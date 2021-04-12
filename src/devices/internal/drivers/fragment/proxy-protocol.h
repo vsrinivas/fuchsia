@@ -86,6 +86,20 @@ struct GpioProxyResponse {
   uint64_t out_actual_ds_ua;
 };
 
+// ZX_PROTOCOL_HDMI proxy support.
+enum class HdmiOp {
+  CONNECT,
+};
+
+struct HdmiProxyRequest {
+  ProxyRequest header;
+  HdmiOp op;
+};
+
+struct HdmiProxyResponse {
+  ProxyResponse header;
+};
+
 // ZX_PROTOCOL_BUTTONS proxy support.
 enum class ButtonsOp {
   GET_NOTIFY_CHANNEL,

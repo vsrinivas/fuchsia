@@ -403,6 +403,36 @@ zx_status_t Fragment::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t
   }
 }
 
+zx_status_t Fragment::RpcHdmi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                              uint32_t* out_resp_size, zx::handle* req_handles,
+                              uint32_t req_handle_count, zx::handle* resp_handles,
+                              uint32_t* resp_handle_count) {
+  if (!hdmi_client_.proto_client().is_valid()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  auto* req = reinterpret_cast<const HdmiProxyRequest*>(req_buf);
+  if (req_size < sizeof(*req)) {
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
+    return ZX_ERR_INTERNAL;
+  }
+  auto* resp = reinterpret_cast<HdmiProxyResponse*>(resp_buf);
+  *out_resp_size = sizeof(*resp);
+
+  switch (req->op) {
+    case HdmiOp::CONNECT:
+      if (req_handle_count != 1) {
+        zxlogf(ERROR, "%s: expected one handle for %u", __func__, static_cast<uint32_t>(req->op));
+        return ZX_ERR_INVALID_ARGS;
+      }
+
+      hdmi_client_.proto_client().Connect(zx::channel(req_handles[0].release()));
+      return ZX_OK;
+    default:
+      zxlogf(ERROR, "%s: unknown Hdmi op %u", __func__, static_cast<uint32_t>(req->op));
+      return ZX_ERR_INTERNAL;
+  }
+}
+
 void Fragment::I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
                                    size_t op_count) {
   auto* ctx = static_cast<I2cTransactContext*>(cookie);
@@ -1026,6 +1056,10 @@ zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
       status = RpcGpio(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                        resp_handles, &resp_handle_count);
       break;
+    case ZX_PROTOCOL_HDMI:
+      status = RpcHdmi(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
+                       resp_handles, &resp_handle_count);
+      break;
     case ZX_PROTOCOL_I2C:
       status = RpcI2c(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                       resp_handles, &resp_handle_count);
@@ -1166,6 +1200,13 @@ zx_status_t Fragment::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
         return ZX_ERR_NOT_SUPPORTED;
       }
       gpio_client_.proto_client().GetProto(static_cast<gpio_protocol_t*>(out_protocol));
+      return ZX_OK;
+    }
+    case ZX_PROTOCOL_HDMI: {
+      if (!hdmi_client_.proto_client().is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      hdmi_client_.proto_client().GetProto(static_cast<hdmi_protocol_t*>(out_protocol));
       return ZX_OK;
     }
     case ZX_PROTOCOL_I2C: {

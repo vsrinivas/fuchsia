@@ -19,6 +19,7 @@
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/hdmi/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <fuchsia/hardware/isp/cpp/banjo.h>
 #include <fuchsia/hardware/mipicsi/cpp/banjo.h>
@@ -81,6 +82,7 @@ class Fragment : public FragmentBase {
         goldfish_pipe_client_(parent, ZX_PROTOCOL_GOLDFISH_PIPE),
         goldfish_sync_client_(parent, ZX_PROTOCOL_GOLDFISH_SYNC),
         gpio_client_(parent, ZX_PROTOCOL_GPIO),
+        hdmi_client_(parent, ZX_PROTOCOL_HDMI),
         i2c_client_(parent, ZX_PROTOCOL_I2C),
         codec_client_(parent, ZX_PROTOCOL_CODEC),
         dai_client_(parent, ZX_PROTOCOL_DAI),
@@ -157,6 +159,9 @@ class Fragment : public FragmentBase {
   zx_status_t RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                       uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                       zx::handle* resp_handles, uint32_t* resp_handle_count);
+  zx_status_t RpcHdmi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                      uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
+                      zx::handle* resp_handles, uint32_t* resp_handle_count);
   zx_status_t RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                      uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                      zx::handle* resp_handles, uint32_t* resp_handle_count);
@@ -213,6 +218,7 @@ class Fragment : public FragmentBase {
   ProtocolClient<ddk::GoldfishPipeProtocolClient, goldfish_pipe_protocol_t> goldfish_pipe_client_;
   ProtocolClient<ddk::GoldfishSyncProtocolClient, goldfish_sync_protocol_t> goldfish_sync_client_;
   ProtocolClient<ddk::GpioProtocolClient, gpio_protocol_t> gpio_client_;
+  ProtocolClient<ddk::HdmiProtocolClient, hdmi_protocol_t> hdmi_client_;
   ProtocolClient<ddk::I2cProtocolClient, i2c_protocol_t> i2c_client_;
   ProtocolClient<ddk::CodecProtocolClient, codec_protocol_t> codec_client_;
   ProtocolClient<ddk::DaiProtocolClient, dai_protocol_t> dai_client_;

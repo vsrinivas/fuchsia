@@ -1,0 +1,13 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.hdmi;
+using zx;
+
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+protocol Hdmi {
+    /// Pass a channel handle to the hdmi driver to connect to its
+    /// FIDL interface.
+    Connect(zx.handle:CHANNEL server_chan) -> ();
+};
