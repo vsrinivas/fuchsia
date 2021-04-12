@@ -24,6 +24,8 @@
 namespace accessibility_test {
 namespace {
 
+constexpr zx::duration kTestTransitionPeriod = a11y::Magnifier2::kTransitionPeriod + kFramePeriod;
+
 using GestureType = a11y::GestureHandler::GestureType;
 using testing::ElementsAre;
 
@@ -245,6 +247,171 @@ TEST_F(Magnifier2Test, ZoomOutIfMagnified) {
   // Call ZoomOutIfMagnified() to ensure that we return to "normal" zoom state.
   magnifier()->ZoomOutIfMagnified();
   RunLoopUntilTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
+}
+
+TEST_F(Magnifier2Test, ClampPan) {
+  // One-finger-triple-tap to enter persistent magnification mode.
+  // Focus on the top-right corner of the screen.
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = 1.f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 1.f;
+    mock_gesture_handler()->TriggerGesture(GestureType::kOneFingerTripleTap, gesture_context);
+
+    RunLoopUntilTransformIs(-1.f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                            -1.f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                            a11y::Magnifier2::kDefaultScale);
+  }
+
+  // Begin a two-finger drag.
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = 1.f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 1.f;
+    gesture_context.current_pointer_locations[2].ndc_point.x = .9f;
+    gesture_context.current_pointer_locations[2].ndc_point.y = .9f;
+    mock_gesture_handler()->TriggerGestureRecognize(GestureType::kTwoFingerDrag, gesture_context);
+
+    RunLoopUntilIdle();
+  }
+
+  // Drag down and to the left. Since the focus is already on the top right
+  // corner, this gesture should have no effect on the transform.
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = 0.1f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 0.1f;
+    gesture_context.current_pointer_locations[2].ndc_point.x = 0.0f;
+    gesture_context.current_pointer_locations[2].ndc_point.y = 0.0f;
+    mock_gesture_handler()->TriggerGestureUpdate(GestureType::kTwoFingerDrag, gesture_context);
+
+    RunLoopUntilTransformIs(-1.f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                            -1.f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                            a11y::Magnifier2::kDefaultScale);
+  }
+}
+
+TEST_F(Magnifier2Test, ClampZoom) {
+  // One-finger-triple-tap to enter persistent magnification mode.
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = 0;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 0;
+    mock_gesture_handler()->TriggerGesture(GestureType::kOneFingerTripleTap, gesture_context);
+
+    RunLoopUntilTransformIs(0 /* x */, 0 /* y */, a11y::Magnifier2::kDefaultScale);
+  }
+
+  // Begin a two-finger drag with fingers very close together.
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = .01f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = .01f;
+    gesture_context.current_pointer_locations[2].ndc_point.x = -.01f;
+    gesture_context.current_pointer_locations[2].ndc_point.y = -.01f;
+    mock_gesture_handler()->TriggerGestureRecognize(GestureType::kTwoFingerDrag, gesture_context);
+
+    RunLoopUntilIdle();
+  }
+
+  // Spread fingers far apart. The scale should be capped at kMaxScale.
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = 1.f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 1.f;
+    gesture_context.current_pointer_locations[2].ndc_point.x = -1.f;
+    gesture_context.current_pointer_locations[2].ndc_point.y = -1.f;
+    mock_gesture_handler()->TriggerGestureUpdate(GestureType::kTwoFingerDrag, gesture_context);
+
+    RunLoopUntilTransformIs(0 /* x */, 0 /* x */, a11y::Magnifier2::kMaxScale);
+  }
+}
+
+TEST_F(Magnifier2Test, TwoFingerDragOnlyWorksInPersistentMode) {
+  // The magnifier should only respond to two-finger drags when in PERSISTENT
+  // mode, so the magnification transform should not change during this test
+  // case.
+  //
+  // Begin two-finger drag at a point different from the current magnification
+  // focus to ensure that the transform does not change.
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = 0.2f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 0.3f;
+    gesture_context.current_pointer_locations[2].ndc_point.x = 0.4f;
+    gesture_context.current_pointer_locations[2].ndc_point.y = 0.5f;
+    mock_gesture_handler()->TriggerGestureRecognize(GestureType::kTwoFingerDrag, gesture_context);
+
+    RunLoopWithTimeout(kTestTransitionPeriod);
+
+    EXPECT_EQ(mock_magnification_handler()->transform(), ClipSpaceTransform::identity());
+  }
+
+  // Try to scale and pan, and again, verify that the transform does not change.
+  {
+    a11y::GestureContext gesture_context;
+    // Double average distance between the fingers and the centroid, and
+    // translate the centroid from (.3, .4) to (.2, .3).
+    gesture_context.current_pointer_locations[1].ndc_point.x = 0.0f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 0.1f;
+    gesture_context.current_pointer_locations[2].ndc_point.x = 0.4f;
+    gesture_context.current_pointer_locations[2].ndc_point.y = 0.5f;
+    mock_gesture_handler()->TriggerGestureUpdate(GestureType::kTwoFingerDrag, gesture_context);
+
+    RunLoopWithTimeout(kTestTransitionPeriod);
+
+    EXPECT_EQ(mock_magnification_handler()->transform(), ClipSpaceTransform::identity());
+  }
+}
+
+TEST_F(Magnifier2Test, TapDragOnlyWorksInUnmagnifiedMode) {
+  // The magnifier should not respond to tap-drag gestures when in PERSISTENT
+  // mode, so the magnification transform should not change during this test
+  // case.
+  //
+  // Enter PERSISTENT mode with a one-finger-triple-tap.
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = 0.4f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 0.5f;
+    mock_gesture_handler()->TriggerGesture(GestureType::kOneFingerTripleTap, gesture_context);
+    RunLoopUntilTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                            -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                            a11y::Magnifier2::kDefaultScale);
+  }
+
+  // Attempt a one-finger-triple-tap-drag at a different location. The
+  // magnifier should ignore the gesture, so the transform should not change.
+  {
+    a11y::GestureContext gesture_context;
+    gesture_context.current_pointer_locations[1].ndc_point.x = 0.3f;
+    gesture_context.current_pointer_locations[1].ndc_point.y = 0.4f;
+    mock_gesture_handler()->TriggerGestureRecognize(GestureType::kOneFingerTripleTapDrag,
+                                                    gesture_context);
+
+    RunLoopWithTimeout(kTestTransitionPeriod);
+
+    // Check that the translation has not changed. X and Y translations are
+    // updated together, so checking one of them is sufficient.
+    const auto& transform = mock_magnification_handler()->transform();
+    EXPECT_LT(std::abs(transform.x - (-1.2f)),
+              a11y::Magnifier2::kDefaultScale * std::numeric_limits<float>::epsilon());
+  }
+}
+
+TEST_F(Magnifier2Test, NoHandlerRegistered) {
+  // The puprose of this test case is to ensure that the magnifier does not
+  // crash if no handler is registered.
+  a11y::Magnifier2 magnifier;
+  MockGestureHandler gesture_handler;
+  magnifier.BindGestures(&gesture_handler);
+
+  a11y::GestureContext gesture_context;
+  gesture_context.current_pointer_locations[1].ndc_point.x = 0.4f;
+  gesture_context.current_pointer_locations[1].ndc_point.y = 0.5f;
+  gesture_handler.TriggerGesture(GestureType::kOneFingerTripleTap, gesture_context);
+
+  RunLoopWithTimeout(kTestTransitionPeriod);
 }
 
 }  // namespace
