@@ -190,6 +190,15 @@ Consider the following guidelines considering test-writing:
    under test, can hamper feature development and refactoring.
 1. Do not encode implementation details in tests, prefer testing through a
    module's public API.
+1. Do not use Rust's support for [tests which return Result][rust_test_result];
+   such tests do not automatically emit backtraces, relying on the errors
+   themselves to carry a backtrace. Test failures that don't emit backtraces
+   are typically much harder to interpret. At the time of writing, the
+   [backtrace feature in Rust is unstable][rust_backtrace_stabilize] and
+   [disabled in the Fuchsia Rust build configuration][rust_backtrace_disabled],
+   but even if enabled this feature would only cause `anyhow::Error`s to carry
+   backtraces; best to panic (via `Result::expect`) to avoid relying on external
+   factors for backtraces.
 
 ### Source Control Best Practices
 
@@ -317,3 +326,6 @@ If you're working on changes that affect `fdio` and `third_party/go`, add:
 [gtest_test_flags]: https://github.com/google/googletest/blob/HEAD/googletest/docs/advanced.md#repeating-the-tests
 [`fuchsia_async::Executor::new_with_fake_time`]: https://fuchsia.googlesource.com/fuchsia/+/a874276/src/lib/fuchsia-async/src/executor.rs#345
 [fake-clock]: https://fuchsia.googlesource.com/fuchsia/+/a874276/src/lib/fake-clock
+[rust_test_result]: https://doc.rust-lang.org/edition-guide/rust-2018/error-handling-and-panics/question-mark-in-main-and-tests.html
+[rust_backtrace_stabilize]: https://github.com/rust-lang/rust/pull/72981
+[rust_backtrace_disabled]: https://cs.opensource.google/fuchsia/fuchsia/+/master:third_party/rust_crates/Cargo.toml;l=308-309;drc=fb9288396656bf5c9174d39238acc183fa0c4882
