@@ -15,6 +15,8 @@ use {
     termion::{color, style},
 };
 
+const RECOVERY_WARNING: &str = "WARNING: Rebooting into recovery partition. ffx cannot yet perform\ntarget operations when in zedboot or recovery mode.";
+
 #[ffx_plugin(AdminProxy = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin")]
 pub async fn reboot(
     admin_proxy: Result<AdminProxy>,
@@ -76,6 +78,7 @@ async fn reboot_target(admin_proxy: AdminProxy, cmd: RebootCommand) -> Result<()
     let res = if cmd.bootloader {
         admin_proxy.reboot_to_bootloader().await
     } else if cmd.recovery {
+        println!("{}", RECOVERY_WARNING);
         admin_proxy.reboot_to_recovery().await
     } else {
         admin_proxy.reboot(RebootReason::UserRequest).await
