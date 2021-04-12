@@ -26,14 +26,26 @@ In `//src/sys/component_manager/src/elf_runner/mod.rs`, comment out the code blo
 direct creation of processes. To find the code block, look for the comment "Prevent direct
 creation of processes".
 
+### Add starnix to core.cml
+
+In order to make starnix available in the system, we need to add starnix to the
+core component by adding the following line to `//src/sys/core/meta/core.cml`,
+directly above the `children` declaration:
+
+```
+    include: [ "src/proc/bin/starnix/meta/core.shard.cml" ],
+```
+
 ### Configure your build
 
-In order to run starnix, we need to build both `//src/proc` and `//examples`:
+In order to run starnix, we need to build `//src/proc`:
 
 ```sh
-$ fx set core.x64 --with //examples,//src/proc,//src/proc:tests
+$ fx set core.x64 --with-base //src/proc,//src/proc:tests
 $ fx build
 ```
+
+### Run Fuchsia
 
 Run Fuchsia as normal, for example using `fx serve` and `fx emu -N`.
 
@@ -43,14 +55,17 @@ To monitor starnix, look for log messages with the `starnix` tag:
 fx log --tag starnix
 ```
 
-Now, you're ready to run starnix. Unfortunately, component framework v2 does not have a way to
-start components manually (see https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=70952), so we
-need to start a nested v2 component manager inside the component framework v1 and instruct that
-component manager to run starnix:
+### Run a Linux binary
+
+To run a Linux binary, ask starnix to start a component that wraps the binary:
 
 ```sh
-$ fx shell 'run fuchsia-pkg://fuchsia.com/components-basic-example#meta/component_manager_for_examples.cmx fuchsia-pkg://fuchsia.com/starnix#meta/starnix_manager.cm'
+$ ffx starnix start fuchsia-pkg://fuchsia.com/hello_starnix#meta/hello_starnix.cm
 ```
+
+If this is the first time you've used the `ffx starnix` command, you might need
+to configure `ffx` to enable the `starnix` commands. Attempting to run the
+`start` command should provide instructions for enabling the `starnix` commands.
 
 If everything is working, you should see some log messages like the following:
 

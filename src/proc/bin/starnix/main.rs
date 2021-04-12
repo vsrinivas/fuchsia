@@ -8,7 +8,8 @@ use {
     fidl_fuchsia_component_runner::{
         self as fcrunner, ComponentControllerMarker, ComponentStartInfo,
     },
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fidl_fuchsia_starnix_developer as fstardev, fuchsia_async as fasync,
+    fuchsia_component::client as fclient,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{
         self as zx, sys::zx_exception_info_t, sys::zx_thread_state_general_regs_t,
@@ -17,7 +18,7 @@ use {
     },
     futures::{StreamExt, TryStreamExt},
     io_util::directory,
-    log::info,
+    log::{error, info},
     std::ffi::CString,
     std::mem,
     std::sync::Arc,
@@ -171,6 +172,31 @@ async fn start_runner(
     Ok(())
 }
 
+async fn start(url: String) -> Result<(), Error> {
+    let _instance = fclient::ScopedInstance::new("playground".to_string(), url).await?;
+    // Dropping _instance here will cause the component to be destroyed, but we
+    // don't know how to stop processes anyway, so starnix will keep running
+    // the program. Eventually, we'll keep track of all the running instances
+    // and be able to stop them.
+    Ok(())
+}
+
+async fn start_manager(mut request_stream: fstardev::ManagerRequestStream) -> Result<(), Error> {
+    while let Some(event) = request_stream.try_next().await? {
+        match event {
+            fstardev::ManagerRequest::Start { url, .. } => {
+                if let Err(e) = start(url).await {
+                    error!("failed to start component: {}", e);
+                }
+            }
+            fstardev::ManagerRequest::StartShell { .. } => {
+                info!("StartShell not yet implemented.")
+            }
+        }
+    }
+    Ok(())
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["starnix"]).expect("failed to initialize logger");
@@ -181,6 +207,12 @@ async fn main() -> Result<(), Error> {
         fasync::Task::local(
             async move { start_runner(stream).await.expect("failed to start runner.") },
         )
+        .detach();
+    });
+    fs.dir("svc").add_fidl_service(move |stream| {
+        fasync::Task::local(async move {
+            start_manager(stream).await.expect("failed to start manager.")
+        })
         .detach();
     });
     fs.take_and_serve_directory_handle()?;

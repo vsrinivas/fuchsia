@@ -1,6 +1,7 @@
 {
     program: {
         runner: "starnix",
-        binary: "bin/hello_starnix.bin",
+        binary: "hello_starnix.bin",
+        root: "bin",
     },
 }

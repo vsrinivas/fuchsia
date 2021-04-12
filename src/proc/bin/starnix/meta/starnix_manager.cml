@@ -4,11 +4,12 @@
             name: "starnix_runner",
             url: "fuchsia-pkg://fuchsia.com/starnix#meta/starnix_runner.cm",
         },
+    ],
+    collections: [
         {
-            name: "hello_starnix",
-            url: "fuchsia-pkg://fuchsia.com/hello_starnix#meta/hello_starnix.cm",
-            startup: "eager",
+            name: "playground",
             environment: "#starnix-env",
+            durability: "transient",
         },
     ],
     offer: [
@@ -17,10 +18,22 @@
             from: "parent",
             to: "#starnix_runner",
         },
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+            to: "#starnix_runner",
+        },
     ],
     expose: [
         {
             runner: "starnix",
+            from: "#starnix_runner",
+        },
+        {
+            // In principle, this protocol should be exposed by the
+            // starnix_manager component itself, but that is blocked
+            // behind fxb/74087
+            protocol: "fuchsia.starnix.developer.Manager",
             from: "#starnix_runner",
         },
     ],
