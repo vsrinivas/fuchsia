@@ -84,6 +84,27 @@ source_set("commands") {
   ]
 }
 
+source_set("mtd-writer") {
+  public = [ "mtd_writer.h" ]
+  deps = [ "//src/storage/volume_image/utils:io-interfaces" ]
+  public_deps = [
+    "//sdk/lib/fit-promise",
+    "//src/storage/volume_image/ftl:ftl-io",
+  ]
+
+  if (current_os == "linux") {
+    sources = [ "mtd_writer_linux.cc" ]
+    deps += [
+      "//src/storage/volume_image/utils:block-io",
+      "//zircon/public/lib/safemath",
+      "//zircon/system/ulib/ftl-mtd",
+      "//zircon/system/ulib/mtd",
+    ]
+  } else {
+    sources = [ "mtd_writer_default.cc" ]
+  }
+}
+
 test_blob_image_label = ":test-blobfs-image-gen($default_toolchain)"
 test_blob_image_path =
     get_label_info(test_blob_image_label, "target_out_dir") + "/test_blobfs.blk"
@@ -259,6 +280,15 @@ source_set("adapter-tests") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+
+  if (current_os == "linux") {
+    sources += [ "mtd_writer_test.cc" ]
+    deps += [
+      ":mtd-writer",
+      "//zircon/system/ulib/ftl-mtd",
+      "//zircon/system/ulib/mtd",
+    ]
+  }
 
   configs += [ ":test-image-path" ]
 

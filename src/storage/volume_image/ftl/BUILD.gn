@@ -31,6 +31,21 @@ source_set("ftl-image-internal") {
   ]
 }
 
+source_set("ftl-io") {
+  sources = [ "ftl_io.cc" ]
+  public = [ "ftl_io.h" ]
+  public_deps = [
+    "//sdk/lib/fit-promise",
+    "//src/storage/volume_image/utils:io-interfaces",
+    "//zircon/system/ulib/ftl",
+  ]
+  deps = [
+    ":raw-nand-image-utils",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/safemath",
+  ]
+}
+
 source_set("ftl-raw-nand-image-writer") {
   sources = [ "ftl_raw_nand_image_writer.cc" ]
   public = [ "ftl_raw_nand_image_writer.h" ]
@@ -64,11 +79,25 @@ source_set("ftl-image") {
   ]
 }
 
+source_set("ftl-test-helper") {
+  testonly = true
+  sources = [ "ftl_test_helper.cc" ]
+  public = [ "ftl_test_helper.h" ]
+
+  public_deps = [
+    ":raw-nand-options",
+    "//zircon/system/ulib/ftl",
+  ]
+
+  deps = [ "//zircon/public/lib/fbl" ]
+}
+
 source_set("ftl-test") {
   testonly = true
   sources = [
     "ftl_image_internal_test.cc",
     "ftl_image_test.cc",
+    "ftl_io_test.cc",
     "ftl_raw_nand_image_writer_test.cc",
     "raw_nand_image_utils_test.cc",
   ]
@@ -76,7 +105,9 @@ source_set("ftl-test") {
   deps = [
     ":ftl-image",
     ":ftl-image-internal",
+    ":ftl-io",
     ":ftl-raw-nand-image-writer",
+    ":ftl-test-helper",
     ":raw-nand-image-utils",
     "//src/storage/volume_image/utils:block-utils",
     "//src/storage/volume_image/utils:fd-io",
@@ -93,6 +124,7 @@ source_set("ftl-integration-test") {
     ":ftl-image",
     ":ftl-image-internal",
     ":ftl-raw-nand-image-writer",
+    ":ftl-test-helper",
     ":raw-nand-image-utils",
     "//src/storage/volume_image/utils:block-utils",
     "//src/storage/volume_image/utils:fd-io",
