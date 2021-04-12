@@ -278,6 +278,44 @@ TEST_F(SessionTest, OneShotBreakpointDelete) {
   EXPECT_FALSE(weak_bp);
 }
 
+// Tests breakpoints with stop_mode == kNone. These are auto-resumed by the Session.
+TEST_F(SessionTest, BreakpointStopNone) {
+  // Make a process and thread for notifying about.
+  constexpr uint64_t kProcessKoid = 1234;
+  InjectProcess(kProcessKoid);
+  constexpr uint64_t kThreadKoid = 5678;
+  InjectThread(kProcessKoid, kThreadKoid);
+  SessionThreadObserver thread_observer;
+  session().thread_observers().AddObserver(&thread_observer);
+
+  // Create a breakpoint.
+  Breakpoint* bp = session().system().CreateNewBreakpoint();
+  constexpr uint64_t kAddress = 0x12345678;
+  BreakpointSettings settings;
+  settings.enabled = true;
+  settings.stop_mode = BreakpointSettings::StopMode::kNone;
+  settings.locations.emplace_back(kAddress);
+  bp->SetSettings(settings);
+
+  debug_ipc::NotifyException notify;
+  notify.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
+  notify.thread.process_koid = kProcessKoid;
+  notify.thread.thread_koid = kThreadKoid;
+  notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  // Don't need stack pointers for this test.
+  notify.thread.frames.emplace_back(kAddress, 0);
+  sink()->PopulateNotificationWithBreakpoints(&notify);
+
+  // Notify of the breakpoint hit, it should continue the execution without notifying the thread.
+  notify.hit_breakpoints[0].hit_count = 1;
+  InjectException(notify);
+  EXPECT_EQ(1u, sink()->resume_count());
+  EXPECT_EQ(0u, thread_observer.stop_count());
+
+  // Cleanup.
+  session().thread_observers().RemoveObserver(&thread_observer);
+}
+
 // Tests a breakpoint with a hit_mult other than 1
 TEST_F(SessionTest, HitMultBreakpoint) {
   // Make a process and thread for notifying about.

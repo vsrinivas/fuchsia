@@ -49,10 +49,10 @@ namespace {
 // buffer size if the stream is corrupt.
 constexpr uint32_t kMaxMessageSize = 16777216;
 
-// Remove conditional breakpoints from stop_info; return whether we'll need to skip this stop_info
-// and continue execution, which happens when the exception is a breakpoint one and all breakpoints
-// in it are conditional.
-bool FilterConditionalBreakpoints(StopInfo* info) {
+// Remove conditional and no-sop breakpoints from stop_info; return whether we'll need to skip this
+// stop_info and continue execution, which happens when the exception is a breakpoint one and all
+// breakpoints in it are conditional.
+bool FilterApplicableBreakpoints(StopInfo* info) {
   bool skip = false;
 
   if (info->exception_type == debug_ipc::ExceptionType::kHardwareBreakpoint ||
@@ -65,15 +65,23 @@ bool FilterConditionalBreakpoints(StopInfo* info) {
     }
   }
 
+  // TODO(dangyi): Consider whether to move this logic to the Breakpoint class.
   auto breakpoint_iter = info->hit_breakpoints.begin();
   while (breakpoint_iter != info->hit_breakpoints.end()) {
     Breakpoint* breakpoint = breakpoint_iter->get();
-    // TODO(dangyi): Consider whether to move the condition to Breakpoint class.
-    if (breakpoint->GetStats().hit_count % breakpoint->GetSettings().hit_mult == 0) {
+    BreakpointSettings settings = breakpoint->GetSettings();
+
+    if (settings.stop_mode == BreakpointSettings::StopMode::kNone) {
+      // This breakpoint should be auto-resumed always. This could be done automatically by the
+      // debug agent which will give better performance, but in the future we likely want to
+      // add some kind of logging features that will require evaluation in the client.
+      info->hit_breakpoints.erase(breakpoint_iter);
+    } else if (breakpoint->GetStats().hit_count % settings.hit_mult != 0) {
+      // Hit-count mismatch, auto-resume.
+      info->hit_breakpoints.erase(breakpoint_iter);
+    } else {
       skip = false;
       breakpoint_iter++;
-    } else {
-      info->hit_breakpoints.erase(breakpoint_iter);
     }
   }
 
@@ -590,7 +598,7 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, 
   }
 
   // Continue if it's a conditional breakpoint.
-  if (FilterConditionalBreakpoints(&info)) {
+  if (FilterApplicableBreakpoints(&info)) {
     // For simplicity, we're resuming all threads right now.
     // TODO(dangyi): It's better to continue only the affected threads.
     system_.Continue(false);
