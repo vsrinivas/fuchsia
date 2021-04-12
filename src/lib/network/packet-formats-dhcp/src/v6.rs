@@ -283,44 +283,51 @@ impl<'a> RecordsImpl<'a> for DhcpOptionsImpl {
         let opt = match opt_code {
             OptionCode::ClientId => Ok(DhcpOption::ClientId(opt_val)),
             OptionCode::ServerId => Ok(DhcpOption::ServerId(opt_val)),
-            OptionCode::Oro => match opt_len % 2 {
-                0 => Ok(DhcpOption::Oro(
-                    opt_val
-                        .chunks(2)
-                        .map(|opt| OptionCode::try_from(NetworkEndian::read_u16(opt)))
-                        .collect::<Result<Vec<OptionCode>, ParseError>>()?,
-                )),
-                _ => Err(ParseError::InvalidOpLen(OptionCode::Oro, opt_len)),
-            },
+            OptionCode::Oro => {
+                if opt_len % 2 == 0 {
+                    Ok(DhcpOption::Oro(
+                        opt_val
+                            .chunks(2)
+                            .map(|opt| OptionCode::try_from(NetworkEndian::read_u16(opt)))
+                            .collect::<Result<Vec<OptionCode>, ParseError>>()?,
+                    ))
+                } else {
+                    Err(ParseError::InvalidOpLen(OptionCode::Oro, opt_len))
+                }
+            }
             OptionCode::Preference => match opt_val {
                 &[b] => Ok(DhcpOption::Preference(b)),
-                _ => Err(ParseError::InvalidOpLen(OptionCode::Preference, opt_val.len())),
+                opt_val => Err(ParseError::InvalidOpLen(OptionCode::Preference, opt_val.len())),
             },
             OptionCode::ElapsedTime => match opt_val {
                 &[b0, b1] => Ok(DhcpOption::ElapsedTime(u16::from_be_bytes([b0, b1]))),
-                _ => Err(ParseError::InvalidOpLen(OptionCode::ElapsedTime, opt_val.len())),
+                opt_val => Err(ParseError::InvalidOpLen(OptionCode::ElapsedTime, opt_val.len())),
             },
             OptionCode::InformationRefreshTime => match opt_val {
                 &[b0, b1, b2, b3] => {
                     Ok(DhcpOption::InformationRefreshTime(u32::from_be_bytes([b0, b1, b2, b3])))
                 }
-                _ => {
+                opt_val => {
                     Err(ParseError::InvalidOpLen(OptionCode::InformationRefreshTime, opt_val.len()))
                 }
             },
-            OptionCode::DnsServers => match opt_len % 16 {
-                0 => Ok(DhcpOption::DnsServers(
-                    opt_val
-                        .chunks(16)
-                        .map(|opt| {
-                            let opt: [u8; 16] =
-                                opt.try_into().expect("unexpected byte slice length after chunk");
-                            Ipv6Addr::from(opt)
-                        })
-                        .collect::<Vec<Ipv6Addr>>(),
-                )),
-                _ => Err(ParseError::InvalidOpLen(OptionCode::DnsServers, opt_len)),
-            },
+            OptionCode::DnsServers => {
+                if opt_len % 16 == 0 {
+                    Ok(DhcpOption::DnsServers(
+                        opt_val
+                            .chunks(16)
+                            .map(|opt| {
+                                let opt: [u8; 16] = opt
+                                    .try_into()
+                                    .expect("unexpected byte slice length after chunk");
+                                Ipv6Addr::from(opt)
+                            })
+                            .collect::<Vec<Ipv6Addr>>(),
+                    ))
+                } else {
+                    Err(ParseError::InvalidOpLen(OptionCode::DnsServers, opt_len))
+                }
+            }
             OptionCode::DomainList => {
                 let mut opt_val = &mut opt_val;
                 let mut domains = Vec::new();
@@ -366,18 +373,19 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionsImpl {
     fn record_length(opt: &Self::Record) -> usize {
         4 + match opt {
             DhcpOption::ClientId(duid) | DhcpOption::ServerId(duid) => {
-                u16::try_from(duid.len()).unwrap_or(18) as usize
+                u16::try_from(duid.len()).unwrap_or(18).into()
             }
-            DhcpOption::Oro(opts) => u16::try_from(2 * opts.len()).unwrap_or(0) as usize,
-            DhcpOption::Preference(_) => 1,
-            DhcpOption::ElapsedTime(_) => 2,
-            DhcpOption::InformationRefreshTime(_) => 4,
+            DhcpOption::Oro(opts) => u16::try_from(2 * opts.len()).unwrap_or(0).into(),
+            DhcpOption::Preference(v) => std::mem::size_of_val(v),
+            DhcpOption::ElapsedTime(v) => std::mem::size_of_val(v),
+            DhcpOption::InformationRefreshTime(v) => std::mem::size_of_val(v),
             DhcpOption::DnsServers(recursive_name_servers) => {
-                u16::try_from(16 * recursive_name_servers.len()).unwrap_or(0) as usize
+                u16::try_from(16 * recursive_name_servers.len()).unwrap_or(0).into()
             }
             DhcpOption::DomainList(domains) => {
                 u16::try_from(domains.iter().fold(0, |tot, domain| tot + domain.bytes_len()))
-                    .unwrap_or(0) as usize
+                    .unwrap_or(0)
+                    .into()
             }
         }
     }
@@ -663,7 +671,7 @@ mod tests {
             DhcpOption::Preference(42),
             DhcpOption::ElapsedTime(3600),
             DhcpOption::InformationRefreshTime(86400),
-            DhcpOption::DnsServers(vec![Ipv6Addr::from(0 as u128)]),
+            DhcpOption::DnsServers(vec![Ipv6Addr::from(0)]),
             DhcpOption::DomainList(vec![
                 checked::Domain::from_str("fuchsia.dev").expect("failed to construct test domain"),
                 checked::Domain::from_str("www.google.com")
@@ -682,9 +690,12 @@ mod tests {
         assert_eq!(got_options, options);
     }
 
+    // We're forced into an `as` cast because From::from is not a const fn.
+    const OVERFLOW_LENGTH: usize = u16::MAX as usize + 1;
+
     #[test]
     fn test_message_serialization_duid_too_long() {
-        let options = [DhcpOption::ClientId(&[0u8; (u16::MAX as usize) + 1])];
+        let options = [DhcpOption::ClientId(&[0u8; OVERFLOW_LENGTH])];
         let builder = MessageBuilder::new(MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
@@ -701,12 +712,12 @@ mod tests {
 
         // Make sure the buffer is still parsable.
         let mut buf = &buf[..];
-        let _ = Message::parse(&mut buf, ()).expect("parse should succeed");
+        let _: Message<'_, _> = Message::parse(&mut buf, ()).expect("parse should succeed");
     }
 
     #[test]
     fn test_message_serialization_oro_too_long() {
-        let options = [DhcpOption::Oro(vec![OptionCode::Preference; (u16::MAX as usize) + 1])];
+        let options = [DhcpOption::Oro(vec![OptionCode::Preference; OVERFLOW_LENGTH])];
         let builder = MessageBuilder::new(MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
@@ -722,7 +733,7 @@ mod tests {
 
         // Make sure the buffer is still parsable.
         let mut buf = &buf[..];
-        let _ = Message::parse(&mut buf, ()).expect("parse should succeed");
+        let _: Message<'_, _> = Message::parse(&mut buf, ()).expect("parse should succeed");
     }
 
     #[test]
