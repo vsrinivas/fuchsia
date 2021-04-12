@@ -48,18 +48,21 @@ template("merge_sysmgr_config") {
   # Using the list of sysmgr config file paths, merge the json into a single
   # file
   action(merged_config_target) {
-    hermetic_deps = false
     script = "//src/sys/pkg/scripts/merge_sysmgr_config.py"
 
     deps = [ ":$merged_config_inputs_target" ]
     inputs = [ merged_config_inputs_path ]
     outputs = [ merged_config_path ]
 
+    depfile = "${merged_config_path}.d"
+
     args = [
-      "--inputs",
+      "--inputs_file",
       rebase_path(merged_config_inputs_path, root_build_dir),
-      "--output",
+      "--output_file",
       rebase_path(merged_config_path, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
     ]
   }
 

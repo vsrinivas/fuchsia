@@ -19,26 +19,41 @@ import json
 def parseargs():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--inputs", help="newline separated file of input files")
-    parser.add_argument("--output", help="where to write the output")
+        "--inputs_file",
+        type=argparse.FileType('r'),
+        help="newline separated file of input files",
+    )
+    parser.add_argument(
+        "--output_file",
+        type=argparse.FileType('w'),
+        help="where to write the output",
+    )
+    parser.add_argument(
+        '--depfile',
+        type=argparse.FileType('w'),
+        required=True,
+    )
     return parser.parse_args()
 
 
 def main(args):
-    configs = load_configs(args.inputs)
+    configs, files_read = load_configs(args.inputs_file)
+    args.depfile.write(
+        "{}: {}\n".format(args.output_file.name, " ".join(files_read)))
+
     merged = merge_configs(configs)
-
-    with open(args.output, 'w') as f:
-        json.dump(merged, f, sort_keys=True, indent=2)
+    json.dump(merged, args.output_file, sort_keys=True, indent=2)
 
 
-def load_configs(config_list_path):
+def load_configs(config_list_file):
     res = []
-    with open(config_list_path) as config_list:
-        for config_path in config_list:
-            with open(config_path.rstrip()) as f:
-                res.append(json.load(f))
-    return res
+    config_files = []
+    for config_path in config_list_file:
+        p = config_path.rstrip()
+        config_files.append(p)
+        with open(p) as f:
+            res.append(json.load(f))
+    return res, config_files
 
 
 def merge_configs(configs):
