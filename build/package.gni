@@ -268,6 +268,8 @@ template("package") {
       manifest_output = []
 
       if (get_path_info(meta.dest, "extension") == "cmx") {
+        pkg.deps += [ "//build/components:cmx_allowlist" ]
+
         cmx(manifest_target) {
           manifest = meta.path
 
