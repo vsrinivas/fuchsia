@@ -249,7 +249,7 @@ Do not worry about assigning a number to your RFC at this stage. Instead, use
 
 *Exit criteria*: CL containing your RFC is created.
 
-#### Step 3: Iterate
+#### Step 3: Iterate {#iterate}
 
 Once you have created a CL containing the first draft of your RFC, you are ready
 to iterate on your idea with the appropriate stakeholders. Hopefully you will
@@ -360,6 +360,11 @@ comment on your CL stating that the RFC is rejected, provide a rationale
 for the rejection and will assign the RFC a number. Rejected RFCs are valuable
 engineering artifacts. The Eng Council will work with the RFC Authors to land
 a version of the RFC that is marked as rejected and incorporates the rationale.
+
+If the Eng Council identifies one or many unresolved open items, the RFC may be
+moved back to the [iterate](#iterate) step. The Eng Council will ask of the
+author(s) to resolve the open items identified with the relevant stakeholders
+before another request to review the RFC will be granted.
 
 You should upload a new patchset of your RFC with the assigned number, both in
 the title of the RFC and in the filename. If your RFC is approved and requires
