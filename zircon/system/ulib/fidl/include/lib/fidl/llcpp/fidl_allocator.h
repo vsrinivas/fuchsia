@@ -156,7 +156,7 @@ class FidlAllocator : public AnyAllocator {
   FidlAllocator() : AnyAllocator(initial_buffer_, initial_capacity) {}
 
   // Deallocate anything allocated by the allocator. After this call, the allocator is in the
-  // extact same state it was after the construction. Any data previously allocated must not be
+  // exact same state it was after the construction. Any data previously allocated must not be
   // accessed anymore.
   void Reset() { AnyAllocator::Reset(initial_buffer_, initial_capacity); }
 
