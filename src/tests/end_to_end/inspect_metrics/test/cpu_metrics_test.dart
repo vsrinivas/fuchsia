@@ -32,21 +32,6 @@ void main() {
     tearDownAll(printErrorHelp);
 
     withLongTimeout(() {
-      test('appmgr exposes cpu metrics for itself', () async {
-        expect(
-            await getInspectValues(
-                inspect, '$appmgrPath/*/@samples/*:cpu_time'),
-            multiValue(greaterThan(0), length: greaterThan(0)));
-        expect(
-            await getInspectValues(
-                inspect, '$appmgrPath/*/@samples/*:queue_time'),
-            multiValue(greaterThan(0), length: greaterThan(0)));
-        expect(
-            await getInspectValues(
-                inspect, '$appmgrPath/*/@samples/*:timestamp'),
-            multiValue(greaterThan(0), length: greaterThan(0)));
-      });
-
       test('appmgr exposes stats on measurement time', () async {
         expect(
             await getInspectValues(

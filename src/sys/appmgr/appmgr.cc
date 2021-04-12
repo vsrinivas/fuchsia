@@ -58,7 +58,6 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       lifecycle_executor_(dispatcher),
       lifecycle_allowlist_(std::move(args.lifecycle_allowlist)),
       startup_service_() {
-  RecordSelfCpuStats();
   inspector_.GetRoot().CreateLazyNode(
       "inspect_stats",
       [this] {
@@ -305,21 +304,6 @@ std::vector<std::shared_ptr<fuchsia::process::lifecycle::LifecyclePtr>> Appmgr::
         }));
   }
   return child_lifecycles;
-}
-
-void Appmgr::RecordSelfCpuStats() {
-  zx::job my_job;
-  zx_info_handle_basic_t info = {};
-  zx_status_t err = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &my_job);
-  if (err != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to initialize job " << err;
-  } else {
-    err = my_job.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-    if (err != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to get job info " << err;
-    }
-  }
-  cpu_watcher_->AddTask({"appmgr.cm", std::to_string(info.koid)}, std::move(my_job));
 }
 
 void Appmgr::MeasureCpu(async_dispatcher_t* dispatcher) {
