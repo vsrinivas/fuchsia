@@ -37,7 +37,6 @@
         {
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
                 "fuchsia.sys.Environment",
             ],

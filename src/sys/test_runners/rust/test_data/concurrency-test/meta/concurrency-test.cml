@@ -21,7 +21,10 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: "#concurrency_test_driver",
+            to: [
+                "#concurrency_test_driver",
+                "#echo_server",
+            ],
         },
     ],
     expose: [

@@ -12,10 +12,7 @@
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.logger.LogSink",
-            ],
+            protocol: [ "fuchsia.boot.WriteOnlyLog" ],
             from: "parent",
             to: "#fuchsia_component_test_collection",
         },

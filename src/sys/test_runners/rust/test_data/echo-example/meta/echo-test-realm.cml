@@ -21,7 +21,10 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: "#echo_rust_client",
+            to: [
+                "#echo_rust_client",
+                "#echo_server",
+            ],
         },
     ],
     expose: [
