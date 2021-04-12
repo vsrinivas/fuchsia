@@ -5,7 +5,7 @@
 //! Parsing and serialization for DHCPv6 messages.
 
 use {
-    byteorder::{ByteOrder, NetworkEndian},
+    byteorder::NetworkEndian,
     mdns::protocol::{Domain, ParseError as MdnsParseError},
     num_derive::FromPrimitive,
     packet::{
@@ -262,12 +262,13 @@ impl<'a> RecordsImpl<'a> for DhcpOptionsImpl {
             return Ok(ParsedRecord::Done);
         }
 
-        let opt_code = data.take_obj_front::<U16>().ok_or(ParseError::BufferExhausted)?.get();
-        let opt_len =
-            usize::from(data.take_obj_front::<U16>().ok_or(ParseError::BufferExhausted)?.get());
-        let mut opt_val = data.take_front(opt_len).ok_or(ParseError::BufferExhausted)?;
+        let opt_code = data.take_obj_front::<U16>().ok_or(ParseError::BufferExhausted)?;
+        let mut opt_val = {
+            let opt_len = data.take_obj_front::<U16>().ok_or(ParseError::BufferExhausted)?;
+            data.take_front(opt_len.get().into()).ok_or(ParseError::BufferExhausted)?
+        };
 
-        let opt_code = match OptionCode::try_from(opt_code) {
+        let opt_code = match OptionCode::try_from(opt_code.get()) {
             Ok(opt_code) => opt_code,
             // TODO(https://fxbug.dev/57177): surface skipped codes so we know which ones are not
             // supported.
@@ -284,16 +285,19 @@ impl<'a> RecordsImpl<'a> for DhcpOptionsImpl {
             OptionCode::ClientId => Ok(DhcpOption::ClientId(opt_val)),
             OptionCode::ServerId => Ok(DhcpOption::ServerId(opt_val)),
             OptionCode::Oro => {
-                if opt_len % 2 == 0 {
-                    Ok(DhcpOption::Oro(
-                        opt_val
-                            .chunks(2)
-                            .map(|opt| OptionCode::try_from(NetworkEndian::read_u16(opt)))
-                            .collect::<Result<Vec<OptionCode>, ParseError>>()?,
-                    ))
-                } else {
-                    Err(ParseError::InvalidOpLen(OptionCode::Oro, opt_len))
-                }
+                let options = opt_val
+                    // TODO(https://github.com/rust-lang/rust/issues/74985): use slice::as_chunks.
+                    .chunks(2)
+                    .map(|opt| {
+                        let opt: [u8; 2] = opt.try_into().map_err(
+                            |std::array::TryFromSliceError { .. }| {
+                                ParseError::InvalidOpLen(OptionCode::Oro, opt_val.len())
+                            },
+                        )?;
+                        OptionCode::try_from(u16::from_be_bytes(opt))
+                    })
+                    .collect::<Result<_, ParseError>>()?;
+                Ok(DhcpOption::Oro(options))
             }
             OptionCode::Preference => match opt_val {
                 &[b] => Ok(DhcpOption::Preference(b)),
@@ -312,21 +316,19 @@ impl<'a> RecordsImpl<'a> for DhcpOptionsImpl {
                 }
             },
             OptionCode::DnsServers => {
-                if opt_len % 16 == 0 {
-                    Ok(DhcpOption::DnsServers(
-                        opt_val
-                            .chunks(16)
-                            .map(|opt| {
-                                let opt: [u8; 16] = opt
-                                    .try_into()
-                                    .expect("unexpected byte slice length after chunk");
-                                Ipv6Addr::from(opt)
-                            })
-                            .collect::<Vec<Ipv6Addr>>(),
-                    ))
-                } else {
-                    Err(ParseError::InvalidOpLen(OptionCode::DnsServers, opt_len))
-                }
+                let addresses = opt_val
+                    // TODO(https://github.com/rust-lang/rust/issues/74985): use slice::as_chunks.
+                    .chunks(16)
+                    .map(|opt| {
+                        let opt: [u8; 16] = opt.try_into().map_err(
+                            |std::array::TryFromSliceError { .. }| {
+                                ParseError::InvalidOpLen(OptionCode::DnsServers, opt_val.len())
+                            },
+                        )?;
+                        Ok(Ipv6Addr::from(opt))
+                    })
+                    .collect::<Result<_, ParseError>>()?;
+                Ok(DhcpOption::DnsServers(addresses))
             }
             OptionCode::DomainList => {
                 let mut opt_val = &mut opt_val;
