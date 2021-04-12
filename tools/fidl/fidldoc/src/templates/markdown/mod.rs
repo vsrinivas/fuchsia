@@ -13,13 +13,13 @@ use std::path::PathBuf;
 
 use crate::templates::{FidldocTemplate, HandlebarsHelper};
 
-pub struct MarkdownTemplate {
-    handlebars: Handlebars,
+pub struct MarkdownTemplate<'a> {
+    handlebars: Handlebars<'a>,
     output_path: PathBuf,
 }
 
-impl MarkdownTemplate {
-    pub fn new(output_path: &PathBuf) -> MarkdownTemplate {
+impl MarkdownTemplate<'_> {
+    pub fn new(output_path: &PathBuf) -> MarkdownTemplate<'_> {
         // Handlebars
         let mut handlebars = Handlebars::new();
 
@@ -110,7 +110,7 @@ impl MarkdownTemplate {
     }
 }
 
-impl FidldocTemplate for MarkdownTemplate {
+impl FidldocTemplate for MarkdownTemplate<'_> {
     fn render_main_page(&self, main_fidl_json: &Value) -> Result<(), Error> {
         // Render main page
         let main_page_path = self.output_path.join("README.md");
@@ -165,7 +165,7 @@ impl FidldocTemplate for MarkdownTemplate {
 }
 
 fn render_template(
-    handlebars: &Handlebars,
+    handlebars: &Handlebars<'_>,
     template_name: String,
     fidl_json: &Value,
 ) -> Result<String, Error> {
@@ -206,7 +206,8 @@ mod test {
             "url_path": "/",
         });
 
-        let template = MarkdownTemplate::new(&PathBuf::new());
+        let pb = PathBuf::new();
+        let template = MarkdownTemplate::new(&pb);
 
         let result = render_template(&template.handlebars, "main".to_string(), &main_fidl_doc)
             .expect("Unable to render main template");
@@ -240,7 +241,8 @@ mod test {
             "url_path": "/",
         });
 
-        let template = MarkdownTemplate::new(&PathBuf::new());
+        let pb = PathBuf::new();
+        let template = MarkdownTemplate::new(&pb);
 
         let result = render_template(&template.handlebars, "toc".to_string(), &main_fidl_doc)
             .expect("Unable to render toc template");

@@ -45,12 +45,9 @@
 //! Now you might have noticed trailing braces `{}`. They are used to define
 //! implementations. By default:
 //!
-//! * `Error::description()` returns variant name as static string
-//! * `Error::cause()` returns None (even if type wraps some value)
-//! * `Display` outputs `description()`
+//! * `Error::source()` returns None (even if type wraps some value)
+//! * `Display` outputs debug representation
 //! * No `From` implementations are defined
-//!
-//! To define description simply add `description(value)` inside braces:
 //!
 //! ```rust
 //! # #[macro_use] extern crate quick_error;
@@ -60,19 +57,16 @@
 //!     #[derive(Debug)]
 //!     pub enum SomeError {
 //!         Io(err: std::io::Error) {
-//!             description(err.description())
+//!             display("{}", err)
 //!         }
 //!         Utf8(err: std::str::Utf8Error) {
-//!             description("utf8 error")
+//!             display("utf8 error")
 //!         }
 //!     }
 //! }
 //! ```
 //!
-//! Normal rules for borrowing apply. So most of the time description either
-//! returns constant string or forwards description from enclosed type.
-//!
-//! To change `cause` method to return some error, add `cause(value)`, for
+//! To change `source` method to return some error, add `source(value)`, for
 //! example:
 //!
 //! ```rust
@@ -83,21 +77,19 @@
 //!     #[derive(Debug)]
 //!     pub enum SomeError {
 //!         Io(err: std::io::Error) {
-//!             cause(err)
-//!             description(err.description())
+//!             source(err)
 //!         }
 //!         Utf8(err: std::str::Utf8Error) {
-//!             description("utf8 error")
+//!             display("utf8 error")
 //!         }
 //!         Other(err: Box<std::error::Error>) {
-//!             cause(&**err)
-//!             description(err.description())
+//!             source(&**err)
 //!         }
 //!     }
 //! }
 //! ```
 //! Note you don't need to wrap value in `Some`, its implicit. In case you want
-//! `None` returned just omit the `cause`. You can't return `None`
+//! `None` returned just omit the `source`. You can't return `None`
 //! conditionally.
 //!
 //! To change how each clause is `Display`ed add `display(pattern,..args)`,
@@ -127,16 +119,16 @@
 //! # #[macro_use] extern crate quick_error;
 //! # fn main() {}
 //! #
-//! use std::error::Error; // put methods like `description()` of this trait into scope
+//! use std::error::Error; // put methods like `source()` of this trait into scope
 //!
 //! quick_error! {
 //!     #[derive(Debug)]
 //!     pub enum SomeError {
 //!         Io(err: std::io::Error) {
-//!             display(x) -> ("{}: {}", x.description(), err)
+//!             display(x) -> ("I/O: {}", err)
 //!         }
 //!         Utf8(err: std::str::Utf8Error) {
-//!             display(self_) -> ("{}, valid up to {}", self_.description(), err.valid_up_to())
+//!             display(self_) -> ("UTF-8 error. Valid up to {}", err.valid_up_to())
 //!         }
 //!     }
 //! }
@@ -228,12 +220,12 @@
 //! }
 //!
 //! fn openfile(path: &Path) -> Result<(), Error> {
-//!     try!(File::open(path).context(path));
+//!     File::open(path).context(path)?;
 //!
 //!     // If we didn't have context, the line above would be written as;
 //!     //
-//!     // try!(File::open(path)
-//!     //     .map_err(|err| Error::File(path.to_path_buf(), err)));
+//!     // File::open(path)
+//!     //     .map_err(|err| Error::File(path.to_path_buf(), err))?;
 //!
 //!     Ok(())
 //! }
@@ -256,7 +248,7 @@
 //!
 //! More info on context in [this article](http://bit.ly/1PsuxDt).
 //!
-//! All forms of `from`, `display`, `description`, `cause`, and `context`
+//! All forms of `from`, `display`, `source`, and `context`
 //! clauses can be combined and put in arbitrary order. Only `from` and
 //! `context` can be used multiple times in single variant of enumeration.
 //! Docstrings are also okay.  Empty braces can be omitted as of quick_error
@@ -300,7 +292,6 @@
 //! It's possible to declare internal enum as public too.
 //!
 //!
-
 
 /// Main macro that does all the work
 #[macro_export]
@@ -379,11 +370,8 @@ macro_rules! quick_error {
         }
 
         impl ::std::error::Error for $strname {
-            fn description(&self) -> &str {
-                self.0.description()
-            }
-            fn cause(&self) -> Option<&::std::error::Error> {
-                self.0.cause()
+            fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+                self.0.source()
             }
         }
     };
@@ -464,8 +452,6 @@ macro_rules! quick_error {
         queue [ #[$qmeta:meta] $( $tail:tt )*]
     ) => {
         quick_error!(SORT [$( $def )*]
-            enum [$( $(#[$emeta])* => $eitem $(( $($etyp),* ))* )*
-                     $(#[$bmeta])* => $bitem: $bmode $(( $($btyp),* ))*]
             items [$($( #[$imeta:meta] )*
                       => $iitem: $imode [$( $ivar:$ityp ),*] {$( $ifuncs )*} )*
                      $bitem: $bmode [$( $bvar:$btyp ),*] {} ]
@@ -482,7 +468,7 @@ macro_rules! quick_error {
     ) => {
         quick_error!(SORT [$( $def )*]
             items [$( $(#[$imeta])* => $iitem: $imode [$( $ivar:$ityp ),*] {$( $ifuncs )*} )*]
-            buf [$( #[$bmeta] )* => $bitem: TUPLE [$( $qvar:$qtyp ),*] ]
+            buf [$( #[$bmeta] )* => $bitem: TUPLE [$( $qvar:$qtyp ),+] ]
             queue [$( $tail )*]
         );
     };
@@ -496,7 +482,7 @@ macro_rules! quick_error {
     ) => {
         quick_error!(SORT [$( $def )*]
             items [$( $(#[$imeta])* => $iitem: $imode [$( $ivar:$ityp ),*] {$( $ifuncs )*} )*]
-            buf [$( #[$bmeta] )* => $bitem: STRUCT [$( $qvar:$qtyp ),*] ]
+            buf [$( #[$bmeta] )* => $bitem: STRUCT [$( $qvar:$qtyp ),+] ]
             queue [$( $tail )*]);
     };
     // Add struct enum-variant, with excess comma - e.g. { descr: &'static str, }
@@ -509,7 +495,7 @@ macro_rules! quick_error {
     ) => {
         quick_error!(SORT [$( $def )*]
             items [$( $(#[$imeta])* => $iitem: $imode [$( $ivar:$ityp ),*] {$( $ifuncs )*} )*]
-            buf [$( #[$bmeta] )* => $bitem: STRUCT [$( $qvar:$qtyp ),*] ]
+            buf [$( #[$bmeta] )* => $bitem: STRUCT [$( $qvar:$qtyp ),+] ]
             queue [$( $tail )*]);
     };
     // Add braces and flush always on braces
@@ -571,7 +557,7 @@ macro_rules! quick_error {
         pub enum $name {
             $(
                 $(#[$imeta])*
-                $iitem $(($( $ttyp ),*))* $({$( $svar: $styp ),*})*,
+                $iitem $(($( $ttyp ),+))* $({$( $svar: $styp ),*})*,
             )*
         }
     };
@@ -589,7 +575,7 @@ macro_rules! quick_error {
         enum $name {
             $(
                 $(#[$imeta])*
-                $iitem $(($( $ttyp ),*))* $({$( $svar: $styp ),*})*,
+                $iitem $(($( $ttyp ),+))* $({$( $svar: $styp ),*})*,
             )*
         }
     };
@@ -615,7 +601,7 @@ macro_rules! quick_error {
     ) => {
         quick_error!(ENUM_DEFINITION [ $($def)* ]
             body [$($( #[$imeta] )* => $iitem ($(($( $ttyp ),+))*) {$({$( $svar: $styp ),*})*} )*
-                    $( #[$qmeta] )* => $qitem (($( $qtyp ),*)) {} ]
+                    $( #[$qmeta] )* => $qitem (($( $qtyp ),+)) {} ]
             queue [ $($queue)* ]
         );
     };
@@ -668,28 +654,14 @@ macro_rules! quick_error {
         #[allow(unused_doc_comment)]
         #[allow(unused_doc_comments)]
         impl ::std::error::Error for $name {
-            fn description(&self) -> &str {
+            fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
                 match *self {
                     $(
                         $(#[$imeta])*
                         quick_error!(ITEM_PATTERN
                             $name $item: $imode [$( ref $var ),*]
                         ) => {
-                            quick_error!(FIND_DESCRIPTION_IMPL
-                                $item: $imode self fmt [$( $var ),*]
-                                {$( $funcs )*})
-                        }
-                    )*
-                }
-            }
-            fn cause(&self) -> Option<&::std::error::Error> {
-                match *self {
-                    $(
-                        $(#[$imeta])*
-                        quick_error!(ITEM_PATTERN
-                            $name $item: $imode [$( ref $var ),*]
-                        ) => {
-                            quick_error!(FIND_CAUSE_IMPL
+                            quick_error!(FIND_SOURCE_IMPL
                                 $item: $imode [$( $var ),*]
                                 {$( $funcs )*})
                         }
@@ -734,44 +706,24 @@ macro_rules! quick_error {
         { }
     ) => {
         |self_: &$name, f: &mut ::std::fmt::Formatter| {
-            write!(f, "{}", ::std::error::Error::description(self_))
+            write!(f, "{:?}", self_)
         }
     };
-    (FIND_DESCRIPTION_IMPL $item:ident: $imode:tt $me:ident $fmt:ident
+    (FIND_SOURCE_IMPL $item:ident: $imode:tt
         [$( $var:ident ),*]
-        { description($expr:expr) $( $tail:tt )*}
-    ) => {
-        $expr
-    };
-    (FIND_DESCRIPTION_IMPL $item:ident: $imode:tt $me:ident $fmt:ident
-        [$( $var:ident ),*]
-        { $t:tt $( $tail:tt )*}
-    ) => {
-        quick_error!(FIND_DESCRIPTION_IMPL
-            $item: $imode $me $fmt [$( $var ),*]
-            {$( $tail )*})
-    };
-    (FIND_DESCRIPTION_IMPL $item:ident: $imode:tt $me:ident $fmt:ident
-        [$( $var:ident ),*]
-        { }
-    ) => {
-        stringify!($item)
-    };
-    (FIND_CAUSE_IMPL $item:ident: $imode:tt
-        [$( $var:ident ),*]
-        { cause($expr:expr) $( $tail:tt )*}
+        { source($expr:expr) $( $tail:tt )*}
     ) => {
         Some($expr)
     };
-    (FIND_CAUSE_IMPL $item:ident: $imode:tt
+    (FIND_SOURCE_IMPL $item:ident: $imode:tt
         [$( $var:ident ),*]
         { $t:tt $( $tail:tt )*}
     ) => {
-        quick_error!(FIND_CAUSE_IMPL
+        quick_error!(FIND_SOURCE_IMPL
             $item: $imode [$( $var ),*]
             { $($tail)* })
     };
-    (FIND_CAUSE_IMPL $item:ident: $imode:tt
+    (FIND_SOURCE_IMPL $item:ident: $imode:tt
         [$( $var:ident ),*]
         { }
     ) => {
@@ -972,9 +924,7 @@ macro_rules! quick_error {
     => { quick_error!(ERROR_CHECK $imode $($tail)*); };
     (ERROR_CHECK $imode:tt display($pattern: expr, $( $exprs:tt )*) $( $tail:tt )*)
     => { quick_error!(ERROR_CHECK $imode $($tail)*); };
-    (ERROR_CHECK $imode:tt description($expr:expr) $( $tail:tt )*)
-    => { quick_error!(ERROR_CHECK $imode $($tail)*); };
-    (ERROR_CHECK $imode:tt cause($expr:expr) $($tail:tt)*)
+    (ERROR_CHECK $imode:tt source($expr:expr) $($tail:tt)*)
     => { quick_error!(ERROR_CHECK $imode $($tail)*); };
     (ERROR_CHECK $imode:tt from() $($tail:tt)*)
     => { quick_error!(ERROR_CHECK $imode $($tail)*); };
@@ -996,7 +946,6 @@ macro_rules! quick_error {
     // Utility functions
     (IDENT $ident:ident) => { $ident }
 }
-
 
 /// Generic context type
 ///
@@ -1021,15 +970,13 @@ impl<T, E> ResultExt<T, E> for Result<T, E> {
     }
 }
 
-
-
 #[cfg(test)]
 mod test {
+    use std::error::Error;
     use std::num::{ParseFloatError, ParseIntError};
+    use std::path::{Path, PathBuf};
     use std::str::Utf8Error;
     use std::string::FromUtf8Error;
-    use std::error::Error;
-    use std::path::{Path, PathBuf};
 
     use super::ResultExt;
 
@@ -1045,16 +992,15 @@ mod test {
     fn bare_item_direct() {
         assert_eq!(format!("{}", Bare::One), "One".to_string());
         assert_eq!(format!("{:?}", Bare::One), "One".to_string());
-        assert_eq!(Bare::One.description(), "One".to_string());
-        assert!(Bare::One.cause().is_none());
+        assert!(Bare::One.source().is_none());
     }
+
     #[test]
     fn bare_item_trait() {
-        let err: &Error = &Bare::Two;
+        let err: &dyn Error = &Bare::Two;
         assert_eq!(format!("{}", err), "Two".to_string());
         assert_eq!(format!("{:?}", err), "Two".to_string());
-        assert_eq!(err.description(), "Two".to_string());
-        assert!(err.cause().is_none());
+        assert!(err.source().is_none());
     }
 
     quick_error! {
@@ -1070,15 +1016,18 @@ mod test {
 
     #[test]
     fn wrapper() {
-        assert_eq!(format!("{}", Wrapper::from(Wrapped::One)),
-            "One".to_string());
-        assert_eq!(format!("{}",
-            Wrapper::from(Wrapped::from(String::from("hello")))),
-            "two: hello".to_string());
-        assert_eq!(format!("{:?}", Wrapper::from(Wrapped::One)),
-            "Wrapper(One)".to_string());
-        assert_eq!(Wrapper::from(Wrapped::One).description(),
-            "One".to_string());
+        assert_eq!(
+            format!("{}", Wrapper::from(Wrapped::One)),
+            "One".to_string()
+        );
+        assert_eq!(
+            format!("{}", Wrapper::from(Wrapped::from(String::from("hello")))),
+            "two: hello".to_string()
+        );
+        assert_eq!(
+            format!("{:?}", Wrapper::from(Wrapped::One)),
+            "Wrapper(One)".to_string()
+        );
     }
 
     quick_error! {
@@ -1087,19 +1036,16 @@ mod test {
             /// ParseFloat Error
             ParseFloatError(err: ParseFloatError) {
                 from()
-                description(err.description())
                 display("parse float error: {err}", err=err)
-                cause(err)
+                source(err)
             }
             Other(descr: &'static str) {
-                description(descr)
                 display("Error: {}", descr)
             }
             /// FromUtf8 Error
             FromUtf8Error(err: Utf8Error, source: Vec<u8>) {
-                cause(err)
-                display(me) -> ("{desc} at index {pos}: {err}", desc=me.description(), pos=err.valid_up_to(), err=err)
-                description("utf8 error")
+                source(err)
+                display(me) -> ("{desc} at index {pos}: {err}", desc="utf8 error", pos=err.valid_up_to(), err=err)
                 from(err: FromUtf8Error) -> (err.utf8_error().clone(), err.into_bytes())
             }
             Discard {
@@ -1113,49 +1059,68 @@ mod test {
 
     #[test]
     fn tuple_wrapper_err() {
-        let cause = "one and a half times pi".parse::<f32>().unwrap_err();
-        let err = TupleWrapper::ParseFloatError(cause.clone());
-        assert_eq!(format!("{}", err), format!("parse float error: {}", cause));
-        assert_eq!(format!("{:?}", err), format!("ParseFloatError({:?})", cause));
-        assert_eq!(err.description(), cause.description());
-        assert_eq!(format!("{:?}", err.cause().unwrap()), format!("{:?}", cause));
+        let source = "one and a half times pi".parse::<f32>().unwrap_err();
+        let err = TupleWrapper::ParseFloatError(source.clone());
+        assert_eq!(format!("{}", err), format!("parse float error: {}", source));
+        assert_eq!(
+            format!("{:?}", err),
+            format!("ParseFloatError({:?})", source)
+        );
+        assert_eq!(
+            format!("{:?}", err.source().unwrap()),
+            format!("{:?}", source)
+        );
     }
 
     #[test]
     fn tuple_wrapper_trait_str() {
         let desc = "hello";
-        let err: &Error = &TupleWrapper::Other(desc);
+        let err: &dyn Error = &TupleWrapper::Other(desc);
         assert_eq!(format!("{}", err), format!("Error: {}", desc));
         assert_eq!(format!("{:?}", err), format!("Other({:?})", desc));
-        assert_eq!(err.description(), desc);
-        assert!(err.cause().is_none());
+        assert!(err.source().is_none());
     }
 
     #[test]
     fn tuple_wrapper_trait_two_fields() {
         let invalid_utf8: Vec<u8> = vec![0, 159, 146, 150];
-        let cause = String::from_utf8(invalid_utf8.clone()).unwrap_err().utf8_error();
-        let err: &Error = &TupleWrapper::FromUtf8Error(cause.clone(), invalid_utf8.clone());
-        assert_eq!(format!("{}", err), format!("{desc} at index {pos}: {cause}", desc=err.description(), pos=cause.valid_up_to(), cause=cause));
-        assert_eq!(format!("{:?}", err), format!("FromUtf8Error({:?}, {:?})", cause, invalid_utf8));
-        assert_eq!(err.description(), "utf8 error");
-        assert_eq!(format!("{:?}", err.cause().unwrap()), format!("{:?}", cause));
+        let source = String::from_utf8(invalid_utf8.clone())
+            .unwrap_err()
+            .utf8_error();
+        let err: &dyn Error = &TupleWrapper::FromUtf8Error(source.clone(), invalid_utf8.clone());
+        assert_eq!(
+            format!("{}", err),
+            format!(
+                "{desc} at index {pos}: {source}",
+                desc = "utf8 error",
+                pos = source.valid_up_to(),
+                source = source
+            )
+        );
+        assert_eq!(
+            format!("{:?}", err),
+            format!("FromUtf8Error({:?}, {:?})", source, invalid_utf8)
+        );
+        assert_eq!(
+            format!("{:?}", err.source().unwrap()),
+            format!("{:?}", source)
+        );
     }
 
     #[test]
     fn tuple_wrapper_from() {
-        let cause = "one and a half times pi".parse::<f32>().unwrap_err();
-        let err = TupleWrapper::ParseFloatError(cause.clone());
-        let err_from: TupleWrapper = From::from(cause);
+        let source = "one and a half times pi".parse::<f32>().unwrap_err();
+        let err = TupleWrapper::ParseFloatError(source.clone());
+        let err_from: TupleWrapper = From::from(source);
         assert_eq!(err_from, err);
     }
 
     #[test]
     fn tuple_wrapper_custom_from() {
         let invalid_utf8: Vec<u8> = vec![0, 159, 146, 150];
-        let cause = String::from_utf8(invalid_utf8.clone()).unwrap_err();
-        let err = TupleWrapper::FromUtf8Error(cause.utf8_error().clone(), invalid_utf8);
-        let err_from: TupleWrapper = From::from(cause);
+        let source = String::from_utf8(invalid_utf8.clone()).unwrap_err();
+        let err = TupleWrapper::FromUtf8Error(source.utf8_error().clone(), invalid_utf8);
+        let err_from: TupleWrapper = From::from(source);
         assert_eq!(err_from, err);
     }
 
@@ -1164,8 +1129,7 @@ mod test {
         let err: TupleWrapper = From::from("hello");
         assert_eq!(format!("{}", err), format!("Discard"));
         assert_eq!(format!("{:?}", err), format!("Discard"));
-        assert_eq!(err.description(), "Discard");
-        assert!(err.cause().is_none());
+        assert!(err.source().is_none());
     }
 
     #[test]
@@ -1173,8 +1137,7 @@ mod test {
         let err: TupleWrapper = TupleWrapper::Singleton;
         assert_eq!(format!("{}", err), format!("Just a string"));
         assert_eq!(format!("{:?}", err), format!("Singleton"));
-        assert_eq!(err.description(), "Singleton");
-        assert!(err.cause().is_none());
+        assert!(err.source().is_none());
     }
 
     quick_error! {
@@ -1182,14 +1145,12 @@ mod test {
         pub enum StructWrapper {
             // Utf8 Error
             Utf8Error{ err: Utf8Error, hint: Option<&'static str> } {
-                cause(err)
-                display(me) -> ("{desc} at index {pos}: {err}", desc=me.description(), pos=err.valid_up_to(), err=err)
-                description("utf8 error")
+                source(err)
+                display(me) -> ("{desc} at index {pos}: {err}", desc="utf8 error", pos=err.valid_up_to(), err=err)
                 from(err: Utf8Error) -> { err: err, hint: None }
             }
             // Utf8 Error
             ExcessComma { descr: &'static str, } {
-                description(descr)
                 display("Error: {}", descr)
             }
         }
@@ -1198,20 +1159,47 @@ mod test {
     #[test]
     fn struct_wrapper_err() {
         let invalid_utf8: Vec<u8> = vec![0, 159, 146, 150];
-        let cause = String::from_utf8(invalid_utf8.clone()).unwrap_err().utf8_error();
-        let err: &Error = &StructWrapper::Utf8Error{ err: cause.clone(), hint: Some("nonsense") };
-        assert_eq!(format!("{}", err), format!("{desc} at index {pos}: {cause}", desc=err.description(), pos=cause.valid_up_to(), cause=cause));
-        assert_eq!(format!("{:?}", err), format!("Utf8Error {{ err: {:?}, hint: {:?} }}", cause, Some("nonsense")));
-        assert_eq!(err.description(), "utf8 error");
-        assert_eq!(format!("{:?}", err.cause().unwrap()), format!("{:?}", cause));
+        let source = String::from_utf8(invalid_utf8.clone())
+            .unwrap_err()
+            .utf8_error();
+        let err: &dyn Error = &StructWrapper::Utf8Error {
+            err: source.clone(),
+            hint: Some("nonsense"),
+        };
+        assert_eq!(
+            format!("{}", err),
+            format!(
+                "{desc} at index {pos}: {source}",
+                desc = "utf8 error",
+                pos = source.valid_up_to(),
+                source = source
+            )
+        );
+        assert_eq!(
+            format!("{:?}", err),
+            format!(
+                "Utf8Error {{ err: {:?}, hint: {:?} }}",
+                source,
+                Some("nonsense")
+            )
+        );
+        assert_eq!(
+            format!("{:?}", err.source().unwrap()),
+            format!("{:?}", source)
+        );
     }
 
     #[test]
     fn struct_wrapper_struct_from() {
         let invalid_utf8: Vec<u8> = vec![0, 159, 146, 150];
-        let cause = String::from_utf8(invalid_utf8.clone()).unwrap_err().utf8_error();
-        let err = StructWrapper::Utf8Error{ err: cause.clone(), hint: None };
-        let err_from: StructWrapper = From::from(cause);
+        let source = String::from_utf8(invalid_utf8.clone())
+            .unwrap_err()
+            .utf8_error();
+        let err = StructWrapper::Utf8Error {
+            err: source.clone(),
+            hint: None,
+        };
+        let err_from: StructWrapper = From::from(source);
         assert_eq!(err_from, err);
     }
 
@@ -1220,9 +1208,11 @@ mod test {
         let descr = "hello";
         let err = StructWrapper::ExcessComma { descr: descr };
         assert_eq!(format!("{}", err), format!("Error: {}", descr));
-        assert_eq!(format!("{:?}", err), format!("ExcessComma {{ descr: {:?} }}", descr));
-        assert_eq!(err.description(), descr);
-        assert!(err.cause().is_none());
+        assert_eq!(
+            format!("{:?}", err),
+            format!("ExcessComma {{ descr: {:?} }}", descr)
+        );
+        assert!(err.source().is_none());
     }
 
     quick_error! {
@@ -1253,19 +1243,23 @@ mod test {
     #[test]
     fn parse_float_error() {
         fn parse_float(s: &str) -> Result<f32, ContextErr> {
-            Ok(try!(s.parse().context(s)))
+            Ok(s.parse().context(s)?)
         }
-        assert_eq!(format!("{}", parse_float("12ab").unwrap_err()),
-            r#"Float error "12ab": invalid float literal"#);
+        assert_eq!(
+            format!("{}", parse_float("12ab").unwrap_err()),
+            r#"Float error "12ab": invalid float literal"#
+        );
     }
 
     #[test]
     fn parse_int_error() {
         fn parse_int(s: &str) -> Result<i32, ContextErr> {
-            Ok(try!(s.parse().context(s)))
+            Ok(s.parse().context(s)?)
         }
-        assert_eq!(format!("{}", parse_int("12.5").unwrap_err()),
-            r#"Int error "12.5": invalid digit found in string"#);
+        assert_eq!(
+            format!("{}", parse_int("12.5").unwrap_err()),
+            r#"Int error "12.5": invalid digit found in string"#
+        );
     }
 
     #[test]
@@ -1274,25 +1268,24 @@ mod test {
             s.parse().context(s).unwrap()
         }
         assert_eq!(parse_int("12"), 12);
-        assert_eq!(format!("{:?}", "x".parse::<i32>().context("x")),
-            r#"Err(Context("x", ParseIntError { kind: InvalidDigit }))"#);
+        assert_eq!(
+            format!("{:?}", "x".parse::<i32>().context("x")),
+            r#"Err(Context("x", ParseIntError { kind: InvalidDigit }))"#
+        );
     }
 
     #[test]
     fn path_context() {
-        fn parse_utf<P: AsRef<Path>>(s: &[u8], p: P)
-            -> Result<(), ContextErr>
-        {
-            try!(::std::str::from_utf8(s).context(p));
+        fn parse_utf<P: AsRef<Path>>(s: &[u8], p: P) -> Result<(), ContextErr> {
+            ::std::str::from_utf8(s).context(p)?;
             Ok(())
         }
         let etext = parse_utf(b"a\x80\x80", "/etc").unwrap_err().to_string();
-        assert!(etext.starts_with(
-            "Path error at \"/etc\": invalid utf-8"));
-        let etext = parse_utf(b"\x80\x80", PathBuf::from("/tmp")).unwrap_err()
+        assert!(etext.starts_with("Path error at \"/etc\": invalid utf-8"));
+        let etext = parse_utf(b"\x80\x80", PathBuf::from("/tmp"))
+            .unwrap_err()
             .to_string();
-        assert!(etext.starts_with(
-            "Path error at \"/tmp\": invalid utf-8"));
+        assert!(etext.starts_with("Path error at \"/tmp\": invalid utf-8"));
     }
 
     #[test]
@@ -1305,5 +1298,39 @@ mod test {
                 Variant
             }
         }
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn cause_struct_wrapper_err() {
+        let invalid_utf8: Vec<u8> = vec![0, 159, 146, 150];
+        let cause = String::from_utf8(invalid_utf8.clone())
+            .unwrap_err()
+            .utf8_error();
+        let err: &dyn Error = &StructWrapper::Utf8Error {
+            err: cause.clone(),
+            hint: Some("nonsense"),
+        };
+        assert_eq!(
+            format!("{}", err),
+            format!(
+                "{desc} at index {pos}: {cause}",
+                desc = "utf8 error",
+                pos = cause.valid_up_to(),
+                cause = cause
+            )
+        );
+        assert_eq!(
+            format!("{:?}", err),
+            format!(
+                "Utf8Error {{ err: {:?}, hint: {:?} }}",
+                cause,
+                Some("nonsense")
+            )
+        );
+        assert_eq!(
+            format!("{:?}", err.cause().unwrap()),
+            format!("{:?}", cause)
+        );
     }
 }

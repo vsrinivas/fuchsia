@@ -1,9 +1,9 @@
 use crate::context::Context;
 use crate::error::RenderError;
+use crate::json::value::ScopedJson;
 use crate::output::Output;
 use crate::registry::Registry;
-use crate::render::{Helper, RenderContext};
-use crate::value::ScopedJson;
+use crate::render::{do_escape, Helper, RenderContext};
 
 pub use self::helper_each::EACH_HELPER;
 pub use self::helper_if::{IF_HELPER, UNLESS_HELPER};
@@ -12,26 +12,27 @@ pub use self::helper_lookup::LOOKUP_HELPER;
 pub use self::helper_raw::RAW_HELPER;
 pub use self::helper_with::WITH_HELPER;
 
+/// A type alias for `Result<(), RenderError>`
 pub type HelperResult = Result<(), RenderError>;
 
 /// Helper Definition
 ///
-/// Implement `HelperDef` to create custom helper. You can retrieve useful information from these arguments.
+/// Implement `HelperDef` to create custom helpers. You can retrieve useful information from these arguments.
 ///
 /// * `&Helper`: current helper template information, contains name, params, hashes and nested template
 /// * `&Registry`: the global registry, you can find templates by name from registry
 /// * `&Context`: the whole data to render, in most case you can use data from `Helper`
 /// * `&mut RenderContext`: you can access data or modify variables (starts with @)/partials in render context, for example, @index of #each. See its document for detail.
-/// * `&mut Output`: where you write output to
+/// * `&mut dyn Output`: where you write output to
 ///
-/// By default, you can use bare function as helper definition because we have supported unboxed_closure. If you have stateful or configurable helper, you can create a struct to implement `HelperDef`.
+/// By default, you can use a bare function as a helper definition because we have supported unboxed_closure. If you have stateful or configurable helper, you can create a struct to implement `HelperDef`.
 ///
 /// ## Define an inline helper
 ///
 /// ```
 /// use handlebars::*;
 ///
-/// fn upper(h: &Helper, _: &Handlebars, _: &Context, rc: &mut RenderContext, out: &mut Output)
+/// fn upper(h: &Helper<'_, '_>, _: &Handlebars<'_>, _: &Context, rc: &mut RenderContext<'_, '_>, out: &mut Output)
 ///     -> HelperResult {
 ///    // get parameter from helper or throw an error
 ///    let param = h.param(0).and_then(|v| v.value().as_str()).unwrap_or("");
@@ -42,17 +43,17 @@ pub type HelperResult = Result<(), RenderError>;
 ///
 /// ## Define block helper
 ///
-/// Block helper is like `#if` or `#each` which has a inner template and an optional *inverse* template (the template in else branch). You can access the inner template by `helper.template()` and `helper.inverse()`. In most case you will just call `render` on it.
+/// Block helper is like `#if` or `#each` which has a inner template and an optional *inverse* template (the template in else branch). You can access the inner template by `helper.template()` and `helper.inverse()`. In most cases you will just call `render` on it.
 ///
 /// ```
 /// use handlebars::*;
 ///
 /// fn dummy_block<'reg, 'rc>(
 ///     h: &Helper<'reg, 'rc>,
-///     r: &'reg Handlebars,
-///     ctx: &Context,
-///     rc: &mut RenderContext<'reg>,
-///     out: &mut Output,
+///     r: &'reg Handlebars<'reg>,
+///     ctx: &'rc Context,
+///     rc: &mut RenderContext<'reg, 'rc>,
+///     out: &mut dyn Output,
 /// ) -> HelperResult {
 ///     h.template()
 ///         .map(|t| t.render(r, ctx, rc, out))
@@ -62,7 +63,7 @@ pub type HelperResult = Result<(), RenderError>;
 ///
 /// ## Define helper function using macro
 ///
-/// In most case you just need some simple function to call from template. We have  `handlebars_helper!` macro to simplify the job.
+/// In most cases you just need some simple function to call from templates. We have a `handlebars_helper!` macro to simplify the job.
 ///
 /// ```
 /// use handlebars::*;
@@ -74,13 +75,13 @@ pub type HelperResult = Result<(), RenderError>;
 /// ```
 ///
 
-pub trait HelperDef: Send + Sync {
+pub trait HelperDef {
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         _: &Helper<'reg, 'rc>,
-        _: &'reg Registry,
+        _: &'reg Registry<'reg>,
         _: &'rc Context,
-        _: &mut RenderContext<'reg>,
+        _: &mut RenderContext<'reg, 'rc>,
     ) -> Result<Option<ScopedJson<'reg, 'rc>>, RenderError> {
         Ok(None)
     }
@@ -88,16 +89,18 @@ pub trait HelperDef: Send + Sync {
     fn call<'reg: 'rc, 'rc>(
         &self,
         h: &Helper<'reg, 'rc>,
-        r: &'reg Registry,
+        r: &'reg Registry<'reg>,
         ctx: &'rc Context,
-        rc: &mut RenderContext<'reg>,
-        out: &mut Output,
+        rc: &mut RenderContext<'reg, 'rc>,
+        out: &mut dyn Output,
     ) -> HelperResult {
         if let Some(result) = self.call_inner(h, r, ctx, rc)? {
             if r.strict_mode() && result.is_missing() {
                 return Err(RenderError::strict_error(None));
             } else {
-                out.write(result.render().as_ref())?;
+                // auto escape according to settings
+                let output = do_escape(r, rc, result.render());
+                out.write(output.as_ref())?;
             }
         }
 
@@ -107,29 +110,28 @@ pub trait HelperDef: Send + Sync {
 
 /// implement HelperDef for bare function so we can use function as helper
 impl<
-        F: Send
-            + Sync
-            + for<'reg, 'rc> Fn(
-                &Helper<'reg, 'rc>,
-                &'reg Registry,
-                &'rc Context,
-                &mut RenderContext<'reg>,
-                &mut Output,
-            ) -> HelperResult,
+        F: for<'reg, 'rc> Fn(
+            &Helper<'reg, 'rc>,
+            &'reg Registry<'reg>,
+            &'rc Context,
+            &mut RenderContext<'reg, 'rc>,
+            &mut dyn Output,
+        ) -> HelperResult,
     > HelperDef for F
 {
     fn call<'reg: 'rc, 'rc>(
         &self,
         h: &Helper<'reg, 'rc>,
-        r: &'reg Registry,
+        r: &'reg Registry<'reg>,
         ctx: &'rc Context,
-        rc: &mut RenderContext<'reg>,
-        out: &mut Output,
+        rc: &mut RenderContext<'reg, 'rc>,
+        out: &mut dyn Output,
     ) -> HelperResult {
         (*self)(h, r, ctx, rc, out)
     }
 }
 
+mod block_util;
 pub(crate) mod helper_boolean;
 mod helper_each;
 mod helper_if;
@@ -137,6 +139,8 @@ mod helper_log;
 mod helper_lookup;
 mod helper_raw;
 mod helper_with;
+#[cfg(feature = "script_helper")]
+pub(crate) mod scripting;
 
 // pub type HelperDef = for <'a, 'b, 'c> Fn<(&'a Context, &'b Helper, &'b Registry, &'c mut RenderContext), Result<String, RenderError>>;
 //
@@ -144,7 +148,6 @@ mod helper_with;
 // h.template().unwrap().render(ctx, r, rc).unwrap()
 // }
 //
-
 #[cfg(test)]
 mod test {
     use std::collections::BTreeMap;
@@ -152,10 +155,10 @@ mod test {
     use crate::context::Context;
     use crate::error::RenderError;
     use crate::helpers::HelperDef;
+    use crate::json::value::JsonRender;
     use crate::output::Output;
     use crate::registry::Registry;
     use crate::render::{Helper, RenderContext, Renderable};
-    use crate::value::JsonRender;
 
     #[derive(Clone, Copy)]
     struct MetaHelper;
@@ -164,10 +167,10 @@ mod test {
         fn call<'reg: 'rc, 'rc>(
             &self,
             h: &Helper<'reg, 'rc>,
-            r: &'reg Registry,
-            ctx: &Context,
-            rc: &mut RenderContext<'reg>,
-            out: &mut Output,
+            r: &'reg Registry<'reg>,
+            ctx: &'rc Context,
+            rc: &mut RenderContext<'reg, 'rc>,
+            out: &mut dyn Output,
         ) -> Result<(), RenderError> {
             let v = h.param(0).unwrap();
 
@@ -215,11 +218,11 @@ mod test {
         handlebars.register_helper(
             "helperMissing",
             Box::new(
-                |h: &Helper,
-                 _: &Registry,
+                |h: &Helper<'_, '_>,
+                 _: &Registry<'_>,
                  _: &Context,
-                 _: &mut RenderContext,
-                 out: &mut Output|
+                 _: &mut RenderContext<'_, '_>,
+                 out: &mut dyn Output|
                  -> Result<(), RenderError> {
                     let output = format!("{}{}", h.name(), h.param(0).unwrap().value());
                     out.write(output.as_ref())?;
@@ -230,11 +233,11 @@ mod test {
         handlebars.register_helper(
             "foo",
             Box::new(
-                |h: &Helper,
-                 _: &Registry,
+                |h: &Helper<'_, '_>,
+                 _: &Registry<'_>,
                  _: &Context,
-                 _: &mut RenderContext,
-                 out: &mut Output|
+                 _: &mut RenderContext<'_, '_>,
+                 out: &mut dyn Output|
                  -> Result<(), RenderError> {
                     let output = format!("{}", h.hash_get("value").unwrap().value().render());
                     out.write(output.as_ref())?;

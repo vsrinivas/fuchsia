@@ -262,7 +262,7 @@ group("gpt") {
 
 if (!(current_os == "fuchsia")) {
   group("handlebars") {
-    deps = [ ":handlebars-v2_0_0-beta_2" ]
+    deps = [ ":handlebars-v3_5_4" ]
   }
 }
 
@@ -3876,26 +3876,22 @@ rust_library("half-v1_6_0") {
   ]
 }
 
-rust_library("handlebars-v2_0_0-beta_2") {
+rust_library("handlebars-v3_5_4") {
   crate_name = "handlebars"
   crate_root = "//third_party/rust_crates/vendor/handlebars/src/lib.rs"
-  output_name = "handlebars-64c1f63c35898973"
+  output_name = "handlebars-57fc345ed0913234"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":hashbrown-v0_2_2" ]
-  deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":pest-v2_1_0" ]
   deps += [ ":pest_derive-v2_1_0($host_toolchain)" ]
-  deps += [ ":quick-error-v1_2_2" ]
-  deps += [ ":regex-v1_3_5" ]
+  deps += [ ":quick-error-v2_0_0" ]
   deps += [ ":serde-v1_0_116" ]
   deps += [ ":serde_json-v1_0_59" ]
-  deps += [ ":walkdir-v2_3_1" ]
 
   rustenv =
       [ "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/handlebars" ]
@@ -3903,37 +3899,9 @@ rust_library("handlebars-v2_0_0-beta_2") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=64c1f63c35898973",
-    "-Cextra-filename=-64c1f63c35898973",
+    "-Cmetadata=57fc345ed0913234",
+    "-Cextra-filename=-57fc345ed0913234",
     "--cfg=feature=\"default\"",
-    "--cfg=feature=\"dir_source\"",
-    "--cfg=feature=\"log\"",
-    "--cfg=feature=\"logging\"",
-    "--cfg=feature=\"walkdir\"",
-  ]
-}
-
-rust_library("hashbrown-v0_2_2") {
-  crate_name = "hashbrown"
-  crate_root = "//third_party/rust_crates/vendor/hashbrown/src/lib.rs"
-  output_name = "hashbrown-d251d5dab4b25374"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":serde-v1_0_116" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=d251d5dab4b25374",
-    "-Cextra-filename=-d251d5dab4b25374",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"serde\"",
   ]
 }
 
@@ -6678,7 +6646,7 @@ rust_library("pulse-v0_5_3") {
 
 rust_library("quick-error-v1_2_2") {
   crate_name = "quick_error"
-  crate_root = "//third_party/rust_crates/vendor/quick-error/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/quick-error-1.2.2/src/lib.rs"
   output_name = "quick_error-5bd842b4b1c97fb4"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -6694,6 +6662,27 @@ rust_library("quick-error-v1_2_2") {
     "--edition=2015",
     "-Cmetadata=5bd842b4b1c97fb4",
     "-Cextra-filename=-5bd842b4b1c97fb4",
+  ]
+}
+
+rust_library("quick-error-v2_0_0") {
+  crate_name = "quick_error"
+  crate_root = "//third_party/rust_crates/vendor/quick-error/src/lib.rs"
+  output_name = "quick_error-3a3190e4aad267f3"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=3a3190e4aad267f3",
+    "-Cextra-filename=-3a3190e4aad267f3",
   ]
 }
 

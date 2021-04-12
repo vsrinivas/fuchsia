@@ -17,7 +17,7 @@ fn format_helper(
     _: &Handlebars,
     _: &Context,
     _: &mut RenderContext,
-    out: &mut Output,
+    out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
     let param = h
@@ -28,6 +28,7 @@ fn format_helper(
     Ok(())
 }
 
+// a decorator registers helpers
 fn format_decorator(
     d: &Decorator,
     _: &Handlebars,
@@ -45,7 +46,7 @@ fn format_decorator(
                   _: &Handlebars,
                   _: &Context,
                   _: &mut RenderContext,
-                  out: &mut Output| {
+                  out: &mut dyn Output| {
                 // get parameter from helper or throw an error
                 let param = h
                     .param(0)
@@ -59,13 +60,39 @@ fn format_decorator(
     Ok(())
 }
 
+// a decorator mutates current context data
+fn set_decorator(
+    d: &Decorator,
+    _: &Handlebars,
+    ctx: &Context,
+    rc: &mut RenderContext,
+) -> Result<(), RenderError> {
+    // get the input of decorator
+    let data_to_set = d.hash();
+    // retrieve the json value in current context
+    let ctx_data = ctx.data();
+
+    if let Json::Object(m) = ctx_data {
+        let mut new_ctx_data = m.clone();
+
+        for (k, v) in data_to_set {
+            new_ctx_data.insert(k.to_string(), v.value().clone());
+        }
+
+        rc.set_context(Context::wraps(new_ctx_data)?);
+        Ok(())
+    } else {
+        Err(RenderError::new("Cannot extend non-object data"))
+    }
+}
+
 // another custom helper
 fn rank_helper(
     h: &Helper,
     _: &Handlebars,
     _: &Context,
     _: &mut RenderContext,
-    out: &mut Output,
+    out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     let rank = h
         .param(0)
@@ -146,7 +173,7 @@ pub fn make_data() -> Map<String, Json> {
     data
 }
 
-fn main() -> Result<(), Box<Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     // create the handlebars registry
     let mut handlebars = Handlebars::new();
@@ -159,6 +186,7 @@ fn main() -> Result<(), Box<Error>> {
     handlebars.register_helper("format", Box::new(format_helper));
     handlebars.register_helper("ranking_label", Box::new(rank_helper));
     handlebars.register_decorator("format_suffix", Box::new(format_decorator));
+    handlebars.register_decorator("set", Box::new(set_decorator));
 
     // make data and render it
     let data = make_data();

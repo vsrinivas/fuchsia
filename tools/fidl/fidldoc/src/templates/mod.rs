@@ -21,17 +21,17 @@ pub trait FidldocTemplate {
 
 pub type HandlebarsHelper = fn(
     h: &Helper<'_, '_>,
-    _: &Handlebars,
+    _: &Handlebars<'_>,
     _: &Context,
-    _: &mut RenderContext<'_>,
+    _: &mut RenderContext<'_, '_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError>;
 
 pub fn get_link_helper(
     h: &Helper<'_, '_>,
-    _: &Handlebars,
+    _: &Handlebars<'_>,
     _: &Context,
-    _: &mut RenderContext<'_>,
+    _: &mut RenderContext<'_, '_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -48,9 +48,9 @@ fn sanitize_name(name: &str) -> String {
 
 pub fn remove_package_name(
     h: &Helper<'_, '_>,
-    _: &Handlebars,
+    _: &Handlebars<'_>,
     _: &Context,
-    _: &mut RenderContext<'_>,
+    _: &mut RenderContext<'_, '_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -69,9 +69,9 @@ fn rpn(name: &str) -> String {
 
 pub fn eq(
     h: &Helper<'_, '_>,
-    _: &Handlebars,
+    _: &Handlebars<'_>,
     _: &Context,
-    _: &mut RenderContext<'_>,
+    _: &mut RenderContext<'_, '_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -94,9 +94,9 @@ pub fn eq(
 
 fn package_link(
     h: &Helper<'_, '_>,
-    _: &Handlebars,
+    _: &Handlebars<'_>,
     _: &Context,
-    _: &mut RenderContext<'_>,
+    _: &mut RenderContext<'_, '_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -136,9 +136,9 @@ fn pl(name: &str, base: &str) -> String {
 
 fn doc_link(
     h: &Helper<'_, '_>,
-    _: &Handlebars,
+    _: &Handlebars<'_>,
     _: &Context,
-    _: &mut RenderContext<'_>,
+    _: &mut RenderContext<'_, '_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -166,9 +166,9 @@ fn dl(docstring: &str, base: &str) -> String {
 
 pub fn remove_parent_folders(
     h: &Helper<'_, '_>,
-    _: &Handlebars,
+    _: &Handlebars<'_>,
     _: &Context,
-    _: &mut RenderContext<'_>,
+    _: &mut RenderContext<'_, '_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -187,43 +187,44 @@ fn rpf(path: &str) -> String {
 
 fn source_link(
     h: &Helper<'_, '_>,
-    _: &Handlebars,
+    _: &Handlebars<'_>,
     _: &Context,
-    _: &mut RenderContext<'_>,
+    _: &mut RenderContext<'_, '_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
-    let fidl_json =
-        h.param(0).ok_or_else(|| RenderError::new("Param 0 is required for sl helper"))?;
+    let config = h.param(0).ok_or_else(|| RenderError::new("Param 0 is required for sl helper"))?;
+    let tag = h.param(1).ok_or_else(|| RenderError::new("Param 1 is required for sl helper"))?;
     let location =
-        h.param(1).ok_or_else(|| RenderError::new("Param 1 is required for sl helper"))?;
+        h.param(2).ok_or_else(|| RenderError::new("Param 2 is required for sl helper"))?;
     debug!(
-        "source_link called on {} and {}",
-        fidl_json.value().to_string(),
+        "source_link called on {}, {} and {}",
+        config.value().to_string(),
+        tag.value().to_string(),
         location.value().to_string()
     );
-    out.write(&sl(&fidl_json.value(), &location.value()))?;
+    out.write(&sl(&config.value(), &tag.value(), &location.value()))?;
     Ok(())
 }
 
-fn sl(fidl_json: &Value, location: &Value) -> String {
+fn sl(config: &Value, tag: &Value, location: &Value) -> String {
     if location.get("line").is_some() {
         // Output source link with line number
         format!(
             "{baseUrl}{tag}{filenamePrefix}{filename}{linePrefix}{lineNo}",
-            baseUrl = fidl_json["config"]["source"]["baseUrl"].as_str().unwrap(),
-            tag = fidl_json["tag"].as_str().unwrap(),
-            filenamePrefix = fidl_json["config"]["source"]["filenamePrefix"].as_str().unwrap(),
+            baseUrl = config["source"]["baseUrl"].as_str().unwrap(),
+            tag = tag.as_str().unwrap(),
+            filenamePrefix = config["source"]["filenamePrefix"].as_str().unwrap(),
             filename = rpf(location["filename"].as_str().unwrap()),
-            linePrefix = fidl_json["config"]["source"]["line"].as_str().unwrap(),
+            linePrefix = config["source"]["line"].as_str().unwrap(),
             lineNo = location["line"]
         )
     } else {
         // Output general source link, without line number
         format!(
             "{baseUrl}{tag}{filenamePrefix}{filename}",
-            baseUrl = fidl_json["config"]["source"]["baseUrl"].as_str().unwrap(),
-            tag = fidl_json["tag"].as_str().unwrap(),
-            filenamePrefix = fidl_json["config"]["source"]["filenamePrefix"].as_str().unwrap(),
+            baseUrl = config["source"]["baseUrl"].as_str().unwrap(),
+            tag = tag.as_str().unwrap(),
+            filenamePrefix = config["source"]["filenamePrefix"].as_str().unwrap(),
             filename = rpf(location["filename"].as_str().unwrap())
         )
     }
@@ -231,9 +232,9 @@ fn sl(fidl_json: &Value, location: &Value) -> String {
 
 pub fn one_line(
     h: &Helper<'_, '_>,
-    _: &Handlebars,
+    _: &Handlebars<'_>,
     _: &Context,
-    _: &mut RenderContext<'_>,
+    _: &mut RenderContext<'_, '_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -252,9 +253,9 @@ fn ol(description: &str) -> String {
 
 pub fn pulldown(
     h: &Helper<'_, '_>,
-    _: &Handlebars,
+    _: &Handlebars<'_>,
     _: &Context,
-    _: &mut RenderContext<'_>,
+    _: &mut RenderContext<'_, '_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -274,9 +275,9 @@ fn pd(text: &str) -> String {
 
 pub fn method_id(
     h: &Helper<'_, '_>,
-    _: &Handlebars,
+    _: &Handlebars<'_>,
     _: &Context,
-    _: &mut RenderContext<'_>,
+    _: &mut RenderContext<'_, '_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     let method_name =
@@ -374,20 +375,26 @@ mod test {
             "line": 42
         });
 
-        assert_eq!(sl(&fidl_json, &location_line), "https://example.com/HEAD:sample.fidl#42");
+        assert_eq!(
+            sl(&fidl_json["config"], &fidl_json["tag"], &location_line),
+            "https://example.com/HEAD:sample.fidl#42"
+        );
 
         let location_no_line = json!({
             "filename": "foobar.fidl"
         });
 
-        assert_eq!(sl(&fidl_json, &location_no_line), "https://example.com/HEAD:foobar.fidl");
+        assert_eq!(
+            sl(&fidl_json["config"], &fidl_json["tag"], &location_no_line),
+            "https://example.com/HEAD:foobar.fidl"
+        );
 
         let location_with_folders = json!({
             "filename": "../../sdk/fidl/fuchsia.bluetooth/address.fidl"
         });
 
         assert_eq!(
-            sl(&fidl_json, &location_with_folders),
+            sl(&fidl_json["config"], &fidl_json["tag"], &location_with_folders),
             "https://example.com/HEAD:sdk/fidl/fuchsia.bluetooth/address.fidl"
         );
 
@@ -397,7 +404,7 @@ mod test {
         });
 
         assert_eq!(
-            sl(&fidl_json, &location_with_folders_and_line),
+            sl(&fidl_json["config"], &fidl_json["tag"], &location_with_folders_and_line),
             "https://example.com/HEAD:sdk/fidl/fuchsia.bluetooth/address.fidl#9"
         );
     }

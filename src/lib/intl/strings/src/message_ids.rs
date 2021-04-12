@@ -151,7 +151,7 @@ library {{library}};
 enum MessageIds : uint64 {
   {{~#each constants~}}
   {{~#each comments}}
-    // {{this}}
+    // {{{this}}}
   {{~/each}}
     {{name}} = {{value}};
   {{~/each}}

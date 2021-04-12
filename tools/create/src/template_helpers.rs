@@ -13,7 +13,7 @@ handlebars_helper!(snake_case: |arg: str| arg.to_snek_case());
 handlebars_helper!(screaming_snake_case: |arg: str| arg.to_shouty_snake_case());
 
 /// Register all applicable helper template methods.
-pub fn register_helpers(handlebars: &mut Handlebars) {
+pub fn register_helpers(handlebars: &mut Handlebars<'_>) {
     // `{{pascal_case arg}}` converts `arg` to PascalCase.
     handlebars.register_helper("pascal_case", Box::new(pascal_case));
 

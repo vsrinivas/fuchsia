@@ -1,12 +1,12 @@
-use hashbrown::HashMap;
-
+use super::block_util::create_block;
+use crate::block::BlockParams;
 use crate::context::Context;
 use crate::error::RenderError;
 use crate::helpers::{HelperDef, HelperResult};
+use crate::json::value::JsonTruthy;
 use crate::output::Output;
 use crate::registry::Registry;
 use crate::render::{Helper, RenderContext, Renderable};
-use crate::value::{to_json, JsonTruthy};
 
 #[derive(Clone, Copy)]
 pub struct WithHelper;
@@ -14,58 +14,44 @@ pub struct WithHelper;
 impl HelperDef for WithHelper {
     fn call<'reg: 'rc, 'rc>(
         &self,
-        h: &Helper,
-        r: &Registry,
-        ctx: &Context,
-        rc: &mut RenderContext,
-        out: &mut Output,
+        h: &Helper<'reg, 'rc>,
+        r: &'reg Registry<'reg>,
+        ctx: &'rc Context,
+        rc: &mut RenderContext<'reg, 'rc>,
+        out: &mut dyn Output,
     ) -> HelperResult {
         let param = h
             .param(0)
             .ok_or_else(|| RenderError::new("Param not found for helper \"with\""))?;
 
-        rc.promote_local_vars();
+        let not_empty = param.value().is_truthy(false);
+        let template = if not_empty { h.template() } else { h.inverse() };
 
-        let result = {
-            let mut local_rc = rc.derive();
+        if not_empty {
+            let mut block = create_block(&param)?;
 
-            let not_empty = param.value().is_truthy(false);
-            let template = if not_empty { h.template() } else { h.inverse() };
-
-            if let Some(path_root) = param.path_root() {
-                let local_path_root = format!("{}/{}", local_rc.get_path(), path_root);
-                local_rc.push_local_path_root(local_path_root);
-            }
-            if not_empty {
-                if let Some(inner_path) = param.path() {
-                    let new_path = format!("{}/{}", local_rc.get_path(), inner_path);
-                    local_rc.set_path(new_path);
+            if let Some(block_param) = h.block_param() {
+                let mut params = BlockParams::new();
+                if param.context_path().is_some() {
+                    params.add_path(block_param, Vec::with_capacity(0))?;
+                } else {
+                    params.add_value(block_param, param.value().clone())?;
                 }
 
-                if let Some(block_param) = h.block_param() {
-                    let mut map = HashMap::new();
-                    map.insert(block_param.to_string(), to_json(param.value()));
-                    local_rc.push_block_context(&map)?;
-                }
+                block.set_block_params(params);
             }
 
-            let result = match template {
-                Some(t) => t.render(r, ctx, &mut local_rc, out),
-                None => Ok(()),
-            };
+            rc.push_block(block);
+        }
 
-            if h.block_param().is_some() {
-                local_rc.pop_block_context();
-            }
-
-            if param.path_root().is_some() {
-                local_rc.pop_local_path_root();
-            }
-
-            result
+        let result = match template {
+            Some(t) => t.render(r, ctx, rc, out),
+            None => Ok(()),
         };
 
-        rc.demote_local_vars();
+        if not_empty {
+            rc.pop_block();
+        }
         result
     }
 }
@@ -74,8 +60,8 @@ pub static WITH_HELPER: WithHelper = WithHelper;
 
 #[cfg(test)]
 mod test {
+    use crate::json::value::to_json;
     use crate::registry::Registry;
-    use crate::value::to_json;
 
     #[derive(Serialize)]
     struct Address {
@@ -234,5 +220,30 @@ mod test {
 
         let r0 = handlebars.render("t0", &data);
         assert_eq!(r0.ok().unwrap(), "1".to_string());
+    }
+
+    #[test]
+    fn test_else_context() {
+        let reg = Registry::new();
+        let template = "{{#with list}}A{{else}}{{foo}}{{/with}}";
+        let input = json!({"list": [], "foo": "bar"});
+        let rendered = reg.render_template(template, &input).unwrap();
+        assert_eq!("bar", rendered);
+    }
+
+    #[test]
+    fn test_derived_value() {
+        let hb = Registry::new();
+        let data = json!({"a": {"b": {"c": "d"}}});
+        let template = "{{#with (lookup a.b \"c\")}}{{this}}{{/with}}";
+        assert_eq!("d", hb.render_template(template, &data).unwrap());
+    }
+
+    #[test]
+    fn test_nested_derived_value() {
+        let hb = Registry::new();
+        let data = json!({"a": {"b": {"c": "d"}}});
+        let template = "{{#with (lookup a \"b\")}}{{#with this}}{{c}}{{/with}}{{/with}}";
+        assert_eq!("d", hb.render_template(template, &data).unwrap());
     }
 }

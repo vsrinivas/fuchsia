@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/handlebars/2.0.0-beta.2")]
+#![doc(html_root_url = "https://docs.rs/handlebars/3.5.4")]
 //! # Handlebars
 //!
 //! [Handlebars](http://handlebarsjs.com/) is a modern and extensible templating solution originally created in the JavaScript world. It's used by many popular frameworks like [Ember.js](http://emberjs.com) and Chaplin. It's also ported to some other platforms such as [Java](https://github.com/jknack/handlebars.java).
@@ -35,50 +35,51 @@
 //! I recommend you to walk through handlebars.js' [intro page](http://handlebarsjs.com)
 //! if you are not quite familiar with the template language itself.
 //!
-//! ## Rational: Why (this) Handlebars?
+//! ## Features
 //!
 //! Handlebars is a real-world templating system that you can use to build
 //! your application without pain.
 //!
-//! ### Features
-//!
-//! #### Isolation of Rust and HTML
+//! ### Isolation of Rust and HTML
 //!
 //! This library doesn't attempt to use some macro magic to allow you to
-//! write your template within your rust code. I admit that it's fun (and feel cool) to do
-//! that but it doesn't fit real-world use case in my opinion.
+//! write your template within your rust code. I admit that it's fun to do
+//! that but it doesn't fit real-world use cases.
 //!
-//! #### Limited but essential control structure built-in
+//! ### Limited but essential control structures built-in
 //!
-//! Only essential control directive `if` and `each` were built-in. This
-//! prevents you to put too much application logic into your template.
+//! Only essential control directives `if` and `each` are built-in. This
+//! prevents you from putting too much application logic into your template.
 //!
-//! #### Extensible helper system
+//! ### Extensible helper system
 //!
 //! You can write your own helper with Rust! It can be a block helper or
-//! inline helper. Put you logic into the helper and don't repeat
+//! inline helper. Put your logic into the helper and don't repeat
 //! yourself.
 //!
-//! #### Template inheritance
+//! The built-in helpers like `if` and `each` were written with these
+//! helper APIs and the APIs are fully available to developers.
+//!
+//! ### Template inheritance
 //!
 //! Every time I look into a templating system, I will investigate its
 //! support for [template inheritance][t].
 //!
 //! [t]: https://docs.djangoproject.com/en/1.9/ref/templates/language/#template-inheritance
 //!
-//! Template include is not enough. In most case you will need a skeleton
-//! of page as parent (header, footer, etc.), and embed you page into this
-//! parent.
+//! Template include is not sufficient for template reuse. In most cases
+//! you will need a skeleton of page as parent (header, footer, etc.), and
+//! embed your page into this parent.
 //!
-//! You can find a real example for template inheritance in
-//! `examples/partials.rs`, and templates used by this file.
+//! You can find a real example of template inheritance in
+//! `examples/partials.rs` and templates used by this file.
 //!
-//! #### Strict mode
+//! ### Strict mode
 //!
 //! Handlebars, the language designed to work with JavaScript, has no
-//! strict restriction on accessing non-existed fields or index. It
-//! generates empty string for such case. However, in Rust we want a
-//! little bit strict sometime.
+//! strict restriction on accessing nonexistent fields or indexes. It
+//! generates empty strings for such cases. However, in Rust we want to be
+//! a little stricter sometimes.
 //!
 //! By enabling `strict_mode` on handlebars:
 //!
@@ -88,37 +89,37 @@
 //! handlebars.set_strict_mode(true);
 //! ```
 //!
-//! You will get a `RenderError` when accessing fields that not exists.
+//! You will get a `RenderError` when accessing fields that do not exist.
 //!
-//! ### Limitations
+//! ## Limitations
 //!
-//! #### Compatibility with JavaScript version
+//! ### Compatibility with original JavaScript version
 //!
-//! This implementation is **not fully compatible** with the original javascript version.
+//! This implementation is **not fully compatible** with the original JavaScript version.
 //!
-//! First of all, mustache block is not supported. I suggest you to use `#if` and `#each` for
-//! same functionality.
+//! First of all, mustache blocks are not supported. I suggest you to use `#if` and `#each` for
+//! the same functionality.
 //!
 //! There are some other minor features missing:
 //!
 //! * Chained else [#12](https://github.com/sunng87/handlebars-rust/issues/12)
 //!
-//! Feel free to fire an issue on [github](https://github.com/sunng87/handlebars-rust/issues) if
+//! Feel free to file an issue on [github](https://github.com/sunng87/handlebars-rust/issues) if
 //! you find missing features.
 //!
-//! #### Static typed
+//! ### Types
 //!
 //! As a static typed language, it's a little verbose to use handlebars.
 //! Handlebars templating language is designed against JSON data type. In rust,
-//! we will convert user's structs, vectors or maps to JSON type in order to use
-//! in template. You have to make sure your data implements the `Serialize` trait
-//! from the [Serde](https://serde.rs) project.
+//! we will convert user's structs, vectors or maps into Serde-Json's `Value` type
+//! in order to use in templates. You have to make sure your data implements the
+//! `Serialize` trait from the [Serde](https://serde.rs) project.
 //!
 //! ## Usage
 //!
 //! ### Template Creation and Registration
 //!
-//! Templates are created from String and registered to `Handlebars` with a name.
+//! Templates are created from `String`s and registered to `Handlebars` with a name.
 //!
 //! ```
 //! # extern crate handlebars;
@@ -163,7 +164,7 @@
 //!
 //! That means, if you want to render something, you have to ensure the data type implements the `serde::Serialize` trait. Most rust internal types already have that trait. Use `#derive[Serialize]` for your types to generate default implementation.
 //!
-//! You can use default `render` function to render a template into `String`. From 0.9, there's `renderw` to render text into anything of `std::io::Write`.
+//! You can use default `render` function to render a template into `String`. From 0.9, there's `render_to_write` to render text into anything of `std::io::Write`.
 //!
 //! ```
 //! # use std::error::Error;
@@ -211,7 +212,7 @@
 //! #  age: i16,
 //! # }
 //!
-//! # fn main() -> Result<(), Box<Error>> {
+//! # fn main() -> Result<(), Box<dyn Error>> {
 //!   let source = "Hello, {{name}}";
 //!
 //!   let mut handlebars = Handlebars::new();
@@ -244,7 +245,7 @@
 //! struct SimpleHelper;
 //!
 //! impl HelperDef for SimpleHelper {
-//!   fn call<'reg: 'rc, 'rc>(&self, h: &Helper, _: &Handlebars, _: &Context, rc: &mut RenderContext, out: &mut Output) -> HelperResult {
+//!   fn call<'reg: 'rc, 'rc>(&self, h: &Helper, _: &Handlebars, _: &Context, rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult {
 //!     let param = h.param(0).unwrap();
 //!
 //!     out.write("1st helper: ")?;
@@ -254,7 +255,7 @@
 //! }
 //!
 //! // implement via bare function
-//! fn another_simple_helper (h: &Helper, _: &Handlebars, _: &Context, rc: &mut RenderContext, out: &mut Output) -> HelperResult {
+//! fn another_simple_helper (h: &Helper, _: &Handlebars, _: &Context, rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult {
 //!     let param = h.param(0).unwrap();
 //!
 //!     out.write("2nd helper: ")?;
@@ -263,13 +264,13 @@
 //! }
 //!
 //!
-//! # fn main() -> Result<(), Box<Error>> {
+//! # fn main() -> Result<(), Box<dyn Error>> {
 //!   let mut handlebars = Handlebars::new();
 //!   handlebars.register_helper("simple-helper", Box::new(SimpleHelper));
 //!   handlebars.register_helper("another-simple-helper", Box::new(another_simple_helper));
 //!   // via closure
 //!   handlebars.register_helper("closure-helper",
-//!       Box::new(|h: &Helper, r: &Handlebars, _: &Context, rc: &mut RenderContext, out: &mut Output| -> HelperResult {
+//!       Box::new(|h: &Helper, r: &Handlebars, _: &Context, rc: &mut RenderContext, out: &mut dyn Output| -> HelperResult {
 //!           let param = h.param(0).ok_or(RenderError::new("param not found"))?;
 //!
 //!           out.write("3rd helper: ")?;
@@ -284,18 +285,45 @@
 //! # }
 //!
 //! ```
+//!
 //! Data available to helper can be found in [Helper](struct.Helper.html). And there are more
 //! examples in [HelperDef](trait.HelperDef.html) page.
 //!
 //! You can learn more about helpers by looking into source code of built-in helpers.
+//!
+//!
+//! ### Script Helper
+//!
+//! Like our JavaScript counterparts, handlebars allows user to define simple helpers with
+//! a scripting language, [rhai](https://docs.rs/crate/rhai/). This can be enabled by
+//! turning on `script_helper` feature flag.
+//!
+//! A sample script:
+//!
+//! ```handlebars
+//! {{percent 0.34 label="%"}}
+//! ```
+//!
+//! ```rhai
+//! // percent.rhai
+//! // get first parameter from `params` array
+//! let value = params[0];
+//! // get key  value pair `label` from `hash` map
+//! let label = hash["label"];
+//!
+//! // compute the final string presentation
+//! (value * 100).to_string() + label
+//! ```
+//!
+//! A runnable [example](https://github.com/sunng87/handlebars-rust/blob/master/examples/script.rs) can be find in the repo.
 //!
 //! #### Built-in Helpers
 //!
 //! * `{{{{raw}}}} ... {{{{/raw}}}}` escape handlebars expression within the block
 //! * `{{#if ...}} ... {{else}} ... {{/if}}` if-else block
 //! * `{{#unless ...}} ... {{else}} .. {{/unless}}` if-not-else block
-//! * `{{#each ...}} ... {{/each}}` iterates over an array or object. Handlebar-rust doesn't support mustache iteration syntax so use this instead.
-//! * `{{#with ...}} ... {{/with}}` change current context. Similar to {{#each}}, used for replace corresponding mustache syntax.
+//! * `{{#each ...}} ... {{/each}}` iterates over an array or object. Handlebars-rust doesn't support mustache iteration syntax so use this instead.
+//! * `{{#with ...}} ... {{/with}}` change current context. Similar to `{{#each}}`, used for replace corresponding mustache syntax.
 //! * `{{lookup ... ...}}` get value from array by `@index` or `@key`
 //! * `{{> ...}}` include template with name
 //! * `{{log ...}}` log value with rust logger, default level: INFO. Currently you cannot change the level.
@@ -318,10 +346,8 @@
 //!
 
 #![allow(dead_code)]
+#![warn(rust_2018_idioms)]
 #![recursion_limit = "200"]
-
-#[macro_use]
-extern crate lazy_static;
 
 #[cfg(not(feature = "no_logging"))]
 #[macro_use]
@@ -330,7 +356,6 @@ extern crate log;
 #[cfg(test)]
 #[macro_use]
 extern crate maplit;
-extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 #[macro_use]
@@ -338,44 +363,39 @@ extern crate quick_error;
 #[cfg(test)]
 #[macro_use]
 extern crate serde_derive;
-#[cfg(test)]
-extern crate tempfile;
 
-extern crate regex;
-extern crate serde;
 #[allow(unused_imports)]
 #[macro_use]
 extern crate serde_json;
-#[cfg(not(feature = "no_dir_source"))]
-extern crate walkdir;
 
-extern crate hashbrown;
-
+pub use self::block::{BlockContext, BlockParams};
 pub use self::context::Context;
-pub use self::directives::DirectiveDef as DecoratorDef;
+pub use self::decorators::DecoratorDef;
 pub use self::error::{RenderError, TemplateError, TemplateFileError, TemplateRenderError};
 pub use self::helpers::{HelperDef, HelperResult};
+pub use self::json::path::Path;
+pub use self::json::value::{to_json, JsonRender, PathAndJson, ScopedJson};
 pub use self::output::Output;
 pub use self::registry::{html_escape, no_escape, EscapeFn, Registry as Handlebars};
-pub use self::render::{Directive as Decorator, Evaluable, Helper, RenderContext, Renderable};
-pub use self::support::str::StringWriter;
+pub use self::render::{Decorator, Evaluable, Helper, RenderContext, Renderable};
 pub use self::template::Template;
-pub use self::value::{to_json, JsonRender, PathAndJson, ScopedJson};
 
 #[doc(hidden)]
 pub use self::serde_json::Value as JsonValue;
 
 #[macro_use]
 mod macros;
+mod block;
 mod context;
-mod directives;
+mod decorators;
 mod error;
 mod grammar;
 mod helpers;
+mod json;
 mod output;
 mod partial;
 mod registry;
 mod render;
 mod support;
 pub mod template;
-mod value;
+mod util;

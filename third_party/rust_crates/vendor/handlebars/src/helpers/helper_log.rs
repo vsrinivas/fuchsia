@@ -2,11 +2,11 @@ use crate::context::Context;
 #[cfg(not(feature = "no_logging"))]
 use crate::error::RenderError;
 use crate::helpers::{HelperDef, HelperResult};
+#[cfg(not(feature = "no_logging"))]
+use crate::json::value::JsonRender;
 use crate::output::Output;
 use crate::registry::Registry;
 use crate::render::{Helper, RenderContext};
-#[cfg(not(feature = "no_logging"))]
-use crate::value::JsonRender;
 #[cfg(not(feature = "no_logging"))]
 use log::Level;
 #[cfg(not(feature = "no_logging"))]
@@ -19,27 +19,32 @@ pub struct LogHelper;
 impl HelperDef for LogHelper {
     fn call<'reg: 'rc, 'rc>(
         &self,
-        h: &Helper,
-        _: &Registry,
-        _: &Context,
-        _: &mut RenderContext,
-        _: &mut Output,
+        h: &Helper<'reg, 'rc>,
+        _: &'reg Registry<'reg>,
+        _: &'rc Context,
+        _: &mut RenderContext<'reg, 'rc>,
+        _: &mut dyn Output,
     ) -> HelperResult {
-        let param = h
-            .param(0)
-            .ok_or_else(|| RenderError::new("Param not found for helper \"log\""))?;
+        let param_to_log = h
+            .params()
+            .iter()
+            .map(|p| {
+                if let Some(ref relative_path) = p.relative_path() {
+                    format!("{}: {}", relative_path, p.value().render())
+                } else {
+                    p.value().render()
+                }
+            })
+            .collect::<Vec<String>>()
+            .join(", ");
+
         let level = h
             .hash_get("level")
             .and_then(|v| v.value().as_str())
             .unwrap_or("info");
 
         if let Ok(log_level) = Level::from_str(level) {
-            log!(
-                log_level,
-                "{}: {}",
-                param.path().unwrap_or(&"".to_owned()),
-                param.value().render()
-            )
+            log!(log_level, "{}", param_to_log)
         } else {
             return Err(RenderError::new(&format!(
                 "Unsupported logging level {}",
@@ -54,11 +59,11 @@ impl HelperDef for LogHelper {
 impl HelperDef for LogHelper {
     fn call<'reg: 'rc, 'rc>(
         &self,
-        _: &Helper,
-        _: &Registry,
+        _: &Helper<'reg, 'rc>,
+        _: &Registry<'reg>,
         _: &Context,
-        _: &mut RenderContext,
-        _: &mut Output,
+        _: &mut RenderContext<'reg, 'rc>,
+        _: &mut dyn Output,
     ) -> HelperResult {
         Ok(())
     }

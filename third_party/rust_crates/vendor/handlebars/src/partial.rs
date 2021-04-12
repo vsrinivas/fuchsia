@@ -1,61 +1,62 @@
-use std::iter::FromIterator;
+use std::collections::HashMap;
 
-use hashbrown::HashMap;
+use serde_json::value::Value as Json;
 
 use crate::context::{merge_json, Context};
 use crate::error::RenderError;
+use crate::json::path::Path;
 use crate::output::Output;
 use crate::registry::Registry;
-use crate::render::{Directive, Evaluable, RenderContext, Renderable};
+use crate::render::{Decorator, Evaluable, RenderContext, Renderable};
 use crate::template::Template;
-use crate::value::DEFAULT_VALUE;
 
 fn render_partial<'reg: 'rc, 'rc>(
     t: &'reg Template,
-    d: &Directive<'reg, 'rc>,
-    r: &'reg Registry,
+    d: &Decorator<'reg, 'rc>,
+    r: &'reg Registry<'reg>,
     ctx: &'rc Context,
-    local_rc: &mut RenderContext<'reg>,
-    out: &mut Output,
+    local_rc: &mut RenderContext<'reg, 'rc>,
+    out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // partial context path
-    if let Some(ref p) = d.param(0) {
-        if let Some(ref param_path) = p.path() {
-            let old_path = local_rc.get_path().clone();
-            local_rc.promote_local_vars();
-            let new_path = format!("{}/{}", old_path, param_path);
-            local_rc.set_path(new_path);
+    if let Some(ref param_ctx) = d.param(0) {
+        if let (Some(p), Some(block)) = (param_ctx.context_path(), local_rc.block_mut()) {
+            *block.base_path_mut() = p.clone();
         }
-    };
+    }
 
     // @partial-block
     if let Some(t) = d.template() {
         local_rc.set_partial("@partial-block".to_owned(), t);
     }
 
-    if d.hash().is_empty() {
+    let result = if d.hash().is_empty() {
         t.render(r, ctx, local_rc, out)
     } else {
-        let hash_ctx =
-            HashMap::from_iter(d.hash().iter().map(|(k, v)| (k.clone(), v.value().clone())));
-        let partial_context = merge_json(
-            local_rc
-                .evaluate(ctx, ".")?
-                .unwrap_or_else(|| &DEFAULT_VALUE),
-            &hash_ctx,
-        );
+        let hash_ctx = d
+            .hash()
+            .iter()
+            .map(|(k, v)| (k, v.value()))
+            .collect::<HashMap<&&str, &Json>>();
+        let current_path = Path::current();
+        let partial_context =
+            merge_json(local_rc.evaluate2(ctx, &current_path)?.as_json(), &hash_ctx);
         let ctx = Context::wraps(&partial_context)?;
         let mut partial_rc = local_rc.new_for_block();
         t.render(r, &ctx, &mut partial_rc, out)
-    }
+    };
+
+    local_rc.remove_partial("@partial-block");
+
+    result
 }
 
 pub fn expand_partial<'reg: 'rc, 'rc>(
-    d: &Directive<'reg, 'rc>,
-    r: &'reg Registry,
+    d: &Decorator<'reg, 'rc>,
+    r: &'reg Registry<'reg>,
     ctx: &'rc Context,
-    rc: &mut RenderContext<'reg>,
-    out: &mut Output,
+    rc: &mut RenderContext<'reg, 'rc>,
+    out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // try eval inline partials first
     if let Some(t) = d.template() {
@@ -71,12 +72,12 @@ pub fn expand_partial<'reg: 'rc, 'rc>(
 
     match partial {
         Some(t) => {
-            let mut local_rc = rc.derive();
+            let mut local_rc = rc.clone();
             render_partial(&t, d, r, ctx, &mut local_rc, out)?;
         }
         None => {
             if let Some(t) = r.get_template(tname).or_else(|| d.template()) {
-                let mut local_rc = rc.derive();
+                let mut local_rc = rc.clone();
                 render_partial(t, d, r, ctx, &mut local_rc, out)?;
             }
         }
@@ -87,7 +88,11 @@ pub fn expand_partial<'reg: 'rc, 'rc>(
 
 #[cfg(test)]
 mod test {
+    use crate::context::Context;
+    use crate::error::RenderError;
+    use crate::output::Output;
     use crate::registry::Registry;
+    use crate::render::{Helper, RenderContext};
 
     #[test]
     fn test() {
@@ -209,6 +214,47 @@ mod test {
     }
 
     #[test]
+    fn test_partial_context_hash() {
+        let mut hbs = Registry::new();
+        hbs.register_template_string("one", "This is a test. {{> two name=\"fred\" }}")
+            .unwrap();
+        hbs.register_template_string("two", "Lets test {{name}}")
+            .unwrap();
+        assert_eq!(
+            "This is a test. Lets test fred",
+            hbs.render("one", &0).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_partial_subexpression_context_hash() {
+        let mut hbs = Registry::new();
+        hbs.register_template_string("one", "This is a test. {{> (x @root) name=\"fred\" }}")
+            .unwrap();
+        hbs.register_template_string("two", "Lets test {{name}}")
+            .unwrap();
+
+        hbs.register_helper(
+            "x",
+            Box::new(
+                |_: &Helper<'_, '_>,
+                 _: &Registry<'_>,
+                 _: &Context,
+                 _: &mut RenderContext<'_, '_>,
+                 out: &mut dyn Output|
+                 -> Result<(), RenderError> {
+                    out.write("two")?;
+                    Ok(())
+                },
+            ),
+        );
+        assert_eq!(
+            "This is a test. Lets test fred",
+            hbs.render("one", &0).unwrap()
+        );
+    }
+
+    #[test]
     fn test_nested_partial_scope() {
         let t = "{{#*inline \"pp\"}}{{a}} {{b}}{{/inline}}{{#each c}}{{> pp a=2}}{{/each}}";
         let data = json!({"c": [{"b": true}, {"b": false}]});
@@ -217,5 +263,22 @@ mod test {
         assert!(handlebars.register_template_string("t", t).is_ok());
         let r0 = handlebars.render("t", &data);
         assert_eq!(r0.ok().unwrap(), "2 true2 false");
+    }
+
+    #[test]
+    fn test_up_to_partial_level() {
+        let outer = r#"{{>inner name="fruit:" vegetables=fruits}}"#;
+        let inner = "{{#each vegetables}}{{../name}} {{this}},{{/each}}";
+
+        let data = json!({ "fruits": ["carrot", "tomato"] });
+
+        let mut handlebars = Registry::new();
+        handlebars.register_template_string("outer", outer).unwrap();
+        handlebars.register_template_string("inner", inner).unwrap();
+
+        assert_eq!(
+            handlebars.render("outer", &data).unwrap(),
+            "fruit: carrot,fruit: tomato,"
+        );
     }
 }

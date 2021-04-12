@@ -1,19 +1,14 @@
-#[macro_use(quick_error)] extern crate quick_error;
-
-use std::io::{self, stderr, Read, Write};
-use std::fs::File;
+use quick_error::{quick_error, ResultExt};
 use std::env;
+use std::fs::File;
+use std::io::{self, stderr, Read, Write};
 use std::num::ParseIntError;
 use std::path::{Path, PathBuf};
-
-use quick_error::ResultExt;
 
 quick_error! {
     #[derive(Debug)]
     pub enum Error {
-        NoFileName {
-            description("no file name specified")
-        }
+        NoFileName {}
         Io(err: io::Error, path: PathBuf) {
             display("could not read file {:?}: {}", path, err)
             context(path: &'a Path, err: io::Error)
@@ -28,12 +23,12 @@ quick_error! {
 }
 
 fn parse_file() -> Result<u64, Error> {
-    let fname = try!(env::args().skip(1).next().ok_or(Error::NoFileName));
+    let fname = env::args().skip(1).next().ok_or(Error::NoFileName)?;
     let fname = Path::new(&fname);
-    let mut file = try!(File::open(fname).context(fname));
+    let mut file = File::open(fname).context(fname)?;
     let mut buf = String::new();
-    try!(file.read_to_string(&mut buf).context(fname));
-    Ok(try!(buf.parse().context(fname)))
+    file.read_to_string(&mut buf).context(fname)?;
+    Ok(buf.parse().context(fname)?)
 }
 
 fn main() {

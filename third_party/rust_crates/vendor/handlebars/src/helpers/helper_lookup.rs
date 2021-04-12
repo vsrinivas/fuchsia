@@ -2,24 +2,22 @@ use serde_json::value::Value as Json;
 
 use crate::context::Context;
 use crate::error::RenderError;
-use crate::helpers::{HelperDef, HelperResult};
-use crate::output::Output;
+use crate::helpers::HelperDef;
+use crate::json::value::ScopedJson;
 use crate::registry::Registry;
 use crate::render::{Helper, RenderContext};
-use crate::value::JsonRender;
 
 #[derive(Clone, Copy)]
 pub struct LookupHelper;
 
 impl HelperDef for LookupHelper {
-    fn call<'reg: 'rc, 'rc>(
+    fn call_inner<'reg: 'rc, 'rc>(
         &self,
-        h: &Helper,
-        _: &Registry,
-        _: &Context,
-        _: &mut RenderContext,
-        out: &mut Output,
-    ) -> HelperResult {
+        h: &Helper<'reg, 'rc>,
+        _: &'reg Registry<'reg>,
+        _: &'rc Context,
+        _: &mut RenderContext<'reg, 'rc>,
+    ) -> Result<Option<ScopedJson<'reg, 'rc>>, RenderError> {
         let collection_value = h
             .param(0)
             .ok_or_else(|| RenderError::new("Param not found for helper \"lookup\""))?;
@@ -27,24 +25,20 @@ impl HelperDef for LookupHelper {
             .param(1)
             .ok_or_else(|| RenderError::new("Insufficient params for helper \"lookup\""))?;
 
-        let null = Json::Null;
         let value = match *collection_value.value() {
             Json::Array(ref v) => index
                 .value()
                 .as_u64()
-                .and_then(|u| Some(u as usize))
-                .and_then(|u| v.get(u))
-                .unwrap_or(&null),
+                .and_then(|u| v.get(u as usize))
+                .map(|i| ScopedJson::Derived(i.clone())),
             Json::Object(ref m) => index
                 .value()
                 .as_str()
                 .and_then(|k| m.get(k))
-                .unwrap_or(&null),
-            _ => &null,
+                .map(|i| ScopedJson::Derived(i.clone())),
+            _ => None,
         };
-        let r = value.render();
-        out.write(r.as_ref())?;
-        Ok(())
+        Ok(value)
     }
 }
 
@@ -60,10 +54,10 @@ mod test {
     fn test_lookup() {
         let mut handlebars = Registry::new();
         assert!(handlebars
-            .register_template_string("t0", "{{#each v1}}{{lookup ../../v2 @index}}{{/each}}")
+            .register_template_string("t0", "{{#each v1}}{{lookup ../v2 @index}}{{/each}}")
             .is_ok());
         assert!(handlebars
-            .register_template_string("t1", "{{#each v1}}{{lookup ../../v2 1}}{{/each}}")
+            .register_template_string("t1", "{{#each v1}}{{lookup ../v2 1}}{{/each}}")
             .is_ok());
         assert!(handlebars
             .register_template_string("t2", "{{lookup kk \"a\"}}")

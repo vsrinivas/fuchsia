@@ -14,13 +14,13 @@ use std::path::PathBuf;
 
 use crate::templates::{FidldocTemplate, HandlebarsHelper};
 
-pub struct HtmlTemplate {
-    handlebars: Handlebars,
+pub struct HtmlTemplate<'a> {
+    handlebars: Handlebars<'a>,
     output_path: PathBuf,
 }
 
-impl HtmlTemplate {
-    pub fn new(output_path: &PathBuf) -> Result<HtmlTemplate, Error> {
+impl HtmlTemplate<'_> {
+    pub fn new(output_path: &PathBuf) -> Result<HtmlTemplate<'_>, Error> {
         info!("The HTML template is not ready, please use Markdown");
 
         // Handlebars
@@ -50,7 +50,7 @@ impl HtmlTemplate {
     }
 }
 
-impl FidldocTemplate for HtmlTemplate {
+impl FidldocTemplate for HtmlTemplate<'_> {
     fn render_main_page(&self, main_fidl_json: &Value) -> Result<(), Error> {
         // Render main page
         let main_page_path = self.output_path.join("index.html");
@@ -94,9 +94,9 @@ impl FidldocTemplate for HtmlTemplate {
 
 fn package_hash(
     h: &Helper<'_, '_>,
-    _: &Handlebars,
+    _: &Handlebars<'_>,
     _: &Context,
-    _: &mut RenderContext<'_>,
+    _: &mut RenderContext<'_, '_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error

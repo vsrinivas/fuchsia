@@ -292,7 +292,7 @@ fn is_partial_template(path: impl AsRef<Path>) -> bool {
 /// Registers any partial templates (templates whose file names begin with `_`) with the templating
 /// engine.
 fn register_partial_templates<FR>(
-    handlebars: &mut Handlebars,
+    handlebars: &mut Handlebars<'_>,
     templates_dir: &Path,
     template_files: &Vec<PathBuf>,
     file_reader: &FR,
@@ -462,7 +462,7 @@ impl TemplateTree {
     // accessible to the templates.
     fn render(
         &self,
-        handlebars: &mut Handlebars,
+        handlebars: &mut Handlebars<'_>,
         args: &TemplateArgs,
     ) -> Result<RenderedTree, handlebars::TemplateRenderError> {
         Ok(match self {

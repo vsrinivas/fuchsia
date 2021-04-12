@@ -1,6 +1,109 @@
 # Change Log
 
-## [2.0.0-beta.1](https://github.com/sunng87/handlebars-rust/compare/1.1.0...2.0.0-beta.1) - {{ 2019-03-16}}
+## [3.5.4](https://github.com/sunng87/handlebars-rust/compare/3.5.3...3.5.4) - 2021-03-27
+
+* [Fixed] Json string literal with escape char [#422]
+
+## [3.5.3](https://github.com/sunng87/handlebars-rust/compare/3.5.2...3.5.3) - 2021-02-20
+
+* [Fixed] value access issue when upper block has a base value [#419]
+
+## [3.5.2](https://github.com/sunng87/handlebars-rust/compare/3.5.1...3.5.2) - 2020-12-29
+
+* [Fixed] allow `/` as trailing separator on Windows, backported from master [#405]
+
+## [3.5.1](https://github.com/sunng87/handlebars-rust/compare/3.5.0...3.5.1) - 2020-10-25
+
+* [Fixed] dir source path separator bug on windows [#389]
+
+## [3.5.0](https://github.com/sunng87/handlebars-rust/compare/3.4.0...3.5.0) - 2020-09-23
+
+* [Changed] `#each` helper now renders else block for non-iterable data [#380]
+* [Fixed] reference starts with `null`, `true` and `false` were parsed incorrectly [#382]
+
+## [3.4.0](https://github.com/sunng87/handlebars-rust/compare/3.3.0...3.4.0) - 2020-08-14
+
+* [Added] Debug log that can be turned on by using envlog or other implementation, to trace data resolution during rendering [#369]
+* [Fixed] Derived value as block context base value [#343, #353]
+* [Fixed] Partial name aligned with handlebars.js, added support for `.`, escape `[]` and string `''` name
+* [Changed] HTML escape aligned with handlebars.js, added `=`, `\` and ``` [#366]
+* [Changed] Update rhai to 0.18 [#370]
+* [Fixed] Result of simple helper is now escaped [#373]
+
+## [3.3.0](https://github.com/sunng87/handlebars-rust/compare/3.2.1...3.3.0) - 2020-07-18
+
+* [Added] Added two new APIs to reuse `Context` for rendering [#352]
+* [Changed] Update rhai to 0.17 [#354]
+* [Fixed] Fixed mustache.js html expression support, which is "&" instead of "$"
+
+## [3.2.1](https://github.com/sunng87/handlebars-rust/compare/3.2.0...3.2.1) - 2020-06-28
+
+* [Fixed] block context leak introduced in 3.2.0, #346 [#349]
+
+## [3.2.0](https://github.com/sunng87/handlebars-rust/compare/3.1.0...3.2.0) - 2020-06-28
+
+* [Added] API to register an pre-processed template [#331]
+* [Added] Helper macro now has support for named argument and helepr hash [#338]
+* [Added] Added support for `$` expression that is part of mustache.js [#339]
+* [Changed] Update rhai to 0.15 [#330]
+* [Fixed] else block for `each` [#344]
+
+## [3.1.0](https://github.com/sunng87/handlebars-rust/compare/3.0.1...3.1.0) - 2020-06-01
+
+* [Added] All new rhai script helper
+* [Added] multiple parameter support for log helper
+* [Fixed] helper lookup priority
+* [Changed] `Send` and `Sync` are not required for RenderContext local helper [#319]
+* [Fixed] partial block when using path as name [#321]
+
+## [3.0.1](https://github.com/sunng87/handlebars-rust/compare/3.0.0...3.0.1) - 2020-01-25
+
+* [Fixed] Slash in partial path causing syntax error  #313
+
+## [3.0.0](https://github.com/sunng87/handlebars-rust/compare/2.0.3...3.0.0) - 2020-01-24
+
+* [Changed] Added lifetime specifier to `Handlebars` structure allowing helper definition to have non-static borrowed data #282
+* [Changed] Removed hashbrown dependency #279
+* [Changed] Features has been reorganized. `dir_source` were turned off by default. #289
+* [Changed] Refactored `RenderContext` API to improve performance up to 5x over `2.0`
+* [Added] Add new `BlockContext` API for helper developer to store block scope state #307
+* [Fixed] `RenderError` should be `Send` and `Sync` #304
+
+## [2.0.4](https://github.com/sunng87/handlebars-rust/compare/2.0.3...2.0.4) - 2020-01-06
+
+* [Fixed] `RenderError` should be `Send` and `Sync` #304
+
+## [2.0.3](https://github.com/sunng87/handlebars-rust/compare/2.0.2...2.0.3) - 2020-01-04
+
+* [Fixed] deprecated warnings on rust 1.42 nightly, due to changes in
+  `Error` trait
+
+## [2.0.2](https://github.com/sunng87/handlebars-rust/compare/2.0.1...2.0.2) - 2019-09-06
+
+* [Changed] Extended `eq` and `ne` helper for all json types #287
+* [Changed] Removed `regex` and `lazy_static` crate to optimize dependency tree
+
+## [2.0.1](https://github.com/sunng87/handlebars-rust/compare/2.0.0...2.0.1) - 2019-07-12
+* [Changed] Fixed issue with block context #275
+* [Changed] Added support for array index in block context #276
+* [Changed] Deprecated RenderContext `concat_path`
+* [Changed] Update hashbrown to 0.5.0
+
+## [2.0.0](https://github.com/sunng87/handlebars-rust/compare/2.0.0-beta3...2.0.0) - 2019-07-02
+* [Changed] Fixed more dyn trait warnings
+* [Changed] #80 Fixed support for zero-param helper
+* [Changed] Changed minimum Rust version to 1.32 as required by
+  getrandom crate
+
+## [2.0.0-beta.3](https://github.com/sunng87/handlebars-rust/compare/2.0.0-beta1...2.0.0-beta.3) - 2019-06-24
+
+* [Changed] Block parameter revamp, fixed cases for #260 and #264
+* [Changed] #265 Fixed block parameter order in `each` helper
+* [Changed] #266 Accept any JSON value in boolean helpers
+* [Changed] `RenderContext` API update, `evaluate_absolute` removed,
+  use `@root` instead
+
+## [2.0.0-beta.1](https://github.com/sunng87/handlebars-rust/compare/1.1.0...2.0.0-beta.1) - 2019-03-16
 
 * [Changed] Everything changed in yanked 1.2.0
 * [Changed] With Pest updated to 2.1, our minimal rust version is set

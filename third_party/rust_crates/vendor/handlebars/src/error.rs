@@ -1,13 +1,15 @@
 use std::error::Error;
 use std::fmt;
 use std::io::Error as IOError;
+use std::num::ParseIntError;
 use std::string::FromUtf8Error;
 
 use serde_json::error::Error as SerdeError;
-#[cfg(not(feature = "no_dir_source"))]
+#[cfg(feature = "dir_source")]
 use walkdir::Error as WalkdirError;
 
-use crate::template::Parameter;
+#[cfg(feature = "script_helper")]
+use rhai::{EvalAltResult, ParseError};
 
 /// Error when rendering data on template.
 #[derive(Debug)]
@@ -16,11 +18,11 @@ pub struct RenderError {
     pub template_name: Option<String>,
     pub line_no: Option<usize>,
     pub column_no: Option<usize>,
-    cause: Option<Box<Error + Send + Sync>>,
+    cause: Option<Box<dyn Error + Send + Sync + 'static>>,
 }
 
 impl fmt::Display for RenderError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match (self.line_no, self.column_no) {
             (Some(line), Some(col)) => write!(
                 f,
@@ -38,30 +40,39 @@ impl fmt::Display for RenderError {
 }
 
 impl Error for RenderError {
-    fn description(&self) -> &str {
-        &self.desc[..]
-    }
-
-    fn cause(&self) -> Option<&Error> {
-        self.cause.as_ref().map(|e| &**e as &Error)
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        self.cause.as_ref().map(|e| &**e as &(dyn Error + 'static))
     }
 }
 
 impl From<IOError> for RenderError {
     fn from(e: IOError) -> RenderError {
-        RenderError::with(e)
+        RenderError::from_error("Error on output generation.", e)
     }
 }
 
 impl From<SerdeError> for RenderError {
     fn from(e: SerdeError) -> RenderError {
-        RenderError::with(e)
+        RenderError::from_error("Error when accessing JSON data.", e)
     }
 }
 
 impl From<FromUtf8Error> for RenderError {
     fn from(e: FromUtf8Error) -> RenderError {
-        RenderError::with(e)
+        RenderError::from_error("Error on bytes generation.", e)
+    }
+}
+
+impl From<ParseIntError> for RenderError {
+    fn from(e: ParseIntError) -> RenderError {
+        RenderError::from_error("Error on accessing array/vector with string index.", e)
+    }
+}
+
+#[cfg(feature = "script_helper")]
+impl From<Box<EvalAltResult>> for RenderError {
+    fn from(e: Box<EvalAltResult>) -> RenderError {
+        RenderError::from_error("Error on converting data to Rhai dynamic.", e)
     }
 }
 
@@ -84,11 +95,22 @@ impl RenderError {
         RenderError::new(&msg)
     }
 
+    #[deprecated]
     pub fn with<E>(cause: E) -> RenderError
     where
         E: Error + Send + Sync + 'static,
     {
-        let mut e = RenderError::new(cause.description());
+        let mut e = RenderError::new(cause.to_string());
+        e.cause = Some(Box::new(cause));
+
+        e
+    }
+
+    pub fn from_error<E>(error_kind: &str, cause: E) -> RenderError
+    where
+        E: Error + Send + Sync + 'static,
+    {
+        let mut e = RenderError::new(format!("{}: {}", error_kind, cause.to_string()));
         e.cause = Some(Box::new(cause));
 
         e
@@ -102,24 +124,19 @@ quick_error! {
         MismatchingClosedHelper(open: String, closed: String) {
             display("helper {:?} was opened, but {:?} is closing",
                 open, closed)
-            description("wrong name of closing helper")
         }
-        MismatchingClosedDirective(open: Parameter, closed: Parameter) {
-            display("directive {:?} was opened, but {:?} is closing",
+        MismatchingClosedDecorator(open: String, closed: String) {
+            display("decorator {:?} was opened, but {:?} is closing",
                 open, closed)
-            description("wrong name of closing directive")
         }
         InvalidSyntax {
             display("invalid handlebars syntax.")
-            description("invalid handlebars syntax")
         }
         InvalidParam (param: String) {
             display("invalid parameter {:?}", param)
-            description("invalid parameter")
         }
         NestedSubexpression {
             display("nested subexpression is not supported")
-            description("nested subexpression is not supported")
         }
     }
 }
@@ -158,11 +175,7 @@ impl TemplateError {
     }
 }
 
-impl Error for TemplateError {
-    fn description(&self) -> &str {
-        self.reason.description()
-    }
-}
+impl Error for TemplateError {}
 
 fn template_segment(template_str: &str, line: usize, col: usize) -> String {
     let range = 3;
@@ -191,7 +204,7 @@ fn template_segment(template_str: &str, line: usize, col: usize) -> String {
 }
 
 impl fmt::Display for TemplateError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match (self.line_no, self.column_no, &self.segment) {
             (Some(line), Some(col), &Some(ref seg)) => writeln!(
                 f,
@@ -211,23 +224,22 @@ impl fmt::Display for TemplateError {
 }
 
 quick_error! {
+    /// A combined error type for `TemplateError` and `IOError`
     #[derive(Debug)]
     pub enum TemplateFileError {
         TemplateError(err: TemplateError) {
             from()
-            cause(err)
-            description(err.description())
+            source(err)
             display("{}", err)
         }
         IOError(err: IOError, name: String) {
-            cause(err)
-            description(err.description())
+            source(err)
             display("Template \"{}\": {}", name, err)
         }
     }
 }
 
-#[cfg(not(feature = "no_dir_source"))]
+#[cfg(feature = "dir_source")]
 impl From<WalkdirError> for TemplateFileError {
     fn from(error: WalkdirError) -> TemplateFileError {
         let path_string: String = error
@@ -239,23 +251,21 @@ impl From<WalkdirError> for TemplateFileError {
 }
 
 quick_error! {
+    /// A combined error type for `TemplateError`, `IOError` and `RenderError`
     #[derive(Debug)]
     pub enum TemplateRenderError {
         TemplateError(err: TemplateError) {
             from()
-            cause(err)
-            description(err.description())
+            source(err)
             display("{}", err)
         }
         RenderError(err: RenderError) {
             from()
-            cause(err)
-            description(err.description())
+            source(err)
             display("{}", err)
         }
         IOError(err: IOError, name: String) {
-            cause(err)
-            description(err.description())
+            source(err)
             display("Template \"{}\": {}", name, err)
         }
     }
@@ -267,6 +277,21 @@ impl TemplateRenderError {
             Some(&e)
         } else {
             None
+        }
+    }
+}
+
+#[cfg(feature = "script_helper")]
+quick_error! {
+    #[derive(Debug)]
+    pub enum ScriptError {
+        IOError(err: IOError) {
+            from()
+            source(err)
+        }
+        ParseError(err: ParseError) {
+            from()
+            source(err)
         }
     }
 }

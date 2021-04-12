@@ -1,10 +1,10 @@
 use crate::context::Context;
 use crate::error::RenderError;
 use crate::helpers::{HelperDef, HelperResult};
+use crate::json::value::JsonTruthy;
 use crate::output::Output;
 use crate::registry::Registry;
 use crate::render::{Helper, RenderContext, Renderable};
-use crate::value::JsonTruthy;
 
 #[derive(Clone, Copy)]
 pub struct IfHelper {
@@ -15,10 +15,10 @@ impl HelperDef for IfHelper {
     fn call<'reg: 'rc, 'rc>(
         &self,
         h: &Helper<'reg, 'rc>,
-        r: &'reg Registry,
-        ctx: &Context,
-        rc: &mut RenderContext<'reg>,
-        out: &mut Output,
+        r: &'reg Registry<'reg>,
+        ctx: &'rc Context,
+        rc: &mut RenderContext<'reg, 'rc>,
+        out: &mut dyn Output,
     ) -> HelperResult {
         let param = h
             .param(0)
@@ -90,10 +90,10 @@ mod test {
             .is_ok());
 
         let r0 = handlebars.render("t0", &data);
-        assert_eq!(r0.ok().unwrap(), "hello 99".to_string());
+        assert_eq!(r0.unwrap(), "hello 99".to_string());
 
         let r1 = handlebars.render("t1", &data);
-        assert_eq!(r1.ok().unwrap(), "hello 99".to_string());
+        assert_eq!(r1.unwrap(), "hello 99".to_string());
     }
 
     #[test]

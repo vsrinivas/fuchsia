@@ -1,6 +1,15 @@
 /// Macro that allows you to quickly define a handlebars helper by passing a
 /// name and a closure.
 ///
+/// There are several types of arguments available to closure:
+///
+/// * Parameters are mapped to closure arguments one by one. Any declared
+/// parameters are required
+/// * Hash are mapped as named arguments and declared in a bracket block.
+/// All named arguments are optional so default value is required.
+/// * An optional `*args` provides a vector of all helper parameters.
+/// * An optional `**kwargs` provides a map of all helper hash.
+///
 /// # Examples
 ///
 /// ```rust
@@ -8,21 +17,32 @@
 /// #[macro_use] extern crate serde_json;
 ///
 /// handlebars_helper!(is_above_10: |x: u64| x > 10);
+/// handlebars_helper!(is_above: |x: u64, { compare: u64 = 10 }| x > compare);
 ///
 /// # fn main() {
 /// #
 /// let mut handlebars = handlebars::Handlebars::new();
 /// handlebars.register_helper("is-above-10", Box::new(is_above_10));
+/// handlebars.register_helper("is-above", Box::new(is_above));
 ///
 /// let result = handlebars
 ///     .render_template("{{#if (is-above-10 12)}}great!{{else}}okay{{/if}}", &json!({}))
 ///     .unwrap();
 ///  assert_eq!(&result, "great!");
+/// let result2 = handlebars
+///     .render_template("{{#if (is-above 12 compare=10)}}great!{{else}}okay{{/if}}", &json!({}))
+///     .unwrap();
+///  assert_eq!(&result2, "great!");
 /// # }
 /// ```
+
 #[macro_export]
 macro_rules! handlebars_helper {
-    ($struct_name:ident: |$($name:ident: $tpe:tt),*| $body:expr ) => {
+    ($struct_name:ident: |$($name:ident: $tpe:tt),*
+     $($(,)?{$($hash_name:ident: $hash_tpe:tt=$dft_val:literal),*})?
+     $($(,)?*$args:ident)?
+     $($(,)?**$kwargs:ident)?|
+     $body:expr ) => {
         #[allow(non_camel_case_types)]
         pub struct $struct_name;
 
@@ -31,9 +51,9 @@ macro_rules! handlebars_helper {
             fn call_inner<'reg: 'rc, 'rc>(
                 &self,
                 h: &$crate::Helper<'reg, 'rc>,
-                _: &'reg $crate::Handlebars,
+                _: &'reg $crate::Handlebars<'reg>,
                 _: &'rc $crate::Context,
-                _: &mut $crate::RenderContext<'reg>,
+                _: &mut $crate::RenderContext<'reg, 'rc>,
             ) -> Result<Option<$crate::ScopedJson<'reg, 'rc>>, $crate::RenderError> {
                 let mut param_idx = 0;
 
@@ -42,19 +62,39 @@ macro_rules! handlebars_helper {
                         .map(|x| x.value())
                         .ok_or_else(|| $crate::RenderError::new(&format!(
                             "`{}` helper: Couldn't read parameter {}",
-                            stringify!($fn_name), stringify!($name),
+                            stringify!($struct_name), stringify!($name),
                         )))
                         .and_then(|x|
                                   handlebars_helper!(@as_json_value x, $tpe)
                                   .ok_or_else(|| $crate::RenderError::new(&format!(
                                       "`{}` helper: Couldn't convert parameter {} to type `{}`. \
                                        It's {:?} as JSON. Got these params: {:?}",
-                                      stringify!($fn_name), stringify!($name), stringify!($tpe),
+                                      stringify!($struct_name), stringify!($name), stringify!($tpe),
                                       x, h.params(),
                                   )))
                         )?;
                     param_idx += 1;
                 )*
+
+                    $(
+                        $(
+                            let $hash_name = h.hash_get(stringify!($hash_name))
+                                .map(|x| x.value())
+                                .map(|x|
+                                     handlebars_helper!(@as_json_value x, $hash_tpe)
+                                     .ok_or_else(|| $crate::RenderError::new(&format!(
+                                         "`{}` helper: Couldn't convert hash {} to type `{}`. \
+                                          It's {:?} as JSON. Got these hash: {:?}",
+                                         stringify!($struct_name), stringify!($hash_name), stringify!($hash_tpe),
+                                         x, h.hash(),
+                                     )))
+                                )
+                                .unwrap_or_else(|| Ok($dft_val))?;
+                        )*
+                    )?
+
+                    $(let $args = h.params().iter().map(|x| x.value()).collect::<Vec<&serde_json::Value>>();)?
+                    $(let $kwargs = h.hash().iter().map(|(k, v)| (k.to_owned(), v.value())).collect::<std::collections::BTreeMap<&str, &serde_json::Value>>();)?
 
                 let result = $body;
                 Ok(Some($crate::ScopedJson::Derived($crate::JsonValue::from(result))))
@@ -70,6 +110,7 @@ macro_rules! handlebars_helper {
     (@as_json_value $x:ident, f64) => { $x.as_f64() };
     (@as_json_value $x:ident, bool) => { $x.as_bool() };
     (@as_json_value $x:ident, null) => { $x.as_null() };
+    (@as_json_value $x:ident, Json) => { Some($x) };
 }
 
 /// This macro is defined if the `logging` feature is set.
@@ -95,7 +136,7 @@ macro_rules! error {
 /// This macro is defined if the `logging` feature is not set.
 ///
 /// It ignores all logging calls inside the library.
-#[cfg(not(feature = "logging"))]
+#[cfg(feature = "no_logging")]
 #[macro_export]
 macro_rules! info {
     (target: $target:expr, $($arg:tt)*) => {};

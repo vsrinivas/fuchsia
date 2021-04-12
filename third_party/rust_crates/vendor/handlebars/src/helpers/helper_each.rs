@@ -1,13 +1,64 @@
-use hashbrown::HashMap;
 use serde_json::value::Value as Json;
 
+use super::block_util::create_block;
+use crate::block::{BlockContext, BlockParams};
 use crate::context::Context;
 use crate::error::RenderError;
 use crate::helpers::{HelperDef, HelperResult};
+use crate::json::value::to_json;
 use crate::output::Output;
 use crate::registry::Registry;
 use crate::render::{Helper, RenderContext, Renderable};
-use crate::value::{to_json, JsonTruthy};
+use crate::util::copy_on_push_vec;
+
+fn update_block_context<'reg>(
+    block: &mut BlockContext<'reg>,
+    base_path: Option<&Vec<String>>,
+    relative_path: String,
+    is_first: bool,
+    value: &Json,
+) {
+    if let Some(ref p) = base_path {
+        if is_first {
+            *block.base_path_mut() = copy_on_push_vec(p, relative_path);
+        } else if let Some(ptr) = block.base_path_mut().last_mut() {
+            *ptr = relative_path;
+        }
+    } else {
+        block.set_base_value(value.clone());
+    }
+}
+
+fn set_block_param<'reg: 'rc, 'rc>(
+    block: &mut BlockContext<'reg>,
+    h: &Helper<'reg, 'rc>,
+    base_path: Option<&Vec<String>>,
+    k: &Json,
+    v: &Json,
+) -> Result<(), RenderError> {
+    if let Some(bp_val) = h.block_param() {
+        let mut params = BlockParams::new();
+        if base_path.is_some() {
+            params.add_path(bp_val, Vec::with_capacity(0))?;
+        } else {
+            params.add_value(bp_val, v.clone())?;
+        }
+
+        block.set_block_params(params);
+    } else if let Some((bp_val, bp_key)) = h.block_param_pair() {
+        let mut params = BlockParams::new();
+        if base_path.is_some() {
+            params.add_path(bp_val, Vec::with_capacity(0))?;
+        } else {
+            params.add_value(bp_val, v.clone())?;
+        }
+        params.add_value(bp_key, k.clone())?;
+
+        block.set_block_params(params);
+    }
+
+    Ok(())
+}
 
 #[derive(Clone, Copy)]
 pub struct EachHelper;
@@ -16,10 +67,10 @@ impl HelperDef for EachHelper {
     fn call<'reg: 'rc, 'rc>(
         &self,
         h: &Helper<'reg, 'rc>,
-        r: &'reg Registry,
-        ctx: &Context,
-        rc: &mut RenderContext<'reg>,
-        out: &mut Output,
+        r: &'reg Registry<'reg>,
+        ctx: &'rc Context,
+        rc: &mut RenderContext<'reg, 'rc>,
+        out: &mut dyn Output,
     ) -> HelperResult {
         let value = h
             .param(0)
@@ -28,107 +79,70 @@ impl HelperDef for EachHelper {
         let template = h.template();
 
         match template {
-            Some(t) => {
-                rc.promote_local_vars();
-                let local_path_root = value
-                    .path_root()
-                    .map(|p| format!("{}/{}", rc.get_path(), p));
+            Some(t) => match *value.value() {
+                Json::Array(ref list) if !list.is_empty() => {
+                    let block_context = create_block(&value)?;
+                    rc.push_block(block_context);
 
-                debug!("each value {:?}", value.value());
-                let rendered = match (value.value().is_truthy(false), value.value()) {
-                    (true, &Json::Array(ref list)) => {
-                        let len = list.len();
-                        for (i, _) in list.iter().enumerate().take(len) {
-                            let mut local_rc = rc.derive();
-                            if let Some(ref p) = local_path_root {
-                                local_rc.push_local_path_root(p.clone());
-                            }
+                    let len = list.len();
 
-                            local_rc.set_local_var("@first".to_string(), to_json(i == 0usize));
-                            local_rc.set_local_var("@last".to_string(), to_json(i == len - 1));
-                            local_rc.set_local_var("@index".to_string(), to_json(i));
+                    let array_path = value.context_path();
 
-                            if let Some(inner_path) = value.path() {
-                                let new_path =
-                                    format!("{}/{}/[{}]", local_rc.get_path(), inner_path, i);
-                                debug!("each path {:?}", new_path);
-                                local_rc.set_path(new_path);
-                            }
+                    for (i, v) in list.iter().enumerate().take(len) {
+                        if let Some(ref mut block) = rc.block_mut() {
+                            let is_first = i == 0usize;
+                            let is_last = i == len - 1;
 
-                            if let Some(block_param) = h.block_param() {
-                                let mut map = HashMap::new();
-                                map.insert(block_param.to_string(), to_json(&list[i]));
-                                local_rc.push_block_context(&map)?;
-                            }
+                            let index = to_json(i);
+                            block.set_local_var("@first".to_string(), to_json(is_first));
+                            block.set_local_var("@last".to_string(), to_json(is_last));
+                            block.set_local_var("@index".to_string(), index.clone());
 
-                            t.render(r, ctx, &mut local_rc, out)?;
-
-                            if h.block_param().is_some() {
-                                local_rc.pop_block_context();
-                            }
-
-                            if local_path_root.is_some() {
-                                local_rc.pop_local_path_root();
-                            }
-                        }
-                        Ok(())
-                    }
-                    (true, &Json::Object(ref obj)) => {
-                        let mut first: bool = true;
-                        for (k, v) in obj.iter() {
-                            let mut local_rc = rc.derive();
-
-                            if let Some(ref p) = local_path_root {
-                                local_rc.push_local_path_root(p.clone());
-                            }
-                            local_rc.set_local_var("@first".to_string(), to_json(first));
-                            if first {
-                                first = false;
-                            }
-
-                            local_rc.set_local_var("@key".to_string(), to_json(k));
-
-                            if let Some(inner_path) = value.path() {
-                                let new_path =
-                                    format!("{}/{}/[{}]", local_rc.get_path(), inner_path, k);
-                                local_rc.set_path(new_path);
-                            }
-
-                            if let Some((bp_key, bp_val)) = h.block_param_pair() {
-                                let mut map = HashMap::new();
-                                map.insert(bp_key.to_string(), to_json(k));
-                                map.insert(bp_val.to_string(), to_json(v));
-                                local_rc.push_block_context(&map)?;
-                            }
-
-                            t.render(r, ctx, &mut local_rc, out)?;
-
-                            if h.block_param().is_some() {
-                                local_rc.pop_block_context();
-                            }
-
-                            if local_path_root.is_some() {
-                                local_rc.pop_local_path_root();
-                            }
+                            update_block_context(block, array_path, i.to_string(), is_first, &v);
+                            set_block_param(block, h, array_path, &index, &v)?;
                         }
 
-                        Ok(())
+                        t.render(r, ctx, rc, out)?;
                     }
-                    (false, _) => {
-                        if let Some(else_template) = h.inverse() {
-                            else_template.render(r, ctx, rc, out)?;
-                        }
-                        Ok(())
-                    }
-                    _ => Err(RenderError::new(format!(
-                        "Param type is not iterable: {:?}",
-                        value.value()
-                    ))),
-                };
 
-                rc.demote_local_vars();
-                rendered
-            }
+                    rc.pop_block();
+                    Ok(())
+                }
+                Json::Object(ref obj) if !obj.is_empty() => {
+                    let block_context = create_block(&value)?;
+                    rc.push_block(block_context);
+
+                    let mut is_first = true;
+                    let obj_path = value.context_path();
+
+                    for (k, v) in obj.iter() {
+                        if let Some(ref mut block) = rc.block_mut() {
+                            let key = to_json(k);
+
+                            block.set_local_var("@first".to_string(), to_json(is_first));
+                            block.set_local_var("@key".to_string(), key.clone());
+
+                            update_block_context(block, obj_path, k.to_string(), is_first, &v);
+                            set_block_param(block, h, obj_path, &key, &v)?;
+                        }
+
+                        t.render(r, ctx, rc, out)?;
+
+                        if is_first {
+                            is_first = false;
+                        }
+                    }
+
+                    rc.pop_block();
+                    Ok(())
+                }
+                _ => {
+                    if let Some(else_template) = h.inverse() {
+                        else_template.render(r, ctx, rc, out)?;
+                    }
+                    Ok(())
+                }
+            },
             None => Ok(()),
         }
     }
@@ -138,9 +152,8 @@ pub static EACH_HELPER: EachHelper = EachHelper;
 
 #[cfg(test)]
 mod test {
+    use crate::json::value::to_json;
     use crate::registry::Registry;
-    use crate::value::to_json;
-
     use serde_json::value::Value as Json;
     use std::collections::BTreeMap;
     use std::str::FromStr;
@@ -247,19 +260,13 @@ mod test {
         let r0 = handlebars
             .render(
                 "t0",
-                &({
-                    let mut rv = BTreeMap::new();
-                    rv.insert("foo".to_owned(), {
-                        let mut rv = BTreeMap::new();
-                        rv.insert("value".to_owned(), "bar".to_owned());
-                        rv
-                    });
-                    rv.insert("".to_owned(), {
-                        let mut rv = BTreeMap::new();
-                        rv.insert("value".to_owned(), "baz".to_owned());
-                        rv
-                    });
-                    rv
+                &json!({
+                    "foo": {
+                        "value": "bar"
+                    },
+                    "": {
+                        "value": "baz"
+                    }
                 }),
             )
             .unwrap();
@@ -305,7 +312,7 @@ mod test {
     #[test]
     fn test_each_object_block_param() {
         let mut handlebars = Registry::new();
-        let template = "{{#each this as |k v|}}\
+        let template = "{{#each this as |v k|}}\
                         {{#with k as |inner_k|}}{{inner_k}}{{/with}}:{{v}}|\
                         {{/each}}";
         assert!(handlebars.register_template_string("t0", template).is_ok());
@@ -319,6 +326,22 @@ mod test {
     }
 
     #[test]
+    fn test_each_object_block_param2() {
+        let mut handlebars = Registry::new();
+        let template = "{{#each this as |v k|}}\
+                        {{#with v as |inner_v|}}{{k}}:{{inner_v}}{{/with}}|\
+                        {{/each}}";
+
+        assert!(handlebars.register_template_string("t0", template).is_ok());
+
+        let m = btreemap! {
+            "ftp".to_string() => 21,
+            "http".to_string() => 80
+        };
+        let r0 = handlebars.render("t0", &m);
+        assert_eq!(r0.ok().unwrap(), "ftp:21|http:80|".to_string());
+    }
+
     fn test_nested_each_with_path_ups() {
         let mut handlebars = Registry::new();
         assert!(handlebars
@@ -373,5 +396,132 @@ mod test {
         assert!(r0.contains("#special key: 3"));
         assert!(r0.contains("😂: 4"));
         assert!(r0.contains("me.dot.key: 5"));
+    }
+
+    #[test]
+    fn test_base_path_after_each() {
+        let mut handlebars = Registry::new();
+        assert!(handlebars
+            .register_template_string("t0", "{{#each a}}{{this}}{{/each}} {{b}}")
+            .is_ok());
+        let data = json!({
+            "a": [1, 2, 3, 4],
+            "b": "good",
+        });
+
+        let r0 = handlebars.render("t0", &data).ok().unwrap();
+
+        assert_eq!("1234 good", r0);
+    }
+
+    #[test]
+    fn test_else_context() {
+        let reg = Registry::new();
+        let template = "{{#each list}}A{{else}}{{foo}}{{/each}}";
+        let input = json!({"list": [], "foo": "bar"});
+        let rendered = reg.render_template(template, &input).unwrap();
+        assert_eq!("bar", rendered);
+    }
+
+    #[test]
+    fn test_block_context_leak() {
+        let reg = Registry::new();
+        let template = "{{#each list}}{{#each inner}}{{this}}{{/each}}{{foo}}{{/each}}";
+        let input = json!({"list": [{"inner": [], "foo": 1}, {"inner": [], "foo": 2}]});
+        let rendered = reg.render_template(template, &input).unwrap();
+        assert_eq!("12", rendered);
+    }
+
+    #[test]
+    fn test_derived_array_as_block_params() {
+        handlebars_helper!(range: |x: u64| (0..x).collect::<Vec<u64>>());
+        let mut reg = Registry::new();
+        reg.register_helper("range", Box::new(range));
+        let template = "{{#each (range 3) as |i|}}{{i}}{{/each}}";
+        let input = json!(0);
+        let rendered = reg.render_template(template, &input).unwrap();
+        assert_eq!("012", rendered);
+    }
+
+    #[test]
+    fn test_derived_object_as_block_params() {
+        handlebars_helper!(point: |x: u64, y: u64| json!({"x":x, "y":y}));
+        let mut reg = Registry::new();
+        reg.register_helper("point", Box::new(point));
+        let template = "{{#each (point 0 1) as |i|}}{{i}}{{/each}}";
+        let input = json!(0);
+        let rendered = reg.render_template(template, &input).unwrap();
+        assert_eq!("01", rendered);
+    }
+
+    #[test]
+    fn test_derived_array_without_block_param() {
+        handlebars_helper!(range: |x: u64| (0..x).collect::<Vec<u64>>());
+        let mut reg = Registry::new();
+        reg.register_helper("range", Box::new(range));
+        let template = "{{#each (range 3)}}{{this}}{{/each}}";
+        let input = json!(0);
+        let rendered = reg.render_template(template, &input).unwrap();
+        assert_eq!("012", rendered);
+    }
+
+    #[test]
+    fn test_derived_object_without_block_params() {
+        handlebars_helper!(point: |x: u64, y: u64| json!({"x":x, "y":y}));
+        let mut reg = Registry::new();
+        reg.register_helper("point", Box::new(point));
+        let template = "{{#each (point 0 1)}}{{this}}{{/each}}";
+        let input = json!(0);
+        let rendered = reg.render_template(template, &input).unwrap();
+        assert_eq!("01", rendered);
+    }
+
+    #[test]
+    fn test_non_iterable() {
+        let reg = Registry::new();
+        let template = "{{#each this}}each block{{else}}else block{{/each}}";
+        let input = json!("strings aren't iterable");
+        let rendered = reg.render_template(template, &input).unwrap();
+        assert_eq!("else block", rendered);
+    }
+
+    #[test]
+    fn test_recursion() {
+        let mut reg = Registry::new();
+        assert!(reg
+            .register_template_string(
+                "walk",
+                "(\
+                    {{#each this}}\
+                        {{#if @key}}{{@key}}{{else}}{{@index}}{{/if}}: \
+                        {{this}} \
+                        {{> walk this}}, \
+                    {{/each}}\
+                )",
+            )
+            .is_ok());
+
+        let input = json!({
+            "array": [42, {"wow": "cool"}, [[]]],
+            "object": { "a": { "b": "c", "d": ["e"] } },
+            "string": "hi"
+        });
+        let expected_output = "(\
+            array: [42, [object], [[], ], ] (\
+                0: 42 (), \
+                1: [object] (wow: cool (), ), \
+                2: [[], ] (0: [] (), ), \
+            ), \
+            object: [object] (\
+                a: [object] (\
+                    b: c (), \
+                    d: [e, ] (0: e (), ), \
+                ), \
+            ), \
+            string: hi (), \
+        )";
+
+        let rendered = reg.render("walk", &input).unwrap();
+        assert_eq!(expected_output, rendered);
     }
 }

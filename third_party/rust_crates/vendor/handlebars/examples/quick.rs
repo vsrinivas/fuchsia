@@ -1,12 +1,9 @@
-extern crate handlebars;
-#[macro_use]
-extern crate serde_json;
-
-use handlebars::Handlebars;
 use std::error::Error;
 
-// wait RFC1937 in
-fn main() -> Result<(), Box<Error>> {
+use handlebars::Handlebars;
+use serde_json::json;
+
+fn main() -> Result<(), Box<dyn Error>> {
     let mut reg = Handlebars::new();
     // render without register
     println!(

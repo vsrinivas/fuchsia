@@ -11,10 +11,10 @@ impl HelperDef for RawHelper {
     fn call<'reg: 'rc, 'rc>(
         &self,
         h: &Helper<'reg, 'rc>,
-        r: &'reg Registry,
-        ctx: &Context,
-        rc: &mut RenderContext<'reg>,
-        out: &mut Output,
+        r: &'reg Registry<'reg>,
+        ctx: &'rc Context,
+        rc: &mut RenderContext<'reg, 'rc>,
+        out: &mut dyn Output,
     ) -> HelperResult {
         let tpl = h.template();
         if let Some(t) = tpl {

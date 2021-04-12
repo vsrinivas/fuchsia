@@ -428,10 +428,10 @@ fn render_fidl_interface(
     Ok(())
 }
 
-fn select_template(
+fn select_template<'a>(
     template_type: &TemplateType,
-    output_path: &PathBuf,
-) -> Result<Box<dyn FidldocTemplate>, Error> {
+    output_path: &'a PathBuf,
+) -> Result<Box<dyn FidldocTemplate + 'a>, Error> {
     // Instantiate the template selected by the user
     let template: Box<dyn FidldocTemplate> = match template_type {
         TemplateType::HTML => {
