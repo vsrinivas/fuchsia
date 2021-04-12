@@ -1,0 +1,51 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import("//src/sys/build/components.gni")
+
+executable("getaddrinfo_test_client") {
+  testonly = true
+
+  sources = [ "getaddrinfo_test_client.cc" ]
+
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
+}
+
+rustc_test("getaddrinfo_test") {
+  edition = "2018"
+
+  sources = [ "src/lib.rs" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//src/connectivity/lib/net-declare",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:futures",
+  ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+fuchsia_test_component("getaddrinfo_test_client_component") {
+  component_name = "getaddrinfo_test_client"
+  deps = [ ":getaddrinfo_test_client" ]
+  manifest = "meta/getaddrinfo_test_client.cmx"
+}
+
+fuchsia_test_component("getaddrinfo_test_component") {
+  deps = [ ":getaddrinfo_test" ]
+  manifest = "meta/getaddrinfo_test.cmx"
+}
+
+fuchsia_test_package("getaddrinfo_tests") {
+  deps = [ ":getaddrinfo_test_client_component" ]
+  test_components = [ ":getaddrinfo_test_component" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":getaddrinfo_tests" ]
+}

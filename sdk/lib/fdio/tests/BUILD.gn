@@ -27,6 +27,7 @@ group("tests") {
     ":chroot-child($host_toolchain)",
     ":fdio-unittest-package",
     "constructors:tests",
+    "getaddrinfo:tests",
   ]
   if (host_os == "linux") {
     deps += [ ":fdio-test($host_toolchain)" ]
