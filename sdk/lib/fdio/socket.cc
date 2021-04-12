@@ -176,7 +176,7 @@ struct BaseSocket {
       return status;
     }
 
-    auto response = client().Bind(std::move(fidl_addr.address));
+    auto response = client().Bind(fidl_addr.address);
     status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -213,7 +213,7 @@ struct BaseSocket {
       return status;
     }
 
-    auto response = client().Connect(std::move(fidl_addr.address));
+    auto response = client().Connect(fidl_addr.address);
     status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -404,7 +404,7 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
       }
       struct ifreq* ifr = va_arg(va, struct ifreq*);
       fidl::StringView name(ifr->ifr_name, strnlen(ifr->ifr_name, sizeof(ifr->ifr_name) - 1));
-      auto response = provider->InterfaceNameToIndex(std::move(name));
+      auto response = provider->InterfaceNameToIndex(name);
       zx_status_t status = response.status();
       if (status != ZX_OK) {
         if (status == ZX_ERR_INVALID_ARGS) {
@@ -431,7 +431,7 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
       }
       struct ifreq* ifr = va_arg(va, struct ifreq*);
       fidl::StringView name(ifr->ifr_name, strnlen(ifr->ifr_name, sizeof(ifr->ifr_name) - 1));
-      auto response = provider->InterfaceNameToFlags(std::move(name));
+      auto response = provider->InterfaceNameToFlags(name);
       zx_status_t status = response.status();
       if (status != ZX_OK) {
         if (status == ZX_ERR_INVALID_ARGS) {
@@ -755,8 +755,8 @@ struct datagram_socket : public zxio {
     // TODO(fxbug.dev/21106): Support control messages.
     // TODO(fxbug.dev/58503): Use better representation of nullable union when available.
     // Currently just using a default-initialized union with an invalid tag.
-    auto response = client.SendMsg(std::move(addr.address), std::move(vec),
-                                   fsocket::wire::SendControlData(), to_sendmsg_flags(flags));
+    auto response = client.SendMsg(addr.address, vec, fsocket::wire::SendControlData(),
+                                   to_sendmsg_flags(flags));
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
