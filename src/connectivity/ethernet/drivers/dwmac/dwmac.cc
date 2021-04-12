@@ -92,13 +92,21 @@ int DWMacDevice::WorkerThread() {
   int ret = thrd_create_with_name(&thread_, thunk, this, "mac-thread");
   ZX_DEBUG_ASSERT(ret == thrd_success);
 
-  zx_status_t status = DdkAdd("Designware-MAC");
+  fbl::AllocChecker ac;
+  std::unique_ptr<EthPhyFunction> phy_function(new (&ac) EthPhyFunction(zxdev(), this));
+  if (!ac.check()) {
+    DdkAsyncRemove();
+    return ZX_ERR_NO_MEMORY;
+  }
+  auto status = phy_function->DdkAdd("Designware-MAC");
   if (status != ZX_OK) {
     zxlogf(ERROR, "dwmac: Could not create eth device: %d", status);
+    DdkAsyncRemove();
     return status;
   } else {
     zxlogf(INFO, "dwmac: Added dwMac device");
   }
+  phy_function_ = phy_function.release();
   return status;
 }
 
@@ -207,6 +215,12 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
 
   sync_completion_reset(&mac_device->cb_registered_signal_);
 
+  status = mac_device->DdkAdd("dwmac", DEVICE_ADD_NON_BINDABLE);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "DWMac DdkAdd failed %d", status);
+    return status;
+  }
+
   // Populate board specific information
   eth_dev_metadata_t phy_info;
   size_t actual;
@@ -223,25 +237,20 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
       {BIND_PLATFORM_DEV_DID, 0, phy_info.did},
   };
 
-  device_add_args_t phy_device_args = {};
-  phy_device_args.version = DEVICE_ADD_ARGS_VERSION;
-  phy_device_args.name = "eth_phy";
-  phy_device_args.ops = &mac_device->ddk_device_proto_,
-  phy_device_args.proto_id = ZX_PROTOCOL_ETH_MAC;
-  phy_device_args.props = props;
-  phy_device_args.prop_count = countof(props);
-  phy_device_args.ctx = mac_device.get();
-  phy_device_args.proto_ops = &mac_device->eth_mac_protocol_ops_;
-
+  fbl::AllocChecker ac;
+  std::unique_ptr<EthMacFunction> mac_function(
+      new (&ac) EthMacFunction(mac_device->zxdev(), mac_device.get()));
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
   // TODO(braval): use proper device pointer, depending on how
   //               many PHY devices we have to load, from the metadata.
-  zx_device_t* dev;
-  status = device_add(device, &phy_device_args, &dev);
+  status = mac_function->DdkAdd(ddk::DeviceAddArgs("eth_phy").set_props(props));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "dwmac: Could not create phy device: %d", status);
-
+    zxlogf(ERROR, "DdkAdd for Eth Mac Function failed %d", status);
     return status;
   }
+  mac_device->mac_function_ = mac_function.release();
 
   auto worker_thunk = [](void* arg) -> int {
     return reinterpret_cast<DWMacDevice*>(arg)->WorkerThread();
@@ -354,7 +363,9 @@ zx_status_t DWMacDevice::EthMacRegisterCallbacks(const eth_mac_callbacks_t* cbs)
 }
 
 DWMacDevice::DWMacDevice(zx_device_t* device, ddk::PDev pdev, ddk::EthBoardProtocolClient eth_board)
-    : ddk::Device<DWMacDevice, ddk::Unbindable>(device), pdev_(pdev), eth_board_(eth_board) {}
+    : ddk::Device<DWMacDevice, ddk::Unbindable, ddk::Suspendable>(device),
+      pdev_(pdev),
+      eth_board_(eth_board) {}
 
 void DWMacDevice::ReleaseBuffers() {
   // Unpin the memory used for the dma buffers
@@ -368,6 +379,8 @@ void DWMacDevice::ReleaseBuffers() {
 
 void DWMacDevice::DdkRelease() {
   zxlogf(INFO, "Ethernet release...");
+  ZX_ASSERT(phy_function_ == nullptr);
+  ZX_ASSERT(mac_function_ == nullptr);
   delete this;
 }
 
@@ -375,6 +388,13 @@ void DWMacDevice::DdkUnbind(ddk::UnbindTxn txn) {
   zxlogf(INFO, "Ethernet DdkUnbind");
   ShutDown();
   txn.Reply();
+}
+
+void DWMacDevice::DdkSuspend(ddk::SuspendTxn txn) {
+  zxlogf(INFO, "Ethernet DdkSuspend");
+  // We do not distinguish between states, just completely shutdown.
+  ShutDown();
+  txn.Reply(ZX_OK, txn.requested_state());
 }
 
 zx_status_t DWMacDevice::ShutDown() {

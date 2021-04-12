@@ -92,9 +92,10 @@ typedef volatile struct dw_dmadescr {
 
 namespace eth {
 
-class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable>,
-                    public ddk::EthernetImplProtocol<DWMacDevice, ddk::base_protocol>,
-                    public ddk::EthMacProtocol<DWMacDevice> {
+class EthPhyFunction;
+class EthMacFunction;
+
+class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable, ddk::Suspendable> {
  public:
   DWMacDevice(zx_device_t* device, ddk::PDev pdev, ddk::EthBoardProtocolClient eth_board);
 
@@ -102,6 +103,7 @@ class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable>,
 
   void DdkRelease();
   void DdkUnbind(ddk::UnbindTxn txn);
+  void DdkSuspend(ddk::SuspendTxn txn);
 
   // ZX_PROTOCOL_ETHERNET_IMPL ops.
   zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
@@ -120,6 +122,9 @@ class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable>,
   zx_status_t EthMacRegisterCallbacks(const eth_mac_callbacks_t* callbacks);
 
  private:
+  friend class EthMacFunction;
+  friend class EthPhyFunction;
+
   zx_status_t InitBuffers();
   zx_status_t InitDevice();
   zx_status_t DeInitDevice() __TA_REQUIRES(lock_);
@@ -194,6 +199,90 @@ class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable>,
 
   // Callbacks registered signal.
   sync_completion_t cb_registered_signal_;
+
+  EthPhyFunction* phy_function_;
+  EthMacFunction* mac_function_;
+};
+
+using EthPhyFunctionType = ddk::Device<EthPhyFunction, ddk::Unbindable, ddk::Suspendable>;
+class EthPhyFunction : public EthPhyFunctionType,
+                       public ddk::EthernetImplProtocol<EthPhyFunction, ddk::base_protocol> {
+ public:
+  explicit EthPhyFunction(zx_device_t* device, DWMacDevice* peripheral)
+      : EthPhyFunctionType(device), device_(peripheral) {}
+
+  void DdkUnbind(ddk::UnbindTxn txn) {
+    device_->phy_function_ = nullptr;
+    device_ = nullptr;
+    txn.Reply();
+  }
+  void DdkSuspend(ddk::SuspendTxn txn) {
+    device_->phy_function_ = nullptr;
+    device_ = nullptr;
+    txn.Reply(ZX_OK, txn.requested_state());
+  }
+  void DdkRelease() {
+    ZX_ASSERT(device_ == nullptr);
+    delete this;
+  }
+
+  // ZX_PROTOCOL_ETHERNET_IMPL ops.
+  zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
+    return device_->EthernetImplQuery(options, info);
+  }
+  void EthernetImplStop() { device_->EthernetImplStop(); }
+  zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
+    return device_->EthernetImplStart(ifc);
+  }
+  void EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                           ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
+    device_->EthernetImplQueueTx(options, netbuf, completion_cb, cookie);
+  }
+  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const uint8_t* data,
+                                   size_t data_size) {
+    return device_->EthernetImplSetParam(param, value, data, data_size);
+  }
+  void EthernetImplGetBti(zx::bti* bti) { device_->EthernetImplGetBti(bti); }
+
+ private:
+  DWMacDevice* device_;
+};
+
+using EthMacFunctionType = ddk::Device<EthMacFunction, ddk::Unbindable, ddk::Suspendable>;
+class EthMacFunction : public EthMacFunctionType,
+                       public ddk::EthMacProtocol<EthMacFunction, ddk::base_protocol> {
+ public:
+  explicit EthMacFunction(zx_device_t* device, DWMacDevice* peripheral)
+      : EthMacFunctionType(device), device_(peripheral) {}
+
+  void DdkUnbind(ddk::UnbindTxn txn) {
+    device_->mac_function_ = nullptr;
+    device_ = nullptr;
+    txn.Reply();
+  }
+  void DdkSuspend(ddk::SuspendTxn txn) {
+    device_->mac_function_ = nullptr;
+    device_ = nullptr;
+    txn.Reply(ZX_OK, txn.requested_state());
+  }
+  void DdkRelease() {
+    ZX_ASSERT(device_ == nullptr);
+    delete this;
+  }
+
+  // ZX_PROTOCOL_ETH_MAC ops.
+  zx_status_t EthMacMdioWrite(uint32_t reg, uint32_t val) {
+    return device_->EthMacMdioWrite(reg, val);
+  }
+  zx_status_t EthMacMdioRead(uint32_t reg, uint32_t* val) {
+    return device_->EthMacMdioRead(reg, val);
+  }
+  zx_status_t EthMacRegisterCallbacks(const eth_mac_callbacks_t* callbacks) {
+    return device_->EthMacRegisterCallbacks(callbacks);
+  }
+
+ private:
+  DWMacDevice* device_;
 };
 
 }  // namespace eth
