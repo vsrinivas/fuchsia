@@ -34,8 +34,8 @@ CacheNode::CacheNode(VfsType* vfs, const Digest& digest,
           vfs
 #endif
           ),
+      digest_(digest),
       overriden_cache_policy_(override_cache_policy) {
-  digest.CopyTo(digest_, sizeof(digest_));
 }
 
 CacheNode::~CacheNode() = default;

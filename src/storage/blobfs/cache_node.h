@@ -36,6 +36,8 @@ class CacheNode : public VnodeType,
                      std::optional<CachePolicy> override_cache_policy = std::nullopt);
   virtual ~CacheNode();
 
+  const Digest& digest() const { return digest_; }
+
   // Invoked by fbl::RefPtr when all strong references to RefPtr<CacheNode> go out of scope.
   //
   // If a derived class wishes to participate in the Cache's lifetime management,
@@ -77,12 +79,8 @@ class CacheNode : public VnodeType,
   std::optional<CachePolicy> overriden_cache_policy() const { return overriden_cache_policy_; };
   void set_overridden_cache_policy(CachePolicy policy) { overriden_cache_policy_ = policy; };
 
-  // Returns the node's digest.
-  const uint8_t* GetKey() const { return &digest_[0]; }
-  digest::Digest GetKeyAsDigest() const { return digest::Digest(digest_); }
-
  private:
-  uint8_t digest_[digest::kSha256Length] = {};
+  digest::Digest digest_;
   std::optional<CachePolicy> overriden_cache_policy_;
 };
 

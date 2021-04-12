@@ -43,7 +43,7 @@ void HealthCheckService::Verify(fuv::wire::VerifyOptions options,
     // check a blob that we didn't need to. If we need 100% correctness, we'll need to add a
     // Blob::VerifyIfNotDeleted() function that can atomically check and verify.
     if (zx_status_t status = blob->Verify(); status != ZX_OK) {
-      FX_LOGS(ERROR) << "Detected corrupted blob " << blob->MerkleRoot();
+      FX_LOGS(ERROR) << "Detected corrupted blob " << blob->digest();
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
     bytes_verified += blob->SizeData();

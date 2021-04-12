@@ -79,6 +79,10 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   virtual ~Blob();
 
+  // Note this Blob's hash is stored on the CacheNode base class:
+  //
+  // const Digest& digest() const;
+
   ////////////////
   // fs::Vnode interface.
 
@@ -112,10 +116,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   ////////////////
   // Other methods.
-
-  // Returns a digest::Digest containing the blob's merkle root.
-  // Equivalent to digest::Digest(GetKey()).
-  digest::Digest MerkleRoot() const;
 
   // Returned true if this blob is marked for deletion.
   //

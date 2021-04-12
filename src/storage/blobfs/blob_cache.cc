@@ -73,7 +73,7 @@ zx_status_t BlobCache::ForAllOpenNodes(NextNodeCallback callback) {
       } else {
         // ... Acquire all subsequent nodes by iterating from the lower bound
         // of the current node.
-        auto current = open_hash_.lower_bound(old_vnode->GetKey());
+        auto current = open_hash_.lower_bound(old_vnode->digest());
         if (current == open_hash_.end()) {
           return ZX_OK;
         } else if (current.CopyPointer() != old_vnode.get()) {
@@ -107,14 +107,13 @@ zx_status_t BlobCache::ForAllOpenNodes(NextNodeCallback callback) {
 
 zx_status_t BlobCache::Lookup(const Digest& digest, fbl::RefPtr<CacheNode>* out) {
   TRACE_DURATION("blobfs", "BlobCache::Lookup");
-  const uint8_t* key = digest.get();
 
   // Look up the blob in the maps.
   fbl::RefPtr<CacheNode> vnode = nullptr;
   // Avoid releasing a reference to |vnode| while holding |hash_lock_|.
   {
     fbl::AutoLock lock(&hash_lock_);
-    zx_status_t status = LookupLocked(key, &vnode);
+    zx_status_t status = LookupLocked(digest, &vnode);
     if (status != ZX_OK) {
       return status;
     }
@@ -127,7 +126,7 @@ zx_status_t BlobCache::Lookup(const Digest& digest, fbl::RefPtr<CacheNode>* out)
   return ZX_OK;
 }
 
-zx_status_t BlobCache::LookupLocked(const uint8_t* key, fbl::RefPtr<CacheNode>* out) {
+zx_status_t BlobCache::LookupLocked(const digest::Digest& key, fbl::RefPtr<CacheNode>* out) {
   ZX_DEBUG_ASSERT(out != nullptr);
 
   // Try to acquire the node from the open hash, if possible.
@@ -172,12 +171,11 @@ zx_status_t BlobCache::LookupLocked(const uint8_t* key, fbl::RefPtr<CacheNode>* 
 zx_status_t BlobCache::Add(const fbl::RefPtr<CacheNode>& vnode) {
   TRACE_DURATION("blobfs", "BlobCache::Add");
 
-  const uint8_t* key = vnode->GetKey();
   // Avoid running the old_node destructor while holding the lock.
   fbl::RefPtr<CacheNode> old_node;
   {
     fbl::AutoLock lock(&hash_lock_);
-    if (LookupLocked(key, &old_node) == ZX_OK) {
+    if (LookupLocked(vnode->digest(), &old_node) == ZX_OK) {
       return ZX_ERR_ALREADY_EXISTS;
     }
     open_hash_.insert(vnode.get());
@@ -200,7 +198,7 @@ zx_status_t BlobCache::EvictUnsafe(CacheNode* vnode, bool from_recycle) {
   }
 
   ZX_ASSERT(open_hash_.erase(*vnode) != nullptr);
-  ZX_ASSERT(closed_hash_.find(vnode->GetKey()).CopyPointer() == nullptr);
+  ZX_ASSERT(closed_hash_.find(vnode->digest()).CopyPointer() == nullptr);
 
   // If we successfully evicted the node from a container, we may have been invoked
   // from fbl_recycle. In this case, a caller to |Lookup| may be blocked waiting until
@@ -252,7 +250,7 @@ void BlobCache::Downgrade(CacheNode* raw_vnode) {
   __UNUSED auto leak = fbl::ExportToRawPtr(&vnode);
 }
 
-fbl::RefPtr<CacheNode> BlobCache::UpgradeLocked(const uint8_t* key) {
+fbl::RefPtr<CacheNode> BlobCache::UpgradeLocked(const digest::Digest& key) {
   ZX_DEBUG_ASSERT(open_hash_.find(key).CopyPointer() == nullptr);
   CacheNode* raw_vnode = closed_hash_.erase(key);
   if (raw_vnode == nullptr) {

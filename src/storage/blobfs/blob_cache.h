@@ -112,7 +112,7 @@ class BlobCache {
   //
   // Returns ZX_OK if the node is found and returned.
   // Returns ZX_ERR_NOT_FOUND if the node doesn't exist in the cache.
-  zx_status_t LookupLocked(const uint8_t* key, fbl::RefPtr<CacheNode>* out)
+  zx_status_t LookupLocked(const digest::Digest& key, fbl::RefPtr<CacheNode>* out)
       __TA_REQUIRES(hash_lock_);
 
   // Upgrades a Vnode which exists in the |closed_hash_| into |open_hash_|,
@@ -120,7 +120,7 @@ class BlobCache {
   // |Downgrade()|, if it exists.
   //
   // Precondition: The Vnode must not exist in |open_hash_|.
-  fbl::RefPtr<CacheNode> UpgradeLocked(const uint8_t* key) __TA_REQUIRES(hash_lock_);
+  fbl::RefPtr<CacheNode> UpgradeLocked(const digest::Digest& key) __TA_REQUIRES(hash_lock_);
 
   // Resets the cache by deleting all members |closed_hash_|.
   void ResetLocked() __TA_REQUIRES(hash_lock_);
@@ -129,18 +129,14 @@ class BlobCache {
   // which is larger than a primitive type: the keys are 'digest::kSha256Length'
   // bytes long.
   struct MerkleRootTraits {
-    static const uint8_t* GetKey(const CacheNode& obj) { return obj.GetKey(); }
-    static bool LessThan(const uint8_t* k1, const uint8_t* k2) {
-      return memcmp(k1, k2, digest::kSha256Length) < 0;
-    }
-    static bool EqualTo(const uint8_t* k1, const uint8_t* k2) {
-      return memcmp(k1, k2, digest::kSha256Length) == 0;
-    }
+    static const digest::Digest& GetKey(const CacheNode& obj) { return obj.digest(); }
+    static bool LessThan(const digest::Digest& d1, const digest::Digest& d2) { return d1 < d2; }
+    static bool EqualTo(const digest::Digest& d1, const digest::Digest& d2) { return d1 == d2; }
   };
 
   // CacheNodes exist in the WAVLTree as long as one or more reference exists;
   // when the Vnode is deleted, it is immediately removed from the WAVL tree.
-  using WAVLTreeByMerkle = fbl::WAVLTree<const uint8_t*, CacheNode*, MerkleRootTraits>;
+  using WAVLTreeByMerkle = fbl::WAVLTree<const digest::Digest&, CacheNode*, MerkleRootTraits>;
 
   CachePolicy cache_policy_ = CachePolicy::EvictImmediately;
 

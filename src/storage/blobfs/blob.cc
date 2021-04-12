@@ -123,7 +123,7 @@ zx_status_t Blob::VerifyNullBlob() const {
   ZX_ASSERT(inode_.blob_size == 0);
   std::unique_ptr<BlobVerifier> verifier;
   if (zx_status_t status =
-          BlobVerifier::CreateWithoutTree(MerkleRoot(), blobfs_->Metrics(), inode_.blob_size,
+          BlobVerifier::CreateWithoutTree(digest(), blobfs_->Metrics(), inode_.blob_size,
                                           &blobfs_->blob_corruption_notifier(), &verifier);
       status != ZX_OK) {
     return status;
@@ -305,14 +305,12 @@ bool Blob::IsPagerBacked() const {
   return SupportsPaging(inode_) && state() == BlobState::kReadable;
 }
 
-Digest Blob::MerkleRoot() const { return GetKeyAsDigest(); }
-
 zx_status_t Blob::WriteMetadata(BlobTransaction& transaction) {
   TRACE_DURATION("blobfs", "Blobfs::WriteMetadata");
   assert(state() == BlobState::kDataWrite);
 
   // Update the on-disk hash.
-  MerkleRoot().CopyTo(inode_.merkle_root_hash);
+  digest().CopyTo(inode_.merkle_root_hash);
 
   if (inode_.block_count) {
     // We utilize the NodePopulator class to take our reserved blocks and nodes and fill the
@@ -440,9 +438,9 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
 }
 
 zx_status_t Blob::Commit() {
-  if (MerkleRoot() != write_info_->digest) {
+  if (digest() != write_info_->digest) {
     // Downloaded blob did not match provided digest.
-    FX_LOGS(ERROR) << "downloaded blob did not match provided digest " << MerkleRoot().ToString();
+    FX_LOGS(ERROR) << "downloaded blob did not match provided digest " << digest();
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -762,8 +760,7 @@ void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
   // This might have been the last reference to a deleted blob, so try purging it.
   std::lock_guard<std::mutex> lock(mutex_);
   if (zx_status_t status = TryPurge(); status != ZX_OK) {
-    FX_LOGS(WARNING) << "Purging blob " << MerkleRoot()
-                     << " failed: " << zx_status_get_string(status);
+    FX_LOGS(WARNING) << "Purging blob " << digest() << " failed: " << zx_status_get_string(status);
   }
   if (!HasReferences()) {
     fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
