@@ -144,7 +144,7 @@ impl<T: 'static + RuntimeStatsSource + Send> ComponentTreeStats<T> {
                         if *m == AbsoluteMoniker::root() {
                             "<root>".to_string()
                         } else {
-                            m.to_string().replacen("/", "", 1)
+                            m.to_string_without_instances().replacen("/", "", 1)
                         }
                     }
                 };
@@ -888,7 +888,7 @@ mod tests {
                                 }
                             }
                         },
-                        "a:0": {
+                        "a": {
                             koid.to_string() => {
                                 "@samples": {
                                     "0": {
@@ -940,7 +940,7 @@ mod tests {
                                 }
                             }
                         },
-                        "a:0": {
+                        "a": {
                             koid.to_string() => contains {
                                 "@samples": contains {
                                     "0": contains {
@@ -981,7 +981,7 @@ mod tests {
                                 }
                             }
                         },
-                        "a:0": {
+                        "a": {
                             koid.to_string() => contains {
                                 "@samples": {
                                     "0": contains {

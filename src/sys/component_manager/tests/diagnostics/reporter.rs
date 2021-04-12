@@ -55,7 +55,7 @@ async fn main() {
                 },
                 components: {
                     "<component_manager>": contains {},
-                    "archivist:0": {
+                    "archivist": {
                         archivist_job_koid.to_string() => {
                             "@samples": {
                                 "0": {
@@ -66,7 +66,7 @@ async fn main() {
                             }
                         }
                     },
-                    "reporter:0": {
+                    "reporter": {
                         reporter_job_koid.to_string() => {
                             "@samples": {
                                 "0": {
