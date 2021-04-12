@@ -6,11 +6,14 @@ use {
     crate::args::{
         Args, Command, ExperimentCommand, ExperimentDisableCommand, ExperimentEnableCommand,
         ExperimentSubCommand, GcCommand, GetHashCommand, OpenCommand, PkgStatusCommand,
-        RepoAddCommand, RepoCommand, RepoRemoveCommand, RepoSubCommand, ResolveCommand,
-        RuleClearCommand, RuleCommand, RuleDumpDynamicCommand, RuleListCommand, RuleReplaceCommand,
+        RepoAddCommand, RepoAddFileCommand, RepoAddSubCommand, RepoAddUrlCommand, RepoCommand,
+        RepoConfigFormat, RepoRemoveCommand, RepoSubCommand, ResolveCommand, RuleClearCommand,
+        RuleCommand, RuleDumpDynamicCommand, RuleListCommand, RuleReplaceCommand,
         RuleReplaceFileCommand, RuleReplaceJsonCommand, RuleReplaceSubCommand, RuleSubCommand,
     },
+    crate::v1repoconf::SourceConfig,
     anyhow::{bail, format_err, Context as _},
+    fidl_fuchsia_net_http::{self as http},
     fidl_fuchsia_pkg::{
         PackageCacheMarker, PackageResolverAdminMarker, PackageResolverMarker, PackageUrl,
         RepositoryManagerMarker, RepositoryManagerProxy,
@@ -22,6 +25,7 @@ use {
     files_async, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon as zx,
+    futures::io::copy,
     futures::stream::TryStreamExt,
     std::{
         convert::{TryFrom, TryInto},
@@ -35,6 +39,7 @@ use {
 
 mod args;
 mod error;
+mod v1repoconf;
 
 pub fn main() -> Result<(), anyhow::Error> {
     let mut executor = fasync::Executor::new()?;
@@ -167,12 +172,55 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                     }
                     Ok(0)
                 }
-                Some(RepoSubCommand::Add(RepoAddCommand { file })) => {
-                    let repo: RepositoryConfig =
-                        serde_json::from_reader(io::BufReader::new(File::open(file)?))?;
+                Some(RepoSubCommand::Add(RepoAddCommand { subcommand })) => {
+                    match subcommand {
+                        RepoAddSubCommand::File(RepoAddFileCommand { format, name, file }) => {
+                            let res = match format {
+                                RepoConfigFormat::Version1 => {
+                                    let mut repo: SourceConfig = serde_json::from_reader(
+                                        io::BufReader::new(File::open(file)?),
+                                    )?;
+                                    // If a name is specified via the command line, override the
+                                    // automatically derived name.
+                                    if let Some(n) = name {
+                                        repo.set_id(&n);
+                                    }
+                                    let r = repo_manager.add(repo.into()).await?;
+                                    r
+                                }
+                                RepoConfigFormat::Version2 => {
+                                    let repo: RepositoryConfig = serde_json::from_reader(
+                                        io::BufReader::new(File::open(file)?),
+                                    )?;
+                                    let r = repo_manager.add(repo.into()).await?;
+                                    r
+                                }
+                            };
 
-                    let res = repo_manager.add(repo.into()).await?;
-                    let () = res.map_err(zx::Status::from_raw)?;
+                            let () = res.map_err(zx::Status::from_raw)?;
+                        }
+                        RepoAddSubCommand::Url(RepoAddUrlCommand { format, name, repo_url }) => {
+                            let res = fetch_url(repo_url).await?;
+                            let res = match format {
+                                RepoConfigFormat::Version1 => {
+                                    let mut repo: SourceConfig = serde_json::from_slice(&res)?;
+                                    // If a name is specified via the command line, override the
+                                    // automatically derived name.
+                                    if let Some(n) = name {
+                                        repo.set_id(&n);
+                                    }
+                                    let r = repo_manager.add(repo.into()).await?;
+                                    r
+                                }
+                                RepoConfigFormat::Version2 => {
+                                    let repo: RepositoryConfig = serde_json::from_slice(&res)?;
+                                    let r = repo_manager.add(repo.into()).await?;
+                                    r
+                                }
+                            };
+                            let () = res.map_err(zx::Status::from_raw)?;
+                        }
+                    }
 
                     Ok(0)
                 }
@@ -367,4 +415,45 @@ async fn fetch_repos(
         .into_iter()
         .map(|repo| RepositoryConfig::try_from(repo).map_err(|e| anyhow::Error::from(e)))
         .collect()
+}
+
+async fn fetch_url<T: Into<String>>(url_string: T) -> Result<Vec<u8>, anyhow::Error> {
+    let http_svc = connect_to_service::<http::LoaderMarker>()
+        .context("Unable to connect to fuchsia.net.http.Loader")?;
+
+    let url_request = http::Request {
+        url: Some(url_string.into()),
+        method: Some(String::from("GET")),
+        headers: None,
+        body: None,
+        deadline: None,
+        ..http::Request::EMPTY
+    };
+
+    let response =
+        http_svc.fetch(url_request).await.context("Error while calling Loader::Fetch")?;
+
+    if let Some(e) = response.error {
+        return Err(format_err!("LoaderProxy error - {:?}", e));
+    }
+
+    let socket = match response.body {
+        Some(s) => fasync::Socket::from_socket(s).context("Error while wrapping body socket")?,
+        _ => {
+            return Err(format_err!("failed to read UrlBody from the stream"));
+        }
+    };
+
+    let mut body = Vec::new();
+    let bytes_received =
+        copy(socket, &mut body).await.context("Failed to read bytes from the socket")?;
+
+    if bytes_received < 1 {
+        return Err(format_err!(
+            "Failed to download data from url! bytes_received = {}",
+            bytes_received
+        ));
+    }
+
+    Ok(body)
 }

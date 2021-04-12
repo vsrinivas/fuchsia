@@ -83,9 +83,61 @@ pub enum RepoSubCommand {
 #[argh(subcommand, name = "add")]
 /// Add a source repository.
 pub struct RepoAddCommand {
-    /// path to a respository config file, in JSON format, which contains the different repository metadata and URLs.
-    #[argh(option, short = 'f')]
+    #[argh(subcommand)]
+    pub subcommand: RepoAddSubCommand,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand)]
+pub enum RepoAddSubCommand {
+    File(RepoAddFileCommand),
+    Url(RepoAddUrlCommand),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum RepoConfigFormat {
+    Version1,
+    Version2,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "file")]
+/// Add a respository config from a local file, in JSON format, which contains the different repository metadata and URLs.
+pub struct RepoAddFileCommand {
+    /// the expected config.json file format version.
+    #[argh(
+        option,
+        short = 'f',
+        default = "RepoConfigFormat::Version2",
+        from_str_fn(repo_config_format)
+    )]
+    pub format: RepoConfigFormat,
+    /// name of the source (a name from the URL will be derived if not provided).
+    #[argh(option, short = 'n')]
+    pub name: Option<String>,
+    /// respository config file, in JSON format, which contains the different repository metadata and URLs.
+    #[argh(positional)]
     pub file: PathBuf,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "url")]
+/// Add a respository config via http, in JSON format, which contains the different repository metadata and URLs.
+pub struct RepoAddUrlCommand {
+    /// the expected config.json file format version.
+    #[argh(
+        option,
+        short = 'f',
+        default = "RepoConfigFormat::Version2",
+        from_str_fn(repo_config_format)
+    )]
+    pub format: RepoConfigFormat,
+    /// name of the source (a name from the URL will be derived if not provided).
+    #[argh(option, short = 'n')]
+    pub name: Option<String>,
+    /// http(s) URL pointing to a respository config file, in JSON format, which contains the different repository metadata and URLs.
+    #[argh(positional)]
+    pub repo_url: String,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -243,6 +295,14 @@ fn parse_rule_config(config: &str) -> Result<RuleConfig, String> {
     serde_json::from_str(&config).map_err(|e| e.to_string())
 }
 
+fn repo_config_format(value: &str) -> Result<RepoConfigFormat, String> {
+    match value {
+        "1" => Ok(RepoConfigFormat::Version1),
+        "2" => Ok(RepoConfigFormat::Version2),
+        _ => Err(format!("unknown format {:?}", value)),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {super::*, matches::assert_matches};
@@ -321,17 +381,55 @@ mod tests {
         check(&["repo", "-v"], RepoCommand { verbose: true, subcommand: None });
         check(&["repo", "--verbose"], RepoCommand { verbose: true, subcommand: None });
         check(
-            &["repo", "add", "-f", "foo"],
+            &["repo", "add", "file", "foo"],
             RepoCommand {
                 verbose: false,
-                subcommand: Some(RepoSubCommand::Add(RepoAddCommand { file: "foo".into() })),
+                subcommand: Some(RepoSubCommand::Add(RepoAddCommand {
+                    subcommand: RepoAddSubCommand::File(RepoAddFileCommand {
+                        format: RepoConfigFormat::Version2,
+                        name: None,
+                        file: "foo".into(),
+                    }),
+                })),
             },
         );
         check(
-            &["repo", "add", "--file", "foo"],
+            &["repo", "add", "file", "-f", "1", "foo"],
             RepoCommand {
                 verbose: false,
-                subcommand: Some(RepoSubCommand::Add(RepoAddCommand { file: "foo".into() })),
+                subcommand: Some(RepoSubCommand::Add(RepoAddCommand {
+                    subcommand: RepoAddSubCommand::File(RepoAddFileCommand {
+                        format: RepoConfigFormat::Version1,
+                        name: None,
+                        file: "foo".into(),
+                    }),
+                })),
+            },
+        );
+        check(
+            &["repo", "add", "file", "-n", "devhost", "foo"],
+            RepoCommand {
+                verbose: false,
+                subcommand: Some(RepoSubCommand::Add(RepoAddCommand {
+                    subcommand: RepoAddSubCommand::File(RepoAddFileCommand {
+                        format: RepoConfigFormat::Version2,
+                        name: Some("devhost".to_string()),
+                        file: "foo".into(),
+                    }),
+                })),
+            },
+        );
+        check(
+            &["repo", "add", "url", "-n", "devhost", "http://foo.tld/fuchsia/config.json"],
+            RepoCommand {
+                verbose: false,
+                subcommand: Some(RepoSubCommand::Add(RepoAddCommand {
+                    subcommand: RepoAddSubCommand::Url(RepoAddUrlCommand {
+                        format: RepoConfigFormat::Version2,
+                        name: Some("devhost".to_string()),
+                        repo_url: "http://foo.tld/fuchsia/config.json".into(),
+                    }),
+                })),
             },
         );
         check(

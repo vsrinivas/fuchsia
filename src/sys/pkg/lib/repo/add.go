@@ -83,7 +83,7 @@ func addFromConfig(ctx context.Context, config *Config, sh shell, installPath st
 }
 
 func repoAddCmd(file string) []string {
-	return []string{"pkgctl", "repo", "add", "--file", file}
+	return []string{"pkgctl", "repo", "add", "file", file}
 }
 
 type shell interface {
