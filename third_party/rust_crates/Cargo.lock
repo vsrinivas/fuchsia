@@ -985,7 +985,6 @@ dependencies = [
  "ansi_term",
  "anyhow",
  "arbitrary",
- "arc-swap",
  "argh",
  "async-channel",
  "async-executor",

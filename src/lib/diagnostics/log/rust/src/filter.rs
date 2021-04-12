@@ -1,11 +1,11 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use arc_swap::ArcSwap;
 use diagnostics_log_encoding::{Severity, SeverityExt};
 use fidl_fuchsia_diagnostics_stream::Record;
 use fidl_fuchsia_logger::{LogSinkEvent, LogSinkEventStream};
 use futures::StreamExt;
+use parking_lot::RwLock;
 use std::{future::Future, sync::Arc};
 use tracing::{
     subscriber::{Interest, Subscriber},
@@ -14,31 +14,30 @@ use tracing::{
 use tracing_subscriber::layer::{Context, Layer};
 
 pub(crate) struct InterestFilter {
-    min_severity: ArcSwap<Severity>,
+    min_severity: Arc<RwLock<Severity>>,
 }
 
 impl InterestFilter {
     /// Constructs a new `InterestFilter` and a future which should be polled to listen
     /// to changes in the LogSink's interest.
     pub fn new(events: LogSinkEventStream) -> (Self, impl Future<Output = ()>) {
-        let min_severity = ArcSwap::new(Arc::new(Severity::Info));
+        let min_severity = Arc::new(RwLock::new(Severity::Info));
         let filter = Self { min_severity: min_severity.clone() };
         (filter, Self::listen_to_interest_changes(min_severity, events))
     }
 
     async fn listen_to_interest_changes(
-        min_severity: ArcSwap<Severity>,
+        min_severity: Arc<RwLock<Severity>>,
         mut events: LogSinkEventStream,
     ) {
         while let Some(Ok(LogSinkEvent::OnInterestChanged { interest })) = events.next().await {
-            let new_severity = Arc::new(interest.min_severity.unwrap_or(Severity::Info));
-            min_severity.store(new_severity);
+            *min_severity.write() = interest.min_severity.unwrap_or(Severity::Info);
         }
     }
 
     #[allow(unused)] // TODO(fxbug.dev/62858) remove attribute
     fn enabled_for_testing(&self, _file: &str, _line: u32, record: &Record) -> bool {
-        record.severity >= **self.min_severity.load()
+        record.severity >= *self.min_severity.read()
     }
 }
 
@@ -49,7 +48,7 @@ impl<S: Subscriber> Layer<S> for InterestFilter {
     }
 
     fn enabled(&self, metadata: &Metadata<'_>, _ctx: Context<'_, S>) -> bool {
-        metadata.severity() >= **self.min_severity.load()
+        metadata.severity() >= *self.min_severity.read()
     }
 }
 
