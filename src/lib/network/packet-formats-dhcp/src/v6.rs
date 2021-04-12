@@ -432,18 +432,11 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionsImpl {
                     |len| (requested_opts, len),
                 );
                 let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
-                let () = buf
-                    .write_obj_front(
-                        requested_opts
-                            .into_iter()
-                            .flat_map(|opt_code| {
-                                let opt_code: [u8; 2] = u16::from(*opt_code).to_be_bytes();
-                                opt_code.to_vec()
-                            })
-                            .collect::<Vec<u8>>()
-                            .as_slice(),
-                    )
-                    .expect("buffer is too small");
+                for opt_code in requested_opts.into_iter() {
+                    let () = buf
+                        .write_obj_front(&u16::from(*opt_code).to_be_bytes())
+                        .expect("buffer is too small");
+                }
             }
             DhcpOption::Preference(pref_val) => {
                 let () = buf.write_obj_front(&U16::new(1)).expect("buffer is too small");
@@ -640,8 +633,8 @@ mod tests {
         assert_eq!(buf.len(), 112);
         #[rustfmt::skip]
         assert_eq!(
-            buf,
-            vec![
+            buf[..],
+            [
                 1, // message type
                 1, 2, 3, // transaction id
                 0, 1, 0, 3, 4, 5, 6, // option - client ID
@@ -723,8 +716,8 @@ mod tests {
         let () = builder.serialize(&mut buf);
 
         assert_eq!(
-            buf,
-            vec![
+            buf[..],
+            [
                 1, // message type
                 1, 2, 3, // transaction id
                 0, 6, 0, 0, // option - ORO
@@ -744,10 +737,10 @@ mod tests {
         let () = <DhcpOptionsImpl as RecordsSerializerImpl>::serialize(&mut buf, &option);
         assert_eq!(buf, [0, 8, 0, 2, 0, 42]);
 
-        let options = Records::<_, DhcpOptionsImpl>::parse_with_context(&buf[..], ()).unwrap();
+        let options = Records::<_, DhcpOptionsImpl>::parse_with_context(&buf[..], ())
+            .expect("parse should succeed");
         let options: Vec<DhcpOption<'_>> = options.iter().collect();
-        assert_eq!(options.len(), 1);
-        assert_eq!(options[0], DhcpOption::ElapsedTime(42));
+        assert_eq!(options[..], [DhcpOption::ElapsedTime(42)]);
     }
 
     #[test]
@@ -798,7 +791,7 @@ mod tests {
     #[test]
     fn test_skip_invalid_op_code() {
         let mut buf = test_buf_with_no_options();
-        buf.append(&mut vec![
+        buf.extend_from_slice(&[
             0, 0, // opt code = 0, invalid op code
             0, 1, // valid opt length
             0, // valid opt value
@@ -816,7 +809,7 @@ mod tests {
     #[test]
     fn test_invalid_oro_opt_len() {
         let mut buf = test_buf_with_no_options();
-        buf.append(&mut vec![
+        buf.extend_from_slice(&[
             0, 6, // opt code = 6, ORO
             0, 1, // invalid opt length, must be even
             0,
@@ -833,7 +826,7 @@ mod tests {
     #[test]
     fn test_invalid_preference_opt_len() {
         let mut buf = test_buf_with_no_options();
-        buf.append(&mut vec![
+        buf.extend_from_slice(&[
             0, 7, // opt code = 7, preference
             0, 2, // invalid opt length, must be even
             0, 0,
@@ -850,7 +843,7 @@ mod tests {
     #[test]
     fn test_elapsed_time_invalid_opt_len() {
         let mut buf = test_buf_with_no_options();
-        buf.append(&mut vec![
+        buf.extend_from_slice(&[
             0, 8, // opt code = 8, elapsed time
             0, 3, // invalid opt length, must be even
             0, 0, 0,
@@ -867,7 +860,7 @@ mod tests {
     #[test]
     fn test_information_refresh_time_invalid_opt_len() {
         let mut buf = test_buf_with_no_options();
-        buf.append(&mut vec![
+        buf.extend_from_slice(&[
             0, 32, // opt code = 32, information refresh time
             0, 3, // invalid opt length, must be 4
             0, 0, 0,
@@ -884,7 +877,7 @@ mod tests {
     #[test]
     fn test_dns_servers_invalid_opt_len() {
         let mut buf = test_buf_with_no_options();
-        buf.append(&mut vec![
+        buf.extend_from_slice(&[
             0, 23, // opt code = 23, dns servers
             0, 17, // invalid opt length, must be multiple of 16
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
