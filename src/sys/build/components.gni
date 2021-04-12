@@ -3,4 +3,4 @@
 # found in the LICENSE file.
 
 # TODO: delete this file and move all imports to the path below.
-import("//build/components/components.gni")
+import("//build/components.gni")
