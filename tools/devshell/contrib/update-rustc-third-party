@@ -69,7 +69,11 @@ export OWNERS_TMP=$(mktemp -d)
   -q)
 
 # restore OWNERS files
-cp -r $OWNERS_TMP/* $VENDOR_DIR/
+shopt -s nullglob
+for f in $OWNERS_TMP/*
+do
+  cp -r $f $VENDOR_DIR/
+done
 
 # restore LICENSE* files
 $FUCHSIA_DIR/scripts/rust/check_rust_licenses.py \
