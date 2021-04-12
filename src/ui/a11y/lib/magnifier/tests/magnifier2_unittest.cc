@@ -232,5 +232,20 @@ TEST_F(Magnifier2Test, TwoFingerDrag) {
   }
 }
 
+TEST_F(Magnifier2Test, ZoomOutIfMagnified) {
+  // Magnify to some non-trivial transform state.
+  a11y::GestureContext gesture_context;
+  gesture_context.current_pointer_locations[1].ndc_point.x = 0.4f;
+  gesture_context.current_pointer_locations[1].ndc_point.y = 0.5f;
+  mock_gesture_handler()->TriggerGesture(GestureType::kOneFingerTripleTap, gesture_context);
+  RunLoopUntilTransformIs(-.4f * (a11y::Magnifier2::kDefaultScale - 1),  // x translation
+                          -.5f * (a11y::Magnifier2::kDefaultScale - 1),  // y translation
+                          a11y::Magnifier2::kDefaultScale);
+
+  // Call ZoomOutIfMagnified() to ensure that we return to "normal" zoom state.
+  magnifier()->ZoomOutIfMagnified();
+  RunLoopUntilTransformIs(0 /* x */, 0 /* y */, 1 /* scale */);
+}
+
 }  // namespace
 }  // namespace accessibility_test

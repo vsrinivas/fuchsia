@@ -38,6 +38,9 @@ class Magnifier2 : public fuchsia::accessibility::Magnifier {
   // Method to register recognizers in a gesture recognition arena.
   void BindGestures(a11y::GestureHandler* gesture_handler);
 
+  // Returns the screen to "normal" zoom (scale = 1) if it's currently magnified.
+  void ZoomOutIfMagnified();
+
  private:
   // Indicates magnification mode.
   // TODO(fxb/69736): Mention that there are more details in README doc.

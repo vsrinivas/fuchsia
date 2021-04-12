@@ -25,6 +25,7 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
       color_transform_manager_(color_transform_manager),
       gesture_listener_registry_(gesture_listener_registry),
       screen_reader_context_factory_(screen_reader_context_factory),
+      magnifier_(),
       inspect_node_(std::move(inspect_node)),
       inspect_property_intl_property_provider_disconnected_(
           inspect_node_.CreateBool(kIntlPropertyProviderDisconnectedInspectName, false)) {
@@ -186,9 +187,8 @@ void App::UpdateGestureManagerState() {
     pointer_event_registry_->Register(gesture_manager_->binding().NewBinding());
 
     // The ordering of these recognizers is significant, as it signifies priority.
-
     if (gesture_state_.magnifier_gestures) {
-      gesture_manager_->arena()->Add(&magnifier_);
+      magnifier_.BindGestures(gesture_manager_->gesture_handler());
     }
 
     if (gesture_state_.screen_reader_gestures) {

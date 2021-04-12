@@ -101,6 +101,9 @@ class AppUnitTest : public gtest::TestLoopFixture {
 
     for (const auto& params : events) {
       SendPointerEvent(listener->get(), params);
+      if (event_handling == fuchsia::ui::input::accessibility::EventHandling::REJECTED) {
+        break;
+      }
     }
 
     return event_handling;
@@ -349,7 +352,7 @@ TEST_F(AppUnitTest, MagnifierGestureWithScreenReader) {
   RunLoopUntilIdle();
 
   SendPointerEvents(&mock_pointer_event_registry_.listener(), 3 * TapEvents(1, {}));
-  RunLoopFor(a11y::Magnifier::kTransitionPeriod);
+  RunLoopFor(a11y::Magnifier2::kTransitionPeriod);
 
   EXPECT_GT(mag_handler.transform().scale, 1);
 }

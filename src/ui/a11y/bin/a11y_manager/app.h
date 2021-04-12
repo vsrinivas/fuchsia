@@ -27,7 +27,7 @@
 #include "src/ui/a11y/lib/focus_chain/focus_chain_manager.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_listener_registry.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
-#include "src/ui/a11y/lib/magnifier/magnifier.h"
+#include "src/ui/a11y/lib/magnifier/magnifier_2.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 #include "src/ui/a11y/lib/util/boot_info_manager.h"
@@ -167,7 +167,7 @@ class App {
   // for pointer events, and destroyed when the listener disconnects.
   std::unique_ptr<a11y::GestureManager> gesture_manager_;
   GestureState gesture_state_;
-  a11y::Magnifier magnifier_;
+  a11y::Magnifier2 magnifier_;
 
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager> semantics_manager_bindings_;
   fidl::BindingSet<fuchsia::accessibility::virtualkeyboard::Registry>

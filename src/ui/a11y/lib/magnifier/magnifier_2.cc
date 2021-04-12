@@ -18,6 +18,12 @@ void Magnifier2::RegisterHandler(
   // TODO(fxb/69730): Update transform here.
 }
 
+void Magnifier2::ZoomOutIfMagnified() {
+  if (state_.mode != Mode::UNMAGNIFIED) {
+    state_.mode = Mode::UNMAGNIFIED;
+    TransitionOutOfZoom();
+  }
+}
 bool Magnifier2::State::operator==(const State& o) const {
   return transition_rate == o.transition_rate && scale == o.scale && translation == o.translation;
 }
