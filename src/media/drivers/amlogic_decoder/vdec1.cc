@@ -103,6 +103,25 @@ void Vdec1::PowerOn() {
   ZX_DEBUG_ASSERT(!powered_on_);
   // See Vdec1::PowerOff for an explanation of why this delay is needed.
   zx::nanosleep(powerup_deadline_);
+
+  // Make sure that the clocks are ungated before we apply power, and reset the
+  // DOS unit.  In the past, we have seen a rare issue on ~3 devices where, a
+  // failure to have the clocks running before the DOS unit was powered up and
+  // reset, would result in a system-wide lockup. This was confirmed on only 1
+  // device. The other two were production devices which could not be
+  // instrumented.
+  //
+  // Experimental evidence seems to suggest that it may have been the main DDR
+  // controller which was locking up, but it is difficult to tell right now as
+  // the available documentation is extremely limited, and provides more or less
+  // no guidance on the subject of a proper power on/reset sequence for this
+  // unit.
+  //
+  // Either way, we currently let the clocks run before even powering up the DOS
+  // unit.  The magic "bad" device seems to like this more than doing it after
+  // resetting the DOS unit.
+  owner_->UngateClocks();
+
   {
     auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(mmio()->aobus);
     temp.set_reg_value(temp.reg_value() & ~vdec_sleep_bits());
@@ -113,7 +132,6 @@ void Vdec1::PowerOn() {
   DosSwReset0::Get().FromValue(0xfffffffc).WriteTo(mmio()->dosbus);
   DosSwReset0::Get().FromValue(0).WriteTo(mmio()->dosbus);
 
-  owner_->UngateClocks();
   enum {
     kGxmFclkDiv4 = 0,  // 500 MHz
     kGxmFclkDiv3 = 1,  // 666 MHz
