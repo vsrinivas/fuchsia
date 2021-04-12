@@ -323,6 +323,7 @@ mod tests {
                         "00000000000000000000": {
                             request: "SetDisplayInfo(SetDisplayInfo { \
                                 manual_brightness_value: None, \
+                                auto_brightness_value: None, \
                                 auto_brightness: Some(false), \
                                 screen_enabled: None, \
                                 low_light_mode: None, \
@@ -333,6 +334,7 @@ mod tests {
                         "00000000000000000001": {
                             request: "SetDisplayInfo(SetDisplayInfo { \
                                 manual_brightness_value: None, \
+                                auto_brightness_value: None, \
                                 auto_brightness: Some(false), \
                                 screen_enabled: None, \
                                 low_light_mode: None, \
@@ -403,6 +405,7 @@ mod tests {
                         "00000000000000000000": {
                             request: "SetDisplayInfo(SetDisplayInfo { \
                                 manual_brightness_value: None, \
+                                auto_brightness_value: None, \
                                 auto_brightness: Some(false), \
                                 screen_enabled: None, \
                                 low_light_mode: None, \
@@ -413,6 +416,7 @@ mod tests {
                         "00000000000000000002": {
                             request: "SetDisplayInfo(SetDisplayInfo { \
                                 manual_brightness_value: None, \
+                                auto_brightness_value: None, \
                                 auto_brightness: Some(true), \
                                 screen_enabled: None, \
                                 low_light_mode: None, \

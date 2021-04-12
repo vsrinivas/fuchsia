@@ -25,14 +25,18 @@ use fidl_fuchsia_ui_brightness::{
 use lazy_static::lazy_static;
 use std::sync::Mutex;
 
+pub const DEFAULT_MANUAL_BRIGHTNESS_VALUE: f32 = 0.5;
+pub const DEFAULT_AUTO_BRIGHTNESS_VALUE: f32 = 0.5;
+
 lazy_static! {
     /// Default display used if no configuration is available.
     pub static ref DEFAULT_DISPLAY_INFO: DisplayInfo = DisplayInfo::new(
-        false,                 /*auto_brightness_enabled*/
-        0.5,                   /*brightness_value*/
-        true,                  /*screen_enabled*/
-        LowLightMode::Disable, /*low_light_mode*/
-        None,                  /*theme*/
+        false,                           /*auto_brightness_enabled*/
+        DEFAULT_MANUAL_BRIGHTNESS_VALUE, /*manual_brightness_value*/
+        DEFAULT_AUTO_BRIGHTNESS_VALUE,   /*auto_brightness_value*/
+        true,                            /*screen_enabled*/
+        LowLightMode::Disable,           /*low_light_mode*/
+        None,                            /*theme*/
     );
 }
 
@@ -77,7 +81,7 @@ impl DeviceStorageCompatible for DisplayInfo {
 
     fn deserialize_from(value: &String) -> Self {
         Self::extract(&value)
-            .unwrap_or_else(|_| Self::from(DisplayInfoV4::deserialize_from(&value)))
+            .unwrap_or_else(|_| Self::from(DisplayInfoV5::deserialize_from(&value)))
     }
 }
 
@@ -87,17 +91,15 @@ impl Into<SettingInfo> for DisplayInfo {
     }
 }
 
-impl From<DisplayInfoV4> for DisplayInfo {
-    fn from(v4: DisplayInfoV4) -> Self {
+impl From<DisplayInfoV5> for DisplayInfo {
+    fn from(v5: DisplayInfoV5) -> Self {
         DisplayInfo {
-            auto_brightness: v4.auto_brightness,
-            manual_brightness_value: v4.manual_brightness_value,
-            screen_enabled: v4.screen_enabled,
-            low_light_mode: v4.low_light_mode,
-            theme: Some(Theme::new(
-                Some(v4.theme_type),
-                if v4.theme_type == ThemeType::Auto { ThemeMode::AUTO } else { ThemeMode::empty() },
-            )),
+            auto_brightness: v5.auto_brightness,
+            auto_brightness_value: DEFAULT_AUTO_BRIGHTNESS_VALUE,
+            manual_brightness_value: v5.manual_brightness_value,
+            screen_enabled: v5.screen_enabled,
+            low_light_mode: v5.low_light_mode,
+            theme: v5.theme,
         }
     }
 }
@@ -211,49 +213,6 @@ where
             }
             Request::SetDisplayInfo(mut set_display_info) => {
                 let display_info = self.client.read_setting::<DisplayInfo>().await;
-                if let Some(manual_brightness_value) = set_display_info.manual_brightness_value {
-                    if let (auto_brightness @ Some(true), screen_enabled)
-                    | (auto_brightness, screen_enabled @ Some(false)) =
-                        (set_display_info.auto_brightness, set_display_info.screen_enabled)
-                    {
-                        // Invalid argument combination
-                        return Some(Err(ControllerError::IncompatibleArguments {
-                            setting_type: SettingType::Display,
-                            main_arg: "manual_brightness_value".into(),
-                            other_args: "auto_brightness, screen_enabled".into(),
-                            values: format!(
-                                "{}, {:?}, {:?}",
-                                manual_brightness_value, auto_brightness, screen_enabled
-                            )
-                            .into(),
-                            reason:
-                                "When manual brightness is set, auto brightness must be off or \
-                             unset and screen must be enabled or unset"
-                                    .into(),
-                        }));
-                    }
-                    set_display_info.auto_brightness = Some(false);
-                    set_display_info.screen_enabled = Some(true);
-                } else if let Some(screen_enabled) = set_display_info.screen_enabled {
-                    // Set auto brightness to the opposite of the screen off state. If the screen is
-                    // turned off, auto brightness must be on so that the screen off component can
-                    // detect the changes. If the screen is turned on, the default behavior is to
-                    // turn it to full manual brightness.
-                    if let Some(auto_brightness) = set_display_info.auto_brightness {
-                        if screen_enabled == auto_brightness {
-                            // Invalid argument combination
-                            return Some(Err(ControllerError::IncompatibleArguments {
-                                setting_type: SettingType::Display,
-                                main_arg: "screen_enabled".into(),
-                                other_args: "auto_brightness".into(),
-                                values: format!("{}, {}", screen_enabled, auto_brightness).into(),
-                                reason: "values cannot be equal".into(),
-                            }));
-                        }
-                    } else {
-                        set_display_info.auto_brightness = Some(!screen_enabled);
-                    }
-                }
 
                 if let Some(theme) = set_display_info.theme {
                     set_display_info.theme = self.build_theme(theme, &display_info);
@@ -340,9 +299,9 @@ impl DeviceStorageCompatible for DisplayInfoV1 {
 
     fn default_value() -> Self {
         DisplayInfoV1::new(
-            false,                 /*auto_brightness_enabled*/
-            0.5,                   /*brightness_value*/
-            LowLightMode::Disable, /*low_light_mode*/
+            false,                           /*auto_brightness_enabled*/
+            DEFAULT_MANUAL_BRIGHTNESS_VALUE, /*brightness_value*/
+            LowLightMode::Disable,           /*low_light_mode*/
         )
     }
 }
@@ -373,10 +332,10 @@ impl DeviceStorageCompatible for DisplayInfoV2 {
 
     fn default_value() -> Self {
         DisplayInfoV2::new(
-            false,                 /*auto_brightness_enabled*/
-            0.5,                   /*brightness_value*/
-            LowLightMode::Disable, /*low_light_mode*/
-            ThemeModeV1::Unknown,  /*theme_mode*/
+            false,                           /*auto_brightness_enabled*/
+            DEFAULT_MANUAL_BRIGHTNESS_VALUE, /*brightness_value*/
+            LowLightMode::Disable,           /*low_light_mode*/
+            ThemeModeV1::Unknown,            /*theme_mode*/
         )
     }
 
@@ -452,11 +411,11 @@ impl DeviceStorageCompatible for DisplayInfoV3 {
 
     fn default_value() -> Self {
         DisplayInfoV3::new(
-            false,                 /*auto_brightness_enabled*/
-            0.5,                   /*brightness_value*/
-            true,                  /*screen_enabled*/
-            LowLightMode::Disable, /*low_light_mode*/
-            ThemeModeV1::Unknown,  /*theme_mode*/
+            false,                           /*auto_brightness_enabled*/
+            DEFAULT_MANUAL_BRIGHTNESS_VALUE, /*brightness_value*/
+            true,                            /*screen_enabled*/
+            LowLightMode::Disable,           /*low_light_mode*/
+            ThemeModeV1::Unknown,            /*theme_mode*/
         )
     }
 
@@ -525,17 +484,80 @@ impl DeviceStorageCompatible for DisplayInfoV4 {
 
     fn default_value() -> Self {
         DisplayInfoV4::new(
-            false,                 /*auto_brightness_enabled*/
-            0.5,                   /*brightness_value*/
-            true,                  /*screen_enabled*/
-            LowLightMode::Disable, /*low_light_mode*/
-            ThemeType::Unknown,    /*theme_type*/
+            false,                           /*auto_brightness_enabled*/
+            DEFAULT_MANUAL_BRIGHTNESS_VALUE, /*brightness_value*/
+            true,                            /*screen_enabled*/
+            LowLightMode::Disable,           /*low_light_mode*/
+            ThemeType::Unknown,              /*theme_type*/
         )
     }
 
     fn deserialize_from(value: &String) -> Self {
         Self::extract(&value)
             .unwrap_or_else(|_| Self::from(DisplayInfoV3::deserialize_from(&value)))
+    }
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DisplayInfoV5 {
+    /// The last brightness value that was manually set.
+    pub manual_brightness_value: f32,
+    pub auto_brightness: bool,
+    pub screen_enabled: bool,
+    pub low_light_mode: LowLightMode,
+    pub theme: Option<Theme>,
+}
+
+impl DisplayInfoV5 {
+    pub const fn new(
+        auto_brightness: bool,
+        manual_brightness_value: f32,
+        screen_enabled: bool,
+        low_light_mode: LowLightMode,
+        theme: Option<Theme>,
+    ) -> DisplayInfoV5 {
+        DisplayInfoV5 {
+            manual_brightness_value,
+            auto_brightness,
+            screen_enabled,
+            low_light_mode,
+            theme,
+        }
+    }
+}
+
+impl From<DisplayInfoV4> for DisplayInfoV5 {
+    fn from(v4: DisplayInfoV4) -> Self {
+        DisplayInfoV5 {
+            auto_brightness: v4.auto_brightness,
+            manual_brightness_value: v4.manual_brightness_value,
+            screen_enabled: v4.screen_enabled,
+            low_light_mode: v4.low_light_mode,
+            theme: Some(Theme::new(
+                Some(v4.theme_type),
+                if v4.theme_type == ThemeType::Auto { ThemeMode::AUTO } else { ThemeMode::empty() },
+            )),
+        }
+    }
+}
+
+impl DeviceStorageCompatible for DisplayInfoV5 {
+    const KEY: &'static str = "display_info";
+
+    fn default_value() -> Self {
+        DisplayInfoV5::new(
+            false,                                                          /*auto_brightness_enabled*/
+            DEFAULT_MANUAL_BRIGHTNESS_VALUE,                                /*brightness_value*/
+            true,                                                           /*screen_enabled*/
+            LowLightMode::Disable,                                          /*low_light_mode*/
+            Some(Theme::new(Some(ThemeType::Unknown), ThemeMode::empty())), /*theme_type*/
+        )
+    }
+
+    fn deserialize_from(value: &String) -> Self {
+        Self::extract(&value)
+            .unwrap_or_else(|_| Self::from(DisplayInfoV4::deserialize_from(&value)))
     }
 }
 
@@ -612,6 +634,31 @@ fn test_display_migration_v3_to_v4() {
 }
 
 #[test]
+fn test_display_migration_v4_to_v5() {
+    let v4 = DisplayInfoV4 {
+        manual_brightness_value: 0.7,
+        auto_brightness: true,
+        low_light_mode: LowLightMode::Enable,
+        theme_type: ThemeType::Auto,
+        screen_enabled: false,
+    };
+
+    let serialized_v4 = v4.serialize_to();
+    let v5 = DisplayInfoV5::deserialize_from(&serialized_v4);
+
+    assert_eq!(
+        v5,
+        DisplayInfoV5 {
+            manual_brightness_value: v4.manual_brightness_value,
+            auto_brightness: v4.auto_brightness,
+            low_light_mode: v4.low_light_mode,
+            theme: Some(Theme::new(Some(v4.theme_type), ThemeMode::AUTO)),
+            screen_enabled: v4.screen_enabled,
+        }
+    );
+}
+
+#[test]
 fn test_display_migration_v1_to_current() {
     let v1 = DisplayInfoV1 {
         manual_brightness_value: 0.6,
@@ -631,6 +678,7 @@ fn test_display_migration_v1_to_current() {
             theme: Some(Theme::new(Some(ThemeType::Unknown), ThemeMode::empty())),
             // screen_enabled was added in v3.
             screen_enabled: DisplayInfoV3::default_value().screen_enabled,
+            auto_brightness_value: DEFAULT_DISPLAY_INFO.auto_brightness_value,
         }
     );
 }
@@ -656,6 +704,7 @@ fn test_display_migration_v2_to_current() {
             theme: Some(Theme::new(Some(ThemeType::Light), ThemeMode::empty())),
             // screen_enabled was added in v3.
             screen_enabled: DisplayInfoV3::default_value().screen_enabled,
+            auto_brightness_value: DEFAULT_DISPLAY_INFO.auto_brightness_value,
         }
     );
 }
@@ -682,6 +731,7 @@ fn test_display_migration_v3_to_current() {
             theme: Some(Theme::new(Some(ThemeType::Light), ThemeMode::empty())),
             // screen_enabled was added in v3.
             screen_enabled: v3.screen_enabled,
+            auto_brightness_value: DEFAULT_DISPLAY_INFO.auto_brightness_value,
         }
     );
 }
@@ -707,6 +757,33 @@ fn test_display_migration_v4_to_current() {
             low_light_mode: v4.low_light_mode,
             theme: Some(Theme::new(Some(ThemeType::Light), ThemeMode::empty())),
             screen_enabled: v4.screen_enabled,
+            auto_brightness_value: DEFAULT_DISPLAY_INFO.auto_brightness_value,
+        }
+    );
+}
+
+#[test]
+fn test_display_migration_v5_to_current() {
+    let v5 = DisplayInfoV5 {
+        manual_brightness_value: 0.6,
+        auto_brightness: true,
+        low_light_mode: LowLightMode::Enable,
+        theme: Some(Theme::new(Some(ThemeType::Light), ThemeMode::AUTO)),
+        screen_enabled: false,
+    };
+
+    let serialized_v5 = v5.serialize_to();
+    let current = DisplayInfo::deserialize_from(&serialized_v5);
+
+    assert_eq!(
+        current,
+        DisplayInfo {
+            manual_brightness_value: v5.manual_brightness_value,
+            auto_brightness: v5.auto_brightness,
+            low_light_mode: v5.low_light_mode,
+            theme: Some(Theme::new(Some(ThemeType::Light), ThemeMode::AUTO)),
+            screen_enabled: v5.screen_enabled,
+            auto_brightness_value: DEFAULT_DISPLAY_INFO.auto_brightness_value,
         }
     );
 }

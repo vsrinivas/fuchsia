@@ -32,6 +32,7 @@ use {
 const ENV_NAME: &str = "settings_service_display_test_environment";
 const STARTING_BRIGHTNESS: f32 = 0.5;
 const CHANGED_BRIGHTNESS: f32 = 0.8;
+const AUTO_BRIGHTNESS_LEVEL: f32 = 0.9;
 
 async fn setup_display_env() -> DisplayProxy {
     let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
@@ -121,11 +122,13 @@ async fn test_auto_brightness_with_storage_controller() {
 
     let mut display_settings = DisplaySettings::EMPTY;
     display_settings.auto_brightness = Some(true);
+    display_settings.adjusted_auto_brightness = Some(AUTO_BRIGHTNESS_LEVEL);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
     let settings = display_proxy.watch().await.expect("watch completed");
 
     assert_eq!(settings.auto_brightness, Some(true));
+    assert_eq!(settings.adjusted_auto_brightness, Some(AUTO_BRIGHTNESS_LEVEL));
 }
 
 // Tests that the FIDL calls for auto brightness result in appropriate
@@ -136,10 +139,12 @@ async fn test_auto_brightness_with_brightness_controller() {
 
     let mut display_settings = DisplaySettings::EMPTY;
     display_settings.auto_brightness = Some(true);
+    display_settings.adjusted_auto_brightness = Some(AUTO_BRIGHTNESS_LEVEL);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
     let settings = display_proxy.watch().await.expect("watch completed");
     assert_eq!(settings.auto_brightness, Some(true));
+    assert_eq!(settings.adjusted_auto_brightness, Some(AUTO_BRIGHTNESS_LEVEL));
 
     let auto_brightness =
         brightness_service_handle.get_auto_brightness().lock().await.expect("get successful");
@@ -412,14 +417,31 @@ async fn test_screen_enabled(display_proxy: DisplayProxy) {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_display_restore_with_storage_controller() {
     // Ensure auto-brightness value is restored correctly.
-    validate_restore_with_storage_controller(0.7, true, true, LowLightMode::Enable, None).await;
+    validate_restore_with_storage_controller(
+        0.7,
+        AUTO_BRIGHTNESS_LEVEL,
+        true,
+        true,
+        LowLightMode::Enable,
+        None,
+    )
+    .await;
 
     // Ensure manual-brightness value is restored correctly.
-    validate_restore_with_storage_controller(0.9, false, true, LowLightMode::Disable, None).await;
+    validate_restore_with_storage_controller(
+        0.9,
+        AUTO_BRIGHTNESS_LEVEL,
+        false,
+        true,
+        LowLightMode::Disable,
+        None,
+    )
+    .await;
 }
 
 async fn validate_restore_with_storage_controller(
     manual_brightness: f32,
+    auto_brightness_value: f32,
     auto_brightness: bool,
     screen_enabled: bool,
     low_light_mode: LowLightMode,
@@ -428,6 +450,7 @@ async fn validate_restore_with_storage_controller(
     let service_registry = ServiceRegistry::create();
     let info = DisplayInfo {
         manual_brightness_value: manual_brightness,
+        auto_brightness_value,
         auto_brightness,
         screen_enabled,
         low_light_mode,
@@ -450,6 +473,7 @@ async fn validate_restore_with_storage_controller(
 
     if auto_brightness {
         assert_eq!(settings.auto_brightness, Some(auto_brightness));
+        assert_eq!(settings.adjusted_auto_brightness, Some(auto_brightness_value));
     } else {
         assert_eq!(settings.brightness_value, Some(manual_brightness));
     }
@@ -459,15 +483,31 @@ async fn validate_restore_with_storage_controller(
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_display_restore_with_brightness_controller() {
     // Ensure auto-brightness value is restored correctly.
-    validate_restore_with_brightness_controller(0.7, true, true, LowLightMode::Enable, None).await;
+    validate_restore_with_brightness_controller(
+        0.7,
+        AUTO_BRIGHTNESS_LEVEL,
+        true,
+        true,
+        LowLightMode::Enable,
+        None,
+    )
+    .await;
 
     // Ensure manual-brightness value is restored correctly.
-    validate_restore_with_brightness_controller(0.9, false, true, LowLightMode::Disable, None)
-        .await;
+    validate_restore_with_brightness_controller(
+        0.9,
+        AUTO_BRIGHTNESS_LEVEL,
+        false,
+        true,
+        LowLightMode::Disable,
+        None,
+    )
+    .await;
 }
 
 async fn validate_restore_with_brightness_controller(
     manual_brightness: f32,
+    auto_brightness_value: f32,
     auto_brightness: bool,
     screen_enabled: bool,
     low_light_mode: LowLightMode,
@@ -481,6 +521,7 @@ async fn validate_restore_with_brightness_controller(
         .register_service(Arc::new(Mutex::new(brightness_service_handle.clone())));
     let info = DisplayInfo {
         manual_brightness_value: manual_brightness,
+        auto_brightness_value,
         auto_brightness,
         screen_enabled,
         low_light_mode,
@@ -588,6 +629,7 @@ async fn test_set_multiple_fields_success() {
     let settings = DisplaySettings {
         auto_brightness: Some(false),
         brightness_value: Some(0.5),
+        adjusted_auto_brightness: Some(0.5),
         low_light_mode: Some(FidlLowLightMode::Enable),
         screen_enabled: Some(true),
         theme: Some(FidlTheme {
@@ -603,19 +645,18 @@ async fn test_set_multiple_fields_success() {
     assert_eq!(settings_result, settings);
 }
 
-// Validate that we cannot set auto_brightness to true or screen_enabled to false
-// when a brightness value is manually set. All other combinations should be ok.
 async_property_test!(test_set_multiple_fields_brightness => [
-    error_case_1(Some(0.5), Some(true), Some(true), false),
-    error_case_2(Some(0.5), Some(true), Some(false), false),
-    error_case_3(Some(0.5), Some(false), Some(false), false),
-    success_case_1(Some(0.5), Some(false), Some(true), true),
-    success_case_2(Some(0.5), None, Some(true), true),
-    success_case_3(Some(0.5), Some(false), None, true),
-    success_case_4(Some(0.5), None, None, true),
+    success_case_1(Some(0.7), Some(AUTO_BRIGHTNESS_LEVEL), Some(false), Some(true), true),
+    success_case_2(Some(0.7), Some(AUTO_BRIGHTNESS_LEVEL), None, Some(true), true),
+    success_case_3(Some(0.7), Some(AUTO_BRIGHTNESS_LEVEL), Some(false), None, true),
+    success_case_4(Some(0.7), Some(AUTO_BRIGHTNESS_LEVEL), None, None, true),
+    success_case_5(Some(0.7), Some(AUTO_BRIGHTNESS_LEVEL), Some(true), Some(true), true),
+    success_case_6(Some(0.7), Some(AUTO_BRIGHTNESS_LEVEL), Some(true), Some(false), true),
+    success_case_7(Some(0.7), Some(AUTO_BRIGHTNESS_LEVEL), Some(false), Some(false), true),
 ]);
 async fn test_set_multiple_fields_brightness(
     brightness_value: Option<f32>,
+    adjusted_auto_brightness: Option<f32>,
     auto_brightness: Option<bool>,
     screen_enabled: Option<bool>,
     expect_success: bool,
@@ -624,6 +665,7 @@ async fn test_set_multiple_fields_brightness(
 
     let settings = DisplaySettings {
         auto_brightness,
+        adjusted_auto_brightness,
         brightness_value,
         screen_enabled,
         ..DisplaySettings::EMPTY
@@ -635,54 +677,22 @@ async fn test_set_multiple_fields_brightness(
         assert_eq!(
             settings,
             DisplaySettings {
-                auto_brightness: Some(false),
-                brightness_value,
-                screen_enabled: Some(true),
-                // Default values untouched.
-                low_light_mode: Some(FidlLowLightMode::Disable),
-                theme: Some(FidlTheme {
-                    theme_type: Some(FidlThemeType::Light),
-                    theme_mode: Some(FidlThemeMode::Auto),
-                    ..FidlTheme::EMPTY
-                }),
-                ..DisplaySettings::EMPTY
-            }
-        );
-    } else {
-        assert_eq!(result, Err(FidlError::Failed));
-    }
-}
-
-// Validate that we cannot set screen_enabled and auto_brightness to the same
-// value. Another other combination is ok.
-async_property_test!(test_set_multiple_fields_auto_brightness => [
-    error_case_1(Some(true), Some(true), false),
-    error_case_2(Some(false), Some(false), false),
-    success_case_1(Some(true), Some(false), true),
-    success_case_2(Some(false), Some(true), true),
-]);
-async fn test_set_multiple_fields_auto_brightness(
-    screen_enabled: Option<bool>,
-    auto_brightness: Option<bool>,
-    expect_success: bool,
-) {
-    let display_proxy = setup_display_env().await;
-
-    let settings = DisplaySettings { screen_enabled, auto_brightness, ..DisplaySettings::EMPTY };
-    let result = display_proxy.set(settings).await.expect("set completed");
-    if expect_success {
-        assert!(result.is_ok());
-        let settings = display_proxy.watch().await.expect("watch completed");
-        assert_eq!(
-            settings,
-            DisplaySettings {
-                auto_brightness,
-                screen_enabled,
-                brightness_value: auto_brightness.and_then(|auto| if auto {
-                    None
+                auto_brightness: if auto_brightness.is_none() {
+                    Some(false)
                 } else {
+                    auto_brightness
+                },
+                adjusted_auto_brightness: if adjusted_auto_brightness.is_none() {
                     Some(0.5)
-                }),
+                } else {
+                    adjusted_auto_brightness
+                },
+                brightness_value: if brightness_value.is_none() {
+                    Some(0.5)
+                } else {
+                    brightness_value
+                },
+                screen_enabled: if screen_enabled.is_none() { Some(true) } else { screen_enabled },
                 // Default values untouched.
                 low_light_mode: Some(FidlLowLightMode::Disable),
                 theme: Some(FidlTheme {

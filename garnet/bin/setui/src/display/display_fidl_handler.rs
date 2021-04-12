@@ -88,17 +88,14 @@ impl From<SettingInfo> for DisplaySettings {
             let mut display_settings = fidl_fuchsia_settings::DisplaySettings::EMPTY;
 
             display_settings.auto_brightness = Some(info.auto_brightness);
+            display_settings.adjusted_auto_brightness = Some(info.auto_brightness_value);
+            display_settings.brightness_value = Some(info.manual_brightness_value);
+            display_settings.screen_enabled = Some(info.screen_enabled);
             display_settings.low_light_mode = Some(match info.low_light_mode {
                 LowLightMode::Enable => FidlLowLightMode::Enable,
                 LowLightMode::Disable => FidlLowLightMode::Disable,
                 LowLightMode::DisableImmediately => FidlLowLightMode::DisableImmediately,
             });
-
-            if !info.auto_brightness {
-                display_settings.brightness_value = Some(info.manual_brightness_value);
-            }
-
-            display_settings.screen_enabled = Some(info.screen_enabled);
 
             display_settings.theme = Some(FidlTheme {
                 theme_type: match info.theme {
@@ -130,6 +127,7 @@ impl From<SettingInfo> for DisplaySettings {
 fn to_request(settings: DisplaySettings) -> Option<Request> {
     let set_display_info = SetDisplayInfo {
         manual_brightness_value: settings.brightness_value,
+        auto_brightness_value: settings.adjusted_auto_brightness,
         auto_brightness: settings.auto_brightness,
         screen_enabled: settings.screen_enabled,
         low_light_mode: settings.low_light_mode.map(Into::into),
@@ -139,6 +137,7 @@ fn to_request(settings: DisplaySettings) -> Option<Request> {
         // No values being set is invalid
         SetDisplayInfo {
             manual_brightness_value: None,
+            auto_brightness_value: None,
             auto_brightness: None,
             screen_enabled: None,
             low_light_mode: None,

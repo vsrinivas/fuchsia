@@ -372,6 +372,7 @@ mod tests {
     const ID2: f32 = 2.0;
 
     const SET_ERROR: &str = "set failure";
+    const DEFAULT_AUTO_BRIGHTNESS_VALUE: f32 = 0.5;
 
     #[derive(PartialEq, Debug, Clone)]
     struct TestStruct {
@@ -482,6 +483,7 @@ mod tests {
                         Payload::Response(Ok(Some(SettingInfo::Brightness(DisplayInfo::new(
                             false,
                             value,
+                            DEFAULT_AUTO_BRIGHTNESS_VALUE,
                             true,
                             LowLightMode::Disable,
                             None,
@@ -511,6 +513,7 @@ mod tests {
                         response = Some(Ok(Some(SettingInfo::Brightness(DisplayInfo::new(
                             false,
                             value,
+                            DEFAULT_AUTO_BRIGHTNESS_VALUE,
                             true,
                             LowLightMode::Disable,
                             None,

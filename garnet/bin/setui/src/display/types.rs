@@ -12,6 +12,7 @@ use crate::base::{Merge, SettingInfo};
 pub struct DisplayInfo {
     /// The last brightness value that was manually set.
     pub manual_brightness_value: f32,
+    pub auto_brightness_value: f32,
     pub auto_brightness: bool,
     pub screen_enabled: bool,
     pub low_light_mode: LowLightMode,
@@ -22,12 +23,14 @@ impl DisplayInfo {
     pub const fn new(
         auto_brightness: bool,
         manual_brightness_value: f32,
+        auto_brightness_value: f32,
         screen_enabled: bool,
         low_light_mode: LowLightMode,
         theme: Option<Theme>,
     ) -> DisplayInfo {
         DisplayInfo {
             manual_brightness_value,
+            auto_brightness_value,
             auto_brightness,
             screen_enabled,
             low_light_mode,
@@ -39,6 +42,7 @@ impl DisplayInfo {
 #[derive(Debug, Default, PartialEq, Copy, Clone)]
 pub struct SetDisplayInfo {
     pub manual_brightness_value: Option<f32>,
+    pub auto_brightness_value: Option<f32>,
     pub auto_brightness: Option<bool>,
     pub screen_enabled: Option<bool>,
     pub low_light_mode: Option<LowLightMode>,
@@ -51,6 +55,9 @@ impl Merge<SetDisplayInfo> for DisplayInfo {
             manual_brightness_value: other
                 .manual_brightness_value
                 .unwrap_or(self.manual_brightness_value),
+            auto_brightness_value: other
+                .auto_brightness_value
+                .unwrap_or(self.auto_brightness_value),
             auto_brightness: other.auto_brightness.unwrap_or(self.auto_brightness),
             screen_enabled: other.screen_enabled.unwrap_or(self.screen_enabled),
             low_light_mode: other.low_light_mode.unwrap_or(self.low_light_mode),
