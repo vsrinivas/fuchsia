@@ -1,0 +1,44 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.accessibility.view;
+
+using fuchsia.ui.views;
+
+/// Registry allows a privileged client to create an accessibility ViewHolder
+/// as a child of the root view in the scene graph.
+[Discoverable]
+protocol Registry {
+    /// Creates a new accessibility `ViewHolder` as a child of the root view
+    /// in the scene graph. The created ViewHolder holds an accessibility view.
+    /// The accessibility view does not render any content; it's only used to
+    /// vend capabilities to the accessibility manager that a view confers, e.g.
+    /// ability to request focus, consume and respond to input events, annotate
+    /// underlying views, and apply coordinate transforms to its subtree.
+    ///
+    /// Additionally, the a11y_view_ref can be used to inject input into the the
+    /// accessibility view's subgraph.
+    ///
+    /// Note that the caller must create a view using |a11y_view_ref| BEFORE
+    /// calling CreateAccessibilityViewHolder().
+    ///
+    /// The protocol returns a client ViewHolderToken, which the caller MUST use
+    /// to attach the corresponding client view holder as a child of the
+    /// accessibility view it created.
+    ///
+    /// Since creating a ViewHolder modifies the SceneGraph, this function won't
+    /// take effect until we schedule a new frame by calling Present() on any
+    /// Session.
+    ///
+    /// EPITAPH
+    ///
+    /// This method may return the following epitaphs:
+    ///
+    /// - ZX_ERR_INVALID_ARGS, if the provided `ViewRef` is invalid.
+    /// - ZX_ERR_PEER_CLOSED, if Scenic fails creating the accessibility `ViewHolder`.
+    ///
+    CreateAccessibilityViewHolder(fuchsia.ui.views.ViewRef a11y_view_ref,
+                                  fuchsia.ui.views.ViewHolderToken a11y_view_token)
+        -> (fuchsia.ui.views.ViewHolderToken client_view_holder_token);
+};
