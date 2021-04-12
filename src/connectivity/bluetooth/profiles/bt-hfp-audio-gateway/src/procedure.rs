@@ -233,6 +233,7 @@ impl ProcedureMarker {
             at::Command::Answer { .. } => Ok(Self::Answer),
             at::Command::Chup { .. } => Ok(Self::HangUp),
             at::Command::Biev { .. } => Ok(Self::TransferHfIndicator),
+            at::Command::Bia { .. } => Ok(Self::Indicators),
             _ => Err(ProcedureError::NotImplemented),
         }
     }
