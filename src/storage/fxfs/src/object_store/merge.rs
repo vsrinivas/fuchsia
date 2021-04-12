@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    super::record::{ExtentKey, ExtentValue, ObjectItem, ObjectKey, ObjectKeyData, ObjectValue},
+    super::record::{
+        AttributeKey, ExtentKey, ExtentValue, ObjectItem, ObjectKey, ObjectKeyData, ObjectValue,
+    },
     crate::lsm_tree::merge::{
         ItemOp::{Discard, Keep, Replace},
         MergeLayerIterator, MergeResult,
@@ -12,6 +14,7 @@ use {
 
 fn merge_extents<'a>(
     object_id: u64,
+    attribute_id: u64,
     left_layer: u16,
     right_layer: u16,
     left_key: &ExtentKey,
@@ -24,9 +27,6 @@ fn merge_extents<'a>(
 
     // TODO(jfsulliv): once we are at the base layer, we should be deleting records mapping to
     // deleted extents. Otherwise they'll stick around forever.
-    if left_key.attribute_id != right_key.attribute_id {
-        return MergeResult::EmitLeft;
-    }
     if left_key.range.end <= right_key.range.start {
         // Extents don't overlap.
         return MergeResult::EmitLeft;
@@ -54,7 +54,7 @@ fn merge_extents<'a>(
             emit: Some(ObjectItem::new(
                 ObjectKey::extent(
                     object_id,
-                    left_key.attribute_id,
+                    attribute_id,
                     left_key.range.start..right_key.range.start,
                 ),
                 ObjectValue::Extent(*left_value),
@@ -62,7 +62,7 @@ fn merge_extents<'a>(
             left: Replace(ObjectItem::new(
                 ObjectKey::extent(
                     object_id,
-                    left_key.attribute_id,
+                    attribute_id,
                     right_key.range.start..left_key.range.end,
                 ),
                 ObjectValue::Extent(
@@ -81,11 +81,7 @@ fn merge_extents<'a>(
         emit: None,
         left: Keep,
         right: Replace(ObjectItem::new(
-            ObjectKey::extent(
-                object_id,
-                left_key.attribute_id,
-                left_key.range.end..right_key.range.end,
-            ),
+            ObjectKey::extent(object_id, attribute_id, left_key.range.end..right_key.range.end),
             ObjectValue::Extent(right_value.offset_by(left_key.range.end - right_key.range.start)),
         )),
     }
@@ -94,13 +90,10 @@ fn merge_extents<'a>(
 // Assumes that the two extents to be merged are on adjacent layers (i.e. layers N, N+1).
 fn merge_deleted_extents<'a>(
     object_id: u64,
+    attribute_id: u64,
     left_key: &ExtentKey,
     right_key: &ExtentKey,
 ) -> MergeResult<ObjectKey, ObjectValue> {
-    if left_key.attribute_id != right_key.attribute_id {
-        return MergeResult::EmitLeft;
-    }
-
     if left_key.range.end < right_key.range.start {
         // The extents are not adjacent or overlapping.
         return MergeResult::EmitLeft;
@@ -115,11 +108,7 @@ fn merge_deleted_extents<'a>(
         emit: None,
         left: Discard,
         right: Replace(ObjectItem::new(
-            ObjectKey::extent(
-                object_id,
-                left_key.attribute_id,
-                left_key.range.start..right_key.range.end,
-            ),
+            ObjectKey::extent(object_id, attribute_id, left_key.range.start..right_key.range.end),
             ObjectValue::deleted_extent(),
         )),
     }
@@ -162,23 +151,32 @@ pub fn merge(
     }
     match (left.key(), right.key(), left.value(), right.value()) {
         (
-            ObjectKey { object_id: _, data: ObjectKeyData::Extent(left_extent_key) },
-            ObjectKey { object_id: _, data: ObjectKeyData::Extent(right_extent_key) },
+            ObjectKey {
+                object_id,
+                data: ObjectKeyData::Attribute(left_attr_id, AttributeKey::Extent(left_extent_key)),
+            },
+            ObjectKey {
+                object_id: _,
+                data:
+                    ObjectKeyData::Attribute(right_attr_id, AttributeKey::Extent(right_extent_key)),
+            },
             ObjectValue::Extent(left_extent),
             ObjectValue::Extent(right_extent),
-        ) if left_extent_key.attribute_id == right_extent_key.attribute_id => {
+        ) if left_attr_id == right_attr_id => {
             if let (None, None) = (left_extent.device_offset, right_extent.device_offset) {
                 if (left.layer_index as i32 - right.layer_index as i32).abs() == 1 {
                     // Two deletions in adjacent layers can be merged.
                     return merge_deleted_extents(
-                        left.key().object_id,
+                        *object_id,
+                        *left_attr_id,
                         left_extent_key,
                         right_extent_key,
                     );
                 }
             }
             return merge_extents(
-                left.key().object_id,
+                *object_id,
+                *left_attr_id,
                 left.layer_index,
                 right.layer_index,
                 left_extent_key,
@@ -186,6 +184,9 @@ pub fn merge(
                 left_extent,
                 right_extent,
             );
+        }
+        (ObjectKey { data: ObjectKeyData::Tombstone, .. }, _, _, _) => {
+            MergeResult::Other { emit: None, left: Keep, right: Discard }
         }
         (left_key, right_key, _, _) if left_key == right_key => {
             MergeResult::Other { emit: None, left: Keep, right: Discard }
@@ -203,18 +204,22 @@ mod tests {
                 types::{Item, LayerIterator},
                 LSMTree,
             },
-            object_store::record::{ObjectItem, ObjectKey, ObjectValue},
+            object_store::record::{ObjectDescriptor, ObjectItem, ObjectKey, ObjectValue},
         },
         anyhow::Error,
         fuchsia_async as fasync,
         std::ops::Bound,
     };
 
-    async fn test_merge(left: ObjectItem, right: ObjectItem, expected: &[ObjectItem]) {
+    async fn test_merge(layer0: &[ObjectItem], layer1: &[ObjectItem], expected: &[ObjectItem]) {
         let tree = LSMTree::new(merge);
-        tree.insert(right).await;
+        for item in layer1 {
+            tree.insert(item.clone()).await;
+        }
         tree.seal();
-        tree.insert(left).await;
+        for item in layer0 {
+            tree.insert(item.clone()).await;
+        }
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
@@ -870,19 +875,37 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_merge_size_records() {
-        let left = Item::new(ObjectKey::attribute(1, 0), ObjectValue::attribute(5));
-        let right = Item::new(ObjectKey::attribute(1, 0), ObjectValue::attribute(10));
-        test_merge(left.clone(), right, &[left]).await;
+        let left = &[Item::new(ObjectKey::attribute(1, 0), ObjectValue::attribute(5))];
+        let right = &[Item::new(ObjectKey::attribute(1, 0), ObjectValue::attribute(10))];
+        test_merge(left, right, left).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_different_attributes_not_merged() {
         let left = Item::new(ObjectKey::attribute(1, 0), ObjectValue::attribute(5));
         let right = Item::new(ObjectKey::attribute(1, 1), ObjectValue::attribute(10));
-        test_merge(left.clone(), right.clone(), &[left, right]).await;
+        test_merge(&[left.clone()], &[right.clone()], &[left, right]).await;
 
         let left = Item::new(ObjectKey::extent(1, 0, 0..100), ObjectValue::extent(0));
         let right = Item::new(ObjectKey::extent(1, 1, 0..100), ObjectValue::extent(1));
-        test_merge(left.clone(), right.clone(), &[left, right]).await;
+        test_merge(&[left.clone()], &[right.clone()], &[left, right]).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_tombstone_discards_all_other_records() {
+        let tombstone = Item::new(ObjectKey::tombstone(1), ObjectValue::None);
+        let other_object =
+            Item::new(ObjectKey::object(2), ObjectValue::object(ObjectDescriptor::File, 1));
+        test_merge(
+            &[tombstone.clone()],
+            &[
+                Item::new(ObjectKey::object(1), ObjectValue::object(ObjectDescriptor::File, 1)),
+                Item::new(ObjectKey::attribute(1, 0), ObjectValue::attribute(100)),
+                Item::new(ObjectKey::extent(1, 0, 0..100), ObjectValue::extent(5000)),
+                other_object.clone(),
+            ],
+            &[tombstone, other_object],
+        )
+        .await;
     }
 }

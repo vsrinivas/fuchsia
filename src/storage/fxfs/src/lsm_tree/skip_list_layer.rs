@@ -237,34 +237,27 @@ impl<'a, K: Ord, V> SkipListLayerIter<'a, K, V> {
             read_counts.counts[epoch] += 1;
             epoch
         };
-        match bound {
+        let (included, key) = match bound {
             Bound::Unbounded => {
-                SkipListLayerIter { skip_list, epoch, node: skip_list.pointers.get(0) }
+                return SkipListLayerIter { skip_list, epoch, node: skip_list.pointers.get(0) };
             }
-            Bound::Included(key) => {
-                let mut index = skip_list.pointers.len() - 1;
-                let mut last_pointers = &skip_list.pointers;
-                loop {
-                    // We could optimise for == if we could be bothered (via a different method
-                    // maybe).
-                    if let Some(node) = last_pointers.get(index) {
-                        // Keep iterating along this level until we encounter a key that's >= our
-                        // search key.
-                        if &node.item.key < key {
-                            last_pointers = &node.pointers;
-                            continue;
-                        }
-                    }
-                    // There are no more levels so we are done.
-                    if index == 0 {
-                        break SkipListLayerIter { skip_list, epoch, node: last_pointers.get(0) };
-                    }
-                    // Move to the next level.
-                    index -= 1;
+            Bound::Included(key) => (true, key),
+            Bound::Excluded(key) => (false, key),
+        };
+        let mut last_pointers = &skip_list.pointers;
+        for index in (0..skip_list.pointers.len()).rev() {
+            // We could optimise for == if we could be bothered (via a different method
+            // maybe).
+            while let Some(node) = last_pointers.get(index) {
+                // Keep iterating along this level until we encounter a key that's >= our
+                // search key.
+                if &node.item.key > key || (included && &node.item.key == key) {
+                    break;
                 }
+                last_pointers = &node.pointers;
             }
-            Bound::Excluded(_) => panic!("Excluded bounds not supported"),
         }
+        SkipListLayerIter { skip_list, epoch, node: last_pointers.get(0) }
     }
 }
 
@@ -354,27 +347,21 @@ impl<K: Ord, V> SkipListLayerIterMut<'_, K, V> {
         match bound {
             Bound::Unbounded => {}
             Bound::Included(key) => {
-                let mut index = len - 1;
-                let mut p = skip_list.pointers.get(index);
                 let pointers = &mut prev_pointers;
-                loop {
+                for index in (0..len).rev() {
                     // We could optimise for == if we could be bothered (via a different method
                     // maybe).
-                    if let Some(node) = p {
-                        if &(node.item.key) < key {
-                            pointers[index] = &node.pointers;
-                            p = node.pointers.get(index);
-                            continue;
+                    while let Some(node) = pointers[index].get(index) {
+                        // Keep iterating along this level until we encounter a key that's >= our
+                        // search key.
+                        if &(node.item.key) >= key {
+                            break;
                         }
+                        pointers[index] = &node.pointers;
                     }
-                    // There are no more levels so we are done.
-                    if index == 0 {
-                        break;
+                    if index > 0 {
+                        pointers[index - 1] = pointers[index];
                     }
-                    // Move to the next level.
-                    index -= 1;
-                    pointers[index] = pointers[index + 1];
-                    p = pointers[index].get(index);
                 }
             }
             Bound::Excluded(_) => panic!("Excluded bounds not supported"),
@@ -571,11 +558,7 @@ mod tests {
     )]
     struct TestKey(i32);
 
-    impl OrdLowerBound for TestKey {
-        fn cmp_lower_bound(&self, other: &Self) -> std::cmp::Ordering {
-            std::cmp::Ord::cmp(self, other)
-        }
-    }
+    impl OrdLowerBound for TestKey {}
 
     #[fasync::run_singlethreaded(test)]
     async fn test_iteration() {
@@ -996,5 +979,16 @@ mod tests {
         assert_eq!((key, value), (&items[1].key, &items[1].value));
         iter.advance().await.unwrap();
         assert!(iter.get().is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_seek_excluded() {
+        let skip_list = SkipListLayer::new(100);
+        let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
+        skip_list.insert(items[0].clone()).await;
+        skip_list.insert(items[1].clone()).await;
+        let iter = skip_list.seek(Bound::Excluded(&items[0].key)).await.expect("seek failed");
+        let ItemRef { key, value } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&items[1].key, &items[1].value));
     }
 }

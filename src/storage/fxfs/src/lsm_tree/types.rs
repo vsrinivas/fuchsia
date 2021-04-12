@@ -120,8 +120,11 @@ impl<'a, K, V> From<&'a Item<K, V>> for ItemRef<'a, K, V> {
 ///
 /// If your keys don't have overlapping ranges that need to be merged, then this can be the same as
 /// std::cmp::Ord.
-pub trait OrdLowerBound {
-    fn cmp_lower_bound(&self, other: &Self) -> std::cmp::Ordering;
+pub trait OrdLowerBound: Ord {
+    fn cmp_lower_bound(&self, other: &Self) -> std::cmp::Ordering {
+        // Default to using cmp.
+        self.cmp(other)
+    }
 }
 
 /// Layer is a trait that all layers need to implement (mutable and immutable).

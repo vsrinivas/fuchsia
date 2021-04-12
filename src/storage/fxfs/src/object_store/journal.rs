@@ -102,7 +102,7 @@ pub enum JournalRecord {
 }
 
 fn journal_handle_options() -> HandleOptions {
-    HandleOptions { overwrite: true, ..Default::default() }
+    HandleOptions { overwrite: true, journal_replay: true, ..Default::default() }
 }
 
 /// The journal records a stream of mutations that are to be applied to other objects.  At mount

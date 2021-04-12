@@ -26,22 +26,19 @@ use {
         },
         errors::FxfsError,
         lsm_tree::{
-            types::{Item, ItemRef, LayerIterator},
+            types::{Item, LayerIterator},
             LSMTree,
         },
         object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::{
             filesystem::{ApplyMutations, Filesystem},
             record::DEFAULT_DATA_ATTRIBUTE_ID,
-            record::{
-                decode_extent, ExtentKey, ExtentValue, ObjectItem, ObjectKey, ObjectKeyData,
-                ObjectValue,
-            },
+            record::{ExtentKey, ExtentValue, ObjectItem, ObjectKey, ObjectKeyData, ObjectValue},
             transaction::{Mutation, Transaction},
         },
     },
     allocator::Allocator,
-    anyhow::{bail, Error},
+    anyhow::{anyhow, bail, Error},
     async_trait::async_trait,
     bincode::{deserialize_from, serialize_into},
     futures::{future::BoxFuture, FutureExt},
@@ -71,8 +68,12 @@ const MAX_STORE_INFO_SERIALIZED_SIZE: usize = 131072;
 
 #[derive(Default)]
 pub struct HandleOptions {
-    // If true, don't COW, write to blocks that are already allocated.
+    /// If true, don't COW, write to blocks that are already allocated.
     pub overwrite: bool,
+
+    /// If true, assume this handle is used during journal replay, in which case the size should not
+    /// be trusted and should be refreshed from the tree when necessary.
+    pub journal_replay: bool,
 }
 
 /// An object store supports a file like interface for objects.  Objects are keyed by a 64 bit
@@ -238,7 +239,7 @@ impl ObjectStore {
             Mutation::Insert {
                 item: ObjectItem {
                     key: ObjectKey::object(object_id),
-                    value: ObjectValue::object(ObjectDescriptor::File),
+                    value: ObjectValue::object(ObjectDescriptor::File, 1),
                 },
             },
         );
@@ -314,6 +315,80 @@ impl ObjectStore {
         Ok(())
     }
 
+    /// Adjusts the reference count for a given object.  If the reference count reaches zero, the
+    /// object is destroyed and any extents are deallocated.
+    pub async fn adjust_refs(
+        &self,
+        transaction: &mut Transaction,
+        oid: u64,
+        delta: i64,
+    ) -> Result<(), Error> {
+        let item = self.tree.find(&ObjectKey::object(oid)).await?.ok_or(FxfsError::NotFound)?;
+        let (object_type, refs) =
+            if let ObjectValue::Object { object_descriptor, refs } = item.value {
+                (
+                    object_descriptor,
+                    if delta < 0 {
+                        refs.checked_sub((-delta) as u64)
+                    } else {
+                        refs.checked_add(delta as u64)
+                    }
+                    .ok_or(anyhow!("refs underflow/overflow"))?,
+                )
+            } else {
+                bail!(FxfsError::Inconsistent);
+            };
+        if refs == 0 {
+            let layer_set = self.tree.layer_set();
+            let mut merger = layer_set.merger();
+            let allocator = self.allocator();
+            let mut iter = merger.seek(Bound::Included(&ObjectKey::attribute(oid, 0))).await?;
+            // Loop over all the extents and deallocate them.
+            // TODO(csuter): deal with overflowing a transaction.
+            while let Some(item) = iter.get() {
+                if item.key.object_id != oid {
+                    break;
+                }
+                if let Some((
+                    _,
+                    attr_id,
+                    ExtentKey { range },
+                    ExtentValue { device_offset: Some(device_offset) },
+                )) = item.into()
+                {
+                    allocator
+                        .deallocate(
+                            transaction,
+                            *device_offset..*device_offset + (range.end - range.start),
+                        )
+                        .await;
+                    let end = range.end;
+                    iter.advance_with_hint(&ObjectKey::extent(oid, attr_id, end..end + 1)).await?;
+                } else if let ObjectKey { data: ObjectKeyData::Attribute(attr_id, _), .. } =
+                    item.key
+                {
+                    let attr_id = *attr_id;
+                    iter.advance_with_hint(&ObjectKey::extent(oid, attr_id, 0..1)).await?;
+                } else {
+                    // We expect either attribute records or extent records.
+                    bail!(FxfsError::Inconsistent);
+                }
+            }
+            transaction.add(
+                self.store_object_id,
+                Mutation::Merge { item: Item::new(ObjectKey::tombstone(oid), ObjectValue::None) },
+            );
+        } else {
+            transaction.add(
+                self.store_object_id,
+                Mutation::ReplaceOrInsert {
+                    item: Item::new(item.key, ObjectValue::object(object_type, refs)),
+                },
+            );
+        }
+        Ok(())
+    }
+
     async fn ensure_open(&self) -> Result<(), Error> {
         if *self.opened.lock().unwrap() {
             return Ok(());
@@ -382,7 +457,7 @@ impl ApplyMutations for ObjectStore {
                 }
                 self.tree.insert(item).await;
             }
-            Mutation::ReplaceExtent { item } => {
+            Mutation::Merge { item } => {
                 let lower_bound = item.key.key_for_merge_into();
                 self.tree.merge_into(item, &lower_bound).await;
             }
@@ -436,7 +511,7 @@ impl StoreObjectHandle {
         );
         transaction.add(
             self.store.store_object_id(),
-            Mutation::ReplaceExtent {
+            Mutation::Merge {
                 item: ObjectItem {
                     key: ObjectKey::extent(self.object_id, self.attribute_id, old_size..new_size),
                     value: ObjectValue::extent(device_range.start),
@@ -467,11 +542,7 @@ impl StoreObjectHandle {
                 },
             );
         }
-        self.deallocate_old_extents(
-            transaction,
-            &ExtentKey::new(self.attribute_id, aligned.clone()),
-        )
-        .await?;
+        self.deallocate_old_extents(transaction, &ExtentKey::new(aligned.clone())).await?;
         let allocator = self.store.allocator();
         while buf_offset < buf.len() {
             let device_range = allocator.allocate(transaction, aligned.end - aligned.start).await?;
@@ -487,7 +558,7 @@ impl StoreObjectHandle {
             .await?;
             transaction.add(
                 self.store.store_object_id,
-                Mutation::ReplaceExtent {
+                Mutation::Merge {
                     item: Item::new(
                         ObjectKey::extent(self.object_id, self.attribute_id, aligned.start..end),
                         ObjectValue::extent(device_range.start),
@@ -515,15 +586,21 @@ impl StoreObjectHandle {
             .await?;
         let mut pos = 0;
         loop {
-            let (device_offset, to_do) = match iter.get() {
-                Some(ItemRef {
-                    key:
-                        ObjectKey { object_id, data: ObjectKeyData::Extent(ExtentKey { range, .. }) },
-                    value: ObjectValue::Extent(ExtentValue { device_offset: Some(device_offset) }),
-                }) if *object_id == self.object_id && range.start <= offset => (
-                    device_offset + (offset - range.start),
-                    min(buf.len() - pos, (range.end - offset) as usize),
-                ),
+            let (device_offset, to_do) = match iter.get().and_then(Into::into) {
+                Some((
+                    object_id,
+                    attribute_id,
+                    ExtentKey { range },
+                    ExtentValue { device_offset: Some(device_offset) },
+                )) if object_id == self.object_id
+                    && attribute_id == self.attribute_id
+                    && range.start <= offset =>
+                {
+                    (
+                        device_offset + (offset - range.start),
+                        min(buf.len() - pos, (range.end - offset) as usize),
+                    )
+                }
                 _ => bail!("offset {} not allocated", offset),
             };
             self.write_at(offset, buf.subslice(pos..pos + to_do), device_offset).await?;
@@ -586,18 +663,20 @@ impl StoreObjectHandle {
     ) -> Result<(), Error> {
         let tree = &self.store.tree;
         let layer_set = tree.layer_set();
-        let lower_bound = ObjectKey::with_extent_key(self.object_id, key.search_key());
+        let lower_bound =
+            ObjectKey::with_extent_key(self.object_id, self.attribute_id, key.search_key());
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Included(&lower_bound)).await?;
         let allocator = self.store.allocator();
         loop {
-            let (oid, extent_key, extent_value) = match iter.get().and_then(decode_extent) {
-                None => break,
-                Some((oid, extent_key, extent_value)) => (oid, extent_key, extent_value),
+            let (extent_key, extent_value) = match iter.get().and_then(Into::into) {
+                Some((oid, attribute_id, extent_key, extent_value))
+                    if oid == self.object_id && attribute_id == self.attribute_id =>
+                {
+                    (extent_key, extent_value)
+                }
+                _ => break,
             };
-            if oid != self.object_id || extent_key.attribute_id != self.attribute_id {
-                break;
-            }
             if let ExtentValue { device_offset: Some(device_offset) } = extent_value {
                 if let Some(overlap) = key.overlap(extent_key) {
                     allocator
@@ -643,7 +722,32 @@ impl ObjectHandle for StoreObjectHandle {
     }
 
     async fn read(&self, mut offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
-        if buf.len() == 0 || offset >= *self.size.lock().unwrap() {
+        if buf.len() == 0 {
+            return Ok(0);
+        }
+        let size = {
+            let size = self.get_size();
+            // If this handle is being used for journal replay, we can't trust the size, so if it
+            // looks like this read would go beyond the end of the file, refresh the size from the
+            // tree.
+            if self.options.journal_replay && (offset >= size || size - offset < buf.len() as u64) {
+                let item = self
+                    .store
+                    .tree
+                    .find(&ObjectKey::attribute(self.object_id, self.attribute_id))
+                    .await?
+                    .ok_or(FxfsError::Inconsistent)?;
+                if let ObjectValue::Attribute { size } = item.value {
+                    *self.size.lock().unwrap() = size;
+                    size
+                } else {
+                    bail!(FxfsError::Inconsistent);
+                }
+            } else {
+                size
+            }
+        };
+        if offset >= size {
             return Ok(0);
         }
         let tree = &self.store.tree;
@@ -656,16 +760,14 @@ impl ObjectHandle for StoreObjectHandle {
                 offset..offset + 1,
             )))
             .await?;
-        let to_do = min(buf.len() as u64, *self.size.lock().unwrap() - offset) as usize;
+        let to_do = min(buf.len() as u64, size - offset) as usize;
         buf = buf.subslice_mut(0..to_do);
         let mut start_align = (offset % self.block_size) as usize;
         let end_align = ((offset + to_do as u64) % self.block_size) as usize;
-        while let Some(ItemRef {
-            key: ObjectKey { object_id, data: ObjectKeyData::Extent(extent_key) },
-            value: ObjectValue::Extent(extent_value),
-        }) = iter.get()
+        while let Some((object_id, attribute_id, extent_key, extent_value)) =
+            iter.get().and_then(Into::into)
         {
-            if *object_id != self.object_id || extent_key.attribute_id != self.attribute_id {
+            if object_id != self.object_id || attribute_id != self.attribute_id {
                 break;
             }
             if extent_key.range.start > offset {
@@ -768,17 +870,14 @@ impl ObjectHandle for StoreObjectHandle {
         *self.size.lock().unwrap()
     }
 
-    async fn truncate(&self, transaction: &mut Transaction, length: u64) -> Result<(), Error> {
-        let old_length = *self.size.lock().unwrap();
-        if length == old_length {
-            return Ok(());
-        }
-        if length < old_length {
+    async fn truncate(&self, transaction: &mut Transaction, size: u64) -> Result<(), Error> {
+        let old_size = self.get_size();
+        if size < old_size {
             let deleted_range =
-                round_up(length, self.block_size)..round_up(old_length, self.block_size);
+                round_up(size, self.block_size)..round_up(old_size, self.block_size);
             transaction.add(
                 self.store.store_object_id,
-                Mutation::ReplaceExtent {
+                Mutation::Merge {
                     item: ObjectItem {
                         key: ObjectKey::extent(
                             self.object_id,
@@ -789,12 +888,8 @@ impl ObjectHandle for StoreObjectHandle {
                     },
                 },
             );
-            self.deallocate_old_extents(
-                transaction,
-                &ExtentKey::new(self.attribute_id, deleted_range),
-            )
-            .await?;
-            let to_zero = round_up(length, self.block_size) - length;
+            self.deallocate_old_extents(transaction, &ExtentKey::new(deleted_range)).await?;
+            let to_zero = round_up(size, self.block_size) - size;
             if to_zero > 0 {
                 assert!(to_zero < self.block_size);
                 // We intentionally use the COW write path even if we're in overwrite mode. There's
@@ -805,7 +900,7 @@ impl ObjectHandle for StoreObjectHandle {
                 // Is there a better way?
                 let mut buf = self.allocate_buffer(to_zero as usize);
                 buf.as_mut_slice().fill(0);
-                self.write_cow(transaction, length, buf.as_ref()).await?;
+                self.write_cow(transaction, size, buf.as_ref()).await?;
             }
         }
         transaction.add(
@@ -813,11 +908,11 @@ impl ObjectHandle for StoreObjectHandle {
             Mutation::ReplaceOrInsert {
                 item: ObjectItem {
                     key: ObjectKey::attribute(self.object_id, self.attribute_id),
-                    value: ObjectValue::attribute(length),
+                    value: ObjectValue::attribute(size),
                 },
             },
         );
-        *self.size.lock().unwrap() = length;
+        *self.size.lock().unwrap() = size;
         Ok(())
     }
 
@@ -835,16 +930,21 @@ impl ObjectHandle for StoreObjectHandle {
         let mut iter = merger
             .seek(Bound::Included(&ObjectKey::with_extent_key(
                 self.object_id,
-                ExtentKey::new(self.attribute_id, file_range.clone()).search_key(),
+                self.attribute_id,
+                ExtentKey::new(file_range.clone()).search_key(),
             )))
             .await?;
         'outer: while file_range.start < file_range.end {
             let allocate_end = loop {
-                match iter.get().and_then(decode_extent) {
-                    Some((oid, extent_key, ExtentValue { device_offset: Some(device_offset) }))
-                        if oid == self.object_id
-                            && extent_key.attribute_id == self.attribute_id
-                            && extent_key.range.start < file_range.end =>
+                match iter.get().and_then(Into::into) {
+                    Some((
+                        oid,
+                        attribute_id,
+                        extent_key,
+                        ExtentValue { device_offset: Some(device_offset) },
+                    )) if oid == self.object_id
+                        && attribute_id == self.attribute_id
+                        && extent_key.range.start < file_range.end =>
                     {
                         if extent_key.range.start <= file_range.start {
                             // Record the existing extent and move on.
@@ -859,7 +959,8 @@ impl ObjectHandle for StoreObjectHandle {
                             }
                             iter.advance_with_hint(&ObjectKey::with_extent_key(
                                 self.object_id,
-                                ExtentKey::new(self.attribute_id, file_range.clone()).search_key(),
+                                self.attribute_id,
+                                ExtentKey::new(file_range.clone()).search_key(),
                             ))
                             .await?;
                             continue;
@@ -869,16 +970,17 @@ impl ObjectHandle for StoreObjectHandle {
                             break extent_key.range.start;
                         }
                     }
-                    Some((oid, extent_key, ExtentValue { device_offset: None }))
+                    Some((oid, attribute_id, extent_key, ExtentValue { device_offset: None }))
                         if oid == self.object_id
-                            && extent_key.attribute_id == self.attribute_id
+                            && attribute_id == self.attribute_id
                             && extent_key.range.end < file_range.end =>
                     {
                         // The current extent is sparse, so skip to the next extent.
                         let next_extent_hint = extent_key.range.end..file_range.end;
                         iter.advance_with_hint(&ObjectKey::with_extent_key(
                             self.object_id,
-                            ExtentKey::new(self.attribute_id, next_extent_hint).search_key(),
+                            self.attribute_id,
+                            ExtentKey::new(next_extent_hint).search_key(),
                         ))
                         .await?;
                     }
@@ -898,7 +1000,7 @@ impl ObjectHandle for StoreObjectHandle {
             file_range.start = this_file_range.end;
             transaction.add(
                 self.store.store_object_id,
-                Mutation::ReplaceExtent {
+                Mutation::Merge {
                     item: ObjectItem {
                         key: ObjectKey::extent(self.object_id, self.attribute_id, this_file_range),
                         value: ObjectValue::extent(device_range.start),
@@ -935,9 +1037,11 @@ impl ObjectHandle for StoreObjectHandle {
 mod tests {
     use {
         crate::{
+            lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
                 filesystem::Filesystem,
+                record::{ObjectKey, ObjectKeyData},
                 round_up,
                 testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
                 transaction::Transaction,
@@ -946,7 +1050,7 @@ mod tests {
             testing::fake_device::FakeDevice,
         },
         fuchsia_async as fasync,
-        std::sync::Arc,
+        std::{ops::Bound, sync::Arc},
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
@@ -1257,6 +1361,42 @@ mod tests {
             deallocated_before,
             deallocated_after
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_adjust_refs() {
+        let (fs, allocator, object) = test_filesystem_and_object().await;
+        let mut transaction = Transaction::new();
+        let store = object.store();
+        store
+            .adjust_refs(&mut transaction, object.object_id(), 1)
+            .await
+            .expect("adjust_refs failed");
+        fs.commit_transaction(transaction).await;
+
+        let deallocated_before = allocator.deallocated();
+        let mut transaction = Transaction::new();
+        store
+            .adjust_refs(&mut transaction, object.object_id(), -2)
+            .await
+            .expect("adjust_refs failed");
+        fs.commit_transaction(transaction).await;
+        assert_eq!(allocator.deallocated() - deallocated_before, TEST_DEVICE_BLOCK_SIZE as usize);
+
+        let layer_set = store.tree.layer_set();
+        let mut merger = layer_set.merger();
+        let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
+        let mut found = false;
+        while let Some(ItemRef { key: ObjectKey { object_id, data }, .. }) = iter.get() {
+            if let ObjectKeyData::Tombstone = data {
+                assert!(!found);
+                found = true;
+            } else {
+                assert!(*object_id != object.object_id(), "{:?}", iter.get());
+            }
+            iter.advance().await.expect("advance failed");
+        }
+        assert!(found);
     }
 }
 

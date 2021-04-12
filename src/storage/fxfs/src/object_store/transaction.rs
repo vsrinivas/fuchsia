@@ -14,8 +14,8 @@ pub enum Mutation {
     Insert { item: ObjectItem },
     // Inserts or replaces a record.
     ReplaceOrInsert { item: ObjectItem },
-    // Inserts or replaces an extent.
-    ReplaceExtent { item: ObjectItem },
+    // Merges a record.
+    Merge { item: ObjectItem },
     Allocate(AllocatorItem),
     Deallocate(AllocatorItem),
     // Seal the mutable layer and create a new one.

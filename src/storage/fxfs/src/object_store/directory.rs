@@ -124,7 +124,7 @@ impl ObjectStore {
             Mutation::Insert {
                 item: ObjectItem {
                     key: ObjectKey::object(object_id),
-                    value: ObjectValue::object(ObjectDescriptor::Directory),
+                    value: ObjectValue::object(ObjectDescriptor::Directory, 1),
                 },
             },
         );
@@ -135,10 +135,14 @@ impl ObjectStore {
         let item =
             self.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)?;
         match item.value {
-            ObjectValue::Object { object_descriptor: ObjectDescriptor::Directory } => {
-                Ok(Directory::new(self.clone(), object_id))
+            ObjectValue::Object { object_descriptor: ObjectDescriptor::Directory, refs } => {
+                if refs == 0 {
+                    bail!(FxfsError::NotFound);
+                } else {
+                    Ok(Directory::new(self.clone(), object_id))
+                }
             }
-            ObjectValue::Object { object_descriptor } => {
+            ObjectValue::Object { object_descriptor, .. } => {
                 log::debug!("Expected directory, found: {:?}", object_descriptor);
                 bail!(FxfsError::NotDir);
             }
