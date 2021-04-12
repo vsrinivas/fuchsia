@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/ui/scenic/lib/view_tree/view_tree_snapshotter.h"
+
 #include <lib/async-testing/test_loop.h>
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/ui/scenic/lib/view_tree/view_tree_snapshotter.h"
+#include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace view_tree::test {
 
@@ -40,51 +43,47 @@ enum : zx_koid_t {
 // |  |  |  |  |
 // |  5  |  7  |
 // ------ -----
-//
-// Subtree A and B come from the same generator, in that order, while C comes from a separate
-// generator; to test that all generator combinations work.
 std::vector<SubtreeSnapshotGenerator> BasicTree() {
   std::vector<SubtreeSnapshotGenerator> subtree_generators;
 
+  // A
   subtree_generators.emplace_back([] {
-    std::vector<SubtreeSnapshot> subtrees;
-    {  // A
-      auto& subtree = subtrees.emplace_back();
-      auto& snapshot = subtree.snapshot;
+    SubtreeSnapshot subtree;
+    auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = subtree;
 
-      snapshot.root = kRoot1A;
-      snapshot.view_tree[kRoot1A] =
-          ViewNode{.parent = ZX_KOID_INVALID, .children = {kNode2, kNode3}};
-      snapshot.view_tree[kNode2] = ViewNode{.parent = kRoot1A, .children = {kRoot4B}};
-      snapshot.view_tree[kNode3] = ViewNode{.parent = kRoot1A, .children = {kRoot6C}};
-      snapshot.unconnected_views = {kNode8};
+    root = kRoot1A;
+    view_tree[kRoot1A] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNode2, kNode3}};
+    view_tree[kNode2] = ViewNode{.parent = kRoot1A, .children = {kRoot4B}};
+    view_tree[kNode3] = ViewNode{.parent = kRoot1A, .children = {kRoot6C}};
+    unconnected_views = {kNode8};
 
-      subtree.tree_boundaries.emplace(kNode2, kRoot4B);
-      subtree.tree_boundaries.emplace(kNode3, kRoot6C);
-    }
-    {  // B
-      auto& subtree = subtrees.emplace_back();
-      auto& snapshot = subtree.snapshot;
+    tree_boundaries.emplace(kNode2, kRoot4B);
+    tree_boundaries.emplace(kNode3, kRoot6C);
+    return subtree;
+  });
 
-      snapshot.root = kRoot4B;
-      snapshot.view_tree[kRoot4B] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNode5}};
-      snapshot.view_tree[kNode5] = ViewNode{.parent = kRoot4B, .children = {}};
-      snapshot.unconnected_views = {kNode9};
-    }
-    return subtrees;
+  // B
+  subtree_generators.emplace_back([] {
+    SubtreeSnapshot subtree;
+    auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = subtree;
+
+    root = kRoot4B;
+    view_tree[kRoot4B] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNode5}};
+    view_tree[kNode5] = ViewNode{.parent = kRoot4B, .children = {}};
+    unconnected_views = {kNode9};
+    return subtree;
   });
 
   // C
   subtree_generators.emplace_back([] {
-    std::vector<SubtreeSnapshot> subtrees;
-    auto& subtree = subtrees.emplace_back();
-    auto& snapshot = subtree.snapshot;
+    SubtreeSnapshot subtree;
+    auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = subtree;
 
-    snapshot.root = kRoot6C;
-    snapshot.view_tree[kRoot6C] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNode7}};
-    snapshot.view_tree[kNode7] = ViewNode{.parent = kRoot6C, .children = {}};
-    snapshot.unconnected_views = {kNode10, kNode11};
-    return subtrees;
+    root = kRoot6C;
+    view_tree[kRoot6C] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNode7}};
+    view_tree[kNode7] = ViewNode{.parent = kRoot6C, .children = {}};
+    unconnected_views = {kNode10, kNode11};
+    return subtree;
   });
 
   return subtree_generators;
@@ -116,21 +115,18 @@ Snapshot BasicTreeSnapshot() {
 // Checks that BasicTree() gets combined to the correct Snapshot, and that the snapshot is
 // correctly delivered to a subscriber.
 TEST(ViewTreeSnapshotterTest, BasicTreeTest) {
-  std::vector<Subscriber> subscribers;
+  std::vector<ViewTreeSnapshotter::Subscriber> subscribers;
   async::TestLoop loop;
   bool callback_fired = false;
   subscribers.push_back({.on_new_view_tree =
                              [&callback_fired](std::shared_ptr<const Snapshot> snapshot) {
                                callback_fired = true;
-                               const bool conversion_correct =
-                                   *snapshot.get() == BasicTreeSnapshot();
+                               const bool conversion_correct = *snapshot == BasicTreeSnapshot();
                                EXPECT_TRUE(conversion_correct);
                                if (!conversion_correct) {
-                                 FX_LOGS(ERROR)
-                                     << "Generated snapshot:\n"
-                                     << ViewTreeSnapshotter::ToString(*snapshot.get())
-                                     << "\ndid not match expected:\n\n"
-                                     << ViewTreeSnapshotter::ToString(BasicTreeSnapshot());
+                                 FX_LOGS(ERROR) << "Generated snapshot:\n"
+                                                << (*snapshot) << "\ndid not match expected:\n\n"
+                                                << BasicTreeSnapshot();
                                }
                              },
                          .dispatcher = loop.dispatcher()});
@@ -145,7 +141,7 @@ TEST(ViewTreeSnapshotterTest, BasicTreeTest) {
 // Check that the subscriber fires on the supplied dispatcher and doesn't rely on the default
 // dispatcher.
 TEST(ViewTreeSnapshotterTest, Subscriber_RunsOnCorrectDispatcher) {
-  std::vector<Subscriber> subscribers;
+  std::vector<ViewTreeSnapshotter::Subscriber> subscribers;
   async::TestLoop loop1;
   async::TestLoop loop2;
   async_set_default_dispatcher(loop1.dispatcher());
@@ -165,7 +161,7 @@ TEST(ViewTreeSnapshotterTest, Subscriber_RunsOnCorrectDispatcher) {
 }
 
 TEST(ViewTreeSnapshotterTest, MultipleSubscribers) {
-  std::vector<Subscriber> subscribers;
+  std::vector<ViewTreeSnapshotter::Subscriber> subscribers;
 
   async::TestLoop loop;
   std::shared_ptr<const Snapshot> snapshot1;
@@ -199,20 +195,19 @@ TEST(ViewTreeSnapshotterTest, MultipleUpdateSnapshot) {
   std::vector<SubtreeSnapshotGenerator> subtrees;
   bool first_call = true;
   subtrees.emplace_back([&first_call] {
-    std::vector<SubtreeSnapshot> subtrees;
-    auto& subtree = subtrees.emplace_back();
+    SubtreeSnapshot subtree;
     if (first_call) {
-      subtree.snapshot.root = kRoot1A;
-      subtree.snapshot.view_tree[kRoot1A] = ViewNode{};
+      subtree.root = kRoot1A;
+      subtree.view_tree[kRoot1A] = ViewNode{};
     } else {
-      subtree.snapshot.root = kRoot4B;
-      subtree.snapshot.view_tree[kRoot4B] = ViewNode{};
+      subtree.root = kRoot4B;
+      subtree.view_tree[kRoot4B] = ViewNode{};
     }
     first_call = false;
-    return subtrees;
+    return subtree;
   });
 
-  std::vector<Subscriber> subscribers;
+  std::vector<ViewTreeSnapshotter::Subscriber> subscribers;
   async::TestLoop loop;
   std::shared_ptr<const Snapshot> snapshot1;
   subscribers.push_back({.on_new_view_tree = [&snapshot1](auto snapshot) { snapshot1 = snapshot; },
@@ -238,14 +233,13 @@ TEST(ViewTreeSnapshotterTest, MultipleUpdateSnapshot) {
 TEST(ViewTreeSnapshotterTest, SubscriberCallbackLifetime) {
   std::vector<SubtreeSnapshotGenerator> subtrees;
   subtrees.emplace_back([] {
-    std::vector<SubtreeSnapshot> subtrees;
-    auto& subtree = subtrees.emplace_back();
-    subtree.snapshot.root = kRoot1A;
-    subtree.snapshot.view_tree[kRoot1A] = ViewNode{};
-    return subtrees;
+    SubtreeSnapshot subtree;
+    subtree.root = kRoot1A;
+    subtree.view_tree[kRoot1A] = ViewNode{};
+    return subtree;
   });
 
-  std::vector<Subscriber> subscribers;
+  std::vector<ViewTreeSnapshotter::Subscriber> subscribers;
   async::TestLoop loop;
   std::shared_ptr<const Snapshot> snapshot1;
   int called_count = 0;

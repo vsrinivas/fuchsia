@@ -12,10 +12,14 @@ group("tests") {
 
 executable("view_tree_test_bin") {
   testonly = true
-  sources = [ "view_tree_snapshot_unittest.cc" ]
+  sources = [
+    "snapshot_types_unittest.cc",
+    "view_tree_snapshotter_unittest.cc",
+  ]
   deps = [
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-testing",

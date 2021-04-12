@@ -4,6 +4,8 @@
 
 source_set("view_tree_snapshot") {
   sources = [
+    "snapshot_types.cc",
+    "snapshot_types.h",
     "view_tree_snapshotter.cc",
     "view_tree_snapshotter.h",
   ]
