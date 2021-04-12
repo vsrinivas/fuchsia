@@ -85,7 +85,7 @@ dart_test("archivist_reader_test") {
 
 dart_test("inspect_metrics_emulator_test") {
   sources = [
-    "appmgr_cpu_metrics_test.dart",
+    "cpu_metrics_test.dart",
     "util.dart",
   ]
 
