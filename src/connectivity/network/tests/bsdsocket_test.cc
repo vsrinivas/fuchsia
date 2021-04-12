@@ -3771,7 +3771,7 @@ TEST(NetDatagramTest, DatagramPartialRecv) {
   EXPECT_EQ(close(recvfd.release()), 0) << strerror(errno);
 }
 
-TEST(NetDatagramTest, DatagramPOLLOUT) {
+TEST(NetDatagramTest, POLLOUT) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
 
