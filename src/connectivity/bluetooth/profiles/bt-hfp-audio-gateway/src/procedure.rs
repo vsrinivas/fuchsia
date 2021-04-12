@@ -16,7 +16,7 @@ use crate::{
     },
     protocol::{
         features::AgFeatures,
-        indicators::{AgIndicator, AgIndicators, HfIndicators},
+        indicators::{AgIndicator, AgIndicators, HfIndicator, HfIndicators},
     },
 };
 
@@ -62,6 +62,9 @@ pub mod ring;
 /// Defines the implementation of the Phone Status Procedures.
 pub mod phone_status;
 
+/// Defines the implementation of the Transfer of HF Indicator Values Procedure.
+pub mod transfer_hf_indicator;
+
 /// Defines the implementation of the Volume Level Synchronization Procedure.
 pub mod volume_synchronization;
 
@@ -79,6 +82,7 @@ use query_operator_selection::QueryOperatorProcedure;
 use ring::RingProcedure;
 use slc_initialization::SlcInitProcedure;
 use subscriber_number_information::{build_cnum_response, SubscriberNumberInformationProcedure};
+use transfer_hf_indicator::TransferHfIndicatorProcedure;
 use volume_synchronization::VolumeSynchronizationProcedure;
 
 const THREE_WAY_SUPPORT: &[&str] = &["0", "1", "1X", "2", "2X", "3", "4"];
@@ -172,6 +176,8 @@ pub enum ProcedureMarker {
     Answer,
     /// The Hang Up procedure as defined in HFP v1.8 Sections 4.14 - 4.15
     HangUp,
+    /// The Transfer of HF Indicator Values procedure as defined in HFP v1.8 Section 4.36.1.5.
+    TransferHfIndicator,
 }
 
 impl ProcedureMarker {
@@ -197,6 +203,7 @@ impl ProcedureMarker {
             Self::Ring => Box::new(RingProcedure::new()),
             Self::Answer => Box::new(AnswerProcedure::new()),
             Self::HangUp => Box::new(HangUpProcedure::new()),
+            Self::TransferHfIndicator => Box::new(TransferHfIndicatorProcedure::new()),
         }
     }
 
@@ -225,6 +232,7 @@ impl ProcedureMarker {
             at::Command::Vts { .. } => Ok(Self::Dtmf),
             at::Command::Answer { .. } => Ok(Self::Answer),
             at::Command::Chup { .. } => Ok(Self::HangUp),
+            at::Command::Biev { .. } => Ok(Self::TransferHfIndicator),
             _ => Err(ProcedureError::NotImplemented),
         }
     }
@@ -242,6 +250,8 @@ pub enum InformationRequest {
     GetSubscriberNumberInformation { response: Box<dyn FnOnce(Vec<String>) -> AgUpdate> },
 
     SetNrec { enable: bool, response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
+
+    SendHfIndicator { indicator: HfIndicator, response: Box<dyn FnOnce() -> AgUpdate> },
 
     SendDtmf { code: DtmfCode, response: Box<dyn FnOnce() -> AgUpdate> },
 
@@ -265,6 +275,7 @@ impl From<&InformationRequest> for ProcedureMarker {
             GetSubscriberNumberInformation { .. } => Self::SubscriberNumberInformation,
             SetNrec { .. } => Self::Nrec,
             SendDtmf { .. } => Self::Dtmf,
+            SendHfIndicator { .. } => Self::TransferHfIndicator,
             SpeakerVolumeSynchronization { .. } | MicrophoneVolumeSynchronization { .. } => {
                 Self::VolumeSynchronization
             }
@@ -288,6 +299,10 @@ impl fmt::Debug for InformationRequest {
             Self::QueryCurrentCalls { .. } => "QueryCurrentCalls ",
             // DTFM Code values are not displayed in Debug representation
             Self::SendDtmf { .. } => "SendDtmf",
+            Self::SendHfIndicator { indicator, .. } => {
+                s = format!("SendHfIndicator({:?})", indicator);
+                &s
+            }
             Self::SpeakerVolumeSynchronization { level, .. } => {
                 s = format!("SpeakerVolumeSynchronization({:?})", level);
                 &s

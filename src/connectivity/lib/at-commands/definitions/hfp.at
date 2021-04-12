@@ -81,6 +81,10 @@ command { AT+BIND? }
 # HFP 1.8 4.36.1.3
 response BindStatus { +BIND:anum:BluetoothHFIndicator,state:BoolAsInt }
 
+# Bluetooth HF Indicator value command
+# HFP 1.8 4.36.1.5
+command { AT+BIEV=anum:BluetoothHFIndicator,value:Integer}
+
 # Standard Call hold read command.
 # HFP 1.8 4.34.2
 command { AT+CHLD=? }

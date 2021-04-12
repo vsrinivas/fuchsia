@@ -679,7 +679,7 @@ pub(crate) mod tests {
     /// Expects a message to be received by the peer. If provided, validates the contents
     /// of the received message.
     #[track_caller]
-    fn expect_peer_ready(
+    pub fn expect_peer_ready(
         exec: &mut fasync::Executor,
         remote: &mut Channel,
         expected: Option<Vec<u8>>,
@@ -710,7 +710,7 @@ pub(crate) mod tests {
 
     /// Serializes the AT Response into a byte buffer.
     #[track_caller]
-    fn serialize_at_response(response: at::Response) -> Vec<u8> {
+    pub fn serialize_at_response(response: at::Response) -> Vec<u8> {
         let mut buf = Vec::new();
         response.serialize(&mut buf).expect("serialization is ok");
         buf

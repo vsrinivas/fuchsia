@@ -36,7 +36,7 @@ use crate::{
     error::Error,
     procedure::{AgUpdate, InformationRequest, ProcedureMarker},
     profile::ProfileEvent,
-    protocol::indicators::{AgIndicator, AgIndicators},
+    protocol::indicators::{AgIndicator, AgIndicators, HfIndicator},
 };
 
 pub(super) struct PeerTask {
@@ -233,6 +233,10 @@ impl PeerTask {
                 self.calls.send_dtmf_code(code).await;
                 self.connection.receive_ag_request(marker, response()).await;
             }
+            InformationRequest::SendHfIndicator { indicator, response } => {
+                self.hf_indicator_update(indicator);
+                self.connection.receive_ag_request(marker, response()).await;
+            }
             InformationRequest::SetNrec { enable, response } => {
                 let result = if let Some(handler) = &mut self.handler {
                     if let Ok(Ok(())) = handler.set_nrec_mode(enable).await {
@@ -335,6 +339,22 @@ impl PeerTask {
         self
     }
 
+    /// Sends an HF Indicator update to the client.
+    fn hf_indicator_update(&mut self, indicator: HfIndicator) {
+        match indicator {
+            ind @ HfIndicator::EnhancedSafety(_) => {
+                debug!("Received EnhancedSafety HF Indicator update: {:?}", ind);
+            }
+            HfIndicator::BatteryLevel(v) => {
+                if let Some(handler) = &mut self.handler {
+                    if let Err(e) = handler.report_headset_battery_level(v) {
+                        log::warn!("Couldn't report headset battery level: {:?}", e);
+                    }
+                }
+            }
+        }
+    }
+
     /// Request to send the phone `status` by initiating the Phone Status Indicator
     /// procedure.
     async fn ring_update(&mut self, call: Call) {
@@ -403,6 +423,7 @@ mod tests {
     use {
         super::*,
         async_utils::PollExt,
+        at_commands::{self as at, SerDe},
         fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
         fidl_fuchsia_bluetooth_hfp::{
             CallState, PeerHandlerMarker, PeerHandlerRequest, SignalStrength,
@@ -415,10 +436,16 @@ mod tests {
 
     use crate::{
         peer::service_level_connection::{
-            tests::{create_and_initialize_slc, expect_data_received_by_peer},
+            tests::{
+                create_and_initialize_slc, expect_data_received_by_peer, expect_peer_ready,
+                serialize_at_response,
+            },
             SlcState,
         },
-        protocol::{features::HfFeatures, indicators::AgIndicatorsReporting},
+        protocol::{
+            features::HfFeatures,
+            indicators::{AgIndicatorsReporting, HfIndicators},
+        },
     };
 
     fn arb_signal() -> impl Strategy<Value = Option<SignalStrength>> {
@@ -787,5 +814,78 @@ mod tests {
 
         // Check that the task's ringer has an active call with the expected call index.
         assert!(task.ringer.ringing());
+    }
+
+    #[test]
+    fn incoming_hf_indicator_battery_level_is_propagated_to_peer_handler_stream() {
+        // Set up the executor, peer, and background call manager task
+        let mut exec = fasync::Executor::new().unwrap();
+
+        // Setup the peer task with the specified SlcState to enable the battery level HF indicator.
+        let mut hf_indicators = HfIndicators::default();
+        hf_indicators.enable_indicators(vec![at::BluetoothHFIndicator::BatteryLevel]);
+        let state = SlcState { hf_indicators, ..SlcState::default() };
+        let (connection, mut remote) = create_and_initialize_slc(state);
+        let (peer, mut sender, receiver, _profile) = setup_peer_task(Some(connection));
+
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
+        // The battery level that will be reported by the peer.
+        let expected_level = 79;
+
+        fasync::Task::local(async move {
+            // First request is always the network info.
+            match stream.next().await {
+                Some(Ok(PeerHandlerRequest::WatchNetworkInformation { responder })) => {
+                    responder
+                        .send(NetworkInformation::EMPTY)
+                        .expect("Successfully send network information");
+                }
+                x => panic!("Expected watch network information request: {:?}", x),
+            };
+            // A vec to hold all the stream items we don't care about for this test.
+            let mut junk_drawer = vec![];
+
+            // Filter out all items that are irrelevant to this particular test, placing them in
+            // the junk_drawer.
+            let mut stream = stream.filter_map(move |item| {
+                let item = match item {
+                    Ok(PeerHandlerRequest::ReportHeadsetBatteryLevel { level, .. }) => Some(level),
+                    x => {
+                        junk_drawer.push(x);
+                        None
+                    }
+                };
+                ready(item)
+            });
+            let actual_battery_level = stream.next().await.unwrap();
+            assert_eq!(actual_battery_level, expected_level);
+            // Call manager should collect all further requests, without responding.
+            stream.collect::<Vec<_>>().await;
+        })
+        .detach();
+
+        // Pass in the client end connected to the call manager
+        let result = exec.run_singlethreaded(sender.send(PeerRequest::Handle(proxy)));
+        assert!(result.is_ok());
+
+        // Run the PeerTask.
+        let run_fut = peer.run(receiver);
+        pin_mut!(run_fut);
+        assert!(exec.run_until_stalled(&mut run_fut).is_pending());
+
+        // Peer sends us a battery level HF indicator update.
+        let battery_level_cmd = at::Command::Biev {
+            anum: at::BluetoothHFIndicator::BatteryLevel,
+            value: expected_level as i64,
+        };
+        let mut buf = Vec::new();
+        battery_level_cmd.serialize(&mut buf).expect("serialization is ok");
+        remote.as_ref().write(&buf[..]).expect("channel write is ok");
+        // Run the main future - the spawned task should receive the HF indicator and report it.
+        assert!(exec.run_until_stalled(&mut run_fut).is_pending());
+
+        // Since we (the AG) received a valid HF indicator, we expect to send an OK back to the peer.
+        expect_peer_ready(&mut exec, &mut remote, Some(serialize_at_response(at::Response::Ok)));
     }
 }

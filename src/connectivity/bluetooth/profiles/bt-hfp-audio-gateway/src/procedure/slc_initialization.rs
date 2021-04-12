@@ -333,7 +333,7 @@ impl SlcProcedureState for ThreeWaySupportReceived {
 
         match update {
             at::Command::Bind { indicators } => {
-                state.hf_indicators.set(indicators);
+                state.hf_indicators.enable_indicators(indicators);
                 Box::new(HfSupportedIndicatorsReceived)
             }
             m => SlcErrorState::unexpected_hf(m),

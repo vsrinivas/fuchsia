@@ -16,16 +16,23 @@ pub(crate) const SIGNAL_INDICATOR_INDEX: usize = 5;
 pub(crate) const ROAM_INDICATOR_INDEX: usize = 6;
 pub(crate) const BATT_CHG_INDICATOR_INDEX: usize = 7;
 
-/// A single HF Indicator status + value.
+/// The supported HF indicators.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum HfIndicator {
+    EnhancedSafety(bool),
+    BatteryLevel(u8),
+}
+
+/// A single indicator status + value.
 #[derive(Clone, Copy, Debug)]
-pub struct HfIndicator<T: Clone + Copy + Debug> {
+struct Indicator<T: Clone + Copy + Debug> {
     /// Whether this indicator is enabled or not.
     enabled: bool,
     /// The value of the indicator.
     value: Option<T>,
 }
 
-impl<T: Clone + Copy + Debug> Default for HfIndicator<T> {
+impl<T: Clone + Copy + Debug> Default for Indicator<T> {
     fn default() -> Self {
         Self { enabled: false, value: None }
     }
@@ -36,14 +43,18 @@ impl<T: Clone + Copy + Debug> Default for HfIndicator<T> {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct HfIndicators {
     /// The Enhanced Safety HF indicator. There are only two potential values (enabled, disabled).
-    enhanced_safety: HfIndicator<bool>,
+    enhanced_safety: Indicator<bool>,
     /// The Battery Level HF indicator. Can be any integer value between [0, 100].
-    battery_level: HfIndicator<u8>,
+    battery_level: Indicator<u8>,
 }
 
 impl HfIndicators {
-    /// Sets the HF indicators based on the provided AT `indicators`.
-    pub fn set(&mut self, indicators: Vec<at::BluetoothHFIndicator>) {
+    /// The Maximum Battery Level value for the `battery_level` indicator.
+    /// Defined in HFP v1.8 Section 4.35.
+    const MAX_BATTERY_LEVEL: u8 = 100;
+
+    /// Enables the supported HF indicators based on the provided AT `indicators`.
+    pub fn enable_indicators(&mut self, indicators: Vec<at::BluetoothHFIndicator>) {
         for ind in indicators {
             if ind == at::BluetoothHFIndicator::EnhancedSafety {
                 self.enhanced_safety.enabled = true;
@@ -52,6 +63,39 @@ impl HfIndicators {
                 self.battery_level.enabled = true;
             }
         }
+    }
+
+    /// Updates the `indicator` with the provided `value`.
+    /// Returns Error if the indicator is disabled or if the `value` is out of bounds.
+    /// Returns a valid HfIndicator on success.
+    pub fn update_indicator_value(
+        &mut self,
+        indicator: at::BluetoothHFIndicator,
+        value: i64,
+    ) -> Result<HfIndicator, ()> {
+        let ind = match indicator {
+            at::BluetoothHFIndicator::EnhancedSafety if self.enhanced_safety.enabled => {
+                if value != 0 && value != 1 {
+                    return Err(());
+                }
+                let v = value != 0;
+                self.enhanced_safety.value = Some(v);
+                HfIndicator::EnhancedSafety(v)
+            }
+            at::BluetoothHFIndicator::BatteryLevel if self.battery_level.enabled => {
+                if value < 0 || value > Self::MAX_BATTERY_LEVEL.into() {
+                    return Err(());
+                }
+                let v = value as u8;
+                self.battery_level.value = Some(v);
+                HfIndicator::BatteryLevel(v)
+            }
+            ind => {
+                log::warn!("Received HF indicator update for disabled indicator: {:?}", ind);
+                return Err(());
+            }
+        };
+        Ok(ind)
     }
 
     /// Returns the +BIND response for the current HF indicator status.
@@ -431,6 +475,94 @@ impl CallIndicatorsUpdates {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use matches::assert_matches;
+
+    #[test]
+    fn update_hf_indicators_with_invalid_values_is_error() {
+        let mut hf_indicators = HfIndicators::default();
+        hf_indicators.enable_indicators(vec![
+            at::BluetoothHFIndicator::BatteryLevel,
+            at::BluetoothHFIndicator::EnhancedSafety,
+        ]);
+
+        let battery_too_low = -18;
+        assert_matches!(
+            hf_indicators
+                .update_indicator_value(at::BluetoothHFIndicator::BatteryLevel, battery_too_low),
+            Err(())
+        );
+        let battery_too_high = 1243;
+        assert_matches!(
+            hf_indicators
+                .update_indicator_value(at::BluetoothHFIndicator::BatteryLevel, battery_too_high),
+            Err(())
+        );
+
+        let negative_safety = -1;
+        assert_matches!(
+            hf_indicators
+                .update_indicator_value(at::BluetoothHFIndicator::EnhancedSafety, negative_safety),
+            Err(())
+        );
+        let large_safety = 8;
+        assert_matches!(
+            hf_indicators
+                .update_indicator_value(at::BluetoothHFIndicator::EnhancedSafety, large_safety),
+            Err(())
+        );
+    }
+
+    #[test]
+    fn update_disabled_hf_indicators_with_valid_values_is_error() {
+        // Default is no indicators set. Therefore any updates are errors.
+        let mut hf_indicators = HfIndicators::default();
+
+        let valid_battery = 32;
+        assert_matches!(
+            hf_indicators
+                .update_indicator_value(at::BluetoothHFIndicator::BatteryLevel, valid_battery),
+            Err(())
+        );
+
+        let valid_safety = 0;
+        assert_matches!(
+            hf_indicators
+                .update_indicator_value(at::BluetoothHFIndicator::EnhancedSafety, valid_safety),
+            Err(())
+        );
+    }
+
+    #[test]
+    fn update_hf_indicators_with_valid_values_is_ok() {
+        let mut hf_indicators = HfIndicators::default();
+        // Default values.
+        assert_eq!(hf_indicators.enhanced_safety.value, None);
+        assert_eq!(hf_indicators.enhanced_safety.enabled, false);
+        assert_eq!(hf_indicators.battery_level.value, None);
+        assert_eq!(hf_indicators.battery_level.enabled, false);
+
+        // Enable both.
+        hf_indicators.enable_indicators(vec![
+            at::BluetoothHFIndicator::BatteryLevel,
+            at::BluetoothHFIndicator::EnhancedSafety,
+        ]);
+
+        let valid_battery = 83;
+        assert_matches!(
+            hf_indicators
+                .update_indicator_value(at::BluetoothHFIndicator::BatteryLevel, valid_battery),
+            Ok(HfIndicator::BatteryLevel(83))
+        );
+        assert_eq!(hf_indicators.battery_level.value, Some(valid_battery as u8));
+
+        let valid_safety = 0;
+        assert_matches!(
+            hf_indicators
+                .update_indicator_value(at::BluetoothHFIndicator::EnhancedSafety, valid_safety),
+            Ok(HfIndicator::EnhancedSafety(false))
+        );
+        assert_eq!(hf_indicators.enhanced_safety.value, Some(false));
+    }
 
     #[test]
     fn default_indicators_reporting_is_disabled_with_all_indicators_enabled() {
