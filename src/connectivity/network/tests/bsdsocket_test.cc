@@ -1381,7 +1381,7 @@ TEST(NetStreamTest, UnconnectPoll) {
   ASSERT_EQ(bind(bound.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
-  for (short events : {0, POLLIN | POLLOUT | POLLPRI | POLLRDHUP}) {
+  for (int16_t events : {0, POLLIN | POLLOUT | POLLPRI | POLLRDHUP}) {
     struct pollfd pfds[] = {{
                                 .fd = init.get(),
                                 .events = events,
@@ -2923,14 +2923,16 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
 
   // Ensure that the accept queue has the completed connection.
   constexpr int kTimeout = 10000;
-  pollfd pfd = {
-      .fd = listener.get(),
-      .events = POLLIN,
-  };
-  int n = poll(&pfd, 1, kTimeout);
-  ASSERT_GE(n, 0) << strerror(errno);
-  ASSERT_EQ(n, 1);
-  ASSERT_EQ(pfd.revents, POLLIN);
+  {
+    pollfd pfd = {
+        .fd = listener.get(),
+        .events = POLLIN,
+    };
+    int n = poll(&pfd, 1, kTimeout);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
+    ASSERT_EQ(pfd.revents, POLLIN);
+  }
 
   fbl::unique_fd connecting_client;
   ASSERT_TRUE(connecting_client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
@@ -3065,13 +3067,13 @@ TEST(NetStreamTest, GetTcpInfo) {
 
   tcp_info info;
   socklen_t info_len = sizeof(tcp_info);
-  ASSERT_GE(getsockopt(connfd.get(), SOL_TCP, TCP_INFO, &info, &info_len), 0) << strerror(errno);
+  ASSERT_EQ(getsockopt(connfd.get(), SOL_TCP, TCP_INFO, &info, &info_len), 0) << strerror(errno);
   ASSERT_EQ(sizeof(tcp_info), info_len);
 
   // Test that we can partially retrieve TCP_INFO.
   uint8_t tcpi_state;
   info_len = sizeof(tcpi_state);
-  ASSERT_GE(getsockopt(connfd.get(), SOL_TCP, TCP_INFO, &tcpi_state, &info_len), 0)
+  ASSERT_EQ(getsockopt(connfd.get(), SOL_TCP, TCP_INFO, &tcpi_state, &info_len), 0)
       << strerror(errno);
   ASSERT_EQ(sizeof(tcpi_state), info_len);
 
