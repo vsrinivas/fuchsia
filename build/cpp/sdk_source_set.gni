@@ -238,6 +238,11 @@ template("sdk_source_set") {
     if (defined(invoker.non_sdk_deps)) {
       non_sdk_deps += invoker.non_sdk_deps
     }
+
+    metadata = {
+      # Used by the //sdk:sdk_source_set_list build API module.
+      sdk_source_set_sources = rebase_path(all_sources + all_headers, "//")
+    }
   }
 }
 
