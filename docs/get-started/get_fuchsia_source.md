@@ -14,13 +14,13 @@ may affect building Fuchsia from source or running the Fuchsia emulator.
 *   For **Linux**, run:
 
     ```posix-terminal
-    curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-linux && chmod +x ffx-linux && ./ffx-linux platform preflight
+    curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-linux-x64 && chmod +x ffx-linux-x64 && ./ffx-linux-x64 platform preflight
     ```
 
 *   For **MacOS**, run:
 
     ```posix-terminal
-    curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-macos && chmod +x ffx-macos && ./ffx-macos platform preflight
+    curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-macos-x64 && chmod +x ffx-macos-x64 && ./ffx-macos-x64 platform preflight
     ```
 
 ## Prerequisites
