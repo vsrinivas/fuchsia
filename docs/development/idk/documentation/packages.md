@@ -132,14 +132,30 @@ To install a package:
    By default, this starts an amber server on the host machine at port `8083`.
 
 2. (On the target device) Add the new repository as an update source with
-   `amberctl`:
+   `pkgctl`:
 
    ```
-   amberctl add_repo_cfg -n $REPO -f http://$HOST_ADDRESS:8083/config.json
+   pkgctl repo add url -f 1 -n $REPO http://$HOST_ADDRESS:8083/config.json
    ```
 
-   If the component is not already on the system, `amberctl` installs the package.
-   If the package already exists, `amberctl` installs any package updates.
+   The option `-f 1` must be set if `pm` is serving a component v1 config.json
+   configuration file. (This is currently the case, but will change to serving
+   component v2 configuration files in the future. Once this change has
+   happened, the `-f 1` can be omitted.)
+
+   Providing a short name for the repository using `-n $REPO` is optional, but
+   helpful. If this short name is not provided, `pkgctl` will derive it from
+   the provided config URL.
+
+3. Get the package:
+
+   ```
+   pkgctl resolve fuchsia-pkg://$REPO/$PACKAGE_NAME
+   ```
+
+   If the component is not already present on the system, `pkgctl` downloads the
+   package and places the blobs in the blobfs in the process of resolving. If
+   the package already exists, the updates will be downloaded.
 
 You have successfully installed or updated the package. You are now ready to
 run a component from the installed package.
