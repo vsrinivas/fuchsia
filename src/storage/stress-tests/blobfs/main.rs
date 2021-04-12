@@ -6,6 +6,7 @@ mod blob_actor;
 mod deletion_actor;
 mod environment;
 mod instance_actor;
+mod read_actor;
 
 use {
     crate::environment::BlobfsEnvironment,

@@ -17,6 +17,12 @@ pub struct InstanceActor {
     pub instance_killed: bool,
 }
 
+impl InstanceActor {
+    pub fn new(fvm: FvmInstance, blobfs: Filesystem<Blobfs>) -> Self {
+        Self { fvm, blobfs, instance_killed: false }
+    }
+}
+
 #[async_trait]
 impl Actor for InstanceActor {
     async fn perform(&mut self) -> Result<(), ActorError> {

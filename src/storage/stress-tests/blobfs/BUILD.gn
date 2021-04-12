@@ -36,5 +36,6 @@ rustc_binary("stressor-bin") {
     "environment.rs",
     "instance_actor.rs",
     "main.rs",
+    "read_actor.rs",
   ]
 }

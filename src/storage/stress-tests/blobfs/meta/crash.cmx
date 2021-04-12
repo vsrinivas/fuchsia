@@ -5,7 +5,7 @@
     "program": {
         "args": [
             "--disconnect-secs",
-            "30",
+            "600",
             "--time-limit-secs",
             "79200"
         ],

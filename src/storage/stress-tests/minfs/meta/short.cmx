@@ -5,7 +5,11 @@
     "program": {
         "args": [
             "--num-operations",
-            "10"
+            "100",
+            "--ramdisk-block-count",
+            "27136",
+            "-l",
+            "debug"
         ],
         "binary": "bin/minfs_stressor"
     },

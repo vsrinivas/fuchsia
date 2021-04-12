@@ -17,6 +17,7 @@ use {
     std::sync::Arc,
     std::time::Duration,
     storage_stress_test_utils::{
+        data::{Compressibility, FileFactory, UncompressedSize},
         fvm::{get_volume_path, FvmInstance},
         io::Directory,
     },
@@ -27,6 +28,9 @@ use {
 const TYPE_GUID: Guid = Guid {
     value: [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf],
 };
+
+const ONE_MIB: u64 = 1048576;
+const FOUR_MIB: u64 = 4 * ONE_MIB;
 
 // The path to the minfs filesystem in the test's namespace
 const MINFS_MOUNT_PATH: &str = "/minfs";
@@ -89,8 +93,11 @@ impl MinfsEnvironment {
 
         let file_actor = {
             let rng = SmallRng::from_seed(rng.gen());
+            let uncompressed_size = UncompressedSize::InRange(ONE_MIB, FOUR_MIB);
+            let compressibility = Compressibility::Compressible;
+            let factory = FileFactory::new(rng, uncompressed_size, compressibility);
             let home_dir = open_dir_at_minfs_root("home1");
-            Arc::new(Mutex::new(FileActor::new(rng, home_dir)))
+            Arc::new(Mutex::new(FileActor::new(factory, home_dir)))
         };
         let deletion_actor = {
             let rng = SmallRng::from_seed(rng.gen());
@@ -98,8 +105,7 @@ impl MinfsEnvironment {
             Arc::new(Mutex::new(DeletionActor::new(rng, home_dir)))
         };
 
-        let instance_actor =
-            Arc::new(Mutex::new(InstanceActor { fvm, minfs, instance_killed: false }));
+        let instance_actor = Arc::new(Mutex::new(InstanceActor::new(fvm, minfs)));
 
         Self { seed, args, vmo, volume_guid, file_actor, deletion_actor, instance_actor }
     }
@@ -182,14 +188,13 @@ impl Environment for MinfsEnvironment {
             actor.instance_killed = false;
         }
 
+        // Replace the root directory with a new one
         {
-            // Replace the root directory with a new one
             let mut actor = self.file_actor.lock().await;
             actor.home_dir = open_dir_at_minfs_root("home1");
         }
 
         {
-            // Replace the root directory with a new one
             let mut actor = self.deletion_actor.lock().await;
             actor.home_dir = open_dir_at_minfs_root("home1");
         }

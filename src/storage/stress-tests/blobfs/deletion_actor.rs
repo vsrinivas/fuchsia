@@ -17,6 +17,12 @@ pub struct DeletionActor {
     pub root_dir: Directory,
 }
 
+impl DeletionActor {
+    pub fn new(rng: SmallRng, root_dir: Directory) -> Self {
+        Self { rng, root_dir }
+    }
+}
+
 #[async_trait]
 impl Actor for DeletionActor {
     async fn perform(&mut self) -> Result<(), ActorError> {

@@ -3,23 +3,26 @@
 // found in the LICENSE file.
 
 use {
-    rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
+    rand::{rngs::SmallRng, seq::SliceRandom, Rng},
     std::cmp::min,
 };
 
-const EIGHT_KIB: u64 = 8192;
-const ONE_MB: u64 = 1048576;
-const FOUR_MB: u64 = 4 * ONE_MB;
-
-/// Controls the compressibility of data generated for a file
+/// Controls the compressibility of data generated for a file.
+/// This parameter is only meaningful for filesystems that support transparent compression.
 pub enum Compressibility {
     Compressible,
     Uncompressible,
 }
 
+// Controls the uncompressed size of the file
+pub enum UncompressedSize {
+    Exact(u64),
+    InRange(u64, u64),
+}
+
 /// Run lengths and bytes are sampled from a uniform distribution.
 /// Data created by this function achieves roughly 50% size reduction after compression.
-fn generate_compressible_data_bytes(mut rng: SmallRng, size_bytes: u64) -> Vec<u8> {
+fn generate_compressible_data_bytes(rng: &mut SmallRng, size_bytes: u64) -> Vec<u8> {
     let mut bytes: Vec<u8> = Vec::with_capacity(size_bytes as usize);
 
     // The file is filled with compressible runs of one of the following bytes.
@@ -36,7 +39,7 @@ fn generate_compressible_data_bytes(mut rng: SmallRng, size_bytes: u64) -> Vec<u
         // This results in files that compress reasonably well (target 50% size reduction).
         if rng.gen_bool(0.5) {
             // Choose a byte for this run.
-            let choice = byte_choices.choose(&mut rng).unwrap();
+            let choice = byte_choices.choose(rng).unwrap();
 
             // Generate a run of compressible data.
             for _ in 0..run_length {
@@ -60,7 +63,7 @@ fn generate_compressible_data_bytes(mut rng: SmallRng, size_bytes: u64) -> Vec<u
 
 /// Bytes are sampled from a uniform distribution.
 /// Data created by this function compresses badly.
-fn generate_uncompressible_data_bytes(mut rng: SmallRng, size_bytes: u64) -> Vec<u8> {
+fn generate_uncompressible_data_bytes(rng: &mut SmallRng, size_bytes: u64) -> Vec<u8> {
     let mut bytes: Vec<u8> = Vec::with_capacity(size_bytes as usize);
     for _ in 0..size_bytes {
         bytes.push(rng.gen());
@@ -69,59 +72,42 @@ fn generate_uncompressible_data_bytes(mut rng: SmallRng, size_bytes: u64) -> Vec
 }
 
 /// A compact in-memory representation of data that can be stored in a file.
-pub struct FileData {
-    pub seed: u128,
-    pub size_bytes: u64,
+pub struct FileFactory {
+    pub rng: SmallRng,
+    pub uncompressed_size: UncompressedSize,
     pub compressibility: Compressibility,
 }
 
-impl FileData {
-    fn new(seed: u128, size_bytes: u64, compressibility: Compressibility) -> Self {
-        Self { seed, size_bytes, compressibility }
+impl FileFactory {
+    #[must_use]
+    pub fn new(
+        rng: SmallRng,
+        uncompressed_size: UncompressedSize,
+        compressibility: Compressibility,
+    ) -> Self {
+        Self { rng, uncompressed_size, compressibility }
+    }
+
+    /// Generate a random filename that can be used for a file created by this factory
+    pub fn random_filename(&mut self) -> String {
+        format!("file_{}", self.rng.gen::<u32>())
     }
 
     /// Generate all the bytes for this file in memory.
     /// For a given FileData, this function is deterministic.
-    pub fn generate_bytes(&self) -> Vec<u8> {
-        let rng = SmallRng::from_seed(self.seed.to_le_bytes());
+    pub fn generate_bytes(&mut self) -> Vec<u8> {
+        let size_bytes = match self.uncompressed_size {
+            UncompressedSize::Exact(size_bytes) => size_bytes,
+            UncompressedSize::InRange(min, max) => self.rng.gen_range(min, max),
+        };
+
         match self.compressibility {
-            Compressibility::Compressible => generate_compressible_data_bytes(rng, self.size_bytes),
+            Compressibility::Compressible => {
+                generate_compressible_data_bytes(&mut self.rng, size_bytes)
+            }
             Compressibility::Uncompressible => {
-                generate_uncompressible_data_bytes(rng, self.size_bytes)
+                generate_uncompressible_data_bytes(&mut self.rng, size_bytes)
             }
         }
-    }
-
-    /// Create a file whose uncompressed size is reasonable (between 8KiB and 4MiB)
-    #[must_use]
-    pub fn new_with_reasonable_size(
-        rng: &mut SmallRng,
-        compressibility: Compressibility,
-    ) -> FileData {
-        Self::new_with_uncompressed_size_in_range(rng, EIGHT_KIB, FOUR_MB, compressibility)
-    }
-
-    /// Create a file whose uncompressed size is in the range requested.
-    /// The exact size of the file is chosen from a uniform distribution.
-    #[must_use]
-    pub fn new_with_uncompressed_size_in_range(
-        rng: &mut SmallRng,
-        min_uncompressed_size_bytes: u64,
-        max_uncompressed_size_bytes: u64,
-        compressibility: Compressibility,
-    ) -> FileData {
-        let uncompressed_size =
-            rng.gen_range(min_uncompressed_size_bytes, max_uncompressed_size_bytes);
-        Self::new_with_exact_uncompressed_size(rng, uncompressed_size, compressibility)
-    }
-
-    /// Create a file whose uncompressed size is exactly as requested
-    #[must_use]
-    pub fn new_with_exact_uncompressed_size(
-        rng: &mut SmallRng,
-        uncompressed_size_bytes: u64,
-        compressibility: Compressibility,
-    ) -> FileData {
-        Self::new(rng.gen(), uncompressed_size_bytes, compressibility)
     }
 }
