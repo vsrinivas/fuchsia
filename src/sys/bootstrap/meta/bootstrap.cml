@@ -158,6 +158,15 @@
             ],
         },
         {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.diagnostics.FeedbackArchiveAccessor",
+                "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+            ],
+            from: "#archivist",
+            to: [ "#console-launcher" ],
+        },
+        {
             directory: "boot",
             from: "parent",
             to: [
