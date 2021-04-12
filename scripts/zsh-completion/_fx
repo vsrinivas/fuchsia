@@ -32,17 +32,26 @@ __fx_gn_target() {
 _fx() {
   typeset -A opt_args
 
-  local fuchsia_dir="${FUCHSIA_DIR}"
-  if [[ -z "${fuchsia_dir}" ]]; then
-    fuchsia_dir="$(pwd)"
-    while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
-      fuchsia_dir="$(dirname "${fuchsia_dir}")"
-      if [[ "${fuchsia_dir}" == "/" ]]; then
-        _message -r "Cannot find Platform Source Tree containing $(pwd)"
-        return
-      fi
-    done
-  fi
+  # We walk the parent directories looking for .jiri_root rather than using
+  # BASH_SOURCE so that we find the fuchsia_dir enclosing the current working
+  # directory instead of the one containing this file in case the user has
+  # multiple source trees and is picking up this file from another one.
+  #
+  # NOTE: The FUCHSIA_DIR environment variable is ignored here because it
+  # could point to a different Fuchsia checkout in some developer setups.
+  #
+  # This logic is replicated in //scripts/fx, //scripts/hermetic_env,
+  # //scripts/zsh_completion/_fx, and //src/developer/ffx/scripts. For
+  # consistency, copy any changes here to those files as well.
+  local fuchsia_dir="$(pwd)"
+  while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
+    fuchsia_dir="$(dirname "${fuchsia_dir}")"
+    if [[ "${fuchsia_dir}" == "/" ]]; then
+      echo "Cannot find the Platform Source Tree in a parent of directory: $(pwd)"
+      exit 1
+    fi
+  done
+
 
   # list of commands based on //tools/devshell/
   # each file is read to find the description line (starts with "### ").

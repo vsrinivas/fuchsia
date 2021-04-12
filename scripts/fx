@@ -94,9 +94,8 @@ function usage {
   cat <<END
 usage: fx [--dir BUILD_DIR] [-d DEVICE_NAME] [-i] [-x] COMMAND [...]
 
-Run Fuchsia development commands. Must be run either from a directory
-that is contained in a Platform Source Tree or with the FUCHSIA_DIR
-environment variable set to the root of a Platform Source Tree.
+Run Fuchsia development commands. Must be run from a directory
+that is contained in a Platform Source Tree.
 
 host shell extensions: (requires "source scripts/fx-env.sh")
   fx-update-path        add useful tools to the PATH
@@ -114,11 +113,15 @@ END
 #
 # NOTE: The FUCHSIA_DIR environment variable is ignored here because it
 # could point to a different Fuchsia checkout in some developer setups.
+#
+# This logic is replicated in //scripts/fx, //scripts/hermetic_env,
+# //scripts/zsh_completion/_fx, and //src/developer/ffx/scripts. For
+# consistency, copy any changes here to those files as well.
 fuchsia_dir="$(pwd)"
 while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
   fuchsia_dir="$(dirname "${fuchsia_dir}")"
   if [[ "${fuchsia_dir}" == "/" ]]; then
-    echo "Cannot find Platform Source Tree containing $(pwd)"
+    echo "Cannot find the Platform Source Tree in a parent of directory: $(pwd)"
     exit 1
   fi
 done
