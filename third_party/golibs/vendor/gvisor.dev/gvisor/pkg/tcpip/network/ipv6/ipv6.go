@@ -314,7 +314,7 @@ func (e *endpoint) onAddressAssignedLocked(addr tcpip.Address) {
 	//   Snooping switches MUST manage multicast forwarding state based on MLD
 	//   Report and Done messages sent with the unspecified address as the
 	//   IPv6 source address.
-	if header.IsV6LinkLocalAddress(addr) {
+	if header.IsV6LinkLocalUnicastAddress(addr) {
 		e.mu.mld.sendQueuedReports()
 	}
 }
@@ -769,6 +769,15 @@ func (e *endpoint) writePacket(r *stack.Route, gso *stack.GSO, pkt *stack.Packet
 		return nil
 	}
 
+	// Postrouting NAT can only change the source address, and does not alter the
+	// route or outgoing interface of the packet.
+	outNicName := e.protocol.stack.FindNICNameFromID(e.nic.ID())
+	if ok := e.protocol.stack.IPTables().Check(stack.Postrouting, pkt, gso, r, "" /* preroutingAddr */, "" /* inNicName */, outNicName); !ok {
+		// iptables is telling us to drop the packet.
+		e.stats.ip.IPTablesPostroutingDropped.Increment()
+		return nil
+	}
+
 	stats := e.stats.ip
 	networkMTU, err := calculateNetworkMTU(e.nic.MTU(), uint32(pkt.NetworkHeader().View().Size()))
 	if err != nil {
@@ -840,9 +849,9 @@ func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.Packe
 	// iptables filtering. All packets that reach here are locally
 	// generated.
 	outNicName := e.protocol.stack.FindNICNameFromID(e.nic.ID())
-	dropped, natPkts := e.protocol.stack.IPTables().CheckPackets(stack.Output, pkts, gso, r, "" /* inNicName */, outNicName)
-	stats.IPTablesOutputDropped.IncrementBy(uint64(len(dropped)))
-	for pkt := range dropped {
+	outputDropped, natPkts := e.protocol.stack.IPTables().CheckPackets(stack.Output, pkts, gso, r, "" /* inNicName */, outNicName)
+	stats.IPTablesOutputDropped.IncrementBy(uint64(len(outputDropped)))
+	for pkt := range outputDropped {
 		pkts.Remove(pkt)
 	}
 
@@ -863,6 +872,15 @@ func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.Packe
 		locallyDelivered++
 	}
 
+	// We ignore the list of NAT-ed packets here because Postrouting NAT can only
+	// change the source address, and does not alter the route or outgoing
+	// interface of the packet.
+	postroutingDropped, _ := e.protocol.stack.IPTables().CheckPackets(stack.Postrouting, pkts, gso, r, "" /* inNicName */, outNicName)
+	stats.IPTablesPostroutingDropped.IncrementBy(uint64(len(postroutingDropped)))
+	for pkt := range postroutingDropped {
+		pkts.Remove(pkt)
+	}
+
 	// The rest of the packets can be delivered to the NIC as a batch.
 	pktsLen := pkts.Len()
 	written, err := e.nic.WritePackets(r, gso, pkts, ProtocolNumber)
@@ -870,7 +888,7 @@ func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.Packe
 	stats.OutgoingPacketErrors.IncrementBy(uint64(pktsLen - written))
 
 	// Dropped packets aren't errors, so include them in the return value.
-	return locallyDelivered + written + len(dropped), err
+	return locallyDelivered + written + len(outputDropped) + len(postroutingDropped), err
 }
 
 // WriteHeaderIncludedPacket implements stack.NetworkEndpoint.
@@ -912,6 +930,16 @@ func (e *endpoint) WriteHeaderIncludedPacket(r *stack.Route, pkt *stack.PacketBu
 // forwardPacket attempts to forward a packet to its final destination.
 func (e *endpoint) forwardPacket(pkt *stack.PacketBuffer) tcpip.Error {
 	h := header.IPv6(pkt.NetworkHeader().View())
+
+	dstAddr := h.DestinationAddress()
+	if header.IsV6LinkLocalUnicastAddress(h.SourceAddress()) || header.IsV6LinkLocalUnicastAddress(dstAddr) || header.IsV6LinkLocalMulticastAddress(dstAddr) {
+		// As per RFC 4291 section 2.5.6,
+		//
+		//   Routers must not forward any packets with Link-Local source or
+		//   destination addresses to other links.
+		return nil
+	}
+
 	hopLimit := h.HopLimit()
 	if hopLimit <= 1 {
 		// As per RFC 4443 section 3.3,
@@ -923,8 +951,6 @@ func (e *endpoint) forwardPacket(pkt *stack.PacketBuffer) tcpip.Error {
 		//   too small an initial Hop Limit value.
 		return e.protocol.returnError(&icmpReasonHopLimitExceeded{}, pkt)
 	}
-
-	dstAddr := h.DestinationAddress()
 
 	// Check if the destination is owned by the stack.
 	if ep := e.protocol.findEndpointWithAddress(dstAddr); ep != nil {
@@ -1614,7 +1640,7 @@ func (e *endpoint) getLinkLocalAddressRLocked() tcpip.Address {
 	var linkLocalAddr tcpip.Address
 	e.mu.addressableEndpointState.ForEachPrimaryEndpoint(func(addressEndpoint stack.AddressEndpoint) bool {
 		if addressEndpoint.IsAssigned(false /* allowExpired */) {
-			if addr := addressEndpoint.AddressWithPrefix().Address; header.IsV6LinkLocalAddress(addr) {
+			if addr := addressEndpoint.AddressWithPrefix().Address; header.IsV6LinkLocalUnicastAddress(addr) {
 				linkLocalAddr = addr
 				return false
 			}

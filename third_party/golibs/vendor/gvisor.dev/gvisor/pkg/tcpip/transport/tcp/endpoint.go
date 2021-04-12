@@ -15,6 +15,7 @@
 package tcp
 
 import (
+	"container/list"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -322,6 +323,15 @@ type EndpointInfo struct {
 // marker interface.
 func (*EndpointInfo) IsEndpointInfo() {}
 
+// +stateify savable
+type accepted struct {
+	// NB: this could be an endpointList, but ilist only permits endpoints to
+	// belong to one list at a time, and endpoints are already stored in the
+	// dispatcher's list.
+	endpoints list.List `state:".([]*endpoint)"`
+	cap       int
+}
+
 // endpoint represents a TCP endpoint. This struct serves as the interface
 // between users of the endpoint and the protocol implementation; it is legal to
 // have concurrent goroutines make calls into the endpoint, they are properly
@@ -337,7 +347,7 @@ func (*EndpointInfo) IsEndpointInfo() {}
 // The following three mutexes can be acquired independent of e.mu but if
 // acquired with e.mu then e.mu must be acquired first.
 //
-// e.acceptMu -> protects acceptedChan.
+// e.acceptMu -> protects accepted.
 // e.rcvListMu -> Protects the rcvList and associated fields.
 // e.sndBufMu -> Protects the sndQueue and associated fields.
 // e.lastErrorMu -> Protects the lastError field.
@@ -607,33 +617,26 @@ type endpoint struct {
 	// listener.
 	deferAccept time.Duration
 
-	// pendingAccepted is a synchronization primitive used to track number
-	// of connections that are queued up to be delivered to the accepted
-	// channel. We use this to ensure that all goroutines blocked on writing
-	// to the acceptedChan below terminate before we close acceptedChan.
+	// pendingAccepted tracks connections queued to be accepted. It is used to
+	// ensure such queued connections are terminated before the accepted queue is
+	// marked closed (by setting its capacity to zero).
 	pendingAccepted sync.WaitGroup `state:"nosave"`
 
-	// acceptMu protects acceptedChan.
+	// acceptMu protects accepted.
 	acceptMu sync.Mutex `state:"nosave"`
 
 	// acceptCond is a condition variable that can be used to block on when
-	// acceptedChan is full and an endpoint is ready to be delivered.
-	//
-	// This condition variable is required because just blocking on sending
-	// to acceptedChan does not work in cases where endpoint.Listen is
-	// called twice with different backlog values. In such cases the channel
-	// is closed and a new one created. Any pending goroutines blocking on
-	// the write to the channel will panic.
+	// accepted is full and an endpoint is ready to be delivered.
 	//
 	// We use this condition variable to block/unblock goroutines which
 	// tried to deliver an endpoint but couldn't because accept backlog was
 	// full ( See: endpoint.deliverAccepted ).
 	acceptCond *sync.Cond `state:"nosave"`
 
-	// acceptedChan is used by a listening endpoint protocol goroutine to
+	// accepted is used by a listening endpoint protocol goroutine to
 	// send newly accepted connections to the endpoint so that they can be
 	// read by Accept() calls.
-	acceptedChan chan *endpoint `state:".([]*endpoint)"`
+	accepted accepted
 
 	// The following are only used from the protocol goroutine, and
 	// therefore don't need locks to protect them.
@@ -874,7 +877,7 @@ func newEndpoint(s *stack.Stack, netProto tcpip.NetworkProtocolNumber, waiterQue
 		waiterQueue: waiterQueue,
 		state:       StateInitial,
 		rcvBufSize:  DefaultReceiveBufferSize,
-		sndMTU:      int(math.MaxInt32),
+		sndMTU:      math.MaxInt32,
 		keepalive: keepalive{
 			// Linux defaults.
 			idle:     2 * time.Hour,
@@ -962,7 +965,7 @@ func (e *endpoint) Readiness(mask waiter.EventMask) waiter.EventMask {
 		// Check if there's anything in the accepted channel.
 		if (mask & waiter.ReadableEvents) != 0 {
 			e.acceptMu.Lock()
-			if len(e.acceptedChan) > 0 {
+			if e.accepted.endpoints.Len() != 0 {
 				result |= waiter.ReadableEvents
 			}
 			e.acceptMu.Unlock()
@@ -1145,22 +1148,22 @@ func (e *endpoint) closeNoShutdownLocked() {
 // handshake but not yet been delivered to the application.
 func (e *endpoint) closePendingAcceptableConnectionsLocked() {
 	e.acceptMu.Lock()
-	if e.acceptedChan == nil {
-		e.acceptMu.Unlock()
-		return
-	}
-	close(e.acceptedChan)
-	ch := e.acceptedChan
-	e.acceptedChan = nil
-	e.acceptCond.Broadcast()
+	acceptedCopy := e.accepted
+	e.accepted = accepted{}
 	e.acceptMu.Unlock()
 
+	if acceptedCopy == (accepted{}) {
+		return
+	}
+
+	e.acceptCond.Broadcast()
+
 	// Reset all connections that are waiting to be accepted.
-	for n := range ch {
-		n.notifyProtocolGoroutine(notifyReset)
+	for n := acceptedCopy.endpoints.Front(); n != nil; n = n.Next() {
+		n.Value.(*endpoint).notifyProtocolGoroutine(notifyReset)
 	}
 	// Wait for reset of all endpoints that are still waiting to be delivered to
-	// the now closed acceptedChan.
+	// the now closed accepted.
 	e.pendingAccepted.Wait()
 }
 
@@ -1700,7 +1703,7 @@ func (e *endpoint) OnReusePortSet(v bool) {
 }
 
 // OnKeepAliveSet implements tcpip.SocketOptionsHandler.OnKeepAliveSet.
-func (e *endpoint) OnKeepAliveSet(v bool) {
+func (e *endpoint) OnKeepAliveSet(bool) {
 	e.notifyProtocolGoroutine(notifyKeepaliveChanged)
 }
 
@@ -2232,12 +2235,22 @@ func (e *endpoint) connect(addr tcpip.FullAddress, handshake bool, run bool) tcp
 		// src IP to ensure that for a given tuple (srcIP, destIP,
 		// destPort) the offset used as a starting point is the same to
 		// ensure that we can cycle through the port space effectively.
-		h := jenkins.Sum32(e.stack.Seed())
-		h.Write([]byte(e.ID.LocalAddress))
-		h.Write([]byte(e.ID.RemoteAddress))
 		portBuf := make([]byte, 2)
 		binary.LittleEndian.PutUint16(portBuf, e.ID.RemotePort)
-		h.Write(portBuf)
+
+		h := jenkins.Sum32(e.stack.Seed())
+		for _, s := range [][]byte{
+			[]byte(e.ID.LocalAddress),
+			[]byte(e.ID.RemoteAddress),
+			portBuf,
+		} {
+			// Per io.Writer.Write:
+			//
+			// Write must return a non-nil error if it returns n < len(p).
+			if _, err := h.Write(s); err != nil {
+				panic(err)
+			}
+		}
 		portOffset := uint16(h.Sum32())
 
 		var twReuse tcpip.TCPTimeWaitReuseOption
@@ -2474,20 +2487,10 @@ func (e *endpoint) shutdownLocked(flags tcpip.ShutdownFlags) tcpip.Error {
 // Listen puts the endpoint in "listen" mode, which allows it to accept
 // new connections.
 func (e *endpoint) Listen(backlog int) tcpip.Error {
-	if uint32(backlog) > MaxListenBacklog {
-		// Linux treats incoming backlog as uint with a limit defined by
-		// sysctl_somaxconn.
-		// https://github.com/torvalds/linux/blob/7acac4b3196/net/socket.c#L1666
-		//
-		// We use the backlog to allocate a channel of that size, hence enforce
-		// a hard limit for the backlog.
-		backlog = MaxListenBacklog
-	} else {
-		// Accept one more than the configured listen backlog to keep in parity with
-		// Linux. Ref, because of missing equality check here:
-		// https://github.com/torvalds/linux/blob/7acac4b3196/include/net/sock.h#L937
-		backlog++
-	}
+	// Accept one more than the configured listen backlog to keep in parity with
+	// Linux. Ref, because of missing equality check here:
+	// https://github.com/torvalds/linux/blob/7acac4b3196/include/net/sock.h#L937
+	backlog++
 	err := e.listen(backlog)
 	if err != nil {
 		if !err.IgnoreStats() {
@@ -2505,28 +2508,20 @@ func (e *endpoint) listen(backlog int) tcpip.Error {
 	if e.EndpointState() == StateListen && !e.closed {
 		e.acceptMu.Lock()
 		defer e.acceptMu.Unlock()
-		if e.acceptedChan == nil {
+		if e.accepted == (accepted{}) {
 			// listen is called after shutdown.
-			e.acceptedChan = make(chan *endpoint, backlog)
+			e.accepted.cap = backlog
 			e.shutdownFlags = 0
 			e.rcvListMu.Lock()
 			e.rcvClosed = false
 			e.rcvListMu.Unlock()
 		} else {
-			// Adjust the size of the channel iff we can fix
+			// Adjust the size of the backlog iff we can fit
 			// existing pending connections into the new one.
-			if len(e.acceptedChan) > backlog {
+			if e.accepted.endpoints.Len() > backlog {
 				return &tcpip.ErrInvalidEndpointState{}
 			}
-			if cap(e.acceptedChan) == backlog {
-				return nil
-			}
-			origChan := e.acceptedChan
-			e.acceptedChan = make(chan *endpoint, backlog)
-			close(origChan)
-			for ep := range origChan {
-				e.acceptedChan <- ep
-			}
+			e.accepted.cap = backlog
 		}
 
 		// Notify any blocked goroutines that they can attempt to
@@ -2559,12 +2554,12 @@ func (e *endpoint) listen(backlog int) tcpip.Error {
 	e.isRegistered = true
 	e.setEndpointState(StateListen)
 
-	// The channel may be non-nil when we're restoring the endpoint, and it
+	// The queue may be non-zero when we're restoring the endpoint, and it
 	// may be pre-populated with some previously accepted (but not Accepted)
 	// endpoints.
 	e.acceptMu.Lock()
-	if e.acceptedChan == nil {
-		e.acceptedChan = make(chan *endpoint, backlog)
+	if e.accepted == (accepted{}) {
+		e.accepted.cap = backlog
 	}
 	e.acceptMu.Unlock()
 
@@ -2601,15 +2596,16 @@ func (e *endpoint) Accept(peerAddr *tcpip.FullAddress) (tcpip.Endpoint, *waiter.
 	}
 
 	// Get the new accepted endpoint.
-	e.acceptMu.Lock()
-	defer e.acceptMu.Unlock()
 	var n *endpoint
-	select {
-	case n = <-e.acceptedChan:
-		e.acceptCond.Signal()
-	default:
+	e.acceptMu.Lock()
+	if element := e.accepted.endpoints.Front(); element != nil {
+		n = e.accepted.endpoints.Remove(element).(*endpoint)
+	}
+	e.acceptMu.Unlock()
+	if n == nil {
 		return nil, nil, &tcpip.ErrWouldBlock{}
 	}
+	e.acceptCond.Signal()
 	if peerAddr != nil {
 		*peerAddr = n.getRemoteAddress()
 	}
@@ -2821,7 +2817,7 @@ func (e *endpoint) updateSndBufferUsage(v int) {
 	// We only notify when there is half the sendBufferSize available after
 	// a full buffer event occurs. This ensures that we don't wake up
 	// writers to queue just 1-2 segments and go back to sleep.
-	notify = notify && e.sndBufUsed < int(sendBufferSize)>>1
+	notify = notify && e.sndBufUsed < sendBufferSize>>1
 	e.sndBufMu.Unlock()
 
 	if notify {

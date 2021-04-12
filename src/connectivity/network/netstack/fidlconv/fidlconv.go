@@ -92,7 +92,7 @@ func ToNetSocketAddress(addr tcpip.FullAddress) net.SocketAddress {
 		// scoped zone where global addresses may only be used once so zone information is not
 		// needed for global addresses. See RFC 4007 section 6 for more details.
 		var zoneIdx uint64
-		if header.IsV6LinkLocalAddress(addr.Addr) || header.IsV6LinkLocalMulticastAddress(addr.Addr) {
+		if header.IsV6LinkLocalUnicastAddress(addr.Addr) || header.IsV6LinkLocalMulticastAddress(addr.Addr) {
 			zoneIdx = uint64(addr.NIC)
 		}
 		out.SetIpv6(net.Ipv6SocketAddress{

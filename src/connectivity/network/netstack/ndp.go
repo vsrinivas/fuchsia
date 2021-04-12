@@ -221,7 +221,7 @@ func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip
 
 	// Metrics only care about dynamic global address configuration options so
 	// only increase the counter if we generated a global SLAAC address.
-	if !header.IsV6LinkLocalAddress(addrWithPrefix.Address) {
+	if !header.IsV6LinkLocalUnicastAddress(addrWithPrefix.Address) {
 		n.dynamicAddressSourceObs.incGlobalSLAAC(nicID)
 	}
 
@@ -242,7 +242,7 @@ func (n *ndpDispatcher) OnAutoGenAddressInvalidated(nicID tcpip.NICID, addrWithP
 
 	// Metrics only care about dynamic global address configuration options so
 	// only decrease the counter if we invalidated a global SLAAC address.
-	if !header.IsV6LinkLocalAddress(addrWithPrefix.Address) {
+	if !header.IsV6LinkLocalUnicastAddress(addrWithPrefix.Address) {
 		n.dynamicAddressSourceObs.decGlobalSLAAC(nicID)
 	}
 }
