@@ -133,11 +133,9 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
         [
             fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![fidl_ip_v4!("192.168.0.1")]),
             fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
-                network_id: Some(fidl_ip_v4!("192.168.0.0")),
-                broadcast: Some(fidl_ip_v4!("192.168.0.127")),
-                mask: Some(fidl_ip_v4!("255.255.255.128")),
-                pool_range_start: Some(fidl_ip_v4!("192.168.0.2")),
-                pool_range_stop: Some(fidl_ip_v4!("192.168.0.5")),
+                prefix_length: Some(25),
+                range_start: Some(fidl_ip_v4!("192.168.0.2")),
+                range_stop: Some(fidl_ip_v4!("192.168.0.5")),
                 ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
             }),
             fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(vec!["eth2".to_string()]),

@@ -365,8 +365,6 @@ mod tests {
             server_ips: vec![ip_v4!("192.168.0.1")],
             lease_length: LeaseLength { default_seconds: 42, max_seconds: 100 },
             managed_addrs: ManagedAddresses {
-                network_id: ip_v4!("192.168.0.0"),
-                broadcast: ip_v4!("192.168.0.255"),
                 mask: crate::configuration::SubnetMask::try_from(24)?,
                 pool_range_start: ip_v4!("192.168.0.10"),
                 pool_range_stop: ip_v4!("192.168.0.254"),
@@ -465,8 +463,6 @@ mod tests {
             server_ips: vec![ip_v4!("192.168.0.1")],
             lease_length: LeaseLength { default_seconds: 42, max_seconds: 100 },
             managed_addrs: ManagedAddresses {
-                network_id: ip_v4!("192.168.0.0"),
-                broadcast: ip_v4!("192.168.0.255"),
                 mask: crate::configuration::SubnetMask::try_from(24)?,
                 pool_range_start: ip_v4!("192.168.0.10"),
                 pool_range_stop: ip_v4!("192.168.0.254"),

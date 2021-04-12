@@ -8,8 +8,10 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::convert::TryInto;
 use std::io;
 use std::net::Ipv4Addr;
+use std::num::TryFromIntError;
 use thiserror::Error;
 
 /// A collection of the basic configuration parameters needed by the server.
@@ -44,13 +46,7 @@ impl ServerParameters {
             server_ips,
             lease_length: crate::configuration::LeaseLength { default_seconds, max_seconds },
             managed_addrs:
-                crate::configuration::ManagedAddresses {
-                    network_id,
-                    broadcast,
-                    mask,
-                    pool_range_start,
-                    pool_range_stop,
-                },
+                crate::configuration::ManagedAddresses { mask: _, pool_range_start, pool_range_stop },
             permitted_macs: _,
             static_assignments: _,
             arp_probe: _,
@@ -59,7 +55,10 @@ impl ServerParameters {
         if server_ips.is_empty() {
             return false;
         }
-        if server_ips.iter().any(std::net::Ipv4Addr::is_unspecified) {
+        if std::array::IntoIter::new([pool_range_start, pool_range_stop])
+            .chain(server_ips.iter())
+            .any(std::net::Ipv4Addr::is_unspecified)
+        {
             return false;
         }
         if *default_seconds == 0 {
@@ -67,18 +66,6 @@ impl ServerParameters {
         }
         if *max_seconds == 0 {
             return false;
-        }
-        if ![network_id, pool_range_start, pool_range_stop]
-            .iter()
-            .all(|address| !address.is_unspecified() && mask.apply_to(address) == *network_id)
-        {
-            return false;
-        }
-        if broadcast != &Ipv4Addr::BROADCAST {
-            let subnet_broadcast: Ipv4Addr = (u32::from(*network_id) | !mask.to_u32()).into();
-            if broadcast != &subnet_broadcast {
-                return false;
-            }
         }
         true
     }
@@ -125,12 +112,8 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::LeaseLength> for LeaseLength {
 }
 
 /// The IP addresses which the server will manage and lease to clients.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct ManagedAddresses {
-    /// The network id of the subnet for which the server will manage addresses.
-    pub network_id: Ipv4Addr,
-    /// The broadcast id of the subnet for which the server will manage addresses.
-    pub broadcast: Ipv4Addr,
     /// The subnet mask of the subnet for which the server will manage addresses.
     pub mask: SubnetMask,
     /// The inclusive starting address of the range of managed addresses.
@@ -140,12 +123,20 @@ pub struct ManagedAddresses {
 }
 
 impl ManagedAddresses {
+    fn pool_range_inner(&self) -> std::ops::Range<u32> {
+        let Self { mask: _, pool_range_start, pool_range_stop } = *self;
+        pool_range_start.into()..pool_range_stop.into()
+    }
     /// Returns an iterator of the `Ipv4Addr`s from `pool_range_start`, inclusive, to
     /// `pool_range_stop`, exclusive.
     pub fn pool_range(&self) -> impl Iterator<Item = Ipv4Addr> {
-        let start: u32 = self.pool_range_start.into();
-        let stop: u32 = self.pool_range_stop.into();
-        (start..stop).map(|addr| addr.into())
+        self.pool_range_inner().map(Into::into)
+    }
+
+    /// Returns the number of `Ipv4Addr`s from `pool_range_start`, inclusive, to
+    /// `pool_range_stop`, exclusive.
+    pub fn pool_range_size(&self) -> Result<u32, TryFromIntError> {
+        self.pool_range_inner().len().try_into()
     }
 }
 
@@ -155,36 +146,32 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::AddressPool> for ManagedAddresses {
 
     fn try_from_fidl(fidl: fidl_fuchsia_net_dhcp::AddressPool) -> Result<Self, Self::FromError> {
         if let fidl_fuchsia_net_dhcp::AddressPool {
-            network_id: Some(network_id),
-            broadcast: Some(broadcast),
-            mask: Some(mask),
-            pool_range_start: Some(pool_range_start),
-            pool_range_stop: Some(pool_range_stop),
+            prefix_length: Some(prefix_length),
+            range_start: Some(pool_range_start),
+            range_stop: Some(pool_range_stop),
             ..
         } = fidl
         {
-            let mask = SubnetMask::try_from_fidl(mask)
-                .context("fuchsia.net.dhcp.AddressPool contained invalid mask")?;
-            let network_id = Ipv4Addr::from_fidl(network_id);
-            let broadcast = Ipv4Addr::from_fidl(broadcast);
+            let mask = SubnetMask::try_from(prefix_length).with_context(|| {
+                format!("failed to create subnet mask from prefix_length={}", prefix_length)
+            })?;
             let pool_range_start = Ipv4Addr::from_fidl(pool_range_start);
             let pool_range_stop = Ipv4Addr::from_fidl(pool_range_stop);
-            if mask.apply_to(&network_id) != network_id {
-                Err(anyhow::format_err!(
-                    "fuchsia.net.dhcp.AddressPool contained wrong mask (/{}) for network_id ({})",
-                    mask.ones(),
-                    network_id
-                ))
-            } else if mask.apply_to(&broadcast) != network_id {
-                Err(anyhow::format_err!("fuchsia.net.dhcp.AddressPool contained broadcast ({}) outside of network_id ({})", broadcast, network_id))
-            } else if mask.apply_to(&pool_range_start) != network_id {
-                Err(anyhow::format_err!("fuchsia.net.dhcp.AddressPool contained pool_range_start ({}) outside of network_id ({})", pool_range_start, network_id))
-            } else if mask.apply_to(&pool_range_stop) != network_id {
-                Err(anyhow::format_err!("fuchsia.net.dhcp.AddressPool contained pool_range_stop ({}) outside of network_id ({})", pool_range_stop, network_id))
-            } else if pool_range_start > pool_range_stop {
-                Err(anyhow::format_err!("fuchsia.net.dhpc.AddressPool contained pool_range_start ({}) > pool_range_stop ({})", pool_range_start, pool_range_stop))
+            let addresses_candidate = Self { mask, pool_range_start, pool_range_stop };
+            if pool_range_start > pool_range_stop {
+                return Err(anyhow::format_err!(
+                    "fuchsia.net.dhcp.AddressPool contained range_start ({}) > range_stop ({})",
+                    pool_range_start,
+                    pool_range_stop
+                ));
+            }
+            let pool_range_size = addresses_candidate.pool_range_size().with_context(|| {
+                format!("failed to determine address pool size for range_start ({}) and range_stop ({})", pool_range_start, pool_range_stop)
+            })?;
+            if pool_range_size > mask.subnet_size() {
+                Err(anyhow::format_err!("fuchsia.net.dhcp.AddressPool contained prefix_length ({}) which cannot fit address pool defined by range_start: ({}) and range_stop: ({})", prefix_length, pool_range_start, pool_range_stop))
             } else {
-                Ok(Self { network_id, broadcast, mask, pool_range_start, pool_range_stop })
+                Ok(addresses_candidate)
             }
         } else {
             Err(anyhow::format_err!("fuchsia.net.dhcp.AddressPool missing fields: {:?}", fidl))
@@ -192,14 +179,11 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::AddressPool> for ManagedAddresses {
     }
 
     fn try_into_fidl(self) -> Result<fidl_fuchsia_net_dhcp::AddressPool, Self::IntoError> {
-        let ManagedAddresses { network_id, broadcast, mask, pool_range_start, pool_range_stop } =
-            self;
+        let ManagedAddresses { mask, pool_range_start, pool_range_stop } = self;
         Ok(fidl_fuchsia_net_dhcp::AddressPool {
-            network_id: Some(network_id.into_fidl()),
-            broadcast: Some(broadcast.into_fidl()),
-            mask: Some(mask.into_fidl()),
-            pool_range_start: Some(pool_range_start.into_fidl()),
-            pool_range_stop: Some(pool_range_stop.into_fidl()),
+            prefix_length: Some(mask.ones()),
+            range_start: Some(pool_range_start.into_fidl()),
+            range_stop: Some(pool_range_stop.into_fidl()),
             ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
         })
     }
@@ -340,6 +324,11 @@ impl SubnetMask {
         let target_bits = u32::from_be_bytes(target.octets());
         Ipv4Addr::from(!subnet_mask_bits | target_bits)
     }
+
+    /// Returns the size of the subnet defined by this mask.
+    pub fn subnet_size(&self) -> u32 {
+        !self.to_u32()
+    }
 }
 
 impl TryFrom<u8> for SubnetMask {
@@ -398,6 +387,28 @@ mod tests {
     use crate::server::tests::{random_ipv4_generator, random_mac_generator};
     use net_declare::{fidl_ip_v4, std_ip_v4};
 
+    /// Asserts that the supplied Result is an err whose error string contains `substr`.
+    ///
+    /// We expect that the contained error implements Display, so that we can extract
+    /// that error string.
+    #[macro_export]
+    macro_rules! assert_err_with_substring {
+        ($result:expr, $substr:expr) => {{
+            match $result {
+                Err(e) => {
+                    let err_str = e.to_string();
+                    assert!(err_str.contains($substr), "{} not in {}", $substr, err_str)
+                }
+                Ok(v) => panic!(
+                    "{} (Ok({:?})) is not an Err containing {} ({})",
+                    stringify!($result),
+                    v,
+                    stringify!($substr),
+                    $substr
+                ),
+            }
+        }};
+    }
     #[test]
     fn test_try_from_ipv4addr_with_consecutive_ones_returns_mask() -> Result<(), anyhow::Error> {
         assert_eq!(SubnetMask::try_from(std_ip_v4!("255.255.255.0"))?, SubnetMask { ones: 24 });
@@ -458,88 +469,72 @@ mod tests {
 
     #[test]
     fn test_managed_addresses_try_from_fidl() -> Result<(), anyhow::Error> {
-        let good_mask = fidl_fuchsia_net_dhcp::AddressPool {
-            network_id: Some(fidl_ip_v4!("192.168.0.0")),
-            broadcast: Some(fidl_ip_v4!("192.168.0.255")),
-            mask: Some(fidl_ip_v4!("255.255.255.0")),
-            pool_range_start: Some(fidl_ip_v4!("192.168.0.2")),
-            pool_range_stop: Some(fidl_ip_v4!("192.168.0.254")),
-            ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
-        };
-        let bad_mask = fidl_fuchsia_net_dhcp::AddressPool {
-            network_id: Some(fidl_ip_v4!("192.168.0.0")),
-            broadcast: Some(fidl_ip_v4!("192.168.0.255")),
-            mask: Some(fidl_ip_v4!("255.255.0.255")),
-            pool_range_start: Some(fidl_ip_v4!("192.168.0.2")),
-            pool_range_stop: Some(fidl_ip_v4!("192.168.0.254")),
-            ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
-        };
-        let missing_fields = fidl_fuchsia_net_dhcp::AddressPool {
-            network_id: None,
-            broadcast: Some(fidl_ip_v4!("192.168.0.255")),
-            mask: None,
-            pool_range_start: Some(fidl_ip_v4!("192.168.0.2")),
-            pool_range_stop: Some(fidl_ip_v4!("192.168.0.254")),
-            ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
-        };
-        let invalid_network_id = fidl_fuchsia_net_dhcp::AddressPool {
-            network_id: Some(fidl_ip_v4!("192.168.0.128")),
-            broadcast: Some(fidl_ip_v4!("192.168.0.255")),
-            mask: Some(fidl_ip_v4!("255.255.255.0")),
-            pool_range_start: Some(fidl_ip_v4!("192.168.0.2")),
-            pool_range_stop: Some(fidl_ip_v4!("192.168.0.254")),
-            ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
-        };
-        let invalid_broadcast = fidl_fuchsia_net_dhcp::AddressPool {
-            network_id: Some(fidl_ip_v4!("192.168.0.0")),
-            broadcast: Some(fidl_ip_v4!("192.168.1.255")),
-            mask: Some(fidl_ip_v4!("255.255.255.0")),
-            pool_range_start: Some(fidl_ip_v4!("192.168.0.2")),
-            pool_range_stop: Some(fidl_ip_v4!("192.168.0.254")),
-            ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
-        };
-        let invalid_pool_range_start = fidl_fuchsia_net_dhcp::AddressPool {
-            network_id: Some(fidl_ip_v4!("192.168.0.0")),
-            broadcast: Some(fidl_ip_v4!("192.168.0.255")),
-            mask: Some(fidl_ip_v4!("255.255.255.0")),
-            pool_range_start: Some(fidl_ip_v4!("192.168.1.2")),
-            pool_range_stop: Some(fidl_ip_v4!("192.168.0.254")),
-            ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
-        };
-        let invalid_pool_range_stop = fidl_fuchsia_net_dhcp::AddressPool {
-            network_id: Some(fidl_ip_v4!("192.168.0.0")),
-            broadcast: Some(fidl_ip_v4!("192.168.0.255")),
-            mask: Some(fidl_ip_v4!("255.255.255.0")),
-            pool_range_start: Some(fidl_ip_v4!("192.168.0.2")),
-            pool_range_stop: Some(fidl_ip_v4!("192.168.1.254")),
-            ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
-        };
-        let start_after_stop = fidl_fuchsia_net_dhcp::AddressPool {
-            network_id: Some(fidl_ip_v4!("192.168.0.0")),
-            broadcast: Some(fidl_ip_v4!("192.168.0.255")),
-            mask: Some(fidl_ip_v4!("255.255.255.0")),
-            pool_range_start: Some(fidl_ip_v4!("192.168.0.20")),
-            pool_range_stop: Some(fidl_ip_v4!("192.168.0.10")),
+        let prefix_length = 24;
+        let start_addr = fidl_ip_v4!("192.168.0.2");
+        let stop_addr = fidl_ip_v4!("192.168.0.254");
+        let correct_pool = fidl_fuchsia_net_dhcp::AddressPool {
+            prefix_length: Some(prefix_length),
+            range_start: Some(start_addr),
+            range_stop: Some(stop_addr),
             ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
         };
 
-        assert_eq!(
-            ManagedAddresses::try_from_fidl(good_mask).unwrap(),
-            ManagedAddresses {
-                network_id: std_ip_v4!("192.168.0.0"),
-                broadcast: std_ip_v4!("192.168.0.255"),
-                mask: SubnetMask::try_from(24)?,
-                pool_range_start: std_ip_v4!("192.168.0.2"),
-                pool_range_stop: std_ip_v4!("192.168.0.254"),
-            }
+        matches::assert_matches!(
+            ManagedAddresses::try_from_fidl(correct_pool),
+            Ok(ManagedAddresses {
+                mask,
+                pool_range_start,
+                pool_range_stop,
+            }) if mask.ones() == prefix_length && pool_range_start.into_fidl() == start_addr && pool_range_stop.into_fidl() == stop_addr
         );
-        assert!(ManagedAddresses::try_from_fidl(bad_mask).is_err());
-        assert!(ManagedAddresses::try_from_fidl(missing_fields).is_err());
-        assert!(ManagedAddresses::try_from_fidl(invalid_network_id).is_err());
-        assert!(ManagedAddresses::try_from_fidl(invalid_broadcast).is_err());
-        assert!(ManagedAddresses::try_from_fidl(invalid_pool_range_start).is_err());
-        assert!(ManagedAddresses::try_from_fidl(invalid_pool_range_stop).is_err());
-        assert!(ManagedAddresses::try_from_fidl(start_after_stop).is_err());
+
+        let bad_prefix_length_pool = fidl_fuchsia_net_dhcp::AddressPool {
+            prefix_length: Some(33),
+            range_start: Some(fidl_ip_v4!("192.168.0.2")),
+            range_stop: Some(fidl_ip_v4!("192.168.0.254")),
+            ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
+        };
+
+        assert_err_with_substring!(
+            ManagedAddresses::try_from_fidl(bad_prefix_length_pool),
+            "from prefix_length"
+        );
+
+        let missing_fields_pool = fidl_fuchsia_net_dhcp::AddressPool {
+            prefix_length: None,
+            range_start: Some(fidl_ip_v4!("192.168.0.2")),
+            range_stop: Some(fidl_ip_v4!("192.168.0.254")),
+            ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
+        };
+
+        assert_err_with_substring!(
+            ManagedAddresses::try_from_fidl(missing_fields_pool),
+            "missing fields"
+        );
+
+        let start_after_stop_pool = fidl_fuchsia_net_dhcp::AddressPool {
+            prefix_length: Some(24),
+            range_start: Some(fidl_ip_v4!("192.168.0.20")),
+            range_stop: Some(fidl_ip_v4!("192.168.0.10")),
+            ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
+        };
+
+        assert_err_with_substring!(
+            ManagedAddresses::try_from_fidl(start_after_stop_pool),
+            "> range_stop"
+        );
+
+        let mask_range_too_small_pool = fidl_fuchsia_net_dhcp::AddressPool {
+            prefix_length: Some(24),
+            range_start: Some(fidl_ip_v4!("192.168.0.0")),
+            range_stop: Some(fidl_ip_v4!("192.168.1.0")),
+            ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
+        };
+
+        assert_err_with_substring!(
+            ManagedAddresses::try_from_fidl(mask_range_too_small_pool),
+            "cannot fit address pool"
+        );
 
         Ok(())
     }

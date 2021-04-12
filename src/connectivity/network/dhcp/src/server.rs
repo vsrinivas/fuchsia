@@ -921,7 +921,7 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
                         Ok(managed_addrs) => managed_addrs,
                         Err(e) => {
                             log::info!(
-                                "dispatch_set_parameter() got invalid AddressPool argument: {}",
+                                "dispatch_set_parameter() got invalid AddressPool argument: {:?}",
                                 e
                             );
                             return Err(Status::INVALID_ARGS);
@@ -1520,8 +1520,6 @@ pub mod tests {
             server_ips,
             lease_length,
             managed_addrs: ManagedAddresses {
-                network_id: net_declare::std::ip_v4!("182.168.0.0"),
-                broadcast: net_declare::std::ip_v4!("192.168.0.255"),
                 mask: SubnetMask::try_from(24)?,
                 pool_range_start: net_declare::std::ip_v4!("192.168.0.0"),
                 pool_range_stop: net_declare::std::ip_v4!("192.168.0.0"),
@@ -3727,13 +3725,11 @@ pub mod tests {
                 max: None,
                 ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
             });
-        let bad_mask =
+        let bad_prefix_length =
             fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
-                network_id: Some(fidl_ip_v4!("192.168.0.0")),
-                broadcast: Some(fidl_ip_v4!("192.168.0.255")),
-                mask: Some(fidl_ip_v4!("255.255.0.255")),
-                pool_range_start: Some(fidl_ip_v4!("192.168.0.2")),
-                pool_range_stop: Some(fidl_ip_v4!("192.168.0.254")),
+                prefix_length: Some(33),
+                range_start: Some(fidl_ip_v4!("192.168.0.2")),
+                range_stop: Some(fidl_ip_v4!("192.168.0.254")),
                 ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
             });
         let mac = random_mac_generator().bytes();
@@ -3757,16 +3753,16 @@ pub mod tests {
             valid_parameter()
         );
         assert_eq!(
-            server.dispatch_set_parameter(empty_lease_length).unwrap_err(),
-            fuchsia_zircon::Status::INVALID_ARGS
+            server.dispatch_set_parameter(empty_lease_length),
+            Err(fuchsia_zircon::Status::INVALID_ARGS)
         );
         assert_eq!(
-            server.dispatch_set_parameter(bad_mask).unwrap_err(),
-            fuchsia_zircon::Status::INVALID_ARGS
+            server.dispatch_set_parameter(bad_prefix_length),
+            Err(fuchsia_zircon::Status::INVALID_ARGS)
         );
         assert_eq!(
-            server.dispatch_set_parameter(duplicated_static_assignment).unwrap_err(),
-            fuchsia_zircon::Status::INVALID_ARGS
+            server.dispatch_set_parameter(duplicated_static_assignment),
+            Err(fuchsia_zircon::Status::INVALID_ARGS)
         );
         matches::assert_matches!(
             server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
@@ -3914,11 +3910,9 @@ pub mod tests {
         assert_eq!(
             server.dispatch_set_parameter(fidl_fuchsia_net_dhcp::Parameter::AddressPool(
                 fidl_fuchsia_net_dhcp::AddressPool {
-                    network_id: Some(fidl_ip_v4!("192.168.0.0")),
-                    broadcast: Some(fidl_ip_v4!("192.168.0.255")),
-                    mask: Some(fidl_ip_v4!("255.255.255.0")),
-                    pool_range_start: Some(fidl_ip_v4!("192.168.0.2")),
-                    pool_range_stop: Some(fidl_ip_v4!("192.168.0.254")),
+                    prefix_length: Some(24),
+                    range_start: Some(fidl_ip_v4!("192.168.0.2")),
+                    range_stop: Some(fidl_ip_v4!("192.168.0.254")),
                     ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
                 }
             )),
@@ -3934,11 +3928,9 @@ pub mod tests {
         let () = server
             .dispatch_set_parameter(fidl_fuchsia_net_dhcp::Parameter::AddressPool(
                 fidl_fuchsia_net_dhcp::AddressPool {
-                    network_id: Some(fidl_ip_v4!("192.168.0.0")),
-                    broadcast: Some(fidl_ip_v4!("192.168.0.255")),
-                    mask: Some(fidl_ip_v4!("255.255.255.0")),
-                    pool_range_start: Some(fidl_ip_v4!("192.168.0.2")),
-                    pool_range_stop: Some(fidl_ip_v4!("192.168.0.5")),
+                    prefix_length: Some(24),
+                    range_start: Some(fidl_ip_v4!("192.168.0.2")),
+                    range_stop: Some(fidl_ip_v4!("192.168.0.5")),
                     ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
                 },
             ))
@@ -3977,8 +3969,6 @@ pub mod tests {
                 max_seconds: 60 * 60 * 24 * 7,
             },
             managed_addrs: ManagedAddresses {
-                network_id: net_declare::std::ip_v4!("192.168.0.0"),
-                broadcast: net_declare::std::ip_v4!("192.168.0.255"),
                 mask: SubnetMask::try_from(24)?,
                 pool_range_start: client_ip,
                 pool_range_stop: net_declare::std::ip_v4!("192.168.0.2"),

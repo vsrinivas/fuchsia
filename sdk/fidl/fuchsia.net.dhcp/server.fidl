@@ -7,21 +7,27 @@ using fuchsia.net;
 using zx;
 
 /// The pool of addresses managed by a DHCP server and from which leases are supplied.
+///
+/// The pool is valid iff all of the following are true:
+///   1) All fields are present.
+///   2) The stop address is larger than the start address.
+///   3) The prefix length is large enough to fit the full range of addresses.
+///
+/// For example, a pool of 4 addresses with a 24 bit subnet mask could be specified:
+///   {
+///     prefix_length: 24,
+///     range_start: 192.168.1.2,
+///     range_stop: 192.168.1.5,
+///   } 
 table AddressPool {
-    /// The network ID of the address pool's subnet.
-    1: fuchsia.net.Ipv4Address network_id;
-    /// The broadcast address of the address pool's subnet.
-    2: fuchsia.net.Ipv4Address broadcast;
-    /// The subnet mask of the address pool's network.
-    3: fuchsia.net.Ipv4Address mask;
+    /// The prefix length (in bits) of the address pool's subnet mask.
+    1: uint8 prefix_length;
     /// The starting address, inclusive, of the range of addresses which the DHCP server
-    /// will lease to clients. This address must be in the subnet defined by the network_id
-    /// and mask members of the AddressPool.
-    4: fuchsia.net.Ipv4Address pool_range_start;
+    /// will lease to clients.
+    2: fuchsia.net.Ipv4Address range_start;
     /// The ending address, inclusive, of the range of addresses which the server will
-    /// to clients. This address must be in the subnet defined by the network_id and mask
-    /// members of the AddressPool.
-    5: fuchsia.net.Ipv4Address pool_range_stop;
+    /// lease to clients.
+    3: fuchsia.net.Ipv4Address range_stop;
 };
 
 /// The duration of leases offered by the server.

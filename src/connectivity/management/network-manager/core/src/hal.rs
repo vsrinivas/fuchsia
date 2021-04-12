@@ -606,13 +606,9 @@ impl NetCfg {
             }
 
             params.push(fnetdhcp::Parameter::AddressPool(fnetdhcp::AddressPool {
-                network_id: Some(fnet::Ipv4Address { addr: subnet.network().ipv4_bytes() }),
-                broadcast: Some(fnet::Ipv4Address { addr: subnet.broadcast().ipv4_bytes() }),
-                mask: Some(fnet::Ipv4Address {
-                    addr: (u32::MAX << (32 - subnet.prefix())).to_be_bytes(),
-                }),
-                pool_range_start: Some(fnet::Ipv4Address { addr: start.octets() }),
-                pool_range_stop: Some(fnet::Ipv4Address { addr: end.octets() }),
+                prefix_length: Some(subnet.prefix()),
+                range_start: Some(fnet::Ipv4Address { addr: start.octets() }),
+                range_stop: Some(fnet::Ipv4Address { addr: end.octets() }),
                 ..fnetdhcp::AddressPool::EMPTY
             }));
         }
@@ -1468,11 +1464,9 @@ mod tests {
                 )),
                 MockDhcpServerRequest::SetParameter(fnetdhcp::Parameter::AddressPool(
                     fnetdhcp::AddressPool {
-                        network_id: Some(fnet::Ipv4Address { addr: [192, 168, 42, 0] }),
-                        broadcast: Some(fnet::Ipv4Address { addr: [192, 168, 42, 255] }),
-                        mask: Some(fnet::Ipv4Address { addr: [255, 255, 255, 0] }),
-                        pool_range_start: Some(fnet::Ipv4Address { addr: [192, 168, 42, 100] }),
-                        pool_range_stop: Some(fnet::Ipv4Address { addr: [192, 168, 42, 200] }),
+                        prefix_length: Some(24),
+                        range_start: Some(fnet::Ipv4Address { addr: [192, 168, 42, 100] }),
+                        range_stop: Some(fnet::Ipv4Address { addr: [192, 168, 42, 200] }),
                         ..fnetdhcp::AddressPool::EMPTY
                     },
                 )),

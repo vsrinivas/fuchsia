@@ -1668,47 +1668,26 @@ impl Into<fidl_fuchsia_net_dhcp::Parameter> for IpAddrs {
 #[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "address-pool")]
 pub struct AddressPool {
-    /// the network ID of the address pool's subnet.
+    /// the prefix length of the network's subnet mask
     #[argh(option)]
-    network_id: Option<Ipv4Addr>,
-    /// the broadcast address of the address pool's subnet.
-    /// By default, this address will be the equivalent of setting
-    /// the host part of the network ID to all ones.
-    #[argh(option)]
-    broadcast: Option<Ipv4Addr>,
-    /// the subnet mask of the address pool's network.
-    #[argh(option)]
-    mask: Option<Ipv4Addr>,
+    prefix_length: Option<u8>,
     /// the starting address, inclusive, of the range of addresses which the DHCP server
-    /// will lease to clients. This address must be in the subnet defined by the network_id
-    /// and mask members of the AddressPool.
+    /// will lease to clients
     #[argh(option)]
-    pool_range_start: Option<Ipv4Addr>,
+    range_start: Option<Ipv4Addr>,
     /// the ending address, inclusive, of the range of addresses which the server will
-    /// to clients. This address must be in the subnet defined by the network_id and mask
-    /// members of the AddressPool.
+    /// to clients
     #[argh(option)]
-    pool_range_stop: Option<Ipv4Addr>,
+    range_stop: Option<Ipv4Addr>,
 }
 
 impl Into<fidl_fuchsia_net_dhcp::Parameter> for AddressPool {
     fn into(self) -> fidl_fuchsia_net_dhcp::Parameter {
+        let Self { prefix_length, range_start, range_stop } = self;
         let pool = fidl_fuchsia_net_dhcp::AddressPool {
-            network_id: self
-                .network_id
-                .map_or(None, |v| Some(fidl_fuchsia_net::Ipv4Address { addr: v.octets() })),
-            broadcast: self
-                .broadcast
-                .map_or(None, |v| Some(fidl_fuchsia_net::Ipv4Address { addr: v.octets() })),
-            mask: self
-                .mask
-                .map_or(None, |v| Some(fidl_fuchsia_net::Ipv4Address { addr: v.octets() })),
-            pool_range_start: self
-                .pool_range_start
-                .map_or(None, |v| Some(fidl_fuchsia_net::Ipv4Address { addr: v.octets() })),
-            pool_range_stop: self
-                .pool_range_stop
-                .map_or(None, |v| Some(fidl_fuchsia_net::Ipv4Address { addr: v.octets() })),
+            prefix_length,
+            range_start: range_start.map(|v| fidl_fuchsia_net::Ipv4Address { addr: v.octets() }),
+            range_stop: range_stop.map(|v| fidl_fuchsia_net::Ipv4Address { addr: v.octets() }),
             ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
         };
         fidl_fuchsia_net_dhcp::Parameter::AddressPool(pool)

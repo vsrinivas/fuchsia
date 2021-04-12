@@ -18,7 +18,9 @@ mod dns;
 mod errors;
 mod matchers;
 
+use dhcp::protocol::FromFidlExt as _;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
+use std::convert::TryFrom as _;
 use std::convert::TryInto as _;
 use std::fs;
 use std::io;
@@ -1364,9 +1366,12 @@ impl<'a> NetCfg<'a> {
             .context("error setting DHCP LeaseLength parameter")
             .map_err(errors::Error::NonFatal)?;
 
-        let host_mask = u32::max_value() >> WLAN_AP_PREFIX_LEN;
-        let broadcast_addr_as_u32 = network_addr_as_u32 | host_mask;
-        let broadcast_addr = fnet::Ipv4Address { addr: broadcast_addr_as_u32.to_be_bytes() };
+        let host_mask = dhcp::configuration::SubnetMask::try_from(WLAN_AP_PREFIX_LEN)
+            .context("error creating host mask from prefix length")
+            .map_err(errors::Error::NonFatal)?;
+        let broadcast_addr =
+            host_mask.broadcast_of(&std::net::Ipv4Addr::from_fidl(WLAN_AP_NETWORK_ADDR));
+        let broadcast_addr_as_u32: u32 = broadcast_addr.into();
         // The start address of the DHCP pool should be the first address after the WLAN AP
         // interface address.
         let dhcp_pool_start =
@@ -1377,11 +1382,9 @@ impl<'a> NetCfg<'a> {
         let dhcp_pool_end = fnet::Ipv4Address { addr: (broadcast_addr_as_u32 - 1).to_be_bytes() };
 
         let v = fnet_dhcp::AddressPool {
-            network_id: Some(WLAN_AP_NETWORK_ADDR),
-            broadcast: Some(broadcast_addr),
-            mask: Some(fnet::Ipv4Address { addr: (!host_mask).to_be_bytes() }),
-            pool_range_start: Some(dhcp_pool_start),
-            pool_range_stop: Some(dhcp_pool_end),
+            prefix_length: Some(WLAN_AP_PREFIX_LEN),
+            range_start: Some(dhcp_pool_start),
+            range_stop: Some(dhcp_pool_end),
             ..fnet_dhcp::AddressPool::EMPTY
         };
         debug!("setting DHCP AddressPool parameter to {:?}", v);

@@ -200,7 +200,10 @@ async fn test_list_parameter() {
     ),
     AddressPool(
         AddressPool {
-            network_id: Some(
+            prefix_length: Some(
+                0,
+            ),
+            range_start: Some(
                 Ipv4Address {
                     addr: [
                         0,
@@ -210,37 +213,7 @@ async fn test_list_parameter() {
                     ],
                 },
             ),
-            broadcast: Some(
-                Ipv4Address {
-                    addr: [
-                        0,
-                        0,
-                        0,
-                        0,
-                    ],
-                },
-            ),
-            mask: Some(
-                Ipv4Address {
-                    addr: [
-                        0,
-                        0,
-                        0,
-                        0,
-                    ],
-                },
-            ),
-            pool_range_start: Some(
-                Ipv4Address {
-                    addr: [
-                        0,
-                        0,
-                        0,
-                        0,
-                    ],
-                },
-            ),
-            pool_range_stop: Some(
+            range_stop: Some(
                 Ipv4Address {
                     addr: [
                         0,
@@ -387,11 +360,9 @@ async fn test_start_succeeds() {
         &mut [
             fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![fidl_ip_v4!("192.168.0.1")]),
             fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
-                network_id: Some(fidl_ip_v4!("192.168.0.0")),
-                broadcast: Some(fidl_ip_v4!("192.168.0.127")),
-                mask: Some(fidl_ip_v4!("255.255.255.128")),
-                pool_range_start: Some(fidl_ip_v4!("192.168.0.2")),
-                pool_range_stop: Some(fidl_ip_v4!("192.168.0.5")),
+                prefix_length: Some(25),
+                range_start: Some(fidl_ip_v4!("192.168.0.2")),
+                range_stop: Some(fidl_ip_v4!("192.168.0.5")),
                 ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
             }),
             fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(vec!["lo".to_string()]),

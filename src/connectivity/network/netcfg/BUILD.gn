@@ -28,6 +28,7 @@ rustc_binary("bin") {
     "//src/connectivity/bluetooth/lib/async-helpers",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/management/network-manager/core/interface:lib",
+    "//src/connectivity/network/dhcp:lib",
     "//src/connectivity/network/lib/dns_server_watcher",
     "//src/connectivity/network/lib/netfilter",
     "//src/lib/async-utils",

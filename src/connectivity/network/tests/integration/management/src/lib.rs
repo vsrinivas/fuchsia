@@ -253,8 +253,6 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
         const INTERFACE_ADDR: net::Ipv4Address = fidl_ip_v4!("192.168.255.249");
         const DHCP_POOL_START_ADDR: net::Ipv4Address = fidl_ip_v4!("192.168.255.250");
         const DHCP_POOL_END_ADDR: net::Ipv4Address = fidl_ip_v4!("192.168.255.254");
-        const BROADCAST_ADDR: net::Ipv4Address = fidl_ip_v4!("192.168.255.255");
-        const NETWORK_MASK: net::Ipv4Address = fidl_ip_v4!("255.255.255.248");
         const NETWORK_ADDR_SUBNET: net_types_ip::Subnet<net_types_ip::Ipv4Addr> = unsafe {
             net_types_ip::Subnet::new_unchecked(
                 net_types_ip::Ipv4Addr::new(NETWORK_ADDR.addr),
@@ -347,11 +345,9 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
             (
                 dhcp::ParameterName::AddressPool,
                 dhcp::Parameter::AddressPool(dhcp::AddressPool {
-                    network_id: Some(NETWORK_ADDR),
-                    broadcast: Some(BROADCAST_ADDR),
-                    mask: Some(NETWORK_MASK),
-                    pool_range_start: Some(DHCP_POOL_START_ADDR),
-                    pool_range_stop: Some(DHCP_POOL_END_ADDR),
+                    prefix_length: Some(NETWORK_PREFIX_LEN),
+                    range_start: Some(DHCP_POOL_START_ADDR),
+                    range_stop: Some(DHCP_POOL_END_ADDR),
                     ..dhcp::AddressPool::EMPTY
                 }),
             ),

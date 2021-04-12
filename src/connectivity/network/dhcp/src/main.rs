@@ -49,8 +49,6 @@ fn default_parameters() -> configuration::ServerParameters {
             max_seconds: DEFAULT_LEASE_DURATION_SECONDS,
         },
         managed_addrs: dhcp::configuration::ManagedAddresses {
-            network_id: Ipv4Addr::UNSPECIFIED,
-            broadcast: Ipv4Addr::UNSPECIFIED,
             mask: std::convert::TryInto::try_into(0u8).unwrap(),
             pool_range_start: Ipv4Addr::UNSPECIFIED,
             pool_range_stop: Ipv4Addr::UNSPECIFIED,
@@ -758,8 +756,6 @@ mod tests {
                 max_seconds: 86400,
             },
             managed_addrs: dhcp::configuration::ManagedAddresses {
-                network_id: std_ip_v4!("192.168.0.0"),
-                broadcast: std_ip_v4!("192.168.0.128"),
                 mask: dhcp::configuration::SubnetMask::try_from(25).unwrap(),
                 pool_range_start: std_ip_v4!("192.168.0.0"),
                 pool_range_stop: std_ip_v4!("192.168.0.0"),
