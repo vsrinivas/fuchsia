@@ -342,7 +342,7 @@ func (ni *netstackImpl) SetInterfaceStatus(_ fidl.Context, nicid uint32, enabled
 			_ = syslog.Errorf("(NIC %d).setState(enabled=%t): %s", nicid, enabled, err)
 		}
 	} else {
-		_ = syslog.Errorf("(NIC %d).setState(enabled=%t): not found", nicid, enabled)
+		_ = syslog.Warnf("(NIC %d).setState(enabled=%t): not found", nicid, enabled)
 	}
 	return nil
 }

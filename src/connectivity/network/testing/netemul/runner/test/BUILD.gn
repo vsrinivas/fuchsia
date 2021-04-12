@@ -10,6 +10,8 @@ group("test") {
     ":grpc_client_stress_test_spec",
     ":guest_test_spec",
     ":netemul-sandbox-test",
+    ":sandbox-service_spec",
+    ":sandbox-unittest_spec",
     "dummy_proc",
     "dynamic_devices",
     "easy_netstack_cfg",
@@ -25,88 +27,92 @@ group("test") {
   ]
 }
 
-fuchsia_component("dynamic-devices-test") {
+fuchsia_test_component("dynamic-devices-test") {
   manifest = "meta/dynamic-devices-test.cmx"
-  testonly = true
   deps = [ "dynamic_devices" ]
 }
 
-fuchsia_component("easy-netstack-cfg-test") {
+fuchsia_test_component("easy-netstack-cfg-test") {
   manifest = "meta/easy-netstack-cfg-test.cmx"
-  testonly = true
   deps = [ "easy_netstack_cfg" ]
 }
 
-fuchsia_component("env-build-test") {
+fuchsia_test_component("env-build-test") {
   manifest = "meta/env-build-test.cmx"
-  testonly = true
   deps = [ "env_build" ]
 }
 
-fuchsia_component("inheritance-test") {
+fuchsia_test_component("inheritance-test") {
   manifest = "meta/inheritance-test.cmx"
-  testonly = true
   deps = [ "inheritance" ]
 }
 
-fuchsia_component("netstack-intermediary-multi-interface-test") {
+fuchsia_test_component("netstack-intermediary-multi-interface-test") {
   manifest = "meta/netstack-intermediary-multi-interface-test.cmx"
-  testonly = true
   deps = [ "netstack_intermediary" ]
 }
 
-fuchsia_component("netstack-intermediary-test") {
+fuchsia_test_component("netstack-intermediary-test") {
   manifest = "meta/netstack-intermediary-test.cmx"
-  testonly = true
   deps = [ "netstack_intermediary" ]
 }
 
-fuchsia_component("netstack-socks-test") {
+fuchsia_test_component("netstack-socks-test") {
   manifest = "meta/netstack-socks-test.cmx"
-  testonly = true
   deps = [ "netstack_socks" ]
 }
 
-fuchsia_component("svc-list-test") {
+fuchsia_test_component("svc-list-test") {
   manifest = "meta/svc-list-test.cmx"
-  testonly = true
   deps = [ "svc_list" ]
 }
 
-fuchsia_component("virtual-device-directory-test") {
+fuchsia_test_component("virtual-device-directory-test") {
   manifest = "meta/virtual-device-directory-test.cmx"
-  testonly = true
   deps = [ "virtual_device_directory" ]
 }
 
-fuchsia_component("network-device-test") {
+fuchsia_test_component("network-device-test") {
   manifest = "meta/network-device-test.cmx"
-  testonly = true
   deps = [ "network_device" ]
 }
 
-fuchsia_component("sandbox-service") {
+fuchsia_test_component("sandbox-service") {
   manifest = "meta/sandbox-service.cmx"
-  testonly = true
   deps = [ "sandbox_service" ]
 }
 
-fuchsia_component("sandbox-unittest") {
+fuchsia_test("sandbox-service_spec") {
+  package = ":netemul-sandbox-test"
+  component = ":sandbox-service"
+
+  log_settings = {
+    max_severity = "ERROR"
+  }
+}
+
+fuchsia_test_component("sandbox-unittest") {
   manifest = "meta/sandbox-unittest.cmx"
-  testonly = true
   deps =
       [ "//src/connectivity/network/testing/netemul/runner:sandbox_unittest" ]
 }
 
-fuchsia_component("mock-device-settings") {
+fuchsia_test("sandbox-unittest_spec") {
+  package = ":netemul-sandbox-test"
+  component = ":sandbox-unittest"
+
+  log_settings = {
+    max_severity = "ERROR"
+  }
+}
+
+fuchsia_test_component("mock-device-settings") {
   manifest = "meta/mock-device-settings.cmx"
-  testonly = true
   deps = [ "//src/connectivity/network/testing/netemul/runner/helpers/mock_device_settings:mock_device_settings_test" ]
 }
 
-fuchsia_component("model-unittest") {
+fuchsia_test_component("model-unittest") {
   manifest = "meta/model-unittest.cmx"
-  testonly = true
   deps = [
     "//src/connectivity/network/testing/netemul/runner/model:model_unittest",
   ]
@@ -124,26 +130,19 @@ fuchsia_test_package("netemul-sandbox-test") {
     ":netstack-intermediary-test",
     ":netstack-socks-test",
     ":network-device-test",
-    ":sandbox-service",
-    ":sandbox-unittest",
     ":svc-list-test",
     ":virtual-device-directory-test",
   ]
   deps = [
+    ":sandbox-service",
+    ":sandbox-unittest",
     "dummy_proc",
     "dummy_proc:dummy_proc_with_dev",
   ]
-  test_specs = {
-    environments = [ emu_env ]
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
 }
 
-fuchsia_component("guest-test") {
+fuchsia_test_component("guest-test") {
   manifest = "meta/guest-test.cmx"
-  testonly = true
   deps = [ "guest" ]
 }
 
@@ -168,9 +167,8 @@ fuchsia_component("grpc-client-stress-test") {
   deps = [ "guest_grpc_stress" ]
 }
 
-fuchsia_component("multiple-guests-test") {
+fuchsia_test_component("multiple-guests-test") {
   manifest = "meta/multiple-guests-test.cmx"
-  testonly = true
   deps = [ "multiple_guests" ]
 }
 

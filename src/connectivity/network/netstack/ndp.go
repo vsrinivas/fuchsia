@@ -541,7 +541,11 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 				case *stack.DADSucceeded:
 					_ = syslog.InfoTf(ndpSyslogTagName, "DAD resolved for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
 				case *stack.DADError:
-					_ = syslog.ErrorTf(ndpSyslogTagName, "DAD for %s on nicID (%d) encountered error = %s, sending interface changed event...", event.addr, event.nicID, result.Err)
+					logFn := syslog.ErrorTf
+					if _, ok := result.Err.(*tcpip.ErrClosedForSend); ok {
+						logFn = syslog.WarnTf
+					}
+					_ = logFn(ndpSyslogTagName, "DAD for %s on nicID (%d) encountered error = %s, sending interface changed event...", event.addr, event.nicID, result.Err)
 				case *stack.DADAborted:
 					_ = syslog.WarnTf(ndpSyslogTagName, "DAD for %s on nicID (%d) aborted, sending interface changed event...", event.addr, event.nicID)
 				case *stack.DADDupAddrDetected:

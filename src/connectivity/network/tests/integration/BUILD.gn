@@ -32,8 +32,7 @@ tests = [
 
 foreach(test, tests) {
   name = "netstack_${test}_integration_test"
-  fuchsia_component(name) {
-    testonly = true
+  fuchsia_test_component(name) {
     manifest = "meta/${name}.cmx"
     deps = [ test ]
   }
@@ -41,16 +40,6 @@ foreach(test, tests) {
 
 fuchsia_test_package("netstack-integration-tests") {
   package_name = "netstack-integration-tests"
-
-  # TODO(fxbug.dev/62551)): avoid these error logs:
-  # [netstack,@set_interface_status] ERROR: netstack_service.go(345): (NIC 2).setState(enabled=false): not found
-  # [netstack,ndp,@test_down_close_race_eth] ERROR: ndp.go(544): DAD for fe80::2644:e5a7:b11a:bf9e on nicID (7) encountered error = endpoint is closed for send, sending interface changed event...
-  # [netstack,ndp,@test_down_close_race_eth] ERROR: ndp.go(544): DAD for fe80::c25:a6ff:fe82:5059 on nicID (7) encountered error = endpoint is closed for send, sending interface changed event...
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
 
   test_components = []
   foreach(test, tests) {

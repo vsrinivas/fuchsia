@@ -538,7 +538,7 @@ func (c *Client) cleanup(info *Info, nicName string, release bool) {
 			}
 			return nil
 		}(); err != nil {
-			_ = syslog.ErrorTf(tag, "%s, continuing", err)
+			_ = syslog.WarnTf(tag, "%s, continuing", err)
 		}
 	}
 
@@ -814,12 +814,12 @@ retransmitRequest:
 				_ = syslog.InfoTf(tag, "%s: got %s from %s with leaseLength=%s", nicName, result.typ, result.source, cfg.LeaseLength)
 				return cfg, nil
 			case dhcpNAK:
-				if msg := result.options.message(); len(msg) != 0 {
-					c.stats.RecvNakErrors.Increment()
-					return Config{}, fmt.Errorf("%s: %x", result.typ, msg)
-				}
 				c.stats.RecvNaks.Increment()
-				_ = syslog.InfoTf(tag, "%s: got %s from %s", nicName, result.typ, result.source)
+				if msg := result.options.message(); len(msg) != 0 {
+					_ = syslog.InfoTf(tag, "%s: got %s from %s (%s)", nicName, result.typ, result.source, msg)
+				} else {
+					_ = syslog.InfoTf(tag, "%s: got %s from %s", nicName, result.typ, result.source)
+				}
 				// We lost the lease.
 				return Config{
 					Declined: true,

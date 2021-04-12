@@ -630,6 +630,35 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				ackCnt++
 				if ackCnt == tc.nakNthReq {
 					pkt = mustCloneWithNewMsgType(t, pkt, dhcpNAK)
+
+					// Add a message option. An earlier version of the client incorrectly
+					// rejected dhcpNAK with a populated message.
+					h := hdr(pkt.Data().AsRange().AsView())
+					opts, err := h.options()
+					if err != nil {
+						t.Fatalf("failed to get options from header: %s", err)
+					}
+					messageOption := option{
+						code: optMessage,
+						body: []byte("no lease for you"),
+					}
+					opts = append(opts, messageOption)
+					b := make(hdr, len(h)+1+len(messageOption.body))
+					if n, l := copy(b, h), len(h); n != l {
+						t.Errorf("failed to copy header bytes, want=%d got=%d", l, n)
+					}
+					b.setOptions(opts)
+					pkt.Data().Replace(buffer.NewViewFromBytes(b).ToVectorisedView())
+
+					// Rewrite all the headers and IP checksum. Yes, this is all
+					// required.
+					delta := uint16(len(b) - len(h))
+					udpHeader := header.UDP(pkt.TransportHeader().View())
+					udpHeader.SetLength(udpHeader.Length() + delta)
+					ipv4Header := header.IPv4(pkt.NetworkHeader().View())
+					ipv4Header.SetTotalLength(ipv4Header.TotalLength() + delta)
+					ipv4Header.SetChecksum(0)
+					ipv4Header.SetChecksum(^ipv4Header.CalculateChecksum())
 				}
 				return pkt
 			}
@@ -1821,36 +1850,36 @@ func TestDecline(t *testing.T) {
 	seenDecline := false
 	for {
 		pkt := <-ch
-		ip := header.IPv4(pkt.Data().AsRange().ToOwnedView())
-		if !ip.IsValid(pkt.Size()) {
+		ipv4Packet := header.IPv4(pkt.Data().AsRange().ToOwnedView())
+		if !ipv4Packet.IsValid(pkt.Size()) {
 			t.Fatal("sent invalid IPv4 packet")
 		}
-		if got, want := ip.Protocol(), uint8(udp.ProtocolNumber); got != want {
-			t.Fatalf("got ip.Protocol() = %d, want = %d", got, want)
+		if got, want := ipv4Packet.TransportProtocol(), udp.ProtocolNumber; got != want {
+			t.Fatalf("got ipv4Packet.TransportProtocol() = %d, want = %d", got, want)
 		}
-		udp := header.UDP(ip.Payload())
-		dhcp := hdr(udp.Payload())
-		typ := mustMsgType(t, []byte(dhcp))
+		udpPacket := header.UDP(ipv4Packet.Payload())
+		dhcpPacket := hdr(udpPacket.Payload())
+		typ := mustMsgType(t, dhcpPacket)
 		if typ != dhcpDECLINE {
 			// We only care about DHCP DECLINE packets.
 			continue
 		}
 
-		if got := ip.SourceAddress(); got != header.IPv4Any {
-			t.Errorf("got ip.SourceAddress() = %s, want = %s", got, header.IPv4Any)
+		if got := ipv4Packet.SourceAddress(); got != header.IPv4Any {
+			t.Errorf("got ipv4Packet.SourceAddress() = %s, want = %s", got, header.IPv4Any)
 		}
-		if got := ip.DestinationAddress(); got != header.IPv4Broadcast {
-			t.Errorf("got ip.DestinationAddress() = %s, want = %s", got, header.IPv4Broadcast)
+		if got := ipv4Packet.DestinationAddress(); got != header.IPv4Broadcast {
+			t.Errorf("got ipv4Packet.DestinationAddress() = %s, want = %s", got, header.IPv4Broadcast)
 		}
-		if got := udp.SourcePort(); got != ClientPort {
-			t.Errorf("got udp.SourcePort() = %d, want = %d", got, ClientPort)
+		if got := udpPacket.SourcePort(); got != ClientPort {
+			t.Errorf("got udpPacket.SourcePort() = %d, want = %d", got, ClientPort)
 		}
-		if got := udp.DestinationPort(); got != ServerPort {
-			t.Errorf("got udp.DestinationPort() = %d, want = %d", got, ServerPort)
+		if got := udpPacket.DestinationPort(); got != ServerPort {
+			t.Errorf("got udpPacket.DestinationPort() = %d, want = %d", got, ServerPort)
 		}
-		opts, err := dhcp.options()
+		opts, err := dhcpPacket.options()
 		if err != nil {
-			t.Fatalf("dhcp.options(): %s", err)
+			t.Fatalf("dhcpPacket.options(): %s", err)
 		}
 		if diff := cmp.Diff(wantOpts, opts, cmp.AllowUnexported(option{})); diff != "" {
 			t.Errorf("dhcpDECLINE options mismatch (-want +got):\n%s", diff)

@@ -180,33 +180,46 @@ func (h hdr) chaddr() []byte   { return h[28:44] }
 func (h hdr) sname() []byte    { return h[44:108] }
 func (h hdr) file() []byte     { return h[108:236] }
 
-func (h hdr) options() (opts options, err error) {
-	i := headerBaseSize
-	for i < len(h) {
-		if h[i] == 0 {
-			i++
-			continue
+func (h hdr) options() (options, error) {
+	{
+		// Silence a warning: assignment to method receiver doesn't propagate to
+		// other calls.
+		h := h
+		if !h.isValid() {
+			return nil, fmt.Errorf("invalid header: %s", h)
 		}
-		if h[i] == 255 {
-			break
+		h = h[headerBaseSize:]
+		var opts options
+		for {
+			if len(h) < 1 {
+				return nil, fmt.Errorf("missing end option; options=%s", opts)
+			}
+			code := optionCode(h[0])
+			h = h[1:]
+			switch code {
+			case 0:
+				// Padding.
+				continue
+			case 255:
+				// End.
+				return opts, nil
+			}
+
+			if len(h) < 1 {
+				return nil, fmt.Errorf("%s missing length; options=%s", code, opts)
+			}
+			length := h[0]
+			h = h[1:]
+			if len(h) < int(length) {
+				return nil, fmt.Errorf("%s length=%d remaining=%d; options=%s", code, length, len(h), opts)
+			}
+			opts = append(opts, option{
+				code: code,
+				body: h[:length],
+			})
+			h = h[length:]
 		}
-		code := optionCode(h[i])
-		i++
-		if len(h) < i+1 {
-			return nil, fmt.Errorf("option %s missing length i=%d", code, i)
-		}
-		optlen := int(h[i])
-		i++
-		if len(h) < i+optlen {
-			return nil, fmt.Errorf("option %s too long i=%d, optlen=%d", code, i, optlen)
-		}
-		opts = append(opts, option{
-			code: code,
-			body: h[i:][:optlen],
-		})
-		i += optlen
 	}
-	return opts, nil
 }
 
 func (h hdr) setOptions(opts []option) {
@@ -304,8 +317,8 @@ const (
 	optClientID         optionCode = 61
 )
 
-func (code optionCode) lenValid(l int) bool {
-	switch code {
+func (i optionCode) lenValid(l int) bool {
+	switch i {
 	case optSubnetMask,
 		optReqIPAddr,
 		optLeaseTime,
