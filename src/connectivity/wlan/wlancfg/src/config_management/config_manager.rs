@@ -316,6 +316,32 @@ impl SavedNetworksManager {
         self.saved_networks.lock().await.entry(id).or_default().iter().map(Clone::clone).collect()
     }
 
+    /// Return a list of network configs that could be used with the security type seen in a scan.
+    /// This includes configs that have a lower security type that can be upgraded to match the
+    /// provided detailed security type.
+    #[cfg(test)]
+    pub async fn lookup_compatible(
+        &self,
+        ssid: types::Ssid,
+        scan_security: types::SecurityTypeDetailed,
+    ) -> Vec<NetworkConfig> {
+        let mut saved_networks_guard = self.saved_networks.lock().await;
+        let mut matching_configs = Vec::new();
+        for security in compatible_policy_securities(scan_security) {
+            let id = NetworkIdentifier::new(ssid.clone(), security.into());
+            // Check for conflicts; PSKs can't be used to connect to WPA3 networks.
+            let configs = saved_networks_guard
+                .entry(id)
+                .or_default()
+                .iter()
+                .filter(|config| security_is_compatible(scan_security, &config.credential))
+                .into_iter()
+                .map(Clone::clone);
+            matching_configs.extend(configs);
+        }
+        matching_configs
+    }
+
     /// Save a network by SSID and password. If the SSID and password have been saved together
     /// before, do not modify the saved config. Update the legacy storage to keep it consistent
     /// with what it did before the new version. If a network is pushed out because of the newly
@@ -545,6 +571,45 @@ fn lower_valid_security(security_type: &SecurityType) -> Option<SecurityType> {
         SecurityType::Wpa2 => Some(SecurityType::Wpa),
         _ => None,
     }
+}
+
+/// Returns a list of security types that could be optionally upgraded to match with this detailed
+/// security type. For example, a WPA2/WPA3 could be connected to using a WPA2 config or a WPA3
+/// config.
+#[cfg(test)]
+fn compatible_policy_securities(
+    detailed_security: types::SecurityTypeDetailed,
+) -> Vec<SecurityType> {
+    use fidl_sme::Protection::*;
+    match detailed_security {
+        Wpa3Enterprise | Wpa3Personal | Wpa2Wpa3Personal => {
+            vec![SecurityType::Wpa2, SecurityType::Wpa3]
+        }
+        Wpa2Enterprise
+        | Wpa2Personal
+        | Wpa1Wpa2Personal
+        | Wpa2PersonalTkipOnly
+        | Wpa1Wpa2PersonalTkipOnly => vec![SecurityType::Wpa, SecurityType::Wpa2],
+        Wpa1 => vec![SecurityType::Wpa],
+        Wep => vec![SecurityType::Wep],
+        Open => vec![SecurityType::None],
+        Unknown => vec![],
+    }
+}
+
+#[cfg(test)]
+fn security_is_compatible(
+    scan_security: types::SecurityTypeDetailed,
+    credential: &Credential,
+) -> bool {
+    if scan_security == types::SecurityTypeDetailed::Wpa3Personal
+        || scan_security == types::SecurityTypeDetailed::Wpa3Enterprise
+    {
+        if let Credential::Psk(_) = credential {
+            return false;
+        }
+    }
+    true
 }
 
 /// If the list of configs is at capacity for the number of saved configs per SSID,
@@ -814,6 +879,111 @@ mod tests {
         .expect("Failed to create SavedNetworksManager");
         assert_eq!(0, saved_networks.known_network_count().await);
         assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
+    }
+
+    #[test]
+    fn sme_protection_converts_to_lower_compatible() {
+        use fidl_sme::Protection::*;
+        let lower_compatible_pairs = vec![
+            (Wpa3Enterprise, vec![SecurityType::Wpa2, SecurityType::Wpa3]),
+            (Wpa3Personal, vec![SecurityType::Wpa2, SecurityType::Wpa3]),
+            (Wpa2Wpa3Personal, vec![SecurityType::Wpa2, SecurityType::Wpa3]),
+            (Wpa2Enterprise, vec![SecurityType::Wpa, SecurityType::Wpa2]),
+            (Wpa2Personal, vec![SecurityType::Wpa, SecurityType::Wpa2]),
+            (Wpa1Wpa2Personal, vec![SecurityType::Wpa, SecurityType::Wpa2]),
+            (Wpa2PersonalTkipOnly, vec![SecurityType::Wpa, SecurityType::Wpa2]),
+            (Wpa1Wpa2PersonalTkipOnly, vec![SecurityType::Wpa, SecurityType::Wpa2]),
+            (Wpa1, vec![SecurityType::Wpa]),
+            (Wep, vec![SecurityType::Wep]),
+            (Open, vec![SecurityType::None]),
+            (Unknown, vec![]),
+        ];
+        for (detailed_security, security) in lower_compatible_pairs {
+            assert_eq!(compatible_policy_securities(detailed_security), security);
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn lookup_compatible_returns_both_compatible_configs() {
+        let stash_id = rand_string();
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+
+        // Store a couple of network configs that could both be use to connect to a WPA2/WPA3
+        // network.
+        let ssid = b"foo".to_vec();
+        let network_id_wpa2 = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa2);
+        let network_id_wpa3 = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa3);
+        let credential_wpa2 = Credential::Password(b"password".to_vec());
+        let credential_wpa3 = Credential::Password(b"wpa3-password".to_vec());
+        saved_networks
+            .store(network_id_wpa2.clone(), credential_wpa2.clone())
+            .await
+            .expect("Failed to store network");
+        saved_networks
+            .store(network_id_wpa3.clone(), credential_wpa3.clone())
+            .await
+            .expect("Failed to store network");
+        // Store a network with the same SSID but a not-compatible security type.
+        let network_id_wep = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
+        saved_networks
+            .store(network_id_wep.clone(), Credential::Password(b"abcdefgh".to_vec()))
+            .await
+            .expect("Failed to store network");
+
+        let results = saved_networks
+            .lookup_compatible(ssid.clone(), types::SecurityTypeDetailed::Wpa2Wpa3Personal)
+            .await;
+        let expected_config_wpa2 = NetworkConfig::new(network_id_wpa2, credential_wpa2, false)
+            .expect("Failed to create config");
+        let expected_config_wpa3 = NetworkConfig::new(network_id_wpa3, credential_wpa3, false)
+            .expect("Failed to create config");
+        assert_eq!(results.len(), 2);
+        assert!(results.contains(&expected_config_wpa2));
+        assert!(results.contains(&expected_config_wpa3));
+    }
+
+    #[test_case(types::SecurityTypeDetailed::Wpa3Personal)]
+    #[test_case(types::SecurityTypeDetailed::Wpa3Enterprise)]
+    fn lookup_compatible_does_not_return_wpa3_psk(
+        wpa3_detailed_security: types::SecurityTypeDetailed,
+    ) {
+        let mut exec = fasync::Executor::new().expect("failed to create executor");
+        let stash_id = rand_string();
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+
+        let saved_networks =
+            exec.run_singlethreaded(create_saved_networks(stash_id, &path, &tmp_path));
+
+        // Store a WPA3 config with a password that will match and a PSK config that won't match
+        // to a WPA3 network.
+        let ssid = b"foo".to_vec();
+        let network_id_psk = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa2);
+        let network_id_password = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa3);
+        let credential_psk = Credential::Psk(vec![5; 32]);
+        let credential_password = Credential::Password(b"mypassword".to_vec());
+        exec.run_singlethreaded(
+            saved_networks.store(network_id_psk.clone(), credential_psk.clone()),
+        )
+        .expect("Failed to store network");
+        exec.run_singlethreaded(
+            saved_networks.store(network_id_password.clone(), credential_password.clone()),
+        )
+        .expect("Failed to store network");
+
+        // Only the WPA3 config with a credential should be returned.
+        let expected_config_wpa3 =
+            NetworkConfig::new(network_id_password, credential_password, false)
+                .expect("Failed to create configc");
+        let results = exec.run_singlethreaded(
+            saved_networks.lookup_compatible(ssid.clone(), wpa3_detailed_security),
+        );
+        assert_eq!(results, vec![expected_config_wpa3]);
     }
 
     #[fasync::run_singlethreaded(test)]
