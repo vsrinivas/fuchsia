@@ -62,14 +62,18 @@ async fn scoped_instances(root_component: &'static str) -> Result<(), Error> {
     // The realm component will connect to our injected capability once it's done with its work.
     // Wait for that to happen before matching on event expectations.
     info!("Waiting for test component to signal ready");
-    let _request_stream = receiver.next().await.context("failed to observe capability request")?;
+    let mut request_stream =
+        receiver.next().await.context("failed to observe capability request")?;
 
     info!("Waiting for scoped instances to be destroyed");
     let () = expectation.await?;
 
-    // TODO(https://fxbug.dev/73644): prove that dropping the OpaqueTest instance causes the
-    // intercepted request stream to close. That was removed from this file due to flakes. See bug
-    // for details.
+    drop(test);
+    // Prove connection to the component under test is severed after dropping everything.
+    match request_stream.next().await {
+        Some(r) => panic!("unexpected item from request stream: {:?}", r),
+        None => (),
+    }
 
     Ok(())
 }
