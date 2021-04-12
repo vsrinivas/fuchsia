@@ -8,10 +8,11 @@ use {
     component_events::{events::*, injectors::*, matcher::EventMatcher},
     fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
+    futures::lock::Mutex,
     futures::StreamExt,
     io_util::{self, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     lazy_static::lazy_static,
-    std::{path::PathBuf, sync::Arc, sync::Mutex},
+    std::{path::PathBuf, sync::Arc},
     test_utils_lib::opaque_test::*,
 };
 
@@ -85,7 +86,7 @@ async fn storage_from_collection() {
     // Create a mutex that is used to hold the response from the trigger
     // service until after the tests inspects the storage.
     let trigger_lock = Arc::new(Mutex::new(()));
-    let trigger_guard = trigger_lock.lock();
+    let trigger_guard = trigger_lock.lock().await;
 
     // The root component connects to the Trigger capability to create a
     // rendezvous so the test can inspect storage before the child is
@@ -151,7 +152,7 @@ impl ProtocolInjector for TriggerCapability {
         mut request_stream: ftest::TriggerRequestStream,
     ) -> Result<(), Error> {
         while let Some(Ok(ftest::TriggerRequest::Run { responder })) = request_stream.next().await {
-            let _guard = self.lock.lock();
+            let _guard = self.lock.lock().await;
             responder.send("")?;
         }
         Ok(())

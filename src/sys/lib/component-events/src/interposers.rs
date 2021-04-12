@@ -45,10 +45,8 @@ pub trait ProtocolInterposer: 'static + Send + Sync {
             .expect("Could not subscribe to CapabilityRouted event for interposition");
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
 
-        // Spawn a new thread to listen to CapabilityRoutedEvents.
-        // We use a new thread here because running this on the main thread may
-        // not work if a test writer needs to do blocking operations.
-        fasync::Task::blocking(
+        // Spawn a new task to listen to CapabilityRoutedEvents
+        fasync::Task::spawn(
             Abortable::new(
                 async move {
                     let mut event_stream = EventStream::new(

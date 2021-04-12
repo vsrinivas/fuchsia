@@ -42,11 +42,9 @@ pub trait CapabilityInjector: 'static + Send + Sync {
             .await
             .expect("Could not subscribe to CapabilityRouted event for injection");
 
-        // Spawn a new thread to listen to CapabilityRoutedEvents.
-        // We use a new thread here because running this on the main thread may
-        // not work if a test writer needs to do blocking operations.
+        // Spawn a new task to listen to CapabilityRoutedEvents
         let injector = self.clone();
-        fasync::Task::blocking(async move {
+        fasync::Task::spawn(async move {
             let mut event_stream = EventStream::new(
                 server_end.into_stream().expect("Could not create EventStream from ServerEnd"),
             );
