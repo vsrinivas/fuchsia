@@ -30,7 +30,6 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
     "ermine_session_shell_simple_browser_test.dart",
     "ermine_shell_shortcut_test.dart",
     "ermine_shell_test.dart",
-    "ermine_smoke_test.dart",
     "ermine_spinning_square_view_test.dart",
     "ermine_terminal_test.dart",
   ]
@@ -67,6 +66,35 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
   ]
 }
 
+dart_test("experiences_ermine_smoke_e2e_test") {
+  sources = [ "ermine_smoke_test.dart" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.input",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input3",
+    "//sdk/testing/sl4f/client",
+    "//sdk/testing/sl4f/flutter_driver_sl4f",
+    "//src/experiences/tests:ermine_driver",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/pub/image",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  environments = [
+    {
+      dimensions = {
+        device_type = "AEMU"
+      }
+    },
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+    },
+  ]
+}
+
 copy("runtime_deps") {
   _data_dir = "$target_gen_dir/runtime_deps"
 
@@ -83,6 +111,9 @@ group("test") {
   testonly = true
   if (is_host && is_linux) {
     # Chromedriver prebuilt is only available for linux-x64
-    deps = [ ":experiences_ermine_session_shell_e2e_test($host_toolchain)" ]
+    deps = [
+      ":experiences_ermine_session_shell_e2e_test($host_toolchain)",
+      ":experiences_ermine_smoke_e2e_test($host_toolchain)",
+    ]
   }
 }

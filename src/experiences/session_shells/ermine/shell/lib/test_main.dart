@@ -9,8 +9,10 @@ import 'main.dart' as entrypoint;
 
 Future<void> main() async {
   final handler = OptionalMethodChannel('flutter_driver/handler');
-  enableFlutterDriverExtension(handler: (String data) async {
-    return handler.invokeMethod(data);
-  });
+  enableFlutterDriverExtension(
+      enableTextEntryEmulation: false,
+      handler: (String data) async {
+        return handler.invokeMethod(data);
+      });
   return entrypoint.main();
 }

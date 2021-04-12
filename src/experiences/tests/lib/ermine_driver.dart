@@ -67,7 +67,8 @@ class ErmineDriver {
     await _connector.initialize();
 
     // Now connect to ermine.
-    _driver = await _connector.driverForIsolate('ermine');
+    _driver =
+        await _connector.driverForIsolate('ermine', printCommunication: true);
     if (_driver == null) {
       fail('unable to connect to ermine.');
     }

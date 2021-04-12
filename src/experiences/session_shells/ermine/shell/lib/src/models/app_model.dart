@@ -49,6 +49,8 @@ class AppModel {
 
   /// The [GlobalKey] associated with [Ask] widget.
   final GlobalKey<AskState> askKey = GlobalKey(debugLabel: 'ask');
+  final GlobalKey<AskState> overviewAskKey =
+      GlobalKey(debugLabel: 'overviewAsk');
 
   final String backgroundImageUrl = 'assets/images/fuchsia.png';
   final Color backgroundColor = Colors.grey[850];
@@ -227,6 +229,7 @@ class AppModel {
         'recents': onRecents,
         'fullscreen': onFullscreen,
         'cancel': onCancel,
+        'clear': onClear,
         'close': onClose,
         'closeAll': onCloseAll,
         'status': onStatus,
@@ -275,6 +278,12 @@ class AppModel {
       onCancel();
     }
     askVisibility.value = !askVisibility.value;
+  }
+
+  /// Clears the contents of the Ask bar.
+  void onClear() {
+    askKey.currentState?.model?.controller?.clear();
+    overviewAskKey.currentState?.model?.controller?.clear();
   }
 
   /// Toggles overview.

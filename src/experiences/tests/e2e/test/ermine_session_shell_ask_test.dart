@@ -26,18 +26,9 @@ void main() {
     sl4f?.close();
   });
 
-  test('use ask to resolve spinning_square_view using FlutterDriver', () async {
-    await ermine.gotoOverview();
-    await ermine.driver.enterText('spinning');
-    await ermine.driver.waitFor(find.text('spinning_square_view'));
-    final askResult =
-        await ermine.driver.getText(find.text('spinning_square_view'));
-    expect(askResult, 'spinning_square_view');
-  }, skip: true);
-
   test('use ask to launch terminal and verify focus', () async {
     await ermine.gotoOverview();
-    await ermine.driver.enterText('');
+    await ermine.driver.requestData('clear');
     final terminalResult = find.text('terminal');
     await ermine.driver.tap(terminalResult);
 
@@ -53,8 +44,4 @@ void main() {
     // Close the terminal view.
     await ermine.driver.requestData('close');
   });
-
-  // TODO(http://fxbug.dev/60790): Implement this when input tool is ready.
-  test('use ask to resolve spinning_square_view using input tool', () async {},
-      skip: true);
 }

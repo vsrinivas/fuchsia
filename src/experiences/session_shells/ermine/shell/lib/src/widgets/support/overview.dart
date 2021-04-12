@@ -88,6 +88,7 @@ class Overview extends StatelessWidget {
 
   @visibleForTesting
   Widget buildAsk(AppModel model) => Ask(
+        key: model.overviewAskKey,
         suggestionService: model.suggestions,
         onDismiss: () => model.overviewVisibility.value = false,
         unbounded: true,
