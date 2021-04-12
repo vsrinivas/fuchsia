@@ -109,6 +109,78 @@
         1,
         6
       ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/bredr:bound_failure_events",
+      "metric_id": 10,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        1,
+        1
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/bredr:bond_success_events",
+      "metric_id": 10,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        1,
+        0
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/bredr:connection_events",
+      "metric_id": 11,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        1,
+        0
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/bredr:disconnection_events",
+      "metric_id": 11,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        1,
+        1
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/le:bound_failure_events",
+      "metric_id": 10,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        0,
+        1
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/le:bond_success_events",
+      "metric_id": 10,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        0,
+        0
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/le:connection_events",
+      "metric_id": 11,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        0,
+        0
+      ]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/bt-host/adapter/peer_cache/metrics/le:disconnection_events",
+      "metric_id": 11,
+      "metric_type": "Occurrence",
+      "event_codes": [
+        0,
+        1
+      ]
     }
   ]
 }
