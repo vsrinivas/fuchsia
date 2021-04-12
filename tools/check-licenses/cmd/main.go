@@ -38,6 +38,7 @@ var (
 
 	logLevel          = flag.Int("log_level", 0, "Log level")
 	baseDir           = flag.String("base_dir", "", "Root location to begin directory traversal.")
+	outDir            = flag.String("out_dir", "", "Directory to write outputs to.")
 	outputLicenseFile = flag.Bool("output_license_file", true, "If true, outputs a license file with all the licenses for the project.")
 	target            = flag.String("target", "", "Analyze the dependency tree of a specific GN build target.")
 )
@@ -166,6 +167,13 @@ func mainImpl() error {
 			return fmt.Errorf("base directory path %q does not exist!", *baseDir)
 		}
 		config.BaseDir = *baseDir
+	}
+
+	if *outDir != "" {
+		if info, err := os.Stat(*outDir); os.IsNotExist(err) && info.IsDir() {
+			return fmt.Errorf("out directory path %q does not exist!", *baseDir)
+		}
+		config.OutDir = *outDir
 	}
 
 	if *target != "" {

@@ -49,6 +49,7 @@ type Config struct {
 	LogLevel    string `json:"logLevel"`
 	MaxReadSize int    `json:"maxReadSize"`
 	BaseDir     string `json:"baseDir"`
+	OutDir      string `json:"outDir"`
 	Target      string `json:"target"`
 }
 
@@ -79,6 +80,9 @@ func NewConfigJson(configJson string) (*Config, error) {
 	}
 	if c.BaseDir == "" {
 		c.BaseDir = "."
+	}
+	if c.OutDir == "" {
+		c.OutDir = "."
 	}
 
 	// Ensure we aren't skipping any directories in the CustomProjectLicenses map.
@@ -120,6 +124,9 @@ func (c *Config) Merge(other *Config) {
 	if c.BaseDir == "" {
 		c.BaseDir = other.BaseDir
 	}
+	if c.OutDir == "" {
+		c.OutDir = other.OutDir
+	}
 	if c.Target == "" {
 		c.Target = other.Target
 	}
@@ -149,6 +156,9 @@ func (c *Config) Merge(other *Config) {
 	}
 	if c.BaseDir == "" {
 		c.BaseDir = other.BaseDir
+	}
+	if c.OutDir == "" {
+		c.OutDir = other.OutDir
 	}
 	if c.Target == "" {
 		c.Target = other.Target

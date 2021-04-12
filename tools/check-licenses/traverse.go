@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime/trace"
 	"sort"
 	"strings"
@@ -120,7 +121,7 @@ func Run(ctx context.Context, config *Config) error {
 	if config.OutputLicenseFile {
 		for _, extension := range config.OutputFileExtensions {
 			path := config.OutputFilePrefix + "." + extension
-			if err := saveToOutputFile(path, licenses, config); err != nil {
+			if err := saveToOutputFile(filepath.Join(config.OutDir, path), licenses, config); err != nil {
 				return err
 			}
 		}

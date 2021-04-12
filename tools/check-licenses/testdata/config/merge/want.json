@@ -16,6 +16,7 @@
   "licensePatternDir": "tools/check-licenses/golden/patterns",
   "licenseAllowList": {},
   "baseDir": ".",
+  "outDir": ".",
   "target": "all",
   "logLevel": "verbose"
 }
