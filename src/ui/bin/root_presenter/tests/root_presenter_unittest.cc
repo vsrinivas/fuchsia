@@ -22,6 +22,7 @@
 #include "src/ui/bin/root_presenter/app.h"
 #include "src/ui/bin/root_presenter/presentation.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_injector_registry.h"
+#include "src/ui/bin/root_presenter/tests/fakes/fake_keyboard_focus_controller.h"
 
 namespace root_presenter {
 namespace {
@@ -45,16 +46,30 @@ class RootPresenterTest : public gtest::RealLoopFixture,
     real_component_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
     // Proxy real APIs through the fake component_context.
-    context_provider_.service_directory_provider()->AddService<fuchsia::ui::scenic::Scenic>(
-        [this](fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
-          real_component_context_->svc()->Connect(std::move(request));
-        });
+    // TODO(fxbug.dev/74262): The test should set up a test environment instead of
+    // injecting a real scenic in the sandbox.
+    ASSERT_EQ(
+        ZX_OK,
+        context_provider_.service_directory_provider()->AddService<fuchsia::ui::scenic::Scenic>(
+            [this](fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
+              real_component_context_->svc()->Connect(std::move(request));
+            }));
+    // Connect FocusChainListenerRegistry to the real Scenic injected in the test sandbox.
+    ASSERT_EQ(ZX_OK,
+              context_provider_.service_directory_provider()
+                  ->AddService<fuchsia::ui::focus::FocusChainListenerRegistry>(
+                      [this](fidl::InterfaceRequest<fuchsia::ui::focus::FocusChainListenerRegistry>
+                                 request) {
+                        real_component_context_->svc()->Connect(std::move(request));
+                      }));
 
     injector_registry_ = std::make_unique<testing::FakeInjectorRegistry>(context_provider_);
+    keyboard_focus_ctl_ = std::make_unique<testing::FakeKeyboardFocusController>(context_provider_);
 
     // Start RootPresenter with fake context.
     root_presenter_ = std::make_unique<App>(context_provider_.context(), dispatcher());
   }
+
   void TearDown() final { root_presenter_.reset(); }
 
   App* root_presenter() { return root_presenter_.get(); }
@@ -151,6 +166,7 @@ class RootPresenterTest : public gtest::RealLoopFixture,
   }
 
   std::unique_ptr<testing::FakeInjectorRegistry> injector_registry_;
+  std::unique_ptr<testing::FakeKeyboardFocusController> keyboard_focus_ctl_;
   fuchsia::ui::input::InputDeviceRegistryPtr input_device_registry_ptr_;
   sys::testing::ComponentContextProvider context_provider_;
 
@@ -561,10 +577,20 @@ TEST_F(RootPresenterTest, FocusOnStartup) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto [control_ref, view_ref] = scenic::ViewRefPair::New();
   const zx_koid_t child_view_koid = ExtractKoid(view_ref);
+
   fuchsia::ui::views::ViewRef clone;
   fidl::Clone(view_ref, &clone);
   root_presenter()->PresentOrReplaceView2(std::move(view_holder_token), std::move(clone), nullptr);
   RunLoopUntil([this]() { return root_presenter()->is_presentation_initialized(); });
+
+  zx_koid_t keyboard_focus_view_koid = ZX_KOID_INVALID;
+  bool keyboard_received_focus = false;
+  // Callback to verify that a focus change triggered a notification.
+  keyboard_focus_ctl_->SetOnNotify([&keyboard_focus_view_koid, &keyboard_received_focus](
+                                       const fuchsia::ui::views::ViewRef& view_ref) {
+    keyboard_focus_view_koid = ExtractKoid(view_ref);
+    keyboard_received_focus = true;
+  });
 
   // Connect to focus chain registry after Scenic has been set up.
   zx_koid_t focused_view_koid = ZX_KOID_INVALID;
@@ -583,9 +609,15 @@ TEST_F(RootPresenterTest, FocusOnStartup) {
   session.Present(0, [](auto) {});
 
   // Expect focus to change to the child view.
-  RunLoopUntil(
-      [&focused_view_koid, child_view_koid]() { return focused_view_koid == child_view_koid; });
+  RunLoopUntil([&focused_view_koid, &keyboard_received_focus, child_view_koid]() {
+    return focused_view_koid == child_view_koid && keyboard_received_focus == true;
+  });
   EXPECT_EQ(focused_view_koid, child_view_koid);
+
+  // Verifies that the keyboard focus listener got the appropriate view ref when
+  // the focus was updated.
+  EXPECT_EQ(focused_view_koid, keyboard_focus_view_koid);
+  EXPECT_NE(ZX_KOID_INVALID, keyboard_focus_view_koid);
 }
 
 // Tests that we can handle both an automatic focus request on startup and a simultaneous one

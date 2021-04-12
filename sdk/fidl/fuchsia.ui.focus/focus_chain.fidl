@@ -8,24 +8,38 @@ using fuchsia.ui.views;
 
 /// A FocusChain tracks the status of the View hierarchy as View focus changes.
 ///
-/// Description. The `focus_chain` is a vector of ViewRefs in order of
-/// dominance in the View hierarchy; each pair of elements represents a
-/// parent-child relationship.  The root View is always present and occupies
-/// slot 0.  The newly-focused View receives a fuchsia.ui.input.FocusEvent and
-/// occupies the final slot in the vector.  If a View gets destroyed, a
-/// FocusChain holder that listens will receive a `ZX_EVENTPAIR_PEER_CLOSED`
-/// signal on the corresponding ViewRef.
-///
-/// Invalidation. A FocusChain is invalid if one if its ViewRefs is invalid.
-///
 /// Reception. Only certain components may receive a FocusChain, as it
 /// captures global information about the scene graph.
 resource table FocusChain {
+    /// The `focus_chain` is reported in order of dominance in the View
+    /// hierarchy; each adjacent pair of elements represents a
+    /// parent-child relationship.
+    ///
+    /// The `focus_chain` MAY be unset when `FocusChain` message is received, if
+    /// the message is sent very early in the scene setup, before the first
+    /// view is available.
+    ///
+    /// When `focus_chain` is set, however, the root View is always present
+    /// and occupies slot 0 in the `focus_chain`.  The newly-focused View
+    /// receives a `fuchsia.ui.input.FocusEvent` and occupies the final slot
+    /// in the vector.
+    ///
+    /// If a View gets destroyed, a `FocusChain` holder that listens will
+    /// receive a `ZX_EVENTPAIR_PEER_CLOSED` signal on the corresponding
+    /// `ViewRef`.
+    ///
+    /// ## Invalidation.
+    ///
+    /// A FocusChain is invalid if any one if its ViewRefs is
+    /// invalid.
     1: vector<fuchsia.ui.views.ViewRef> focus_chain;
 };
 
 /// A FocusChainListener receives an updated FocusChain when focus changes.
 protocol FocusChainListener {
+    /// Sent when a focus change occurs.  Since `focus_chain` may contain an
+    /// empty update, every handler MUST respond to the message even
+    /// if its contents are not immediately useful.
     OnFocusChange(FocusChain focus_chain) -> ();
 };
 

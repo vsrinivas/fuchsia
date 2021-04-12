@@ -7,7 +7,16 @@ import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  public_deps = [ ":root_presenter_tests" ]
+  public_deps = [
+    ":focus_dispatcher_unittests",
+    ":root_presenter_tests",
+  ]
+}
+
+fuchsia_component("focus_dispatcher_unittests") {
+  testonly = true
+  deps = [ ":focus_dispatcher_unittests_bin" ]
+  manifest = "meta/focus_dispatcher_unittests.cmx"
 }
 
 fuchsia_component("root_presenter_apptests") {
@@ -25,6 +34,7 @@ fuchsia_test_package("root_presenter_tests") {
   test_components = [
     ":root_presenter_apptests",
     ":root_presenter_unittests",
+    ":focus_dispatcher_unittests",
   ]
   test_specs = {
     log_settings = {
@@ -94,6 +104,27 @@ executable("root_presenter_apptests_bin") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/bin/root_presenter:lib",
+    "//src/ui/bin/root_presenter/tests/fakes",
+  ]
+}
+
+executable("focus_dispatcher_unittests_bin") {
+  testonly = true
+  output_name = "focus_dispatcher_unittests"
+
+  sources = [ "focus_dispatcher_unittest.cc" ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//sdk/fidl/fuchsia.ui.policy.accessibility",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/bin/root_presenter:lib",

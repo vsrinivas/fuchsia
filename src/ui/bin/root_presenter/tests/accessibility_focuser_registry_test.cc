@@ -10,6 +10,7 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "src/ui/bin/root_presenter/app.h"
+#include "src/ui/bin/root_presenter/tests/fakes/fake_keyboard_focus_controller.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_scenic.h"
 
 namespace root_presenter {
@@ -36,6 +37,8 @@ class AccessibilityFocuserRegistryTest : public sys::testing::TestWithEnvironmen
     ASSERT_EQ(ZX_OK, status);
 
     services->AddService(fake_scenic_.GetHandler(), fuchsia::ui::scenic::Scenic::Name_);
+    services->AddService(fake_keyboard_focus_controller_.GetHandler(),
+                         fuchsia::ui::keyboard::focus::Controller::Name_);
 
     // Create the synthetic environment.
     environment_ =
@@ -57,6 +60,7 @@ class AccessibilityFocuserRegistryTest : public sys::testing::TestWithEnvironmen
 
   FakeScenic fake_scenic_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
+  FakeKeyboardFocusController fake_keyboard_focus_controller_;
 };
 
 TEST_F(AccessibilityFocuserRegistryTest, AccessibilityFocusRequestIsDeferredUntilScenicConnects) {

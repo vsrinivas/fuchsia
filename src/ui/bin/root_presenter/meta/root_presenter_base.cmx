@@ -16,6 +16,8 @@
             "fuchsia.media.sounds.Player",
             "fuchsia.recovery.FactoryReset",
             "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.focus.FocusChainListenerRegistry",
+            "fuchsia.ui.keyboard.focus.Controller",
             "fuchsia.ui.pointerinjector.Registry",
             "fuchsia.ui.policy.accessibility.PointerEventRegistry",
             "fuchsia.ui.scenic.Scenic"

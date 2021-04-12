@@ -37,7 +37,8 @@ ColorTransformHandler::ColorTransformHandler(sys::ComponentContext* component_co
   FX_DCHECK(safe_presenter_);
   component_context->svc()->Connect(color_transform_manager_.NewRequest());
   color_transform_manager_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Unable to connect to ColorTransformManager" << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Unable to connect to ColorTransformManager: "
+                   << zx_status_get_string(status);
   });
   fidl::InterfaceHandle<fuchsia::accessibility::ColorTransformHandler> handle;
   color_transform_handler_bindings_.Bind(handle.NewRequest());

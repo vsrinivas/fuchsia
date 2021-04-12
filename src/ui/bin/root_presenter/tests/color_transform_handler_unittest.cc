@@ -17,6 +17,7 @@
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/bin/root_presenter/safe_presenter.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_color_transform_manager.h"
+#include "src/ui/bin/root_presenter/tests/fakes/fake_keyboard_focus_controller.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_scenic.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_session.h"
 
@@ -44,6 +45,7 @@ class ColorTransformHandlerTest : public gtest::TestLoopFixture {
     context_provider_.service_directory_provider()->AddService(fake_scenic_.GetHandler());
     context_provider_.service_directory_provider()->AddService(
         fake_color_transform_manager_.GetHandler());
+    context_provider_.service_directory_provider()->AddService(fake_keyboard_ctl_.GetHandler());
   }
 
   void SetUp() final {
@@ -70,6 +72,7 @@ class ColorTransformHandlerTest : public gtest::TestLoopFixture {
   FakeSession* fake_session_ = nullptr;  // Owned by fake_scenic_.
   FakeScenic fake_scenic_;
   FakeColorTransformManager fake_color_transform_manager_;
+  FakeKeyboardFocusController fake_keyboard_ctl_;
   std::unique_ptr<ColorTransformHandler> color_transform_handler_;
   std::unique_ptr<SafePresenter> safe_presenter_;
 };

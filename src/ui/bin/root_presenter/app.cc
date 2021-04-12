@@ -5,6 +5,7 @@
 #include "src/ui/bin/root_presenter/app.h"
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/keyboard/focus/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
@@ -218,6 +219,8 @@ void App::InitializeServices() {
       Reset();
     });
 
+    focus_dispatcher_ = std::make_unique<FocusDispatcher>(component_context_->svc());
+
     view_focuser_.set_error_handler([](zx_status_t error) {
       FX_LOGS(ERROR) << "ViewFocuser died with error " << zx_status_get_string(error);
     });
@@ -326,6 +329,7 @@ void App::RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallbac
     focuser_binding_.Close(ZX_ERR_BAD_STATE);
     return;
   }
+
   view_focuser_->RequestFocus(std::move(view_ref), std::move(callback));
 }
 

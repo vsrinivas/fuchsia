@@ -30,6 +30,7 @@
 #include "src/ui/bin/root_presenter/color_transform_handler.h"
 #include "src/ui/bin/root_presenter/constants.h"
 #include "src/ui/bin/root_presenter/factory_reset_manager.h"
+#include "src/ui/bin/root_presenter/focus_dispatcher.h"
 #include "src/ui/bin/root_presenter/inspect.h"
 #include "src/ui/bin/root_presenter/media_buttons_handler.h"
 #include "src/ui/bin/root_presenter/presentation.h"
@@ -182,6 +183,9 @@ class App : public fuchsia::ui::policy::Presenter,
   // Tracks if scenic initialization is complete.
   bool is_scenic_initialized_ = false;
   std::unique_ptr<ColorTransformHandler> color_transform_handler_;
+
+  // Used to dispatch the focus change messages to interested downstream clients.
+  std::unique_ptr<FocusDispatcher> focus_dispatcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
