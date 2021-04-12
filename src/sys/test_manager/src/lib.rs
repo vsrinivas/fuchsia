@@ -336,9 +336,8 @@ async fn get_realm(
     test_url: &str,
 ) -> Result<Realm, RealmBuilderError> {
     let mut builder = RealmBuilder::new().await?;
-    let test_wrapper_test_root = format!("test_wrapper/{}", TEST_ROOT_REALM_NAME);
     builder
-        .add_eager_component(test_wrapper_test_root.as_ref(), ComponentSource::url(test_url))
+        .add_eager_component(WRAPPER_ROOT_REALM_PATH, ComponentSource::url(test_url))
         .await?
         .add_component(
             "mocks-server",
