@@ -101,7 +101,7 @@ it’s fast.
 
 You’ll need to update that dependency’s vendored repository in //third_party.
 See the
-[Rust documentation](/doc/development/languages/rust/third_party#steps_to_update_a_third_party_crate.md)
+[Rust documentation](/docs/development/languages/rust/third_party.md#steps-to-update-a-third_party-crate)
 for examples.
 
 ##### Resolve a package and run a contained component
