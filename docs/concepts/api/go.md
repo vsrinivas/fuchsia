@@ -270,8 +270,8 @@ appear as the first field(s).
 
 ### Pointers vs Values {#pointers-vs-values}
 
-For method receivers, read [Pointers vs. Values][Effective Go
-pointers_vs_values] and [Receiver Type][Go Code Review Comments receiver-type].
+For method receivers, read [Pointers vs. Values][Effective Go pointers_vs_values]
+and [Receiver Type][Go Code Review Comments receiver-type].
 tl;dr is to keep things consistent, but when in doubt, use a pointer receiver.
 For a given type, always be consistent about how it is passed around, i.e.
 always pass by value, always pass by reference, and this flows from whether
