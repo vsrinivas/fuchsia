@@ -262,11 +262,14 @@ struct BaseSocket {
     bool do_optlen_check = true;
     // The following code block is to just keep up with Linux parity.
     switch (level) {
-      case IPPROTO_IP:
+      case SOL_IP:
         switch (optname) {
           case IP_TOS:
+          case IP_RECVTOS:
+          case IP_MULTICAST_TTL:
+          case IP_MULTICAST_LOOP:
             // On Linux, when the optlen is < sizeof(int), only a single byte is
-            // copied. As the TOS size is just a byte value, we are not losing
+            // copied. As these options' value is just a single byte, we are not losing
             // any information here.
             //
             // Note that this probably won't work right on big-endian systems.
@@ -279,8 +282,11 @@ struct BaseSocket {
             break;
         }
         break;
-      case IPPROTO_IPV6:
+      case SOL_IPV6:
         switch (optname) {
+          case IPV6_MULTICAST_HOPS:
+          case IPV6_MULTICAST_LOOP:
+          case IPV6_RECVTCLASS:
           case IPV6_TCLASS:
             do_optlen_check = false;
             break;
@@ -288,7 +294,7 @@ struct BaseSocket {
             break;
         }
         break;
-      case IPPROTO_TCP:
+      case SOL_TCP:
         switch (optname) {
           case TCP_CONGESTION:
           case TCP_INFO:

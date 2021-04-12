@@ -738,11 +738,36 @@ TEST_P(SocketOptsTest, SetMulticastLoopChar) {
     want = kSockOptOffChar;
   }
 
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, want);
+  {
+    char get = -1;
+    socklen_t get_len = sizeof(get);
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+    EXPECT_EQ(get_len, sizeof(get));
+    EXPECT_EQ(get, want);
+  }
+
+  {
+    int16_t get = -1;
+    fprintf(stderr, "%s\n", std::bitset<16>(get).to_string().c_str());
+    socklen_t get_len = sizeof(get);
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+    if (IsIPv6()) {
+      EXPECT_EQ(get_len, sizeof(get));
+      EXPECT_EQ(get, want);
+    } else {
+      // This option truncates size < 4 to 1 and only writes the low byte.
+      EXPECT_EQ(get_len, sizeof(char));
+      EXPECT_EQ(get, static_cast<int16_t>(uint16_t(-1) << 8) | want);
+    }
+  }
+
+  {
+    int get = -1;
+    socklen_t get_len = sizeof(get);
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+    EXPECT_EQ(get_len, sizeof(get));
+    EXPECT_EQ(get, want);
+  }
 
   if (IsIPv6()) {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)), -1);
@@ -752,6 +777,8 @@ TEST_P(SocketOptsTest, SetMulticastLoopChar) {
         << strerror(errno);
   }
 
+  char get = -1;
+  socklen_t get_len = sizeof(get);
   EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
   EXPECT_EQ(get_len, sizeof(get));
   EXPECT_EQ(get, kSockOptOn);
@@ -898,11 +925,35 @@ TEST_P(SocketOptsTest, SetUDPMulticastTTLChar) {
     want = kArbitrary;
   }
 
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, want);
+  {
+    char get = -1;
+    socklen_t get_len = sizeof(get);
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+    EXPECT_EQ(get_len, sizeof(get));
+    EXPECT_EQ(get, want);
+  }
+
+  {
+    int16_t get = -1;
+    socklen_t get_len = sizeof(get);
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+    if (IsIPv6()) {
+      EXPECT_EQ(get_len, sizeof(get));
+      EXPECT_EQ(get, want);
+    } else {
+      // This option truncates size < 4 to 1 and only writes the low byte.
+      EXPECT_EQ(get_len, sizeof(char));
+      EXPECT_EQ(get, static_cast<int16_t>(uint16_t(-1) << 8) | want);
+    }
+  }
+
+  {
+    int get = -1;
+    socklen_t get_len = sizeof(get);
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+    EXPECT_EQ(get_len, sizeof(get));
+    EXPECT_EQ(get, want);
+  }
 
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
@@ -1091,14 +1142,41 @@ TEST_P(SocketOptsTest, SetReceiveTOSChar) {
         << strerror(errno);
   }
 
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
+  int want;
   if (IsIPv6()) {
-    EXPECT_EQ(get, kSockOptOff);
+    want = kSockOptOff;
   } else {
-    EXPECT_EQ(get, kSockOptOn);
+    want = kSockOptOn;
+  }
+
+  {
+    char get = -1;
+    socklen_t get_len = sizeof(get);
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+    EXPECT_EQ(get_len, sizeof(get));
+    EXPECT_EQ(get, want);
+  }
+
+  {
+    int16_t get = -1;
+    socklen_t get_len = sizeof(get);
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+    if (IsIPv6()) {
+      EXPECT_EQ(get_len, sizeof(get));
+      EXPECT_EQ(get, want);
+    } else {
+      // This option truncates size < 4 to 1 and only writes the low byte.
+      EXPECT_EQ(get_len, sizeof(char));
+      EXPECT_EQ(get, static_cast<int16_t>(uint16_t(-1) << 8) | want);
+    }
+  }
+
+  {
+    int get = -1;
+    socklen_t get_len = sizeof(get);
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+    EXPECT_EQ(get_len, sizeof(get));
+    EXPECT_EQ(get, want);
   }
 
   if (IsIPv6()) {
@@ -1110,6 +1188,8 @@ TEST_P(SocketOptsTest, SetReceiveTOSChar) {
         << strerror(errno);
   }
 
+  int get = -1;
+  socklen_t get_len = sizeof(get);
   EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
   EXPECT_EQ(get_len, sizeof(get));
   EXPECT_EQ(get, kSockOptOff);
