@@ -78,30 +78,24 @@ void Magnifier2::HandlePersistentDrag(const Delta& delta) {
   const float actual_delta_scale = scale / old_scale;
 
   auto& translation = state_.translation;
-  // For persistent magnification, we want the UX to be slightly different from
-  // temporary magnification. The goal here is to ensure that the magnification
-  // focus remains under the centroid of the user's fingers as the user
-  // pans/zooms. To accomplish this goal, we use the sum of two transforms:
-  //
-  // (1) A translation of translation + (translation - centroid_vector) * [(scale / old_scale) - 1]
-  // keeps the centroid of the drag in the same place in the new scaled space as it was in
-  // the old scaled space, which anchors zoom about the gesture centroid (e.g. zoom in on
-  // the point between your fingers when you pinch). Note that the transform in the temporary
-  // magnification space is just a special case of this transform where
-  // current_focus_vector = (0, 0) and old_scale = 1. Note also that
-  // centroid_vector is the OLD gesture centroid (pre-delta).
-  //
-  // (2) A translation of delta.translation will then move the centroid of the gesture to be under
-  // the current centroid. Note that this delta is in NDC, but current_transform is
-  // post-scale. Adding NDC directly to the scaled-space translation implicitly captures the
-  // scale of the pan (i.e. the same gesture should cause the focus to change by a smaller amount
-  // when the magnification scale is larger). Furthermore, since the translation in the transform
-  // specifies the direction to move the scene under the camera (which is opposite the direction
-  // of panning -- e.g., move the scene left to pan right), the translation should go in the same
-  // direction as the gesture.
+  // For persistent magnification, we want the UX to be a little bit different from temporary
+  // magnification. In persistent magnification, the user can pan and zoom using a two-finger drag
+  // gesture. As the distance between the user’s fingers change, the zoom should change
+  // proportionally to the change in distance (so moving the fingers twice as far apart will cause
+  // the scale to increase by a factor of 2). So, given the two fingers’ former and current
+  // locations, we can compute new_scale = old_scale * (new_distance_between_fingers /
+  // old_distance_between_fingers). To achieve panning, our goal is to keep the same point in
+  // unscaled space under the centroid of the drag at all times. To do so, we need to consider both
+  // the new and previous locations of the centroid (midpoint) between the two fingers. To determine
+  // the point in unscaled space that is under the previous centroid of the two fingers, we can
+  // simply apply the inverse of the current magnification transform to the previous centroid
+  // coordinates. Then, we can compute the new magnification transform by determining what
+  // translation will place the unscaled point at the new centroid location (after we’ve applied the
+  // new scale factor).
   auto current_centroid =
       ToVec2(state_.gesture_context.CurrentCentroid(false /* use_local_coordinates */));
-  translation += delta.translation + (translation - current_centroid) * (actual_delta_scale - 1);
+  translation =
+      current_centroid + delta.translation + actual_delta_scale * (translation - current_centroid);
 
   // Ensure that translation does not fall outside of sensical values.
   ClampTranslation();
