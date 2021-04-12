@@ -57,7 +57,7 @@ func TestOOMSignal(t *testing.T) {
 func TestOOM(t *testing.T) {
 	exDir := execDir(t)
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
-		Emulator: emulator.Femu,
+		Emulator: emulator.Qemu,
 	})
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
@@ -101,7 +101,7 @@ func TestOOM(t *testing.T) {
 func TestOOMHard(t *testing.T) {
 	exDir := execDir(t)
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
-		Emulator: emulator.Femu,
+		Emulator: emulator.Qemu,
 	})
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
