@@ -16,7 +16,6 @@ benchmark_file = "benchmark.dart"
 benchmark_path = "$benchmark_dir/test/$benchmark_file"
 
 gidl("benchmark_suite") {
-  testonly = true
   type = "benchmark"
   language = "dart"
   inputs = benchmark_suite_gidl_files

@@ -35,7 +35,6 @@ fuzzer_package("fidl-fuzzers") {
 conformance_test_source = "$target_gen_dir/corpus.distribution_entries"
 
 gidl("generate_conformance_test") {
-  testonly = true
   type = "conformance"
   language = "fuzzer_corpus"
   inputs = conformance_suite_gidl_files

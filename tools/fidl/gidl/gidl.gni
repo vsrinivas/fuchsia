@@ -27,7 +27,9 @@ import("//build/fidl/toolchain.gni")
 #      Path of the output file to generate (in the case of 1 output). In the case of multiple
 #      outputs, this is the name of an output file used to generate all output file names.
 #      e.g. a.cc, a2.cc, a3.cc...
-
+#
+#    visibility
+#      Standard GN meaning.
 template("gidl") {
   assert(defined(invoker.language))
 
@@ -56,6 +58,7 @@ template("gidl") {
               get_label_info(fidl_target, "name") + ".fidl.json"
 
   compiled_action(target_name) {
+    testonly = true
     tool = "//tools/fidl/gidl:gidl"
     args = output_args + [
              "--type",
@@ -68,7 +71,7 @@ template("gidl") {
     inputs = invoker.inputs
     outputs = [ invoker.output ]
     deps = [ fidl_target ]
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker, [ "visibility" ])
   }
 }
 
@@ -96,12 +99,13 @@ template("_gidl_cc_source_set") {
     inputs = invoker.inputs
     forward_variables_from(invoker,
                            [
-                             "testonly",
                              "extra_args",
+                             "visibility",
                            ])
   }
 
   source_set(target_name) {
+    testonly = true
     sources = [ output_filename ]
     deps = [ ":${gidl_target}" ]
     public_deps = [ fidl_bindings ]

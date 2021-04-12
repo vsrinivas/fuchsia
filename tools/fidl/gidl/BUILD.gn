@@ -138,7 +138,6 @@ gidl_hlcpp_conformance("gidl_hlcpp_goldens") {
 
 go_golden_generated_source = "$target_gen_dir/gidl_conformance_goldens.go"
 gidl("gidl_go_goldens") {
-  testonly = true
   type = "conformance"
   language = "go"
   inputs = conformance_suite_golden_gidl_files

@@ -13,7 +13,6 @@ import("//tools/fidl/gidl/gidl.gni")
 gidl_go_out_dir = "$target_gen_dir/benchmark_suite"
 
 gidl("benchmark_suite_go") {
-  testonly = true
   type = "benchmark"
   language = "go"
   inputs = benchmark_suite_gidl_files

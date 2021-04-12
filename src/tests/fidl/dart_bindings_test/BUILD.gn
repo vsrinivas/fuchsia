@@ -38,7 +38,6 @@ conformance_file = "conformance.dart"
 conformance_path = "$conformance_dir/test/$conformance_file"
 
 gidl("conformance_suite") {
-  testonly = true
   type = "conformance"
   language = "dart"
   inputs = conformance_suite_gidl_files

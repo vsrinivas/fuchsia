@@ -18,7 +18,6 @@ template("rust_gidl_benchmark_suite") {
   output_file = "$gidl_rust_out_file_prefix/$target_name.rs"
 
   gidl("${target_name}__gidl") {
-    testonly = true
     type = "benchmark"
     language = "rust"
     inputs = invoker.gidl

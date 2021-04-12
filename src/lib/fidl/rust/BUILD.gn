@@ -15,7 +15,6 @@ gidl("generate_conformance_test") {
   inputs = conformance_suite_gidl_files
   fidl = conformance_suite_fidl_target
   output = conformance_test_source
-  testonly = true
 }
 
 rustc_test("fidl_rust_conformance_tests_bin") {
