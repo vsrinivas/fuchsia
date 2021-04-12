@@ -554,33 +554,6 @@ rustc_test("metrics") {
   sources = [ "src/metrics.rs" ]
 }
 
-empty_repo_deps = []
-foreach(path,
-        [
-          "keys/root.json",
-          "keys/snapshot.json",
-          "keys/targets.json",
-          "keys/timestamp.json",
-          "repository/1.root.json",
-          "repository/1.snapshot.json",
-          "repository/1.targets.json",
-          "repository/root.json",
-          "repository/snapshot.json",
-          "repository/targets.json",
-          "repository/timestamp.json",
-        ]) {
-  resource_target = string_replace(path, "/", "_")
-  resource(resource_target) {
-    sources = [ "template/$path" ]
-    outputs = [ "empty-repo/$path" ]
-  }
-  empty_repo_deps += [ ":$resource_target" ]
-}
-
-group("empty-repo") {
-  deps = empty_repo_deps
-}
-
 test_package("pkg-resolver-integration-tests") {
   deps = [
     ":base_pinning",
@@ -728,37 +701,21 @@ group("tests") {
   ]
 }
 
-resource("empty-repo-resource-keys") {
+resource_tree("empty-repo") {
   testonly = true
-  visibility = [ ":empty-repo-resource" ]
+  sources_root = "template"
   sources = [
-    "template/keys/root.json",
-    "template/keys/snapshot.json",
-    "template/keys/targets.json",
-    "template/keys/timestamp.json",
+    "keys/root.json",
+    "keys/snapshot.json",
+    "keys/targets.json",
+    "keys/timestamp.json",
+    "repository/1.root.json",
+    "repository/1.snapshot.json",
+    "repository/1.targets.json",
+    "repository/root.json",
+    "repository/snapshot.json",
+    "repository/targets.json",
+    "repository/timestamp.json",
   ]
-  outputs = [ "empty-repo/keys/{{source_file_part}}" ]
-}
-
-resource("empty-repo-resource-repository") {
-  testonly = true
-  visibility = [ ":empty-repo-resource" ]
-  sources = [
-    "template/repository/1.root.json",
-    "template/repository/1.snapshot.json",
-    "template/repository/1.targets.json",
-    "template/repository/root.json",
-    "template/repository/snapshot.json",
-    "template/repository/targets.json",
-    "template/repository/timestamp.json",
-  ]
-  outputs = [ "empty-repo/repository/{{source_file_part}}" ]
-}
-
-group("empty-repo-resource") {
-  testonly = true
-  public_deps = [
-    ":empty-repo-resource-keys",
-    ":empty-repo-resource-repository",
-  ]
+  dest_dir = "empty-repo"
 }

@@ -150,7 +150,7 @@ fuchsia_test_package("unit-tests-package") {
     "//src/connectivity/network/dns:component-v2",
     "//src/connectivity/network/netstack:component-v2",
     "//src/sys/pkg/bin/pm:pm_bin",
-    "//src/sys/pkg/tests/pkg-resolver:empty-repo-resource",
+    "//src/sys/pkg/tests/pkg-resolver:empty-repo",
   ]
   test_components = [ ":unit-tests-root" ]
 }
