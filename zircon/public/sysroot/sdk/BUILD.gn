@@ -115,7 +115,6 @@ generated_file("sysroot-meta-json") {
 
 action("sysroot-meta") {
   visibility = [ ":*" ]
-  hermetic_deps = false
   script = "//build/zircon/sdk_build_id.py"
   sources = [ sysroot_meta_json_file ]
   inputs = [
@@ -126,10 +125,12 @@ action("sysroot-meta") {
     "$target_out_dir/sysroot.meta.out.json",
     "$target_out_dir/sysroot.debug.manifest",
   ]
+  depfile = "$target_out_dir/sysroot-meta.d"
   args = [
     "--input=" + rebase_path(sources[0], root_build_dir),
     "--output=" + rebase_path(outputs[0], root_build_dir),
     "--manifest=" + rebase_path(outputs[1], root_build_dir),
+    "--depfile=" + rebase_path(depfile, root_build_dir),
     "--location=/versions/$target_cpu/debug_libs",
   ]
   deps = [ ":sysroot-meta-json" ] + sysroot_sdk_deps

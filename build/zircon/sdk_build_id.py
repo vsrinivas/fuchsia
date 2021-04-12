@@ -28,16 +28,34 @@ def rewrite(debug, manifest):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input', help='Input JSON file', required=True)
-    parser.add_argument('--output', help='Output JSON file', required=True)
     parser.add_argument(
-        '--manifest', help='Output manifest file', required=True)
+        '--input',
+        type=argparse.FileType('r'),
+        help='Input JSON file',
+        required=True,
+    )
+    parser.add_argument(
+        '--output',
+        type=argparse.FileType('w'),
+        help='Output JSON file',
+        required=True,
+    )
+    parser.add_argument(
+        '--manifest',
+        type=argparse.FileType('w'),
+        help='Output manifest file',
+        required=True,
+    )
+    parser.add_argument(
+        '--depfile',
+        type=argparse.FileType('w'),
+        required=True,
+    )
     parser.add_argument('--location', help='JSON pointer', required=True)
     args = parser.parse_args()
 
     # Read in the original JSON tree.
-    with open(args.input) as f:
-        data = json.load(f)
+    data = json.load(args.input)
 
     # Poor man's JSON pointer: /foo/bar/baz looks up in dicts.
     ptr = args.location.split('/')
@@ -56,13 +74,21 @@ def main():
 
     # Write out the manifest collected while rewriting original debug files
     # names to .build-id/... names for publication.
-    with open(args.manifest, 'w') as f:
-        for dest, source in manifest.items():
-            f.write('%s=%s\n' % (dest, source))
+    #
+    # Original debug files are read during the rewrite above, so include them in
+    # a depfile.
+    mappings = []
+    deps = []
+    for dest, source in manifest.items():
+        mappings.append(f'{dest}={source}')
+        deps.append(source)
+    args.manifest.write('\n'.join(mappings))
+    args.depfile.write(
+        '{} {}: {}\n'.format(
+            args.manifest.name, args.output.name, ' '.join(deps)))
 
     # Write out the modified JSON tree.
-    with open(args.output, 'w') as f:
-        json.dump(data, f, indent=2, sort_keys=True)
+    json.dump(data, args.output, indent=2, sort_keys=True)
 
     return 0
 
