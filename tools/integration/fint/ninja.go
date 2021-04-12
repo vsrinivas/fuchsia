@@ -35,7 +35,7 @@ var (
 	// build failure. When present, it will be the last line of stdout.
 	failureEndRegex = regexp.MustCompile(`^\s*ninja: build stopped:.*`)
 
-	// noWorkBytes in the Ninja output indicates a null build (i.e. all the
+	// noWorkString in the Ninja output indicates a null build (i.e. all the
 	// requested targets have already been built).
 	noWorkString = "\nninja: no work to do."
 
@@ -74,11 +74,11 @@ func (r ninjaRunner) run(ctx context.Context, args []string, stdout, stderr io.W
 	return r.runner.Run(ctx, cmd, stdout, stderr)
 }
 
-// ninjaParser is a container for tracking the stdout of a ninja subprocess and
+// ninjaParser is a container for tracking the stdio of a ninja subprocess and
 // aggregating the logs from any failed targets.
 type ninjaParser struct {
-	// ninjaStdout emits the stdout of a Ninja command.
-	ninjaStdout io.Reader
+	// ninjaStdio emits the combined stdout and stderr of a Ninja command.
+	ninjaStdio io.Reader
 
 	// Lines of output produced by failed Ninja steps, with all successful steps
 	// filtered out to make the logs easy to read.
@@ -93,7 +93,7 @@ type ninjaParser struct {
 }
 
 func (p *ninjaParser) parse(ctx context.Context) error {
-	scanner := bufio.NewScanner(p.ninjaStdout)
+	scanner := bufio.NewScanner(p.ninjaStdio)
 	for scanner.Scan() {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -146,9 +146,9 @@ func runNinja(
 	r ninjaRunner,
 	targets []string,
 ) (string, error) {
-	stdoutReader, stdoutWriter := io.Pipe()
-	defer stdoutReader.Close()
-	parser := &ninjaParser{ninjaStdout: stdoutReader}
+	stdioReader, stdioWriter := io.Pipe()
+	defer stdioReader.Close()
+	parser := &ninjaParser{ninjaStdio: stdioReader}
 
 	parserErrs := make(chan error)
 	go func() {
@@ -159,8 +159,20 @@ func runNinja(
 	func() {
 		// Close the pipe as soon as the subprocess completes so that the pipe
 		// reader will return an EOF.
-		defer stdoutWriter.Close()
-		ninjaErr = r.run(ctx, targets, io.MultiWriter(os.Stdout, stdoutWriter), os.Stderr)
+		defer stdioWriter.Close()
+		ninjaErr = r.run(
+			ctx,
+			targets,
+			// Ninja writes "ninja: ..." logs to stderr, but step logs like
+			// "[1/12345] ..." to stdout. The parser should consider both of
+			// these kinds of logs. In theory stdout and stderr should be
+			// handled by separate parsers, but it's simpler to dump them to the
+			// same stream and have the parser read from that stream. The writer
+			// returned by io.Pipe() is thread-safe, so there's no need to worry
+			// about interleaving characters of stdout and stderr.
+			io.MultiWriter(os.Stdout, stdioWriter),
+			io.MultiWriter(os.Stderr, stdioWriter),
+		)
 	}()
 	// Wait for parsing to complete.
 	if parserErr := <-parserErrs; parserErr != nil {
