@@ -275,7 +275,7 @@ func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (sock
 	return socket.BaseSocketConnectResultWithResponse(socket.BaseSocketConnectResponse{}), nil
 }
 
-func (ep *endpoint) Disconnect(_ fidl.Context) (socket.BaseSocketDisconnectResult, error) {
+func (ep *endpoint) Disconnect(fidl.Context) (socket.BaseSocketDisconnectResult, error) {
 	if err := ep.ep.Disconnect(); err != nil {
 		return socket.BaseSocketDisconnectResultWithErr(tcpipErrorToCode(err)), nil
 	}
