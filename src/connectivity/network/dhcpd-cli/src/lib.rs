@@ -30,24 +30,25 @@ async fn test_cli_with_config(
     let mut dhcpd_builder =
         AppBuilder::new("fuchsia-pkg://fuchsia.com/dhcpd-cli-tests#meta/dhcpd.cmx");
 
-    fs.add_proxy_service_to::<fidl_fuchsia_stash::SecureStoreMarker, _>(
-        stash_builder
-            .directory_request()
-            .expect("failed to get test stash directory request")
-            .clone(),
-    )
-    .add_proxy_service_to::<fidl_fuchsia_posix_socket::ProviderMarker, _>(
-        netstack_builder
-            .directory_request()
-            .expect("failed to get test netstack directory request")
-            .clone(),
-    )
-    .add_proxy_service_to::<fidl_fuchsia_net_dhcp::Server_Marker, _>(
-        dhcpd_builder
-            .directory_request()
-            .expect("failed to get test dhcpd directory request")
-            .clone(),
-    );
+    let _: &mut ServiceFs<_> = fs
+        .add_proxy_service_to::<fidl_fuchsia_stash::SecureStoreMarker, _>(
+            stash_builder
+                .directory_request()
+                .expect("failed to get test stash directory request")
+                .clone(),
+        )
+        .add_proxy_service_to::<fidl_fuchsia_posix_socket::ProviderMarker, _>(
+            netstack_builder
+                .directory_request()
+                .expect("failed to get test netstack directory request")
+                .clone(),
+        )
+        .add_proxy_service_to::<fidl_fuchsia_net_dhcp::Server_Marker, _>(
+            dhcpd_builder
+                .directory_request()
+                .expect("failed to get test dhcpd directory request")
+                .clone(),
+        );
 
     let env =
         fs.create_salted_nested_environment("test_cli").expect("failed to create environment");
