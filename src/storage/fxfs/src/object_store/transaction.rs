@@ -172,8 +172,8 @@ pub enum LockKey {
     /// Used to lock changes to a particular object (e.g. adding a child to a directory).
     Object { store_object_id: u64, object_id: u64 },
 
-    /// Used to lock changes to the volume directory.
-    VolumeDirectory,
+    /// Used to lock changes to the root volume (e.g. adding or removing a volume).
+    RootVolume,
 }
 
 impl LockKey {

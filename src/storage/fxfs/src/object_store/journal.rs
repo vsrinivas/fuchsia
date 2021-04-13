@@ -336,13 +336,13 @@ impl Journal {
             .await;
     }
 
-    pub fn volume_info_object_id(&self) -> u64 {
-        self.inner.lock().unwrap().super_block.volume_info_object_id
+    pub fn root_volume_info_object_id(&self) -> u64 {
+        self.inner.lock().unwrap().super_block.root_volume_info_object_id
     }
 
-    pub fn set_volume_info_object_id(&self, volume_info_object_id: u64) {
+    pub fn set_root_volume_info_object_id(&self, object_id: u64) {
         let mut inner = self.inner.lock().unwrap();
-        inner.super_block.volume_info_object_id = volume_info_object_id;
+        inner.super_block.root_volume_info_object_id = object_id;
         inner.needs_super_block = true;
     }
 
@@ -666,13 +666,13 @@ mod tests {
 
         {
             let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
-            fs.set_volume_info_object_id(567);
+            fs.set_root_volume_info_object_id(567);
             fs.sync(SyncOptions::default()).await.expect("sync failed");
         }
 
         {
             let fs = FxFilesystem::open(device).await.expect("open failed");
-            assert_eq!(fs.volume_info_object_id(), 567);
+            assert_eq!(fs.root_volume_info_object_id(), 567);
         }
     }
 }

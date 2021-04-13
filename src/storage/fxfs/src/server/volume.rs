@@ -5,7 +5,10 @@
 use {
     crate::{
         errors::FxfsError,
-        object_store::{directory::ObjectDescriptor, HandleOptions, ObjectStore},
+        object_store::{
+            directory::{Directory, ObjectDescriptor},
+            HandleOptions, ObjectStore,
+        },
         server::{directory::FxDirectory, file::FxFile, node::FxNode},
         volume::Volume,
     },
@@ -55,6 +58,7 @@ pub struct FxVolume {
     // we then go update in place.
     nodes: futures::lock::Mutex<NodeCache>,
     store: Arc<ObjectStore>,
+    _graveyard: Directory,
 }
 
 impl FxVolume {
@@ -123,11 +127,12 @@ pub struct FxVolumeAndRoot {
 
 impl FxVolumeAndRoot {
     pub async fn new(volume: Volume) -> Self {
-        let (store, root_directory) = volume.into();
+        let (store, root_directory, graveyard) = volume.into();
         let root_object_id = root_directory.object_id();
         let volume = Arc::new(FxVolume {
             nodes: futures::lock::Mutex::new(NodeCache(HashMap::new())),
             store,
+            _graveyard: graveyard,
         });
         let root: Arc<dyn FxNode> = Arc::new(FxDirectory::new(volume.clone(), root_directory));
         volume.add_node(root_object_id, Arc::downgrade(&root)).await;

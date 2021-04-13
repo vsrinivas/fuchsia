@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        object_store::FxFilesystem, server::volume::FxVolumeAndRoot, volume::volume_directory,
-    },
+    crate::{object_store::FxFilesystem, server::volume::FxVolumeAndRoot, volume::root_volume},
     anyhow::{Context, Error},
     fidl_fuchsia_fs::{AdminRequest, AdminRequestStream, QueryRequest, QueryRequestStream},
     fidl_fuchsia_io::{self as fio, DirectoryMarker},
@@ -46,7 +44,7 @@ pub struct FxfsServer {
 impl FxfsServer {
     /// Creates a new FxfsServer by opening or creating |volume_name| in |fs|.
     pub async fn new(fs: Arc<FxFilesystem>, volume_name: &str) -> Result<Self, Error> {
-        let volume_dir = volume_directory(&fs).await?;
+        let volume_dir = root_volume(&fs).await?;
         let volume = FxVolumeAndRoot::new(
             volume_dir
                 .open_or_create_volume(volume_name)

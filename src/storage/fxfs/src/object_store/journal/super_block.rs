@@ -69,7 +69,7 @@ pub(super) struct SuperBlock {
     pub journal_file_offsets: HashMap<u64, u64>,
 
     // The object ID in the root object store that contains VolumeInfo.
-    pub volume_info_object_id: u64,
+    pub root_volume_info_object_id: u64,
 }
 
 // TODO(csuter): Add support for multiple super-blocks.

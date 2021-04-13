@@ -296,12 +296,12 @@ impl FxFilesystem {
         self.journal.sync(options).await
     }
 
-    pub fn volume_info_object_id(&self) -> u64 {
-        self.journal.volume_info_object_id()
+    pub fn root_volume_info_object_id(&self) -> u64 {
+        self.journal.root_volume_info_object_id()
     }
 
-    pub fn set_volume_info_object_id(&self, object_id: u64) {
-        self.journal.set_volume_info_object_id(object_id);
+    pub fn set_root_volume_info_object_id(&self, object_id: u64) {
+        self.journal.set_root_volume_info_object_id(object_id);
     }
 
     pub async fn close(&self) -> Result<(), Error> {
