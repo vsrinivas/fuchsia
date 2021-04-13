@@ -94,7 +94,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl_incoming_msg_t* msg) {
       if (likely(context != nullptr)) {
         list_delete(static_cast<list_node_t*>(context));
       } else {
-        fprintf(stderr, "%s: Received response for unknown txid %u.\n", __func__, hdr->txid);
+        // Received unknown txid.
         return UnbindInfo{UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_FOUND};
       }
     }
