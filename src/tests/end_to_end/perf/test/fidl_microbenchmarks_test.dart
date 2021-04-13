@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:io' show File;
+
 import 'package:test/test.dart';
 
 import 'helpers.dart';
@@ -30,29 +32,24 @@ void runFidlBenchmark(String benchmarkBinary, String args) {
 // Runs a benchmark that uses the C++ perftest runner.
 // It is believed that benchmarks converge to different means in different
 // process runs (and reboots). Since each of these benchmarks are currently
-// fast to run (a few secs), run the binary several times for more stability
-// in perfcompare results.
-// However, this is currently not possible with catapult_converter, so only
-// report the first result to catapult.
+// fast to run (a few secs), run the binary several times for more stability.
 void runPerftestFidlBenchmark(String benchmarkBinary) {
   final resultsFile = tmpPerfResultsJson(benchmarkBinary);
   _tests.add(() {
     test(benchmarkBinary, () async {
       final helper = await PerfTestHelper.make();
-      final result = await helper.sl4fDriver.ssh
-          .run('/bin/$benchmarkBinary -p --quiet --out $resultsFile');
-      expect(result.exitCode, equals(0));
-      // This makes the results visible to both perfcompare and Catapult.
-      await helper.processResults(resultsFile);
 
-      for (var process = 0; process < perftestProcessRuns - 1; ++process) {
+      final List<File> resultsFiles = [];
+      for (var process = 0; process < perftestProcessRuns; ++process) {
         final result = await helper.sl4fDriver.ssh
             .run('/bin/$benchmarkBinary -p --quiet --out $resultsFile');
         expect(result.exitCode, equals(0));
-        // This makes the results visible to perfcompare but not Catapult.
-        await helper.storage.dumpFile(resultsFile,
-            'results_fidl_microbenchmarks_process$process', 'fuchsiaperf.json');
+        resultsFiles.add(await helper.storage.dumpFile(
+            resultsFile,
+            'results_fidl_microbenchmarks_process$process',
+            'fuchsiaperf_full.json'));
       }
+      await helper.processResultsSummarized(resultsFiles);
     }, timeout: Timeout.none);
   });
 }
