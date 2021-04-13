@@ -53,6 +53,16 @@ impl HfIndicators {
     /// Defined in HFP v1.8 Section 4.35.
     const MAX_BATTERY_LEVEL: u8 = 100;
 
+    #[cfg(test)]
+    pub fn enhanced_safety_enabled(&self) -> bool {
+        self.enhanced_safety.enabled
+    }
+
+    #[cfg(test)]
+    pub fn battery_level_enabled(&self) -> bool {
+        self.battery_level.enabled
+    }
+
     /// Enables the supported HF indicators based on the provided AT `indicators`.
     pub fn enable_indicators(&mut self, indicators: Vec<at::BluetoothHFIndicator>) {
         for ind in indicators {

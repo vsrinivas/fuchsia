@@ -15,7 +15,7 @@ use crate::{
     },
 };
 
-use at_commands as at;
+use {at_commands as at, num_traits::FromPrimitive};
 
 /// This mode's behavior is to forward unsolicited result codes directly per
 /// 3GPP TS 27.007 version 6.8.0, Section 8.10.
@@ -333,6 +333,10 @@ impl SlcProcedureState for ThreeWaySupportReceived {
 
         match update {
             at::Command::Bind { indicators } => {
+                let indicators = indicators
+                    .into_iter()
+                    .filter_map(at_commands::BluetoothHFIndicator::from_i64)
+                    .collect();
                 state.hf_indicators.enable_indicators(indicators);
                 Box::new(HfSupportedIndicatorsReceived)
             }
@@ -648,7 +652,7 @@ mod tests {
         // Optional - HF sends its supported HF indicators.
         let inds =
             vec![at::BluetoothHFIndicator::EnhancedSafety, at::BluetoothHFIndicator::BatteryLevel];
-        let update9 = at::Command::Bind { indicators: inds.clone() };
+        let update9 = at::Command::Bind { indicators: inds.iter().map(|i| *i as i64).collect() };
         let expected_messages9 = vec![at::Response::Ok];
         assert_matches!(slc_proc.hf_update(update9, &mut state),
             ProcedureRequest::SendMessages(m) if m == expected_messages9
@@ -734,5 +738,66 @@ mod tests {
         state.state.hf_features.set(HfFeatures::THREE_WAY_CALLING, true);
         state.state.hf_features.set(HfFeatures::HF_INDICATORS, true);
         assert!(state.is_terminal());
+    }
+
+    /// Assert that the current procedure state is not an error.
+    /// This is done by checking that the produced .request() value is not an error.
+    #[track_caller]
+    fn assert_not_error(state: &dyn SlcProcedureState) {
+        if let ProcedureRequest::Error(e) = state.request() {
+            panic!("Error state: {}", e);
+        }
+    }
+
+    #[test]
+    fn procedure_ignores_invalid_bind_values() {
+        // All bind values are invalid.
+        let mut state = SlcState::default();
+        state.hf_features = HfFeatures::all();
+        state.ag_features = AgFeatures::all();
+
+        assert!(!state.hf_indicators.enhanced_safety_enabled());
+        assert!(!state.hf_indicators.battery_level_enabled());
+
+        let tws_recv = ThreeWaySupportReceived { state: state.clone() };
+        let command = at::Command::Bind { indicators: vec![0, 99] };
+        let next = tws_recv.hf_update(command, &mut state);
+
+        // Next state is not an error
+        assert_not_error(&*next);
+
+        // No indicator states have changed.
+        assert!(!state.hf_indicators.enhanced_safety_enabled());
+        assert!(!state.hf_indicators.battery_level_enabled());
+
+        // First bind value is invalid
+        let mut state = SlcState::default();
+        state.hf_features = HfFeatures::all();
+        state.ag_features = AgFeatures::all();
+        let tws_recv = ThreeWaySupportReceived { state: state.clone() };
+        let command = at::Command::Bind { indicators: vec![0, 1] };
+        let next = tws_recv.hf_update(command, &mut state);
+
+        // Next state is not an error
+        assert_not_error(&*next);
+
+        // Only valid indicator, enhanced safety, has changed.
+        assert!(state.hf_indicators.enhanced_safety_enabled());
+        assert!(!state.hf_indicators.battery_level_enabled());
+
+        // Second bind value is invalid
+        let mut state = SlcState::default();
+        state.hf_features = HfFeatures::all();
+        state.ag_features = AgFeatures::all();
+        let tws_recv = ThreeWaySupportReceived { state: state.clone() };
+        let command = at::Command::Bind { indicators: vec![2, 99] };
+        let next = tws_recv.hf_update(command, &mut state);
+
+        // Next state is not an error
+        assert_not_error(&*next);
+
+        // Only valid indicator, battery level, has changed.
+        assert!(!state.hf_indicators.enhanced_safety_enabled());
+        assert!(state.hf_indicators.battery_level_enabled());
     }
 }

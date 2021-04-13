@@ -356,7 +356,7 @@ async fn test_hfp_full_slc_init_procedure() {
     .await;
 
     let peer_supported_indicators_cmd =
-        at::Command::Bind { indicators: vec![at::BluetoothHFIndicator::BatteryLevel] };
+        at::Command::Bind { indicators: vec![at::BluetoothHFIndicator::BatteryLevel as i64] };
     send_command_and_expect_response(
         &mut remote,
         peer_supported_indicators_cmd,

@@ -61,7 +61,7 @@ enum BluetoothHFIndicator {
 
 # Bluetooth HF Indicators Feature list command
 # HFP 1.8 4.35.1
-command { AT+BIND=indicators: List<BluetoothHFIndicator> }
+command { AT+BIND=indicators: List<Integer> }
 
 # Bluetooth HF Indicators Feature read command
 # HFP 1.8 4.35.1
