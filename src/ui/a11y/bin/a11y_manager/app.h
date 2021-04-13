@@ -12,7 +12,7 @@
 #include <fuchsia/settings/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
-#include <fuchsia/ui/input/accessibility/cpp/fidl.h>
+#include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/views/accessibility/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -156,6 +156,8 @@ class App {
   // End of list of data fields that must be set to consider this object initialized.
   bool is_initialized_ = false;
 
+  sys::ComponentContext* context_;
+
   std::unique_ptr<a11y::ScreenReader> screen_reader_;
   a11y::ViewManager* view_manager_;
   a11y::TtsManager* tts_manager_;
@@ -181,9 +183,9 @@ class App {
   fidl::BindingSet<fuchsia::accessibility::gesture::ListenerRegistry>
       gesture_listener_registry_bindings_;
 
-  // Interface between a11y manager and Root presenter to register a
+  // Interface between a11y manager and Scenic to register a
   // accessibility pointer event listener.
-  fuchsia::ui::input::accessibility::PointerEventRegistryPtr pointer_event_registry_;
+  fuchsia::ui::policy::accessibility::PointerEventRegistryPtr pointer_event_registry_;
 
   // Interface between a11y manager and Root presenter to register a
   // Focuser.

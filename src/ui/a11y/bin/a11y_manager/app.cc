@@ -20,7 +20,8 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
          a11y::BootInfoManager* boot_info_manager,
          a11y::ScreenReaderContextFactory* screen_reader_context_factory,
          inspect::Node inspect_node)
-    : view_manager_(view_manager),
+    : context_(context),
+      view_manager_(view_manager),
       tts_manager_(tts_manager),
       color_transform_manager_(color_transform_manager),
       gesture_listener_registry_(gesture_listener_registry),
@@ -46,14 +47,6 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
   context->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(&magnifier_));
   context->outgoing()->AddPublicService(
       gesture_listener_registry_bindings_.GetHandler(gesture_listener_registry_));
-
-  // Connect to Root presenter service.
-  pointer_event_registry_ =
-      context->svc()->Connect<fuchsia::ui::input::accessibility::PointerEventRegistry>();
-  pointer_event_registry_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Error from fuchsia::ui::input::accessibility::PointerEventRegistry"
-                   << zx_status_get_string(status);
-  });
 
   // Inits Focus Chain focuser support / listening Focus Chain updates.
   focuser_registry_ = context->svc()->Connect<fuchsia::ui::views::accessibility::FocuserRegistry>();
@@ -183,8 +176,22 @@ void App::UpdateGestureManagerState() {
     // Shut down and clean up if no users
     gesture_manager_.reset();
   } else {
+    // Register with the pointer event registry on first use, rather than in the
+    // constructor. The service is usually not ready when the constructor is
+    // called, so we should wait until we need the service to register.
+    if (!pointer_event_registry_) {
+      pointer_event_registry_ =
+          context_->svc()->Connect<fuchsia::ui::policy::accessibility::PointerEventRegistry>();
+      pointer_event_registry_.set_error_handler([](zx_status_t status) {
+        FX_LOGS(ERROR) << "Error from fuchsia::ui::policy::accessibility::PointerEventRegistry"
+                       << zx_status_get_string(status);
+      });
+    }
+
     gesture_manager_ = std::make_unique<a11y::GestureManager>();
-    pointer_event_registry_->Register(gesture_manager_->binding().NewBinding());
+    pointer_event_registry_->Register(gesture_manager_->binding().NewBinding(), [](bool status) {
+      FX_LOGS(INFO) << "Registration completed for pointer event registry with status: " << status;
+    });
 
     // The ordering of these recognizers is significant, as it signifies priority.
     if (gesture_state_.magnifier_gestures) {

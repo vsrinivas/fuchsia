@@ -95,10 +95,7 @@ executable("root_presenter_apptests_bin") {
   testonly = true
   output_name = "root_presenter_apptests"
 
-  sources = [
-    "accessibility_focuser_registry_test.cc",
-    "accessibility_pointer_event_registry_test.cc",
-  ]
+  sources = [ "accessibility_focuser_registry_test.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",

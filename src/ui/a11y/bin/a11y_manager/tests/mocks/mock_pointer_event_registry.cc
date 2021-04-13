@@ -15,8 +15,10 @@ MockPointerEventRegistry::MockPointerEventRegistry(
 
 void MockPointerEventRegistry::Register(
     fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
-        pointer_event_listener) {
+        pointer_event_listener,
+    RegisterCallback callback) {
   listener_.Bind(std::move(pointer_event_listener));
+  callback(true);
 }
 
 }  // namespace accessibility_test

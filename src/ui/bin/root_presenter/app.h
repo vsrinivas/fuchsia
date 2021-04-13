@@ -7,9 +7,7 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/input/virtualkeyboard/cpp/fidl.h>
-#include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/accessibility/cpp/fidl.h>
@@ -50,7 +48,6 @@ namespace root_presenter {
 class App : public fuchsia::ui::policy::Presenter,
             public fuchsia::ui::policy::DeviceListenerRegistry,
             public fuchsia::ui::input::InputDeviceRegistry,
-            public fuchsia::ui::input::accessibility::PointerEventRegistry,
             public fuchsia::ui::views::accessibility::FocuserRegistry,
             public fuchsia::ui::views::Focuser,
             public ui_input::InputDeviceImpl::Listener {
@@ -62,10 +59,6 @@ class App : public fuchsia::ui::policy::Presenter,
   void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) override;
   void OnReport(ui_input::InputDeviceImpl* input_device,
                 fuchsia::ui::input::InputReport report) override;
-
-  // |fuchsia.ui.input.accessibility.PointerEventRegistry|
-  void Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
-                    pointer_event_listener) override;
 
   // |fuchsia.ui.views.accessibility.FocuserRegistry|
   void RegisterFocuser(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) override;
@@ -122,8 +115,6 @@ class App : public fuchsia::ui::policy::Presenter,
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
   fidl::BindingSet<fuchsia::ui::policy::DeviceListenerRegistry> device_listener_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;
-  fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventRegistry>
-      a11y_pointer_event_bindings_;
   fidl::BindingSet<fuchsia::ui::views::accessibility::FocuserRegistry>
       a11y_focuser_registry_bindings_;
   ui_input::InputReader input_reader_;
@@ -132,9 +123,6 @@ class App : public fuchsia::ui::policy::Presenter,
   fuchsia::ui::scenic::ScenicPtr scenic_;
   std::unique_ptr<scenic::Session> session_;
 
-  // This is a privileged interface between Root Presenter and Scenic. It forwards the requests
-  // incoming from accessibility services to start listening for pointer events.
-  fuchsia::ui::policy::accessibility::PointerEventRegistryPtr pointer_event_registry_;
   // This is a privileged interface between Root Presenter and Scenic. It forwards the Focuser
   // requests incoming from accessibility services to Scenic. This Focuser is implicitly associated
   // with the root view, which gives it access to change the Focus Chain to whatever view that is
@@ -146,10 +134,6 @@ class App : public fuchsia::ui::policy::Presenter,
   // If accessibility requests to register a Focuser and Scenic hasn't started yet, the binding of
   // |focuser_binding_| is deferred until |view_focuser_| is initialized.
   fit::function<void()> deferred_a11y_focuser_binding_;
-
-  // If accessibility requests to register a PointerEventRegistry and Scenic hasn't started yet, the
-  // registration is deferred until GetDisplayOwnershipEventCallback is called.
-  fit::function<void()> deferred_a11y_pointer_event_registry_ = nullptr;
 
   // This is a privileged interface between Root Presenter and Accessibility. It allows Root
   // Presenter to register presentations with Accessibility for magnification.
