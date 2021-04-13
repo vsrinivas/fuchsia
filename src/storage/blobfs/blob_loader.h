@@ -32,7 +32,12 @@ namespace blobfs {
 // contents as needed.
 class BlobLoader {
  public:
-  struct LoadResult {
+  struct PagedLoadResult {
+    pager::UserPagerInfo pager_info;
+    std::unique_ptr<BlobLayout> layout;
+    fzl::OwnedVmoMapper merkle;
+  };
+  struct UnpagedLoadResult {
     zx::vmo data_vmo;
     fzl::VmoMapper data_mapper;
 
@@ -62,16 +67,11 @@ class BlobLoader {
   //  - The stored merkle tree is well-formed.
   //  - The blob's merkle root in |inode| matches the root of the merkle tree stored on-disk.
   //  - The blob's contents match the merkle tree.
-  zx::status<LoadResult> LoadBlob(uint32_t node_index,
-                                  const BlobCorruptionNotifier* corruption_notifier);
+  zx::status<UnpagedLoadResult> LoadBlob(uint32_t node_index,
+                                         const BlobCorruptionNotifier* corruption_notifier);
 
   // Loads the merkle tree for the blob referenced |inode|, and prepare a pager-backed VMO for
   // data.
-  //
-  // |page_watcher_out| will be a PageWatcher that is backing |data_out|.
-  // |data_out| will be a pager-backed VMO with no resident pages, padded up to a block size.
-  // |merkle_out| will be a VMO containing the merkle tree of the blob. For small blobs, there
-  // may be no merkle tree, in which case no VMO is returned.
   //
   // This method verifies the following correctness properties:
   //  - The stored merkle tree is well-formed.
@@ -79,10 +79,8 @@ class BlobLoader {
   //
   // This method does *NOT* immediately verify the integrity of the blob's data, this will be
   // lazily verified by the pager as chunks of the blob are loaded.
-  using CreateDataVmoCallback = std::function<zx::status<zx::vmo>(
-      BlobLayout::ByteCountType aligned_size, pager::UserPagerInfo info)>;
-  zx::status<LoadResult> LoadBlobPaged(uint32_t node_index, CreateDataVmoCallback create_data,
-                                       const BlobCorruptionNotifier* corruption_notifier);
+  zx::status<PagedLoadResult> LoadBlobPaged(uint32_t node_index,
+                                            const BlobCorruptionNotifier* corruption_notifier);
 
  private:
   BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,

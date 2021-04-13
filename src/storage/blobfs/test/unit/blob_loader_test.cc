@@ -91,6 +91,9 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
   }
 
   // Remounts the filesystem, which ensures writes are flushed and caches are wiped.
+  //
+  // Any Blob references that the test holds will need to be released before this function is
+  // called or the BlobCache destructor will assert that there are live blobs.
   zx_status_t Remount() {
     auto block_device = Blobfs::Destroy(std::move(fs_));
     fs_.reset();
@@ -148,6 +151,25 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
   }
 
   uint32_t LookupInode(const BlobInfo& info) { return LookupBlob(info)->Ino(); }
+
+  zx_status_t LoadBlobData(Blob* blob, std::vector<uint8_t>* data) {
+    data->clear();
+
+    fs::VnodeAttributes attrs;
+    if (zx_status_t status = blob->GetAttributes(&attrs); status != ZX_OK)
+      return status;
+
+    // Always read, even for 0-length blobs, to make sure we test the read path in this case.
+    data->resize(attrs.content_size + 1);
+    size_t actual = 0xdedbeef;  // Make sure this gets written to.
+    if (zx_status_t status = blob->Read(&(*data)[0], data->size(), 0, &actual); status != ZX_OK)
+      return status;
+
+    EXPECT_EQ(attrs.content_size, actual);
+    data->resize(actual);
+
+    return ZX_OK;
+  }
 
   std::vector<uint8_t> LoadPagedBlobData(Blob* blob) {
     zx::vmo vmo;
@@ -214,30 +236,6 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
 // A separate parameterized test fixture that will only be run with compression algorithms that
 // support paging.
 using BlobLoaderPagedTest = BlobLoaderTest;
-
-// Implementation of the "create VMO callback" for the LoadBlobPaged call. Since our tests don't
-// actually need a real paged VMO, we can just create a regular one of the requested size.
-zx::status<zx::vmo> CreateDataVmo(BlobLayout::ByteCountType aligned_size, pager::UserPagerInfo) {
-  zx::vmo vmo;
-  if (zx_status_t status = zx::vmo::create(aligned_size, 0, &vmo); status != ZX_OK)
-    return zx::error(status);
-  return zx::ok(std::move(vmo));
-};
-
-TEST_P(BlobLoaderTest, NullBlob) {
-  size_t blob_len = 0;
-  std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
-  ASSERT_EQ(Remount(), ZX_OK);
-
-  auto result = loader().LoadBlob(LookupInode(*info), nullptr);
-  ASSERT_TRUE(result.is_ok());
-
-  EXPECT_FALSE(result->data_vmo.is_valid());
-  EXPECT_EQ(result->data_mapper.size(), 0ul);
-
-  EXPECT_FALSE(result->merkle.vmo().is_valid());
-  EXPECT_EQ(result->merkle.size(), 0ul);
-}
 
 TEST_P(BlobLoaderTest, SmallBlob) {
   size_t blob_len = 1024;
@@ -357,22 +355,23 @@ TEST_P(BlobLoaderTest, MediumBlobWithRoomForMerkleTree) {
 }
 
 TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
-  size_t blob_len = 0;
-  std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
-  uint32_t inode_index = LookupInode(*info);
+  std::unique_ptr<BlobInfo> info = AddBlob(0);
 
-  // Verify the null blob can be read back.
-  auto result = loader().LoadBlob(inode_index, nullptr);
-  ASSERT_TRUE(result.is_ok());
+  // The added empty blob should be valid.
+  auto blob = LookupBlob(*info);
+  ASSERT_EQ(ZX_OK, blob->Verify());
+
+  std::vector<uint8_t> data;
+  ASSERT_EQ(ZX_OK, LoadBlobData(blob.get(), &data));
 
   uint8_t corrupt_merkle_root[digest::kSha256Length] = "-corrupt-null-blob-merkle-root-";
   {
     // Corrupt the null blob's merkle root.
     // |inode| holds a pointer into |fs_| and needs to be destroyed before remounting.
-    auto inode = fs_->GetNode(inode_index);
+    auto inode = fs_->GetNode(blob->Ino());
     memcpy(inode->merkle_root_hash, corrupt_merkle_root, sizeof(corrupt_merkle_root));
     BlobTransaction transaction;
-    uint64_t block = (inode_index * kBlobfsInodeSize) / kBlobfsBlockSize;
+    uint64_t block = (blob->Ino() * kBlobfsInodeSize) / kBlobfsBlockSize;
     transaction.AddOperation({.vmo = zx::unowned_vmo(fs_->GetAllocator()->GetNodeMapVmo().get()),
                               .op = {
                                   .type = storage::OperationType::kWrite,
@@ -384,18 +383,17 @@ TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
   }
 
   // Remount the filesystem so the node cache will pickup the new name for the blob.
+  blob.reset();  // Required for Remount() to succeed.
   ASSERT_EQ(Remount(), ZX_OK);
 
   // Verify the empty blob can be found by the corrupt name.
   BlobInfo corrupt_info;
   Digest corrupt_digest(corrupt_merkle_root);
-  snprintf(corrupt_info.path, sizeof(info->path), "%s", corrupt_digest.ToString().c_str());
-  EXPECT_EQ(LookupInode(corrupt_info), inode_index);
+  strncpy(corrupt_info.path, corrupt_digest.ToString().c_str(), sizeof(info->path));
 
-  // Verify the null blob with a corrupted Merkle root fails to load.
-  auto failed_result = loader().LoadBlob(inode_index, nullptr);
-  ASSERT_TRUE(failed_result.is_error());
-  EXPECT_EQ(failed_result.error_value(), ZX_ERR_IO_DATA_INTEGRITY);
+  // Loading the data should report corruption.
+  auto corrupt_blob = LookupBlob(corrupt_info);
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, LoadBlobData(corrupt_blob.get(), &data));
 }
 
 TEST_P(BlobLoaderTest, LoadBlobWithAnInvalidNodeIndexIsAnError) {
@@ -407,7 +405,7 @@ TEST_P(BlobLoaderTest, LoadBlobWithAnInvalidNodeIndexIsAnError) {
 
 TEST_P(BlobLoaderPagedTest, LoadBlobPagedWithAnInvalidNodeIndexIsAnError) {
   uint32_t invalid_node_index = kMaxNodeId - 1;
-  auto result = loader().LoadBlobPaged(invalid_node_index, &CreateDataVmo, nullptr);
+  auto result = loader().LoadBlobPaged(invalid_node_index, nullptr);
   ASSERT_TRUE(result.is_error());
   EXPECT_EQ(result.error_value(), ZX_ERR_INVALID_ARGS);
 }
@@ -424,7 +422,7 @@ TEST_P(BlobLoaderTest, LoadBlobWithACorruptNextNodeIndexIsAnError) {
   inode->header.next_node = invalid_node_index;
   inode->extent_count = 2;
 
-  auto result = loader().LoadBlobPaged(node_index, &CreateDataVmo, nullptr);
+  auto result = loader().LoadBlobPaged(node_index, nullptr);
   ASSERT_TRUE(result.is_error());
   EXPECT_EQ(result.error_value(), ZX_ERR_IO_DATA_INTEGRITY);
 }

@@ -84,9 +84,9 @@ zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
                            std::move(decompressor_client)));
 }
 
-zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlob(
+zx::status<BlobLoader::UnpagedLoadResult> BlobLoader::LoadBlob(
     uint32_t node_index, const BlobCorruptionNotifier* corruption_notifier) {
-  LoadResult result;
+  UnpagedLoadResult result;
 
   ZX_DEBUG_ASSERT(read_mapper_.vmo().is_valid());
   auto inode = node_finder_->GetNode(node_index);
@@ -94,13 +94,15 @@ zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlob(
     return inode.take_error();
   }
 
-  // LoadBlob should only be called for Inodes. If this doesn't hold, one of two things happened:
+  // LoadBlob should only be called for nonempty Inodes. If this doesn't hold, one of two things
+  // happened:
   //   - Programmer error
   //   - Corruption of a blob's Inode
   // In either case it is preferable to ASSERT than to return an error here, since the first case
   // should happen only during development and in the second case there may be more corruption and
   // we want to unmount the filesystem before any more damage is done.
   ZX_ASSERT(inode->header.IsInode() && inode->header.IsAllocated());
+  ZX_ASSERT(inode->blob_size > 0);
 
   TRACE_DURATION("blobfs", "BlobLoader::LoadBlob", "blob_size", inode->blob_size);
 
@@ -109,15 +111,6 @@ zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlob(
   if (blob_layout.is_error()) {
     FX_LOGS(ERROR) << "Failed to create blob layout: " << blob_layout.status_string();
     return blob_layout.take_error();
-  }
-  if (inode->blob_size == 0) {
-    // No data to load for the null blob.
-    if (zx_status_t status =
-            VerifyNullBlob(digest::Digest(inode->merkle_root_hash), corruption_notifier);
-        status != ZX_OK) {
-      return zx::error(status);
-    }
-    return zx::ok(std::move(result));
   }
 
   std::unique_ptr<BlobVerifier> verifier;
@@ -154,10 +147,9 @@ zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlob(
   return zx::ok(std::move(result));
 }
 
-zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlobPaged(
-    uint32_t node_index, CreateDataVmoCallback create_data,
-    const BlobCorruptionNotifier* corruption_notifier) {
-  LoadResult result;
+zx::status<BlobLoader::PagedLoadResult> BlobLoader::LoadBlobPaged(
+    uint32_t node_index, const BlobCorruptionNotifier* corruption_notifier) {
+  PagedLoadResult result;
 
   ZX_DEBUG_ASSERT(read_mapper_.vmo().is_valid());
   auto inode = node_finder_->GetNode(node_index);
@@ -165,62 +157,43 @@ zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlobPaged(
     return inode.take_error();
   }
 
-  // LoadBlobPaged should only be called for Inodes. If this doesn't hold, one of two things
-  // happened:
+  // LoadBlobPaged should only be called for nonempty Inodes. If this doesn't hold, one of two
+  // things happened:
   //   - Programmer error
   //   - Corruption of a blob's Inode
   // In either case it is preferable to ASSERT than to return an error here, since the first case
   // should happen only during development and in the second case there may be more corruption and
   // we want to unmount the filesystem before any more damage is done.
   ZX_ASSERT(inode->header.IsInode() && inode->header.IsAllocated());
+  ZX_ASSERT(inode->blob_size > 0);
 
   TRACE_DURATION("blobfs", "BlobLoader::LoadBlobPaged", "blob_size", inode->blob_size);
 
-  auto blob_layout = BlobLayout::CreateFromInode(GetBlobLayoutFormat(txn_manager_->Info()),
-                                                 *inode.value(), GetBlockSize());
-  if (blob_layout.is_error()) {
+  // Create and save the layout.
+  auto blob_layout_or = BlobLayout::CreateFromInode(GetBlobLayoutFormat(txn_manager_->Info()),
+                                                    *inode.value(), GetBlockSize());
+  if (blob_layout_or.is_error()) {
     FX_LOGS(ERROR) << "Failed to create blob layout: "
-                   << zx_status_get_string(blob_layout.error_value());
-    return blob_layout.take_error();
+                   << zx_status_get_string(blob_layout_or.error_value());
+    return blob_layout_or.take_error();
   }
-  if (inode->blob_size == 0) {
-    // No data to load for the null blob.
-    if (zx_status_t status =
-            VerifyNullBlob(digest::Digest(inode->merkle_root_hash), corruption_notifier);
-        status != ZX_OK) {
-      return zx::error(status);
-    }
-    return zx::ok(std::move(result));
-  }
+  result.layout = std::move(blob_layout_or.value());
+  result.pager_info.identifier = node_index;
+  result.pager_info.data_start_bytes =
+      static_cast<uint64_t>(result.layout->DataBlockOffset()) * GetBlockSize();
+  result.pager_info.data_length_bytes = inode->blob_size;
 
-  std::unique_ptr<BlobVerifier> verifier;
-  if (zx_status_t status = InitMerkleVerifier(node_index, *inode.value(), *blob_layout.value(),
-                                              corruption_notifier, &result.merkle, &verifier);
+  if (zx_status_t status =
+          InitMerkleVerifier(node_index, *inode.value(), *result.layout, corruption_notifier,
+                             &result.merkle, &result.pager_info.verifier);
       status != ZX_OK) {
     return zx::error(status);
   }
 
-  std::unique_ptr<SeekableDecompressor> decompressor;
-  if (zx_status_t status = InitForDecompression(node_index, *inode.value(), *blob_layout.value(),
-                                                *verifier, &decompressor);
+  if (zx_status_t status =
+          InitForDecompression(node_index, *inode.value(), *result.layout,
+                               *result.pager_info.verifier, &result.pager_info.decompressor);
       status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  pager::UserPagerInfo userpager_info;
-  userpager_info.identifier = node_index;
-  userpager_info.data_start_bytes = uint64_t{blob_layout->DataBlockOffset()} * GetBlockSize();
-  userpager_info.data_length_bytes = inode->blob_size;
-  userpager_info.verifier = std::move(verifier);
-  userpager_info.decompressor = std::move(decompressor);
-
-  auto data_vmo_or = create_data(blob_layout->FileBlockAlignedSize(), std::move(userpager_info));
-  if (data_vmo_or.is_error())
-    return data_vmo_or.take_error();
-  result.data_vmo = std::move(data_vmo_or.value());
-
-  if (zx_status_t status = result.data_mapper.Map(std::move(result.data_vmo)); status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create mapping for data vmo: " << zx_status_get_string(status);
     return zx::error(status);
   }
 
@@ -509,12 +482,12 @@ uint32_t BlobLoader::GetBlockSize() const { return txn_manager_->Info().block_si
 
 zx_status_t BlobLoader::VerifyNullBlob(Digest merkle_root, const BlobCorruptionNotifier* notifier) {
   std::unique_ptr<BlobVerifier> verifier;
-  zx_status_t status;
-  if ((status = BlobVerifier::CreateWithoutTree(std::move(merkle_root), metrics_,
-                                                /*data_size=*/0, notifier, &verifier)) != ZX_OK) {
+  if (zx_status_t status =
+          BlobVerifier::CreateWithoutTree(std::move(merkle_root), metrics_, 0, notifier, &verifier);
+      status != ZX_OK) {
     return status;
   }
-  return verifier->Verify(/*data=*/nullptr, /*data_size=*/0, /*buffer_size=*/0);
+  return verifier->Verify(nullptr, 0, 0);
 }
 
 }  // namespace blobfs
