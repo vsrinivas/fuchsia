@@ -200,7 +200,7 @@ impl Into<CobaltTimeSourceEvent> for SampleValidationError {
 
 /// The reasons a partially accumulated frequency window may be discarded.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum FrequencyUpdateError {
+pub enum FrequencyDiscardReason {
     UtcBeforeWindow,
     InsufficientSamples,
     PotentialLeapSecond,

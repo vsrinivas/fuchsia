@@ -6,8 +6,9 @@ use {
     crate::{
         diagnostics::{Diagnostics, Event},
         enums::{
-            ClockCorrectionStrategy, ClockUpdateReason, InitializeRtcOutcome, Role,
-            SampleValidationError, TimeSourceError, Track, WriteRtcOutcome,
+            ClockCorrectionStrategy, ClockUpdateReason, FrequencyDiscardReason,
+            InitializeRtcOutcome, Role, SampleValidationError, TimeSourceError, Track,
+            WriteRtcOutcome,
         },
         MonitorTrack, PrimaryTrack, TimeSource,
     },
@@ -29,6 +30,8 @@ const ONE_MILLION: i32 = 1_000_000;
 const FAILED_TIME: i64 = -1;
 /// The number of Kalman filter state updates that are retained.
 const FILTER_STATE_COUNT: usize = 5;
+/// The number of frequency estimates that are retained.
+const FREQUENCY_COUNT: usize = 3;
 /// The number of clock corrections that are retained.
 const CLOCK_CORRECTION_COUNT: usize = 3;
 
@@ -241,7 +244,7 @@ impl TimeSourceNode {
     }
 }
 
-/// A representation of the state of a kalman filter at a point in time.
+/// A representation of the state of a Kalman filter at a point in time.
 #[derive(InspectWritable, Default)]
 pub struct KalmanFilterState {
     /// The monotonic time at which the state applies, in nanoseconds.
@@ -250,6 +253,18 @@ pub struct KalmanFilterState {
     utc: i64,
     /// The square root of element [0,0] of the covariance matrix, in nanoseconds.
     sqrt_covariance: u64,
+}
+
+/// A representation of a frequency estimate at a point in time.
+#[derive(InspectWritable, Default)]
+pub struct FrequencyState {
+    /// The monotonic time at which the state applies, in nanoseconds.
+    monotonic: i64,
+    /// The estimated frequency as a PPM deviation from nominal. A positive number means UTC is
+    /// running faster than monotonic, i.e. the oscillator is slow.
+    rate_adjust_ppm: i32,
+    /// The number of frequency windows that contributed to this estimate.
+    window_count: u32,
 }
 
 /// A representation of a single planned clock correction.
@@ -265,12 +280,16 @@ pub struct ClockCorrection {
 
 /// An inspect `Node` and properties used to describe the state and history of a time track.
 struct TrackNode {
-    /// A circular buffer of recent updates to the kalman filter state.
+    /// A circular buffer of recent updates to the Kalman filter state.
     filter_states: CircularBuffer<KalmanFilterState>,
+    /// A circular buffer of recent updates to the frequency.
+    frequencies: CircularBuffer<FrequencyState>,
     /// A circular buffer of recently planned clock corrections.
     corrections: CircularBuffer<ClockCorrection>,
     /// The details of the most recent update to the clock object.
     last_update: Option<<ClockDetails as InspectWritable>::NodeType>,
+    /// The number of frequency window discards for each failure mode.
+    frequency_discard_counters: HashMap<FrequencyDiscardReason, UintProperty>,
     /// The clock used to determine the result of a clock update operation.
     clock: Arc<zx::Clock>,
     /// The inspect `Node` these fields are exported to.
@@ -282,10 +301,23 @@ impl TrackNode {
     pub fn new(node: Node, clock: Arc<zx::Clock>) -> Self {
         TrackNode {
             filter_states: CircularBuffer::new(FILTER_STATE_COUNT, "filter_state_", &node),
+            frequencies: CircularBuffer::new(FREQUENCY_COUNT, "frequency_", &node),
             corrections: CircularBuffer::new(CLOCK_CORRECTION_COUNT, "clock_correction_", &node),
+            frequency_discard_counters: HashMap::new(),
             last_update: None,
             clock,
             node,
+        }
+    }
+
+    /// Records the discard of a frequency window.
+    pub fn discard_frequency(&mut self, reason: FrequencyDiscardReason) {
+        match self.frequency_discard_counters.get_mut(&reason) {
+            Some(field) => field.add(1),
+            None => {
+                let prop = self.node.create_uint(&format!("frequency_discard_{:?}", &reason), 1);
+                self.frequency_discard_counters.insert(reason, prop);
+            }
         }
     }
 
@@ -302,6 +334,18 @@ impl TrackNode {
             sqrt_covariance: sqrt_covariance.into_nanos() as u64,
         };
         self.filter_states.update(&filter_state);
+    }
+
+    /// Records a new frequency update for the track.
+    pub fn update_frequency(
+        &mut self,
+        monotonic: zx::Time,
+        rate_adjust_ppm: i32,
+        window_count: u32,
+    ) {
+        let frequency_state =
+            FrequencyState { monotonic: monotonic.into_nanos(), rate_adjust_ppm, window_count };
+        self.frequencies.update(&frequency_state);
     }
 
     /// Records a new planned correction for the clock.
@@ -405,6 +449,20 @@ impl InspectDiagnostics {
         });
         diagnostics
     }
+
+    fn update_source<F>(&self, role: Role, function: F)
+    where
+        F: FnOnce(&mut TimeSourceNode),
+    {
+        self.time_sources.lock().get_mut(&role).map(function);
+    }
+
+    fn update_track<F>(&self, track: Track, function: F)
+    where
+        F: FnOnce(&mut TrackNode),
+    {
+        self.tracks.lock().get_mut(&track).map(function);
+    }
 }
 
 impl Diagnostics for InspectDiagnostics {
@@ -417,28 +475,29 @@ impl Diagnostics for InspectDiagnostics {
                 });
             }
             Event::TimeSourceFailed { role, error } => {
-                self.time_sources.lock().get_mut(&role).map(|source| source.failure(error));
+                self.update_source(role, |tsn| tsn.failure(error));
             }
             Event::TimeSourceStatus { role, status } => {
-                self.time_sources.lock().get_mut(&role).map(|source| source.status(status));
+                self.update_source(role, |tsn| tsn.status(status));
             }
             Event::SampleRejected { role, error } => {
-                self.time_sources
-                    .lock()
-                    .get_mut(&role)
-                    .map(|source| source.sample_rejection(error));
+                self.update_source(role, |tsn| tsn.sample_rejection(error));
+            }
+            Event::FrequencyWindowDiscarded { track, reason } => {
+                self.update_track(track, |tn| tn.discard_frequency(reason));
             }
             Event::KalmanFilterUpdated { track, monotonic, utc, sqrt_covariance } => {
-                self.tracks
-                    .lock()
-                    .get_mut(&track)
-                    .map(|track| track.update_filter_state(monotonic, utc, sqrt_covariance));
+                self.update_track(track, |tn| {
+                    tn.update_filter_state(monotonic, utc, sqrt_covariance)
+                });
+            }
+            Event::FrequencyUpdated { track, monotonic, rate_adjust_ppm, window_count } => {
+                self.update_track(track, |tn| {
+                    tn.update_frequency(monotonic, rate_adjust_ppm, window_count)
+                });
             }
             Event::ClockCorrection { track, correction, strategy } => {
-                self.tracks
-                    .lock()
-                    .get_mut(&track)
-                    .map(|track| track.clock_correction(correction, strategy));
+                self.update_track(track, |tn| tn.clock_correction(correction, strategy));
             }
             Event::WriteRtc { outcome } => {
                 if let Some(ref mut rtc_node) = *self.rtc.lock() {
@@ -446,10 +505,10 @@ impl Diagnostics for InspectDiagnostics {
                 }
             }
             Event::StartClock { track, .. } => {
-                self.tracks.lock().get_mut(&track).map(|track| track.update_clock(None));
+                self.update_track(track, |tn| tn.update_clock(None));
             }
             Event::UpdateClock { track, reason } => {
-                self.tracks.lock().get_mut(&track).map(|track| track.update_clock(Some(reason)));
+                self.update_track(track, |tn| tn.update_clock(Some(reason)));
             }
         }
     }
@@ -460,7 +519,10 @@ mod tests {
     use {
         super::*,
         crate::{
-            enums::{SampleValidationError as SVE, StartClockSource, TimeSourceError as TSE},
+            enums::{
+                FrequencyDiscardReason as FDR, SampleValidationError as SVE, StartClockSource,
+                TimeSourceError as TSE,
+            },
             time_source::FakeTimeSource,
         },
         fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty},
@@ -732,6 +794,7 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: contains {
+                // For brevity we only verify the uninitialized contents of one entry per buffer.
                 primary_track: contains {
                     filter_state_0: contains {
                         counter: 0u64,
@@ -739,48 +802,26 @@ mod tests {
                         utc: 0i64,
                         sqrt_covariance: 0u64,
                     },
-                    filter_state_1: contains {
+                    filter_state_1: contains {},
+                    filter_state_2: contains {},
+                    filter_state_3: contains {},
+                    filter_state_4: contains {},
+                    frequency_0: contains {
                         counter: 0u64,
                         monotonic: 0i64,
-                        utc: 0i64,
-                        sqrt_covariance: 0u64,
+                        rate_adjust_ppm: 0i64,
+                        window_count: 0u64,
                     },
-                    filter_state_2: contains {
-                        counter: 0u64,
-                        monotonic: 0i64,
-                        utc: 0i64,
-                        sqrt_covariance: 0u64,
-                    },
-                    filter_state_3: contains {
-                        counter: 0u64,
-                        monotonic: 0i64,
-                        utc: 0i64,
-                        sqrt_covariance: 0u64,
-                    },
-                    filter_state_4: contains {
-                        counter: 0u64,
-                        monotonic: 0i64,
-                        utc: 0i64,
-                        sqrt_covariance: 0u64,
-                    },
+                    frequency_1: contains {},
+                    frequency_2: contains {},
                     clock_correction_0: contains {
                         counter: 0u64,
                         monotonic: 0i64,
                         correction: 0i64,
                         strategy: "Step",
                     },
-                    clock_correction_1: contains {
-                        counter: 0u64,
-                        monotonic: 0i64,
-                        correction: 0i64,
-                        strategy: "Step",
-                    },
-                    clock_correction_2: contains {
-                        counter: 0u64,
-                        monotonic: 0i64,
-                        correction: 0i64,
-                        strategy: "Step",
-                    },
+                    clock_correction_1: contains {},
+                    clock_correction_2: contains {},
                 },
                 monitor_track: contains {
                     filter_state_0: contains {},
@@ -788,6 +829,9 @@ mod tests {
                     filter_state_2: contains {},
                     filter_state_3: contains {},
                     filter_state_4: contains {},
+                    frequency_0: contains {},
+                    frequency_1: contains {},
+                    frequency_2: contains {},
                     clock_correction_0: contains {},
                     clock_correction_1: contains {},
                     clock_correction_2: contains {},
@@ -795,13 +839,19 @@ mod tests {
             }
         );
 
-        // Write enough to wrap the circular buffer
+        // Write enough to wrap all of the circular buffers
         for i in 1..8 {
             test.record(Event::KalmanFilterUpdated {
                 track: Track::Primary,
                 monotonic: zx::Time::ZERO + OFFSET * i,
                 utc: zx::Time::from_nanos(BACKSTOP_TIME) + OFFSET * i,
                 sqrt_covariance: zx::Duration::from_nanos(SQRT_COVARIANCE) * i,
+            });
+            test.record(Event::FrequencyUpdated {
+                track: Track::Primary,
+                monotonic: zx::Time::ZERO + OFFSET * i,
+                rate_adjust_ppm: -i,
+                window_count: i as u32,
             });
             test.record(Event::ClockCorrection {
                 track: Track::Primary,
@@ -813,6 +863,12 @@ mod tests {
                 reason: ClockUpdateReason::BeginSlew,
             });
         }
+
+        // And record a few frequency window discard events.
+        let make_event = |reason| Event::FrequencyWindowDiscarded { track: Track::Primary, reason };
+        test.record(make_event(FDR::InsufficientSamples));
+        test.record(make_event(FDR::UtcBeforeWindow));
+        test.record(make_event(FDR::InsufficientSamples));
 
         assert_inspect_tree!(
             inspector,
@@ -848,6 +904,24 @@ mod tests {
                         utc: BACKSTOP_TIME + 5 * OFFSET.into_nanos(),
                         sqrt_covariance: 5 * SQRT_COVARIANCE as u64,
                     },
+                    frequency_0: contains {
+                        counter: 7u64,
+                        monotonic: 7 * OFFSET.into_nanos(),
+                        rate_adjust_ppm: -7i64,
+                        window_count: 7u64,
+                    },
+                    frequency_1: contains {
+                        counter: 5u64,
+                        monotonic: 5 * OFFSET.into_nanos(),
+                        rate_adjust_ppm: -5i64,
+                        window_count: 5u64,
+                    },
+                    frequency_2: contains {
+                        counter: 6u64,
+                        monotonic: 6 * OFFSET.into_nanos(),
+                        rate_adjust_ppm: -6i64,
+                        window_count: 6u64,
+                    },
                     clock_correction_0: contains {
                         counter: 7u64,
                         monotonic: AnyProperty,
@@ -875,6 +949,8 @@ mod tests {
                         error_bounds: AnyProperty,
                         reason: "Some(BeginSlew)",
                     },
+                    frequency_discard_InsufficientSamples: 2u64,
+                    frequency_discard_UtcBeforeWindow: 1u64,
                 },
                 monitor_track: contains {
                     filter_state_0: contains {},
@@ -882,6 +958,9 @@ mod tests {
                     filter_state_2: contains {},
                     filter_state_3: contains {},
                     filter_state_4: contains {},
+                    frequency_0: contains {},
+                    frequency_1: contains {},
+                    frequency_2: contains {},
                     clock_correction_0: contains {},
                     clock_correction_1: contains {},
                     clock_correction_2: contains {},

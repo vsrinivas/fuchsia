@@ -16,8 +16,9 @@ pub use self::inspect::{InspectDiagnostics, INSPECTOR};
 
 use {
     crate::enums::{
-        ClockCorrectionStrategy, ClockUpdateReason, InitialClockState, InitializeRtcOutcome, Role,
-        SampleValidationError, StartClockSource, TimeSourceError, Track, WriteRtcOutcome,
+        ClockCorrectionStrategy, ClockUpdateReason, FrequencyDiscardReason, InitialClockState,
+        InitializeRtcOutcome, Role, SampleValidationError, StartClockSource, TimeSourceError,
+        Track, WriteRtcOutcome,
     },
     fidl_fuchsia_time_external::Status,
     fuchsia_zircon as zx,
@@ -54,6 +55,22 @@ pub enum Event {
         utc: zx::Time,
         /// Square root of element [0,0] of the covariance matrix.
         sqrt_covariance: zx::Duration,
+    },
+    /// A partially completed frequency window was discarded without being used.
+    #[allow(unused)]
+    FrequencyWindowDiscarded { track: Track, reason: FrequencyDiscardReason },
+    /// An estimated frequency was updated.
+    #[allow(unused)]
+    FrequencyUpdated {
+        /// The `Track` of the estimate.
+        track: Track,
+        /// The monotonic time at which the state applies.
+        monotonic: zx::Time,
+        /// The estimated frequency as a PPM deviation from nominal. A positive number means UTC is
+        /// running faster than monotonic, i.e. the oscillator is slow.
+        rate_adjust_ppm: i32,
+        /// The number of frequency windows that contributed to this estimate.
+        window_count: u32,
     },
     /// A strategy has been determined to align the userspace clock with the estimated UTC.
     /// This will be followed by zero or more `UpdateClock` events to implement the strategy.

@@ -5,7 +5,7 @@
 #![allow(unused)]
 
 use {
-    crate::{enums::FrequencyUpdateError, time_source::Sample},
+    crate::{enums::FrequencyDiscardReason, time_source::Sample},
     fuchsia_zircon as zx,
     std::mem,
 };
@@ -35,11 +35,11 @@ enum GetFrequencyError {
     PotentialLeapSecond,
 }
 
-impl Into<FrequencyUpdateError> for GetFrequencyError {
-    fn into(self) -> FrequencyUpdateError {
+impl Into<FrequencyDiscardReason> for GetFrequencyError {
+    fn into(self) -> FrequencyDiscardReason {
         match self {
-            Self::InsufficientSamples => FrequencyUpdateError::InsufficientSamples,
-            Self::PotentialLeapSecond => FrequencyUpdateError::PotentialLeapSecond,
+            Self::InsufficientSamples => FrequencyDiscardReason::InsufficientSamples,
+            Self::PotentialLeapSecond => FrequencyDiscardReason::PotentialLeapSecond,
         }
     }
 }
@@ -154,7 +154,10 @@ impl FrequencyEstimator {
     /// Update the estimate to include the supplied sample. Very occasionally this will lead to a
     /// change in the estimated frequency, in which case the new frequency and the total number of
     /// windows used in producing this new frequency are returned.
-    pub fn update(&mut self, sample: &Sample) -> Result<Option<(f64, u32)>, FrequencyUpdateError> {
+    pub fn update(
+        &mut self,
+        sample: &Sample,
+    ) -> Result<Option<(f64, u32)>, FrequencyDiscardReason> {
         match self.current_window.add_sample(sample) {
             Ok(()) => {
                 // This sample was accepted into the current window so didn't lead to a
@@ -165,7 +168,7 @@ impl FrequencyEstimator {
                 // If the server had a large step back in time theoretically we might see a UTC
                 // before the window we were accumulating into, in that case just start over.
                 self.current_window = EstimationWindow::new(sample);
-                Err(FrequencyUpdateError::UtcBeforeWindow)
+                Err(FrequencyDiscardReason::UtcBeforeWindow)
             }
             Err(AddSampleError::AfterWindow) => {
                 // This sample was after the current window. Start a new window and if the previous
@@ -352,7 +355,7 @@ mod test {
         }
         assert_eq!(
             estimator.update(&mut samples.remove(0)),
-            Err(FrequencyUpdateError::InsufficientSamples)
+            Err(FrequencyDiscardReason::InsufficientSamples)
         );
         for _ in 0..23 {
             assert_eq!(estimator.update(&mut samples.remove(0)), Ok(None));

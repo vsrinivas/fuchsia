@@ -176,9 +176,13 @@ impl Diagnostics for CobaltDiagnostics {
                     1,
                 );
             }
+            // TODO(fxbug.dev/56868): Record frequency events in Cobalt.
+            Event::FrequencyWindowDiscarded { .. } => {}
             Event::KalmanFilterUpdated { track, sqrt_covariance, .. } => {
                 self.record_kalman_filter_update(track, sqrt_covariance);
             }
+            // TODO(fxbug.dev/56868): Record frequency events in Cobalt.
+            Event::FrequencyUpdated { .. } => {}
             Event::ClockCorrection { track, correction, strategy } => {
                 self.record_clock_correction(track, correction, strategy);
             }
