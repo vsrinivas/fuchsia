@@ -10,7 +10,7 @@ zx_library("device-protocol-platform-device") {
   sources = []
   public_deps = [
     # <lib/device-protocol-platform-device/platform-device.h> has #include <fuchsia/hardware/platform/device/c/banjo.h>
-    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
 
     # <lib/device-protocol-platform-device/platform-device.h> has #include <zircon/types.h>
     "//zircon/public/lib/zx",

@@ -22,7 +22,7 @@ driver_module("integration-test") {
   deps = [
     ":test-bus-bind",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",

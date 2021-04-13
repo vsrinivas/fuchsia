@@ -5,10 +5,11 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.platform.device") {
+  fidl_only = true
   sources = [ "platform-device.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
 
 group("fuchsia.hardware.platform.device_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.platform.device" ]
+  public_deps = [ ":fuchsia.hardware.platform.device_banjo_cpp_2" ]
 }

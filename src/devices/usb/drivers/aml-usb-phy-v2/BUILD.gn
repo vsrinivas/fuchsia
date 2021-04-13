@@ -23,7 +23,7 @@ driver_module("aml-usb-phy-v2") {
   sources = [ "aml-usb-phy.cc" ]
   deps = [
     ":aml_usb_phy_bind",
-    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.registers",
     "//sdk/banjo/fuchsia.hardware.usb.modeswitch",
     "//sdk/banjo/fuchsia.hardware.usb.phy",
@@ -57,7 +57,7 @@ test("aml-usb-phy-test-bin") {
   output_name = "aml-usb-phy-test"
   deps = [
     ":aml_usb_phy_bind",
-    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.registers",
     "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/banjo/fuchsia.hardware.usb.modeswitch",

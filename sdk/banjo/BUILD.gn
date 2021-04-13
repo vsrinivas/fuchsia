@@ -67,7 +67,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.network.mac",
   "fuchsia.hardware.pci",
   "fuchsia.hardware.pciroot",
-  "fuchsia.hardware.platform.device",
   "fuchsia.hardware.power",
   "fuchsia.hardware.powerimpl",
   "fuchsia.hardware.pwm",

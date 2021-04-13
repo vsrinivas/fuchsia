@@ -33,7 +33,7 @@ source_set("lib") {
     "//sdk/banjo/fuchsia.hardware.camera",
     "//sdk/banjo/fuchsia.hardware.camera.sensor",
     "//sdk/banjo/fuchsia.hardware.mipicsi",
-    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/lib/syslog/cpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk:ddk-metadata-headers",

@@ -69,7 +69,7 @@ driver_module("scpi") {
   deps = [
     ":aml-scpi-s912-bind",
     "//sdk/banjo/fuchsia.hardware.mailbox",
-    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.scpi",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//src/devices/bus/lib/device-protocol-pdev",

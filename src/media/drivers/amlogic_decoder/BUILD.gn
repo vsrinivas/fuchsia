@@ -162,7 +162,7 @@ if (target_cpu == "arm64") {
       "h264:h264_parser",
       "//sdk/banjo/fuchsia.hardware.amlogiccanvas",
       "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
-      "//sdk/banjo/fuchsia.hardware.platform.device",
+      "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.sysmem",
       "//sdk/banjo/fuchsia.hardware.tee",
       "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_llcpp",

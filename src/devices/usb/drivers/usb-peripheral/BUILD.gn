@@ -67,7 +67,7 @@ test("usb-peripheral-unittest-bin") {
   output_name = "usb-peripheral-unittest"
   deps = [
     ":usb_peripheral_bind",
-    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/banjo/fuchsia.hardware.usb.dci",
     "//sdk/banjo/fuchsia.hardware.usb.function",
