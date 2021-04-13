@@ -14,6 +14,7 @@ void main() {
     final controller = MockFuchsiaViewController();
     final completer = Completer();
     when(controller.viewId).thenReturn(42);
+    when(controller.whenConnected).thenAnswer((_) => Future<bool>.value(false));
     when(controller.connect()).thenAnswer((_) => completer.future);
 
     await tester.pumpWidget(
@@ -28,12 +29,27 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(controller.connect(hitTestable: true, focusable: true));
+
+    // Change properties on the view.
+    when(controller.connected).thenReturn(true);
+
+    await tester.pumpWidget(
+      Center(
+        child: SizedBox(
+          child: FuchsiaView(controller: controller, hitTestable: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    verify(controller.update(hitTestable: false));
   });
 
   testWidgets('FuchsiaView with args', (tester) async {
     final controller = MockFuchsiaViewController();
     final completer = Completer();
     when(controller.viewId).thenReturn(42);
+    when(controller.whenConnected).thenAnswer((_) => Future<bool>.value(false));
     when(controller.connect(hitTestable: false, focusable: false))
         .thenAnswer((_) => completer.future);
 

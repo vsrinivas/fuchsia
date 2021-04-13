@@ -4,6 +4,7 @@
 
 // ignore_for_file: avoid_as, unnecessary_null_comparison
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
@@ -53,8 +54,14 @@ class FuchsiaViewController implements PlatformViewController {
   @visibleForTesting
   MethodChannel get platformViewChannel => _platformViewChannel;
 
-  // Set to true if connected to underlying child view.
-  bool _connected = false;
+  // The [Completer] that is completed when the platform view is connected.
+  var _whenConnected = Completer();
+
+  /// The future that completes when the platform view is connected.
+  Future get whenConnected => _whenConnected.future;
+
+  /// Returns true when platform view is connected.
+  bool get connected => _whenConnected.isCompleted;
 
   /// Constructor.
   FuchsiaViewController({
@@ -69,18 +76,22 @@ class FuchsiaViewController implements PlatformViewController {
   ///
   /// Called by [FuchsiaView] when the platform view is ready to be initialized
   /// and should not be called directly.
-  Future<void> connect({bool hitTestable = true, bool focusable = true}) async {
-    if (_connected) return;
+  Future<void> connect({
+    bool hitTestable = true,
+    bool focusable = true,
+    Rect viewInsets = Rect.zero,
+  }) async {
+    if (_whenConnected.isCompleted) return;
 
     // Setup callbacks for receiving view events.
     platformViewChannel.setMethodCallHandler((call) async {
       switch (call.method) {
         case 'View.viewConnected':
-          _connected = true;
+          _whenConnected.complete();
           onViewConnected?.call(this);
           break;
         case 'View.viewDisconnected':
-          _connected = false;
+          _whenConnected = Completer();
           onViewDisconnected?.call(this);
           break;
         case 'View.viewStateChanged':
@@ -96,6 +107,12 @@ class FuchsiaViewController implements PlatformViewController {
       'viewId': viewId,
       'hitTestable': hitTestable,
       'focusable': focusable,
+      'viewInsetsLTRB': <double>[
+        viewInsets.left,
+        viewInsets.top,
+        viewInsets.right,
+        viewInsets.bottom
+      ],
     };
     return platformViewChannel.invokeMethod('View.create', args);
   }
@@ -112,6 +129,29 @@ class FuchsiaViewController implements PlatformViewController {
     };
     await platformViewChannel.invokeMethod('View.dispose', args);
     onViewDisconnected?.call(this);
+  }
+
+  /// Updates properties on the platform view given it's [viewId].
+  ///
+  /// Called by [FuchsiaView] when the [focusable] or [hitTestable] or
+  /// [viewInsets] properties are changed.
+  Future<void> update({
+    bool focusable = true,
+    bool hitTestable = true,
+    Rect viewInsets = Rect.zero,
+  }) async {
+    final args = <String, dynamic>{
+      'viewId': viewId,
+      'hitTestable': hitTestable,
+      'focusable': focusable,
+      'viewInsetsLTRB': <double>[
+        viewInsets.left,
+        viewInsets.top,
+        viewInsets.right,
+        viewInsets.bottom
+      ],
+    };
+    return platformViewChannel.invokeMethod('View.update', args);
   }
 
   /// Requests that focus be transferred to the remote Scene represented by

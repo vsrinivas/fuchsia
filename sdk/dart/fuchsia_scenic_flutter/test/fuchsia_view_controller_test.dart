@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:ui';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +29,18 @@ void main() {
       'viewId': 42,
       'hitTestable': true,
       'focusable': true,
+      'viewInsetsLTRB': [0, 0, 0, 0],
+    }));
+
+    await controller.update(
+        focusable: false,
+        hitTestable: false,
+        viewInsets: Rect.fromLTRB(10, 10, 20, 30));
+    verify(controller.platformViewChannel.invokeMethod('View.update', {
+      'viewId': 42,
+      'hitTestable': false,
+      'focusable': false,
+      'viewInsetsLTRB': [10, 10, 20, 30],
     }));
 
     final methodCallback =

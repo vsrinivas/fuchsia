@@ -31,6 +31,7 @@ void main() {
       'viewId': 42,
       'hitTestable': true,
       'focusable': true,
+      'viewInsetsLTRB': [0, 0, 0, 0],
     }));
 
     final methodCallback =
