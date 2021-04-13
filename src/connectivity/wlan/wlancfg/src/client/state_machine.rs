@@ -731,6 +731,7 @@ mod tests {
         fidl_fuchsia_stash as fidl_stash, fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_policy as fidl_policy,
         fuchsia_cobalt::CobaltEventExt,
+        fuchsia_inspect::{self as inspect},
         fuchsia_zircon,
         futures::{task::Poll, Future},
         pin_utils::pin_mut,
@@ -764,6 +765,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
 
         TestValues {
@@ -833,6 +835,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
         let next_network_ssid = "bar";
         let bss_desc = generate_random_bss_desc();
@@ -998,6 +1001,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
         let next_network_ssid = "bar";
         let bss_desc = generate_random_bss_desc();
@@ -1187,6 +1191,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
         let next_network_ssid = "bar";
         let bss_desc = generate_random_bss_desc();
@@ -1449,6 +1454,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
         let next_network_ssid = "bar";
         let bss_desc = generate_random_bss_desc();
@@ -1649,6 +1655,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
         let common_options = CommonStateOptions {
             proxy: sme_proxy,
@@ -1787,6 +1794,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
 
         let common_options = CommonStateOptions {
@@ -2766,6 +2774,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
         let network_ssid = "foo";
         let bss_desc = generate_random_bss_desc();

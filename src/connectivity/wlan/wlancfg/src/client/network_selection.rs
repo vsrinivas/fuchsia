@@ -18,12 +18,19 @@ use {
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_cobalt::CobaltSender,
+    fuchsia_inspect::Node as InspectNode,
+    fuchsia_inspect_contrib::{
+        inspect_insert, inspect_log,
+        log::{InspectList, WriteInspect},
+        nodes::{BoundedListNode as InspectBoundedListNode, NodeWriter},
+    },
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::{debug, error, info, trace},
     rand::Rng,
-    std::{collections::HashMap, sync::Arc},
+    std::{collections::HashMap, convert::TryInto as _, sync::Arc},
     wlan_common::{channel::Channel, hasher::WlanHasher},
+    wlan_inspect::wrappers::InspectWlanChan,
     wlan_metrics_registry::{
         ActiveScanRequestedForNetworkSelectionMetricDimensionActiveScanSsidsRequested as ActiveScanSsidsRequested,
         SavedNetworkInScanResultMetricDimensionBssCount,
@@ -51,11 +58,15 @@ const SCORE_PENALTY_FOR_RECENT_FAILURE: i8 = 5;
 /// on a retry.
 const SCORE_PENALTY_FOR_RECENT_CREDENTIAL_REJECTED: i8 = 30;
 
+const INSPECT_EVENT_LIMIT_FOR_NETWORK_SELECTIONS: usize = 20;
+
 pub struct NetworkSelector {
     saved_network_manager: Arc<SavedNetworksManager>,
     scan_result_cache: Arc<Mutex<ScanResultCache>>,
     cobalt_api: Arc<Mutex<CobaltSender>>,
     hasher: WlanHasher,
+    _inspect_node_root: Arc<Mutex<InspectNode>>,
+    inspect_node_for_network_selections: Arc<Mutex<InspectBoundedListNode>>,
 }
 
 struct ScanResultCache {
@@ -76,6 +87,7 @@ struct InternalBss<'a> {
     network_info: InternalSavedNetworkData,
     bss_info: &'a types::Bss,
     multiple_bss_candidates: bool,
+    hasher: WlanHasher,
 }
 
 impl InternalBss<'_> {
@@ -110,28 +122,39 @@ impl InternalBss<'_> {
         return score.saturating_sub(failure_score);
     }
 
-    fn print_without_pii(&self, hasher: &WlanHasher) {
-        let channel = Channel::from_fidl(self.bss_info.channel);
-        let rssi = self.bss_info.rssi;
-        let recent_failure_count = self
-            .network_info
+    fn recent_failure_count(&self) -> u64 {
+        self.network_info
             .recent_failures
             .iter()
             .filter(|failure| failure.bssid == self.bss_info.bssid)
-            .collect::<Vec<_>>()
-            .len();
-        let security_type = match self.network_info.network_id.type_ {
+            .count()
+            .try_into()
+            .unwrap_or_else(|e| {
+                error!("{}", e);
+                u64::MAX
+            })
+    }
+
+    fn saved_security_type_to_string(&self) -> String {
+        match self.network_info.network_id.type_ {
             fidl_policy::SecurityType::None => "open",
             fidl_policy::SecurityType::Wep => "WEP",
             fidl_policy::SecurityType::Wpa => "WPA",
             fidl_policy::SecurityType::Wpa2 => "WPA2",
             fidl_policy::SecurityType::Wpa3 => "WPA3",
-        };
-        info!(
-            "{}({:4}), {}, {:>4}dBm, chan {:8}, score {:4},{}{}{}",
-            hasher.hash_ssid(&self.network_info.network_id.ssid),
-            security_type,
-            hasher.hash_mac_addr(&self.bss_info.bssid),
+        }
+        .to_string()
+    }
+
+    fn to_string_without_pii(&self) -> String {
+        let channel = Channel::from_fidl(self.bss_info.channel);
+        let rssi = self.bss_info.rssi;
+        let recent_failure_count = self.recent_failure_count();
+        format!(
+            "{}({:4}), {}, {:>4}dBm, chan {:8}, score {:4}{}{}{}",
+            self.hasher.hash_ssid(&self.network_info.network_id.ssid),
+            self.saved_security_type_to_string(),
+            self.hasher.hash_mac_addr(&self.bss_info.bssid),
             rssi,
             channel,
             self.score(),
@@ -145,9 +168,32 @@ impl InternalBss<'_> {
         )
     }
 }
+impl<'a> WriteInspect for InternalBss<'a> {
+    fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str) {
+        inspect_insert!(writer, var key: {
+            ssid_hash: self.hasher.hash_ssid(&self.network_info.network_id.ssid),
+            bssid_hash: self.hasher.hash_mac_addr(&self.bss_info.bssid),
+            rssi: self.bss_info.rssi,
+            score: self.score(),
+            security_type_saved: self.saved_security_type_to_string(),
+            channel: InspectWlanChan(&self.bss_info.channel),
+            compatible: self.bss_info.compatible,
+            recent_failure_count: self.recent_failure_count(),
+            saved_network_has_ever_connected: self.network_info.has_ever_connected,
+        });
+    }
+}
 
 impl NetworkSelector {
-    pub fn new(saved_network_manager: Arc<SavedNetworksManager>, cobalt_api: CobaltSender) -> Self {
+    pub fn new(
+        saved_network_manager: Arc<SavedNetworksManager>,
+        cobalt_api: CobaltSender,
+        inspect_node: InspectNode,
+    ) -> Self {
+        let inspect_node_for_network_selection = InspectBoundedListNode::new(
+            inspect_node.create_child("network_selection"),
+            INSPECT_EVENT_LIMIT_FOR_NETWORK_SELECTIONS,
+        );
         Self {
             saved_network_manager,
             scan_result_cache: Arc::new(Mutex::new(ScanResultCache {
@@ -156,6 +202,10 @@ impl NetworkSelector {
             })),
             cobalt_api: Arc::new(Mutex::new(cobalt_api)),
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
+            _inspect_node_root: Arc::new(Mutex::new(inspect_node)),
+            inspect_node_for_network_selections: Arc::new(Mutex::new(
+                inspect_node_for_network_selection,
+            )),
         }
     }
 
@@ -269,10 +319,12 @@ impl NetworkSelector {
             saved_networks,
             &scan_result_guard.results,
             wpa3_supported,
+            &self.hasher,
         )
         .await;
 
-        match select_best_connection_candidate(networks, ignore_list, &self.hasher) {
+        let mut inspect_node = self.inspect_node_for_network_selections.lock().await;
+        match select_best_connection_candidate(networks, ignore_list, &mut inspect_node) {
             Some((selected, channel, bssid)) => {
                 Some(augment_bss_with_active_scan(selected, channel, bssid, iface_manager).await)
             }
@@ -300,10 +352,12 @@ impl NetworkSelector {
                     saved_networks,
                     &scan_results,
                     wpa3_supported,
+                    &self.hasher,
                 )
                 .await;
                 let ignore_list = vec![];
-                select_best_connection_candidate(networks, &ignore_list, &self.hasher).map(
+                let mut inspect_node = self.inspect_node_for_network_selections.lock().await;
+                select_best_connection_candidate(networks, &ignore_list, &mut inspect_node).map(
                     |(candidate, _, _)| {
                         // Strip out the information about passive vs active scan, because we can't know
                         // if this network would have been observed in a passive scan (since we never
@@ -322,6 +376,7 @@ async fn merge_saved_networks_and_scan_data<'a>(
     saved_networks: HashMap<types::NetworkIdentifier, InternalSavedNetworkData>,
     scan_results: &'a Vec<types::ScanResult>,
     wpa3_supported: bool,
+    hasher: &WlanHasher,
 ) -> Vec<InternalBss<'a>> {
     let mut merged_networks = vec![];
     for scan_result in scan_results {
@@ -337,6 +392,7 @@ async fn merge_saved_networks_and_scan_data<'a>(
                         bss_info: bss,
                         multiple_bss_candidates,
                         network_info: saved_network_info.clone(),
+                        hasher: hasher.clone(),
                     });
                 }
             }
@@ -425,13 +481,14 @@ impl ScanResultUpdate for NetworkSelectorScanUpdater {
 fn select_best_connection_candidate<'a>(
     bss_list: Vec<InternalBss<'a>>,
     ignore_list: &Vec<types::NetworkIdentifier>,
-    hasher: &WlanHasher,
+    inspect_node: &mut InspectBoundedListNode,
 ) -> Option<(types::ConnectionCandidate, types::WlanChan, types::Bssid)> {
     info!("Selecting from {} BSSs found for saved networks", bss_list.len());
-    bss_list
-        .into_iter()
+
+    let selected = bss_list
+        .iter()
         .inspect(|bss| {
-            bss.print_without_pii(hasher);
+            info!("{}", bss.to_string_without_pii());
         })
         .filter(|bss| {
             // Filter out incompatible BSSs
@@ -446,22 +503,26 @@ fn select_best_connection_candidate<'a>(
             }
             true
         })
-        .max_by(|bss_a, bss_b| bss_a.score().partial_cmp(&bss_b.score()).unwrap())
-        .map(|bss| {
-            info!("Selected BSS:");
-            bss.print_without_pii(hasher);
-            (
-                types::ConnectionCandidate {
-                    network: bss.network_info.network_id,
-                    credential: bss.network_info.credential,
-                    observed_in_passive_scan: Some(bss.bss_info.observed_in_passive_scan),
-                    bss: bss.bss_info.bss_desc.clone(),
-                    multiple_bss_candidates: Some(bss.multiple_bss_candidates),
-                },
-                bss.bss_info.channel,
-                bss.bss_info.bssid,
-            )
-        })
+        .max_by(|bss_a, bss_b| bss_a.score().partial_cmp(&bss_b.score()).unwrap());
+
+    // Log the candidates into Inspect
+    inspect_log!(inspect_node, candidates: InspectList(&bss_list), selected?: selected);
+
+    selected.map(|bss| {
+        info!("Selected BSS:");
+        info!("{}", bss.to_string_without_pii());
+        (
+            types::ConnectionCandidate {
+                network: bss.network_info.network_id.clone(),
+                credential: bss.network_info.credential.clone(),
+                observed_in_passive_scan: Some(bss.bss_info.observed_in_passive_scan),
+                bss: bss.bss_info.bss_desc.clone(),
+                multiple_bss_candidates: Some(bss.multiple_bss_candidates),
+            },
+            bss.bss_info.channel,
+            bss.bss_info.bssid,
+        )
+    })
 }
 
 /// If a BSS was discovered via a passive scan, we need to perform an active scan on it to discover
@@ -629,6 +690,7 @@ mod tests {
         fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
         fuchsia_async as fasync,
         fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
+        fuchsia_inspect::{self as inspect, assert_inspect_tree},
         futures::{
             channel::{mpsc, oneshot},
             prelude::*,
@@ -647,6 +709,7 @@ mod tests {
         cobalt_events: mpsc::Receiver<CobaltEvent>,
         iface_manager: Arc<Mutex<FakeIfaceManager>>,
         sme_stream: fidl_sme::ClientSmeRequestStream,
+        inspector: inspect::Inspector,
     }
 
     async fn test_setup() -> TestValues {
@@ -655,8 +718,14 @@ mod tests {
         // setup modules
         let (cobalt_api, cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let saved_network_manager = Arc::new(SavedNetworksManager::new_for_test().await.unwrap());
-        let network_selector =
-            Arc::new(NetworkSelector::new(Arc::clone(&saved_network_manager), cobalt_api));
+        let inspector = inspect::Inspector::new();
+        let inspect_node = inspector.root().create_child("net_select_test");
+
+        let network_selector = Arc::new(NetworkSelector::new(
+            Arc::clone(&saved_network_manager),
+            cobalt_api,
+            inspect_node,
+        ));
         let (client_sme, remote) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
         let iface_manager = Arc::new(Mutex::new(FakeIfaceManager::new(client_sme)));
@@ -667,6 +736,7 @@ mod tests {
             cobalt_events,
             iface_manager,
             sme_stream: remote.into_stream().expect("failed to create stream"),
+            inspector,
         }
     }
 
@@ -948,6 +1018,7 @@ mod tests {
         );
 
         // build our expected result
+        let hasher = WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes());
         let expected_internal_data_1 = InternalSavedNetworkData {
             network_id: test_id_1.clone(),
             credential: credential_1.clone(),
@@ -959,16 +1030,19 @@ mod tests {
                 network_info: expected_internal_data_1.clone(),
                 bss_info: &mock_scan_results[0].entries[0],
                 multiple_bss_candidates: true,
+                hasher: hasher.clone(),
             },
             InternalBss {
                 network_info: expected_internal_data_1.clone(),
                 bss_info: &mock_scan_results[0].entries[1],
                 multiple_bss_candidates: true,
+                hasher: hasher.clone(),
             },
             InternalBss {
                 network_info: expected_internal_data_1,
                 bss_info: &mock_scan_results[0].entries[2],
                 multiple_bss_candidates: true,
+                hasher: hasher.clone(),
             },
             InternalBss {
                 network_info: InternalSavedNetworkData {
@@ -979,12 +1053,14 @@ mod tests {
                 },
                 bss_info: &mock_scan_results[1].entries[0],
                 multiple_bss_candidates: false,
+                hasher: hasher.clone(),
             },
         ];
 
         // validate the function works
         let result =
-            merge_saved_networks_and_scan_data(saved_networks, &mock_scan_results, true).await;
+            merge_saved_networks_and_scan_data(saved_networks, &mock_scan_results, true, &hasher)
+                .await;
         assert_eq!(result, expected_result);
     }
 
@@ -1022,6 +1098,7 @@ mod tests {
             },
             bss_info: &bss,
             multiple_bss_candidates: false,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
 
         assert_eq!(internal_bss.score(), expected_score)
@@ -1042,11 +1119,13 @@ mod tests {
             network_info: internal_data.clone(),
             bss_info: &bss_info_worse,
             multiple_bss_candidates: true,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
             network_info: internal_data,
             bss_info: &bss_info_better,
             multiple_bss_candidates: true,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         // Check that the better BSS has a higher score than the worse BSS.
         assert!(bss_better.score() > bss_worse.score());
@@ -1068,11 +1147,13 @@ mod tests {
             network_info: internal_data.clone(),
             bss_info: &bss_info_worse,
             multiple_bss_candidates: false,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
             network_info: internal_data,
             bss_info: &bss_info_better,
             multiple_bss_candidates: false,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         assert!(bss_better.score() > bss_worse.score());
     }
@@ -1100,11 +1181,13 @@ mod tests {
             network_info: internal_data.clone(),
             bss_info: &bss_info_worse,
             multiple_bss_candidates: true,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
             network_info: internal_data,
             bss_info: &bss_info_better,
             multiple_bss_candidates: true,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
 
         assert!(bss_better.score() > bss_worse.score());
@@ -1112,6 +1195,10 @@ mod tests {
 
     #[test]
     fn select_best_connection_candidate_sorts_by_score() {
+        // generate Inspect nodes
+        let inspector = inspect::Inspector::new();
+        let mut inspect_node =
+            InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: "foo".as_bytes().to_vec(),
@@ -1141,6 +1228,7 @@ mod tests {
             },
             bss_info: &bss_info1,
             multiple_bss_candidates: true,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
         let bss_info2 = types::Bss {
@@ -1158,6 +1246,7 @@ mod tests {
             },
             bss_info: &bss_info2,
             multiple_bss_candidates: true,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
         let bss_info3 = types::Bss {
@@ -1175,15 +1264,12 @@ mod tests {
             },
             bss_info: &bss_info3,
             multiple_bss_candidates: false,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
         // there's a network on 5G, it should get a boost and be selected
         assert_eq!(
-            select_best_connection_candidate(
-                networks.clone(),
-                &vec![],
-                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
-            ),
+            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
@@ -1206,11 +1292,7 @@ mod tests {
 
         // all networks are 2.4GHz, strongest RSSI network returned
         assert_eq!(
-            select_best_connection_candidate(
-                networks.clone(),
-                &vec![],
-                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
-            ),
+            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
@@ -1227,6 +1309,10 @@ mod tests {
 
     #[test]
     fn select_best_connection_candidate_sorts_by_failure_count() {
+        // generate Inspect nodes
+        let inspector = inspect::Inspector::new();
+        let mut inspect_node =
+            InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: "foo".as_bytes().to_vec(),
@@ -1256,6 +1342,7 @@ mod tests {
             },
             bss_info: &bss_info1,
             multiple_bss_candidates: false,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
         let bss_info2 = types::Bss {
@@ -1273,15 +1360,12 @@ mod tests {
             },
             bss_info: &bss_info2,
             multiple_bss_candidates: false,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(
-                networks.clone(),
-                &vec![],
-                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
-            ),
+            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
@@ -1304,11 +1388,7 @@ mod tests {
 
         // weaker network (with no failures) returned
         assert_eq!(
-            select_best_connection_candidate(
-                networks.clone(),
-                &vec![],
-                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
-            ),
+            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
@@ -1328,11 +1408,7 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(
-                networks.clone(),
-                &vec![],
-                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
-            ),
+            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
@@ -1349,6 +1425,10 @@ mod tests {
 
     #[test]
     fn select_best_connection_candidate_incompatible() {
+        // generate Inspect nodes
+        let inspector = inspect::Inspector::new();
+        let mut inspect_node =
+            InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: "foo".as_bytes().to_vec(),
@@ -1378,6 +1458,7 @@ mod tests {
             },
             bss_info: &bss_info1,
             multiple_bss_candidates: true,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
         let bss_info2 = types::Bss {
@@ -1395,6 +1476,7 @@ mod tests {
             },
             bss_info: &bss_info2,
             multiple_bss_candidates: true,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
         let bss_info3 = types::Bss {
@@ -1412,15 +1494,12 @@ mod tests {
             },
             bss_info: &bss_info3,
             multiple_bss_candidates: false,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(
-                networks.clone(),
-                &vec![],
-                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
-            ),
+            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
@@ -1443,11 +1522,7 @@ mod tests {
 
         // other network returned
         assert_eq!(
-            select_best_connection_candidate(
-                networks.clone(),
-                &vec![],
-                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
-            ),
+            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
@@ -1464,6 +1539,10 @@ mod tests {
 
     #[test]
     fn select_best_connection_candidate_ignore_list() {
+        // generate Inspect nodes
+        let inspector = inspect::Inspector::new();
+        let mut inspect_node =
+            InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: "foo".as_bytes().to_vec(),
@@ -1488,6 +1567,7 @@ mod tests {
             },
             bss_info: &bss_info1,
             multiple_bss_candidates: false,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
         let bss_info2 = types::Bss { compatible: true, rssi: -12, ..generate_random_bss() };
@@ -1500,15 +1580,12 @@ mod tests {
             },
             bss_info: &bss_info2,
             multiple_bss_candidates: false,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
         // stronger network returned
         assert_eq!(
-            select_best_connection_candidate(
-                networks.clone(),
-                &vec![],
-                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
-            ),
+            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
@@ -1527,7 +1604,7 @@ mod tests {
             select_best_connection_candidate(
                 networks.clone(),
                 &vec![test_id_2.clone()],
-                &WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
+                &mut inspect_node
             ),
             Some((
                 types::ConnectionCandidate {
@@ -1541,6 +1618,131 @@ mod tests {
                 bss_info1.bssid
             ))
         );
+    }
+
+    #[test]
+    fn select_best_connection_candidate_logs_to_inspect() {
+        // generate Inspect nodes
+        let inspector = inspect::Inspector::new();
+        let mut inspect_node =
+            InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
+        // build networks list
+        let test_id_1 = types::NetworkIdentifier {
+            ssid: "foo".as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa3,
+        };
+        let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
+        let test_id_2 = types::NetworkIdentifier {
+            ssid: "bar".as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa,
+        };
+        let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
+
+        let mut networks = vec![];
+
+        let bss_info1 = types::Bss {
+            compatible: true,
+            rssi: -14,
+            channel: generate_channel(1),
+            ..generate_random_bss()
+        };
+        networks.push(InternalBss {
+            network_info: InternalSavedNetworkData {
+                network_id: test_id_1.clone(),
+                credential: credential_1.clone(),
+                has_ever_connected: true,
+                recent_failures: Vec::new(),
+            },
+            bss_info: &bss_info1,
+            multiple_bss_candidates: true,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
+        });
+
+        let bss_info2 = types::Bss {
+            compatible: false,
+            rssi: -10,
+            channel: generate_channel(1),
+            ..generate_random_bss()
+        };
+        networks.push(InternalBss {
+            network_info: InternalSavedNetworkData {
+                network_id: test_id_1.clone(),
+                credential: credential_1.clone(),
+                has_ever_connected: true,
+                recent_failures: Vec::new(),
+            },
+            bss_info: &bss_info2,
+            multiple_bss_candidates: true,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
+        });
+
+        let bss_info3 = types::Bss {
+            compatible: true,
+            rssi: -12,
+            channel: generate_channel(1),
+            ..generate_random_bss()
+        };
+        networks.push(InternalBss {
+            network_info: InternalSavedNetworkData {
+                network_id: test_id_2.clone(),
+                credential: credential_2.clone(),
+                has_ever_connected: true,
+                recent_failures: Vec::new(),
+            },
+            bss_info: &bss_info3,
+            multiple_bss_candidates: false,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
+        });
+
+        // stronger network returned
+        assert_eq!(
+            select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
+            Some((
+                types::ConnectionCandidate {
+                    network: test_id_2.clone(),
+                    credential: credential_2.clone(),
+                    bss: bss_info3.bss_desc.clone(),
+                    observed_in_passive_scan: Some(networks[2].bss_info.observed_in_passive_scan),
+                    multiple_bss_candidates: Some(false),
+                },
+                bss_info3.channel,
+                bss_info3.bssid
+            ))
+        );
+
+        assert_inspect_tree!(inspector, root: {
+            test: {
+                "0": {
+                    "@time": inspect::testing::AnyProperty,
+                    "candidates": {
+                        "0": contains {
+                            score: inspect::testing::AnyProperty,
+                        },
+                        "1": contains {
+                            score: inspect::testing::AnyProperty,
+                        },
+                        "2": contains {
+                            score: inspect::testing::AnyProperty,
+                        },
+                    },
+                    "selected": {
+                        ssid_hash: networks[2].hasher.hash_ssid(&networks[2].network_info.network_id.ssid),
+                        bssid_hash: networks[2].hasher.hash_mac_addr(&networks[2].bss_info.bssid),
+                        rssi: i64::from(networks[2].bss_info.rssi),
+                        score: i64::from(networks[2].score()),
+                        security_type_saved: networks[2].saved_security_type_to_string(),
+                        channel: {
+                            cbw: inspect::testing::AnyProperty,
+                            primary: u64::from(networks[2].bss_info.channel.primary),
+                            secondary80: u64::from(networks[2].bss_info.channel.secondary80),
+                        },
+                        compatible: networks[2].bss_info.compatible,
+                        recent_failure_count: networks[2].recent_failure_count(),
+                        saved_network_has_ever_connected: networks[2].network_info.has_ever_connected,
+                    },
+                }
+            },
+        });
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -2012,6 +2214,48 @@ mod tests {
                 multiple_bss_candidates: Some(false)
             })
         );
+
+        // Check the network selections were logged
+        assert_inspect_tree!(test_values.inspector, root: {
+            net_select_test: {
+                network_selection: {
+                    "0": {
+                        "@time": inspect::testing::AnyProperty,
+                        "candidates": {
+                            "0": contains {
+                                bssid_hash: inspect::testing::AnyProperty,
+                                score: inspect::testing::AnyProperty,
+                            },
+                            "1": contains {
+                                bssid_hash: inspect::testing::AnyProperty,
+                                score: inspect::testing::AnyProperty,
+                            },
+                        },
+                        "selected": contains {
+                            bssid_hash: inspect::testing::AnyProperty,
+                            score: inspect::testing::AnyProperty,
+                        },
+                    },
+                    "1": {
+                        "@time": inspect::testing::AnyProperty,
+                        "candidates": {
+                            "0": contains {
+                                bssid_hash: inspect::testing::AnyProperty,
+                                score: inspect::testing::AnyProperty,
+                            },
+                            "1": contains {
+                                bssid_hash: inspect::testing::AnyProperty,
+                                score: inspect::testing::AnyProperty,
+                            },
+                        },
+                        "selected": contains {
+                            bssid_hash: inspect::testing::AnyProperty,
+                            score: inspect::testing::AnyProperty,
+                        },
+                    }
+                }
+            },
+        });
     }
 
     #[test]

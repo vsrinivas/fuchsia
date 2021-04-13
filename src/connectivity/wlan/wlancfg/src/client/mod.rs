@@ -489,6 +489,7 @@ mod tests {
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},
         fidl_fuchsia_stash as fidl_stash, fuchsia_async as fasync,
+        fuchsia_inspect::{self as inspect},
         futures::{
             channel::{mpsc, oneshot},
             lock::Mutex,
@@ -738,6 +739,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             Arc::clone(&saved_networks),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1333,6 +1335,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             Arc::clone(&saved_networks),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
@@ -1404,6 +1407,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             Arc::clone(&saved_networks),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
@@ -1489,6 +1493,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             Arc::clone(&saved_networks),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1576,6 +1581,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             Arc::clone(&saved_networks),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
@@ -1645,6 +1651,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             Arc::clone(&saved_networks),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1808,6 +1815,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             Arc::clone(&saved_networks),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -2147,6 +2155,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             Arc::clone(&saved_networks),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
         let iface_manager = Arc::new(Mutex::new(FakeIfaceManagerNoIfaces {}));
 

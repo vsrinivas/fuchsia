@@ -214,8 +214,11 @@ fn main() -> Result<(), Error> {
 
     let saved_networks =
         Arc::new(executor.run_singlethreaded(SavedNetworksManager::new(cobalt_api.clone()))?);
-    let network_selector =
-        Arc::new(NetworkSelector::new(Arc::clone(&saved_networks), cobalt_api.clone()));
+    let network_selector = Arc::new(NetworkSelector::new(
+        Arc::clone(&saved_networks),
+        cobalt_api.clone(),
+        component::inspector().root().create_child("network_selector"),
+    ));
 
     let phy_manager = Arc::new(Mutex::new(PhyManager::new(
         wlan_svc.clone(),

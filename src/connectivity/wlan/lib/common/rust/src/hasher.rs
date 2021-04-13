@@ -13,7 +13,7 @@ use {
 
 const HASH_KEY_LEN: usize = 8;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 /// Hasher used to hash sensitive information, preserving user privacy.
 pub struct WlanHasher {
     hash_key: [u8; HASH_KEY_LEN],

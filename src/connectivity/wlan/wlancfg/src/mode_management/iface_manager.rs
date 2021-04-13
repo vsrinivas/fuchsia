@@ -1324,8 +1324,11 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("phy_manager");
         let (cobalt_api, cobalt_receiver) = create_mock_cobalt_sender_and_receiver();
-        let network_selector =
-            Arc::new(NetworkSelector::new(saved_networks.clone(), cobalt_api.clone()));
+        let network_selector = Arc::new(NetworkSelector::new(
+            saved_networks.clone(),
+            cobalt_api.clone(),
+            inspector.root().create_child("network_selection"),
+        ));
 
         TestValues {
             device_service_proxy: proxy,
@@ -3857,8 +3860,11 @@ mod tests {
 
         // Create other components to run the service.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
-        let network_selector =
-            Arc::new(NetworkSelector::new(test_values.saved_networks, create_mock_cobalt_sender()));
+        let network_selector = Arc::new(NetworkSelector::new(
+            test_values.saved_networks,
+            create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
+        ));
 
         // Create mpsc channel to handle requests.
         let (mut sender, receiver) = mpsc::channel(1);
@@ -3905,8 +3911,11 @@ mod tests {
 
         // Create other components to run the service.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
-        let network_selector =
-            Arc::new(NetworkSelector::new(test_values.saved_networks, create_mock_cobalt_sender()));
+        let network_selector = Arc::new(NetworkSelector::new(
+            test_values.saved_networks,
+            create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
+        ));
 
         // Create mpsc channel to handle requests.
         let (mut sender, receiver) = mpsc::channel(1);
@@ -3942,8 +3951,11 @@ mod tests {
 
         // Create other components to run the service.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
-        let network_selector =
-            Arc::new(NetworkSelector::new(test_values.saved_networks, create_mock_cobalt_sender()));
+        let network_selector = Arc::new(NetworkSelector::new(
+            test_values.saved_networks,
+            create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
+        ));
 
         // Create mpsc channel to handle requests.
         let (mut sender, receiver) = mpsc::channel(1);
@@ -4086,8 +4098,11 @@ mod tests {
 
         // Create other components to run the service.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
-        let network_selector =
-            Arc::new(NetworkSelector::new(test_values.saved_networks, create_mock_cobalt_sender()));
+        let network_selector = Arc::new(NetworkSelector::new(
+            test_values.saved_networks,
+            create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
+        ));
 
         // Create mpsc channel to handle requests.
         let (mut sender, receiver) = mpsc::channel(1);
@@ -4759,6 +4774,7 @@ mod tests {
         let selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks.clone(),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
 
         // Setup the test to prevent a network selection from happening for whatever reason was specified.
@@ -4888,6 +4904,7 @@ mod tests {
         let selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks.clone(),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
 
         // Inject a scan result into the network selector.
@@ -5006,6 +5023,7 @@ mod tests {
         let selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks.clone(),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
 
         // Inject a scan result into the network selector.
@@ -5105,6 +5123,7 @@ mod tests {
         let selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks.clone(),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
 
         // Create an interface manager with an unconfigured client interface.
@@ -5152,6 +5171,7 @@ mod tests {
         let selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks.clone(),
             create_mock_cobalt_sender(),
+            inspect::Inspector::new().root().create_child("network_selector"),
         ));
 
         // Create an interface manager with an unconfigured client interface.
