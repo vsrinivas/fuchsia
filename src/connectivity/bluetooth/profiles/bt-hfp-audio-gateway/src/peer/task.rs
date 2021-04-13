@@ -298,6 +298,11 @@ impl PeerTask {
                 // A new call state has been received from the call service
                 update = self.calls.select_next_some() => {
                     self.ringer.ring(self.calls.should_ring());
+                    if update.callwaiting {
+                        if let Some(call) = self.calls.waiting() {
+                            self.call_waiting_update(call).await;
+                        }
+                    }
                     for status in update.to_vec() {
                         self.phone_status_update(status).await;
                     }
@@ -359,6 +364,16 @@ impl PeerTask {
     /// procedure.
     async fn ring_update(&mut self, call: Call) {
         self.connection.receive_ag_request(ProcedureMarker::Ring, AgUpdate::Ring(call)).await;
+    }
+
+    /// Request to send a Call Waiting Notification.
+    async fn call_waiting_update(&mut self, call: Call) {
+        self.connection
+            .receive_ag_request(
+                ProcedureMarker::CallWaitingNotifications,
+                AgUpdate::CallWaiting(call),
+            )
+            .await;
     }
 
     /// Request to send the phone `status` by initiating the Phone Status Indicator
@@ -426,21 +441,30 @@ mod tests {
         at_commands::{self as at, SerDe},
         fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
         fidl_fuchsia_bluetooth_hfp::{
-            CallState, PeerHandlerMarker, PeerHandlerRequest, SignalStrength,
+            CallState, PeerHandlerMarker, PeerHandlerRequest, PeerHandlerRequestStream,
+            PeerHandlerWaitForCallResponder, SignalStrength,
         },
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::Channel,
-        futures::{future::ready, pin_mut, stream::FusedStream, SinkExt},
+        futures::{
+            future::ready,
+            pin_mut,
+            stream::{FusedStream, Stream},
+            SinkExt,
+        },
         proptest::prelude::*,
     };
 
     use crate::{
-        peer::service_level_connection::{
-            tests::{
-                create_and_initialize_slc, expect_data_received_by_peer, expect_peer_ready,
-                serialize_at_response,
+        peer::{
+            calls::Number,
+            service_level_connection::{
+                tests::{
+                    create_and_initialize_slc, expect_data_received_by_peer, expect_peer_ready,
+                    serialize_at_response,
+                },
+                SlcState,
             },
-            SlcState,
         },
         protocol::{
             features::HfFeatures,
@@ -739,6 +763,65 @@ mod tests {
         assert!(result.is_ready());
     }
 
+    /// Transform `stream` into a Stream of WaitForCall responders.
+    #[track_caller]
+    async fn wait_for_call_stream(
+        stream: PeerHandlerRequestStream,
+    ) -> impl Stream<Item = PeerHandlerWaitForCallResponder> {
+        filtered_stream(stream, |item| match item {
+            PeerHandlerRequest::WaitForCall { responder } => Ok(responder),
+            x => Err(x),
+        })
+        .await
+    }
+
+    /// Transform `stream` into a Stream of `T`.
+    ///
+    /// `f` is a function that takes a PeerHandlerRequest and either returns an Ok if the request
+    /// is relevant to the test or Err if the request irrelevant.
+    ///
+    /// This test helper function can be used in the common case where the test interacts
+    /// with a particular kind of PeerHandlerRequest.
+    ///
+    /// Initial setup of the handler is done, then a filtered stream is produced which
+    /// outputs items based on the result of `f`. Ok return values from `f` are returned from the
+    /// `filtered_stream`. Err return values from `f` are not returned from the `filtered_stream`.
+    /// Instead they are stored within `filtered_stream` until `filtered_stream` is dropped
+    /// so that they do not cause the underlying fidl channel to be closed.
+    #[track_caller]
+    async fn filtered_stream<T>(
+        mut stream: PeerHandlerRequestStream,
+        f: impl Fn(PeerHandlerRequest) -> Result<T, PeerHandlerRequest>,
+    ) -> impl Stream<Item = T> {
+        // Send the network information immediately so the peer can make progress.
+        match stream.next().await {
+            Some(Ok(PeerHandlerRequest::WatchNetworkInformation { responder })) => {
+                responder
+                    .send(NetworkInformation::EMPTY)
+                    .expect("Successfully send network information");
+            }
+            x => panic!("Expected watch network information request: {:?}", x),
+        };
+
+        // A vec to hold all the stream items we don't care about for this test.
+        let mut junk_drawer = vec![];
+
+        // Filter out all items, placing them in the junk_drawer.
+        stream.filter_map(move |item| {
+            let item = match item {
+                Ok(item) => match f(item) {
+                    Ok(t) => Some(t),
+                    Err(x) => {
+                        junk_drawer.push(x);
+                        None
+                    }
+                },
+                _ => None,
+            };
+            ready(item)
+        })
+    }
+
     #[test]
     fn call_updates_update_ringer_state() {
         // Set up the executor, peer, and background call manager task
@@ -752,35 +835,11 @@ mod tests {
         let (connection, mut remote) = create_and_initialize_slc(state);
         let (peer, mut sender, receiver, _profile) = setup_peer_task(Some(connection));
 
-        let (proxy, mut stream) =
+        let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
 
         fasync::Task::local(async move {
-            // Send the network information immediately so the peer can make progress.
-            match stream.next().await {
-                Some(Ok(PeerHandlerRequest::WatchNetworkInformation { responder })) => {
-                    responder
-                        .send(NetworkInformation::EMPTY)
-                        .expect("Successfully send network information");
-                }
-                x => panic!("Expected watch network information request: {:?}", x),
-            };
-
-            // A vec to hold all the stream items we don't care about for this test.
-            let mut junk_drawer = vec![];
-
-            // Filter out all items that are irrelevant to this particular test, placing them in
-            // the junk_drawer.
-            let mut stream = stream.filter_map(move |item| {
-                let item = match item {
-                    Ok(PeerHandlerRequest::WaitForCall { responder }) => Some(responder),
-                    x => {
-                        junk_drawer.push(x);
-                        None
-                    }
-                };
-                ready(item)
-            });
+            let mut stream = wait_for_call_stream(stream).await;
 
             // Send the incoming call
             let responder = stream.next().await.unwrap();
@@ -788,10 +847,6 @@ mod tests {
             responder
                 .send(client_end, "1234567", CallState::IncomingRinging)
                 .expect("Successfully send call information");
-
-            // Expect to send the Call Setup indicator to the peer.
-            let expected_data1 = vec![AgIndicator::CallSetup(1).into()];
-            expect_data_received_by_peer(&mut remote, expected_data1).await;
 
             // Call manager should collect all further requests, without responding.
             stream.collect::<Vec<_>>().await;
@@ -807,6 +862,10 @@ mod tests {
         pin_mut!(run_fut);
         let result = exec.run_until_stalled(&mut run_fut);
         assert!(result.is_pending());
+
+        // Expect to send the Call Setup indicator to the peer.
+        let expected_data = vec![AgIndicator::CallSetup(1).into()];
+        exec.run_singlethreaded(expect_data_received_by_peer(&mut remote, expected_data));
 
         // Drop the peer task sender to force the PeerTask's run future to complete
         drop(sender);
@@ -887,5 +946,61 @@ mod tests {
 
         // Since we (the AG) received a valid HF indicator, we expect to send an OK back to the peer.
         expect_peer_ready(&mut exec, &mut remote, Some(serialize_at_response(at::Response::Ok)));
+    }
+
+    #[test]
+    fn call_updates_produce_call_waiting() {
+        // Set up the executor, peer, and background call manager task
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let raw_number = "1234567";
+        let number = Number::from(raw_number);
+        let expected_ccwa =
+            vec![at::success(at::Success::Ccwa { ty: number.type_(), number: number.into() })];
+        let expected_ciev = vec![AgIndicator::CallSetup(1).into()];
+
+        // Setup the peer task with the specified SlcState to enable indicator events.
+        let state = SlcState {
+            call_waiting_notifications: true,
+            ag_indicator_events_reporting: AgIndicatorsReporting::new_enabled(),
+            ..SlcState::default()
+        };
+        let (connection, mut remote) = create_and_initialize_slc(state);
+        let (peer, mut sender, receiver, _profile) = setup_peer_task(Some(connection));
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
+
+        fasync::Task::local(async move {
+            let mut stream = wait_for_call_stream(stream).await;
+
+            // Send the incoming waiting call
+            let responder = stream.next().await.unwrap();
+            let (client_end, _call_stream) = fidl::endpoints::create_request_stream().unwrap();
+            responder
+                .send(client_end, raw_number, CallState::IncomingWaiting)
+                .expect("Successfully send call information");
+
+            // Call manager should collect all further requests, without responding.
+            stream.collect::<Vec<_>>().await;
+        })
+        .detach();
+
+        // Pass in the client end connected to the call manager
+        let result = exec.run_singlethreaded(sender.send(PeerRequest::Handle(proxy)));
+        assert!(result.is_ok());
+
+        // Run the PeerTask until it has no more work to do.
+        let run_fut = peer.run(receiver);
+        pin_mut!(run_fut);
+        let result = exec.run_until_stalled(&mut run_fut);
+        assert!(result.is_pending());
+
+        exec.run_singlethreaded(expect_data_received_by_peer(&mut remote, expected_ccwa));
+        exec.run_singlethreaded(expect_data_received_by_peer(&mut remote, expected_ciev));
+
+        // Drop the peer task sender to force the PeerTask's run future to complete
+        drop(sender);
+        exec.run_until_stalled(&mut run_fut).expect("run_fut to complete");
     }
 }

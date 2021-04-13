@@ -441,15 +441,19 @@ pub struct CallIndicators {
     pub call: Call,
     pub callsetup: CallSetup,
     pub callheld: CallHeld,
+    /// There is at least one call in the IncomingWaiting state. `callwaiting` is distinct from
+    /// other fields in that it doesn't map to a specific CIEV phone status indicator.
+    pub callwaiting: bool,
 }
 
 impl CallIndicators {
     /// Find CallIndicators based on all items in `iter`.
-    pub fn find(iter: impl Iterator<Item = CallState> + Clone) -> Self {
+    pub fn find(mut iter: impl Iterator<Item = CallState> + Clone) -> Self {
         let call = Call::find(iter.clone());
         let callsetup = CallSetup::find(iter.clone());
-        let callheld = CallHeld::find(iter);
-        CallIndicators { call, callsetup, callheld }
+        let callheld = CallHeld::find(iter.clone());
+        let callwaiting = iter.any(|c| c == CallState::IncomingWaiting);
+        CallIndicators { call, callsetup, callheld, callwaiting }
     }
 
     /// A list of all the statuses that have changed between `other` and self.
@@ -465,6 +469,9 @@ impl CallIndicators {
         if other.callheld != self.callheld {
             changes.callheld = Some(self.callheld);
         }
+        if self.callwaiting && !other.callwaiting {
+            changes.callwaiting = true;
+        }
         changes
     }
 }
@@ -474,12 +481,17 @@ pub struct CallIndicatorsUpdates {
     pub call: Option<Call>,
     pub callsetup: Option<CallSetup>,
     pub callheld: Option<CallHeld>,
+    /// Indicates whether there is a call that has changed to the CallWaiting state in this update.
+    pub callwaiting: bool,
 }
 
 impl CallIndicatorsUpdates {
-    /// Returns true if all fields are `None`
+    /// Returns true if all fields are `None` or false.
     pub fn is_empty(&self) -> bool {
-        self.call.is_none() && self.callsetup.is_none() && self.callheld.is_none()
+        self.call.is_none()
+            && self.callsetup.is_none()
+            && self.callheld.is_none()
+            && !self.callwaiting
     }
 
     /// Returns a Vec of all updated indicators. This vec is ordered by Indicator index.
@@ -799,6 +811,7 @@ mod tests {
         let expected = CallIndicators {
             call: Call::Some,
             callsetup: CallSetup::Incoming,
+            callwaiting: false,
             callheld: CallHeld::Held,
         };
         assert_eq!(ind, expected);
@@ -832,6 +845,23 @@ mod tests {
             ..CallIndicatorsUpdates::default()
         };
         assert_eq!(b.difference(a), expected);
+
+        let a = CallIndicators::default();
+        let b = CallIndicators { callsetup: CallSetup::Incoming, callwaiting: true, ..a };
+        let expected = CallIndicatorsUpdates {
+            callsetup: Some(CallSetup::Incoming),
+            callwaiting: true,
+            ..CallIndicatorsUpdates::default()
+        };
+        assert_eq!(b.difference(a), expected);
+
+        // reverse: going from b to a.
+        let expected = CallIndicatorsUpdates {
+            callsetup: Some(CallSetup::None),
+            callwaiting: false,
+            ..CallIndicatorsUpdates::default()
+        };
+        assert_eq!(a.difference(b), expected);
     }
 
     #[test]
@@ -844,6 +874,10 @@ mod tests {
 
         let mut updates = CallIndicatorsUpdates::default();
         updates.callsetup = Some(CallSetup::Incoming);
+        assert!(!updates.is_empty());
+
+        let mut updates = CallIndicatorsUpdates::default();
+        updates.callwaiting = true;
         assert!(!updates.is_empty());
 
         let mut updates = CallIndicatorsUpdates::default();

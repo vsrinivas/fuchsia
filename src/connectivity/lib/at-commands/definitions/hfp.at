@@ -175,3 +175,7 @@ command Answer { ATA }
 # Hang Up
 # HFP 1.8 4.34.2
 command { AT+CHUP }
+
+# Call Waiting Notification
+# HFP 1.8 4.34.2
+response { CCWA: number: String, ty: Integer }

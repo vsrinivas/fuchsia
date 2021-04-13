@@ -11,6 +11,8 @@ use crate::peer::service_level_connection::SlcState;
 /// The HF may disable or enable the Call Waiting Notifications via this
 /// procedure. See HFP v1.8, Section 4.21.
 ///
+/// The AG may send Call Waiting Notifications via this procedure. See HFP v1.8, Section 4.22
+///
 /// This procedure is implemented from the perspective of the AG. Namely, outgoing `requests`
 /// typically request information about the current state of the AG, to be sent to the remote
 /// peer acting as the HF.
@@ -40,6 +42,21 @@ impl Procedure for CallWaitingNotificationsProcedure {
                 AgUpdate::Ok.into()
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
+        }
+    }
+
+    fn ag_update(&mut self, update: AgUpdate, state: &mut SlcState) -> ProcedureRequest {
+        match (self.terminated, update) {
+            (false, AgUpdate::CallWaiting(call)) => {
+                // Only send the update if call waiting notifications are enabled for the SLC.
+                self.terminated = true;
+                if state.call_waiting_notifications {
+                    AgUpdate::CallWaiting(call).into()
+                } else {
+                    ProcedureRequest::None
+                }
+            }
+            (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedAg(update)),
         }
     }
 

@@ -442,6 +442,8 @@ pub enum AgUpdate {
     CurrentCalls(Vec<Call>),
     /// The information of an IncomingRinging call.
     Ring(Call),
+    /// The information of an IncomingRinging call.
+    CallWaiting(Call),
 }
 
 impl From<AgUpdate> for ProcedureRequest {
@@ -511,6 +513,12 @@ impl From<AgUpdate> for ProcedureRequest {
                         number: call.number.into(),
                     }),
                 ]
+            }
+            AgUpdate::CallWaiting(call) => {
+                vec![at::success(at::Success::Ccwa {
+                    ty: call.number.type_(),
+                    number: call.number.into(),
+                })]
             }
         }
         .into()

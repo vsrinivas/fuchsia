@@ -351,6 +351,12 @@ impl Calls {
             .map(|(idx, call)| Call::new(idx, call.number.clone(), call.state, call.direction))
     }
 
+    /// Get the Call that has been waiting the longest. Returns None if there are no waiting calls.
+    pub fn waiting(&self) -> Option<Call> {
+        self.oldest_by_state(CallState::IncomingWaiting)
+            .map(|(idx, call)| Call::new(idx, call.number.clone(), call.state, call.direction))
+    }
+
     /// Answer the call that has been in the IncomingRinging state the longest.
     /// Returns an Error if there are no calls in the IncomingRinging state.
     pub fn answer(&mut self) -> Result<(), CallError> {
@@ -711,6 +717,7 @@ mod tests {
         let expected = CallIndicators {
             call: indicators::Call::None,
             callsetup: indicators::CallSetup::Incoming,
+            callwaiting: false,
             callheld: indicators::CallHeld::None,
         };
         assert_eq!(calls.indicators(), expected);
