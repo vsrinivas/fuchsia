@@ -148,6 +148,13 @@ pub struct RealmInstance {
     _mocks_runner: mock::MocksRunner,
 }
 
+// Empty Drop impl so that `RealmInstance` cannot be destructured.
+// This avoids a common mistake where the `ScopedInstance` is moved out and the MocksRunner is
+// dropped, leading to unexpected behavior.
+impl Drop for RealmInstance {
+    fn drop(&mut self) {}
+}
+
 /// A custom built realm, which can be created at runtime in a component collection
 pub struct Realm {
     decl_tree: Option<RealmNode>,
