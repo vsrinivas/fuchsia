@@ -115,7 +115,7 @@ pub type Actions = Vec<Action>;
 
 /// Holds data and provides methods for handling state transitions from information requesting
 /// state.
-#[derive(Debug, Default)]
+#[derive(Debug, PartialEq)]
 struct InformationRequesting {
     retrans_timeout: Duration,
 }
@@ -129,7 +129,7 @@ impl InformationRequesting {
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
     ) -> Transition {
-        let info_req: Self = Default::default();
+        let info_req = Self { retrans_timeout: Default::default() };
         info_req.send_and_schedule_retransmission(transaction_id, options_to_request, rng)
     }
 
@@ -199,11 +199,10 @@ impl InformationRequesting {
             }
         }
 
-        let actions = vec![
+        let actions = std::array::IntoIter::new([
             Action::CancelTimer(ClientTimerType::Retransmission),
             Action::ScheduleTimer(ClientTimerType::Refresh, information_refresh_time),
-        ]
-        .into_iter()
+        ])
         .chain(dns_servers.clone().map(|server_addrs| Action::UpdateDnsServers(server_addrs)))
         .collect::<Vec<_>>();
 
@@ -217,7 +216,7 @@ impl InformationRequesting {
 }
 
 /// Provides methods for handling state transitions from information received state.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct InformationReceived {
     /// Stores the DNS servers received from the reply.
     dns_servers: Vec<Ipv6Addr>,
@@ -238,7 +237,7 @@ impl InformationReceived {
 /// All possible states of a DHCPv6 client.
 ///
 /// States not found in this enum are not supported yet.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum ClientState {
     /// Creating and (re)transmitting an information request, and waiting for a reply.
     InformationRequesting(InformationRequesting),
@@ -257,7 +256,7 @@ impl ClientState {
     fn reply_message_received<B: ByteSlice>(self, msg: v6::Message<'_, B>) -> Transition {
         match self {
             ClientState::InformationRequesting(s) => s.reply_message_received(msg),
-            state => (state, vec![]),
+            state => (state, Vec::new()),
         }
     }
 
@@ -274,7 +273,7 @@ impl ClientState {
             ClientState::InformationRequesting(s) => {
                 s.retransmission_timer_expired(transaction_id, options_to_request, rng)
             }
-            state => (state, vec![]),
+            state => (state, Vec::new()),
         }
     }
 
@@ -291,7 +290,7 @@ impl ClientState {
             ClientState::InformationReceived(s) => {
                 s.refresh_timer_expired(transaction_id, options_to_request, rng)
             }
-            state => (state, vec![]),
+            state => (state, Vec::new()),
         }
     }
 
@@ -417,26 +416,28 @@ mod tests {
     #[test]
     fn test_information_request_and_reply() {
         // Try to start information request with different list of requested options.
-        for options in vec![
+        for options in std::array::IntoIter::new([
             Vec::new(),
             vec![v6::OptionCode::DnsServers],
             vec![v6::OptionCode::DnsServers, v6::OptionCode::DomainList],
-        ] {
+        ]) {
             let (mut client, actions) = ClientStateMachine::start_information_request(
                 [0, 1, 2],
                 options.clone(),
                 StepRng::new(std::u64::MAX / 2, 0),
             );
 
-            assert_matches!(client.state, Some(ClientState::InformationRequesting(_)));
+            assert_eq!(
+                client.state,
+                Some(ClientState::InformationRequesting(InformationRequesting {
+                    retrans_timeout: INFO_REQ_TIMEOUT,
+                }))
+            );
 
             // Start of information requesting should send a information request and schedule a
             // retransmission timer.
-            let want_options = if options.is_empty() {
-                Vec::new()
-            } else {
-                vec![v6::DhcpOption::Oro(options.clone())]
-            };
+            let want_options =
+                if options.is_empty() { Vec::new() } else { vec![v6::DhcpOption::Oro(options)] };
             let builder = v6::MessageBuilder::new(
                 v6::MessageType::InformationRequest,
                 client.transaction_id,
@@ -445,20 +446,19 @@ mod tests {
             let mut want_buf = vec![0; builder.bytes_len()];
             let () = builder.serialize(&mut want_buf);
             assert_eq!(
-                actions,
-                vec![
+                actions[..],
+                [
                     Action::SendMessage(want_buf),
                     Action::ScheduleTimer(ClientTimerType::Retransmission, INFO_REQ_TIMEOUT)
                 ]
             );
 
+            let dns_servers = vec![std_ip_v6!("ff01::0102"), std_ip_v6!("ff01::0304")];
+
             let test_dhcp_refresh_time = 42u32;
             let options = [
                 v6::DhcpOption::InformationRefreshTime(test_dhcp_refresh_time),
-                v6::DhcpOption::DnsServers(vec![
-                    std_ip_v6!("ff01::0102"),
-                    std_ip_v6!("ff01::0304"),
-                ]),
+                v6::DhcpOption::DnsServers(dns_servers.clone()),
             ];
             let builder =
                 v6::MessageBuilder::new(v6::MessageType::Reply, client.transaction_id, &options);
@@ -469,20 +469,23 @@ mod tests {
 
             let actions = client.handle_message_receive(msg);
 
-            assert_matches!(client.state, Some(ClientState::InformationReceived(_)));
+            {
+                let dns_servers = dns_servers.clone();
+                assert_eq!(
+                    client.state,
+                    Some(ClientState::InformationReceived(InformationReceived { dns_servers }))
+                );
+            }
             // Upon receiving a valid reply, client should set up for refresh based on the reply.
             assert_eq!(
-                actions,
-                vec![
+                actions[..],
+                [
                     Action::CancelTimer(ClientTimerType::Retransmission),
                     Action::ScheduleTimer(
                         ClientTimerType::Refresh,
                         Duration::from_secs(u64::from(test_dhcp_refresh_time)),
                     ),
-                    Action::UpdateDnsServers(vec![
-                        std_ip_v6!("ff01::0102"),
-                        std_ip_v6!("ff01::0304")
-                    ]),
+                    Action::UpdateDnsServers(dns_servers)
                 ]
             );
         }
@@ -511,7 +514,7 @@ mod tests {
         assert!(client.handle_message_receive(msg).is_empty());
 
         // Messages with unsupported/unexpected types are discarded.
-        for msg_type in vec![
+        for msg_type in std::array::IntoIter::new([
             v6::MessageType::Solicit,
             v6::MessageType::Advertise,
             v6::MessageType::Request,
@@ -524,7 +527,7 @@ mod tests {
             v6::MessageType::InformationRequest,
             v6::MessageType::RelayForw,
             v6::MessageType::RelayRepl,
-        ] {
+        ]) {
             let builder = v6::MessageBuilder::new(msg_type, client.transaction_id, &[]);
             let mut buf = vec![0; builder.bytes_len()];
             let () = builder.serialize(&mut buf);
@@ -544,8 +547,13 @@ mod tests {
         );
 
         // The client expects either a reply or retransmission timeout in the current state.
-        client.handle_timeout(ClientTimerType::Refresh);
-        assert_matches!(client.state, Some(ClientState::InformationRequesting(_)));
+        assert_eq!(client.handle_timeout(ClientTimerType::Refresh)[..], []);
+        assert_eq!(
+            client.state,
+            Some(ClientState::InformationRequesting(InformationRequesting {
+                retrans_timeout: INFO_REQ_TIMEOUT
+            }))
+        );
 
         let builder = v6::MessageBuilder::new(v6::MessageType::Reply, client.transaction_id, &[]);
         let mut buf = vec![0; builder.bytes_len()];
@@ -553,20 +561,35 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         // Transition to InformationReceived state.
-        client.handle_message_receive(msg);
-        assert_matches!(client.state, Some(ClientState::InformationReceived(_)));
+        assert_eq!(
+            client.handle_message_receive(msg)[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::ScheduleTimer(ClientTimerType::Refresh, IRT_DEFAULT)
+            ]
+        );
+        assert_eq!(
+            client.state,
+            Some(ClientState::InformationReceived(InformationReceived { dns_servers: vec![] }))
+        );
 
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         // Extra replies received in information received state are ignored.
-        client.handle_message_receive(msg);
-        assert_matches!(client.state, Some(ClientState::InformationReceived(_)));
+        assert_eq!(client.handle_message_receive(msg)[..], []);
+        assert_eq!(
+            client.state,
+            Some(ClientState::InformationReceived(InformationReceived { dns_servers: vec![] }))
+        );
 
         // Information received state should only respond to `Refresh` timer.
-        client.handle_timeout(ClientTimerType::Retransmission);
-        assert_matches!(client.state, Some(ClientState::InformationReceived(_)));
+        assert_eq!(client.handle_timeout(ClientTimerType::Retransmission)[..], []);
+        assert_eq!(
+            client.state,
+            Some(ClientState::InformationReceived(InformationReceived { dns_servers: vec![] }))
+        );
     }
 
     #[test]
@@ -604,7 +627,13 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
         // Transition to InformationReceived state.
-        client.handle_message_receive(msg);
+        assert_eq!(
+            client.handle_message_receive(msg)[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::ScheduleTimer(ClientTimerType::Refresh, IRT_DEFAULT)
+            ]
+        );
 
         // Refresh should start another round of information request.
         let actions = client.handle_timeout(ClientTimerType::Refresh);
@@ -616,8 +645,8 @@ mod tests {
         let mut want_buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut want_buf);
         assert_eq!(
-            actions,
-            vec![
+            actions[..],
+            [
                 Action::SendMessage(want_buf),
                 Action::ScheduleTimer(ClientTimerType::Retransmission, INFO_REQ_TIMEOUT)
             ]

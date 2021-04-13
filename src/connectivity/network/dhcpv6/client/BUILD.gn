@@ -39,6 +39,8 @@ rustc_binary("dhcpv6_client") {
     "src/main.rs",
     "src/provider.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("component") {

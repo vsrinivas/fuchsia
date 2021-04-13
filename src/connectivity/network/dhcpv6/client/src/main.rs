@@ -12,8 +12,8 @@ use {
     anyhow::{Context as _, Error, Result},
     fidl_fuchsia_net_dhcpv6::ClientProviderRequestStream,
     fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
-    futures::{future, StreamExt, TryStreamExt},
+    fuchsia_component::server::{ServiceFs, ServiceFsDir},
+    futures::{future, StreamExt as _, TryStreamExt as _},
 };
 
 enum IncomingService {
@@ -26,8 +26,9 @@ async fn main() -> Result<()> {
     let () = log::info!("starting");
 
     let mut fs = ServiceFs::new_local();
-    fs.dir("svc").add_fidl_service(IncomingService::ClientProvider);
-    fs.take_and_serve_directory_handle()?;
+    let _: &mut ServiceFsDir<'_, _> =
+        fs.dir("svc").add_fidl_service(IncomingService::ClientProvider);
+    let _: &mut ServiceFs<_> = fs.take_and_serve_directory_handle()?;
 
     fs.then(future::ok::<_, Error>)
         .try_for_each_concurrent(None, |request| async {
