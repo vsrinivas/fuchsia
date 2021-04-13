@@ -3,10 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("setui") {
   testonly = true
@@ -259,28 +258,27 @@ rustc_library("lib") {
   ]
 }
 
-test_package("setui_service_tests") {
+fuchsia_unittest_package("setui_service_tests") {
+  component_name = "settings_lib_test"
+  manifest = "meta/settings_lib_test.cmx"
   deps = [
     ":lib_test",
+    ":setui_service_tests_resources",
     ":tests_config",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
 
-  tests = [
-    {
-      name = "settings_lib_test"
-    },
+resource("setui_service_tests_resources") {
+  sources = [
+    "//third_party/icu/common/icudtl.dat",
+    "src/tests/testdata/test_store_data.store",
   ]
-
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
-    {
-      path = rebase_path("src/tests/testdata/test_store_data.store")
-      dest = "test_store_data.store"
-    },
-  ]
+  outputs = [ "data/{{source_file_part}}" ]
 }
 
 config_data("tests_config") {
@@ -327,32 +325,28 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("setui_service") {
+fuchsia_component("setui_service_v1") {
+  component_name = "setui_service"
+  manifest = "meta/setui_service.cmx"
   deps = [ ":bin" ]
+}
 
-  binaries = [
-    {
-      name = "setui_service"
-    },
-  ]
+fuchsia_component("setui_service_v2") {
+  component_name = "setui_service"
+  manifest = "meta/setui_service.cml"
+  deps = [ ":bin" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/setui_service.cmx")
-      dest = "setui_service.cmx"
-    },
-    {
-      path = rebase_path("meta/setui_service.cml")
-      dest = "setui_service.cm"
-    },
-  ]
+resource("setui_service_resources") {
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
-  # Timezone resources, needed to validate input to fuchsia.settings.intl.
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
+fuchsia_package("setui_service") {
+  deps = [
+    ":setui_service_resources",
+    ":setui_service_v1",
+    ":setui_service_v2",
   ]
 }
 
@@ -374,105 +368,48 @@ rustc_binary("setui-config-test") {
   sources = [ "src/setui_config_test.rs" ]
 }
 
-unittest_package("sample-setui-config-test") {
-  deps = [ "//garnet/bin/setui:setui-config-test" ]
-
-  resources = [
-    {
-      path = rebase_path("src/tests/testdata/service_configuration.json")
-      dest = "service_configuration.json"
-    },
-    {
-      path = rebase_path("src/tests/testdata/display_configuration.json")
-      dest = "display_configuration.json"
-    },
-    {
-      path = rebase_path("src/tests/testdata/policy_configuration.json")
-      dest = "policy_configuration.json"
-    },
-    {
-      path = rebase_path("src/tests/testdata/service_flags.json")
-      dest = "service_flags.json"
-    },
-    {
-      path = rebase_path("src/tests/testdata/input_device_configuration.json")
-      dest = "input_device_configuration.json"
-    },
-    {
-      path = rebase_path("src/tests/testdata/light_sensor_configuration.json")
-      dest = "light_sensor_configuration.json"
-    },
-    {
-      path = rebase_path("src/tests/testdata/light_hardware_configuration.json")
-      dest = "light_hardware_configuration.json"
-    },
-    {
-      path = rebase_path("src/tests/testdata/agent_configuration.json")
-      dest = "agent_configuration.json"
-    },
+resource("sample-setui-config-test-resources") {
+  sources = [
+    "src/tests/testdata/agent_configuration.json",
+    "src/tests/testdata/display_configuration.json",
+    "src/tests/testdata/input_device_configuration.json",
+    "src/tests/testdata/light_hardware_configuration.json",
+    "src/tests/testdata/light_sensor_configuration.json",
+    "src/tests/testdata/policy_configuration.json",
+    "src/tests/testdata/service_configuration.json",
+    "src/tests/testdata/service_flags.json",
   ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
-  tests = [
-    {
-      name = "setui_config_test"
-      dest = "setui_config_test_all_args"
-      args = [
-        "--service-config",
-        "/pkg/data/service_configuration.json",
-        "--display-config",
-        "/pkg/data/display_configuration.json",
-        "--policy-config",
-        "/pkg/data/policy_configuration.json",
-        "--controller-flags",
-        "/pkg/data/service_flags.json",
-        "--input-device-config",
-        "/pkg/data/input_device_configuration.json",
-        "--light-sensor-config",
-        "/pkg/data/light_sensor_configuration.json",
-        "--light-hardware-config",
-        "/pkg/data/light_hardware_configuration.json",
-        "--agent-config",
-        "/pkg/data/agent_configuration.json",
-      ]
-    },
-    {
-      name = "setui_config_test"
-      dest = "setui_config_test_short_args"
-      args = [
-        "-s",
-        "/pkg/data/service_configuration.json",
-        "-d",
-        "/pkg/data/display_configuration.json",
-        "-p",
-        "/pkg/data/policy_configuration.json",
-        "-f",
-        "/pkg/data/service_flags.json",
-        "-i",
-        "/pkg/data/input_device_configuration.json",
-        "-l",
-        "/pkg/data/light_sensor_configuration.json",
-        "-h",
-        "/pkg/data/light_hardware_configuration.json",
-        "-a",
-        "/pkg/data/agent_configuration.json",
-      ]
-    },
-    {
-      name = "setui_config_test"
-      dest = "setui_config_test_no_args"
-      args = []
-    },
-    {
-      name = "setui_config_test"
-      dest = "setui_config_test_multiple_args"
-      args = [
-        "-s",
-        "/pkg/data/service_configuration.json",
-        "-s",
-        "/pkg/data/service_configuration.json",
-      ]
-    },
+fuchsia_unittest_component("sample-setui-config-test-all-args") {
+  manifest = "meta/sample_setui_config_test_all_args.cmx"
+  deps = [ ":setui-config-test" ]
+}
+
+fuchsia_unittest_component("sample-setui-config-test-multiple-args") {
+  manifest = "meta/sample_setui_config_test_multiple_args.cmx"
+  deps = [ ":setui-config-test" ]
+}
+
+fuchsia_unittest_component("sample-setui-config-test-no-args") {
+  manifest = "meta/sample_setui_config_test_no_args.cmx"
+  deps = [ ":setui-config-test" ]
+}
+
+fuchsia_unittest_component("sample-setui-config-test-short-args") {
+  manifest = "meta/sample_setui_config_test_short_args.cmx"
+  deps = [ ":setui-config-test" ]
+}
+
+fuchsia_test_package("sample-setui-config-test") {
+  test_components = [
+    ":sample-setui-config-test-all-args",
+    ":sample-setui-config-test-multiple-args",
+    ":sample-setui-config-test-no-args",
+    ":sample-setui-config-test-short-args",
   ]
+  deps = [ ":sample-setui-config-test-resources" ]
 }
 
 group("tests") {
