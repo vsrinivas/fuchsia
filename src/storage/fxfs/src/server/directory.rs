@@ -14,6 +14,7 @@ use {
     },
     anyhow::{bail, Error},
     async_trait::async_trait,
+    either::{Left, Right},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         self as fio, NodeAttributes, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE,
@@ -58,6 +59,7 @@ impl FxDirectory {
         // writers, but the readers don't have any locks, so there needs to be checks that nodes
         // still exist at some point.
         let mut current_node = FxNode::Dir(self.clone());
+        let fs = self.volume.store().filesystem();
         while !path.is_empty() {
             let last_segment = path.is_single_component();
             let current_dir = match current_node {
@@ -68,10 +70,9 @@ impl FxDirectory {
             // Create the transaction here if we might need to create the object so that we have a
             // lock in place.
             let store = self.volume.store();
-            let transaction = if last_segment && flags & OPEN_FLAG_CREATE != 0 {
-                Some(
-                    store
-                        .filesystem()
+            let transaction_or_guard = if last_segment && flags & OPEN_FLAG_CREATE != 0 {
+                Left(
+                    fs.clone()
                         .new_transaction(&[LockKey::object(
                             store.store_object_id(),
                             current_dir.directory.object_id(),
@@ -79,7 +80,21 @@ impl FxDirectory {
                         .await?,
                 )
             } else {
-                None
+                // When child objects are created, the object is created along with the directory
+                // entry in the same transaction, and so we need to hold a read lock over the lookup
+                // and open calls.
+
+                // TODO(csuter): I think that this cannot be tested easily at the moment because it
+                // would only result in open_or_load_node returning NotFound, which is what we would
+                // want to return anyway.  When we add unlink support, we might be able to use this
+                // same lock to guard against the race mentioned above.
+                Right(
+                    fs.read_lock(&[LockKey::object(
+                        store.store_object_id(),
+                        current_dir.directory.object_id(),
+                    )])
+                    .await,
+                )
             };
             match current_dir.directory.lookup(name).await {
                 Ok((object_id, object_descriptor)) => {
@@ -93,10 +108,10 @@ impl FxDirectory {
                         self.volume.open_or_load_node(object_id, object_descriptor).await?;
                 }
                 Err(e) if FxfsError::NotFound.matches(&e) => {
-                    if let Some(transaction) = transaction {
+                    if let Left(transaction) = transaction_or_guard {
                         return self.create_child(transaction, &current_dir, name, mode).await;
                     } else {
-                        bail!(FxfsError::NotFound);
+                        return Err(e);
                     }
                 }
                 Err(e) => return Err(e),

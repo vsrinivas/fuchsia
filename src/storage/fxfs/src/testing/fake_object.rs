@@ -9,7 +9,9 @@ use {
             buffer_allocator::{BufferAllocator, MemBufferSource},
         },
         object_handle::ObjectHandle,
-        object_store::transaction::{LockKey, LockManager, Transaction, TransactionHandler},
+        object_store::transaction::{
+            LockKey, LockManager, ReadGuard, Transaction, TransactionHandler,
+        },
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -66,10 +68,16 @@ impl TransactionHandler for FakeObject {
         Ok(Transaction::new(self, locks))
     }
 
-    async fn commit_transaction(&self, _transaction: Transaction<'_>) {}
+    async fn commit_transaction(&self, mut transaction: Transaction<'_>) {
+        std::mem::take(&mut transaction.mutations);
+    }
 
     fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
         self.lock_manager.drop_transaction(transaction);
+    }
+
+    async fn read_lock<'a>(&'a self, lock_keys: &[LockKey]) -> ReadGuard<'a> {
+        self.lock_manager.read_lock(lock_keys).await
     }
 }
 

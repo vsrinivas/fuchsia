@@ -9,7 +9,9 @@ use {
             allocator::Allocator,
             filesystem::{Filesystem, ObjectManager, ObjectSync},
             journal::JournalCheckpoint,
-            transaction::{LockKey, LockManager, Transaction, TransactionHandler, TxnMutation},
+            transaction::{
+                LockKey, LockManager, ReadGuard, Transaction, TransactionHandler, TxnMutation,
+            },
             ObjectStore,
         },
     },
@@ -71,6 +73,7 @@ impl TransactionHandler for FakeFilesystem {
     }
 
     async fn commit_transaction(&self, mut transaction: Transaction<'_>) {
+        self.lock_manager.commit_prepare(&transaction).await;
         for TxnMutation { object_id, mutation, associated_object } in
             std::mem::take(&mut transaction.mutations)
         {
@@ -89,5 +92,9 @@ impl TransactionHandler for FakeFilesystem {
     fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
         self.object_manager.drop_transaction(transaction);
         self.lock_manager.drop_transaction(transaction);
+    }
+
+    async fn read_lock<'a>(&'a self, lock_keys: &[LockKey]) -> ReadGuard<'a> {
+        self.lock_manager.read_lock(lock_keys).await
     }
 }

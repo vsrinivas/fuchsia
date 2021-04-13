@@ -47,6 +47,14 @@ pub trait TransactionHandler: Send + Sync {
     /// removed the mutations.  This is called automatically when Transaction is dropped, which is
     /// why this isn't async.
     fn drop_transaction(&self, transaction: &mut Transaction<'_>);
+
+    /// Acquires a read lock for the given keys.  Read locks are only blocked whilst a transaction
+    /// is being committed for the same locks.  They are only necessary where consistency is
+    /// required between different mutations within a transaction.  For example, a write might
+    /// change the size and extents for an object, in which case a read lock is required so that
+    /// observed size and extents are seen together or not at all.  Implementations should call
+    /// through to LockManager's read_lock implementation.
+    async fn read_lock<'a>(&'a self, lock_keys: &[LockKey]) -> ReadGuard<'a>;
 }
 
 /// The journal consists of these records which will be replayed at mount time.  Within a a
@@ -306,7 +314,20 @@ pub struct LockManager {
 
 struct Locks {
     sequence: u64,
-    keys: HashMap<LockKey, (u64, Vec<Waker>)>,
+    keys: HashMap<LockKey, LockEntry>,
+}
+
+struct LockEntry {
+    sequence: u64,
+    read_count: u64,
+    state: LockState,
+    wakers: Vec<Waker>,
+}
+
+enum LockState {
+    Unlocked,
+    Locked,
+    Committing(Waker),
 }
 
 impl LockManager {
@@ -328,19 +349,29 @@ impl LockManager {
                 match keys.entry(lock.clone()) {
                     Entry::Vacant(vacant) => {
                         *sequence += 1;
-                        vacant.insert((*sequence, Vec::new()));
+                        vacant.insert(LockEntry {
+                            sequence: *sequence,
+                            read_count: 0,
+                            state: LockState::Locked,
+                            wakers: Vec::new(),
+                        });
                         Poll::Ready(())
                     }
                     Entry::Occupied(mut occupied) => {
-                        let (sequence, wakers) = occupied.get_mut();
-                        if *sequence == waker_sequence {
-                            wakers[waker_index] = cx.waker().clone();
+                        let entry = occupied.get_mut();
+                        if let LockState::Unlocked = entry.state {
+                            entry.state = LockState::Locked;
+                            Poll::Ready(())
                         } else {
-                            waker_index = wakers.len();
-                            waker_sequence = *sequence;
-                            wakers.push(cx.waker().clone());
+                            if entry.sequence == waker_sequence {
+                                entry.wakers[waker_index] = cx.waker().clone();
+                            } else {
+                                waker_index = entry.wakers.len();
+                                waker_sequence = *sequence;
+                                entry.wakers.push(cx.waker().clone());
+                            }
+                            Poll::Pending
                         }
-                        Poll::Pending
                     }
                 }
             })
@@ -352,9 +383,98 @@ impl LockManager {
     pub fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
         let mut locks = self.locks.lock().unwrap();
         for lock in transaction.lock_keys.drain(..) {
-            let (_, (_, wakers)) = locks.keys.remove_entry(&lock).unwrap();
-            for waker in wakers {
+            let (_, entry) = locks.keys.remove_entry(&lock).unwrap();
+            for waker in entry.wakers {
                 waker.wake();
+            }
+        }
+    }
+
+    /// Prepares to commit by waiting for readers to finish.
+    pub async fn commit_prepare(&self, transaction: &Transaction<'_>) {
+        for lock in &transaction.lock_keys {
+            poll_fn(|cx| {
+                let mut locks = self.locks.lock().unwrap();
+                let entry = locks.keys.get_mut(&lock).expect("key missing!");
+                entry.state = LockState::Committing(cx.waker().clone());
+                if entry.read_count > 0 {
+                    Poll::Pending
+                } else {
+                    Poll::Ready(())
+                }
+            })
+            .await;
+        }
+    }
+
+    pub async fn read_lock<'a>(&'a self, lock_keys: &[LockKey]) -> ReadGuard<'a> {
+        let mut lock_keys: Vec<_> = lock_keys.iter().cloned().collect();
+        lock_keys.sort_unstable();
+        for lock in &lock_keys {
+            let mut waker_sequence = 0;
+            let mut waker_index = 0;
+            poll_fn(|cx| {
+                let mut locks = self.locks.lock().unwrap();
+                let Locks { sequence, keys } = &mut *locks;
+                match keys.entry(lock.clone()) {
+                    Entry::Vacant(vacant) => {
+                        *sequence += 1;
+                        vacant.insert(LockEntry {
+                            sequence: *sequence,
+                            read_count: 1,
+                            state: LockState::Unlocked,
+                            wakers: Vec::new(),
+                        });
+                        Poll::Ready(())
+                    }
+                    Entry::Occupied(mut occupied) => {
+                        let entry = occupied.get_mut();
+                        if let LockState::Committing(_) = entry.state {
+                            if entry.sequence == waker_sequence {
+                                entry.wakers[waker_index] = cx.waker().clone();
+                            } else {
+                                waker_index = entry.wakers.len();
+                                waker_sequence = *sequence;
+                                entry.wakers.push(cx.waker().clone());
+                            }
+                            Poll::Pending
+                        } else {
+                            entry.read_count += 1;
+                            Poll::Ready(())
+                        }
+                    }
+                }
+            })
+            .await;
+        }
+        ReadGuard { manager: self, lock_keys }
+    }
+}
+
+#[must_use]
+pub struct ReadGuard<'a> {
+    manager: &'a LockManager,
+    lock_keys: Vec<LockKey>,
+}
+
+impl Drop for ReadGuard<'_> {
+    fn drop(&mut self) {
+        let mut locks = self.manager.locks.lock().unwrap();
+        for lock in std::mem::take(&mut self.lock_keys) {
+            if let Entry::Occupied(mut occupied) = locks.keys.entry(lock) {
+                let entry = occupied.get_mut();
+                entry.read_count -= 1;
+                if entry.read_count == 0 {
+                    match entry.state {
+                        LockState::Unlocked => {
+                            occupied.remove_entry();
+                        }
+                        LockState::Locked => {}
+                        LockState::Committing(ref waker) => waker.wake_by_ref(),
+                    }
+                }
+            } else {
+                unreachable!(); // The entry *must* be in the HashMap.
             }
         }
     }
@@ -424,6 +544,72 @@ mod tests {
                 let _t = fs.clone().new_transaction(&[LockKey::object_attribute(1, 2, 3)]).await;
                 *done.lock().unwrap() = true;
             }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_lock_after_write_lock() {
+        let device = Arc::new(FakeDevice::new(1024, 1024));
+        let fs = FakeFilesystem::new(device);
+        let (send1, recv1) = channel();
+        let (send2, recv2) = channel();
+        let done = Mutex::new(false);
+        join!(
+            async {
+                let t = fs
+                    .clone()
+                    .new_transaction(&[LockKey::object_attribute(1, 2, 3)])
+                    .await
+                    .expect("new_transaction failed");
+                send1.send(()).unwrap(); // Tell the next future to continue.
+                recv2.await.unwrap();
+                t.commit().await;
+                *done.lock().unwrap() = true;
+            },
+            async {
+                recv1.await.unwrap();
+                // Reads should not be blocked until the transaction is committed.
+                let _guard = fs.read_lock(&[LockKey::object_attribute(1, 2, 3)]).await;
+                // Tell the first future to continue.
+                send2.send(()).unwrap();
+                // It shouldn't proceed until we release our read lock, but it's a halting
+                // problem, so sleep.
+                fasync::Timer::new(Duration::from_millis(100)).await;
+                assert!(!*done.lock().unwrap());
+            },
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_write_lock_after_read_lock() {
+        let device = Arc::new(FakeDevice::new(1024, 1024));
+        let fs = FakeFilesystem::new(device);
+        let (send1, recv1) = channel();
+        let (send2, recv2) = channel();
+        let done = Mutex::new(false);
+        join!(
+            async {
+                // Reads should not be blocked until the transaction is committed.
+                let _guard = fs.read_lock(&[LockKey::object_attribute(1, 2, 3)]).await;
+                // Tell the next future to continue and then nwait.
+                send1.send(()).unwrap();
+                recv2.await.unwrap();
+                // It shouldn't proceed until we release our read lock, but it's a halting
+                // problem, so sleep.
+                fasync::Timer::new(Duration::from_millis(100)).await;
+                assert!(!*done.lock().unwrap());
+            },
+            async {
+                recv1.await.unwrap();
+                let t = fs
+                    .clone()
+                    .new_transaction(&[LockKey::object_attribute(1, 2, 3)])
+                    .await
+                    .expect("new_transaction failed");
+                send2.send(()).unwrap(); // Tell the first future to continue;
+                t.commit().await;
+                *done.lock().unwrap() = true;
+            },
         );
     }
 }

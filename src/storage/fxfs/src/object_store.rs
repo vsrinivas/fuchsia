@@ -498,7 +498,7 @@ impl StoreObjectHandle {
     /// Extend the file with the given extent.  The only use case for this right now is for files
     /// that must exist at certain offsets on the device, such as super-blocks.
     pub async fn extend<'a>(&'a self, transaction: &mut Transaction<'a>, device_range: Range<u64>) {
-        let old_size = self.get_size();
+        let old_size = self.txn_get_size(transaction);
         let new_size = old_size + device_range.end - device_range.start;
         self.store.allocator().reserve(transaction, device_range.clone()).await;
         transaction.add_with_object(
@@ -738,6 +738,14 @@ impl ObjectHandle for StoreObjectHandle {
         if buf.len() == 0 {
             return Ok(0);
         }
+        let fs = self.store.filesystem();
+        let _guard = fs
+            .read_lock(&[LockKey::object_attribute(
+                self.store.store_object_id,
+                self.object_id,
+                self.attribute_id,
+            )])
+            .await;
         let size = self.get_size();
         if offset >= size {
             return Ok(0);
@@ -1039,6 +1047,7 @@ mod tests {
         },
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, join},
+        rand::Rng,
         std::{
             ops::Bound,
             sync::{Arc, Mutex},
@@ -1440,6 +1449,50 @@ mod tests {
                 assert_eq!(buf.as_slice(), b"hello");
             }
         );
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_racy_reads() {
+        let (fs, _allocator, store) = test_filesystem_and_store().await;
+        let object;
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        object = Arc::new(
+            store
+                .create_object(&mut transaction, HandleOptions::default())
+                .await
+                .expect("create_object failed"),
+        );
+        transaction.commit().await;
+        for _ in 0..100 {
+            let cloned_object = object.clone();
+            let writer = fasync::Task::spawn(async move {
+                let mut buf = cloned_object.allocate_buffer(10);
+                buf.as_mut_slice().fill(123);
+                cloned_object.write(0, buf.as_ref()).await.expect("write failed");
+            });
+            let cloned_object = object.clone();
+            let reader = fasync::Task::spawn(async move {
+                let wait_time = rand::thread_rng().gen_range(0, 5);
+                fasync::Timer::new(Duration::from_millis(wait_time)).await;
+                let mut buf = cloned_object.allocate_buffer(10);
+                buf.as_mut_slice().fill(23);
+                let amount = cloned_object.read(0, buf.as_mut()).await.expect("write failed");
+                // If we succeed in reading data, it must include the write; i.e. if we see the size
+                // change, we should see the data too.  For this to succeed it requires locking on
+                // the read size to ensure that when we read the size, we get the extents changed in
+                // that same transaction.
+                if amount != 0 {
+                    assert_eq!(amount, 10);
+                    assert_eq!(buf.as_slice(), &[123; 10]);
+                }
+            });
+            writer.await;
+            reader.await;
+            let mut transaction = object.new_transaction().await.expect("new_transaction failed");
+            object.truncate(&mut transaction, 0).await.expect("truncate failed");
+            transaction.commit().await;
+        }
     }
 }
 

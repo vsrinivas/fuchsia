@@ -10,8 +10,8 @@ use {
             constants::INVALID_OBJECT_ID,
             journal::{Journal, JournalCheckpoint},
             transaction::{
-                AssociatedObject, LockKey, LockManager, Mutation, Transaction, TransactionHandler,
-                TxnMutation,
+                AssociatedObject, LockKey, LockManager, Mutation, ReadGuard, Transaction,
+                TransactionHandler, TxnMutation,
             },
             ObjectStore,
         },
@@ -352,12 +352,17 @@ impl TransactionHandler for FxFilesystem {
     }
 
     async fn commit_transaction(&self, transaction: Transaction<'_>) {
+        self.lock_manager.commit_prepare(&transaction).await;
         self.journal.commit(transaction).await;
     }
 
     fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
         self.objects.drop_transaction(transaction);
         self.lock_manager.drop_transaction(transaction);
+    }
+
+    async fn read_lock<'a>(&'a self, lock_keys: &[LockKey]) -> ReadGuard<'a> {
+        self.lock_manager.read_lock(lock_keys).await
     }
 }
 
