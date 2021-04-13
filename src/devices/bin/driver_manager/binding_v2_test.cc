@@ -12,7 +12,7 @@
 // Tests for matching device properties to the new bytecode.
 
 bool match_bind_rules(const uint8_t* bytecode, const zx_device_prop_t* props, size_t bytecode_sz,
-                      size_t props_sz) {
+                      size_t props_sz, uint32_t protocol_id, bool autobind) {
   auto driver = Driver();
   driver.bytecode_version = 2;
 
@@ -28,7 +28,7 @@ bool match_bind_rules(const uint8_t* bytecode, const zx_device_prop_t* props, si
     memcpy(properties.data(), props, sizeof(props[0]) * props_sz);
   }
 
-  return driver_is_bindable(&driver, 0, std::move(properties), false);
+  return driver_is_bindable(&driver, protocol_id, std::move(properties), autobind);
 }
 
 TEST(BindingV2Test, SingleAbortInstruction) {
@@ -39,7 +39,8 @@ TEST(BindingV2Test, SingleAbortInstruction) {
       0x30                                          // Abort instruction
   };
   zx_device_prop_t properties[] = {zx_device_prop_t{5, 0, 2}};
-  ASSERT_FALSE(match_bind_rules(bytecode, properties, std::size(bytecode), std::size(properties)));
+  ASSERT_FALSE(
+      match_bind_rules(bytecode, properties, std::size(bytecode), std::size(properties), 5, false));
 }
 
 TEST(BindingV2Test, NoBindRules) {
@@ -49,7 +50,8 @@ TEST(BindingV2Test, NoBindRules) {
       0x49, 0x4E, 0x53, 0x54, 0x0,  0x0, 0x0, 0x0   // Instruction header
   };
   zx_device_prop_t properties[] = {zx_device_prop_t{5, 0, 2}};
-  ASSERT_TRUE(match_bind_rules(bytecode, properties, std::size(bytecode), std::size(properties)));
+  ASSERT_TRUE(
+      match_bind_rules(bytecode, properties, std::size(bytecode), std::size(properties), 5, false));
 }
 
 TEST(BindingV2Test, MatchDeviceProperty) {
@@ -60,7 +62,8 @@ TEST(BindingV2Test, MatchDeviceProperty) {
       0x01, 0x01, 0x05, 0x0,  0x0,  0x0, 0x01, 0x02, 0x0, 0x0, 0x0,  // Equal instruction
   };
   zx_device_prop_t properties[] = {zx_device_prop_t{4, 0, 3}, zx_device_prop_t{5, 0, 2}};
-  ASSERT_TRUE(match_bind_rules(bytecode, properties, std::size(bytecode), std::size(properties)));
+  ASSERT_TRUE(
+      match_bind_rules(bytecode, properties, std::size(bytecode), std::size(properties), 5, false));
 }
 
 TEST(BindingV2Test, MismatchDeviceProperty) {
@@ -71,22 +74,56 @@ TEST(BindingV2Test, MismatchDeviceProperty) {
       0x01, 0x01, 0x05, 0x0,  0x0,  0x0, 0x01, 0x02, 0x0, 0x0, 0x0,  // Equal instruction
   };
   zx_device_prop_t properties[] = {zx_device_prop_t{5, 0, 20}};
-  ASSERT_FALSE(match_bind_rules(bytecode, properties, std::size(bytecode), std::size(properties)));
+  ASSERT_FALSE(
+      match_bind_rules(bytecode, properties, std::size(bytecode), std::size(properties), 5, false));
 }
 
-TEST(BindingV2Test, NoDeviceProperties) {
+TEST(BindingV2Test, NoDevicePropertiesWithMismatchProtocolId) {
   uint8_t bytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
       0x53, 0x59, 0x4E, 0x42, 0x0,  0x0, 0x0,  0x0,                  // Symbol table header
       0x49, 0x4E, 0x53, 0x54, 0x0B, 0x0, 0x0,  0x0,                  // Instruction header
-      0x01, 0x01, 0x05, 0x0,  0x0,  0x0, 0x01, 0x02, 0x0, 0x0, 0x0,  // Equal instruction
+      0x01, 0x01, 0x01, 0x0,  0x0,  0x0, 0x01, 0x02, 0x0, 0x0, 0x0,  // Equal instruction
   };
   zx_device_prop_t properties[] = {};
-  ASSERT_FALSE(match_bind_rules(bytecode, properties, std::size(bytecode), 0));
+  ASSERT_FALSE(match_bind_rules(bytecode, properties, std::size(bytecode), 0, 5, false));
+}
+
+TEST(BindingV2Test, NoDevicePropertiesWithMatchingProtocolId) {
+  uint8_t bytecode[] = {
+      0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x53, 0x59, 0x4E, 0x42, 0x0,  0x0, 0x0,  0x0,                  // Symbol table header
+      0x49, 0x4E, 0x53, 0x54, 0x0B, 0x0, 0x0,  0x0,                  // Instruction header
+      0x01, 0x01, 0x01, 0x0,  0x0,  0x0, 0x01, 0x05, 0x0, 0x0, 0x0,  // Equal instruction
+  };
+  zx_device_prop_t properties[] = {};
+  ASSERT_TRUE(match_bind_rules(bytecode, properties, std::size(bytecode), 0, 5, false));
+}
+
+TEST(BindingV2Test, NoDevicePropertiesWithMismatchAutobind) {
+  uint8_t bytecode[] = {
+      0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x53, 0x59, 0x4E, 0x42, 0x0,  0x0, 0x0,  0x0,                  // Symbol table header
+      0x49, 0x4E, 0x53, 0x54, 0x0B, 0x0, 0x0,  0x0,                  // Instruction header
+      0x01, 0x01, 0x02, 0x0,  0x0,  0x0, 0x01, 0x01, 0x0, 0x0, 0x0,  //  Equal instruction
+  };
+  zx_device_prop_t properties[] = {};
+  ASSERT_FALSE(match_bind_rules(bytecode, properties, std::size(bytecode), 0, 5, false));
+}
+
+TEST(BindingV2Test, NoDevicePropertiesWithMatchingAutobind) {
+  uint8_t bytecode[] = {
+      0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x53, 0x59, 0x4E, 0x42, 0x0,  0x0, 0x0,  0x0,                  // Symbol table header
+      0x49, 0x4E, 0x53, 0x54, 0x0B, 0x0, 0x0,  0x0,                  // Instruction header
+      0x01, 0x01, 0x02, 0x0,  0x0,  0x0, 0x01, 0x01, 0x0, 0x0, 0x0,  //  Equal instruction
+  };
+  zx_device_prop_t properties[] = {};
+  ASSERT_TRUE(match_bind_rules(bytecode, properties, std::size(bytecode), 0, 5, true));
 }
 
 TEST(BindingV2Test, EmptyBytecode) {
   uint8_t bytecode[] = {};
   zx_device_prop_t properties[] = {zx_device_prop_t{5, 0, 20}};
-  ASSERT_FALSE(match_bind_rules(bytecode, properties, 0, std::size(properties)));
+  ASSERT_FALSE(match_bind_rules(bytecode, properties, 0, std::size(properties), 5, false));
 }

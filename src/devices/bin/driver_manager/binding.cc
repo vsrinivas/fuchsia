@@ -158,8 +158,8 @@ bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
       properties[i] = device_property_t{.key = props[i].id, .value = props[i].value};
     }
 
-    return match_bind_rules(drv->binding_size, bytecode ? bytecode->get() : nullptr, props.size(),
-                            properties.get());
+    return match_bind_rules(bytecode ? bytecode->get() : nullptr, drv->binding_size,
+                            properties.get(), props.size(), protocol_id, autobind);
   }
 
   LOGF(ERROR, "Invalid bytecode version: %i", drv->bytecode_version);
