@@ -83,11 +83,15 @@ async fn sme_scan(
                 }
                 fidl_sme::ScanTransactionEvent::OnError { error } => {
                     error!("Scan error from SME: {:?}", error);
-                    return Err(if error.code == fidl_sme::ScanErrorCode::ShouldWait {
-                        SmeScanError::ShouldRetryLater
-                    } else {
-                        SmeScanError::Other
-                    });
+                    return Err(
+                        if error.code == fidl_sme::ScanErrorCode::ShouldWait
+                            || error.code == fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware
+                        {
+                            SmeScanError::ShouldRetryLater
+                        } else {
+                            SmeScanError::Other
+                        },
+                    );
                 }
             };
         }
@@ -1129,6 +1133,7 @@ mod tests {
 
     #[test_case(fidl_sme::ScanErrorCode::ShouldWait, false; "SME scan error ShouldWait with failed retry")]
     #[test_case(fidl_sme::ScanErrorCode::ShouldWait, true; "SME scan error ShouldWait with successful retry")]
+    #[test_case(fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware, true; "SME scan error CanceledByDriverOrFirmware with successful retry")]
     fn sme_scan_error_with_retry(error_code: fidl_sme::ScanErrorCode, retry_succeeds: bool) {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());

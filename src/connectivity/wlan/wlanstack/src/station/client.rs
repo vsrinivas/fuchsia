@@ -259,6 +259,10 @@ fn send_scan_results(
                     code: fidl_sme::ScanErrorCode::ShouldWait,
                     message: "Scanning is temporarily unavailable".to_string(),
                 },
+                fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware => fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware,
+                    message: "Scanning was canceled by driver or FW".to_string(),
+                },
                 _ => fidl_sme::ScanError {
                     code: fidl_sme::ScanErrorCode::InternalError,
                     message: "Internal error occurred".to_string(),
@@ -349,6 +353,11 @@ mod tests {
         fidl_mlme::ScanResultCode::NotSupported,
         fidl_sme::ScanErrorCode::NotSupported,
         "Scanning not supported by device"
+    )]
+    #[test_case(
+        fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware,
+        fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware,
+        "Scanning was canceled by driver or FW"
     )]
     #[test_case(
         fidl_mlme::ScanResultCode::InvalidArgs,

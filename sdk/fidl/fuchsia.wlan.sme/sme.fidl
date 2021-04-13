@@ -59,6 +59,7 @@ enum ScanErrorCode {
     NOT_SUPPORTED = 1;
     INTERNAL_ERROR = 2;
     SHOULD_WAIT = 3;
+    CANCELED_BY_DRIVER_OR_FIRMWARE = 4;
 };
 
 struct ScanError {
