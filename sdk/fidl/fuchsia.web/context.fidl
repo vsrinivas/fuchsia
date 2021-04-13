@@ -191,6 +191,7 @@ resource table CreateContextParams {
 };
 
 /// Manages browsing state (e.g. LocalStorage, cookies, etc) associated with a set of [`Frame`].
+[Discoverable]
 protocol Context {
     /// Creates a new [`Frame`] under this [`Context`]. Destruction of a [`Context`] triggers the
     /// destruction of all of its associated [`Frame`]. [`Frame`] can be transferred to another
