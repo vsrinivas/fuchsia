@@ -38,6 +38,9 @@ pub mod extended_errors;
 /// Defines the implementation of the Hang Up Procedure.
 pub mod hang_up;
 
+/// Defines the implementation of the Hold Procedure.
+pub mod hold;
+
 /// Defines the implementation of the SLC Initialization Procedure.
 pub mod slc_initialization;
 
@@ -74,6 +77,7 @@ use call_waiting_notifications::CallWaitingNotificationsProcedure;
 use dtmf::{DtmfCode, DtmfProcedure};
 use extended_errors::ExtendedErrorsProcedure;
 use hang_up::HangUpProcedure;
+use hold::{CallHoldAction, HoldProcedure};
 use indicators_activation::IndicatorsActivationProcedure;
 use nrec::NrecProcedure;
 use phone_status::PhoneStatusProcedure;
@@ -85,7 +89,10 @@ use subscriber_number_information::{build_cnum_response, SubscriberNumberInforma
 use transfer_hf_indicator::TransferHfIndicatorProcedure;
 use volume_synchronization::VolumeSynchronizationProcedure;
 
-const THREE_WAY_SUPPORT: &[&str] = &["0", "1", "1X", "2", "2X", "3", "4"];
+// TODO (fxbug.dev/74091): Add multiparty support.
+// TODO (fxbug.dev/74093): Add Explicit Call Transfer support.
+const THREE_WAY_SUPPORT: &[&str] = &["0", "1", "1X", "2", "2X"];
+
 // TODO(fxb/71668) Stop using raw bytes.
 const CIND_TEST_RESPONSE_BYTES: &[u8] = b"+CIND: \
 (\"service\",(0,1)),\
@@ -178,6 +185,8 @@ pub enum ProcedureMarker {
     HangUp,
     /// The Transfer of HF Indicator Values procedure as defined in HFP v1.8 Section 4.36.1.5.
     TransferHfIndicator,
+    /// The Call Hold procedure as defined in HFP v1.8 Section 4.22
+    Hold,
 }
 
 impl ProcedureMarker {
@@ -204,6 +213,7 @@ impl ProcedureMarker {
             Self::Answer => Box::new(AnswerProcedure::new()),
             Self::HangUp => Box::new(HangUpProcedure::new()),
             Self::TransferHfIndicator => Box::new(TransferHfIndicatorProcedure::new()),
+            Self::Hold => Box::new(HoldProcedure::new()),
         }
     }
 
@@ -237,6 +247,7 @@ impl ProcedureMarker {
             at::Command::Chup { .. } => Ok(Self::HangUp),
             at::Command::Biev { .. } => Ok(Self::TransferHfIndicator),
             at::Command::Bia { .. } => Ok(Self::Indicators),
+            at::Command::Chld { .. } => Ok(Self::Hold),
             _ => Err(ProcedureError::NotImplemented),
         }
     }
@@ -268,6 +279,8 @@ pub enum InformationRequest {
     Answer { response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
 
     HangUp { response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
+
+    Hold { command: CallHoldAction, response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
 }
 
 impl From<&InformationRequest> for ProcedureMarker {
@@ -286,6 +299,7 @@ impl From<&InformationRequest> for ProcedureMarker {
             QueryCurrentCalls { .. } => Self::QueryCurrentCalls,
             Answer { .. } => Self::Answer,
             HangUp { .. } => Self::HangUp,
+            Hold { .. } => Self::Hold,
         }
     }
 }
@@ -317,6 +331,7 @@ impl fmt::Debug for InformationRequest {
             }
             Self::Answer { .. } => "Answer",
             Self::HangUp { .. } => "HangUp",
+            Self::Hold { .. } => "Hold",
         }
         .to_string();
         write!(f, "{}", output)

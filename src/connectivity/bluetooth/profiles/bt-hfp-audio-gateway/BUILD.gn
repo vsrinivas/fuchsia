@@ -59,6 +59,7 @@ rustc_binary("bin") {
     "src/procedure/dtmf.rs",
     "src/procedure/extended_errors.rs",
     "src/procedure/hang_up.rs",
+    "src/procedure/hold.rs",
     "src/procedure/indicators_activation.rs",
     "src/procedure/nrec.rs",
     "src/procedure/phone_status.rs",

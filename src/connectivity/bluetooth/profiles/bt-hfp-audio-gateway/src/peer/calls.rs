@@ -5,7 +5,7 @@
 use {
     crate::{
         error::CallError,
-        procedure::dtmf::DtmfCode,
+        procedure::{dtmf::DtmfCode, hold::CallHoldAction},
         protocol::indicators::{CallIndicators, CallIndicatorsUpdates},
     },
     async_utils::{
@@ -338,10 +338,18 @@ impl Calls {
         self.current_calls.remove(index);
     }
 
+    /// Iterator over all calls in `state`.
+    fn all_by_state(
+        &self,
+        state: CallState,
+    ) -> impl Iterator<Item = (CallIdx, &CallEntry)> + Clone {
+        self.calls().filter(move |c| c.1.state == state)
+    }
+
     /// Operations that act on calls in a particular state should act on the call that was put into
     /// that state first. `oldest_by_state` allows querying for a call that meets that criteria.
     fn oldest_by_state(&self, state: CallState) -> Option<(CallIdx, &CallEntry)> {
-        self.calls().filter(|c| c.1.state == state).min_by_key(|c| c.1.state_updated_at)
+        self.all_by_state(state).min_by_key(|c| c.1.state_updated_at)
     }
 
     /// Return the Call that has been in the IncomingRinging call state the longest if at least one
@@ -389,6 +397,55 @@ impl Calls {
             .ok_or(CallError::None(vec![IncomingRinging, OngoingActive, OngoingHeld]))?
             .0;
         self.request_terminate(idx)
+    }
+
+    /// Perform the supplementary call service related to held or waiting calls specified by
+    /// `action`. See HFP v1.8, Section 4.22 for more information.
+    ///
+    /// Waiting calls are prioritized over held calls when an action operates on a specific call.
+    /// Per 4.34.2 AT+CHLD: "Where both a held and a waiting call exist, the above procedures shall
+    /// apply to the waiting call (i.e., not to the held call) in conflicting situation."
+    ///
+    /// Returns an error if the CallIdx associated with a specific action is invalid.
+    pub fn hold(&mut self, action: CallHoldAction) -> Result<(), CallError> {
+        use {CallHoldAction::*, CallState::*};
+        match action {
+            ReleaseAllHeld => {
+                let waiting_calls: Vec<_> =
+                    self.all_by_state(IncomingWaiting).map(|c| c.0).collect();
+                let held_calls: Vec<_> = self.all_by_state(OngoingHeld).map(|c| c.0).collect();
+
+                // Terminated state on incoming waiting calls is prioritized over held calls.
+                let to_release = if !waiting_calls.is_empty() { waiting_calls } else { held_calls };
+
+                for idx in to_release {
+                    let _ = self.request_terminate(idx);
+                }
+            }
+            ReleaseAllActive => {
+                // Active state on incoming waiting calls is prioritized over held calls.
+                let idx = self
+                    .oldest_by_state(IncomingWaiting)
+                    .or_else(|| self.oldest_by_state(OngoingHeld))
+                    .ok_or(CallError::None(vec![IncomingWaiting, OngoingHeld]))?
+                    .0;
+
+                self.request_active(idx, true)?;
+            }
+            ReleaseSpecified(idx) => self.request_terminate(idx)?,
+            HoldActiveAndAccept => {
+                // Active state on incoming waiting calls is prioritized over held calls.
+                let idx = self
+                    .oldest_by_state(IncomingWaiting)
+                    .or_else(|| self.oldest_by_state(OngoingHeld))
+                    .ok_or(CallError::None(vec![IncomingWaiting, OngoingHeld]))?
+                    .0;
+
+                self.request_active(idx, false)?;
+            }
+            HoldAllExceptSpecified(idx) => self.request_active(idx, false)?,
+        }
+        Ok(())
     }
 
     /// Returns true if the state of any calls requires ringing.

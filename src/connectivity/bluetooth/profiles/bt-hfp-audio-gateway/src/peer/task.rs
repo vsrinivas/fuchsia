@@ -273,6 +273,12 @@ impl PeerTask {
                 });
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
+            InformationRequest::Hold { command, response } => {
+                let result = self.calls.hold(command).map_err(|e| {
+                    warn!("Unexpected Action {:?} from Hands Free: {}", command, e);
+                });
+                self.connection.receive_ag_request(marker, response(result)).await;
+            }
         };
     }
 
