@@ -44,8 +44,7 @@ group("userdebug_configs") {
 group("user_configs") {
   deps = [
     ":crash_reports_user_config",
-    # TODO(fxbug.dev/70450): re-enable once the budget logic works.
-    # ":feedback_data_limit_inspect_data",
+    ":feedback_data_limit_inspect_data",
   ]
 }
 
