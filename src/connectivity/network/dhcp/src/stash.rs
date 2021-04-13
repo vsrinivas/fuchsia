@@ -136,53 +136,56 @@ impl Stash {
     /// hashmap. Any key-value pair which could not be parsed or deserialized will be removed and
     /// skipped.
     pub async fn load_client_configs(&self) -> Result<CachedClients, StashError> {
+        use futures::TryStreamExt as _;
+
         let (iter, server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_stash::GetIteratorMarker>()?;
         let () = self.proxy.get_prefix(&self.prefix, server)?;
-        let mut cache = std::collections::HashMap::new();
-        loop {
+        futures::stream::try_unfold(iter, |iter| async move {
             let kvs = iter.get_next().await?;
-            if kvs.is_empty() {
-                break;
-            }
-            for kv in kvs {
-                let key = match kv.key.split("-").last() {
-                    Some(v) => v,
-                    None => {
-                        // Invalid key-value pair: remove the invalid pair and try the next one.
-                        log::warn!("failed to parse key string: {}", kv.key);
-                        let () = self.rm_key(&kv.key)?;
-                        continue;
-                    }
-                };
-                let key = match ClientIdentifier::from_str(key) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        log::warn!("client id from string conversion failed: {}", e);
-                        let () = self.rm_key(&kv.key)?;
-                        continue;
-                    }
-                };
-                let val = match kv.val {
-                    fidl_fuchsia_stash::Value::Stringval(v) => v,
-                    v => {
-                        log::warn!("invalid value variant stored in stash: {:?}", v);
-                        let () = self.rm_key(&kv.key)?;
-                        continue;
-                    }
-                };
-                let val: CachedConfig = match serde_json::from_str(&val) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        log::warn!("failed to parse JSON from string: {}", e);
-                        let () = self.rm_key(&kv.key)?;
-                        continue;
-                    }
-                };
-                let _: Option<_> = cache.insert(key, val);
-            }
-        }
-        Ok(cache)
+            let yielded = (!kvs.is_empty()).then(|| (kvs, iter));
+            Result::<_, StashError>::Ok(yielded)
+        })
+        .map_ok(|kvs| futures::stream::iter(kvs.into_iter().map(Ok)))
+        .try_flatten()
+        .try_filter_map(|kv| async move {
+            let key = match kv.key.split("-").last() {
+                Some(v) => v,
+                None => {
+                    // Invalid key-value pair: remove the invalid pair and try the next one.
+                    log::warn!("failed to parse key string: {}", kv.key);
+                    let () = self.rm_key(&kv.key)?;
+                    return Ok(None);
+                }
+            };
+            let key = match ClientIdentifier::from_str(key) {
+                Ok(v) => v,
+                Err(e) => {
+                    log::warn!("client id from string conversion failed: {}", e);
+                    let () = self.rm_key(&kv.key)?;
+                    return Ok(None);
+                }
+            };
+            let val = match kv.val {
+                fidl_fuchsia_stash::Value::Stringval(v) => v,
+                v => {
+                    log::warn!("invalid value variant stored in stash: {:?}", v);
+                    let () = self.rm_key(&kv.key)?;
+                    return Ok(None);
+                }
+            };
+            let val: CachedConfig = match serde_json::from_str(&val) {
+                Ok(v) => v,
+                Err(e) => {
+                    log::warn!("failed to parse JSON from string: {}", e);
+                    let () = self.rm_key(&kv.key)?;
+                    return Ok(None);
+                }
+            };
+            Ok(Some((key, val)))
+        })
+        .try_collect()
+        .await
     }
 
     /// Loads a map of `OptionCode`s to `DhcpOption`s from data stored in `fuchsia.stash`.
