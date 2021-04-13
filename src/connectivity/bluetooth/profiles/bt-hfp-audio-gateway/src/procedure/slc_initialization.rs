@@ -11,17 +11,11 @@ use crate::{
     peer::service_level_connection::SlcState,
     protocol::{
         features::{AgFeatures, HfFeatures},
-        indicators::AgIndicators,
+        indicators::{AgIndicators, AgIndicatorsReporting},
     },
 };
 
 use {at_commands as at, num_traits::FromPrimitive};
-
-/// This mode's behavior is to forward unsolicited result codes directly per
-/// 3GPP TS 27.007 version 6.8.0, Section 8.10.
-/// This is the only supported mode in the Event Reporting Enabling AT command (AT+CMER).
-/// Defined in HFP v1.8 Section 4.34.2.
-const SUPPORTED_EVENT_REPORTING_MODE: i64 = 3;
 
 /// A singular state within the SLC Initialization Procedure.
 pub trait SlcProcedureState {
@@ -258,17 +252,13 @@ impl SlcProcedureState for AgIndicatorStatusReceived {
         // Ensure that the requested `mode` and `ind` values are valid per HFP v1.8 Section 4.34.2.
         match update {
             at::Command::Cmer { mode, ind, .. } => {
-                let is_valid = mode == SUPPORTED_EVENT_REPORTING_MODE && (ind == 0 || ind == 1);
-                if !is_valid {
-                    return SlcErrorState::invalid_hf_argument(update.clone());
-                }
-                if ind != 0 {
-                    state.ag_indicator_events_reporting.enable();
+                if mode == AgIndicatorsReporting::EVENT_REPORTING_MODE
+                    && state.ag_indicator_events_reporting.set_reporting_status(ind).is_ok()
+                {
+                    Box::new(AgIndicatorStatusEnableReceived { state: state.clone() })
                 } else {
-                    state.ag_indicator_events_reporting.disable();
+                    SlcErrorState::invalid_hf_argument(update.clone())
                 }
-
-                Box::new(AgIndicatorStatusEnableReceived { state: state.clone() })
             }
             m => SlcErrorState::unexpected_hf(m),
         }
@@ -546,8 +536,12 @@ mod tests {
             SlcInitProcedure::new_at_state(AgIndicatorStatusReceived { state: state.clone() });
 
         // `ind` = 9 is invalid.
-        let invalid_enable =
-            at::Command::Cmer { mode: SUPPORTED_EVENT_REPORTING_MODE, keyp: 0, disp: 0, ind: 9 };
+        let invalid_enable = at::Command::Cmer {
+            mode: AgIndicatorsReporting::EVENT_REPORTING_MODE,
+            keyp: 0,
+            disp: 0,
+            ind: 9,
+        };
         assert_matches!(
             procedure.hf_update(invalid_enable, &mut state),
             ProcedureRequest::Error(Error::InvalidHfArgument(_))

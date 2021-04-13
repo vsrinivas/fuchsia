@@ -207,18 +207,21 @@ impl ProcedureMarker {
         }
     }
 
-    /// Matches the HF `command` to a procedure. Returns an error if the command is
-    /// unable to be matched.
-    pub fn match_command(command: &at::Command) -> Result<Self, ProcedureError> {
+    /// Matches the HF `command` to a procedure. `initialized` represents the initialization state
+    /// of the Service Level Connection.
+    ///
+    /// Returns an error if the command is unable to be matched.
+    pub fn match_command(command: &at::Command, initialized: bool) -> Result<Self, ProcedureError> {
         match command {
             at::Command::Brsf { .. }
             | at::Command::Bac { .. }
             | at::Command::CindTest { .. }
             | at::Command::CindRead { .. }
-            | at::Command::Cmer { .. }
             | at::Command::ChldTest { .. }
             | at::Command::BindTest { .. }
             | at::Command::BindRead { .. } => Ok(Self::SlcInitialization),
+            at::Command::Cmer { .. } if initialized => Ok(Self::Indicators),
+            at::Command::Cmer { .. } => Ok(Self::SlcInitialization),
             at::Command::Nrec { .. } => Ok(Self::Nrec),
             at::Command::Cops { .. } | at::Command::CopsRead { .. } => {
                 Ok(Self::QueryOperatorSelection)
@@ -529,5 +532,16 @@ mod tests {
             ProcedureRequest::SendMessages(messages)
                 if messages == vec![at::Response::Ok, at::Response::Error]
         );
+    }
+
+    #[test]
+    fn match_conditional_commands_based_on_slci() {
+        let command = at::Command::Cmer { mode: 3, keyp: 0, disp: 0, ind: 1 };
+        let marker = ProcedureMarker::match_command(&command, false).expect("command to match");
+        assert_eq!(marker, ProcedureMarker::SlcInitialization);
+
+        let command = at::Command::Cmer { mode: 3, keyp: 0, disp: 0, ind: 1 };
+        let marker = ProcedureMarker::match_command(&command, true).expect("command to match");
+        assert_eq!(marker, ProcedureMarker::Indicators);
     }
 }

@@ -230,6 +230,24 @@ pub struct AgIndicatorsReporting {
 }
 
 impl AgIndicatorsReporting {
+    /// This mode's behavior is to forward unsolicited result codes directly per
+    /// 3GPP TS 27.007 version 6.8.0, Section 8.10.
+    /// This is the only supported mode in the Event Reporting Enabling AT command (AT+CMER).
+    /// Defined in HFP v1.8 Section 4.34.2.
+    pub const EVENT_REPORTING_MODE: i64 = 3;
+
+    /// Enables or disables the indicators reporting state while maintaining current indicator
+    /// flags. Valid status values are 0 for disabled and 1 for enabled. Any other value returns an
+    /// UnsupportedReportingStatus error. See HFP v1.8 Section 4.34.2 AT+CMER.
+    pub fn set_reporting_status(&mut self, status: i64) -> Result<(), UnsupportedReportingStatus> {
+        match status {
+            0 => self.is_enabled = false,
+            1 => self.is_enabled = true,
+            _ => return Err(UnsupportedReportingStatus(status)),
+        }
+        Ok(())
+    }
+
     #[cfg(test)]
     pub fn set_signal(&mut self, toggle: bool) {
         self.signal = toggle;
@@ -252,18 +270,6 @@ impl AgIndicatorsReporting {
 
     pub fn new_disabled() -> Self {
         Self { is_enabled: false, service: true, signal: true, roam: true, batt_chg: true }
-    }
-
-    /// Sets the indicators reporting state to enabled while maintaining current indicator
-    /// flags.
-    pub fn enable(&mut self) {
-        self.is_enabled = true;
-    }
-
-    /// Sets the indicators reporting state to disabled while maintaining the current
-    /// indicator flags.
-    pub fn disable(&mut self) {
-        self.is_enabled = false;
     }
 
     /// Updates the indicators with any indicators specified in `flags`.
@@ -307,6 +313,10 @@ impl Default for AgIndicatorsReporting {
         Self::new_disabled()
     }
 }
+
+#[derive(Debug)]
+/// An error representing an unsupported reporting status value.
+pub struct UnsupportedReportingStatus(i64);
 
 /// The Call Indicator as specified in HFP v1.8, Section 4.10.1
 #[derive(PartialEq, Clone, Copy, Debug)]
@@ -647,12 +657,12 @@ mod tests {
 
         // Toggling indicators reporting should preserve indicator values.
         let expected1 = AgIndicatorsReporting { is_enabled: false, ..status.clone() };
-        status.disable();
+        status.set_reporting_status(0).unwrap();
         assert_eq!(status, expected1);
-        status.disable();
+        status.set_reporting_status(0).unwrap();
         assert_eq!(status, expected1);
 
-        status.enable();
+        status.set_reporting_status(1).unwrap();
         let expected2 = AgIndicatorsReporting { is_enabled: true, ..expected1.clone() };
         assert_eq!(status, expected2);
         assert!(status.is_enabled);

@@ -4,7 +4,9 @@
 
 use super::{AgUpdate, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
-use crate::peer::service_level_connection::SlcState;
+use crate::{
+    peer::service_level_connection::SlcState, protocol::indicators::AgIndicatorsReporting,
+};
 use at_commands as at;
 
 /// Converts the indicator activeness flags (represented as Strings) to a vector of
@@ -61,6 +63,16 @@ impl Procedure for IndicatorsActivationProcedure {
                     AgUpdate::Error.into()
                 }
             }
+            (false, at::Command::Cmer { mode, ind, .. }) => {
+                self.terminated = true;
+                if mode == AgIndicatorsReporting::EVENT_REPORTING_MODE
+                    && state.ag_indicator_events_reporting.set_reporting_status(ind).is_ok()
+                {
+                    AgUpdate::Ok.into()
+                } else {
+                    AgUpdate::Error.into()
+                }
+            }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
         }
     }
@@ -73,7 +85,6 @@ impl Procedure for IndicatorsActivationProcedure {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::indicators::AgIndicatorsReporting;
     use matches::assert_matches;
 
     #[test]

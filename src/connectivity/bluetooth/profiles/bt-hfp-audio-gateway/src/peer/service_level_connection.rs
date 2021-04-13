@@ -473,7 +473,7 @@ impl ServiceLevelConnection {
 
         // Otherwise, try to match it to a procedure - it must be a non SLCI command since
         // the channel has already been initialized.
-        match ProcedureMarker::match_command(command) {
+        match ProcedureMarker::match_command(command, self.initialized()) {
             Ok(ProcedureMarker::SlcInitialization) => {
                 warn!("Received unexpected SLCI command after SLC initialization: {:?}", command);
                 Err(command.into())
