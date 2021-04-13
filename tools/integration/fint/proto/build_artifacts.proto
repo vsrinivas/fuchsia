@@ -43,4 +43,7 @@ message BuildArtifacts {
 
   // Absolute path to a Ninja compdb file.
   string ninja_compdb_path = 9;
+
+  // The duration taken by the ninja build step.
+  int32 ninja_duration_seconds = 10;
 }

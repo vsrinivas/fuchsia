@@ -8,10 +8,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
@@ -80,6 +82,7 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		jobCount:  int(contextSpec.GomaJobCount),
 	}
 
+	ninjaStartTime := time.Now()
 	var ninjaErr error
 	if contextSpec.ArtifactDir == "" {
 		// If we don't care about collecting artifacts, which is generally the
@@ -91,6 +94,8 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	} else {
 		artifacts.FailureSummary, ninjaErr = runNinja(ctx, runner, targets)
 	}
+	ninjaDuration := time.Since(ninjaStartTime)
+	artifacts.NinjaDurationSeconds = int32(math.Round(ninjaDuration.Seconds()))
 
 	// As an optimization, we only bother collecting graph and compdb data if we
 	// have a way to return it to the caller. We want to collect this data even
