@@ -143,7 +143,8 @@ func doTestReboot(
 	build artifacts.Build,
 	rpcClient **sl4f.Client,
 ) error {
-	repo, err := build.GetPackageRepository(ctx)
+	// We don't install an OTA, so we don't need to prefetch the blobs.
+	repo, err := build.GetPackageRepository(ctx, artifacts.LazilyFetchBlobs)
 	if err != nil {
 		return fmt.Errorf("unable to get repository: %w", err)
 	}
@@ -211,7 +212,7 @@ func initializeDevice(
 ) (*sl4f.Client, error) {
 	logger.Infof(ctx, "Initializing device")
 
-	repo, err := build.GetPackageRepository(ctx)
+	repo, err := build.GetPackageRepository(ctx, artifacts.LazilyFetchBlobs)
 	if err != nil {
 		return nil, err
 	}

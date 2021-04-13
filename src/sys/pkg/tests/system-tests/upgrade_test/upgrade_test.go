@@ -167,7 +167,7 @@ func doTestOTAs(
 
 	startTime := time.Now()
 
-	repo, err := build.GetPackageRepository(ctx)
+	repo, err := build.GetPackageRepository(ctx, artifacts.PrefetchBlobs)
 	if err != nil {
 		return fmt.Errorf("error getting repository: %w", err)
 	}
@@ -223,7 +223,9 @@ func initializeDevice(
 	var err error
 
 	if build != nil {
-		repo, err = build.GetPackageRepository(ctx)
+		// We don't need to prefetch all the blobs, since we only use a subset of
+		// packages from the repository, like run, sl4f.
+		repo, err = build.GetPackageRepository(ctx, artifacts.LazilyFetchBlobs)
 		if err != nil {
 			return nil, fmt.Errorf("error getting downgrade repository: %w", err)
 		}

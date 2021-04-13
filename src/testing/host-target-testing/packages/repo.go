@@ -16,10 +16,31 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
+type BlobStore interface {
+	Dir() string
+	OpenBlob(ctx context.Context, merkle string) (*os.File, error)
+}
+
+type DirBlobStore struct {
+	dir string
+}
+
+func NewDirBlobStore(dir string) BlobStore {
+	return &DirBlobStore{dir}
+}
+
+func (fs *DirBlobStore) OpenBlob(ctx context.Context, merkle string) (*os.File, error) {
+	return os.Open(filepath.Join(fs.dir, merkle))
+}
+
+func (fs *DirBlobStore) Dir() string {
+	return fs.dir
+}
+
 type Repository struct {
 	Dir string
 	// BlobsDir should be a directory called `blobs` where all the blobs are.
-	BlobsDir string
+	BlobStore BlobStore
 }
 
 type signed struct {
@@ -40,12 +61,12 @@ type custom struct {
 
 // NewRepository parses the repository from the specified directory. It returns
 // an error if the repository does not exist, or it contains malformed metadata.
-func NewRepository(ctx context.Context, dir, blobsDir string) (*Repository, error) {
-	logger.Infof(ctx, "creating a repository for %q and %q", dir, blobsDir)
+func NewRepository(ctx context.Context, dir string, blobStore BlobStore) (*Repository, error) {
+	logger.Infof(ctx, "creating a repository for %q and %q", dir, blobStore.Dir())
 
 	// The repository may have out of date metadata. This updates the repository to
 	// the latest version so TUF won't complain about the data being old.
-	repo, err := repo.New(dir, blobsDir)
+	repo, err := repo.New(dir, blobStore.Dir())
 	if err != nil {
 		return nil, err
 	}
@@ -61,8 +82,8 @@ func NewRepository(ctx context.Context, dir, blobsDir string) (*Repository, erro
 	}
 
 	return &Repository{
-		Dir:      filepath.Join(dir, "repository"),
-		BlobsDir: blobsDir,
+		Dir:       filepath.Join(dir, "repository"),
+		BlobStore: blobStore,
 	}, nil
 }
 
@@ -74,7 +95,7 @@ func NewRepositoryFromTar(ctx context.Context, dst string, src string) (*Reposit
 		return nil, fmt.Errorf("failed to extract packages: %w", err)
 	}
 
-	return NewRepository(ctx, filepath.Join(dst, "amber-files"), filepath.Join(dst, "amber-files", "repository", "blobs"))
+	return NewRepository(ctx, filepath.Join(dst, "amber-files"), NewDirBlobStore(filepath.Join(dst, "amber-files", "repository", "blobs")))
 }
 
 // OpenPackage opens a package from the repository.
@@ -100,11 +121,11 @@ func (r *Repository) OpenPackage(ctx context.Context, path string) (Package, err
 }
 
 func (r *Repository) OpenBlob(ctx context.Context, merkle string) (*os.File, error) {
-	return os.Open(filepath.Join(r.BlobsDir, merkle))
+	return r.BlobStore.OpenBlob(ctx, merkle)
 }
 
 func (r *Repository) Serve(ctx context.Context, localHostname string, repoName string) (*Server, error) {
-	return newServer(ctx, r.Dir, r.BlobsDir, localHostname, repoName)
+	return newServer(ctx, r.Dir, r.BlobStore, localHostname, repoName)
 }
 
 func (r *Repository) LookupUpdateSystemImageMerkle(ctx context.Context) (string, error) {

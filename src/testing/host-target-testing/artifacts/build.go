@@ -23,12 +23,22 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
+type BlobFetchMode int
+
+const (
+	// PrefetchBlobs will download all the blobs from a build when `GetPackageRepository()` is called.
+	PrefetchBlobs BlobFetchMode = iota
+
+	// LazilyFetchBlobs will only download blobs when they are accessed.
+	LazilyFetchBlobs
+)
+
 type Build interface {
 	// GetBootserver returns the path to the bootserver used for paving.
 	GetBootserver(ctx context.Context) (string, error)
 
 	// GetPackageRepository returns a Repository for this build.
-	GetPackageRepository(ctx context.Context) (*packages.Repository, error)
+	GetPackageRepository(ctx context.Context, blobFetchMode BlobFetchMode) (*packages.Repository, error)
 
 	// GetPaverDir downloads and returns the directory containing the images
 	// and image manifest.
@@ -46,13 +56,13 @@ type Build interface {
 
 // ArtifactsBuild represents the build artifacts for a specific build.
 type ArtifactsBuild struct {
-	id                 string
-	archive            *Archive
-	dir                string
-	packages           *packages.Repository
-	buildImageDir      string
-	sshPublicKey       ssh.PublicKey
-	srcs               map[string]struct{}
+	id            string
+	archive       *Archive
+	dir           string
+	packages      *packages.Repository
+	buildImageDir string
+	sshPublicKey  ssh.PublicKey
+	srcs          map[string]struct{}
 }
 
 func (b *ArtifactsBuild) GetBootserver(ctx context.Context) (string, error) {
@@ -71,7 +81,7 @@ type blob struct {
 // GetPackageRepository returns a Repository for this build. It tries to
 // download a package when all the artifacts are stored in individual files,
 // which is how modern builds publish their build artifacts.
-func (b *ArtifactsBuild) GetPackageRepository(ctx context.Context) (*packages.Repository, error) {
+func (b *ArtifactsBuild) GetPackageRepository(ctx context.Context, fetchMode BlobFetchMode) (*packages.Repository, error) {
 	if b.packages != nil {
 		return b.packages, nil
 	}
@@ -113,21 +123,54 @@ func (b *ArtifactsBuild) GetPackageRepository(ctx context.Context) (*packages.Re
 	for _, blob := range blobs {
 		blobsList = append(blobsList, filepath.Join("blobs", blob.Merkle))
 	}
-	logger.Infof(ctx, "all_blobs contains %d blobs", len(blobsList))
+	logger.Infof(ctx, "all_blobs contains %d blobs", len(blobs))
 
 	blobsDir := filepath.Join(b.dir, "blobs")
-	p, err := packages.NewRepository(ctx, packagesDir, blobsDir)
+
+	if fetchMode == PrefetchBlobs {
+		if err := b.archive.download(ctx, b.id, true, filepath.Dir(blobsDir), blobsList); err != nil {
+			logger.Errorf(ctx, "failed to download blobs to %s: %v", blobsDir, err)
+			return nil, fmt.Errorf("failed to download blobs to %s: %w", blobsDir, err)
+		}
+	}
+
+	p, err := packages.NewRepository(ctx, packagesDir, &proxyBlobStore{b, blobsDir})
 	if err != nil {
 		return nil, err
 	}
 	b.packages = p
 
-	if err := b.archive.download(ctx, b.id, true, filepath.Dir(blobsDir), blobsList); err != nil {
-		logger.Errorf(ctx, "failed to download blobs to %s: %v", blobsDir, err)
-		return nil, fmt.Errorf("failed to download blobs to %s: %w", blobsDir, err)
+	return b.packages, nil
+}
+
+type proxyBlobStore struct {
+	b   *ArtifactsBuild
+	dir string
+}
+
+func (fs *proxyBlobStore) OpenBlob(ctx context.Context, merkle string) (*os.File, error) {
+	path := filepath.Join(fs.dir, merkle)
+
+	// First, try to read the blob from the directory
+	if f, err := os.Open(path); err == nil {
+		return f, nil
 	}
 
-	return b.packages, nil
+	// Otherwise, start downloading the blob. The package resolver will only
+	// fetch a blob once, so we don't need to deduplicate requests on our side.
+
+	logger.Infof(ctx, "download blob from build %s: %s", fs.b.id, merkle)
+
+	src := filepath.Join("blobs", merkle)
+	if err := fs.b.archive.download(ctx, fs.b.id, true, path, []string{src}); err != nil {
+		return nil, err
+	}
+
+	return os.Open(path)
+}
+
+func (fs *proxyBlobStore) Dir() string {
+	return fs.dir
 }
 
 // GetBuildImages downloads the build images for a specific build id.
@@ -150,13 +193,13 @@ func (b *ArtifactsBuild) GetBuildImages(ctx context.Context) (string, error) {
 	}
 
 	if len(imageSrcs) == 0 {
-    return "", fmt.Errorf("build %s has no images/ directory", b.id)
+		return "", fmt.Errorf("build %s has no images/ directory", b.id)
 	}
 
 	imageDir := filepath.Join(b.dir, b.id, "images")
 
 	if err := b.archive.download(ctx, b.id, false, filepath.Dir(imageDir), imageSrcs); err != nil {
-    return "", fmt.Errorf("failed to download images to %s: %w", imageDir, err)
+		return "", fmt.Errorf("failed to download images to %s: %w", imageDir, err)
 	}
 
 	b.buildImageDir = imageDir
@@ -259,8 +302,9 @@ func (b *FuchsiaDirBuild) GetBootserver(ctx context.Context) (string, error) {
 	return filepath.Join(b.dir, "host_x64/bootserver_new"), nil
 }
 
-func (b *FuchsiaDirBuild) GetPackageRepository(ctx context.Context) (*packages.Repository, error) {
-	return packages.NewRepository(ctx, filepath.Join(b.dir, "amber-files"), filepath.Join(b.dir, "amber-files", "repository", "blobs"))
+func (b *FuchsiaDirBuild) GetPackageRepository(ctx context.Context, blobFetchMode BlobFetchMode) (*packages.Repository, error) {
+	blobFS := packages.NewDirBlobStore(filepath.Join(b.dir, "amber-files", "repository", "blobs"))
+	return packages.NewRepository(ctx, filepath.Join(b.dir, "amber-files"), blobFS)
 }
 
 func (b *FuchsiaDirBuild) GetPaverDir(ctx context.Context) (string, error) {
@@ -321,8 +365,8 @@ func (b *OmahaBuild) GetBootserver(ctx context.Context) (string, error) {
 }
 
 // GetPackageRepository returns a Repository for this build.
-func (b *OmahaBuild) GetPackageRepository(ctx context.Context) (*packages.Repository, error) {
-	return b.build.GetPackageRepository(ctx)
+func (b *OmahaBuild) GetPackageRepository(ctx context.Context, blobFetchMode BlobFetchMode) (*packages.Repository, error) {
+	return b.build.GetPackageRepository(ctx, blobFetchMode)
 }
 
 func (b *OmahaBuild) GetPaverDir(ctx context.Context) (string, error) {

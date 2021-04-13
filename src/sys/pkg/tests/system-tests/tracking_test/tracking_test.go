@@ -155,7 +155,7 @@ func testTrackingOTAAttempt(
 		return fmt.Errorf("failed to find build %s: %w", buildID, err)
 	}
 
-	repo, err := build.GetPackageRepository(ctx)
+	repo, err := build.GetPackageRepository(ctx, artifacts.PrefetchBlobs)
 	if err != nil {
 		return fmt.Errorf("failed to get repo for build: %w", err)
 	}
@@ -209,7 +209,9 @@ func initializeDevice(ctx context.Context, deviceClient *device.Client) (*sl4f.C
 }
 
 func paveDevice(ctx context.Context, device *device.Client, downgradeBuild artifacts.Build) (*sl4f.Client, error) {
-	downgradeRepo, err := downgradeBuild.GetPackageRepository(ctx)
+	// We don't need to prefetch all the blobs, since we only use a subset of
+	// packages from the repository, like run, sl4f.
+	downgradeRepo, err := downgradeBuild.GetPackageRepository(ctx, artifacts.LazilyFetchBlobs)
 	if err != nil {
 		return nil, fmt.Errorf("error getting downgrade repository: %w", err)
 	}

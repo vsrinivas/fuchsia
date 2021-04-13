@@ -66,11 +66,11 @@ func (a *Archive) GetBuildByID(
 	}
 
 	return &ArtifactsBuild{
-		id:                 id,
-		archive:            a,
-		dir:                dir,
-		sshPublicKey:       publicKey,
-		srcs:               srcsMap,
+		id:           id,
+		archive:      a,
+		dir:          dir,
+		sshPublicKey: publicKey,
+		srcs:         srcsMap,
 	}, nil
 }
 

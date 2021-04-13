@@ -136,7 +136,7 @@ func (p *PackageBuilder) Publish(ctx context.Context, pkgRepo *Repository) (stri
 	// Open repository
 	// Repository.Dir contains a trailing `repository` in the path that we don't want.
 	repoDir := path.Dir(pkgRepo.Dir)
-	pmRepo, err := repo.New(repoDir, pkgRepo.BlobsDir)
+	pmRepo, err := repo.New(repoDir, pkgRepo.BlobStore.Dir())
 	if err != nil {
 		return "", "", fmt.Errorf("failed to open repository at %q. %w", pkgRepo.Dir, err)
 	}

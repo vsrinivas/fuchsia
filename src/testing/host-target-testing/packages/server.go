@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -25,14 +26,26 @@ import (
 
 type Server struct {
 	Dir          string
-	BlobsDir     string
+	BlobStore    BlobStore
 	URL          string
 	Hash         string
 	server       *http.Server
 	shuttingDown chan struct{}
 }
 
-func newServer(ctx context.Context, dir, blobsDir string, localHostname string, repoName string) (*Server, error) {
+type httpBlobStore struct {
+	ctx       context.Context
+	blobStore BlobStore
+}
+
+func (f httpBlobStore) Open(path string) (fs.File, error) {
+	if !strings.HasPrefix(path, "blobs/") {
+		return nil, os.ErrNotExist
+	}
+	return f.blobStore.OpenBlob(f.ctx, strings.TrimPrefix(path, "blobs/"))
+}
+
+func newServer(ctx context.Context, dir string, blobStore BlobStore, localHostname string, repoName string) (*Server, error) {
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return nil, err
@@ -56,7 +69,7 @@ func newServer(ctx context.Context, dir, blobsDir string, localHostname string, 
 	// Blobs requests come as `/blobs/<merkle>` so the directory we actually
 	// serve from should be the parent directory of the blobsDir and the blobsDir
 	// should be called `blobs`.
-	mux.Handle("/blobs/", http.FileServer(http.Dir(filepath.Dir(blobsDir))))
+	mux.Handle("/blobs/", http.FileServer(http.FS(httpBlobStore{ctx, blobStore})))
 	mux.Handle("/", http.FileServer(http.Dir(dir)))
 
 	server := &http.Server{
@@ -87,7 +100,7 @@ func newServer(ctx context.Context, dir, blobsDir string, localHostname string, 
 
 	return &Server{
 		Dir:          dir,
-		BlobsDir:     blobsDir,
+		BlobStore:    blobStore,
 		URL:          configURL,
 		Hash:         configHash,
 		server:       server,
