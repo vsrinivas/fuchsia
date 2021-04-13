@@ -285,7 +285,7 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
         .connect_to_service::<net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
     let mut wait_for_netmgr_fut = netmgr.wait().fuse();
-    let (_id, _name): (u32, String) = netstack_testing_common::wait_for_non_loopback_interface_up(
+    let _: (u64, String) = netstack_testing_common::wait_for_non_loopback_interface_up(
         &interface_state,
         &mut wait_for_netmgr_fut,
         None,

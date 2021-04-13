@@ -216,16 +216,15 @@ async fn install_ip_device(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
         |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
-            // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
-            if addrs.iter().all(|want| {
-                addresses
-                    .iter()
-                    .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr }| addr == *want)
-            }) {
-                Some(())
-            } else {
-                None
-            }
+            // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
+            addrs
+                .iter()
+                .all(|want| {
+                    addresses
+                        .iter()
+                        .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr }| addr == *want)
+                })
+                .then(|| ())
         },
     )
     .await

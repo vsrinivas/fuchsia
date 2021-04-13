@@ -346,16 +346,13 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(name: &str) -> Resu
                          addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
                      }| {
                         match addr {
+                            net::IpAddress::Ipv4(net::Ipv4Address { addr: _ }) => None,
                             net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
-                                // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
-                                if ipv6_consts::PREFIX.contains(&net_types_ip::Ipv6Addr::new(addr))
-                                {
-                                    Some(())
-                                } else {
-                                    None
-                                }
+                                // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
+                                ipv6_consts::PREFIX
+                                    .contains(&net_types_ip::Ipv6Addr::new(addr))
+                                    .then(|| ())
                             }
-                            net::IpAddress::Ipv4(_) => None,
                         }
                     },
                 )

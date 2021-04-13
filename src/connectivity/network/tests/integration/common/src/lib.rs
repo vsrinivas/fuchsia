@@ -135,9 +135,9 @@ pub async fn wait_for_non_loopback_interface_up<
 >(
     interface_state: &net_interfaces::StateProxy,
     mut wait_for_netmgr: &mut F,
-    exclude_ids: Option<&HashSet<u32>>,
+    exclude_ids: Option<&HashSet<u64>>,
     timeout: zx::Duration,
-) -> Result<(u32, String)> {
+) -> Result<(u64, String)> {
     let mut if_map = HashMap::new();
     let wait_for_interface = fidl_fuchsia_net_interfaces_ext::wait_interface(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(interface_state)?,
@@ -150,17 +150,11 @@ pub async fn wait_for_non_loopback_interface_up<
                         name, device_class, online, ..
                     },
                 )| {
-                    let id = *id as u32;
-                    // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
-                    if *device_class
+                    (*device_class
                         != net_interfaces::DeviceClass::Loopback(net_interfaces::Empty {})
                         && *online
-                        && exclude_ids.map_or(true, |ids| !ids.contains(&id))
-                    {
-                        Some((id, name.clone()))
-                    } else {
-                        None
-                    }
+                        && exclude_ids.map_or(true, |ids| !ids.contains(id)))
+                    .then(|| (*id, name.clone()))
                 },
             )
         },

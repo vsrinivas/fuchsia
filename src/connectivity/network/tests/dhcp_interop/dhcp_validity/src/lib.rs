@@ -55,20 +55,17 @@ pub async fn verify_v4_addr_present(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut if_map,
         |if_map| {
-            // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
-            if if_map.values().any(
-                |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
+            // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
+            if_map
+                .values()
+                .any(|fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
                     addresses.iter().any(
                         |fidl_fuchsia_net_interfaces_ext::Address {
                              addr: fnet::Subnet { addr, prefix_len: _ },
                          }| { *addr == want_addr },
                     )
-                },
-            ) {
-                Some(())
-            } else {
-                None
-            }
+                })
+                .then(|| ())
         },
     )
     .map_err(anyhow::Error::from)

@@ -64,7 +64,7 @@ async fn test_oir<E: netemul::Endpoint>(name: &str) -> Result {
     let interface_state = environment
         .connect_to_service::<net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
-    let (_id, _name): (u32, String) = wait_for_non_loopback_interface_up(
+    let _: (u64, String) = wait_for_non_loopback_interface_up(
         &interface_state,
         &mut wait_for_netmgr,
         None,
@@ -170,7 +170,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint>(name: &str) -> R
     )
     .await
     .context("wait for second non loopback interface")?;
-    assert_eq!(id_etht0, netstack_id_etht0);
+    assert_eq!(id_etht0, u64::from(netstack_id_etht0));
     assert_eq!(&name_etht0, "etht0");
 
     // Add another device from the network manager with the same MAC address and wait for it
@@ -299,20 +299,15 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
                             name, online, addresses, ..
                         },
                     )| {
-                        // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
-                        if *online
+                        (*online
                             && addresses.iter().any(
                                 |&fidl_fuchsia_net_interfaces_ext::Address {
                                      addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
                                  }| {
                                     addr == INTERFACE_ADDR.into_ext()
                                 },
-                            )
-                        {
-                            Some((*id, name.clone()))
-                        } else {
-                            None
-                        }
+                            ))
+                        .then(|| (*id, name.clone()))
                     },
                 )
             },
@@ -400,8 +395,8 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
                         id,
                         fidl_fuchsia_net_interfaces_ext::Properties { online, addresses, .. },
                     )| {
-                        // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
-                        if *id != wlan_ap_id
+                        // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
+                        (*id != wlan_ap_id
                             && *online
                             && addresses.iter().any(
                                 |&fidl_fuchsia_net_interfaces_ext::Address {
@@ -411,14 +406,10 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
                                         NETWORK_ADDR_SUBNET
                                             .contains(&net_types_ip::Ipv4Addr::new(addr))
                                     }
-                                    net::IpAddress::Ipv6(_) => false,
+                                    net::IpAddress::Ipv6(net::Ipv6Address { addr: _ }) => false,
                                 },
-                            )
-                        {
-                            Some(())
-                        } else {
-                            None
-                        }
+                            ))
+                        .then(|| ())
                     },
                 )
             },
