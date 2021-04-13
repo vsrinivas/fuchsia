@@ -68,9 +68,12 @@ class PresenterService extends fidl.GraphicalPresenter {
         viewHolderToken,
         viewRef: viewSpec.viewRef,
         usePlatformView: true,
-        onAvailable: (childViewConnection) =>
-            viewController.viewConnectionAvailable.value = true,
-        onStateChanged: (_, state) => viewController.stateChanged.value = state,
+        onStateChanged: (_, state) {
+          viewController.stateChanged.value = state;
+          if (state == true) {
+            viewController.viewRendered.value = true;
+          }
+        },
       );
       onPresent(
         connection,
@@ -89,7 +92,7 @@ class PresenterService extends fidl.GraphicalPresenter {
 class ViewControllerImpl extends fidl.ViewController {
   /// Notifier for view state change callback.
   ValueNotifier stateChanged = ValueNotifier(null);
-  ValueNotifier viewConnectionAvailable = ValueNotifier(false);
+  ValueNotifier viewRendered = ValueNotifier(false);
 
   final _binding = fidl.ViewControllerBinding();
   final StreamController<void> _onPresentedStreamController =

@@ -113,7 +113,7 @@ class ErmineStory {
     childViewConnectionNotifier.value?.dispose();
     childViewConnectionNotifier.value = null;
     childViewAvailableNotifier.value = null;
-    viewController?.viewConnectionAvailable?.removeListener(onViewAvailable);
+    viewController?.viewRendered?.removeListener(onViewAvailable);
     viewController?.close();
     onDelete?.call(this);
     _elementController?.ctrl?.close();
@@ -199,13 +199,12 @@ class ErmineStory {
     childViewConnectionNotifier.value = connection;
     this.viewRef = viewRef;
     viewController = vc;
-    viewController.viewConnectionAvailable.addListener(onViewAvailable);
+    viewController.viewRendered.addListener(onViewAvailable);
     viewController?.didPresent();
   }
 
   void onViewAvailable() {
-    childViewAvailableNotifier.value =
-        viewController.viewConnectionAvailable.value;
+    childViewAvailableNotifier.value = viewController.viewRendered.value;
     focus();
   }
 

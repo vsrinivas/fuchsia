@@ -47,8 +47,7 @@ void main() {
 
   test('Delete ErmineStory', () {
     final viewController = MockViewControllerImpl();
-    when(viewController.viewConnectionAvailable)
-        .thenReturn(ValueNotifier(true));
+    when(viewController.viewRendered).thenReturn(ValueNotifier(true));
     bool didCallDelete = false;
     ErmineStory.fromExternalSource(onDelete: (_) => didCallDelete = true)
       ..viewController = viewController
