@@ -44,12 +44,14 @@ pub enum Event {
     TimeSourceStatus { role: Role, status: Status },
     /// A sample received from a time source was rejected during validation.
     SampleRejected { role: Role, error: SampleValidationError },
-    /// A time estimate was updated.
-    EstimateUpdated {
+    /// The state of a Kalman filter was updated.
+    KalmanFilterUpdated {
         /// The `Track` of the estimate.
         track: Track,
-        /// Estimated UTC at reference minus monotonic time at reference.
-        offset: zx::Duration,
+        /// The monotonic time at which the state applies.
+        monotonic: zx::Time,
+        /// The estimated UTC corresponding to monotonic.
+        utc: zx::Time,
         /// Square root of element [0,0] of the covariance matrix.
         sqrt_covariance: zx::Duration,
     },

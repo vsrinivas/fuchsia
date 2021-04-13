@@ -27,8 +27,8 @@ use {
 const ONE_MILLION: i32 = 1_000_000;
 /// The value stored in place of any time that could not be generated.
 const FAILED_TIME: i64 = -1;
-/// The number of time estimates that are retained.
-const ESTIMATE_UPDATE_COUNT: usize = 5;
+/// The number of Kalman filter state updates that are retained.
+const FILTER_STATE_COUNT: usize = 5;
 /// The number of clock corrections that are retained.
 const CLOCK_CORRECTION_COUNT: usize = 3;
 
@@ -241,13 +241,13 @@ impl TimeSourceNode {
     }
 }
 
-/// A representation of a single update to a UTC estimate.
+/// A representation of the state of a kalman filter at a point in time.
 #[derive(InspectWritable, Default)]
-pub struct Estimate {
-    /// The monotonic time at which the estimate was received.
+pub struct KalmanFilterState {
+    /// The monotonic time at which the state applies, in nanoseconds.
     monotonic: i64,
-    /// Estimated UTC at reference minus monotonic time at reference, in nanoseconds.
-    offset: i64,
+    /// The estimated UTC corresponding to monotonic, in nanoseconds.
+    utc: i64,
     /// The square root of element [0,0] of the covariance matrix, in nanoseconds.
     sqrt_covariance: u64,
 }
@@ -265,8 +265,8 @@ pub struct ClockCorrection {
 
 /// An inspect `Node` and properties used to describe the state and history of a time track.
 struct TrackNode {
-    /// A circular buffer of recent updates to the time estimate.
-    estimates: CircularBuffer<Estimate>,
+    /// A circular buffer of recent updates to the kalman filter state.
+    filter_states: CircularBuffer<KalmanFilterState>,
     /// A circular buffer of recently planned clock corrections.
     corrections: CircularBuffer<ClockCorrection>,
     /// The details of the most recent update to the clock object.
@@ -281,7 +281,7 @@ impl TrackNode {
     /// Constructs a new `TrackNode`.
     pub fn new(node: Node, clock: Arc<zx::Clock>) -> Self {
         TrackNode {
-            estimates: CircularBuffer::new(ESTIMATE_UPDATE_COUNT, "estimate_", &node),
+            filter_states: CircularBuffer::new(FILTER_STATE_COUNT, "filter_state_", &node),
             corrections: CircularBuffer::new(CLOCK_CORRECTION_COUNT, "clock_correction_", &node),
             last_update: None,
             clock,
@@ -289,14 +289,19 @@ impl TrackNode {
         }
     }
 
-    /// Records a new estimate of time for the track.
-    pub fn update_estimate(&mut self, offset: zx::Duration, sqrt_covariance: zx::Duration) {
-        let estimate = Estimate {
-            monotonic: monotonic_time(),
-            offset: offset.into_nanos(),
+    /// Records a new Kalman filter update for the track.
+    pub fn update_filter_state(
+        &mut self,
+        monotonic: zx::Time,
+        utc: zx::Time,
+        sqrt_covariance: zx::Duration,
+    ) {
+        let filter_state = KalmanFilterState {
+            monotonic: monotonic.into_nanos(),
+            utc: utc.into_nanos(),
             sqrt_covariance: sqrt_covariance.into_nanos() as u64,
         };
-        self.estimates.update(&estimate);
+        self.filter_states.update(&filter_state);
     }
 
     /// Records a new planned correction for the clock.
@@ -423,11 +428,11 @@ impl Diagnostics for InspectDiagnostics {
                     .get_mut(&role)
                     .map(|source| source.sample_rejection(error));
             }
-            Event::EstimateUpdated { track, offset, sqrt_covariance } => {
+            Event::KalmanFilterUpdated { track, monotonic, utc, sqrt_covariance } => {
                 self.tracks
                     .lock()
                     .get_mut(&track)
-                    .map(|track| track.update_estimate(offset, sqrt_covariance));
+                    .map(|track| track.update_filter_state(monotonic, utc, sqrt_covariance));
             }
             Event::ClockCorrection { track, correction, strategy } => {
                 self.tracks
@@ -569,10 +574,10 @@ mod tests {
                     status_change_monotonic: AnyProperty,
                 },
                 primary_track: contains {
-                    estimate_0: contains {
+                    filter_state_0: contains {
                         counter: 0u64,
                         monotonic: 0i64,
-                        offset: 0i64,
+                        utc: 0i64,
                         sqrt_covariance: 0u64,
                     }
                     // For brevity we omit the other empty estimates we expect in the circular
@@ -728,34 +733,34 @@ mod tests {
             inspector,
             root: contains {
                 primary_track: contains {
-                    estimate_0: contains {
+                    filter_state_0: contains {
                         counter: 0u64,
                         monotonic: 0i64,
-                        offset: 0i64,
+                        utc: 0i64,
                         sqrt_covariance: 0u64,
                     },
-                    estimate_1: contains {
+                    filter_state_1: contains {
                         counter: 0u64,
                         monotonic: 0i64,
-                        offset: 0i64,
+                        utc: 0i64,
                         sqrt_covariance: 0u64,
                     },
-                    estimate_2: contains {
+                    filter_state_2: contains {
                         counter: 0u64,
                         monotonic: 0i64,
-                        offset: 0i64,
+                        utc: 0i64,
                         sqrt_covariance: 0u64,
                     },
-                    estimate_3: contains {
+                    filter_state_3: contains {
                         counter: 0u64,
                         monotonic: 0i64,
-                        offset: 0i64,
+                        utc: 0i64,
                         sqrt_covariance: 0u64,
                     },
-                    estimate_4: contains {
+                    filter_state_4: contains {
                         counter: 0u64,
                         monotonic: 0i64,
-                        offset: 0i64,
+                        utc: 0i64,
                         sqrt_covariance: 0u64,
                     },
                     clock_correction_0: contains {
@@ -778,11 +783,11 @@ mod tests {
                     },
                 },
                 monitor_track: contains {
-                    estimate_0: contains {},
-                    estimate_1: contains {},
-                    estimate_2: contains {},
-                    estimate_3: contains {},
-                    estimate_4: contains {},
+                    filter_state_0: contains {},
+                    filter_state_1: contains {},
+                    filter_state_2: contains {},
+                    filter_state_3: contains {},
+                    filter_state_4: contains {},
                     clock_correction_0: contains {},
                     clock_correction_1: contains {},
                     clock_correction_2: contains {},
@@ -792,9 +797,10 @@ mod tests {
 
         // Write enough to wrap the circular buffer
         for i in 1..8 {
-            test.record(Event::EstimateUpdated {
+            test.record(Event::KalmanFilterUpdated {
                 track: Track::Primary,
-                offset: OFFSET * i,
+                monotonic: zx::Time::ZERO + OFFSET * i,
+                utc: zx::Time::from_nanos(BACKSTOP_TIME) + OFFSET * i,
                 sqrt_covariance: zx::Duration::from_nanos(SQRT_COVARIANCE) * i,
             });
             test.record(Event::ClockCorrection {
@@ -812,34 +818,34 @@ mod tests {
             inspector,
             root: contains {
                 primary_track: contains {
-                    estimate_0: contains {
+                    filter_state_0: contains {
                         counter: 6u64,
-                        monotonic: AnyProperty,
-                        offset: 6 * OFFSET.into_nanos(),
+                        monotonic: 6 * OFFSET.into_nanos(),
+                        utc: BACKSTOP_TIME + 6 * OFFSET.into_nanos(),
                         sqrt_covariance: 6 * SQRT_COVARIANCE as u64,
                     },
-                    estimate_1: contains {
+                    filter_state_1: contains {
                         counter: 7u64,
-                        monotonic: AnyProperty,
-                        offset: 7 * OFFSET.into_nanos(),
+                        monotonic: 7 * OFFSET.into_nanos(),
+                        utc: BACKSTOP_TIME + 7 * OFFSET.into_nanos(),
                         sqrt_covariance: 7 * SQRT_COVARIANCE as u64,
                     },
-                    estimate_2: contains {
+                    filter_state_2: contains {
                         counter: 3u64,
-                        monotonic: AnyProperty,
-                        offset: 3 * OFFSET.into_nanos(),
+                        monotonic: 3 * OFFSET.into_nanos(),
+                        utc: BACKSTOP_TIME + 3 * OFFSET.into_nanos(),
                         sqrt_covariance: 3 * SQRT_COVARIANCE as u64,
                     },
-                    estimate_3: contains {
+                    filter_state_3: contains {
                         counter: 4u64,
-                        monotonic: AnyProperty,
-                        offset: 4 * OFFSET.into_nanos(),
+                        monotonic: 4 * OFFSET.into_nanos(),
+                        utc: BACKSTOP_TIME + 4 * OFFSET.into_nanos(),
                         sqrt_covariance: 4 * SQRT_COVARIANCE as u64,
                     },
-                    estimate_4: contains {
+                    filter_state_4: contains {
                         counter: 5u64,
-                        monotonic: AnyProperty,
-                        offset: 5 * OFFSET.into_nanos(),
+                        monotonic: 5 * OFFSET.into_nanos(),
+                        utc: BACKSTOP_TIME + 5 * OFFSET.into_nanos(),
                         sqrt_covariance: 5 * SQRT_COVARIANCE as u64,
                     },
                     clock_correction_0: contains {
@@ -871,11 +877,11 @@ mod tests {
                     },
                 },
                 monitor_track: contains {
-                    estimate_0: contains {},
-                    estimate_1: contains {},
-                    estimate_2: contains {},
-                    estimate_3: contains {},
-                    estimate_4: contains {},
+                    filter_state_0: contains {},
+                    filter_state_1: contains {},
+                    filter_state_2: contains {},
+                    filter_state_3: contains {},
+                    filter_state_4: contains {},
                     clock_correction_0: contains {},
                     clock_correction_1: contains {},
                     clock_correction_2: contains {},

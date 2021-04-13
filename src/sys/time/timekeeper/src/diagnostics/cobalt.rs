@@ -66,8 +66,8 @@ impl CobaltDiagnostics {
         }
     }
 
-    /// Records an update to the estimate, including an event and a covariance report.
-    fn record_estimate_update(&self, track: Track, sqrt_covariance: zx::Duration) {
+    /// Records an update to the Kalman filter state, including an event and a covariance report.
+    fn record_kalman_filter_update(&self, track: Track, sqrt_covariance: zx::Duration) {
         let mut locked_sender = self.sender.lock();
         let cobalt_track = Into::<CobaltTrack>::into(track);
         locked_sender.log_event_count(
@@ -176,8 +176,8 @@ impl Diagnostics for CobaltDiagnostics {
                     1,
                 );
             }
-            Event::EstimateUpdated { track, sqrt_covariance, .. } => {
-                self.record_estimate_update(track, sqrt_covariance);
+            Event::KalmanFilterUpdated { track, sqrt_covariance, .. } => {
+                self.record_kalman_filter_update(track, sqrt_covariance);
             }
             Event::ClockCorrection { track, correction, strategy } => {
                 self.record_clock_correction(track, correction, strategy);
@@ -356,9 +356,10 @@ mod test {
     async fn record_time_track_events() {
         let (diagnostics, mut mpsc_receiver) = create_test_object();
 
-        diagnostics.record(Event::EstimateUpdated {
+        diagnostics.record(Event::KalmanFilterUpdated {
             track: Track::Primary,
-            offset: zx::Duration::from_seconds(333),
+            monotonic: zx::Time::from_nanos(333_000_000_000),
+            utc: zx::Time::from_nanos(4455445544_000_000_000),
             sqrt_covariance: zx::Duration::from_micros(55555),
         });
         assert_eq!(

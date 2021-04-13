@@ -97,14 +97,16 @@ impl EqWithAny for Event {
                 }
                 _ => false,
             },
-            Event::EstimateUpdated { track, offset, sqrt_covariance } => match other {
-                Event::EstimateUpdated {
+            Event::KalmanFilterUpdated { track, monotonic, utc, sqrt_covariance } => match other {
+                Event::KalmanFilterUpdated {
                     track: other_track,
-                    offset: other_offset,
+                    monotonic: other_monotonic,
+                    utc: other_utc,
                     sqrt_covariance: other_sqrt_cov,
                 } => {
                     track == other_track
-                        && offset.eq_with_any(other_offset)
+                        && monotonic.eq_with_any(other_monotonic)
+                        && utc.eq_with_any(other_utc)
                         && sqrt_covariance.eq_with_any(other_sqrt_cov)
                 }
                 _ => false,
@@ -160,30 +162,41 @@ mod test {
     #[fuchsia::test]
     fn match_wildcards() {
         let diagnostics = FakeDiagnostics::new();
-        let test_event = Event::EstimateUpdated {
+        let test_event = Event::KalmanFilterUpdated {
             track: Track::Monitor,
-            offset: zx::Duration::from_seconds(1234),
+            monotonic: zx::Time::from_nanos(1234_000_000_000),
+            utc: zx::Time::from_nanos(2345_000_000_000),
             sqrt_covariance: zx::Duration::from_millis(321),
         };
 
         diagnostics.record(test_event.clone());
         diagnostics.assert_events(&[test_event]);
 
-        diagnostics.assert_events(&[Event::EstimateUpdated {
+        diagnostics.assert_events(&[Event::KalmanFilterUpdated {
             track: Track::Monitor,
-            offset: ANY_DURATION,
+            monotonic: ANY_TIME,
+            utc: zx::Time::from_nanos(2345_000_000_000),
             sqrt_covariance: zx::Duration::from_millis(321),
         }]);
 
-        diagnostics.assert_events(&[Event::EstimateUpdated {
+        diagnostics.assert_events(&[Event::KalmanFilterUpdated {
             track: Track::Monitor,
-            offset: zx::Duration::from_seconds(1234),
+            monotonic: zx::Time::from_nanos(1234_000_000_000),
+            utc: ANY_TIME,
+            sqrt_covariance: zx::Duration::from_millis(321),
+        }]);
+
+        diagnostics.assert_events(&[Event::KalmanFilterUpdated {
+            track: Track::Monitor,
+            monotonic: zx::Time::from_nanos(1234_000_000_000),
+            utc: zx::Time::from_nanos(2345_000_000_000),
             sqrt_covariance: ANY_DURATION,
         }]);
 
-        diagnostics.assert_events(&[Event::EstimateUpdated {
+        diagnostics.assert_events(&[Event::KalmanFilterUpdated {
             track: Track::Monitor,
-            offset: ANY_DURATION,
+            monotonic: ANY_TIME,
+            utc: ANY_TIME,
             sqrt_covariance: ANY_DURATION,
         }]);
     }

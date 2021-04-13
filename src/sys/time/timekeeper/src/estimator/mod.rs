@@ -38,9 +38,10 @@ impl<D: Diagnostics> Estimator<D> {
     /// Construct a new estimator initialized to the supplied sample.
     pub fn new(track: Track, sample: Sample, diagnostics: Arc<D>) -> Self {
         let filter = KalmanFilter::new(sample);
-        diagnostics.record(Event::EstimateUpdated {
+        diagnostics.record(Event::KalmanFilterUpdated {
             track,
-            offset: filter.offset(),
+            monotonic: filter.monotonic(),
+            utc: filter.utc(),
             sqrt_covariance: filter.sqrt_covariance(),
         });
         Estimator { filter, track, diagnostics }
@@ -53,18 +54,17 @@ impl<D: Diagnostics> Estimator<D> {
             warn!("Rejected update: {}", err);
             return;
         }
-        let offset = self.filter.offset();
         let sqrt_covariance = self.filter.sqrt_covariance();
-        self.diagnostics.record(Event::EstimateUpdated {
+        self.diagnostics.record(Event::KalmanFilterUpdated {
             track: self.track,
-            offset,
+            monotonic: self.filter.monotonic(),
+            utc: self.filter.utc(),
             sqrt_covariance,
         });
         info!(
-            "received {:?} update to {}. Estimated UTC offset={}ns, sqrt_covariance={}ns",
+            "Received {:?} update to {}. sqrt_covariance={}ns",
             self.track,
             Utc.timestamp_nanos(utc.into_nanos()),
-            offset.into_nanos(),
             sqrt_covariance.into_nanos()
         );
     }
@@ -93,10 +93,15 @@ mod test {
     const TEST_TRACK: Track = Track::Primary;
     const SQRT_COV_1: u64 = STD_DEV_1.into_nanos() as u64;
 
-    fn create_estimate_event(offset: zx::Duration, sqrt_covariance: u64) -> Event {
-        Event::EstimateUpdated {
+    fn create_filter_event(
+        monotonic: zx::Time,
+        offset: zx::Duration,
+        sqrt_covariance: u64,
+    ) -> Event {
+        Event::KalmanFilterUpdated {
             track: TEST_TRACK,
-            offset,
+            monotonic: monotonic,
+            utc: monotonic + offset,
             sqrt_covariance: zx::Duration::from_nanos(sqrt_covariance as i64),
         }
     }
@@ -109,7 +114,7 @@ mod test {
             Sample::new(TIME_1 + OFFSET_1, TIME_1, STD_DEV_1),
             Arc::clone(&diagnostics),
         );
-        diagnostics.assert_events(&[create_estimate_event(OFFSET_1, SQRT_COV_1)]);
+        diagnostics.assert_events(&[create_filter_event(TIME_1, OFFSET_1, SQRT_COV_1)]);
         let transform = estimator.transform();
         assert_eq!(transform.synthetic(TIME_1), TIME_1 + OFFSET_1);
         assert_eq!(transform.synthetic(TIME_2), TIME_2 + OFFSET_1);
@@ -139,8 +144,8 @@ mod test {
         assert_eq!(estimator.transform().synthetic(TIME_3), TIME_3 + expected_offset);
 
         diagnostics.assert_events(&[
-            create_estimate_event(OFFSET_1, SQRT_COV_1),
-            create_estimate_event(expected_offset, expected_sqrt_cov),
+            create_filter_event(TIME_1, OFFSET_1, SQRT_COV_1),
+            create_filter_event(TIME_2, expected_offset, expected_sqrt_cov),
         ]);
     }
 
@@ -156,6 +161,6 @@ mod test {
         estimator.update(Sample::new(TIME_1 + OFFSET_2, TIME_1, STD_DEV_1));
         assert_eq!(estimator.transform().synthetic(TIME_3), TIME_3 + OFFSET_1);
         // Ignored event should not be logged.
-        diagnostics.assert_events(&[create_estimate_event(OFFSET_1, SQRT_COV_1)]);
+        diagnostics.assert_events(&[create_filter_event(TIME_2, OFFSET_1, SQRT_COV_1)]);
     }
 }

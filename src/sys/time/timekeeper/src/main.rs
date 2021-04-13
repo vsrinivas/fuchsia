@@ -384,9 +384,10 @@ mod tests {
                 time: Some(INVALID_RTC_TIME),
             },
             Event::TimeSourceStatus { role: Role::Primary, status: ftexternal::Status::Ok },
-            Event::EstimateUpdated {
+            Event::KalmanFilterUpdated {
                 track: Track::Primary,
-                offset: OFFSET,
+                monotonic: monotonic_ref,
+                utc: monotonic_ref + OFFSET,
                 sqrt_covariance: STD_DEV,
             },
             Event::StartClock {
@@ -396,9 +397,10 @@ mod tests {
             Event::WriteRtc { outcome: WriteRtcOutcome::Succeeded },
             Event::TimeSourceStatus { role: Role::Monitor, status: ftexternal::Status::Network },
             Event::TimeSourceStatus { role: Role::Monitor, status: ftexternal::Status::Ok },
-            Event::EstimateUpdated {
+            Event::KalmanFilterUpdated {
                 track: Track::Monitor,
-                offset: OFFSET_2,
+                monotonic: monotonic_ref,
+                utc: monotonic_ref + OFFSET_2,
                 sqrt_covariance: STD_DEV,
             },
             Event::StartClock {

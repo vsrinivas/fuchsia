@@ -130,7 +130,7 @@ impl KalmanFilter {
     pub fn transform(&self) -> Transform {
         Transform {
             monotonic_offset: self.monotonic.into_nanos(),
-            synthetic_offset: (self.reference_utc + f64_to_duration(self.estimate_0)).into_nanos(),
+            synthetic_offset: self.utc().into_nanos(),
             // TODO(jsankey): Accommodate an oscillator frequency error when implementing the
             // frequency correction algorithm.
             rate_adjust_ppm: 0,
@@ -139,9 +139,14 @@ impl KalmanFilter {
         }
     }
 
-    /// Returns the last updated monotonic to UTC offset.
-    pub fn offset(&self) -> zx::Duration {
-        self.reference_utc + f64_to_duration(self.estimate_0) - self.monotonic
+    /// Returns the monotonic time of the last state update.
+    pub fn monotonic(&self) -> zx::Time {
+        self.monotonic
+    }
+
+    /// Returns the estimated utc at the last state update.
+    pub fn utc(&self) -> zx::Time {
+        self.reference_utc + f64_to_duration(self.estimate_0)
     }
 
     /// Returns the square root of the last updated filter covariance.
@@ -186,7 +191,8 @@ mod test {
             transform.error_bound(TIME_1 + 1.second()),
             2 * SQRT_COV_1 + 2000 * OSCILLATOR_ERROR_STD_DEV_PPM
         );
-        assert_eq!(filter.offset(), OFFSET_1);
+        assert_eq!(filter.monotonic(), TIME_1);
+        assert_eq!(filter.utc(), TIME_1 + OFFSET_1);
         assert_eq!(filter.sqrt_covariance(), STD_DEV_1);
     }
 

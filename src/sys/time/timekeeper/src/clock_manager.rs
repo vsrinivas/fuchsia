@@ -815,7 +815,12 @@ mod tests {
         // Check that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
-            Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, sqrt_covariance: STD_DEV },
+            Event::KalmanFilterUpdated {
+                track: *TEST_TRACK,
+                monotonic: monotonic_ref,
+                utc: monotonic_ref + OFFSET,
+                sqrt_covariance: STD_DEV,
+            },
             Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
             Event::WriteRtc { outcome: WriteRtcOutcome::Succeeded },
         ]);
@@ -864,7 +869,12 @@ mod tests {
         // Check that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
-            Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, sqrt_covariance: STD_DEV },
+            Event::KalmanFilterUpdated {
+                track: *TEST_TRACK,
+                monotonic: monotonic_ref,
+                utc: monotonic_ref + OFFSET,
+                sqrt_covariance: STD_DEV,
+            },
             Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
             Event::UpdateClock { track: *TEST_TRACK, reason: ClockUpdateReason::IncreaseError },
             Event::UpdateClock { track: *TEST_TRACK, reason: ClockUpdateReason::IncreaseError },
@@ -913,11 +923,17 @@ mod tests {
         // Check that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
-            Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, sqrt_covariance: STD_DEV },
-            Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
-            Event::EstimateUpdated {
+            Event::KalmanFilterUpdated {
                 track: *TEST_TRACK,
-                offset: expected_offset,
+                monotonic: monotonic_ref - SAMPLE_SPACING,
+                utc: monotonic_ref - SAMPLE_SPACING + OFFSET,
+                sqrt_covariance: STD_DEV,
+            },
+            Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
+            Event::KalmanFilterUpdated {
+                track: *TEST_TRACK,
+                monotonic: monotonic_ref,
+                utc: monotonic_ref + expected_offset,
                 sqrt_covariance: 62225396.nanos(),
             },
             Event::ClockCorrection {
@@ -1009,11 +1025,17 @@ mod tests {
         // Check that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
-            Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, sqrt_covariance: STD_DEV },
-            Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
-            Event::EstimateUpdated {
+            Event::KalmanFilterUpdated {
                 track: *TEST_TRACK,
-                offset: OFFSET + filtered_delta_offset,
+                monotonic: monotonic_ref - SAMPLE_SPACING,
+                utc: monotonic_ref - SAMPLE_SPACING + OFFSET,
+                sqrt_covariance: STD_DEV,
+            },
+            Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
+            Event::KalmanFilterUpdated {
+                track: *TEST_TRACK,
+                monotonic: monotonic_ref,
+                utc: monotonic_ref + OFFSET + filtered_delta_offset,
                 sqrt_covariance: 62225396.nanos(),
             },
             Event::ClockCorrection {
