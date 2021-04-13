@@ -42,7 +42,8 @@ App::App(sys::ComponentContext* component_context, async_dispatcher_t* dispatche
       fdr_manager_(std::make_unique<FactoryResetManager>(*component_context_,
                                                          std::make_shared<MediaRetriever>())),
       focuser_binding_(this),
-      media_buttons_handler_() {
+      media_buttons_handler_(),
+      virtual_keyboard_controller_creator_(component_context) {
   FX_DCHECK(component_context_);
 
   input_reader_.Start();
@@ -252,6 +253,10 @@ void App::InitializeServices() {
     // instead, we add error handlers for cleanup on the a11y presentations when we register them.
 
     // Add Color Transform Handler.
+    //
+    // TODO(fxbug.dev/73838): refactor so that `fuchsia.ui.brightness.ColorAdjustmentHandler`
+    // and `fuchsia.ui.policy.DisplayBacklight` are added to outgoing services before entering
+    // the event loop.
     color_transform_handler_ = std::make_unique<ColorTransformHandler>(
         component_context_, compositor_->id(), session_.get(), safe_presenter_.get());
 

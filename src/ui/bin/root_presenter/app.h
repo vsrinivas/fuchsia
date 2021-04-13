@@ -6,6 +6,7 @@
 #define SRC_UI_BIN_ROOT_PRESENTER_APP_H_
 
 #include <fuchsia/accessibility/cpp/fidl.h>
+#include <fuchsia/input/virtualkeyboard/cpp/fidl.h>
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
@@ -35,6 +36,7 @@
 #include "src/ui/bin/root_presenter/media_buttons_handler.h"
 #include "src/ui/bin/root_presenter/presentation.h"
 #include "src/ui/bin/root_presenter/safe_presenter.h"
+#include "src/ui/bin/root_presenter/virtual_keyboard_controller_creator.h"
 #include "src/ui/lib/input_report_reader/input_reader.h"
 
 namespace root_presenter {
@@ -186,6 +188,8 @@ class App : public fuchsia::ui::policy::Presenter,
 
   // Used to dispatch the focus change messages to interested downstream clients.
   std::unique_ptr<FocusDispatcher> focus_dispatcher_;
+
+  VirtualKeyboardControllerCreator virtual_keyboard_controller_creator_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

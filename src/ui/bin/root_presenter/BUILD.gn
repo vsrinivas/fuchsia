@@ -77,6 +77,7 @@ source_set("lib") {
     ":factory_reset_manager",
     ":focus_dispatcher",
     "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.input.virtualkeyboard",
     "//sdk/fidl/fuchsia.media.sounds",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.recovery.ui",
@@ -105,6 +106,7 @@ source_set("lib") {
     ":displays",
     ":media_buttons_handler",
     ":safe_presenter",
+    ":virtual_keyboard",
     "//garnet/public/lib/fostr/fidl/fuchsia.input.report",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.accessibility",
@@ -245,4 +247,19 @@ source_set("constants") {
     "constants.h",
   ]
   deps = [ "//src/lib/files" ]
+}
+
+source_set("virtual_keyboard") {
+  sources = [
+    "virtual_keyboard_controller.cc",
+    "virtual_keyboard_controller.h",
+    "virtual_keyboard_controller_creator.cc",
+    "virtual_keyboard_controller_creator.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.input.virtualkeyboard",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+  ]
 }
