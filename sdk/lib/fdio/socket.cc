@@ -571,7 +571,7 @@ struct datagram_socket : public zxio {
 
   void wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) override {
     *handle = zxio_datagram_socket().event.get();
-    zx_signals_t signals = ZX_EVENTPAIR_PEER_CLOSED;
+    zx_signals_t signals = ZX_EVENTPAIR_PEER_CLOSED | ZXSIO_SIGNAL_ERROR;
     if (events & POLLIN) {
       signals |= ZXSIO_SIGNAL_INCOMING | ZXSIO_SIGNAL_SHUTDOWN_READ;
     }
@@ -593,7 +593,7 @@ struct datagram_socket : public zxio {
         (ZX_EVENTPAIR_PEER_CLOSED | ZXSIO_SIGNAL_OUTGOING | ZXSIO_SIGNAL_SHUTDOWN_WRITE)) {
       events |= POLLOUT;
     }
-    if (signals & ZX_EVENTPAIR_PEER_CLOSED) {
+    if (signals & (ZX_EVENTPAIR_PEER_CLOSED | ZXSIO_SIGNAL_ERROR)) {
       events |= POLLERR;
     }
     if (signals & (ZX_EVENTPAIR_PEER_CLOSED | ZXSIO_SIGNAL_SHUTDOWN_READ)) {

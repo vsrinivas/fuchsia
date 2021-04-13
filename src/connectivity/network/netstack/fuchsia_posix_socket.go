@@ -59,6 +59,8 @@ import (
 */
 import "C"
 
+const endpointWithSocketAllowedEvents = waiter.EventIn
+
 var _ io.Writer = (*socketWriter)(nil)
 
 type socketWriter struct {
@@ -109,6 +111,78 @@ func (r *socketReader) Len() int {
 	return n
 }
 
+const signalerSupportedEvents = waiter.EventIn | waiter.EventErr
+
+func eventsToSignals(events waiter.EventMask) zx.Signals {
+	signals := zx.SignalNone
+	if events&waiter.EventIn != 0 {
+		signals |= zxsocket.SignalIncoming
+		events &^= waiter.EventIn
+	}
+	if events&waiter.EventErr != 0 {
+		signals |= zxsocket.SignalError
+		events &^= waiter.EventErr
+	}
+	if events != 0 {
+		panic(fmt.Sprintf("unexpected events=%b", events))
+	}
+	return signals
+}
+
+type signaler struct {
+	allowed waiter.EventMask
+
+	mu struct {
+		sync.Mutex
+		asserted waiter.EventMask
+	}
+}
+
+func (s *signaler) init(allowed waiter.EventMask) {
+	if allowed&signalerSupportedEvents != allowed {
+		panic(fmt.Sprintf("allowed=%b but signalerSupportedEvents=%b", allowed, signalerSupportedEvents))
+	}
+
+	if s.allowed != 0 {
+		panic(fmt.Sprintf("s.allowed=%b but was expected to be zero-initialized", s.allowed))
+	}
+
+	s.allowed = allowed
+}
+
+func (s *signaler) update(readiness func(waiter.EventMask) waiter.EventMask, signalPeer func(zx.Signals, zx.Signals) error) error {
+	// We lock to ensure that no incoming event changes readiness while we maybe
+	// set the signals.
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Consult the present readiness of the events we are interested in while
+	// we're locked, as they may have changed already.
+	observed := readiness(s.allowed)
+	// readiness may return events that were not requested so only keep the events
+	// we explicitly requested. For example, Readiness implementation of the UDP
+	// endpoint in gvisor may return EventErr whether or not it was set in the
+	// mask:
+	// https://github.com/google/gvisor/blob/8ee4a3f/pkg/tcpip/transport/udp/endpoint.go#L1252
+	observed &= s.allowed
+
+	if observed == s.mu.asserted {
+		// No events changed since last time.
+		return nil
+	}
+
+	set := eventsToSignals(observed &^ s.mu.asserted)
+	clear := eventsToSignals(s.mu.asserted &^ observed)
+	if set == 0 && clear == 0 {
+		return nil
+	}
+	if err := signalPeer(clear, set); err != nil {
+		return err
+	}
+	s.mu.asserted = observed
+	return nil
+}
+
 type hardError struct {
 	mu struct {
 		sync.Mutex
@@ -136,6 +210,8 @@ type endpoint struct {
 	key uint64
 
 	ns *Netstack
+
+	pending signaler
 
 	// gVisor stack clears the hard error on the endpoint on a read, so,
 	// save the error when returned by gVisor endpoint calls.
@@ -356,13 +432,6 @@ func (ep *endpoint) GetSockOpt(_ fidl.Context, level, optName int16) (socket.Bas
 	}), nil
 }
 
-type boolWithMutex struct {
-	mu struct {
-		sync.Mutex
-		asserted bool
-	}
-}
-
 // endpointWithSocket implements a network socket that uses a zircon socket for
 // its data plane. This structure creates a pair of goroutines which are
 // responsible for moving data and signals between the underlying
@@ -371,8 +440,6 @@ type endpointWithSocket struct {
 	endpoint
 
 	local, peer zx.Socket
-
-	incoming boolWithMutex
 
 	// These channels enable coordination of orderly shutdown of loops, handles,
 	// and endpoints. See the comment on `close` for more information.
@@ -425,6 +492,7 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		closing: make(chan struct{}),
 		linger:  make(chan struct{}),
 	}
+	eps.pending.init(endpointWithSocketAllowedEvents)
 
 	// Add the endpoint before registering callback for hangup event.
 	// The callback could be called soon after registration, where the
@@ -490,8 +558,6 @@ type endpointWithEvent struct {
 
 	local, peer zx.Handle
 
-	incoming boolWithMutex
-
 	entry waiter.Entry
 }
 
@@ -504,6 +570,16 @@ func (epe *endpointWithEvent) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	}
 	info.SetDatagramSocket(fidlio.DatagramSocket{Event: event})
 	return info, nil
+}
+
+func (epe *endpointWithEvent) GetSockOpt(ctx fidl.Context, level, optName int16) (socket.BaseSocketGetSockOptResult, error) {
+	opts, err := epe.endpoint.GetSockOpt(ctx, level, optName)
+	if level == C.SOL_SOCKET && optName == C.SO_ERROR {
+		if err := epe.pending.update(epe.ep.Readiness, epe.local.SignalPeer); err != nil {
+			panic(err)
+		}
+	}
+	return opts, err
 }
 
 func (epe *endpointWithEvent) Shutdown(_ fidl.Context, how socket.ShutdownMode) (socket.DatagramSocketShutdownResult, error) {
@@ -620,14 +696,7 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 		eps.startPollLoop()
 		var entry waiter.Entry
 		cb := func() {
-			var err error
-			eps.incoming.mu.Lock()
-			if !eps.incoming.mu.asserted && eps.endpoint.ep.Readiness(waiter.EventIn) != 0 {
-				err = eps.local.Handle().SignalPeer(0, zxsocket.SignalIncoming)
-				eps.incoming.mu.asserted = true
-			}
-			eps.incoming.mu.Unlock()
-			if err != nil {
+			if err := eps.pending.update(eps.ep.Readiness, eps.local.Handle().SignalPeer); err != nil {
 				if err, ok := err.(*zx.Error); ok && (err.Status == zx.ErrBadHandle || err.Status == zx.ErrPeerClosed) {
 					// The endpoint is closing -- this is possible when an incoming
 					// connection races with the listening endpoint being closed.
@@ -642,7 +711,9 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 				cb()
 			}
 		})
-		eps.wq.EventRegister(&entry, waiter.EventIn|waiter.EventErr)
+		// Register for EventErr as well so that we can ignore an event if it is
+		// asserted alongside an EventErr.
+		eps.wq.EventRegister(&entry, endpointWithSocketAllowedEvents|waiter.EventErr)
 
 		// We're registering after calling Listen, so we might've missed an event.
 		// Call the callback once to check for already-present incoming
@@ -747,16 +818,7 @@ func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAd
 		return tcpipErrorToCode(err), nil, nil, nil
 	}
 	{
-		var err error
-		// We lock here to ensure that no incoming connection changes readiness
-		// while we clear the signal.
-		eps.incoming.mu.Lock()
-		if eps.incoming.mu.asserted && eps.endpoint.ep.Readiness(waiter.EventIn) == 0 {
-			err = eps.local.Handle().SignalPeer(zxsocket.SignalIncoming, 0)
-			eps.incoming.mu.asserted = false
-		}
-		eps.incoming.mu.Unlock()
-		if err != nil {
+		if err := eps.pending.update(eps.ep.Readiness, eps.local.Handle().SignalPeer); err != nil {
 			ep.Close()
 			return 0, nil, nil, err
 		}
@@ -1142,22 +1204,11 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint
 	if _, ok := err.(*tcpip.ErrBadBuffer); ok && dataLen == 0 {
 		err = nil
 	}
+	if err := s.pending.update(s.ep.Readiness, s.local.SignalPeer); err != nil {
+		panic(err)
+	}
 	if err != nil {
 		return socket.DatagramSocketRecvMsgResultWithErr(tcpipErrorToCode(err)), nil
-	}
-	{
-		var err error
-		// We lock here to ensure that no incoming data changes readiness while we
-		// clear the signal.
-		s.incoming.mu.Lock()
-		if s.endpointWithEvent.incoming.mu.asserted && s.endpoint.ep.Readiness(waiter.EventIn) == 0 {
-			err = s.endpointWithEvent.local.SignalPeer(zxsocket.SignalIncoming, 0)
-			s.endpointWithEvent.incoming.mu.asserted = false
-		}
-		s.incoming.mu.Unlock()
-		if err != nil {
-			panic(err)
-		}
 	}
 	var addr *fidlnet.SocketAddress
 	if wantAddr {
@@ -1192,6 +1243,9 @@ func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress
 	r.Reset(data)
 	n, err := s.ep.Write(&r, writeOpts)
 	if err != nil {
+		if err := s.pending.update(s.ep.Readiness, s.local.SignalPeer); err != nil {
+			panic(err)
+		}
 		return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	return socket.DatagramSocketSendMsgResultWithResponse(socket.DatagramSocketSendMsgResponse{Len: n}), nil
@@ -1442,6 +1496,7 @@ func (cb callback) Callback(e *waiter.Entry, m waiter.EventMask) {
 }
 
 func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, proto socket.DatagramSocketProtocol) (socket.ProviderDatagramSocketResult, error) {
+	const registeredEvents = waiter.EventIn | waiter.EventErr
 	code, netProto := toNetProto(domain)
 	if code != 0 {
 		return socket.ProviderDatagramSocketResultWithErr(code), nil
@@ -1478,21 +1533,15 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 			peer:  peerE,
 		},
 	}
+	s.pending.init(registeredEvents)
 
 	s.entry.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
-		var err error
-		s.endpointWithEvent.incoming.mu.Lock()
-		if !s.endpointWithEvent.incoming.mu.asserted && s.endpoint.ep.Readiness(waiter.EventIn) != 0 {
-			err = s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalIncoming)
-			s.endpointWithEvent.incoming.mu.asserted = true
-		}
-		s.endpointWithEvent.incoming.mu.Unlock()
-		if err != nil {
+		if err := s.pending.update(s.ep.Readiness, s.endpointWithEvent.local.SignalPeer); err != nil {
 			panic(err)
 		}
 	})
 
-	s.wq.EventRegister(&s.entry, waiter.EventIn)
+	s.wq.EventRegister(&s.entry, registeredEvents)
 
 	s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
 	_ = syslog.DebugTf("NewDatagram", "%p", s.endpointWithEvent)
