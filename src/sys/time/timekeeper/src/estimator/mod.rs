@@ -22,6 +22,11 @@ use {
 /// control the growth in error bound and bound the allowed frequency estimates.
 const OSCILLATOR_ERROR_STD_DEV_PPM: u64 = 15;
 
+/// Converts a floating point frequency to a rate adjustment in PPM.
+fn frequency_to_adjust_ppm(frequency: f64) -> i32 {
+    ((frequency - 1.0f64) * 1_000_000f64).round() as i32
+}
+
 /// Maintains an estimate of the relationship between true UTC time and monotonic time on this
 /// device, based on time samples received from one or more time sources.
 #[derive(Debug)]
@@ -37,7 +42,7 @@ pub struct Estimator<D: Diagnostics> {
 impl<D: Diagnostics> Estimator<D> {
     /// Construct a new estimator initialized to the supplied sample.
     pub fn new(track: Track, sample: Sample, diagnostics: Arc<D>) -> Self {
-        let filter = KalmanFilter::new(sample);
+        let filter = KalmanFilter::new(&sample);
         diagnostics.record(Event::KalmanFilterUpdated {
             track,
             monotonic: filter.monotonic(),
@@ -50,7 +55,7 @@ impl<D: Diagnostics> Estimator<D> {
     /// Update the estimate to include the supplied sample.
     pub fn update(&mut self, sample: Sample) {
         let utc = sample.utc;
-        if let Err(err) = self.filter.update(sample) {
+        if let Err(err) = self.filter.update(&sample) {
             warn!("Rejected update: {}", err);
             return;
         }
@@ -104,6 +109,15 @@ mod test {
             utc: monotonic + offset,
             sqrt_covariance: zx::Duration::from_nanos(sqrt_covariance as i64),
         }
+    }
+
+    #[fuchsia::test]
+    fn frequency_to_adjust_ppm_test() {
+        assert_eq!(frequency_to_adjust_ppm(0.999), -1000);
+        assert_eq!(frequency_to_adjust_ppm(0.999999), -1);
+        assert_eq!(frequency_to_adjust_ppm(1.0), 0);
+        assert_eq!(frequency_to_adjust_ppm(1.000001), 1);
+        assert_eq!(frequency_to_adjust_ppm(1.001), 1000);
     }
 
     #[fuchsia::test]
