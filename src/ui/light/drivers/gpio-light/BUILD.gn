@@ -22,7 +22,7 @@ driver_module("gpio-light") {
   deps = [
     ":gpio-light-bind",
     "//sdk/banjo/fuchsia.hardware.gpio",
-    "//sdk/banjo/fuchsia.hardware.gpioimpl",
+    "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

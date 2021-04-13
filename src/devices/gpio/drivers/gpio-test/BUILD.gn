@@ -29,7 +29,7 @@ driver_module("gpio-test") {
   deps = [
     ":gpio_test_bind",
     "//sdk/banjo/fuchsia.hardware.gpio",
-    "//sdk/banjo/fuchsia.hardware.gpioimpl",
+    "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",

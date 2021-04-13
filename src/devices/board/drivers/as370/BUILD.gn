@@ -41,7 +41,7 @@ driver_module("as370") {
   deps = [
     ":as370-bind",
     "//sdk/banjo/fuchsia.hardware.gpio",
-    "//sdk/banjo/fuchsia.hardware.gpioimpl",
+    "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.shareddma",

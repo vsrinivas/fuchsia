@@ -25,7 +25,7 @@ driver_module("aml-gxl-gpio") {
   deps = [
     ":aml-gxl-gpio-bind",
     "//sdk/banjo/fuchsia.hardware.gpio",
-    "//sdk/banjo/fuchsia.hardware.gpioimpl",
+    "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/bus/lib/device-protocol-platform-device",
