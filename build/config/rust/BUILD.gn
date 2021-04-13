@@ -152,7 +152,6 @@ config("allow_unused_results") {
     "//src/connectivity/network/tests/connect/*",
     "//src/connectivity/network/tests/dhcp_interop/*",
     "//src/connectivity/network/tools/*",
-    "//src/connectivity/network/tun/*",
     "//src/connectivity/openthread/*",
     "//src/connectivity/overnet/*",
     "//src/connectivity/ppp/*",
