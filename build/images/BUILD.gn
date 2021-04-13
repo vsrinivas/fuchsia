@@ -2596,7 +2596,6 @@ action("system_index") {
   visibility = [ ":system_snapshot" ]
   testonly = true
 
-  hermetic_deps = false
   script = "//build/cat.sh"
   sources = []
   outputs = [ "$target_out_dir/$target_name" ]
