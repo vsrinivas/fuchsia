@@ -23,7 +23,7 @@ driver_module("gpio") {
   sources = [ "gpio.cc" ]
   deps = [
     ":gpio_bind",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_llcpp",
     "//src/devices/lib/driver",
@@ -45,7 +45,7 @@ test("gpio-test-bin") {
   ]
   deps = [
     ":gpio_bind",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp_mock",
     "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_llcpp",

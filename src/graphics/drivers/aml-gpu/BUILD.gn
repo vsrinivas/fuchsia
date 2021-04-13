@@ -32,7 +32,7 @@ source_set("sources") {
   sources = [ "aml-gpu.cc" ]
   public_deps = [
     ":aml_gpu_bind",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpu.mali",
     "//sdk/banjo/fuchsia.hardware.iommu",
     "//sdk/banjo/fuchsia.hardware.platform.bus",

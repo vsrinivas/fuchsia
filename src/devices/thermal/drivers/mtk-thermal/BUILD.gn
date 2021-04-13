@@ -25,7 +25,7 @@ driver_module("mtk-thermal") {
   deps = [
     ":mtk-thermal-bind",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
@@ -56,7 +56,7 @@ test("mtk-thermal-test-bin") {
   deps = [
     ":mtk-thermal-bind",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",

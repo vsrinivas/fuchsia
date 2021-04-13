@@ -24,7 +24,7 @@ driver_module("aml-sdmmc") {
   deps = [
     ":aml-sdmmc-bind",
     "//sdk/banjo/fuchsia.hardware.block",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.sdmmc",
     "//src/devices/block/lib/sdio",
@@ -53,7 +53,7 @@ test("aml-sdmmc-test-bin") {
   ]
   deps = [
     ":aml-sdmmc-bind",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.sdmmc",
     "//src/devices/block/lib/sdio",

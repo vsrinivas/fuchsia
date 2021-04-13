@@ -23,7 +23,7 @@ driver_module("lp50xx-light") {
   sources = [ "lp50xx-light.cc" ]
   deps = [
     ":lp50xx_light-bind",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",
@@ -50,7 +50,7 @@ test("lp50xx-light-test") {
   ]
   deps = [
     ":lp50xx_light-bind",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",

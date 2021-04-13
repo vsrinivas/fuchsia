@@ -23,7 +23,7 @@ driver_module("aml-g12-pdm") {
   deps = [
     ":aml_g12_pdm_bind",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/bus/lib/device-protocol-pdev",

@@ -20,7 +20,7 @@ bind_rules("aml_spi_bind") {
 group("common") {
   public_deps = [
     ":aml_spi_bind",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.spiimpl",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/amlogic",
@@ -44,7 +44,7 @@ test("aml-spi-test-bin") {
   ]
   deps = [
     ":common",
-    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
     "//src/devices/bus/testing/fake-pdev",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",

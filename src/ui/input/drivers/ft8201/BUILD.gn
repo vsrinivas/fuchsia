@@ -50,7 +50,7 @@ bind_rules("ft8201-bind") {
 source_set("common") {
   public_deps = [
     ":ft8201-bind",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device",
@@ -104,7 +104,7 @@ executable("ft8201-test-bin") {
   ]
   deps = [
     ":common",
-    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
     "//src/devices/i2c/testing/fake-i2c",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/mock-function",

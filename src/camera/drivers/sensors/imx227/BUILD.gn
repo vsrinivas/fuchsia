@@ -32,7 +32,7 @@ source_set("lib") {
     ":imx227_bind",
     "//sdk/banjo/fuchsia.hardware.camera",
     "//sdk/banjo/fuchsia.hardware.camera.sensor",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.mipicsi",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/lib/syslog/cpp",
@@ -77,7 +77,7 @@ executable("imx227_unittest_bin") {
   deps = [
     ":lib",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp_mock",
-    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
     "//sdk/banjo/fuchsia.hardware.mipicsi:fuchsia.hardware.mipicsi_mock",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/fake_ddk",

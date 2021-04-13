@@ -20,7 +20,7 @@ source_set("common") {
     "//sdk/banjo/fuchsia.hardware.amlogiccanvas",
     "//sdk/banjo/fuchsia.hardware.audiotypes",
     "//sdk/banjo/fuchsia.hardware.display.controller",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2cimpl",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.sysmem",

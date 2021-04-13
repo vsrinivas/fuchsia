@@ -50,7 +50,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.goldfish.control",
   "fuchsia.hardware.goldfish.pipe",
   "fuchsia.hardware.goldfish.sync",
-  "fuchsia.hardware.gpio",
   "fuchsia.hardware.gpu.mali",
   "fuchsia.hardware.hidbus",
   "fuchsia.hardware.hiddevice",

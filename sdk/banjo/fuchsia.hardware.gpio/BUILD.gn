@@ -5,15 +5,16 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.gpio") {
+  fidl_only = true
   sources = [ "gpio.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
 
 group("fuchsia.hardware.gpio_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.gpio" ]
+  public_deps = [ ":fuchsia.hardware.gpio_banjo_cpp_2" ]
 }
 
 group("fuchsia.hardware.gpio_banjo_cpp_mock") {
   testonly = true
-  public_deps = [ ":fuchsia.hardware.gpio_mock" ]
+  public_deps = [ ":fuchsia.hardware.gpio_banjo_cpp_mock_2" ]
 }

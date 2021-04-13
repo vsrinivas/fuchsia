@@ -23,7 +23,7 @@ driver_module("sg-micro") {
   sources = [ "sgm37603a.cc" ]
   deps = [
     ":sgm37603a-bind",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
@@ -49,7 +49,7 @@ test("sgm37603a-test-bin") {
   ]
   deps = [
     ":sgm37603a-bind",
-    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
     "//sdk/lib/fdio",
     "//src/devices/bus/lib/device-protocol-pdev",
