@@ -27,6 +27,7 @@ executable("unittests") {
     "pointer_capture_test.cc",
     "pointer_event_conversion_test.cc",
     "startup_tests.cc",
+    "touch_source_test.cc",
     "view_tree_input_integration_test.cc",
   ]
   deps = [

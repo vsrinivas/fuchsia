@@ -62,11 +62,6 @@ void InjectorInspector::OnPointerInjectorEvent(const fuchsia::ui::pointerinjecto
   }
 }
 
-StreamId NewStreamId() {
-  static StreamId next_id = 1;
-  return next_id++;
-}
-
 namespace {
 
 InternalPointerEvent CreateCancelEvent(uint32_t device_id, uint32_t pointer_id, zx_koid_t context,

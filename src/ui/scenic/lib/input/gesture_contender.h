@@ -25,7 +25,13 @@ enum GestureResponse {
   kUndefined = 9
 };
 
-using StreamId = uint64_t;
+using ContenderId = uint32_t;
+constexpr ContenderId kInvalidContenderId = 0;
+
+// TODO(fxbug.dev/fxbug.dev/73600): Rename all instances of "stream" to "interaction".
+using StreamId = uint32_t;
+constexpr StreamId kInvalidStreamId = 0;
+StreamId NewStreamId();
 
 // Interface for a gesture disambiguation contender. All methods are called in response to
 // a GestureArena.

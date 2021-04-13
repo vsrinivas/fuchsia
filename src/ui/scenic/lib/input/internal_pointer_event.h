@@ -29,6 +29,11 @@ struct Extents {
     min = {extents[0][0], extents[0][1]};
     max = {extents[1][0], extents[1][1]};
   }
+
+  // Used to check for exact equality in TouchSource
+  inline bool operator==(const Extents& other) const {
+    return min == other.min && max == other.max;
+  }
 };
 
 // Viewport defines an arbitrary rectangle in the space of the injector context.
@@ -39,6 +44,13 @@ struct Viewport {
   Extents extents;
   // A transform defining the Viewport in relation to a context (a View).
   glm::mat4 context_from_viewport_transform = glm::mat4(1.f);
+
+  // Used to check for exact equality in TouchSource
+  inline bool operator==(const Viewport& other) const {
+    return extents == other.extents &&
+           context_from_viewport_transform == other.context_from_viewport_transform;
+  }
+  inline bool operator!=(const Viewport& other) const { return !(*this == other); }
 };
 
 // Pointer event representation to be used internally, uncoupled from FIDL types.

@@ -10,6 +10,7 @@ source_set("input") {
     "constants.h",
     "gesture_arena.cc",
     "gesture_arena.h",
+    "gesture_contender.cc",
     "gesture_contender.h",
     "gfx_legacy_contender.cc",
     "gfx_legacy_contender.h",
@@ -22,6 +23,8 @@ source_set("input") {
     "input_system.cc",
     "input_system.h",
     "internal_pointer_event.h",
+    "touch_source.cc",
+    "touch_source.h",
   ]
 
   deps = [
@@ -43,5 +46,8 @@ source_set("input") {
     "//zircon/system/ulib/trace",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.ui.pointerinjector" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.pointer",
+    "//sdk/fidl/fuchsia.ui.pointerinjector",
+  ]
 }

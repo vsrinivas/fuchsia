@@ -11,15 +11,12 @@
 
 #include <unordered_map>
 
+#include "src/ui/scenic/lib/input/gesture_contender.h"
 #include "src/ui/scenic/lib/input/helper.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
 
 namespace scenic_impl {
 namespace input {
-
-using StreamId = uint64_t;
-constexpr StreamId kInvalidStreamId = 0;
-StreamId NewStreamId();
 
 // Non-FIDL-type struct for keeping client defined settings.
 struct InjectorSettings {

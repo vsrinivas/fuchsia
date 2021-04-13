@@ -16,9 +16,6 @@
 
 namespace scenic_impl::input {
 
-using ContenderId = uint64_t;
-static constexpr ContenderId kInvalidContenderId = 0;
-
 struct ContestResults {
   std::optional<ContenderId> winner;
   std::vector<ContenderId> losers;
