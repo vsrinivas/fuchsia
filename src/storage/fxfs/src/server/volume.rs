@@ -6,32 +6,32 @@ use {
     crate::{
         errors::FxfsError,
         object_store::{directory::ObjectDescriptor, HandleOptions, ObjectStore},
-        server::{
-            directory::FxDirectory,
-            file::FxFile,
-            node::{FxNode, WeakFxNode},
-        },
+        server::{directory::FxDirectory, file::FxFile, node::FxNode},
         volume::Volume,
     },
     anyhow::{anyhow, bail, Error},
     fuchsia_zircon::Status,
-    std::{any::Any, collections::HashMap, sync::Arc},
+    std::{
+        any::Any,
+        collections::HashMap,
+        sync::{Arc, Weak},
+    },
     vfs::{
         filesystem::{Filesystem, FilesystemRename},
         path::Path,
     },
 };
 
-struct NodeCache(HashMap<u64, WeakFxNode>);
+struct NodeCache(HashMap<u64, Weak<dyn FxNode>>);
 
 impl NodeCache {
-    fn add(&mut self, object_id: u64, node: WeakFxNode) {
+    fn add(&mut self, object_id: u64, node: Weak<dyn FxNode>) {
         // This is a programming error, so panic here.
         assert!(!self.0.contains_key(&object_id), "Duplicate node for {}", object_id);
         self.0.insert(object_id, node);
     }
 
-    fn get(&mut self, object_id: u64) -> Result<FxNode, Error> {
+    fn get(&mut self, object_id: u64) -> Result<Arc<dyn FxNode>, Error> {
         if let Some(node) = self.0.get(&object_id) {
             if let Some(node) = node.upgrade() {
                 Ok(node)
@@ -62,19 +62,22 @@ impl FxVolume {
         &self.store
     }
 
-    pub async fn add_node(&self, object_id: u64, node: WeakFxNode) {
+    pub async fn add_node(&self, object_id: u64, node: Weak<dyn FxNode>) {
         self.nodes.lock().await.add(object_id, node)
     }
 
-    pub async fn open_node(&self, object_id: u64) -> Result<FxNode, Error> {
+    pub async fn open_node(&self, object_id: u64) -> Result<Arc<dyn FxNode>, Error> {
         self.nodes.lock().await.get(object_id)
     }
 
+    /// Attempts to open a node in the node cache. If the node wasn't present in the cache, loads
+    /// the object from the object store, installing the returned node into the cache and returns
+    /// the newly created FxNode backed by the loaded object.
     pub async fn open_or_load_node(
         self: &Arc<Self>,
         object_id: u64,
         object_descriptor: ObjectDescriptor,
-    ) -> Result<FxNode, Error> {
+    ) -> Result<Arc<dyn FxNode>, Error> {
         let mut nodes = self.nodes.lock().await;
         match nodes.get(object_id) {
             Ok(node) => Ok(node),
@@ -83,15 +86,15 @@ impl FxVolume {
                     ObjectDescriptor::File => {
                         let file =
                             self.store.open_object(object_id, HandleOptions::default()).await?;
-                        FxNode::File(Arc::new(FxFile::new(file)))
+                        Arc::new(FxFile::new(file)) as Arc<dyn FxNode>
                     }
                     ObjectDescriptor::Directory => {
                         let directory = self.store.open_directory(object_id).await?;
-                        FxNode::Dir(Arc::new(FxDirectory::new(self.clone(), directory)))
+                        Arc::new(FxDirectory::new(self.clone(), directory)) as Arc<dyn FxNode>
                     }
                     _ => bail!(FxfsError::Inconsistent),
                 };
-                nodes.add(object_id, node.downgrade());
+                nodes.add(object_id, Arc::downgrade(&node));
                 Ok(node)
             }
             Err(e) => return Err(e),
@@ -115,17 +118,19 @@ impl Filesystem for FxVolume {}
 
 pub struct FxVolumeAndRoot {
     volume: Arc<FxVolume>,
-    root: FxNode,
+    root: Arc<dyn FxNode>,
 }
 
 impl FxVolumeAndRoot {
-    pub fn new(volume: Volume) -> Self {
+    pub async fn new(volume: Volume) -> Self {
         let (store, root_directory) = volume.into();
+        let root_object_id = root_directory.object_id();
         let volume = Arc::new(FxVolume {
             nodes: futures::lock::Mutex::new(NodeCache(HashMap::new())),
             store,
         });
-        let root = FxNode::Dir(Arc::new(FxDirectory::new(volume.clone(), root_directory)));
+        let root: Arc<dyn FxNode> = Arc::new(FxDirectory::new(volume.clone(), root_directory));
+        volume.add_node(root_object_id, Arc::downgrade(&root)).await;
         Self { volume, root }
     }
 
@@ -133,12 +138,8 @@ impl FxVolumeAndRoot {
         &self.volume
     }
 
-    pub fn root(&self) -> &Arc<FxDirectory> {
-        if let FxNode::Dir(dir) = &self.root {
-            dir
-        } else {
-            panic!("Invalid type for root");
-        }
+    pub fn root(&self) -> Arc<FxDirectory> {
+        self.root.clone().into_any().downcast::<FxDirectory>().expect("Invalid type for root")
     }
 
     pub(super) fn into_volume(self) -> Arc<FxVolume> {

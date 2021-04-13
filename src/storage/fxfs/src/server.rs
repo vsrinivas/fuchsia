@@ -52,7 +52,8 @@ impl FxfsServer {
                 .open_or_create_volume(volume_name)
                 .await
                 .expect("Open or create volume failed"),
-        );
+        )
+        .await;
         Ok(Self { fs, volume })
     }
 
