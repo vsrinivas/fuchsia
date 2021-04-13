@@ -519,9 +519,6 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
       TA_REQ(lock()) override;
 
  protected:
-  // constructor for use in creating a VmAddressRegionDummy
-  explicit VmAddressRegion();
-
   friend class VmAspace;
   // constructor for use in creating the kernel aspace singleton
   explicit VmAddressRegion(VmAspace& kernel_aspace);

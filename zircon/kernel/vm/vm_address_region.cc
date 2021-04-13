@@ -50,11 +50,6 @@ VmAddressRegion::VmAddressRegion(VmAspace& kernel_aspace)
   state_ = LifeCycleState::ALIVE;
 }
 
-VmAddressRegion::VmAddressRegion() : VmAddressRegionOrMapping(0, 0, 0, nullptr, nullptr, false) {
-  strlcpy(const_cast<char*>(name_), "dummy", sizeof(name_));
-  LTRACEF("%p '%s'\n", this, name_);
-}
-
 zx_status_t VmAddressRegion::CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
                                         fbl::RefPtr<VmAddressRegion>* out) {
   DEBUG_ASSERT(out);
