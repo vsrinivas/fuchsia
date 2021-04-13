@@ -210,8 +210,8 @@ class SysReg {
 // layout type with arch::SysRegDerivedBase<LT> and then defining separate
 // register tag types using `struct T : public arch::SysRegDerived<T, LT> {};`.
 
-template <class RegisterType, typename IntType = uint64_t>
-class SysRegDerivedBase : public hwreg::RegisterBase<RegisterType, IntType, void> {
+template <class RegisterType, typename IntType = uint64_t, typename Printer = void>
+class SysRegDerivedBase : public hwreg::RegisterBase<RegisterType, IntType, Printer> {
  public:
   using SelfType = RegisterType;
   using ValueType = IntType;
@@ -234,8 +234,8 @@ struct SysRegDerived : public RegisterType {
   }
 };
 
-template <class RegisterTag, typename IntType = uint64_t>
-using SysRegBase = SysRegDerived<RegisterTag, SysRegDerivedBase<RegisterTag, IntType>>;
+template <class RegisterTag, typename IntType = uint64_t, typename Printer = void>
+using SysRegBase = SysRegDerived<RegisterTag, SysRegDerivedBase<RegisterTag, IntType, Printer>>;
 
 }  // namespace arch
 

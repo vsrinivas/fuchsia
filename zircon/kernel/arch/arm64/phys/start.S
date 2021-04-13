@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/arch/arm64/feature-asm.h>
 #include <lib/arch/asm.h>
 #include <lib/arch/ticks.h>
 #include <zircon/tls.h>
@@ -43,11 +44,26 @@
   adr_global tp, boot_thread_pointer
   msr tpidr_el1, tp
 
-  // Stack guard canary value.  The only "randomness" readily available is
-  // our own load address, so swizzle that in with some arbitrary bits.
+  // Stack guard canary value.
   boot_stack_guard .req x10
+
+  // If hardware random numbers are available, use them.
+  .arch armv8.5-a+rng
+  mrs boot_stack_guard, ID_AA64ISAR0_EL1
+  tst boot_stack_guard, #ID_AA64ISAR0_EL1_RNDR
+  beq .Lno_rndr
+  // Reading this register sets the Z flag if no good randomness is delivered.
+  mrs boot_stack_guard, RNDRRS
+  bne .Lstack_guard_done
+  mrs boot_stack_guard, RNDR
+  bne .Lstack_guard_done
+
+.Lno_rndr:
+  // The only "randomness" readily available is our own load address, so
+  // swizzle that in with some arbitrary bits.
   movlit boot_stack_guard, 0xdeadbeef1ee2d00d
   eor boot_stack_guard, tp, boot_stack_guard
+.Lstack_guard_done:
 
 #if __has_feature(safe_stack)
   boot_unsafe_stack_ptr .req x11

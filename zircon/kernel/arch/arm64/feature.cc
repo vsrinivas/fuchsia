@@ -7,6 +7,7 @@
 
 #include <bits.h>
 #include <inttypes.h>
+#include <lib/arch/arm64/feature.h>
 #include <lib/arch/intrin.h>
 
 #include <arch/arm64.h>
@@ -318,60 +319,69 @@ void arm64_feature_init() {
 
     // parse the ISA feature bits
     arm64_isa_features |= ZX_HAS_CPU_FEATURES;
-    uint64_t isar0 = __arm_rsr64("id_aa64isar0_el1");
-    if (BITS_SHIFT(isar0, 7, 4) >= 1) {
-      arm64_isa_features |= ZX_ARM64_FEATURE_ISA_AES;
+
+    auto isar0 = arch::ArmIdAa64IsaR0El1::Read();
+
+    // Other values are reserved.  When assigned they will probably be
+    // supersets of FEAT_PMULL, but don't presume that.
+    switch (isar0.aes()) {
+      case arch::ArmIdAa64IsaR0El1::Aes::kPmull:
+        arm64_isa_features |= ZX_ARM64_FEATURE_ISA_PMULL;
+        [[fallthrough]];
+      case arch::ArmIdAa64IsaR0El1::Aes::kAes:
+        arm64_isa_features |= ZX_ARM64_FEATURE_ISA_AES;
+        break;
+      case arch::ArmIdAa64IsaR0El1::Aes::kNone:
+        break;
     }
-    if (BITS_SHIFT(isar0, 7, 4) >= 2) {
-      arm64_isa_features |= ZX_ARM64_FEATURE_ISA_PMULL;
-    }
-    if (BITS_SHIFT(isar0, 11, 8) >= 1) {
+
+    if (isar0.sha1() != arch::ArmIdAa64IsaR0El1::Sha1::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_SHA1;
     }
-    if (BITS_SHIFT(isar0, 15, 12) >= 1) {
+    if (isar0.sha2() != arch::ArmIdAa64IsaR0El1::Sha2::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_SHA2;
     }
-    if (BITS_SHIFT(isar0, 19, 16) >= 1) {
+    if (isar0.crc32() != arch::ArmIdAa64IsaR0El1::Crc32::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_CRC32;
     }
-    if (BITS_SHIFT(isar0, 23, 20) >= 1) {
+    if (isar0.atomic() != arch::ArmIdAa64IsaR0El1::Atomic::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_ATOMICS;
     }
-    if (BITS_SHIFT(isar0, 31, 28) >= 1) {
+    if (isar0.rdm() != arch::ArmIdAa64IsaR0El1::Rdm::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_RDM;
     }
-    if (BITS_SHIFT(isar0, 35, 32) >= 1) {
+    if (isar0.sha3() != arch::ArmIdAa64IsaR0El1::Sha3::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_SHA3;
     }
-    if (BITS_SHIFT(isar0, 39, 36) >= 1) {
+    if (isar0.sm3() != arch::ArmIdAa64IsaR0El1::Sm3::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_SM3;
     }
-    if (BITS_SHIFT(isar0, 43, 40) >= 1) {
+    if (isar0.sm4() != arch::ArmIdAa64IsaR0El1::Sm4::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_SM4;
     }
-    if (BITS_SHIFT(isar0, 47, 44) >= 1) {
+    if (isar0.dp() != arch::ArmIdAa64IsaR0El1::DotProd::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_DP;
     }
-    if (BITS_SHIFT(isar0, 51, 48) >= 1) {
+    if (isar0.fhm() != arch::ArmIdAa64IsaR0El1::Fhm::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_FHM;
     }
-    if (BITS_SHIFT(isar0, 55, 52) >= 1) {
+    if (isar0.ts() != arch::ArmIdAa64IsaR0El1::Ts::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_TS;
     }
-    if (BITS_SHIFT(isar0, 63, 60) >= 1) {
+    if (isar0.rndr() != arch::ArmIdAa64IsaR0El1::Rndr::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_RNDR;
     }
 
-    uint64_t isar1 = __arm_rsr64("id_aa64isar1_el1");
-    if (BITS_SHIFT(isar1, 3, 0) >= 1) {
+    auto isar1 = arch::ArmIdAa64IsaR1El1::Read();
+    if (isar1.dpb() != arch::ArmIdAa64IsaR1El1::Dpb::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_DPB;
     }
 
-    uint64_t pfr0 = __arm_rsr64("id_aa64pfr0_el1");
-    if (BITS_SHIFT(pfr0, 19, 16) < 0b1111) {
+    auto pfr0 = arch::ArmIdAa64Pfr0El1::Read();
+    if (pfr0.fp() != arch::ArmIdAa64Pfr0El1::Fp::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_FP;
     }
-    if (BITS_SHIFT(pfr0, 23, 20) < 0b1111) {
+    if (pfr0.advsimd() != arch::ArmIdAa64Pfr0El1::Fp::kNone) {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_ASIMD;
     }
 
