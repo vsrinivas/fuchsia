@@ -27,11 +27,22 @@ List<TestCaseResults> cpuMetricsProcessor(
         'Trace duration (${duration.toMilliseconds()} milliseconds) is too short to provide CPU information');
     return [];
   }
-  final cpuPercentages = getArgValuesFromEvents<num>(
+  List<double> cpuPercentages = getArgValuesFromEvents<num>(
           filterEventsTyped<CounterEvent>(getAllEvents(model),
-              category: 'system_metrics', name: 'cpu_usage'),
-          'average_cpu_percentage')
-      .map((x) => x.toDouble());
+              category: 'system_metrics_logger', name: 'cpu_usage'),
+          'cpu_usage')
+      .map((x) => x.toDouble())
+      .toList();
+  // TODO(b/156300857): Remove this fallback after all consumers have been
+  // updated to use system_metrics_logger.
+  if (cpuPercentages.isEmpty) {
+    cpuPercentages = getArgValuesFromEvents<num>(
+            filterEventsTyped<CounterEvent>(getAllEvents(model),
+                category: 'system_metrics', name: 'cpu_usage'),
+            'average_cpu_percentage')
+        .map((x) => x.toDouble())
+        .toList();
+  }
   _log.info('Average CPU Load: ${computeMean(cpuPercentages)}');
   final List<TestCaseResults> testCaseResults = [];
   if (extraArgs.containsKey(_aggregateMetricsOnly) &&

@@ -123,6 +123,7 @@ if (is_host) {
       "${root_out_dir}/fake_zedmon",
       "test/trace_processing_test_data/chrome_metadata.json",
       "test/trace_processing_test_data/cpu_metric.json",
+      "test/trace_processing_test_data/cpu_metric_system_metrics_logger.json",
       "test/trace_processing_test_data/flow_event_binding.json",
       "test/trace_processing_test_data/flow_ids.json",
       "test/trace_processing_test_data/flutter_app.json",
