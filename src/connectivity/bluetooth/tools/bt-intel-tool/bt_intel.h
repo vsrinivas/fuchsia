@@ -6,7 +6,7 @@
 #define SRC_CONNECTIVITY_BLUETOOTH_TOOLS_BT_INTEL_TOOL_BT_INTEL_H_
 
 #include "src/connectivity/bluetooth/core/bt-host/common/device_address.h"
-#include "src/connectivity/bluetooth/core/bt-host/hci/hci.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci-spec/protocol.h"
 
 namespace bt_intel {
 
