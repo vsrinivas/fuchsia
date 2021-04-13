@@ -6,7 +6,10 @@ use {
     crate::{
         errors::FxfsError,
         object_handle::ObjectHandle,
-        object_store::{self, transaction::Transaction},
+        object_store::{
+            self,
+            transaction::{LockKey, Transaction},
+        },
         server::{errors::map_to_status, file::FxFile, node::FxNode, volume::FxVolume},
     },
     anyhow::{bail, Error},
@@ -50,6 +53,10 @@ impl FxDirectory {
         mode: u32,
         mut path: Path,
     ) -> Result<FxNode, Error> {
+        // TODO(csuter): There are races to fix here where a direectory or file could be removed
+        // whilst a lookup is taking place. The transaction locks only protect against multiple
+        // writers, but the readers don't have any locks, so there needs to be checks that nodes
+        // still exist at some point.
         let mut current_node = FxNode::Dir(self.clone());
         while !path.is_empty() {
             let last_segment = path.is_single_component();
@@ -58,6 +65,22 @@ impl FxDirectory {
                 FxNode::File(_file) => bail!(FxfsError::NotDir),
             };
             let name = path.next().unwrap();
+            // Create the transaction here if we might need to create the object so that we have a
+            // lock in place.
+            let store = self.volume.store();
+            let transaction = if last_segment && flags & OPEN_FLAG_CREATE != 0 {
+                Some(
+                    store
+                        .filesystem()
+                        .new_transaction(&[LockKey::object(
+                            store.store_object_id(),
+                            current_dir.directory.object_id(),
+                        )])
+                        .await?,
+                )
+            } else {
+                None
+            };
             match current_dir.directory.lookup(name).await {
                 Ok((object_id, object_descriptor)) => {
                     if last_segment
@@ -70,8 +93,8 @@ impl FxDirectory {
                         self.volume.open_or_load_node(object_id, object_descriptor).await?;
                 }
                 Err(e) if FxfsError::NotFound.matches(&e) => {
-                    if last_segment && flags & OPEN_FLAG_CREATE != 0 {
-                        return self.create_child(&current_dir, name, mode).await;
+                    if let Some(transaction) = transaction {
+                        return self.create_child(transaction, &current_dir, name, mode).await;
                     } else {
                         bail!(FxfsError::NotFound);
                     }
@@ -84,11 +107,11 @@ impl FxDirectory {
 
     async fn create_child(
         self: &Arc<Self>,
+        mut transaction: Transaction<'_>,
         dir: &Arc<FxDirectory>,
         name: &str,
         mode: u32,
     ) -> Result<FxNode, Error> {
-        let mut transaction = Transaction::new();
         let (object_id, node) = if mode & MODE_TYPE_DIRECTORY != 0 {
             let dir = dir.directory.create_child_dir(&mut transaction, name).await?;
             let object_id = dir.object_id();
@@ -101,7 +124,7 @@ impl FxDirectory {
             let node = FxNode::File(Arc::new(FxFile::new(handle)));
             (object_id, node)
         };
-        self.volume.store().filesystem().commit_transaction(transaction).await;
+        transaction.commit().await;
         self.volume.add_node(object_id, node.downgrade()).await;
         Ok(node)
     }

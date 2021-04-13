@@ -239,10 +239,7 @@ mod tests {
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         fuchsia_async as fasync,
-        std::{
-            ops::Bound,
-            sync::{Arc, Mutex},
-        },
+        std::{ops::Bound, sync::Arc},
     };
 
     #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
@@ -306,7 +303,7 @@ mod tests {
         tree.insert(items[2].clone()).await;
         tree.insert(items[3].clone()).await;
         tree.seal();
-        let object = Arc::new(Mutex::new(FakeObject::new()));
+        let object = Arc::new(FakeObject::new());
         let handle = FakeObjectHandle::new(object.clone());
         tree.compact(handle).await.expect("compact failed");
         let handle = FakeObjectHandle::new(object.clone());

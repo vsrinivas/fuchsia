@@ -28,9 +28,9 @@ pub trait ObjectHandle: Send + Sync {
     async fn read(&self, offset: u64, buf: MutableBufferRef<'_>) -> Result<usize, Error>;
 
     /// Writes |buf| to the device at |offset|.
-    async fn txn_write(
-        &self,
-        transaction: &mut Transaction,
+    async fn txn_write<'a>(
+        &'a self,
+        transaction: &mut Transaction<'a>,
         offset: u64,
         buf: BufferRef<'_>,
     ) -> Result<(), Error>;
@@ -41,20 +41,24 @@ pub trait ObjectHandle: Send + Sync {
     /// Sets the size of the object to |size|.  If this extends the object, a hole is created.  If
     /// this shrinks the object, space will be deallocated (if there are no more references to the
     /// data).
-    async fn truncate(&self, transaction: &mut Transaction, size: u64) -> Result<(), Error>;
+    async fn truncate<'a>(
+        &'a self,
+        transaction: &mut Transaction<'a>,
+        size: u64,
+    ) -> Result<(), Error>;
 
     /// Preallocates the given file range.  Data will not be initialised so this should be a
     /// privileged operation for now.  The data can be later written to using an overwrite mode.
     /// Returns the device ranges allocated.  Existing allocated ranges will be left untouched and
     /// the ranges returned will include those.
-    async fn preallocate_range(
-        &self,
-        transaction: &mut Transaction,
+    async fn preallocate_range<'a>(
+        &'a self,
+        transaction: &mut Transaction<'a>,
         range: Range<u64>,
     ) -> Result<Vec<Range<u64>>, Error>;
 
-    /// Commit the given transaction.
-    async fn commit_transaction(&self, transaction: Transaction);
+    /// Returns a new transaction including a lock for this handle.
+    async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error>;
 }
 
 #[async_trait]
@@ -74,9 +78,9 @@ pub trait ObjectHandleExt: ObjectHandle {
 
     /// Performs a write within a transaction.
     async fn write(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
-        let mut transaction = Transaction::new();
+        let mut transaction = self.new_transaction().await?;
         self.txn_write(&mut transaction, offset, buf).await?;
-        self.commit_transaction(transaction).await;
+        transaction.commit().await;
         Ok(())
     }
 }

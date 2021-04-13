@@ -7,7 +7,7 @@ use {
         errors::FxfsError,
         object_handle::ObjectHandle,
         object_store::{
-            record::{ObjectItem, ObjectKey, ObjectValue},
+            record::{ObjectKey, ObjectValue},
             transaction::{Mutation, Transaction},
             HandleOptions, ObjectStore, StoreObjectHandle,
         },
@@ -56,58 +56,52 @@ impl Directory {
 
     pub async fn create_child_dir(
         &self,
-        transaction: &mut Transaction,
+        transaction: &mut Transaction<'_>,
         name: &str,
     ) -> Result<Directory, Error> {
         let handle = self.store.create_directory(transaction).await?;
         transaction.add(
             self.store.store_object_id(),
-            Mutation::Insert {
-                item: ObjectItem {
-                    key: ObjectKey::child(self.object_id, name),
-                    value: ObjectValue::child(handle.object_id(), ObjectDescriptor::Directory),
-                },
-            },
+            Mutation::insert_object(
+                ObjectKey::child(self.object_id, name),
+                ObjectValue::child(handle.object_id(), ObjectDescriptor::Directory),
+            ),
         );
         Ok(handle)
     }
 
     pub async fn create_child_file(
         &self,
-        transaction: &mut Transaction,
+        transaction: &mut Transaction<'_>,
         name: &str,
     ) -> Result<StoreObjectHandle, Error> {
         let handle = self.store.create_object(transaction, HandleOptions::default()).await?;
         transaction.add(
             self.store.store_object_id(),
-            Mutation::Insert {
-                item: ObjectItem {
-                    key: ObjectKey::child(self.object_id, name),
-                    value: ObjectValue::child(handle.object_id(), ObjectDescriptor::File),
-                },
-            },
+            Mutation::insert_object(
+                ObjectKey::child(self.object_id, name),
+                ObjectValue::child(handle.object_id(), ObjectDescriptor::File),
+            ),
         );
         Ok(handle)
     }
 
     pub fn add_child_volume(
         &self,
-        transaction: &mut Transaction,
+        transaction: &mut Transaction<'_>,
         volume_name: &str,
         store_object_id: u64,
         volume_info_object_id: u64,
     ) {
         transaction.add(
             self.store.store_object_id(),
-            Mutation::Insert {
-                item: ObjectItem {
-                    key: ObjectKey::child(self.object_id, volume_name),
-                    value: ObjectValue::child(
-                        store_object_id,
-                        ObjectDescriptor::Volume(volume_info_object_id),
-                    ),
-                },
-            },
+            Mutation::insert_object(
+                ObjectKey::child(self.object_id, volume_name),
+                ObjectValue::child(
+                    store_object_id,
+                    ObjectDescriptor::Volume(volume_info_object_id),
+                ),
+            ),
         );
     }
 }
@@ -115,18 +109,16 @@ impl Directory {
 impl ObjectStore {
     pub async fn create_directory(
         self: &Arc<Self>,
-        transaction: &mut Transaction,
+        transaction: &mut Transaction<'_>,
     ) -> Result<Directory, Error> {
         self.ensure_open().await?;
         let object_id = self.get_next_object_id();
         transaction.add(
             self.store_object_id,
-            Mutation::Insert {
-                item: ObjectItem {
-                    key: ObjectKey::object(object_id),
-                    value: ObjectValue::object(ObjectDescriptor::Directory, 1),
-                },
-            },
+            Mutation::insert_object(
+                ObjectKey::object(object_id),
+                ObjectValue::object(ObjectDescriptor::Directory, 1),
+            ),
         );
         Ok(Directory::new(self.clone(), object_id))
     }
@@ -157,8 +149,8 @@ mod tests {
         crate::{
             errors::FxfsError,
             object_store::{
-                filesystem::{Filesystem, FxFilesystem, SyncOptions},
-                transaction::Transaction,
+                filesystem::{FxFilesystem, SyncOptions},
+                transaction::TransactionHandler,
                 HandleOptions, ObjectDescriptor,
             },
             testing::fake_device::FakeDevice,
@@ -174,7 +166,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
         let object_id = {
             let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
-            let mut transaction = Transaction::new();
+            let mut transaction =
+                fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
             let dir = fs
                 .root_store()
                 .create_directory(&mut transaction)
@@ -194,7 +187,7 @@ mod tests {
                 .await
                 .expect("create_child_file failed");
             dir.add_child_volume(&mut transaction, "corge", 100, 101);
-            fs.commit_transaction(transaction).await;
+            transaction.commit().await;
             fs.sync(SyncOptions::default()).await.expect("sync failed");
             dir.object_id()
         };

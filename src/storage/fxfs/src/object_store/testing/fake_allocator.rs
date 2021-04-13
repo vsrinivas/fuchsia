@@ -5,8 +5,8 @@
 use {
     crate::object_store::{
         allocator::Allocator,
-        filesystem::ApplyMutations,
-        transaction::{Mutation, Transaction},
+        filesystem::Mutations,
+        transaction::{AssociatedObject, Mutation, Transaction},
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -49,7 +49,7 @@ impl Allocator for FakeAllocator {
 
     async fn allocate(
         &self,
-        _transaction: &mut Transaction,
+        _transaction: &mut Transaction<'_>,
         len: u64,
     ) -> Result<Range<u64>, Error> {
         let mut inner = self.0.lock().unwrap();
@@ -59,7 +59,7 @@ impl Allocator for FakeAllocator {
         Ok(result)
     }
 
-    async fn deallocate(&self, _transaction: &mut Transaction, device_range: Range<u64>) {
+    async fn deallocate(&self, _transaction: &mut Transaction<'_>, device_range: Range<u64>) {
         let mut inner = self.0.lock().unwrap();
         assert!(device_range.end <= inner.next_offset);
         let len = device_range.end - device_range.start;
@@ -71,17 +71,25 @@ impl Allocator for FakeAllocator {
         Ok(())
     }
 
-    async fn reserve(&self, _transaction: &mut Transaction, device_range: Range<u64>) {
+    async fn reserve(&self, _transaction: &mut Transaction<'_>, device_range: Range<u64>) {
         let mut inner = self.0.lock().unwrap();
         inner.next_offset = std::cmp::max(device_range.end, inner.next_offset);
     }
 
-    fn as_apply_mutations(self: Arc<Self>) -> Arc<dyn ApplyMutations> {
+    fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations> {
         self
     }
 }
 
 #[async_trait]
-impl ApplyMutations for FakeAllocator {
-    async fn apply_mutation(&self, _mutation: Mutation, _replay: bool) {}
+impl Mutations for FakeAllocator {
+    async fn apply_mutation(
+        &self,
+        _mutation: Mutation,
+        _replay: bool,
+        _object: Option<AssociatedObject<'_>>,
+    ) {
+    }
+
+    fn drop_mutation(&self, _mutation: Mutation) {}
 }

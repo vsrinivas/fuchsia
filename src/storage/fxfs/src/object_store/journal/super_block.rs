@@ -16,7 +16,7 @@ use {
             },
             record::ObjectItem,
             transaction::Transaction,
-            Device, HandleOptions, ObjectStore, StoreObjectHandle,
+            Device, ObjectStore,
         },
     },
     anyhow::{bail, Error},
@@ -135,9 +135,9 @@ impl ObjectHandle for SuperBlockHandle {
         Ok(len)
     }
 
-    async fn txn_write(
-        &self,
-        _transaction: &mut Transaction,
+    async fn txn_write<'a>(
+        &'a self,
+        _transaction: &mut Transaction<'a>,
         _offset: u64,
         _buf: BufferRef<'_>,
     ) -> Result<(), Error> {
@@ -148,19 +148,23 @@ impl ObjectHandle for SuperBlockHandle {
         unreachable!();
     }
 
-    async fn truncate(&self, _transaction: &mut Transaction, _length: u64) -> Result<(), Error> {
+    async fn truncate<'a>(
+        &'a self,
+        _transaction: &mut Transaction<'a>,
+        _length: u64,
+    ) -> Result<(), Error> {
         unreachable!();
     }
 
-    async fn preallocate_range(
-        &self,
-        _transaction: &mut Transaction,
+    async fn preallocate_range<'a>(
+        &'a self,
+        _transaction: &mut Transaction<'a>,
         _range: Range<u64>,
     ) -> Result<Vec<Range<u64>>, Error> {
         unreachable!();
     }
 
-    async fn commit_transaction(&self, _transaction: Transaction) {
+    async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error> {
         unreachable!();
     }
 }
@@ -181,22 +185,6 @@ impl SuperBlock {
             journal_checkpoint,
             ..Default::default()
         }
-    }
-
-    /// Creates the super-block object.
-    pub async fn create_object(
-        transaction: &mut Transaction,
-        store: &Arc<ObjectStore>,
-    ) -> Result<StoreObjectHandle, Error> {
-        let handle = store
-            .create_object_with_id(
-                transaction,
-                SUPER_BLOCK_OBJECT_ID,
-                HandleOptions { overwrite: true, ..Default::default() },
-            )
-            .await?;
-        handle.extend(transaction, first_extent()).await;
-        Ok(handle)
     }
 
     /// Read the super-block header, and return it and a reader that produces the records that are
@@ -238,16 +226,15 @@ impl SuperBlock {
             if writer.journal_file_checkpoint().file_offset
                 >= next_extent_offset - SUPER_BLOCK_CHUNK_SIZE
             {
-                let mut transaction = Transaction::new();
-                let allocated = writer
-                    .handle()
-                    .unwrap()
+                let handle = writer.handle().unwrap();
+                let mut transaction = handle.new_transaction().await?;
+                let allocated = handle
                     .preallocate_range(
                         &mut transaction,
                         next_extent_offset..next_extent_offset + SUPER_BLOCK_CHUNK_SIZE,
                     )
                     .await?;
-                root_parent_store.filesystem().commit_transaction(transaction).await;
+                transaction.commit().await;
                 for device_range in allocated {
                     next_extent_offset += device_range.end - device_range.start;
                     serialize_into(&mut writer, &SuperBlockRecord::Extent(device_range))?;
@@ -297,10 +284,9 @@ mod tests {
             object_store::{
                 allocator::Allocator,
                 constants::SUPER_BLOCK_OBJECT_ID,
-                filesystem::Filesystem,
                 journal::JournalCheckpoint,
                 testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
-                transaction::Transaction,
+                transaction::TransactionHandler,
                 HandleOptions, ObjectStore,
             },
             testing::fake_device::FakeDevice,
@@ -318,7 +304,8 @@ mod tests {
         let allocator = Arc::new(FakeAllocator::new());
         fs.object_manager().set_allocator(allocator.clone());
         let root_parent_store = ObjectStore::new_empty(None, 2, fs.clone());
-        let mut transaction = Transaction::new();
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         let root_store = root_parent_store
             .create_child_store_with_id(&mut transaction, 3)
             .await
@@ -328,12 +315,13 @@ mod tests {
         // Create a large number of objects in the root parent store so that we test handling of
         // extents.
         for _i in 0..10000 {
-            let mut transaction = Transaction::new();
+            let mut transaction =
+                fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
             root_parent_store
                 .create_object(&mut transaction, HandleOptions::default())
                 .await
                 .expect("create_object failed");
-            fs.commit_transaction(transaction).await;
+            transaction.commit().await;
         }
 
         let mut super_block = SuperBlock::new(
@@ -345,11 +333,20 @@ mod tests {
         );
         super_block.journal_file_offsets.insert(1, 2);
 
-        let mut transaction = Transaction::new();
-        let handle = SuperBlock::create_object(&mut transaction, &root_store)
+        let handle; // extend will borrow handle and needs to outlive transaction.
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        handle = root_store
+            .create_object_with_id(
+                &mut transaction,
+                SUPER_BLOCK_OBJECT_ID,
+                HandleOptions { overwrite: true, ..Default::default() },
+            )
             .await
-            .expect("create_object failed");
-        fs.commit_transaction(transaction).await;
+            .expect("create_object_with_id failed");
+        handle.extend(&mut transaction, super::first_extent()).await;
+
+        transaction.commit().await;
 
         let layer_set = root_parent_store.tree().layer_set();
         let mut merger = layer_set.merger();

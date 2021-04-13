@@ -9,7 +9,10 @@ use {
             allocator::Allocator,
             constants::INVALID_OBJECT_ID,
             journal::{Journal, JournalCheckpoint},
-            transaction::{Mutation, Transaction},
+            transaction::{
+                AssociatedObject, LockKey, LockManager, Mutation, Transaction, TransactionHandler,
+                TxnMutation,
+            },
             ObjectStore,
         },
     },
@@ -22,11 +25,7 @@ use {
 };
 
 #[async_trait]
-pub trait Filesystem: Send + Sync {
-    /// Implementations should perform any required journaling and then apply the mutations via
-    /// ObjectManager's apply_mutation method.
-    async fn commit_transaction(&self, transaction: Transaction);
-
+pub trait Filesystem: TransactionHandler {
     /// Informs the journaling system that a new store has been created so that when a transaction
     /// is committed or replayed, mutations can be routed to the correct store.
     fn register_store(&self, store: &Arc<ObjectStore>);
@@ -131,19 +130,38 @@ impl ObjectManager {
         mutation: Mutation,
         replay: bool,
         checkpoint: &JournalCheckpoint,
+        object: Option<AssociatedObject<'_>>,
     ) {
         {
             let mut objects = self.objects.write().unwrap();
             objects.journal_file_checkpoints.entry(object_id).or_insert_with(|| checkpoint.clone());
             if object_id == objects.allocator_object_id {
-                Some(objects.allocator.clone().unwrap().as_apply_mutations())
+                Some(objects.allocator.clone().unwrap().as_mutations())
             } else {
-                objects.stores.get(&object_id).map(|x| x.clone() as Arc<dyn ApplyMutations>)
+                objects.stores.get(&object_id).map(|x| x.clone() as Arc<dyn Mutations>)
             }
         }
         .unwrap_or_else(|| self.root_store().lazy_open_store(object_id))
-        .apply_mutation(mutation, replay)
+        .apply_mutation(mutation, replay, object)
         .await;
+    }
+
+    // Drops a transaction.  This is called automatically when a transaction is dropped.  If the
+    // transaction has been committed, it should contain no mutations and so nothing will get rolled
+    // back.  For each mutation, drop_mutation is called to allow for roll back (e.g. the allocator
+    // will unreserve allocations).
+    pub fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
+        for TxnMutation { object_id, mutation, .. } in std::mem::take(&mut transaction.mutations) {
+            {
+                let objects = self.objects.read().unwrap();
+                if object_id == objects.allocator_object_id {
+                    Some(objects.allocator.clone().unwrap().as_mutations())
+                } else {
+                    objects.stores.get(&object_id).map(|x| x.clone() as Arc<dyn Mutations>)
+                }
+            }
+            .map(|o| o.drop_mutation(mutation));
+        }
     }
 
     /// Returns the journal file offsets that each object depends on and the checkpoint for the
@@ -209,12 +227,20 @@ impl Drop for ObjectSync {
 }
 
 #[async_trait]
-pub trait ApplyMutations: Send + Sync {
+pub trait Mutations: Send + Sync {
     /// Objects that use the journaling system to track mutations should implement this trait.  This
     /// method will get called when the transaction commits, which can either be during live
     /// operation or during journal replay, in which case |replay| will be true.  Also see
     /// ObjectManager's apply_mutation method.
-    async fn apply_mutation(&self, mutation: Mutation, replay: bool);
+    async fn apply_mutation(
+        &self,
+        mutation: Mutation,
+        replay: bool,
+        object: Option<AssociatedObject<'_>>,
+    );
+
+    /// Called when a transaction fails to commit.
+    fn drop_mutation(&self, mutation: Mutation);
 }
 
 #[derive(Default)]
@@ -224,14 +250,19 @@ pub struct FxFilesystem {
     device: Arc<dyn Device>,
     objects: Arc<ObjectManager>,
     journal: Journal,
+    lock_manager: LockManager,
 }
 
 impl FxFilesystem {
     pub async fn new_empty(device: Arc<dyn Device>) -> Result<Arc<FxFilesystem>, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
-        let filesystem =
-            Arc::new(FxFilesystem { device: device.clone(), objects: objects.clone(), journal });
+        let filesystem = Arc::new(FxFilesystem {
+            device: device.clone(),
+            objects: objects.clone(),
+            journal,
+            lock_manager: LockManager::new(),
+        });
         filesystem.journal.init_empty(filesystem.clone()).await?;
         Ok(filesystem)
     }
@@ -239,8 +270,12 @@ impl FxFilesystem {
     pub async fn open(device: Arc<dyn Device>) -> Result<Arc<FxFilesystem>, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
-        let filesystem =
-            Arc::new(FxFilesystem { device: device.clone(), objects: objects.clone(), journal });
+        let filesystem = Arc::new(FxFilesystem {
+            device: device.clone(),
+            objects: objects.clone(),
+            journal,
+            lock_manager: LockManager::new(),
+        });
         filesystem.journal.replay(filesystem.clone()).await?;
         Ok(filesystem)
     }
@@ -283,10 +318,6 @@ impl FxFilesystem {
 
 #[async_trait]
 impl Filesystem for FxFilesystem {
-    async fn commit_transaction(&self, transaction: Transaction) {
-        self.journal.commit(transaction).await;
-    }
-
     fn register_store(&self, store: &Arc<ObjectStore>) {
         self.objects.register_store(store);
     }
@@ -305,6 +336,28 @@ impl Filesystem for FxFilesystem {
 
     fn allocator(&self) -> Arc<dyn Allocator> {
         self.objects.allocator()
+    }
+}
+
+#[async_trait]
+impl TransactionHandler for FxFilesystem {
+    async fn new_transaction<'a>(
+        self: Arc<Self>,
+        locks: &[LockKey],
+    ) -> Result<Transaction<'a>, Error> {
+        let mut locks: Vec<_> = locks.iter().cloned().collect();
+        locks.sort_unstable();
+        self.lock_manager.lock(&locks).await;
+        Ok(Transaction::new(self, locks))
+    }
+
+    async fn commit_transaction(&self, transaction: Transaction<'_>) {
+        self.journal.commit(transaction).await;
+    }
+
+    fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
+        self.objects.drop_transaction(transaction);
+        self.lock_manager.drop_transaction(transaction);
     }
 }
 

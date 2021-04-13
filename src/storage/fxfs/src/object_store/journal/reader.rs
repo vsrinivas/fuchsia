@@ -237,7 +237,7 @@ mod tests {
         },
         fuchsia_async as fasync,
         serde::Serialize,
-        std::sync::{Arc, Mutex},
+        std::sync::Arc,
     };
 
     const TEST_BLOCK_SIZE: u64 = 512;
@@ -253,7 +253,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_single_record() {
-        let object = Arc::new(Mutex::new(FakeObject::new()));
+        let object = Arc::new(FakeObject::new());
         let handle = FakeObjectHandle::new(object.clone());
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
         let len = TEST_BLOCK_SIZE as usize * 2;
@@ -273,7 +273,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_journal_file_checkpoint_and_take_handle() {
-        let object = Arc::new(Mutex::new(FakeObject::new()));
+        let object = Arc::new(FakeObject::new());
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
             TEST_BLOCK_SIZE,
@@ -299,7 +299,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_offset() {
-        let object = Arc::new(Mutex::new(FakeObject::new()));
+        let object = Arc::new(FakeObject::new());
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
             TEST_BLOCK_SIZE,
@@ -319,7 +319,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_skip_to_end_of_block() {
-        let object = Arc::new(Mutex::new(FakeObject::new()));
+        let object = Arc::new(FakeObject::new());
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
         let handle = FakeObjectHandle::new(object.clone());
         let len = TEST_BLOCK_SIZE as usize * 3;
@@ -348,7 +348,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_handle() {
-        let object = Arc::new(Mutex::new(FakeObject::new()));
+        let object = Arc::new(FakeObject::new());
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
         let handle = FakeObjectHandle::new(object.clone());
         let len = TEST_BLOCK_SIZE as usize * 3;
@@ -365,7 +365,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_item_spanning_block() {
-        let object = Arc::new(Mutex::new(FakeObject::new()));
+        let object = Arc::new(FakeObject::new());
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
         let handle = FakeObjectHandle::new(object.clone());
         let len = TEST_BLOCK_SIZE as usize * 3;
@@ -405,7 +405,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_reset() {
-        let object = Arc::new(Mutex::new(FakeObject::new()));
+        let object = Arc::new(FakeObject::new());
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
         let handle = FakeObjectHandle::new(object.clone());
         let len = TEST_BLOCK_SIZE as usize * 3;

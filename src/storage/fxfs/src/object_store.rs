@@ -25,16 +25,15 @@ use {
             Device,
         },
         errors::FxfsError,
-        lsm_tree::{
-            types::{Item, LayerIterator},
-            LSMTree,
-        },
+        lsm_tree::{types::LayerIterator, LSMTree},
         object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::{
-            filesystem::{ApplyMutations, Filesystem},
+            filesystem::{Filesystem, Mutations},
             record::DEFAULT_DATA_ATTRIBUTE_ID,
             record::{ExtentKey, ExtentValue, ObjectItem, ObjectKey, ObjectKeyData, ObjectValue},
-            transaction::{Mutation, Transaction},
+            transaction::{
+                AssociatedObject, LockKey, Mutation, ObjectStoreMutation, Operation, Transaction,
+            },
         },
     },
     allocator::Allocator,
@@ -70,10 +69,6 @@ const MAX_STORE_INFO_SERIALIZED_SIZE: usize = 131072;
 pub struct HandleOptions {
     /// If true, don't COW, write to blocks that are already allocated.
     pub overwrite: bool,
-
-    /// If true, assume this handle is used during journal replay, in which case the size should not
-    /// be trusted and should be refreshed from the tree when necessary.
-    pub journal_replay: bool,
 }
 
 /// An object store supports a file like interface for objects.  Objects are keyed by a 64 bit
@@ -148,24 +143,22 @@ impl ObjectStore {
         &self.tree
     }
 
-    pub async fn create_child_store(
-        self: &Arc<ObjectStore>,
-        transaction: &mut Transaction,
+    pub async fn create_child_store<'a>(
+        self: &'a Arc<ObjectStore>,
+        transaction: &mut Transaction<'a>,
     ) -> Result<Arc<ObjectStore>, Error> {
         let object_id = self.get_next_object_id();
         self.create_child_store_with_id(transaction, object_id).await
     }
 
-    async fn create_child_store_with_id(
-        self: &Arc<ObjectStore>,
-        transaction: &mut Transaction,
+    async fn create_child_store_with_id<'a>(
+        self: &'a Arc<ObjectStore>,
+        transaction: &mut Transaction<'a>,
         object_id: u64,
     ) -> Result<Arc<ObjectStore>, Error> {
         self.ensure_open().await?;
-        let handle = self
-            .clone()
-            .create_object_with_id(transaction, object_id, HandleOptions::default())
-            .await?;
+        let handle =
+            self.create_object_with_id(transaction, object_id, HandleOptions::default()).await?;
         // TODO(csuter): if the transaction rolls back, we need to delete the store.
         Ok(Self::new_empty(
             Some(self.clone()),
@@ -216,41 +209,37 @@ impl ObjectStore {
         if let ObjectValue::Attribute { size } = item.value {
             Ok(StoreObjectHandle {
                 store: self.clone(),
-                object_id: object_id,
+                object_id,
                 attribute_id: DEFAULT_DATA_ATTRIBUTE_ID,
                 block_size: self.block_size.into(),
                 size: Mutex::new(size),
                 options,
             })
         } else {
-            bail!("Expected attribute value");
+            bail!(FxfsError::Inconsistent);
         }
     }
 
     async fn create_object_with_id(
         self: &Arc<Self>,
-        transaction: &mut Transaction,
+        transaction: &mut Transaction<'_>,
         object_id: u64,
         options: HandleOptions,
     ) -> Result<StoreObjectHandle, Error> {
         self.ensure_open().await?;
         transaction.add(
             self.store_object_id,
-            Mutation::Insert {
-                item: ObjectItem {
-                    key: ObjectKey::object(object_id),
-                    value: ObjectValue::object(ObjectDescriptor::File, 1),
-                },
-            },
+            Mutation::insert_object(
+                ObjectKey::object(object_id),
+                ObjectValue::object(ObjectDescriptor::File, 1),
+            ),
         );
         transaction.add(
             self.store_object_id,
-            Mutation::Insert {
-                item: ObjectItem {
-                    key: ObjectKey::attribute(object_id, DEFAULT_DATA_ATTRIBUTE_ID),
-                    value: ObjectValue::attribute(0),
-                },
-            },
+            Mutation::insert_object(
+                ObjectKey::attribute(object_id, DEFAULT_DATA_ATTRIBUTE_ID),
+                ObjectValue::attribute(0),
+            ),
         );
         Ok(StoreObjectHandle {
             store: self.clone(),
@@ -264,7 +253,7 @@ impl ObjectStore {
 
     pub async fn create_object(
         self: &Arc<Self>,
-        mut transaction: &mut Transaction,
+        mut transaction: &mut Transaction<'_>,
         options: HandleOptions,
     ) -> Result<StoreObjectHandle, Error> {
         let object_id = self.get_next_object_id();
@@ -285,11 +274,11 @@ impl ObjectStore {
             return Ok(());
         }
         let parent_store = self.parent_store.as_ref().unwrap();
-        let mut transaction = Transaction::new();
+        let mut transaction = filesystem.clone().new_transaction(&[]).await?;
         let object_handle =
-            parent_store.clone().create_object(&mut transaction, HandleOptions::default()).await?;
+            parent_store.create_object(&mut transaction, HandleOptions::default()).await?;
         transaction.add(self.store_object_id(), Mutation::TreeSeal);
-        self.filesystem.upgrade().unwrap().commit_transaction(transaction).await;
+        transaction.commit().await;
 
         let object_id = object_handle.object_id();
         let handle = parent_store
@@ -305,11 +294,11 @@ impl ObjectStore {
         }
         let mut buf = self.device.allocate_buffer(serialized_info.len());
         buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);
-        let mut transaction = Transaction::new();
+        let mut transaction = filesystem.clone().new_transaction(&[]).await?;
         handle.txn_write(&mut transaction, 0u64, buf.as_ref()).await?;
 
         transaction.add(self.store_object_id(), Mutation::TreeCompact);
-        filesystem.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         object_sync.commit();
         Ok(())
@@ -319,7 +308,7 @@ impl ObjectStore {
     /// object is destroyed and any extents are deallocated.
     pub async fn adjust_refs(
         &self,
-        transaction: &mut Transaction,
+        transaction: &mut Transaction<'_>,
         oid: u64,
         delta: i64,
     ) -> Result<(), Error> {
@@ -376,14 +365,15 @@ impl ObjectStore {
             }
             transaction.add(
                 self.store_object_id,
-                Mutation::Merge { item: Item::new(ObjectKey::tombstone(oid), ObjectValue::None) },
+                Mutation::merge_object(ObjectKey::tombstone(oid), ObjectValue::None),
             );
         } else {
             transaction.add(
                 self.store_object_id,
-                Mutation::ReplaceOrInsert {
-                    item: Item::new(item.key, ObjectValue::object(object_type, refs)),
-                },
+                Mutation::replace_or_insert_object(
+                    item.key,
+                    ObjectValue::object(object_type, refs),
+                ),
             );
         }
         Ok(())
@@ -438,8 +428,13 @@ impl ObjectStore {
 }
 
 #[async_trait]
-impl ApplyMutations for ObjectStore {
-    async fn apply_mutation(&self, mutation: Mutation, replay: bool) {
+impl Mutations for ObjectStore {
+    async fn apply_mutation(
+        &self,
+        mutation: Mutation,
+        replay: bool,
+        object: Option<AssociatedObject<'_>>,
+    ) {
         // It's not safe to fully open a store until replay is fully complete (because
         // subsequent mutations could render current records invalid). The exception to
         // this is the root parent object store which contains the extents for the journal
@@ -448,29 +443,42 @@ impl ApplyMutations for ObjectStore {
         assert!(!replay || !*self.opened.lock().unwrap() || self.parent_store.is_none());
 
         match mutation {
-            Mutation::Insert { item } => {
+            Mutation::ObjectStore(ObjectStoreMutation { item, op }) => {
                 {
                     let mut store_info = self.store_info.lock().unwrap();
                     if item.key.object_id > store_info.last_object_id {
                         store_info.last_object_id = item.key.object_id;
                     }
                 }
-                self.tree.insert(item).await;
+                // If this mutation is a size change, update the cached size if there is an
+                // associated object.
+                match (object, &item) {
+                    (Some(object), ObjectItem { value: ObjectValue::Attribute { size }, .. }) => {
+                        *object.downcast_ref::<StoreObjectHandle>().unwrap().size.lock().unwrap() =
+                            *size;
+                    }
+                    _ => {}
+                }
+                match op {
+                    Operation::Insert => self.tree.insert(item).await,
+                    Operation::ReplaceOrInsert => self.tree.replace_or_insert(item).await,
+                    Operation::Merge => {
+                        let lower_bound = item.key.key_for_merge_into();
+                        self.tree.merge_into(item, &lower_bound).await;
+                    }
+                }
             }
-            Mutation::Merge { item } => {
-                let lower_bound = item.key.key_for_merge_into();
-                self.tree.merge_into(item, &lower_bound).await;
-            }
-            Mutation::ReplaceOrInsert { item } => self.tree.replace_or_insert(item).await,
             Mutation::TreeSeal => self.tree.seal(),
             Mutation::TreeCompact => {
                 if replay {
                     self.tree.reset_immutable_layers();
                 }
             }
-            _ => panic!("unexpected mutation: {:?}", mutation),
+            _ => panic!("unexpected mutation: {:?}", mutation), // TODO(csuter): can't panic
         }
     }
+
+    fn drop_mutation(&self, _mutation: Mutation) {}
 }
 
 pub struct StoreObjectHandle {
@@ -489,57 +497,44 @@ impl StoreObjectHandle {
 
     /// Extend the file with the given extent.  The only use case for this right now is for files
     /// that must exist at certain offsets on the device, such as super-blocks.
-    pub async fn extend(&self, transaction: &mut Transaction, device_range: Range<u64>) {
-        // TODO(csuter): this needs locking
-        let (old_size, new_size) = {
-            let mut size = self.size.lock().unwrap();
-            let old_size = *size;
-            // TODO(csuter): roll back size change if transaction fails, or alternatively, change
-            // the size when the transaction commits (whilst keeping the object locked).
-            *size += device_range.end - device_range.start;
-            (old_size, *size)
-        };
+    pub async fn extend<'a>(&'a self, transaction: &mut Transaction<'a>, device_range: Range<u64>) {
+        let old_size = self.get_size();
+        let new_size = old_size + device_range.end - device_range.start;
         self.store.allocator().reserve(transaction, device_range.clone()).await;
-        transaction.add(
+        transaction.add_with_object(
             self.store.store_object_id,
-            Mutation::ReplaceOrInsert {
-                item: ObjectItem {
-                    key: ObjectKey::attribute(self.object_id, self.attribute_id),
-                    value: ObjectValue::attribute(new_size),
-                },
-            },
+            Mutation::replace_or_insert_object(
+                ObjectKey::attribute(self.object_id, self.attribute_id),
+                ObjectValue::attribute(new_size),
+            ),
+            self,
         );
         transaction.add(
             self.store.store_object_id(),
-            Mutation::Merge {
-                item: ObjectItem {
-                    key: ObjectKey::extent(self.object_id, self.attribute_id, old_size..new_size),
-                    value: ObjectValue::extent(device_range.start),
-                },
-            },
+            Mutation::merge_object(
+                ObjectKey::extent(self.object_id, self.attribute_id, old_size..new_size),
+                ObjectValue::extent(device_range.start),
+            ),
         );
     }
 
-    async fn write_cow(
-        &self,
-        transaction: &mut Transaction,
+    async fn write_cow<'a>(
+        &'a self,
+        transaction: &mut Transaction<'a>,
         mut offset: u64,
         buf: BufferRef<'_>,
     ) -> Result<(), Error> {
         let mut aligned = round_down(offset, self.block_size)
             ..round_up(offset + buf.len() as u64, self.block_size);
         let mut buf_offset = 0;
-        if offset + buf.len() as u64 > *self.size.lock().unwrap() {
-            // TODO(csuter): need to hold locks properly
-            *self.size.lock().unwrap() = offset + buf.len() as u64;
-            transaction.add(
+        if offset + buf.len() as u64 > self.txn_get_size(transaction) {
+            transaction.add_with_object(
                 self.store.store_object_id,
-                Mutation::ReplaceOrInsert {
-                    item: ObjectItem {
-                        key: ObjectKey::attribute(self.object_id, self.attribute_id),
-                        value: ObjectValue::attribute(*self.size.lock().unwrap()),
-                    },
-                },
+                Mutation::replace_or_insert_object(
+                    ObjectKey::attribute(self.object_id, self.attribute_id),
+                    ObjectValue::attribute(offset + buf.len() as u64),
+                ),
+                self,
             );
         }
         self.deallocate_old_extents(transaction, &ExtentKey::new(aligned.clone())).await?;
@@ -558,12 +553,10 @@ impl StoreObjectHandle {
             .await?;
             transaction.add(
                 self.store.store_object_id,
-                Mutation::Merge {
-                    item: Item::new(
-                        ObjectKey::extent(self.object_id, self.attribute_id, aligned.start..end),
-                        ObjectValue::extent(device_range.start),
-                    ),
-                },
+                Mutation::merge_object(
+                    ObjectKey::extent(self.object_id, self.attribute_id, aligned.start..end),
+                    ObjectValue::extent(device_range.start),
+                ),
             );
             aligned.start += extent_len;
             buf_offset += len;
@@ -630,7 +623,8 @@ impl StoreObjectHandle {
             let (head, remainder) =
                 buf.split_at(min(self.block_size as usize - start_align, buf.len()));
             let mut align_buf = self.store.device.allocate_buffer(self.block_size as usize);
-            self.read(start_offset, align_buf.as_mut()).await?;
+            let read = self.read(start_offset, align_buf.as_mut()).await?;
+            align_buf.as_mut_slice()[read..].fill(0);
             align_buf.as_mut_slice()[start_align..(start_align + head.len())]
                 .copy_from_slice(head.as_slice());
             device_offset -= start_align as u64;
@@ -648,7 +642,8 @@ impl StoreObjectHandle {
             device_offset += whole_blocks.len() as u64;
             if tail.len() > 0 {
                 let mut align_buf = self.store.device.allocate_buffer(self.block_size as usize);
-                self.read(end - end_align as u64, align_buf.as_mut()).await?;
+                let read = self.read(end - end_align as u64, align_buf.as_mut()).await?;
+                align_buf.as_mut_slice()[read..].fill(0);
                 &align_buf.as_mut_slice()[..tail.len()].copy_from_slice(tail.as_slice());
                 self.store.device.write(device_offset, align_buf.as_ref()).await?;
             }
@@ -658,7 +653,7 @@ impl StoreObjectHandle {
 
     async fn deallocate_old_extents(
         &self,
-        transaction: &mut Transaction,
+        transaction: &mut Transaction<'_>,
         key: &ExtentKey,
     ) -> Result<(), Error> {
         let tree = &self.store.tree;
@@ -699,6 +694,24 @@ impl StoreObjectHandle {
         }
         Ok(())
     }
+
+    // Within a transaction, the size of the object might have changed, so get the size from there
+    // if it exists, otherwise, fall back on the cached size.
+    fn txn_get_size(&self, transaction: &Transaction<'_>) -> u64 {
+        transaction
+            .get_object_mutation(
+                self.store.store_object_id,
+                ObjectKey::attribute(self.object_id, self.attribute_id),
+            )
+            .and_then(|m| {
+                if let ObjectItem { value: ObjectValue::Attribute { size }, .. } = m.item {
+                    Some(size)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_else(|| self.get_size())
+    }
 }
 
 // TODO(jfsulliv): Move into utils module or something else.
@@ -725,28 +738,7 @@ impl ObjectHandle for StoreObjectHandle {
         if buf.len() == 0 {
             return Ok(0);
         }
-        let size = {
-            let size = self.get_size();
-            // If this handle is being used for journal replay, we can't trust the size, so if it
-            // looks like this read would go beyond the end of the file, refresh the size from the
-            // tree.
-            if self.options.journal_replay && (offset >= size || size - offset < buf.len() as u64) {
-                let item = self
-                    .store
-                    .tree
-                    .find(&ObjectKey::attribute(self.object_id, self.attribute_id))
-                    .await?
-                    .ok_or(FxfsError::Inconsistent)?;
-                if let ObjectValue::Attribute { size } = item.value {
-                    *self.size.lock().unwrap() = size;
-                    size
-                } else {
-                    bail!(FxfsError::Inconsistent);
-                }
-            } else {
-                size
-            }
-        };
+        let size = self.get_size();
         if offset >= size {
             return Ok(0);
         }
@@ -851,9 +843,9 @@ impl ObjectHandle for StoreObjectHandle {
         Ok(to_do)
     }
 
-    async fn txn_write(
-        &self,
-        transaction: &mut Transaction,
+    async fn txn_write<'a>(
+        &'a self,
+        transaction: &mut Transaction<'a>,
         offset: u64,
         buf: BufferRef<'_>,
     ) -> Result<(), Error> {
@@ -870,23 +862,21 @@ impl ObjectHandle for StoreObjectHandle {
         *self.size.lock().unwrap()
     }
 
-    async fn truncate(&self, transaction: &mut Transaction, size: u64) -> Result<(), Error> {
-        let old_size = self.get_size();
+    async fn truncate<'a>(
+        &'a self,
+        transaction: &mut Transaction<'a>,
+        size: u64,
+    ) -> Result<(), Error> {
+        let old_size = self.txn_get_size(transaction);
         if size < old_size {
             let deleted_range =
                 round_up(size, self.block_size)..round_up(old_size, self.block_size);
             transaction.add(
                 self.store.store_object_id,
-                Mutation::Merge {
-                    item: ObjectItem {
-                        key: ObjectKey::extent(
-                            self.object_id,
-                            self.attribute_id,
-                            deleted_range.clone(),
-                        ),
-                        value: ObjectValue::deleted_extent(),
-                    },
-                },
+                Mutation::merge_object(
+                    ObjectKey::extent(self.object_id, self.attribute_id, deleted_range.clone()),
+                    ObjectValue::deleted_extent(),
+                ),
             );
             self.deallocate_old_extents(transaction, &ExtentKey::new(deleted_range)).await?;
             let to_zero = round_up(size, self.block_size) - size;
@@ -903,26 +893,23 @@ impl ObjectHandle for StoreObjectHandle {
                 self.write_cow(transaction, size, buf.as_ref()).await?;
             }
         }
-        transaction.add(
+        transaction.add_with_object(
             self.store.store_object_id,
-            Mutation::ReplaceOrInsert {
-                item: ObjectItem {
-                    key: ObjectKey::attribute(self.object_id, self.attribute_id),
-                    value: ObjectValue::attribute(size),
-                },
-            },
+            Mutation::replace_or_insert_object(
+                ObjectKey::attribute(self.object_id, self.attribute_id),
+                ObjectValue::attribute(size),
+            ),
+            self,
         );
-        *self.size.lock().unwrap() = size;
         Ok(())
     }
 
     // Must be multiple of block size.
-    async fn preallocate_range(
-        &self,
-        transaction: &mut Transaction,
+    async fn preallocate_range<'a>(
+        &'a self,
+        transaction: &mut Transaction<'a>,
         mut file_range: Range<u64>,
     ) -> Result<Vec<Range<u64>>, Error> {
-        // TODO(csuter): Fix the locking here.
         let mut ranges = Vec::new();
         let tree = &self.store.tree;
         let layer_set = tree.layer_set();
@@ -1000,36 +987,38 @@ impl ObjectHandle for StoreObjectHandle {
             file_range.start = this_file_range.end;
             transaction.add(
                 self.store.store_object_id,
-                Mutation::Merge {
-                    item: ObjectItem {
-                        key: ObjectKey::extent(self.object_id, self.attribute_id, this_file_range),
-                        value: ObjectValue::extent(device_range.start),
-                    },
-                },
+                Mutation::merge_object(
+                    ObjectKey::extent(self.object_id, self.attribute_id, this_file_range),
+                    ObjectValue::extent(device_range.start),
+                ),
             );
             ranges.push(device_range);
             // If we didn't allocate all that we requested, we'll loop around and try again.
         }
         // Update the file size if it changed.
-        if file_range.end > *self.size.lock().unwrap() {
-            // TODO(csuter): if the transaction fails, this needs to be rolled back.  In fact a lock
-            // needs to be held until the transaction commits.
-            *self.size.lock().unwrap() = file_range.end;
-            transaction.add(
+        if file_range.end > self.txn_get_size(transaction) {
+            transaction.add_with_object(
                 self.store.store_object_id,
-                Mutation::ReplaceOrInsert {
-                    item: ObjectItem {
-                        key: ObjectKey::attribute(self.object_id, 0),
-                        value: ObjectValue::attribute(file_range.end),
-                    },
-                },
+                Mutation::replace_or_insert_object(
+                    ObjectKey::attribute(self.object_id, self.attribute_id),
+                    ObjectValue::attribute(file_range.end),
+                ),
+                self,
             );
         }
         Ok(ranges)
     }
 
-    async fn commit_transaction(&self, transaction: Transaction) {
-        self.store.filesystem().commit_transaction(transaction).await;
+    async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error> {
+        Ok(self
+            .store
+            .filesystem()
+            .new_transaction(&[LockKey::object_attribute(
+                self.store.store_object_id,
+                self.object_id,
+                self.attribute_id,
+            )])
+            .await?)
     }
 }
 
@@ -1040,17 +1029,21 @@ mod tests {
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
-                filesystem::Filesystem,
                 record::{ObjectKey, ObjectKeyData},
                 round_up,
                 testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
-                transaction::Transaction,
+                transaction::TransactionHandler,
                 HandleOptions, ObjectStore, StoreObjectHandle,
             },
             testing::fake_device::FakeDevice,
         },
         fuchsia_async as fasync,
-        std::{ops::Bound, sync::Arc},
+        futures::{channel::oneshot::channel, join},
+        std::{
+            ops::Bound,
+            sync::{Arc, Mutex},
+            time::Duration,
+        },
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
@@ -1064,24 +1057,27 @@ mod tests {
     async fn test_filesystem_and_store(
     ) -> (Arc<FakeFilesystem>, Arc<FakeAllocator>, Arc<ObjectStore>) {
         let device = Arc::new(FakeDevice::new(1024, TEST_DEVICE_BLOCK_SIZE));
-        let filesystem = FakeFilesystem::new(device);
+        let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(FakeAllocator::new());
-        filesystem.object_manager().set_allocator(allocator.clone());
-        let parent_store = ObjectStore::new_empty(None, 2, filesystem.clone());
-        let mut transaction = Transaction::new();
+        fs.object_manager().set_allocator(allocator.clone());
+        let parent_store = ObjectStore::new_empty(None, 2, fs.clone());
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         let store = parent_store
             .create_child_store_with_id(&mut transaction, 3)
             .await
             .expect("create_child_store failed");
-        filesystem.commit_transaction(transaction).await;
-        (filesystem.clone(), allocator, store)
+        transaction.commit().await;
+        (fs.clone(), allocator, store)
     }
 
     async fn test_filesystem_and_object(
     ) -> (Arc<FakeFilesystem>, Arc<FakeAllocator>, StoreObjectHandle) {
         let (fs, allocator, store) = test_filesystem_and_store().await;
-        let mut transaction = Transaction::new();
-        let object = store
+        let object;
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        object = store
             .create_object(&mut transaction, HandleOptions::default())
             .await
             .expect("create_object failed");
@@ -1094,7 +1090,7 @@ mod tests {
                 .expect("write failed");
         }
         object.truncate(&mut transaction, TEST_OBJECT_SIZE).await.expect("truncate failed");
-        store.filesystem().commit_transaction(transaction).await;
+        transaction.commit().await;
         (fs, allocator, object)
     }
 
@@ -1154,15 +1150,16 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_after_truncate_and_extend() {
-        let (_fs, _, object) = test_filesystem_and_object().await;
+        let (fs, _, object) = test_filesystem_and_object().await;
 
         // Arrange for there to be <extent><deleted-extent><extent>.
         let mut buf = object.allocate_buffer(TEST_DATA.len());
         buf.as_mut_slice().copy_from_slice(TEST_DATA);
         object.write(0, buf.as_ref()).await.expect("write failed"); // This adds an extent at 0..512.
-        let mut transaction = Transaction::new();
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         object.truncate(&mut transaction, 3).await.expect("truncate failed"); // This deletes 512..1024.
-        object.commit_transaction(transaction).await;
+        transaction.commit().await;
         let data = b"foo";
         let mut buf = object.allocate_buffer(data.len());
         buf.as_mut_slice().copy_from_slice(data);
@@ -1187,18 +1184,19 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_whole_blocks_with_multiple_objects() {
-        let (_fs, _, object) = test_filesystem_and_object().await;
+        let (fs, _, object) = test_filesystem_and_object().await;
         let mut buffer = object.allocate_buffer(512);
         buffer.as_mut_slice().fill(0xaf);
         object.write(0, buffer.as_ref()).await.expect("write failed");
 
         let store = object.store();
-        let mut transaction = Transaction::new();
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         let object2 = store
             .create_object(&mut transaction, HandleOptions::default())
             .await
             .expect("create_object failed");
-        store.filesystem().commit_transaction(transaction).await;
+        transaction.commit().await;
         let mut ef_buffer = object.allocate_buffer(512);
         ef_buffer.as_mut_slice().fill(0xef);
         object2.write(0, ef_buffer.as_ref()).await.expect("write failed");
@@ -1206,9 +1204,9 @@ mod tests {
         let mut buffer = object.allocate_buffer(512);
         buffer.as_mut_slice().fill(0xaf);
         object.write(512, buffer.as_ref()).await.expect("write failed");
-        let mut transaction = Transaction::new();
+        let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         object.truncate(&mut transaction, 1536).await.expect("truncate failed");
-        object.commit_transaction(transaction).await;
+        transaction.commit().await;
         object2.write(512, ef_buffer.as_ref()).await.expect("write failed");
 
         let mut buffer = object.allocate_buffer(2048);
@@ -1220,22 +1218,18 @@ mod tests {
         assert_eq!(&buffer.as_slice()[..1024], &[0xef; 1024]);
     }
 
-    async fn test_preallocate_common(
-        fs: &FakeFilesystem,
-        allocator: &FakeAllocator,
-        object: StoreObjectHandle,
-    ) {
+    async fn test_preallocate_common(allocator: &FakeAllocator, object: StoreObjectHandle) {
         let allocated_before = allocator.allocated();
-        let mut transaction = Transaction::new();
+        let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         object.preallocate_range(&mut transaction, 0..512).await.expect("preallocate_range failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
         assert!(object.get_size() < 1048576);
-        let mut transaction = Transaction::new();
+        let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         object
             .preallocate_range(&mut transaction, 0..1048576)
             .await
             .expect("preallocate_range failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
         assert_eq!(object.get_size(), 1048576);
         // Check that it didn't reallocate the space for the existing extent
         let allocated_after = allocator.allocated();
@@ -1273,30 +1267,30 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_preallocate_range() {
-        let (fs, allocator, object) = test_filesystem_and_object().await;
-        test_preallocate_common(&fs, &allocator, object).await;
+        let (_fs, allocator, object) = test_filesystem_and_object().await;
+        test_preallocate_common(&allocator, object).await;
     }
 
     // This is identical to the previous test except that we flush so that extents end up in
     // different layers.
     #[fasync::run_singlethreaded(test)]
     async fn test_preallocate_suceeds_when_extents_are_in_different_layers() {
-        let (fs, allocator, object) = test_filesystem_and_object().await;
+        let (_fs, allocator, object) = test_filesystem_and_object().await;
         object.store().flush(false).await.expect("flush failed");
-        test_preallocate_common(&fs, &allocator, object).await;
+        test_preallocate_common(&allocator, object).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_already_preallocated() {
-        let (fs, allocator, object) = test_filesystem_and_object().await;
+        let (_fs, allocator, object) = test_filesystem_and_object().await;
         let allocated_before = allocator.allocated();
-        let mut transaction = Transaction::new();
+        let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         let offset = TEST_DATA_OFFSET - TEST_DATA_OFFSET % TEST_DEVICE_BLOCK_SIZE as u64;
         object
             .preallocate_range(&mut transaction, offset..offset + 512)
             .await
             .expect("preallocate_range failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
         // Check that it didn't reallocate any new space.
         assert_eq!(allocator.allocated(), allocated_before);
     }
@@ -1322,8 +1316,10 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_extend() {
         let (fs, _allocator, store) = test_filesystem_and_store().await;
-        let mut transaction = Transaction::new();
-        let handle = store
+        let handle;
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        handle = store
             .create_object(
                 &mut transaction,
                 HandleOptions { overwrite: true, ..Default::default() },
@@ -1331,7 +1327,7 @@ mod tests {
             .await
             .expect("create_object failed");
         handle.extend(&mut transaction, 0..5 * TEST_DEVICE_BLOCK_SIZE as u64).await;
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
         let mut buf = handle.allocate_buffer(5 * TEST_DEVICE_BLOCK_SIZE as usize);
         buf.as_mut_slice().fill(123);
         handle.write(0, buf.as_ref()).await.expect("write failed");
@@ -1348,12 +1344,13 @@ mod tests {
         object.write(0, buf.as_ref()).await.expect("write failed");
 
         let deallocated_before = allocator.deallocated();
-        let mut transaction = Transaction::new();
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         object
             .truncate(&mut transaction, TEST_DEVICE_BLOCK_SIZE as u64)
             .await
             .expect("truncate failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
         let deallocated_after = allocator.deallocated();
         assert!(
             deallocated_before < deallocated_after,
@@ -1366,21 +1363,23 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_adjust_refs() {
         let (fs, allocator, object) = test_filesystem_and_object().await;
-        let mut transaction = Transaction::new();
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         let store = object.store();
         store
             .adjust_refs(&mut transaction, object.object_id(), 1)
             .await
             .expect("adjust_refs failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         let deallocated_before = allocator.deallocated();
-        let mut transaction = Transaction::new();
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         store
             .adjust_refs(&mut transaction, object.object_id(), -2)
             .await
             .expect("adjust_refs failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
         assert_eq!(allocator.deallocated() - deallocated_before, TEST_DEVICE_BLOCK_SIZE as usize);
 
         let layer_set = store.tree.layer_set();
@@ -1397,6 +1396,50 @@ mod tests {
             iter.advance().await.expect("advance failed");
         }
         assert!(found);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_locks() {
+        let (_fs, _allocator, object) = test_filesystem_and_object().await;
+        let (send1, recv1) = channel();
+        let (send2, recv2) = channel();
+        let (send3, recv3) = channel();
+        let done = Mutex::new(false);
+        join!(
+            async {
+                let mut t = object.new_transaction().await.expect("new_transaction failed");
+                send1.send(()).unwrap(); // Tell the next future to continue.
+                send3.send(()).unwrap(); // Tell the last future to continue.
+                recv2.await.unwrap();
+                let mut buf = object.allocate_buffer(5);
+                buf.as_mut_slice().copy_from_slice(b"hello");
+                object.txn_write(&mut t, 0, buf.as_ref()).await.expect("write failed");
+                // This is a halting problem so all we can do is sleep.
+                fasync::Timer::new(Duration::from_millis(100)).await;
+                assert!(!*done.lock().unwrap());
+                t.commit().await;
+            },
+            async {
+                recv1.await.unwrap();
+                // Reads should not block.
+                let mut buf = object.allocate_buffer(TEST_DATA.len());
+                assert_eq!(
+                    object.read(TEST_DATA_OFFSET, buf.as_mut()).await.expect("read failed"),
+                    TEST_DATA.len()
+                );
+                assert_eq!(buf.as_slice(), TEST_DATA);
+                // Tell the first future to continue.
+                send2.send(()).unwrap();
+            },
+            async {
+                // This should block until the first future has completed.
+                recv3.await.unwrap();
+                let _t = object.new_transaction().await.expect("new_transaction failed");
+                let mut buf = object.allocate_buffer(5);
+                assert_eq!(object.read(0, buf.as_mut()).await.expect("read failed"), 5);
+                assert_eq!(buf.as_slice(), b"hello");
+            }
+        );
     }
 }
 

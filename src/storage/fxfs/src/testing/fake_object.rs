@@ -9,7 +9,7 @@ use {
             buffer_allocator::{BufferAllocator, MemBufferSource},
         },
         object_handle::ObjectHandle,
-        object_store::transaction::Transaction,
+        object_store::transaction::{LockKey, LockManager, Transaction, TransactionHandler},
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -22,42 +22,70 @@ use {
 };
 
 pub struct FakeObject {
-    buf: Vec<u8>,
+    buf: Mutex<Vec<u8>>,
+    lock_manager: LockManager,
 }
 
 impl FakeObject {
     pub fn new() -> Self {
-        FakeObject { buf: Vec::new() }
+        FakeObject { buf: Mutex::new(Vec::new()), lock_manager: LockManager::new() }
     }
 
     pub fn read(&self, offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
-        let to_do = min(buf.len(), self.buf.len() - offset as usize);
+        let our_buf = self.buf.lock().unwrap();
+        let to_do = min(buf.len(), our_buf.len() - offset as usize);
         buf.as_mut_slice()[0..to_do]
-            .copy_from_slice(&self.buf[offset as usize..offset as usize + to_do]);
+            .copy_from_slice(&our_buf[offset as usize..offset as usize + to_do]);
         Ok(to_do)
     }
 
-    pub fn write(&mut self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
+    pub fn write(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
+        let mut our_buf = self.buf.lock().unwrap();
         let required_len = offset as usize + buf.len();
-        if self.buf.len() < required_len {
-            self.buf.resize(required_len, 0);
+        if our_buf.len() < required_len {
+            our_buf.resize(required_len, 0);
         }
-        &self.buf[offset as usize..offset as usize + buf.len()].copy_from_slice(buf.as_slice());
+        &our_buf[offset as usize..offset as usize + buf.len()].copy_from_slice(buf.as_slice());
         Ok(())
     }
 
     pub fn get_size(&self) -> u64 {
-        self.buf.len() as u64
+        self.buf.lock().unwrap().len() as u64
+    }
+}
+
+#[async_trait]
+impl TransactionHandler for FakeObject {
+    async fn new_transaction<'a>(
+        self: Arc<Self>,
+        locks: &[LockKey],
+    ) -> Result<Transaction<'a>, Error> {
+        let mut locks: Vec<_> = locks.iter().cloned().collect();
+        locks.sort_unstable();
+        self.lock_manager.lock(&locks).await;
+        Ok(Transaction::new(self, locks))
+    }
+
+    async fn commit_transaction(&self, _transaction: Transaction<'_>) {}
+
+    fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
+        self.lock_manager.drop_transaction(transaction);
+    }
+}
+
+impl AsRef<LockManager> for FakeObject {
+    fn as_ref(&self) -> &LockManager {
+        &self.lock_manager
     }
 }
 
 pub struct FakeObjectHandle {
-    object: Arc<Mutex<FakeObject>>,
+    object: Arc<FakeObject>,
     allocator: BufferAllocator,
 }
 
 impl FakeObjectHandle {
-    pub fn new(object: Arc<Mutex<FakeObject>>) -> Self {
+    pub fn new(object: Arc<FakeObject>) -> Self {
         // TODO(jfsulliv): Should this take an allocator as parameter?
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(32 * 1024 * 1024)));
         FakeObjectHandle { object, allocator }
@@ -75,34 +103,40 @@ impl ObjectHandle for FakeObjectHandle {
     }
 
     async fn read(&self, offset: u64, buf: MutableBufferRef<'_>) -> Result<usize, Error> {
-        self.object.lock().unwrap().read(offset, buf)
+        self.object.read(offset, buf)
     }
 
-    async fn txn_write(
-        &self,
-        _transaction: &mut Transaction,
+    async fn txn_write<'a>(
+        &'a self,
+        _transaction: &mut Transaction<'a>,
         offset: u64,
         buf: BufferRef<'_>,
     ) -> Result<(), Error> {
-        self.object.lock().unwrap().write(offset, buf)
+        self.object.write(offset, buf)
     }
 
     fn get_size(&self) -> u64 {
-        self.object.lock().unwrap().get_size()
+        self.object.get_size()
     }
 
-    async fn truncate(&self, _transaction: &mut Transaction, length: u64) -> Result<(), Error> {
-        self.object.lock().unwrap().buf.resize(length as usize, 0);
+    async fn truncate<'a>(
+        &'a self,
+        _transaction: &mut Transaction<'a>,
+        length: u64,
+    ) -> Result<(), Error> {
+        self.object.buf.lock().unwrap().resize(length as usize, 0);
         Ok(())
     }
 
-    async fn preallocate_range(
-        &self,
-        _transaction: &mut Transaction,
+    async fn preallocate_range<'a>(
+        &'a self,
+        _transaction: &mut Transaction<'a>,
         _range: Range<u64>,
     ) -> Result<Vec<Range<u64>>, Error> {
         panic!("Unsupported");
     }
 
-    async fn commit_transaction(&self, _transaction: Transaction) {}
+    async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error> {
+        self.object.clone().new_transaction(&[]).await
+    }
 }

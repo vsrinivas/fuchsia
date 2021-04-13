@@ -25,13 +25,16 @@ use {
         object_store::{
             allocator::{Allocator, SimpleAllocator},
             constants::SUPER_BLOCK_OBJECT_ID,
-            filesystem::{ApplyMutations, Filesystem, ObjectManager, SyncOptions},
+            filesystem::{Filesystem, Mutations, ObjectManager, SyncOptions},
             journal::{
                 reader::{JournalReader, ReadResult},
                 super_block::SuperBlock,
                 writer::JournalWriter,
             },
-            transaction::{Mutation, Transaction},
+            record::{ObjectItem, ObjectKey},
+            transaction::{
+                AssociatedObject, Mutation, ObjectStoreMutation, Transaction, TxnMutation,
+            },
             HandleOptions, ObjectStore, StoreObjectHandle,
         },
     },
@@ -42,6 +45,7 @@ use {
     serde::{Deserialize, Serialize},
     std::{
         clone::Clone,
+        iter::IntoIterator,
         sync::{Arc, Mutex},
         vec::Vec,
     },
@@ -102,7 +106,7 @@ pub enum JournalRecord {
 }
 
 fn journal_handle_options() -> HandleOptions {
-    HandleOptions { overwrite: true, journal_replay: true, ..Default::default() }
+    HandleOptions { overwrite: true, ..Default::default() }
 }
 
 /// The journal records a stream of mutations that are to be applied to other objects.  At mount
@@ -155,7 +159,9 @@ impl Journal {
             ObjectStore::new_empty(None, super_block.root_parent_store_object_id, filesystem);
 
         while let Some(item) = reader.next_item().await? {
-            root_parent.apply_mutation(Mutation::Insert { item }, true).await;
+            root_parent
+                .apply_mutation(Mutation::insert_object(item.key, item.value), true, None)
+                .await;
         }
 
         {
@@ -196,9 +202,36 @@ impl Journal {
                         JournalRecord::Commit => {
                             if let Some(checkpoint) = journal_file_checkpoint.take() {
                                 log::debug!("REPLAY {}", checkpoint.file_offset);
-                                for mutation in mutations {
-                                    self.apply_mutation(mutation.0, &checkpoint, mutation.1, true)
-                                        .await;
+                                for (object_id, mutation) in mutations {
+                                    // Snoop the mutations for any that might apply to the journal
+                                    // file to ensure that we accurately track changes in size.
+                                    let associated_object = match (object_id, &mutation) {
+                                        (
+                                            store_object_id,
+                                            Mutation::ObjectStore(ObjectStoreMutation {
+                                                item:
+                                                    ObjectItem {
+                                                        key: ObjectKey { object_id, .. }, ..
+                                                    },
+                                                ..
+                                            }),
+                                        ) if store_object_id
+                                            == super_block.root_parent_store_object_id
+                                            && *object_id == super_block.journal_object_id =>
+                                        {
+                                            Some(reader.handle() as &_)
+                                        }
+                                        _ => None,
+                                    };
+
+                                    self.apply_mutation(
+                                        object_id,
+                                        &checkpoint,
+                                        mutation,
+                                        true,
+                                        associated_object,
+                                    )
+                                    .await;
                                 }
                                 mutations = Vec::new();
                             }
@@ -245,17 +278,26 @@ impl Journal {
             Arc::new(SimpleAllocator::new(filesystem.clone(), INIT_ALLOCATOR_OBJECT_ID, true));
         self.objects.set_allocator(allocator.clone());
 
-        let mut transaction = Transaction::new();
+        let journal_handle;
+        let super_block_handle;
+        let mut transaction = filesystem.new_transaction(&[]).await?;
         let root_store = root_parent
             .create_child_store_with_id(&mut transaction, INIT_ROOT_STORE_OBJECT_ID)
             .await?;
         self.objects.set_root_store_object_id(root_store.store_object_id());
 
         // Create the super-block object...
-        SuperBlock::create_object(&mut transaction, &root_store).await?;
+        super_block_handle = root_store
+            .create_object_with_id(
+                &mut transaction,
+                SUPER_BLOCK_OBJECT_ID,
+                HandleOptions { overwrite: true, ..Default::default() },
+            )
+            .await?;
+        super_block_handle.extend(&mut transaction, super_block::first_extent()).await;
 
         // and the journal object...
-        let journal_handle =
+        journal_handle =
             root_parent.create_object(&mut transaction, journal_handle_options()).await?;
         journal_handle.preallocate_range(&mut transaction, 0..self.chunk_size()).await?;
         self.commit(transaction).await;
@@ -275,7 +317,7 @@ impl Journal {
     }
 
     /// Commits a transaction.
-    pub async fn commit(&self, transaction: Transaction) {
+    pub async fn commit(&self, mut transaction: Transaction<'_>) {
         if transaction.is_empty() {
             return;
         }
@@ -283,13 +325,15 @@ impl Journal {
         // TODO(csuter): handle the case where we are unable to extend the journal file.
         self.maybe_extend_journal_file(&mut writer).await.unwrap();
         // TODO(csuter): writing to the journal here can be asynchronous.
-        let journal_file_checkpoint = writer.write_transaction(&transaction);
+        let journal_file_checkpoint = writer.journal_file_checkpoint();
+        writer.write_mutations(transaction.mutations.iter().cloned());
         if let Err(e) = writer.maybe_flush_buffer().await {
             // TODO(csuter): if writes to the journal start failing then we should prevent the
             // creation of new transactions.
             log::warn!("journal write failed: {}", e);
         }
-        self.apply_mutations(transaction, journal_file_checkpoint).await;
+        self.apply_mutations(std::mem::take(&mut transaction.mutations), journal_file_checkpoint)
+            .await;
     }
 
     pub fn volume_info_object_id(&self) -> u64 {
@@ -316,9 +360,28 @@ impl Journal {
         if file_offset + self.chunk_size() <= size {
             return Ok(());
         }
-        let mut transaction = Transaction::new();
+        let mut transaction = handle.new_transaction().await?;
         handle.preallocate_range(&mut transaction, size..size + self.chunk_size()).await?;
-        let journal_file_checkpoint = writer.write_transaction(&transaction);
+        let journal_file_checkpoint = writer.journal_file_checkpoint();
+
+        // We have to apply the mutations before writing them because we borrowed the writer for the
+        // transaction.  First we clone the mutations without the associated objects since that's
+        // where the handle is borrowed.
+        let cloned_mutations: Vec<_> = transaction
+            .mutations
+            .iter()
+            .map(|m| TxnMutation {
+                object_id: m.object_id,
+                mutation: m.mutation.clone(),
+                associated_object: None,
+            })
+            .collect();
+
+        self.apply_mutations(std::mem::take(&mut transaction.mutations), journal_file_checkpoint)
+            .await;
+
+        std::mem::drop(transaction);
+        writer.write_mutations(cloned_mutations);
 
         // We need to be sure that any journal records that arose from preallocation can fit in
         // within the old preallocated range.  If this situation arose (it shouldn't, so it would be
@@ -328,18 +391,24 @@ impl Journal {
         let file_offset = writer.journal_file_checkpoint().file_offset;
         let handle = writer.handle().unwrap();
         assert!(file_offset + self.chunk_size() <= handle.get_size());
-        self.apply_mutations(transaction, journal_file_checkpoint).await;
         Ok(())
     }
 
     async fn apply_mutations(
         &self,
-        transaction: Transaction,
+        mutations: impl IntoIterator<Item = TxnMutation<'_>>,
         journal_file_checkpoint: JournalCheckpoint,
     ) {
         log::debug!("BEGIN TXN {}", journal_file_checkpoint.file_offset);
-        for mutation in transaction.mutations {
-            self.apply_mutation(mutation.0, &journal_file_checkpoint, mutation.1, false).await;
+        for TxnMutation { object_id, mutation, associated_object } in mutations {
+            self.apply_mutation(
+                object_id,
+                &journal_file_checkpoint,
+                mutation,
+                false,
+                associated_object,
+            )
+            .await;
         }
         log::debug!("END TXN");
     }
@@ -364,10 +433,13 @@ impl Journal {
         journal_file_checkpoint: &JournalCheckpoint,
         mutation: Mutation,
         filter: bool,
+        object: Option<AssociatedObject<'_>>,
     ) {
         if !filter || self.should_apply(object_id, journal_file_checkpoint) {
             log::debug!("applying mutation: {}: {:?}, filter: {}", object_id, mutation, filter);
-            self.objects.apply_mutation(object_id, mutation, filter, journal_file_checkpoint).await;
+            self.objects
+                .apply_mutation(object_id, mutation, filter, journal_file_checkpoint, object)
+                .await;
         } else {
             log::debug!("ignoring mutation: {}, {:?}", object_id, mutation);
         }
@@ -428,18 +500,11 @@ impl Journal {
 
 impl<OH> JournalWriter<OH> {
     // Extends JournalWriter to write a transaction.
-    fn write_transaction(&mut self, transaction: &Transaction) -> JournalCheckpoint {
-        let checkpoint = self.journal_file_checkpoint();
-        {
-            for mutation in &transaction.mutations {
-                self.write_record(&JournalRecord::Mutation {
-                    object_id: mutation.0,
-                    mutation: mutation.1.clone(),
-                });
-            }
-            self.write_record(&JournalRecord::Commit);
+    fn write_mutations<'a>(&mut self, mutations: impl IntoIterator<Item = TxnMutation<'a>>) {
+        for TxnMutation { object_id, mutation, .. } in mutations {
+            self.write_record(&JournalRecord::Mutation { object_id, mutation });
         }
-        checkpoint
+        self.write_record(&JournalRecord::Commit);
     }
 }
 
@@ -449,8 +514,8 @@ mod tests {
         crate::{
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
-                filesystem::{Filesystem, FxFilesystem, SyncOptions},
-                transaction::Transaction,
+                filesystem::{FxFilesystem, SyncOptions},
+                transaction::TransactionHandler,
                 HandleOptions,
             },
             testing::fake_device::FakeDevice,
@@ -469,13 +534,14 @@ mod tests {
 
         let object_id = {
             let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
-            let mut transaction = Transaction::new();
+            let mut transaction =
+                fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
             let handle = fs
                 .root_store()
                 .create_object(&mut transaction, HandleOptions::default())
                 .await
                 .expect("create_object failed");
-            fs.commit_transaction(transaction).await;
+            transaction.commit().await;
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
             handle.write(0, buf.as_ref()).await.expect("write failed");
@@ -508,13 +574,14 @@ mod tests {
 
         {
             let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
-            let mut transaction = Transaction::new();
+            let mut transaction =
+                fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
             let handle = fs
                 .root_store()
                 .create_object(&mut transaction, HandleOptions::default())
                 .await
                 .expect("create_object failed");
-            fs.commit_transaction(transaction).await;
+            transaction.commit().await;
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
             handle.write(0, buf.as_ref()).await.expect("write failed");
@@ -524,13 +591,14 @@ mod tests {
             // Create a lot of objects but don't sync at the end. This should leave the filesystem
             // with a half finished transaction that cannot be replayed.
             for _ in 0..1000 {
-                let mut transaction = Transaction::new();
+                let mut transaction =
+                    fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
                 let handle = fs
                     .root_store()
                     .create_object(&mut transaction, HandleOptions::default())
                     .await
                     .expect("create_object failed");
-                fs.commit_transaction(transaction).await;
+                transaction.commit().await;
                 let mut buf = handle.allocate_buffer(TEST_DATA.len());
                 buf.as_mut_slice().copy_from_slice(TEST_DATA);
                 handle.write(0, buf.as_ref()).await.expect("write failed");
@@ -557,13 +625,14 @@ mod tests {
             }
 
             // Write one more object and sync.
-            let mut transaction = Transaction::new();
+            let mut transaction =
+                fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
             let handle = fs
                 .root_store()
                 .create_object(&mut transaction, HandleOptions::default())
                 .await
                 .expect("create_object failed");
-            fs.commit_transaction(transaction).await;
+            transaction.commit().await;
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
             handle.write(0, buf.as_ref()).await.expect("write failed");

@@ -261,10 +261,7 @@ mod tests {
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         fuchsia_async as fasync,
-        std::{
-            ops::Bound,
-            sync::{Arc, Mutex},
-        },
+        std::{ops::Bound, sync::Arc},
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -272,7 +269,7 @@ mod tests {
         const BLOCK_SIZE: u32 = 512;
         const ITEM_COUNT: i32 = 10000;
 
-        let mut handle = FakeObjectHandle::new(Arc::new(Mutex::new(FakeObject::new())));
+        let mut handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
             let mut writer = SimplePersistentLayerWriter::new(&mut handle, BLOCK_SIZE);
             for i in 0..ITEM_COUNT {
@@ -295,7 +292,7 @@ mod tests {
         const BLOCK_SIZE: u32 = 512;
         const ITEM_COUNT: i32 = 10000;
 
-        let mut handle = FakeObjectHandle::new(Arc::new(Mutex::new(FakeObject::new())));
+        let mut handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
             let mut writer = SimplePersistentLayerWriter::new(&mut handle, BLOCK_SIZE);
             for i in 0..ITEM_COUNT {
@@ -326,7 +323,7 @@ mod tests {
         const BLOCK_SIZE: u32 = 512;
         const ITEM_COUNT: i32 = 10000;
 
-        let mut handle = FakeObjectHandle::new(Arc::new(Mutex::new(FakeObject::new())));
+        let mut handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
             let mut writer = SimplePersistentLayerWriter::new(&mut handle, BLOCK_SIZE);
             for i in 0..ITEM_COUNT {
@@ -349,7 +346,7 @@ mod tests {
     async fn test_zero_items() {
         const BLOCK_SIZE: u32 = 512;
 
-        let mut handle = FakeObjectHandle::new(Arc::new(Mutex::new(FakeObject::new())));
+        let mut handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
             let mut writer = SimplePersistentLayerWriter::new(&mut handle, BLOCK_SIZE);
             writer.flush().await.expect("flush failed");
@@ -369,7 +366,7 @@ mod tests {
         const BLOCK_SIZE: u32 = 2097152;
         const ITEM_COUNT: i32 = 70000;
 
-        let mut handle = FakeObjectHandle::new(Arc::new(Mutex::new(FakeObject::new())));
+        let mut handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
             let mut writer = SimplePersistentLayerWriter::new(&mut handle, BLOCK_SIZE);
             for i in 0..ITEM_COUNT {

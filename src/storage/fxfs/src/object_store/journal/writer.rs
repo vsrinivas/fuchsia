@@ -165,14 +165,14 @@ mod tests {
         bincode::deserialize_from,
         byteorder::{ByteOrder, LittleEndian},
         fuchsia_async as fasync,
-        std::sync::{Arc, Mutex},
+        std::sync::Arc,
     };
 
     const TEST_BLOCK_SIZE: usize = 512;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_write_single_record_and_pad() {
-        let object = Arc::new(Mutex::new(FakeObject::new()));
+        let object = Arc::new(FakeObject::new());
         let mut writer =
             JournalWriter::new(Some(FakeObjectHandle::new(object.clone())), TEST_BLOCK_SIZE, 0);
         writer.write_record(&4u32);
@@ -180,7 +180,7 @@ mod tests {
         writer.maybe_flush_buffer().await.expect("flush_buffer failed");
 
         let handle = FakeObjectHandle::new(object.clone());
-        let mut buf = handle.allocate_buffer(object.lock().unwrap().get_size() as usize);
+        let mut buf = handle.allocate_buffer(object.get_size() as usize);
         assert_eq!(buf.len(), TEST_BLOCK_SIZE);
         handle.read(0, buf.as_mut()).await.expect("read failed");
         let value: u32 = deserialize_from(buf.as_slice()).expect("deserialize_from failed");
@@ -197,7 +197,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_journal_file_checkpoint() {
-        let object = Arc::new(Mutex::new(FakeObject::new()));
+        let object = Arc::new(FakeObject::new());
         let mut writer =
             JournalWriter::new(Some(FakeObjectHandle::new(object.clone())), TEST_BLOCK_SIZE, 0);
         writer.write_record(&4u32);
@@ -208,7 +208,7 @@ mod tests {
         writer.maybe_flush_buffer().await.expect("flush_buffer failed");
 
         let handle = FakeObjectHandle::new(object.clone());
-        let mut buf = handle.allocate_buffer(object.lock().unwrap().get_size() as usize);
+        let mut buf = handle.allocate_buffer(object.get_size() as usize);
         assert_eq!(buf.len(), TEST_BLOCK_SIZE);
         handle.read(0, buf.as_mut()).await.expect("read failed");
         let value: u64 = deserialize_from(&buf.as_slice()[checkpoint.file_offset as usize..])
@@ -218,7 +218,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_handle() {
-        let object = Arc::new(Mutex::new(FakeObject::new()));
+        let object = Arc::new(FakeObject::new());
         let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE, 0);
         writer.set_handle(FakeObjectHandle::new(object.clone()));
         writer.seek_to_checkpoint(JournalCheckpoint::new(TEST_BLOCK_SIZE as u64 * 5, 12345), false);
@@ -227,7 +227,7 @@ mod tests {
         writer.maybe_flush_buffer().await.expect("flush_buffer failed");
 
         let handle = FakeObjectHandle::new(object.clone());
-        let mut buf = handle.allocate_buffer(object.lock().unwrap().get_size() as usize);
+        let mut buf = handle.allocate_buffer(object.get_size() as usize);
         assert_eq!(buf.len(), TEST_BLOCK_SIZE * 6);
         handle.read(0, buf.as_mut()).await.expect("read failed");
         let (first_5_blocks, last_block) = buf.as_slice().split_at(TEST_BLOCK_SIZE * 5);
@@ -247,7 +247,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_reset() {
-        let object = Arc::new(Mutex::new(FakeObject::new()));
+        let object = Arc::new(FakeObject::new());
         let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE, 0);
         writer.set_handle(FakeObjectHandle::new(object.clone()));
         writer.seek_to_checkpoint(JournalCheckpoint::new(TEST_BLOCK_SIZE as u64 * 5, 12345), true);
@@ -256,7 +256,7 @@ mod tests {
         writer.maybe_flush_buffer().await.expect("flush_buffer failed");
 
         let handle = FakeObjectHandle::new(object.clone());
-        let mut buf = handle.allocate_buffer(object.lock().unwrap().get_size() as usize);
+        let mut buf = handle.allocate_buffer(object.get_size() as usize);
         assert_eq!(buf.len(), TEST_BLOCK_SIZE * 6);
         handle.read(0, buf.as_mut()).await.expect("read failed");
         let (first_5_blocks, last_block) = buf.as_slice().split_at(TEST_BLOCK_SIZE * 5);

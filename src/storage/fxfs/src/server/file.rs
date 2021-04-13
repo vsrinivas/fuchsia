@@ -5,7 +5,7 @@
 use {
     crate::{
         object_handle::{ObjectHandle, ObjectHandleExt},
-        object_store::{transaction::Transaction, StoreObjectHandle},
+        object_store::StoreObjectHandle,
         server::errors::map_to_status,
     },
     async_trait::async_trait,
@@ -101,9 +101,9 @@ impl File for FxFile {
     }
 
     async fn truncate(&self, length: u64) -> Result<(), Status> {
-        let mut transaction = Transaction::new();
+        let mut transaction = self.handle.new_transaction().await.map_err(map_to_status)?;
         self.handle.truncate(&mut transaction, length).await.map_err(map_to_status)?;
-        self.handle.commit_transaction(transaction).await;
+        transaction.commit().await;
         Ok(())
     }
 
