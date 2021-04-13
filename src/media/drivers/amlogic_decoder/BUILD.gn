@@ -161,6 +161,7 @@ if (target_cpu == "arm64") {
       ":amlogic_video_test_bind",
       "h264:h264_parser",
       "//sdk/banjo/fuchsia.hardware.amlogiccanvas",
+      "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.platform.device",
       "//sdk/banjo/fuchsia.hardware.sysmem",
       "//sdk/banjo/fuchsia.hardware.tee",
@@ -191,7 +192,6 @@ if (target_cpu == "arm64") {
     deps = [
       ":test_support",
       "third_party/libvpx",
-      "//sdk/banjo/fuchsia.hardware.clock",
       "//sdk/fidl/fuchsia.mediacodec",
       "//sdk/lib/fdio",
       "//sdk/lib/fidl/cpp",

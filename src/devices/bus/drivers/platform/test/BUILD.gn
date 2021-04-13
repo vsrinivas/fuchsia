@@ -212,7 +212,7 @@ driver_module("test-clock") {
   sources = [ "test/clock.cc" ]
   deps = [
     ":test-clock-bind",
-    "//sdk/banjo/fuchsia.hardware.clock",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.clockimpl",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
@@ -363,7 +363,7 @@ driver_module("test-composite") {
   sources = [ "test/composite.c" ]
   deps = [
     ":test-composite-bind",
-    "//sdk/banjo/fuchsia.hardware.clock",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.goldfish.addressspace",
     "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
     "//sdk/banjo/fuchsia.hardware.goldfish.sync",

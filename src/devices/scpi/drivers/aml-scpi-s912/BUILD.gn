@@ -40,7 +40,7 @@ driver_module("aml-scpi-s912.mailbox") {
   sources = [ "aml-mailbox.cc" ]
   deps = [
     ":aml-mailbox-s912-bind",
-    "//sdk/banjo/fuchsia.hardware.clock",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.mailbox",

@@ -28,7 +28,7 @@ driver_module("goodix-module") {
   defines = [ "GT9293_ASTRO_FIRMWARE_PATH=\"$astro_firmware_path\"" ]
   deps = [
     ":gt92xx_bind",
-    "//sdk/banjo/fuchsia.hardware.clock",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/banjo/fuchsia.hardware.i2c",

@@ -25,7 +25,7 @@ driver_module("aml-cpu") {
   sources = [ "aml-cpu.cc" ]
   deps = [
     ":aml-cpu-bind",
-    "//sdk/banjo/fuchsia.hardware.clock",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.thermal",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
@@ -54,7 +54,8 @@ test("aml-cpu-test-bin") {
   output_name = "aml-cpu-test"
   deps = [
     ":aml-cpu-bind",
-    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_mock",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp_mock",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.power:fuchsia.hardware.power_mock",
     "//sdk/banjo/fuchsia.hardware.thermal",

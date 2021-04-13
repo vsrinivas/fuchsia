@@ -21,7 +21,7 @@ driver_module("clock") {
   sources = [ "clock.cc" ]
   deps = [
     ":clock-bind",
-    "//sdk/banjo/fuchsia.hardware.clock",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.clockimpl",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

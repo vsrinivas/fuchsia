@@ -91,7 +91,7 @@ template("sherlock_driver") {
     deps = [
       ":luis-bind",
       ":sherlock-bind",
-      "//sdk/banjo/fuchsia.hardware.clock",
+      "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.clockimpl",
       "//sdk/banjo/fuchsia.hardware.gpio",
       "//sdk/banjo/fuchsia.hardware.gpioimpl",

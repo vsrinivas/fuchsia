@@ -21,7 +21,7 @@ driver_module("as370-tdm-output") {
   sources = [ "audio-stream-out.cc" ]
   deps = [
     ":as370_audio_out_bind",
-    "//sdk/banjo/fuchsia.hardware.clock",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.shareddma",
     "//src/devices/bus/lib/device-protocol-pdev",

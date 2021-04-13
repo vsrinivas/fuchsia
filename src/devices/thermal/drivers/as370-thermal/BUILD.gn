@@ -23,7 +23,7 @@ driver_module("as370-thermal") {
   sources = [ "as370-thermal.cc" ]
   deps = [
     ":as370-thermal-bind",
-    "//sdk/banjo/fuchsia.hardware.clock",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.power",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
@@ -50,8 +50,8 @@ test("as370-thermal-test-bin") {
   ]
   deps = [
     ":as370-thermal-bind",
-    "//sdk/banjo/fuchsia.hardware.clock",
-    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_mock",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp_mock",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.power",
     "//sdk/banjo/fuchsia.hardware.power:fuchsia.hardware.power_mock",
