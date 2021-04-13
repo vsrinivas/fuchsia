@@ -35,9 +35,8 @@ impl<'a> BuildPrereqs<'a> {
         // Ensure on a debian-flavor distribution.
         let (dpkg_status, _, __) = (self.command_runner)(&vec!["which", "dpkg"])?;
         if !dpkg_status.success() {
-            return Ok(PreflightCheckResult::Failure(
-                "Non-Debian linux distributions are not supported".to_string(),
-                None,
+            return Ok(PreflightCheckResult::Warning(
+                "Non-Debian linux distributions are not officially supported. Other preflight checks may or may not work, but you can continue on if you're adventurous".to_string()
             ));
         }
 
@@ -205,7 +204,7 @@ mod test {
 
         let check = BuildPrereqs::new(&run_command);
         let response = check.run(&PreflightConfig { system: OperatingSystem::Linux }).await;
-        assert!(matches!(response?, PreflightCheckResult::Failure(..)));
+        assert!(matches!(response?, PreflightCheckResult::Warning(..)));
         Ok(())
     }
 
