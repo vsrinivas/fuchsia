@@ -21,6 +21,11 @@
 #include "src/virtualization/bin/vmm/device/virtio_magma_generic.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 
+struct ImageInfoWithToken {
+  magma_image_info_t info;
+  zx::eventpair token;
+};
+
 class VirtioMagma : public VirtioMagmaGeneric,
                     public DeviceBase<VirtioMagma>,
                     public fuchsia::virtualization::hardware::VirtioMagma {
@@ -75,7 +80,7 @@ class VirtioMagma : public VirtioMagmaGeneric,
   std::unordered_multimap<zx_koid_t, std::pair<zx_vaddr_t, size_t>> buffer_maps_;
 
   // Each connection maps images to info, populated either when image is created or imported
-  using ImageMap = std::unordered_map<magma_buffer_t, magma_image_info_t>;
+  using ImageMap = std::unordered_map<magma_buffer_t, ImageInfoWithToken>;
   std::unordered_map<magma_connection_t, ImageMap> connection_image_map_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VirtioMagma);

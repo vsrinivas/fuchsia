@@ -80,8 +80,8 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
     // Returns ZX_ERR_NOT_SUPPORTED if duplication is not supported.
     virtual zx_status_t Duplicate(zx::handle* handle) { return ZX_ERR_NOT_SUPPORTED; }
 
-    // Returns the VirtioImage associated with this VFD.
-    virtual VirtioWl::VirtioImage* GetImage() { return nullptr; }
+    // Creates a duplicate VirtioImage.
+    virtual std::unique_ptr<VirtioWl::VirtioImage> DuplicateImage() { return nullptr; }
   };
 
   explicit VirtioWl(sys::ComponentContext* context);

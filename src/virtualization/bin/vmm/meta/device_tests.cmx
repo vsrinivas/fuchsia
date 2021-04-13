@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.scenic.allocation.Allocator"
+            ]
+        }
+    },
     "include": [
         "sdk/lib/diagnostics/syslog/client.shard.cmx",
         "src/lib/vulkan/test-application.shard.cmx"
@@ -11,6 +18,7 @@
             "isolated-temp"
         ],
         "services": [
+            "fuchsia.scenic.allocation.Allocator",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]

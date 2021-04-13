@@ -17,6 +17,7 @@ constexpr uint32_t kFormat = DRM_FORMAT_ARGB8888;
 TEST_F(MagmaImageTesting, SpecifyLinear) {
   uint32_t physical_device_index = 0;
   zx::vmo buffer;
+  zx::eventpair token;
 
   magma_image_create_info_t create_info = {
       .drm_format = kFormat,
@@ -27,17 +28,19 @@ TEST_F(MagmaImageTesting, SpecifyLinear) {
   };
 
   magma_image_info_t image_info = {};
-  ASSERT_EQ(MAGMA_STATUS_OK,
-            magma_image::CreateDrmImage(physical_device_index, &create_info, &image_info, &buffer));
+  ASSERT_EQ(MAGMA_STATUS_OK, magma_image::CreateDrmImage(physical_device_index, &create_info,
+                                                         &image_info, &buffer, &token));
 
   EXPECT_EQ(DRM_FORMAT_MOD_LINEAR, image_info.drm_format_modifier);
   EXPECT_EQ(kWidth * 4u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
+  EXPECT_FALSE(token);
 }
 
 TEST_F(MagmaImageTesting, SpecifyIntelX) {
   uint32_t physical_device_index = 0;
   zx::vmo buffer;
+  zx::eventpair token;
 
   magma_image_create_info_t create_info = {
       .drm_format = kFormat,
@@ -48,17 +51,19 @@ TEST_F(MagmaImageTesting, SpecifyIntelX) {
   };
 
   magma_image_info_t image_info = {};
-  ASSERT_EQ(MAGMA_STATUS_OK,
-            magma_image::CreateDrmImage(physical_device_index, &create_info, &image_info, &buffer));
+  ASSERT_EQ(MAGMA_STATUS_OK, magma_image::CreateDrmImage(physical_device_index, &create_info,
+                                                         &image_info, &buffer, &token));
 
   EXPECT_EQ(I915_FORMAT_MOD_X_TILED, image_info.drm_format_modifier);
   EXPECT_EQ(0u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
+  EXPECT_FALSE(token);
 }
 
 TEST_F(MagmaImageTesting, SpecifyIntelY) {
   uint32_t physical_device_index = 0;
   zx::vmo buffer;
+  zx::eventpair token;
 
   magma_image_create_info_t create_info = {
       .drm_format = kFormat,
@@ -69,17 +74,19 @@ TEST_F(MagmaImageTesting, SpecifyIntelY) {
   };
 
   magma_image_info_t image_info = {};
-  ASSERT_EQ(MAGMA_STATUS_OK,
-            magma_image::CreateDrmImage(physical_device_index, &create_info, &image_info, &buffer));
+  ASSERT_EQ(MAGMA_STATUS_OK, magma_image::CreateDrmImage(physical_device_index, &create_info,
+                                                         &image_info, &buffer, &token));
 
   EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, image_info.drm_format_modifier);
   EXPECT_EQ(0u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
+  EXPECT_FALSE(token);
 }
 
 TEST_F(MagmaImageTesting, SpecifyIntelYf) {
   uint32_t physical_device_index = 0;
   zx::vmo buffer;
+  zx::eventpair token;
 
   magma_image_create_info_t create_info = {
       .drm_format = kFormat,
@@ -91,12 +98,15 @@ TEST_F(MagmaImageTesting, SpecifyIntelYf) {
 
   magma_image_info_t image_info = {};
   ASSERT_EQ(MAGMA_STATUS_INVALID_ARGS,
-            magma_image::CreateDrmImage(physical_device_index, &create_info, &image_info, &buffer));
+            magma_image::CreateDrmImage(physical_device_index, &create_info, &image_info, &buffer,
+                                        &token));
+  EXPECT_FALSE(token);
 }
 
 TEST_F(MagmaImageTesting, IntelMany) {
   uint32_t physical_device_index = 0;
   zx::vmo buffer;
+  zx::eventpair token;
 
   magma_image_create_info_t create_info = {
       .drm_format = kFormat,
@@ -109,18 +119,20 @@ TEST_F(MagmaImageTesting, IntelMany) {
   };
 
   magma_image_info_t image_info = {};
-  ASSERT_EQ(MAGMA_STATUS_OK,
-            magma_image::CreateDrmImage(physical_device_index, &create_info, &image_info, &buffer));
+  ASSERT_EQ(MAGMA_STATUS_OK, magma_image::CreateDrmImage(physical_device_index, &create_info,
+                                                         &image_info, &buffer, &token));
 
   EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, image_info.drm_format_modifier);
   EXPECT_EQ(0u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
+  EXPECT_FALSE(token);
 }
 
 TEST_F(MagmaImageTesting, IntelNone) {
   uint32_t physical_device_index = 0;
   magma_image_info_t image_info = {};
   zx::vmo buffer;
+  zx::eventpair token;
 
   magma_image_create_info_t create_info = {
       .drm_format = kFormat,
@@ -130,18 +142,20 @@ TEST_F(MagmaImageTesting, IntelNone) {
       .flags = 0,
   };
 
-  ASSERT_EQ(MAGMA_STATUS_OK,
-            magma_image::CreateDrmImage(physical_device_index, &create_info, &image_info, &buffer));
+  ASSERT_EQ(MAGMA_STATUS_OK, magma_image::CreateDrmImage(physical_device_index, &create_info,
+                                                         &image_info, &buffer, &token));
 
   EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, image_info.drm_format_modifier);
   EXPECT_EQ(0u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
+  EXPECT_FALSE(token);
 }
 
 TEST_F(MagmaImageTesting, IntelNonePresentable) {
   uint32_t physical_device_index = 0;
   magma_image_info_t image_info = {};
   zx::vmo buffer;
+  zx::eventpair token;
 
   magma_image_create_info_t create_info = {
       .drm_format = kFormat,
@@ -151,11 +165,12 @@ TEST_F(MagmaImageTesting, IntelNonePresentable) {
       .flags = MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE,
   };
 
-  ASSERT_EQ(MAGMA_STATUS_OK,
-            magma_image::CreateDrmImage(physical_device_index, &create_info, &image_info, &buffer));
+  ASSERT_EQ(MAGMA_STATUS_OK, magma_image::CreateDrmImage(physical_device_index, &create_info,
+                                                         &image_info, &buffer, &token));
 
   if (image_info.drm_format_modifier != I915_FORMAT_MOD_Y_TILED)
     EXPECT_EQ(image_info.drm_format_modifier, I915_FORMAT_MOD_X_TILED);
   EXPECT_EQ(0u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
+  EXPECT_TRUE(token);
 }

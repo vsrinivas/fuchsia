@@ -5,8 +5,10 @@
 #include "src/graphics/lib/magma/include/virtio/virtio_magma.h"
 
 #include <drm_fourcc.h>
+#include <fuchsia/scenic/allocation/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/socket.h>
 #include <string.h>
 
@@ -57,12 +59,70 @@ class WaylandImporterMock : public fuchsia::virtualization::hardware::VirtioWayl
   std::unique_ptr<VirtioImage> image_;
 };
 
+class ScenicAllocatorFake : public fuchsia::scenic::allocation::Allocator {
+ public:
+  // Must set constraints on the given buffer collection token to allow the constraints
+  // negotiation to complete.
+  void RegisterBufferCollection(
+      fuchsia::scenic::allocation::BufferCollectionExportToken export_token,
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> scenic_token,
+      RegisterBufferCollectionCallback callback) override {
+    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
+    auto context = sys::ComponentContext::Create();
+    context->svc()->Connect(sysmem_allocator.NewRequest());
+
+    fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+    zx_status_t status = sysmem_allocator->BindSharedCollection(std::move(scenic_token),
+                                                                buffer_collection.NewRequest());
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "BindSharedCollection failed: " << status;
+      callback(
+          fit::error(fuchsia::scenic::allocation::RegisterBufferCollectionError::BAD_OPERATION));
+      return;
+    }
+
+    fuchsia::sysmem::BufferCollectionConstraints constraints;
+    constraints.min_buffer_count = 1;
+    constraints.usage.cpu =
+        fuchsia::sysmem::cpuUsageReadOften | fuchsia::sysmem::cpuUsageWriteOften;
+    constraints.has_buffer_memory_constraints = true;
+    constraints.image_format_constraints_count = 1;
+    fuchsia::sysmem::ImageFormatConstraints& image_constraints =
+        constraints.image_format_constraints[0];
+    image_constraints = fuchsia::sysmem::ImageFormatConstraints();
+    image_constraints.min_coded_width = 0;
+    image_constraints.min_coded_height = 0;
+    image_constraints.max_coded_width = 0;
+    image_constraints.max_coded_height = 0;
+    image_constraints.min_bytes_per_row = 0;
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
+    image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+    image_constraints.pixel_format.has_format_modifier = false;
+
+    status = buffer_collection->SetConstraints(true, constraints);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "SetConstraints failed: " << status;
+      callback(
+          fit::error(fuchsia::scenic::allocation::RegisterBufferCollectionError::BAD_OPERATION));
+      return;
+    }
+
+    buffer_collection->Close();
+
+    callback(fit::ok());
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
 class VirtioMagmaTest : public TestWithDevice {
  public:
   VirtioMagmaTest()
       : out_queue_(phys_mem_, kDescriptorSize, kQueueSize),
         wayland_importer_mock_binding_(&wayland_importer_mock_),
-        wayland_importer_mock_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+        wayland_importer_mock_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        scenic_allocator_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() override {
     uintptr_t vmar_addr;
@@ -76,12 +136,18 @@ class VirtioMagmaTest : public TestWithDevice {
       std::unique_ptr<sys::testing::EnvironmentServices> env_services = CreateServices();
       env_services->AllowParentService("fuchsia.vulkan.loader.Loader");
       env_services->AllowParentService("fuchsia.sysmem.Allocator");
+
+      ASSERT_EQ(ZX_OK, env_services->AddService(scenic_allocator_binding_set_.GetHandler(
+                           &scenic_allocator_fake_, scenic_allocator_loop_.dispatcher())));
+
       ASSERT_EQ(ZX_OK, LaunchDevice(kVirtioMagmaUrl, out_queue_.end(), &start_info,
                                     std::move(env_services)));
     }
 
     // Start device execution.
     ASSERT_EQ(wayland_importer_mock_loop_.StartThread(), ZX_OK);
+    ASSERT_EQ(scenic_allocator_loop_.StartThread(), ZX_OK);
+
     services_->Connect(magma_.NewRequest());
 
     {
@@ -263,6 +329,8 @@ class VirtioMagmaTest : public TestWithDevice {
         .drm_format_modifiers = {DRM_FORMAT_MOD_INVALID},
         .width = 1920,
         .height = 1080,
+        // Presentable causes VirtioMagma to register buffer collection with scenic
+        .flags = MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE,
     };
 
     std::vector<uint8_t> request_buffer(sizeof(request) + sizeof(create_image));
@@ -299,6 +367,9 @@ class VirtioMagmaTest : public TestWithDevice {
   fidl::Binding<fuchsia::virtualization::hardware::VirtioWaylandImporter>
       wayland_importer_mock_binding_;
   async::Loop wayland_importer_mock_loop_;
+  ScenicAllocatorFake scenic_allocator_fake_;
+  async::Loop scenic_allocator_loop_;
+  fidl::BindingSet<fuchsia::scenic::allocation::Allocator> scenic_allocator_binding_set_;
 };
 
 TEST_F(VirtioMagmaTest, HandleQuery) {

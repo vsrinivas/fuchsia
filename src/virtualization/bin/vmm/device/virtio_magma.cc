@@ -32,6 +32,31 @@ static constexpr const char* kDeviceDir = "/dev/class/gpu";
 #define LOG_VERBOSE(msg, ...)
 #endif
 
+static zx_status_t InitFromImageInfo(zx::vmo vmo, ImageInfoWithToken& info,
+                                     fuchsia::virtualization::hardware::VirtioImage* image) {
+  if (info.token) {
+    zx_status_t status = info.token.duplicate(ZX_RIGHT_SAME_RIGHTS, &image->token);
+    if (status != ZX_OK)
+      return status;
+  }
+
+  image->vmo = std::move(vmo);
+
+  image->info.resize(sizeof(magma_image_info_t));
+  memcpy(image->info.data(), &info.info, sizeof(magma_image_info_t));
+
+  return ZX_OK;
+}
+
+static void InitFromVirtioImage(fuchsia::virtualization::hardware::VirtioImage& image, zx::vmo* vmo,
+                                ImageInfoWithToken* info) {
+  *vmo = std::move(image.vmo);
+  info->token = std::move(image.token);
+
+  assert(image.info.size() >= sizeof(magma_image_info_t));
+  memcpy(&info->info, image.info.data(), sizeof(magma_image_info_t));
+}
+
 VirtioMagma::VirtioMagma(sys::ComponentContext* context) : DeviceBase(context) {}
 
 void VirtioMagma::Start(
@@ -259,21 +284,25 @@ zx_status_t VirtioMagma::Handle_export(const virtio_magma_export_ctrl_t* request
       return ZX_OK;
     }
 
-    magma_image_info_t& info = iter->second;
+    ImageInfoWithToken& info = iter->second;
 
-    image.info.resize(sizeof(magma_image_info_t));
+    // Get the VMO handle for this buffer.
+    zx_status_t status = VirtioMagmaGeneric::Handle_export(request, response);
+    if (status != ZX_OK) {
+      LOG_VERBOSE("VirtioMagmaGeneric::Handle_export failed: %d", status);
+      return status;
+    }
 
-    memcpy(image.info.data(), &info, sizeof(info));
+    // Take ownership of the VMO handle.
+    zx::vmo vmo(static_cast<zx_handle_t>(response->buffer_handle_out));
+    response->buffer_handle_out = 0;
+
+    status = InitFromImageInfo(std::move(vmo), info, &image);
+    if (status != ZX_OK) {
+      LOG_VERBOSE("InitFromImageInfo failed: %d", status);
+      return status;
+    }
   }
-
-  // Get the VMO handle for this buffer.
-  zx_status_t status = VirtioMagmaGeneric::Handle_export(request, response);
-  if (status != ZX_OK)
-    return status;
-
-  // Take ownership of the VMO handle.
-  image.vmo = zx::vmo(static_cast<zx_handle_t>(response->buffer_handle_out));
-  response->buffer_handle_out = 0;
 
   // TODO(fxbug.dev/13261): improvement backlog
   // Perform a blocking import of the image, then return the VFD ID in the response.
@@ -282,9 +311,11 @@ zx_status_t VirtioMagma::Handle_export(const virtio_magma_export_ctrl_t* request
   // return it only when the Import call returns, processing messages from other
   // instances, or even other connections, in the meantime.
   uint32_t vfd_id;
-  status = wayland_importer_->ImportImage(std::move(image), &vfd_id);
-  if (status != ZX_OK)
+  zx_status_t status = wayland_importer_->ImportImage(std::move(image), &vfd_id);
+  if (status != ZX_OK) {
+    LOG_VERBOSE("ImportImage failed: %d", status);
     return status;
+  }
 
   response->buffer_handle_out = vfd_id;
 
@@ -317,9 +348,14 @@ zx_status_t VirtioMagma::Handle_import(const virtio_magma_import_ctrl_t* request
     return result;
   }
 
+  ImageInfoWithToken info;
+  zx::vmo vmo;
+
+  InitFromVirtioImage(*image.get(), &vmo, &info);
+
   {
     virtio_magma_import_ctrl_t request_copy = *request;
-    request_copy.buffer_handle = image->vmo.release();
+    request_copy.buffer_handle = vmo.release();
 
     status = VirtioMagmaGeneric::Handle_import(&request_copy, response);
     if (status != ZX_OK)
@@ -330,13 +366,8 @@ zx_status_t VirtioMagma::Handle_import(const virtio_magma_import_ctrl_t* request
     auto& image_map =
         connection_image_map_[reinterpret_cast<magma_connection_t>(request->connection)];
 
-    magma_image_info_t info;
-    assert(image->info.size() >= sizeof(info));
-
-    memcpy(&info, image->info.data(), sizeof(info));
-
     magma_buffer_t image = response->buffer_out;
-    image_map[image] = info;
+    image_map[image] = std::move(info);
   }
 
   return ZX_OK;
@@ -369,14 +400,14 @@ zx_status_t VirtioMagma::Handle_virt_create_image(
   memcpy(&image_create_info, reinterpret_cast<const magma_image_create_info_t*>(request + 1),
          sizeof(image_create_info));
 
-  magma_image_info_t image_info;
+  ImageInfoWithToken image_info;
   zx::vmo vmo;
 
   response->hdr.type = VIRTIO_MAGMA_RESP_VIRT_CREATE_IMAGE;
   // Assuming the current connection is on the one and only physical device.
   uint32_t physical_device_index = 0;
-  response->result_return =
-      magma_image::CreateDrmImage(physical_device_index, &image_create_info, &image_info, &vmo);
+  response->result_return = magma_image::CreateDrmImage(physical_device_index, &image_create_info,
+                                                        &image_info.info, &vmo, &image_info.token);
 
   if (response->result_return != MAGMA_STATUS_OK)
     return ZX_OK;
@@ -396,7 +427,7 @@ zx_status_t VirtioMagma::Handle_virt_create_image(
 
   auto& map = connection_image_map_[connection];
 
-  map[response->image_out] = image_info;
+  map[response->image_out] = std::move(image_info);
 
   return ZX_OK;
 }
@@ -416,9 +447,11 @@ zx_status_t VirtioMagma::Handle_virt_get_image_info(
     return ZX_OK;
   }
 
+  ImageInfoWithToken& image_info = iter->second;
+
   auto image_info_out = reinterpret_cast<magma_image_info_t*>(
       const_cast<virtio_magma_virt_get_image_info_ctrl_t*>(request) + 1);
-  *image_info_out = iter->second;
+  *image_info_out = image_info.info;
 
   response->result_return = MAGMA_STATUS_OK;
   return ZX_OK;

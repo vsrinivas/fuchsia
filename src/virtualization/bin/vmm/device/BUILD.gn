@@ -182,6 +182,7 @@ source_set("magma_image") {
     "magma_image.h",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.scenic.allocation:fuchsia.scenic.allocation_llcpp",
     "//sdk/fidl/fuchsia.sysmem",
     "//src/graphics/lib/magma/include:magma_abi",
     "//src/lib/fsl",

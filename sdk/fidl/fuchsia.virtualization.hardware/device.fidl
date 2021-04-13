@@ -171,6 +171,7 @@ const uint32 VIRTIO_WAYLAND_MAX_IMAGE_INFO_SIZE = 128;
 /// opaque image info needed by VirtioMagma.
 resource struct VirtioImage {
     zx.handle:VMO vmo;
+    zx.handle:EVENTPAIR? token;
     bytes:VIRTIO_WAYLAND_MAX_IMAGE_INFO_SIZE info;
 };
 

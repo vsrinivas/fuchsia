@@ -4,6 +4,7 @@
 
 #include "magma_image.h"
 
+#include <fuchsia/scenic/allocation/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
@@ -67,6 +68,7 @@ class VulkanImageCreator {
  public:
   vk::Result InitVulkan(uint32_t physical_device_index);
   zx_status_t InitSysmem();
+  zx_status_t InitScenic();
 
   vk::PhysicalDeviceLimits GetPhysicalDeviceLimits();
 
@@ -76,18 +78,24 @@ class VulkanImageCreator {
                               std::vector<uint64_t>& modifiers);
 
   zx_status_t GetImageInfo(uint32_t width, uint32_t height, zx::vmo* vmo_out,
-                           magma_image_info_t* image_info_out);
+                           zx::eventpair* token_out, magma_image_info_t* image_info_out);
+
+  // Scenic is used if client asks for presentable images.
+  bool use_scenic() { return scenic_allocator_.client_end().is_valid(); }
 
  private:
   vk::DispatchLoaderDynamic loader_;
   vk::UniqueInstance instance_;
   vk::PhysicalDevice physical_device_;
   vk::UniqueDevice device_;
+  fidl::WireSyncClient<fuchsia_scenic_allocation::Allocator> scenic_allocator_;
   fidl::WireSyncClient<fuchsia_sysmem::Allocator> sysmem_allocator_;
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> local_token_;
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> vulkan_token_;
+  fidl::ClientEnd<fuchsia_sysmem::BufferCollectionToken> scenic_token_endpoint_;
   std::shared_ptr<AsyncHandler> async_handler_;
   fidl::Client<fuchsia_sysmem::BufferCollection> collection_;
+  fuchsia_scenic_allocation::wire::BufferCollectionImportToken scenic_import_token_;
 };
 
 vk::Result VulkanImageCreator::InitVulkan(uint32_t physical_device_index) {
@@ -175,13 +183,7 @@ vk::Result VulkanImageCreator::InitVulkan(uint32_t physical_device_index) {
 
 zx_status_t VulkanImageCreator::InitSysmem() {
   {
-    auto client_end_directory = service::OpenServiceRoot();
-    if (!client_end_directory.is_ok()) {
-      LOG_VERBOSE("Failed to open service root: %d", client_end_directory.status_value());
-      return client_end_directory.status_value();
-    }
-
-    auto client_end = service::ConnectAt<fuchsia_sysmem::Allocator>(*client_end_directory);
+    auto client_end = service::Connect<fuchsia_sysmem::Allocator>();
     if (!client_end.is_ok()) {
       LOG_VERBOSE("Failed to connect to sysmem allocator: %d", client_end.status_value());
       return client_end.status_value();
@@ -210,6 +212,23 @@ zx_status_t VulkanImageCreator::InitSysmem() {
         fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken>(std::move(endpoints->client));
   }
 
+  if (use_scenic()) {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+    if (!endpoints.is_ok()) {
+      LOG_VERBOSE("Failed to create endpoints: %d", endpoints.status_value());
+      return endpoints.status_value();
+    }
+
+    constexpr uint32_t kNoRightsAttentuation = ~0;
+    auto result = local_token_.Duplicate(kNoRightsAttentuation, std::move(endpoints->server));
+    if (!result.ok()) {
+      LOG_VERBOSE("Failed to duplicate token: %d", result.status());
+      return result.status();
+    }
+
+    scenic_token_endpoint_ = std::move(endpoints->client);
+  }
+
   {
     auto endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
     if (!endpoints.is_ok()) {
@@ -229,12 +248,26 @@ zx_status_t VulkanImageCreator::InitSysmem() {
   }
 
   {
-    auto result = vulkan_token_.Sync();
+    // Sync the local token that was used for Duplicating
+    auto result = local_token_.Sync();
     if (!result.ok()) {
       LOG_VERBOSE("Failed to sync token: %d", result.status());
       return result.status();
     }
   }
+
+  return ZX_OK;
+}
+
+zx_status_t VulkanImageCreator::InitScenic() {
+  auto client_end = service::Connect<fuchsia_scenic_allocation::Allocator>();
+  if (!client_end.is_ok()) {
+    LOG_VERBOSE("Failed to connect to scenic allocator: %d", client_end.status_value());
+    return client_end.status_value();
+  }
+
+  scenic_allocator_ =
+      fidl::WireSyncClient<fuchsia_scenic_allocation::Allocator>(std::move(*client_end));
 
   return ZX_OK;
 }
@@ -252,6 +285,29 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
                                                 std::vector<uint64_t>& modifiers) {
   assert(device_);
 
+  if (use_scenic()) {
+    fuchsia_scenic_allocation::wire::BufferCollectionExportToken export_token;
+
+    zx_status_t status = zx::eventpair::create(0, &export_token.value, &scenic_import_token_.value);
+    if (status != ZX_OK) {
+      LOG_VERBOSE("zx::eventpair::create failed: %d", status);
+      return vk::Result::eErrorInitializationFailed;
+    }
+
+    auto result = scenic_allocator_.RegisterBufferCollection(std::move(export_token),
+                                                             std::move(scenic_token_endpoint_));
+    if (!result.ok()) {
+      LOG_VERBOSE("RegisterBufferCollection returned %d", result.status());
+      return vk::Result::eErrorInitializationFailed;
+    }
+
+    if (result->result.is_err()) {
+      LOG_VERBOSE("RegisterBufferCollection is_err()");
+      return vk::Result::eErrorInitializationFailed;
+    }
+  }
+
+  // Set vulkan constraints.
   vk::UniqueHandle<vk::BufferCollectionFUCHSIA, vk::DispatchLoaderDynamic> vk_collection;
 
   {
@@ -285,6 +341,7 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
     }
   }
 
+  // Set local constraints.
   async_handler_ = std::make_shared<AsyncHandler>();
 
   {
@@ -342,6 +399,7 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
 }
 
 zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx::vmo* vmo_out,
+                                             zx::eventpair* token_out,
                                              magma_image_info_t* image_info_out) {
   auto result = collection_->WaitForBuffersAllocated_Sync();
 
@@ -353,6 +411,8 @@ zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx
     LOG_VERBOSE("Unbind: reason %d status %d", unbind_info->reason, unbind_info->status);
     return unbind_info->status;
   }
+
+  collection_->Close();
 
   // Run the loop to ensure local unbind completes and async_handler_ is freed
   collection_.Unbind();
@@ -419,6 +479,7 @@ zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx
   }
 
   *vmo_out = std::move(collection_info.buffers[0].vmo);
+  *token_out = std::move(scenic_import_token_.value);
 
   return ZX_OK;
 }
@@ -489,7 +550,8 @@ namespace magma_image {
 
 magma_status_t CreateDrmImage(uint32_t physical_device_index,
                               const magma_image_create_info_t* create_info,
-                              magma_image_info_t* image_info_out, zx::vmo* vmo_out) {
+                              magma_image_info_t* image_info_out, zx::vmo* vmo_out,
+                              zx::eventpair* token_out) {
   assert(create_info);
   assert(image_info_out);
   assert(vmo_out);
@@ -557,6 +619,14 @@ magma_status_t CreateDrmImage(uint32_t physical_device_index,
     }
   }
 
+  if (create_info->flags & MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE) {
+    zx_status_t status = image_creator.InitScenic();
+    if (status != ZX_OK) {
+      LOG_VERBOSE("Failed to initialize scenic: %d", status);
+      return MAGMA_STATUS_INTERNAL_ERROR;
+    }
+  }
+
   zx_status_t status = image_creator.InitSysmem();
   if (status != ZX_OK) {
     LOG_VERBOSE("Failed to initialize sysmem: %d", status);
@@ -585,8 +655,8 @@ magma_status_t CreateDrmImage(uint32_t physical_device_index,
     return MagmaStatus(result);
   }
 
-  status =
-      image_creator.GetImageInfo(create_info->width, create_info->height, vmo_out, image_info_out);
+  status = image_creator.GetImageInfo(create_info->width, create_info->height, vmo_out, token_out,
+                                      image_info_out);
   if (status != ZX_OK) {
     LOG_VERBOSE("GetImageInfo failed: %d", status);
     if (status == ZX_ERR_NOT_SUPPORTED)
