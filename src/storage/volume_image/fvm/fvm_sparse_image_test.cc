@@ -1697,45 +1697,18 @@ TEST(FvmSparseReadImageTest, NullReaderIsError) {
   ASSERT_TRUE(FvmSparseReadImage(0, nullptr).is_error());
 }
 
-TEST(FvmSparseReadImageTest, CompressedImageIsError) {
-  SerializedImageContainer compressed_container;
-  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kLz4));
+void CheckGeneratedDescriptor(const FvmDescriptor& actual_descriptor,
+                              const FvmDescriptor& original_descriptor) {
+  EXPECT_EQ(actual_descriptor.options().slice_size, original_descriptor.options().slice_size);
+  EXPECT_EQ(actual_descriptor.options().max_volume_size,
+            original_descriptor.options().max_volume_size);
+  EXPECT_EQ(actual_descriptor.options().target_volume_size, std::nullopt);
+  EXPECT_EQ(actual_descriptor.options().compression.schema, CompressionSchema::kNone);
 
-  Lz4Compressor compressor = Lz4Compressor::Create(descriptor.options().compression).take_value();
-
-  // Write the compressed data that we will decompress later.
-  auto write_result = FvmSparseWriteImage(descriptor, &compressed_container.writer(), &compressor);
-  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
-
-  EXPECT_TRUE(FvmSparseReadImage(
-                  0, std::make_unique<BufferReader>(0, &compressed_container.serialized_image(),
-                                                    sizeof(SerializedSparseImage)))
-                  .is_error());
-}
-
-TEST(FvmSparseReadImageTest, ReturnsFvmDescriptorAndIsCorrect) {
-  SerializedImageContainer compressed_container;
-  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
-
-  // Write the compressed data that we will decompress later.
-  auto write_result = FvmSparseWriteImage(descriptor, &compressed_container.writer());
-  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
-
-  auto read_descriptor_or = FvmSparseReadImage(
-      0, std::make_unique<BufferReader>(0, &compressed_container.serialized_image(),
-                                        sizeof(SerializedSparseImage)));
-  EXPECT_TRUE(read_descriptor_or.is_ok());
-  auto read_descriptor = read_descriptor_or.take_value();
-
-  EXPECT_EQ(read_descriptor.options().slice_size, descriptor.options().slice_size);
-  EXPECT_EQ(read_descriptor.options().max_volume_size, descriptor.options().max_volume_size);
-  EXPECT_EQ(read_descriptor.options().target_volume_size, std::nullopt);
-  EXPECT_EQ(read_descriptor.options().compression.schema, CompressionSchema::kNone);
-
-  ASSERT_EQ(read_descriptor.partitions().size(), descriptor.partitions().size());
-  auto read_partition_it = read_descriptor.partitions().begin();
-  auto expected_partition_it = descriptor.partitions().begin();
-  for (size_t i = 0; i < read_descriptor.partitions().size(); ++i) {
+  ASSERT_EQ(actual_descriptor.partitions().size(), original_descriptor.partitions().size());
+  auto read_partition_it = actual_descriptor.partitions().begin();
+  auto expected_partition_it = original_descriptor.partitions().begin();
+  for (size_t i = 0; i < actual_descriptor.partitions().size(); ++i) {
     const auto& actual_partition = *(read_partition_it);
     const auto& expected_partition = *(expected_partition_it);
 
@@ -1772,9 +1745,13 @@ TEST(FvmSparseReadImageTest, ReturnsFvmDescriptorAndIsCorrect) {
       EXPECT_EQ(actual_mapping.size, expected_size);
 
       // Non compressed images will require zero filling.
-      ASSERT_EQ(actual_mapping.options.size(), 1u);
-      EXPECT_NE(actual_mapping.options.find(EnumAsString(AddressMapOption::kFill)),
-                actual_mapping.options.end());
+      if (original_descriptor.options().compression.schema == CompressionSchema::kNone) {
+        ASSERT_EQ(actual_mapping.options.size(), 1u);
+        EXPECT_NE(actual_mapping.options.find(EnumAsString(AddressMapOption::kFill)),
+                  actual_mapping.options.end());
+      } else {
+        ASSERT_EQ(actual_mapping.options.size(), 0u);
+      }
 
       actual_data.resize(actual_mapping.count, 0);
       expected_data.resize(expected_mapping.count, 0);
@@ -1792,6 +1769,42 @@ TEST(FvmSparseReadImageTest, ReturnsFvmDescriptorAndIsCorrect) {
     read_partition_it++;
     expected_partition_it++;
   }
+}
+
+TEST(FvmSparseReadImageTest, CompressedImageIsOk) {
+  SerializedImageContainer compressed_container;
+  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kLz4));
+
+  Lz4Compressor compressor = Lz4Compressor::Create(descriptor.options().compression).take_value();
+
+  // Write the compressed data that we will decompress later.
+  auto write_result = FvmSparseWriteImage(descriptor, &compressed_container.writer(), &compressor);
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+
+  auto read_descriptor_or = FvmSparseReadImage(
+      0, std::make_unique<BufferReader>(0, &compressed_container.serialized_image(),
+                                        sizeof(SerializedSparseImage)));
+  EXPECT_TRUE(read_descriptor_or.is_ok()) << read_descriptor_or.error();
+  auto read_descriptor = read_descriptor_or.take_value();
+
+  ASSERT_NO_FATAL_FAILURE(CheckGeneratedDescriptor(read_descriptor, descriptor));
+}
+
+TEST(FvmSparseReadImageTest, ReturnsFvmDescriptorAndIsCorrect) {
+  SerializedImageContainer compressed_container;
+  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+
+  // Write the compressed data that we will decompress later.
+  auto write_result = FvmSparseWriteImage(descriptor, &compressed_container.writer());
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+
+  auto read_descriptor_or = FvmSparseReadImage(
+      0, std::make_unique<BufferReader>(0, &compressed_container.serialized_image(),
+                                        sizeof(SerializedSparseImage)));
+  EXPECT_TRUE(read_descriptor_or.is_ok());
+  auto read_descriptor = read_descriptor_or.take_value();
+
+  ASSERT_NO_FATAL_FAILURE(CheckGeneratedDescriptor(read_descriptor, descriptor));
 }
 
 }  // namespace

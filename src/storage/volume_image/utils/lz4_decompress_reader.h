@@ -21,7 +21,7 @@ namespace storage::volume_image {
 class Lz4DecompressReader final : public Reader {
  public:
   // Default size for |StreamContext| buffers.
-  static constexpr uint64_t kMaxBufferSize = 20 * (1 << 10);
+  static constexpr uint64_t kMaxBufferSize = 2 * (1 << 20);
 
   // Lz4DecompressReader will decompress data starting at |offset|. That is the compressed data is
   // embedded in |compressed_reader| and the first compressed byte is at |offset|.

@@ -51,6 +51,7 @@ source_set("fvm-sparse-image") {
   deps = [
     "//src/storage/volume_image/utils:block-utils",
     "//src/storage/volume_image/utils:lz4-compression",
+    "//src/storage/volume_image/utils:lz4-decompress-reader",
   ]
 }
 

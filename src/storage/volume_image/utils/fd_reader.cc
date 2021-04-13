@@ -10,6 +10,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
 
 #include <fbl/span.h>
 #include <fbl/unique_fd.h>

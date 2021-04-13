@@ -25,6 +25,7 @@
 #include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/utils/block_utils.h"
 #include "src/storage/volume_image/utils/compressor.h"
+#include "src/storage/volume_image/utils/lz4_decompress_reader.h"
 #include "src/storage/volume_image/utils/lz4_decompressor.h"
 #include "src/storage/volume_image/volume_descriptor.h"
 
@@ -691,12 +692,6 @@ fit::result<FvmDescriptor, std::string> FvmSparseReadImage(uint64_t offset,
   }
   auto header = header_or.take_value();
 
-  if (fvm_sparse_internal::GetCompressionOptions(header).schema != CompressionSchema::kNone) {
-    return fit::error(
-        "FvmSparseReadImage only supports uncompressed images. Use FvmSparseDecompressImage "
-        "first.");
-  }
-
   // Get the partition entries.
   auto partition_entries_or =
       fvm_sparse_internal::GetPartitions(sizeof(fvm::SparseImage), *image_reader, header);
@@ -704,9 +699,16 @@ fit::result<FvmDescriptor, std::string> FvmSparseReadImage(uint64_t offset,
     return partition_entries_or.take_error_result();
   }
 
+  // This is the maximum offset allowed for the sparse image.
+  uint64_t total_image_size = header.header_length;
+  for (const auto& partition_entry : partition_entries_or.value()) {
+    for (const auto& extent : partition_entry.extents) {
+      total_image_size += extent.extent_length;
+    }
+  }
+
   // Get the matching options.
   FvmOptions options;
-
   options.slice_size = header.slice_size;
 
   if (header.maximum_disk_size != 0) {
@@ -717,7 +719,7 @@ fit::result<FvmDescriptor, std::string> FvmSparseReadImage(uint64_t offset,
   builder.SetOptions(options);
 
   // Generate the address map for each partition entry.
-  uint64_t imaged_extent_offset = header.header_length;
+  uint64_t image_extent_offset = header.header_length;
   for (auto& partition_entry : partition_entries_or.value()) {
     VolumeDescriptor volume_descriptor;
     AddressDescriptor address_descriptor;
@@ -753,10 +755,22 @@ fit::result<FvmDescriptor, std::string> FvmSparseReadImage(uint64_t offset,
       address_descriptor.mappings.push_back(mapping);
       accumulated_extent_offset += extent.extent_length;
     }
-    std::unique_ptr<SharedReader> partition_reader = std::make_unique<SharedReader>(
-        imaged_extent_offset, accumulated_extent_offset, image_reader);
 
-    imaged_extent_offset += accumulated_extent_offset;
+    // If the image is compressed wrap it with a Lz4DecompressReader.
+    std::shared_ptr<Reader> base_reader = image_reader;
+    if (fvm_sparse_internal::GetCompressionOptions(header).schema == CompressionSchema::kLz4) {
+      auto decompress_reader = std::make_shared<Lz4DecompressReader>(
+          header.header_length, total_image_size, image_reader);
+      if (auto result = decompress_reader->Initialize(); result.is_error()) {
+        return result.take_error_result();
+      }
+      base_reader = decompress_reader;
+    }
+
+    std::unique_ptr<SharedReader> partition_reader =
+        std::make_unique<SharedReader>(image_extent_offset, accumulated_extent_offset, base_reader);
+
+    image_extent_offset += accumulated_extent_offset;
 
     builder.AddPartition(
         Partition(volume_descriptor, address_descriptor, std::move(partition_reader)));
