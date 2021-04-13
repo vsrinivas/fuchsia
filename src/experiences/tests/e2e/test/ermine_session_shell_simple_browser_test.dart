@@ -16,6 +16,7 @@ const _timeoutTenSec = Duration(seconds: 10);
 const _sampleViewRect = Rectangle(100, 200, 100, 100);
 const testserverUrl =
     'fuchsia-pkg://fuchsia.com/ermine_testserver#meta/ermine_testserver.cmx';
+const skipTests = [false, true, true, true];
 
 void main() {
   Sl4f sl4f;
@@ -44,14 +45,16 @@ void main() {
     webDriverConnector = WebDriverConnector('runtime_deps/chromedriver', sl4f);
     await webDriverConnector.initialize();
 
-    // Starts hosting a local http website.
-    // ignore: unawaited_futures
-    ermine.component.launch(testserverUrl);
-    expect(await ermine.isRunning(testserverUrl), isTrue);
+    // Starts hosting a local http website if there's any test running.
+    if (skipTests.any((isSkipped) => !isSkipped)) {
+      // ignore: unawaited_futures
+      ermine.component.launch(testserverUrl);
+      expect(await ermine.isRunning(testserverUrl), isTrue);
+    }
   });
 
   tearDownAll(() async {
-    // Closes the test server.
+    // Closes the test server if there's any test running.
     // simple-browser is launched via [Component.launch()] since it does not
     // have a view. Therefore, it cannot be closed with ermine's flutter driver.
     // For this reason, we have to explicitly stop the http server to avoid
@@ -59,20 +62,23 @@ void main() {
     // running.
     // TODO(fxb/69291): Remove this workaround once we can properly close hidden
     // components
-    FlutterDriver browser = await ermine.launchAndWaitForSimpleBrowser();
-    const stopUrl = 'http://127.0.0.1:8080/stop';
-    await browser.requestData(stopUrl);
-    await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
-    await browser.waitFor(find.text(stopUrl), timeout: _timeoutTenSec);
-    expect(await ermine.isStopped(testserverUrl), isTrue);
-    print('Stopped the test server');
-    await browser.close();
+    if (skipTests.any((isSkipped) => !isSkipped)) {
+      FlutterDriver browser = await ermine.launchAndWaitForSimpleBrowser();
+      const stopUrl = 'http://127.0.0.1:8080/stop';
+      await browser.requestData(stopUrl);
+      await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
+      await browser.waitFor(find.text(stopUrl), timeout: _timeoutTenSec);
+      expect(await ermine.isStopped(testserverUrl), isTrue);
+      print('Stopped the test server');
+      await browser.close();
 
-    await ermine.driver.requestData('close');
-    await ermine.driver.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
-    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
-    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
-    print('Closed the browser');
+      await ermine.driver.requestData('close');
+      await ermine.driver
+          .waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
+      await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
+      expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
+      print('Closed the browser');
+    }
 
     await webDriverConnector?.tearDown();
     await ermine.tearDown();
@@ -187,19 +193,29 @@ void main() {
     print('Clicked the index.html link');
 
     // Goes back to next.html by tapping the BCK button (history navigation)
-    final back = find.byValueKey('back');
-    await browser.tap(back);
-    await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
-    await browser.waitForAbsent(indexTabFinder, timeout: _timeoutTenSec);
+    expect(
+      await _repeatActionWaitingForAbsent(browser, () async {
+        final back = find.byValueKey('back');
+        await browser.tap(back);
+      }, indexTabFinder),
+      isTrue,
+      reason: 'Failed to hit the BCK button.',
+    );
+
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(nextTabFinder), isNotNull);
     print('Hit BCK');
 
     // Goes forward to index.html by tapping the FWD button (history navigation)
-    final forward = find.byValueKey('forward');
-    await browser.tap(forward);
-    await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
-    await browser.waitForAbsent(nextTabFinder, timeout: _timeoutTenSec);
+    expect(
+      await _repeatActionWaitingForAbsent(browser, () async {
+        final forward = find.byValueKey('forward');
+        await browser.tap(forward);
+      }, nextTabFinder),
+      isTrue,
+      reason: 'Failed to hit the FWD button.',
+    );
+
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(indexTabFinder), isNotNull);
     print('Hit FWD');
@@ -247,7 +263,7 @@ void main() {
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     print('Closed the browser');
-  });
+  }, skip: skipTests[0]);
 
   test('Should be able to play videos on web pages.', () async {
     FlutterDriver browser;
@@ -285,7 +301,7 @@ void main() {
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     print('Closed the browser');
-  }, skip: true);
+  }, skip: skipTests[1]);
 
   test('Should be able to switch, rearrange, and close tabs', () async {
     FlutterDriver browser;
@@ -396,7 +412,7 @@ void main() {
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     await browser.close();
     print('Closed the browser');
-  }, skip: true);
+  }, skip: skipTests[2]);
 
   test('Should be able enter text into web text fields', () async {
     FlutterDriver browser;
@@ -440,6 +456,6 @@ void main() {
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     print('Closed the browser');
-  }, skip: true);
+  }, skip: skipTests[3]);
   // TODO(fxb/68716): Test audio playing
 }
