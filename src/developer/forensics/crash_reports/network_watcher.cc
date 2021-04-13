@@ -10,9 +10,9 @@
 namespace forensics::crash_reports {
 
 NetworkWatcher::NetworkWatcher(async_dispatcher_t* dispatcher,
-                               std::shared_ptr<sys::ServiceDirectory> services) {
+                               const sys::ServiceDirectory& services) {
   fuchsia::net::interfaces::StatePtr state;
-  zx_status_t status = services->Connect(state.NewRequest(dispatcher));
+  zx_status_t status = services.Connect(state.NewRequest(dispatcher));
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to connect to " << fuchsia::net::interfaces::State::Name_
                             << "; cannot watch for network reachability status";

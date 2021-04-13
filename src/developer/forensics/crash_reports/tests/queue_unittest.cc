@@ -119,7 +119,7 @@ class TestReportingPolicyWatcher : public ReportingPolicyWatcher {
 
 class QueueTest : public UnitTestFixture {
  public:
-  QueueTest() : network_watcher_(dispatcher(), services()) {}
+  QueueTest() : network_watcher_(dispatcher(), *services()){};
 
   void SetUp() override {
     info_context_ =
@@ -141,7 +141,7 @@ class QueueTest : public UnitTestFixture {
     InjectServiceProvider(network_reachability_provider_.get());
   }
 
-  void SetUpQueue(std::vector<CrashServer::UploadStatus> upload_attempt_results =
+  void SetUpQueue(const std::vector<CrashServer::UploadStatus>& upload_attempt_results =
                       std::vector<CrashServer::UploadStatus>{}) {
     report_id_ = 1;
     snapshot_manager_ = std::make_unique<SnapshotManager>(
@@ -338,7 +338,7 @@ TEST_F(QueueTest, PeriodicUpload) {
   });
   reporting_policy_watcher_.Set(ReportingPolicy::kUndecided);
 
-  auto report_id = AddNewReport(/*is_hourly_upload=*/false);
+  auto report_id = AddNewReport(/*is_hourly_report=*/false);
   ASSERT_TRUE(report_id);
   EXPECT_TRUE(queue_->Contains(*report_id));
 
@@ -358,11 +358,11 @@ TEST_F(QueueTest, PeriodicUpload) {
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
               }));
 
-  report_id = AddNewReport(/*is_hourly_upload=*/false);
+  report_id = AddNewReport(/*is_hourly_report=*/false);
   ASSERT_TRUE(report_id);
   EXPECT_TRUE(queue_->Contains(*report_id));
 
-  const auto hourly_report_id = AddNewReport(/*is_hourly_upload=*/true);
+  const auto hourly_report_id = AddNewReport(/*is_hourly_report=*/true);
   ASSERT_TRUE(hourly_report_id);
   EXPECT_TRUE(queue_->Contains(*hourly_report_id));
 

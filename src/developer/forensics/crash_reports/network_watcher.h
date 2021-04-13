@@ -19,7 +19,7 @@ namespace forensics::crash_reports {
 // this occurs.
 class NetworkWatcher {
  public:
-  NetworkWatcher(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
+  NetworkWatcher(async_dispatcher_t* dispatcher, const sys::ServiceDirectory& services);
 
   // Register a callback to be called when the network reachability status changes.
   void Register(::fit::function<void(bool)> on_reachable);

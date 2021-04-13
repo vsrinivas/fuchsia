@@ -93,8 +93,8 @@ std::unique_ptr<ReportingPolicyWatcher> MakeReportingPolicyWatcher(
 }  // namespace
 
 std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context, Config config,
+    async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
+    timekeeper::Clock* clock, const std::shared_ptr<InfoContext>& info_context, Config config,
     AnnotationMap default_annotations, CrashRegister* crash_register) {
   std::unique_ptr<SnapshotManager> snapshot_manager = std::make_unique<SnapshotManager>(
       dispatcher, services, clock, kSnapshotSharedRequestWindow, kGarbageCollectedSnapshotsPath,
@@ -105,19 +105,17 @@ std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
   auto crash_server =
       std::make_unique<CrashServer>(services, kCrashServerUrl, snapshot_manager.get(), tags.get());
 
-  return std::unique_ptr<CrashReporter>(
-      new CrashReporter(dispatcher, std::move(services), clock, std::move(info_context),
-                        std::move(config), std::move(default_annotations), crash_register,
-                        std::move(tags), std::move(snapshot_manager), std::move(crash_server)));
+  return std::make_unique<CrashReporter>(
+      dispatcher, std::move(services), clock, std::move(info_context), config,
+      std::move(default_annotations), crash_register, std::move(tags), std::move(snapshot_manager),
+      std::move(crash_server));
 }
 
-CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
-                             std::shared_ptr<sys::ServiceDirectory> services,
-                             timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context,
-                             Config config, AnnotationMap default_annotations,
-                             CrashRegister* crash_register, std::unique_ptr<LogTags> tags,
-                             std::unique_ptr<SnapshotManager> snapshot_manager,
-                             std::unique_ptr<CrashServer> crash_server)
+CrashReporter::CrashReporter(
+    async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
+    timekeeper::Clock* clock, const std::shared_ptr<InfoContext>& info_context, Config config,
+    AnnotationMap default_annotations, CrashRegister* crash_register, std::unique_ptr<LogTags> tags,
+    std::unique_ptr<SnapshotManager> snapshot_manager, std::unique_ptr<CrashServer> crash_server)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       services_(services),
@@ -131,7 +129,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
              snapshot_manager_.get()),
       product_quotas_(dispatcher_, config.daily_per_product_quota),
       info_(info_context),
-      network_watcher_(dispatcher_, services_),
+      network_watcher_(dispatcher_, *services_),
       reporting_policy_watcher_(MakeReportingPolicyWatcher(dispatcher_, services, config)),
       device_id_provider_ptr_(dispatcher_, services_) {
   FX_CHECK(dispatcher_);
