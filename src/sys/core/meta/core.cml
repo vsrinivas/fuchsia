@@ -46,6 +46,10 @@
             url: "fuchsia-pkg://fuchsia.com/triage-detect#meta/triage-detect.cm",
         },
         {
+            name: "diagnostics-persistence",
+            url: "fuchsia-pkg://fuchsia.com/diagnostics-persistence#meta/diagnostics-persistence.cm",
+        },
+        {
             name: "http-client",
             url: "fuchsia-pkg://fuchsia.com/http-client#meta/http-client.cm",
         },
@@ -203,7 +207,7 @@
         {
             protocol: "fuchsia.ui.brightness.Control",
             from: "#brightness_manager",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
         },
         {
             protocol: "fuchsia.hardware.serial.NewDeviceProxy",
@@ -372,7 +376,10 @@
         {
             protocol: [ "fuchsia.diagnostics.FeedbackArchiveAccessor" ],
             from: "parent",
-            to: "#detect",
+            to: [
+                "#detect",
+                "#diagnostics-persistence",
+            ],
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],
@@ -386,6 +393,7 @@
                 "#detect",
                 "#device_settings",
                 "#dhcpd",
+                "#diagnostics-persistence",
                 "#font_provider",
                 "#http-client",
                 "#last_reboot",
@@ -492,6 +500,12 @@
             subdir: "sampler",
         },
         {
+            directory: "config-data",
+            from: "parent",
+            to: "#diagnostics-persistence",
+            subdir: "diagnostics-persistence",
+        },
+        {
             protocol: "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge",
             from: "#remote-diagnostics-bridge",
             to: "#remote-control",
@@ -539,20 +553,20 @@
         {
             storage: "data",
             from: "self",
-            to: [ "#brightness_manager" ],
+            to: "#brightness_manager",
         },
         {
             directory: "dev",
             from: "parent",
             as: "dev-backlight",
-            to: [ "#brightness_manager" ],
+            to: "#brightness_manager",
             subdir: "class/backlight",
         },
         {
             directory: "dev",
             from: "parent",
             as: "dev-input",
-            to: [ "#brightness_manager" ],
+            to: "#brightness_manager",
             subdir: "class/input",
         },
         {
@@ -820,12 +834,17 @@
         {
             protocol: "fuchsia.media.sounds.Player",
             from: "#soundplayer",
-            to: [ "#appmgr" ],
+            to: "#appmgr",
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: "#diagnostics-persistence",
         },
         {
             protocol: [ "fuchsia.media.Audio" ],
             from: "#appmgr",
-            to: [ "#soundplayer" ],
+            to: "#soundplayer",
             dependency: "weak_for_migration",
         },
         {
@@ -881,6 +900,10 @@
         {
             protocol: [ "fuchsia.diagnostics.internal.DetectController" ],
             from: "#detect",
+        },
+        {
+            protocol: [ "fuchsia.diagnostics.internal.PersistenceController" ],
+            from: "#diagnostics-persistence",
         },
         {
             protocol: [ "fuchsia.diagnostics.internal.LogStatsController" ],
