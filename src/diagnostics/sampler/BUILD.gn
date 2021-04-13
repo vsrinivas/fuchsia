@@ -79,6 +79,7 @@ lapis_configuration("production_lapis") {
     "config/fvm.json",
     "config/sysmem.json",
     "config/system-update-committer.json",
+    "config/connectivity-wlan.json",
   ]
 }
 
