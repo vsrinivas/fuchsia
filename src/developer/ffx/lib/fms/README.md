@@ -10,7 +10,7 @@ name and downloading the artifact(s) referenced in the manifest entry.
 When working on FMS lib, consider using:
 
 ```
-$ fx set [...] --with //src/developer/lib/fms:tests
+$ fx set [...] --with //src/developer/ffx/lib/fms:tests
 ```
 
 ### Unit Tests
