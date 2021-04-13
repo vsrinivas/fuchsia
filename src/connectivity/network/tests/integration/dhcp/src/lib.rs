@@ -466,6 +466,11 @@ async fn acquire_dhcp_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) 
 async fn acquire_dhcp_then_renew_with_dhcpd_bound_device<E: netemul::Endpoint>(
     name: &str,
 ) -> Result {
+    // TODO(https://fxbug.dev/74365): Reenable flaky test once underlying race is fixed.
+    // #[ignore] doesn't work with #[variants_test] so we have to employ the following hack.
+    if true {
+        return Ok(());
+    }
     let config = default_test_config().context("failed to create test config")?;
     let mut dhcp_parameters = config.dhcp_parameters();
     let () = dhcp_parameters.push(fidl_fuchsia_net_dhcp::Parameter::Lease(
