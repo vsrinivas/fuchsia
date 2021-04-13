@@ -5,7 +5,6 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_FILE_API_H_
 #define SRC_BRINGUP_BIN_NETSVC_FILE_API_H_
 
-#include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <zircon/boot/netboot.h>
 
 #include <tftp/tftp.h>
@@ -46,9 +45,7 @@ class FileApi : public FileApiInterface {
   // FileApi does *not* take ownership of |paver|.
   explicit FileApi(bool is_zedboot,
                    std::unique_ptr<NetCopyInterface> netcp = std::make_unique<NetCopy>(),
-                   fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo =
-                       fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo>({}),
-                   PaverInterface* paver = Paver::Get());
+                   zx::channel sysinfo = zx::channel(), PaverInterface* paver = Paver::Get());
 
   ssize_t OpenRead(const char* filename) final;
   tftp_status OpenWrite(const char* filename, size_t size) final;
@@ -80,7 +77,7 @@ class FileApi : public FileApiInterface {
   NetfileType type_ = NetfileType::kUnknown;
 
   // Use when type_ == NetfileType::kBoardName.
-  fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo_;
+  zx::channel sysinfo_;
 
   // Used when type_ == NetfileType::kNetCopy.
   std::unique_ptr<NetCopyInterface> netcp_;

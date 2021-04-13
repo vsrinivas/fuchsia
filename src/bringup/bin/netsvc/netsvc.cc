@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
 
   NetsvcArgs args;
   const char* error;
-  if (ParseArgs(argc, argv, caller.directory(), &error, &args) < 0) {
+  if (ParseArgs(argc, argv, *caller.channel(), &error, &args) < 0) {
     printf("netsvc: fatal error: %s\n", error);
     return -1;
   };

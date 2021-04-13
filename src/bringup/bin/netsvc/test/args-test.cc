@@ -5,7 +5,6 @@
 #include "src/bringup/bin/netsvc/args.h"
 
 #include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
@@ -52,20 +51,20 @@ class FakeSvc {
                              return ZX_OK;
                            }));
 
-    auto svc_remote = fidl::CreateEndpoints(&svc_local_);
-    ASSERT_OK(svc_remote.status_value());
+    zx::channel svc_remote;
+    ASSERT_OK(zx::channel::create(0, &svc_local_, &svc_remote));
 
-    vfs_.ServeDirectory(root_dir, std::move(*svc_remote));
+    vfs_.ServeDirectory(root_dir, std::move(svc_remote));
   }
 
   mock_boot_arguments::Server& mock_boot() { return mock_boot_; }
-  fidl::UnownedClientEnd<fuchsia_io::Directory> svc() { return svc_local_; }
+  zx::channel& svc_chan() { return svc_local_; }
 
  private:
   async_dispatcher_t* dispatcher_;
   fs::SynchronousVfs vfs_;
   mock_boot_arguments::Server mock_boot_;
-  fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
+  zx::channel svc_local_;
 };
 
 class ArgsTest : public zxtest::Test {
@@ -77,7 +76,7 @@ class ArgsTest : public zxtest::Test {
   ~ArgsTest() { loop_.Shutdown(); }
 
   FakeSvc& fake_svc() { return fake_svc_; }
-  fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root() { return fake_svc_.svc(); }
+  const zx::channel& svc_root() { return fake_svc_.svc_chan(); }
 
  private:
   async::Loop loop_;

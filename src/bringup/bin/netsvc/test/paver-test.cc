@@ -31,16 +31,16 @@ TEST(PaverTest, GetSingleton) {
 }
 
 TEST(PaverTest, InitialInProgressFalse) {
-  fidl::ClientEnd<fuchsia_io::Directory> svc_root;
-  fidl::ClientEnd<fuchsia_io::Directory> devfs_root;
-  netsvc::Paver paver_(std::move(svc_root), std::move(devfs_root));
+  zx::channel chan;
+  fbl::unique_fd fd;
+  netsvc::Paver paver_(std::move(chan), std::move(fd));
   ASSERT_FALSE(paver_.InProgress());
 }
 
 TEST(PaverTest, InitialExitCodeValid) {
-  fidl::ClientEnd<fuchsia_io::Directory> svc_root;
-  fidl::ClientEnd<fuchsia_io::Directory> devfs_root;
-  netsvc::Paver paver_(std::move(svc_root), std::move(devfs_root));
+  zx::channel chan;
+  fbl::unique_fd fd;
+  netsvc::Paver paver_(std::move(chan), std::move(fd));
   ASSERT_OK(paver_.exit_code());
 }
 

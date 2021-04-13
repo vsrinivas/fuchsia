@@ -11,8 +11,7 @@
 
 namespace netsvc {
 
-PayloadStreamer::PayloadStreamer(fidl::ServerEnd<fuchsia_paver::PayloadStream> chan,
-                                 ReadCallback callback)
+PayloadStreamer::PayloadStreamer(zx::channel chan, ReadCallback callback)
     : read_(std::move(callback)) {
   fidl::BindSingleInFlightOnly(async_get_default_dispatcher(), std::move(chan), this);
 }
