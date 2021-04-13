@@ -40,6 +40,8 @@ rustc_test("test_bin") {
     "src/lib.rs",
     "src/pcapng.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("netdump_integration_test") {
