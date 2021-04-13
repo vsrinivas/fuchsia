@@ -141,8 +141,6 @@ void LoaderServiceTest::Config(fidl::WireSyncClient<fldsvc::Loader>& client, std
 
 // static
 zx::status<zx::unowned_resource> LoaderServiceTest::GetVmexResource() {
-  static const std::string kVmexResourcePath = "/svc/" + std::string(fkernel::VmexResource::Name);
-
   static zx::resource vmex_resource;
   if (!vmex_resource.is_valid()) {
     zx::channel client, server;
@@ -150,7 +148,8 @@ zx::status<zx::unowned_resource> LoaderServiceTest::GetVmexResource() {
     if (status.is_error()) {
       return status.take_error();
     }
-    status = zx::make_status(fdio_service_connect(kVmexResourcePath.c_str(), server.release()));
+    status = zx::make_status(fdio_service_connect(
+        fidl::DiscoverableProtocolDefaultPath<fkernel::VmexResource>, server.release()));
     if (status.is_error()) {
       return status.take_error();
     }

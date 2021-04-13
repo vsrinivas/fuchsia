@@ -241,7 +241,7 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     return status;
   }
-  auto path = fbl::StringPrintf("/svc/%s", fuchsia_boot::Arguments::Name);
+  auto path = fbl::StringPrintf("/svc/%s", fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>);
   status = fdio_service_connect(path.data(), remote.release());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to get boot arguments service handle: %s", zx_status_get_string(status));
@@ -296,7 +296,8 @@ int main(int argc, char** argv) {
     LOGF(INFO, "Starting DriverRunner with root driver URL: %s",
          driver_manager_args.driver_runner_root_driver_url.data());
 
-    const auto realm_path = fbl::StringPrintf("/svc/%s", fuchsia_sys2::Realm::Name);
+    const auto realm_path =
+        fbl::StringPrintf("/svc/%s", fidl::DiscoverableProtocolName<fuchsia_sys2::Realm>);
     auto endpoints = fidl::CreateEndpoints<fuchsia_sys2::Realm>();
     if (endpoints.is_error()) {
       return endpoints.status_value();

@@ -156,7 +156,8 @@ zx_status_t send_poweroff() {
     return ZX_ERR_INTERNAL;
   }
 
-  auto service = fbl::StringPrintf("/svc/%s", statecontrol_fidl::Admin::Name);
+  auto service =
+      fbl::StringPrintf("/svc/%s", fidl::DiscoverableProtocolName<statecontrol_fidl::Admin>);
   status = fdio_service_connect(service.c_str(), channel_remote.release());
   if (status != ZX_OK) {
     printf("pwrbtn-monitor: failed to connect to service %s: %d\n", service.c_str(), status);

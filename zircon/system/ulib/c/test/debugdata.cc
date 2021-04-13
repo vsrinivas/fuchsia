@@ -64,7 +64,7 @@ struct DebugData : public fidl::WireInterface<fuchsia_debugdata::DebugData> {
     auto node = fbl::MakeRefCounted<fs::Service>([dispatcher, this](zx::channel channel) {
       return fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), this);
     });
-    dir->AddEntry(fuchsia_debugdata::DebugData::Name, node);
+    dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::DebugData>, node);
 
     zx::channel server;
     ASSERT_OK(zx::channel::create(0, client, &server));

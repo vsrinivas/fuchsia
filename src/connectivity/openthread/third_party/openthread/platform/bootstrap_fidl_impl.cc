@@ -54,7 +54,7 @@ zx_status_t BootstrapThreadImpl::Bind(fidl::ServerEnd<fuchsia_lowpan_bootstrap::
 void BootstrapThreadImpl::StopServingFidl() {
   if (svc_dir_) {
     FX_LOGS(INFO) << "Removing svc entry";
-    svc_dir_.value()->RemoveEntry(fuchsia_lowpan_bootstrap::Thread::Name);
+    svc_dir_.value()->RemoveEntry(fidl::DiscoverableProtocolName<fuchsia_lowpan_bootstrap::Thread>);
     svc_dir_.reset();
   }
 }

@@ -33,7 +33,7 @@ TEST(NameProviderTest, GetDeviceName) {
 
   ASSERT_EQ(status = zx::channel::create(0, &c0, &c1), ZX_OK) << zx_status_get_string(status);
   ASSERT_EQ(status = sys::ServiceDirectory::CreateFromNamespace()->Connect(
-                fuchsia_device::NameProvider::Name, std::move(c1)),
+                fidl::DiscoverableProtocolName<fuchsia_device::NameProvider>, std::move(c1)),
             ZX_OK)
       << zx_status_get_string(status);
 

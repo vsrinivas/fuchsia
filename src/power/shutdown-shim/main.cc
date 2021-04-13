@@ -194,8 +194,8 @@ zx_status_t connect_to_protocol_with_timeout(const char* name, zx::channel* loca
 // termination state.
 zx_status_t set_system_state_transition_behavior(statecontrol_fidl::wire::SystemPowerState state) {
   zx::channel local;
-  zx_status_t status =
-      connect_to_protocol(&device_manager_fidl::SystemStateTransition::Name[0], &local);
+  zx_status_t status = connect_to_protocol(
+      fidl::DiscoverableProtocolName<device_manager_fidl::SystemStateTransition>, &local);
   if (status != ZX_OK) {
     fprintf(stderr, "[shutdown-shim]: error connecting to driver_manager\n");
     return status;
@@ -220,7 +220,8 @@ zx_status_t set_system_state_transition_behavior(statecontrol_fidl::wire::System
 // complete.
 zx_status_t initiate_component_shutdown() {
   zx::channel local;
-  zx_status_t status = connect_to_protocol(&sys2_fidl::SystemController::Name[0], &local);
+  zx_status_t status =
+      connect_to_protocol(fidl::DiscoverableProtocolName<sys2_fidl::SystemController>, &local);
   if (status != ZX_OK) {
     fprintf(stderr, "[shutdown-shim]: error connecting to component_manager\n");
     return status;
@@ -360,7 +361,8 @@ zx_status_t forward_command(statecontrol_fidl::wire::SystemPowerState fallback_s
                             statecontrol_fidl::wire::RebootReason* reboot_reason) {
   printf("[shutdown-shim]: checking power_manager liveness\n");
   zx::channel local;
-  zx_status_t status = connect_to_protocol_with_timeout(&statecontrol_fidl::Admin::Name[0], &local);
+  zx_status_t status = connect_to_protocol_with_timeout(
+      fidl::DiscoverableProtocolName<statecontrol_fidl::Admin>, &local);
   if (status == ZX_OK) {
     printf("[shutdown-shim]: trying to forward command\n");
     status = send_command(fidl::WireSyncClient<statecontrol_fidl::Admin>(std::move(local)),
@@ -436,7 +438,8 @@ void StateControlAdminServer::Poweroff(
 void StateControlAdminServer::Mexec(
     fidl::WireInterface<statecontrol_fidl::Admin>::MexecCompleter::Sync& completer) {
   zx::channel local;
-  zx_status_t status = connect_to_protocol_with_timeout(&statecontrol_fidl::Admin::Name[0], &local);
+  zx_status_t status = connect_to_protocol_with_timeout(
+      fidl::DiscoverableProtocolName<statecontrol_fidl::Admin>, &local);
   if (status == ZX_OK) {
     status = send_command(fidl::WireSyncClient<statecontrol_fidl::Admin>(std::move(local)),
                           statecontrol_fidl::wire::SystemPowerState::MEXEC, nullptr);
@@ -521,7 +524,7 @@ int main() {
   auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
 
-  svc_dir->AddEntry(statecontrol_fidl::Admin::Name,
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<statecontrol_fidl::Admin>,
                     StateControlAdminServer::Create(loop.dispatcher()));
   outgoing_dir->AddEntry("svc", std::move(svc_dir));
 

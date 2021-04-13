@@ -82,8 +82,16 @@ class Parent final {
     TakeChildRequest() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_protocolrequest
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::fidl_test_protocolrequest::Parent> {
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Parent>
     final {
@@ -95,9 +103,8 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Parent>
       ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_protocolrequest
+
 template <>
 struct ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>
     final {
@@ -1647,8 +1654,15 @@ class Child final {
 
  public:
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_protocolrequest
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::fidl_test_protocolrequest::Child> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Child>
     final {
@@ -1660,9 +1674,7 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Child>
       ::fidl::WireInterface<::fidl_test_protocolrequest::Child>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_protocolrequest
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a |fidl::ClientEnd<::fidl_test_protocolrequest::Child>|,

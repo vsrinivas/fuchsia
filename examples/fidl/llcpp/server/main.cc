@@ -80,10 +80,11 @@ int main(int argc, char** argv) {
 
   // Register a handler for components trying to connect to fuchsia.examples.Echo.
   status = outgoing.svc_dir()->AddEntry(
-      fuchsia_examples::Echo::Name,
+      fidl::DiscoverableProtocolName<fuchsia_examples::Echo>,
       fbl::MakeRefCounted<fs::Service>(
           [&server, dispatcher](fidl::ServerEnd<fuchsia_examples::Echo> request) mutable {
-            std::cout << "Incoming connection for " << fuchsia_examples::Echo::Name << std::endl;
+            std::cout << "Incoming connection for "
+                      << fidl::DiscoverableProtocolName<fuchsia_examples::Echo> << std::endl;
             server.Bind(dispatcher, std::move(request));
             return ZX_OK;
           }));

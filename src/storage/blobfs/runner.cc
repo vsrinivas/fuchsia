@@ -94,10 +94,11 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, Serve
       outgoing->AddEntry("svc", svc_dir);
 
       query_svc_ = fbl::MakeRefCounted<QueryService>(loop_->dispatcher(), blobfs_.get(), this);
-      svc_dir->AddEntry(fuchsia_fs::Query::Name, query_svc_);
+      svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
 
       health_check_svc_ = fbl::MakeRefCounted<HealthCheckService>(loop_->dispatcher(), *blobfs_);
-      svc_dir->AddEntry(fuchsia_update_verify::BlobfsVerifier::Name, health_check_svc_);
+      svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>,
+                        health_check_svc_);
 
       export_root = std::move(outgoing);
       break;

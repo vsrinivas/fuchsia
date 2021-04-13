@@ -99,7 +99,7 @@ type unifiedMessagingDetails struct {
 }
 
 // These correspond to templated classes forward-declared in
-// /zircon/system/ulib/fidl/include/lib/fidl/llcpp/wire_messaging.h
+// //zircon/system/ulib/fidl/include/lib/fidl/llcpp/wire_messaging.h
 var (
 	// Protocol related
 	WireSyncClient            = fidlNs.Member("WireSyncClient")
@@ -208,7 +208,8 @@ type Protocol struct {
 	// in the protocol.
 	Events []*Method
 
-	// Templated names for wire helper types.
+	// Generated struct holding variant-agnostic details about protocol.
+	ProtocolDetails Name
 }
 
 func (Protocol) Kind() declKind {
@@ -247,11 +248,12 @@ func newProtocol(inner protocolInner) Protocol {
 	}
 
 	return Protocol{
-		protocolInner: inner,
-		OneWayMethods: filterBy(kinds{oneWayMethod}),
-		TwoWayMethods: filterBy(kinds{twoWayMethod}),
-		ClientMethods: filterBy(kinds{oneWayMethod, twoWayMethod}),
-		Events:        filterBy(kinds{eventMethod}),
+		protocolInner:   inner,
+		OneWayMethods:   filterBy(kinds{oneWayMethod}),
+		TwoWayMethods:   filterBy(kinds{twoWayMethod}),
+		ClientMethods:   filterBy(kinds{oneWayMethod, twoWayMethod}),
+		Events:          filterBy(kinds{eventMethod}),
+		ProtocolDetails: MakeName("fidl::internal::ProtocolDetails").Template(inner.Wire),
 	}
 }
 

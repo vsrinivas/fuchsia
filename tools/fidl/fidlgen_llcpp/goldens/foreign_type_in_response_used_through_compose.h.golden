@@ -55,8 +55,16 @@ class Top final {
     GetFoo() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
@@ -71,9 +79,8 @@ struct ::fidl::internal::WireDispatcher<
           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
+
 template <>
 struct ::fidl::WireRequest<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>

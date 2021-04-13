@@ -52,11 +52,6 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 class {{ .Name }} final {
   {{ .Name }}() = delete;
  public:
-  {{- if .DiscoverableName }}
-    static constexpr char Name[] = {{ .DiscoverableName }};
-  {{- end }}
-
-  {{ "" }}
   {{- range .Methods }}
     {{- .Docs }}
     class {{ .Marker.Self }} final {
@@ -65,6 +60,7 @@ class {{ .Name }} final {
   {{- end }}
 };
 
+{{- template "ProtocolDetailsDeclaration" . }}
 {{- template "ProtocolDispatcherDeclaration" . }}
 
 {{- range .Methods }}

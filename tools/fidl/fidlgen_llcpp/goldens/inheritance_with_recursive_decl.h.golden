@@ -55,8 +55,16 @@ class Parent final {
     First() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_inheritancewithrecursivedecl
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::fidl_test_inheritancewithrecursivedecl::Parent> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<
     ::fidl_test_inheritancewithrecursivedecl::Parent>
@@ -71,9 +79,8 @@ struct ::fidl::internal::WireDispatcher<
           impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_inheritancewithrecursivedecl
+
 template <>
 struct ::fidl::WireRequest<
     ::fidl_test_inheritancewithrecursivedecl::Parent::First>
@@ -474,8 +481,16 @@ class Child final {
     Second() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_inheritancewithrecursivedecl
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::fidl_test_inheritancewithrecursivedecl::Child> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<
     ::fidl_test_inheritancewithrecursivedecl::Child>
@@ -490,9 +505,8 @@ struct ::fidl::internal::WireDispatcher<
           impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_inheritancewithrecursivedecl
+
 template <>
 struct ::fidl::WireRequest<
     ::fidl_test_inheritancewithrecursivedecl::Child::First>

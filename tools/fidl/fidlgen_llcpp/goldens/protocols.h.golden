@@ -904,14 +904,23 @@ class DiscoverableProtocol final {
   DiscoverableProtocol() = delete;
 
  public:
-  static constexpr char Name[] = "fidl.test.protocols.DiscoverableProtocol";
-
   class Method final {
     Method() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::fidl_test_protocols::DiscoverableProtocol> {
+  static constexpr char DiscoverableName[] =
+      "fidl.test.protocols.DiscoverableProtocol";
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<
     ::fidl_test_protocols::DiscoverableProtocol>
@@ -924,9 +933,8 @@ struct ::fidl::internal::WireDispatcher<
       ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_protocols {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_protocols
+
 template <>
 struct ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>
     final {
@@ -1243,8 +1251,16 @@ class Transitional final {
     Event() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::fidl_test_protocols::Transitional> {
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::Transitional>
     final {
@@ -1256,9 +1272,8 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::Transitional>
       ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_protocols {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_protocols
+
 template <>
 struct ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request> final {
   FIDL_ALIGNDECL
@@ -2222,8 +2237,16 @@ class ChannelProtocol final {
     MutateSocket() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::fidl_test_protocols::ChannelProtocol> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::ChannelProtocol>
     final {
@@ -2235,9 +2258,8 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::ChannelProtocol>
       ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_protocols {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_protocols
+
 template <>
 struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>
     final {
@@ -4219,8 +4241,16 @@ class WithAndWithoutRequestResponse final {
     OnWithResponse() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>
@@ -4235,9 +4265,8 @@ struct ::fidl::internal::WireDispatcher<
           ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_protocols {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_protocols
+
 template <>
 struct ::fidl::WireRequest<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>
@@ -7112,8 +7141,16 @@ class WithErrorSyntax final {
     ErrorAsEnum() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::fidl_test_protocols::WithErrorSyntax> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::WithErrorSyntax>
     final {
@@ -7125,9 +7162,8 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::WithErrorSyntax>
       ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_protocols {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_protocols
+
 template <>
 struct ::fidl::WireRequest<
     ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>

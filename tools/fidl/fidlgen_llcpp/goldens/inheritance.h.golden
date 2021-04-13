@@ -53,8 +53,15 @@ class super final {
     foo() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_inheritance
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::fidl_test_inheritance::super> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<::fidl_test_inheritance::super> final {
   WireDispatcher() = delete;
@@ -65,9 +72,8 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_inheritance::super> final {
       ::fidl::WireInterface<::fidl_test_inheritance::super>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_inheritance {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_inheritance
+
 template <>
 struct ::fidl::WireRequest<::fidl_test_inheritance::super::foo> final {
   FIDL_ALIGNDECL
@@ -620,8 +626,15 @@ class sub final {
     foo() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_inheritance
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::fidl_test_inheritance::sub> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<::fidl_test_inheritance::sub> final {
   WireDispatcher() = delete;
@@ -632,9 +645,8 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_inheritance::sub> final {
       ::fidl::WireInterface<::fidl_test_inheritance::sub>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_inheritance {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_inheritance
+
 template <>
 struct ::fidl::WireRequest<::fidl_test_inheritance::sub::foo> final {
   FIDL_ALIGNDECL

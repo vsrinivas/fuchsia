@@ -146,7 +146,7 @@ zx_status_t SetupVirtcon(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_arg
     status = fdio_service_connect("/svc/fuchsia.virtualconsole.SessionManager", remote.release());
     if (status != ZX_OK) {
       fprintf(stderr, "console-launcher: unable to connect to %s: %d\n",
-              fuchsia_virtualconsole::SessionManager::Name, status);
+              fidl::DiscoverableProtocolName<fuchsia_virtualconsole::SessionManager>, status);
       return status;
     }
     virtcon = fidl::WireSyncClient<fuchsia_virtualconsole::SessionManager>(std::move(local));

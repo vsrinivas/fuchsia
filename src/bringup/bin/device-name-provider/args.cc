@@ -50,7 +50,8 @@ int ParseArgs(int argc, char** argv, const zx::channel& svc_root, const char** e
     return -1;
   }
 
-  status = fdio_service_connect_at(svc_root.get(), fuchsia_boot::Arguments::Name, remote.release());
+  status = fdio_service_connect_at(
+      svc_root.get(), fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>, remote.release());
   if (status != ZX_OK) {
     *error = "netsvc: unable to connect to fuchsia.boot.Arguments";
     return -1;

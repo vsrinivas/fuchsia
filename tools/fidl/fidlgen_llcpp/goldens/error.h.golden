@@ -293,8 +293,15 @@ class Example final {
     foo() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_error
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::fidl_test_error::Example> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<::fidl_test_error::Example> final {
   WireDispatcher() = delete;
@@ -305,9 +312,8 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_error::Example> final {
       ::fidl::WireInterface<::fidl_test_error::Example>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_error {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_error
+
 template <>
 struct ::fidl::WireRequest<::fidl_test_error::Example::foo> final {
   FIDL_ALIGNDECL

@@ -108,10 +108,10 @@ zx_status_t FsManager::SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Direct
           return ZX_OK;
         }));
   }
-  svc_dir_->AddEntry(fuchsia_fshost::Admin::Name,
+  svc_dir_->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fshost::Admin>,
                      AdminServer::Create(this, global_loop_->dispatcher()));
 
-  svc_dir_->AddEntry(fuchsia_fshost::BlockWatcher::Name,
+  svc_dir_->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fshost::BlockWatcher>,
                      BlockWatcherServer::Create(global_loop_->dispatcher(), watcher));
 
   outgoing_dir->AddEntry("svc", svc_dir_);

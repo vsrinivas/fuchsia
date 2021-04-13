@@ -387,8 +387,8 @@ zx::status<typename fidl::WireSyncClient<T>>& get_client() {
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
-      zx_status_t status =
-          fdio_service_connect_by_name(T::Name, endpoints->server.channel().release());
+      zx_status_t status = fdio_service_connect_by_name(fidl::DiscoverableProtocolName<T>,
+                                                        endpoints->server.channel().release());
       if (status != ZX_OK) {
         return zx::error(status);
       }

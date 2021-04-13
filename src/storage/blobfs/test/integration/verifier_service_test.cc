@@ -12,6 +12,7 @@
 
 #include <gtest/gtest.h>
 
+#include "lib/fidl/llcpp/connect_service.h"
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 
 namespace blobfs {
@@ -26,8 +27,8 @@ class VerifierServiceTest : public BlobfsTest {
     EXPECT_EQ(endpoints.status_value(), ZX_OK);
     auto [client_end, server_end] = *std::move(endpoints);
 
-    std::string service_path = std::string("svc/") + fuv::BlobfsVerifier::Name;
-    EXPECT_EQ(fdio_service_connect_at(fs().GetOutgoingDirectory()->get(), service_path.c_str(),
+    EXPECT_EQ(fdio_service_connect_at(fs().GetOutgoingDirectory()->get(),
+                                      fidl::DiscoverableProtocolDefaultPath<fuv::BlobfsVerifier>,
                                       server_end.TakeChannel().release()),
               ZX_OK);
     return fidl::WireSyncClient<fuv::BlobfsVerifier>(std::move(client_end));

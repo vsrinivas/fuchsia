@@ -35,7 +35,9 @@ fuchsia_cobalt::wire::CobaltEvent MetricIntoToCobaltEvent(const MetricOptions& m
 
 }  // namespace
 
-std::string_view CobaltLogger::GetServiceName() { return fuchsia_cobalt::LoggerFactory::Name; }
+std::string_view CobaltLogger::GetServiceName() {
+  return fidl::DiscoverableProtocolName<fuchsia_cobalt::LoggerFactory>;
+}
 
 bool CobaltLogger::TryObtainLogger() {
   if (logger_.client_end().is_valid()) {

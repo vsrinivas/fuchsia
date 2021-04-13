@@ -74,9 +74,9 @@ void ExceptionHandler::ConnectToServer() {
     return;
   }
 
-  if (const zx_status_t status =
-          fdio_service_connect_at(exception_handler_svc_, fuchsia_exception::Handler::Name,
-                                  server_endpoint_.channel().release());
+  if (const zx_status_t status = fdio_service_connect_at(
+          exception_handler_svc_, fidl::DiscoverableProtocolName<fuchsia_exception::Handler>,
+          server_endpoint_.channel().release());
       status != ZX_OK) {
     LogError("unable to connect to fuchsia.exception.Handler", status);
     drop_exceptions_ = true;

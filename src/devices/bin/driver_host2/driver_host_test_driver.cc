@@ -36,10 +36,11 @@ class TestDriver {
     }
 
     // Setup the outgoing service.
-    zx_status_t status = outgoing_.svc_dir()->AddEntry(
-        ftest::Outgoing::Name, fbl::MakeRefCounted<fs::Service>([](zx::channel request) {
-          return fidl_epitaph_write(request.get(), ZX_ERR_STOP);
-        }));
+    zx_status_t status =
+        outgoing_.svc_dir()->AddEntry(fidl::DiscoverableProtocolName<ftest::Outgoing>,
+                                      fbl::MakeRefCounted<fs::Service>([](zx::channel request) {
+                                        return fidl_epitaph_write(request.get(), ZX_ERR_STOP);
+                                      }));
     if (status != ZX_OK) {
       return zx::error(status);
     }

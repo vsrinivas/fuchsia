@@ -154,7 +154,8 @@ TEST(SvchostTest, FuchsiaKernelStatsPresent) {
   zx_status_t status = zx::channel::create(0, &client, &server);
   ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
 
-  fbl::String service_path = fbl::String::Concat({"/svc/", fuchsia_kernel::Stats::Name});
+  fbl::String service_path =
+      fbl::String::Concat({"/svc/", fidl::DiscoverableProtocolName<fuchsia_kernel::Stats>});
   status = fdio_service_connect(service_path.c_str(), server.release());
   ASSERT_EQ(ZX_OK, status, "fdio_service_connect failed");
 

@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
     return -1;
   }
   status = outgoing.svc_dir()->AddEntry(
-      fuchsia_virtualconsole::SessionManager::Name,
+      fidl::DiscoverableProtocolName<fuchsia_virtualconsole::SessionManager>,
       fbl::MakeRefCounted<fs::Service>(
           [&virtcon_server](
               fidl::ServerEnd<fuchsia_virtualconsole::SessionManager> request) mutable {

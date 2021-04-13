@@ -84,7 +84,7 @@ TEST_F(FshostExposedDirTest, ExposesDiagnosticsAndServicesForBlobfs) {
       openat(export_dir_fd.get(), svc_name.c_str(), fuchsia::io::OPEN_FLAG_DESCRIBE, 0644));
   EXPECT_TRUE(blobfs_diag_dir_fd) << "failed to open " << svc_name << ": " << strerror(errno);
 
-  svc_name = fuchsia_update_verify::BlobfsVerifier::Name;
+  svc_name = fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>;
   fbl::unique_fd blobfs_health_check_dir_fd(
       openat(export_dir_fd.get(), svc_name.c_str(), fuchsia::io::OPEN_FLAG_DESCRIBE, 0644));
   EXPECT_TRUE(blobfs_health_check_dir_fd)

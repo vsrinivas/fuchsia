@@ -103,7 +103,7 @@ class Paver : public PaverInterface {
   Command command_;
 
   // Channel to svc.
-  zx::channel svc_root_;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root_;
 
   // File descriptor to dev.
   fbl::unique_fd devfs_root_;

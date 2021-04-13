@@ -166,8 +166,16 @@ class EmptyProtocol final {
     SendAndReceive() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_emptystruct
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::fidl_test_emptystruct::EmptyProtocol> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<::fidl_test_emptystruct::EmptyProtocol>
     final {
@@ -179,9 +187,8 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_emptystruct::EmptyProtocol>
       ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_emptystruct {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_emptystruct
+
 template <>
 struct ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> final {
   FIDL_ALIGNDECL

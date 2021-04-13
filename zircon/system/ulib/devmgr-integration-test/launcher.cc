@@ -21,6 +21,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/vfs/cpp/remote_dir.h>
 #include <lib/zx/exception.h>
@@ -128,7 +129,7 @@ void CreateFakeCppService(fbl::RefPtr<fs::PseudoDir> root, async_dispatcher_t* d
       [dispatcher, server{std::move(server)}](fidl::ServerEnd<Protocol> channel) {
         return fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), server.get());
       });
-  root->AddEntry(Protocol::Name, node);
+  root->AddEntry(fidl::DiscoverableProtocolName<Protocol>, node);
 }
 
 void CreateFakeService(fbl::RefPtr<fs::PseudoDir> root, const char* name,

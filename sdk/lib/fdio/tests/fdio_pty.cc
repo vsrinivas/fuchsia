@@ -18,9 +18,8 @@ TEST(PtyTest, WindowSize) {
 
   auto client = fidl::BindSyncClient(std::move(endpoints->client));
 
-  std::string path = "/svc/";
-  path.append(fpty::Device::Name);
-  ASSERT_OK(fdio_service_connect(path.c_str(), endpoints->server.channel().release()));
+  ASSERT_OK(fdio_service_connect(fidl::DiscoverableProtocolDefaultPath<fpty::Device>,
+                                 endpoints->server.channel().release()));
 
   auto endpoints0 = fidl::CreateEndpoints<fpty::Device>();
   ASSERT_OK(endpoints0.status_value());

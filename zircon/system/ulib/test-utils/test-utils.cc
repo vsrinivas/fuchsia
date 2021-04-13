@@ -130,8 +130,8 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
   status = zx::channel::create(0, &launcher_channel, &launcher_request);
   tu_check("creating channel for launcher service", status);
 
-  std::string service_name = "/svc/" + std::string(fprocess::Launcher::Name);
-  status = fdio_service_connect(service_name.c_str(), launcher_request.release());
+  status = fdio_service_connect(fidl::DiscoverableProtocolDefaultPath<fprocess::Launcher>,
+                                launcher_request.release());
   tu_check("connecting to launcher service", status);
 
   fidl::WireSyncClient<fprocess::Launcher> launcher(std::move(launcher_channel));

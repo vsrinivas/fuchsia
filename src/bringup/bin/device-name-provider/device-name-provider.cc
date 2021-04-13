@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
   DeviceNameProviderServer server(device_name, strnlen(device_name, sizeof(device_name)));
 
   outgoing.svc_dir()->AddEntry(
-      fuchsia_device::NameProvider::Name,
+      fidl::DiscoverableProtocolName<fuchsia_device::NameProvider>,
       fbl::MakeRefCounted<fs::Service>([dispatcher, server](zx::channel svc_request) mutable {
         zx_status_t status =
             fidl::BindSingleInFlightOnly(dispatcher, std::move(svc_request), &server);

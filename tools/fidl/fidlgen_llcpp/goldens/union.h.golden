@@ -3174,8 +3174,15 @@ class TestProtocol final {
     FlexibleXUnionHenceResponseMustBeHeapAllocated() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_union
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::fidl_test_union::TestProtocol> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<::fidl_test_union::TestProtocol> final {
   WireDispatcher() = delete;
@@ -3186,9 +3193,8 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_union::TestProtocol> final {
       ::fidl::WireInterface<::fidl_test_union::TestProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_union {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_union
+
 template <>
 struct ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                                StrictXUnionHenceResponseMayBeStackAllocated>

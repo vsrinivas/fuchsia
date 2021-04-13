@@ -220,7 +220,7 @@ class FakeService {
  public:
   FakeService(async_dispatcher_t* dispatcher) : vfs_(dispatcher) {
     auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-    root_dir->AddEntry(fuchsia_exception::Handler::Name,
+    root_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_exception::Handler>,
                        fbl::MakeRefCounted<fs::Service>([this, dispatcher](zx::channel request) {
                          return exception_handler_.Connect(dispatcher, std::move(request));
                        }));

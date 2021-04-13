@@ -66,9 +66,10 @@ int main(int argc, const char** argv) {
     printf("console: failed to add svc to root dir: %s\n", zx_status_get_string(status));
     return -1;
   }
-  if ((status = svc_dir->AddEntry(fuchsia_hardware_pty::Device::Name,
+  if ((status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_hardware_pty::Device>,
                                   fbl::MakeRefCounted<PtyGeneratingVnode>(&vfs))) != ZX_OK) {
-    printf("console: failed to add %s to svc dir: %s\n", fuchsia_hardware_pty::Device::Name,
+    printf("console: failed to add %s to svc dir: %s\n",
+           fidl::DiscoverableProtocolName<fuchsia_hardware_pty::Device>,
            zx_status_get_string(status));
     return -1;
   }

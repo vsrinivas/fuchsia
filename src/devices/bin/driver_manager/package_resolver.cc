@@ -43,7 +43,8 @@ zx_status_t PackageResolver::ConnectToResolverService() {
   if (status != ZX_OK) {
     return status;
   }
-  const auto path = fbl::StringPrintf("/svc/%s", fuchsia_pkg::PackageResolver::Name);
+  const auto path =
+      fbl::StringPrintf("/svc/%s", fidl::DiscoverableProtocolName<fuchsia_pkg::PackageResolver>);
   status = fdio_service_connect(path.c_str(), remote.release());
   if (status != ZX_OK) {
     return status;

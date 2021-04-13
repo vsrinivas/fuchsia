@@ -77,7 +77,7 @@ bool GetMexecResource(zx::resource* resource) {
   using Resource = fuchsia_boot::RootResource;
 
   zx::channel local;
-  if (!ConnectToService(Resource::Name, local)) {
+  if (!ConnectToService(fidl::DiscoverableProtocolName<Resource>, local)) {
     return false;
   }
   fidl::WireSyncClient<Resource> client(std::move(local));
@@ -301,7 +301,8 @@ static zx_status_t do_dmctl_mexec() {
     return ZX_ERR_INTERNAL;
   }
   zx::channel devmgr_channel;
-  if (!ConnectToService(fuchsia_device_manager::Administrator::Name, devmgr_channel)) {
+  if (!ConnectToService(fidl::DiscoverableProtocolName<fuchsia_device_manager::Administrator>,
+                        devmgr_channel)) {
     return ZX_ERR_INTERNAL;
   }
 
@@ -320,7 +321,7 @@ static zx_status_t reboot() {
   namespace statecontrol = fuchsia_hardware_power_statecontrol;
 
   zx::channel local;
-  if (!ConnectToService(statecontrol::Admin::Name, local)) {
+  if (!ConnectToService(fidl::DiscoverableProtocolName<statecontrol::Admin>, local)) {
     return ZX_ERR_INTERNAL;
   }
   auto response = fidl::WireCall<statecontrol::Admin>(local.borrow())

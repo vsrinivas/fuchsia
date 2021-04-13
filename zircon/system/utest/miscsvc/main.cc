@@ -7,6 +7,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
@@ -25,7 +26,8 @@ TEST(MiscSvcTest, PaverSvccEnumeratesSuccessfully) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_OK(fdio_service_connect_at(svc_local.get(), Paver::Name, remote.release()));
+  ASSERT_OK(fdio_service_connect_at(svc_local.get(), fidl::DiscoverableProtocolDefaultPath<Paver>,
+                                    remote.release()));
 
   zx::channel local2, remote2;
   ASSERT_OK(zx::channel::create(0, &local2, &remote2));

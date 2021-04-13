@@ -129,7 +129,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
   fidl::WireInterface<fdf::DriverHost>* driver_host() { return &driver_host_; }
 
   void AddEntry(fs::Service::Connector connector) {
-    EXPECT_EQ(ZX_OK, svc_dir_->AddEntry(ftest::Incoming::Name,
+    EXPECT_EQ(ZX_OK, svc_dir_->AddEntry(fidl::DiscoverableProtocolName<ftest::Incoming>,
                                         fbl::MakeRefCounted<fs::Service>(std::move(connector))));
   }
 
@@ -243,7 +243,7 @@ TEST_F(DriverHostTest, Start_MultipleDrivers) {
 TEST_F(DriverHostTest, Start_OutgoingServices) {
   auto [driver, outgoing_dir] = StartDriver();
 
-  auto path = fbl::StringPrintf("svc/%s", ftest::Outgoing::Name);
+  auto path = fbl::StringPrintf("svc/%s", fidl::DiscoverableProtocolName<ftest::Outgoing>);
   zx::channel client_end, server_end;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &client_end, &server_end));
   zx_status_t status =

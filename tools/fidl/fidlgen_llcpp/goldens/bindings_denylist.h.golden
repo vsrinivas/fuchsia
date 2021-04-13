@@ -148,8 +148,16 @@ class OnlyLibfuzzerAndDeps final {
     LibfuzzerNeedsNonemptyProtocol() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_bindingsdenylist
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
@@ -164,9 +172,8 @@ struct ::fidl::internal::WireDispatcher<
           impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_bindingsdenylist {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_bindingsdenylist
+
 template <>
 struct ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                LibfuzzerNeedsNonemptyProtocol>
@@ -745,8 +752,16 @@ class OnlyCppAndDeps final {
 
  public:
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_bindingsdenylist
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::fidl_test_bindingsdenylist::OnlyCppAndDeps> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<
     ::fidl_test_bindingsdenylist::OnlyCppAndDeps>
@@ -759,9 +774,7 @@ struct ::fidl::internal::WireDispatcher<
       ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_bindingsdenylist {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_bindingsdenylist
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a

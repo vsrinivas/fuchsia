@@ -63,8 +63,16 @@ class SecondProtocol final {
     MethodOnSecond() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_service
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::fidl_test_service::SecondProtocol> {
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<::fidl_test_service::SecondProtocol>
     final {
@@ -76,9 +84,8 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_service::SecondProtocol>
       ::fidl::WireInterface<::fidl_test_service::SecondProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_service {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_service
+
 template <>
 struct ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>
     final {
@@ -372,8 +379,15 @@ class FirstProtocol final {
     MethodOnFirst() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_service
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::fidl_test_service::FirstProtocol> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<::fidl_test_service::FirstProtocol>
     final {
@@ -385,9 +399,8 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_service::FirstProtocol>
       ::fidl::WireInterface<::fidl_test_service::FirstProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_service {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_service
+
 template <>
 struct ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>
     final {

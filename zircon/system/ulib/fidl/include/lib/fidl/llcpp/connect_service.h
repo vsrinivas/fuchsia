@@ -100,6 +100,36 @@ using ConnectMemberFunc = zx::status<> (*)(zx::unowned_channel service_dir,
 
 #endif  // __Fuchsia__
 
+namespace internal {
+// This struct template is specialized in generated bindings to include the following
+// protocol-specific members:
+//  - static constexpr char DiscoverableName[] - the discoverable name if any exists.
+template <typename Protocol>
+struct ProtocolDetails;
+
+// Helper type for compile-time string concatenation.
+template <const char*, typename>
+struct default_service_path;
+template <const char* n, size_t... i>
+struct default_service_path<n, std::integer_sequence<size_t, i...>> {
+  static constexpr const char value[]{'/', 's', 'v', 'c', '/', n[i]...};
+};
+}  // namespace internal
+
+// DiscoverableProtocolName<Protocol> evaluates to a string containing the name of the protocol,
+// including its library.
+template <typename Protocol>
+constexpr const char* DiscoverableProtocolName =
+    fidl::internal::ProtocolDetails<Protocol>::DiscoverableName;
+
+// DiscoverableProtocolDefaultPath<Protocol> evaluates to a string containing the default path for
+// the protocol endpoint, something like "/svc/fuchsia.library.Protocol".
+template <typename Protocol>
+constexpr const char* DiscoverableProtocolDefaultPath = fidl::internal::default_service_path<
+    fidl::internal::ProtocolDetails<Protocol>::DiscoverableName,
+    std::make_integer_sequence<
+        size_t, sizeof(fidl::internal::ProtocolDetails<Protocol>::DiscoverableName)>>::value;
+
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_CONNECT_SERVICE_H_

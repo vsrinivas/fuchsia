@@ -54,8 +54,8 @@ zx_handle_t RetriveWriteOnlyDebuglogHandle() {
     return ZX_HANDLE_INVALID;
   }
 
-  std::string path = std::string("/svc/") + fboot::WriteOnlyLog::Name;
-  status = fdio_service_connect(path.c_str(), remote.release());
+  status = fdio_service_connect(fidl::DiscoverableProtocolDefaultPath<fboot::WriteOnlyLog>,
+                                remote.release());
   if (status != ZX_OK) {
     fprintf(stderr, "fs-management: Failed to connect to WriteOnlyLog: %d (%s)\n", status,
             zx_status_get_string(status));

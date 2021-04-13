@@ -39,7 +39,7 @@ void FshostIntegrationTest::SetUp() {
   ASSERT_EQ(status.status_value(), ZX_OK);
   status = zx::make_status(
       exposed_dir_->Open(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE, 0,
-                         fuchsia_fshost::BlockWatcher::Name,
+                         fidl::DiscoverableProtocolName<fuchsia_fshost::BlockWatcher>,
                          fidl::InterfaceRequest<fuchsia::io::Node>(std::move(request))));
   ASSERT_EQ(status.status_value(), ZX_OK);
 }

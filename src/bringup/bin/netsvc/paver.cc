@@ -9,6 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/sysconfig/sync-client.h>
 #include <lib/zx/clock.h>
 #include <stdio.h>
@@ -658,20 +659,14 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
   }
   auto buffer_cleanup = fit::defer([this]() { buffer_mapper_.Reset(); });
 
-  zx::channel paver_local, paver_remote;
-  status = zx::channel::create(0, &paver_local, &paver_remote);
-  if (status != ZX_OK) {
-    fprintf(stderr, "netsvc: Unable to create channel pair.\n");
-    return TFTP_ERR_IO;
-  }
-  status =
-      fdio_service_connect_at(svc_root_.get(), fuchsia_paver::Paver::Name, paver_remote.release());
-  if (status != ZX_OK) {
-    fprintf(stderr, "netsvc: Unable to open /svc/%s.\n", fuchsia_paver::Paver::Name);
+  auto paver = service::ConnectAt<fuchsia_paver::Paver>(svc_root_);
+  if (paver.is_error()) {
+    fprintf(stderr, "netsvc: Unable to open /svc/%s.\n",
+            fidl::DiscoverableProtocolName<fuchsia_paver::Paver>);
     return TFTP_ERR_IO;
   }
 
-  paver_svc_.emplace(std::move(paver_local));
+  paver_svc_.emplace(std::move(*paver));
   auto svc_cleanup = fit::defer([&]() { paver_svc_.reset(); });
 
   size_ = size;

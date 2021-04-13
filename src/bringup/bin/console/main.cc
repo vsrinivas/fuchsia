@@ -151,7 +151,7 @@ int main(int argc, const char** argv) {
 
   using Vnode =
       fs_pty::TtyService<fs_pty::SimpleConsoleOps<fbl::RefPtr<Console>>, fbl::RefPtr<Console>>;
-  outgoing.svc_dir()->AddEntry(fuchsia_hardware_pty::Device::Name,
+  outgoing.svc_dir()->AddEntry(fidl::DiscoverableProtocolName<fuchsia_hardware_pty::Device>,
                                fbl::AdoptRef(new Vnode(std::move(console))));
 
   status = loop.Run();

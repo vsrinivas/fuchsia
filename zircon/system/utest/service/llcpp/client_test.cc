@@ -180,21 +180,22 @@ TEST_F(ClientTest, FilePathTooLong) {
 // Tests for connecting to singleton FIDL services (`/svc/MyProtocolName` style).
 //
 
-struct MockProtocol {
-  static constexpr char Name[] = "mock";
+struct MockProtocol {};
+
+template <>
+struct ::fidl::internal::ProtocolDetails<MockProtocol> {
+  static constexpr char DiscoverableName[] = "mock";
 };
 
 // Test compile time path concatenation.
 TEST(SingletonService, DefaultPath) {
-  static_assert(::service::internal::string_length(MockProtocol::Name) == 4);
-
-  constexpr auto path = ::service::internal::DefaultPath<MockProtocol>();
+  constexpr auto path = ::fidl::DiscoverableProtocolDefaultPath<MockProtocol>;
   ASSERT_STR_EQ(path, "/svc/mock", "protocol path should be /svc/mock");
 }
 
 // Using a local filesystem, test that |service::ConnectAt| successfully sends
-// an open request using the path |MockProtocol::Name|, when connecting to the
-// |MockProtocol| service.
+// an open request using the path |fidl::DiscoverableProtocolName<MockProtocol>|,
+// when connecting to the |MockProtocol| service.
 TEST(SingletonService, ConnectAt) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fs::SynchronousVfs vfs(loop.dispatcher());
@@ -207,7 +208,7 @@ TEST(SingletonService, ConnectAt) {
     return ZX_OK;
   });
   auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  root_dir->AddEntry(MockProtocol::Name, std::move(protocol));
+  root_dir->AddEntry(fidl::DiscoverableProtocolName<MockProtocol>, std::move(protocol));
 
   auto directory = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(directory.status_value());

@@ -10,6 +10,8 @@
 
 #include <fbl/string_printf.h>
 
+#include "lib/fidl/llcpp/connect_service.h"
+
 namespace devmgr {
 
 // static
@@ -24,8 +26,8 @@ std::shared_ptr<FshostBootArgs> FshostBootArgs::Create() {
                       "environment and continuing";
     return std::make_shared<FshostBootArgs>(std::nullopt);
   }
-  auto path = fbl::StringPrintf("/svc/%s", fuchsia_boot::Arguments::Name);
-  status = fdio_service_connect(path.data(), remote.release());
+  status = fdio_service_connect(fidl::DiscoverableProtocolDefaultPath<fuchsia_boot::Arguments>,
+                                remote.release());
   if (status != ZX_OK) {
     // This service might be missing if we're running in a test environment. Log
     // the error and continue.

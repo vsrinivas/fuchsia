@@ -211,7 +211,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
         [dispatcher = loop.dispatcher(), debug_data = debug_data.get()](zx::channel channel) {
           return fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), debug_data);
         });
-    proxy_dir->AddEntry(fuchsia_debugdata::DebugData::Name, node);
+    proxy_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::DebugData>, node);
 
     // Setup VFS.
     vfs = std::make_unique<fs::SynchronousVfs>(loop.dispatcher());

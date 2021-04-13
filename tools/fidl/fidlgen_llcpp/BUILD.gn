@@ -32,6 +32,7 @@ go_library("gopkg") {
     "codegen/fragment_method_result.tmpl.go",
     "codegen/fragment_method_unownedresult.tmpl.go",
     "codegen/fragment_protocol.tmpl.go",
+    "codegen/fragment_protocol_details.tmpl.go",
     "codegen/fragment_protocol_dispatcher.tmpl.go",
     "codegen/fragment_protocol_event_handler.tmpl.go",
     "codegen/fragment_protocol_interface.tmpl.go",

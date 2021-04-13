@@ -440,9 +440,10 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
 
   zx::channel channel, channel_remote;
   ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
-  std::string svc_dir = "/svc/";
-  std::string service = svc_dir + fuchsia_device_manager::SystemStateTransition::Name;
-  ASSERT_OK(fdio_service_connect_at(services.get(), service.c_str(), channel_remote.release()));
+  ASSERT_OK(fdio_service_connect_at(
+      services.get(),
+      fidl::DiscoverableProtocolDefaultPath<fuchsia_device_manager::SystemStateTransition>,
+      channel_remote.release()));
 
   auto response = fidl::WireCall<fuchsia_device_manager::SystemStateTransition>(
                       zx::unowned_channel(channel.get()))

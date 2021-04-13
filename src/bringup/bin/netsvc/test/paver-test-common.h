@@ -402,10 +402,11 @@ class FakeSvc {
  public:
   explicit FakeSvc(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher), vfs_(dispatcher) {
     auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-    root_dir->AddEntry(fuchsia_paver::Paver::Name,
-                       fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
-                         return fake_paver_.Connect(dispatcher_, std::move(request));
-                       }));
+    root_dir->AddEntry(
+        fidl::DiscoverableProtocolName<fuchsia_paver::Paver>,
+        fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<fuchsia_paver::Paver> request) {
+          return fake_paver_.Connect(dispatcher_, request.TakeChannel());
+        }));
 
     zx::channel svc_remote;
     ASSERT_OK(zx::channel::create(0, &svc_local_, &svc_remote));

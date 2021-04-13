@@ -44,7 +44,7 @@ class FakeSvc {
  public:
   explicit FakeSvc(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher), vfs_(dispatcher) {
     auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-    root_dir->AddEntry(fuchsia_boot::Arguments::Name,
+    root_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>,
                        fbl::MakeRefCounted<fs::Service>(
                            [this](fidl::ServerEnd<fuchsia_boot::Arguments> server_end) {
                              fidl::BindServer(dispatcher_, std::move(server_end), &mock_boot_);

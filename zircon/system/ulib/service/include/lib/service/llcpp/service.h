@@ -35,35 +35,6 @@ namespace internal {
 // Implementation of |service::Clone| that is independent from the actual |Protocol|.
 ::zx::status<zx::channel> CloneRaw(::zx::unowned_channel&& node);
 
-template <size_t... I>
-using seq = std::integer_sequence<size_t, I...>;
-template <size_t N>
-using make_seq = std::make_integer_sequence<size_t, N>;
-
-template <const char*, typename, const char*, typename>
-struct concat;
-template <const char* s1, size_t... i1, const char* s2, size_t... i2>
-struct concat<s1, seq<i1...>, s2, seq<i2...>> {
-  // |s1| followed by |s2| followed by trailing NUL.
-  static constexpr const char value[]{s1[i1]..., s2[i2]..., 0};
-};
-
-template <size_t N>
-constexpr size_t string_length(const char (&literal)[N], size_t size = N - 1) {
-  return size;
-}
-
-// Returns the default path for a protocol in the `/svc/{name}` format,
-// where `{name}` is the fully qualified name of the FIDL protocol.
-// The string concatentation happens at compile time.
-template <typename Protocol>
-constexpr const char* DefaultPath() {
-  constexpr auto svc_length = string_length(llcpp::sys::kServiceDirectoryTrailingSlash);
-  constexpr auto protocol_length = string_length(Protocol::Name);
-  return concat<llcpp::sys::kServiceDirectoryTrailingSlash, make_seq<svc_length>, Protocol::Name,
-                make_seq<protocol_length>>::value;
-}
-
 // Determines if |Protocol| contains a method named |Clone|.
 // TODO(fxbug.dev/65964): This template is coupled to LLCPP codegen details,
 // and as such would need to be adapted when e.g. we change the LLCPP generated
@@ -118,7 +89,7 @@ void CheckProtocolForClone(::fidl::UnownedClientEnd<Protocol> node,
 // See documentation on |fdio_service_connect| for details.
 template <typename Protocol>
 ::zx::status<::fidl::ClientEnd<Protocol>> Connect(
-    const char* path = internal::DefaultPath<Protocol>()) {
+    const char* path = fidl::DiscoverableProtocolDefaultPath<Protocol>) {
   auto channel = internal::ConnectRaw(path);
   if (channel.is_error()) {
     return channel.take_error();
@@ -136,7 +107,7 @@ template <typename Protocol>
 template <typename Protocol>
 ::zx::status<::fidl::ClientEnd<Protocol>> ConnectAt(
     ::fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
-    const char* protocol_name = Protocol::Name) {
+    const char* protocol_name = fidl::DiscoverableProtocolName<Protocol>) {
   auto channel = internal::ConnectAtRaw(svc_dir, protocol_name);
   if (channel.is_error()) {
     return channel.take_error();

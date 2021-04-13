@@ -109,11 +109,11 @@ zx::status<> DriverHost::PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc
     fidl::BindServer(loop_->dispatcher(), std::move(request), this);
     return ZX_OK;
   };
-  zx_status_t status =
-      svc_dir->AddEntry(fdf::DriverHost::Name, fbl::MakeRefCounted<fs::Service>(service));
+  zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdf::DriverHost>,
+                                         fbl::MakeRefCounted<fs::Service>(service));
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to add directory entry '%s': %s", fdf::DriverHost::Name,
-         zx_status_get_string(status));
+    LOGF(ERROR, "Failed to add directory entry '%s': %s",
+         fidl::DiscoverableProtocolName<fdf::DriverHost>, zx_status_get_string(status));
   }
   return zx::make_status(status);
 }

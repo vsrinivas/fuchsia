@@ -304,8 +304,15 @@ class SomeProtocol final {
 
  public:
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_handles
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::fidl_test_handles::SomeProtocol> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<::fidl_test_handles::SomeProtocol>
     final {
@@ -317,9 +324,7 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_handles::SomeProtocol>
       ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_handles {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_handles
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a |fidl::ClientEnd<::fidl_test_handles::SomeProtocol>|,

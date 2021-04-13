@@ -395,11 +395,11 @@ zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDi
     fidl::BindServer(dispatcher_, std::move(request), this);
     return ZX_OK;
   };
-  zx_status_t status =
-      svc_dir->AddEntry(frunner::ComponentRunner::Name, fbl::MakeRefCounted<fs::Service>(service));
+  zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<frunner::ComponentRunner>,
+                                         fbl::MakeRefCounted<fs::Service>(service));
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to add directory entry '%s': %s", frunner::ComponentRunner::Name,
-         zx_status_get_string(status));
+    LOGF(ERROR, "Failed to add directory entry '%s': %s",
+         fidl::DiscoverableProtocolName<frunner::ComponentRunner>, zx_status_get_string(status));
   }
   return zx::make_status(status);
 }
@@ -557,11 +557,12 @@ zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost()
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  zx_status_t status = fdio_service_connect_at(create->channel().get(), fdf::DriverHost::Name,
+  zx_status_t status = fdio_service_connect_at(create->channel().get(),
+                                               fidl::DiscoverableProtocolName<fdf::DriverHost>,
                                                endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to connect to service '%s': %s", fdf::DriverHost::Name,
-         zx_status_get_string(status));
+    LOGF(ERROR, "Failed to connect to service '%s': %s",
+         fidl::DiscoverableProtocolName<fdf::DriverHost>, zx_status_get_string(status));
     return zx::error(status);
   }
 

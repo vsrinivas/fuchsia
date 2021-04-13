@@ -291,7 +291,7 @@ zx_status_t OtStackApp::SetupBootstrapFidlService() {
   bootstrap_impl_ = std::make_unique<ot::Fuchsia::BootstrapThreadImpl>();
 
   status = outgoing_->svc_dir()->AddEntry(
-      fuchsia_lowpan_bootstrap::Thread::Name,
+      fidl::DiscoverableProtocolName<fuchsia_lowpan_bootstrap::Thread>,
       fbl::MakeRefCounted<fs::Service>(
           [this](fidl::ServerEnd<fuchsia_lowpan_bootstrap::Thread> request) {
             zx_status_t status =
@@ -320,7 +320,7 @@ zx_status_t OtStackApp::SetupFidlService() {
   fidl_request_handler_ptr_ = std::make_unique<LowpanSpinelDeviceFidlImpl>(*this);
 
   status = outgoing_->svc_dir()->AddEntry(
-      fidl_spinel::Device::Name,
+      fidl::DiscoverableProtocolName<fidl_spinel::Device>,
       fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<fidl_spinel::Device> request) {
         if (binding_) {  // TODO (jiamingw) add support for multiple clients
           FX_LOGS(ERROR) << "FIDL connect request rejected: already bound";

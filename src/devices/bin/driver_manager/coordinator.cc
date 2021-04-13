@@ -138,7 +138,7 @@ zx_status_t Coordinator::RegisterWithPowerManager(zx::channel devfs_handle) {
     return status;
   }
   std::string registration_svc =
-      "/svc/" + std::string(fuchsia_power_manager::DriverManagerRegistration::Name);
+      fidl::DiscoverableProtocolDefaultPath<fuchsia_power_manager::DriverManagerRegistration>;
 
   status = fdio_service_connect(registration_svc.c_str(), remote.release());
   if (status != ZX_OK) {
@@ -1746,15 +1746,18 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
         dispatcher_, std::move(request), std::make_unique<SystemStateManager>(this));
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           fuchsia_device_manager::SystemStateTransition::Name, zx_status_get_string(status));
+           fidl::DiscoverableProtocolName<fuchsia_device_manager::SystemStateTransition>,
+           zx_status_get_string(status));
     }
     return status;
   };
-  status = svc_dir->AddEntry(fuchsia_device_manager::SystemStateTransition::Name,
-                             fbl::MakeRefCounted<fs::Service>(system_state_manager_register));
+  status = svc_dir->AddEntry(
+      fidl::DiscoverableProtocolName<fuchsia_device_manager::SystemStateTransition>,
+      fbl::MakeRefCounted<fs::Service>(system_state_manager_register));
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to add entry in service directory for '%s': %s",
-         fuchsia_device_manager::SystemStateTransition::Name, zx_status_get_string(status));
+         fidl::DiscoverableProtocolName<fuchsia_device_manager::SystemStateTransition>,
+         zx_status_get_string(status));
     return status;
   }
 
@@ -1764,11 +1767,12 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
             dispatcher_, std::move(request), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           fuchsia_device_manager::BindDebugger::Name, zx_status_get_string(status));
+           fidl::DiscoverableProtocolName<fuchsia_device_manager::BindDebugger>,
+           zx_status_get_string(status));
     }
     return status;
   };
-  status = svc_dir->AddEntry(fuchsia_device_manager::BindDebugger::Name,
+  status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_device_manager::BindDebugger>,
                              fbl::MakeRefCounted<fs::Service>(bind_debugger));
   if (status != ZX_OK) {
     return status;
@@ -1780,12 +1784,14 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
         dispatcher_, std::move(request), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           fuchsia_device_manager::DriverHostDevelopment::Name, zx_status_get_string(status));
+           fidl::DiscoverableProtocolName<fuchsia_device_manager::DriverHostDevelopment>,
+           zx_status_get_string(status));
     }
     return status;
   };
-  status = svc_dir->AddEntry(fuchsia_device_manager::DriverHostDevelopment::Name,
-                             fbl::MakeRefCounted<fs::Service>(driver_host_dev));
+  status = svc_dir->AddEntry(
+      fidl::DiscoverableProtocolName<fuchsia_device_manager::DriverHostDevelopment>,
+      fbl::MakeRefCounted<fs::Service>(driver_host_dev));
   if (status != ZX_OK) {
     return status;
   }
@@ -1797,8 +1803,9 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
               dispatcher_, std::move(request), this);
       return ZX_OK;
     };
-    status = svc_dir->AddEntry(fuchsia_driver_registrar::DriverRegistrar::Name,
-                               fbl::MakeRefCounted<fs::Service>(driver_registrar));
+    status =
+        svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_driver_registrar::DriverRegistrar>,
+                          fbl::MakeRefCounted<fs::Service>(driver_registrar));
     if (status != ZX_OK) {
       return status;
     }

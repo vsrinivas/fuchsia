@@ -36,7 +36,8 @@ class QueryServiceTest : public BlobfsWithFvmTest {
     EXPECT_EQ(endpoints.status_value(), ZX_OK);
     auto [query_client_end, query_server_end] = *std::move(endpoints);
 
-    std::string query_service_path = std::string("svc/") + fuchsia_fs::Query::Name;
+    std::string query_service_path =
+        std::string("svc/") + fidl::DiscoverableProtocolName<fuchsia_fs::Query>;
     EXPECT_EQ(
         fdio_service_connect_at(fs().GetOutgoingDirectory()->get(), query_service_path.c_str(),
                                 query_server_end.TakeChannel().release()),

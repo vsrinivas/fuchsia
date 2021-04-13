@@ -625,8 +625,16 @@ class ExampleProtocol final {
     Method() = delete;
   };
 };
-#ifdef __Fuchsia__
 }  // namespace fidl_test_placementofattributes
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::fidl_test_placementofattributes::ExampleProtocol> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::internal::WireDispatcher<
     ::fidl_test_placementofattributes::ExampleProtocol>
@@ -641,9 +649,8 @@ struct ::fidl::internal::WireDispatcher<
           impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
-namespace fidl_test_placementofattributes {
 #endif  // __Fuchsia__
-}  // namespace fidl_test_placementofattributes
+
 template <>
 struct ::fidl::WireRequest<
     ::fidl_test_placementofattributes::ExampleProtocol::Method>

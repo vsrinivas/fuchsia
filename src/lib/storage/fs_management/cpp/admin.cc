@@ -197,8 +197,8 @@ zx_status_t fs_register(zx_handle_t export_root) {
     return status;
   }
 
-  std::string path = std::string("/svc/") + fshost::Registry::Name;
-  if ((status = fdio_service_connect(path.c_str(), registry_server.release())) != ZX_OK) {
+  if ((status = fdio_service_connect(fidl::DiscoverableProtocolDefaultPath<fshost::Registry>,
+                                     registry_server.release())) != ZX_OK) {
     return status;
   }
 

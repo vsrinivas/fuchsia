@@ -23,8 +23,8 @@ int main(int argc, char* argv[]) {
     return status;
   }
 
-  const auto svc_path =
-      fbl::StringPrintf("/svc/%s", fuchsia_driver_registrar::DriverRegistrar::Name);
+  const auto svc_path = fbl::StringPrintf(
+      "/svc/%s", fidl::DiscoverableProtocolName<fuchsia_driver_registrar::DriverRegistrar>);
   status = fdio_service_connect(svc_path.c_str(), remote.release());
   if (status != ZX_OK) {
     fprintf(stderr, "fdio_service_connect failed, pathc %s, status %d\n", svc_path.c_str(), status);

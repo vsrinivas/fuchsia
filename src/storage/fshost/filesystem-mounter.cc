@@ -189,8 +189,9 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device, const mount_o
     FX_LOGS(ERROR) << "failed to add diagnostic directory for blobfs: "
                    << zx_status_get_string(status);
   }
-  status = fshost_.ForwardFsService(FsManager::MountPoint::kBlob,
-                                    fuchsia_update_verify::BlobfsVerifier::Name);
+  status = fshost_.ForwardFsService(
+      FsManager::MountPoint::kBlob,
+      fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to forward BlobfsVerifier service for blobfs: "
                    << zx_status_get_string(status);

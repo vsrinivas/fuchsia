@@ -45,7 +45,8 @@ zx::status<zx::job> GetRootJob(const zx::channel& svc_root) {
             zx_status_get_string(status));
     return zx::error(status);
   }
-  status = fdio_service_connect_at(svc_root.get(), fuchsia_kernel::RootJob::Name, remote.release());
+  status = fdio_service_connect_at(
+      svc_root.get(), fidl::DiscoverableProtocolName<fuchsia_kernel::RootJob>, remote.release());
   if (status != ZX_OK) {
     fprintf(stderr, "svchost: unable to connect to fuchsia.kernel.RootJob\n");
     return zx::error(status);
@@ -67,8 +68,8 @@ zx::status<zx::resource> GetRootResource(const zx::channel& svc_root) {
             zx_status_get_string(status));
     return zx::error(status);
   }
-  status =
-      fdio_service_connect_at(svc_root.get(), fuchsia_boot::RootResource::Name, remote.release());
+  status = fdio_service_connect_at(
+      svc_root.get(), fidl::DiscoverableProtocolName<fuchsia_boot::RootResource>, remote.release());
   if (status != ZX_OK) {
     fprintf(stderr, "svchost: unable to connect to fuchsia.boot.RootResource\n");
     return zx::error(status);
@@ -222,7 +223,8 @@ int main(int argc, char** argv) {
               zx_status_get_string(status));
       return 1;
     }
-    status = fdio_service_connect_at(caller.channel()->get(), fuchsia_boot::Arguments::Name,
+    status = fdio_service_connect_at(caller.channel()->get(),
+                                     fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>,
                                      remote.release());
     if (status != ZX_OK) {
       fprintf(stderr, "svchost: unable to connect to fuchsia.boot.Arguments");

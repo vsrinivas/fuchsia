@@ -143,7 +143,8 @@ static zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_
     report_error(err_msg, "failed to create channel for resolver service: %d", status);
     return ZX_ERR_INTERNAL;
   }
-  status = fdio_service_connect_by_name(fprocess::Resolver::Name, request.release());
+  status = fdio_service_connect_by_name(fidl::DiscoverableProtocolName<fprocess::Resolver>,
+                                        request.release());
   if (status != ZX_OK) {
     report_error(err_msg, "failed to connect to resolver service: %d", status);
     return ZX_ERR_INTERNAL;
@@ -762,7 +763,8 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
     report_error(err_msg, "failed to create channel for launcher service: %d", status);
     goto cleanup;
   }
-  status = fdio_service_connect_by_name(fprocess::Launcher::Name, request.release());
+  status = fdio_service_connect_by_name(fidl::DiscoverableProtocolName<fprocess::Launcher>,
+                                        request.release());
   if (status != ZX_OK) {
     report_error(err_msg, "failed to connect to launcher service: %d", status);
     goto cleanup;

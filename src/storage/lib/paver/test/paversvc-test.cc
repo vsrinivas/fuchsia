@@ -218,7 +218,7 @@ class FakeSvc {
  public:
   explicit FakeSvc(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher), vfs_(dispatcher) {
     root_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
-    root_dir_->AddEntry(fuchsia_boot::Arguments::Name,
+    root_dir_->AddEntry(fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>,
                         fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
                           return fake_boot_args_.Connect(dispatcher_, std::move(request));
                         }));
@@ -294,7 +294,8 @@ PaverServiceTest::PaverServiceTest()
   ASSERT_OK(paver_get_service_provider()->ops->init(&provider_ctx_));
 
   ASSERT_OK(paver_get_service_provider()->ops->connect(
-      provider_ctx_, loop_.dispatcher(), fuchsia_paver::Paver::Name, server.release()));
+      provider_ctx_, loop_.dispatcher(), fidl::DiscoverableProtocolName<fuchsia_paver::Paver>,
+      server.release()));
   loop_.StartThread("paver-svc-test-loop");
   loop2_.StartThread("paver-svc-test-loop-2");
 }
@@ -1785,7 +1786,8 @@ class PaverServiceBlockTest : public PaverServiceTest {
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
 
     // Forward the block watcher FIDL interface from the devmgr.
-    fake_svc_.ForwardServiceTo(fuchsia_fshost::BlockWatcher::Name, devmgr_.fshost_outgoing_dir());
+    fake_svc_.ForwardServiceTo(fidl::DiscoverableProtocolName<fuchsia_fshost::BlockWatcher>,
+                               devmgr_.fshost_outgoing_dir());
 
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
@@ -1896,7 +1898,8 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
     ASSERT_OK(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_));
 
     // Forward the block watcher FIDL interface from the devmgr.
-    fake_svc_.ForwardServiceTo(fuchsia_fshost::BlockWatcher::Name, devmgr_.fshost_outgoing_dir());
+    fake_svc_.ForwardServiceTo(fidl::DiscoverableProtocolName<fuchsia_fshost::BlockWatcher>,
+                               devmgr_.fshost_outgoing_dir());
 
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));

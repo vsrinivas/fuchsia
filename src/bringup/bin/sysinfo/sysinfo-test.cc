@@ -26,7 +26,7 @@ namespace sysinfo {
 
 namespace {
 
-const std::string kSysinfoPath = "/svc/" + std::string(SysInfo::Name);
+const std::string kSysinfoPath = fidl::DiscoverableProtocolDefaultPath<SysInfo>;
 
 }  // namespace
 

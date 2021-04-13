@@ -201,6 +201,7 @@ func NewGenerator() *Generator {
 		fragmentMethodResultTmpl,
 		fragmentMethodUnownedResultTmpl,
 		fragmentProtocolTmpl,
+		fragmentProtocolDetailsTmpl,
 		fragmentProtocolDispatcherTmpl,
 		fragmentProtocolEventHandlerTmpl,
 		fragmentProtocolInterfaceTmpl,
