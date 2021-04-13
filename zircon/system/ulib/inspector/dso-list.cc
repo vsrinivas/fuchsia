@@ -145,6 +145,7 @@ __EXPORT void inspector_print_markup_context(FILE* f, zx_handle_t process) {
   fprintf(f, "{{{reset}}}\n");
   elf_search::ForEachModule(
       *zx::unowned_process{process}, [f, count = 0u](const elf_search::ModuleInfo& info) mutable {
+        const size_t kPageSize = zx_system_get_page_size();
         unsigned int module_id = count++;
         // Print out the module first.
         fprintf(f, "{{{module:%#x:%s:elf:", module_id, info.name.begin());
@@ -157,8 +158,8 @@ __EXPORT void inspector_print_markup_context(FILE* f, zx_handle_t process) {
           if (phdr.p_type != PT_LOAD) {
             continue;
           }
-          uintptr_t start = phdr.p_vaddr & -PAGE_SIZE;
-          uintptr_t end = (phdr.p_vaddr + phdr.p_memsz + PAGE_SIZE - 1) & -PAGE_SIZE;
+          uintptr_t start = phdr.p_vaddr & -kPageSize;
+          uintptr_t end = (phdr.p_vaddr + phdr.p_memsz + kPageSize - 1) & -kPageSize;
           fprintf(f, "{{{mmap:%#" PRIxPTR ":%#" PRIxPTR ":load:%#x:", info.vaddr + start,
                   end - start, module_id);
           if (phdr.p_flags & PF_R) {
