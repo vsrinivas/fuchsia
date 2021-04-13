@@ -10,25 +10,25 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-// Namespaced is implemented by types that have a C++ namespace.
-type Namespaced interface {
-	Namespace() Namespace
+// namespaced is implemented by types that have a C++ namespace.
+type namespaced interface {
+	Namespace() namespace
 }
 
 // During template processing this holds the current namespace.
-var currentNamespace Namespace
+var currentNamespace namespace
 
 //
 // Predefined namespaces
 //
 
-func wireNamespace(library fidlgen.LibraryIdentifier) Namespace {
-	return unifiedNamespace(library).Append("wire")
+func wireNamespace(library fidlgen.LibraryIdentifier) namespace {
+	return unifiedNamespace(library).append("wire")
 }
 
-func naturalNamespace(library fidlgen.LibraryIdentifier) Namespace {
+func naturalNamespace(library fidlgen.LibraryIdentifier) namespace {
 	parts := libraryParts(library, changePartIfReserved)
-	return Namespace(parts)
+	return namespace(parts)
 }
 
 func formatLibrary(library fidlgen.LibraryIdentifier, sep string, identifierTransform identifierTransform) string {
@@ -36,6 +36,6 @@ func formatLibrary(library fidlgen.LibraryIdentifier, sep string, identifierTran
 	return changeIfReserved(fidlgen.Identifier(name))
 }
 
-func unifiedNamespace(library fidlgen.LibraryIdentifier) Namespace {
-	return Namespace([]string{formatLibrary(library, "_", keepPartIfReserved)})
+func unifiedNamespace(library fidlgen.LibraryIdentifier) namespace {
+	return namespace([]string{formatLibrary(library, "_", keepPartIfReserved)})
 }

@@ -14,7 +14,7 @@ import (
 type Struct struct {
 	Attributes
 	fidlgen.Resourceness
-	NameVariants
+	nameVariants
 	CodingTableType string
 	Members         []StructMember
 	InlineSize      int
@@ -37,6 +37,7 @@ func (Struct) Kind() declKind {
 }
 
 var _ Kinded = (*Struct)(nil)
+var _ namespaced = (*Struct)(nil)
 
 type StructMember struct {
 	Attributes
@@ -79,12 +80,12 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 }
 
 func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
-	name := c.compileNameVariants(val.Name)
+	n := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Struct{
 		Attributes:      Attributes{val.Attributes},
 		Resourceness:    val.Resourceness,
-		NameVariants:    name,
+		nameVariants:    n,
 		CodingTableType: codingTableType,
 		Members:         []StructMember{},
 		InlineSize:      val.TypeShapeV1.InlineSize,
@@ -103,15 +104,15 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 
 	result := c.resultForStruct[val.Name]
 	if result != nil {
-		memberTypeNames := []Name{}
+		memberTypeNames := []name{}
 		for _, m := range r.Members {
 			memberTypeNames = append(memberTypeNames, m.Type.Natural)
 			result.ValueMembers = append(result.ValueMembers, m.AsParameter())
 		}
-		result.ValueTupleDecl = MakeTupleName(memberTypeNames)
+		result.ValueTupleDecl = makeTupleName(memberTypeNames)
 
 		if len(r.Members) == 0 {
-			result.ValueDecl = MakeName("void")
+			result.ValueDecl = makeName("void")
 		} else if len(r.Members) == 1 {
 			result.ValueDecl = r.Members[0].Type.Natural
 		} else {

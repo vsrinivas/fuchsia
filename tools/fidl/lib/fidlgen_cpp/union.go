@@ -14,13 +14,13 @@ type Union struct {
 	Attributes
 	fidlgen.Strictness
 	fidlgen.Resourceness
-	NameVariants
+	nameVariants
 	CodingTableType    string
-	TagEnum            NameVariants
-	TagUnknown         NameVariants
-	TagInvalid         NameVariants
-	WireOrdinalEnum    Name
-	WireInvalidOrdinal Name
+	TagEnum            nameVariants
+	TagUnknown         nameVariants
+	TagInvalid         nameVariants
+	WireOrdinalEnum    name
+	WireInvalidOrdinal name
 	Members            []UnionMember
 	InlineSize         int
 	MaxHandles         int
@@ -34,6 +34,7 @@ func (Union) Kind() declKind {
 }
 
 var _ Kinded = (*Union)(nil)
+var _ namespaced = (*Union)(nil)
 
 type UnionMember struct {
 	Attributes
@@ -41,8 +42,8 @@ type UnionMember struct {
 	Type              Type
 	Name              string
 	StorageName       string
-	TagName           NameVariants
-	WireOrdinalName   Name
+	TagName           nameVariants
+	WireOrdinalName   name
 	Offset            int
 	HandleInformation *HandleInformation
 }
@@ -57,19 +58,19 @@ func (um UnionMember) NameAndType() (string, Type) {
 func (c *compiler) compileUnion(val fidlgen.Union) Union {
 	name := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
-	tagEnum := name.Nest("Tag")
-	wireOrdinalEnum := name.Wire.Nest("Ordinal")
+	tagEnum := name.nest("Tag")
+	wireOrdinalEnum := name.Wire.nest("Ordinal")
 	u := Union{
 		Attributes:         Attributes{val.Attributes},
 		Strictness:         val.Strictness,
 		Resourceness:       val.Resourceness,
-		NameVariants:       name,
+		nameVariants:       name,
 		CodingTableType:    codingTableType,
 		TagEnum:            tagEnum,
-		TagUnknown:         tagEnum.Nest("kUnknown"),
-		TagInvalid:         tagEnum.Nest("Invalid"),
+		TagUnknown:         tagEnum.nest("kUnknown"),
+		TagInvalid:         tagEnum.nest("Invalid"),
 		WireOrdinalEnum:    wireOrdinalEnum,
-		WireInvalidOrdinal: wireOrdinalEnum.Nest("Invalid"),
+		WireInvalidOrdinal: wireOrdinalEnum.nest("Invalid"),
 		InlineSize:         val.TypeShapeV1.InlineSize,
 		MaxHandles:         val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine:       val.TypeShapeV1.MaxOutOfLine,
@@ -88,8 +89,8 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 			Type:              c.compileType(mem.Type),
 			Name:              n,
 			StorageName:       changeIfReserved(mem.Name + "_"),
-			TagName:           u.TagEnum.Nest(t),
-			WireOrdinalName:   u.WireOrdinalEnum.Nest(t),
+			TagName:           u.TagEnum.nest(t),
+			WireOrdinalName:   u.WireOrdinalEnum.nest(t),
 			Offset:            mem.Offset,
 			HandleInformation: c.fieldHandleInformation(&mem.Type),
 		})
@@ -97,9 +98,9 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 
 	if val.MethodResult != nil {
 		result := Result{
-			ResultDecl:      u.NameVariants,
-			ValueStructDecl: u.Members[0].Type.NameVariants,
-			ErrorDecl:       u.Members[1].Type.NameVariants,
+			ResultDecl:      u.nameVariants,
+			ValueStructDecl: u.Members[0].Type.nameVariants,
+			ErrorDecl:       u.Members[1].Type.nameVariants,
 		}
 		c.resultForStruct[val.MethodResult.ValueType.Identifier] = &result
 		c.resultForUnion[val.Name] = &result

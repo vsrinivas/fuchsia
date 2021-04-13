@@ -19,7 +19,7 @@ func ensureNamespace(arg interface{}) string {
 
 	newNamespace := []string{}
 	switch v := arg.(type) {
-	case Namespaced:
+	case namespaced:
 		newNamespace = []string(v.Namespace())
 	case string:
 		newNamespace = strings.Split(v, "::")
@@ -53,7 +53,7 @@ func ensureNamespace(arg interface{}) string {
 	}
 
 	// Update the current namespace variable
-	currentNamespace = Namespace(newNamespace)
+	currentNamespace = namespace(newNamespace)
 
 	return strings.Join(lines, "\n")
 }
@@ -65,7 +65,7 @@ func ensureNamespace(arg interface{}) string {
 // namespace is generated.
 // This allows templates to maintain a consistent C++ namespace as they enter
 // and leave #ifdef __Fuchsia__ blocks.
-var namespaceStack = []Namespace{}
+var namespaceStack = []namespace{}
 
 func ifdefFuchsia() string {
 	namespaceStack = append(namespaceStack, currentNamespace)
@@ -109,7 +109,7 @@ var CommonTemplateFuncs = template.FuncMap{
 	"EndOfFile":       endOfFile,
 
 	// UseNatural sets the template engine to default to the "natural" domain object
-	// namespace, when printing NameVariants.
+	// namespace, when printing nameVariants.
 	//
 	// Example of Natural type name: "fuchsia::library::MyType".
 	"UseNatural": func() string {
@@ -118,7 +118,7 @@ var CommonTemplateFuncs = template.FuncMap{
 	},
 
 	// UseUnified sets the template engine to default to the "unified" domain object
-	// namespace, when printing NameVariants.
+	// namespace, when printing nameVariants.
 	//
 	// Example of Unified type name: "fuchsia_library::MyType".
 	"UseUnified": func() string {
@@ -127,7 +127,7 @@ var CommonTemplateFuncs = template.FuncMap{
 	},
 
 	// UseWire sets the template engine to default to the "wire" domain object
-	// namespace, when printing NameVariants.
+	// namespace, when printing nameVariants.
 	//
 	// Example of Wire type name: "fuchsia_library::wire::MyType".
 	"UseWire": func() string {

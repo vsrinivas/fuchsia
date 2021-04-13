@@ -15,7 +15,7 @@ type TableFrameItem *TableMember
 type Table struct {
 	Attributes
 	fidlgen.Resourceness
-	NameVariants
+	nameVariants
 	CodingTableType string
 	Members         []TableMember
 	InlineSize      int
@@ -34,6 +34,7 @@ func (Table) Kind() declKind {
 }
 
 var _ Kinded = (*Table)(nil)
+var _ namespaced = (*Table)(nil)
 
 type TableMember struct {
 	Attributes
@@ -86,7 +87,7 @@ func (c *compiler) compileTable(val fidlgen.Table) Table {
 	r := Table{
 		Attributes:      Attributes{val.Attributes},
 		Resourceness:    val.Resourceness,
-		NameVariants:    name,
+		nameVariants:    name,
 		CodingTableType: codingTableType,
 		Members:         nil,
 		InlineSize:      val.TypeShapeV1.InlineSize,

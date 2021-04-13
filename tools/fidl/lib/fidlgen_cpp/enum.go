@@ -11,9 +11,9 @@ import (
 type Enum struct {
 	Attributes
 	fidlgen.Strictness
-	NameVariants
+	nameVariants
 	Enum    fidlgen.Enum
-	Type    NameVariants
+	Type    nameVariants
 	Members []EnumMember
 }
 
@@ -22,6 +22,7 @@ func (Enum) Kind() declKind {
 }
 
 var _ Kinded = (*Enum)(nil)
+var _ namespaced = (*Enum)(nil)
 
 func (e Enum) UnknownValueForTmpl() interface{} {
 	return e.Enum.UnknownValueForTmpl()
@@ -39,7 +40,7 @@ func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
 	r := Enum{
 		Attributes:   Attributes{val.Attributes},
 		Strictness:   val.Strictness,
-		NameVariants: name,
+		nameVariants: name,
 		Enum:         val,
 		Type:         NameVariantsForPrimitive(val.Type),
 	}

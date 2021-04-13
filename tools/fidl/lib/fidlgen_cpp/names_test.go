@@ -9,25 +9,25 @@ import (
 )
 
 func TestName(t *testing.T) {
-	ns := Namespace([]string{"foo", "bar"})
-	v := ns.Member("Baz")
+	ns := namespace([]string{"foo", "bar"})
+	v := ns.member("Baz")
 	assertEqual(t, v.String(), "::foo::bar::Baz")
 
-	p := v.PrependName("Prefix")
+	p := v.prependName("Prefix")
 	assertEqual(t, p.String(), "::foo::bar::PrefixBaz")
 
-	s := v.AppendName("Suffix")
+	s := v.appendName("Suffix")
 	assertEqual(t, s.String(), "::foo::bar::BazSuffix")
 
-	n := v.Nest("Quux")
+	n := v.nest("Quux")
 	assertEqual(t, n.String(), "::foo::bar::Baz::Quux")
 	assertEqual(t, n.Self(), "Quux")
 
-	tmpl := v.Template(Namespace([]string{"hello"}).Member("World"))
+	tmpl := v.template(namespace([]string{"hello"}).member("World"))
 	assertEqual(t, tmpl.String(), "::foo::bar::Baz<::hello::World>")
 	assertEqual(t, tmpl.Self(), "Baz")
 
-	tmpl_nest := tmpl.Nest("Inner")
+	tmpl_nest := tmpl.nest("Inner")
 	assertEqual(t, tmpl_nest.String(), "::foo::bar::Baz<::hello::World>::Inner")
 
 }

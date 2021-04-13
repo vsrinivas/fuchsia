@@ -23,50 +23,50 @@ type hlMessagingDetails struct {
 	// ProtocolMarker is a pure-virtual interface corresponding to methods in
 	// the protocol. Notably, HLCPP shares the same interface type between
 	// the server and client bindings API.
-	ProtocolMarker Name
+	ProtocolMarker name
 
 	// InterfaceAliasForStub is the type alias generated within the
 	// "Stub" class, that refers to the pure-virtual interface corresponding to
 	// the protocol.
-	InterfaceAliasForStub Name
+	InterfaceAliasForStub name
 
 	// Proxy implements the interface by encoding and making method calls.
-	Proxy Name
+	Proxy name
 
 	// Stub calls into the interface after decoding an incoming message.
 	// It also implements the EventSender interface.
-	Stub Name
+	Stub name
 
 	// EventSender is a pure-virtual interface for sending events.
-	EventSender Name
+	EventSender name
 
 	// SyncInterface is a pure-virtual interface for making synchronous calls.
-	SyncInterface Name
+	SyncInterface name
 
 	// SyncProxy implements the SyncInterface.
-	SyncProxy Name
+	SyncProxy name
 
-	RequestEncoder  Name
-	RequestDecoder  Name
-	ResponseEncoder Name
-	ResponseDecoder Name
+	RequestEncoder  name
+	RequestDecoder  name
+	ResponseEncoder name
+	ResponseDecoder name
 }
 
-func compileHlMessagingDetails(protocol NameVariants) hlMessagingDetails {
+func compileHlMessagingDetails(protocol nameVariants) hlMessagingDetails {
 	p := protocol.Natural
-	stub := p.AppendName("_Stub")
+	stub := p.appendName("_Stub")
 	return hlMessagingDetails{
 		ProtocolMarker:        p,
-		InterfaceAliasForStub: stub.Nest(p.AppendName("_clazz").Name()),
-		Proxy:                 p.AppendName("_Proxy"),
+		InterfaceAliasForStub: stub.nest(p.appendName("_clazz").Name()),
+		Proxy:                 p.appendName("_Proxy"),
 		Stub:                  stub,
-		EventSender:           p.AppendName("_EventSender"),
-		SyncInterface:         p.AppendName("_Sync"),
-		SyncProxy:             p.AppendName("_SyncProxy"),
-		RequestEncoder:        p.AppendName("_RequestEncoder"),
-		RequestDecoder:        p.AppendName("_RequestDecoder"),
-		ResponseEncoder:       p.AppendName("_ResponseEncoder"),
-		ResponseDecoder:       p.AppendName("_ResponseDecoder"),
+		EventSender:           p.appendName("_EventSender"),
+		SyncInterface:         p.appendName("_Sync"),
+		SyncProxy:             p.appendName("_SyncProxy"),
+		RequestEncoder:        p.appendName("_RequestEncoder"),
+		RequestDecoder:        p.appendName("_RequestDecoder"),
+		ResponseEncoder:       p.appendName("_ResponseEncoder"),
+		ResponseDecoder:       p.appendName("_ResponseDecoder"),
 	}
 }
 
@@ -88,77 +88,77 @@ func (p Protocol) WithHlMessaging() protocolWithHlMessaging {
 // TODO(fxbug.dev/60240): Start implementing unified bindings messaging layer
 // based on this skeleton.
 type unifiedMessagingDetails struct {
-	ClientImpl      Name
-	EventHandlers   Name
-	Interface       Name
-	EventSender     Name
-	RequestEncoder  Name
-	RequestDecoder  Name
-	ResponseEncoder Name
-	ResponseDecoder Name
+	ClientImpl      name
+	EventHandlers   name
+	Interface       name
+	EventSender     name
+	RequestEncoder  name
+	RequestDecoder  name
+	ResponseEncoder name
+	ResponseDecoder name
 }
 
 // These correspond to templated classes forward-declared in
 // //zircon/system/ulib/fidl/include/lib/fidl/llcpp/wire_messaging.h
 var (
 	// Protocol related
-	WireSyncClient            = fidlNs.Member("WireSyncClient")
-	WireClient                = fidlNs.Member("WireClient")
-	WireEventHandlerInterface = internalNs.Member("WireEventHandlerInterface")
-	WireSyncEventHandler      = fidlNs.Member("WireSyncEventHandler")
-	WireAsyncEventHandler     = fidlNs.Member("WireAsyncEventHandler")
-	WireInterface             = fidlNs.Member("WireInterface")
-	WireRawChannelInterface   = fidlNs.Member("WireRawChannelInterface")
-	WireEventSender           = fidlNs.Member("WireEventSender")
-	WireWeakEventSender       = internalNs.Member("WireWeakEventSender")
-	WireClientImpl            = internalNs.Member("WireClientImpl")
-	WireCaller                = internalNs.Member("WireCaller")
-	WireDispatcher            = internalNs.Member("WireDispatcher")
+	WireSyncClient            = fidlNs.member("WireSyncClient")
+	WireClient                = fidlNs.member("WireClient")
+	WireEventHandlerInterface = internalNs.member("WireEventHandlerInterface")
+	WireSyncEventHandler      = fidlNs.member("WireSyncEventHandler")
+	WireAsyncEventHandler     = fidlNs.member("WireAsyncEventHandler")
+	WireInterface             = fidlNs.member("WireInterface")
+	WireRawChannelInterface   = fidlNs.member("WireRawChannelInterface")
+	WireEventSender           = fidlNs.member("WireEventSender")
+	WireWeakEventSender       = internalNs.member("WireWeakEventSender")
+	WireClientImpl            = internalNs.member("WireClientImpl")
+	WireCaller                = internalNs.member("WireCaller")
+	WireDispatcher            = internalNs.member("WireDispatcher")
 
 	// MethodRelated
-	WireRequest         = fidlNs.Member("WireRequest")
-	WireResponse        = fidlNs.Member("WireResponse")
-	WireResult          = fidlNs.Member("WireResult")
-	WireUnownedResult   = fidlNs.Member("WireUnownedResult")
-	WireResponseContext = fidlNs.Member("WireResponseContext")
+	WireRequest         = fidlNs.member("WireRequest")
+	WireResponse        = fidlNs.member("WireResponse")
+	WireResult          = fidlNs.member("WireResult")
+	WireUnownedResult   = fidlNs.member("WireUnownedResult")
+	WireResponseContext = fidlNs.member("WireResponseContext")
 )
 
 type wireTypeNames struct {
 	// WireProtocolMarker is a class only used for containing other definitions
 	// related to this protocol.
 	// TODO(fxbug.dev/72798): Golang template should use this instead of the
-	// NameVariants embedded in Protocol.
-	WireProtocolMarker        Name
-	WireSyncClient            Name
-	WireClient                Name
-	WireEventHandlerInterface Name
-	WireSyncEventHandler      Name
-	WireAsyncEventHandler     Name
-	WireInterface             Name
-	WireRawChannelInterface   Name
-	WireEventSender           Name
-	WireWeakEventSender       Name
-	WireClientImpl            Name
-	WireCaller                Name
-	WireDispatcher            Name
+	// nameVariants embedded in Protocol.
+	WireProtocolMarker        name
+	WireSyncClient            name
+	WireClient                name
+	WireEventHandlerInterface name
+	WireSyncEventHandler      name
+	WireAsyncEventHandler     name
+	WireInterface             name
+	WireRawChannelInterface   name
+	WireEventSender           name
+	WireWeakEventSender       name
+	WireClientImpl            name
+	WireCaller                name
+	WireDispatcher            name
 }
 
-func newWireTypeNames(protocolVariants NameVariants) wireTypeNames {
+func newWireTypeNames(protocolVariants nameVariants) wireTypeNames {
 	p := protocolVariants.Wire
 	return wireTypeNames{
 		WireProtocolMarker:        p,
-		WireSyncClient:            WireSyncClient.Template(p),
-		WireClient:                WireClient.Template(p),
-		WireEventHandlerInterface: WireEventHandlerInterface.Template(p),
-		WireSyncEventHandler:      WireSyncEventHandler.Template(p),
-		WireAsyncEventHandler:     WireAsyncEventHandler.Template(p),
-		WireInterface:             WireInterface.Template(p),
-		WireRawChannelInterface:   WireRawChannelInterface.Template(p),
-		WireEventSender:           WireEventSender.Template(p),
-		WireWeakEventSender:       WireWeakEventSender.Template(p),
-		WireClientImpl:            WireClientImpl.Template(p),
-		WireCaller:                WireCaller.Template(p),
-		WireDispatcher:            WireDispatcher.Template(p),
+		WireSyncClient:            WireSyncClient.template(p),
+		WireClient:                WireClient.template(p),
+		WireEventHandlerInterface: WireEventHandlerInterface.template(p),
+		WireSyncEventHandler:      WireSyncEventHandler.template(p),
+		WireAsyncEventHandler:     WireAsyncEventHandler.template(p),
+		WireInterface:             WireInterface.template(p),
+		WireRawChannelInterface:   WireRawChannelInterface.template(p),
+		WireEventSender:           WireEventSender.template(p),
+		WireWeakEventSender:       WireWeakEventSender.template(p),
+		WireClientImpl:            WireClientImpl.template(p),
+		WireCaller:                WireCaller.template(p),
+		WireDispatcher:            WireDispatcher.template(p),
 	}
 }
 
@@ -169,7 +169,7 @@ type protocolInner struct {
 	// TODO(fxbug.dev/72798): This should be replaced by ProtocolMarker in hlMessagingDetails
 	// and wireMessagingDetails. In particular, the unified bindings do not declare
 	// protocol marker classes.
-	NameVariants
+	nameVariants
 
 	// [Discoverable] protocols are exported to the outgoing namespace under this
 	// name. This is deprecated by FTP-041 unified services.
@@ -184,7 +184,7 @@ type protocolInner struct {
 	SyncEventAllocation allocation
 	Methods             []Method
 	FuzzingName         string
-	TestBase            NameVariants
+	TestBase            nameVariants
 }
 
 // Protocol should be created using newProtocol.
@@ -209,7 +209,7 @@ type Protocol struct {
 	Events []*Method
 
 	// Generated struct holding variant-agnostic details about protocol.
-	ProtocolDetails Name
+	ProtocolDetails name
 }
 
 func (Protocol) Kind() declKind {
@@ -217,6 +217,7 @@ func (Protocol) Kind() declKind {
 }
 
 var _ Kinded = (*Protocol)(nil)
+var _ namespaced = (*Protocol)(nil)
 
 func (p Protocol) Name() string {
 	return p.Wire.Name() // TODO: not the wire name, maybe?
@@ -253,7 +254,7 @@ func newProtocol(inner protocolInner) Protocol {
 		TwoWayMethods:   filterBy(kinds{twoWayMethod}),
 		ClientMethods:   filterBy(kinds{oneWayMethod, twoWayMethod}),
 		Events:          filterBy(kinds{eventMethod}),
-		ProtocolDetails: MakeName("fidl::internal::ProtocolDetails").Template(inner.Wire),
+		ProtocolDetails: makeName("fidl::internal::ProtocolDetails").template(inner.Wire),
 	}
 }
 
@@ -272,8 +273,8 @@ func (args argsWrapper) isResource() bool {
 
 type messageInner struct {
 	fidlgen.TypeShape
-	HlCodingTable   Name
-	WireCodingTable Name
+	HlCodingTable   name
+	WireCodingTable name
 }
 
 // message contains lower level wire-format information about a request/response
@@ -323,33 +324,33 @@ func (m message) HasPointer() bool {
 }
 
 type wireMethod struct {
-	WireCompleter       Name
-	WireCompleterBase   Name
-	WireRequest         Name
-	WireResponse        Name
-	WireResponseContext Name
-	WireResult          Name
-	WireUnownedResult   Name
+	WireCompleter       name
+	WireCompleterBase   name
+	WireRequest         name
+	WireResponse        name
+	WireResponseContext name
+	WireResult          name
+	WireUnownedResult   name
 }
 
-func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker Name, methodMarker Name) wireMethod {
-	i := wireTypes.WireInterface.Nest(name)
+func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, methodMarker name) wireMethod {
+	i := wireTypes.WireInterface.nest(name)
 	return wireMethod{
-		WireCompleter:       i.AppendName("Completer"),
-		WireCompleterBase:   i.AppendName("CompleterBase"),
-		WireRequest:         WireRequest.Template(methodMarker),
-		WireResponse:        WireResponse.Template(methodMarker),
-		WireResponseContext: WireResponseContext.Template(methodMarker),
-		WireResult:          WireResult.Template(methodMarker),
-		WireUnownedResult:   WireUnownedResult.Template(methodMarker),
+		WireCompleter:       i.appendName("Completer"),
+		WireCompleterBase:   i.appendName("CompleterBase"),
+		WireRequest:         WireRequest.template(methodMarker),
+		WireResponse:        WireResponse.template(methodMarker),
+		WireResponseContext: WireResponseContext.template(methodMarker),
+		WireResult:          WireResult.template(methodMarker),
+		WireUnownedResult:   WireUnownedResult.template(methodMarker),
 	}
 }
 
 // methodInner contains information about a Method that should be filled out by
 // the compiler.
 type methodInner struct {
-	protocolName NameVariants
-	Marker       NameVariants
+	protocolName nameVariants
+	Marker       nameVariants
 	wireMethod
 	baseCodingTableName string
 	requestTypeShape    fidlgen.TypeShape
@@ -370,7 +371,7 @@ type methodInner struct {
 type Method struct {
 	methodInner
 	NameInLowerSnakeCase string
-	OrdinalName          NameVariants
+	OrdinalName          nameVariants
 	Request              message
 	Response             message
 	CallbackType         string
@@ -411,16 +412,16 @@ func (d messageDirection) queryBoundedness(c methodContext, s fidlgen.Strictness
 }
 
 func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames) Method {
-	hlCodingTableBase := hl.ProtocolMarker.Namespace().Append("_internal").Member(inner.baseCodingTableName)
-	wireCodingTableBase := wire.WireProtocolMarker.Namespace().Member(inner.baseCodingTableName)
+	hlCodingTableBase := hl.ProtocolMarker.Namespace().append("_internal").member(inner.baseCodingTableName)
+	wireCodingTableBase := wire.WireProtocolMarker.Namespace().member(inner.baseCodingTableName)
 
-	hlRequestCodingTable := hlCodingTableBase.AppendName("RequestTable")
-	wireRequestCodingTable := wireCodingTableBase.AppendName("RequestTable")
-	hlResponseCodingTable := hlCodingTableBase.AppendName("ResponseTable")
-	wireResponseCodingTable := wireCodingTableBase.AppendName("ResponseTable")
+	hlRequestCodingTable := hlCodingTableBase.appendName("RequestTable")
+	wireRequestCodingTable := wireCodingTableBase.appendName("RequestTable")
+	hlResponseCodingTable := hlCodingTableBase.appendName("ResponseTable")
+	wireResponseCodingTable := wireCodingTableBase.appendName("ResponseTable")
 	if !inner.HasRequest {
-		hlResponseCodingTable = hlCodingTableBase.AppendName("EventTable")
-		wireResponseCodingTable = wireCodingTableBase.AppendName("EventTable")
+		hlResponseCodingTable = hlCodingTableBase.appendName("EventTable")
+		wireResponseCodingTable = wireCodingTableBase.appendName("EventTable")
 	}
 
 	callbackType := ""
@@ -432,9 +433,9 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames) Met
 	m := Method{
 		methodInner:          inner,
 		NameInLowerSnakeCase: fidlgen.ToSnakeCase(inner.Name),
-		OrdinalName: NameVariants{
-			Natural: inner.protocolName.Natural.Namespace().Append("internal").Member(ordinalName),
-			Wire:    inner.protocolName.Wire.Namespace().Member(ordinalName),
+		OrdinalName: nameVariants{
+			Natural: inner.protocolName.Natural.Namespace().append("internal").member(ordinalName),
+			Wire:    inner.protocolName.Wire.Namespace().member(ordinalName),
 		},
 		Request: newMessage(messageInner{
 			TypeShape:       inner.requestTypeShape,
@@ -518,7 +519,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 			result = c.resultForUnion[v.Response[0].Type.Identifier]
 		}
 
-		methodMarker := protocolName.Nest(name)
+		methodMarker := protocolName.nest(name)
 
 		method := newMethod(methodInner{
 			protocolName: protocolName,
@@ -552,7 +553,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 	fuzzingName := strings.ReplaceAll(strings.ReplaceAll(string(p.Name), ".", "_"), "/", "_")
 	r := newProtocol(protocolInner{
 		Attributes:       Attributes{p.Attributes},
-		NameVariants:     protocolName,
+		nameVariants:     protocolName,
 		hlMessaging:      hlMessaging,
 		wireTypeNames:    wireTypeNames,
 		DiscoverableName: p.GetServiceName(),
@@ -561,7 +562,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 				clientContext, allEventsStrict(methods))),
 		Methods:     methods,
 		FuzzingName: fuzzingName,
-		TestBase:    protocolName.AppendName("_TestBase").AppendNamespace("testing"),
+		TestBase:    protocolName.appendName("_TestBase").appendNamespace("testing"),
 	})
 	for i := 0; i < len(methods); i++ {
 		methods[i].Protocol = &r

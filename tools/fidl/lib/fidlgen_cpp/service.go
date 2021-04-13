@@ -15,7 +15,7 @@ import (
 
 type Service struct {
 	Attributes
-	NameVariants
+	nameVariants
 	ServiceName string
 	Members     []ServiceMember
 }
@@ -25,10 +25,11 @@ func (Service) Kind() declKind {
 }
 
 var _ Kinded = (*Service)(nil)
+var _ namespaced = (*Service)(nil)
 
 type ServiceMember struct {
 	Attributes
-	ProtocolType NameVariants
+	ProtocolType nameVariants
 	Name         string
 	MethodName   string
 }
@@ -36,7 +37,7 @@ type ServiceMember struct {
 func (c *compiler) compileService(val fidlgen.Service) Service {
 	s := Service{
 		Attributes:   Attributes{val.Attributes},
-		NameVariants: c.compileNameVariants(val.Name),
+		nameVariants: c.compileNameVariants(val.Name),
 		ServiceName:  val.GetServiceName(),
 	}
 
