@@ -17,7 +17,7 @@ def main():
     params.add_argument("source", type=Path)
     params.add_argument("target", type=Path)
     params.add_argument("stamp", type=Path)
-    params.add_argument("--ignore_pattern", action="append")
+    params.add_argument("--ignore_patterns", nargs="+")
     args = params.parse_args()
 
     if args.target.is_file():
@@ -26,8 +26,8 @@ def main():
         shutil.rmtree(args.target, ignore_errors=True)
 
     ignore = None
-    if args.ignore_pattern:
-        ignore = shutil.ignore_patterns(*args.ignore_pattern)
+    if args.ignore_patterns:
+        ignore = shutil.ignore_patterns(*args.ignore_patterns)
 
     shutil.copytree(args.source, args.target, symlinks=True, ignore=ignore)
 

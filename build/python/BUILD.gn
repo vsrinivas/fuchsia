@@ -2,39 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/copy_tree.gni")
 import("//build/python/python.gni")
 import("//build/testing/host_test_data.gni")
 
 # Make the host python prebuilt available in the out dir so it
 # can be used in python_host_test without making multiple copies.
 
-# A regular copy() doesn't work properly with directories.
-action("copy_lib") {
-  # TODO(https://fxbug.dev/73140): fix hermeticity of copy_tree.py
-  hermetic_deps = false
-  script = "//build/copy_tree.py"
-  args = [
-    rebase_path("//prebuilt/third_party/python3/${host_platform}/lib",
-                root_build_dir),
-    rebase_path("${python_out_dir}/lib", root_build_dir),
-    rebase_path("${python_out_dir}/lib.stamp", root_build_dir),
-
+copy_tree("copy_lib") {
+  src_dir = "//prebuilt/third_party/python3/${host_platform}/lib"
+  dest_dir = "${python_out_dir}/lib"
+  ignore_patterns = [
     # The .pyc files may be produced while this action is running,
     # so we don't want to try to copy them while the're being written.
-    "--ignore_pattern",
     "__pycache__",
-    "--ignore_pattern",
     "*.pyc.*",
-    "--ignore_pattern",
     "*.pyc",
   ]
   inputs = [
     # This file should change when the package version changes.
     "//prebuilt/third_party/python3/${host_platform}/include/python${python_version}/pyconfig.h",
-  ]
-  outputs = [
-    "${python_out_dir}/lib",
-    "${python_out_dir}/lib.stamp",
   ]
   visibility = [ ":*" ]
 }

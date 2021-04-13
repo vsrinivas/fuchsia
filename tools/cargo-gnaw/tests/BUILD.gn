@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/copy_tree.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
@@ -127,39 +128,31 @@ if (is_host) {
     outputs = [ "$root_out_dir/test_data/tools/cargo-gnaw/tests/{{source_target_relative}}" ]
   }
 
-  template("_copy_tool") {
-    action(target_name) {
-      hermetic_deps = false
-      source = "//prebuilt/third_party/${invoker.tool}/${host_platform}"
-      target = "${invoker.out_dir}/${invoker.tool}"
-      inputs = [ "$source/.versions/${invoker.tool}.cipd_version" ]
-      script = "//build/copy_tree.py"
-      stamp = "${target}.stamp"
-      args = [
-        rebase_path(source, root_build_dir),
-        rebase_path(target, root_build_dir),
-        rebase_path(stamp, root_build_dir),
-      ]
-
-      # In theory we could use the version file as our output, but that causes
-      # a problem: ninja will attempt to mkdir $target, and if $target exists
-      # but is not a directory, the build will fail. So we use a stamp file in
-      # the parent directory instead.
-      outputs = [ stamp ]
-
-      metadata = {
-        test_runtime_deps = [ target ]
-      }
-    }
+  cargo_gnaw_rust_out_dir =
+      "${root_out_dir}/test_data/tools/cargo-gnaw/runfiles/rust"
+  copy_tree("cargo_gnaw_rust_copy") {
+    src_dir = "//prebuilt/third_party/rust/${host_platform}"
+    dest_dir = cargo_gnaw_rust_out_dir
+    inputs = [ "${src_dir}/.versions/rust.cipd_version" ]
   }
 
-  _copy_tool("cargo_gnaw_rust") {
-    tool = "rust"
-    out_dir = "$root_out_dir/test_data/tools/cargo-gnaw/runfiles"
+  # Make the copied directory available at test runtime.
+  host_test_data("cargo_gnaw_rust") {
+    sources = [ cargo_gnaw_rust_out_dir ]
+    deps = [ ":cargo_gnaw_rust_copy" ]
   }
 
-  _copy_tool("cargo_gnaw_gn") {
-    tool = "gn"
-    out_dir = "$root_out_dir/test_data/tools/cargo-gnaw/runfiles"
+  cargo_gnaw_gn_out_dir =
+      "${root_out_dir}/test_data/tools/cargo-gnaw/runfiles/gn"
+  copy_tree("cargo_gnaw_gn_copy") {
+    src_dir = "//prebuilt/third_party/gn/${host_platform}"
+    dest_dir = cargo_gnaw_gn_out_dir
+    inputs = [ "${src_dir}/.versions/gn.cipd_version" ]
+  }
+
+  # Make the copied directory available at test runtime.
+  host_test_data("cargo_gnaw_gn") {
+    sources = [ cargo_gnaw_gn_out_dir ]
+    deps = [ ":cargo_gnaw_gn_copy" ]
   }
 }

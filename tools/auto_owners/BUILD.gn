@@ -2,9 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/copy_tree.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
+import("//build/testing/host_test_data.gni")
 
 if (is_host) {
   crate_deps = [
@@ -58,38 +60,19 @@ if (is_host) {
     outputs = [ "$test_output_dir/{{source_target_relative}}" ]
   }
 
-  # we need to copy the GN binary from the builder into the test output directory so we can
-  # run it on a different bot than does the builds
-  # TODO(fxbug.dev/74196) extract this, cargo-gnaw's, potentially others to a file in //build
-  template("_copy_tool") {
-    action(target_name) {
-      hermetic_deps = false
-      source = "//prebuilt/third_party/${invoker.tool}/${host_platform}"
-      target = "${invoker.out_dir}/${invoker.tool}"
-      inputs = [ "$source/.versions/${invoker.tool}.cipd_version" ]
-      script = "//build/copy_tree.py"
-      stamp = "${target}.stamp"
-      args = [
-        rebase_path(source, root_build_dir),
-        rebase_path(target, root_build_dir),
-        rebase_path(stamp, root_build_dir),
-      ]
-
-      # In theory we could use the version file as our output, but that causes
-      # a problem: ninja will attempt to mkdir $target, and if $target exists
-      # but is not a directory, the build will fail. So we use a stamp file in
-      # the parent directory instead.
-      outputs = [ stamp ]
-
-      metadata = {
-        test_runtime_deps = [ target ]
-      }
-    }
+  # we need to copy the GN binary from the builder into the test output
+  # directory so we can run it on a different bot than does the builds.
+  auto_owners_gn_out_dir = "${test_output_dir}/runfiles/gn"
+  copy_tree("auto_owners_gn_copy") {
+    src_dir = "//prebuilt/third_party/gn/${host_platform}"
+    dest_dir = auto_owners_gn_out_dir
+    inputs = [ "${src_dir}/.versions/gn.cipd_version" ]
   }
 
-  _copy_tool("auto_owners_gn") {
-    tool = "gn"
-    out_dir = "$test_output_dir/runfiles"
+  # Make the copied directory available at test runtime.
+  host_test_data("auto_owners_gn") {
+    sources = [ auto_owners_gn_out_dir ]
+    deps = [ ":auto_owners_gn_copy" ]
   }
 }
 

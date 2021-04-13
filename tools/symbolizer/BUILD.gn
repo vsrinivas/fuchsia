@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/copy_tree.gni")
 import("//build/host.gni")
 import("//build/sdk/sdk_host_tool.gni")
 import("//build/test.gni")
@@ -78,29 +79,27 @@ if (is_host) {
         [ "$root_out_dir/test_data/symbolizer/test_cases/{{source_file_part}}" ]
   }
 
-  # Manually copy the symbol directory since host_test_data does not support copying directory
-  # any more (fxbug.dev/73250). It's not a big issue for us since the symbol directory seldom
-  # changes, and when it changes, we usually only add new files to it which will change the
-  # directory's mtime.
-  action("copy_e2e_test_symbols") {
-    hermetic_deps = false
-    script = "//build/copy_tree.py"
-    inputs = [ "//prebuilt/test_data/symbolizer/symbols" ]
-    outputs = [
-      "$root_out_dir/test_data/symbolizer/symbols",
-      "$root_out_dir/test_data/symbolizer/symbols.stamp",
-    ]
-    args = rebase_path(inputs + outputs)
-    metadata = {
-      test_runtime_deps = outputs
-    }
+  # Manually copy the symbol directory since host_test_data does not support
+  # copying directory any more (fxbug.dev/73250). It's not a big issue for us
+  # since the symbol directory seldom changes, and when it changes, we usually
+  # only add new files to it which will change the directory's mtime.
+  e2e_test_symbols_out_dir = "$root_out_dir/test_data/symbolizer/symbols"
+  copy_tree("e2e_test_symbols_copy") {
+    src_dir = "//prebuilt/test_data/symbolizer/symbols"
+    dest_dir = e2e_test_symbols_out_dir
+  }
+
+  # Make the copied directory available at test runtime.
+  host_test_data("e2e_test_symbols") {
+    sources = [ e2e_test_symbols_out_dir ]
+    deps = [ ":e2e_test_symbols_copy" ]
   }
 
   test("symbolizer_e2e_tests") {
     sources = [ "e2e_test.cc" ]
     deps = [
-      ":copy_e2e_test_symbols",
       ":e2e_test_cases",
+      ":e2e_test_symbols",
       ":src",
       "//third_party/googletest:gtest",
     ]
