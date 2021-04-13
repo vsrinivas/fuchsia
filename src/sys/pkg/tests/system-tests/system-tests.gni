@@ -70,6 +70,10 @@ _environment_service_account =
 #   - Optional: How many test cycles should the test execute. Defaults to 1
 #     cycle.
 #   - Type: integer string
+#
+#   device_connect_timeout
+#   - Optional: How long to wait between connection attempts.
+#   - Type: duration string
 template("system_test_upgrade_suite") {
   assert(is_linux || is_mac, "system_tests are for linux/mac only")
 
@@ -203,6 +207,16 @@ template("system_test_upgrade_suite") {
       ]
     }
 
+    if (defined(invoker.device_connect_timeout)) {
+      assert(
+          invoker.device_connect_timeout != "",
+          "'${_host_test_target_name}' cannot have empty device connect timout")
+      _args += [
+        "-device-connect-timeout",
+        invoker.device_connect_timeout,
+      ]
+    }
+
     host_test(_host_test_target_name) {
       binary_path = _test_binary
       args = _args
@@ -259,6 +273,10 @@ template("system_test_upgrade_suite") {
 #   - Optional: How many test cycles should the test execute. Defaults to 1
 #     cycle.
 #   - Type: integer string
+#
+#   device_connect_timeout
+#   - Optional: How long to wait between connection attempts.
+#   - Type: duration string
 template("system_test_reboot_suite") {
   assert(is_linux || is_mac, "system_test_reboot_suite is for linux/mac only")
 
@@ -320,6 +338,16 @@ template("system_test_reboot_suite") {
       _args += [
         "-cycle-count",
         invoker.cycle_count,
+      ]
+    }
+
+    if (defined(invoker.device_connect_timeout)) {
+      assert(
+          invoker.device_connect_timeout != "",
+          "'${_host_test_target_name}' cannot have empty device connect timout")
+      _args += [
+        "-device-connect-timeout",
+        invoker.device_connect_timeout,
       ]
     }
 

@@ -11,11 +11,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/device"
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 )
 
 type DeviceConfig struct {
@@ -25,6 +27,7 @@ type DeviceConfig struct {
 	deviceHostname   string
 	sshPrivateKey    ssh.Signer
 	SerialSocketPath string
+	connectTimeout   time.Duration
 }
 
 func NewDeviceConfig(fs *flag.FlagSet) *DeviceConfig {
@@ -37,6 +40,7 @@ func NewDeviceConfig(fs *flag.FlagSet) *DeviceConfig {
 	fs.StringVar(&c.deviceHostname, "device-hostname", os.Getenv(constants.DeviceAddrEnvKey), "device hostname or IPv4/IPv6 address")
 	fs.StringVar(&c.deviceFinderPath, "device-finder-path", filepath.Join(testDataPath, "device-finder"), "device-finder tool path")
 	fs.StringVar(&c.SerialSocketPath, "device-serial", os.Getenv(constants.SerialSocketEnvKey), "device serial path")
+	fs.DurationVar(&c.connectTimeout, "device-connect-timeout", 5*time.Second, "device connection timeout (default 5 seconds)")
 
 	return c
 }
@@ -101,5 +105,7 @@ func (c *DeviceConfig) NewDeviceClient(ctx context.Context) (*device.Client, err
 		return nil, err
 	}
 
-	return device.NewClient(ctx, deviceFinder, deviceResolver, sshPrivateKey)
+	connectBackoff := retry.NewConstantBackoff(c.connectTimeout)
+
+	return device.NewClient(ctx, deviceFinder, deviceResolver, sshPrivateKey, connectBackoff)
 }

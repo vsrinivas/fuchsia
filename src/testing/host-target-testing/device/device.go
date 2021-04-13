@@ -31,8 +31,6 @@ import (
 
 const rebootCheckPath = "/tmp/ota_test_should_reboot"
 
-var sshConnectBackoff = retry.NewConstantBackoff(5 * time.Second)
-
 // Client manages the connection to the device.
 type Client struct {
 	deviceFinder         *DeviceFinder
@@ -42,7 +40,14 @@ type Client struct {
 }
 
 // NewClient creates a new Client.
-func NewClient(ctx context.Context, deviceFinder *DeviceFinder, deviceResolver DeviceResolver, privateKey ssh.Signer) (*Client, error) {
+func NewClient(
+	ctx context.Context,
+	deviceFinder *DeviceFinder,
+	deviceResolver DeviceResolver,
+	privateKey ssh.Signer,
+	sshConnectBackoff retry.Backoff,
+
+) (*Client, error) {
 	sshConfig, err := newSSHConfig(privateKey)
 	if err != nil {
 		return nil, err
