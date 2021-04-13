@@ -10,8 +10,11 @@
 use {
     crate::generator::Generator,
     crate::operations::OperationType,
-    byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt},
-    std::{io::Cursor, mem, ops::Range},
+    std::{
+        io::{self, Write},
+        mem,
+        ops::Range,
+    },
 };
 
 enum FillType {
@@ -183,7 +186,6 @@ impl Generator for SequentialIoGenerator {
 /// Each block of written data contains a header field. This field helps us to
 /// verify the written data. In future this also acts as poison value to detect
 /// any corruptions. TODO(auradkar): This needs a better home.
-#[derive(Default)]
 struct Header {
     /// magic_number helps to identify that the block was written
     /// by the app
@@ -218,6 +220,18 @@ struct Header {
     crc32: u32,
 }
 
+fn read_u32<T: io::Read>(reader: &mut T) -> io::Result<u32> {
+    let mut buf = [0; 4];
+    let () = reader.read_exact(&mut buf)?;
+    Ok(u32::from_le_bytes(buf))
+}
+
+fn read_u64<T: io::Read>(reader: &mut T) -> io::Result<u64> {
+    let mut buf = [0; 8];
+    let () = reader.read_exact(&mut buf)?;
+    Ok(u64::from_le_bytes(buf))
+}
+
 impl Header {
     fn new(
         magic_number: u64,
@@ -249,51 +263,56 @@ impl Header {
     /// Convert byte vector to header
     #[allow(dead_code)]
     pub fn read_header(buf: &[u8]) -> Header {
-        let mut cursor = Cursor::new(buf);
-        let mut header: Header = Default::default();
+        let mut cursor = io::Cursor::new(buf);
 
-        header.magic_number = cursor.read_u64::<LittleEndian>().unwrap();
+        let magic_number = read_u64(&mut cursor).unwrap();
+        let process_id = read_u64(&mut cursor).unwrap();
+        let fd_unique_id = read_u64(&mut cursor).unwrap();
+        let generator_unique_id = read_u64(&mut cursor).unwrap();
+        let io_op_unique_id = read_u64(&mut cursor).unwrap();
+        let file_offset = read_u64(&mut cursor).unwrap();
+        let size = read_u64(&mut cursor).unwrap();
+        let seed = read_u64(&mut cursor).unwrap();
+        let crc32 = read_u32(&mut cursor).unwrap();
 
-        header.process_id = cursor.read_u64::<LittleEndian>().unwrap();
-
-        header.fd_unique_id = cursor.read_u64::<LittleEndian>().unwrap();
-
-        header.generator_unique_id = cursor.read_u64::<LittleEndian>().unwrap();
-
-        header.io_op_unique_id = cursor.read_u64::<LittleEndian>().unwrap();
-
-        header.file_offset = cursor.read_u64::<LittleEndian>().unwrap();
-
-        header.size = cursor.read_u64::<LittleEndian>().unwrap();
-
-        header.seed = cursor.read_u64::<LittleEndian>().unwrap();
-
-        header.crc32 = cursor.read_u32::<LittleEndian>().unwrap();
-
-        header
+        Self {
+            magic_number,
+            process_id,
+            fd_unique_id,
+            generator_unique_id,
+            io_op_unique_id,
+            file_offset,
+            size,
+            seed,
+            crc32,
+        }
     }
 
     /// Copy header into byte vector
     fn write_header(&self, buf: &mut [u8]) {
-        let mut cursor = Cursor::new(buf);
+        let mut cursor = io::Cursor::new(buf);
 
-        cursor.write_u64::<LittleEndian>(self.magic_number).unwrap();
+        let Self {
+            magic_number,
+            process_id,
+            fd_unique_id,
+            generator_unique_id,
+            io_op_unique_id,
+            file_offset,
+            size,
+            seed,
+            crc32,
+        } = self;
 
-        cursor.write_u64::<LittleEndian>(self.process_id).unwrap();
-
-        cursor.write_u64::<LittleEndian>(self.fd_unique_id).unwrap();
-
-        cursor.write_u64::<LittleEndian>(self.generator_unique_id).unwrap();
-
-        cursor.write_u64::<LittleEndian>(self.io_op_unique_id).unwrap();
-
-        cursor.write_u64::<LittleEndian>(self.file_offset).unwrap();
-
-        cursor.write_u64::<LittleEndian>(self.size).unwrap();
-
-        cursor.write_u64::<LittleEndian>(self.seed).unwrap();
-
-        cursor.write_u32::<LittleEndian>(self.crc32).unwrap();
+        cursor.write_all(&magic_number.to_le_bytes()[..]).unwrap();
+        cursor.write_all(&process_id.to_le_bytes()[..]).unwrap();
+        cursor.write_all(&fd_unique_id.to_le_bytes()[..]).unwrap();
+        cursor.write_all(&generator_unique_id.to_le_bytes()[..]).unwrap();
+        cursor.write_all(&io_op_unique_id.to_le_bytes()[..]).unwrap();
+        cursor.write_all(&file_offset.to_le_bytes()[..]).unwrap();
+        cursor.write_all(&size.to_le_bytes()[..]).unwrap();
+        cursor.write_all(&seed.to_le_bytes()[..]).unwrap();
+        cursor.write_all(&crc32.to_le_bytes()[..]).unwrap();
     }
 }
 
