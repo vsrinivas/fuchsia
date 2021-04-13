@@ -10,68 +10,70 @@ import("//build/sdk/sdk_host_tool.gni")
 import("//build/testing/golden_test.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
-go_library("fidlgen_dart_lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/..."
+if (is_host) {
+  go_library("fidlgen_dart_lib") {
+    name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/..."
 
-  deps = [ "//tools/fidl/lib/fidlgen" ]
-  sources = [
-    "codegen/bits.tmpl.go",
-    "codegen/const.tmpl.go",
-    "codegen/enum.tmpl.go",
-    "codegen/generator.go",
-    "codegen/interface.tmpl.go",
-    "codegen/ir.go",
-    "codegen/library.tmpl.go",
-    "codegen/struct.tmpl.go",
-    "codegen/table.tmpl.go",
-    "codegen/union.tmpl.go",
-    "main.go",
-  ]
-}
+    deps = [ "//tools/fidl/lib/fidlgen" ]
+    sources = [
+      "codegen/bits.tmpl.go",
+      "codegen/const.tmpl.go",
+      "codegen/enum.tmpl.go",
+      "codegen/generator.go",
+      "codegen/interface.tmpl.go",
+      "codegen/ir.go",
+      "codegen/library.tmpl.go",
+      "codegen/struct.tmpl.go",
+      "codegen/table.tmpl.go",
+      "codegen/union.tmpl.go",
+      "main.go",
+    ]
+  }
 
-go_binary("fidlgen_dart") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/"
-  deps = [ ":fidlgen_dart_lib" ]
-}
+  go_binary("fidlgen_dart") {
+    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/"
+    deps = [ ":fidlgen_dart_lib" ]
+  }
 
-sdk_host_tool("fidlgen_dart_sdk") {
-  category = "partner"
-  output_name = "fidlgen_dart"
-  deps = [ ":fidlgen_dart" ]
+  sdk_host_tool("fidlgen_dart_sdk") {
+    category = "partner"
+    output_name = "fidlgen_dart"
+    deps = [ ":fidlgen_dart" ]
+  }
+
+  dartfmt_command = rebase_path("${dart_sdk}/bin/dartfmt")
+
+  golden_test("fidlgen_dart_golden_tests") {
+    goldens_dir = "goldens"
+    reformat_goldens_command = dartfmt_command
+    deps = []
+    entries = []
+    foreach(info, fidl_testdata_info) {
+      if (info.denylist + [ "fidlgen_dart" ] - [ "fidlgen_dart" ] ==
+          info.denylist) {
+        deps += [ "${info.target}_dart_generate($dart_toolchain)" ]
+        dart_gen_dir =
+            get_label_info("${info.target}($dart_toolchain)", "target_gen_dir")
+        entries += [
+          {
+            golden = "${info.name}_async.dart.golden"
+            generated =
+                "${dart_gen_dir}/${info.library}_package/lib/fidl_async.dart"
+          },
+          {
+            golden = "${info.name}_test.dart.golden"
+            generated =
+                "${dart_gen_dir}/${info.library}_package/lib/fidl_test.dart"
+          },
+        ]
+      }
+    }
+  }
 }
 
 install_host_tools("host") {
   deps = [ ":fidlgen_dart" ]
   outputs = [ "fidlgen_dart" ]
-}
-
-dartfmt_command = rebase_path("${dart_sdk}/bin/dartfmt")
-
-golden_test("fidlgen_dart_golden_tests") {
-  goldens_dir = "goldens"
-  reformat_goldens_command = dartfmt_command
-  deps = []
-  entries = []
-  foreach(info, fidl_testdata_info) {
-    if (info.denylist + [ "fidlgen_dart" ] - [ "fidlgen_dart" ] ==
-        info.denylist) {
-      deps += [ "${info.target}_dart_generate($dart_toolchain)" ]
-      dart_gen_dir =
-          get_label_info("${info.target}($dart_toolchain)", "target_gen_dir")
-      entries += [
-        {
-          golden = "${info.name}_async.dart.golden"
-          generated =
-              "${dart_gen_dir}/${info.library}_package/lib/fidl_async.dart"
-        },
-        {
-          golden = "${info.name}_test.dart.golden"
-          generated =
-              "${dart_gen_dir}/${info.library}_package/lib/fidl_test.dart"
-        },
-      ]
-    }
-  }
 }
 
 group("goldens") {

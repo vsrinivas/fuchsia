@@ -49,9 +49,7 @@ if (is_host) {
       ":rust_crates",
       "//src/lib/libdoc",
     ]
-
     sources = common_sources
-
     inputs = common_inputs
   }
 
@@ -67,9 +65,7 @@ if (is_host) {
       ":rust_crates",
       "//src/lib/libdoc",
     ]
-
     sources = common_sources
-
     inputs = common_inputs + [
                "src/templates/markdown/testdata/README.md",
                "src/templates/markdown/testdata/_toc.yaml",
@@ -93,6 +89,63 @@ if (is_host) {
       "//third_party/rust_crates:tempfile",
     ]
   }
+
+  fidl_testdata_info_filtered = []
+  foreach(info, fidl_testdata_info) {
+    if (info.denylist + [ "fidldoc" ] - [ "fidldoc" ] == info.denylist) {
+      fidl_testdata_info_filtered += [ info ]
+    }
+  }
+
+  compiled_action("generate_goldens") {
+    testonly = true
+    tool = ":fidldoc_bin"
+    tool_output_name = "fidldoc"
+    deps = [ ":fidldoc_copy_config" ]
+    sources = []
+    inputs = [ "${host_tools_dir}/fidldoc.config.json" ]
+    args = [
+      "--silent",
+      "--config",
+      rebase_path("${host_tools_dir}/fidldoc.config.json", root_build_dir),
+      "--out",
+      rebase_path("${target_gen_dir}/goldens", root_build_dir),
+    ]
+    outputs = [
+      "$target_gen_dir/goldens/_toc.yaml",
+      "$target_gen_dir/goldens/README.md",
+    ]
+    foreach(info, fidl_testdata_info_filtered) {
+      deps += [ "${info.target}($fidl_toolchain)" ]
+      json_ir = "${info.fidl_gen_dir}/${info.target_name}.fidl.json"
+      sources += [ json_ir ]
+      args += [ rebase_path(json_ir, root_build_dir) ]
+      outputs += [ "$target_gen_dir/goldens/${info.library}/README.md" ]
+    }
+  }
+
+  golden_test("fidldoc_golden_tests") {
+    goldens_dir = "goldens"
+    deps = [ ":generate_goldens" ]
+    entries = [
+      {
+        golden = "_toc.yaml.golden"
+        generated = "$target_gen_dir/goldens/_toc.yaml"
+      },
+      {
+        golden = "README.md.golden"
+        generated = "$target_gen_dir/goldens/README.md"
+      },
+    ]
+    foreach(info, fidl_testdata_info_filtered) {
+      entries += [
+        {
+          golden = "${info.name}.md.golden"
+          generated = "$target_gen_dir/goldens/${info.library}/README.md"
+        },
+      ]
+    }
+  }
 }
 
 install_host_tools("fidldoc") {
@@ -100,75 +153,11 @@ install_host_tools("fidldoc") {
     ":fidldoc_bin($host_toolchain)",
     ":fidldoc_copy_config($host_toolchain)",
   ]
-
   outputs = [ "fidldoc" ]
-}
-
-fidl_testdata_info_filtered = []
-foreach(info, fidl_testdata_info) {
-  if (info.denylist + [ "fidldoc" ] - [ "fidldoc" ] == info.denylist) {
-    fidl_testdata_info_filtered += [ info ]
-  }
-}
-
-copy("config_for_tests") {
-  sources = [ "src/fidldoc.config.json" ]
-  outputs = [ "$target_gen_dir/fidldoc.config.json" ]
-}
-
-compiled_action("generate_goldens") {
-  testonly = true
-  tool = ":fidldoc_bin"
-  tool_output_name = "fidldoc"
-  deps = [ ":config_for_tests" ]
-  sources = []
-  args = [
-    "--silent",
-    "--config",
-    rebase_path(target_gen_dir, root_build_dir) + "/fidldoc.config.json",
-    "--out",
-    rebase_path(target_gen_dir, root_build_dir) + "/goldens",
-  ]
-  outputs = [
-    "$target_gen_dir/goldens/_toc.yaml",
-    "$target_gen_dir/goldens/README.md",
-  ]
-  foreach(info, fidl_testdata_info_filtered) {
-    deps += [ "${info.target}($fidl_toolchain)" ]
-    json_ir = "${info.fidl_gen_dir}/${info.target_name}.fidl.json"
-    sources += [ json_ir ]
-    args += [ rebase_path(json_ir, root_build_dir) ]
-    outputs += [ "$target_gen_dir/goldens/${info.library}/README.md" ]
-  }
-  hermetic_deps = false
-}
-
-golden_test("fidldoc_golden_tests") {
-  goldens_dir = "goldens"
-  deps = [ ":generate_goldens" ]
-  entries = [
-    {
-      golden = "_toc.yaml.golden"
-      generated = "$target_gen_dir/goldens/_toc.yaml"
-    },
-    {
-      golden = "README.md.golden"
-      generated = "$target_gen_dir/goldens/README.md"
-    },
-  ]
-  foreach(info, fidl_testdata_info_filtered) {
-    entries += [
-      {
-        golden = "${info.name}.md.golden"
-        generated = "$target_gen_dir/goldens/${info.library}/README.md"
-      },
-    ]
-  }
 }
 
 group("tests") {
   testonly = true
-
   deps = [
     ":fidldoc_bin_test($host_toolchain)",
     ":fidldoc_golden_tests($host_toolchain)",

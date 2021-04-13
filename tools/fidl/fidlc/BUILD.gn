@@ -121,22 +121,24 @@ if (current_os != "fuchsia") {
   }
 }
 
-golden_test("fidlc_golden_tests") {
-  goldens_dir = "goldens"
-  deps = []
-  entries = []
-  foreach(info, fidl_testdata_info) {
-    deps += [ "${info.target}($fidl_toolchain)" ]
-    entries += [
-      {
-        golden = "${info.name}.json.golden"
-        generated = "${info.fidl_gen_dir}/${info.target_name}.fidl.json"
-      },
-      {
-        golden = "${info.name}.tables.c.golden"
-        generated = "${info.fidl_gen_dir}/${info.target_name}.fidl.tables.c"
-      },
-    ]
+if (is_host) {
+  golden_test("fidlc_golden_tests") {
+    goldens_dir = "goldens"
+    deps = []
+    entries = []
+    foreach(info, fidl_testdata_info) {
+      deps += [ "${info.target}($fidl_toolchain)" ]
+      entries += [
+        {
+          golden = "${info.name}.json.golden"
+          generated = "${info.fidl_gen_dir}/${info.target_name}.fidl.json"
+        },
+        {
+          golden = "${info.name}.tables.c.golden"
+          generated = "${info.fidl_gen_dir}/${info.target_name}.fidl.tables.c"
+        },
+      ]
+    }
   }
 }
 

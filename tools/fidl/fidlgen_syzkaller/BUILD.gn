@@ -10,71 +10,73 @@ import("//build/host.gni")
 import("//build/testing/golden_test.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
-go_library("gopkg") {
-  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/..."
-  deps = [ "//tools/fidl/lib/fidlgen" ]
-  sources = [
-    "codegen/codegen.go",
-    "codegen/description.tmpl.go",
-    "codegen/ir.go",
-    "codegen/protocol.tmpl.go",
-    "codegen/struct.tmpl.go",
-    "codegen/union.tmpl.go",
-    "main.go",
-  ]
-}
+if (is_host) {
+  go_library("gopkg") {
+    name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/..."
+    deps = [ "//tools/fidl/lib/fidlgen" ]
+    sources = [
+      "codegen/codegen.go",
+      "codegen/description.tmpl.go",
+      "codegen/ir.go",
+      "codegen/protocol.tmpl.go",
+      "codegen/struct.tmpl.go",
+      "codegen/union.tmpl.go",
+      "main.go",
+    ]
+  }
 
-go_binary("fidlgen_syzkaller") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller"
+  go_binary("fidlgen_syzkaller") {
+    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller"
 
-  sdk_category = "partner"
-  deps = [ ":gopkg" ]
+    sdk_category = "partner"
+    deps = [ ":gopkg" ]
+  }
+
+  fidl_testdata_info_filtered = []
+  foreach(info, fidl_testdata_info) {
+    if (info.denylist + [ "fidlgen_syzkaller" ] - [ "fidlgen_syzkaller" ] ==
+        info.denylist) {
+      fidl_testdata_info_filtered += [ info ]
+    }
+  }
+
+  compiled_action_foreach("generate_goldens") {
+    testonly = true
+    tool = ":fidlgen_syzkaller"
+    deps = []
+    sources = []
+    foreach(info, fidl_testdata_info_filtered) {
+      deps += [ "${info.target}($fidl_toolchain)" ]
+      sources += [ "${info.fidl_gen_dir}/${info.target_name}.fidl.json" ]
+    }
+    args = [
+      "-json",
+      "{{source}}",
+      "-output-syz",
+      rebase_path(target_gen_dir, root_build_dir) +
+          "/golden_{{source_name_part}}.syz.txt",
+    ]
+    outputs = [ "$target_gen_dir/golden_{{source_name_part}}.syz.txt" ]
+  }
+
+  golden_test("fidlgen_syzkaller_golden_tests") {
+    goldens_dir = "goldens"
+    deps = [ ":generate_goldens" ]
+    entries = []
+    foreach(info, fidl_testdata_info_filtered) {
+      entries += [
+        {
+          golden = "${info.name}.syz.txt.golden"
+          generated = "$target_gen_dir/golden_${info.target_name}.fidl.syz.txt"
+        },
+      ]
+    }
+  }
 }
 
 install_host_tools("host") {
   deps = [ ":fidlgen_syzkaller" ]
   outputs = [ "fidlgen_syzkaller" ]
-}
-
-fidl_testdata_info_filtered = []
-foreach(info, fidl_testdata_info) {
-  if (info.denylist + [ "fidlgen_syzkaller" ] - [ "fidlgen_syzkaller" ] ==
-      info.denylist) {
-    fidl_testdata_info_filtered += [ info ]
-  }
-}
-
-compiled_action_foreach("generate_goldens") {
-  testonly = true
-  tool = ":fidlgen_syzkaller"
-  deps = []
-  sources = []
-  foreach(info, fidl_testdata_info_filtered) {
-    deps += [ "${info.target}($fidl_toolchain)" ]
-    sources += [ "${info.fidl_gen_dir}/${info.target_name}.fidl.json" ]
-  }
-  args = [
-    "-json",
-    "{{source}}",
-    "-output-syz",
-    rebase_path(target_gen_dir, root_build_dir) +
-        "/golden_{{source_name_part}}.syz.txt",
-  ]
-  outputs = [ "$target_gen_dir/golden_{{source_name_part}}.syz.txt" ]
-}
-
-golden_test("fidlgen_syzkaller_golden_tests") {
-  goldens_dir = "goldens"
-  deps = [ ":generate_goldens" ]
-  entries = []
-  foreach(info, fidl_testdata_info_filtered) {
-    entries += [
-      {
-        golden = "${info.name}.syz.txt.golden"
-        generated = "$target_gen_dir/golden_${info.target_name}.fidl.syz.txt"
-      },
-    ]
-  }
 }
 
 group("tests") {

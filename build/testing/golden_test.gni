@@ -65,6 +65,8 @@ import("//build/testing/host_test_data.gni")
 #   visibility
 #
 template("golden_test") {
+  assert(is_host, "The golden_test template can only be used on host")
+
   assert(defined(invoker.goldens_dir))
   assert(defined(invoker.entries))
   assert(defined(invoker.deps))

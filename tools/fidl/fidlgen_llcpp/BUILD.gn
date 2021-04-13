@@ -9,86 +9,88 @@ import("//build/host.gni")
 import("//build/testing/golden_test.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
-go_library("gopkg") {
-  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp/..."
-  deps = [
-    "//tools/fidl/lib/fidlgen",
-    "//tools/fidl/lib/fidlgen_cpp",
-  ]
-  sources = [
-    "codegen/codegen.go",
-    "codegen/file_header.tmpl.go",
-    "codegen/file_source.tmpl.go",
-    "codegen/fragment_bits.tmpl.go",
-    "codegen/fragment_client.tmpl.go",
-    "codegen/fragment_client_async_methods.tmpl.go",
-    "codegen/fragment_client_sync_methods.tmpl.go",
-    "codegen/fragment_const.tmpl.go",
-    "codegen/fragment_enum.tmpl.go",
-    "codegen/fragment_event_sender.tmpl.go",
-    "codegen/fragment_method_request.tmpl.go",
-    "codegen/fragment_method_response.tmpl.go",
-    "codegen/fragment_method_response_context.tmpl.go",
-    "codegen/fragment_method_result.tmpl.go",
-    "codegen/fragment_method_unownedresult.tmpl.go",
-    "codegen/fragment_protocol.tmpl.go",
-    "codegen/fragment_protocol_details.tmpl.go",
-    "codegen/fragment_protocol_dispatcher.tmpl.go",
-    "codegen/fragment_protocol_event_handler.tmpl.go",
-    "codegen/fragment_protocol_interface.tmpl.go",
-    "codegen/fragment_reply_caller_allocate.tmpl.go",
-    "codegen/fragment_reply_managed.tmpl.go",
-    "codegen/fragment_service.tmpl.go",
-    "codegen/fragment_struct.tmpl.go",
-    "codegen/fragment_sync_event_handler.tmpl.go",
-    "codegen/fragment_sync_request_caller_allocate.tmpl.go",
-    "codegen/fragment_table.tmpl.go",
-    "codegen/fragment_union.tmpl.go",
-    "codegen/test_base.tmpl.go",
-    "main.go",
-  ]
-}
+if (is_host) {
+  go_library("gopkg") {
+    name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp/..."
+    deps = [
+      "//tools/fidl/lib/fidlgen",
+      "//tools/fidl/lib/fidlgen_cpp",
+    ]
+    sources = [
+      "codegen/codegen.go",
+      "codegen/file_header.tmpl.go",
+      "codegen/file_source.tmpl.go",
+      "codegen/fragment_bits.tmpl.go",
+      "codegen/fragment_client.tmpl.go",
+      "codegen/fragment_client_async_methods.tmpl.go",
+      "codegen/fragment_client_sync_methods.tmpl.go",
+      "codegen/fragment_const.tmpl.go",
+      "codegen/fragment_enum.tmpl.go",
+      "codegen/fragment_event_sender.tmpl.go",
+      "codegen/fragment_method_request.tmpl.go",
+      "codegen/fragment_method_response.tmpl.go",
+      "codegen/fragment_method_response_context.tmpl.go",
+      "codegen/fragment_method_result.tmpl.go",
+      "codegen/fragment_method_unownedresult.tmpl.go",
+      "codegen/fragment_protocol.tmpl.go",
+      "codegen/fragment_protocol_details.tmpl.go",
+      "codegen/fragment_protocol_dispatcher.tmpl.go",
+      "codegen/fragment_protocol_event_handler.tmpl.go",
+      "codegen/fragment_protocol_interface.tmpl.go",
+      "codegen/fragment_reply_caller_allocate.tmpl.go",
+      "codegen/fragment_reply_managed.tmpl.go",
+      "codegen/fragment_service.tmpl.go",
+      "codegen/fragment_struct.tmpl.go",
+      "codegen/fragment_sync_event_handler.tmpl.go",
+      "codegen/fragment_sync_request_caller_allocate.tmpl.go",
+      "codegen/fragment_table.tmpl.go",
+      "codegen/fragment_union.tmpl.go",
+      "codegen/test_base.tmpl.go",
+      "main.go",
+    ]
+  }
 
-go_binary("fidlgen_llcpp") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp"
-  deps = [ ":gopkg" ]
+  go_binary("fidlgen_llcpp") {
+    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp"
+    deps = [ ":gopkg" ]
+  }
+
+  clang_format = rebase_path("${clang_prefix}/clang-format", "", root_build_dir)
+  reformat_command = "'${clang_format}' --style=google"
+
+  golden_test("fidlgen_llcpp_golden_tests") {
+    goldens_dir = "goldens"
+    reformat_goldens_command = reformat_command
+    deps = []
+    entries = []
+    foreach(info, fidl_testdata_info) {
+      if (info.denylist + [ "fidlgen_llcpp" ] - [ "fidlgen_llcpp" ] ==
+          info.denylist) {
+        deps += [ "${info.target}_llcpp_generate($fidl_toolchain)" ]
+        gen_dir = "${info.fidl_gen_dir}/${info.target_name}/llcpp"
+        include_path = string_replace(info.library, ".", "/") + "/llcpp"
+        entries += [
+          {
+            golden = "${info.name}.h.golden"
+            generated = "$gen_dir/$include_path/fidl.h"
+          },
+          {
+            golden = "${info.name}.cc.golden"
+            generated = "$gen_dir/$include_path/fidl.cc"
+          },
+          {
+            golden = "${info.name}_test_base.h.golden"
+            generated = "$gen_dir/$include_path/fidl_test_base.h"
+          },
+        ]
+      }
+    }
+  }
 }
 
 install_host_tools("host") {
   deps = [ ":fidlgen_llcpp" ]
   outputs = [ "fidlgen_llcpp" ]
-}
-
-clang_format = rebase_path("${clang_prefix}/clang-format", "", root_build_dir)
-reformat_command = "'${clang_format}' --style=google"
-
-golden_test("fidlgen_llcpp_golden_tests") {
-  goldens_dir = "goldens"
-  reformat_goldens_command = reformat_command
-  deps = []
-  entries = []
-  foreach(info, fidl_testdata_info) {
-    if (info.denylist + [ "fidlgen_llcpp" ] - [ "fidlgen_llcpp" ] ==
-        info.denylist) {
-      deps += [ "${info.target}_llcpp_generate($fidl_toolchain)" ]
-      gen_dir = "${info.fidl_gen_dir}/${info.target_name}/llcpp"
-      include_path = string_replace(info.library, ".", "/") + "/llcpp"
-      entries += [
-        {
-          golden = "${info.name}.h.golden"
-          generated = "$gen_dir/$include_path/fidl.h"
-        },
-        {
-          golden = "${info.name}.cc.golden"
-          generated = "$gen_dir/$include_path/fidl.cc"
-        },
-        {
-          golden = "${info.name}_test_base.h.golden"
-          generated = "$gen_dir/$include_path/fidl_test_base.h"
-        },
-      ]
-    }
-  }
 }
 
 group("goldens") {

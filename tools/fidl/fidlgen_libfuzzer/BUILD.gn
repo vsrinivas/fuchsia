@@ -9,75 +9,77 @@ import("//build/host.gni")
 import("//build/testing/golden_test.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
-go_library("gopkg") {
-  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer/..."
-  deps = [
-    "//tools/fidl/lib/fidlgen",
-    "//tools/fidl/lib/fidlgen_cpp",
-  ]
-  sources = [
-    "codegen/bits.tmpl.go",
-    "codegen/codegen.go",
-    "codegen/decoder_encoder.tmpl.go",
-    "codegen/decoder_encoder_header.tmpl.go",
-    "codegen/decoder_encoder_source.tmpl.go",
-    "codegen/enum.tmpl.go",
-    "codegen/header.tmpl.go",
-    "codegen/protocol_decoder_encoders.tmpl.go",
-    "codegen/source.tmpl.go",
-    "codegen/struct.tmpl.go",
-    "codegen/table.tmpl.go",
-    "codegen/union.tmpl.go",
-    "main.go",
-  ]
-}
+if (is_host) {
+  go_library("gopkg") {
+    name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer/..."
+    deps = [
+      "//tools/fidl/lib/fidlgen",
+      "//tools/fidl/lib/fidlgen_cpp",
+    ]
+    sources = [
+      "codegen/bits.tmpl.go",
+      "codegen/codegen.go",
+      "codegen/decoder_encoder.tmpl.go",
+      "codegen/decoder_encoder_header.tmpl.go",
+      "codegen/decoder_encoder_source.tmpl.go",
+      "codegen/enum.tmpl.go",
+      "codegen/header.tmpl.go",
+      "codegen/protocol_decoder_encoders.tmpl.go",
+      "codegen/source.tmpl.go",
+      "codegen/struct.tmpl.go",
+      "codegen/table.tmpl.go",
+      "codegen/union.tmpl.go",
+      "main.go",
+    ]
+  }
 
-go_binary("fidlgen_libfuzzer") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer"
+  go_binary("fidlgen_libfuzzer") {
+    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer"
 
-  sdk_category = "partner"
-  deps = [ ":gopkg" ]
+    sdk_category = "partner"
+    deps = [ ":gopkg" ]
+  }
+
+  clang_format = rebase_path("${clang_prefix}/clang-format", "", root_build_dir)
+  reformat_command = "'${clang_format}' --style=google"
+
+  golden_test("fidlgen_libfuzzer_golden_tests") {
+    goldens_dir = "goldens"
+    reformat_goldens_command = reformat_command
+    deps = []
+    entries = []
+    foreach(info, fidl_testdata_info) {
+      if (info.denylist + [ "fidlgen_libfuzzer" ] - [ "fidlgen_libfuzzer" ] ==
+          info.denylist) {
+        deps += [ "${info.target}_libfuzzer_generate($fidl_toolchain)" ]
+        gen_dir = "${info.fidl_gen_dir}/${info.target_name}/libfuzzer"
+        include_path = string_replace(info.library, ".", "/") + "/cpp"
+        entries += [
+          {
+            golden = "${info.name}.h.golden"
+            generated = "$gen_dir/$include_path/libfuzzer.h"
+          },
+          {
+            golden = "${info.name}.cc.golden"
+            generated = "$gen_dir/$include_path/libfuzzer.cc"
+          },
+          {
+            golden = "${info.name}_decode_encode.h.golden"
+            generated = "$gen_dir/$include_path/libfuzzer_decode_encode.h"
+          },
+          {
+            golden = "${info.name}_decode_encode.cc.golden"
+            generated = "$gen_dir/$include_path/libfuzzer_decode_encode.cc"
+          },
+        ]
+      }
+    }
+  }
 }
 
 install_host_tools("host") {
   deps = [ ":fidlgen_libfuzzer" ]
   outputs = [ "fidlgen_libfuzzer" ]
-}
-
-clang_format = rebase_path("${clang_prefix}/clang-format", "", root_build_dir)
-reformat_command = "'${clang_format}' --style=google"
-
-golden_test("fidlgen_libfuzzer_golden_tests") {
-  goldens_dir = "goldens"
-  reformat_goldens_command = reformat_command
-  deps = []
-  entries = []
-  foreach(info, fidl_testdata_info) {
-    if (info.denylist + [ "fidlgen_libfuzzer" ] - [ "fidlgen_libfuzzer" ] ==
-        info.denylist) {
-      deps += [ "${info.target}_libfuzzer_generate($fidl_toolchain)" ]
-      gen_dir = "${info.fidl_gen_dir}/${info.target_name}/libfuzzer"
-      include_path = string_replace(info.library, ".", "/") + "/cpp"
-      entries += [
-        {
-          golden = "${info.name}.h.golden"
-          generated = "$gen_dir/$include_path/libfuzzer.h"
-        },
-        {
-          golden = "${info.name}.cc.golden"
-          generated = "$gen_dir/$include_path/libfuzzer.cc"
-        },
-        {
-          golden = "${info.name}_decode_encode.h.golden"
-          generated = "$gen_dir/$include_path/libfuzzer_decode_encode.h"
-        },
-        {
-          golden = "${info.name}_decode_encode.cc.golden"
-          generated = "$gen_dir/$include_path/libfuzzer_decode_encode.cc"
-        },
-      ]
-    }
-  }
 }
 
 group("goldens") {

@@ -9,58 +9,60 @@ import("//build/host.gni")
 import("//build/testing/golden_test.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
-go_library("gopkg") {
-  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_cpp/..."
-  deps = [
-    "//tools/fidl/lib/fidlgen",
-    "//tools/fidl/lib/fidlgen_cpp",
-  ]
-  sources = [
-    "codegen/codegen.go",
-    "codegen/file_header.tmpl.go",
-    "codegen/file_source.tmpl.go",
-    "codegen/fragment_const.tmpl.go",
-    "codegen/fragment_type_alias.tmpl.go",
-    "main.go",
-  ]
-}
+if (is_host) {
+  go_library("gopkg") {
+    name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_cpp/..."
+    deps = [
+      "//tools/fidl/lib/fidlgen",
+      "//tools/fidl/lib/fidlgen_cpp",
+    ]
+    sources = [
+      "codegen/codegen.go",
+      "codegen/file_header.tmpl.go",
+      "codegen/file_source.tmpl.go",
+      "codegen/fragment_const.tmpl.go",
+      "codegen/fragment_type_alias.tmpl.go",
+      "main.go",
+    ]
+  }
 
-go_binary("fidlgen_cpp") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_cpp"
-  deps = [ ":gopkg" ]
+  go_binary("fidlgen_cpp") {
+    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_cpp"
+    deps = [ ":gopkg" ]
+  }
+
+  clang_format = rebase_path("${clang_prefix}/clang-format", "", root_build_dir)
+  reformat_command = "'${clang_format}' --style=google"
+
+  golden_test("fidlgen_cpp_golden_tests") {
+    goldens_dir = "goldens"
+    reformat_goldens_command = reformat_command
+    deps = []
+    entries = []
+    foreach(info, fidl_testdata_info) {
+      if (info.denylist + [ "fidlgen_cpp" ] - [ "fidlgen_cpp" ] ==
+          info.denylist) {
+        deps += [ "${info.target}_cpp_generate($fidl_toolchain)" ]
+        gen_dir = "${info.fidl_gen_dir}/${info.target_name}/cpp"
+        include_path = string_replace(info.library, ".", "/") + "/cpp"
+        entries += [
+          {
+            golden = "${info.name}.h.golden"
+            generated = "$gen_dir/$include_path/fidl_v2.h"
+          },
+          {
+            golden = "${info.name}.cc.golden"
+            generated = "$gen_dir/$include_path/fidl_v2.cc"
+          },
+        ]
+      }
+    }
+  }
 }
 
 install_host_tools("host") {
   deps = [ ":fidlgen_cpp" ]
   outputs = [ "fidlgen_cpp" ]
-}
-
-clang_format = rebase_path("${clang_prefix}/clang-format", "", root_build_dir)
-reformat_command = "'${clang_format}' --style=google"
-
-golden_test("fidlgen_cpp_golden_tests") {
-  goldens_dir = "goldens"
-  reformat_goldens_command = reformat_command
-  deps = []
-  entries = []
-  foreach(info, fidl_testdata_info) {
-    if (info.denylist + [ "fidlgen_cpp" ] - [ "fidlgen_cpp" ] ==
-        info.denylist) {
-      deps += [ "${info.target}_cpp_generate($fidl_toolchain)" ]
-      gen_dir = "${info.fidl_gen_dir}/${info.target_name}/cpp"
-      include_path = string_replace(info.library, ".", "/") + "/cpp"
-      entries += [
-        {
-          golden = "${info.name}.h.golden"
-          generated = "$gen_dir/$include_path/fidl_v2.h"
-        },
-        {
-          golden = "${info.name}.cc.golden"
-          generated = "$gen_dir/$include_path/fidl_v2.cc"
-        },
-      ]
-    }
-  }
 }
 
 group("goldens") {

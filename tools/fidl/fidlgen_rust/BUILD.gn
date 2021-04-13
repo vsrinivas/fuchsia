@@ -11,43 +11,38 @@ import("//build/rust/toolchain.gni")
 import("//build/testing/golden_test.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
-go_library("gopkg") {
-  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/..."
-  deps = [
-    "//tools/fidl/lib/fidlgen",
-    "//tools/fidl/lib/fidlgentest",
-  ]
-  sources = [
-    "codegen/bits.tmpl.go",
-    "codegen/codegen.go",
-    "codegen/const.tmpl.go",
-    "codegen/enum.tmpl.go",
-    "codegen/handle_metadata_wrappers.tmpl.go",
-    "codegen/ir.go",
-    "codegen/ir_test.go",
-    "codegen/protocol.tmpl.go",
-    "codegen/result.tmpl.go",
-    "codegen/service.tmpl.go",
-    "codegen/sourcefile.tmpl.go",
-    "codegen/struct.tmpl.go",
-    "codegen/table.tmpl.go",
-    "codegen/union.tmpl.go",
-    "main.go",
-  ]
-}
-
-go_binary("fidlgen_rust") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust"
-  sdk_category = "partner"
-  deps = [ ":gopkg" ]
-}
-
-install_host_tools("host") {
-  deps = [ ":fidlgen_rust" ]
-  outputs = [ "fidlgen_rust" ]
-}
-
 if (is_host) {
+  go_library("gopkg") {
+    name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/..."
+    deps = [
+      "//tools/fidl/lib/fidlgen",
+      "//tools/fidl/lib/fidlgentest",
+    ]
+    sources = [
+      "codegen/bits.tmpl.go",
+      "codegen/codegen.go",
+      "codegen/const.tmpl.go",
+      "codegen/enum.tmpl.go",
+      "codegen/handle_metadata_wrappers.tmpl.go",
+      "codegen/ir.go",
+      "codegen/ir_test.go",
+      "codegen/protocol.tmpl.go",
+      "codegen/result.tmpl.go",
+      "codegen/service.tmpl.go",
+      "codegen/sourcefile.tmpl.go",
+      "codegen/struct.tmpl.go",
+      "codegen/table.tmpl.go",
+      "codegen/union.tmpl.go",
+      "main.go",
+    ]
+  }
+
+  go_binary("fidlgen_rust") {
+    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust"
+    sdk_category = "partner"
+    deps = [ ":gopkg" ]
+  }
+
   fidlc_target = "//tools/fidl/fidlc($host_toolchain)"
 
   go_test("fidlgen_rust_lib_tests") {
@@ -70,29 +65,34 @@ if (is_host) {
     sources = [ get_label_info(fidlc_target, "root_out_dir") + "/fidlc" ]
     deps = [ fidlc_target ]
   }
-}
 
-rustfmt = rebase_path("$fidl_rust_tools_dir/bin/rustfmt", root_build_dir)
-rustfmt_config = rebase_path("//rustfmt.toml", root_build_dir)
+  rustfmt = rebase_path("$fidl_rust_tools_dir/bin/rustfmt", root_build_dir)
+  rustfmt_config = rebase_path("//rustfmt.toml", root_build_dir)
 
-golden_test("fidlgen_rust_golden_tests") {
-  goldens_dir = "goldens"
-  reformat_goldens_command = "'${rustfmt}' --config-path '${rustfmt_config}'"
-  deps = []
-  entries = []
-  foreach(info, fidl_testdata_info) {
-    if (info.denylist + [ "fidlgen_rust" ] - [ "fidlgen_rust" ] ==
-        info.denylist) {
-      deps += [ "${info.target}_rust_generate($rust_toolchain)" ]
-      library_underscore = string_replace(info.library, ".", "_")
-      entries += [
-        {
-          golden = "${info.name}.rs.golden"
-          generated = "${info.fidl_gen_dir}/${info.target_name}/fidl_${library_underscore}.rs"
-        },
-      ]
+  golden_test("fidlgen_rust_golden_tests") {
+    goldens_dir = "goldens"
+    reformat_goldens_command = "'${rustfmt}' --config-path '${rustfmt_config}'"
+    deps = []
+    entries = []
+    foreach(info, fidl_testdata_info) {
+      if (info.denylist + [ "fidlgen_rust" ] - [ "fidlgen_rust" ] ==
+          info.denylist) {
+        deps += [ "${info.target}_rust_generate($rust_toolchain)" ]
+        library_underscore = string_replace(info.library, ".", "_")
+        entries += [
+          {
+            golden = "${info.name}.rs.golden"
+            generated = "${info.fidl_gen_dir}/${info.target_name}/fidl_${library_underscore}.rs"
+          },
+        ]
+      }
     }
   }
+}
+
+install_host_tools("host") {
+  deps = [ ":fidlgen_rust" ]
+  outputs = [ "fidlgen_rust" ]
 }
 
 group("goldens") {

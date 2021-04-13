@@ -10,106 +10,108 @@ import("//build/host.gni")
 import("//build/testing/golden_test.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
-go_library("gopkg") {
-  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp/..."
-  deps = [
-    "//tools/fidl/lib/fidlgen",
-    "//tools/fidl/lib/fidlgen_cpp",
-  ]
-  sources = [
-    "codegen/codegen.go",
-    "codegen/header.tmpl.go",
-    "codegen/implementation.tmpl.go",
-    "codegen/natural_types_bits.tmpl.go",
-    "codegen/natural_types_const.tmpl.go",
-    "codegen/natural_types_enum.tmpl.go",
-    "codegen/natural_types_protocol.tmpl.go",
-    "codegen/natural_types_struct.tmpl.go",
-    "codegen/natural_types_table.tmpl.go",
-    "codegen/natural_types_union.tmpl.go",
-    "codegen/proxies_and_stubs_protocol.tmpl.go",
-    "codegen/proxies_and_stubs_service.tmpl.go",
-    "codegen/test_base.tmpl.go",
-    "main.go",
-  ]
-}
+if (is_host) {
+  go_library("gopkg") {
+    name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp/..."
+    deps = [
+      "//tools/fidl/lib/fidlgen",
+      "//tools/fidl/lib/fidlgen_cpp",
+    ]
+    sources = [
+      "codegen/codegen.go",
+      "codegen/header.tmpl.go",
+      "codegen/implementation.tmpl.go",
+      "codegen/natural_types_bits.tmpl.go",
+      "codegen/natural_types_const.tmpl.go",
+      "codegen/natural_types_enum.tmpl.go",
+      "codegen/natural_types_protocol.tmpl.go",
+      "codegen/natural_types_struct.tmpl.go",
+      "codegen/natural_types_table.tmpl.go",
+      "codegen/natural_types_union.tmpl.go",
+      "codegen/proxies_and_stubs_protocol.tmpl.go",
+      "codegen/proxies_and_stubs_service.tmpl.go",
+      "codegen/test_base.tmpl.go",
+      "main.go",
+    ]
+  }
 
-go_binary("fidlgen_hlcpp") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp"
+  go_binary("fidlgen_hlcpp") {
+    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp"
 
-  sdk_category = "partner"
-  deps = [ ":gopkg" ]
+    sdk_category = "partner"
+    deps = [ ":gopkg" ]
+  }
+
+  # TODO(fxbug.dev/45483): Remove once all SDK customers are using HLCPP backend
+  # directly.
+  go_binary("fidlgen") {
+    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp"
+
+    sdk_category = "partner"
+    deps = [ ":gopkg" ]
+  }
+
+  clang_format = rebase_path("${clang_prefix}/clang-format", "", root_build_dir)
+  reformat_command = "'${clang_format}' --style=google"
+
+  golden_test("fidlgen_hlcpp_golden_tests") {
+    goldens_dir = "goldens/bindings"
+    reformat_goldens_command = reformat_command
+    deps = []
+    entries = []
+    foreach(info, fidl_testdata_info) {
+      if (info.denylist + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
+          info.denylist) {
+        deps += [ "${info.target}_hlcpp_generate($fidl_toolchain)" ]
+        gen_dir = "${info.fidl_gen_dir}/${info.target_name}/hlcpp"
+        include_path = string_replace(info.library, ".", "/") + "/cpp"
+        entries += [
+          {
+            golden = "${info.name}.h.golden"
+            generated = "$gen_dir/$include_path/fidl.h"
+          },
+          {
+            golden = "${info.name}.cc.golden"
+            generated = "$gen_dir/$include_path/fidl.cc"
+          },
+          {
+            golden = "${info.name}_test_base.h.golden"
+            generated = "$gen_dir/$include_path/fidl_test_base.h"
+          },
+        ]
+      }
+    }
+  }
+
+  golden_test("fidlgen_hlcpp_natural_types_golden_tests") {
+    goldens_dir = "goldens/natural_types"
+    reformat_goldens_command = reformat_command
+    deps = []
+    entries = []
+    foreach(info, fidl_testdata_info) {
+      if (info.denylist + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
+          info.denylist) {
+        deps += [ "${info.target}_cpp_natural_types_generate($fidl_toolchain)" ]
+        gen_dir = "${info.fidl_gen_dir}/${info.target_name}/cpp_natural_types"
+        include_path = string_replace(info.library, ".", "/") + "/cpp"
+        entries += [
+          {
+            golden = "${info.name}.h.golden"
+            generated = "$gen_dir/$include_path/natural_types.h"
+          },
+          {
+            golden = "${info.name}.cc.golden"
+            generated = "$gen_dir/$include_path/natural_types.cc"
+          },
+        ]
+      }
+    }
+  }
 }
 
 install_host_tools("host") {
   deps = [ ":fidlgen_hlcpp" ]
   outputs = [ "fidlgen_hlcpp" ]
-}
-
-# TODO(fxbug.dev/45483): Remove once all SDK customers are using HLCPP backend
-# directly.
-go_binary("fidlgen") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp"
-
-  sdk_category = "partner"
-  deps = [ ":gopkg" ]
-}
-
-clang_format = rebase_path("${clang_prefix}/clang-format", "", root_build_dir)
-reformat_command = "'${clang_format}' --style=google"
-
-golden_test("fidlgen_hlcpp_golden_tests") {
-  goldens_dir = "goldens/bindings"
-  reformat_goldens_command = reformat_command
-  deps = []
-  entries = []
-  foreach(info, fidl_testdata_info) {
-    if (info.denylist + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
-        info.denylist) {
-      deps += [ "${info.target}_hlcpp_generate($fidl_toolchain)" ]
-      gen_dir = "${info.fidl_gen_dir}/${info.target_name}/hlcpp"
-      include_path = string_replace(info.library, ".", "/") + "/cpp"
-      entries += [
-        {
-          golden = "${info.name}.h.golden"
-          generated = "$gen_dir/$include_path/fidl.h"
-        },
-        {
-          golden = "${info.name}.cc.golden"
-          generated = "$gen_dir/$include_path/fidl.cc"
-        },
-        {
-          golden = "${info.name}_test_base.h.golden"
-          generated = "$gen_dir/$include_path/fidl_test_base.h"
-        },
-      ]
-    }
-  }
-}
-
-golden_test("fidlgen_hlcpp_natural_types_golden_tests") {
-  goldens_dir = "goldens/natural_types"
-  reformat_goldens_command = reformat_command
-  deps = []
-  entries = []
-  foreach(info, fidl_testdata_info) {
-    if (info.denylist + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
-        info.denylist) {
-      deps += [ "${info.target}_cpp_natural_types_generate($fidl_toolchain)" ]
-      gen_dir = "${info.fidl_gen_dir}/${info.target_name}/cpp_natural_types"
-      include_path = string_replace(info.library, ".", "/") + "/cpp"
-      entries += [
-        {
-          golden = "${info.name}.h.golden"
-          generated = "$gen_dir/$include_path/natural_types.h"
-        },
-        {
-          golden = "${info.name}.cc.golden"
-          generated = "$gen_dir/$include_path/natural_types.cc"
-        },
-      ]
-    }
-  }
 }
 
 group("goldens") {
