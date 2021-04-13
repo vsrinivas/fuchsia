@@ -290,13 +290,13 @@ class TypeConstructorOld final : public SourceElement {
 };
 
 class LayoutReference;
-class TypeParameterList;
+class LayoutParameterList;
 class TypeConstraints;
 
 class TypeConstructorNew final : public SourceElement {
  public:
   TypeConstructorNew(SourceElement const& element, std::unique_ptr<LayoutReference> layout_ref,
-                     std::unique_ptr<TypeParameterList> parameters,
+                     std::unique_ptr<LayoutParameterList> parameters,
                      std::unique_ptr<TypeConstraints> constraints)
       : SourceElement(element),
         layout_ref(std::move(layout_ref)),
@@ -306,7 +306,7 @@ class TypeConstructorNew final : public SourceElement {
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<LayoutReference> layout_ref;
-  std::unique_ptr<TypeParameterList> parameters;
+  std::unique_ptr<LayoutParameterList> parameters;
   std::unique_ptr<TypeConstraints> constraints;
 };
 
@@ -901,7 +901,7 @@ class NamedLayoutReference final : public LayoutReference {
   std::unique_ptr<CompoundIdentifier> identifier;
 };
 
-class TypeParameter : public SourceElement {
+class LayoutParameter : public SourceElement {
  public:
   enum Kind {
     kAmbiguous,
@@ -909,55 +909,55 @@ class TypeParameter : public SourceElement {
     kType,
   };
 
-  TypeParameter(SourceElement const& element, Kind kind) : SourceElement(element), kind(kind) {}
+  LayoutParameter(SourceElement const& element, Kind kind) : SourceElement(element), kind(kind) {}
 
   void Accept(TreeVisitor* visitor) const;
 
   const Kind kind;
 };
 
-class LiteralTypeParameter final : public TypeParameter {
+class LiteralLayoutParameter final : public LayoutParameter {
  public:
-  explicit LiteralTypeParameter(SourceElement const& element,
-                                std::unique_ptr<LiteralConstant> literal)
-      : TypeParameter(element, Kind::kLiteral), literal(std::move(literal)) {}
+  explicit LiteralLayoutParameter(SourceElement const& element,
+                                  std::unique_ptr<LiteralConstant> literal)
+      : LayoutParameter(element, Kind::kLiteral), literal(std::move(literal)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<LiteralConstant> literal;
 };
 
-class TypeTypeParameter final : public TypeParameter {
+class TypeLayoutParameter final : public LayoutParameter {
  public:
-  explicit TypeTypeParameter(SourceElement const& element,
-                             std::unique_ptr<TypeConstructorNew> type_ctor)
-      : TypeParameter(element, Kind::kType), type_ctor(std::move(type_ctor)) {}
+  explicit TypeLayoutParameter(SourceElement const& element,
+                               std::unique_ptr<TypeConstructorNew> type_ctor)
+      : LayoutParameter(element, Kind::kType), type_ctor(std::move(type_ctor)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<TypeConstructorNew> type_ctor;
 };
 
-class AmbiguousTypeParameter final : public TypeParameter {
+class AmbiguousLayoutParameter final : public LayoutParameter {
  public:
-  explicit AmbiguousTypeParameter(SourceElement const& element,
-                                  std::unique_ptr<CompoundIdentifier> identifier)
-      : TypeParameter(element, Kind::kAmbiguous), identifier(std::move(identifier)) {}
+  explicit AmbiguousLayoutParameter(SourceElement const& element,
+                                    std::unique_ptr<CompoundIdentifier> identifier)
+      : LayoutParameter(element, Kind::kAmbiguous), identifier(std::move(identifier)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<CompoundIdentifier> identifier;
 };
 
-class TypeParameterList final : public SourceElement {
+class LayoutParameterList final : public SourceElement {
  public:
-  TypeParameterList(SourceElement const& element,
-                    std::vector<std::unique_ptr<raw::TypeParameter>> items)
+  LayoutParameterList(SourceElement const& element,
+                      std::vector<std::unique_ptr<raw::LayoutParameter>> items)
       : SourceElement(element), items(std::move(items)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::vector<std::unique_ptr<raw::TypeParameter>> items;
+  std::vector<std::unique_ptr<raw::LayoutParameter>> items;
 };
 
 class TypeConstraints final : public SourceElement {

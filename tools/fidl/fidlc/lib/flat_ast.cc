@@ -2148,7 +2148,7 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
     // That means the logic here can be very simple (for now): assume the first type parameter is
     // always a maybe_type_ctor, and the second (if it exists) is a maybe_size.
     auto builtin = span.data();
-    std::unique_ptr<raw::TypeParameter> param;
+    std::unique_ptr<raw::LayoutParameter> param;
     if (params->items.size() >= 1) {
       // Because all of the generic types we have today only take at most one nested type, it is
       // okay to pass the name context through like this.  If we ever introduce generic types
@@ -2159,15 +2159,15 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
       auto name = Name::CreateDerived(this, span, context.full_name());
 
       switch (param->kind) {
-        case raw::TypeParameter::Kind::kType: {
-          auto type_param = static_cast<raw::TypeTypeParameter*>(param.get());
+        case raw::LayoutParameter::Kind::kType: {
+          auto type_param = static_cast<raw::TypeLayoutParameter*>(param.get());
           if (!ConsumeTypeConstructorNew(std::move(type_param->type_ctor), name,
                                          &type_ctor->maybe_arg_type_ctor))
             return false;
           break;
         }
-        case raw::TypeParameter::Kind::kAmbiguous: {
-          auto type_param = static_cast<raw::AmbiguousTypeParameter*>(param.get());
+        case raw::LayoutParameter::Kind::kAmbiguous: {
+          auto type_param = static_cast<raw::AmbiguousLayoutParameter*>(param.get());
           auto inner_name = Name::CreateSourced(this, type_param->identifier->span());
           type_ctor->maybe_arg_type_ctor = std::make_unique<TypeConstructor>(
               inner_name,
@@ -2177,7 +2177,7 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
               /*maybe_size=*/nullptr, types::Nullability::kNonnullable, fidl::utils::Syntax::kNew);
           break;
         }
-        case raw::TypeParameter::Kind::kLiteral: {
+        case raw::LayoutParameter::Kind::kLiteral: {
           assert(false && "the first type parameter must be a type, not a value");
           break;
         }
@@ -2186,14 +2186,14 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
     if (builtin == "array" && params->items.size() >= 2) {
       param = std::move(params->items[1]);
       switch (param->kind) {
-        case raw::TypeParameter::Kind::kAmbiguous: {
-          auto type_param = static_cast<raw::AmbiguousTypeParameter*>(param.get());
+        case raw::LayoutParameter::Kind::kAmbiguous: {
+          auto type_param = static_cast<raw::AmbiguousLayoutParameter*>(param.get());
           type_ctor->maybe_size = std::make_unique<Constant>(Constant::Kind::kIdentifier,
                                                              type_param->identifier->span());
           break;
         }
-        case raw::TypeParameter::Kind::kLiteral: {
-          auto type_param = static_cast<raw::LiteralTypeParameter*>(param.get());
+        case raw::LayoutParameter::Kind::kLiteral: {
+          auto type_param = static_cast<raw::LiteralLayoutParameter*>(param.get());
           ConsumeConstant(std::move(type_param->literal), &type_ctor->maybe_size);
           break;
         }

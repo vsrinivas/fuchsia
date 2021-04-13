@@ -339,8 +339,8 @@ class Parser {
   // TODO(fxbug.dev/70247): Consolidate the ParseFoo methods.
   // --- new syntax ---
 
-  std::unique_ptr<raw::TypeParameter> ParseTypeParameter();
-  std::unique_ptr<raw::TypeParameterList> MaybeParseTypeParameterList();
+  std::unique_ptr<raw::LayoutParameter> ParseLayoutParameter();
+  std::unique_ptr<raw::LayoutParameterList> MaybeParseLayoutParameterList();
   std::unique_ptr<raw::TypeConstraints> ParseConstraints();
   std::unique_ptr<raw::LayoutMember> ParseLayoutMember(raw::LayoutMember::Kind);
   std::unique_ptr<raw::Layout> ParseLayout(ASTScope&, const Modifiers&,

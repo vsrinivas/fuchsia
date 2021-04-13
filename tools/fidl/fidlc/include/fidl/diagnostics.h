@@ -44,7 +44,7 @@ constexpr ErrorDef ErrMissingConstraintBrackets(
     "lists of constraints must be enclosed in brackets");
 constexpr ErrorDef ErrUnnecessaryConstraintBrackets(
     "single constraints must not be enclosed in brackets");
-constexpr ErrorDef ErrEmptyTypeParameterList("no type parameters specified");
+constexpr ErrorDef ErrEmptyLayoutParameterList("no layout parameters specified");
 // end new_syntax
 
 // TODO(fxbug.dev/65978): This is a misnomer in the new syntax: the ordinal comes

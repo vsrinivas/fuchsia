@@ -1691,7 +1691,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       std::move(comment_tokens_), fidl::utils::Syntax::kOld);
 }
 
-std::unique_ptr<raw::TypeParameter> Parser::ParseTypeParameter() {
+std::unique_ptr<raw::LayoutParameter> Parser::ParseLayoutParameter() {
   ASTScope scope(this);
 
   switch (Peek().combined()) {
@@ -1700,8 +1700,8 @@ std::unique_ptr<raw::TypeParameter> Parser::ParseTypeParameter() {
     if (!Ok())
       return Fail();
     auto constant = std::make_unique<raw::LiteralConstant>(std::move(literal));
-    return std::make_unique<raw::LiteralTypeParameter>(scope.GetSourceElement(),
-                                                       std::move(constant));
+    return std::make_unique<raw::LiteralLayoutParameter>(scope.GetSourceElement(),
+                                                         std::move(constant));
   }
   default: {
     auto type_ctor = ParseTypeConstructorNew();
@@ -1716,23 +1716,24 @@ std::unique_ptr<raw::TypeParameter> Parser::ParseTypeParameter() {
     if (type_ctor->layout_ref->kind == raw::LayoutReference::Kind::kNamed &&
         type_ctor->parameters == nullptr && type_ctor->constraints == nullptr) {
       auto named_ref = static_cast<raw::NamedLayoutReference*>(type_ctor->layout_ref.get());
-      return std::make_unique<raw::AmbiguousTypeParameter>(scope.GetSourceElement(),
-                                                           std::move(named_ref->identifier));
+      return std::make_unique<raw::AmbiguousLayoutParameter>(scope.GetSourceElement(),
+                                                             std::move(named_ref->identifier));
     }
-    return std::make_unique<raw::TypeTypeParameter>(scope.GetSourceElement(), std::move(type_ctor));
+    return std::make_unique<raw::TypeLayoutParameter>(scope.GetSourceElement(),
+                                                      std::move(type_ctor));
   }
   }
 }
 
-std::unique_ptr<raw::TypeParameterList> Parser::MaybeParseTypeParameterList() {
+std::unique_ptr<raw::LayoutParameterList> Parser::MaybeParseLayoutParameterList() {
   if (!MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
     return nullptr;
   }
 
   ASTScope scope(this);
-  std::vector<std::unique_ptr<raw::TypeParameter>> params;
+  std::vector<std::unique_ptr<raw::LayoutParameter>> params;
   for (;;) {
-    params.emplace_back(ParseTypeParameter());
+    params.emplace_back(ParseLayoutParameter());
     if (!Ok())
       return Fail();
     if (!MaybeConsumeToken(OfKind(Token::Kind::kComma)))
@@ -1740,7 +1741,7 @@ std::unique_ptr<raw::TypeParameterList> Parser::MaybeParseTypeParameterList() {
   }
 
   ConsumeTokenOrRecover(OfKind(Token::Kind::kRightAngle));
-  return std::make_unique<raw::TypeParameterList>(scope.GetSourceElement(), std::move(params));
+  return std::make_unique<raw::LayoutParameterList>(scope.GetSourceElement(), std::move(params));
 }
 
 std::unique_ptr<raw::TypeConstraints> Parser::ParseConstraints() {
@@ -2021,9 +2022,9 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
     }
   }
 
-  std::unique_ptr<raw::TypeParameterList> parameters;
+  std::unique_ptr<raw::LayoutParameterList> parameters;
   if (previous_token_.kind() != Token::Kind::kColon) {
-    parameters = MaybeParseTypeParameterList();
+    parameters = MaybeParseLayoutParameterList();
     if (!Ok())
       return Fail();
   }
