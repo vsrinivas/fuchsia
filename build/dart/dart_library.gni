@@ -514,13 +514,27 @@ if (current_toolchain == dart_toolchain) {
         "/dart-tools/strict_deps"
     _strict_deps_stamp =
         "${invoker.target_gen_dir}/${invoker.target_name}_strict_deps.report"
+    _strict_deps_snapshot_path =
+        get_label_info(_strict_deps_tool_label, "target_gen_dir") +
+        "/strict_deps.snapshot"
 
     action("${invoker.target_name}_strict_deps") {
-      hermetic_deps = false
       deps = [
-        ":$_dart_package_config_target_name",
-        ":${invoker.target_name}_dart_build_info",
-        _strict_deps_tool_label,
+               ":$_dart_package_config_target_name",
+               ":${invoker.target_name}_dart_build_info",
+               "//tools/dart-strict-deps:strict_deps_snapshot($host_toolchain)",
+               _strict_deps_tool_label,
+             ] + _dart_deps
+      sources = []
+      if (defined(invoker.sources)) {
+        foreach(src, invoker.sources) {
+          sources += [ rebase_path("$source_dir/$src") ]
+        }
+      }
+      inputs = [
+        _metadata_collection_results_path,
+        _packages_path,
+        _strict_deps_snapshot_path,
       ]
       outputs = [ _strict_deps_stamp ]
       script = _strict_deps_tool_path
