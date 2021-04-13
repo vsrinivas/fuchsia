@@ -2,22 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
+import("//build/fidl/fidl.gni")
 
-banjo("fuchsia.hardware.gpioimpl") {
-  fidl_only = true
-  sources = [ "gpio-impl.banjo" ]
-  deps = [
+fidl("fuchsia.hardware.gpioimpl") {
+  sources = [ "gpio-impl.fidl" ]
+  public_deps = [
     "//sdk/banjo/fuchsia.hardware.gpio",
-    "//sdk/banjo/zx",
+    "//zircon/vdso/zx",
   ]
-}
-
-group("fuchsia.hardware.gpioimpl_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.gpioimpl_banjo_cpp_2" ]
-}
-
-group("fuchsia.hardware.gpioimpl_banjo_cpp_mock") {
-  testonly = true
-  public_deps = [ ":fuchsia.hardware.gpioimpl_banjo_cpp_mock_2" ]
 }

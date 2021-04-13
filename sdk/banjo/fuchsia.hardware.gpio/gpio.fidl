@@ -28,13 +28,13 @@ protocol Gpio {
     /// the interpretation of "function" is platform dependent.
     SetAltFunction(uint64 function) -> (zx.status s);
     /// Reads the current value of a GPIO (0 or 1).
-    Read()-> (zx.status s, uint8 value);
+    Read() -> (zx.status s, uint8 value);
     /// Sets the current value of the GPIO (any non-zero value maps to 1).
     Write(uint8 value) -> (zx.status s);
     /// Gets an interrupt object pertaining to a particular GPIO pin.
     GetInterrupt(uint32 flags) -> (zx.status s, zx.handle:INTERRUPT irq);
     /// Release the interrupt.
-    ReleaseInterrupt()-> (zx.status s);
+    ReleaseInterrupt() -> (zx.status s);
     /// Set GPIO polarity.
     SetPolarity(GpioPolarity polarity) -> (zx.status s);
     /// Set GPIO drive strength.
