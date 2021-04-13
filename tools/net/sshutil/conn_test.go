@@ -29,7 +29,7 @@ func setUpConn(
 		t.Fatalf("failed to start ssh server: %s", err)
 	}
 	t.Cleanup(func() {
-		if err := server.stop(); err != nil {
+		if err := server.stop(); err != nil && !errors.Is(err, io.EOF) {
 			t.Error(err)
 		}
 	})
