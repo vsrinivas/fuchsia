@@ -96,6 +96,7 @@ impl SequenceStore {
 mod test {
     use super::*;
 
+    const ZERO_DURATION: zx::Duration = zx::Duration::from_nanos(0);
     const SHORT_DELAY: zx::Duration = zx::Duration::from_nanos(1);
 
     #[test]
@@ -103,7 +104,9 @@ mod test {
         let _executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
         let mut s = SequenceStore::new();
         for i in 0..std::u16::MAX {
-            assert_eq!(s.take().expect("Failed to take").0, i);
+            let (seq, offset) = s.take().expect("Failed to take");
+            assert_eq!(seq, i);
+            assert_eq!(offset, ZERO_DURATION);
         }
     }
 
@@ -112,34 +115,43 @@ mod test {
         let _executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
         let mut s = SequenceStore::new();
         for i in 0..std::u16::MAX {
-            assert_eq!(s.take().expect("Failed to take").0, i);
+            let (seq, offset) = s.take().expect("Failed to take");
+            assert_eq!(seq, i);
+            assert_eq!(offset, ZERO_DURATION);
         }
-        s.take().expect_err("There shouldn't be any more sequence numbers available");
+        matches::assert_matches!(s.take(), Err(OutOfSequencesError {}));
     }
 
     #[test]
     fn give_out_of_order() {
         let _executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
         let mut s = SequenceStore::new();
-        s.take().expect("Failed to take");
-        let (n, _) = s.take().expect("Failed to take");
-        s.give(n, None).expect_err("Should error on out-of-order responses");
+        let (seq, offset) = s.take().expect("Failed to take");
+        assert_eq!(seq, 0);
+        assert_eq!(offset, ZERO_DURATION);
+        let (seq, offset) = s.take().expect("Failed to take");
+        assert_eq!(seq, 1);
+        assert_eq!(offset, ZERO_DURATION);
+        matches::assert_matches!(s.give(seq, None), Err(GiveError::OutOfOrder(None)));
     }
 
     #[test]
     fn give_duplicate() {
         let _executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
         let mut s = SequenceStore::new();
-        s.give(42, None).expect_err("Should not be able to give seq_nums that haven't been given");
+        matches::assert_matches!(s.give(42, None), Err(GiveError::DoesNotExist(None)));
     }
 
     #[test]
     fn give_same_number() {
         let _executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
         let mut s = SequenceStore::new();
-        let (num, _) = s.take().expect("Failed to take");
-        s.give(num, None).expect("Failed to give");
-        s.give(num, None).expect_err("Should not be able to give duplicates");
+        let (seq, offset) = s.take().expect("Failed to take");
+        assert_eq!(seq, 0);
+        assert_eq!(offset, ZERO_DURATION);
+        let latency = s.give(seq, None).expect("Failed to give");
+        assert_eq!(latency, None);
+        matches::assert_matches!(s.give(seq, None), Err(GiveError::Duplicate(None)));
     }
 
     #[test]
@@ -147,8 +159,10 @@ mod test {
         let _executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
         let mut s = SequenceStore::new();
 
-        let (_, a_time) = s.take().expect("Failed to take");
-        let (_, b_time) = s.take().expect("Failed to take");
+        let (seq, a_time) = s.take().expect("Failed to take");
+        assert_eq!(seq, 0);
+        let (seq, b_time) = s.take().expect("Failed to take");
+        assert_eq!(seq, 1);
         assert_eq!(a_time, b_time);
     }
 
@@ -157,9 +171,11 @@ mod test {
         let executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
         let mut s = SequenceStore::new();
 
-        let (_, a_time) = s.take().expect("Failed to take");
+        let (seq, a_time) = s.take().expect("Failed to take");
+        assert_eq!(seq, 0);
         executor.set_fake_time(executor.now() + SHORT_DELAY);
-        let (_, b_time) = s.take().expect("Failed to take");
+        let (seq, b_time) = s.take().expect("Failed to take");
+        assert_eq!(seq, 1);
         assert_eq!(b_time - a_time, SHORT_DELAY);
     }
 

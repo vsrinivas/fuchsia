@@ -146,7 +146,6 @@ config("allow_unused_results") {
     "//src/connectivity/network/lib/*",
     "//src/connectivity/network/netstack/*",
     "//src/connectivity/network/netstack3/*",
-    "//src/connectivity/network/ping3/*",
     "//src/connectivity/network/testing/netemul/*",
     "//src/connectivity/network/tests/connect/*",
     "//src/connectivity/network/tests/dhcp_interop/*",
