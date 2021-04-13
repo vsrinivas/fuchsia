@@ -25,6 +25,8 @@ zx_library("arch") {
   deps = []
 
   public_deps = [
+    "//sdk/lib/stdcompat",
+
     # <lib/arch/x86/cpuid.h> has #include <hwreg/bitfields.h>.
     "//zircon/system/ulib/hwreg:headers",
   ]
