@@ -163,7 +163,7 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20210403161142-5e06dd20ab57
+# golang.org/x/sys v0.0.0-20210412220455-f1c623a9e750
 ## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
@@ -332,7 +332,7 @@ google.golang.org/protobuf/types/pluginpb
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
-# gvisor.dev/gvisor v0.0.0-20210412205723-5dc99694d8de
+# gvisor.dev/gvisor v0.0.0-20210413080324-28f40ff47e9c
 ## explicit
 gvisor.dev/gvisor/pkg/gohacks
 gvisor.dev/gvisor/pkg/goid
