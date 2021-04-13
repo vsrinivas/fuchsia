@@ -12,11 +12,11 @@ namespace {
 
 // Max record counts. These values are selected to prevent an attack that would
 // cause is to allocate memory for large numbers of records.
-static constexpr size_t kMaxQuestions = 1024;
-static constexpr size_t kMaxAnswers = 1024;
-static constexpr size_t kMaxAuthorities = 1024;
-static constexpr size_t kMaxAdditionals = 1024;
-static constexpr size_t kMaxDnsNameSize = 255;
+constexpr size_t kMaxQuestions = 1024;
+constexpr size_t kMaxAnswers = 1024;
+constexpr size_t kMaxAuthorities = 1024;
+constexpr size_t kMaxAdditionals = 1024;
+constexpr size_t kMaxDnsNameSize = 255;
 
 void ReadNameLabels(PacketReader& reader, std::vector<char>& chars) {
   size_t start_position_of_current_run = reader.bytes_consumed();
@@ -343,29 +343,29 @@ PacketReader& operator>>(PacketReader& reader, DnsMessage& value) {
 
   if (reader.healthy()) {
     value.questions_.resize(value.header_.question_count_);
-    for (uint16_t i = 0; i < value.questions_.size(); ++i) {
-      reader >> value.questions_[i];
+    for (auto& question : value.questions_) {
+      reader >> question;
     }
   }
 
   if (reader.healthy()) {
     value.answers_.resize(value.header_.answer_count_);
-    for (uint16_t i = 0; i < value.answers_.size(); ++i) {
-      reader >> value.answers_[i];
+    for (auto& answer : value.answers_) {
+      reader >> answer;
     }
   }
 
   if (reader.healthy()) {
     value.authorities_.resize(value.header_.authority_count_);
-    for (uint16_t i = 0; i < value.authorities_.size(); ++i) {
-      reader >> value.authorities_[i];
+    for (auto& authority : value.authorities_) {
+      reader >> authority;
     }
   }
 
   if (reader.healthy()) {
     value.additionals_.resize(value.header_.additional_count_);
-    for (uint16_t i = 0; i < value.additionals_.size(); ++i) {
-      reader >> value.additionals_[i];
+    for (auto& additional : value.additionals_) {
+      reader >> additional;
     }
   }
 
