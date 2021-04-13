@@ -93,6 +93,11 @@ class Snapshot {
   std::vector<zx_koid_t> HitTest(zx_koid_t start_node, glm::vec2 world_space_point,
                                  bool is_semantic) const;
 
+  // Given a node's KOID, return true if it transitively connects to node with |ancestor_koid| via
+  // parent references.
+  // - This operation is O(N) in the depth of the view tree.
+  bool IsDescendant(zx_koid_t descendant_koid, zx_koid_t ancestor_koid) const;
+
   bool operator==(const Snapshot& other) const {
     return root == other.root && view_tree == other.view_tree &&
            unconnected_views == other.unconnected_views;

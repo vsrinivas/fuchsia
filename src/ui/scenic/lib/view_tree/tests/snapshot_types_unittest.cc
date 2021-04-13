@@ -145,4 +145,43 @@ TEST(SnapshotHitTestTest, ContinuationsShouldHonorInsertionOrder) {
   }
 }
 
+// Check IsDescendant() for various combinations in this ViewTree:
+//    1
+//  /   \
+// 2     3
+// |     |
+// 4     5
+TEST(IsDescendantTest, Comprehensive) {
+  Snapshot snapshot;
+  {
+    auto& view_tree = snapshot.view_tree;
+    view_tree[1].parent = ZX_KOID_INVALID;
+    view_tree[1].children = {2, 3};
+    view_tree[2].parent = 1;
+    view_tree[2].children = {4};
+    view_tree[3].parent = 1;
+    view_tree[3].children = {5};
+    view_tree[4].parent = 2;
+    view_tree[5].parent = 3;
+  }
+
+  // Check all the valid parent chains.
+  EXPECT_TRUE(snapshot.IsDescendant(/*descendant*/ 2, /*ancestor*/ 1));
+  EXPECT_TRUE(snapshot.IsDescendant(/*descendant*/ 3, /*ancestor*/ 1));
+  EXPECT_TRUE(snapshot.IsDescendant(/*descendant*/ 4, /*ancestor*/ 1));
+  EXPECT_TRUE(snapshot.IsDescendant(/*descendant*/ 5, /*ancestor*/ 1));
+  EXPECT_TRUE(snapshot.IsDescendant(/*descendant*/ 4, /*ancestor*/ 2));
+  EXPECT_TRUE(snapshot.IsDescendant(/*descendant*/ 5, /*ancestor*/ 3));
+
+  // Check some invalid ones.
+  EXPECT_FALSE(snapshot.IsDescendant(/*descendant*/ 1, /*ancestor*/ 2));
+  EXPECT_FALSE(snapshot.IsDescendant(/*descendant*/ 1, /*ancestor*/ 4));
+  EXPECT_FALSE(snapshot.IsDescendant(/*descendant*/ 2, /*ancestor*/ 4));
+  EXPECT_FALSE(snapshot.IsDescendant(/*descendant*/ 1, /*ancestor*/ 1));
+  EXPECT_FALSE(snapshot.IsDescendant(/*descendant*/ 5, /*ancestor*/ 2));
+  EXPECT_FALSE(snapshot.IsDescendant(/*descendant*/ 2, /*ancestor*/ 3));
+  EXPECT_FALSE(snapshot.IsDescendant(/*descendant*/ 2, /*ancestor*/ ZX_KOID_INVALID));
+  EXPECT_FALSE(snapshot.IsDescendant(/*descendant*/ 124124, /*ancestor*/ 1));
+}
+
 }  // namespace view_tree::test

@@ -62,6 +62,23 @@ std::vector<zx_koid_t> Snapshot::HitTest(zx_koid_t start_node, glm::vec2 world_s
   return hits;
 }
 
+bool Snapshot::IsDescendant(zx_koid_t descendant_koid, zx_koid_t ancestor_koid) const {
+  if (view_tree.count(descendant_koid) == 0 || view_tree.count(ancestor_koid) == 0) {
+    return false;
+  }
+
+  zx_koid_t parent_koid = view_tree.at(descendant_koid).parent;
+  while (parent_koid != ZX_KOID_INVALID) {
+    FX_DCHECK(view_tree.count(parent_koid) != 0);
+    if (parent_koid == ancestor_koid) {
+      return true;
+    }
+    parent_koid = view_tree.at(parent_koid).parent;
+  }
+
+  return false;
+}
+
 std::ostream& operator<<(std::ostream& os, const ViewNode& node) {
   const std::string indent = "  ";
   os << "[\n";
