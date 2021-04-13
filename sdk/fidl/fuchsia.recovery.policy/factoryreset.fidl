@@ -1,0 +1,13 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.recovery.policy;
+
+/// A protocol for determining whether factory reset can be triggered.
+[Discoverable]
+protocol FactoryReset {
+    /// A hanging-get style api that returns whether local factory reset is
+    /// enabled.
+    GetEnabled() -> (bool fdr_enabled);
+};
