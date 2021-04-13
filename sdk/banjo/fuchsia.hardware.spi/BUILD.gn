@@ -5,10 +5,11 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.spi") {
+  fidl_only = true
   sources = [ "spi.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
 
 group("fuchsia.hardware.spi_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.spi" ]
+  public_deps = [ ":fuchsia.hardware.spi_banjo_cpp_2" ]
 }

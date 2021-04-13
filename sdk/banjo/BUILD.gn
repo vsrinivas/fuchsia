@@ -81,7 +81,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.serialimpl",
   "fuchsia.hardware.serialimpl.async",
   "fuchsia.hardware.shareddma",
-  "fuchsia.hardware.spi",
   "fuchsia.hardware.spiimpl",
   "fuchsia.hardware.syscalls.pci",
   "fuchsia.hardware.sysmem",
