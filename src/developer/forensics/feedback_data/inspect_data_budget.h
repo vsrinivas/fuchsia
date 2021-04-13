@@ -12,6 +12,7 @@
 #include <optional>
 
 #include "src/developer/forensics/utils/archive.h"
+#include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/inspect_node_manager.h"
 
 namespace forensics {
@@ -21,7 +22,8 @@ namespace feedback_data {
 // 2.0 MB. If the file 'limit_data_flag_path' does not exist, prediction is disabled.
 class InspectDataBudget {
  public:
-  InspectDataBudget(const char* limit_data_flag_path, InspectNodeManager* node);
+  InspectDataBudget(const char* limit_data_flag_path, InspectNodeManager* node,
+                    cobalt::Logger* cobalt);
 
   void UpdateBudget(const std::map<std::string, ArchiveFileStats>& file_size_stats);
 
@@ -40,6 +42,8 @@ class InspectDataBudget {
   inspect::UintProperty inspect_target_size_;
   std::list<inspect::UintArray> inspect_last_ten_readings_;
   size_t next_reading_idx_ = 0;
+
+  cobalt::Logger* cobalt_;
 };
 
 }  // namespace feedback_data

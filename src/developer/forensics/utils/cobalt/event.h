@@ -41,7 +41,7 @@ struct Event {
   template <typename DimensionTypesH, typename... DimensionTypesT,
             typename = std::enable_if_t<(std::is_enum_v<DimensionTypesT> && ...)>>
   explicit Event(DimensionTypesH dimensions_h, DimensionTypesT... dimensions_t)
-      : type(EventType::kMultidimensionalOccurrence),
+      : type(EventType::kMultidimensionalEvent),
         metric_id(MetricIDForEventCode(dimensions_h, dimensions_t...)),
         dimensions(std::vector<uint32_t>({
             static_cast<uint32_t>(dimensions_h),

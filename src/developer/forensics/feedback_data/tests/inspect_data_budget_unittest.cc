@@ -10,7 +10,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "src/developer/forensics/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
@@ -37,10 +40,15 @@ using testing::UnorderedElementsAreArray;
 
 class InspectDataBudgetTest : public UnitTestFixture {
  public:
+  void SetUp() override {
+    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
+    cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services());
+  }
+
   void MakeUnlimitedBudget() {
     inspect_node_manager_ = std::make_unique<InspectNodeManager>(&InspectRoot());
-    inspect_data_budget_ =
-        std::make_unique<InspectDataBudget>("non-existent_path", inspect_node_manager_.get());
+    inspect_data_budget_ = std::make_unique<InspectDataBudget>(
+        "non-existent_path", inspect_node_manager_.get(), cobalt_.get());
   }
 
   void MakeLimitedBudget() {
@@ -48,8 +56,8 @@ class InspectDataBudgetTest : public UnitTestFixture {
 
     std::string limit_data_flag_path = files::JoinPath(tmp_dir_.path(), "limit_inspect_data");
     files::WriteFile(limit_data_flag_path, " ");
-    inspect_data_budget_ = std::make_unique<InspectDataBudget>(limit_data_flag_path.c_str(),
-                                                               inspect_node_manager_.get());
+    inspect_data_budget_ = std::make_unique<InspectDataBudget>(
+        limit_data_flag_path.c_str(), inspect_node_manager_.get(), cobalt_.get());
   }
 
   void CalcBudget(size_t zip_file_bytes) {
@@ -73,6 +81,8 @@ class InspectDataBudgetTest : public UnitTestFixture {
 
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<InspectDataBudget> inspect_data_budget_;
+
+  std::unique_ptr<cobalt::Logger> cobalt_;
 };
 
 TEST_F(InspectDataBudgetTest, TestUnlimitedBudget) {
@@ -229,6 +239,24 @@ TEST_F(InspectDataBudgetTest, TestInspectBudget_MaxEntries) {
                           ChildrenMatch(UnorderedElementsAre(budget)));
 
   EXPECT_THAT(InspectTree(), ChildrenMatch(UnorderedElementsAre(AllOf(node))));
+}
+
+TEST_F(InspectDataBudgetTest, TestCobalt_BudgetEnabled) {
+  MakeLimitedBudget();
+  ASSERT_TRUE(GetSizeInBytes());
+  size_t initial_budget = GetSizeInBytes().value();
+
+  CalcBudget(1 * kMegabytes);
+  ASSERT_TRUE(GetSizeInBytes());
+  ASSERT_EQ(GetSizeInBytes().value(), initial_budget);
+
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::EventType::kMultidimensionalEvent,
+                                cobalt::kInspectBudgetMetricId, {}, 20971520),
+              }));
 }
 
 }  // namespace

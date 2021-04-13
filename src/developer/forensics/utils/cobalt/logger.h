@@ -31,6 +31,11 @@ class Logger {
   Logger(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
          std::unique_ptr<timekeeper::Clock> clock = std::make_unique<timekeeper::SystemClock>());
 
+  // Log event with no dimensions.
+  void LogEvent(uint32_t metric_id, uint64_t count) {
+    LogEvent(Event(cobalt::EventType::kMultidimensionalEvent, metric_id, {}, count));
+  }
+
   // Log an occurrence event with fuchsia.cobalt.Logger with the provided parameters. If the service
   // is not accessible, keep the parameters to try again later.
   template <typename... DimensionTypes>

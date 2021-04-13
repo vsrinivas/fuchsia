@@ -11,6 +11,7 @@ namespace forensics {
 namespace cobalt {
 
 constexpr auto kProjectId = cobalt_registry::kProjectId;
+constexpr auto kInspectBudgetMetricId = cobalt_registry::kMaxInputInspectBudgetMetricId;
 
 enum class CrashState {
   kUnknown = cobalt_registry::CrashMetricDimensionState::Unknown,
@@ -165,7 +166,7 @@ enum class EventType {
   kOccurrence,
   kCount,
   kTimeElapsed,
-  kMultidimensionalOccurrence,
+  kMultidimensionalEvent,
 };
 
 inline constexpr EventType EventTypeForEventCode(const SnapshotVersion version) {

@@ -5,11 +5,13 @@
 #include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <stdint.h>
 
 #include <algorithm>
 #include <filesystem>
 
 #include "src/developer/forensics/feedback_data/constants.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 
 namespace forensics::feedback_data {
 namespace {
@@ -22,8 +24,9 @@ const size_t kStartingInspectDataBudgetInBytes = kMaxInspectDataBudgetInBytes;
 
 }  // namespace
 
-InspectDataBudget::InspectDataBudget(const char* limit_data_flag_path, InspectNodeManager* node)
-    : inspect_node_(node) {
+InspectDataBudget::InspectDataBudget(const char* limit_data_flag_path, InspectNodeManager* node,
+                                     cobalt::Logger* cobalt)
+    : inspect_node_(node), cobalt_(cobalt) {
   limit_data_flag_ = std::filesystem::exists(limit_data_flag_path);
   inspect_budget_enabled_ =
       inspect_node_->Get("/inspect_budget")
@@ -79,6 +82,8 @@ void InspectDataBudget::UpdateBudget(
   if (inspect_last_ten_readings_.size() > 10) {
     inspect_last_ten_readings_.pop_front();
   }
+
+  cobalt_->LogEvent(cobalt::kInspectBudgetMetricId, data_budget_.value());
 }
 
 }  // namespace forensics::feedback_data

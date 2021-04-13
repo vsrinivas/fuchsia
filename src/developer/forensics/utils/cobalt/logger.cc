@@ -160,7 +160,7 @@ void Logger::SendEvent(uint64_t event_id) {
       logger_->LogElapsedTime(event.metric_id, event.dimensions[0], /*component=*/"",
                               /*elapsed_micros=*/event.usecs_elapsed, std::move(cb));
       break;
-    case EventType::kMultidimensionalOccurrence:
+    case EventType::kMultidimensionalEvent:
       fuchsia::cobalt::CobaltEvent cobalt_event;
       cobalt_event.metric_id = event.metric_id;
       cobalt_event.event_codes = event.dimensions;

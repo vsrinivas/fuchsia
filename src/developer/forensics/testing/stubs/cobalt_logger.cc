@@ -41,7 +41,7 @@ void CobaltLoggerBase::SetLastEvent(uint32_t metric_id, uint32_t event_code, uin
 void CobaltLoggerBase::SetLastEvent(uint32_t metric_id, std::vector<uint32_t> event_codes,
                                     uint64_t count) {
   events_.push_back(
-      cobalt::Event(cobalt::EventType::kMultidimensionalOccurrence, metric_id, event_codes, count));
+      cobalt::Event(cobalt::EventType::kMultidimensionalEvent, metric_id, event_codes, count));
 }
 
 void CobaltLogger::LogEvent(uint32_t metric_id, uint32_t event_code, LogEventCallback callback) {

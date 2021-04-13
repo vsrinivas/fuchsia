@@ -72,15 +72,15 @@ const AttachmentKeys kDefaultAttachmentsToAvoidSpuriousLogs = {
 
 class DatastoreTest : public UnitTestFixture {
  public:
-  DatastoreTest() : executor_(dispatcher()) {
-    inspect_node_manager_ = std::make_unique<InspectNodeManager>(&InspectRoot());
-    inspect_data_budget_ =
-        std::make_unique<InspectDataBudget>("non-existent_path", inspect_node_manager_.get());
-  }
+  DatastoreTest() : executor_(dispatcher()) {}
 
   void SetUp() override {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services());
+
+    inspect_node_manager_ = std::make_unique<InspectNodeManager>(&InspectRoot());
+    inspect_data_budget_ = std::make_unique<InspectDataBudget>(
+        "non-existent_path", inspect_node_manager_.get(), cobalt_.get());
   }
 
   void TearDown() override {

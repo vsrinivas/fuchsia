@@ -137,12 +137,6 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 // connecting through FIDL.
 class DataProviderTest : public UnitTestFixture {
  public:
-  DataProviderTest() {
-    inspect_node_manager_ = std::make_unique<InspectNodeManager>(&InspectRoot());
-    inspect_data_budget_ =
-        std::make_unique<InspectDataBudget>("non-existent_path", inspect_node_manager_.get());
-  }
-
   void SetUp() override {
     // |cobalt_| owns the test clock through a unique_ptr so we need to allocate |clock_| on the
     // heap and then give |cobalt_| ownership of it. This allows us to control the time perceived by
@@ -151,6 +145,10 @@ class DataProviderTest : public UnitTestFixture {
     cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services(),
                                                std::unique_ptr<timekeeper::TestClock>(clock_));
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
+
+    inspect_node_manager_ = std::make_unique<InspectNodeManager>(&InspectRoot());
+    inspect_data_budget_ = std::make_unique<InspectDataBudget>(
+        "non-existent_path", inspect_node_manager_.get(), cobalt_.get());
   }
 
  protected:

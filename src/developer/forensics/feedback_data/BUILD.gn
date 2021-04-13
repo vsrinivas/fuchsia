@@ -260,6 +260,7 @@ source_set("inspect_budget") {
     "//sdk/lib/sys/inspect/cpp",
     "//src/developer/forensics/utils:archive",
     "//src/developer/forensics/utils:inspect_node_manager",
+    "//src/developer/forensics/utils/cobalt",
   ]
 
   deps = [

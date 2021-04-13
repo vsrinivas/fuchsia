@@ -20,8 +20,7 @@ bool operator==(const Event& lhs, const Event& rhs) {
     return false;
   }
 
-  if (lhs.type != EventType::kMultidimensionalOccurrence &&
-      lhs.dimensions[0] != rhs.dimensions[0]) {
+  if (lhs.type != EventType::kMultidimensionalEvent && lhs.dimensions[0] != rhs.dimensions[0]) {
     return false;
   }
 
@@ -33,7 +32,7 @@ bool operator==(const Event& lhs, const Event& rhs) {
       return lhs.count == rhs.count;
     case EventType::kTimeElapsed:
       return lhs.usecs_elapsed == rhs.usecs_elapsed;
-    case EventType::kMultidimensionalOccurrence:
+    case EventType::kMultidimensionalEvent:
       std::vector lhs_events = lhs.dimensions;
       std::vector rhs_events = rhs.dimensions;
 
@@ -58,7 +57,7 @@ std::string Event::ToString() const {
       return fxl::StringPrintf(
           "{type: time elapsed, metric_id: %u, dimension: %u, usecs elapsed: %lu}", metric_id,
           dimensions[0], usecs_elapsed);
-    case EventType::kMultidimensionalOccurrence:
+    case EventType::kMultidimensionalEvent:
       std::string dimensions_str;
       for (const auto& dimension : dimensions) {
         dimensions_str += fxl::StringPrintf("%u, ", dimension);
