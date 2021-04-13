@@ -51,11 +51,15 @@ def main():
     parser.add_argument(
         "--name", help="The name for the generated FIDL library, if any")
     parser.add_argument(
+        "--depfile", help="The name for the generated depfile, if any")
+    parser.add_argument(
         "--sources", help="List of FIDL source files", nargs="*")
     parser.add_argument(
         "--dep-libraries", help="List of dependent libraries", nargs="*")
     parser.add_argument(
-        "--experimental-flag", help="List of experimental flags", action="append")
+        "--experimental-flag",
+        help="List of experimental flags",
+        action="append")
     args = parser.parse_args()
 
     target_libraries = []
@@ -89,6 +93,9 @@ def main():
 
     if args.name:
         response_file.append("--name %s" % args.name)
+
+    if args.depfile:
+        response_file.append("--depfile %s" % args.depfile)
 
     if args.experimental_flag:
         for experimental_flag in args.experimental_flag:

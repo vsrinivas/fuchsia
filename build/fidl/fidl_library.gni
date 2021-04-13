@@ -64,6 +64,7 @@ template("fidl_library") {
   c_server = "$target_gen_dir/$c_stem.server.c"
   coding_tables = "$fidl_stem.tables.c"
   lint_stamp_file = "$target_gen_dir/$target_name.linted"
+  fidlc_depfile_path = "$target_gen_dir/$target_name.d"
 
   main_target_name = target_name
   response_file_target_name = "${target_name}_response_file"
@@ -125,6 +126,8 @@ template("fidl_library") {
              rebase_path(coding_tables, root_build_dir),
              "--name",
              library_name,
+             "--depfile",
+             rebase_path(fidlc_depfile_path, root_build_dir),
              "--sources",
            ] + rebase_path(sources, root_build_dir)
 
@@ -302,6 +305,8 @@ template("fidl_library") {
 
     inputs = [ response_file ]
 
+    depfile = fidlc_depfile_path
+
     outputs = [
       c_client,
       c_header,
@@ -310,16 +315,12 @@ template("fidl_library") {
       json_representation,
     ]
 
-    rebased_response_file = rebase_path(response_file, root_build_dir)
-
-    args = [ "@$rebased_response_file" ]
+    args = [ "@" + rebase_path(response_file, root_build_dir) ]
 
     deps = [
              ":$lint_target_name",
              ":$response_file_target_name",
            ] + non_fidl_deps
-
-    hermetic_deps = false
   }
 
   validate_json(verification_target_name) {
