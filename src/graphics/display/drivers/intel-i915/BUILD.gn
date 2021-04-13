@@ -37,7 +37,7 @@ source_set("common_srcs") {
     "//sdk/banjo/fuchsia.hardware.i2cimpl",
     "//sdk/banjo/fuchsia.hardware.intelgpucore",
     "//sdk/banjo/fuchsia.hardware.pci",
-    "//sdk/banjo/fuchsia.hardware.sysmem",
+    "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/lib/driver",

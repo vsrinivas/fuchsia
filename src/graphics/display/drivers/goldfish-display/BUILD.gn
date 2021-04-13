@@ -36,7 +36,7 @@ source_set("common") {
     "//sdk/banjo/fuchsia.hardware.display.controller",
     "//sdk/banjo/fuchsia.hardware.goldfish.control",
     "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
-    "//sdk/banjo/fuchsia.hardware.sysmem",
+    "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/lib/ddk",

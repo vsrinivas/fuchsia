@@ -44,7 +44,7 @@ source_set("optee_lib") {
 
   deps = [
     ":optee-bind",
-    "//sdk/banjo/fuchsia.hardware.sysmem",
+    "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.tee",
     "//sdk/fidl/fuchsia.tee:fuchsia.tee_llcpp",
     "//sdk/fidl/fuchsia.tee.manager:fuchsia.tee.manager_llcpp",
@@ -92,7 +92,7 @@ test("optee-controller-test-bin") {
   output_name = "optee-controller-test"
   deps = [
     ":optee_lib",
-    "//sdk/banjo/fuchsia.hardware.sysmem",
+    "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-resource",
     "//src/devices/testing/fake_ddk",
@@ -106,7 +106,7 @@ test("optee-client-test-bin") {
   output_name = "optee-client-test"
   deps = [
     ":optee_lib",
-    "//sdk/banjo/fuchsia.hardware.sysmem",
+    "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/lib/fidl/cpp",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-resource",

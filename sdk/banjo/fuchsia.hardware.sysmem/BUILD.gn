@@ -5,10 +5,11 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.sysmem") {
+  fidl_only = true
   sources = [ "sysmem.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
 
 group("fuchsia.hardware.sysmem_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.sysmem" ]
+  public_deps = [ ":fuchsia.hardware.sysmem_banjo_cpp_2" ]
 }
