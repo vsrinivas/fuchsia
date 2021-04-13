@@ -2,43 +2,62 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::io::{Error, Write};
+use std::io::{Error, ErrorKind, Write};
 use vte::{Parser, Perform};
 
 /// A trait for objects that write line delimited strings.
 pub trait WriteLine {
-    /// Write a line of output.
-    fn write_line(&mut self, s: &str) -> Result<(), Error>;
+    /// Writes a string and terminates it will a line break.
+    fn write_line(&mut self, s: &str) -> Result<(), Error> {
+        self.write_line_segments(&[s])
+    }
+
+    /// Write a series of segments, and terminate it with a line break.
+    fn write_line_segments(&mut self, segments: &[&str]) -> Result<(), Error>;
 }
 
 impl<W: Write> WriteLine for W {
-    fn write_line(&mut self, s: &str) -> Result<(), Error> {
-        writeln!(self, "{}", s)
+    fn write_line_segments(&mut self, segments: &[&str]) -> Result<(), Error> {
+        for segment in segments {
+            self.write_all(segment.as_bytes())?;
+        }
+        writeln!(self)
     }
 }
 
 impl WriteLine for Box<dyn WriteLine + Send> {
-    fn write_line(&mut self, s: &str) -> Result<(), Error> {
-        self.as_mut().write_line(s)
+    fn write_line_segments(&mut self, segments: &[&str]) -> Result<(), Error> {
+        self.as_mut().write_line_segments(segments)
     }
 }
 
 /// A wrapper around a `Write` that filters out ANSI escape sequences before writing to the
 /// wrapped object.
-pub struct AnsiFilterWriter<W: Write> {
+pub struct AnsiFilterWriter<W: WriteLine> {
     inner: W,
 }
 
-impl<W: Write> AnsiFilterWriter<W> {
+impl<W: WriteLine> AnsiFilterWriter<W> {
     pub fn new(inner: W) -> Self {
         Self { inner }
     }
 }
 
-impl<W: Write> WriteLine for AnsiFilterWriter<W> {
+impl<W: WriteLine> WriteLine for AnsiFilterWriter<W> {
+    fn write_line_segments(&mut self, segments: &[&str]) -> Result<(), Error> {
+        match segments.len() {
+            1 => self.write_line(segments[0]),
+            // It's possible to do this without this copy. This is currently unused as the ansi
+            // filter is always top of the chain, but if this needs to be nested lower in a chain
+            // of filters we should implement it properly.
+            _ => self.write_line(&segments.join("")),
+        }
+    }
+
     fn write_line(&mut self, s: &str) -> Result<(), Error> {
         let bytes = s.as_bytes();
         let mut parser = Parser::new();
+        let mut segments = vec![];
 
         // Contains range [x1, x2) for the last known chunk of non-ANSI characters
         let mut last_known_printable_chunk: Option<(usize, usize)> = None;
@@ -58,7 +77,9 @@ impl<W: Write> WriteLine for AnsiFilterWriter<W> {
                 }
                 // new char is part of a new chunk
                 (Some(prev_chunk), Some(new_char_idx)) => {
-                    self.inner.write_all(&bytes[prev_chunk.0..prev_chunk.1])?;
+                    let new_segment = std::str::from_utf8(&bytes[prev_chunk.0..prev_chunk.1])
+                        .map_err(|_| ErrorKind::InvalidData)?;
+                    segments.push(new_segment);
                     last_known_printable_chunk = Some((new_char_idx, idx + 1));
                 }
                 (Some(_), None) => (),
@@ -69,9 +90,11 @@ impl<W: Write> WriteLine for AnsiFilterWriter<W> {
             }
         }
         if let Some(chunk) = last_known_printable_chunk {
-            self.inner.write_all(&bytes[chunk.0..chunk.1])?;
+            let new_segment = std::str::from_utf8(&bytes[chunk.0..chunk.1])
+                .map_err(|_| ErrorKind::InvalidData)?;
+            segments.push(new_segment);
         }
-        writeln!(self.inner)
+        self.inner.write_line_segments(&segments)
     }
 }
 
