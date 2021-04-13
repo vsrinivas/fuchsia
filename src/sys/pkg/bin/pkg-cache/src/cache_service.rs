@@ -409,6 +409,28 @@ async fn serve_needed_blobs(
                     "BAD_STATE: pkgfs needs more blobs, but all were provided: {:#?}",
                     needs
                 );
+
+                for need in needs {
+                    // open each blob for write.  If the blob already exists, this should fulfill
+                    // it in pkgfs as well, unblocking this package fetch.  Though, the open that
+                    // happened during the package fetch should have already done that.
+                    match open_blob(pkgfs_install, need, BlobKind::Data).await {
+                        Ok(OpenBlobSuccess::AlreadyExists) => {
+                            fx_log_err!(
+                                "BAD_STATE: already written blob needed opened again to commit"
+                            );
+                        }
+                        Ok(OpenBlobSuccess::Needed(_)) => {
+                            fx_log_err!("BAD_STATE: already written blob needs written again");
+                        }
+                        Err(e) => {
+                            fx_log_err!(
+                                "BAD_STATE: error opening already written blob for write: {:#}",
+                                anyhow!(e)
+                            );
+                        }
+                    }
+                }
             }
             Err(e) => {
                 fx_log_err!(
