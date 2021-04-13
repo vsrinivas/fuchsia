@@ -72,8 +72,8 @@ fn generate_fake_test_proxy_method(
         Ident::new(&format!("setup_oneshot_fake_{}", proxy_name), Span::call_site());
     quote! {
         #[cfg(test)]
-        fn #method_name<R:'static>(handle_request: R) -> #qualified_proxy_type
-            where R: Fn(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>) + std::marker::Send
+        fn #method_name<R:'static>(mut handle_request: R) -> #qualified_proxy_type
+            where R: FnMut(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>) + std::marker::Send
         {
             use futures::TryStreamExt;
             let (proxy, mut stream) =
@@ -88,8 +88,8 @@ fn generate_fake_test_proxy_method(
         }
 
         #[cfg(test)]
-        fn #oneshot_method_name<R:'static>(handle_request: R) -> #qualified_proxy_type
-            where R: Fn(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>) + std::marker::Send
+        fn #oneshot_method_name<R:'static>(mut handle_request: R) -> #qualified_proxy_type
+            where R: FnMut(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>) + std::marker::Send
         {
             use futures::TryStreamExt;
             let (proxy, mut stream) =
