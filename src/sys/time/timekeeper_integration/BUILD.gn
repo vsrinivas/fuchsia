@@ -148,5 +148,8 @@ fuchsia_test_package("timekeeper-integration") {
 
   test_specs = {
     environments = [ nuc_env ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
