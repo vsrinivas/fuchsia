@@ -21,7 +21,7 @@ use {
                 HooksRegistration,
             },
             model::Model,
-            routing,
+            routing::{route_capability, RouteRequest, RouteSource},
         },
     },
     async_trait::async_trait,
@@ -389,15 +389,16 @@ impl EventRegistry {
         event_decl: UseEventDecl,
         component: &Arc<ComponentInstance>,
     ) -> Result<(CapabilityName, ExtendedMoniker), ModelError> {
-        match routing::route_event(event_decl, component).await? {
-            CapabilitySource::Framework {
+        let route_source = route_capability(RouteRequest::UseEvent(event_decl), component).await?;
+        match route_source {
+            RouteSource::Event(CapabilitySource::Framework {
                 capability: InternalCapability::Event(source_name),
                 component,
-            } => Ok((source_name, component.moniker.into())),
-            CapabilitySource::Builtin {
+            }) => Ok((source_name, component.moniker.into())),
+            RouteSource::Event(CapabilitySource::Builtin {
                 capability: InternalCapability::Event(source_name),
                 ..
-            } if source_name == "capability_ready".into() => {
+            }) if source_name == "capability_ready".into() => {
                 Ok((source_name, ExtendedMoniker::ComponentManager))
             }
             _ => unreachable!(),

@@ -8,7 +8,7 @@ use {
         model::{
             component::{ComponentInstance, WeakComponentInstance},
             error::ModelError,
-            routing::open_capability_at_source,
+            routing::{open_capability_at_source, OpenRequest},
         },
     },
     ::routing::capability_source::CollectionCapabilityProvider,
@@ -123,14 +123,14 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
             } else {
                 Path::new(DEFAULT_INSTANCE).join(path.into_string())
             };
-            if let Err(err) = open_capability_at_source(
+            if let Err(err) = open_capability_at_source(OpenRequest {
                 flags,
-                mode,
+                open_mode: mode,
                 relative_path,
                 source,
-                &target,
-                &mut server_end,
-            )
+                target: &target,
+                server_chan: &mut server_end,
+            })
             .await
             {
                 let _ = server_end.close_with_epitaph(err.as_zx_status());

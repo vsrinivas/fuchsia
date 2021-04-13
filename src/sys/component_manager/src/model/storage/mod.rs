@@ -116,7 +116,7 @@ impl StorageError {
 
 /// Information returned by the route_storage_capability function on the source of a storage
 /// capability.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct StorageCapabilitySource {
     /// The component that's providing the backing directory capability for this storage
     /// capability. If None, then the backing directory comes from component_manager's namespace.

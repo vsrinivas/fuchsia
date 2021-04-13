@@ -6,7 +6,7 @@ use {
     crate::model::{
         component::{ComponentInstance, WeakComponentInstance},
         error::ModelError,
-        routing,
+        routing::{route_and_open_capability, OpenOptions, OpenResolverOptions, RouteRequest},
     },
     ::routing::component_instance::ComponentInstanceInterface,
     anyhow::Error,
@@ -15,7 +15,7 @@ use {
     cm_rust::ResolverRegistration,
     fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon::Status,
-    std::{collections::HashMap, path::PathBuf, sync::Arc},
+    std::{collections::HashMap, sync::Arc},
     thiserror::Error,
     url::Url,
 };
@@ -112,16 +112,15 @@ impl Resolver for RemoteResolver {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<fsys::ComponentResolverMarker>()
             .map_err(ResolverError::internal)?;
         let component = self.component.upgrade().map_err(ResolverError::routing_error)?;
-        let capability_source = routing::route_resolver(self.registration.clone(), &component)
-            .await
-            .map_err(ResolverError::routing_error)?;
-        routing::open_capability_at_source(
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
-            fio::MODE_TYPE_SERVICE,
-            PathBuf::new(),
-            capability_source,
+        let open_options = OpenResolverOptions {
+            flags: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            open_mode: fio::MODE_TYPE_SERVICE,
+            server_chan: &mut server_end.into_channel(),
+        };
+        route_and_open_capability(
+            RouteRequest::Resolver(self.registration.clone()),
             &component,
-            &mut server_end.into_channel(),
+            OpenOptions::Resolver(open_options),
         )
         .await
         .map_err(ResolverError::routing_error)?;

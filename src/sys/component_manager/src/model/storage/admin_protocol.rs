@@ -18,7 +18,8 @@ use {
             component::{BindReason, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            routing, storage,
+            routing::{route_capability, RouteRequest, RouteSource},
+            storage,
         },
     },
     anyhow::{format_err, Error},
@@ -175,8 +176,14 @@ impl StorageAdmin {
         })?;
         let storage_moniker = component.abs_moniker.clone();
 
-        let storage_capability_source_info =
-            routing::route_storage_backing_directory(storage_decl, component.clone()).await?;
+        let storage_capability_source_info = {
+            match route_capability(RouteRequest::StorageBackingDirectory(storage_decl), &component)
+                .await?
+            {
+                RouteSource::StorageBackingDirectory(storage_source) => storage_source,
+                _ => unreachable!("expected RouteSource::StorageBackingDirectory"),
+            }
+        };
 
         let mut stream = ServerEnd::<fsys::StorageAdminMarker>::new(server_end)
             .into_stream()

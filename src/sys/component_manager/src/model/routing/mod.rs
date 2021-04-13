@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 pub mod error;
+pub mod open;
 pub use error::OpenResourceError;
 pub use error::RoutingError;
+pub use open::*;
 
 mod service;
 
@@ -60,6 +62,30 @@ use {
 const SERVICE_OPEN_FLAGS: u32 =
     fio::OPEN_FLAG_DESCRIBE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
 
+/// Routes a capability from `target` to its source. Opens the capability if routing succeeds.
+///
+/// If the capability is not allowed to be routed to the `target`, per the
+/// [`crate::model::policy::GlobalPolicyChecker`], the capability is not opened and an error
+/// is returned.
+pub(super) async fn route_and_open_capability(
+    route_request: RouteRequest,
+    target: &Arc<ComponentInstance>,
+    open_options: OpenOptions<'_>,
+) -> Result<(), ModelError> {
+    match route_request {
+        RouteRequest::UseStorage(use_storage_decl) => {
+            let (storage_source_info, relative_moniker) =
+                route_storage_and_backing_directory(use_storage_decl, target).await?;
+            open_storage_capability(storage_source_info, relative_moniker, target, open_options)
+                .await
+        }
+        _ => {
+            let route_source = route_capability(route_request, target).await?;
+            open_capability_at_source(OpenRequest::new(route_source, target, open_options)).await
+        }
+    }
+}
+
 /// Routes a capability from `target` to its source, starting from a `use_decl`.
 ///
 /// If the capability is allowed to be routed to the `target`, per the
@@ -79,55 +105,15 @@ pub(super) async fn route_and_open_namespace_capability(
     target: &Arc<ComponentInstance>,
     server_chan: &mut zx::Channel,
 ) -> Result<(), ModelError> {
-    match use_decl {
-        UseDecl::Service(use_service_decl) => {
-            let source = route_service(use_service_decl, target).await?;
-            open_capability_at_source(
-                flags,
-                open_mode,
-                PathBuf::from(relative_path),
-                source,
-                target,
-                server_chan,
-            )
-            .await
-        }
-        UseDecl::Protocol(use_protocol_decl) => {
-            let source = route_protocol(use_protocol_decl, target).await?;
-            open_capability_at_source(flags, open_mode, PathBuf::new(), source, target, server_chan)
-                .await
-        }
-        UseDecl::Directory(use_directory_decl) => {
-            let (source, directory_state) = route_directory(use_directory_decl, target).await?;
-            open_capability_at_source(
-                flags,
-                open_mode,
-                directory_state.make_relative_path(relative_path),
-                source,
-                target,
-                server_chan,
-            )
-            .await
-        }
-        UseDecl::Storage(use_storage_decl) => {
-            // TODO(fxbug.dev/50716): This BindReason is wrong. We need to refactor the Storage
-            // capability to plumb through the correct BindReason.
-            route_and_open_storage_capability(
-                use_storage_decl,
-                open_mode,
-                target,
-                server_chan,
-                &BindReason::Eager,
-            )
-            .await
-        }
-        UseDecl::Event(_) | UseDecl::EventStream(_) => {
-            // These capabilities are not representable on a VFS.
-            Err(ModelError::unsupported(
-                "opening a capability that cannot be installed in a namespace",
-            ))
-        }
-    }
+    let route_request = request_for_namespace_capability_use(use_decl)?;
+    let open_options = OpenOptions::for_namespace_capability(
+        &route_request,
+        flags,
+        open_mode,
+        relative_path,
+        server_chan,
+    )?;
+    route_and_open_capability(route_request, target, open_options).await
 }
 
 /// Routes a capability from `target` to its source, starting from an `expose_decl`.
@@ -149,34 +135,40 @@ pub(super) async fn route_and_open_namespace_capability_from_expose(
     target: &Arc<ComponentInstance>,
     server_chan: &mut zx::Channel,
 ) -> Result<(), ModelError> {
-    let (capability_source, relative_path) = match expose_decl {
-        ExposeDecl::Service(expose_service_decl) => (
-            route_service_from_expose(expose_service_decl, target).await?,
-            PathBuf::from(relative_path),
-        ),
-        ExposeDecl::Protocol(expose_protocol_decl) => {
-            (route_protocol_from_expose(expose_protocol_decl, target).await?, PathBuf::new())
-        }
-        ExposeDecl::Directory(expose_directory_decl) => {
-            let (capability_source, directory_state) =
-                route_directory_from_expose(expose_directory_decl, target).await?;
-            (capability_source, directory_state.make_relative_path(relative_path))
-        }
-        ExposeDecl::Runner(_) | ExposeDecl::Resolver(_) => {
-            return Err(ModelError::unsupported(
-                "opening a capability that cannot be installed in a namespace",
-            ))
-        }
-    };
-    open_capability_at_source(
+    let route_request = request_for_namespace_capability_expose(expose_decl)?;
+    let open_options = OpenOptions::for_namespace_capability(
+        &route_request,
         flags,
         open_mode,
         relative_path,
-        capability_source,
-        target,
         server_chan,
-    )
-    .await
+    )?;
+    route_and_open_capability(route_request, target, open_options).await
+}
+
+/// Create a new `RouteRequest` from a `UseDecl`, checking that the capability type can
+/// be installed in a namespace.
+fn request_for_namespace_capability_use(use_decl: UseDecl) -> Result<RouteRequest, ModelError> {
+    match use_decl {
+        UseDecl::Directory(decl) => Ok(RouteRequest::UseDirectory(decl)),
+        UseDecl::Protocol(decl) => Ok(RouteRequest::UseProtocol(decl)),
+        UseDecl::Service(decl) => Ok(RouteRequest::UseService(decl)),
+        UseDecl::Storage(decl) => Ok(RouteRequest::UseStorage(decl)),
+        _ => Err(ModelError::unsupported("capability cannot be installed in a namespace")),
+    }
+}
+
+/// Create a new `RouteRequest` from an `ExposeDecl`, checking that the capability type can
+/// be installed in a namespace.
+fn request_for_namespace_capability_expose(
+    expose_decl: ExposeDecl,
+) -> Result<RouteRequest, ModelError> {
+    match expose_decl {
+        ExposeDecl::Directory(decl) => Ok(RouteRequest::ExposeDirectory(decl)),
+        ExposeDecl::Protocol(decl) => Ok(RouteRequest::ExposeProtocol(decl)),
+        ExposeDecl::Service(decl) => Ok(RouteRequest::ExposeService(decl)),
+        _ => Err(ModelError::unsupported("capability cannot be installed in a namespace")),
+    }
 }
 
 /// The default provider for a ComponentCapability.
@@ -273,22 +265,10 @@ fn get_default_provider(
 /// Opens the capability at `source`, triggering a `CapabilityRouted` event and binding
 /// to the source component instance if necessary.
 ///
-/// If the capability is not allowed to be routed to the `target`, per the
-/// [`crate::model::policy::GlobalPolicyChecker`], the capability is not opened and an error
-/// is returned.
-///
 /// See [`fidl_fuchsia_io::Directory::Open`] for how the `flags`, `open_mode`, `relative_path`,
 /// and `server_chan` parameters are used in the open call.
-pub async fn open_capability_at_source(
-    flags: u32,
-    open_mode: u32,
-    relative_path: PathBuf,
-    source: CapabilitySource,
-    target: &Arc<ComponentInstance>,
-    server_chan: &mut zx::Channel,
-) -> Result<(), ModelError> {
-    target.try_get_policy_checker()?.can_route_capability(&source, &target.abs_moniker)?;
-
+async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), ModelError> {
+    let OpenRequest { flags, open_mode, relative_path, source, target, server_chan } = open_request;
     // When serving a collection, routing hasn't reached the source. The CapabilityRouted event
     // should not fire, nor should hooks be able to modify the provider (which is hosted by
     // component_manager). Once a component is routed to from the collection, CapabilityRouted will
@@ -404,6 +384,22 @@ pub async fn open_capability_at_source(
     }
 }
 
+/// Routes a storage capability from `target` to its source and deletes its isolated storage.
+pub(super) async fn route_and_delete_storage(
+    use_storage_decl: UseStorageDecl,
+    target: &Arc<ComponentInstance>,
+) -> Result<(), ModelError> {
+    let (storage_source_info, relative_moniker) =
+        route_storage_and_backing_directory(use_storage_decl, target).await?;
+
+    storage::delete_isolated_storage(
+        storage_source_info,
+        relative_moniker,
+        target.instance_id().as_ref(),
+    )
+    .await
+}
+
 /// Sets an epitaph on `server_end` for a capability routing failure, and logs the error. Logs a
 /// failure to route a capability. Formats `err` as a `String`, but elides the type if the error is
 /// a `RoutingError`, the common case.
@@ -432,6 +428,178 @@ pub(super) async fn report_routing_failure(
         .await
 }
 
+/// Routes a storage capability from `target` to its source and opens its backing directory
+/// capability, binding to the component instance if necessary.
+///
+/// See [`fidl_fuchsia_io::Directory::Open`] for how the `flags`, `open_mode`, `relative_path`,
+/// and `server_chan` parameters are used in the open call.
+async fn open_storage_capability(
+    source: storage::StorageCapabilitySource,
+    relative_moniker: RelativeMoniker,
+    target: &Arc<ComponentInstance>,
+    options: OpenOptions<'_>,
+) -> Result<(), ModelError> {
+    let dir_source = source.storage_provider.clone();
+    let relative_moniker_2 = relative_moniker.clone();
+    match options {
+        OpenOptions::Storage(OpenStorageOptions { open_mode, server_chan, bind_reason }) => {
+            let storage_dir_proxy = storage::open_isolated_storage(
+                source,
+                relative_moniker,
+                target.instance_id().as_ref(),
+                open_mode,
+                &bind_reason,
+            )
+            .await
+            .map_err(|e| ModelError::from(e))?;
+
+            // clone the final connection to connect the channel we're routing to its destination
+            let server_chan = channel::take_channel(server_chan);
+            storage_dir_proxy
+                .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_chan))
+                .map_err(|e| {
+                    let moniker = match &dir_source {
+                        Some(r) => ExtendedMoniker::ComponentInstance(r.abs_moniker.clone()),
+                        None => ExtendedMoniker::ComponentManager,
+                    };
+                    ModelError::from(OpenResourceError::open_storage_failed(
+                        &moniker,
+                        &relative_moniker_2,
+                        "",
+                        e,
+                    ))
+                })?;
+            return Ok(());
+        }
+        _ => unreachable!("expected OpenStorageOptions"),
+    }
+}
+
+// Functions which route capabilities without opening.
+// TODO(https://fxbug.dev/61861): Move everything below this comment into src/sys/lib/routing.
+
+/// A request to route a capability, together with the data needed to do so.
+pub enum RouteRequest {
+    // Route a capability from an ExposeDecl.
+    ExposeDirectory(ExposeDirectoryDecl),
+    ExposeProtocol(ExposeProtocolDecl),
+    ExposeService(ExposeServiceDecl),
+
+    // Route a capability from a realm's environment.
+    Resolver(ResolverRegistration),
+    Runner(CapabilityName),
+
+    // Route the directory capability that backs a storage capability.
+    StorageBackingDirectory(StorageDecl),
+
+    // Route a capability from a UseDecl.
+    UseDirectory(UseDirectoryDecl),
+    UseEvent(UseEventDecl),
+    UseProtocol(UseProtocolDecl),
+    UseService(UseServiceDecl),
+    UseStorage(UseStorageDecl),
+}
+
+/// The data returned after successfully routing a capability to its source.
+#[derive(Debug)]
+pub enum RouteSource {
+    Directory(CapabilitySource, DirectoryState),
+    Event(CapabilitySource),
+    Protocol(CapabilitySource),
+    Resolver(CapabilitySource),
+    Runner(CapabilitySource),
+    Service(CapabilitySource),
+    Storage(CapabilitySource),
+    StorageBackingDirectory(storage::StorageCapabilitySource),
+}
+
+/// Routes a capability to its source.
+///
+/// If the capability is not allowed to be routed to the `target`, per the
+/// [`crate::model::policy::GlobalPolicyChecker`], then an error is returned.
+pub(super) async fn route_capability(
+    request: RouteRequest,
+    target: &Arc<ComponentInstance>,
+) -> Result<RouteSource, RoutingError> {
+    match request {
+        // Route from an ExposeDecl
+        RouteRequest::ExposeDirectory(expose_directory_decl) => {
+            route_directory_from_expose(expose_directory_decl, target).await
+        }
+        RouteRequest::ExposeProtocol(expose_protocol_decl) => {
+            route_protocol_from_expose(expose_protocol_decl, target).await
+        }
+        RouteRequest::ExposeService(expose_service_decl) => {
+            route_service_from_expose(expose_service_decl, target).await
+        }
+
+        // Route a resolver or runner from an environment
+        RouteRequest::Resolver(resolver_registration) => {
+            route_resolver(resolver_registration, target).await
+        }
+        RouteRequest::Runner(runner_name) => route_runner(&runner_name, target).await,
+
+        // Route the backing directory for a storage capability
+        RouteRequest::StorageBackingDirectory(storage_decl) => {
+            route_storage_backing_directory(storage_decl, target).await
+        }
+
+        // Route from a UseDecl
+        RouteRequest::UseDirectory(use_directory_decl) => {
+            route_directory(use_directory_decl, target).await
+        }
+        RouteRequest::UseEvent(use_event_decl) => route_event(use_event_decl, target).await,
+        RouteRequest::UseProtocol(use_protocol_decl) => {
+            route_protocol(use_protocol_decl, target).await
+        }
+        RouteRequest::UseService(use_service_decl) => route_service(use_service_decl, target).await,
+        RouteRequest::UseStorage(use_storage_decl) => route_storage(use_storage_decl, target).await,
+    }
+}
+
+/// Routes a storage capability and its backing directory capability to their sources,
+/// returning the data needed to open the storage capability.
+///
+/// If either capability is not allowed to be routed to the `target`, per the
+/// [`crate::model::policy::GlobalPolicyChecker`], then an error is returned.
+pub(super) async fn route_storage_and_backing_directory(
+    use_decl: UseStorageDecl,
+    target: &Arc<ComponentInstance>,
+) -> Result<(storage::StorageCapabilitySource, RelativeMoniker), RoutingError> {
+    // First route the storage capability to its source.
+    let storage_source = {
+        match route_capability(RouteRequest::UseStorage(use_decl), target).await? {
+            RouteSource::Storage(source) => source,
+            _ => unreachable!("expected RouteSource::Storage"),
+        }
+    };
+
+    let (storage_decl, storage_component_instance) = match storage_source {
+        CapabilitySource::Component {
+            capability: ComponentCapability::Storage(storage_decl),
+            component,
+        } => (storage_decl, component.upgrade()?),
+        _ => unreachable!("unexpected storage source"),
+    };
+    let relative_moniker = RelativeMoniker::from_absolute(
+        &storage_component_instance.abs_moniker,
+        &target.abs_moniker,
+    );
+
+    // Now route the backing directory capability.
+    match route_capability(
+        RouteRequest::StorageBackingDirectory(storage_decl),
+        &storage_component_instance,
+    )
+    .await?
+    {
+        RouteSource::StorageBackingDirectory(storage_source_info) => {
+            Ok((storage_source_info, relative_moniker))
+        }
+        _ => unreachable!("expected RouteSource::StorageBackingDirectory"),
+    }
+}
+
 make_noop_visitor!(ProtocolVisitor, {
     OfferDecl => OfferProtocolDecl,
     ExposeDecl => ExposeProtocolDecl,
@@ -439,10 +607,10 @@ make_noop_visitor!(ProtocolVisitor, {
 });
 
 /// Routes a Protocol capability from `target` to its source, starting from `use_decl`.
-pub async fn route_protocol(
+async fn route_protocol(
     use_decl: UseProtocolDecl,
     target: &Arc<ComponentInstance>,
-) -> Result<CapabilitySource, ModelError> {
+) -> Result<RouteSource, RoutingError> {
     let allowed_sources = AllowedSourcesBuilder::new()
         .framework(InternalCapability::Protocol)
         .builtin(InternalCapability::Protocol)
@@ -499,34 +667,40 @@ pub async fn route_protocol(
             &env_name,
             &target.abs_moniker,
         )?;
-        return Ok(source);
+        return Ok(RouteSource::Protocol(source));
     } else {
-        Ok(RoutingStrategy::new()
+        let source = RoutingStrategy::new()
             .use_::<UseProtocolDecl>()
             .offer::<OfferProtocolDecl>()
             .expose::<ExposeProtocolDecl>()
             .route(use_decl, target.clone(), allowed_sources, &mut ProtocolVisitor)
-            .await?)
+            .await?;
+
+        target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+        Ok(RouteSource::Protocol(source))
     }
 }
 
 /// Routes a Protocol capability from `target` to its source, starting from `expose_decl`.
-pub async fn route_protocol_from_expose(
+async fn route_protocol_from_expose(
     expose_decl: ExposeProtocolDecl,
     target: &Arc<ComponentInstance>,
-) -> Result<CapabilitySource, RoutingError> {
+) -> Result<RouteSource, RoutingError> {
     let allowed_sources = AllowedSourcesBuilder::new()
         .framework(InternalCapability::Protocol)
         .builtin(InternalCapability::Protocol)
         .namespace()
         .component()
         .capability();
-    RoutingStrategy::new()
+    let source = RoutingStrategy::new()
         .use_::<UseProtocolDecl>()
         .offer::<OfferProtocolDecl>()
         .expose::<ExposeProtocolDecl>()
         .route_from_expose(expose_decl, target.clone(), allowed_sources, &mut ProtocolVisitor)
-        .await
+        .await?;
+
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    Ok(RouteSource::Protocol(source))
 }
 
 make_noop_visitor!(ServiceVisitor, {
@@ -535,34 +709,40 @@ make_noop_visitor!(ServiceVisitor, {
     CapabilityDecl => ServiceDecl,
 });
 
-pub async fn route_service(
+async fn route_service(
     use_decl: UseServiceDecl,
     target: &Arc<ComponentInstance>,
-) -> Result<CapabilitySource, RoutingError> {
+) -> Result<RouteSource, RoutingError> {
     let allowed_sources = AllowedSourcesBuilder::new().component().collection();
-    RoutingStrategy::new()
+    let source = RoutingStrategy::new()
         .use_::<UseServiceDecl>()
         .offer::<OfferServiceDecl>()
         .expose::<ExposeServiceDecl>()
         .route(use_decl, target.clone(), allowed_sources, &mut ServiceVisitor)
-        .await
+        .await?;
+
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    Ok(RouteSource::Service(source))
 }
 
 async fn route_service_from_expose(
     expose_decl: ExposeServiceDecl,
     target: &Arc<ComponentInstance>,
-) -> Result<CapabilitySource, RoutingError> {
+) -> Result<RouteSource, RoutingError> {
     let allowed_sources = AllowedSourcesBuilder::new().component().collection();
-    RoutingStrategy::new()
+    let source = RoutingStrategy::new()
         .use_::<UseServiceDecl>()
         .offer::<OfferServiceDecl>()
         .expose::<ExposeServiceDecl>()
         .route_from_expose(expose_decl, target.clone(), allowed_sources, &mut ServiceVisitor)
-        .await
+        .await?;
+
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    Ok(RouteSource::Service(source))
 }
 
 /// The accumulated state of routing a Directory capability.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DirectoryState {
     rights: WalkState<Rights>,
     subdir: PathBuf,
@@ -638,10 +818,10 @@ impl CapabilityVisitor for DirectoryState {
 /// Routes a Directory capability from `target` to its source, starting from `use_decl`.
 /// Returns the capability source, along with a `DirectoryState` accumulated from traversing
 /// the route.
-pub async fn route_directory(
+async fn route_directory(
     use_decl: UseDirectoryDecl,
     target: &Arc<ComponentInstance>,
-) -> Result<(CapabilitySource, DirectoryState), RoutingError> {
+) -> Result<RouteSource, RoutingError> {
     let mut state = DirectoryState::new(use_decl.rights.clone(), use_decl.subdir.clone());
     if let UseSource::Framework = &use_decl.source {
         state.finalize(*READ_RIGHTS, None)?;
@@ -657,16 +837,18 @@ pub async fn route_directory(
         .expose::<ExposeDirectoryDecl>()
         .route(use_decl, target.clone(), allowed_sources, &mut state)
         .await?;
-    Ok((source, state))
+
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    Ok(RouteSource::Directory(source, state))
 }
 
 /// Routes a Directory capability from `target` to its source, starting from `expose_decl`.
 /// Returns the capability source, along with a `DirectoryState` accumulated from traversing
 /// the route.
-pub async fn route_directory_from_expose(
+async fn route_directory_from_expose(
     expose_decl: ExposeDirectoryDecl,
     target: &Arc<ComponentInstance>,
-) -> Result<(CapabilitySource, DirectoryState), RoutingError> {
+) -> Result<RouteSource, RoutingError> {
     let mut state = DirectoryState { rights: WalkState::new(), subdir: PathBuf::new() };
     let allowed_sources = AllowedSourcesBuilder::new()
         .framework(InternalCapability::Directory)
@@ -679,69 +861,9 @@ pub async fn route_directory_from_expose(
         .expose::<ExposeDirectoryDecl>()
         .route_from_expose(expose_decl, target.clone(), allowed_sources, &mut state)
         .await?;
-    Ok((source, state))
-}
 
-/// Routes a storage capability from `target` to its source and opens its backing directory
-/// capability, binding to the component instance if necessary.
-///
-/// If the capability is not allowed to be routed to the `target`, per the
-/// [`crate::model::policy::GlobalPolicyChecker`], the capability is not opened and an error
-/// is returned.
-///
-/// See [`fidl_fuchsia_io::Directory::Open`] for how the `flags`, `open_mode`, `relative_path`,
-/// and `server_chan` parameters are used in the open call.
-pub async fn route_and_open_storage_capability(
-    use_decl: UseStorageDecl,
-    open_mode: u32,
-    target: &Arc<ComponentInstance>,
-    server_chan: &mut zx::Channel,
-    bind_reason: &BindReason,
-) -> Result<(), ModelError> {
-    let (storage_source_info, relative_moniker) = route_storage(use_decl, target).await?;
-    let dir_source = storage_source_info.storage_provider.clone();
-    let relative_moniker_2 = relative_moniker.clone();
-    let storage_dir_proxy = storage::open_isolated_storage(
-        storage_source_info,
-        relative_moniker,
-        target.instance_id().as_ref(),
-        open_mode,
-        bind_reason,
-    )
-    .await
-    .map_err(|e| ModelError::from(e))?;
-
-    // clone the final connection to connect the channel we're routing to its destination
-    let server_chan = channel::take_channel(server_chan);
-    storage_dir_proxy.clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_chan)).map_err(
-        |e| {
-            let moniker = match &dir_source {
-                Some(r) => ExtendedMoniker::ComponentInstance(r.abs_moniker.clone()),
-                None => ExtendedMoniker::ComponentManager,
-            };
-            ModelError::from(OpenResourceError::open_storage_failed(
-                &moniker,
-                &relative_moniker_2,
-                "",
-                e,
-            ))
-        },
-    )?;
-    Ok(())
-}
-
-/// Routes a storage capability from `target` to its source and deletes its isolated storage.
-pub(super) async fn route_and_delete_storage(
-    use_decl: UseStorageDecl,
-    target: &Arc<ComponentInstance>,
-) -> Result<(), ModelError> {
-    let (storage_source_info, relative_moniker) = route_storage(use_decl, target).await?;
-    storage::delete_isolated_storage(
-        storage_source_info,
-        relative_moniker,
-        target.instance_id().as_ref(),
-    )
-    .await
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    Ok(RouteSource::Directory(source, state))
 }
 
 make_noop_visitor!(StorageVisitor, {
@@ -754,39 +876,24 @@ make_noop_visitor!(StorageVisitor, {
 async fn route_storage(
     use_decl: UseStorageDecl,
     target: &Arc<ComponentInstance>,
-) -> Result<(storage::StorageCapabilitySource, RelativeMoniker), ModelError> {
+) -> Result<RouteSource, RoutingError> {
     let allowed_sources = AllowedSourcesBuilder::new().component();
-    let storage_source = RoutingStrategy::new()
+    let source = RoutingStrategy::new()
         .use_::<UseStorageDecl>()
         .offer::<OfferStorageDecl>()
         .route(use_decl, target.clone(), allowed_sources, &mut StorageVisitor)
         .await?;
-    target.try_get_policy_checker()?.can_route_capability(&storage_source, &target.abs_moniker)?;
-    let (storage_decl, storage_component_instance) = match storage_source {
-        CapabilitySource::Component {
-            capability: ComponentCapability::Storage(storage_decl),
-            component,
-        } => (storage_decl, component.upgrade()?),
-        _ => unreachable!("unexpected storage source"),
-    };
-    let relative_moniker = RelativeMoniker::from_absolute(
-        &storage_component_instance.abs_moniker,
-        &target.abs_moniker,
-    );
 
-    // The storage capability was routed to its source. Now route the backing directory capability.
-    Ok((
-        route_storage_backing_directory(storage_decl, storage_component_instance).await?,
-        relative_moniker,
-    ))
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    Ok(RouteSource::Storage(source))
 }
 
 /// Routes the backing Directory capability of a Storage capability from `target` to its source,
 /// starting from `storage_decl`.
-pub async fn route_storage_backing_directory(
+async fn route_storage_backing_directory(
     storage_decl: StorageDecl,
-    target: Arc<ComponentInstance>,
-) -> Result<storage::StorageCapabilitySource, RoutingError> {
+    target: &Arc<ComponentInstance>,
+) -> Result<RouteSource, RoutingError> {
     // Storage rights are always READ+WRITE.
     let mut state = DirectoryState::new(*READ_RIGHTS | *WRITE_RIGHTS, None);
     let allowed_sources = AllowedSourcesBuilder::new().component().namespace();
@@ -794,8 +901,10 @@ pub async fn route_storage_backing_directory(
         .registration::<StorageDeclAsRegistration>()
         .offer::<OfferDirectoryDecl>()
         .expose::<ExposeDirectoryDecl>()
-        .route(storage_decl.clone().into(), target, allowed_sources, &mut state)
+        .route(storage_decl.clone().into(), target.clone(), allowed_sources, &mut state)
         .await?;
+
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
 
     let (dir_source_path, dir_source_instance) = match source {
         CapabilitySource::Component { capability, component } => (
@@ -810,12 +919,12 @@ pub async fn route_storage_backing_directory(
 
     let dir_subdir = if state.subdir == Path::new("") { None } else { Some(state.subdir) };
 
-    Ok(storage::StorageCapabilitySource {
+    Ok(RouteSource::StorageBackingDirectory(storage::StorageCapabilitySource {
         storage_provider: dir_source_instance,
         backing_directory_path: dir_source_path,
         backing_directory_subdir: dir_subdir,
         storage_subdir: storage_decl.subdir.clone(),
-    })
+    }))
 }
 
 make_noop_visitor!(RunnerVisitor, {
@@ -826,10 +935,10 @@ make_noop_visitor!(RunnerVisitor, {
 
 /// Finds a Runner capability that matches `runner` in the `target`'s environment, and then
 /// routes the Runner capability from the environment's component instance to its source.
-pub async fn route_runner(
+async fn route_runner(
     runner: &CapabilityName,
     target: &Arc<ComponentInstance>,
-) -> Result<CapabilitySource, RoutingError> {
+) -> Result<RouteSource, RoutingError> {
     // Find the component instance in which the runner was registered with the environment.
     let (env_component_instance, registration_decl) =
         match target.environment().get_registered_runner(&runner)? {
@@ -838,10 +947,10 @@ pub async fn route_runner(
             }
             Some((ExtendedInstance::AboveRoot(top_instance), reg)) => {
                 // Root environment.
-                return Ok(CapabilitySource::Builtin {
+                return Ok(RouteSource::Runner(CapabilitySource::Builtin {
                     capability: InternalCapability::Runner(reg.source_name.clone()),
                     top_instance: Arc::downgrade(&top_instance),
-                });
+                }));
             }
             None => {
                 return Err(RoutingError::UseFromEnvironmentNotFound {
@@ -855,12 +964,15 @@ pub async fn route_runner(
 
     let allowed_sources =
         AllowedSourcesBuilder::new().builtin(InternalCapability::Runner).component();
-    RoutingStrategy::new()
+    let source = RoutingStrategy::new()
         .registration::<RunnerRegistration>()
         .offer::<OfferRunnerDecl>()
         .expose::<ExposeRunnerDecl>()
         .route(registration_decl, env_component_instance, allowed_sources, &mut RunnerVisitor)
-        .await
+        .await?;
+
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    Ok(RouteSource::Runner(source))
 }
 
 make_noop_visitor!(ResolverVisitor, {
@@ -870,18 +982,22 @@ make_noop_visitor!(ResolverVisitor, {
 });
 
 /// Routes a Resolver capability from `target` to its source, starting from `registration_decl`.
-pub async fn route_resolver(
+async fn route_resolver(
     registration: ResolverRegistration,
     target: &Arc<ComponentInstance>,
-) -> Result<CapabilitySource, RoutingError> {
+) -> Result<RouteSource, RoutingError> {
     let allowed_sources =
         AllowedSourcesBuilder::new().builtin(InternalCapability::Resolver).component();
-    RoutingStrategy::new()
+
+    let source = RoutingStrategy::new()
         .registration::<ResolverRegistration>()
         .offer::<OfferResolverDecl>()
         .expose::<ExposeResolverDecl>()
         .route(registration, target.clone(), allowed_sources, &mut ResolverVisitor)
-        .await
+        .await?;
+
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    Ok(RouteSource::Resolver(source))
 }
 
 /// State accumulated from routing an Event capability to its source.
@@ -916,10 +1032,10 @@ impl CapabilityVisitor for EventState {
 }
 
 /// Routes an Event capability from `target` to its source, starting from `use_decl`.
-pub async fn route_event(
+async fn route_event(
     use_decl: UseEventDecl,
     target: &Arc<ComponentInstance>,
-) -> Result<CapabilitySource, ModelError> {
+) -> Result<RouteSource, RoutingError> {
     let mut state = EventState {
         filter_state: WalkState::at(EventFilter::new(use_decl.filter.clone())),
         modes_state: WalkState::at(EventModeSet::new(use_decl.mode.clone())),
@@ -933,6 +1049,7 @@ pub async fn route_event(
         .offer::<OfferEventDecl>()
         .route(use_decl, target.clone(), allowed_sources, &mut state)
         .await?;
-    target.try_get_policy_checker()?.can_route_capability(&source, &target.abs_moniker)?;
-    Ok(source)
+
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    Ok(RouteSource::Event(source))
 }

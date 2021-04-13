@@ -23,7 +23,9 @@ use {
             namespace::IncomingNamespace,
             policy::GlobalPolicyChecker,
             resolver::ResolvedComponent,
-            routing::{self, OpenResourceError, RoutingError},
+            routing::{
+                self, OpenOptions, OpenResourceError, OpenRunnerOptions, RouteRequest, RoutingError,
+            },
             runner::{NullRunner, RemoteRunner, Runner},
         },
     },
@@ -370,14 +372,15 @@ impl ComponentInstance {
                     create_endpoints::<fcrunner::ComponentRunnerMarker>()
                         .map_err(|_| ModelError::InsufficientResources)?;
                 let mut server_channel = server_channel.into_channel();
-                let capability_source = routing::route_runner(runner, self).await?;
-                routing::open_capability_at_source(
-                    OPEN_RIGHT_READABLE,
-                    MODE_TYPE_SERVICE,
-                    PathBuf::new(),
-                    capability_source,
+                let options = OpenRunnerOptions {
+                    flags: OPEN_RIGHT_READABLE,
+                    open_mode: MODE_TYPE_SERVICE,
+                    server_chan: &mut server_channel,
+                };
+                routing::route_and_open_capability(
+                    RouteRequest::Runner(runner.clone()),
                     self,
-                    &mut server_channel,
+                    OpenOptions::Runner(options),
                 )
                 .await?;
 

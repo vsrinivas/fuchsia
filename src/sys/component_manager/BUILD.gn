@@ -179,6 +179,7 @@ template("component_manager") {
     "src/model/rights.rs",
     "src/model/routing/error.rs",
     "src/model/routing/mod.rs",
+    "src/model/routing/open.rs",
     "src/model/routing/service.rs",
     "src/model/routing_fns.rs",
     "src/model/runner.rs",

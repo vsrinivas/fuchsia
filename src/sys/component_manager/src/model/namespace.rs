@@ -11,7 +11,10 @@ use {
             error::ModelError,
             logging::{FmtArgsLogger, LOGGER as MODEL_LOGGER},
             rights::Rights,
-            routing,
+            routing::{
+                self, route_and_open_capability, OpenDirectoryOptions, OpenOptions,
+                OpenProtocolOptions, OpenServiceOptions, OpenStorageOptions, RouteRequest,
+            },
         },
     },
     anyhow::{Context, Error},
@@ -351,40 +354,29 @@ impl IncomingNamespace {
                 }
             };
             let mut server_end = server_end.into_zx_channel();
-            let res = match &use_ {
-                UseDecl::Directory(use_directory_decl) => {
-                    async {
-                        let (source, cap_state) =
-                            routing::route_directory(use_directory_decl.clone(), &target).await?;
-                        let relative_path = cap_state.make_relative_path(String::new());
-                        routing::open_capability_at_source(
-                            flags,
-                            fio::MODE_TYPE_DIRECTORY,
-                            relative_path,
-                            source,
-                            &target,
-                            &mut server_end,
-                        )
-                        .await
-                    }
-                    .await
-                }
-                UseDecl::Storage(use_storage_decl) => {
+            let (route_request, open_options) = match &use_ {
+                UseDecl::Directory(use_dir_decl) => (
+                    RouteRequest::UseDirectory(use_dir_decl.clone()),
+                    OpenOptions::Directory(OpenDirectoryOptions {
+                        flags,
+                        open_mode: fio::MODE_TYPE_DIRECTORY,
+                        relative_path: String::new(),
+                        server_chan: &mut server_end,
+                    }),
+                ),
+                UseDecl::Storage(use_storage_decl) => (
+                    RouteRequest::UseStorage(use_storage_decl.clone()),
                     // TODO(fxbug.dev/50716): This BindReason is wrong. We need to refactor the Storage
                     // capability to plumb through the correct BindReason.
-                    routing::route_and_open_storage_capability(
-                        use_storage_decl.clone(),
-                        fio::MODE_TYPE_DIRECTORY,
-                        &target,
-                        &mut server_end,
-                        &BindReason::Eager,
-                    )
-                    .await
-                }
+                    OpenOptions::Storage(OpenStorageOptions {
+                        open_mode: fio::MODE_TYPE_DIRECTORY,
+                        server_chan: &mut server_end,
+                        bind_reason: BindReason::Eager,
+                    }),
+                ),
                 _ => panic!("not a directory or storage capability"),
             };
-
-            if let Err(e) = res {
+            if let Err(e) = route_and_open_capability(route_request, &target, open_options).await {
                 routing::report_routing_failure(
                     &target,
                     &ComponentCapability::Use(use_),
@@ -455,32 +447,43 @@ impl IncomingNamespace {
                         }
                     };
                     let mut server_end = server_end.into_channel();
-                    let res: Result<_, ModelError> = match &use_ {
-                        UseDecl::Service(service) => routing::route_service(service.clone(), &target).await.map_err(|err| err.into()),
-                        UseDecl::Protocol(protocol) => routing::route_protocol(protocol.clone(), &target).await,
-                        _ => panic!("add_service_or_protocol_use called with non-service or protocol capability"),
-                    };
-                    let res = match res {
-                        Ok(source) => {
-                            routing::open_capability_at_source(
-                                flags,
-                                mode,
-                                PathBuf::from(relative_path),
-                                source,
-                                &target,
-                                &mut server_end,
-                            )
-                            .await
+                    let (route_request, open_options) = {
+                        match &use_ {
+                            UseDecl::Service(use_service_decl) => {
+                                (RouteRequest::UseService(use_service_decl.clone()),
+                                 OpenOptions::Service(
+                                     OpenServiceOptions{
+                                         flags,
+                                         open_mode: mode,
+                                         relative_path,
+                                         server_chan: &mut server_end
+                                     }
+                                 ))
+                            },
+                            UseDecl::Protocol(use_protocol_decl) => {
+                                (RouteRequest::UseProtocol(use_protocol_decl.clone()),
+                                 OpenOptions::Protocol(
+                                     OpenProtocolOptions{
+                                         flags,
+                                         open_mode:mode,
+                                         relative_path,
+                                         server_chan: &mut server_end
+                                     }
+                                 ))
+                            },
+                            _ => panic!("add_service_or_protocol_use called with non-service or protocol capability"),
                         }
-                        Err(err) => Err(err),
                     };
+
+                    let res = routing::route_and_open_capability(route_request, &target, open_options).await;
                     if let Err(e) = res {
                         routing::report_routing_failure(
                             &target,
                             &ComponentCapability::Use(use_),
                             &e,
                             server_end,
-                        ).await;
+                        )
+                        .await;
                     }
                 })
                 .detach();

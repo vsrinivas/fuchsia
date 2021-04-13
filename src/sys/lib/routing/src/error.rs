@@ -349,7 +349,10 @@ impl RoutingError {
 
     /// Convert this error into its approximate `zx::Status` equivalent.
     pub fn as_zx_status(&self) -> zx::Status {
-        zx::Status::UNAVAILABLE
+        match self {
+            RoutingError::PolicyError(_) => zx::Status::ACCESS_DENIED,
+            _ => zx::Status::UNAVAILABLE,
+        }
     }
 
     pub fn source_instance_stopped(moniker: &AbsoluteMoniker) -> Self {
