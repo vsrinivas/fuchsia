@@ -574,11 +574,12 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   // and if so populates pva with the base address to use.
   bool CheckGapLocked(VmAddressRegionOrMapping* prev, VmAddressRegionOrMapping* next, vaddr_t* pva,
                       vaddr_t search_base, vaddr_t align, size_t region_size, size_t min_gap,
-                      uint arch_mmu_flags);
+                      uint arch_mmu_flags) TA_REQ(lock());
 
   // search for a spot to allocate for a region of a given size
   zx_status_t AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags, vaddr_t* spot,
-                              vaddr_t upper_limit = ktl::numeric_limits<vaddr_t>::max());
+                              vaddr_t upper_limit = ktl::numeric_limits<vaddr_t>::max())
+      TA_REQ(lock());
 
   template <typename ON_VMAR, typename ON_MAPPING>
   bool EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t max_addr, ON_VMAR on_vmar,

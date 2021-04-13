@@ -392,9 +392,6 @@ zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags, PageRequest* p
 bool VmAddressRegion::CheckGapLocked(VmAddressRegionOrMapping* prev, VmAddressRegionOrMapping* next,
                                      vaddr_t* pva, vaddr_t search_base, vaddr_t align,
                                      size_t region_size, size_t min_gap, uint arch_mmu_flags) {
-  // TODO: Add annotations to remove this.
-  AssertHeld(lock_ref());
-
   vaddr_t gap_beg;  // first byte of a gap
   vaddr_t gap_end;  // last byte of a gap
 
@@ -586,7 +583,6 @@ void VmAddressRegion::DumpLocked(uint depth, bool verbose) const {
 
 void VmAddressRegion::Activate() {
   DEBUG_ASSERT(state_ == LifeCycleState::NOT_READY);
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
   state_ = LifeCycleState::ALIVE;
   parent_->subregions_.InsertRegion(fbl::RefPtr<VmAddressRegionOrMapping>(this));
@@ -973,7 +969,6 @@ zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, ui
                                              vaddr_t* spot, vaddr_t upper_limit) {
   canary_.Assert();
   DEBUG_ASSERT(size > 0 && IS_PAGE_ALIGNED(size));
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
   DEBUG_ASSERT(spot);
 
   LTRACEF_LEVEL(2, "aspace %p size 0x%zx align %hhu upper_limit 0x%lx\n", this, size, align_pow2,
