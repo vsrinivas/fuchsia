@@ -8,10 +8,9 @@ use fidl_fuchsia_devicesettings::{
     Status, ValueType,
 };
 use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
-use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
+use fuchsia_component::server::{ServiceFs, ServiceFsDir};
+use futures::{lock::Mutex, StreamExt, TryStreamExt};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -28,6 +27,7 @@ struct Opt {
     int_key: Vec<String>,
 }
 
+#[derive(Debug)]
 enum Key {
     StringKey(String),
     IntKey(i64),
@@ -65,107 +65,112 @@ fn config_state(state: &mut DeviceSettingsManagerServer, opt: Opt) -> Result<(),
     for s_key in opt.string_key {
         let (k, v) = split_once(&s_key)?;
         log::info!("Startup {}={}", k, v);
-        state.keys.insert(String::from(k), Key::StringKey(String::from(v)));
+        if let Some(previous_value) =
+            state.keys.insert(String::from(k), Key::StringKey(String::from(v)))
+        {
+            panic!("duplicate key {}={} in startup, previously set to {:?}", k, v, previous_value);
+        }
     }
 
     for i_key in opt.int_key {
         let (k, v) = split_once(&i_key)?;
         let v = v.parse::<i64>()?;
         log::info!("Startup {}={}", k, v);
-        state.keys.insert(String::from(k), Key::IntKey(v));
+        if let Some(previous_value) = state.keys.insert(String::from(k), Key::IntKey(v)) {
+            panic!("duplicate key {}={} in startup, previously set to {:?}", k, v, previous_value);
+        }
     }
 
     Ok(())
 }
 
-fn spawn_device_settings_server(
-    state: Arc<Mutex<DeviceSettingsManagerServer>>,
+async fn run_request_stream(
+    state: &Mutex<DeviceSettingsManagerServer>,
     stream: DeviceSettingsManagerRequestStream,
 ) {
-    fasync::Task::spawn(
-        stream
-            .try_for_each(move |req| {
-                let mut state = state.lock().unwrap();
-                future::ready(match req {
-                    DeviceSettingsManagerRequest::GetInteger { key, responder } => {
-                        match state.keys.get(&key) {
-                            None => {
-                                log::info!("Key {} doesn't exist", key);
-                                responder.send(0, Status::ErrNotSet)
-                            }
-                            Some(Key::IntKey(val)) => responder.send(*val, Status::Ok),
-                            _ => {
-                                log::info!("Key {} is not an integer", key);
-                                responder.send(0, Status::ErrIncorrectType)
-                            }
+    stream
+        .try_for_each(move |req| async move {
+            let mut state = state.lock().await;
+            match req {
+                DeviceSettingsManagerRequest::GetInteger { key, responder } => {
+                    match state.keys.get(&key) {
+                        None => {
+                            log::info!("Key {} doesn't exist", key);
+                            responder.send(0, Status::ErrNotSet)
+                        }
+                        Some(Key::IntKey(val)) => responder.send(*val, Status::Ok),
+                        _ => {
+                            log::info!("Key {} is not an integer", key);
+                            responder.send(0, Status::ErrIncorrectType)
                         }
                     }
-                    DeviceSettingsManagerRequest::GetString { key, responder } => {
-                        match state.keys.get(&key) {
-                            None => {
-                                log::info!("Key {} doesn't exist", key);
-                                responder.send("", Status::ErrNotSet)
-                            }
-                            Some(Key::StringKey(val)) => responder.send(val, Status::Ok),
-                            _ => {
-                                log::info!("Key {} is not a string", key);
-                                responder.send("", Status::ErrIncorrectType)
-                            }
+                }
+                DeviceSettingsManagerRequest::GetString { key, responder } => {
+                    match state.keys.get(&key) {
+                        None => {
+                            log::info!("Key {} doesn't exist", key);
+                            responder.send("", Status::ErrNotSet)
+                        }
+                        Some(Key::StringKey(val)) => responder.send(val, Status::Ok),
+                        _ => {
+                            log::info!("Key {} is not a string", key);
+                            responder.send("", Status::ErrIncorrectType)
                         }
                     }
-                    DeviceSettingsManagerRequest::SetInteger { key, val, responder } => {
-                        match state.keys.get(&key) {
-                            Some(Key::IntKey(_)) => {
-                                log::info!("Set {}={}", key, val);
-                                state.run_watchers(&key, ValueType::Number);
-                                state.keys.insert(key, Key::IntKey(val));
-                                responder.send(true)
-                            }
-                            _ => {
-                                log::info!("Failed to set integer key {}={}", key, val);
-                                responder.send(false)
-                            }
+                }
+                DeviceSettingsManagerRequest::SetInteger { key, val, responder } => {
+                    match state.keys.get(&key) {
+                        Some(Key::IntKey(_)) => {
+                            log::info!("Set {}={}", key, val);
+                            state.run_watchers(&key, ValueType::Number);
+                            let _: Option<Key> = state.keys.insert(key, Key::IntKey(val));
+                            responder.send(true)
+                        }
+                        _ => {
+                            log::info!("Failed to set integer key {}={}", key, val);
+                            responder.send(false)
                         }
                     }
-                    DeviceSettingsManagerRequest::SetString { key, val, responder } => {
-                        match state.keys.get(&key) {
-                            Some(Key::StringKey(_)) => {
-                                log::info!("Set {}={}", key, val);
-                                state.run_watchers(&key, ValueType::Text);
-                                state.keys.insert(key, Key::StringKey(val));
-                                responder.send(true)
-                            }
-                            _ => {
-                                log::info!("Failed to set string key {}={}", key, val);
-                                responder.send(false)
-                            }
+                }
+                DeviceSettingsManagerRequest::SetString { key, val, responder } => {
+                    match state.keys.get(&key) {
+                        Some(Key::StringKey(_)) => {
+                            log::info!("Set {}={}", key, val);
+                            state.run_watchers(&key, ValueType::Text);
+                            let _: Option<Key> = state.keys.insert(key, Key::StringKey(val));
+                            responder.send(true)
+                        }
+                        _ => {
+                            log::info!("Failed to set string key {}={}", key, val);
+                            responder.send(false)
                         }
                     }
-                    DeviceSettingsManagerRequest::Watch { key, watcher, responder } => {
-                        match state.keys.get(&key) {
-                            None => {
-                                log::info!("Can't watch key {}, it doesn't exist", key);
-                                responder.send(Status::ErrInvalidSetting)
-                            }
-                            _ => match watcher.into_proxy() {
-                                Ok(watcher) => {
-                                    let mv = state.watchers.entry(key).or_insert(Vec::new());
-                                    mv.push(watcher);
-                                    responder.send(Status::Ok)
-                                }
-                                Err(e) => {
-                                    log::info!("Error watching key {}: {}", key, e);
-                                    responder.send(Status::ErrUnknown)
-                                }
-                            },
+                }
+                DeviceSettingsManagerRequest::Watch { key, watcher, responder } => {
+                    match state.keys.get(&key) {
+                        None => {
+                            log::info!("Can't watch key {}, it doesn't exist", key);
+                            responder.send(Status::ErrInvalidSetting)
                         }
+                        _ => match watcher.into_proxy() {
+                            Ok(watcher) => {
+                                let mv = state.watchers.entry(key).or_insert(Vec::new());
+                                mv.push(watcher);
+                                responder.send(Status::Ok)
+                            }
+                            Err(e) => {
+                                log::info!("Error watching key {}: {}", key, e);
+                                responder.send(Status::ErrUnknown)
+                            }
+                        },
                     }
-                })
-            })
-            .map_ok(|_| ())
-            .unwrap_or_else(|e| log::error!("error running mock device settings server: {:?}", e)),
-    )
-    .detach();
+                }
+            }
+        })
+        .await
+        .unwrap_or_else(|e| {
+            log::error!("error running mock device settings server: {:?}", e);
+        })
 }
 
 #[fasync::run_singlethreaded]
@@ -175,12 +180,12 @@ async fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
     let mut state = DeviceSettingsManagerServer { keys: HashMap::new(), watchers: HashMap::new() };
     let () = config_state(&mut state, opt)?;
-    let state = Arc::new(Mutex::new(state));
+    let state = Mutex::new(state);
     let mut fs = ServiceFs::new();
-    fs.dir("svc")
-        .add_fidl_service(move |stream| spawn_device_settings_server(state.clone(), stream));
-    fs.take_and_serve_directory_handle()?;
-    let () = fs.collect().await;
+    let _: &mut ServiceFsDir<'_, _> =
+        fs.dir("svc").add_fidl_service(|stream: DeviceSettingsManagerRequestStream| stream);
+    let _: &mut ServiceFs<_> = fs.take_and_serve_directory_handle()?;
+    let () = fs.for_each_concurrent(None, |stream| run_request_stream(&state, stream)).await;
     Ok(())
 }
 
@@ -249,6 +254,10 @@ mod test {
                 }
             });
 
-        wait_watch.try_next().await.unwrap();
+        let () = wait_watch
+            .try_next()
+            .await
+            .expect("failed to watch")
+            .expect("stream ended unexpectedly");
     }
 }

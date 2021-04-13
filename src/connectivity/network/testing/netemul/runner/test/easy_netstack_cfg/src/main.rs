@@ -63,7 +63,10 @@ async fn run_server() -> Result<(), Error> {
             return Err(format_err!("Got unexpected request from client: {}", req));
         }
         log::info!("Got request {}", req);
-        stream.write(HELLO_MSG_RSP.as_bytes()).context("write failed")?;
+        assert_eq!(
+            stream.write(HELLO_MSG_RSP.as_bytes()).context("write failed")?,
+            HELLO_MSG_RSP.as_bytes().len()
+        );
         stream.flush().context("flush failed")?;
     }
 
@@ -88,7 +91,7 @@ async fn run_client(gateway: Option<String>) -> Result<(), Error> {
         let addr: SocketAddr = format!("{}:{}", ip, PORT).parse()?;
         let mut stream = TcpStream::connect(&addr).context("Tcp connection failed")?;
         let request = HELLO_MSG_REQ.as_bytes();
-        stream.write(request)?;
+        assert_eq!(stream.write(request)?, request.len());
         stream.flush()?;
 
         let mut buffer = [0; 512];

@@ -54,10 +54,10 @@ async fn test_file_transfer() -> Result<(), Error> {
     let mut copy_contents = String::new();
 
     let mut original_file = File::open(local_test_data)?;
-    original_file.read_to_string(&mut original_contents)?;
+    let _read: usize = original_file.read_to_string(&mut original_contents)?;
 
     let mut verification_file = File::open(verification_copy)?;
-    verification_file.read_to_string(&mut copy_contents)?;
+    let _read: usize = verification_file.read_to_string(&mut copy_contents)?;
 
     assert_eq!(original_contents, copy_contents);
 
@@ -112,12 +112,12 @@ async fn test_exec_script() -> Result<(), Error> {
     // Validate the stdout and stderr.
     let mut guest_stdout = Vec::new();
     let mut stdout_socket = fasync::Socket::from_socket(stdout_0)?;
-    stdout_socket.read_to_end(&mut guest_stdout).await?;
+    let _read: usize = stdout_socket.read_to_end(&mut guest_stdout).await?;
     assert_eq!(std::str::from_utf8(&guest_stdout)?.trim(), stdout_expected_string);
 
     let mut guest_stderr = Vec::new();
     let mut stderr_socket = fasync::Socket::from_socket(stderr_0)?;
-    stderr_socket.read_to_end(&mut guest_stderr).await?;
+    let _read: usize = stderr_socket.read_to_end(&mut guest_stderr).await?;
     assert_eq!(std::str::from_utf8(&guest_stderr)?.trim(), stderr_expected_string);
 
     // Pull the file that was created by the script and validate its contents.
@@ -133,7 +133,7 @@ async fn test_exec_script() -> Result<(), Error> {
 
     let mut file_contents = String::new();
     let mut stdin_file = File::open(local_copy)?;
-    stdin_file.read_to_string(&mut file_contents)?;
+    let _read: usize = stdin_file.read_to_string(&mut file_contents)?;
 
     assert_eq!(file_contents, stdin_input.to_string());
 

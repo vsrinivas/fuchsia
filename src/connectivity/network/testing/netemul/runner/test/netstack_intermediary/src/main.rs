@@ -79,7 +79,10 @@ async fn run_mock_guest(
     let echo_string = String::from("hello");
 
     let bus = open_bus(&ep_name)?;
-    bus.wait_for_clients(&mut vec![server_name.as_str()].drain(..), 0).await?;
+    let (success, absent) =
+        bus.wait_for_clients(&mut vec![server_name.as_str()].drain(..), 0).await?;
+    assert!(success);
+    assert_eq!(absent, None);
 
     fake_ep.write(echo_string.as_bytes()).await.context("write failed")?;
 
@@ -145,10 +148,11 @@ async fn run_echo_server_ethernet(
             ethernet::Event::Receive(rx, _flags) => {
                 if !sent_response {
                     let mut data: [u8; 100] = [0; 100];
-                    rx.read(&mut data);
-                    let user_message = str::from_utf8(&data[0..rx.len() as usize]).unwrap();
+                    let sz = rx.read(&mut data);
+                    let user_message =
+                        str::from_utf8(&data[0..sz]).expect("failed to parse string");
                     println!("From client: {}", user_message);
-                    eth_client.send(&data[0..rx.len() as usize]);
+                    let () = eth_client.send(&data[0..sz]);
                     sent_response = true;
 
                     // Start listening for the server's response to be

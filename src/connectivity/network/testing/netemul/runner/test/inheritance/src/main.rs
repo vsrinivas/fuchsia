@@ -12,7 +12,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::server::{ServiceFs, ServiceFsDir},
     futures::prelude::*,
     std::sync::Arc,
     std::sync::Mutex,
@@ -145,9 +145,14 @@ async fn run_root() -> Result<(), Error> {
 }
 
 async fn run_no_inherit() -> Result<(), Error> {
-    simple_increment(1)
+    let err = simple_increment(1)
         .await
-        .expect_err("Shouldn't be able to use service due to inheritance setup");
+        .expect_err("Shouldn't be able to use service due to inheritance setup")
+        .downcast::<fidl::Error>()
+        .expect("unexpected error type");
+    // We can get different types of FIDL closing errors, assert broadly on closed-type errors to
+    // avoid races.
+    assert!(err.is_closed(), "FIDL error should be PEER_CLOSED: {:?}", err);
     Ok(())
 }
 
@@ -176,8 +181,9 @@ fn spawn_counter_server(mut stream: CounterRequestStream, data: Arc<Mutex<Counte
 async fn run_server() -> Result<(), Error> {
     let data = Arc::new(Mutex::new(CounterData { value: 0 }));
     let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(move |chan| spawn_counter_server(chan, data.clone()));
-    fs.take_and_serve_directory_handle()?;
+    let _: &mut ServiceFsDir<'_, _> =
+        fs.dir("svc").add_fidl_service(move |chan| spawn_counter_server(chan, data.clone()));
+    let _: &mut ServiceFs<_> = fs.take_and_serve_directory_handle()?;
     let () = fs.collect().await;
     Ok(())
 }

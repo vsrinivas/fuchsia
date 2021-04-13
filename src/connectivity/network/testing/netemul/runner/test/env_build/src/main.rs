@@ -74,7 +74,7 @@ impl BusConnection {
             },
             _ => futures::future::ok(None),
         });
-        stream.try_next().await?;
+        let () = stream.try_next().await?.context("event stream ended unexpectedly")?;
         Ok(())
     }
 }

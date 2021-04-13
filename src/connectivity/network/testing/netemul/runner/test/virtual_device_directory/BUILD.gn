@@ -11,6 +11,8 @@ rustc_binary("bin") {
   deps = [ "//third_party/rust_crates:anyhow" ]
 
   sources = [ "src/main.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("virtual_device_directory") {

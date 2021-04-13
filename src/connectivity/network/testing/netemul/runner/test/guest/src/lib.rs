@@ -72,7 +72,7 @@ pub async fn wait_for_command_completion(
                 zx::ok(status)?;
 
                 if let Some((stdin_socket, to_write)) = stdin.as_ref() {
-                    stdin_socket.write(to_write.as_bytes())?;
+                    assert_eq!(stdin_socket.write(to_write.as_bytes())?, to_write.as_bytes().len());
                 }
             }
             CommandListenerEvent::OnTerminated { status, return_code } => {

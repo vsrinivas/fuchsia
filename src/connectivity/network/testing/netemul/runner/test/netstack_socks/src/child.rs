@@ -46,7 +46,10 @@ fn run_server(ip: &str) -> Result<(), Error> {
     }
     println!("Got request ({} bytes) '{}'", rd, req);
     println!("Sending response '{}'", HELLO_MSG_RSP);
-    stream.write(HELLO_MSG_RSP.as_bytes()).context("write failed")?;
+    assert_eq!(
+        stream.write(HELLO_MSG_RSP.as_bytes()).context("write failed")?,
+        HELLO_MSG_RSP.as_bytes().len()
+    );
     stream.flush().context("flush failed")?;
     println!("Server done");
     Ok(())
@@ -59,7 +62,7 @@ fn run_client(server_ip: &str) -> Result<(), Error> {
     println!("Connected to server!");
     let request = HELLO_MSG_REQ.as_bytes();
     println!("Sending message '{}'", HELLO_MSG_REQ);
-    stream.write(request).context("write failed")?;
+    assert_eq!(stream.write(request).context("write failed")?, request.len());
     stream.flush().context("flush failed")?;
 
     let mut buffer = [0; 512];

@@ -73,9 +73,12 @@ impl BusConnection {
                 }
                 None => futures::future::ok(None),
             },
-            _ => futures::future::ok(None),
+            fidl_fuchsia_netemul_sync::BusEvent::OnClientAttached { client: _ }
+            | fidl_fuchsia_netemul_sync::BusEvent::OnClientDetached { client: _ } => {
+                futures::future::ok(None)
+            }
         });
-        stream.try_next().await?;
+        let () = stream.try_next().await?.context("event stream ended unexpectedly")?;
         Ok(())
     }
 

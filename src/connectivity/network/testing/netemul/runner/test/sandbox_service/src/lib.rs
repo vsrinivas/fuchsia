@@ -88,6 +88,10 @@ mod tests {
         get_network_from_context(&netctx, name).await
     }
 
+    #[derive(thiserror::Error, Debug)]
+    #[error("network not found")]
+    struct NetworkNotFoundError {}
+
     async fn get_network_from_context<'a>(
         netctx: &'a NetworkContextProxy,
         name: &'a str,
@@ -96,7 +100,7 @@ mod tests {
         netctx.get_network_manager(netmgr_server_end)?;
         let network = netmgr.get_network(name).await?;
 
-        Ok(network.ok_or_else(|| format_err!("can't create network"))?.into_proxy()?)
+        Ok(network.ok_or(NetworkNotFoundError {})?.into_proxy()?)
     }
 
     async fn get_on_bus_from_env<'a>(
@@ -172,12 +176,14 @@ mod tests {
         let net3_retrieve = get_network(&env3, "network").await;
         assert!(net3_retrieve.is_err(), "net should not exist in env3");
 
-        get_network_from_context(&netctx1, "network")
+        let _: NetworkProxy = get_network_from_context(&netctx1, "network")
             .await
-            .expect("Should be able to retrieve net from sandbox 1");
-        get_network_from_context(&netctx2, "network")
+            .expect("should be able to retrieve net from sandbox 1");
+        let NetworkNotFoundError {} = get_network_from_context(&netctx2, "network")
             .await
-            .expect_err("Shouldn't be able retrieve net from sandbox 2");
+            .expect_err("shouldn't be able retrieve net from sandbox 2")
+            .downcast::<NetworkNotFoundError>()
+            .expect("unexpected error from context");
     }
 
     #[fasync::run_singlethreaded]
