@@ -97,6 +97,13 @@ zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t capacity, 
   return ZX_OK;
 }
 
+__EXPORT
+zx_status_t device_set_profile_by_role(zx_device_t* device, zx_handle_t thread, const char* role,
+                                       size_t role_size) {
+  // This is currently a no-op.
+  return ZX_OK;
+}
+
 __EXPORT __WEAK zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw,
                                           size_t* size) {
   // This is currently a no-op.

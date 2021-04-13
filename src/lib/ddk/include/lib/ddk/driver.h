@@ -264,14 +264,35 @@ void device_resume_reply(zx_device_t* device, zx_status_t status, uint8_t out_po
 // priority.
 //
 // The current arguments are transitional, and will likely change in the future.
+//
+// TODO(fxbug.dev/40858): This API will be deprecated and removed in the future, use
+// device_set_profile_by_role instead.
 zx_status_t device_get_profile(zx_device_t* device, uint32_t priority, const char* name,
                                zx_handle_t* out_profile);
 
 // Retrieves a deadline profile handle into |out_profile| from the scheduler for
 // the given deadline parameters.  See |device_get_profile|
+//
+// TODO(fxbug.dev/40858): This API will be deprecated and removed in the future, use
+// device_set_profile_by_role instead.
 zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t capacity, uint64_t deadline,
                                         uint64_t period, const char* name,
                                         zx_handle_t* out_profile);
+
+// Requests that the given thread be assigned a profile with parameters appropriate for the given
+// role. The available roles and the specific parameters assigned are device-dependent and may also
+// vary across builds. Requests are not guaranteed to be honored for all roles and requestors, and
+// may either be rejected or silently ignored, based on system-specific criteria.
+//
+// |role| is name of the requested role. This must not be nullptr, even if |role_size| is zero.
+//
+// |thread| is a borrowed handle that must have DUPLICATE, TRANSFER, and MANAGE_THREAD rights. It is
+// duplicated internally before transfer to the ProfileProvider service to complete the profile
+// assignment.
+//
+// This API should be used in preference to hard coding parameters in drivers.
+zx_status_t device_set_profile_by_role(zx_device_t* device, zx_handle_t thread, const char* role,
+                                       size_t role_size);
 
 // A description of a part of a device fragment.  It provides a bind program
 // that will match a device on the path from the root of the device tree to the

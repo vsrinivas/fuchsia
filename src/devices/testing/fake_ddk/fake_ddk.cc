@@ -537,6 +537,13 @@ zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t capacity, 
 }
 
 __EXPORT
+zx_status_t device_set_profile_by_role(zx_device_t* device, zx_handle_t thread, const char* role,
+                                       size_t role_size) {
+  // This is currently a no-op.
+  return ZX_OK;
+}
+
+__EXPORT
 void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fidl_txn_t* new_txn) {
   auto fidl_txn = fake_ddk::FromDdkInternalTransaction(ddk::internal::Transaction::FromTxn(txn));
 

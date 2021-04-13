@@ -15,12 +15,27 @@ struct CpuSet {
 [Discoverable, ForDeprecatedCBindings]
 protocol ProfileProvider {
     /// Obtain a profile handle.
+    ///
+    /// TODO(fxbug.dev/40858): This API will be deprecated and removed in the future, use
+    /// SetProfileByRole instead.
     GetProfile(uint32 priority, string:64 name) -> (zx.status status, zx.handle:PROFILE? profile);
 
     /// Obtain a deadline profile handle.
+    ///
+    /// TODO(fxbug.dev/40858): This API will be deprecated and removed in the future, use
+    /// SetProfileByRole instead.
     GetDeadlineProfile(uint64 capacity, uint64 deadline, uint64 period, string:64 name)
         -> (zx.status status, zx.handle:PROFILE? profile);
 
     /// Obtain a handle for a profile that sets CPU affinity.
+    ///
+    /// TODO(fxbug.dev/40858): This API will be deprecated and removed in the future, use
+    /// SetProfileByRole instead.
     GetCpuAffinityProfile(CpuSet cpu_mask) -> (zx.status status, zx.handle:PROFILE? profile);
+
+    /// Sets the given thread's profile based on the requested role. The exact
+    /// parameters of the profile are system dependent and may vary based on
+    /// device-specific tuning and/or runtime system goals.
+    SetProfileByRole(zx.handle:THREAD thread, string:2048 role)
+        -> (zx.status status);
 };

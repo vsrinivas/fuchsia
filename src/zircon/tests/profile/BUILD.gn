@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("profile") {
   output_name = "profile-test"
@@ -18,7 +18,12 @@ test("profile") {
   ]
 }
 
-bootfs_test("profile-bootfs-test") {
-  name = "profile-test"
+fuchsia_unittest_package("profile-test-pkg") {
+  manifest = "meta/profile-test.cmx"
   deps = [ ":profile" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":profile-test-pkg" ]
 }

@@ -5,15 +5,21 @@
 #include "zircon/syscalls/profile.h"
 
 #include <fuchsia/scheduler/c/fidl.h>
+#include <inttypes.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/profile/profile.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/profile.h>
 #include <string.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 #include <algorithm>
+#include <string>
 
 namespace {
 
@@ -66,10 +72,58 @@ zx_status_t GetCpuAffinityProfileSimple(void* ctx, const fuchsia_scheduler_CpuSe
       txn, status, status == ZX_OK ? profile.release() : ZX_HANDLE_INVALID);
 }
 
+zx_status_t SetProfileByRoleSimple(void* ctx, zx_handle_t thread, const char* role_data,
+                                   size_t role_size, fidl_txn_t* txn) {
+  auto root_job = static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(ctx));
+
+  // Log the requested role and PID:TID of the thread being assigned.
+  zx_info_handle_basic_t handle_info{};
+  zx_status_t status = zx_object_get_info(thread, ZX_INFO_HANDLE_BASIC, &handle_info,
+                                          sizeof(handle_info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    FX_LOGF(WARNING, "ProfileProvider", "Failed to get info for thread handle: %s",
+            zx_status_get_string(status));
+    handle_info.koid = ZX_KOID_INVALID;
+    handle_info.related_koid = ZX_KOID_INVALID;
+  }
+  const std::string role{role_data, role_size};
+  FX_LOGF(INFO, "ProfileProvider", "Role \"%s\" requested by %" PRId64 ":%" PRId64, role.c_str(),
+          handle_info.related_koid, handle_info.koid);
+
+  // Select the profile parameters based on the requested role. New roles and
+  // logic for selecting parameters may be added here as needed.
+  //
+  // TODO(fxbug.dev/40858): Move the role definitions into a device-specific
+  // configuration file.
+  zx_profile_info_t info = {};
+  if (role == "fuchsia.default") {
+    info.flags = ZX_PROFILE_INFO_FLAG_PRIORITY;
+    info.priority = ZX_PRIORITY_DEFAULT;
+  } else if (role == "fuchsia.test-role:not-found") {
+    return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_ERR_NOT_FOUND);
+  } else if (role == "fuchsia.test-role:ok") {
+    return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_OK);
+  } else {
+    return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_ERR_NOT_FOUND);
+  }
+
+  zx::profile profile;
+  status = zx_profile_create(root_job, 0u, &info, profile.reset_and_get_address());
+  if (status != ZX_OK) {
+    // Failing to create a profile is likely due to a programming error in
+    // this handler. The most likely cause is invalid profile parameters.
+    return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_ERR_INTERNAL);
+  }
+
+  status = zx_object_set_profile(thread, profile.get(), 0);
+  return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, status);
+}
+
 fuchsia_scheduler_ProfileProvider_ops ops = {
     .GetProfile = GetProfileSimple,
     .GetDeadlineProfile = GetDeadlineProfileSimple,
     .GetCpuAffinityProfile = GetCpuAffinityProfileSimple,
+    .SetProfileByRole = SetProfileByRoleSimple,
 };
 
 constexpr const char* profile_svc_names[] = {

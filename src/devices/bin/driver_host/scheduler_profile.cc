@@ -8,6 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/profile.h>
+#include <lib/zx/thread.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/types.h>
@@ -62,4 +63,24 @@ zx_status_t get_scheduler_deadline_profile(uint64_t capacity, uint64_t deadline,
   return ZX_OK;
 }
 
+zx_status_t set_scheduler_profile_by_role(zx_handle_t thread, const char* role, size_t role_size) {
+  zx::unowned_thread original_thread{thread};
+  zx::thread duplicate_thread;
+  zx_status_t status =
+      original_thread->duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_MANAGE_THREAD, &duplicate_thread);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx_status_t fidl_status = ZX_ERR_INTERNAL;
+  status = fuchsia_scheduler_ProfileProviderSetProfileByRole(scheduler_profile_provider, thread,
+                                                             role, role_size, &fidl_status);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (fidl_status != ZX_OK) {
+    return fidl_status;
+  }
+  return ZX_OK;
+}
 }  // namespace internal

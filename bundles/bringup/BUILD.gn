@@ -34,7 +34,6 @@ group("tests") {
     "//src/zircon/tests/futex-ownership:futex-ownership-bootfs-test",
     "//src/zircon/tests/job-policy:policy-bootfs-test",
     "//src/zircon/tests/kcounter:kcounter-bootfs-test",
-    "//src/zircon/tests/profile:profile-bootfs-test",
     "//src/zircon/tests/thread-state:thread-state-bootfs-test",
     "//src/zircon/tests/time:time-bootfs-test",
     "//src/zircon/tests/timers:timers-bootfs-test",

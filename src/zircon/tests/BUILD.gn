@@ -12,6 +12,7 @@ group("tests") {
     "kernel-clocks:tests",
     "kernel-cmdline:tests",
     "processor:tests",
+    "profile:tests",
     "property:tests",
     "register-state:tests",
     "status:tests",

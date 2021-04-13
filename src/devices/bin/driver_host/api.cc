@@ -244,6 +244,11 @@ __EXPORT zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t c
   return internal::get_scheduler_deadline_profile(capacity, deadline, period, name, out_profile);
 }
 
+__EXPORT zx_status_t device_set_profile_by_role(zx_device_t* device, zx_handle_t thread,
+                                                const char* role, size_t role_size) {
+  return internal::set_scheduler_profile_by_role(thread, role, role_size);
+}
+
 __EXPORT const char* device_get_name(zx_device_t* dev) { return dev->name(); }
 
 __EXPORT zx_device_t* device_get_parent(zx_device_t* dev) {

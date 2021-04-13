@@ -69,6 +69,11 @@ struct FakeProfileProvider : public fuchsia::scheduler::ProfileProvider {
     ZX_PANIC("unexpected call");
   }
 
+  void SetProfileByRole(zx::thread thread, std::string role,
+                        SetProfileByRoleCallback callback) override {
+    ZX_PANIC("unexpected call");
+  }
+
   bool get_affinity_profile_called = false;
   bool get_profile_called = false;
   uint32_t requested_priority = -1;

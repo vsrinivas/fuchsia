@@ -50,6 +50,12 @@ class FakeProfileProvider : public fuchsia::scheduler::ProfileProvider {
   void GetCpuAffinityProfile(fuchsia::scheduler::CpuSet cpu_mask,
                              GetProfileCallback callback) override {}
 
+  // |fuchsia::scheduler::ProfileProvider|
+  void SetProfileByRole(zx::thread thread, std::string role,
+                        SetProfileByRoleCallback callback) override {
+    callback(ZX_ERR_NOT_SUPPORTED);
+  }
+
   std::unordered_set<uint32_t> valid_priorities_;
   fidl::BindingSet<fuchsia::scheduler::ProfileProvider> bindings_;
 };
