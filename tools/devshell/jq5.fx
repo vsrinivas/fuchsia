@@ -6,5 +6,5 @@
 #### EXECUTABLE=${HOST_TOOLS_DIR}/jq5
 ### Extends the functionality of jq to json5 objects.
 ## Usage: run `fx jq5 -h`
-## 
-## Or see the README at `tools/jq5/README.md`
+##
+## Or see [`//tools/jq5/README.md`](/tools/jq5/README.md)
