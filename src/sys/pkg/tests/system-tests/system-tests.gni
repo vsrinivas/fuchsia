@@ -255,6 +255,11 @@ template("system_test_upgrade_suite") {
 #     installed on the device, instead of from the current build. This has
 #     the form of `1234...`. Conflicts with `release_builder`.
 #   - Type: string
+
+#   service_account
+#   - Optional: The service account that has permission to download the build
+#     artifacts.
+#   - Type: string
 #
 #   environments
 #   - Required: What environments this test should target.
@@ -314,6 +319,13 @@ template("system_test_reboot_suite") {
       ]
     }
 
+    _service_account = _environment_service_account
+    if (defined(invoker.service_account)) {
+      assert(invoker.service_account != "",
+             "'${_host_test_target_name}' cannot have an empty service_account")
+      _service_account = invoker.service_account
+    }
+
     if (defined(invoker.timeout)) {
       assert(invoker.timeout != "",
              "'${_host_test_target_name}' cannot have an empty timeout")
@@ -355,7 +367,12 @@ template("system_test_reboot_suite") {
       binary_path = _test_binary
       args = _args
       deps = [ test ]
-      environments = invoker.environments
+
+      environments = []
+      foreach(env, invoker.environments) {
+        env.service_account = _service_account
+        environments += [ env ]
+      }
     }
   }
 

@@ -108,6 +108,8 @@ if (is_linux || is_mac) {
   _service_account = "artifact-readers@fuchsia-infra.iam.gserviceaccount.com"
 
   system_test_reboot_suite("nuc-release-reboot") {
+    service_account = _service_account
+
     environments = [
       {
         dimensions = {

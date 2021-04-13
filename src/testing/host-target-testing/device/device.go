@@ -46,7 +46,6 @@ func NewClient(
 	deviceResolver DeviceResolver,
 	privateKey ssh.Signer,
 	sshConnectBackoff retry.Backoff,
-
 ) (*Client, error) {
 	sshConfig, err := newSSHConfig(privateKey)
 	if err != nil {
