@@ -6,25 +6,12 @@ import 'package:test/test.dart';
 
 import 'helpers.dart';
 
-String tmpPerfResultsJson(String benchmarkBinary) {
-  return '/tmp/perf_results_$benchmarkBinary.json';
-}
-
-void runBenchmark(String benchmarkBinary, String resultsFile) {
-  final command = '/bin/$benchmarkBinary $resultsFile';
-  test(benchmarkBinary, () async {
-    final helper = await PerfTestHelper.make();
-    var result = await helper.sl4fDriver.ssh.run(command);
-    expect(result.exitCode, equals(0));
-    await helper.processResults(resultsFile);
-    result = await helper.sl4fDriver.ssh.run('rm $resultsFile');
-    expect(result.exitCode, equals(0));
-  }, timeout: Timeout.none);
-}
-
 void main() {
   enableLoggingOutput();
 
-  runBenchmark(
-      'selectors_benchmarks', tmpPerfResultsJson('selectors_benchmarks'));
+  test('selectors_benchmarks', () async {
+    final helper = await PerfTestHelper.make();
+    await helper.runTestCommand(
+        (resultsFile) => '/bin/selectors_benchmarks $resultsFile');
+  }, timeout: Timeout.none);
 }

@@ -95,6 +95,35 @@ class PerfTestHelper {
     await performance.convertResults('runtime_deps/catapult_converter',
         jsonSummaryFile, Platform.environment);
   }
+
+  // Runs a command over SSH and publishes its output as performance
+  // test results.
+  //
+  // The command to run is specified via a function that takes a
+  // filename as an argument and returns a shell command string.  The
+  // filename is for the results file that the command will write its
+  // results to, in fuchsiaperf.json format.
+  Future<void> runTestCommand(
+      String Function(String resultsFilename) getCommand) async {
+    // Make a filename that is very likely to be unique.  Using a
+    // unique filename should not be strictly necessary, but it should
+    // avoid potential problems.  We do not expect performance tests
+    // to be run concurrently on the Infra builders, but it may be
+    // useful to do so locally for development purposes when we don't
+    // care about the performance results.
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    final resultsFile = '/tmp/perf_results_$timestamp.fuchsiaperf.json';
+    final command = getCommand(resultsFile);
+    final result = await sl4fDriver.ssh.run(command);
+    expect(result.exitCode, equals(0));
+    try {
+      await processResults(resultsFile);
+    } finally {
+      // Clean up: remove the temporary file.
+      final result = await sl4fDriver.ssh.run('rm -f $resultsFile');
+      expect(result.exitCode, equals(0));
+    }
+  }
 }
 
 final _log = Logger('TouchInputLatencyMetricsProcessor');

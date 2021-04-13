@@ -16,19 +16,6 @@ String tmpPerfResultsJson(String benchmarkBinary) {
   return '/tmp/perf_results_$benchmarkBinary.json';
 }
 
-void runFidlBenchmark(String benchmarkBinary, String args) {
-  final resultsFile = tmpPerfResultsJson(benchmarkBinary);
-  final path = '/bin/$benchmarkBinary $args';
-  _tests.add(() {
-    test(benchmarkBinary, () async {
-      final helper = await PerfTestHelper.make();
-      final result = await helper.sl4fDriver.ssh.run(path);
-      expect(result.exitCode, equals(0));
-      await helper.processResults(resultsFile);
-    }, timeout: Timeout.none);
-  });
-}
-
 // Runs a benchmark that uses the C++ perftest runner.
 // It is believed that benchmarks converge to different means in different
 // process runs (and reboots). Since each of these benchmarks are currently
@@ -57,15 +44,27 @@ void runPerftestFidlBenchmark(String benchmarkBinary) {
 void main(List<String> args) {
   enableLoggingOutput();
 
-  runFidlBenchmark('go_fidl_microbenchmarks',
-      '--out_file ${tmpPerfResultsJson('go_fidl_microbenchmarks')}');
   runPerftestFidlBenchmark('hlcpp_fidl_microbenchmarks');
   runPerftestFidlBenchmark('lib_fidl_microbenchmarks');
   runPerftestFidlBenchmark('llcpp_fidl_microbenchmarks');
   runPerftestFidlBenchmark('walker_fidl_microbenchmarks');
-  runFidlBenchmark('rust_fidl_microbenchmarks',
-      tmpPerfResultsJson('rust_fidl_microbenchmarks'));
   runPerftestFidlBenchmark('reference_fidl_microbenchmarks');
+
+  _tests.add(() {
+    test('go_fidl_microbenchmarks', () async {
+      final helper = await PerfTestHelper.make();
+      await helper.runTestCommand((resultsFile) =>
+          '/bin/go_fidl_microbenchmarks --out_file $resultsFile');
+    }, timeout: Timeout.none);
+  });
+
+  _tests.add(() {
+    test('rust_fidl_microbenchmarks', () async {
+      final helper = await PerfTestHelper.make();
+      await helper.runTestCommand(
+          (resultsFile) => '/bin/rust_fidl_microbenchmarks $resultsFile');
+    }, timeout: Timeout.none);
+  });
 
   _tests.add(() {
     test('dart_fidl_microbenchmarks', () async {

@@ -11,10 +11,7 @@ void main() {
 
   test('/bin/fidlc_microbenchmarks', () async {
     final helper = await PerfTestHelper.make();
-    const resultsFile = '/tmp/perf_results_fidlc_microbenchmarks';
-    final result = await helper.sl4fDriver.ssh
-        .run('/bin/fidlc_microbenchmarks -p --quiet --out $resultsFile');
-    expect(result.exitCode, equals(0));
-    await helper.processResults(resultsFile);
+    await helper.runTestCommand((resultsFile) =>
+        '/bin/fidlc_microbenchmarks -p --quiet --out $resultsFile');
   }, timeout: Timeout.none);
 }

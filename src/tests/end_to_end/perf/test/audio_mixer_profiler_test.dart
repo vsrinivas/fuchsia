@@ -11,10 +11,7 @@ void main() {
 
   test('fuchsia.audio.mixer', () async {
     final helper = await PerfTestHelper.make();
-    const resultsFile = '/tmp/perf_results.json';
-    final result = await helper.sl4fDriver.ssh
-        .run('/bin/audio_mixer_profiler --perftest-json=$resultsFile');
-    expect(result.exitCode, equals(0));
-    await helper.processResults(resultsFile);
+    await helper.runTestCommand((resultsFile) =>
+        '/bin/audio_mixer_profiler --perftest-json=$resultsFile');
   }, timeout: Timeout.none);
 }

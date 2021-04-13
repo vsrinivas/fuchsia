@@ -3,3 +3,7 @@
 # found in the LICENSE file.
 
 include: ../../../../topaz/tools/analysis_options.yaml
+
+linter:
+  rules:
+    cascade_invocations: false
