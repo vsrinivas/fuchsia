@@ -366,6 +366,10 @@
             protocol: "fuchsia.stash.SecureStore",
             path: "/svc_for_sys/fuchsia.stash.SecureStore",
         },
+        {
+            protocol: "fuchsia.vulkan.loader.Loader",
+            path: "/svc_for_sys/fuchsia.vulkan.loader.Loader",
+        },
 
         // From archivist
         {
