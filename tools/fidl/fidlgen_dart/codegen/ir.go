@@ -211,38 +211,40 @@ type Root struct {
 	Unions      []Union
 }
 
-type context map[string]bool
+func changeName(name string) string {
+	return name + "$"
+}
 
 var (
 	// Name of a bits member
-	bitsMemberContext = make(context)
+	bitsMemberContext = fidlgen.NewNameContext(changeName)
 	// Name of an enum member
-	enumMemberContext = make(context)
+	enumMemberContext = fidlgen.NewNameContext(changeName)
 	// Name of a struct member
-	structMemberContext = make(context)
+	structMemberContext = fidlgen.NewNameContext(changeName)
 	// Name of a table member
-	tableMemberContext = make(context)
+	tableMemberContext = fidlgen.NewNameContext(changeName)
 	// Name of a union member
-	unionMemberContext = make(context)
+	unionMemberContext = fidlgen.NewNameContext(changeName)
 	// Tag of a union member
-	unionMemberTagContext = make(context)
+	unionMemberTagContext = fidlgen.NewNameContext(changeName)
 	// Name of a constant
-	constantContext = make(context)
+	constantContext = fidlgen.NewNameContext(changeName)
 	// Name of a top-level declaration (other than a constant)
-	declarationContext = make(context)
+	declarationContext = fidlgen.NewNameContext(changeName)
 	// Name of a method
-	methodContext = make(context)
+	methodContext = fidlgen.NewNameContext(changeName)
 	// Everywhere
 )
 
 func init() {
-	var allContexts = []context{
+	var allContexts = []fidlgen.NameContext{
 		enumMemberContext, structMemberContext, tableMemberContext,
 		unionMemberContext, unionMemberTagContext, constantContext,
 		declarationContext, methodContext, bitsMemberContext,
 	}
 
-	var reservedWords = map[string][]context{
+	fidlgen.ReserveNames(map[string][]fidlgen.NameContext{
 		"assert":       allContexts,
 		"async":        allContexts,
 		"await":        allContexts,
@@ -297,19 +299,7 @@ func init() {
 		"while":        allContexts,
 		"with":         allContexts,
 		"yield":        allContexts,
-	}
-	for word, ctxs := range reservedWords {
-		for _, ctx := range ctxs {
-			ctx[word] = true
-		}
-	}
-}
-
-func (ctx context) changeIfReserved(str string) string {
-	if ctx[str] {
-		return str + "$"
-	}
-	return str
+	})
 }
 
 var declForPrimitiveType = map[fidlgen.PrimitiveSubtype]string{
@@ -527,39 +517,39 @@ func (c *compiler) _typeSymbolForCompoundIdentifier(ident fidlgen.CompoundIdenti
 	return t
 }
 
-func (c *compiler) compileUpperCamelIdentifier(val fidlgen.Identifier, context context) string {
-	return context.changeIfReserved(fidlgen.ToUpperCamelCase(string(val)))
+func (c *compiler) compileUpperCamelIdentifier(val fidlgen.Identifier, context fidlgen.NameContext) string {
+	return context.ChangeIfReserved(fidlgen.ToUpperCamelCase(string(val)))
 }
 
-func (c *compiler) compileLowerCamelIdentifier(val fidlgen.Identifier, context context) string {
-	return context.changeIfReserved(fidlgen.ToLowerCamelCase(string(val)))
+func (c *compiler) compileLowerCamelIdentifier(val fidlgen.Identifier, context fidlgen.NameContext) string {
+	return context.ChangeIfReserved(fidlgen.ToLowerCamelCase(string(val)))
 }
 
-func (c *compiler) compileCompoundIdentifier(val fidlgen.CompoundIdentifier, context context) string {
+func (c *compiler) compileCompoundIdentifier(val fidlgen.CompoundIdentifier, context fidlgen.NameContext) string {
 	strs := []string{}
 	if c.inExternalLibrary(val) {
 		strs = append(strs, libraryPrefix(val.Library))
 	}
-	strs = append(strs, context.changeIfReserved(string(val.Name)))
+	strs = append(strs, context.ChangeIfReserved(string(val.Name)))
 	if val.Member != "" {
-		strs = append(strs, context.changeIfReserved(string(val.Member)))
+		strs = append(strs, context.ChangeIfReserved(string(val.Member)))
 	}
 	return strings.Join(strs, ".")
 }
 
-func (c *compiler) compileUpperCamelCompoundIdentifier(val fidlgen.CompoundIdentifier, ext string, context context) string {
+func (c *compiler) compileUpperCamelCompoundIdentifier(val fidlgen.CompoundIdentifier, ext string, context fidlgen.NameContext) string {
 	str := fidlgen.ToUpperCamelCase(string(val.Name)) + ext
 	val.Name = fidlgen.Identifier(str)
 	return c.compileCompoundIdentifier(val, context)
 }
 
-func (c *compiler) compileLowerCamelCompoundIdentifier(val fidlgen.CompoundIdentifier, ext string, context context) string {
+func (c *compiler) compileLowerCamelCompoundIdentifier(val fidlgen.CompoundIdentifier, ext string, context fidlgen.NameContext) string {
 	str := fidlgen.ToLowerCamelCase(string(val.Name)) + ext
 	val.Name = fidlgen.Identifier(str)
 	return c.compileCompoundIdentifier(val, context)
 }
 
-func (c *compiler) compileConstantIdentifier(val fidlgen.CompoundIdentifier, context context) string {
+func (c *compiler) compileConstantIdentifier(val fidlgen.CompoundIdentifier, context fidlgen.NameContext) string {
 	if val.Member != "" {
 		// val.Name here is the type.
 		// Format: Type.memberIdentifier

@@ -10,6 +10,7 @@ go_library("fidlgen") {
     "formatter.go",
     "identifiers.go",
     "lazywriter.go",
+    "name_context.go",
     "names.go",
     "strings.go",
     "templates.go",
