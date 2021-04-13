@@ -1124,29 +1124,62 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             self.driver_state_change.trigger();
         }
 
-        self.apply_standard_combinators(
-            async move {
-                if duration.as_nanos() > 0 {
-                    // Specify the assisting ports.
-                    self.frame_handler
-                        .send_request(
-                            CmdPropValueSet(PropThread::AssistingPorts.into(), port).verify(),
-                        )
+        let future = async move {
+            if duration.as_nanos() > 0 {
+                // Set the steering data to the all-devices mask if we have that capability.
+                if self.driver_state.lock().has_cap(Cap::Ot(CapOt::OobSteeringData)) {
+                    const STEERING_DATA_ALL_DEVICES_MASK: EUI64 = EUI64([0xFFu8; 8]);
+                    match self
+                        .frame_handler
+                        .send_request(CmdPropValueSet(
+                            PropThread::SteeringData.into(),
+                            STEERING_DATA_ALL_DEVICES_MASK,
+                        ))
                         .await
+                    {
+                        Ok(()) => (),
+                        Err(err) => fx_log_warn!(
+                            "make_joinable: Unable to set steering data to all devices: {:?}",
+                            err
+                        ),
+                    }
                 } else {
-                    // Clear the assisting ports.
-                    self.frame_handler
-                        .send_request(
-                            CmdPropValueSet(PropThread::AssistingPorts.into(), ()).verify(),
-                        )
-                        .await
+                    fx_log_warn!("make_joinable: CAP_OOB_STEERING_DATA not set");
                 }
-            }
-            .boxed(),
-        )
-        .await?;
 
-        Ok(())
+                // Specify the assisting ports.
+                self.frame_handler
+                    .send_request(CmdPropValueSet(PropThread::AssistingPorts.into(), port).verify())
+                    .await
+            } else {
+                // Clear the steering data if we have that capability.
+                if self.driver_state.lock().has_cap(Cap::Ot(CapOt::OobSteeringData)) {
+                    const STEERING_DATA_NO_DEVICES_MASK: EUI64 = EUI64([0u8; 8]);
+                    match self
+                        .frame_handler
+                        .send_request(CmdPropValueSet(
+                            PropThread::SteeringData.into(),
+                            STEERING_DATA_NO_DEVICES_MASK,
+                        ))
+                        .await
+                    {
+                        Ok(()) => (),
+                        Err(err) => {
+                            fx_log_warn!("make_joinable: Unable to clear steering data: {:?}", err)
+                        }
+                    }
+                } else {
+                    fx_log_warn!("make_joinable: CAP_OOB_STEERING_DATA not set");
+                }
+
+                // Clear the assisting ports.
+                self.frame_handler
+                    .send_request(CmdPropValueSet(PropThread::AssistingPorts.into(), ()).verify())
+                    .await
+            }
+        };
+
+        self.apply_standard_combinators(future.boxed()).await
     }
 
     async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>> {
