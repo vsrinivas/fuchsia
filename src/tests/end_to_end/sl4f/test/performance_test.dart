@@ -36,25 +36,20 @@ void main() {
   });
 
   group(sl4f.Sl4f, () {
-    // TODO(https://fxbug.dev/73859): This test leaks resources if it times out,
-    // causing later tests to break. Re-enable when non-hermeticity is fixed.
-    if (Platform.environment['FUCHSIA_DEVICE_TYPE'] !=
-        'Intel NUC Kit NUC7i5DNHE') {
-      test('trace via facade', () async {
-        final traceSession = await performance.initializeTracing();
-        await traceSession.start();
-        await Future.delayed(Duration(seconds: 2));
-        await traceSession.stop();
-        final traceFile = await traceSession.terminateAndDownload('test-trace');
+    test('trace via facade', () async {
+      final traceSession = await performance.initializeTracing();
+      await traceSession.start();
+      await Future.delayed(Duration(seconds: 2));
+      await traceSession.stop();
+      final traceFile = await traceSession.terminateAndDownload('test-trace');
 
-        expect(traceFile.path, matches(RegExp(r'-test-trace-trace.fxt$')));
-        expect(
-            dumpDir.listSync().map((f) => f.path.split('/').last),
-            unorderedMatches([
-              matches(RegExp(r'-test-trace-trace.fxt$')),
-            ]));
-      });
-    }
+      expect(traceFile.path, matches(RegExp(r'-test-trace-trace.fxt$')));
+      expect(
+          dumpDir.listSync().map((f) => f.path.split('/').last),
+          unorderedMatches([
+            matches(RegExp(r'-test-trace-trace.fxt$')),
+          ]));
+    });
 
     test('get trace data without writing to file', () async {
       final traceSession = await performance.initializeTracing();
