@@ -55,7 +55,7 @@ test("mt8167-i2c-test-bin") {
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.i2cimpl",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/lib/fdio",
     "//src/devices/bus/lib/device-protocol-pdev",

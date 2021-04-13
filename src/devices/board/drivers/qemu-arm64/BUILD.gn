@@ -35,7 +35,7 @@ driver_module("qemu-arm64") {
   ]
   deps = [
     ":qemu_bus_bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",

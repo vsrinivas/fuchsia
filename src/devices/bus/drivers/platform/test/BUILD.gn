@@ -57,7 +57,7 @@ driver_module("test-board") {
   ]
   deps = [
     ":test-board-bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
@@ -87,7 +87,7 @@ driver_module("test-gpio") {
     ":test-gpio-bind",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -111,7 +111,7 @@ driver_module("test-power") {
   sources = [ "test/power.cc" ]
   deps = [
     ":test-power-bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.power",
     "//sdk/banjo/fuchsia.hardware.powerimpl",
@@ -138,7 +138,7 @@ driver_module("test-goldfish-address-space") {
   deps = [
     ":test-goldfish-address-space-bind",
     "//sdk/banjo/fuchsia.hardware.goldfish.addressspace",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -163,7 +163,7 @@ driver_module("test-goldfish-pipe") {
   deps = [
     ":test-goldfish-pipe-bind",
     "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -188,7 +188,7 @@ driver_module("test-goldfish-sync") {
   deps = [
     ":test-goldfish-sync-bind",
     "//sdk/banjo/fuchsia.hardware.goldfish.sync",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -214,7 +214,7 @@ driver_module("test-clock") {
     ":test-clock-bind",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.clockimpl",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -240,7 +240,7 @@ driver_module("test-i2c") {
     ":test-i2c-bind",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.i2cimpl",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -264,7 +264,7 @@ driver_module("test-spi") {
   sources = [ "test/spi.cc" ]
   deps = [
     ":test-spi-bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.spi",
     "//sdk/banjo/fuchsia.hardware.spiimpl",
@@ -290,7 +290,7 @@ driver_module("test-pwm") {
   sources = [ "test/pwm.cc" ]
   deps = [
     ":test-pwm-bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.pwm",
     "//src/devices/lib/driver",
@@ -315,7 +315,7 @@ driver_module("test-rpmb") {
   sources = [ "test/rpmb.cc" ]
   deps = [
     ":test-rpmb-bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.rpmb",
     "//src/devices/lib/driver",
@@ -340,7 +340,7 @@ driver_module("test-vreg") {
   sources = [ "test/vreg.cc" ]
   deps = [
     ":test-vreg-bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.vreg",
     "//src/devices/lib/driver",
@@ -481,7 +481,7 @@ driver_module("test-bti-board") {
   sources = [ "test-bti-board.cc" ]
   deps = [
     ":test-bti-board-bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
 

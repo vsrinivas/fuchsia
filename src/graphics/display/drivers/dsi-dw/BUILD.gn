@@ -27,7 +27,7 @@ source_set("common_srcs") {
     "//sdk/banjo/fuchsia.hardware.dsiimpl",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/fidl/fuchsia.hardware.dsi:fuchsia.hardware.dsi_llcpp",

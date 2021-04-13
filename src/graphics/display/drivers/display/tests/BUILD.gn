@@ -46,7 +46,7 @@ static_library("base") {
     "fidl_client.h",
   ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.sysmem",
     "//src/lib/fsl",

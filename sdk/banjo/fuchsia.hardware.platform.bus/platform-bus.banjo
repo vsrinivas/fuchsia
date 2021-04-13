@@ -41,7 +41,7 @@ struct PbusMetadata {
     /// Metadata type.
     uint32 type;
     /// Pointer to metadata.
-    [Buffer] vector<uint8> data;
+    [Buffer] vector<uint8>:MAX data;
 };
 
 /// Device metadata to be passed from bootloader via a ZBI record.
@@ -54,7 +54,7 @@ struct PbusBootMetadata {
 };
 
 struct PbusDev {
-    string name;
+    string:MAX name;
     /// `BIND_PLATFORM_DEV_VID`
     uint32 vid;
     /// `BIND_PLATFORM_DEV_PID`
@@ -64,12 +64,12 @@ struct PbusDev {
     /// Instance ID. Contributes to device-name if non-zero.
     /// `BIND_PLATFORM_DEV_INSTANCE_ID`
     uint32 instance_id;
-    vector<PbusMmio> mmio;
-    vector<PbusIrq> irq;
-    vector<PbusBti> bti;
-    vector<PbusSmc> smc;
-    vector<PbusMetadata> metadata;
-    vector<PbusBootMetadata> boot_metadata;
+    vector<PbusMmio>:MAX mmio;
+    vector<PbusIrq>:MAX irq;
+    vector<PbusBti>:MAX bti;
+    vector<PbusSmc>:MAX smc;
+    vector<PbusMetadata>:MAX metadata;
+    vector<PbusBootMetadata>:MAX boot_metadata;
 };
 
 /// Subset of pdev_board_info_t to be set by the board driver.
@@ -105,7 +105,7 @@ protocol PBus {
     ProtocolDeviceAdd(uint32 proto_id, PbusDev dev) -> (zx.status s);
     /// Called by protocol implementation drivers to register their protocol
     /// with the platform bus.
-    RegisterProtocol(uint32 proto_id, [Buffer] vector<uint8> protocol) -> (zx.status s);
+    RegisterProtocol(uint32 proto_id, [Buffer] vector<uint8>:MAX protocol) -> (zx.status s);
     /// Board drivers may use this to get information about the board, and to
     /// differentiate between multiple boards that they support.
     GetBoardInfo() -> (zx.status s, fuchsia.hardware.platform.device.PdevBoardInfo info);

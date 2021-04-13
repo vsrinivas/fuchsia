@@ -394,7 +394,9 @@ impl Ty {
                 for inner_pair in pair.clone().into_inner() {
                     match inner_pair.as_rule() {
                         Rule::constant => {
-                            size = Some(Constant::from_str(inner_pair.as_str()));
+                            if inner_pair.as_str() != "MAX" {
+                                size = Some(Constant::from_str(inner_pair.as_str()));
+                            }
                         }
                         Rule::reference => {
                             nullable = true;
@@ -414,7 +416,9 @@ impl Ty {
                 for inner_pair in iter {
                     match inner_pair.as_rule() {
                         Rule::constant => {
-                            size = Some(Constant::from_str(inner_pair.as_str()));
+                            if inner_pair.as_str() != "MAX" {
+                                size = Some(Constant::from_str(inner_pair.as_str()));
+                            }
                         }
                         Rule::reference => {
                             nullable = true;

@@ -45,7 +45,7 @@ driver_module("vim2") {
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.iommu",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.scpi",
     "//sdk/banjo/fuchsia.hardware.sdmmc",

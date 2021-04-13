@@ -49,7 +49,7 @@ test("aml-pwm-test-bin") {
 group("common") {
   public_deps = [
     ":aml-pwm-bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pwm",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/amlogic",

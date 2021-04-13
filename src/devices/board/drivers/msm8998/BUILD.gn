@@ -31,7 +31,7 @@ driver_module("msm8998") {
   sources = [ "msm8998.cc" ]
   deps = [
     ":msm8998_bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

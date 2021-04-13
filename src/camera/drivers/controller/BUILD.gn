@@ -57,7 +57,7 @@ source_set("source") {
     "//sdk/banjo/fuchsia.hardware.gdc",
     "//sdk/banjo/fuchsia.hardware.ge2d",
     "//sdk/banjo/fuchsia.hardware.isp",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",

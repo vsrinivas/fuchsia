@@ -39,7 +39,7 @@ driver_module("vs680-evk") {
     ":vs680-evk-bind",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2cimpl",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
     "//src/devices/lib/as370",
     "//src/devices/lib/driver",

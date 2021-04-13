@@ -11,7 +11,7 @@ group("common") {
   public_deps = [
     ":bind",
     "//sdk/banjo/fuchsia.hardware.i2c",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_llcpp",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",

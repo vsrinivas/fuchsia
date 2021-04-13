@@ -34,7 +34,7 @@ fuzzer("sysmem_fuzzer") {
   ]
   corpus = "corpus"
   deps = [
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/banjo/fuchsia.sysmem",
@@ -89,7 +89,7 @@ fuzzer("sysmem_fuzzer_multi") {
   # max_len.
   options = [ "max_len=20000" ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",

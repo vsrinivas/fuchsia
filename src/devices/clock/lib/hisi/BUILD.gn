@@ -17,7 +17,7 @@ zx_library("hisi") {
   ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.clockimpl",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",

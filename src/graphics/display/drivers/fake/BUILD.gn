@@ -88,7 +88,7 @@ static_library("fake-display-device-tree") {
   ]
   public_deps = [
     ":fake-lib",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",

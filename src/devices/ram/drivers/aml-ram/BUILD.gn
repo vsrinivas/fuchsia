@@ -44,7 +44,7 @@ test("aml-ram-test-bin") {
   deps = [
     ":aml_ram_bind",
     ":common",
-    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//src/devices/bus/testing/fake-pdev",
     "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/fake_ddk",
