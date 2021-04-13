@@ -6,13 +6,14 @@ use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_net_http as net_http,
     fuchsia_async::{self as fasync, TimeoutExt as _},
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_hyper as fhyper,
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{future::BoxFuture, prelude::*, StreamExt},
     hyper,
     log::{debug, error, info, trace},
     std::convert::TryFrom,
+    std::str::FromStr as _,
 };
 
 static MAX_REDIRECTS: u8 = 10;
@@ -194,21 +195,22 @@ struct Loader {
 
 impl Loader {
     async fn new(req: net_http::Request) -> Result<Self, Error> {
-        let method =
-            hyper::Method::from_bytes(req.method.unwrap_or_else(|| "GET".to_string()).as_bytes())?;
-        if let Some(url) = req.url {
+        let net_http::Request { method, url, headers, body, deadline, .. } = req;
+        let method = method.as_ref().map(|method| hyper::Method::from_str(method)).transpose()?;
+        let method = method.unwrap_or(hyper::Method::GET);
+        if let Some(url) = url {
             let url = hyper::Uri::try_from(url)?;
-            let mut headers = hyper::HeaderMap::new();
-            if let Some(h) = req.headers {
-                for header in &h {
-                    headers.insert(
-                        hyper::header::HeaderName::from_bytes(&header.name)?,
-                        hyper::header::HeaderValue::from_bytes(&header.value)?,
-                    );
-                }
-            }
+            let headers = headers
+                .unwrap_or_else(|| vec![])
+                .into_iter()
+                .map(|net_http::Header { name, value }| {
+                    let name = hyper::header::HeaderName::from_bytes(&name)?;
+                    let value = hyper::header::HeaderValue::from_bytes(&value)?;
+                    Ok((name, value))
+                })
+                .collect::<Result<hyper::HeaderMap, Error>>()?;
 
-            let body = match req.body {
+            let body = match body {
                 Some(net_http::Body::Buffer(buffer)) => {
                     let mut bytes = vec![0; buffer.size as usize];
                     buffer.vmo.read(&mut bytes, 0)?;
@@ -227,8 +229,7 @@ impl Loader {
                 None => Vec::new(),
             };
 
-            let deadline = req
-                .deadline
+            let deadline = deadline
                 .map(|deadline| fasync::Time::from_nanos(deadline))
                 .unwrap_or_else(|| fasync::Time::after(DEFAULT_DEADLINE_DURATION));
 
@@ -410,8 +411,8 @@ fn spawn_server(stream: net_http::LoaderRequestStream) {
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init()?;
     let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(spawn_server);
-    fs.take_and_serve_directory_handle()?;
+    let _: &mut ServiceFsDir<'_, _> = fs.dir("svc").add_fidl_service(spawn_server);
+    let _: &mut ServiceFs<_> = fs.take_and_serve_directory_handle()?;
     let () = fs.collect().await;
     Ok(())
 }
