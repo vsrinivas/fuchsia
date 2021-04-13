@@ -2,7 +2,9 @@
 
 ## Build Configuration
 
-Include `--with //src/connectivity/bluetooth/profiles/tests/bt-hfp-audio-gateway-integration-tests` in your `fx set`.
+Include in your build args via `fx set` or `fx args`:
+
+`//src/connectivity/bluetooth/profiles/tests`
 
 To run the integration tests:
 

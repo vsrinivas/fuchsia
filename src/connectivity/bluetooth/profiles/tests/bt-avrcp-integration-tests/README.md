@@ -2,7 +2,7 @@
 
 ## Build Configuration
 
-Include `--with //src/connectivity/bluetooth/profiles/tests/bt-avrcp-integration-tests` in your `fx set`.
+Include `--with //src/connectivity/bluetooth/profiles/tests` in your `fx set`.
 
 To run the integration tests:
 
