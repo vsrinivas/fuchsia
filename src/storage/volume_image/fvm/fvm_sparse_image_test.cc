@@ -678,8 +678,9 @@ class BufferReader final : public Reader {
 
     uint64_t copied_bytes = 0;
     if (zeroed_bytes < buffer.size()) {
-      copied_bytes = std::min(buffer.size() - zeroed_bytes, image_buffer_.size());
       size_t distance_from_start = (image_offset_ > offset) ? 0 : offset - image_offset_;
+      copied_bytes =
+          std::min(buffer.size() - zeroed_bytes, image_buffer_.size() - distance_from_start);
       memcpy(buffer.data() + zeroed_bytes, image_buffer_.subspan(distance_from_start).data(),
              copied_bytes);
     }
