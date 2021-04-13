@@ -598,7 +598,6 @@ fit::result<bool, std::string> FvmSparseDecompressImage(uint64_t offset, const R
   }
   // Remove the compression flag.
   header_or.value().flags ^= fvm::kSparseFlagLz4;
-  header_or.value().flags ^= fvm::kSparseFlagZeroFillNotRequired;
   memcpy(metadata_buffer.data(), &header_or.value(), sizeof(fvm::SparseImage));
 
   auto metadata_write_result = writer.Write(0, metadata_buffer);

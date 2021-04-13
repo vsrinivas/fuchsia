@@ -48,6 +48,10 @@ Lz4Compressor::Preferences ConvertOptionsToPreferences(
 
 }  // namespace
 
+Lz4Compressor::Lz4Compressor()
+    : Lz4Compressor(
+          ConvertOptionsToPreferences(CompressionOptions{.schema = CompressionSchema::kLz4})) {}
+
 Lz4Compressor::~Lz4Compressor() {
   if (context_ != nullptr) {
     LZ4F_freeCompressionContext(context_);

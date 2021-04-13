@@ -1662,6 +1662,11 @@ TEST(FvmSparseDecompressImageTest, CompressedImageReturnsTrueAndIsCorrect) {
   write_result = FvmSparseWriteImage(decompressed_descriptor, &expected_container.writer());
   ASSERT_TRUE(write_result.is_ok()) << write_result.error();
 
+  // When decompressing this flag should remain, since the zeroes where already emitted as part of
+  // the compressed image, and the were decompressed. In general, not keeping this flag, would
+  // apply fill to all extents, even those who do not need it.
+  expected_container.serialized_image().header.flags |= fvm::kSparseFlagZeroFillNotRequired;
+
   auto decompress_or = FvmSparseDecompressImage(
       0, BufferReader(0, &compressed_container.serialized_image(), sizeof(SerializedSparseImage)),
       decompressed_container.writer());

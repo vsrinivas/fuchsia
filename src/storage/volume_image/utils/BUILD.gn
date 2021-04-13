@@ -47,6 +47,36 @@ source_set("lz4-compression-test") {
   ]
 }
 
+source_set("lz4-decompress-reader") {
+  sources = [ "lz4_decompress_reader.cc" ]
+  public = [ "lz4_decompress_reader.h" ]
+  public_deps = [
+    ":io-interfaces",
+    ":lz4-compression",
+    "//sdk/lib/fit",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+source_set("lz4-decompress-reader-test") {
+  testonly = true
+  sources = [ "lz4_decompress_reader_test.cc" ]
+  deps = [
+    ":fd-io",
+    ":fd-test-helper",
+    ":lz4-decompress-reader",
+    "//src/storage/volume_image/fvm:fvm-sparse-image",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//src/storage/volume_image/adapter:test-image-path" ]
+
+  if (is_host) {
+    deps += [ "//src/storage/volume_image/adapter:host-test-images" ]
+  }
+}
+
 source_set("guid") {
   sources = [ "guid.cc" ]
   public = [ "guid.h" ]
@@ -174,5 +204,6 @@ group("tests") {
     ":fd-io-test",
     ":guid-test",
     ":lz4-compression-test",
+    ":lz4-decompress-reader-test",
   ]
 }

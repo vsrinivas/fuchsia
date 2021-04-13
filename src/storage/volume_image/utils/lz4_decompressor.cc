@@ -88,11 +88,6 @@ fit::result<Decompressor::DecompressResult, std::string> Lz4Decompressor::Decomp
   }
   state_ = State::kDecompressed;
 
-  // Extend the buffer to hint size.
-  if (decompress_result.byte_count() > decompression_buffer_.size()) {
-    decompression_buffer_.resize(decompress_result.byte_count(), 0);
-  }
-
   // lz4_decompress returns 0 when the end of the decompression frame has been reached.
   return fit::ok(
       DecompressResult{.hint = decompress_result.byte_count(), .read_bytes = read_bytes});

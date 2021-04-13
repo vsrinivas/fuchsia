@@ -29,7 +29,7 @@ class Lz4Compressor final : public Compressor {
   // On failure, returns a string describing the error.
   static fit::result<Lz4Compressor, std::string> Create(const CompressionOptions& options);
 
-  Lz4Compressor() = default;
+  Lz4Compressor();
   explicit Lz4Compressor(const Preferences& preferences) : preferences_(preferences) {}
   Lz4Compressor(const Lz4Compressor&) = delete;
   Lz4Compressor(Lz4Compressor&&) noexcept = default;
