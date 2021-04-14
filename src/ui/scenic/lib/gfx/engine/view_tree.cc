@@ -22,6 +22,32 @@ bool IsValid(zx_koid_t koid) { return koid != ZX_KOID_INVALID; }
 std::optional<zx_koid_t> wrap(zx_koid_t koid) {
   return koid == ZX_KOID_INVALID ? std::nullopt : std::optional(koid);
 }
+
+// Sets the parents off all nodes in the subtree rooted at |root| to ZX_KOID_INVALID.
+void OrphanSubgraph(std::unordered_map<zx_koid_t, view_tree::ViewNode>& nodes, zx_koid_t root) {
+  auto& node = nodes.at(root);
+  node.parent = ZX_KOID_INVALID;
+  for (auto child : node.children) {
+    OrphanSubgraph(nodes, child);
+  }
+  // No need to clear children, since this is only used to mark unconnected nodes.
+}
+
+// TODO(fxbug.dev/74453): Move these into a src/ui/scenic/lib/utils
+glm::vec4 Homogenize(const glm::vec4& vector) {
+  if (vector.w == 0.f) {
+    return vector;
+  }
+  return vector / vector.w;
+}
+
+glm::vec2 TransformPointerCoords(const glm::vec2& pointer, const glm::mat4 transform) {
+  const glm::vec4 homogenous_pointer{pointer.x, pointer.y, 0, 1};
+  const glm::vec4 transformed_pointer = transform * homogenous_pointer;
+  const glm::vec2 homogenized_transformed_pointer{Homogenize(transformed_pointer)};
+  return homogenized_transformed_pointer;
+}
+
 }  // namespace
 
 fuchsia::ui::focus::FocusChain ViewTree::CloneFocusChain() const {
@@ -683,6 +709,91 @@ void ViewTree::UpdateInstalledRefs() {
       }
     }
   }
+}
+
+view_tree::SubtreeSnapshot ViewTree::Snapshot() const {
+  // Create a ViewNode for each RefNode.
+  std::unordered_map<zx_koid_t, view_tree::ViewNode> all_nodes;
+  for (const auto& [koid, variant_node] : nodes_) {
+    // Ignore AttachNodes.
+    if (const auto& ref_node = std::get_if<RefNode>(&variant_node)) {
+      all_nodes[koid];  // Creates the element if it doesn't exist.
+
+      // If there's a RefNode parent we add this as a child of it.
+      if (ref_node->parent != ZX_KOID_INVALID) {
+        const auto& attach_node = std::get<AttachNode>(nodes_.at(ref_node->parent));
+        if (attach_node.parent != ZX_KOID_INVALID) {
+          const zx_koid_t ref_parent = attach_node.parent;
+          all_nodes[koid].parent = ref_parent;
+          all_nodes[ref_parent].children.emplace(koid);
+        }
+      }
+    }
+  }
+
+  {  // To sort out unconnected nodes: set all dangling nodes as having no parents.
+    std::vector<zx_koid_t> dangling_nodes;
+    for (const auto& [koid, node] : all_nodes) {
+      if (node.parent == ZX_KOID_INVALID && koid != root_) {
+        dangling_nodes.emplace_back(koid);
+      }
+    }
+
+    for (auto koid : dangling_nodes) {
+      OrphanSubgraph(all_nodes, koid);
+    }
+  }
+
+  view_tree::SubtreeSnapshot snapshot{
+      // Gfx does not currently support other compositors as subtrees.
+      .tree_boundaries = {}};
+  auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
+  root = root_;
+
+  // Sort out all nodes without parents.
+  for (auto& [koid, node] : all_nodes) {
+    if (node.parent == ZX_KOID_INVALID && koid != root) {
+      unconnected_views.insert(koid);
+    } else {
+      // If it does have a parent, add it to |view_tree|.
+      auto [it, success] = view_tree.emplace(koid, std::move(node));
+      FX_DCHECK(success);
+      const auto& ref_node = std::get<RefNode>(nodes_.at(koid));
+      const glm::mat4 world_from_view_transform = ref_node.global_transform();
+      it->second.local_from_world_transform = glm::inverse(world_from_view_transform);
+      it->second.is_focusable = ref_node.may_receive_focus();
+      fidl::Clone(ref_node.view_ref, &it->second.view_ref);
+    }
+  }
+
+  // Set up the hit tester.
+  // TODO(fxbug.dev/74533): The hit testing closures generated here are not thread safe.
+  hit_tester = [this](zx_koid_t starting_view_koid, glm::vec2 view_local_point, bool is_semantic) {
+    const std::optional<glm::mat4> world_from_view_transform =
+        GlobalTransformOf(starting_view_koid);
+    if (!world_from_view_transform.has_value()) {
+      return view_tree::SubtreeHitTestResult{};
+    }
+
+    const auto world_point =
+        TransformPointerCoords(view_local_point, world_from_view_transform.value());
+    const auto world_z_ray = escher::ray4{
+        .origin = {world_point.x, world_point.y, -1000, 1},
+        .direction = {0, 0, 1, 0},
+    };
+
+    // Gfx does not support embedding other subtrees so we never have continuations.
+    view_tree::SubtreeHitTestResult results{.continuations = {}};
+    // Perform hit test.
+    gfx::ViewHitAccumulator accumulator;
+    HitTestFrom(starting_view_koid, world_z_ray, &accumulator, is_semantic);
+    for (const auto& hit : accumulator.hits()) {
+      results.hits.emplace_back(hit.view_ref_koid);
+    }
+    return results;
+  };
+
+  return snapshot;
 }
 
 }  // namespace scenic_impl::gfx

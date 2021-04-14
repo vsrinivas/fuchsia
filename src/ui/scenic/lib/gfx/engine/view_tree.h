@@ -22,6 +22,7 @@
 #include "src/ui/scenic/lib/gfx/engine/view_ref_installed_impl.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
+#include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace scenic_impl::gfx {
 
@@ -265,6 +266,10 @@ class ViewTree {
   // - Do not rely on the concrete format for testing or any other purpose.
   // - Do not rely on this function being runtime efficient; it is not guaranteed to be.
   std::string ToString() const;
+
+  // Generate a snapshot of the ViewTree.
+  // TODO(fxbug.dev/74533): The hit testing closures generated here are not thread safe.
+  view_tree::SubtreeSnapshot Snapshot() const;
 
  private:
   // Utility.

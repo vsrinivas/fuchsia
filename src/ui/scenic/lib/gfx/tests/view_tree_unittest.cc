@@ -966,4 +966,191 @@ TEST(ViewTreePrimitive, RequestFocusChangeDeniedIfUnfocusable) {
   EXPECT_EQ(tree.focus_chain()[0], scene_koid);
 }
 
+// Check that the snapshot is correct as the scene is created and manipulated.
+TEST(ViewTreePrimitive, Snapshot) {
+  ViewTree tree{};
+
+  {  // Empty ViewTree.
+    auto snapshot = tree.Snapshot();
+    EXPECT_TRUE(snapshot.tree_boundaries.empty());
+    auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
+    EXPECT_EQ(root, ZX_KOID_INVALID);
+    EXPECT_TRUE(view_tree.empty());
+    EXPECT_TRUE(unconnected_views.empty());
+  }
+
+  // Just the scene node
+  scenic::ViewRefPair scene_pair = scenic::ViewRefPair::New();
+  zx_koid_t scene_koid = ExtractKoid(scene_pair.view_ref);
+  tree.NewRefNode(ViewTreeNewRefNodeTemplate(std::move(scene_pair.view_ref), kOne));
+  tree.MakeGlobalRoot(scene_koid);
+  {
+    auto snapshot = tree.Snapshot();
+    EXPECT_TRUE(snapshot.tree_boundaries.empty());
+    auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
+    EXPECT_EQ(root, scene_koid);
+    EXPECT_EQ(view_tree.size(), 1u);
+
+    EXPECT_TRUE(view_tree.count(scene_koid) == 1);
+    EXPECT_EQ(view_tree.at(scene_koid).parent, ZX_KOID_INVALID);
+    EXPECT_TRUE(view_tree.at(scene_koid).children.empty());
+
+    EXPECT_TRUE(unconnected_views.empty());
+  }
+
+  //     scene
+  //    /
+  //  a_1
+  zx_koid_t attach_koid_1 = 1111u;
+  tree.NewAttachNode(attach_koid_1);
+  tree.ConnectToParent(attach_koid_1, scene_koid);
+  {  // Attach node should cause no change.
+    auto snapshot = tree.Snapshot();
+    EXPECT_TRUE(snapshot.tree_boundaries.empty());
+    auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
+    EXPECT_EQ(root, scene_koid);
+    EXPECT_EQ(view_tree.size(), 1u);
+
+    EXPECT_TRUE(view_tree.count(scene_koid) == 1);
+    EXPECT_EQ(view_tree.at(scene_koid).parent, ZX_KOID_INVALID);
+    EXPECT_TRUE(view_tree.at(scene_koid).children.empty());
+
+    EXPECT_TRUE(unconnected_views.empty());
+  }
+
+  //     scene
+  //    /
+  //  a_1
+  //   |
+  //  v_1
+  scenic::ViewRefPair view_pair = scenic::ViewRefPair::New();
+  zx_koid_t view_koid_1 = ExtractKoid(view_pair.view_ref);
+  tree.NewRefNode(ViewTreeNewRefNodeTemplate(std::move(view_pair.view_ref), kTwo));
+  tree.ConnectToParent(view_koid_1, attach_koid_1);
+  {
+    auto snapshot = tree.Snapshot();
+    EXPECT_TRUE(snapshot.tree_boundaries.empty());
+    auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
+    EXPECT_EQ(root, scene_koid);
+    EXPECT_EQ(view_tree.size(), 2u);
+
+    EXPECT_TRUE(view_tree.count(scene_koid) == 1);
+    EXPECT_EQ(view_tree.at(scene_koid).parent, ZX_KOID_INVALID);
+    EXPECT_THAT(view_tree.at(scene_koid).children, testing::UnorderedElementsAre(view_koid_1));
+
+    EXPECT_TRUE(view_tree.count(view_koid_1) == 1);
+    EXPECT_EQ(view_tree.at(view_koid_1).parent, scene_koid);
+    EXPECT_TRUE(view_tree.at(view_koid_1).children.empty());
+
+    EXPECT_TRUE(unconnected_views.empty());
+  }
+
+  //     scene
+  //    /    \
+  //  a_1    a_2
+  //   |      |
+  //  v_1    v_2
+  zx_koid_t attach_koid_2 = 2222u;
+  tree.NewAttachNode(attach_koid_2);
+  tree.ConnectToParent(attach_koid_2, scene_koid);
+  scenic::ViewRefPair view_pair_2 = scenic::ViewRefPair::New();
+  zx_koid_t view_koid_2 = ExtractKoid(view_pair_2.view_ref);
+  tree.NewRefNode(ViewTreeNewRefNodeTemplate(std::move(view_pair_2.view_ref), kThree));
+  tree.ConnectToParent(view_koid_2, attach_koid_2);
+  {
+    auto snapshot = tree.Snapshot();
+    EXPECT_TRUE(snapshot.tree_boundaries.empty());
+    auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
+    EXPECT_EQ(root, scene_koid);
+    EXPECT_EQ(view_tree.size(), 3u);
+
+    EXPECT_TRUE(view_tree.count(scene_koid) == 1);
+    EXPECT_EQ(view_tree.at(scene_koid).parent, ZX_KOID_INVALID);
+    EXPECT_THAT(view_tree.at(scene_koid).children,
+                testing::UnorderedElementsAre(view_koid_1, view_koid_2));
+
+    EXPECT_TRUE(view_tree.count(view_koid_1) == 1);
+    EXPECT_EQ(view_tree.at(view_koid_1).parent, scene_koid);
+    EXPECT_TRUE(view_tree.at(view_koid_1).children.empty());
+
+    EXPECT_TRUE(view_tree.count(view_koid_2) == 1);
+    EXPECT_EQ(view_tree.at(view_koid_2).parent, scene_koid);
+    EXPECT_TRUE(view_tree.at(view_koid_2).children.empty());
+
+    EXPECT_TRUE(unconnected_views.empty());
+  }
+
+  //     scene
+  //    /    \
+  //  a_1    a_2
+  //   |      |
+  //  v_1    v_2
+  //   |
+  //  a_3
+  //   |
+  //  v_3
+  zx_koid_t attach_koid_3 = 3333u;
+  tree.NewAttachNode(attach_koid_3);
+  tree.ConnectToParent(attach_koid_3, view_koid_1);
+  scenic::ViewRefPair view_pair_3 = scenic::ViewRefPair::New();
+  zx_koid_t view_koid_3 = ExtractKoid(view_pair_3.view_ref);
+  tree.NewRefNode(ViewTreeNewRefNodeTemplate(std::move(view_pair_3.view_ref), kFour));
+  tree.ConnectToParent(view_koid_3, attach_koid_3);
+  {
+    auto snapshot = tree.Snapshot();
+    EXPECT_TRUE(snapshot.tree_boundaries.empty());
+    auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
+    EXPECT_EQ(root, scene_koid);
+    EXPECT_EQ(view_tree.size(), 4u);
+
+    EXPECT_TRUE(view_tree.count(scene_koid) == 1);
+    EXPECT_EQ(view_tree.at(scene_koid).parent, ZX_KOID_INVALID);
+    EXPECT_THAT(view_tree.at(scene_koid).children,
+                testing::UnorderedElementsAre(view_koid_1, view_koid_2));
+
+    EXPECT_TRUE(view_tree.count(view_koid_1) == 1);
+    EXPECT_EQ(view_tree.at(view_koid_1).parent, scene_koid);
+    EXPECT_THAT(view_tree.at(view_koid_1).children, testing::UnorderedElementsAre(view_koid_3));
+
+    EXPECT_TRUE(view_tree.count(view_koid_2) == 1);
+    EXPECT_EQ(view_tree.at(view_koid_2).parent, scene_koid);
+    EXPECT_TRUE(view_tree.at(view_koid_2).children.empty());
+
+    EXPECT_TRUE(view_tree.count(view_koid_3) == 1);
+    EXPECT_EQ(view_tree.at(view_koid_3).parent, view_koid_1);
+    EXPECT_TRUE(view_tree.at(view_koid_3).children.empty());
+
+    EXPECT_TRUE(unconnected_views.empty());
+  }
+
+  // Disconnect a subtree
+  //     scene
+  //    X    \
+  //  a_1    a_2
+  //   |      |
+  //  v_1    v_2
+  //   |
+  //  a_3
+  //   |
+  //  v_3
+  tree.DisconnectFromParent(attach_koid_1);
+  {
+    auto snapshot = tree.Snapshot();
+    EXPECT_TRUE(snapshot.tree_boundaries.empty());
+    auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
+    EXPECT_EQ(root, scene_koid);
+    EXPECT_EQ(view_tree.size(), 2u);
+
+    EXPECT_TRUE(view_tree.count(scene_koid) == 1);
+    EXPECT_EQ(view_tree.at(scene_koid).parent, ZX_KOID_INVALID);
+    EXPECT_THAT(view_tree.at(scene_koid).children, testing::UnorderedElementsAre(view_koid_2));
+
+    EXPECT_TRUE(view_tree.count(view_koid_2) == 1);
+    EXPECT_EQ(view_tree.at(view_koid_2).parent, scene_koid);
+    EXPECT_TRUE(view_tree.at(view_koid_2).children.empty());
+
+    EXPECT_THAT(unconnected_views, testing::UnorderedElementsAre(view_koid_1, view_koid_3));
+  }
+}
+
 }  // namespace lib_ui_gfx_engine_tests
