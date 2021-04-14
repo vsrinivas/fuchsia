@@ -1,0 +1,22 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/component_manager",
+        args: [
+            "--config",
+            "/pkg/data/component_manager_config",
+
+            // This test provides a root component that cannot be resolved. This URL scheme is not
+            // registered with this component manager. Furthermore, the URL points to a file that
+            // is not a valid CML manifest. It should never be resolved correctly.
+            "fuchsia-pkg://fuchsia.com/component_manager_panic_test#bin/component_manager",
+        ],
+    },
+    use: [
+        { protocol: "fuchsia.sys.Loader" },
+    ],
+}

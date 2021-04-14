@@ -1,0 +1,54 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/component_manager_panic_test",
+    },
+    children: [
+        {
+            name: "component_manager",
+            url: "fuchsia-pkg://fuchsia.com/component_manager_panic_test#meta/component_manager.cm",
+        },
+    ],
+    capabilities: [
+        { protocol: "fuchsia.sys.Loader" },
+    ],
+    use: [
+        {
+            event: [ "stopped" ],
+            from: "framework",
+            modes: [ "sync" ],
+        },
+        {
+            event_stream: "panic_test_event_stream",
+            subscriptions: [
+                {
+                    event: "stopped",
+                    mode: "sync",
+                },
+            ],
+        },
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+        { protocol: "fuchsia.sys2.EventSource" },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.sys.Loader",
+            from: "self",
+            to: [ "#component_manager" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#component_manager" ],
+        },
+    ],
+}

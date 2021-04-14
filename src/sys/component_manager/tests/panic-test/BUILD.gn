@@ -10,19 +10,34 @@ rustc_test("component_manager_panic_test_bin") {
   edition = "2018"
   source_root = "component_manager_panic.rs"
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
-    "//src/sys/component_manager/testing:test_utils_lib",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:matches",
+    "//src/sys/lib/component-events",
   ]
 
   sources = [ "component_manager_panic.rs" ]
 }
 
-fuchsia_unittest_package("component_manager_panic_test") {
-  manifest = "meta/component_manager_panic_test.cmx"
+fuchsia_component("component_manager") {
+  testonly = true
+  manifest = "meta/component_manager.cml"
+  deps = [
+    "//src/sys/component_manager:bin",
+    "//src/sys/component_manager:component_manager_for_examples_config",
+  ]
+}
+
+fuchsia_component("component_manager_panic_test_cmp") {
+  testonly = true
+  manifest = "meta/component_manager_panic_test.cml"
   deps = [ ":component_manager_panic_test_bin" ]
+}
+
+fuchsia_test_package("component_manager_panic_test") {
+  test_components = [ ":component_manager_panic_test_cmp" ]
+  deps = [ ":component_manager" ]
 }
