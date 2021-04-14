@@ -17,7 +17,8 @@ template <typename CpuidIoProvider>
 inline std::string_view SelectX86UserCopyAlternative(CpuidIoProvider&& cpuid) {
   const auto ebx = cpuid.template Read<arch::CpuidExtendedFeatureFlagsB>();
   const auto edx = cpuid.template Read<arch::CpuidExtendedFeatureFlagsD>();
-  const bool is_zen = arch::GetMicroarchitecture(cpuid) == arch::Microarchitecture::kAmdFamily0x17;
+  const bool is_zen = arch::GetMicroarchitecture(cpuid) == arch::Microarchitecture::kAmdFamilyZen;
+
   // Whether the "Enhanced" or "Fast Short" `rep mov` optimizations are present
   // - or whether this is an AMD Zen (for which previous measurements indicated
   // that moving byte by byte was on the whole faster.)

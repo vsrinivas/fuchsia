@@ -1184,7 +1184,7 @@ TEST(CpuidTests, AmdA10_7870k) {
   arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdA10_7870k);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
-  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x15, arch::GetMicroarchitecture(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamilyBulldozer, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
   EXPECT_EQ(0x15u, info.family());
@@ -1255,7 +1255,7 @@ TEST(CpuidTests, AmdRyzen5_1500x) {
   arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen5_1500x);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
-  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamilyZen, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
   EXPECT_EQ(0x17u, info.family());
@@ -1332,7 +1332,7 @@ TEST(CpuidTests, AmdRyzen7_1700) {
   arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen7_1700);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
-  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamilyZen, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
   EXPECT_EQ(0x17u, info.family());
@@ -1409,7 +1409,7 @@ TEST(CpuidTests, AmdRyzen7_2700x) {
   arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen7_2700x);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
-  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamilyZen, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
   EXPECT_EQ(0x17u, info.family());
@@ -1486,7 +1486,7 @@ TEST(CpuidTests, AmdRyzen9_3950x) {
   arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950x);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
-  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamilyZen, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
   EXPECT_EQ(0x17u, info.family());
@@ -1563,7 +1563,7 @@ TEST(CpuidTests, AmdRyzen9_3950xVirtualBoxHyperv) {
   arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950xVirtualBoxHyperv);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
-  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamilyZen, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
   EXPECT_EQ(0x17u, info.family());
@@ -1644,7 +1644,7 @@ TEST(CpuidTests, AmdRyzen9_3950xVirtualBoxKvm) {
   arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950xVirtualBoxKvm);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
-  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamilyZen, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
   EXPECT_EQ(0x17u, info.family());
@@ -1725,7 +1725,7 @@ TEST(CpuidTests, AmdRyzen9_3950xVmware) {
   arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950xVmware);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
-  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamilyZen, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
   EXPECT_EQ(0x17u, info.family());
@@ -1804,7 +1804,7 @@ TEST(CpuidTests, AmdRyzen9_3950xWsl2) {
   arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950xWsl2);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
-  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamilyZen, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
   EXPECT_EQ(0x17u, info.family());
@@ -1883,7 +1883,7 @@ TEST(CpuidTests, AmdRyzen9_3950xWsl2) {
 TEST(CpuidTests, AmdRyzenThreadripper1950x) {
   arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzenThreadripper1950x);
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
-  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamilyZen, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
   EXPECT_EQ(0x17u, info.family());
@@ -1959,7 +1959,7 @@ TEST(CpuidTests, AmdRyzenThreadripper1950x) {
 TEST(CpuidTests, AmdRyzenThreadripper2970wx) {
   arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzenThreadripper2970wx);
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
-  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamilyZen, arch::GetMicroarchitecture(cpuid));
 
   auto info = cpuid.Read<arch::CpuidVersionInfo>();
   EXPECT_EQ(0x17u, info.family());

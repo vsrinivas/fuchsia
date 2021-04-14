@@ -121,10 +121,15 @@ enum class Microarchitecture {
   kIntelTremont,
 
   // AMD families.
-  kAmdFamily0x15,
-  kAmdFamily0x16,
-  kAmdFamily0x17,
-  kAmdFamily0x19,
+
+  // Bulldozer/Piledriver/Steamroller/Excavator.
+  kAmdFamilyBulldozer,
+  // Jaguar.
+  kAmdFamilyJaguar,
+  // Zen 1, 1+, 2.
+  kAmdFamilyZen,
+  // Zen 3.
+  kAmdFamilyZen3,
 };
 
 std::string_view ToString(Vendor vendor);

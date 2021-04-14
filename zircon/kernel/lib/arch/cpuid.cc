@@ -105,14 +105,14 @@ std::string_view ToString(Microarchitecture microarch) {
       return "Intel Goldmont Plus";
     case Microarchitecture::kIntelTremont:
       return "Intel Tremont";
-    case Microarchitecture::kAmdFamily0x15:
-      return "AMD Family 0x15";
-    case Microarchitecture::kAmdFamily0x16:
-      return "AMD Family 0x16";
-    case Microarchitecture::kAmdFamily0x17:
-      return "AMD Family 0x17";
-    case Microarchitecture::kAmdFamily0x19:
-      return "AMD Family 0x19";
+    case Microarchitecture::kAmdFamilyBulldozer:
+      return "AMD Bulldozer";
+    case Microarchitecture::kAmdFamilyJaguar:
+      return "AMD Jaguar";
+    case Microarchitecture::kAmdFamilyZen:
+      return "AMD Zen";
+    case Microarchitecture::kAmdFamilyZen3:
+      return "AMD Zen 3";
   }
   __UNREACHABLE;
 }
@@ -211,14 +211,14 @@ Microarchitecture CpuidVersionInfo::microarchitecture(Vendor vendor) const {
     }
     case Vendor::kAmd: {
       switch (family()) {
-        case 0x15:
-          return Microarchitecture::kAmdFamily0x15;
-        case 0x16:
-          return Microarchitecture::kAmdFamily0x16;
-        case 0x17:
-          return Microarchitecture::kAmdFamily0x17;
-        case 0x19:
-          return Microarchitecture::kAmdFamily0x19;
+        case 0x15: // Bulldozer/Piledriver/Steamroller/Excavator
+          return Microarchitecture::kAmdFamilyBulldozer;
+        case 0x16: // Jaguar
+          return Microarchitecture::kAmdFamilyJaguar;
+        case 0x17: // Zen 1 - 2
+          return Microarchitecture::kAmdFamilyZen;
+        case 0x19: // Zen 3
+          return Microarchitecture::kAmdFamilyZen3;
       }
       return Microarchitecture::kUnknown;
     }

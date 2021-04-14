@@ -109,10 +109,10 @@ size_t LbrStack::Size(Microarchitecture microarch) {
   // [intel/vol3]: Table 17-4.  LBR Stack Size and TOS Pointer Range.
   switch (microarch) {
     case Microarchitecture::kUnknown:
-    case Microarchitecture::kAmdFamily0x15:
-    case Microarchitecture::kAmdFamily0x16:
-    case Microarchitecture::kAmdFamily0x17:
-    case Microarchitecture::kAmdFamily0x19:
+    case Microarchitecture::kAmdFamilyBulldozer:
+    case Microarchitecture::kAmdFamilyJaguar:
+    case Microarchitecture::kAmdFamilyZen:
+    case Microarchitecture::kAmdFamilyZen3:
       return 0;
     case Microarchitecture::kIntelCore2:
       return 4;
@@ -151,10 +151,10 @@ bool LbrStack::SupportsCallstackProfiling(Microarchitecture microarch) {
     case Microarchitecture::kIntelWestmere:
     case Microarchitecture::kIntelSandyBridge:
     case Microarchitecture::kIntelIvyBridge:
-    case Microarchitecture::kAmdFamily0x15:
-    case Microarchitecture::kAmdFamily0x16:
-    case Microarchitecture::kAmdFamily0x17:
-    case Microarchitecture::kAmdFamily0x19:
+    case Microarchitecture::kAmdFamilyBulldozer:
+    case Microarchitecture::kAmdFamilyJaguar:
+    case Microarchitecture::kAmdFamilyZen:
+    case Microarchitecture::kAmdFamilyZen3:
       return false;
     case Microarchitecture::kIntelHaswell:
     case Microarchitecture::kIntelBroadwell:

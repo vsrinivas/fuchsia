@@ -936,6 +936,8 @@ const x86_microarch_config_t* get_microarch_config(const cpu_id::CpuId* cpuid) {
         return &jaguar_config;
       case 0x17:
         return &zen_config;
+      case 0x19:
+        return &zen_config;
       default:
         return &amd_default_config;
     }

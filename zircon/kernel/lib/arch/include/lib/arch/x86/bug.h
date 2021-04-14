@@ -101,10 +101,10 @@ inline bool HasX86MdsBugs(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
     case Microarchitecture::kIntelGoldmont:
     case Microarchitecture::kIntelGoldmontPlus:
     case Microarchitecture::kIntelTremont:
-    case Microarchitecture::kAmdFamily0x15:
-    case Microarchitecture::kAmdFamily0x16:
-    case Microarchitecture::kAmdFamily0x17:
-    case Microarchitecture::kAmdFamily0x19:
+    case Microarchitecture::kAmdFamilyBulldozer:
+    case Microarchitecture::kAmdFamilyJaguar:
+    case Microarchitecture::kAmdFamilyZen:
+    case Microarchitecture::kAmdFamilyZen3:
       return false;
   }
   return true;
@@ -144,10 +144,10 @@ inline bool HasX86TaaBug(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
     case Microarchitecture::kIntelGoldmont:
     case Microarchitecture::kIntelGoldmontPlus:
     case Microarchitecture::kIntelTremont:
-    case Microarchitecture::kAmdFamily0x15:
-    case Microarchitecture::kAmdFamily0x16:
-    case Microarchitecture::kAmdFamily0x17:
-    case Microarchitecture::kAmdFamily0x19:
+    case Microarchitecture::kAmdFamilyBulldozer:
+    case Microarchitecture::kAmdFamilyJaguar:
+    case Microarchitecture::kAmdFamilyZen:
+    case Microarchitecture::kAmdFamilyZen3:
       return false;
   }
   return true;
@@ -200,10 +200,10 @@ inline bool HasX86SsbBug(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
     case Microarchitecture::kIntelGoldmont:
     case Microarchitecture::kIntelGoldmontPlus:
     case Microarchitecture::kIntelTremont:
-    case Microarchitecture::kAmdFamily0x15:
-    case Microarchitecture::kAmdFamily0x16:
-    case Microarchitecture::kAmdFamily0x17:
-    case Microarchitecture::kAmdFamily0x19:
+    case Microarchitecture::kAmdFamilyBulldozer:
+    case Microarchitecture::kAmdFamilyJaguar:
+    case Microarchitecture::kAmdFamilyZen:
+    case Microarchitecture::kAmdFamilyZen3:
       return true;
     case Microarchitecture::kIntelSilvermont:
     case Microarchitecture::kIntelAirmont:
@@ -242,13 +242,13 @@ inline bool MitigateX86SsbBug(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
   // There are non-architectural mechanisms to disable SSB for AMD families
   // 0x15-0x17.
   switch (GetMicroarchitecture(cpuid)) {
-    case arch::Microarchitecture::kAmdFamily0x15:
+    case arch::Microarchitecture::kAmdFamilyBulldozer:
       AmdLoadStoreConfigurationMsr::Get().ReadFrom(&msr).set_ssbd_15h(1).WriteTo(&msr);
       return true;
-    case arch::Microarchitecture::kAmdFamily0x16:
+    case arch::Microarchitecture::kAmdFamilyJaguar:
       AmdLoadStoreConfigurationMsr::Get().ReadFrom(&msr).set_ssbd_16h(1).WriteTo(&msr);
       return true;
-    case arch::Microarchitecture::kAmdFamily0x17:
+    case arch::Microarchitecture::kAmdFamilyZen:
       AmdLoadStoreConfigurationMsr::Get().ReadFrom(&msr).set_ssbd_17h(1).WriteTo(&msr);
       return true;
     default:

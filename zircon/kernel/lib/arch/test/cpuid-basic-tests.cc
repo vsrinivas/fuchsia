@@ -83,9 +83,9 @@ TEST(CpuidTests, GetMicroarchitectureFromVersion) {
       // Intel Tangier.
       {arch::Vendor::kIntel, 0x0, 0x6, 0x4, 0xa, arch::Microarchitecture::kIntelSilvermont},
       // AMD Kaveri.
-      {arch::Vendor::kAmd, 0x6, 0xf, 0x3, 0x0, arch::Microarchitecture::kAmdFamily0x15},
+      {arch::Vendor::kAmd, 0x6, 0xf, 0x3, 0x0, arch::Microarchitecture::kAmdFamilyBulldozer},
       // AMD Banded Kestrel.
-      {arch::Vendor::kAmd, 0x8, 0xf, 0x1, 0x8, arch::Microarchitecture::kAmdFamily0x17},
+      {arch::Vendor::kAmd, 0x8, 0xf, 0x1, 0x8, arch::Microarchitecture::kAmdFamilyZen},
   };
 
   for (const auto& test_case : test_cases) {
