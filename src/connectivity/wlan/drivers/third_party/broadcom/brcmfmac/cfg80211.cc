@@ -5941,7 +5941,7 @@ zx_status_t brcmf_cfg80211_wait_vif_event(struct brcmf_cfg80211_info* cfg, zx_du
 
 zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wireless_dev* wdev) {
   struct net_device* ndev = wdev->netdev;
-  struct brcmf_if* ifp = cfg_to_if(cfg);
+  struct brcmf_if* ifp = ndev_to_if(ndev);
 
   /* vif event pending in firmware */
   if (brcmf_cfg80211_vif_event_armed(cfg)) {
@@ -5955,7 +5955,13 @@ zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wir
       brcmf_abort_scanning_immediately(cfg);
     }
 
-    brcmf_enable_mpc(ifp, 1);
+    struct brcmf_if* client_ifp = cfg_to_if(cfg);
+    brcmf_enable_mpc(client_ifp, 1);
+  }
+
+  zx_status_t err = brcmf_bus_flush_txq(ifp->drvr->bus_if, ifp->ifidx);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Failed to flush TXQ on iface %d: %s", ifp->ifidx, zx_status_get_string(err));
   }
 
   switch (wdev->iftype) {

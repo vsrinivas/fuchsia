@@ -2333,6 +2333,40 @@ static struct pktq* brcmf_sdio_bus_gettxq(brcmf_bus* bus_if) {
   return &bus->txq;
 }
 
+static zx_status_t brcmf_sdio_bus_flush_txq(brcmf_bus* bus_if, int ifidx) {
+  struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
+  struct brcmf_sdio* bus = sdiodev->bus;
+  struct brcmf_pub* drvr = sdiodev->drvr;
+
+  struct brcmf_netbuf* cur;
+  struct brcmf_netbuf* next;
+
+  std::lock_guard lock(drvr->irq_callback_lock);
+
+  for (size_t q = 0; q <= bus->txq.hi_prec; ++q) {
+    brcmf_netbuf_list_for_every_safe(&bus->txq.q[q].netbuf_list, cur, next) {
+      if (cur->len <= bus->tx_hdrlen) {
+        continue;
+      }
+      if (cur->len - bus->tx_hdrlen < BCDC_HEADER_LEN) {
+        continue;
+      }
+
+      auto hdr = reinterpret_cast<struct brcmf_proto_bcdc_header*>(cur->data + bus->tx_hdrlen);
+      uint8_t idx = BCDC_GET_IF_IDX(hdr);
+      if (ifidx != idx) {
+        continue;
+      }
+
+      brcmf_netbuf_shrink_head(cur, bus->tx_hdrlen);
+      brcmf_netbuf_list_remove(&bus->txq.q[q].netbuf_list, cur);
+      brcmf_proto_bcdc_txcomplete(drvr, cur, false);
+    }
+  }
+
+  return ZX_OK;
+}
+
 static bool brcmf_sdio_prec_enq(struct pktq* q, struct brcmf_netbuf* pkt, int prec) {
   struct brcmf_netbuf* p;
   int eprec = -1; /* precedence to evict from */
@@ -3648,6 +3682,7 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
     .txctl = brcmf_sdio_bus_txctl,
     .rxctl = brcmf_sdio_bus_rxctl,
     .gettxq = brcmf_sdio_bus_gettxq,
+    .flush_txq = brcmf_sdio_bus_flush_txq,
     .recovery = brcmf_sdio_recovery,
     .log_stats = brcmf_sdio_log_stats,
 };

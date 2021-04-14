@@ -69,6 +69,7 @@ struct brcmf_bus_ops {
   zx_status_t (*txctl)(brcmf_bus* bus, unsigned char* msg, uint len);
   zx_status_t (*rxctl)(brcmf_bus* bus, unsigned char* msg, uint len, int* rxlen_out);
   struct pktq* (*gettxq)(brcmf_bus* bus);
+  zx_status_t (*flush_txq)(brcmf_bus* bus, int ifidx);
   zx_status_t (*recovery)(brcmf_bus* bus);
   void (*log_stats)(brcmf_bus* bus);
 };
@@ -141,6 +142,10 @@ static inline zx_status_t brcmf_bus_gettxq(struct brcmf_bus* bus, struct pktq** 
       return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
+}
+
+static inline zx_status_t brcmf_bus_flush_txq(struct brcmf_bus* bus, int ifidx) {
+  return bus->ops->flush_txq(bus, ifidx);
 }
 
 static inline zx_status_t brcmf_bus_get_bootloader_macaddr(struct brcmf_bus* bus,

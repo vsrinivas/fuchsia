@@ -131,6 +131,7 @@ class AllocatedNetbuf : public Netbuf {
  * ip_summed - Unclear - TODO: maybe delete after FIDL interfaces is finalized
  * allocated_buffer - Pointer to the allocated buffer
  * allocated_size - Size of the allocated buffer
+ * ifc_netbuf - netbuf managed by the 802.11 interface
  */
 struct brcmf_netbuf {
   int priority;
@@ -140,6 +141,7 @@ struct brcmf_netbuf {
   uint32_t ip_summed;
   uint8_t* allocated_buffer;
   uint32_t allocated_size;
+  wlan::brcmfmac::Netbuf* ifc_netbuf;
 };
 
 // The list-head for queues of buffers.

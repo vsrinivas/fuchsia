@@ -315,25 +315,28 @@ static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int if
   // Make sure that netbuf_size (calculated below) isn't going to overflow.
   if (std::numeric_limits<uint32_t>::max() - drvr->hdrlen < netbuf->size()) {
     BRCMF_ERR("brcmf_netbuf_allocate cannot allocate requested size (overflow)");
+    netbuf->Return(ZX_ERR_INTERNAL);
     return ZX_ERR_INTERNAL;
   }
   const auto netbuf_size = static_cast<uint32_t>(netbuf->size() + drvr->hdrlen);
   struct brcmf_netbuf* b_netbuf = brcmf_netbuf_allocate(netbuf_size);
   if (b_netbuf == nullptr) {
-    ret = ZX_ERR_NO_MEMORY;
-  } else {
-    brcmf_netbuf_grow_tail(b_netbuf, netbuf_size);
-    brcmf_netbuf_shrink_head(b_netbuf, drvr->hdrlen);
-    memcpy(b_netbuf->data, netbuf->data(), netbuf->size());
-    b_netbuf->priority = netbuf->priority();
-    ret = brcmf_proto_txdata(drvr, ifidx, 0, b_netbuf);
+    netbuf->Return(ZX_ERR_NO_MEMORY);
+    return ZX_ERR_NO_MEMORY;
   }
 
+  brcmf_netbuf_grow_tail(b_netbuf, netbuf_size);
+  brcmf_netbuf_shrink_head(b_netbuf, drvr->hdrlen);
+  memcpy(b_netbuf->data, netbuf->data(), netbuf->size());
+  b_netbuf->priority = netbuf->priority();
+  b_netbuf->ifc_netbuf = netbuf.release();
+  ret = brcmf_proto_txdata(drvr, ifidx, 0, b_netbuf);
+
   if (ret != ZX_OK) {
+    b_netbuf->ifc_netbuf->Return(ret);
     brcmu_pkt_buf_free_netbuf(b_netbuf);
   }
 
-  netbuf->Return(ret);
   return ret;
 }
 
@@ -350,6 +353,9 @@ void brcmf_proto_bcdc_txcomplete(brcmf_pub* drvr, struct brcmf_netbuf* txp, bool
   if (!brcmf_proto_bcdc_hdrpull(drvr, txp, &ifp)) {
     struct ethhdr* eh = reinterpret_cast<struct ethhdr*>(txp->data);
     brcmf_txfinalize(ifp, eh, success);
+  }
+  if (txp->ifc_netbuf) {
+    txp->ifc_netbuf->Return(success ? ZX_OK : ZX_ERR_IO);
   }
   brcmu_pkt_buf_free_netbuf(txp);
 }

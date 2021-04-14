@@ -141,5 +141,6 @@ struct brcmf_netbuf* brcmf_netbuf_allocate(uint32_t size) {
 
 void brcmf_netbuf_free(struct brcmf_netbuf* netbuf) {
   free(netbuf->allocated_buffer);
+  delete netbuf->ifc_netbuf;
   free(netbuf);
 }

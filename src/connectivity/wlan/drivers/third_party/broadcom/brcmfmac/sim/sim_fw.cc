@@ -635,8 +635,11 @@ zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
 
   hw_.Tx(dataFrame);
 
-  free(netbuf->allocated_buffer);
-  free(netbuf);
+  if (netbuf->ifc_netbuf) {
+    netbuf->ifc_netbuf->Return(ZX_OK);
+  }
+
+  brcmf_netbuf_free(netbuf);
   return ZX_OK;
 }
 
@@ -703,6 +706,11 @@ zx_status_t SimFirmware::BusRxCtl(unsigned char* msg, uint len, int* rxlen_out) 
 struct pktq* SimFirmware::BusGetTxQueue() {
   BRCMF_ERR("%s unimplemented", __FUNCTION__);
   return nullptr;
+}
+
+zx_status_t SimFirmware::BusFlushTxQueue(int /* ifidx */) {
+  // Sim firmware doesn't have a queue
+  return ZX_OK;
 }
 
 zx_status_t SimFirmware::BusGetBootloaderMacAddr(uint8_t* mac_addr) {

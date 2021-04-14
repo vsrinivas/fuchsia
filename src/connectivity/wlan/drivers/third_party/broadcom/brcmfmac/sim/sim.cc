@@ -64,6 +64,7 @@ static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
     .rxctl = [](brcmf_bus* bus, unsigned char* msg, uint len,
                 int* rxlen_out) { return BUS_OP(bus)->BusRxCtl(msg, len, rxlen_out); },
     .gettxq = [](brcmf_bus* bus) { return BUS_OP(bus)->BusGetTxQueue(); },
+    .flush_txq = [](brcmf_bus* bus, int ifidx) { return BUS_OP(bus)->BusFlushTxQueue(ifidx); },
     .recovery = [](brcmf_bus* bus) { return brcmf_sim_recovery(bus); },
     .log_stats = [](brcmf_bus* bus) { BRCMF_INFO("Simulated bus, no stats to log"); }};
 #undef BUS_OP
