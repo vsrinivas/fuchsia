@@ -1,0 +1,112 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//src/sys/build/components.gni")
+
+rustc_library("rive-rs") {
+  name = "rive-rs"
+  with_unit_tests = true
+  version = "0.1.0"
+  edition = "2018"
+  deps = [
+    "//third_party/rust_crates:bitflags",
+    "//third_party/rust_crates:once_cell",
+    "//third_party/rust_crates:smallvec",
+  ]
+
+  sources = [
+    "src/animation/animation.rs",
+    "src/animation/animator.rs",
+    "src/animation/cubic_interpolator.rs",
+    "src/animation/key_frame.rs",
+    "src/animation/key_frame_color.rs",
+    "src/animation/key_frame_double.rs",
+    "src/animation/key_frame_id.rs",
+    "src/animation/keyed_object.rs",
+    "src/animation/keyed_property.rs",
+    "src/animation/linear_animation.rs",
+    "src/animation/linear_animation_instance.rs",
+    "src/animation/loop.rs",
+    "src/animation/mod.rs",
+    "src/artboard.rs",
+    "src/backboard.rs",
+    "src/bones/bone.rs",
+    "src/bones/cubic_weight.rs",
+    "src/bones/mod.rs",
+    "src/bones/root_bone.rs",
+    "src/bones/skeletal_component.rs",
+    "src/bones/skin.rs",
+    "src/bones/skinnable.rs",
+    "src/bones/tendon.rs",
+    "src/bones/weight.rs",
+    "src/component.rs",
+    "src/component_dirt.rs",
+    "src/container_component.rs",
+    "src/core/binary_reader.rs",
+    "src/core/mod.rs",
+    "src/core/object.rs",
+    "src/core/property.rs",
+    "src/dependency_sorter.rs",
+    "src/draw_rules.rs",
+    "src/draw_target.rs",
+    "src/drawable.rs",
+    "src/dyn_vec.rs",
+    "src/file.rs",
+    "src/layout.rs",
+    "src/lib.rs",
+    "src/math/aabb.rs",
+    "src/math/bezier.rs",
+    "src/math/color.rs",
+    "src/math/mat.rs",
+    "src/math/mod.rs",
+    "src/math/vec.rs",
+    "src/node.rs",
+    "src/option_cell.rs",
+    "src/renderer.rs",
+    "src/runtime_header.rs",
+    "src/shapes/clipping_shape.rs",
+    "src/shapes/command_path.rs",
+    "src/shapes/cubic_asymmetric_vertex.rs",
+    "src/shapes/cubic_detached_vertex.rs",
+    "src/shapes/cubic_mirrored_vertex.rs",
+    "src/shapes/cubic_vertex.rs",
+    "src/shapes/ellipse.rs",
+    "src/shapes/fill_rule.rs",
+    "src/shapes/metrics_path.rs",
+    "src/shapes/mod.rs",
+    "src/shapes/paint/blend_mode.rs",
+    "src/shapes/paint/color.rs",
+    "src/shapes/paint/fill.rs",
+    "src/shapes/paint/gradient_stop.rs",
+    "src/shapes/paint/linear_gradient.rs",
+    "src/shapes/paint/mod.rs",
+    "src/shapes/paint/radial_gradient.rs",
+    "src/shapes/paint/shape_paint.rs",
+    "src/shapes/paint/shape_paint_mutator.rs",
+    "src/shapes/paint/solid_color.rs",
+    "src/shapes/paint/stroke.rs",
+    "src/shapes/paint/stroke_effect.rs",
+    "src/shapes/paint/trim_path.rs",
+    "src/shapes/parametric_path.rs",
+    "src/shapes/path.rs",
+    "src/shapes/path_composer.rs",
+    "src/shapes/path_space.rs",
+    "src/shapes/path_vertex.rs",
+    "src/shapes/points_path.rs",
+    "src/shapes/polygon.rs",
+    "src/shapes/rectangle.rs",
+    "src/shapes/shape.rs",
+    "src/shapes/shape_paint_container.rs",
+    "src/shapes/star.rs",
+    "src/shapes/straight_vertex.rs",
+    "src/shapes/triangle.rs",
+    "src/status_code.rs",
+    "src/transform_component.rs",
+  ]
+}
+
+fuchsia_unittest_package("rive-rs-tests") {
+  deps = [ ":rive-rs_test" ]
+}
