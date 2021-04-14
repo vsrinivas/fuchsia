@@ -8,8 +8,6 @@
 
 #include <elfload/elfload.h>
 
-#define PAGE_SIZE 4096
-
 static const size_t kMaxPhNum = 1024;
 elf_phdr_t phdrs[kMaxPhNum];
 
