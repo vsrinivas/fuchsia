@@ -11,6 +11,7 @@
 #include "src/storage/blobfs/fsck.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
+#include "src/storage/blobfs/test/blobfs_test_setup.h"
 
 namespace blobfs {
 namespace {
@@ -34,12 +35,9 @@ std::unique_ptr<BlockDevice> CreateFakeFVMBlockDevice(uint64_t num_blocks) {
 template <uint64_t oldest_minor_version,
           std::unique_ptr<BlockDevice> (*DeviceFactory)(uint64_t) = CreateFakeBlockDevice,
           uint64_t num_blocks = kNumBlocks>
-class BlobfsTestAtMinorVersion : public testing::Test {
+class BlobfsTestAtMinorVersion : public BlobfsTestSetup, public testing::Test {
  public:
-  void SetUp() final {
-    loop_.StartThread();
-    srand(testing::UnitTest::GetInstance()->random_seed());
-  }
+  void SetUp() final { srand(testing::UnitTest::GetInstance()->random_seed()); }
 
   std::unique_ptr<BlockDevice> CreateAndFormat() {
     FilesystemOptions options{.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd,
@@ -49,15 +47,6 @@ class BlobfsTestAtMinorVersion : public testing::Test {
     return device;
   }
 
-  void Mount(std::unique_ptr<BlockDevice> device, const MountOptions& options) {
-    ASSERT_EQ(fs_, nullptr);
-    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), nullptr, options);
-    ASSERT_TRUE(blobfs_or.is_ok());
-    fs_ = std::move(blobfs_or.value());
-  }
-
-  std::unique_ptr<BlockDevice> Unmount() { return Blobfs::Destroy(std::move(fs_)); }
-
   MountOptions ReadOnlyOptions() const {
     return MountOptions{.writability = Writability::ReadOnlyDisk};
   }
@@ -65,10 +54,6 @@ class BlobfsTestAtMinorVersion : public testing::Test {
   MountOptions ReadWriteOptions() const {
     return MountOptions{.writability = Writability::Writable};
   }
-
- protected:
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
-  std::unique_ptr<Blobfs> fs_;
 };
 
 using BlobfsTestAtRev1 = BlobfsTestAtMinorVersion<kBlobfsMinorVersionBackupSuperblock - 1>;
@@ -100,7 +85,7 @@ TEST_F(BlobfsTestAtRev1, UpgradedToLaterMinorVersion) {
 
 TEST_F(BlobfsTestAtRev1WithFvm, OldInstanceTriggersWriteToBackupSuperblock) {
   Mount(CreateAndFormat(), ReadWriteOptions());
-  ASSERT_TRUE(fs_->Info().flags & kBlobFlagFVM);
+  ASSERT_TRUE(blobfs()->Info().flags & kBlobFlagFVM);
   auto device = Unmount();
 
   // Read the superblock, verify the oldest revision is set to the current revision

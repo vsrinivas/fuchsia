@@ -37,14 +37,26 @@ source_set("test_utils") {
   sources = [
     "blob_utils.cc",
     "blob_utils.h",
+    "blobfs_test_setup.cc",
+    "blobfs_test_setup.h",
+    "unit/utils.cc",
+    "unit/utils.h",
   ]
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/digest",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/safemath",
   ]
-  public_deps = [ "//src/storage/blobfs" ]
+  public_deps = [
+    "//src/storage/blobfs",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/id_allocator",
+  ]
 }
 
 test("blobfs_unittest") {
@@ -77,8 +89,6 @@ test("blobfs_unittest") {
     "unit/parser_test.cc",
     "unit/seekable_compressor_test.cc",
     "unit/streaming_writes_test.cc",
-    "unit/utils.cc",
-    "unit/utils.h",
     "unit/vector_extent_iterator_test.cc",
   ]
   deps = [
@@ -98,13 +108,9 @@ test("blobfs_unittest") {
     "//zircon/public/lib/lz4",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
-    "//zircon/system/ulib/async-loop",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-utils",
-    "//zircon/system/ulib/id_allocator",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
   ]

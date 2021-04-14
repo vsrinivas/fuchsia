@@ -15,33 +15,16 @@
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/mkfs.h"
+#include "src/storage/blobfs/test/blobfs_test_setup.h"
 #include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
 namespace {
-constexpr uint64_t kBlockCount = 1024;
-
-using block_client::FakeBlockDevice;
-
-void CreateAndFormatDevice(std::unique_ptr<FakeBlockDevice>* out) {
-  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlobfsBlockSize);
-  ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
-
-  *out = std::move(device);
-}
-
-TEST(CreateTest, ValidSuperblock) {
-  std::unique_ptr<FakeBlockDevice> device;
-  CreateAndFormatDevice(&device);
-
-  auto blobfs_or = Blobfs::Create(nullptr, std::move(device));
-  EXPECT_TRUE(blobfs_or.is_ok());
-  EXPECT_TRUE(*blobfs_or);
-}
 
 TEST(CreateTest, AllocNodeCountGreaterThanAllocated) {
-  std::unique_ptr<FakeBlockDevice> device;
-  CreateAndFormatDevice(&device);
+  constexpr uint64_t kBlockCount = 1024;
+  auto device = std::make_unique<block_client::FakeBlockDevice>(kBlockCount, kBlobfsBlockSize);
+  ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions()), ZX_OK);
 
   char block[kBlobfsBlockSize];
   DeviceBlockRead(device.get(), block, sizeof(block), kSuperblockOffset);
@@ -49,8 +32,8 @@ TEST(CreateTest, AllocNodeCountGreaterThanAllocated) {
   info->alloc_inode_count++;
   DeviceBlockWrite(device.get(), block, sizeof(block), kSuperblockOffset);
 
-  auto blobfs_or = Blobfs::Create(nullptr, std::move(device));
-  EXPECT_EQ(blobfs_or.status_value(), ZX_ERR_IO_OVERRUN);
+  BlobfsTestSetup setup;
+  EXPECT_EQ(ZX_ERR_IO_OVERRUN, setup.Mount(std::move(device)));
 }
 
 }  // namespace

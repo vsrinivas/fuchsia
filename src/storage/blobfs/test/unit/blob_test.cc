@@ -18,7 +18,6 @@
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/node-digest.h"
-#include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/common.h"
@@ -26,6 +25,7 @@
 #include "src/storage/blobfs/fsck.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
+#include "src/storage/blobfs/test/blobfs_test_setup.h"
 #include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
@@ -38,13 +38,13 @@ constexpr uint32_t kBlockSize = 512;
 constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
 namespace fio = fuchsia_io;
 
-class BlobTest : public testing::TestWithParam<std::tuple<BlobLayoutFormat, CompressionAlgorithm>> {
+class BlobTest : public BlobfsTestSetup,
+                 public testing::TestWithParam<std::tuple<BlobLayoutFormat, CompressionAlgorithm>> {
  public:
   virtual uint64_t GetOldestMinorVersion() const { return kBlobfsCurrentMinorVersion; }
 
   void SetUp() override {
     auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
-    device_ = device.get();
 
     FilesystemOptions filesystem_options{
         .blob_layout_format = std::get<0>(GetParam()),
@@ -55,24 +55,14 @@ class BlobTest : public testing::TestWithParam<std::tuple<BlobLayoutFormat, Comp
     MountOptions mount_options{.compression_settings = {
                                    .compression_algorithm = std::get<1>(GetParam()),
                                }};
-    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), nullptr, mount_options);
-    ASSERT_TRUE(blobfs_or.is_ok());
-    fs_ = std::move(blobfs_or.value());
+    ASSERT_EQ(ZX_OK, Mount(std::move(device), mount_options));
   }
 
-  void TearDown() override { device_ = nullptr; }
-
-  fbl::RefPtr<fs::Vnode> OpenRoot() const {
+  fbl::RefPtr<fs::Vnode> OpenRoot() {
     fbl::RefPtr<fs::Vnode> root;
-    EXPECT_EQ(fs_->OpenRootNode(&root), ZX_OK);
+    EXPECT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
     return root;
   }
-
- protected:
-  async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
-
-  block_client::FakeBlockDevice* device_;
-  std::unique_ptr<Blobfs> fs_;
 };
 
 // Return an old revsions so we can test migrating blobs.
@@ -133,10 +123,7 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
   MountOptions options = {.compression_settings = {
                               .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
                           }};
-  auto blobfs_or =
-      Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), nullptr, options);
-  ASSERT_TRUE(blobfs_or.is_ok());
-  fs_ = std::move(blobfs_or.value());
+  ASSERT_EQ(ZX_OK, Remount(options));
 
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
   uint64_t block;
@@ -150,16 +137,15 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
     EXPECT_EQ(out_actual, info->size_data);
     {
       auto blob = fbl::RefPtr<Blob>::Downcast(file);
-      block = fs_->GetNode(blob->Ino())->extents[0].Start() + DataStartBlock(fs_->Info());
+      block = blobfs()->GetNode(blob->Ino())->extents[0].Start() + DataStartBlock(blobfs()->Info());
     }
   }
 
-  // Unmount.
-  std::unique_ptr<block_client::BlockDevice> device = Blobfs::Destroy(std::move(fs_));
+  auto block_device = Unmount();
 
   // Read the block that contains the blob.
   storage::VmoBuffer buffer;
-  ASSERT_EQ(buffer.Initialize(device.get(), 1, kBlobfsBlockSize, "test_buffer"), ZX_OK);
+  ASSERT_EQ(buffer.Initialize(block_device.get(), 1, kBlobfsBlockSize, "test_buffer"), ZX_OK);
   block_fifo_request_t request = {
       .opcode = BLOCKIO_READ,
       .vmoid = buffer.vmoid(),
@@ -167,20 +153,17 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
       .vmo_offset = 0,
       .dev_offset = block * kBlobfsBlockSize / kBlockSize,
   };
-  ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
+  ASSERT_EQ(block_device->FifoTransaction(&request, 1), ZX_OK);
 
   // Corrupt the end of the page.
   static_cast<uint8_t*>(buffer.Data(0))[PAGE_SIZE - 1] = 1;
 
   // Write the block back.
   request.opcode = BLOCKIO_WRITE;
-  ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
+  ASSERT_EQ(block_device->FifoTransaction(&request, 1), ZX_OK);
 
   // Remount and try and read the blob.
-  auto remounted_blobfs_or =
-      Blobfs::Create(loop_.dispatcher(), std::move(device), nullptr, options);
-  ASSERT_TRUE(remounted_blobfs_or.is_ok());
-  fs_ = std::move(remounted_blobfs_or.value());
+  ASSERT_EQ(ZX_OK, Mount(std::move(block_device), options));
 
   auto root = OpenRoot();
   fbl::RefPtr<fs::Vnode> file;
@@ -235,19 +218,16 @@ TEST_P(BlobTestWithOldMinorVersion, ReadWriteAllCompressionFormats) {
       // Check that it got migrated.
       auto blob = fbl::RefPtr<Blob>::Downcast(file);
       EXPECT_TRUE(SupportsPaging(blob->GetNode()));
-      EXPECT_GE(fs_->Info().oldest_minor_version, kBlobfsMinorVersionNoOldCompressionFormats);
+      EXPECT_GE(blobfs()->Info().oldest_minor_version, kBlobfsMinorVersionNoOldCompressionFormats);
     } else {
       // Don't hold onto the file past the lifetime of the blobfs that it came from.
       file.reset();
-      // Remount
-      auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)));
-      ASSERT_TRUE(blobfs_or.is_ok());
-      fs_ = std::move(blobfs_or.value());
+      Remount();
       root = OpenRoot();
     }
   }
 
-  EXPECT_EQ(Fsck(Blobfs::Destroy(std::move(fs_)), MountOptions()), ZX_OK);
+  EXPECT_EQ(Fsck(Unmount(), MountOptions()), ZX_OK);
 }
 
 TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
@@ -255,18 +235,15 @@ TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
   MountOptions options = {.compression_settings = {
                               .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
                           }};
-  auto blobfs_or =
-      Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), nullptr, options);
-  ASSERT_TRUE(blobfs_or.is_ok());
-  fs_ = std::move(blobfs_or.value());
+  Remount(options);
 
   // Create a blob where the Merkle tree in the compact layout fits perfectly into the space
   // remaining at the end of the blob.
-  ASSERT_EQ(fs_->Info().block_size, digest::kDefaultNodeSize);
+  ASSERT_EQ(blobfs()->Info().block_size, digest::kDefaultNodeSize);
   std::unique_ptr<BlobInfo> info =
       GenerateRealisticBlob("", (digest::kDefaultNodeSize - digest::kSha256Length) * 3);
   {
-    if (GetBlobLayoutFormat(fs_->Info()) == BlobLayoutFormat::kCompactMerkleTreeAtEnd) {
+    if (GetBlobLayoutFormat(blobfs()->Info()) == BlobLayoutFormat::kCompactMerkleTreeAtEnd) {
       std::unique_ptr<MerkleTreeInfo> merkle_tree =
           CreateMerkleTree(info->data.get(), info->size_data, /*use_compact_format=*/true);
       EXPECT_EQ(info->size_data + merkle_tree->merkle_tree_size, digest::kDefaultNodeSize * 3);
@@ -281,10 +258,7 @@ TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
   }
 
   // Remount to avoid caching.
-  auto remounted_blobfs_or =
-      Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), nullptr, options);
-  ASSERT_TRUE(remounted_blobfs_or.is_ok());
-  fs_ = std::move(remounted_blobfs_or.value());
+  Remount(options);
 
   // Read back the blob
   {
@@ -382,7 +356,7 @@ TEST_P(BlobTest, VmoChildDeletedTriggersPurging) {
   const auto start = std::chrono::steady_clock::now();
   constexpr auto kMaxWait = std::chrono::seconds(60);
   while (std::chrono::steady_clock::now() <= start + kMaxWait) {
-    loop_.RunUntilIdle();
+    loop().RunUntilIdle();
 
     fbl::RefPtr<fs::Vnode> file;
     zx_status_t status = root->Lookup(info->path + 1, &file);
@@ -402,10 +376,7 @@ TEST_P(BlobTest, BlobPrepareWriteFailure) {
   MountOptions options = {.compression_settings = {
                               .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
                           }};
-  auto blobfs_or =
-      Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), nullptr, options);
-  ASSERT_TRUE(blobfs_or.is_ok());
-  fs_ = std::move(blobfs_or.value());
+  Remount(options);
 
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
   {
@@ -443,7 +414,7 @@ TEST_P(BlobTest, VmoNameActiveWhileFdOpen) {
   ASSERT_EQ(file->Truncate(info->size_data), ZX_OK);
   ASSERT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
   // Make sure the async part of the write finishes.
-  loop_.RunUntilIdle();
+  loop().RunUntilIdle();
   ASSERT_EQ(file->Close(), ZX_OK);
   ASSERT_EQ(file->OpenValidating(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
   auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
@@ -478,7 +449,7 @@ TEST_P(BlobTest, VmoNameActiveWhileVmoClonesExist) {
   ASSERT_EQ(file->Truncate(info->size_data), ZX_OK);
   ASSERT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
   // Make sure the async part of the write finishes.
-  loop_.RunUntilIdle();
+  loop().RunUntilIdle();
   ASSERT_EQ(file->Close(), ZX_OK);
   ASSERT_EQ(file->OpenValidating(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
   auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
@@ -495,7 +466,7 @@ TEST_P(BlobTest, VmoNameActiveWhileVmoClonesExist) {
   const auto start = std::chrono::steady_clock::now();
   constexpr auto kMaxWait = std::chrono::seconds(60);
   while (std::chrono::steady_clock::now() <= start + kMaxWait) {
-    loop_.RunUntilIdle();
+    loop().RunUntilIdle();
     if (VmoName(blob->DataVmo()) == inactive_name) {
       active = false;
       break;
@@ -522,10 +493,7 @@ TEST_P(BlobMigrationTest, MigrateLargeBlobSucceeds) {
     EXPECT_EQ(out_actual, info->size_data);
   }
 
-  // Remount
-  auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)));
-  ASSERT_TRUE(blobfs_or.is_ok());
-  fs_ = std::move(blobfs_or.value());
+  ASSERT_EQ(ZX_OK, Remount());
   root = OpenRoot();
 
   {
@@ -540,10 +508,10 @@ TEST_P(BlobMigrationTest, MigrateLargeBlobSucceeds) {
 
     auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
     EXPECT_TRUE(SupportsPaging(blob->GetNode()));
-    EXPECT_GE(fs_->Info().oldest_minor_version, kBlobfsMinorVersionNoOldCompressionFormats);
+    EXPECT_GE(blobfs()->Info().oldest_minor_version, kBlobfsMinorVersionNoOldCompressionFormats);
   }
 
-  EXPECT_EQ(Fsck(Blobfs::Destroy(std::move(fs_)), MountOptions()), ZX_OK);
+  EXPECT_EQ(Fsck(Unmount(), MountOptions()), ZX_OK);
 }
 
 TEST_P(BlobMigrationTest, MigrateWhenNoSpaceSkipped) {
@@ -562,9 +530,7 @@ TEST_P(BlobMigrationTest, MigrateWhenNoSpaceSkipped) {
   }
 
   // Remount
-  auto blobfs_or = Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)));
-  ASSERT_TRUE(blobfs_or.is_ok());
-  fs_ = std::move(blobfs_or.value());
+  ASSERT_EQ(ZX_OK, Remount());
   root = OpenRoot();
 
   {
@@ -580,9 +546,9 @@ TEST_P(BlobMigrationTest, MigrateWhenNoSpaceSkipped) {
 
   // The blob shouldn't have been migrated and the filesystem oldest minor version shouldn't have
   // changed.
-  EXPECT_GE(fs_->Info().oldest_minor_version, kBlobfsMinorVersionBackupSuperblock);
+  EXPECT_GE(blobfs()->Info().oldest_minor_version, kBlobfsMinorVersionBackupSuperblock);
 
-  EXPECT_EQ(Fsck(Blobfs::Destroy(std::move(fs_)), MountOptions()), ZX_OK);
+  EXPECT_EQ(Fsck(Unmount(), MountOptions()), ZX_OK);
 }
 
 std::string GetTestParamName(

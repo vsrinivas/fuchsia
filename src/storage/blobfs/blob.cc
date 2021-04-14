@@ -829,7 +829,7 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
 
   // Make the vmo.
   if (auto status = EnsureCreateVmo(load_result->layout->FileBlockAlignedSize()); status.is_error())
-    return status.take_error();
+    return status.error_value();
 
   // Map the result.
   // TODO(fxbug.dev/74061): See if we can avoid doing this mapping.
@@ -893,6 +893,10 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
 #endif
 
 zx_status_t Blob::LoadUnpagedVmosFromDisk() {
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+  // TODO(fxbug.dev/51111): Figure out if we need to support unpaged blobs in the new system.
+  return ZX_ERR_NOT_SUPPORTED;
+#else
   ZX_ASSERT(!IsDataLoaded());
 
   zx::status<BlobLoader::UnpagedLoadResult> load_result =
@@ -904,6 +908,7 @@ zx_status_t Blob::LoadUnpagedVmosFromDisk() {
   }
 
   return load_result.status_value();
+#endif
 }
 
 zx_status_t Blob::LoadVmosFromDisk() {

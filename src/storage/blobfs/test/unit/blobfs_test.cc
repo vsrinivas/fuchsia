@@ -21,6 +21,7 @@
 #include "src/storage/blobfs/fsck.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
+#include "src/storage/blobfs/test/blobfs_test_setup.h"
 #include "src/storage/blobfs/transaction.h"
 
 namespace blobfs {
@@ -72,20 +73,16 @@ zx_status_t MockBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* info
 
 template <uint64_t oldest_minor_version, uint64_t num_blocks = kNumBlocks,
           typename Device = MockBlockDevice>
-class BlobfsTestAtRevision : public testing::Test {
+class BlobfsTestAtRevision : public BlobfsTestSetup, public testing::Test {
  public:
   void SetUp() final {
-    FilesystemOptions options{.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd,
-                              .oldest_minor_version = oldest_minor_version};
-    auto device = Device::CreateAndFormat(options, num_blocks);
+    FilesystemOptions fs_options{.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd,
+                                 .oldest_minor_version = oldest_minor_version};
+    auto device = Device::CreateAndFormat(fs_options, num_blocks);
     ASSERT_TRUE(device);
     device_ = device.get();
-    loop_.StartThread();
 
-    auto blobfs_or =
-        Blobfs::Create(loop_.dispatcher(), std::move(device), nullptr, GetMountOptions());
-    ASSERT_TRUE(blobfs_or.is_ok());
-    fs_ = std::move(blobfs_or.value());
+    ASSERT_EQ(ZX_OK, Mount(std::move(device), GetMountOptions()));
 
     srand(testing::UnitTest::GetInstance()->random_seed());
   }
@@ -93,17 +90,15 @@ class BlobfsTestAtRevision : public testing::Test {
  protected:
   virtual MountOptions GetMountOptions() const { return MountOptions(); }
 
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   Device* device_ = nullptr;
-  std::unique_ptr<Blobfs> fs_;
 };
 
 using BlobfsTest = BlobfsTestAtRevision<blobfs::kBlobfsCurrentMinorVersion>;
 
-TEST_F(BlobfsTest, GetDevice) { ASSERT_EQ(device_, fs_->GetDevice()); }
+TEST_F(BlobfsTest, GetDevice) { ASSERT_EQ(device_, blobfs()->GetDevice()); }
 
 TEST_F(BlobfsTest, BlockNumberToDevice) {
-  ASSERT_EQ(42 * kBlobfsBlockSize / kBlockSize, fs_->BlockNumberToDevice(42));
+  ASSERT_EQ(42 * kBlobfsBlockSize / kBlockSize, blobfs()->BlockNumberToDevice(42));
 }
 
 TEST_F(BlobfsTest, CleanFlag) {
@@ -111,26 +106,26 @@ TEST_F(BlobfsTest, CleanFlag) {
   // don't have dangling references once it is destroyed.
   {
     storage::VmoBuffer buffer;
-    ASSERT_EQ(buffer.Initialize(fs_.get(), 1, kBlobfsBlockSize, "source"), ZX_OK);
+    ASSERT_EQ(buffer.Initialize(blobfs(), 1, kBlobfsBlockSize, "source"), ZX_OK);
 
     // Write the superblock with the clean flag unset on Blobfs::Create in Setup.
     storage::Operation operation = {};
-    memcpy(buffer.Data(0), &fs_->Info(), sizeof(Superblock));
+    memcpy(buffer.Data(0), &blobfs()->Info(), sizeof(Superblock));
     operation.type = storage::OperationType::kWrite;
     operation.dev_offset = 0;
     operation.length = 1;
 
-    ASSERT_EQ(fs_->RunOperation(operation, &buffer), ZX_OK);
+    ASSERT_EQ(blobfs()->RunOperation(operation, &buffer), ZX_OK);
 
     // Read the superblock with the clean flag unset.
     operation.type = storage::OperationType::kRead;
-    ASSERT_EQ(fs_->RunOperation(operation, &buffer), ZX_OK);
+    ASSERT_EQ(blobfs()->RunOperation(operation, &buffer), ZX_OK);
     Superblock* info = reinterpret_cast<Superblock*>(buffer.Data(0));
     EXPECT_EQ(0u, (info->flags & kBlobFlagClean));
   }
 
   // Destroy the blobfs instance to force writing of the clean bit.
-  auto device = Blobfs::Destroy(std::move(fs_));
+  auto device = Unmount();
 
   // Read the superblock, verify the clean flag is set.
   uint8_t block[kBlobfsBlockSize] = {};
@@ -143,13 +138,13 @@ TEST_F(BlobfsTest, CleanFlag) {
 // Tests reading a well known location.
 TEST_F(BlobfsTest, RunOperationExpectedRead) {
   storage::VmoBuffer buffer;
-  ASSERT_EQ(buffer.Initialize(fs_.get(), 1, kBlobfsBlockSize, "source"), ZX_OK);
+  ASSERT_EQ(buffer.Initialize(blobfs(), 1, kBlobfsBlockSize, "source"), ZX_OK);
 
   // Read the first block.
   storage::Operation operation = {};
   operation.type = storage::OperationType::kRead;
   operation.length = 1;
-  ASSERT_EQ(fs_->RunOperation(operation, &buffer), ZX_OK);
+  ASSERT_EQ(blobfs()->RunOperation(operation, &buffer), ZX_OK);
 
   uint64_t* data = reinterpret_cast<uint64_t*>(buffer.Data(0));
   EXPECT_EQ(kBlobfsMagic0, data[0]);
@@ -161,7 +156,7 @@ TEST_F(BlobfsTest, RunOperationReadWrite) {
   char data[kBlobfsBlockSize] = "something to test";
 
   storage::VmoBuffer buffer;
-  ASSERT_EQ(buffer.Initialize(fs_.get(), 1, kBlobfsBlockSize, "source"), ZX_OK);
+  ASSERT_EQ(buffer.Initialize(blobfs(), 1, kBlobfsBlockSize, "source"), ZX_OK);
   memcpy(buffer.Data(0), data, kBlobfsBlockSize);
 
   storage::Operation operation = {};
@@ -169,18 +164,18 @@ TEST_F(BlobfsTest, RunOperationReadWrite) {
   operation.dev_offset = 1;
   operation.length = 1;
 
-  ASSERT_EQ(fs_->RunOperation(operation, &buffer), ZX_OK);
+  ASSERT_EQ(blobfs()->RunOperation(operation, &buffer), ZX_OK);
 
   memset(buffer.Data(0), 'a', kBlobfsBlockSize);
   operation.type = storage::OperationType::kRead;
-  ASSERT_EQ(fs_->RunOperation(operation, &buffer), ZX_OK);
+  ASSERT_EQ(blobfs()->RunOperation(operation, &buffer), ZX_OK);
 
   ASSERT_EQ(memcmp(data, buffer.Data(0), kBlobfsBlockSize), 0);
 }
 
 TEST_F(BlobfsTest, TrimsData) {
   fbl::RefPtr<fs::Vnode> root;
-  ASSERT_EQ(fs_->OpenRootNode(&root), ZX_OK);
+  ASSERT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
   fs::Vnode* root_node = root.get();
 
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 1024);
@@ -198,7 +193,7 @@ TEST_F(BlobfsTest, TrimsData) {
   ASSERT_EQ(root_node->Unlink(info->path, false), ZX_OK);
 
   sync_completion_t completion;
-  fs_->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+  blobfs()->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
   EXPECT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
 
   ASSERT_TRUE(device_->saw_trim());
@@ -206,19 +201,19 @@ TEST_F(BlobfsTest, TrimsData) {
 
 TEST_F(BlobfsTest, GetNodeWithAnInvalidNodeIndexIsAnError) {
   uint32_t invalid_node_index = kMaxNodeId - 1;
-  auto node = fs_->GetNode(invalid_node_index);
+  auto node = blobfs()->GetNode(invalid_node_index);
   EXPECT_EQ(node.status_value(), ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(BlobfsTest, FreeInodeWithAnInvalidNodeIndexIsAnError) {
   BlobTransaction transaction;
   uint32_t invalid_node_index = kMaxNodeId - 1;
-  EXPECT_EQ(fs_->FreeInode(invalid_node_index, transaction), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(blobfs()->FreeInode(invalid_node_index, transaction), ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(BlobfsTest, BlockIteratorByNodeIndexWithAnInvalidNodeIndexIsAnError) {
   uint32_t invalid_node_index = kMaxNodeId - 1;
-  auto block_iterator = fs_->BlockIteratorByNodeIndex(invalid_node_index);
+  auto block_iterator = blobfs()->BlockIteratorByNodeIndex(invalid_node_index);
   EXPECT_EQ(block_iterator.status_value(), ZX_ERR_INVALID_ARGS);
 }
 
@@ -226,10 +221,7 @@ TEST_F(BlobfsTest, DeprecatedCompressionAlgorithmsReturnsError) {
   MountOptions options = {.compression_settings = {
                               .compression_algorithm = CompressionAlgorithm::LZ4,
                           }};
-
-  auto blobfs_or =
-      Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), nullptr, options);
-  EXPECT_EQ(blobfs_or.status_value(), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, Remount(options));
 }
 
 using BlobfsTestWithLargeDevice =
@@ -238,11 +230,11 @@ using BlobfsTestWithLargeDevice =
 
 TEST_F(BlobfsTestWithLargeDevice, WritingBlobLargerThanWritebackCapacitySucceeds) {
   fbl::RefPtr<fs::Vnode> root;
-  ASSERT_EQ(fs_->OpenRootNode(&root), ZX_OK);
+  ASSERT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
   fs::Vnode* root_node = root.get();
 
   std::unique_ptr<BlobInfo> info =
-      GenerateRealisticBlob("", (fs_->WriteBufferBlockCount() + 1) * kBlobfsBlockSize);
+      GenerateRealisticBlob("", (blobfs()->WriteBufferBlockCount() + 1) * kBlobfsBlockSize);
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root_node->Create(info->path + 1, 0, &file), ZX_OK);
   auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
@@ -281,7 +273,7 @@ class FsckAtEndOfEveryTransactionTest : public BlobfsTest {
 
 TEST_F(FsckAtEndOfEveryTransactionTest, FsckAtEndOfEveryTransaction) {
   fbl::RefPtr<fs::Vnode> root;
-  ASSERT_EQ(fs_->OpenRootNode(&root), ZX_OK);
+  ASSERT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
   fs::Vnode* root_node = root.get();
 
   std::unique_ptr<BlobInfo> info = GenerateRealisticBlob("", 500123);
@@ -354,7 +346,7 @@ bool CheckMap(const std::string& str, const std::map<size_t, uint64_t>& found,
 // creating a huge blob that occupies all the blocks freed by blob deletion. We measure/verify
 // metrics at each stage.
 // This test has an understanding about block allocation policy.
-TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
+TEST(BlobfsFragmentationTest, FragmentationMetrics) {
   struct Stats {
     int64_t total_nodes = 0;
     int64_t blobs_in_use = 0;
@@ -478,13 +470,7 @@ TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
 
   std::unique_ptr<Logger> logger = std::make_unique<Logger>();
   auto* logger_ptr = logger.get();
-  MountOptions mount_options{
-      .metrics = true,
-      .collector_factory =
-          [&logger] { return std::make_unique<cobalt_client::Collector>(std::move(logger)); },
-      .metrics_flush_time = zx::sec(5)};
 
-  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   auto device = MockBlockDevice::CreateAndFormat(
       {
           .blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd,
@@ -492,18 +478,21 @@ TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
       },
       kNumBlocks);
   ASSERT_TRUE(device);
-  loop.StartThread();
 
-  auto blobfs_or = Blobfs::Create(loop.dispatcher(), std::move(device), nullptr, mount_options);
-  ASSERT_TRUE(blobfs_or.is_ok());
-  std::unique_ptr<Blobfs> fs = std::move(blobfs_or.value());
+  MountOptions mount_options{
+      .metrics = true,
+      .collector_factory =
+          [&logger] { return std::make_unique<cobalt_client::Collector>(std::move(logger)); },
+      .metrics_flush_time = zx::sec(5)};
+  BlobfsTestSetup setup;
+  ASSERT_EQ(ZX_OK, setup.Mount(std::move(device), mount_options));
 
   srand(testing::UnitTest::GetInstance()->random_seed());
 
   Stats expected;
-  expected.total_nodes = static_cast<int64_t>(fs->Info().inode_count);
+  expected.total_nodes = static_cast<int64_t>(setup.blobfs()->Info().inode_count);
   expected.free_fragments[5] = 2;
-  logger_ptr->UpdateMetrics(fs.get());
+  logger_ptr->UpdateMetrics(setup.blobfs());
   auto found = logger_ptr->GetStats();
   ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
   ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
@@ -513,7 +502,7 @@ TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
   ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
 
   fbl::RefPtr<fs::Vnode> root;
-  ASSERT_EQ(fs->OpenRootNode(&root), ZX_OK);
+  ASSERT_EQ(setup.blobfs()->OpenRootNode(&root), ZX_OK);
   std::vector<std::unique_ptr<BlobInfo>> infos;
   constexpr int kSmallBlobCount = 10;
   infos.reserve(kSmallBlobCount);
@@ -528,7 +517,7 @@ TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
   expected.extents_per_blob[1] = kSmallBlobCount;
   expected.in_use_fragments[1] = kSmallBlobCount;
   expected.free_fragments[5] = 1;
-  logger_ptr->UpdateMetrics(fs.get());
+  logger_ptr->UpdateMetrics(setup.blobfs());
   found = logger_ptr->GetStats();
   ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
   ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
@@ -551,7 +540,7 @@ TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
   expected.free_fragments[1] = 3;
   expected.extents_per_blob[1] = kSmallBlobCount - kBlobsDeleted;
   expected.in_use_fragments[1] = kSmallBlobCount - kBlobsDeleted;
-  logger_ptr->UpdateMetrics(fs.get());
+  logger_ptr->UpdateMetrics(setup.blobfs());
   found = logger_ptr->GetStats();
   ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
   ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
@@ -580,7 +569,7 @@ TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
   expected.extents_per_blob[1] = expected.extents_per_blob[1] + 1;
   expected.in_use_fragments[1] = kSmallBlobCount - kBlobsDeleted + 3;
   expected.in_use_fragments[2] = 1;
-  logger_ptr->UpdateMetrics(fs.get());
+  logger_ptr->UpdateMetrics(setup.blobfs());
   found = logger_ptr->GetStats();
   ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
   ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));

@@ -28,6 +28,7 @@
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
+#include "src/storage/blobfs/test/blobfs_test_setup.h"
 #include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
@@ -45,8 +46,6 @@ using ::testing::TestWithParam;
 using ::testing::Values;
 using ::testing::ValuesIn;
 
-using block_client::FakeBlockDevice;
-
 using TestParamType = std::tuple<CompressionAlgorithm, BlobLayoutFormat>;
 
 class BlobLoaderTest : public TestWithParam<TestParamType> {
@@ -56,9 +55,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     std::tie(compression_algorithm, blob_layout_format_) = GetParam();
     srand(testing::UnitTest::GetInstance()->random_seed());
 
-    auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kTestBlockSize);
-    ASSERT_TRUE(device);
-    FilesystemOptions options{
+    FilesystemOptions fs_options{
         .blob_layout_format = blob_layout_format_,
     };
     switch (compression_algorithm) {
@@ -68,46 +65,19 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
       case CompressionAlgorithm::ZSTD:
       case CompressionAlgorithm::ZSTD_SEEKABLE:
       case CompressionAlgorithm::LZ4:
-        options.oldest_minor_version = kBlobfsMinorVersionBackupSuperblock;
+        fs_options.oldest_minor_version = kBlobfsMinorVersionBackupSuperblock;
         break;
     }
-    ASSERT_EQ(FormatFilesystem(device.get(), options), ZX_OK);
-
-    vfs_ = std::make_unique<fs::PagedVfs>(loop_.dispatcher(), 1);
-    ASSERT_TRUE(vfs_->Init().is_ok());
-
     options_ = {.compression_settings = {
                     .compression_algorithm = compression_algorithm,
                 }};
-    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), vfs_.get(), options_);
-    ASSERT_TRUE(blobfs_or.is_ok());
-    fs_ = std::move(blobfs_or.value());
+    ASSERT_EQ(ZX_OK, setup_.CreateFormatMount(kNumBlocks, kTestBlockSize, fs_options, options_));
 
     // Pre-seed with some random blobs.
     for (unsigned i = 0; i < 3; i++) {
       AddBlob(1024);
     }
-    ASSERT_EQ(Remount(), ZX_OK);
-  }
-
-  // Remounts the filesystem, which ensures writes are flushed and caches are wiped.
-  //
-  // Any Blob references that the test holds will need to be released before this function is
-  // called or the BlobCache destructor will assert that there are live blobs.
-  zx_status_t Remount() {
-    auto block_device = Blobfs::Destroy(std::move(fs_));
-    fs_.reset();
-
-    vfs_ = std::make_unique<fs::PagedVfs>(loop_.dispatcher(), 1);
-    if (auto init_result = vfs_->Init(); init_result.is_error())
-      return init_result.error_value();
-
-    auto blobfs_or =
-        Blobfs::Create(loop_.dispatcher(), std::move(block_device), vfs_.get(), options_);
-    if (blobfs_or.is_error())
-      return blobfs_or.error_value();
-    fs_ = std::move(blobfs_or.value());
-    return ZX_OK;
+    ASSERT_EQ(ZX_OK, setup_.Remount(options_));
   }
 
   // AddBlob creates and writes a blob of a specified size to the file system.
@@ -116,7 +86,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
   // of the on-disk blob.
   [[maybe_unused]] std::unique_ptr<BlobInfo> AddBlob(size_t sz) {
     fbl::RefPtr<fs::Vnode> root;
-    EXPECT_EQ(fs_->OpenRootNode(&root), ZX_OK);
+    EXPECT_EQ(setup_.blobfs()->OpenRootNode(&root), ZX_OK);
     fs::Vnode* root_node = root.get();
 
     std::unique_ptr<BlobInfo> info = GenerateRealisticBlob("", sz);
@@ -134,9 +104,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     return info;
   }
 
-  BlobLoader& loader() { return fs_->loader(); }
-
-  Blobfs* Fs() const { return fs_.get(); }
+  BlobLoader& loader() { return setup_.blobfs()->loader(); }
 
   CompressionAlgorithm ExpectedAlgorithm() const {
     return options_.compression_settings.compression_algorithm;
@@ -146,7 +114,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     Digest digest;
     fbl::RefPtr<CacheNode> node;
     EXPECT_EQ(digest.Parse(info.path), ZX_OK);
-    EXPECT_EQ(fs_->Cache().Lookup(digest, &node), ZX_OK);
+    EXPECT_EQ(setup_.blobfs()->Cache().Lookup(digest, &node), ZX_OK);
     return fbl::RefPtr<Blob>::Downcast(std::move(node));
   }
 
@@ -188,7 +156,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     Digest digest;
     fbl::RefPtr<CacheNode> node;
     EXPECT_EQ(digest.Parse(info.path), ZX_OK);
-    EXPECT_EQ(fs_->Cache().Lookup(digest, &node), ZX_OK);
+    EXPECT_EQ(setup_.blobfs()->Cache().Lookup(digest, &node), ZX_OK);
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(node));
     auto algorithm_or = AlgorithmForInode(vnode->GetNode());
     EXPECT_TRUE(algorithm_or.is_ok());
@@ -225,10 +193,8 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
   }
 
  protected:
-  async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
+  BlobfsTestSetup setup_;
 
-  std::unique_ptr<fs::PagedVfs> vfs_;
-  std::unique_ptr<Blobfs> fs_;
   MountOptions options_;
   BlobLayoutFormat blob_layout_format_;
 };
@@ -240,7 +206,7 @@ using BlobLoaderPagedTest = BlobLoaderTest;
 TEST_P(BlobLoaderTest, SmallBlob) {
   size_t blob_len = 1024;
   std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
-  ASSERT_EQ(Remount(), ZX_OK);
+  ASSERT_EQ(setup_.Remount(options_), ZX_OK);
   // We explicitly don't check the compression algorithm was respected here, since files this small
   // don't need to be compressed.
 
@@ -258,7 +224,7 @@ TEST_P(BlobLoaderTest, SmallBlob) {
 TEST_P(BlobLoaderPagedTest, SmallBlob) {
   size_t blob_len = 1024;
   std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
-  ASSERT_EQ(Remount(), ZX_OK);
+  ASSERT_EQ(setup_.Remount(options_), ZX_OK);
   // We explicitly don't check the compression algorithm was respected here, since files this small
   // don't need to be compressed.
 
@@ -277,7 +243,7 @@ TEST_P(BlobLoaderPagedTest, SmallBlob) {
 TEST_P(BlobLoaderTest, LargeBlob) {
   size_t blob_len = 1 << 18;
   std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
-  ASSERT_EQ(Remount(), ZX_OK);
+  ASSERT_EQ(setup_.Remount(options_), ZX_OK);
   ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
 
   auto result = loader().LoadBlob(LookupInode(*info), nullptr);
@@ -293,7 +259,7 @@ TEST_P(BlobLoaderTest, LargeBlob) {
 TEST_P(BlobLoaderTest, LargeBlobWithNonAlignedLength) {
   size_t blob_len = (1 << 18) - 1;
   std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
-  ASSERT_EQ(Remount(), ZX_OK);
+  ASSERT_EQ(setup_.Remount(options_), ZX_OK);
   ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
 
   auto result = loader().LoadBlob(LookupInode(*info), nullptr);
@@ -309,7 +275,7 @@ TEST_P(BlobLoaderTest, LargeBlobWithNonAlignedLength) {
 TEST_P(BlobLoaderPagedTest, LargeBlob) {
   size_t blob_len = 1 << 18;
   std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
-  ASSERT_EQ(Remount(), ZX_OK);
+  ASSERT_EQ(setup_.Remount(options_), ZX_OK);
   ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
 
   auto blob = LookupBlob(*info);
@@ -324,7 +290,7 @@ TEST_P(BlobLoaderPagedTest, LargeBlob) {
 TEST_P(BlobLoaderPagedTest, LargeBlobWithNonAlignedLength) {
   size_t blob_len = (1 << 18) - 1;
   std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
-  ASSERT_EQ(Remount(), ZX_OK);
+  ASSERT_EQ(setup_.Remount(options_), ZX_OK);
   ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
 
   auto blob = LookupBlob(*info);
@@ -339,10 +305,10 @@ TEST_P(BlobLoaderPagedTest, LargeBlobWithNonAlignedLength) {
 TEST_P(BlobLoaderTest, MediumBlobWithRoomForMerkleTree) {
   // In the compact layout the Merkle tree can fit perfectly into the room leftover at the end of
   // the data.
-  ASSERT_EQ(fs_->Info().block_size, digest::kDefaultNodeSize);
+  ASSERT_EQ(setup_.blobfs()->Info().block_size, digest::kDefaultNodeSize);
   size_t blob_len = (digest::kDefaultNodeSize - digest::kSha256Length) * 3;
   std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
-  ASSERT_EQ(Remount(), ZX_OK);
+  ASSERT_EQ(setup_.Remount(options_), ZX_OK);
 
   auto result = loader().LoadBlob(LookupInode(*info), nullptr);
   ASSERT_TRUE(result.is_ok());
@@ -367,24 +333,25 @@ TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
   uint8_t corrupt_merkle_root[digest::kSha256Length] = "-corrupt-null-blob-merkle-root-";
   {
     // Corrupt the null blob's merkle root.
-    // |inode| holds a pointer into |fs_| and needs to be destroyed before remounting.
-    auto inode = fs_->GetNode(blob->Ino());
+    // |inode| holds a pointer into |blobfs()| and needs to be destroyed before remounting.
+    auto inode = setup_.blobfs()->GetNode(blob->Ino());
     memcpy(inode->merkle_root_hash, corrupt_merkle_root, sizeof(corrupt_merkle_root));
     BlobTransaction transaction;
     uint64_t block = (blob->Ino() * kBlobfsInodeSize) / kBlobfsBlockSize;
-    transaction.AddOperation({.vmo = zx::unowned_vmo(fs_->GetAllocator()->GetNodeMapVmo().get()),
-                              .op = {
-                                  .type = storage::OperationType::kWrite,
-                                  .vmo_offset = block,
-                                  .dev_offset = NodeMapStartBlock(fs_->Info()) + block,
-                                  .length = 1,
-                              }});
-    transaction.Commit(*fs_->journal());
+    transaction.AddOperation(
+        {.vmo = zx::unowned_vmo(setup_.blobfs()->GetAllocator()->GetNodeMapVmo().get()),
+         .op = {
+             .type = storage::OperationType::kWrite,
+             .vmo_offset = block,
+             .dev_offset = NodeMapStartBlock(setup_.blobfs()->Info()) + block,
+             .length = 1,
+         }});
+    transaction.Commit(*setup_.blobfs()->journal());
   }
 
   // Remount the filesystem so the node cache will pickup the new name for the blob.
   blob.reset();  // Required for Remount() to succeed.
-  ASSERT_EQ(Remount(), ZX_OK);
+  ASSERT_EQ(setup_.Remount(options_), ZX_OK);
 
   // Verify the empty blob can be found by the corrupt name.
   BlobInfo corrupt_info;
@@ -412,12 +379,12 @@ TEST_P(BlobLoaderPagedTest, LoadBlobPagedWithAnInvalidNodeIndexIsAnError) {
 
 TEST_P(BlobLoaderTest, LoadBlobWithACorruptNextNodeIndexIsAnError) {
   std::unique_ptr<BlobInfo> info = AddBlob(1 << 14);
-  ASSERT_EQ(Remount(), ZX_OK);
+  ASSERT_EQ(setup_.Remount(options_), ZX_OK);
 
   // Corrupt the next node index of the inode.
   uint32_t invalid_node_index = kMaxNodeId - 1;
   uint32_t node_index = LookupInode(*info);
-  auto inode = fs_->GetAllocator()->GetNode(node_index);
+  auto inode = setup_.blobfs()->GetAllocator()->GetNode(node_index);
   ASSERT_TRUE(inode.is_ok());
   inode->header.next_node = invalid_node_index;
   inode->extent_count = 2;
