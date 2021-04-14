@@ -124,6 +124,8 @@ if (is_linux || is_mac) {
   }
 
   system_test_reboot_suite("nuc-release-reboot-longevity") {
+    service_account = _service_account
+
     environments = [
       {
         dimensions = {
