@@ -5,10 +5,15 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.gdc") {
+  fidl_only = true
   sources = [ "gdc.banjo" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.camerahwaccel",
     "//sdk/banjo/fuchsia.sysmem",
     "//sdk/banjo/zx",
   ]
+}
+
+group("fuchsia.hardware.gdc_banjo_cpp") {
+  public_deps = [ ":fuchsia.hardware.gdc_banjo_cpp_2" ]
 }

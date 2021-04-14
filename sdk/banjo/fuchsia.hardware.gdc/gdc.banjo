@@ -7,7 +7,7 @@ using zx;
 using fuchsia.hardware.camerahwaccel;
 using fuchsia.sysmem;
 
-struct GdcConfigInfo {
+resource struct GdcConfigInfo {
     zx.handle:VMO config_vmo;
     uint32 size;
 };
@@ -25,9 +25,9 @@ protocol Gdc {
     InitTask(fuchsia.sysmem.BufferCollectionInfo_2 input_buffer_collection,
              fuchsia.sysmem.BufferCollectionInfo_2 output_buffer_collection,
              fuchsia.sysmem.ImageFormat_2	input_image_format,
-             vector<fuchsia.sysmem.ImageFormat_2> output_image_format_table,
+             vector<fuchsia.sysmem.ImageFormat_2>:MAX output_image_format_table,
              uint32 output_image_format_index,
-             vector<GdcConfigInfo> config_vmos,
+             vector<GdcConfigInfo>:MAX config_vmos,
              fuchsia.hardware.camerahwaccel.HwAccelFrameCallback frame_callback,
              fuchsia.hardware.camerahwaccel.HwAccelResChangeCallback res_callback,
              fuchsia.hardware.camerahwaccel.HwAccelRemoveTaskCallback task_remove_callback)
