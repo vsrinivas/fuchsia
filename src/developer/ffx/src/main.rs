@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    analytics::{add_crash_event, add_launch_event, get_notice},
+    analytics::{add_crash_event, get_notice},
     anyhow::{anyhow, Context, Result},
     async_once::Once,
-    ffx_core::{ffx_bail, ffx_error, init_metrics_svc, FfxError},
+    ffx_core::metrics::{add_fx_launch_event, init_metrics_svc},
+    ffx_core::{ffx_bail, ffx_error, FfxError},
     ffx_daemon::{get_daemon_proxy_single_link, is_daemon_running},
     ffx_lib_args::{from_env, Ffx},
     ffx_lib_sub_command::Subcommand,
@@ -274,14 +275,6 @@ fn sha256_digest<R: Read>(mut reader: R) -> Result<Digest> {
     Ok(context.finish())
 }
 
-fn get_launch_args() -> String {
-    let args: Vec<String> = std::env::args().collect();
-    // drop arg[0]: executable with hard path
-    // TODO(fxb/71028): do we want to break out subcommands for analytics?
-    let args_str = &args[1..].join(" ");
-    format!("{}", &args_str)
-}
-
 async fn run() -> Result<()> {
     hoist::disable_autoconnect();
     let app: Ffx = from_env();
@@ -309,8 +302,7 @@ async fn run() -> Result<()> {
     let analytics_start = Instant::now();
 
     let analytics_task = fuchsia_async::Task::spawn(async {
-        let launch_args = get_launch_args();
-        if let Err(e) = add_launch_event(Some(&launch_args)).await {
+        if let Err(e) = add_fx_launch_event().await {
             log::error!("metrics submission failed: {}", e);
         }
         Instant::now()

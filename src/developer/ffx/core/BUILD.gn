@@ -32,7 +32,10 @@ if (is_host) {
 
     non_rust_deps = [ "//third_party/boringssl" ]
 
-    sources = [ "src/lib.rs" ]
+    sources = [
+      "src/lib.rs",
+      "src/metrics.rs",
+    ]
   }
 }
 
