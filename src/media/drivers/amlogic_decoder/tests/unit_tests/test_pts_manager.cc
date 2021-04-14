@@ -6,6 +6,9 @@
 
 #include "pts_manager.h"
 
+namespace amlogic_decoder {
+namespace test {
+
 // This particular test could reasonably be made to run in a non-driver process, but keeping it with
 // the rest of the driver's unit tests for now.  This keeps the unit tests together, avoids adding
 // a whole binary just for this test code, and lets any LOG() macro output work normally for easier
@@ -67,3 +70,6 @@ TEST(PtsManagerUnitTest, KeepingMaxEntriesButNotMore) {
   EXPECT_FALSE(result_absent.has_pts());
   EXPECT_EQ(0ull, result_absent.pts());
 }
+
+}  // namespace test
+}  // namespace amlogic_decoder

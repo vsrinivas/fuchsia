@@ -16,6 +16,8 @@
 #include "codec_adapter_vp9.h"
 #include "device_ctx.h"
 
+namespace amlogic_decoder {
+
 namespace {
 
 struct CodecAdapterFactory {
@@ -357,3 +359,5 @@ void LocalCodecFactory::AttachLifetimeTracking(zx::eventpair codec_end) {
   }
   lifetime_tracking_.emplace_back(std::move(codec_end));
 }
+
+}  // namespace amlogic_decoder

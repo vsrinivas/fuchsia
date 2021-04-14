@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DECODER_INSTANCE_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DECODER_INSTANCE_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DECODER_INSTANCE_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DECODER_INSTANCE_H_
 
 #include "decoder_core.h"
 #include "stream_buffer.h"
 #include "video_decoder.h"
+
+namespace amlogic_decoder {
 
 class DecoderInstance {
  public:
@@ -35,4 +37,6 @@ class DecoderInstance {
   DecoderCore* core_ = nullptr;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DECODER_INSTANCE_H_
+}  // namespace amlogic_decoder
+
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DECODER_INSTANCE_H_

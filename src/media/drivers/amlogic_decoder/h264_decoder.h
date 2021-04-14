@@ -13,6 +13,8 @@
 #include "src/media/lib/internal_buffer/internal_buffer.h"
 #include "video_decoder.h"
 
+namespace amlogic_decoder {
+
 class H264Decoder : public VideoDecoder {
  public:
   // This is the state of the actual firmware.
@@ -85,5 +87,7 @@ class H264Decoder : public VideoDecoder {
   std::vector<ReferenceFrame> video_frames_;
   std::vector<std::shared_ptr<VideoFrame>> returned_frames_;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_DECODER_H_

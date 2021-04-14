@@ -15,6 +15,8 @@
 #include "util.h"
 #include "video_decoder.h"
 
+namespace amlogic_decoder {
+
 namespace {
 
 constexpr uint32_t kFirmwareSize = 4 * 4096;
@@ -503,3 +505,5 @@ zx_status_t Vdec1::RestoreInputContext(InputContext* context) {
   fifo_control.WriteTo(mmio()->dosbus);
   return ZX_OK;
 }
+
+}  // namespace amlogic_decoder

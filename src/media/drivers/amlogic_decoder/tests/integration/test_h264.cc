@@ -18,7 +18,10 @@
 #include "vdec1.h"
 #include "video_frame_helpers.h"
 
-static void ValidateInputRegisters(AmlogicVideo* video) {
+namespace amlogic_decoder {
+namespace test {
+
+void ValidateInputRegisters(AmlogicVideo* video) {
   // Check that input is the correct endianness.
   EXPECT_EQ(7u, VldMemVififoControl::Get().ReadFrom(video->mmio()->dosbus).endianness());
 }
@@ -400,3 +403,6 @@ TEST(H264, DecodeMalformedBadReferenceCount) {
   // Parameters found through fuzzing. Gives an invalid number of reference frames.
   TestH264::DecodeMalformed(591, 141, false);
 }
+
+}  // namespace test
+}  // namespace amlogic_decoder

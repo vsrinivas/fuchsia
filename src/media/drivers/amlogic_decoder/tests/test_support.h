@@ -12,6 +12,9 @@
 
 #include <memory>
 
+namespace amlogic_decoder {
+namespace test {
+
 class TestSupport {
  public:
   struct FirmwareFile {
@@ -29,5 +32,8 @@ class TestSupport {
 
   static std::unique_ptr<FirmwareFile> LoadFirmwareFile(const char* name);
 };
+
+}  // namespace test
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_TEST_SUPPORT_H_

@@ -20,6 +20,8 @@
 #include "src/media/lib/memory_barriers/memory_barriers.h"
 #include "util.h"
 
+namespace amlogic_decoder {
+
 // TODO(fxbug.dev/35200):
 //
 // Change these to InternalBuffer:
@@ -863,3 +865,5 @@ void H264Decoder::OnFatalError() {
     client_->OnError();
   }
 }
+
+}  // namespace amlogic_decoder

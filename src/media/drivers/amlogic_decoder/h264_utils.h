@@ -9,7 +9,11 @@
 
 #include <fbl/span.h>
 
+namespace amlogic_decoder {
+
 std::vector<std::vector<uint8_t>> SplitNalUnits(const uint8_t* start_data, uint32_t size);
 uint8_t GetNalUnitType(fbl::Span<const uint8_t> nal_unit);
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_UTILS_H_

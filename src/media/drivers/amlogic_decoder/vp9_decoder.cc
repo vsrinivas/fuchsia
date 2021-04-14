@@ -25,6 +25,8 @@
 #include "vp9_utils.h"
 #include "watchdog.h"
 
+namespace amlogic_decoder {
+
 using HevcDecStatusReg = HevcAssistScratch0;
 using HevcRpmBuffer = HevcAssistScratch1;
 using HevcShortTermRps = HevcAssistScratch2;
@@ -1739,3 +1741,5 @@ void Vp9Decoder::OnSignaledWatchdog() {
 zx_status_t Vp9Decoder::SetupProtection() {
   return owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kHevc, is_secure());
 }
+
+}  // namespace amlogic_decoder

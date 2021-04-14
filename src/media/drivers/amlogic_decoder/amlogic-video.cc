@@ -40,6 +40,8 @@
 #include "vdec1.h"
 #include "video_firmware_session.h"
 
+namespace amlogic_decoder {
+
 // TODO(fxbug.dev/35200):
 //
 // AllocateIoBuffer() - only used by VP9 - switch to InternalBuffer when we do zero copy on input
@@ -1007,3 +1009,5 @@ zx_status_t AmlogicVideo::InitDecoder() {
 
   return ZX_OK;
 }
+
+}  // namespace amlogic_decoder

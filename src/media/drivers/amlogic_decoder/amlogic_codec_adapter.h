@@ -9,6 +9,8 @@
 #include "lib/media/codec_impl/codec_adapter.h"
 #include "video_decoder.h"
 
+namespace amlogic_decoder {
+
 class AmlogicCodecAdapter : public CodecAdapter, public VideoDecoder::Client {
  public:
   AmlogicCodecAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
@@ -21,5 +23,7 @@ class AmlogicCodecAdapter : public CodecAdapter, public VideoDecoder::Client {
  protected:
   AmlogicDecoderTestHooks test_hooks_;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_AMLOGIC_CODEC_ADAPTER_H_

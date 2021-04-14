@@ -13,6 +13,8 @@
 #include "registers.h"
 #include "video_decoder.h"
 
+namespace amlogic_decoder {
+
 class Mpeg12Decoder : public VideoDecoder {
  public:
   explicit Mpeg12Decoder(Owner* owner, Client* client)
@@ -48,5 +50,7 @@ class Mpeg12Decoder : public VideoDecoder {
   std::vector<std::shared_ptr<VideoFrame>> returned_frames_;
   io_buffer_t workspace_buffer_ = {};
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_MPEG12_DECODER_H_

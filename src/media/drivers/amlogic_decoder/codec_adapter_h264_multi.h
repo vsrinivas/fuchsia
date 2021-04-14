@@ -17,9 +17,13 @@
 #include "h264_multi_decoder.h"
 #include "video_decoder.h"
 
+// From codec_impl
+struct VideoFrame;
+
+namespace amlogic_decoder {
+
 class AmlogicVideo;
 class DeviceCtx;
-struct VideoFrame;
 class CodecAdapterH264Multi : public AmlogicCodecAdapter,
                               public H264MultiDecoder::FrameDataProvider {
  public:
@@ -182,5 +186,7 @@ class CodecAdapterH264Multi : public AmlogicCodecAdapter,
   CodecAdapterH264Multi() = delete;
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterH264Multi);
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_H264_MULTI_H_

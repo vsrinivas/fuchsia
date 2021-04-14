@@ -19,6 +19,9 @@
 #include "vp9_decoder.h"
 #include "vp9_utils.h"
 
+namespace amlogic_decoder {
+namespace test {
+
 struct __attribute__((__packed__)) IvfHeader {
   uint32_t signature;
   uint16_t version;
@@ -709,3 +712,6 @@ TEST(VP9, DecodeMalformedLarge) {
   TestVP9::DecodeMalformed("video_test_data/test-25fps.vp9",
                            {{kWidthModificationOffset, 0x0f}, {kHeightModificationOffset, 0xff}});
 }
+
+}  // namespace test
+}  // namespace amlogic_decoder

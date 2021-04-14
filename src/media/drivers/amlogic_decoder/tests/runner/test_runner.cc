@@ -9,7 +9,9 @@
 
 #include <zxtest/zxtest.h>
 
-namespace {
+namespace amlogic_decoder {
+namespace test {
+
 class TestDeviceBase {
  public:
   TestDeviceBase() {}
@@ -128,4 +130,6 @@ TEST(TestRunner, RunTests) {
   // Try to rebind the correct driver.
   TestDeviceBase::BindDriver(parent_device, "/system/driver/amlogic_video_decoder.so");
 }
-}  // namespace
+
+}  // namespace test
+}  // namespace amlogic_decoder

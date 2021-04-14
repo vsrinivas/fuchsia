@@ -10,6 +10,8 @@
 
 #include "macros.h"
 
+namespace amlogic_decoder {
+
 FirmwareBlob::~FirmwareBlob() {
   if (vmo_)
     zx::vmar::root_self()->unmap(ptr_, fw_size_);
@@ -219,3 +221,5 @@ void FirmwareBlob::LoadFakeFirmwareForTesting(FirmwareType firmware_type, uint8_
   firmware_code_[format_name].size = size;
   firmware_code_[format_name].offset = 0;
 }
+
+}  // namespace amlogic_decoder

@@ -13,6 +13,8 @@
 #include <chrono>
 #include <thread>
 
+namespace amlogic_decoder {
+
 // Using the global logger helps keep messages in order when debugging interaction between driver
 // code and library code used by the driver which is using the global logger (via chromium_utils.h).
 //
@@ -92,5 +94,7 @@ __WARN_UNUSED_RESULT bool SpinWaitForRegister(DurationType timeout, T condition)
 }
 
 inline void DebugWrite(const char* log) { zx_debug_write(log, strlen(log)); }
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_MACROS_H_

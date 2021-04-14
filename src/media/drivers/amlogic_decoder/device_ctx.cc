@@ -14,6 +14,8 @@
 #include "macros.h"
 #include "sdk/lib/sys/cpp/service_directory.h"
 
+namespace amlogic_decoder {
+
 DeviceCtx::DeviceCtx(DriverCtx* driver, zx_device_t* parent)
     : DdkDeviceType(parent),
       driver_(driver),
@@ -62,3 +64,5 @@ void DeviceCtx::SetAuxServiceDirectory(fidl::ClientEnd<fuchsia_io::Directory> di
 }
 
 CodecMetrics& DeviceCtx::metrics() { return driver_->metrics(); }
+
+}  // namespace amlogic_decoder

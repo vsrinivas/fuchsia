@@ -14,6 +14,8 @@
 #include "stream_buffer.h"
 #include "util.h"
 
+namespace amlogic_decoder {
+
 Parser::Parser(Owner* owner, zx::handle interrupt_handle)
     : owner_(owner), interrupt_handle_(std::move(interrupt_handle)) {
   zx::event::create(0, &parser_finished_event_);
@@ -370,3 +372,5 @@ void Parser::CancelParsing() {
   // ZX_USER_SIGNAL_1 must be un-signaled while parser_running_ is false.
   parser_finished_event_.signal(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1, 0);
 }
+
+}  // namespace amlogic_decoder

@@ -6,6 +6,8 @@
 
 #include "device_ctx.h"
 
+namespace amlogic_decoder {
+
 CodecAdapterMpeg2::CodecAdapterMpeg2(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
                                      DeviceCtx* device)
     : CodecAdapter(lock, codec_adapter_events), device_(device), video_(device_->video()) {
@@ -105,3 +107,5 @@ void CodecAdapterMpeg2::CoreCodecMidStreamOutputBufferReConfigPrepare() {
 void CodecAdapterMpeg2::CoreCodecMidStreamOutputBufferReConfigFinish() {
   ZX_DEBUG_ASSERT_MSG(false, "not yet implemented");
 }
+
+}  // namespace amlogic_decoder

@@ -12,6 +12,8 @@
 #include <map>
 #include <string>
 
+namespace amlogic_decoder {
+
 class FirmwareBlob {
  public:
   // Some of these values are used in communicating with the TEE to switch firmware; these values
@@ -111,5 +113,7 @@ class FirmwareBlob {
   uint64_t fw_size_ = 0;
   std::map<std::string, FirmwareCode> firmware_code_;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_FIRMWARE_BLOB_H_

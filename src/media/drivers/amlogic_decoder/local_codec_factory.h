@@ -12,6 +12,8 @@
 
 #include "lib/zx/eventpair.h"
 
+namespace amlogic_decoder {
+
 // TODO(dustingreen): Concider pulling LocalCodecFactory out into a source_set
 // that can be used by other HW codec drivers (in contrast to CodecImpl source
 // set which will need to remain usable for both SW and HW codecs).
@@ -95,5 +97,7 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(LocalCodecFactory);
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_LOCAL_CODEC_FACTORY_H_

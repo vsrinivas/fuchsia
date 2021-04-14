@@ -16,9 +16,13 @@
 #include "amlogic_codec_adapter.h"
 #include "video_decoder.h"
 
+// From codec_impl
+struct VideoFrame;
+
+namespace amlogic_decoder {
+
 class AmlogicVideo;
 class DeviceCtx;
-struct VideoFrame;
 class CodecAdapterH264 : public AmlogicCodecAdapter {
  public:
   explicit CodecAdapterH264(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
@@ -186,5 +190,7 @@ class CodecAdapterH264 : public AmlogicCodecAdapter {
   CodecAdapterH264() = delete;
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterH264);
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_H264_H_

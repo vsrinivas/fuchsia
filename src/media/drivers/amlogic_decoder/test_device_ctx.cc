@@ -15,6 +15,9 @@
 #include "macros.h"
 #include "tests/test_support.h"
 
+namespace amlogic_decoder {
+namespace test {
+
 class AmlogicTestDevice;
 using DdkDeviceType = ddk::Device<AmlogicTestDevice, ddk::Messageable>;
 
@@ -49,8 +52,11 @@ class AmlogicTestDevice : public fidl::WireInterface<fuchsia_hardware_mediacodec
   }
 };
 
+}  // namespace test
+}  // namespace amlogic_decoder
+
 extern "C" zx_status_t test_amlogic_video_bind(void* ctx, zx_device_t* parent) {
-  auto test_device = std::make_unique<AmlogicTestDevice>(parent);
+  auto test_device = std::make_unique<amlogic_decoder::test::AmlogicTestDevice>(parent);
 
   if (test_device->Bind() != ZX_OK) {
     return ZX_ERR_INTERNAL;

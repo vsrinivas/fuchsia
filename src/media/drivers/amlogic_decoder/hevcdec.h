@@ -9,6 +9,8 @@
 
 #include "decoder_core.h"
 
+namespace amlogic_decoder {
+
 // Used for both HEVC and VP9 video.
 class HevcDec : public DecoderCore {
  public:
@@ -51,5 +53,7 @@ class HevcDec : public DecoderCore {
   bool powered_on_ = false;
   bool decoding_started_ = false;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_HEVCDEC_H_

@@ -9,6 +9,9 @@
 
 #include <gtest/gtest.h>
 
+namespace amlogic_decoder {
+namespace test {
+
 static zx_device_t* g_parent_device;
 
 TestSupport::FirmwareFile::~FirmwareFile() {
@@ -44,3 +47,6 @@ std::unique_ptr<TestSupport::FirmwareFile> TestSupport::LoadFirmwareFile(const c
   firmware_file->ptr = (uint8_t*)ptr;
   return firmware_file;
 }
+
+}  // namespace test
+}  // namespace amlogic_decoder

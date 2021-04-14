@@ -37,6 +37,16 @@
 #include "video_decoder.h"
 #include "watchdog.h"
 
+namespace amlogic_decoder {
+
+// Used for friend declarations below
+namespace test {
+class TestH264;
+class TestMpeg2;
+class TestVP9;
+class TestFrameProvider;
+}  // namespace test
+
 class AmlogicVideo final : public VideoDecoder::Owner,
                            public DecoderCore::Owner,
                            public CanvasEntry::Owner,
@@ -173,10 +183,10 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> ConnectToSysmem();
 
  private:
-  friend class TestH264;
-  friend class TestMpeg2;
-  friend class TestVP9;
-  friend class TestFrameProvider;
+  friend class test::TestH264;
+  friend class test::TestMpeg2;
+  friend class test::TestVP9;
+  friend class test::TestFrameProvider;
 
   zx_status_t ConnectToTrustedApp(const uuid_t* uuid, fuchsia::tee::ApplicationSyncPtr* tee);
 
@@ -268,5 +278,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   __TA_GUARDED(video_decoder_lock_)
   Watchdog watchdog_{this};
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_

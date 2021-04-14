@@ -15,6 +15,8 @@
 
 #include <tee-client-api/tee-client-types.h>
 
+namespace amlogic_decoder {
+
 class SecmemSession {
  public:
   static fit::result<SecmemSession, fuchsia::tee::ApplicationSyncPtr> TryOpen(
@@ -50,5 +52,7 @@ class SecmemSession {
   uint32_t session_id_;
   fuchsia::tee::ApplicationSyncPtr tee_connection_;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_SECMEM_SESSION_H_

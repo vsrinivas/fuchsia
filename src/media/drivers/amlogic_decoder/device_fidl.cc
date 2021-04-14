@@ -9,6 +9,8 @@
 
 #include "device_ctx.h"
 
+namespace amlogic_decoder {
+
 DeviceFidl::DeviceFidl(DeviceCtx* device) : device_(device) {
   // Nothing else to do here.
 }
@@ -65,3 +67,5 @@ void DeviceFidl::DeleteFactory(LocalCodecFactory* raw_factory_ptr) {
   ZX_DEBUG_ASSERT(iter != factories_.end());
   factories_.erase(iter);
 }
+
+}  // namespace amlogic_decoder

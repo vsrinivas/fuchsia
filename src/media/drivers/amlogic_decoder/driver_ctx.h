@@ -13,6 +13,8 @@
 
 #include <memory>
 
+namespace amlogic_decoder {
+
 // The driver is split up into separate concerns, with one instance of this
 // class unifying the lifetime of those concerns (including the creation and
 // destruction order).
@@ -70,5 +72,7 @@ class DriverCtx {
   // Cobalt:
   CodecMetrics metrics_;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DRIVER_CTX_H_

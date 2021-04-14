@@ -15,7 +15,10 @@
 #include "tests/test_support.h"
 #include "vdec1.h"
 
+namespace amlogic_decoder {
+namespace test {
 namespace {
+
 fuchsia::sysmem::AllocatorSyncPtr ConnectToSysmem() {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
@@ -172,3 +175,6 @@ TEST_F(Vdec1UnitTest, PowerOnSm1) {
 
   decoder->PowerOff();
 }
+
+}  // namespace test
+}  // namespace amlogic_decoder

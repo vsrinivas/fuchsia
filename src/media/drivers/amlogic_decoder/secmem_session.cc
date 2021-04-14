@@ -14,6 +14,8 @@
 
 #include "macros.h"
 
+namespace amlogic_decoder {
+
 // TODO(dustingreen): We could potentially share code with aml-securemem for this class - currently
 // we don't mainly because of logging differences.
 
@@ -302,3 +304,5 @@ zx_status_t SecmemSession::GetVp9HeaderSize(zx_paddr_t vp9_paddr, uint32_t befor
   *after_size = before_size + header_size_result.value();
   return ZX_OK;
 }
+
+}  // namespace amlogic_decoder

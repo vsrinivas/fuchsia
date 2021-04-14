@@ -19,6 +19,15 @@ struct loop_filter_info_n;
 struct loopfilter;
 struct segmentation;
 
+namespace amlogic_decoder {
+
+// Used for friend declarations below
+namespace test {
+class Vp9UnitTest;
+class TestVP9;
+class TestFrameProvider;
+}  // namespace test
+
 class Vp9Decoder : public VideoDecoder {
  public:
   enum class InputType {
@@ -134,9 +143,9 @@ class Vp9Decoder : public VideoDecoder {
   void InjectInitializationFault() { should_inject_initialization_fault_for_testing_ = true; }
 
  private:
-  friend class Vp9UnitTest;
-  friend class TestVP9;
-  friend class TestFrameProvider;
+  friend class test::Vp9UnitTest;
+  friend class test::TestVP9;
+  friend class test::TestFrameProvider;
   friend class CodecAdapterVp9;
   class WorkingBuffer;
 
@@ -369,5 +378,7 @@ class Vp9Decoder : public VideoDecoder {
 
   bool has_keyframe_ = false;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VP9_DECODER_H_

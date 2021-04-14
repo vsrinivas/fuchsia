@@ -18,9 +18,18 @@
 #include "video_decoder.h"
 #include "vp9_decoder.h"
 
+// From codec_impl
+struct VideoFrame;
+
+namespace amlogic_decoder {
+
+// Used for friend declarations below
+namespace test {
+class CodecAdapterVp9Test;
+}  // namespace test
+
 class AmlogicVideo;
 class DeviceCtx;
-struct VideoFrame;
 
 class CodecAdapterVp9 : public AmlogicCodecAdapter, public Vp9Decoder::FrameDataProvider {
  public:
@@ -86,7 +95,7 @@ class CodecAdapterVp9 : public AmlogicCodecAdapter, public Vp9Decoder::FrameData
                                              uint32_t display_height) override;
 
  private:
-  friend class CodecAdapterVp9Test;
+  friend class test::CodecAdapterVp9Test;
 
   void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run);
   void PostToInputProcessingThread(fit::closure to_run);
@@ -188,5 +197,7 @@ class CodecAdapterVp9 : public AmlogicCodecAdapter, public Vp9Decoder::FrameData
   CodecAdapterVp9() = delete;
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterVp9);
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_VP9_H_

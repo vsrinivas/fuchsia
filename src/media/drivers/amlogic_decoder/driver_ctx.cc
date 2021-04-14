@@ -22,17 +22,17 @@ zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent);
 }
 
 extern zx_status_t amlogic_video_init(void** out_ctx) {
-  DriverCtx* driver_ctx = new DriverCtx();
+  amlogic_decoder::DriverCtx* driver_ctx = new amlogic_decoder::DriverCtx();
   *out_ctx = reinterpret_cast<void*>(driver_ctx);
   return ZX_OK;
 }
 
 // ctx is the driver ctx (not device ctx)
 zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
-  DriverCtx* driver = reinterpret_cast<DriverCtx*>(ctx);
-  auto device = std::make_unique<DeviceCtx>(driver, parent);
+  amlogic_decoder::DriverCtx* driver = reinterpret_cast<amlogic_decoder::DriverCtx*>(ctx);
+  auto device = std::make_unique<amlogic_decoder::DeviceCtx>(driver, parent);
 
-  AmlogicVideo* video = device->video();
+  amlogic_decoder::AmlogicVideo* video = device->video();
 
   zx_status_t status = video->InitRegisters(parent);
   if (status != ZX_OK) {
@@ -63,6 +63,8 @@ zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
 }
 
 }  // namespace
+
+namespace amlogic_decoder {
 
 DriverCtx::DriverCtx() {
   // We use kAsyncLoopConfigNoAttachToCurrentThread here, because we don't really want
@@ -153,3 +155,5 @@ void DriverCtx::SetAuxServiceDirectory(
 }
 
 CodecMetrics& DriverCtx::metrics() { return metrics_; }
+
+}  // namespace amlogic_decoder

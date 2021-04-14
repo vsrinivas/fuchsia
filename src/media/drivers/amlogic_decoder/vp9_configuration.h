@@ -5,8 +5,12 @@
 #ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VP9_CONFIGURATION_H_
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VP9_CONFIGURATION_H_
 
+namespace amlogic_decoder {
+
 // For local experimentation purposes, make it easy to specify larger buffers, but use smaller
 // buffers by default.
 constexpr bool kUseLessRam = true;
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VP9_CONFIGURATION_H_

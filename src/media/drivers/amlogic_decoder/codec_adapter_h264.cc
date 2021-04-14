@@ -14,9 +14,11 @@
 #include "device_ctx.h"
 #include "h264_decoder.h"
 #include "macros.h"
-#include "src/media/lib/metrics/metrics.cb.h"
 #include "pts_manager.h"
+#include "src/media/lib/metrics/metrics.cb.h"
 #include "vdec1.h"
+
+namespace amlogic_decoder {
 
 // TODO(dustingreen):
 //   * Split InitializeStream() into two parts, one to get the format info from
@@ -1384,3 +1386,5 @@ bool CodecAdapterH264::IsOutputSecure() {
   ZX_DEBUG_ASSERT(IsPortSecurePermitted(kOutputPort) == IsPortSecureRequired(kOutputPort));
   return IsPortSecureRequired(kOutputPort);
 }
+
+}  // namespace amlogic_decoder

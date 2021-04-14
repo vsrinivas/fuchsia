@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_WATCHDOG_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_WATCHDOG_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_WATCHDOG_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_WATCHDOG_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
@@ -13,6 +13,8 @@
 #include <mutex>
 
 #include "video_decoder.h"
+
+namespace amlogic_decoder {
 
 class Watchdog {
  public:
@@ -49,4 +51,6 @@ class Watchdog {
   async::Loop loop_;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_WATCHDOG_H_
+}  // namespace amlogic_decoder
+
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_WATCHDOG_H_

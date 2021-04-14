@@ -6,6 +6,9 @@
 
 #include <cstdio>
 
+namespace amlogic_decoder {
+namespace test {
+
 void HashFrame(VideoFrame* frame, uint8_t digest[SHA256_DIGEST_LENGTH]) {
   io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->coded_height);
   io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
@@ -47,3 +50,6 @@ std::string CppStringifyHash(uint8_t digest[SHA256_DIGEST_LENGTH]) {
   actual_sha256_ptr += snprintf(actual_sha256_ptr, 3, "},");
   return std::string(actual_sha256);
 }
+
+}  // namespace test
+}  // namespace amlogic_decoder

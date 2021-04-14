@@ -12,6 +12,8 @@
 
 #include <tee-client-api/tee-client-types.h>
 
+namespace amlogic_decoder {
+
 class VideoFirmwareSession {
  public:
   static fit::result<VideoFirmwareSession, fuchsia::tee::ApplicationSyncPtr> TryOpen(
@@ -35,5 +37,7 @@ class VideoFirmwareSession {
   uint32_t session_id_;
   fuchsia::tee::ApplicationSyncPtr tee_connection_;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_FIRMWARE_SESSION_H_

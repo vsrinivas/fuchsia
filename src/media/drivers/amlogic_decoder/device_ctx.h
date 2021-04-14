@@ -14,6 +14,8 @@
 #include "device_fidl.h"
 #include "driver_ctx.h"
 
+namespace amlogic_decoder {
+
 class AmlogicVideo;
 class DeviceCtx;
 
@@ -69,5 +71,7 @@ class DeviceCtx : public fidl::WireInterface<fuchsia_hardware_mediacodec::Device
   // Codec admission control:
   CodecAdmissionControl codec_admission_control_;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DEVICE_CTX_H_

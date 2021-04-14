@@ -18,6 +18,8 @@
 
 #include "macros.h"
 
+namespace amlogic_decoder {
+
 class DecoderCore;
 class DecoderInstance;
 struct MmioRegisters;
@@ -93,5 +95,7 @@ class Parser final {
   bool parser_running_ = false;
   std::thread parser_interrupt_thread_;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_PARSER_H_

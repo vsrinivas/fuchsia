@@ -13,6 +13,8 @@
 
 #include "local_codec_factory.h"
 
+namespace amlogic_decoder {
+
 // This class is the per-device FIDL context.
 class DeviceFidl {
  public:
@@ -81,5 +83,7 @@ class DeviceFidl {
   // Only touched from shared_fidl_thread().
   std::map<CodecImpl*, std::unique_ptr<CodecImpl>> codecs_;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DEVICE_FIDL_H_

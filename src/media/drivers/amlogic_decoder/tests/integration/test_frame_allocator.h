@@ -18,6 +18,9 @@
 #include "tests/test_basic_client.h"
 #include "video_decoder.h"
 
+namespace amlogic_decoder {
+namespace test {
+
 class TestFrameAllocator : public TestBasicClient {
  public:
   explicit TestFrameAllocator(AmlogicVideo* video)
@@ -88,5 +91,8 @@ class TestFrameAllocator : public TestBasicClient {
   fit::closure pump_function_;
   bool has_sar_ = false;
 };
+
+}  // namespace test
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_INTEGRATION_TEST_FRAME_ALLOCATOR_H_

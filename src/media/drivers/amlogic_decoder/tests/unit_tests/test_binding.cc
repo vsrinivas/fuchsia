@@ -8,6 +8,9 @@
 #include "tests/test_support.h"
 
 /*
+namespace amlogic_decoder {
+namespace test {
+
 TEST(Binding, Destruction) {
   auto video = std::make_unique<AmlogicVideo>();
   ASSERT_TRUE(video);
@@ -17,4 +20,7 @@ TEST(Binding, Destruction) {
 
   video.reset();
 }
+
+}  // namespace test
+}  // namespace amlogic_decoder
 */

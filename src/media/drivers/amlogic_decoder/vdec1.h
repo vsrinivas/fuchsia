@@ -9,6 +9,8 @@
 
 #include "decoder_core.h"
 
+namespace amlogic_decoder {
+
 // This core is used for decoding all formats that aren't VP9 or HEVC, including
 // MPEG-2 and h.264.
 class Vdec1 : public DecoderCore {
@@ -52,5 +54,7 @@ class Vdec1 : public DecoderCore {
   bool decoding_started_ = false;
   zx::time powerup_deadline_;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VDEC1_H_

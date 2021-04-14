@@ -12,6 +12,8 @@
 #include <map>
 #include <mutex>
 
+namespace amlogic_decoder {
+
 class PtsManager {
  public:
   // 8 is the max number of frames in a VP9 superframe.  For H264, num_reorder_frames is max 16.  So
@@ -34,8 +36,8 @@ class PtsManager {
   // Large enough to account for the <= 1024 bytes of data required by the FW when using
   // h264_multi_decoder before the FW is willing to start decoding the first available data.
   //
-  // TODO(fxbug.dev/13483): Pad the data provided to FW with AUD + padding when we know we have at least
-  // one frame end available so far that hasn't seen a corresponding pic data done.  Preferably
+  // TODO(fxbug.dev/13483): Pad the data provided to FW with AUD + padding when we know we have at
+  // least one frame end available so far that hasn't seen a corresponding pic data done. Preferably
   // without relying on PtsManager though.
   static constexpr uint32_t kH264MultiMaxEntriesDueToFifo = 1024 / 4;
   // Threshold used by h264_multi_decoder to avoid over-queueing data if we've already got more than
@@ -54,7 +56,8 @@ class PtsManager {
       kMaxEntriesDueToFrameReordering + kMaxEntriesDueToExtraDecoderDelay +
       kH264MultiMaxEntriesDueToFifoWithMargin;
 
-  // TODO(fxbug.dev/13483): This should have its own constants, not just be the max of these other two.
+  // TODO(fxbug.dev/13483): This should have its own constants, not just be the max of these other
+  // two.
   static constexpr uint32_t kVp9MaxEntriesToKeep =
       std::max(kH264SingleStreamMaxEntriesToKeep, kH264MultiStreamMaxEntriesToKeep);
 
@@ -132,5 +135,7 @@ class PtsManager {
   __TA_GUARDED(lock_)
   std::map<uint64_t, LookupResult> offset_to_result_;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_PTS_MANAGER_H_

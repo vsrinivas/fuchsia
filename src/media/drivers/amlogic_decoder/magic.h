@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <zircon/assert.h>
 
+namespace amlogic_decoder {
+
 // Once we're on C++20 we can make MagicNumber a class with a uint64_t in it and avoid the strange
 // enum without any declared values.  Also we could keep the file and line around if we wanted
 // without breaking ergonomics, if we want.
@@ -70,5 +72,7 @@ class Magic {
   static constexpr MagicType kMovedOut = 0xDEAD1DEAD1DEAD1;
   MagicType magic_ = kMagic;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_MAGIC_H_

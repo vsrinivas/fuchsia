@@ -11,6 +11,9 @@
 #include "macros.h"
 #include "tests/test_support.h"
 
+namespace amlogic_decoder {
+namespace test {
+
 class TestAmlogicVideo {
  public:
   static void BufferAlignment() {
@@ -66,3 +69,6 @@ TEST(AmlogicVideo, BufferAlignment) { TestAmlogicVideo::BufferAlignment(); }
 TEST(AmlogicVideo, LoadVdecFirmware) { TestAmlogicVideo::LoadFirmware(/*vdec=*/true); }
 
 TEST(AmlogicVideo, LoadHeavcFirmware) { TestAmlogicVideo::LoadFirmware(/*vdec=*/false); }
+
+}  // namespace test
+}  // namespace amlogic_decoder

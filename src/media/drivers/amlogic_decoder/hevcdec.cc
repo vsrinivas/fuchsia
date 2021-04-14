@@ -15,6 +15,8 @@
 #include "util.h"
 #include "video_decoder.h"
 
+namespace amlogic_decoder {
+
 static constexpr uint32_t kFirmwareSize = 4 * 4096;
 
 uint32_t HevcDec::hevc_sleep_bits() {
@@ -412,3 +414,5 @@ zx_status_t HevcDec::RestoreInputContext(InputContext* context) {
   HevcStreamSwapCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
   return ZX_OK;
 }
+
+}  // namespace amlogic_decoder

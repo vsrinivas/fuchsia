@@ -14,6 +14,8 @@
 #include "src/media/lib/internal_buffer/internal_buffer.h"
 #include "src/media/lib/memory_barriers/memory_barriers.h"
 
+namespace amlogic_decoder {
+
 struct MmioRegisters {
   DosRegisterIo* dosbus;
   AoRegisterIo* aobus;
@@ -136,5 +138,7 @@ class PowerReference {
  private:
   DecoderCore* core_;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DECODER_CORE_H_

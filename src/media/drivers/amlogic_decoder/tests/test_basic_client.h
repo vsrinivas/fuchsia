@@ -7,6 +7,9 @@
 
 #include "video_decoder.h"
 
+namespace amlogic_decoder {
+namespace test {
+
 // This client can have some behavior injected for use in tests.
 class TestBasicClient : public VideoDecoder::Client {
  public:
@@ -66,5 +69,8 @@ class TestBasicClient : public VideoDecoder::Client {
   fit::closure eos_handler_;
   AmlogicDecoderTestHooks test_hooks_;
 };
+
+}  // namespace test
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_TEST_BASIC_CLIENT_H_

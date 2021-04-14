@@ -8,6 +8,8 @@
 
 #include "src/media/lib/internal_buffer/internal_buffer.h"
 
+namespace amlogic_decoder {
+
 // The stream buffer is a fifo between parser and decoder.
 class StreamBuffer {
  public:
@@ -31,5 +33,7 @@ class StreamBuffer {
   uint32_t data_size_ = 0;
   uint32_t padding_size_ = 0;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_STREAM_BUFFER_H_

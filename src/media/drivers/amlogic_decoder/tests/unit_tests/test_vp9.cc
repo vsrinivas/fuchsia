@@ -14,6 +14,8 @@
 #include "tests/test_support.h"
 #include "vp9_decoder.h"
 
+namespace amlogic_decoder {
+namespace test {
 namespace {
 class FakeDecoderCore : public DecoderCore {
  public:
@@ -177,3 +179,6 @@ class Vp9UnitTest {
 TEST(Vp9UnitTest, LoopFilter) { Vp9UnitTest::LoopFilter(); }
 TEST(Vp9UnitTest, InitializeMemory) { Vp9UnitTest::InitializeMemory(false); }
 TEST(Vp9UnitTest, InitializeMemoryCompressed) { Vp9UnitTest::InitializeMemory(true); }
+
+}  // namespace test
+}  // namespace amlogic_decoder

@@ -19,6 +19,8 @@
 #include "vp9_decoder.h"
 #include "vp9_utils.h"
 
+namespace amlogic_decoder {
+
 // TODO(dustingreen):
 //   * Split InitializeStream() into two parts, one to get the format info from
 //     the HW and send it to the Codec client, the other part to configure
@@ -1576,3 +1578,5 @@ bool CodecAdapterVp9::IsOutputSecure() {
   ZX_DEBUG_ASSERT(IsPortSecurePermitted(kOutputPort) == IsPortSecureRequired(kOutputPort));
   return IsPortSecureRequired(kOutputPort);
 }
+
+}  // namespace amlogic_decoder

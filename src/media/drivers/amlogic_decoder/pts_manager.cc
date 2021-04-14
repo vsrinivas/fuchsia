@@ -21,6 +21,8 @@
     }                                \
   } while (0)
 
+namespace amlogic_decoder {
+
 // h264 has HW stream offset counter with 0xfffffff max - 28 bit - 256 MiB cycle period
 // vp9 has a 32 bit stream offset counter.
 void PtsManager::SetLookupBitWidth(uint32_t lookup_bit_width) {
@@ -132,3 +134,5 @@ uint64_t PtsManager::GetLastInsertedOffset() {
   }
   return offset_to_result_.rbegin()->first;
 }
+
+}  // namespace amlogic_decoder

@@ -20,6 +20,8 @@
 #include "pts_manager.h"
 #include "vdec1.h"
 
+namespace amlogic_decoder {
+
 namespace {
 static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
   return (static_cast<uint32_t>(d) << 24) | (static_cast<uint32_t>(c) << 16) |
@@ -1395,3 +1397,5 @@ bool CodecAdapterH264Multi::IsOutputSecure() {
   ZX_DEBUG_ASSERT(IsPortSecurePermitted(kOutputPort) == IsPortSecureRequired(kOutputPort));
   return IsPortSecureRequired(kOutputPort);
 }
+
+}  // namespace amlogic_decoder

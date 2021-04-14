@@ -11,6 +11,8 @@
 
 #include "macros.h"
 
+namespace amlogic_decoder {
+
 std::vector<uint32_t> TryParseSuperframeHeader(const uint8_t* data, uint32_t frame_size) {
   std::vector<uint32_t> frame_sizes;
   if (frame_size < 1)
@@ -169,3 +171,5 @@ fit::result<bool, fuchsia::media::StreamError> IsVp9KeyFrame(uint8_t frame_heade
 
   return fit::ok(true);
 }
+
+}  // namespace amlogic_decoder

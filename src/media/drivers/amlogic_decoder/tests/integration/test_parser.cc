@@ -10,6 +10,9 @@
 #include "macros.h"
 #include "tests/test_support.h"
 
+namespace amlogic_decoder {
+namespace test {
+
 class TestParser {
  public:
   static void MemoryCopy(uint32_t input_data_size) {
@@ -65,3 +68,6 @@ class TestParser {
 TEST(Parser, MemoryCopy4079) { TestParser::MemoryCopy(4079); }
 TEST(Parser, MemoryCopy4080) { TestParser::MemoryCopy(4080); }
 TEST(Parser, MemoryCopy4096) { TestParser::MemoryCopy(4096); }
+
+}  // namespace test
+}  // namespace amlogic_decoder

@@ -8,6 +8,8 @@
 #include "macros.h"
 #include "src/media/lib/memory_barriers/memory_barriers.h"
 
+namespace amlogic_decoder {
+
 using MregSeqInfo = AvScratch4;
 using MregPicInfo = AvScratch5;
 using MregPicWidth = AvScratch6;
@@ -231,3 +233,5 @@ zx_status_t Mpeg12Decoder::InitializeVideoBuffers() {
   BarrierAfterFlush();
   return ZX_OK;
 }
+
+}  // namespace amlogic_decoder

@@ -9,6 +9,7 @@
 
 #include <cstdint>
 
+// From codec_impl
 class CodecBuffer;
 struct VideoFrame {
   ~VideoFrame() { io_buffer_release(&buffer); }

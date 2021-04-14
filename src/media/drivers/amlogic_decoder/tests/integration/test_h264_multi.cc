@@ -21,6 +21,9 @@
 #include "vdec1.h"
 #include "video_frame_helpers.h"
 
+namespace amlogic_decoder {
+namespace test {
+
 class H264TestFrameDataProvider final : public H264MultiDecoder::FrameDataProvider {
  public:
   H264TestFrameDataProvider(AmlogicVideo* video)
@@ -781,3 +784,6 @@ TEST(H264Multi, DecodeMalformedSize) {
   // This changes the height to 53184, which is too high for the hardware.
   TestH264Multi::DecodeMalformed(bear_data, {{593, 64}});
 }
+
+}  // namespace test
+}  // namespace amlogic_decoder

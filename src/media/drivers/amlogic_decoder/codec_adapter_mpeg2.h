@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_MPEG2_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_MPEG2_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_MPEG2_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_MPEG2_H_
 
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <zircon/compiler.h>
+
+namespace amlogic_decoder {
 
 class DeviceCtx;
 class AmlogicVideo;
@@ -55,4 +57,6 @@ class CodecAdapterMpeg2 : public CodecAdapter {
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterMpeg2);
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_MPEG2_H_
+}  // namespace amlogic_decoder
+
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_MPEG2_H_

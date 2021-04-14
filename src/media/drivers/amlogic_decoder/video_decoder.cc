@@ -4,6 +4,8 @@
 
 #include "video_decoder.h"
 
+namespace amlogic_decoder {
+
 namespace {
 
 std::atomic<uint32_t> next_decoder_id_;
@@ -29,3 +31,5 @@ VideoDecoder::~VideoDecoder() {
 void VideoDecoder::LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent event) {
   metrics().LogEvent(implementation_, event);
 }
+
+}  // namespace amlogic_decoder

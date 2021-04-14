@@ -14,6 +14,9 @@
 #include "tests/test_support.h"
 #include "vdec1.h"
 
+namespace amlogic_decoder {
+namespace test {
+
 class TestMpeg2 {
  public:
   static void Decode(bool use_parser) {
@@ -73,3 +76,6 @@ class TestMpeg2 {
 TEST(MPEG2, Decode) { TestMpeg2::Decode(true); }
 
 TEST(MPEG2, DecodeNoParser) { TestMpeg2::Decode(false); }
+
+}  // namespace test
+}  // namespace amlogic_decoder

@@ -5,6 +5,8 @@
 
 #include <cstring>
 
+namespace amlogic_decoder {
+
 std::vector<std::vector<uint8_t>> SplitNalUnits(const uint8_t* start_data, uint32_t size) {
   std::vector<std::vector<uint8_t>> out_vector;
 
@@ -47,3 +49,5 @@ uint8_t GetNalUnitType(fbl::Span<const uint8_t> nal_unit) {
     return 0;
   return this_start[sizeof(start_code)] & 0xf;
 }
+
+}  // namespace amlogic_decoder

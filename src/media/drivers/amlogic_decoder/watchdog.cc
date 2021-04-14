@@ -6,6 +6,8 @@
 
 #include "macros.h"
 
+namespace amlogic_decoder {
+
 Watchdog::Watchdog(Owner* owner) : owner_(owner), loop_(&kAsyncLoopConfigNeverAttachToThread) {
   ZX_ASSERT(ZX_OK == loop_.StartThread("Watchdog"));
   // Use late slack so the comparison in CheckAndResetTimeout works.
@@ -73,3 +75,5 @@ void Watchdog::HandleTimer(async_dispatcher_t* dispatcher, async::WaitBase* wait
   owner_->OnSignaledWatchdog();
   waiter_.Begin(loop_.dispatcher());
 }
+
+}  // namespace amlogic_decoder

@@ -13,6 +13,8 @@
 
 #include "macros.h"
 
+namespace amlogic_decoder {
+
 namespace {
 
 // Defined by video_firmware TA.
@@ -196,3 +198,5 @@ zx_status_t VideoFirmwareSession::LoadVideoFirmwareEncoder(uint8_t* data, uint32
   }
   return ZX_OK;
 }
+
+}  // namespace amlogic_decoder

@@ -30,6 +30,11 @@
 
 #include <src/media/lib/metrics/metrics.cb.h>
 
+// From codec_impl
+class CodecPacket;
+
+namespace amlogic_decoder {
+
 class FirmwareBlob;
 class PtsManager;
 
@@ -66,7 +71,6 @@ class CanvasEntry {
   uint32_t index_{};
 };
 
-class CodecPacket;
 class DecoderInstance;
 class Parser;
 class Watchdog;
@@ -217,5 +221,7 @@ class VideoDecoder {
  private:
   const media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation_;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_DECODER_H_

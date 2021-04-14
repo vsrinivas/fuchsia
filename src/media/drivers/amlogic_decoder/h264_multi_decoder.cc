@@ -27,6 +27,8 @@
 #include "util.h"
 #include "watchdog.h"
 
+namespace amlogic_decoder {
+
 #if 0
         1: StreamCreated
         2: StreamDeleted
@@ -2677,3 +2679,5 @@ uint32_t H264MultiDecoder::GetStreamBufferSize() {
   ZX_DEBUG_ASSERT(stream_buffer_size_);
   return stream_buffer_size_;
 }
+
+}  // namespace amlogic_decoder

@@ -10,6 +10,8 @@
 
 #include <hwreg/bitfields.h>
 
+namespace amlogic_decoder {
+
 template <class RegType>
 class TypedRegisterAddr;
 
@@ -620,5 +622,7 @@ REGISTER_NAME(ParserFetchCmd, ParserRegisterIo, 0x2962)
 
 #undef REGISTER_NAME
 #undef DEFINE_REGISTER
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_REGISTERS_H_

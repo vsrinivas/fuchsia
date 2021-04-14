@@ -29,6 +29,8 @@ struct H264SPS;
 class DecoderBuffer;
 }  // namespace media
 
+namespace amlogic_decoder {
+
 // An H264 decoder that can be context-switched in and out.
 class H264MultiDecoder : public VideoDecoder {
  public:
@@ -471,5 +473,7 @@ class H264MultiDecoder : public VideoDecoder {
   // detect a missing pic data done between slices of two different frames.
   std::optional<int> frame_num_;
 };
+
+}  // namespace amlogic_decoder
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MULTI_DECODER_H_
