@@ -44,26 +44,6 @@ struct ServiceStarterArgs {
   Coordinator* coordinator;
 };
 
-struct ServiceStarterParams {
-  std::string clock_backstop;
-};
-
-ServiceStarterParams GetServiceStarterParams(
-    fidl::WireSyncClient<fuchsia_boot::Arguments>* client) {
-  fidl::StringView string_keys[]{
-      "clock.backstop",
-  };
-
-  auto string_resp =
-      client->GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(string_keys));
-  ServiceStarterParams ret;
-  if (string_resp.ok()) {
-    auto& values = string_resp->values;
-    ret.clock_backstop = std::string{values[0].data(), values[0].size()};
-  }
-  return ret;
-}
-
 // Wait for the requested file.  Its parent directory must exist.
 zx_status_t wait_for_file(const char* path, zx::time deadline) {
   char path_copy[PATH_MAX];
@@ -149,18 +129,6 @@ void SystemInstance::InstallDevFsIntoNamespace() {
 }
 
 void SystemInstance::ServiceStarter(Coordinator* coordinator) {
-  auto params = GetServiceStarterParams(coordinator->boot_args());
-  if (!params.clock_backstop.empty()) {
-    auto offset = zx::sec(atoi(params.clock_backstop.data()));
-    zx_status_t status =
-        zx_clock_adjust(coordinator->root_resource().get(), ZX_CLOCK_UTC, offset.get());
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to set UTC backstop: %s", zx_status_get_string(status));
-    } else {
-      LOGF(INFO, "Set UTC backstop to %ld", offset.get());
-    }
-  }
-
   zx_status_t status = coordinator->RegisterWithPowerManager(CloneFs("dev"));
   if (status != ZX_OK) {
     LOGF(WARNING, "Unable to RegisterWithPowerManager: %d", status);
