@@ -105,7 +105,10 @@ governed by its doubling rate, i.e. every doubling period you will have
 passively cleaned up half of the codebase.
 
 Ensure that allowlists are guarded by `OWNERS` files, and that POCs for the
-migration are listed as owners.
+migration are listed as owners. Since owners are defined by file, it may be
+preferable to subdivide allowlists to different `BUILD.gn` files. For instance,
+`config()` targets related to Rust were pulled out to `//build/config/rust` to
+better manage the `OWNERS` assignments.
 
 ### Document migration / cleanup steps
 
