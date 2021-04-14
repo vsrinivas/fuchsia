@@ -24,7 +24,7 @@ driver_module("aml-nna") {
   deps = [
     ":aml_nna_bind",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.registers",
+    "//sdk/banjo/fuchsia.hardware.registers:fuchsia.hardware.registers_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
     "//src/devices/bind/fuchsia.platform:bind.fuchsia.platform",
     "//src/devices/bind/fuchsia.verisilicon.platform:bind.fuchsia.verisilicon.platform",
@@ -53,8 +53,8 @@ test("aml-nna-test-bin") {
   deps = [
     ":aml_nna_bind",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.registers",
-    "//sdk/banjo/fuchsia.hardware.registers:fuchsia.hardware.registers_mock",
+    "//sdk/banjo/fuchsia.hardware.registers:fuchsia.hardware.registers_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.registers:fuchsia.hardware.registers_banjo_cpp_mock",
     "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
     "//src/devices/bind/fuchsia.platform:bind.fuchsia.platform",
     "//src/devices/bind/fuchsia.verisilicon.platform:bind.fuchsia.verisilicon.platform",

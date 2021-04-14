@@ -5,10 +5,16 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.registers") {
+  fidl_only = true
   sources = [ "registers.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
 
 group("fuchsia.hardware.registers_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.registers" ]
+  public_deps = [ ":fuchsia.hardware.registers_banjo_cpp_2" ]
+}
+
+group("fuchsia.hardware.registers_banjo_cpp_mock") {
+  testonly = true
+  public_deps = [ ":fuchsia.hardware.registers_banjo_cpp_mock_2" ]
 }
