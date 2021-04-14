@@ -231,19 +231,19 @@ __UNUSED static const struct timer_reg_procs cntps_procs_a73 = {
 };
 
 #if (TIMER_ARM_GENERIC_SELECTED_CNTV)
-static const struct timer_reg_procs* reg_procs = &cntv_procs;
+static struct timer_reg_procs reg_procs = cntv_procs;
 #else
-static const struct timer_reg_procs* reg_procs = &cntp_procs;
+static struct timer_reg_procs reg_procs = cntp_procs;
 #endif
 
-static inline void write_ctl(uint32_t val) { reg_procs->write_ctl(val); }
+static inline void write_ctl(uint32_t val) { reg_procs.write_ctl(val); }
 
-static inline void write_cval(uint64_t val) { reg_procs->write_cval(val); }
+static inline void write_cval(uint64_t val) { reg_procs.write_cval(val); }
 
-static inline void write_tval(uint32_t val) { reg_procs->write_tval(val); }
+static inline void write_tval(uint32_t val) { reg_procs.write_tval(val); }
 
 static zx_ticks_t read_ct() {
-  zx_ticks_t cntpct = static_cast<zx_ticks_t>(reg_procs->read_ct());
+  zx_ticks_t cntpct = static_cast<zx_ticks_t>(reg_procs.read_ct());
   LTRACEF_LEVEL(3, "cntpct: 0x%016" PRIx64 ", %" PRIi64 "\n", static_cast<uint64_t>(cntpct),
                 cntpct);
   return cntpct;
@@ -432,19 +432,19 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
     timer_str = "phys";
     timer_irq = irq_phys;
     timer_assignment = IRQ_PHYS;
-    reg_procs = &cntp_procs;
+    reg_procs = cntp_procs;
     entry_ticks_idx = 0;
   } else if (irq_virt) {
     timer_str = "virt";
     timer_irq = irq_virt;
     timer_assignment = IRQ_VIRT;
-    reg_procs = &cntv_procs;
+    reg_procs = cntv_procs;
     entry_ticks_idx = 1;
   } else if (irq_sphys) {
     timer_str = "sphys";
     timer_irq = irq_sphys;
     timer_assignment = IRQ_SPHYS;
-    reg_procs = &cntps_procs;
+    reg_procs = cntps_procs;
     entry_ticks_idx = 0;
   } else {
     panic("no irqs set in arm_generic_timer_pdev_init\n");
@@ -469,11 +469,11 @@ static void late_update_reg_procs(uint) {
   // core in the system.
   if (arm64_read_percpu_ptr()->microarch == ARM_CORTEX_A73) {
     if (timer_assignment == IRQ_PHYS) {
-      reg_procs = &cntp_procs_a73;
+      reg_procs = cntp_procs_a73;
     } else if (timer_assignment == IRQ_VIRT) {
-      reg_procs = &cntv_procs_a73;
+      reg_procs = cntv_procs_a73;
     } else if (timer_assignment == IRQ_SPHYS) {
-      reg_procs = &cntps_procs_a73;
+      reg_procs = cntps_procs_a73;
     } else {
       panic("no irqs set in late_update_reg_procs\n");
     }
