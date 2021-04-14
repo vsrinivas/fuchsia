@@ -103,6 +103,54 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 
 #ifdef __Fuchsia__
 
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<
+    ::fidl_test_inheritancewithrecursivedecl::Parent>::
+    TryDispatch(::fidl::WireServer<
+                    ::fidl_test_inheritancewithrecursivedecl::Parent>* impl,
+                fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_inheritancewithrecursivedecl::kParent_First_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_inheritancewithrecursivedecl::Parent::First>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
+                                   Parent>::FirstCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl::WireServer<
+                ::fidl_test_inheritancewithrecursivedecl::Parent>*>(interface)
+                ->First(reinterpret_cast<::fidl::WireRequest<
+                            ::fidl_test_inheritancewithrecursivedecl::Parent::
+                                First>*>(bytes),
+                        completer);
+          },
+      },
+  };
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
+}
+
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<
+    ::fidl_test_inheritancewithrecursivedecl::Parent>::
+    Dispatch(::fidl::WireServer<
+                 ::fidl_test_inheritancewithrecursivedecl::Parent>* impl,
+             fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  }
+  return dispatch_result;
+}
+::fidl::DispatchResult
+fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Parent>::
+    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireServerDispatcher<
+      ::fidl_test_inheritancewithrecursivedecl::Parent>::Dispatch(this, msg,
+                                                                  txn);
+}
+
 ::fidl::DispatchResult fidl::internal::WireDispatcher<
     ::fidl_test_inheritancewithrecursivedecl::Parent>::
     TryDispatch(::fidl::WireInterface<
@@ -117,9 +165,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             auto message = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_inheritancewithrecursivedecl::Parent::First>*>(
                 bytes);
-            ::fidl::WireInterface<
-                ::fidl_test_inheritancewithrecursivedecl::Parent>::
-                FirstCompleter::Sync completer(txn);
+            ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
+                                   Parent>::FirstCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_inheritancewithrecursivedecl::Parent>*>(interface)
                 ->First(std::move(message->request), completer);
@@ -354,6 +401,69 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 
 #ifdef __Fuchsia__
 
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<
+    ::fidl_test_inheritancewithrecursivedecl::Child>::
+    TryDispatch(::fidl::WireServer<
+                    ::fidl_test_inheritancewithrecursivedecl::Child>* impl,
+                fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_inheritancewithrecursivedecl::kChild_First_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_inheritancewithrecursivedecl::Child::First>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
+                                   Child>::FirstCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl::WireServer<
+                ::fidl_test_inheritancewithrecursivedecl::Child>*>(interface)
+                ->First(reinterpret_cast<::fidl::WireRequest<
+                            ::fidl_test_inheritancewithrecursivedecl::Child::
+                                First>*>(bytes),
+                        completer);
+          },
+      },
+      {
+          ::fidl_test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_inheritancewithrecursivedecl::Child::Second>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
+                                   Child>::SecondCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl::WireServer<
+                ::fidl_test_inheritancewithrecursivedecl::Child>*>(interface)
+                ->Second(reinterpret_cast<::fidl::WireRequest<
+                             ::fidl_test_inheritancewithrecursivedecl::Child::
+                                 Second>*>(bytes),
+                         completer);
+          },
+      },
+  };
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
+}
+
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<
+    ::fidl_test_inheritancewithrecursivedecl::Child>::
+    Dispatch(::fidl::WireServer<
+                 ::fidl_test_inheritancewithrecursivedecl::Child>* impl,
+             fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  }
+  return dispatch_result;
+}
+::fidl::DispatchResult
+fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
+    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireServerDispatcher<
+      ::fidl_test_inheritancewithrecursivedecl::Child>::Dispatch(this, msg,
+                                                                 txn);
+}
+
 ::fidl::DispatchResult fidl::internal::WireDispatcher<
     ::fidl_test_inheritancewithrecursivedecl::Child>::
     TryDispatch(::fidl::WireInterface<
@@ -368,9 +478,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             auto message = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_inheritancewithrecursivedecl::Child::First>*>(
                 bytes);
-            ::fidl::WireInterface<
-                ::fidl_test_inheritancewithrecursivedecl::Child>::
-                FirstCompleter::Sync completer(txn);
+            ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
+                                   Child>::FirstCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_inheritancewithrecursivedecl::Child>*>(interface)
                 ->First(std::move(message->request), completer);
@@ -384,9 +493,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             auto message = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_inheritancewithrecursivedecl::Child::Second>*>(
                 bytes);
-            ::fidl::WireInterface<
-                ::fidl_test_inheritancewithrecursivedecl::Child>::
-                SecondCompleter::Sync completer(txn);
+            ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
+                                   Child>::SecondCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_inheritancewithrecursivedecl::Child>*>(interface)
                 ->Second(std::move(message->request), completer);

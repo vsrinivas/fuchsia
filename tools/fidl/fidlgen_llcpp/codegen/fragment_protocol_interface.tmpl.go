@@ -13,12 +13,12 @@ const fragmentProtocolInterfaceTmpl = `
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template<>
-class {{ .WireInterface }} : public ::fidl::internal::IncomingMessageDispatcher {
+class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
   public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
+  {{ .WireServer.Self }}() = default;
+  virtual ~{{ .WireServer.Self }}() = default;
 
-  // The marker protocol type within which this |{{ .WireInterface.Self }}| class is defined.
+  // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = {{ . }};
 
 {{ "" }}
@@ -48,22 +48,67 @@ class {{ .WireInterface }} : public ::fidl::internal::IncomingMessageDispatcher 
         {{- end }}
 
     protected:
-    using ::fidl::CompleterBase::CompleterBase;
+      using ::fidl::CompleterBase::CompleterBase;
+  };
+  using {{ .WireCompleter.Self }} = ::fidl::Completer<{{ .WireCompleterBase.Self }}>;
+    {{- else }}
+  using {{ .WireCompleter.Self }} = ::fidl::Completer<>;
+    {{- end }}
+  class {{ .WireRequestView.Self }} {
+   public:
+    {{ .WireRequestView.Self }}({{ .WireRequest }}* request) : request_(request) {}
+    {{ .WireRequest }}* operator->() const { return request_; }
+
+   private:
+    {{ .WireRequest }}* request_;
   };
 
-  using {{ .WireCompleter.Self }} = ::fidl::Completer<{{ .WireCompleterBase.Self }}>;
-      {{- else }}
-  using {{ .WireCompleter.Self }} = ::fidl::Completer<>;
+  {{ .Docs }}
+  virtual void {{ .Name }}(
+      {{ .WireRequestView.Self }} request, {{ .WireCompleter.Self }}::Sync& _completer)
+      {{- if .Transitional -}}
+        { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+      {{- else -}}
+        = 0;
       {{- end }}
+{{ "" }}
+    {{- end }}
+  {{- end }}
+
+  private:
+  {{- /* Note that this implementation is snake_case to avoid name conflicts. */}}
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template<>
+class {{ .WireInterface }} : public ::fidl::internal::IncomingMessageDispatcher {
+  public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |{{ .WireInterface.Self }}| class is defined.
+  using _EnclosingProtocol = {{ . }};
 
 {{ "" }}
+  {{- range .Methods }}
+    {{- if .HasRequest }}
+{{ "" }}
+      {{ if .HasResponse }}
+  using {{ .Name }}CompleterBase = {{ .WireCompleterBase }};
+      {{ end }}
+  using {{ .Name }}Completer = {{ .WireCompleter }};
+
   {{- .Docs }}
   virtual void {{ .Name }}(
       {{- .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end -}}
       {{- if .Transitional -}}
-        {{ .WireCompleter.Self }}::Sync& _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+        {{ .Name }}Completer::Sync& _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
       {{- else -}}
-        {{ .WireCompleter.Self }}::Sync& _completer) = 0;
+        {{ .Name }}Completer::Sync& _completer) = 0;
       {{- end }}
 {{ "" }}
     {{- end }}
@@ -93,13 +138,13 @@ template<>
     using {{ .WireInterface }}::_EnclosingProtocol;
 
     {{- range .ClientMethods }}
-    using {{ .WireCompleter }};
+    using {{ .Name }}Completer = {{ .WireCompleter }};
 
 {{ "" }}
       {{- if .ShouldEmitTypedChannelCascadingInheritance }}
     virtual void {{ .Name }}(
         {{- .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end -}}
-        {{ .WireCompleter }}::Sync& _completer) final {
+        {{ .Name }}Completer::Sync& _completer) final {
       {{ .Name }}({{ template "ForwardMessageParamsUnwrapTypedChannels" .RequestArgs }}
         {{- if .RequestArgs }}, {{ end -}} _completer);
     }

@@ -180,6 +180,51 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 #ifdef __Fuchsia__
 
 ::fidl::DispatchResult
+fidl::internal::WireServerDispatcher<::fidl_test_error::Example>::TryDispatch(
+    ::fidl::WireServer<::fidl_test_error::Example>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_error::kExample_foo_Ordinal,
+          ::fidl::WireRequest<::fidl_test_error::Example::foo>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireServer<::fidl_test_error::Example>::fooCompleter::Sync
+                completer(txn);
+            reinterpret_cast<::fidl::WireServer<::fidl_test_error::Example>*>(
+                interface)
+                ->foo(
+                    reinterpret_cast<
+                        ::fidl::WireRequest<::fidl_test_error::Example::foo>*>(
+                        bytes),
+                    completer);
+          },
+      },
+  };
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
+}
+
+::fidl::DispatchResult
+fidl::internal::WireServerDispatcher<::fidl_test_error::Example>::Dispatch(
+    ::fidl::WireServer<::fidl_test_error::Example>* impl,
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  }
+  return dispatch_result;
+}
+::fidl::DispatchResult
+fidl::WireServer<::fidl_test_error::Example>::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireServerDispatcher<
+      ::fidl_test_error::Example>::Dispatch(this, msg, txn);
+}
+
+::fidl::DispatchResult
 fidl::internal::WireDispatcher<::fidl_test_error::Example>::TryDispatch(
     ::fidl::WireInterface<::fidl_test_error::Example>* impl,
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
@@ -190,8 +235,8 @@ fidl::internal::WireDispatcher<::fidl_test_error::Example>::TryDispatch(
           [](void* interface, void* bytes, ::fidl::Transaction* txn) {
             auto message = reinterpret_cast<
                 ::fidl::WireRequest<::fidl_test_error::Example::foo>*>(bytes);
-            ::fidl::WireInterface<
-                ::fidl_test_error::Example>::fooCompleter::Sync completer(txn);
+            ::fidl::WireServer<::fidl_test_error::Example>::fooCompleter::Sync
+                completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_error::Example>*>(interface)
                 ->foo(std::move(message->s), completer);
@@ -225,18 +270,18 @@ fidl::WireInterface<::fidl_test_error::Example>::dispatch_message(
 
 #ifdef __Fuchsia__
 ::fidl::Result
-fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
+fidl::WireServer<::fidl_test_error::Example>::fooCompleterBase::Reply(
     ::fidl_test_error::wire::Example_foo_Result result) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_error::Example::foo>>
       _response{result};
-  return ::fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::
+  return ::fidl::WireServer<::fidl_test_error::Example>::fooCompleterBase::
       SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::WireInterface<
+::fidl::Result fidl::WireServer<
     ::fidl_test_error::Example>::fooCompleterBase::ReplySuccess(int64_t y) {
   ::fidl_test_error::wire::Example_foo_Response _response;
   _response.y = std::move(y);
@@ -248,7 +293,7 @@ fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::WireInterface<
+::fidl::Result fidl::WireServer<
     ::fidl_test_error::Example>::fooCompleterBase::ReplyError(uint32_t error) {
   return Reply(::fidl_test_error::wire::Example_foo_Result::WithErr(
       ::fidl::ObjectView<uint32_t>::FromExternal(&error)));
@@ -257,7 +302,7 @@ fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
 
 #ifdef __Fuchsia__
 ::fidl::Result
-fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
+fidl::WireServer<::fidl_test_error::Example>::fooCompleterBase::Reply(
     ::fidl::BufferSpan _backing_buffer,
     ::fidl_test_error::wire::Example_foo_Result result) {
   ::fidl::WireResponse<::fidl_test_error::Example::foo>::UnownedEncodedMessage
@@ -268,7 +313,7 @@ fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
 
 #ifdef __Fuchsia__
 ::fidl::Result
-fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::ReplySuccess(
+fidl::WireServer<::fidl_test_error::Example>::fooCompleterBase::ReplySuccess(
     ::fidl::BufferSpan _buffer, int64_t y) {
   ::fidl_test_error::wire::Example_foo_Response response;
   response.y = std::move(y);

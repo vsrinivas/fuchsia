@@ -20,7 +20,7 @@
 // [START impl]
 // An implementation of the Echo protocol. Protocols are implemented in LLCPP by
 // creating a subclass of the ::Interface class for the protocol.
-class EchoImpl final : public fidl::WireInterface<fuchsia_examples::Echo> {
+class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
  public:
   // Bind this implementation to a channel.
   void Bind(async_dispatcher_t* dispatcher, fidl::ServerEnd<fuchsia_examples::Echo> request) {
@@ -42,15 +42,15 @@ class EchoImpl final : public fidl::WireInterface<fuchsia_examples::Echo> {
 
   // Handle a SendString request by sending on OnString event with the request value. For
   // fire and forget methods, the completer can be used to close the channel with an epitaph.
-  void SendString(fidl::StringView value, SendStringCompleter::Sync& completer) override {
+  void SendString(SendStringRequestView request, SendStringCompleter::Sync& completer) override {
     if (binding_) {
-      binding_.value()->OnString(value);
+      binding_.value()->OnString(request->value);
     }
   }
   // Handle an EchoString request by responding with the request value. For two-way
   // methods, the completer is also used to send a response.
-  void EchoString(fidl::StringView value, EchoStringCompleter::Sync& completer) override {
-    completer.Reply(value);
+  void EchoString(EchoStringRequestView request, EchoStringCompleter::Sync& completer) override {
+    completer.Reply(request->value);
   }
 
   // A reference back to the Binding that this class is bound to, which is used

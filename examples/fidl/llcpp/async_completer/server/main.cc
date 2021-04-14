@@ -17,12 +17,12 @@
 #include <iostream>
 
 // [START impl]
-class EchoImpl final : public fidl::WireInterface<fuchsia_examples::Echo> {
+class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
  public:
   explicit EchoImpl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
   // SendString is not used in this example, so requests are just ignored.
-  void SendString(fidl::StringView value, SendStringCompleter::Sync& completer) override {}
-  void EchoString(fidl::StringView value, EchoStringCompleter::Sync& completer) override {
+  void SendString(SendStringRequestView request, SendStringCompleter::Sync& completer) override {}
+  void EchoString(EchoStringRequestView request, EchoStringCompleter::Sync& completer) override {
     // Respond to the request asynchronously by using ToAsync() and moving it into
     // a lambda capture. This allows multiple requests to EchoString to wait concurrently
     // rather than in sequence.
@@ -30,8 +30,8 @@ class EchoImpl final : public fidl::WireInterface<fuchsia_examples::Echo> {
         dispatcher_,
         // The lambda capturing `completer` must be marked mutable, because making a
         // reply using the completer mutates it such that duplicate repies will panic.
-        [value = std::move(value), completer = completer.ToAsync()]() mutable {
-          completer.Reply(std::move(value));
+        [value = request->value, completer = completer.ToAsync()]() mutable {
+          completer.Reply(value);
         },
         zx::duration(ZX_SEC(5)));
   }

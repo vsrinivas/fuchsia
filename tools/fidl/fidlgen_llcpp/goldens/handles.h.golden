@@ -338,6 +338,18 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_handles::SomeProtocol>
       ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<::fidl_test_handles::SomeProtocol>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::fidl_test_handles::SomeProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireServer<::fidl_test_handles::SomeProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
 #endif  // __Fuchsia__
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
@@ -418,6 +430,24 @@ class ::fidl::WireSyncClient<::fidl_test_handles::SomeProtocol> final {
 
  private:
   ::fidl::ClientEnd<::fidl_test_handles::SomeProtocol> client_end_;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireServer<::fidl_test_handles::SomeProtocol>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::fidl_test_handles::SomeProtocol;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
 };
 
 // Pure-virtual interface to be implemented by a server.

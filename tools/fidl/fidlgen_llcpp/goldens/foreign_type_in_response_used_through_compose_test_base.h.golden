@@ -17,9 +17,8 @@ class Top_TestBase
   using Interface = ::fidl::WireInterface<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
   virtual void GetFoo(
-      ::fidl::WireInterface<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
-          GetFooCompleter::Sync& completer) override {
+      ::fidl::WireServer<::fidl_test_foreigntypeinresponseusedthroughcompose::
+                             Top>::GetFooCompleter::Sync& completer) override {
     NotImplemented_("GetFoo", completer);
   }
 };

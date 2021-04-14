@@ -199,6 +199,19 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_emptystruct::EmptyProtocol>
       ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<
+    ::fidl_test_emptystruct::EmptyProtocol>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
 #endif  // __Fuchsia__
 
 template <>
@@ -1199,19 +1212,32 @@ class ::fidl::WireSyncClient<::fidl_test_emptystruct::EmptyProtocol> final {
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>
+class ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
+  WireServer() = default;
+  virtual ~WireServer() = default;
 
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
+  // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_emptystruct::EmptyProtocol;
 
   using SendCompleter = ::fidl::Completer<>;
+  class SendRequestView {
+   public:
+    SendRequestView(
+        ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>*
+            request)
+        : request_(request) {}
+    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>*
+    operator->() const {
+      return request_;
+    }
 
-  virtual void Send(::fidl_test_emptystruct::wire::Empty e,
+   private:
+    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>* request_;
+  };
+
+  virtual void Send(SendRequestView request,
                     SendCompleter::Sync& _completer) = 0;
 
   class SendAndReceiveCompleterBase : public ::fidl::CompleterBase {
@@ -1233,10 +1259,56 @@ class ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>
    protected:
     using ::fidl::CompleterBase::CompleterBase;
   };
-
   using SendAndReceiveCompleter =
       ::fidl::Completer<SendAndReceiveCompleterBase>;
+  class SendAndReceiveRequestView {
+   public:
+    SendAndReceiveRequestView(
+        ::fidl::WireRequest<
+            ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* request)
+        : request_(request) {}
+    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
+    operator->() const {
+      return request_;
+    }
 
+   private:
+    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
+        request_;
+  };
+
+  virtual void SendAndReceive(SendAndReceiveRequestView request,
+                              SendAndReceiveCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_emptystruct::EmptyProtocol;
+
+  using SendCompleter =
+      ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::SendCompleter;
+  virtual void Send(::fidl_test_emptystruct::wire::Empty e,
+                    SendCompleter::Sync& _completer) = 0;
+
+  using SendAndReceiveCompleterBase = ::fidl::WireServer<
+      ::fidl_test_emptystruct::EmptyProtocol>::SendAndReceiveCompleterBase;
+
+  using SendAndReceiveCompleter = ::fidl::WireServer<
+      ::fidl_test_emptystruct::EmptyProtocol>::SendAndReceiveCompleter;
   virtual void SendAndReceive(::fidl_test_emptystruct::wire::Empty e,
                               SendAndReceiveCompleter::Sync& _completer) = 0;
 

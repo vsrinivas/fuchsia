@@ -205,6 +205,62 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 
 #ifdef __Fuchsia__
 
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+    TryDispatch(
+        ::fidl::WireServer<
+            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>* impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::
+              kTop_GetFoo_Ordinal,
+          ::fidl::WireRequest<
+              ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+                  GetFoo>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireServer<
+                ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+                GetFooCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl::WireServer<
+                ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>*>(
+                interface)
+                ->GetFoo(
+                    reinterpret_cast<::fidl::WireRequest<
+                        ::fidl_test_foreigntypeinresponseusedthroughcompose::
+                            Top::GetFoo>*>(bytes),
+                    completer);
+          },
+      },
+  };
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
+}
+
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+    Dispatch(
+        ::fidl::WireServer<
+            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>* impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  }
+  return dispatch_result;
+}
+::fidl::DispatchResult
+fidl::WireServer<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireServerDispatcher<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::Dispatch(this,
+                                                                          msg,
+                                                                          txn);
+}
+
 ::fidl::DispatchResult fidl::internal::WireDispatcher<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     TryDispatch(
@@ -219,7 +275,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
               ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
                   GetFoo>::Type,
           [](void* interface, void* bytes, ::fidl::Transaction* txn) {
-            ::fidl::WireInterface<
+            ::fidl::WireServer<
                 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
                 GetFooCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
@@ -260,12 +316,12 @@ fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
 
 #ifdef __Fuchsia__
 ::fidl::Result
-fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+fidl::WireServer<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     GetFooCompleterBase::Reply(const ::bottom::wire::Foo& foo) {
   ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
       _response{foo};
-  return ::fidl::WireInterface<
+  return ::fidl::WireServer<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
       GetFooCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
@@ -273,7 +329,7 @@ fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
 
 #ifdef __Fuchsia__
 ::fidl::Result
-fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+fidl::WireServer<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     GetFooCompleterBase::Reply(::fidl::BufferSpan _backing_buffer,
                                const ::bottom::wire::Foo& foo) {
   ::fidl::WireResponse<

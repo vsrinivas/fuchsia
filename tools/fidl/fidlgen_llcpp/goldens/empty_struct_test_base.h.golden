@@ -15,15 +15,14 @@ class EmptyProtocol_TestBase
 
   using Interface =
       ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>;
-  virtual void Send(
-      ::fidl_test_emptystruct::wire::Empty e,
-      ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::
-          SendCompleter::Sync& completer) override {
+  virtual void Send(::fidl_test_emptystruct::wire::Empty e,
+                    ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
+                        SendCompleter::Sync& completer) override {
     NotImplemented_("Send", completer);
   }
   virtual void SendAndReceive(
       ::fidl_test_emptystruct::wire::Empty e,
-      ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::
+      ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
           SendAndReceiveCompleter::Sync& completer) override {
     NotImplemented_("SendAndReceive", completer);
   }

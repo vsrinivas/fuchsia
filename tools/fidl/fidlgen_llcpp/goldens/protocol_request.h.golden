@@ -103,6 +103,19 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Parent>
       ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<
+    ::fidl_test_protocolrequest::Parent>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::fidl_test_protocolrequest::Parent>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireServer<::fidl_test_protocolrequest::Parent>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
 #endif  // __Fuchsia__
 
 template <>
@@ -1718,14 +1731,13 @@ class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>
+class ::fidl::WireServer<::fidl_test_protocolrequest::Parent>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
+  WireServer() = default;
+  virtual ~WireServer() = default;
 
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
+  // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocolrequest::Parent;
 
   class GetChildCompleterBase : public ::fidl::CompleterBase {
@@ -1749,10 +1761,25 @@ class ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>
    protected:
     using ::fidl::CompleterBase::CompleterBase;
   };
-
   using GetChildCompleter = ::fidl::Completer<GetChildCompleterBase>;
+  class GetChildRequestView {
+   public:
+    GetChildRequestView(
+        ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>*
+            request)
+        : request_(request) {}
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>*
+    operator->() const {
+      return request_;
+    }
 
-  virtual void GetChild(GetChildCompleter::Sync& _completer) = 0;
+   private:
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>*
+        request_;
+  };
+
+  virtual void GetChild(GetChildRequestView request,
+                        GetChildCompleter::Sync& _completer) = 0;
 
   class GetChildRequestCompleterBase : public ::fidl::CompleterBase {
    public:
@@ -1775,20 +1802,109 @@ class ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>
    protected:
     using ::fidl::CompleterBase::CompleterBase;
   };
-
   using GetChildRequestCompleter =
       ::fidl::Completer<GetChildRequestCompleterBase>;
+  class GetChildRequestRequestView {
+   public:
+    GetChildRequestRequestView(
+        ::fidl::WireRequest<
+            ::fidl_test_protocolrequest::Parent::GetChildRequest>* request)
+        : request_(request) {}
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>*
+    operator->() const {
+      return request_;
+    }
 
-  virtual void GetChildRequest(GetChildRequestCompleter::Sync& _completer) = 0;
+   private:
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>*
+        request_;
+  };
+
+  virtual void GetChildRequest(GetChildRequestRequestView request,
+                               GetChildRequestCompleter::Sync& _completer) = 0;
 
   using TakeChildCompleter = ::fidl::Completer<>;
+  class TakeChildRequestView {
+   public:
+    TakeChildRequestView(
+        ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>*
+            request)
+        : request_(request) {}
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>*
+    operator->() const {
+      return request_;
+    }
 
+   private:
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>*
+        request_;
+  };
+
+  virtual void TakeChild(TakeChildRequestView request,
+                         TakeChildCompleter::Sync& _completer) = 0;
+
+  using TakeChildRequestCompleter = ::fidl::Completer<>;
+  class TakeChildRequestRequestView {
+   public:
+    TakeChildRequestRequestView(
+        ::fidl::WireRequest<
+            ::fidl_test_protocolrequest::Parent::TakeChildRequest>* request)
+        : request_(request) {}
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChildRequest>*
+    operator->() const {
+      return request_;
+    }
+
+   private:
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChildRequest>*
+        request_;
+  };
+
+  virtual void TakeChildRequest(
+      TakeChildRequestRequestView request,
+      TakeChildRequestCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_protocolrequest::Parent;
+
+  using GetChildCompleterBase = ::fidl::WireServer<
+      ::fidl_test_protocolrequest::Parent>::GetChildCompleterBase;
+
+  using GetChildCompleter = ::fidl::WireServer<
+      ::fidl_test_protocolrequest::Parent>::GetChildCompleter;
+  virtual void GetChild(GetChildCompleter::Sync& _completer) = 0;
+
+  using GetChildRequestCompleterBase = ::fidl::WireServer<
+      ::fidl_test_protocolrequest::Parent>::GetChildRequestCompleterBase;
+
+  using GetChildRequestCompleter = ::fidl::WireServer<
+      ::fidl_test_protocolrequest::Parent>::GetChildRequestCompleter;
+  virtual void GetChildRequest(GetChildRequestCompleter::Sync& _completer) = 0;
+
+  using TakeChildCompleter = ::fidl::WireServer<
+      ::fidl_test_protocolrequest::Parent>::TakeChildCompleter;
   virtual void TakeChild(
       ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c,
       TakeChildCompleter::Sync& _completer) = 0;
 
-  using TakeChildRequestCompleter = ::fidl::Completer<>;
-
+  using TakeChildRequestCompleter = ::fidl::WireServer<
+      ::fidl_test_protocolrequest::Parent>::TakeChildRequestCompleter;
   virtual void TakeChildRequest(
       ::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r,
       TakeChildRequestCompleter::Sync& _completer) = 0;
@@ -1822,6 +1938,19 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Child>
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireInterface<::fidl_test_protocolrequest::Child>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<
+    ::fidl_test_protocolrequest::Child>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::fidl_test_protocolrequest::Child>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireServer<::fidl_test_protocolrequest::Child>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
 #endif  // __Fuchsia__
@@ -1904,6 +2033,24 @@ class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Child> final {
 
  private:
   ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> client_end_;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireServer<::fidl_test_protocolrequest::Child>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::fidl_test_protocolrequest::Child;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
 };
 
 // Pure-virtual interface to be implemented by a server.

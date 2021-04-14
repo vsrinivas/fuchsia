@@ -18,7 +18,7 @@ class Parent_TestBase : public ::fidl::WireInterface<
   virtual void First(
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           request,
-      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>::
+      ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Parent>::
           FirstCompleter::Sync& completer) override {
     NotImplemented_("First", completer);
   }
@@ -36,14 +36,14 @@ class Child_TestBase : public ::fidl::WireInterface<
   virtual void First(
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           request,
-      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>::
+      ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
           FirstCompleter::Sync& completer) override {
     NotImplemented_("First", completer);
   }
   virtual void Second(
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           request,
-      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>::
+      ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
           SecondCompleter::Sync& completer) override {
     NotImplemented_("Second", completer);
   }

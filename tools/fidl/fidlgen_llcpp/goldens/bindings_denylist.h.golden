@@ -172,6 +172,21 @@ struct ::fidl::internal::WireDispatcher<
           impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>*
+          impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>*
+          impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
 #endif  // __Fuchsia__
 
 template <>
@@ -751,14 +766,13 @@ class ::fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+class ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
+  WireServer() = default;
+  virtual ~WireServer() = default;
 
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
+  // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps;
 
   class LibfuzzerNeedsNonemptyProtocolCompleterBase
@@ -779,10 +793,55 @@ class ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
    protected:
     using ::fidl::CompleterBase::CompleterBase;
   };
-
   using LibfuzzerNeedsNonemptyProtocolCompleter =
       ::fidl::Completer<LibfuzzerNeedsNonemptyProtocolCompleterBase>;
+  class LibfuzzerNeedsNonemptyProtocolRequestView {
+   public:
+    LibfuzzerNeedsNonemptyProtocolRequestView(
+        ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                                LibfuzzerNeedsNonemptyProtocol>* request)
+        : request_(request) {}
+    ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                            LibfuzzerNeedsNonemptyProtocol>*
+    operator->() const {
+      return request_;
+    }
 
+   private:
+    ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                            LibfuzzerNeedsNonemptyProtocol>* request_;
+  };
+
+  virtual void LibfuzzerNeedsNonemptyProtocol(
+      LibfuzzerNeedsNonemptyProtocolRequestView request,
+      LibfuzzerNeedsNonemptyProtocolCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps;
+
+  using LibfuzzerNeedsNonemptyProtocolCompleterBase =
+      ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
+          LibfuzzerNeedsNonemptyProtocolCompleterBase;
+
+  using LibfuzzerNeedsNonemptyProtocolCompleter =
+      ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
+          LibfuzzerNeedsNonemptyProtocolCompleter;
   virtual void LibfuzzerNeedsNonemptyProtocol(
       LibfuzzerNeedsNonemptyProtocolCompleter::Sync& _completer) = 0;
 
@@ -817,6 +876,19 @@ struct ::fidl::internal::WireDispatcher<
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<
+    ::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyCppAndDeps>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyCppAndDeps>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
 #endif  // __Fuchsia__
@@ -908,6 +980,24 @@ class ::fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
 
  private:
   ::fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps> client_end_;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::fidl_test_bindingsdenylist::OnlyCppAndDeps;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
 };
 
 // Pure-virtual interface to be implemented by a server.

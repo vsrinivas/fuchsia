@@ -17,14 +17,14 @@
 
 // [START echo-impl]
 // Implementation of the Echo protocol that prepends a prefix to every response.
-class EchoImpl final : public fidl::WireInterface<fuchsia_examples::Echo> {
+class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
  public:
   explicit EchoImpl(std::string prefix) : prefix_(prefix) {}
   // This method is not used in the request pipelining example, so requests are ignored.
-  void SendString(fidl::StringView value, SendStringCompleter::Sync& completer) override {}
-  void EchoString(fidl::StringView value, EchoStringCompleter::Sync& completer) override {
+  void SendString(SendStringRequestView request, SendStringCompleter::Sync& completer) override {}
+  void EchoString(EchoStringRequestView request, EchoStringCompleter::Sync& completer) override {
     std::cout << "Got echo request for prefix " << prefix_ << std::endl;
-    auto value_str = std::string(value.data(), value.size());
+    auto value_str = std::string(request->value.data(), request->value.size());
     auto response = prefix_ + value_str;
     completer.Reply(fidl::StringView::FromExternal(response));
   }
@@ -36,23 +36,23 @@ class EchoImpl final : public fidl::WireInterface<fuchsia_examples::Echo> {
 // [START launcher-impl]
 // Implementation of EchoLauncher. Each method creates an instance of EchoImpl
 // with the specified prefix.
-class EchoLauncherImpl final : public fidl::WireInterface<fuchsia_examples::EchoLauncher> {
+class EchoLauncherImpl final : public fidl::WireServer<fuchsia_examples::EchoLauncher> {
  public:
   explicit EchoLauncherImpl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
-  void GetEcho(fidl::StringView prefix, GetEchoCompleter::Sync& completer) override {
+  void GetEcho(GetEchoRequestView request, GetEchoCompleter::Sync& completer) override {
     std::cout << "Got non pipelined request" << std::endl;
     auto endpoints = fidl::CreateEndpoints<fuchsia_examples::Echo>();
     ZX_ASSERT(endpoints.is_ok());
     auto [client_end, server_end] = *std::move(endpoints);
-    RunEchoServer(std::move(prefix), std::move(server_end));
+    RunEchoServer(request->echo_prefix, std::move(server_end));
     completer.Reply(std::move(client_end));
   }
 
-  void GetEchoPipelined(fidl::StringView prefix, fidl::ServerEnd<fuchsia_examples::Echo> server_end,
+  void GetEchoPipelined(GetEchoPipelinedRequestView request,
                         GetEchoPipelinedCompleter::Sync& completer) override {
     std::cout << "Got pipelined request" << std::endl;
-    RunEchoServer(std::move(prefix), std::move(server_end));
+    RunEchoServer(request->echo_prefix, std::move(request->request));
   }
 
   void RunEchoServer(fidl::StringView prefix, fidl::ServerEnd<fuchsia_examples::Echo> server_end) {

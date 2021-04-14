@@ -3228,6 +3228,18 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_union::TestProtocol> final {
       ::fidl::WireInterface<::fidl_test_union::TestProtocol>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<::fidl_test_union::TestProtocol>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::fidl_test_union::TestProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireServer<::fidl_test_union::TestProtocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
 #endif  // __Fuchsia__
 
 template <>
@@ -4344,14 +4356,13 @@ class ::fidl::WireSyncClient<::fidl_test_union::TestProtocol> final {
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireInterface<::fidl_test_union::TestProtocol>
+class ::fidl::WireServer<::fidl_test_union::TestProtocol>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
+  WireServer() = default;
+  virtual ~WireServer() = default;
 
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
+  // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_union::TestProtocol;
 
   class StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase
@@ -4374,12 +4385,30 @@ class ::fidl::WireInterface<::fidl_test_union::TestProtocol>
    protected:
     using ::fidl::CompleterBase::CompleterBase;
   };
-
   using StrictXUnionHenceResponseMayBeStackAllocatedCompleter =
       ::fidl::Completer<
           StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase>;
+  class StrictXUnionHenceResponseMayBeStackAllocatedRequestView {
+   public:
+    StrictXUnionHenceResponseMayBeStackAllocatedRequestView(
+        ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                                StrictXUnionHenceResponseMayBeStackAllocated>*
+            request)
+        : request_(request) {}
+    ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                            StrictXUnionHenceResponseMayBeStackAllocated>*
+    operator->() const {
+      return request_;
+    }
+
+   private:
+    ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                            StrictXUnionHenceResponseMayBeStackAllocated>*
+        request_;
+  };
 
   virtual void StrictXUnionHenceResponseMayBeStackAllocated(
+      StrictXUnionHenceResponseMayBeStackAllocatedRequestView request,
       StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync&
           _completer) = 0;
 
@@ -4403,11 +4432,70 @@ class ::fidl::WireInterface<::fidl_test_union::TestProtocol>
    protected:
     using ::fidl::CompleterBase::CompleterBase;
   };
-
   using FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter =
       ::fidl::Completer<
           FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase>;
+  class FlexibleXUnionHenceResponseMustBeHeapAllocatedRequestView {
+   public:
+    FlexibleXUnionHenceResponseMustBeHeapAllocatedRequestView(
+        ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                                FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+            request)
+        : request_(request) {}
+    ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                            FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+    operator->() const {
+      return request_;
+    }
 
+   private:
+    ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                            FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+        request_;
+  };
+
+  virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequestView request,
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync&
+          _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_union::TestProtocol>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_union::TestProtocol;
+
+  using StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase =
+      ::fidl::WireServer<::fidl_test_union::TestProtocol>::
+          StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase;
+
+  using StrictXUnionHenceResponseMayBeStackAllocatedCompleter =
+      ::fidl::WireServer<::fidl_test_union::TestProtocol>::
+          StrictXUnionHenceResponseMayBeStackAllocatedCompleter;
+  virtual void StrictXUnionHenceResponseMayBeStackAllocated(
+      StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync&
+          _completer) = 0;
+
+  using FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase =
+      ::fidl::WireServer<::fidl_test_union::TestProtocol>::
+          FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase;
+
+  using FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter =
+      ::fidl::WireServer<::fidl_test_union::TestProtocol>::
+          FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter;
   virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
       FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync&
           _completer) = 0;

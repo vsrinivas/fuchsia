@@ -16,7 +16,7 @@ class super_TestBase
   using Interface = ::fidl::WireInterface<::fidl_test_inheritance::super>;
   virtual void foo(
       ::fidl::StringView s,
-      ::fidl::WireInterface<::fidl_test_inheritance::super>::fooCompleter::Sync&
+      ::fidl::WireServer<::fidl_test_inheritance::super>::fooCompleter::Sync&
           completer) override {
     NotImplemented_("foo", completer);
   }
@@ -32,7 +32,7 @@ class sub_TestBase
   using Interface = ::fidl::WireInterface<::fidl_test_inheritance::sub>;
   virtual void foo(
       ::fidl::StringView s,
-      ::fidl::WireInterface<::fidl_test_inheritance::sub>::fooCompleter::Sync&
+      ::fidl::WireServer<::fidl_test_inheritance::sub>::fooCompleter::Sync&
           completer) override {
     NotImplemented_("foo", completer);
   }

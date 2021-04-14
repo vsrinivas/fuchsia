@@ -72,6 +72,18 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_inheritance::super> final {
       ::fidl::WireInterface<::fidl_test_inheritance::super>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<::fidl_test_inheritance::super>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::fidl_test_inheritance::super>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireServer<::fidl_test_inheritance::super>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
 #endif  // __Fuchsia__
 
 template <>
@@ -620,14 +632,13 @@ class ::fidl::WireSyncClient<::fidl_test_inheritance::super> final {
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireInterface<::fidl_test_inheritance::super>
+class ::fidl::WireServer<::fidl_test_inheritance::super>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
+  WireServer() = default;
+  virtual ~WireServer() = default;
 
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
+  // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_inheritance::super;
 
   class fooCompleterBase : public ::fidl::CompleterBase {
@@ -648,9 +659,47 @@ class ::fidl::WireInterface<::fidl_test_inheritance::super>
    protected:
     using ::fidl::CompleterBase::CompleterBase;
   };
-
   using fooCompleter = ::fidl::Completer<fooCompleterBase>;
+  class fooRequestView {
+   public:
+    fooRequestView(
+        ::fidl::WireRequest<::fidl_test_inheritance::super::foo>* request)
+        : request_(request) {}
+    ::fidl::WireRequest<::fidl_test_inheritance::super::foo>* operator->()
+        const {
+      return request_;
+    }
 
+   private:
+    ::fidl::WireRequest<::fidl_test_inheritance::super::foo>* request_;
+  };
+
+  virtual void foo(fooRequestView request, fooCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_inheritance::super>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_inheritance::super;
+
+  using fooCompleterBase =
+      ::fidl::WireServer<::fidl_test_inheritance::super>::fooCompleterBase;
+
+  using fooCompleter =
+      ::fidl::WireServer<::fidl_test_inheritance::super>::fooCompleter;
   virtual void foo(::fidl::StringView s, fooCompleter::Sync& _completer) = 0;
 
  private:
@@ -688,6 +737,18 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_inheritance::sub> final {
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireInterface<::fidl_test_inheritance::sub>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<::fidl_test_inheritance::sub>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::fidl_test_inheritance::sub>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireServer<::fidl_test_inheritance::sub>* impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
 #endif  // __Fuchsia__
@@ -1232,14 +1293,13 @@ class ::fidl::WireSyncClient<::fidl_test_inheritance::sub> final {
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireInterface<::fidl_test_inheritance::sub>
+class ::fidl::WireServer<::fidl_test_inheritance::sub>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
+  WireServer() = default;
+  virtual ~WireServer() = default;
 
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
+  // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_inheritance::sub;
 
   class fooCompleterBase : public ::fidl::CompleterBase {
@@ -1260,9 +1320,46 @@ class ::fidl::WireInterface<::fidl_test_inheritance::sub>
    protected:
     using ::fidl::CompleterBase::CompleterBase;
   };
-
   using fooCompleter = ::fidl::Completer<fooCompleterBase>;
+  class fooRequestView {
+   public:
+    fooRequestView(
+        ::fidl::WireRequest<::fidl_test_inheritance::sub::foo>* request)
+        : request_(request) {}
+    ::fidl::WireRequest<::fidl_test_inheritance::sub::foo>* operator->() const {
+      return request_;
+    }
 
+   private:
+    ::fidl::WireRequest<::fidl_test_inheritance::sub::foo>* request_;
+  };
+
+  virtual void foo(fooRequestView request, fooCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_inheritance::sub>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_inheritance::sub;
+
+  using fooCompleterBase =
+      ::fidl::WireServer<::fidl_test_inheritance::sub>::fooCompleterBase;
+
+  using fooCompleter =
+      ::fidl::WireServer<::fidl_test_inheritance::sub>::fooCompleter;
   virtual void foo(::fidl::StringView s, fooCompleter::Sync& _completer) = 0;
 
  private:

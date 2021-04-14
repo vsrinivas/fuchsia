@@ -16,7 +16,7 @@ class Example_TestBase
   using Interface = ::fidl::WireInterface<::fidl_test_error::Example>;
   virtual void foo(
       ::fidl::StringView s,
-      ::fidl::WireInterface<::fidl_test_error::Example>::fooCompleter::Sync&
+      ::fidl::WireServer<::fidl_test_error::Example>::fooCompleter::Sync&
           completer) override {
     NotImplemented_("foo", completer);
   }

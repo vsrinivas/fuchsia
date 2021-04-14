@@ -109,11 +109,13 @@ var (
 	WireAsyncEventHandler     = fidlNs.member("WireAsyncEventHandler")
 	WireInterface             = fidlNs.member("WireInterface")
 	WireRawChannelInterface   = fidlNs.member("WireRawChannelInterface")
+	WireServer                = fidlNs.member("WireServer")
 	WireEventSender           = fidlNs.member("WireEventSender")
 	WireWeakEventSender       = internalNs.member("WireWeakEventSender")
 	WireClientImpl            = internalNs.member("WireClientImpl")
 	WireCaller                = internalNs.member("WireCaller")
 	WireDispatcher            = internalNs.member("WireDispatcher")
+	WireServerDispatcher      = internalNs.member("WireServerDispatcher")
 
 	// MethodRelated
 	WireRequest         = fidlNs.member("WireRequest")
@@ -136,11 +138,13 @@ type wireTypeNames struct {
 	WireAsyncEventHandler     name
 	WireInterface             name
 	WireRawChannelInterface   name
+	WireServer                name
 	WireEventSender           name
 	WireWeakEventSender       name
 	WireClientImpl            name
 	WireCaller                name
 	WireDispatcher            name
+	WireServerDispatcher      name
 }
 
 func newWireTypeNames(protocolVariants nameVariants) wireTypeNames {
@@ -154,11 +158,13 @@ func newWireTypeNames(protocolVariants nameVariants) wireTypeNames {
 		WireAsyncEventHandler:     WireAsyncEventHandler.template(p),
 		WireInterface:             WireInterface.template(p),
 		WireRawChannelInterface:   WireRawChannelInterface.template(p),
+		WireServer:                WireServer.template(p),
 		WireEventSender:           WireEventSender.template(p),
 		WireWeakEventSender:       WireWeakEventSender.template(p),
 		WireClientImpl:            WireClientImpl.template(p),
 		WireCaller:                WireCaller.template(p),
 		WireDispatcher:            WireDispatcher.template(p),
+		WireServerDispatcher:      WireServerDispatcher.template(p),
 	}
 }
 
@@ -327,6 +333,7 @@ type wireMethod struct {
 	WireCompleter       name
 	WireCompleterBase   name
 	WireRequest         name
+	WireRequestView     name
 	WireResponse        name
 	WireResponseContext name
 	WireResult          name
@@ -334,11 +341,12 @@ type wireMethod struct {
 }
 
 func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, methodMarker name) wireMethod {
-	i := wireTypes.WireInterface.nest(name)
+	s := wireTypes.WireServer.nest(name)
 	return wireMethod{
-		WireCompleter:       i.appendName("Completer"),
-		WireCompleterBase:   i.appendName("CompleterBase"),
+		WireCompleter:       s.appendName("Completer"),
+		WireCompleterBase:   s.appendName("CompleterBase"),
 		WireRequest:         WireRequest.template(methodMarker),
+		WireRequestView:     s.appendName("RequestView"),
 		WireResponse:        WireResponse.template(methodMarker),
 		WireResponseContext: WireResponseContext.template(methodMarker),
 		WireResult:          WireResult.template(methodMarker),

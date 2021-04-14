@@ -17,8 +17,7 @@ class OnlyLibfuzzerAndDeps_TestBase
   using Interface =
       ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
   virtual void LibfuzzerNeedsNonemptyProtocol(
-      ::fidl::WireInterface<
-          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
+      ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
           LibfuzzerNeedsNonemptyProtocolCompleter::Sync& completer) override {
     NotImplemented_("LibfuzzerNeedsNonemptyProtocol", completer);
   }

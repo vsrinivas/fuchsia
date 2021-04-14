@@ -374,6 +374,19 @@ struct ::fidl::internal::WireDispatcher<
           impl,
       fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<
+    ::fidl_test_requestflexibleenvelope::Protocol>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>* impl,
+      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+};
 #endif  // __Fuchsia__
 
 template <>
@@ -1555,14 +1568,13 @@ class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>
+class ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
+  WireServer() = default;
+  virtual ~WireServer() = default;
 
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
+  // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_requestflexibleenvelope::Protocol;
 
   class RequestStrictResponseFlexibleCompleterBase
@@ -1587,12 +1599,27 @@ class ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>
    protected:
     using ::fidl::CompleterBase::CompleterBase;
   };
-
   using RequestStrictResponseFlexibleCompleter =
       ::fidl::Completer<RequestStrictResponseFlexibleCompleterBase>;
+  class RequestStrictResponseFlexibleRequestView {
+   public:
+    RequestStrictResponseFlexibleRequestView(
+        ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                                RequestStrictResponseFlexible>* request)
+        : request_(request) {}
+    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestStrictResponseFlexible>*
+    operator->() const {
+      return request_;
+    }
+
+   private:
+    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestStrictResponseFlexible>* request_;
+  };
 
   virtual void RequestStrictResponseFlexible(
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
+      RequestStrictResponseFlexibleRequestView request,
       RequestStrictResponseFlexibleCompleter::Sync& _completer) = 0;
 
   class RequestFlexibleResponseStrictCompleterBase
@@ -1617,10 +1644,66 @@ class ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>
    protected:
     using ::fidl::CompleterBase::CompleterBase;
   };
-
   using RequestFlexibleResponseStrictCompleter =
       ::fidl::Completer<RequestFlexibleResponseStrictCompleterBase>;
+  class RequestFlexibleResponseStrictRequestView {
+   public:
+    RequestFlexibleResponseStrictRequestView(
+        ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                                RequestFlexibleResponseStrict>* request)
+        : request_(request) {}
+    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestFlexibleResponseStrict>*
+    operator->() const {
+      return request_;
+    }
 
+   private:
+    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestFlexibleResponseStrict>* request_;
+  };
+
+  virtual void RequestFlexibleResponseStrict(
+      RequestFlexibleResponseStrictRequestView request,
+      RequestFlexibleResponseStrictCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_requestflexibleenvelope::Protocol;
+
+  using RequestStrictResponseFlexibleCompleterBase =
+      ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
+          RequestStrictResponseFlexibleCompleterBase;
+
+  using RequestStrictResponseFlexibleCompleter =
+      ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
+          RequestStrictResponseFlexibleCompleter;
+  virtual void RequestStrictResponseFlexible(
+      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
+      RequestStrictResponseFlexibleCompleter::Sync& _completer) = 0;
+
+  using RequestFlexibleResponseStrictCompleterBase =
+      ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
+          RequestFlexibleResponseStrictCompleterBase;
+
+  using RequestFlexibleResponseStrictCompleter =
+      ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
+          RequestFlexibleResponseStrictCompleter;
   virtual void RequestFlexibleResponseStrict(
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
       RequestFlexibleResponseStrictCompleter::Sync& _completer) = 0;

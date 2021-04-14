@@ -34,6 +34,12 @@ class WireAsyncEventHandler;
 template <typename FidlProtocol>
 class WireInterface;
 
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <typename FidlProtocol>
+class WireServer;
+
 // Deprecated transitional un-typed interface.
 template <typename FidlProtocol>
 class WireRawChannelInterface;
@@ -79,6 +85,9 @@ class WireCaller;
 template <typename FidlProtocol>
 struct WireDispatcher;
 
+template <typename FidlProtocol>
+struct WireServerDispatcher;
+
 }  // namespace internal
 
 // |WireCall| is used to make method calls directly on a |fidl::ClientEnd|
@@ -117,6 +126,25 @@ template <typename FidlProtocol>
 fidl::DispatchResult WireTryDispatch(fidl::WireInterface<FidlProtocol>* impl,
                                      fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
   return fidl::internal::WireDispatcher<FidlProtocol>::TryDispatch(impl, msg, txn);
+}
+
+// Dispatches the incoming message to one of the handlers functions in the protocol.
+// If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+// a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+template <typename FidlProtocol>
+fidl::DispatchResult WireDispatch(fidl::WireServer<FidlProtocol>* impl, fidl_incoming_msg_t* msg,
+                                  fidl::Transaction* txn) {
+  return fidl::internal::WireServerDispatcher<FidlProtocol>::Dispatch(impl, msg, txn);
+}
+
+// Attempts to dispatch the incoming message to a handler function in the server implementation.
+// If there is no matching handler, it returns false, leaving the message and transaction intact.
+// In all other cases, it consumes the message and returns true.
+// It is possible to chain multiple TryDispatch functions in this manner.
+template <typename FidlProtocol>
+fidl::DispatchResult WireTryDispatch(fidl::WireServer<FidlProtocol>* impl, fidl_incoming_msg_t* msg,
+                                     fidl::Transaction* txn) {
+  return fidl::internal::WireServerDispatcher<FidlProtocol>::TryDispatch(impl, msg, txn);
 }
 
 }  // namespace fidl

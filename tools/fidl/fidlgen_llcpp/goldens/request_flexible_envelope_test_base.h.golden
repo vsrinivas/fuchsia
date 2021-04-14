@@ -17,13 +17,13 @@ class Protocol_TestBase : public ::fidl::WireInterface<
       ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>;
   virtual void RequestStrictResponseFlexible(
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
-      ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
+      ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
           RequestStrictResponseFlexibleCompleter::Sync& completer) override {
     NotImplemented_("RequestStrictResponseFlexible", completer);
   }
   virtual void RequestFlexibleResponseStrict(
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
-      ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
+      ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
           RequestFlexibleResponseStrictCompleter::Sync& completer) override {
     NotImplemented_("RequestFlexibleResponseStrict", completer);
   }
