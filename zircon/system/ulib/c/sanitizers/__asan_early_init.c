@@ -57,8 +57,9 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
   // The actual shadow that needs to be mapped starts at the top of
   // the shadow of the shadow, and has a page of shadow for each
   // (1<<ASAN_SHADOW_SHIFT) pages that can actually be mapped.
+  const size_t kPageSize = _zx_system_get_page_size();
   size_t shadow_used_size =
-      ((((info.base + info.len) >> ASAN_SHADOW_SHIFT) + PAGE_SIZE - 1) & -PAGE_SIZE) -
+      ((((info.base + info.len) >> ASAN_SHADOW_SHIFT) + kPageSize - 1) & -kPageSize) -
       shadow_shadow_size;
 
   // Now we're ready to allocate and map the actual shadow. We keep the VMO
@@ -99,13 +100,14 @@ sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void) { return shadow_bounds
 
 NO_ASAN static void decommit_if_zero(uintptr_t page) {
   const uint64_t *ptr = (uint64_t *)page;
-  for (int i = 0; i < PAGE_SIZE / sizeof(uint64_t); i++) {
+  for (int i = 0; i < _zx_system_get_page_size() / sizeof(uint64_t); i++) {
     if (ptr[i] != 0)
       return;
   }
 
-  zx_status_t status = _zx_vmo_op_range(shadow_vmo, ZX_VMO_OP_DECOMMIT,
-                                        page - shadow_bounds.shadow_base, PAGE_SIZE, NULL, 0);
+  zx_status_t status =
+      _zx_vmo_op_range(shadow_vmo, ZX_VMO_OP_DECOMMIT, page - shadow_bounds.shadow_base,
+                       _zx_system_get_page_size(), NULL, 0);
   if (status != ZX_OK) {
     __builtin_trap();
   }
@@ -118,14 +120,15 @@ NO_ASAN void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value,
     __builtin_trap();
   }
   const size_t shadow_size = size >> ASAN_SHADOW_SHIFT;
-  if (!value && shadow_size >= threshold && shadow_size >= PAGE_SIZE) {
-    // TODO(fxbug.dev/41009): Handle shadow_size < PAGE_SIZE.
-    uintptr_t page_start = (shadow_base + PAGE_SIZE - 1) & -PAGE_SIZE;
-    uintptr_t page_end = (shadow_base + shadow_size) & -PAGE_SIZE;
+  const size_t kPageSize = _zx_system_get_page_size();
+  if (!value && shadow_size >= threshold && shadow_size >= kPageSize) {
+    // TODO(fxbug.dev/41009): Handle shadow_size < zx_system_get_page_size().
+    uintptr_t page_start = (shadow_base + kPageSize - 1) & -kPageSize;
+    uintptr_t page_end = (shadow_base + shadow_size) & -kPageSize;
     // Memset the partial pages, and decommit them if they are zero-pages.
     if (page_start - shadow_base > 0) {
       __unsanitized_memset((void *)shadow_base, 0, page_start - shadow_base);
-      decommit_if_zero(page_start - PAGE_SIZE);
+      decommit_if_zero(page_start - kPageSize);
     }
 
     if (shadow_base + shadow_size - page_end > 0) {
