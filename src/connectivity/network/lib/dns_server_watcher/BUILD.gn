@@ -12,6 +12,7 @@ rustc_library("dns_server_watcher") {
   test_deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:matches",
   ]
 
   deps = [
@@ -22,6 +23,7 @@ rustc_library("dns_server_watcher") {
     "//src/lib/network/fidl_fuchsia_net_name_ext",
     "//third_party/rust_crates:futures",
   ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 
   sources = [
     "src/lib.rs",

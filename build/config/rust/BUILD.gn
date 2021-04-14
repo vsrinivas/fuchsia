@@ -142,7 +142,6 @@ config("allow_unused_results") {
     "//src/connectivity/location/*",
     "//src/connectivity/lowpan/*",
     "//src/connectivity/management/*",
-    "//src/connectivity/network/lib/*",
     "//src/connectivity/network/netstack/*",
     "//src/connectivity/network/netstack3/*",
     "//src/connectivity/network/tools/*",

@@ -156,8 +156,14 @@ mod tests {
         // `DHCPV6_SERVER2` would normally only come from an interface with ID
         // `DHCPV6_SERVER2_INTERFACE_ID`, but we are just testing deduplication
         // logic here.
-        dhcpv6.insert(DHCPV6_SERVER1_INTERFACE_ID, vec![DHCPV6_SERVER1, DHCPV6_SERVER2]);
-        dhcpv6.insert(DHCPV6_SERVER2_INTERFACE_ID, vec![DHCPV6_SERVER1, DHCPV6_SERVER2]);
+        matches::assert_matches!(
+            dhcpv6.insert(DHCPV6_SERVER1_INTERFACE_ID, vec![DHCPV6_SERVER1, DHCPV6_SERVER2]),
+            None
+        );
+        matches::assert_matches!(
+            dhcpv6.insert(DHCPV6_SERVER2_INTERFACE_ID, vec![DHCPV6_SERVER1, DHCPV6_SERVER2]),
+            None
+        );
         let servers = DnsServers {
             default: vec![NDP_SERVER, NDP_SERVER],
             netstack: vec![
@@ -188,8 +194,14 @@ mod tests {
         // is observed by a higher priority source, then use the higher source for
         // ordering.
         let mut dhcpv6 = HashMap::new();
-        dhcpv6.insert(DHCPV6_SERVER1_INTERFACE_ID, vec![DHCPV6_SERVER1]);
-        dhcpv6.insert(DHCPV6_SERVER2_INTERFACE_ID, vec![DHCPV6_SERVER2]);
+        matches::assert_matches!(
+            dhcpv6.insert(DHCPV6_SERVER1_INTERFACE_ID, vec![DHCPV6_SERVER1]),
+            None
+        );
+        matches::assert_matches!(
+            dhcpv6.insert(DHCPV6_SERVER2_INTERFACE_ID, vec![DHCPV6_SERVER2]),
+            None
+        );
         let servers = DnsServers {
             default: vec![NDP_SERVER, NDP_SERVER, DHCP_SERVER],
             netstack: vec![DHCP_SERVER, STATIC_SERVER, DHCP_SERVER, STATIC_SERVER],
@@ -222,7 +234,13 @@ mod tests {
             ..DnsServer_::EMPTY
         };
         let mut dhcpv6 = HashMap::new();
-        dhcpv6.insert(DHCPV6_SERVER1_INTERFACE_ID, vec![dhcpv6_with_ndp_address(), DHCPV6_SERVER1]);
+        matches::assert_matches!(
+            dhcpv6.insert(
+                DHCPV6_SERVER1_INTERFACE_ID,
+                vec![dhcpv6_with_ndp_address(), DHCPV6_SERVER1]
+            ),
+            None
+        );
         let mut servers = DnsServers {
             default: vec![],
             netstack: vec![dhcpv6_with_ndp_address(), DHCP_SERVER, NDP_SERVER, STATIC_SERVER],
@@ -253,8 +271,14 @@ mod tests {
         };
 
         let mut dhcpv6 = HashMap::new();
-        dhcpv6.insert(DHCPV6_SERVER1_INTERFACE_ID, vec![DHCPV6_SERVER1]);
-        dhcpv6.insert(DHCPV6_SERVER2_INTERFACE_ID, vec![DHCPV6_SERVER2]);
+        matches::assert_matches!(
+            dhcpv6.insert(DHCPV6_SERVER1_INTERFACE_ID, vec![DHCPV6_SERVER1]),
+            None
+        );
+        matches::assert_matches!(
+            dhcpv6.insert(DHCPV6_SERVER2_INTERFACE_ID, vec![DHCPV6_SERVER2]),
+            None
+        );
         let mut servers = DnsServers {
             default: vec![],
             netstack: vec![ndp_with_dhcpv6_sockaddr1(), DHCP_SERVER, STATIC_SERVER],
