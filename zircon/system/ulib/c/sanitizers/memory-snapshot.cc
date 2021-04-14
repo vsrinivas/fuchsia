@@ -68,8 +68,8 @@ class RelocatingPageAllocatedVector {
     if (size_ < capacity_) {
       return ZX_OK;
     }
-    static_assert(sizeof(T) <= ZX_PAGE_SIZE);
-    const size_t alloc_size = AllocatedSize() + ZX_PAGE_SIZE;
+    assert(sizeof(T) <= _zx_system_get_page_size());
+    const size_t alloc_size = AllocatedSize() + _zx_system_get_page_size();
     zx_status_t status =
         vmo_ ? vmo_.set_size(alloc_size) : zx::vmo::create(alloc_size, ZX_VMO_RESIZABLE, &vmo_);
     if (status == ZX_OK) {
@@ -109,7 +109,8 @@ class RelocatingPageAllocatedVector {
 
   size_t AllocatedSize() const {
     size_t total = capacity_ * sizeof(T);
-    return (total + ZX_PAGE_SIZE - 1) & -ZX_PAGE_SIZE;
+    return (total + _zx_system_get_page_size() - 1) &
+           -static_cast<size_t>(_zx_system_get_page_size());
   }
 
   zx_status_t Map(size_t alloc_size) {

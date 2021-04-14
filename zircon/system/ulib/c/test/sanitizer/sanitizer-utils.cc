@@ -93,7 +93,7 @@ zx_status_t GetCommitChangeEvents(zx_koid_t vmo_koid, uint64_t* committed_change
 }
 
 // c++ complains if we try to do PAGE_SIZE << shadow_scale.
-constexpr size_t kPageSize = PAGE_SIZE;
+const size_t kPageSize = zx_system_get_page_size();
 
 // Touch every page in the region to make sure it's been COW'd.
 __attribute__((no_sanitize("all"))) static void PrefaultPages(uintptr_t start, uintptr_t end) {
@@ -137,7 +137,7 @@ TEST(SanitizerUtilsTest, FillShadow) {
   uint64_t memset_mem_use;
   uint64_t fill_shadow_mem_use;
 
-  constexpr size_t len = 32 * kPageSize;
+  const size_t len = 32 * kPageSize;
 
   do {
     ASSERT_OK(GetCommitChangeEvents(shadow_koid, &start_events));
