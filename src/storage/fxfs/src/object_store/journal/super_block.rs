@@ -284,6 +284,7 @@ mod tests {
             object_store::{
                 allocator::Allocator,
                 constants::SUPER_BLOCK_OBJECT_ID,
+                filesystem::Filesystem,
                 journal::JournalCheckpoint,
                 testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
                 transaction::TransactionHandler,

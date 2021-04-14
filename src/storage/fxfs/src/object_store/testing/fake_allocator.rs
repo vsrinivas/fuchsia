@@ -11,6 +11,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     std::{
+        any::Any,
         ops::Range,
         sync::{Arc, Mutex},
     },
@@ -77,6 +78,10 @@ impl Allocator for FakeAllocator {
     }
 
     fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations> {
+        self
+    }
+
+    fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
         self
     }
 }

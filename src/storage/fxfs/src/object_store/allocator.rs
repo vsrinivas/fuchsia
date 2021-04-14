@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod merge;
+pub mod merge;
 
 use {
     crate::{
@@ -26,6 +26,7 @@ use {
     merge::merge,
     serde::{Deserialize, Serialize},
     std::{
+        any::Any,
         cmp::min,
         ops::{Bound, Range},
         sync::{Arc, Mutex, Weak},
@@ -60,6 +61,8 @@ pub trait Allocator: Send + Sync {
 
     /// Cast to super-trait.
     fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations>;
+
+    fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync>;
 }
 
 // Our allocator implementation tracks extents with a reference count.  At time of writing, these
@@ -67,7 +70,14 @@ pub trait Allocator: Send + Sync {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct AllocatorKey {
-    device_range: Range<u64>,
+    pub device_range: Range<u64>,
+}
+
+impl AllocatorKey {
+    /// Returns a new key that is a lower bound suitable for use with merge_into.
+    pub fn lower_bound_for_merge_into(self: &AllocatorKey) -> AllocatorKey {
+        AllocatorKey { device_range: 0..self.device_range.start }
+    }
 }
 
 impl Ord for AllocatorKey {
@@ -91,7 +101,7 @@ impl OrdLowerBound for AllocatorKey {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct AllocatorValue {
     // This is the delta on a reference count for the extent.
-    delta: i64,
+    pub delta: i64,
 }
 
 pub type AllocatorItem = Item<AllocatorKey, AllocatorValue>;
@@ -141,6 +151,10 @@ impl SimpleAllocator {
                 dropped_allocations: Vec::new(),
             }),
         }
+    }
+
+    pub fn tree(&self) -> &LSMTree<AllocatorKey, AllocatorValue> {
+        &self.tree
     }
 
     // Ensures the allocator is open.  If empty, create the object in the root object store,
@@ -308,6 +322,10 @@ impl Allocator for SimpleAllocator {
     fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations> {
         self
     }
+
+    fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
+        self
+    }
 }
 
 #[async_trait]
@@ -321,7 +339,7 @@ impl Mutations for SimpleAllocator {
         match mutation {
             Mutation::Allocator(AllocatorMutation(item)) => {
                 self.reserved_allocations.erase(item.as_item_ref()).await;
-                let lower_bound = lower_bound_for_replace_range(&item.key);
+                let lower_bound = item.key.lower_bound_for_merge_into();
                 self.tree.merge_into(item, &lower_bound).await;
             }
             Mutation::TreeSeal => self.tree.seal(),
@@ -344,10 +362,6 @@ impl Mutations for SimpleAllocator {
     }
 }
 
-fn lower_bound_for_replace_range(key: &AllocatorKey) -> AllocatorKey {
-    AllocatorKey { device_range: 0..key.device_range.start }
-}
-
 // The merger is unable to merge extents that exist like the following:
 //
 //     |----- +1 -----|
@@ -360,13 +374,13 @@ fn lower_bound_for_replace_range(key: &AllocatorKey) -> AllocatorKey {
 // records cannot overlap, so it's just a question of merging adjacent records if they happen to
 // have the same delta.
 
-struct CoalescingIterator<'a> {
+pub struct CoalescingIterator<'a> {
     iter: BoxedLayerIterator<'a, AllocatorKey, AllocatorValue>,
     item: Option<AllocatorItem>,
 }
 
 impl<'a> CoalescingIterator<'a> {
-    async fn new(
+    pub async fn new(
         iter: BoxedLayerIterator<'a, AllocatorKey, AllocatorValue>,
     ) -> Result<CoalescingIterator<'a>, Error> {
         let mut iter = Self { iter, item: None };
@@ -422,6 +436,7 @@ mod tests {
                     merge::merge, Allocator, AllocatorKey, AllocatorValue, CoalescingIterator,
                     SimpleAllocator,
                 },
+                filesystem::Filesystem,
                 testing::fake_filesystem::FakeFilesystem,
                 transaction::TransactionHandler,
                 ObjectStore,

@@ -43,6 +43,9 @@ pub trait Filesystem: TransactionHandler {
 
     /// Returns the allocator or panics if it is not available.
     fn allocator(&self) -> Arc<dyn Allocator>;
+
+    /// Returns the object manager for the filesystem.
+    fn object_manager(&self) -> Arc<ObjectManager>;
 }
 
 pub struct ObjectManager {
@@ -75,6 +78,10 @@ impl ObjectManager {
                 journal_file_checkpoints: HashMap::new(),
             }),
         }
+    }
+
+    pub fn store_object_ids(&self) -> Vec<u64> {
+        self.objects.read().unwrap().stores.keys().cloned().collect()
     }
 
     pub fn root_parent_store(&self) -> Arc<ObjectStore> {
@@ -336,6 +343,10 @@ impl Filesystem for FxFilesystem {
 
     fn allocator(&self) -> Arc<dyn Allocator> {
         self.objects.allocator()
+    }
+
+    fn object_manager(&self) -> Arc<ObjectManager> {
+        self.objects.clone()
     }
 }
 

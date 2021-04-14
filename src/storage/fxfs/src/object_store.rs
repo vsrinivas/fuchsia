@@ -6,6 +6,7 @@ mod allocator;
 mod constants;
 pub mod directory;
 pub mod filesystem;
+mod fsck;
 mod journal;
 mod merge;
 mod record;
@@ -1114,6 +1115,7 @@ mod tests {
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
+                filesystem::Filesystem,
                 record::{ObjectKey, ObjectKeyData},
                 round_up,
                 testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},

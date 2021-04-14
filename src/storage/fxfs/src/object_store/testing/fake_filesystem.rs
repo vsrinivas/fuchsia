@@ -31,10 +31,6 @@ impl FakeFilesystem {
         let object_manager = Arc::new(ObjectManager::new());
         Arc::new(FakeFilesystem { device, object_manager, lock_manager: LockManager::new() })
     }
-
-    pub fn object_manager(&self) -> &Arc<ObjectManager> {
-        &self.object_manager
-    }
 }
 
 #[async_trait]
@@ -57,6 +53,10 @@ impl Filesystem for FakeFilesystem {
 
     fn allocator(&self) -> Arc<dyn Allocator> {
         self.object_manager.allocator()
+    }
+
+    fn object_manager(&self) -> Arc<ObjectManager> {
+        self.object_manager.clone()
     }
 }
 

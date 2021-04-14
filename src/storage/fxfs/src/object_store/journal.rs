@@ -515,6 +515,7 @@ mod tests {
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
                 filesystem::{FxFilesystem, SyncOptions},
+                fsck::fsck,
                 transaction::TransactionHandler,
                 HandleOptions,
             },
@@ -561,6 +562,7 @@ mod tests {
             let mut buf = handle.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
             assert_eq!(handle.read(0, buf.as_mut()).await.expect("read failed"), TEST_DATA.len());
             assert_eq!(&buf.as_slice()[..TEST_DATA.len()], TEST_DATA);
+            fsck(fs.as_ref()).await.expect("fsck failed");
         }
     }
 
@@ -657,6 +659,8 @@ mod tests {
                 );
                 assert_eq!(&buf.as_slice()[..TEST_DATA.len()], TEST_DATA);
             }
+
+            fsck(fs.as_ref()).await.expect("fsck failed");
         }
     }
 
@@ -673,6 +677,7 @@ mod tests {
         {
             let fs = FxFilesystem::open(device).await.expect("open failed");
             assert_eq!(fs.root_volume_info_object_id(), 567);
+            fsck(fs.as_ref()).await.expect("fsck failed");
         }
     }
 }
