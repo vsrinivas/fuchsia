@@ -56,7 +56,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.intelgpucore",
   "fuchsia.hardware.intelhda.codec",
   "fuchsia.hardware.iommu",
-  "fuchsia.hardware.isp",
   "fuchsia.hardware.mailbox",
   "fuchsia.hardware.nand",
   "fuchsia.hardware.nandinfo",
@@ -121,7 +120,6 @@ _fidl_translated_deps -= [
   "fuchsia.hardware.gdc",  # Blocked by fuchsia.sysmem.
   "fuchsia.hardware.ge2d",  # Blocked by fuchsia.sysmem.
   "fuchsia.hardware.hidbus",  # Multiple enum variants with the same value.
-  "fuchsia.hardware.isp",  # Blocked by fuchsia.sysmem.
   "fuchsia.hardware.pciroot",  # Blocked by zircon.hw.pci.
   "fuchsia.hardware.serialimpl",  # Blocked by fuchsia.hardware.serial.
   "fuchsia.hardware.serialimpl.async",  # Blocked by fuchsia.hardware.serial.

@@ -5,6 +5,8 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.isp") {
+  disable_verification = true
+  fidl_only = true
   sources = [ "isp.banjo" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.camera",
@@ -15,5 +17,5 @@ banjo("fuchsia.hardware.isp") {
 }
 
 group("fuchsia.hardware.isp_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.isp" ]
+  public_deps = [ ":fuchsia.hardware.isp_banjo_cpp_2" ]
 }

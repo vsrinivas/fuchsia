@@ -72,5 +72,5 @@ protocol Isp {
     /// Returns ZX_OK if the mode was successfully applied.
     /// Returns ZX_ERR_INVALID_ARGS if |mode| is invalid
     ///         or if |data| is invalid for the given |mode|.
-    SetTestPattern(uint8 mode, vector<uint8> data) -> (zx.status s);
+    SetTestPattern(uint8 mode, vector<uint8>:MAX data) -> (zx.status s);
 };
