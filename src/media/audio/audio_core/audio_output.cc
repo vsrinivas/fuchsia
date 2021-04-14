@@ -58,7 +58,11 @@ void AudioOutput::Process() {
 
     // TODO(fxbug.dev/69001): remove after debugging
     uint32_t frames_mixed = 0;
+    uint32_t start_mix_job_calls = 0;
     uint32_t read_lock_calls = 0;
+    uint32_t read_lock_calls_returned_nullopt = 0;
+    zx::duration total_start_mix_job_time{0};
+    zx::duration total_read_lock_time{0};
     std::optional<Fixed> overall_frame_start;
     std::optional<Fixed> overall_frame_end;
     std::optional<Fixed> last_buffer_frame_start;
@@ -67,12 +71,21 @@ void AudioOutput::Process() {
 
     do {
       float* payload = nullptr;
+      // TODO(fxbug.dev/69001): remove after debugging
+      auto start_mix_job_start = async::Now(mix_domain().dispatcher());
       auto mix_frames = StartMixJob(ref_now);
+      auto start_mix_job_end = async::Now(mix_domain().dispatcher());
+      start_mix_job_calls++;
+      total_start_mix_job_time += start_mix_job_end - start_mix_job_start;
       last_mix_job = mix_frames;
       // If we have frames to mix that are non-silent, we should do the mix now.
       if (mix_frames && !mix_frames->is_mute) {
-        ++read_lock_calls;
+        read_lock_calls++;
+        // TODO(fxbug.dev/69001): remove after debugging
+        auto read_lock_start = async::Now(mix_domain().dispatcher());
         auto buf = pipeline_->ReadLock(Fixed(mix_frames->start), mix_frames->length);
+        auto read_lock_end = async::Now(mix_domain().dispatcher());
+        total_read_lock_time += read_lock_end - read_lock_start;
         if (buf) {
           if (!overall_frame_start) {
             overall_frame_start = buf->start();
@@ -99,6 +112,7 @@ void AudioOutput::Process() {
           frames_mixed += valid_frames;
           mix_frames->length = valid_frames;
         } else {
+          read_lock_calls_returned_nullopt++;
           // If the mix pipeline has no frames for this range, we treat this region as silence.
           // FinishMixJob will be responsible for filling this region of the ring with silence.
           mix_frames->is_mute = true;
@@ -133,20 +147,24 @@ void AudioOutput::Process() {
           << static_cast<double>(MixDeadline().to_nsecs()) / ZX_MSEC(1) << " ms; thread spent "
           << cpu_timer_.cpu().get() << " ns on CPU, " << cpu_timer_.queue().get() << " ns queued; "
           << "produced " << frames_mixed << " frames, advanced " << frames_advanced
-          << " frames, made " << read_lock_calls << " ReadLock calls";
+          << " frames, made " << read_lock_calls << " ReadLock calls, "
+          << read_lock_calls_returned_nullopt << " ReadLock calls returned nullopt";
       if (!frames_advanced) {
         FX_LOGS(ERROR) << "PIPELINE UNDERFLOW advanced zero frames:"
                        << " overall_frame_start="
-                       << (overall_frame_start ? overall_frame_start->Floor() : 0)
+                       << (overall_frame_start ? overall_frame_start->Floor() : -1)
                        << " overall_frame_end="
-                       << (overall_frame_end ? overall_frame_end->Floor() : 0)
+                       << (overall_frame_end ? overall_frame_end->Floor() : -1)
                        << " last_buffer_empty=" << (last_buffer_frame_start ? "false" : "true")
                        << " last_buffer_frame_start="
-                       << (last_buffer_frame_start ? last_buffer_frame_start->Floor() : 0)
+                       << (last_buffer_frame_start ? last_buffer_frame_start->Floor() : -1)
                        << " last_buffer_frame_end="
-                       << (last_buffer_frame_end ? last_buffer_frame_end->Floor() : 0)
-                       << " last_mix_job_start=" << (last_mix_job ? last_mix_job->start : 0)
-                       << " last_mix_job_length=" << (last_mix_job ? last_mix_job->length : 0);
+                       << (last_buffer_frame_end ? last_buffer_frame_end->Floor() : -1)
+                       << " last_mix_job_start=" << (last_mix_job ? last_mix_job->start : -1)
+                       << " last_mix_job_length=" << (last_mix_job ? last_mix_job->length : -1)
+                       << " start_mix_job_calls=" << start_mix_job_calls
+                       << " total_read_lock_time_ns=" << total_read_lock_time.to_nsecs()
+                       << " total_start_mix_job_time_ns=" << total_start_mix_job_time.to_nsecs();
       }
 
       reporter().PipelineUnderflow(mono_now + MixDeadline(), mono_end);
