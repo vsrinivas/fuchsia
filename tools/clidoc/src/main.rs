@@ -18,8 +18,7 @@ use {
     },
 };
 
-mod simple_logger;
-use simple_logger::SimpleLogger;
+use simplelog::{Config, SimpleLogger};
 
 /// CliDoc generates documentation for core Fuchsia developer tools.
 #[derive(Debug, FromArgs)]
@@ -92,9 +91,7 @@ const ALLOW_LIST: &'static [&'static str] = &[
     "zxdb",
 ];
 
-static LOGGER: SimpleLogger = SimpleLogger;
 fn main() -> Result<()> {
-    log::set_logger(&LOGGER).unwrap();
     let opt: Opt = argh::from_env();
     run(opt)
 }
@@ -105,12 +102,12 @@ fn run(opt: Opt) -> Result<()> {
     }
 
     if opt.verbose {
-        log::set_max_level(LevelFilter::Debug);
+        SimpleLogger::init(LevelFilter::Debug, Config::default())?;
         debug!("Debug logging enabled.");
     } else if opt.quiet {
-        log::set_max_level(LevelFilter::Warn);
+        SimpleLogger::init(LevelFilter::Warn, Config::default())?;
     } else {
-        log::set_max_level(LevelFilter::Info);
+        SimpleLogger::init(LevelFilter::Info, Config::default())?;
     }
 
     // Set the directory for the command executables.
@@ -353,7 +350,6 @@ mod tests {
     #[test]
     fn run_test_commands() {
         let tmp_dir = tempfile::Builder::new().prefix("clidoc-test-out").tempdir().unwrap();
-        log::set_logger(&LOGGER).unwrap();
         let argv = [
             "-v",
             "-o",

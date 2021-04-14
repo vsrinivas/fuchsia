@@ -8,10 +8,7 @@ import("//build/rust/rustc_test.gni")
 import("//build/testing/host_test_data.gni")
 
 if (is_host) {
-  common_sources = [
-    "src/main.rs",
-    "src/simple_logger.rs",
-  ]
+  common_sources = [ "src/main.rs" ]
 
   rustc_binary("clidoc_bin") {
     name = "clidoc"
@@ -34,6 +31,7 @@ if (is_host) {
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:log",
+      "//third_party/rust_crates:simplelog",
       "//third_party/rust_crates:tempfile",
     ]
   }

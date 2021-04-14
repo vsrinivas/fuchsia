@@ -19,8 +19,7 @@ use libdoc::DocCompiler;
 mod fidljson;
 use fidljson::{FidlJson, FidlJsonPackageData, TableOfContentsItem};
 
-mod simple_logger;
-use simple_logger::SimpleLogger;
+use simplelog::{Config, SimpleLogger};
 
 mod templates;
 use templates::html::HtmlTemplate;
@@ -83,10 +82,7 @@ struct Opt {
     experimental_checks: bool,
 }
 
-static LOGGER: SimpleLogger = SimpleLogger;
-
 fn main() {
-    log::set_logger(&LOGGER).unwrap();
     let opt: Opt = argh::from_env();
     if let Err(e) = run(opt) {
         error!("Error: {}", e);
@@ -112,9 +108,9 @@ fn run(opt: Opt) -> Result<(), Error> {
     }
 
     if opt.verbose {
-        log::set_max_level(LevelFilter::Info);
+        SimpleLogger::init(LevelFilter::Info, Config::default())?;
     } else {
-        log::set_max_level(LevelFilter::Error);
+        SimpleLogger::init(LevelFilter::Error, Config::default())?;
     }
 
     // Read in fidldoc.config.json
