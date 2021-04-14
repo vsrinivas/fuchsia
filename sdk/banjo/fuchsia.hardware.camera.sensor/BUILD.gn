@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.camera.sensor") {
+  fidl_only = true
   sources = [ "camera-sensor.banjo" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.camera",
@@ -13,10 +14,10 @@ banjo("fuchsia.hardware.camera.sensor") {
 }
 
 group("fuchsia.hardware.camera.sensor_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.camera.sensor" ]
+  public_deps = [ ":fuchsia.hardware.camera.sensor_banjo_cpp_2" ]
 }
 
 group("fuchsia.hardware.camera.sensor_banjo_cpp_mock") {
   testonly = true
-  public_deps = [ ":fuchsia.hardware.camera.sensor_mock" ]
+  public_deps = [ ":fuchsia.hardware.camera.sensor_banjo_cpp_mock_2" ]
 }

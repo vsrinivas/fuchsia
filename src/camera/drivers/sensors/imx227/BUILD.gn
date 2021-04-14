@@ -31,7 +31,6 @@ source_set("lib") {
   deps = [
     ":imx227_bind",
     "//sdk/banjo/fuchsia.hardware.camera",
-    "//sdk/banjo/fuchsia.hardware.camera.sensor",
     "//sdk/banjo/fuchsia.hardware.mipicsi",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/lib/syslog/cpp",
@@ -42,6 +41,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//sdk/banjo/fuchsia.hardware.camera.sensor:fuchsia.hardware.camera.sensor_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/lib/fit-promise",

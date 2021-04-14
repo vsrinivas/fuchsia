@@ -58,7 +58,7 @@ struct OperatingMode {
     /// This mode's index.
     uint8 idx;
     /// This mode's identifying string.
-    string identifier;
+    string:MAX identifier;
     /// Maximum frames per second.
     uint32 fps;
     /// Input resolution, where |x| is pixel width and |y| is pixel height.
@@ -117,7 +117,7 @@ protocol CameraSensor2 {
     GetSensorId() -> (zx.status s, uint32 id);
 
     /// Retrieve a vector of available modes.
-    GetAvailableModes() -> (zx.status s, vector<OperatingMode> modes);
+    GetAvailableModes() -> (zx.status s, vector<OperatingMode>:MAX modes);
     /// Use a specific mode for the initialization sequence.
     SetMode(uint32 mode) -> (zx.status s);
 
