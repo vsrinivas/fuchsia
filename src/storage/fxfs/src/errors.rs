@@ -18,6 +18,8 @@ pub enum FxfsError {
     NotFile,
     #[error("Not found")]
     NotFound,
+    #[error("Read only filesystem")]
+    ReadOnlyFilesystem,
 }
 
 impl FxfsError {

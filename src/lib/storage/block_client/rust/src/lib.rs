@@ -210,7 +210,8 @@ impl VmoId {
         self.0.load(Ordering::Relaxed) != BLOCK_VMOID_INVALID
     }
 
-    fn into_id(self) -> u16 {
+    /// Takes the ID.  The caller assumes responsibility for detaching.
+    pub fn into_id(self) -> u16 {
         self.0.swap(BLOCK_VMOID_INVALID, Ordering::Relaxed)
     }
 

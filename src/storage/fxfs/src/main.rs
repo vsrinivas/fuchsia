@@ -9,7 +9,10 @@ use {
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_runtime::HandleType,
     fuchsia_syslog, fuchsia_zircon as zx,
-    fxfs::{device::block_device::BlockDevice, mkfs, mount, server::FxfsServer},
+    fxfs::{
+        device::block_device::BlockDevice, mkfs, mount, object_store::fsck::fsck,
+        server::FxfsServer,
+    },
     remote_block_device::RemoteBlockClient,
     std::sync::Arc,
 };
@@ -26,6 +29,7 @@ struct TopLevel {
 enum SubCommand {
     Format(FormatSubCommand),
     Mount(MountSubCommand),
+    Fsck(FsckSubCommand),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -37,6 +41,11 @@ struct FormatSubCommand {}
 /// Mount
 #[argh(subcommand, name = "mount")]
 struct MountSubCommand {}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Fsck
+#[argh(subcommand, name = "fsck")]
+struct FsckSubCommand {}
 
 #[fasync::run(10)]
 async fn main() -> Result<(), Error> {
@@ -51,20 +60,23 @@ async fn main() -> Result<(), Error> {
         ))
         .ok_or(format_err!("Missing device handle"))?,
     ))?;
-    let device = Arc::new(BlockDevice::new(Box::new(client)));
 
     match args {
         TopLevel { nested: SubCommand::Format(_) } => {
-            mkfs::mkfs(device).await?;
+            mkfs::mkfs(Arc::new(BlockDevice::new(Box::new(client), false))).await?;
             Ok(())
         }
         TopLevel { nested: SubCommand::Mount(_) } => {
-            let fs = mount::mount(device).await?;
+            let fs = mount::mount(Arc::new(BlockDevice::new(Box::new(client), false))).await?;
             let mut server = FxfsServer::new(fs, "default").await?;
             let startup_handle =
                 fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
                     .ok_or(MissingStartupHandle)?;
             server.run(zx::Channel::from(startup_handle)).await
+        }
+        TopLevel { nested: SubCommand::Fsck(_) } => {
+            let fs = mount::mount(Arc::new(BlockDevice::new(Box::new(client), true))).await?;
+            fsck(fs.as_ref()).await
         }
     }
 }

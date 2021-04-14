@@ -6,7 +6,7 @@ mod allocator;
 mod constants;
 pub mod directory;
 pub mod filesystem;
-mod fsck;
+pub mod fsck;
 mod journal;
 mod merge;
 mod record;
@@ -728,6 +728,7 @@ impl StoreObjectHandle {
             .unwrap_or_else(|| self.get_size())
     }
 
+    #[cfg(test)]
     async fn get_allocated_size(&self) -> Result<u64, Error> {
         if let ObjectItem {
             value: ObjectValue::Object { kind: ObjectKind::File { allocated_size, .. } },

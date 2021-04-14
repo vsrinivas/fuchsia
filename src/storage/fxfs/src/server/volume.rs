@@ -147,6 +147,7 @@ impl FxVolumeAndRoot {
         self.root.clone().into_any().downcast::<FxDirectory>().expect("Invalid type for root")
     }
 
+    #[cfg(test)]
     pub(super) fn into_volume(self) -> Arc<FxVolume> {
         self.volume
     }

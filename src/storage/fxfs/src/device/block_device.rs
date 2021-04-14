@@ -3,20 +3,20 @@
 // found in the LICENSE file.
 
 use {
-    crate::device::{
-        buffer::{Buffer, BufferRef, MutableBufferRef},
-        buffer_allocator::{BufferAllocator, BufferSource},
-        Device,
+    crate::{
+        device::{
+            buffer::{Buffer, BufferRef, MutableBufferRef},
+            buffer_allocator::{BufferAllocator, BufferSource},
+            Device,
+        },
+        errors::FxfsError,
     },
-    anyhow::{ensure, Error},
+    anyhow::{bail, ensure, Error},
     async_trait::async_trait,
     fuchsia_runtime::vmar_root_self,
     fuchsia_zircon::{self as zx, AsHandleRef},
     remote_block_device::{BlockClient, BufferSlice, MutableBufferSlice, VmoId},
-    std::any::Any,
-    std::cell::UnsafeCell,
-    std::ffi::CString,
-    std::ops::Range,
+    std::{any::Any, cell::UnsafeCell, ffi::CString, ops::Range},
 };
 
 #[derive(Debug)]
@@ -83,13 +83,14 @@ impl BufferSource for VmoBufferSource {
 pub struct BlockDevice {
     allocator: BufferAllocator,
     remote: Box<dyn BlockClient>,
+    read_only: bool,
 }
 
 const TRANSFER_VMO_SIZE: usize = 128 * 1024 * 1024;
 
 impl BlockDevice {
     /// Creates a new BlockDevice over |remote|.
-    pub fn new(remote: Box<dyn BlockClient>) -> Self {
+    pub fn new(remote: Box<dyn BlockClient>, read_only: bool) -> Self {
         // TODO(jfsulliv): Should we align buffers to the system page size as well? This will be
         // necessary for splicing pages out of the transfer buffer, but that only improves
         // performance for large data transfers, and we might simply attach separate VMOs to the
@@ -98,7 +99,7 @@ impl BlockDevice {
             remote.block_size() as usize,
             Box::new(VmoBufferSource::new(remote.as_ref(), TRANSFER_VMO_SIZE)),
         );
-        Self { allocator, remote }
+        Self { allocator, remote, read_only }
     }
 
     fn buffer_source(&self) -> &VmoBufferSource {
@@ -142,6 +143,9 @@ impl Device for BlockDevice {
     }
 
     async fn write(&self, offset: u64, buffer: BufferRef<'_>) -> Result<(), Error> {
+        if self.read_only {
+            bail!(FxfsError::ReadOnlyFilesystem);
+        }
         if buffer.len() == 0 {
             return Ok(());
         }
@@ -167,17 +171,28 @@ impl Device for BlockDevice {
     }
 }
 
+impl Drop for BlockDevice {
+    fn drop(&mut self) {
+        // We can't detach the VmoId because we're not async here, but we are tearing down the
+        // connection to the block device so we don't really need to.
+        self.buffer_source().take_vmoid().into_id();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
-        crate::device::{block_device::BlockDevice, Device},
+        crate::{
+            device::{block_device::BlockDevice, Device},
+            errors::FxfsError,
+        },
         fuchsia_async as fasync,
         remote_block_device::testing::FakeBlockClient,
     };
 
     #[fasync::run_singlethreaded(test)]
     async fn test_lifecycle() {
-        let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)));
+        let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)), false);
 
         {
             let _buf = device.allocate_buffer(8192);
@@ -187,14 +202,8 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    #[should_panic(expected = "Did you forget to detach?")]
-    async fn test_panics_if_device_not_closed() {
-        let _device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)));
-    }
-
-    #[fasync::run_singlethreaded(test)]
     async fn test_read_write_buffer() {
-        let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)));
+        let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)), false);
 
         {
             let mut buf1 = device.allocate_buffer(8192);
@@ -212,5 +221,14 @@ mod tests {
         }
 
         device.close().await.expect("Close failed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_only() {
+        let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)), true);
+        let mut buf1 = device.allocate_buffer(8192);
+        buf1.as_mut_slice().fill(0xaa as u8);
+        assert!(FxfsError::ReadOnlyFilesystem
+            .matches(&device.write(65536, buf1.as_ref()).await.expect_err("Write succeeded")));
     }
 }
