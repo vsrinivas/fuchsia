@@ -46,28 +46,45 @@ struct {{ .WireResponse }} final {
 
   class UnownedEncodedMessage final {
    public:
-  UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size
+  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size
     {{- .ResponseArgs | CalleeCommaParams }})
-    : message_(_bytes, _byte_size, sizeof({{ .WireResponse.Self }}),
+    : message_(::fidl::OutgoingMessage::ConstructorArgs{
+        .iovecs = iovecs_,
+        .iovec_capacity = ::fidl::internal::IovecBufferSize,
   {{- if gt .Response.MaxHandles 0 }}
-    handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
-  {{- else }}
-    nullptr, 0, 0
+        .handles = handles_,
+        .handle_capacity = std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
   {{- end }}
-    ) {
+        .backing_buffer = _backing_buffer,
+        .backing_buffer_capacity = _backing_buffer_size,
+      }) {
     FIDL_ALIGNDECL {{ .WireResponse.Self }} _response{
     {{- .ResponseArgs | ForwardParams -}}
     };
+    if (_backing_buffer_size < sizeof({{ .WireResponse.Self }})) {
+      ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+        message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+      return;
+    }
     message_.Encode<{{ .WireResponse }}>(&_response);
   }
-  UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, {{ .WireResponse.Self }}* response)
-    : message_(bytes, byte_size, sizeof({{ .WireResponse.Self }}),
+  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
+                        {{ .WireResponse.Self }}* response)
+    : message_(::fidl::OutgoingMessage::ConstructorArgs{
+        .iovecs = iovecs_,
+        .iovec_capacity = ::fidl::internal::IovecBufferSize,
   {{- if gt .Response.MaxHandles 0 }}
-    handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
-  {{- else }}
-    nullptr, 0, 0
+        .handles = handles_,
+        .handle_capacity = std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
   {{- end }}
-    ) {
+        .backing_buffer = _backing_buffer,
+        .backing_buffer_capacity = _backing_buffer_size,
+      }) {
+    if (_backing_buffer_size < sizeof({{ .WireResponse.Self }})) {
+      ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+        message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+      return;
+    }
     message_.Encode<{{ .WireResponse }}>(response);
   }
   UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -90,6 +107,7 @@ struct {{ .WireResponse }} final {
 {{- EndifFuchsia -}}
 
    private:
+  ::fidl::internal::IovecBuffer iovecs_;
   {{- if gt .Response.MaxHandles 0 }}
     zx_handle_disposition_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
   {{- end }}
@@ -99,10 +117,10 @@ struct {{ .WireResponse }} final {
   class OwnedEncodedMessage final {
    public:
   explicit OwnedEncodedMessage({{ .ResponseArgs | CalleeParams }})
-    : message_(bytes_.data(), bytes_.size()
+    : message_(backing_buffer_.data(), backing_buffer_.size()
     {{- .ResponseArgs | ForwardCommaParams }}) {}
   explicit OwnedEncodedMessage({{ .WireResponse }}* response)
-    : message_(bytes_.data(), bytes_.size(), response) {}
+    : message_(backing_buffer_.data(), backing_buffer_.size(), response) {}
   OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
   OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
   OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -123,7 +141,7 @@ struct {{ .WireResponse }} final {
 {{- EndifFuchsia -}}
 
    private:
-  {{ .Response.ServerAllocation.ByteBufferType }} bytes_;
+  {{ .Response.ServerAllocation.BackingBufferType }} backing_buffer_;
   UnownedEncodedMessage message_;
   };
 

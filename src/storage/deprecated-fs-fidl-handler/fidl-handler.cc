@@ -21,7 +21,7 @@ namespace fio = fuchsia_io;
 
 zx_status_t Reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   auto connection = FidlConnection::FromTxn(txn);
-  fidl::OutgoingMessage message(msg);
+  auto message = fidl::OutgoingMessage::FromEncodedCMessage(msg);
   message.set_txid(connection->Txid());
   message.Write(connection->Channel());
   return message.status();

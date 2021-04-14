@@ -142,8 +142,23 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightReplyShortMessage) {
     auto txn = GetNextInflightTransaction();
     ASSERT_EQ(inflight_transactions(), 1);
     fidl_message_header_t header;
-    fidl::OutgoingMessage message(reinterpret_cast<uint8_t*>(&header), sizeof(header),
-                                  sizeof(header), nullptr, 0, 0);
+    zx_channel_iovec_t iovecs[1] = {
+        {
+            .buffer = &header,
+            .capacity = sizeof(header),
+            .reserved = 0,
+        },
+    };
+    fidl_outgoing_msg_t c_msg = {
+        .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
+        .iovec =
+            {
+                .iovecs = iovecs,
+                .num_iovecs = std::size(iovecs),
+            },
+    };
+    auto message = fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
+
     txn->Reply(&message);
     // Count drops when the transaction object is destroyed
     ASSERT_EQ(inflight_transactions(), 1);
@@ -171,8 +186,23 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightReplyValidMessage) {
     fidl_message_header_t hdr = {};
     fidl_init_txn_header(&hdr, 1, 1);
 
-    fidl::OutgoingMessage message(reinterpret_cast<uint8_t*>(&hdr), sizeof(hdr), sizeof(hdr),
-                                  nullptr, 0, 0);
+    zx_channel_iovec_t iovecs[1] = {
+        {
+            .buffer = &hdr,
+            .capacity = sizeof(hdr),
+            .reserved = 0,
+        },
+    };
+    fidl_outgoing_msg_t c_msg = {
+        .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
+        .iovec =
+            {
+                .iovecs = iovecs,
+                .num_iovecs = std::size(iovecs),
+            },
+    };
+    auto message = fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
+
     txn->Reply(&message);
     // Count drops when the transaction object is destroyed
     ASSERT_EQ(inflight_transactions(), 1);
@@ -230,16 +260,44 @@ TEST_F(TransactionCountingTest, MultipleTransactionsInflight) {
 
   fidl_message_header_t header;
   {
-    fidl::OutgoingMessage message(reinterpret_cast<uint8_t*>(&header), sizeof(header),
-                                  sizeof(header), nullptr, 0, 0);
+    zx_channel_iovec_t iovecs[1] = {
+        {
+            .buffer = &header,
+            .capacity = sizeof(header),
+            .reserved = 0,
+        },
+    };
+    fidl_outgoing_msg_t c_msg = {
+        .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
+        .iovec =
+            {
+                .iovecs = iovecs,
+                .num_iovecs = std::size(iovecs),
+            },
+    };
+    auto message = fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
     txn1->Reply(&message);
     txn1.reset();
   }
   ASSERT_EQ(inflight_transactions(), 1);
 
   {
-    fidl::OutgoingMessage message(reinterpret_cast<uint8_t*>(&header), sizeof(header),
-                                  sizeof(header), nullptr, 0, 0);
+    zx_channel_iovec_t iovecs[1] = {
+        {
+            .buffer = &header,
+            .capacity = sizeof(header),
+            .reserved = 0,
+        },
+    };
+    fidl_outgoing_msg_t c_msg = {
+        .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
+        .iovec =
+            {
+                .iovecs = iovecs,
+                .num_iovecs = std::size(iovecs),
+            },
+    };
+    auto message = fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
     txn2->Reply(&message);
     txn2.reset();
   }

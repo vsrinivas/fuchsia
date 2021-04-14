@@ -47,7 +47,6 @@ class RewriteTransaction : public fidl::Transaction {
 
   zx_status_t Reply(fidl::OutgoingMessage* indicator_msg) override {
     ZX_ASSERT(txid_ != 0);
-    ZX_ASSERT(indicator_msg->message()->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
     auto indicator_msg_bytes = indicator_msg->CopyBytes();
     ZX_ASSERT(
         indicator_msg_bytes.size() >=

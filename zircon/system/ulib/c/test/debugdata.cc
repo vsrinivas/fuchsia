@@ -193,8 +193,12 @@ TEST(DebugDataTests, ConfirmMatchingFuchsiaIODefinitions) {
   fidl::WireRequest<fio::Directory::Open> for_ordinal(zx_txid_t(0));
   ASSERT_EQ(fuchsia_io_DirectoryOpenOrdinal, for_ordinal._hdr.ordinal);
 
-  fidl::ServerEnd<fio::Node> empty;
-  fidl::WireRequest<fio::Directory::Open>::OwnedEncodedMessage msg(0, 0, 0, "", std::move(empty));
+  zx::channel ch1, ch2;
+  ASSERT_OK(zx::channel::create(0, &ch1, &ch2));
+  fidl::ServerEnd<fio::Node> server_end(std::move(ch2));
+  fidl::WireRequest<fio::Directory::Open>::OwnedEncodedMessage msg(0, 0, 0, "",
+                                                                   std::move(server_end));
+  ASSERT_OK(msg.status());
   ASSERT_EQ(sizeof(fuchsia_io_DirectoryOpenRequest), msg.GetOutgoingMessage().CopyBytes().size());
 }
 

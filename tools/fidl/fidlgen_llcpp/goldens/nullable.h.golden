@@ -199,10 +199,19 @@ struct StructWithNullableVector {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           StructWithNullableVector* value)
-        : message_(bytes, byte_size, sizeof(StructWithNullableVector), nullptr,
-                   0, 0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(StructWithNullableVector)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<StructWithNullableVector>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -220,13 +229,14 @@ struct StructWithNullableVector {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     ::fidl::OutgoingMessage message_;
   };
 
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(StructWithNullableVector* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -244,7 +254,8 @@ struct StructWithNullableVector {
     }
 
    private:
-    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES>
+        backing_buffer_;
     UnownedEncodedMessage message_;
   };
 
@@ -292,10 +303,19 @@ struct StructWithNullableUnion {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           StructWithNullableUnion* value)
-        : message_(bytes, byte_size, sizeof(StructWithNullableUnion), nullptr,
-                   0, 0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(StructWithNullableUnion)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<StructWithNullableUnion>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -313,13 +333,14 @@ struct StructWithNullableUnion {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     ::fidl::OutgoingMessage message_;
   };
 
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(StructWithNullableUnion* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -337,7 +358,7 @@ struct StructWithNullableUnion {
     }
 
    private:
-    ::fidl::internal::InlineMessageBuffer<32> bytes_;
+    ::fidl::internal::InlineMessageBuffer<32> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 
@@ -385,10 +406,19 @@ struct StructWithNullableStruct {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           StructWithNullableStruct* value)
-        : message_(bytes, byte_size, sizeof(StructWithNullableStruct), nullptr,
-                   0, 0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(StructWithNullableStruct)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<StructWithNullableStruct>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -406,13 +436,14 @@ struct StructWithNullableStruct {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     ::fidl::OutgoingMessage message_;
   };
 
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(StructWithNullableStruct* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -430,7 +461,7 @@ struct StructWithNullableStruct {
     }
 
    private:
-    ::fidl::internal::InlineMessageBuffer<16> bytes_;
+    ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 
@@ -478,10 +509,19 @@ struct StructWithNullableString {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           StructWithNullableString* value)
-        : message_(bytes, byte_size, sizeof(StructWithNullableString), nullptr,
-                   0, 0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(StructWithNullableString)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<StructWithNullableString>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -499,13 +539,14 @@ struct StructWithNullableString {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     ::fidl::OutgoingMessage message_;
   };
 
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(StructWithNullableString* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -523,7 +564,8 @@ struct StructWithNullableString {
     }
 
    private:
-    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES>
+        backing_buffer_;
     UnownedEncodedMessage message_;
   };
 
@@ -575,11 +617,22 @@ struct StructWithNullableRequest {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           StructWithNullableRequest* value)
-        : message_(bytes, byte_size, sizeof(StructWithNullableRequest),
-                   handles_,
-                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .handles = handles_,
+              .handle_capacity =
+                  std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(StructWithNullableRequest)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<StructWithNullableRequest>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -595,6 +648,7 @@ struct StructWithNullableRequest {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     zx_handle_disposition_t
         handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
     ::fidl::OutgoingMessage message_;
@@ -603,7 +657,7 @@ struct StructWithNullableRequest {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(StructWithNullableRequest* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -619,7 +673,7 @@ struct StructWithNullableRequest {
     }
 
    private:
-    ::fidl::internal::InlineMessageBuffer<8> bytes_;
+    ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 
@@ -677,11 +731,22 @@ struct StructWithNullableProtocol {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           StructWithNullableProtocol* value)
-        : message_(bytes, byte_size, sizeof(StructWithNullableProtocol),
-                   handles_,
-                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .handles = handles_,
+              .handle_capacity =
+                  std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(StructWithNullableProtocol)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<StructWithNullableProtocol>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -697,6 +762,7 @@ struct StructWithNullableProtocol {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     zx_handle_disposition_t
         handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
     ::fidl::OutgoingMessage message_;
@@ -705,7 +771,7 @@ struct StructWithNullableProtocol {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(StructWithNullableProtocol* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -721,7 +787,7 @@ struct StructWithNullableProtocol {
     }
 
    private:
-    ::fidl::internal::InlineMessageBuffer<8> bytes_;
+    ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 
@@ -779,10 +845,22 @@ struct StructWithNullableHandle {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           StructWithNullableHandle* value)
-        : message_(bytes, byte_size, sizeof(StructWithNullableHandle), handles_,
-                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .handles = handles_,
+              .handle_capacity =
+                  std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(StructWithNullableHandle)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<StructWithNullableHandle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -798,6 +876,7 @@ struct StructWithNullableHandle {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     zx_handle_disposition_t
         handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
     ::fidl::OutgoingMessage message_;
@@ -806,7 +885,7 @@ struct StructWithNullableHandle {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(StructWithNullableHandle* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -822,7 +901,7 @@ struct StructWithNullableHandle {
     }
 
    private:
-    ::fidl::internal::InlineMessageBuffer<8> bytes_;
+    ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 
@@ -925,15 +1004,36 @@ struct ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> final {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+    UnownedEncodedMessage(uint8_t* _backing_buffer,
+                          uint32_t _backing_buffer_size, zx_txid_t _txid,
                           int32_t a, int32_t b)
-        : message_(_bytes, _byte_size, sizeof(WireRequest), nullptr, 0, 0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = _backing_buffer,
+              .backing_buffer_capacity = _backing_buffer_size,
+          }) {
+      if (_backing_buffer_size < sizeof(WireRequest)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       FIDL_ALIGNDECL WireRequest _request(_txid, a, b);
       message_.Encode<WireRequest>(&_request);
     }
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
-                          WireRequest* request)
-        : message_(bytes, byte_size, sizeof(WireRequest), nullptr, 0, 0) {
+    UnownedEncodedMessage(uint8_t* _backing_buffer,
+                          uint32_t _backing_buffer_size, WireRequest* request)
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = _backing_buffer,
+              .backing_buffer_capacity = _backing_buffer_size,
+          }) {
+      if (_backing_buffer_size < sizeof(WireRequest)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<WireRequest>(request);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -956,15 +1056,17 @@ struct ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> final {
     }
 #endif  // __Fuchsia__
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     ::fidl::OutgoingMessage message_;
   };
 
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(zx_txid_t _txid, int32_t a, int32_t b)
-        : message_(bytes_.data(), bytes_.size(), _txid, a, b) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), _txid, a,
+                   b) {}
     explicit OwnedEncodedMessage(WireRequest* request)
-        : message_(bytes_.data(), bytes_.size(), request) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), request) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -987,7 +1089,7 @@ struct ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> final {
     }
 #endif  // __Fuchsia__
    private:
-    ::fidl::internal::InlineMessageBuffer<24> bytes_;
+    ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 
@@ -1044,16 +1146,37 @@ struct ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add> final {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, int32_t sum)
-        : message_(_bytes, _byte_size, sizeof(WireResponse), nullptr, 0, 0) {
+    UnownedEncodedMessage(uint8_t* _backing_buffer,
+                          uint32_t _backing_buffer_size, int32_t sum)
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = _backing_buffer,
+              .backing_buffer_capacity = _backing_buffer_size,
+          }) {
       FIDL_ALIGNDECL WireResponse _response{sum};
+      if (_backing_buffer_size < sizeof(WireResponse)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<
           ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>(
           &_response);
     }
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
-                          WireResponse* response)
-        : message_(bytes, byte_size, sizeof(WireResponse), nullptr, 0, 0) {
+    UnownedEncodedMessage(uint8_t* _backing_buffer,
+                          uint32_t _backing_buffer_size, WireResponse* response)
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = _backing_buffer,
+              .backing_buffer_capacity = _backing_buffer_size,
+          }) {
+      if (_backing_buffer_size < sizeof(WireResponse)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<
           ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>(
           response);
@@ -1078,17 +1201,18 @@ struct ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add> final {
     }
 #endif  // __Fuchsia__
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     ::fidl::OutgoingMessage message_;
   };
 
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(int32_t sum)
-        : message_(bytes_.data(), bytes_.size(), sum) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), sum) {}
     explicit OwnedEncodedMessage(
         ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>*
             response)
-        : message_(bytes_.data(), bytes_.size(), response) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), response) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -1111,7 +1235,7 @@ struct ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add> final {
     }
 #endif  // __Fuchsia__
    private:
-    ::fidl::internal::InlineMessageBuffer<24> bytes_;
+    ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 
@@ -1432,7 +1556,7 @@ class ::fidl::WireInterface<::fidl_test_nullable::SimpleProtocol>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(int32_t sum);
-    ::fidl::Result Reply(::fidl::BufferSpan _buffer, int32_t sum);
+    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer, int32_t sum);
 
    protected:
     using ::fidl::CompleterBase::CompleterBase;
@@ -1464,9 +1588,19 @@ struct Int32Wrapper {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           Int32Wrapper* value)
-        : message_(bytes, byte_size, sizeof(Int32Wrapper), nullptr, 0, 0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(Int32Wrapper)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<Int32Wrapper>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -1484,13 +1618,14 @@ struct Int32Wrapper {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     ::fidl::OutgoingMessage message_;
   };
 
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Int32Wrapper* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -1508,7 +1643,7 @@ struct Int32Wrapper {
     }
 
    private:
-    ::fidl::internal::InlineMessageBuffer<8> bytes_;
+    ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 

@@ -227,7 +227,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 			p := protocols[0]
 			actual := ex.actualChooser(p)
 			expectEqual(t, actual, ex.expected, cmpopts.IgnoreUnexported(allocation{}))
-			expectEqual(t, actual.ByteBufferType(), ex.expectedType)
+			expectEqual(t, actual.BackingBufferType(), ex.expectedType)
 		})
 	}
 }

@@ -258,10 +258,10 @@ fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireInterface<::fidl_test_error::Example>::fooCompleterBase::Reply(
-    ::fidl::BufferSpan _buffer,
+    ::fidl::BufferSpan _backing_buffer,
     ::fidl_test_error::wire::Example_foo_Result result) {
   ::fidl::WireResponse<::fidl_test_error::Example::foo>::UnownedEncodedMessage
-      _response(_buffer.data, _buffer.capacity, result);
+      _response(_backing_buffer.data, _backing_buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__

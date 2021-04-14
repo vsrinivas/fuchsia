@@ -55,10 +55,19 @@ struct ExampleUseOfVectors {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           ExampleUseOfVectors* value)
-        : message_(bytes, byte_size, sizeof(ExampleUseOfVectors), nullptr, 0,
-                   0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(ExampleUseOfVectors)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<ExampleUseOfVectors>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -76,13 +85,14 @@ struct ExampleUseOfVectors {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     ::fidl::OutgoingMessage message_;
   };
 
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(ExampleUseOfVectors* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -100,7 +110,8 @@ struct ExampleUseOfVectors {
     }
 
    private:
-    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES>
+        backing_buffer_;
     UnownedEncodedMessage message_;
   };
 

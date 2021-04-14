@@ -15,16 +15,16 @@ type Struct struct {
 	Attributes
 	fidlgen.Resourceness
 	nameVariants
-	CodingTableType string
-	Members         []StructMember
-	InlineSize      int
-	MaxHandles      int
-	MaxOutOfLine    int
-	ByteBufferType  string
-	HasPadding      bool
-	IsResultValue   bool
-	HasPointer      bool
-	Result          *Result
+	CodingTableType   string
+	Members           []StructMember
+	InlineSize        int
+	MaxHandles        int
+	MaxOutOfLine      int
+	BackingBufferType string
+	HasPadding        bool
+	IsResultValue     bool
+	HasPointer        bool
+	Result            *Result
 	// Full decls needed to check if a type is memcpy compatible.
 	// Only set if it may be possible for a type to be memcpy compatible,
 	// e.g. has no padding.
@@ -91,9 +91,9 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 		InlineSize:      val.TypeShapeV1.InlineSize,
 		MaxHandles:      val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine:    val.TypeShapeV1.MaxOutOfLine,
-		ByteBufferType: computeAllocation(
+		BackingBufferType: computeAllocation(
 			val.TypeShapeV1.InlineSize, val.TypeShapeV1.MaxOutOfLine, boundednessBounded).
-			ByteBufferType(),
+			BackingBufferType(),
 		HasPadding: val.TypeShapeV1.HasPadding,
 		HasPointer: val.TypeShapeV1.Depth > 0,
 	}

@@ -602,11 +602,12 @@ fidl::WireInterface<::fidl_test_union::TestProtocol>::dispatch_message(
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_union::TestProtocol>::
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
-        ::fidl::BufferSpan _buffer,
+        ::fidl::BufferSpan _backing_buffer,
         ::fidl_test_union::wire::StrictBoundedXUnion xu) {
   ::fidl::WireResponse<::fidl_test_union::TestProtocol::
                            StrictXUnionHenceResponseMayBeStackAllocated>::
-      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, xu);
+      UnownedEncodedMessage _response(_backing_buffer.data,
+                                      _backing_buffer.capacity, xu);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
@@ -628,11 +629,12 @@ fidl::WireInterface<::fidl_test_union::TestProtocol>::dispatch_message(
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_union::TestProtocol>::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
-        ::fidl::BufferSpan _buffer,
+        ::fidl::BufferSpan _backing_buffer,
         ::fidl_test_union::wire::OlderSimpleUnion xu) {
   ::fidl::WireResponse<::fidl_test_union::TestProtocol::
                            FlexibleXUnionHenceResponseMustBeHeapAllocated>::
-      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, xu);
+      UnownedEncodedMessage _response(_backing_buffer.data,
+                                      _backing_buffer.capacity, xu);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__

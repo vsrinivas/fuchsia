@@ -100,14 +100,22 @@ public:
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, {{ .Name }}* value)
-        : message_(bytes, byte_size, sizeof({{ .Name }}),
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size, {{ .Name }}* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+          .iovecs = iovecs_,
+          .iovec_capacity = ::fidl::internal::IovecBufferSize,
     {{- if gt .MaxHandles 0 }}
-      handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
-    {{- else }}
-      nullptr, 0, 0
+          .handles = handles_,
+          .handle_capacity = std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
     {{- end }}
-      ) {
+          .backing_buffer = backing_buffer,
+          .backing_buffer_capacity = backing_buffer_size,
+        }) {
+      if (backing_buffer_size < sizeof({{ .Name }})) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+          message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<{{ .Name }}>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -125,6 +133,7 @@ public:
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     {{- if gt .MaxHandles 0 }}
       zx_handle_disposition_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
     {{- end }}
@@ -134,7 +143,7 @@ public:
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage({{ .Name }}* value)
-      : message_(bytes_.data(), bytes_.size(), value) {}
+      : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -150,7 +159,7 @@ public:
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
    private:
-    {{ .ByteBufferType }} bytes_;
+    {{ .BackingBufferType }} backing_buffer_;
     UnownedEncodedMessage message_;
   };
 

@@ -73,11 +73,22 @@ struct NonInlineStructTestStruct {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           NonInlineStructTestStruct* value)
-        : message_(bytes, byte_size, sizeof(NonInlineStructTestStruct),
-                   handles_,
-                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .handles = handles_,
+              .handle_capacity =
+                  std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(NonInlineStructTestStruct)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<NonInlineStructTestStruct>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -93,6 +104,7 @@ struct NonInlineStructTestStruct {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     zx_handle_disposition_t
         handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
     ::fidl::OutgoingMessage message_;
@@ -101,7 +113,7 @@ struct NonInlineStructTestStruct {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(NonInlineStructTestStruct* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -117,7 +129,7 @@ struct NonInlineStructTestStruct {
     }
 
    private:
-    ::fidl::internal::InlineMessageBuffer<24> bytes_;
+    ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 
@@ -173,8 +185,19 @@ struct Int8Int32 {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, Int8Int32* value)
-        : message_(bytes, byte_size, sizeof(Int8Int32), nullptr, 0, 0) {
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                          Int8Int32* value)
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(Int8Int32)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<Int8Int32>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -192,13 +215,14 @@ struct Int8Int32 {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     ::fidl::OutgoingMessage message_;
   };
 
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Int8Int32* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -216,7 +240,7 @@ struct Int8Int32 {
     }
 
    private:
-    ::fidl::internal::InlineMessageBuffer<8> bytes_;
+    ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 
@@ -266,8 +290,19 @@ struct Int16Int8 {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, Int16Int8* value)
-        : message_(bytes, byte_size, sizeof(Int16Int8), nullptr, 0, 0) {
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                          Int16Int8* value)
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(Int16Int8)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<Int16Int8>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -285,13 +320,14 @@ struct Int16Int8 {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     ::fidl::OutgoingMessage message_;
   };
 
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Int16Int8* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -309,7 +345,7 @@ struct Int16Int8 {
     }
 
    private:
-    ::fidl::internal::InlineMessageBuffer<8> bytes_;
+    ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 
@@ -357,9 +393,19 @@ struct ArrayInt16Int8 {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           ArrayInt16Int8* value)
-        : message_(bytes, byte_size, sizeof(ArrayInt16Int8), nullptr, 0, 0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(ArrayInt16Int8)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<ArrayInt16Int8>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -377,13 +423,14 @@ struct ArrayInt16Int8 {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     ::fidl::OutgoingMessage message_;
   };
 
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(ArrayInt16Int8* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -401,7 +448,7 @@ struct ArrayInt16Int8 {
     }
 
    private:
-    ::fidl::internal::InlineMessageBuffer<16> bytes_;
+    ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 
@@ -454,10 +501,19 @@ struct StructPaddingTestStruct {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           StructPaddingTestStruct* value)
-        : message_(bytes, byte_size, sizeof(StructPaddingTestStruct), nullptr,
-                   0, 0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(StructPaddingTestStruct)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<StructPaddingTestStruct>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -475,13 +531,14 @@ struct StructPaddingTestStruct {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     ::fidl::OutgoingMessage message_;
   };
 
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(StructPaddingTestStruct* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -499,7 +556,7 @@ struct StructPaddingTestStruct {
     }
 
    private:
-    ::fidl::internal::InlineMessageBuffer<24> bytes_;
+    ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 
@@ -553,10 +610,22 @@ struct TopLevelStruct {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           TopLevelStruct* value)
-        : message_(bytes, byte_size, sizeof(TopLevelStruct), handles_,
-                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .handles = handles_,
+              .handle_capacity =
+                  std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(TopLevelStruct)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<TopLevelStruct>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -572,6 +641,7 @@ struct TopLevelStruct {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     zx_handle_disposition_t
         handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
     ::fidl::OutgoingMessage message_;
@@ -580,7 +650,7 @@ struct TopLevelStruct {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(TopLevelStruct* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -596,7 +666,7 @@ struct TopLevelStruct {
     }
 
    private:
-    ::fidl::internal::InlineMessageBuffer<48> bytes_;
+    ::fidl::internal::InlineMessageBuffer<48> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 

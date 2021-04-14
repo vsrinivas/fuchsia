@@ -54,10 +54,19 @@ struct DocCommentWithQuotes {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           DocCommentWithQuotes* value)
-        : message_(bytes, byte_size, sizeof(DocCommentWithQuotes), nullptr, 0,
-                   0) {
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(DocCommentWithQuotes)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<DocCommentWithQuotes>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -75,13 +84,14 @@ struct DocCommentWithQuotes {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     ::fidl::OutgoingMessage message_;
   };
 
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(DocCommentWithQuotes* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -99,7 +109,7 @@ struct DocCommentWithQuotes {
     }
 
    private:
-    ::fidl::internal::InlineMessageBuffer<8> bytes_;
+    ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 

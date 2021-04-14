@@ -602,11 +602,11 @@ fidl::WireInterface<::fidl_test_protocolrequest::Parent>::dispatch_message(
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
     GetChildCompleterBase::Reply(
-        ::fidl::BufferSpan _buffer,
+        ::fidl::BufferSpan _backing_buffer,
         ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
   ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>::
-      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
-                                      std::move(c));
+      UnownedEncodedMessage _response(_backing_buffer.data,
+                                      _backing_buffer.capacity, std::move(c));
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
@@ -626,11 +626,11 @@ fidl::WireInterface<::fidl_test_protocolrequest::Parent>::dispatch_message(
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
     GetChildRequestCompleterBase::Reply(
-        ::fidl::BufferSpan _buffer,
+        ::fidl::BufferSpan _backing_buffer,
         ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
   ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChildRequest>::
-      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
-                                      std::move(r));
+      UnownedEncodedMessage _response(_backing_buffer.data,
+                                      _backing_buffer.capacity, std::move(r));
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__

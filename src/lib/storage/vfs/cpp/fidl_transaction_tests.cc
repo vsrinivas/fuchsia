@@ -30,9 +30,22 @@ TEST(FidlTransaction, Reply) {
                                                          std::move(server_end));
   zx_txid_t txid = 1;
   fs::internal::FidlTransaction txn(txid, binding);
-  uint8_t msg_bytes[sizeof(fidl_message_header_t)] = {};
-  fidl::OutgoingMessage message(msg_bytes, sizeof(msg_bytes), sizeof(msg_bytes), nullptr, 0, 0);
-  txn.Reply(&message);
+  fidl_message_header_t message_header;
+  zx_channel_iovec_t iovec = {
+      .buffer = &message_header,
+      .capacity = sizeof(message_header),
+      .reserved = 0,
+  };
+  fidl_outgoing_msg_t c_msg = {
+      .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
+      .iovec =
+          {
+              .iovecs = &iovec,
+              .num_iovecs = 1,
+          },
+  };
+  auto message = fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
+  ASSERT_OK(txn.Reply(&message));
 
   uint8_t received_msg_bytes[sizeof(fidl_message_header_t)] = {};
   uint32_t actual;

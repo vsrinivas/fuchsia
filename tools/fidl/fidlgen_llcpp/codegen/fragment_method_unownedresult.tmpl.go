@@ -79,7 +79,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
   {{- end }}
   {{- if .RequestArgs -}}
   ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> _request(
-    _request_bytes, _request_byte_capacity, 0
+      _request_bytes, _request_byte_capacity, 0
   {{- else -}}
   ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(zx_txid_t(0)
   {{- end -}}

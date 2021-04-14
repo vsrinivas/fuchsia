@@ -16,14 +16,14 @@ type Table struct {
 	Attributes
 	fidlgen.Resourceness
 	nameVariants
-	CodingTableType string
-	Members         []TableMember
-	InlineSize      int
-	BiggestOrdinal  int
-	MaxHandles      int
-	MaxOutOfLine    int
-	ByteBufferType  string
-	HasPointer      bool
+	CodingTableType   string
+	Members           []TableMember
+	InlineSize        int
+	BiggestOrdinal    int
+	MaxHandles        int
+	MaxOutOfLine      int
+	BackingBufferType string
+	HasPointer        bool
 
 	// FrameItems stores the members in ordinal order; "null" for reserved.
 	FrameItems []TableFrameItem
@@ -94,9 +94,9 @@ func (c *compiler) compileTable(val fidlgen.Table) Table {
 		BiggestOrdinal:  0,
 		MaxHandles:      val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine:    val.TypeShapeV1.MaxOutOfLine,
-		ByteBufferType: computeAllocation(
+		BackingBufferType: computeAllocation(
 			val.TypeShapeV1.InlineSize, val.TypeShapeV1.MaxOutOfLine, boundednessBounded).
-			ByteBufferType(),
+			BackingBufferType(),
 		HasPointer: val.TypeShapeV1.Depth > 0,
 	}
 

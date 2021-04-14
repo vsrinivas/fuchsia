@@ -64,7 +64,8 @@ The request and callback are allocated on the heap.
 ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }}) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{ if .RequestArgs }}
-  {{ .WireRequest }}::UnownedEncodedMessage _request(_request_buffer.data, _request_buffer.capacity, _context->Txid()
+  {{ .WireRequest }}::UnownedEncodedMessage _request(
+    _request_buffer.data, _request_buffer.capacity, _context->Txid()
   {{- else }}
   {{ .WireRequest }}::OwnedEncodedMessage _request(_context->Txid()
   {{- end }}

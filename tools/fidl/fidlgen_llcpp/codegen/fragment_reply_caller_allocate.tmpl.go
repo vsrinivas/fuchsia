@@ -6,7 +6,7 @@ package codegen
 
 const fragmentReplyCallerAllocateTmpl = `
 {{- define "ReplyCallerAllocateMethodSignature" -}}
-Reply(::fidl::BufferSpan _buffer {{- if .ResponseArgs }}, {{ end }}
+Reply(::fidl::BufferSpan _backing_buffer {{- if .ResponseArgs }}, {{ end }}
       {{ .ResponseArgs | CalleeParams }})
 {{- end }}
 
@@ -14,7 +14,8 @@ Reply(::fidl::BufferSpan _buffer {{- if .ResponseArgs }}, {{ end }}
 {{- IfdefFuchsia -}}
 ::fidl::Result {{ .WireCompleterBase.NoLeading }}::
 {{- template "ReplyCallerAllocateMethodSignature" . }} {
-  {{ .WireResponse }}::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity
+  {{ .WireResponse }}::UnownedEncodedMessage _response(
+    _backing_buffer.data, _backing_buffer.capacity
   {{- .ResponseArgs | ForwardCommaParams -}}
   );
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());

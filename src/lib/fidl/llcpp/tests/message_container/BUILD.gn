@@ -18,7 +18,7 @@ fidl("fidl.llcpp.linearized.test") {
 test("fidl_llcpp_message_container_tests_bin") {
   output_name = "fidl_llcpp_message_container_tests"
   sources = [
-    "linearized_and_encoded_test.cc",
+    "encoded_test.cc",
     "outgoing_message_test.cc",
     "outgoing_to_incoming_message_test.cc",
   ]

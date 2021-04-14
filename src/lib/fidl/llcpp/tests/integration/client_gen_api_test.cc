@@ -185,8 +185,7 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
     explicit ErrorServer() {}
 
     void TwoWay(fidl::StringView in, TwoWayCompleter::Sync& completer) override {
-      // Fail to send the reply due to an encoding error (the buffer is too
-      // small).
+      // Fail to send the reply due to an encoding error (the buffer is too small).
       fidl::BufferSpan empty;
       EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, completer.Reply(empty, std::move(in)).status());
       completer.Close(ZX_OK);  // This should not panic.

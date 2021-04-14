@@ -216,9 +216,22 @@ struct Handles {
 
   class UnownedEncodedMessage final {
    public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, Handles* value)
-        : message_(bytes, byte_size, sizeof(Handles), handles_,
-                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                          Handles* value)
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .handles = handles_,
+              .handle_capacity =
+                  std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      if (backing_buffer_size < sizeof(Handles)) {
+        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
+            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
+        return;
+      }
       message_.Encode<Handles>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -234,6 +247,7 @@ struct Handles {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
+    ::fidl::internal::IovecBuffer iovecs_;
     zx_handle_disposition_t
         handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
     ::fidl::OutgoingMessage message_;
@@ -242,7 +256,7 @@ struct Handles {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Handles* value)
-        : message_(bytes_.data(), bytes_.size(), value) {}
+        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -258,7 +272,7 @@ struct Handles {
     }
 
    private:
-    ::fidl::internal::InlineMessageBuffer<136> bytes_;
+    ::fidl::internal::InlineMessageBuffer<136> backing_buffer_;
     UnownedEncodedMessage message_;
   };
 

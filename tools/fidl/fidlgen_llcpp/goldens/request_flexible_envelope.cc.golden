@@ -540,11 +540,11 @@ fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
 ::fidl::Result
 fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
     RequestStrictResponseFlexibleCompleterBase::Reply(
-        ::fidl::BufferSpan _buffer,
+        ::fidl::BufferSpan _backing_buffer,
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f) {
   ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                            RequestStrictResponseFlexible>::UnownedEncodedMessage
-      _response(_buffer.data, _buffer.capacity, f);
+      _response(_backing_buffer.data, _backing_buffer.capacity, f);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
@@ -568,11 +568,11 @@ fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
 ::fidl::Result
 fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
     RequestFlexibleResponseStrictCompleterBase::Reply(
-        ::fidl::BufferSpan _buffer,
+        ::fidl::BufferSpan _backing_buffer,
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo f) {
   ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                            RequestFlexibleResponseStrict>::UnownedEncodedMessage
-      _response(_buffer.data, _buffer.capacity, f);
+      _response(_backing_buffer.data, _backing_buffer.capacity, f);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__

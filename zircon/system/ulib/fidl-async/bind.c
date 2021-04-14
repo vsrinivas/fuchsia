@@ -29,20 +29,40 @@ static zx_status_t fidl_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   fidl_connection_t* conn = (fidl_connection_t*)txn;
   if (conn->txid == 0u)
     return ZX_ERR_BAD_STATE;
-  // TODO(fxbug.dev/66977) Support the iovec mode.
-  ZX_ASSERT(msg->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
-  if (msg->byte.num_bytes < sizeof(fidl_message_header_t))
-    return ZX_ERR_INVALID_ARGS;
-  fidl_message_header_t* hdr = (fidl_message_header_t*)msg->byte.bytes;
-  hdr->txid = conn->txid;
-  conn->txid = 0u;
-  fidl_trace(WillCChannelWrite, NULL /* type */, msg->byte.bytes, msg->byte.num_bytes,
-             msg->byte.num_handles);
-  const zx_status_t status =
-      zx_channel_write_etc(conn->channel, 0, msg->byte.bytes, msg->byte.num_bytes,
-                           msg->byte.handles, msg->byte.num_handles);
-  fidl_trace(DidCChannelWrite);
-  return status;
+  switch (msg->type) {
+    case FIDL_OUTGOING_MSG_TYPE_BYTE: {
+      if (msg->byte.num_bytes < sizeof(fidl_message_header_t))
+        return ZX_ERR_INVALID_ARGS;
+      fidl_message_header_t* hdr = (fidl_message_header_t*)msg->byte.bytes;
+      hdr->txid = conn->txid;
+      conn->txid = 0u;
+      fidl_trace(WillCChannelWrite, NULL /* type */, msg->byte.bytes, msg->byte.num_bytes,
+                 msg->byte.num_handles);
+      const zx_status_t status =
+          zx_channel_write_etc(conn->channel, 0, msg->byte.bytes, msg->byte.num_bytes,
+                               msg->byte.handles, msg->byte.num_handles);
+      fidl_trace(DidCChannelWrite);
+      return status;
+    }
+    case FIDL_OUTGOING_MSG_TYPE_IOVEC: {
+      if (msg->iovec.num_iovecs < 1)
+        return ZX_ERR_INVALID_ARGS;
+      // The message header must fit within the first iovec.
+      if (msg->iovec.iovecs[0].capacity < sizeof(fidl_message_header_t))
+        return ZX_ERR_INVALID_ARGS;
+      fidl_message_header_t* hdr = (fidl_message_header_t*)msg->iovec.iovecs[0].buffer;
+      hdr->txid = conn->txid;
+      conn->txid = 0u;
+      fidl_trace(WillCChannelWrite);
+      const zx_status_t status =
+          zx_channel_write_etc(conn->channel, ZX_CHANNEL_WRITE_USE_IOVEC, msg->iovec.iovecs,
+                               msg->iovec.num_iovecs, msg->iovec.handles, msg->iovec.num_handles);
+      fidl_trace(DidCChannelWrite);
+      return status;
+    }
+    default:
+      ZX_PANIC("unsupported message type");
+  }
 }
 
 static void fidl_binding_destroy(fidl_binding_t* binding) {

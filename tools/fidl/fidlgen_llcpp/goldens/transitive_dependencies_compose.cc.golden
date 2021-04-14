@@ -248,10 +248,11 @@ fidl::WireInterface<::fidl_test_transitivedependenciescompose::Top>::
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireInterface<::fidl_test_transitivedependenciescompose::Top>::
-    GetFooCompleterBase::Reply(::fidl::BufferSpan _buffer,
+    GetFooCompleterBase::Reply(::fidl::BufferSpan _backing_buffer,
                                const ::bottom::wire::Foo& foo) {
   ::fidl::WireResponse<::fidl_test_transitivedependenciescompose::Top::GetFoo>::
-      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, foo);
+      UnownedEncodedMessage _response(_backing_buffer.data,
+                                      _backing_buffer.capacity, foo);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__

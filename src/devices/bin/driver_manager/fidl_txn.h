@@ -80,7 +80,7 @@ class FidlTxn {
   FidlTxn(FidlTxn&&) = delete;
 
   zx_status_t Reply(const fidl_outgoing_msg_t* msg) {
-    fidl::OutgoingMessage message(msg);
+    auto message = fidl::OutgoingMessage::FromEncodedCMessage(msg);
     message.set_txid(txid_);
     message.Write(channel_);
     return message.status();

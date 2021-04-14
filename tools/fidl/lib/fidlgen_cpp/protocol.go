@@ -615,7 +615,7 @@ type allocation struct {
 	size       string
 }
 
-func (alloc allocation) ByteBufferType() string {
+func (alloc allocation) BackingBufferType() string {
 	switch alloc.bufferType {
 	case inlineBuffer:
 		return fmt.Sprintf("::fidl::internal::InlineMessageBuffer<%s>", alloc.size)
