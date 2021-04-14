@@ -1,0 +1,35 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_app.gni")
+
+dart_app("dart-inspect-benchmarks") {
+  components = [
+    {
+      component_name = "dart-inspect-benchmarks"
+      component_type = "dart"
+      package_root = "."
+      main_dart = "lib/dart_inspect_benchmarks.dart"
+      sources = [ "dart_inspect_benchmarks.dart" ]
+      deps = [
+        "//sdk/dart/fuchsia",
+        "//sdk/dart/fuchsia_inspect",
+        "//sdk/dart/fuchsia_services",
+        "//third_party/dart-pkg/pub/args",
+      ]
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/dart-inspect-benchmarks.cmx")
+      dest = "dart-inspect-benchmarks.cmx"
+    },
+  ]
+}
+
+group("benchmarks") {
+  testonly = true
+  deps = [ ":dart-inspect-benchmarks" ]
+}

@@ -57,8 +57,8 @@ group("deprecated_dart_app_allowlist") {
     "//sdk/dart/fuchsia_inspect/test/validator_puppet:dart-inspect-validator-puppet",
     "//sdk/dart/fuchsia_services/test_support:fuchsia-services-foo-test-server",
     "//src/diagnostics/validator/logs/encoding/puppet/dart:log-validator-dart-puppet",
+    "//src/lib/diagnostics/inspect/dart/bench:dart-inspect-benchmarks",
     "//src/tests/intl/timestamp-server-dart:timestamp-server-dart",
-    "//topaz/tests/dart-inspect-benchmarks:dart-inspect-benchmarks",
   ]
 
   visibility = []

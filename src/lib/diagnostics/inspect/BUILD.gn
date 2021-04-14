@@ -13,5 +13,8 @@ group("tests") {
 
 group("benchmarks") {
   testonly = true
-  deps = [ "rust:benchmarks" ]
+  deps = [
+    "dart:benchmarks",
+    "rust:benchmarks",
+  ]
 }

@@ -176,13 +176,12 @@ group("package_deps") {
     "//src/connectivity/network/tests/benchmarks",
     "//src/diagnostics/archivist/bench",
     "//src/diagnostics/lib/selectors/bench",
-    "//src/lib/diagnostics/inspect/rust:benchmarks",
+    "//src/lib/diagnostics/inspect:benchmarks",
     "//src/media/audio/audio_core/mixer/tools:audio_mixer_profiler",
     "//src/tests/benchmarks:kernel-boot-benchmarks",
     "//src/tests/benchmarks/fidl:benchmarks",
     "//src/tests/microbenchmarks:fuchsia_microbenchmarks_perftestmode",
     "//third_party/iperf",
-    "//topaz/tests/dart-inspect-benchmarks",
 
     # These are used by garnet_input_latency_benchmarks.
     "//src/sys/activity",
