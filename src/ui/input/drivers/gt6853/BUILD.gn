@@ -4,9 +4,9 @@
 
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
+import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//src/sys/build/components.gni")
 
 config_9364_path = "gt6853/goodix_cfg_group_fiti9364.bin"
 config_9365_path = "gt6853/goodix_cfg_group_fiti9365.bin"

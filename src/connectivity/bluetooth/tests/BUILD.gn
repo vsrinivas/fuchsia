@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 # Define a name provider, which is required for BT-GAP
 fuchsia_test_component("device-name-provider") {

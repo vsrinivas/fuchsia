@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 #
 
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 group("token_manager_integration") {
   testonly = true

@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/dart/config.gni")
 import("//build/dart/dart.gni")
 import("//build/dart/dart_package_config.gni")
 import("//build/dart/kernel/dart_kernel.gni")
-import("//src/sys/build/components.gni")
 import("//tools/cmc/build/cmc.gni")
 
 # Creates a flutter asset manifest from the pubspec.yaml file.

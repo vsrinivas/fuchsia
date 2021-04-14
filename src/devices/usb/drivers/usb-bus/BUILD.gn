@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//src/sys/build/fuchsia_unittest_package.gni")
 
 bind_rules("usb_bus_bind") {
   rules = "usb_bus.bind"

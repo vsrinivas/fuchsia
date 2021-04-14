@@ -6,8 +6,8 @@
 # is located at `//tools/create/templates/component-v2/BUILD.gn.tmpl-rust`.
 # If you find something broken, we are eager to review fixes.
 
+import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
-import("//src/sys/build/components.gni")
 
 group("my-component-v2-rust") {
   testonly = true

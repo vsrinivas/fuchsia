@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/sys/build/components.gni")
-import("//src/sys/build/fuchsia_test_package.gni")
+import("//build/components.gni")
 
 group("tools") {
   deps = [ ":sysmem-memory-pressure" ]

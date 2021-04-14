@@ -5,7 +5,7 @@
 import("//build/test.gni")
 
 # [START imports]
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 # [END imports]
 

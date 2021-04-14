@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//src/sys/build/components.gni")
 
 bind_rules("iwlwifi_bind") {
   rules = "iwlwifi.bind"

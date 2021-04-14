@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
-import("//src/sys/build/components.gni")
 
 group("driver-index") {
   deps = [ ":package" ]

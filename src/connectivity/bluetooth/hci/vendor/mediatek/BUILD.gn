@@ -3,10 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/unification/firmware.gni")
-import("//src/sys/build/components.gni")
 
 bind_rules("bt-hci-mediatek-bind") {
   rules = "bt-hci-mediatek.bind"

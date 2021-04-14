@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//src/media/audio/audio_core_package.gni")
-import("//src/sys/build/components.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 action_foreach("json_schema_headers") {

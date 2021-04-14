@@ -4,9 +4,9 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/components.gni")
 import("//build/test.gni")
 import("//build/zircon/migrated_targets.gni")
-import("//src/sys/build/fuchsia_unittest_package.gni")
 
 zx_library("memalloc") {
   sdk = "source"

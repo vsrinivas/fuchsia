@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/sys/build/fuchsia_component.gni")
+import("//build/components.gni")
 
 # Produces a (testonly) component with an isolated driver manager to launch drivers. The component
 # name will always be `isolated-devmgr`.

@@ -9,7 +9,7 @@ import("//build/compiled_action.gni")
 # Example:
 #
 #   import("//src/lib/icu/tools/static_icu_data.gni")
-#   import("//src/sys/build/components.gni")
+#   import("//build/components.gni")
 #   import("//build/dist/resource.gni")
 #
 #   static_icu_data("revision") {

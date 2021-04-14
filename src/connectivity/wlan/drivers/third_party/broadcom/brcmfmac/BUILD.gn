@@ -12,8 +12,8 @@
 # OF THIS SOFTWARE.
 
 import("//build/bind/bind.gni")
+import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//src/sys/build/components.gni")
 import("config.gni")
 
 # By default, targets are only visible here and to subdirectories.

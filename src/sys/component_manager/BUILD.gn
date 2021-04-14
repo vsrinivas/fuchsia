@@ -3,10 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/component/config.gni")
+import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/testing/environments.gni")
-import("//src/sys/build/components.gni")
 
 template("component_manager") {
   forward_variables_from(invoker, [ "is_test" ])
@@ -31,7 +31,6 @@ template("component_manager") {
     "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.time:fuchsia.time-rustc",
     "//src/diagnostics/archivist:lib",

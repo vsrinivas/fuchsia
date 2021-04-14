@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
-import("//src/sys/build/components.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 declare_args() {

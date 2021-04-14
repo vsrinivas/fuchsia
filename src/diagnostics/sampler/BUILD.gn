@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/toolchain/variant_shared_library_redirect.gni")
 import("//src/diagnostics/sampler/build/config_generator.gni")
-import("//src/sys/build/components.gni")
 
 # Library containing core logic for sampler,
 # library launched by generic diagnostics Launcher
@@ -29,7 +29,6 @@ rustc_library("lib") {
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

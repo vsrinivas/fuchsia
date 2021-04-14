@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/storage/testing/isolated_devmgr.gni")
-import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   output_name = "export-ffs"

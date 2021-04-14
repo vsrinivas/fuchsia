@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 static_library("shell_interpreter") {
   public = [
@@ -103,7 +103,6 @@ executable("shell_server_test_bin") {
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]

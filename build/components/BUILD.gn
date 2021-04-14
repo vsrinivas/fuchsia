@@ -45,3 +45,8 @@ group("cmx_allowlist") {
     "//vendor/*",
   ]
 }
+
+group("tests") {
+  deps = [ "tests" ]
+  testonly = true
+}

@@ -2,13 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/lib/vulkan/build/config.gni")
 import("//src/lib/vulkan/compact_image.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
-import("//src/sys/build/components.gni")
 
 # Centralizing the GN points of entry into Vulkan ecosystem repositories here is helpful
 # for grasping the full scope.  Note, there are also entry points in //sdk/BUILD.gn.

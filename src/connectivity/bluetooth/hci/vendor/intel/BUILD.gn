@@ -4,9 +4,9 @@
 
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
+import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/dist/resource.gni")
-import("//src/sys/build/components.gni")
 
 bind_rules("bt_hci_intel_bind") {
   rules = "bt_hci_intel.bind"

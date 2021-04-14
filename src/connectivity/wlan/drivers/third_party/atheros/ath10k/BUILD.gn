@@ -15,8 +15,8 @@
 
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
+import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//src/sys/build/components.gni")
 
 bind_rules("ath10k_bind") {
   rules = "ath10k_pci.bind"

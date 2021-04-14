@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 group("codec") {
   testonly = true
@@ -36,12 +36,9 @@ group("tests") {
     "//src/media/codec/examples:use_vp9_decoder_24_output_frames_test",
     "//src/media/codec/examples:use_vp9_decoder_secure_input_output_test",
     "//src/media/codec/examples:use_vp9_decoder_secure_output_test",
-    "//src/media/codec/examples:use_vp9_decoder_secure_output_test",
-    "//src/media/codec/examples:use_vp9_decoder_skip_first_frame_test",
     "//src/media/codec/examples:use_vp9_decoder_skip_first_frame_test",
     "//src/media/codec/examples:use_vp9_decoder_tests",
     "//src/media/codec/examples:vp9-decoder-conformance-test--bear-vp9",
-    "//src/media/codec/examples:vp9_decoder_fuzzer_test",
     "//src/media/codec/examples:vp9_decoder_fuzzer_test",
     "//src/media/codec/factory:codec_detect_hw_decode_test",
   ]

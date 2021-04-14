@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 # this has to match the binary name in examples/ui/Build.gn
 
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 executable("bin") {
   output_name = "yuv_to_image_pipe"

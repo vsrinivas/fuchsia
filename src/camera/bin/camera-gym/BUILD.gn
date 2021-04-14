@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/cipd.gni")
+import("//build/components.gni")
 import("//src/camera/bin/camera-gym/assets/convert_image.gni")
 import("//src/camera/debug.gni")
-import("//src/sys/build/components.gni")
 
 declare_args() {
   camera_gym_configuration_cycle_time_ms = 10000

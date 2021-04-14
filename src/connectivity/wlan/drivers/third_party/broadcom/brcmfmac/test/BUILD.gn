@@ -13,7 +13,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import("//build/bind/bind.gni")
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 source_set("stub_netbuf") {
   testonly = true

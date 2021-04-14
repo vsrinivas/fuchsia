@@ -4,8 +4,8 @@
 
 import("//build/unification/zx_library.gni")
 
+import("//build/components.gni")
 import("//build/test.gni")
-import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true

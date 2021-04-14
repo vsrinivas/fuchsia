@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/test.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
-import("//src/sys/build/components.gni")
 
 magma_vulkan_icd("icd_strip_test") {
   output_name = "libicd_strip_test"

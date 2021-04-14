@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//src/sys/build/components.gni")
 
 bind_rules("usb_xhci_bind") {
   rules = "usb_xhci.bind"
@@ -60,7 +60,6 @@ driver_module("xhci") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

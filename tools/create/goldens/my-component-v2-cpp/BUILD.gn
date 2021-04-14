@@ -6,7 +6,7 @@
 # is located at `//tools/create/templates/component-v2/BUILD.gn.tmpl-cpp`.
 # If you find something broken, we are eager to review fixes.
 
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 group("my-component-v2-cpp") {
   testonly = true

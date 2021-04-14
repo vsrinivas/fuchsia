@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 import("//tools/fidl/measure-tape/measure_tape.gni")
 
 measure_tape("measure_tape_for_case") {

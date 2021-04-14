@@ -6,7 +6,7 @@ import("//build/cpp/sdk_source_set.gni")
 import("//build/fidl/fidl.gni")
 import("//build/testing/environments.gni")
 
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 sdk_source_set("cpp") {
   testonly = true

@@ -51,11 +51,11 @@ packages, components, and their tests.
 Below is a hypothetical package containing one component that runs a C++
 program and a data file. The example uses the following templates:
 
-*   [`fuchsia_component.gni`](/src/sys/build/fuchsia_component.gni)
-*   [`fuchsia_package.gni`](/src/sys/build/fuchsia_package.gni)
+*   [`fuchsia_component.gni`](/build/components/fuchsia_component.gni)
+*   [`fuchsia_package.gni`](/build/components/fuchsia_package.gni)
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 executable("my_program") {
   sources = [ "my_program.cc" ]
@@ -83,7 +83,7 @@ The file `my_program.cmx` should include at least the following:
 
 Note the following details:
 
-*   This example imports `"//src/sys/build/components.gni"`. This single import
+*   This example imports `"//build/components.gni"`. This single import
     includes all templates related to packages, components, and testing them.
 *   This example defines an `executable()`, which is used to build a C++
     program. This is for illustrative purposes - a component can launch all
@@ -115,7 +115,7 @@ paths.
    * {C++}
 
    ```gn
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    executable("bin") {
      output_name = "my_program"
@@ -147,7 +147,7 @@ paths.
 
    ```gn
    import("//build/rust/rustc_binary.gni")
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    rustc_binary("bin") {
      output_name = "my_program"
@@ -178,7 +178,7 @@ paths.
 
    ```gn
    import("//build/go/go_binary.gni")
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    go_binary("bin") {
      output_name = "my_program"
@@ -210,7 +210,7 @@ paths.
    ```gn
    import("//build/dart/dart_component.gni")
    import("//build/dart/dart_library.gni")
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    dart_library("lib") {
      package_name = "my_lib"
@@ -243,7 +243,7 @@ paths.
    ```gn
    import("//build/dart/dart_library.gni")
    import("//build/flutter/flutter_component.gni")
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    dart_library("lib") {
      package_name = "my_lib"
@@ -275,14 +275,14 @@ paths.
 
 Test packages are packages that contain at least one component that is
 launched as a test. Test packages are defined using
-[`fuchsia_test_package.gni`](/src/sys/build/fuchsia_test_package.gni). This
+[`fuchsia_test_package.gni`](/build/components/fuchsia_test_package.gni). This
 template can be used to define all sorts of tests, although it's most useful for
 integration tests -- tests where other components in addition to the test itself
 participate in the test. See [below](#unit-tests) for templates that specialize
 in unit testing.
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 executable("my_test") {
   sources = [ "my_test.cc" ]
@@ -357,7 +357,7 @@ It's possible to work around this limitation with an indirection through
 
 ```gn
 # Let this be //foo/BUILD.gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 executable("my_test") {
   sources = [ "my_test.cc" ]
@@ -390,7 +390,7 @@ Then elsewhere, you can add the `fuchsia_component()` target to the `deps` of a
 
 ```gn
 # Let this be //bar/BUILD.gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 fuchsia_package("my_test_package") {
   testonly = true
@@ -410,7 +410,7 @@ main invocation. The `flutter_test_component()` can then be used by the
 ```gn
 import("//build/dart/dart_test_component.gni")
 import("//build/flutter/flutter_test_component.gni")
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 flutter_test_component("my_flutter_test_component") {
   testonly = true
@@ -436,10 +436,10 @@ fuchsia_test("my_test_component_test") {
 
 Since unit tests are very common, two simplified templates are provided:
 
-* [`fuchsia_unittest_component.gni`](/src/sys/build/fuchsia_unittest_component.gni) defines a
+* [`fuchsia_unittest_component.gni`](/build/components/fuchsia_unittest_component.gni) defines a
   component to be run as a test, with the option to automatically generate a basic component
   manifest, that must then be included in a package.
-* [`fuchsia_unittest_package.gni`](/src/sys/build/fuchsia_unittest_package.gni) defines a
+* [`fuchsia_unittest_package.gni`](/build/components/fuchsia_unittest_package.gni) defines a
   package with a single component to be run as a test, shorthand for a single
   `fuchsia_unittest_component()` target paired with a `fuchsia_test_package()`.
 
@@ -451,7 +451,7 @@ package and component for the test.
    * {C++}
 
    ```gn
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    executable("my_test") {
      sources = [ "test.cc" ]
@@ -472,7 +472,7 @@ package and component for the test.
 
    ```gn
    import("//build/rust/rustc_test.gni")
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    rustc_test("my_test") {}
 
@@ -486,7 +486,7 @@ package and component for the test.
 
    ```gn
    import("//build/go/go_test.gni")
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    go_test("my_test") {}
 
@@ -528,7 +528,7 @@ for us.
    * {C++}
 
    ```gn
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    executable("rot13_test") {
      sources = [ "rot13_test.cc" ]
@@ -548,7 +548,7 @@ for us.
 
    ```gn
    import("//build/rust/rustc_test.gni")
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    rustc_test("rot13_test") {}
 
@@ -561,7 +561,7 @@ for us.
 
    ```gn
    import("//build/go/go_test.gni")
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    go_test("rot13_test") {}
 
@@ -574,7 +574,7 @@ It's also possible to generate multiple unit test components and include them in
 a single package.
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 fuchsia_unittest_component("rot13_encrypt_test") {
   ...
@@ -621,7 +621,7 @@ See also: [`fx test`][fx-test]
 You can generate a [CFv2 test component][v2-test-component] by specifying:
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 fuchsia_unittest_package("rot13_test") {
   v2 = true
@@ -632,7 +632,7 @@ fuchsia_unittest_package("rot13_test") {
 Or:
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 fuchsia_unittest_component("rot13_encrypt_test") {
   v2 = true
@@ -669,7 +669,7 @@ using either `fx test rot13_decoder_test` or the full URL
    * {C++}
 
    ```gn
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    executable("rot13_decoder_bin_test") {}
 
@@ -695,7 +695,7 @@ using either `fx test rot13_decoder_test` or the full URL
 
    ```gn
    import("//build/rust/rustc_test.gni")
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    rustc_test("rot13_decoder_bin_test") {}
 
@@ -721,7 +721,7 @@ using either `fx test rot13_decoder_test` or the full URL
 
    ```gn
    import("//build/go/go_test.gni")
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    go_test("rot13_decoder_test") {}
 
@@ -763,7 +763,7 @@ template as a convenience. This template fuses together `fuchsia_package()` and
    * {C++}
 
    ```gn
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    executable("rot13_encoder_decoder") {
      sources = [ "rot13_encoder_decoder.cc" ]
@@ -779,7 +779,7 @@ template as a convenience. This template fuses together `fuchsia_package()` and
 
    ```gn
    import("//build/rust/rustc_binary.gni")
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    rustc_binary("rot13_encoder_decoder") {
    }
@@ -794,7 +794,7 @@ template as a convenience. This template fuses together `fuchsia_package()` and
 
    ```gn
    import("//build/go/go_binary.gni")
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    go_binary("rot13_encoder_decoder") {
    }
@@ -804,7 +804,6 @@ template as a convenience. This template fuses together `fuchsia_package()` and
      deps = [ ":rot13_encoder_decoder" ]
    }
    ```
-
 
 ## Test-driven development
 
@@ -842,7 +841,7 @@ the use of two [`resource.gni`](/build/dist/resource.gni) templates,
 {% verbatim %}
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 resource("roboto_family") {
   sources = [
@@ -1151,7 +1150,7 @@ fuchsia-pkg://fuchsia.com/<package-name>#meta/<component-name>.<extension>
 
 The examples below demonstrate migration scenarios from the legacy
 [`package()`](/build/package.gni) template to the new
-[`fuchsia_package()`](/src/sys/build/fuchsia_package.gni) & friends.
+[`fuchsia_package()`](/build/components/fuchsia_package.gni) & friends.
 
 ### Simple `package()` example
 
@@ -1210,7 +1209,7 @@ This example is adapted from
   ```gn
   import("//build/config.gni")
   import("//build/rust/rustc_binary.gni")
-  import("//src/sys/build/components.gni")                   # <1>
+  import("//build/components.gni")                   # <1>
 
   rustc_binary("component_index_bin") {                      # <2>
     name = "component_index"
@@ -1232,7 +1231,7 @@ This example is adapted from
 
 The following key elements are called out in the code example above:
 
-> 1.  Necessary imports are replaced by `//src/sys/build/components.gni`.
+> 1.  Necessary imports are replaced by `//build/components.gni`.
 > 2.  Targets that generate executables or data files are not expected to change
 >     in a migration.
 > 3.  The original `package()` declaration contains a single component manifest
@@ -1308,7 +1307,7 @@ This example is adapted from
   ```gn
   import("//build/rust/rustc_binary.gni")
   import("//src/fonts/build/fonts.gni")
-  import("//src/sys/build/components.gni")                 # <1>
+  import("//build/components.gni")                         # <1>
 
   rustc_binary("font_provider") {                          # <2>
     name = "font_provider"
@@ -1354,7 +1353,7 @@ This example is adapted from
 
 The following key elements are called out in the code example above:
 
-> 1.  Necessary imports are replaced by `//src/sys/build/components.gni`.
+> 1.  Necessary imports are replaced by `//build/components.gni`.
 > 2.  Targets that generate executables or data files are not expected to change
 >     in a migration.
 > 3.  If a `package()` includes multiple distinct components using the `meta`
@@ -1376,7 +1375,7 @@ unable to resolve, see [Troubleshooting](#troubleshooting).
 
 The example below highlights some key differences between the legacy
 [`test_package()`](/build/test/test_package.gni) template and the new
-[`fuchsia_test_package()`](/src/sys/build/fuchsia_test_package.gni).
+[`fuchsia_test_package()`](/build/components/fuchsia_test_package.gni).
 
 * {Pre-migration}
 
@@ -1403,7 +1402,7 @@ The example below highlights some key differences between the legacy
 * {Post-migration}
 
   ```gn
-  import("//src/sys/build/components.gni")                 # <1>
+  import("//build/components.gni")                         # <1>
 
   executable("foo_bin_test") { ... }
 
@@ -1426,7 +1425,7 @@ The example below highlights some key differences between the legacy
 
 The following key elements are called out in the code example above:
 
-> 1.  Replace necessary imports with `//src/sys/build/components.gni` and rename
+> 1.  Replace necessary imports with `//build/components.gni` and rename
 >     `test_package()` to `fuchsia_test_package()`.
 > 2.  Create a `fuchsia_component()` to encapsulate the test components previously
 >     added with the `tests` field. Reference the components in the package with
@@ -1473,7 +1472,6 @@ group("deprecated_package") {
   ]
 }
 ```
-
 
 ### Legacy features
 
@@ -1564,7 +1562,7 @@ packaged files, developers should work with the templates for the targets
 that produce those files. For instance:
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 executable("bin") {
   output_name = "foo_bin"
@@ -1610,7 +1608,7 @@ package("echo") {
 The new templates support this feature as follows:
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 # `fx shell echo Hello World` prints "Hello World"
 executable("bin") {
@@ -1670,7 +1668,7 @@ The new templates support this feature as follows:
 ```gn
 import("//build/go/go_library.gni")
 import("//src/go/grand_unified_binary/gub.gni")
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 go_library("my_tool") {
   ...
@@ -1732,7 +1730,7 @@ with it, but there is currently no concrete timeline for this deprecation. If
 you'd like to keep the old behavior, you can do so with this special syntax:
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 import("//src/sys/component_index/component_index.gni")
 
 executable("bin") {

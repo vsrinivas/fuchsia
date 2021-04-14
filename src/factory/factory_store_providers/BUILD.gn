@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/config.gni")
 import("//build/dist/resource.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/zbi/zbi.gni")
-import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "factory_store_providers"

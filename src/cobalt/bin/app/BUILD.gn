@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/config.gni")
-import("//src/sys/build/components.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 declare_args() {
@@ -214,7 +214,6 @@ executable("cobalt_app_unittests") {
     ":testapp_metrics_registry_cc",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.cobalt",
-    "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/cobalt/bin/testing:fake_clock_lib",
     "//src/cobalt/bin/testing:fake_http_loader",

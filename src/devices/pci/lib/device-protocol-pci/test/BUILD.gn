@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/test.gni")
-import("//src/sys/build/components.gni")
 
 test("device-protocol-pci") {
   sources = [ "pci-test.cc" ]

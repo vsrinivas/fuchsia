@@ -38,8 +38,8 @@ zx_library("static-pie") {
   }
 }
 
+import("//build/components.gni")
 import("//build/test.gni")
-import("//src/sys/build/components.gni")
 
 test("static_pie_test") {
   sources = [ "relocation_test.cc" ]

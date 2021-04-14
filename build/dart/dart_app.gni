@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/dart/dart_component.gni")
 import("//build/dart/dart_library.gni")
-import("//src/sys/build/components.gni")
 
 # Defines a Dart application that can be run in the Dart content handler
 #

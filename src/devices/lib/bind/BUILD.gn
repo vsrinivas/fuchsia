@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_fuzzer.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_staticlib.gni")
-import("//src/sys/build/components.gni")
 
 group("bind") {
   deps = [ ":lib" ]

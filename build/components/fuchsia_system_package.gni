@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/sys/build/fuchsia_package.gni")
+import("fuchsia_package.gni")
 
 # Defines a Fuchsia package that contains binaries or resources to be
 # part of the Fuchsia system image (i.e. copied to /system/...).

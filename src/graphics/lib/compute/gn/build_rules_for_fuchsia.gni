@@ -4,10 +4,10 @@
 
 # These rules are only used by the Fuchsia platform build.
 
+import("//build/components.gni")
 import("//build/testing/environments.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
-import("//src/sys/build/components.gni")
 import("//src/sys/component_index/component_index.gni")
 import("build_settings.gni")
 

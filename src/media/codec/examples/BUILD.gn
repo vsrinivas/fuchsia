@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 import("//build/testing/environments.gni")
-import("//src/sys/build/components.gni")
 
 declare_args() {
   build_all_vp9_file_decoder_conformance_tests = false

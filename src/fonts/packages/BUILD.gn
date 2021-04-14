@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/dist/resource.gni")
 import("//src/fonts/build/fonts.gni")
-import("//src/sys/build/components.gni")
 
 # Generate all the Fuchsia font `package`s from the values in the files listed
 # in `font_pkgs_paths`.

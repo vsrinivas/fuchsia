@@ -6,9 +6,9 @@
 # is located at `//tools/create/templates/component-v2/BUILD.gn.tmpl-rust`.
 # If you find something broken, we are eager to review fixes.
 
+import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/session/build/session_config.gni")
-import("//src/sys/build/components.gni")
 
 session_config("hello-world-session-config.json") {
   config = "meta/hello-world-session-config.json"

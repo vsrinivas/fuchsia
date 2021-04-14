@@ -61,7 +61,7 @@ executable("files_unittests") {
 }
 
 if (is_fuchsia) {
-  import("//src/sys/build/components.gni")
+  import("//build/components.gni")
 
   fuchsia_unittest_package("files-tests") {
     manifest = "meta/files_unittests.cmx"

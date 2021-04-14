@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
-import("//src/sys/build/components.gni")
 
 fidl("echos") {
   name = "fuchsia.test.echos"
@@ -46,7 +46,6 @@ rustc_binary("fuchsia_component_test_middle_bin") {
     ":echos-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
@@ -74,7 +73,6 @@ rustc_binary("fuchsia_component_test_middle_sibling_bin") {
   deps = [
     ":echos-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

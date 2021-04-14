@@ -11,7 +11,7 @@
 # NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 # OF THIS SOFTWARE.
 
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 source_set("sim_test") {
   output_name = "sim_test"

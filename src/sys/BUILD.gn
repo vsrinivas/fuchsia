@@ -20,7 +20,6 @@ group("tests") {
     "activity:tests",
     "appmgr:tests",
     "base-resolver:tests",
-    "build:tests",
     "component_index:tests",
     "component_manager:tests",
     "component_test_runner:tests",

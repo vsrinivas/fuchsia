@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/component/component_id_index.gni")
+import("//build/components.gni")
 import("//build/config.gni")
-import("//src/sys/build/components.gni")
 
 source_set("lib") {
   sources = [
@@ -77,7 +77,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/fidl/fuchsia.sys.test",
     "//sdk/fidl/fuchsia.sys2",
-    "//sdk/lib/fit-promise",
     "//sdk/lib/fit-promise",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",

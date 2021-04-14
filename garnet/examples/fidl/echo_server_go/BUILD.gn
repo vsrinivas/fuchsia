@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
-import("//src/sys/build/components.gni")
 
 go_binary("echo_server_go_bin") {
   output_name = "echo_server_go"
@@ -19,7 +19,6 @@ go_library("echo_server_go_lib") {
   sources = [ "echo_server.go" ]
 
   deps = [
-    "//garnet/examples/fidl/services:echo($go_toolchain)",
     "//garnet/examples/fidl/services:echo($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//src/lib/component",

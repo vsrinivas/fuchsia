@@ -2,12 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+
 # TODO(fxb/58062): Delete this file after all packages are migrated away from
 # flutter_app.
 import("//build/dart/dart_library.gni")
 import("//build/flutter/flutter_build_config.gni")
 import("//build/flutter/flutter_component.gni")
-import("//src/sys/build/components.gni")
 
 # Defines a Flutter application
 #

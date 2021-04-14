@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 executable("basemgr_launcher_bin") {
   output_name = "basemgr_launcher"

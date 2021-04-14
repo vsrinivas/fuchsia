@@ -1,7 +1,7 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-import("//src/sys/build/fuchsia_package_with_single_component.gni")
+import("//build/components.gni")
 
 group("benchmark") {
   public_deps = [ ":camera_benchmark" ]

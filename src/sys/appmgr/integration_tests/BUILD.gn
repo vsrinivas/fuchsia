@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/config.gni")
 import("//build/fidl/fidl.gni")
-import("//src/sys/build/components.gni")
 
 group("integration_tests") {
   testonly = true
@@ -35,7 +35,6 @@ executable("full_tests") {
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",

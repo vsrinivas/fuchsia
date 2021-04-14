@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 fuchsia_unittest_package("amlogic_decoder_integration_tests") {
   deps = [ ":amlogic_decoder_integration_tests_bin" ]
@@ -23,7 +23,6 @@ executable("amlogic_decoder_integration_tests_bin") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]

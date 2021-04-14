@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//src/media/audio/hardware.gni")
-import("//src/sys/build/components.gni")
 
 fuchsia_unittest_package("audio_core_hardware_tests") {
   manifest = "meta/audio_core_hardware_tests.cmx"

@@ -4,9 +4,9 @@
 
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
+import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/dist/resource.gni")
-import("//src/sys/build/components.gni")
 
 bind_rules("bt_hci_atheros_bind") {
   rules = "bt_hci_atheros.bind"
@@ -36,7 +36,6 @@ driver_module("driver") {
     "//src/connectivity/bluetooth/core/bt-host/hci",
     "//src/connectivity/bluetooth/core/bt-host/hci-spec",
     "//src/devices/lib/driver",
-    "//src/devices/usb/lib/usb",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",

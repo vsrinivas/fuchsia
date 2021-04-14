@@ -4,8 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/components.gni")
 import("//build/test.gni")
-import("//src/sys/build/components.gni")
 
 if (is_kernel) {
   # NOTE: This cannot be called 'tests' due to the target with the same name

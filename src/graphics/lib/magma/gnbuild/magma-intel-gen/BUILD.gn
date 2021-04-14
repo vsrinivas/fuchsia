@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/config.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
-import("//src/sys/build/components.gni")
-import("//src/sys/build/fuchsia_system_package.gni")
 
 # Mesa Intel Vulkan driver requires x64 build
 if (target_cpu == "x64") {

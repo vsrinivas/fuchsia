@@ -53,8 +53,8 @@ executable("json_parser_unittests_bin") {
 }
 
 if (is_fuchsia) {
+  import("//build/components.gni")
   import("//build/testing/environments.gni")
-  import("//src/sys/build/components.gni")
 
   fuchsia_unittest_package("json_parser_unittests") {
     manifest = "meta/json_parser_unittests.cmx"

@@ -2,7 +2,7 @@
 
 {{>generated comment="#"}}
 
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 group("{{PROJECT_NAME}}") {
   testonly = true

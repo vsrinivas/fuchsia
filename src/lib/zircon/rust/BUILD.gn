@@ -3,10 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//src/sys/build/components.gni")
 
 common_sources = [
   "src/channel.rs",

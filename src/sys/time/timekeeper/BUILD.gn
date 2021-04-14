@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
-import("//src/sys/build/components.gni")
 
 timekeeper_deps = [
   "//sdk/fidl/fuchsia.deprecatedtimezone:fuchsia.deprecatedtimezone-rustc",
@@ -14,7 +14,6 @@ timekeeper_deps = [
   "//src/lib/async-utils",
   "//src/lib/cobalt/rust:fuchsia-cobalt",
   "//src/lib/diagnostics/inspect/derive",
-  "//src/lib/diagnostics/inspect/rust",
   "//src/lib/diagnostics/inspect/rust",
   "//src/lib/fdio/rust:fdio",
   "//src/lib/fidl/rust/fidl",

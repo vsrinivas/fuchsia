@@ -3,7 +3,7 @@
 
 # Clock-related utility functions, for audio tests, tools or drivers
 
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 source_set("clock") {
   public_deps = [

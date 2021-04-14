@@ -5,7 +5,7 @@
 # This Puppet launches an isolated devmgr and proxies the LogSinkPuppet
 # to Rust, so that the log output can be read using the ArchiveReader API.
 
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 executable("ddk-puppet") {
   output_name = "accessor_validator_ddk_puppet"

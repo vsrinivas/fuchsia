@@ -7,9 +7,9 @@
 # If you find something broken, we are eager to review fixes.
 
 import("//build/component/config.gni")
+import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
-import("//src/sys/build/components.gni")
 
 group("utc-time") {
   testonly = true

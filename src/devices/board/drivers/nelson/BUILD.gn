@@ -4,8 +4,8 @@
 
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
+import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//src/sys/build/components.gni")
 
 if (internal_access) {
   config_tas5805m = "audio/config/tas5805m_config.h"

@@ -5,9 +5,9 @@
 # This directory was based on fuchsia-mirror/src/sys/component_manager/tests/utc-time/
 
 import("//build/component/config.gni")
+import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
-import("//src/sys/build/components.gni")
 
 group("integration") {
   testonly = true

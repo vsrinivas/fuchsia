@@ -4,9 +4,9 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/components.gni")
 import("//build/cpp/library_headers.gni")
 import("//build/test.gni")
-import("//src/sys/build/fuchsia_unittest_package.gni")
 import("//zircon/kernel/lib/code-patching/code-patching.gni")
 
 library_headers("headers") {

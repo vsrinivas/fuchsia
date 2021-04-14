@@ -51,8 +51,8 @@ zx_library("acpi_lite") {
 }
 
 if (!is_kernel) {
+  import("//build/components.gni")
   import("//build/fuzzing/fuzzer.gni")
-  import("//src/sys/build/fuchsia_unittest_package.gni")
 
   executable("acpi_lite_test") {
     testonly = true
