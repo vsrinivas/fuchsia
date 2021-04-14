@@ -2114,7 +2114,6 @@ mod tests {
     use std::convert::TryFrom;
     use std::num::NonZeroU16;
 
-    use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{Ipv4Addr, Ipv6Addr};
     use net_types::UnicastAddr;
     use packet::{Buf, ParseBuffer};
@@ -2207,8 +2206,8 @@ mod tests {
         ][..]);
         bytes[..4].copy_from_slice(&[0x60, 0x20, 0x00, 0x77][..]);
 
-        let payload_len = (bytes.len() - 40) as u16;
-        NetworkEndian::write_u16(&mut bytes[4..6], payload_len);
+        let payload_len = u16::try_from(bytes.len() - 40).unwrap();
+        bytes[4..6].copy_from_slice(&payload_len.to_be_bytes()[..]);
 
         bytes[6] = Ipv6ExtHdrType::DestinationOptions.into();
         bytes[7] = 64;
@@ -2306,10 +2305,10 @@ mod tests {
         bytes[40] = IpProto::Udp.into();
         bytes[42] = fragment_offset >> 5;
         bytes[43] = ((fragment_offset & 0x1F) << 3) | if m_flag { 1 } else { 0 };
-        NetworkEndian::write_u32(&mut bytes[44..48], fragment_id as u32);
+        bytes[44..48].copy_from_slice(&(u32::try_from(fragment_id).unwrap().to_be_bytes()[..]));
         bytes.extend(fragment_offset * 8..fragment_offset * 8 + 8);
-        let payload_len = (bytes.len() - 40) as u16;
-        NetworkEndian::write_u16(&mut bytes[4..6], payload_len);
+        let payload_len = u16::try_from(bytes.len() - 40).unwrap();
+        bytes[4..6].copy_from_slice(&payload_len.to_be_bytes()[..]);
         let buffer = Buf::new(bytes, ..);
         receive_ipv6_packet(ctx, device, FrameDestination::Unicast, buffer);
     }
@@ -2334,8 +2333,8 @@ mod tests {
             1, 2, 3, 4, 5,
         ][..];
         bytes[..4].copy_from_slice(&[0x60, 0x20, 0x00, 0x77][..]);
-        let payload_len = (bytes.len() - 40) as u16;
-        NetworkEndian::write_u16(&mut bytes[4..6], payload_len);
+        let payload_len = u16::try_from(bytes.len() - 40).unwrap();
+        bytes[4..6].copy_from_slice(&payload_len.to_be_bytes()[..]);
         bytes[6] = 255; // Invalid Next Header
         bytes[7] = 64;
         bytes[8..24].copy_from_slice(DUMMY_CONFIG_V6.remote_ip.bytes());
@@ -2379,8 +2378,8 @@ mod tests {
             1, 2, 3, 4, 5,
         ][..];
         bytes[..4].copy_from_slice(&[0x60, 0x20, 0x00, 0x77][..]);
-        let payload_len = (bytes.len() - 40) as u16;
-        NetworkEndian::write_u16(&mut bytes[4..6], payload_len);
+        let payload_len = u16::try_from(bytes.len() - 40).unwrap();
+        bytes[4..6].copy_from_slice(&payload_len.to_be_bytes()[..]);
         bytes[6] = Ipv6ExtHdrType::Routing.into();
         bytes[7] = 64;
         bytes[8..24].copy_from_slice(DUMMY_CONFIG_V6.remote_ip.bytes());

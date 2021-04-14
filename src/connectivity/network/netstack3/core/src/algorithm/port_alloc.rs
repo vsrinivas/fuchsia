@@ -17,8 +17,6 @@ use mundane::{hash::Digest, hmac::HmacSha256};
 use net_types::{ip::IpAddress, SpecifiedAddr};
 use rand::RngCore;
 
-use byteorder::{ByteOrder, NativeEndian};
-
 /// A port number.
 // NOTE(brunodalbo): `PortNumber` could be a trait, but given the expected use
 // of the PortAlloc algorithm is to allocate `u16` ports, it's just defined as a
@@ -244,9 +242,12 @@ impl<I: PortAllocImpl> PortAlloc<I> {
 
 /// Helper function to hash an `id` with a given `secret` into a `usize`.
 fn hmac_with_secret<I: Hash>(id: &I, secret: &[u8]) -> usize {
+    use core::convert::TryInto as _;
+
     let mut hmac = HmacSha256::new(secret);
-    id.hash(&mut hmac);
-    NativeEndian::read_u64(&hmac.finish().bytes()) as usize
+    let () = id.hash(&mut hmac);
+
+    usize::from_ne_bytes(hmac.finish().bytes()[..core::mem::size_of::<usize>()].try_into().unwrap())
 }
 
 #[cfg(test)]
@@ -259,7 +260,7 @@ mod tests {
     struct MockId(usize);
 
     /// Number of different RNG seeds used in tests in this mod.
-    const RNG_ROUNDS: u64 = 128;
+    const RNG_ROUNDS: u128 = 128;
 
     /// Hard-coded mock of available port filter.
     enum MockAvailable {
@@ -377,7 +378,7 @@ mod tests {
         // Test that different IDs can hash to different offsets in internal
         // tables, which increase independently.
         let mock = MockImpl { available: MockAvailable::AllowAll };
-        let mut alloc = PortAlloc::<MockImpl>::new(&mut FakeCryptoRng::new_xorshift(0));
+        let mut alloc = PortAlloc::<MockImpl>::new(&mut FakeCryptoRng::new_xorshift(2));
         let table_a = alloc.table[0];
         let table_b = alloc.table[1];
         let id_a = MockId(0);

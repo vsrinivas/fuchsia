@@ -14,9 +14,6 @@ include = ["Cargo.toml", "src/*"]
 [features]
 benchmark = []
 
-[dependencies]
-byteorder = "1.3"
-
 [dev-dependencies]
 rand_xorshift = "0.1.1"
 rand = "0.6"

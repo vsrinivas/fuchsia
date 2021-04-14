@@ -11,7 +11,6 @@ use std::ops;
 use std::sync::Once;
 use std::time::Duration;
 
-use byteorder::{ByteOrder, NativeEndian};
 use log::{debug, trace};
 use net_types::ethernet::Mac;
 use net_types::ip::{
@@ -91,7 +90,7 @@ impl Default for FakeCryptoRng<XorShiftRng> {
 
 impl FakeCryptoRng<XorShiftRng> {
     /// Creates a new [`FakeCryptoRng<XorShiftRng>`] from a seed.
-    pub(crate) fn new_xorshift(seed: u64) -> FakeCryptoRng<XorShiftRng> {
+    pub(crate) fn new_xorshift(seed: u128) -> FakeCryptoRng<XorShiftRng> {
         FakeCryptoRng(new_rng(seed))
     }
 }
@@ -122,17 +121,12 @@ impl<R: RngCore> crate::context::RngContext for FakeCryptoRng<R> {
 }
 
 /// Create a new deterministic RNG from a seed.
-pub(crate) fn new_rng(mut seed: u64) -> XorShiftRng {
+pub(crate) fn new_rng(mut seed: u128) -> XorShiftRng {
     if seed == 0 {
         // XorShiftRng can't take 0 seeds
         seed = 1;
     }
-    let mut bytes = [0; 16];
-    NativeEndian::write_u32(&mut bytes[0..4], seed as u32);
-    NativeEndian::write_u32(&mut bytes[4..8], (seed >> 32) as u32);
-    NativeEndian::write_u32(&mut bytes[8..12], seed as u32);
-    NativeEndian::write_u32(&mut bytes[12..16], (seed >> 32) as u32);
-    XorShiftRng::from_seed(bytes)
+    XorShiftRng::from_seed(seed.to_ne_bytes())
 }
 
 /// Creates `iterations` fake RNGs.
@@ -142,7 +136,7 @@ pub(crate) fn new_rng(mut seed: u64) -> XorShiftRng {
 ///
 /// This function can be used for tests that weed out weirdnesses that can
 /// happen with certain random number sequences.
-pub(crate) fn with_fake_rngs<F: Fn(FakeCryptoRng<XorShiftRng>)>(iterations: u64, f: F) {
+pub(crate) fn with_fake_rngs<F: Fn(FakeCryptoRng<XorShiftRng>)>(iterations: u128, f: F) {
     for seed in 0..iterations {
         f(FakeCryptoRng::new_xorshift(seed))
     }

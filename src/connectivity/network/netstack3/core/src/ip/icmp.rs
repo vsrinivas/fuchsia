@@ -7,7 +7,8 @@
 use alloc::vec::Vec;
 use core::fmt::Debug;
 
-use byteorder::{ByteOrder, NetworkEndian};
+use core::convert::TryInto as _;
+
 use log::{debug, trace};
 use net_types::ip::{
     Ip, IpAddress, IpVersionMarker, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr,
@@ -974,7 +975,7 @@ impl<B: BufferMut, C: BufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
                             // We need the first 4 bytes as the total length
                             // field is at bytes 2/3 of the original packet
                             // buffer.
-                            let total_len = NetworkEndian::read_u16(&original_packet_buf[2..4]);
+                            let total_len = u16::from_be_bytes(original_packet_buf[2..4].try_into().unwrap());
 
                             trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet: Next-Hop MTU is 0 so using the next best PMTU value from {}", total_len);
 

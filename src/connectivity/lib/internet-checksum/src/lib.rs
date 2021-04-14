@@ -631,24 +631,12 @@ mod tests {
     use super::*;
 
     /// Create a new deterministic RNG from a seed.
-    fn new_rng(mut seed: u64) -> XorShiftRng {
-        use std::convert::TryInto;
-
+    fn new_rng(mut seed: u128) -> XorShiftRng {
         if seed == 0 {
             // XorShiftRng can't take 0 seeds
             seed = 1;
         }
-
-        let bytes: Vec<u8> = std::array::IntoIter::new([
-            seed as u32,
-            (seed >> 32) as u32,
-            seed as u32,
-            (seed >> 32) as u32,
-        ])
-        .map(u32::to_ne_bytes)
-        .flat_map(std::array::IntoIter::new)
-        .collect();
-        XorShiftRng::from_seed(bytes.as_slice().try_into().unwrap())
+        XorShiftRng::from_seed(seed.to_ne_bytes())
     }
 
     #[test]
