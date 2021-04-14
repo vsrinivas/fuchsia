@@ -446,7 +446,6 @@ action("devmgr_config.txt") {
     ":fuchsia.vbmeta__zbi_props",
   ]
   testonly = fuchsia_zbi_testonly
-  hermetic_deps = false
   script = "manifest.py"
   outputs = [ "$target_out_dir/devmgr_config.txt" ]
   args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
@@ -498,6 +497,8 @@ action("devmgr_config.txt") {
     "--reset-rewrite",
   ]
 
+  inputs = [ build_info_files.minimum_utc_stamp ]
+
   foreach(entry, devmgr_config) {
     args += [ "--entry=$entry" ]
   }
@@ -521,7 +522,6 @@ action("devmgr_config_prime.txt") {
     ":fuchsia_prime.vbmeta__zbi_props",
   ]
   testonly = true
-  hermetic_deps = false
   script = "manifest.py"
   outputs = [ "$target_out_dir/devmgr_config_prime.txt" ]
   args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
@@ -1146,7 +1146,6 @@ generate_fvm("fvm.sparse.blk") {
 
   output_name = fvm_sparse_blk_path
   rebased_output_name = rebase_path(output_name, root_build_dir)
-
   deps = [
     ":blob.blk",
     ":data.blk",
@@ -1187,6 +1186,9 @@ filesystem_sizes_inputs += [
   blob_image_path,
   data_image_path,
   fvm_sparse_blk_path,
+  fvm_tool_path,
+  blobfs_tool_path,
+  minfs_tool_path,
 ]
 filesystem_sizes_args += [
   "--fvm-blk",
@@ -2273,7 +2275,7 @@ action("update.manifest") {
       source = board_name_file
     },
   ]
-  hermetic_deps = false
+
   script = "manifest.py"
 
   outputs = [ "$target_out_dir/$target_name" ]
@@ -2408,7 +2410,6 @@ action("update_prime_packages.manifest.json") {
 action("update_prime.manifest") {
   visibility = [ ":*" ]
   testonly = true
-  hermetic_deps = false
   script = "manifest.py"
 
   outputs = [ "$target_out_dir/$target_name" ]
