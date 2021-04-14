@@ -4,8 +4,6 @@
 
 library fuchsia.ui.input;
 
-using fuchsia.ui.input2;
-
 /// The service provided by an IME
 [Discoverable]
 protocol ImeService {
@@ -16,11 +14,6 @@ protocol ImeService {
                          request<InputMethodEditor> editor);
     ShowKeyboard();
     HideKeyboard();
-
-    // DEPRECATED: Instead, use `fuchsia.ui.input3.KeyEventInjector`.
-    // TODO(fxbug.dev/70474): remove this method.
-    // TODO(fxbug.dev/47689): Work is ongoing to remove all input2 code.
-    DispatchKey(fuchsia.ui.input2.KeyEvent event) -> (bool handled);
 };
 
 /// Onscreen keyboard containers connect to this to know when a keyboard

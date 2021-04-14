@@ -229,7 +229,6 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.pointer.augment:fuchsia.ui.pointer.augment_sdk($fidl_toolchain)",
@@ -524,7 +523,6 @@ sdk("fuchsia_dart") {
     # TODO(viktard): remove, needed to soft transition
     # https://fuchsia-review.googlesource.com/c/fuchsia/+/295264
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_sdk",
-    "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2_sdk",
 
     # TODO(fxbug.dev/24537): Remove this temporary dependency.
     # Temporarily added as a direct dependency so that it can be removed from

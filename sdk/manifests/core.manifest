@@ -103,7 +103,6 @@ sdk://fidl/fuchsia.ui.app
 sdk://fidl/fuchsia.ui.brightness
 sdk://fidl/fuchsia.ui.gfx
 sdk://fidl/fuchsia.ui.input
-sdk://fidl/fuchsia.ui.input2
 sdk://fidl/fuchsia.ui.input3
 sdk://fidl/fuchsia.ui.pointer
 sdk://fidl/fuchsia.ui.pointer.augment
