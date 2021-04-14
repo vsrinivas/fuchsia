@@ -210,10 +210,11 @@ async fn start(url: String) -> Result<(), Error> {
 async fn start_manager(mut request_stream: fstardev::ManagerRequestStream) -> Result<(), Error> {
     while let Some(event) = request_stream.try_next().await? {
         match event {
-            fstardev::ManagerRequest::Start { url, .. } => {
+            fstardev::ManagerRequest::Start { url, responder } => {
                 if let Err(e) = start(url).await {
                     error!("failed to start component: {}", e);
                 }
+                responder.send()?;
             }
             fstardev::ManagerRequest::StartShell { .. } => {
                 info!("StartShell not yet implemented.")
