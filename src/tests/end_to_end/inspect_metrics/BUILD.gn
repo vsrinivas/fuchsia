@@ -185,7 +185,8 @@ group("test") {
   testonly = true
 
   deps = [
-    ":archivist_metrics_test($host_toolchain)",
+    # TODO(fxbug.dev/74207): re-enable when fixing flake.
+    # ":archivist_metrics_test($host_toolchain)",
 
     # TODO(fxbug.dev/70684): re-enable when fixing flake.
     # ":archivist_reader_test($host_toolchain)",
