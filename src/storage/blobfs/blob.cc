@@ -831,14 +831,6 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
   if (auto status = EnsureCreateVmo(load_result->layout->FileBlockAlignedSize()); status.is_error())
     return status.error_value();
 
-  // Map the result.
-  // TODO(fxbug.dev/74061): See if we can avoid doing this mapping.
-  if (zx_status_t status = data_mapping_.Map(vmo()); status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create mapping for data vmo: " << zx_status_get_string(status);
-    FreeVmo();  // Rollback the allocated vmo.
-    return status;
-  }
-
   // Commit the other load information.
   pager_info_ = std::move(load_result->pager_info);
   merkle_mapping_ = std::move(load_result->merkle);
@@ -872,13 +864,6 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
   if (zx_status_t status = created_page_watcher->CreatePagedVmo(
           load_result->layout->FileBlockAlignedSize(), &data_vmo);
       status != ZX_OK) {
-    return status;
-  }
-
-  // Map the result.
-  // TODO(fxbug.dev/74061): See if we can avoid doing this mapping.
-  if (zx_status_t status = data_mapping_.Map(data_vmo); status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create mapping for data vmo: " << zx_status_get_string(status);
     return status;
   }
 

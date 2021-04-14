@@ -365,8 +365,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // For small blobs, merkle_mapping_ may be absent, since small blobs may not have any stored
   // merkle tree.
   fzl::OwnedVmoMapper merkle_mapping_ FS_TA_GUARDED(mutex_);
-  // TODO(fxbug.dev/74061) Don't keep this data mapping around. We seldom need the data actually
-  // mapped and can lighten the resource usage of blobfs by deleting the mapping when unnecessary.
+
+  // Mapped data VMO. This will be mapped during writing and for unpaged blobs, but the data
+  // will be unmapped otherwise.
   fzl::VmoMapper data_mapping_ FS_TA_GUARDED(mutex_);  // Vmo is owned separately (see vmo()).
 
 #if !defined(ENABLE_BLOBFS_NEW_PAGER)
