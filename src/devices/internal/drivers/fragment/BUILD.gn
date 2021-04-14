@@ -36,7 +36,7 @@ driver_module("fragment") {
     "//sdk/banjo/fuchsia.hardware.hdmi:fuchsia.hardware.hdmi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.isp",
-    "//sdk/banjo/fuchsia.hardware.mipicsi",
+    "//sdk/banjo/fuchsia.hardware.mipicsi:fuchsia.hardware.mipicsi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.power",
     "//sdk/banjo/fuchsia.hardware.powerimpl",

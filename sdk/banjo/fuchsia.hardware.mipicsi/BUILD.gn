@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.mipicsi") {
+  fidl_only = true
   sources = [ "mipicsi.banjo" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.camera",
@@ -13,5 +14,10 @@ banjo("fuchsia.hardware.mipicsi") {
 }
 
 group("fuchsia.hardware.mipicsi_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.mipicsi" ]
+  public_deps = [ ":fuchsia.hardware.mipicsi_banjo_cpp_2" ]
+}
+
+group("fuchsia.hardware.mipicsi_banjo_cpp_mock") {
+  testonly = true
+  public_deps = [ ":fuchsia.hardware.mipicsi_banjo_cpp_mock_2" ]
 }
