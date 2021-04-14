@@ -91,11 +91,10 @@ static zx_status_t choose_load_bias(zx_handle_t root_vmar, const elf_load_header
   bool first = true;
   uintptr_t low = 0, high = 0;
   uint32_t max_perm = 0;
-  const size_t kPageSize = zx_system_get_page_size();
   for (uint_fast16_t i = 0; i < header->e_phnum; ++i) {
     if (phdrs[i].p_type == PT_LOAD) {
-      uintptr_t start = phdrs[i].p_vaddr & -kPageSize;
-      uintptr_t end = ((phdrs[i].p_vaddr + phdrs[i].p_memsz + kPageSize - 1) & -kPageSize);
+      uintptr_t start = phdrs[i].p_vaddr & -PAGE_SIZE;
+      uintptr_t end = ((phdrs[i].p_vaddr + phdrs[i].p_memsz + PAGE_SIZE - 1) & -PAGE_SIZE);
       // Sanity check.  ELF requires that PT_LOAD phdrs be sorted in
       // ascending p_vaddr order and not overlap.
       if (first) {
@@ -169,23 +168,18 @@ static zx_status_t finish_load_segment(zx_handle_t vmar, zx_handle_t vmo,
   // The final partial page of initialized data falls into the
   // region backed by bss_vmo rather than (the file) vmo.  We need
   // to read that data out of the file and copy it into bss_vmo.
-  uintptr_t partial_offset = 0;
-  while (partial_page - partial_offset > 0) {
-    const size_t kMaxChunkSize = 4096;
-    const size_t remain = partial_page - partial_offset;
-    const size_t chunk_size = remain > kMaxChunkSize ? kMaxChunkSize : remain;
-    char buffer[kMaxChunkSize];
-    status = zx_vmo_read(vmo, buffer, file_end + partial_offset, chunk_size);
+  if (partial_page > 0) {
+    char buffer[PAGE_SIZE];
+    status = zx_vmo_read(vmo, buffer, file_end, partial_page);
     if (status != ZX_OK) {
       zx_handle_close(bss_vmo);
       return status;
     }
-    status = zx_vmo_write(bss_vmo, buffer, partial_offset, chunk_size);
+    status = zx_vmo_write(bss_vmo, buffer, 0, partial_page);
     if (status != ZX_OK) {
       zx_handle_close(bss_vmo);
       return status;
     }
-    partial_offset += chunk_size;
   }
 
   status = zx_vmar_map(vmar, options, start_offset, bss_vmo, 0, size, &start);
@@ -199,11 +193,10 @@ static zx_status_t load_segment(zx_handle_t vmar, size_t vmar_offset, zx_handle_
   // The p_vaddr can start in the middle of a page, but the
   // semantics are that all the whole pages containing the
   // p_vaddr+p_filesz range are mapped in.
-  const size_t kPageSize = zx_system_get_page_size();
   size_t start = (size_t)ph->p_vaddr + vmar_offset;
   size_t end = start + ph->p_memsz;
-  start &= -kPageSize;
-  end = (end + kPageSize - 1) & -kPageSize;
+  start &= -PAGE_SIZE;
+  end = (end + PAGE_SIZE - 1) & -PAGE_SIZE;
   size_t size = end - start;
 
   // Nothing to do for an empty segment (degenerate case).
@@ -212,11 +205,11 @@ static zx_status_t load_segment(zx_handle_t vmar, size_t vmar_offset, zx_handle_
 
   uintptr_t file_start = (uintptr_t)ph->p_offset;
   uintptr_t file_end = file_start + ph->p_filesz;
-  const size_t partial_page = file_end & (kPageSize - 1);
-  file_start &= -kPageSize;
-  file_end &= -kPageSize;
+  const size_t partial_page = file_end & (PAGE_SIZE - 1);
+  file_start &= -PAGE_SIZE;
+  file_end &= -PAGE_SIZE;
 
-  uintptr_t data_end = (ph->p_offset + ph->p_filesz + kPageSize - 1) & -kPageSize;
+  uintptr_t data_end = (ph->p_offset + ph->p_filesz + PAGE_SIZE - 1) & -PAGE_SIZE;
   const size_t data_size = data_end - file_start;
 
   // With no writable data, it's the simple case.
