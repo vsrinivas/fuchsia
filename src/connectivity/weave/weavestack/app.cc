@@ -97,6 +97,22 @@ zx_status_t App::Init() {
     return ZX_ERR_BAD_STATE;
   }
 
+  auto component_context = PlatformMgrImpl().GetComponentContextForProcess();
+
+  // Bootstrap fidl is initialized first since if Bootstrap is serving then
+  // WeaveStack is in bootstrap mode and should not fully initalize since normal
+  // operation may interfere with the bootstrap.
+  bootstrap_impl_ = std::make_unique<BootstrapImpl>(component_context);
+  auto bootstrap_status = bootstrap_impl_->Init();
+  if (bootstrap_status.has_value()) {
+    status = bootstrap_status.value();
+    initialized_ = true;
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "BootstrapImpl Init() failed with status = " << zx_status_get_string(status);
+    }
+    return status;
+  }
+
   // Set dispatcher before initializing the stack, which may reach out to other
   // components on the system to acquire initial state.
   PlatformMgrImpl().SetDispatcher(loop_.dispatcher());
@@ -122,26 +138,17 @@ zx_status_t App::Init() {
   // Kick FD handler to start the task loop.
   sleep_task_ = std::make_unique<async::TaskClosure>([this] { FdHandler(ZX_OK, 0); });
 
-  bootstrap_impl_ =
-      std::make_unique<BootstrapImpl>(PlatformMgrImpl().GetComponentContextForProcess());
-  status = bootstrap_impl_->Init();
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "BootstrapImpl Init() failed with status = " << zx_status_get_string(status);
-    return status;
-  }
-
   // The stack implementation should remain the last member to be fully
   // initialized, as it will begin accepting FIDL requests after initialization
   // is complete, potentially interacting with the rest of WeaveStack.
-  stack_impl_ = std::make_unique<StackImpl>(PlatformMgrImpl().GetComponentContextForProcess());
+  stack_impl_ = std::make_unique<StackImpl>(component_context);
   status = stack_impl_->Init();
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "StackImpl Init() failed with status = " << zx_status_get_string(status);
     return status;
   }
 
-  stack_provider_impl_ =
-      std::make_unique<StackProviderImpl>(PlatformMgrImpl().GetComponentContextForProcess());
+  stack_provider_impl_ = std::make_unique<StackProviderImpl>(component_context);
   status = stack_provider_impl_->Init();
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "StackProviderImpl Init() failed with status = "
@@ -233,6 +240,9 @@ void App::FdHandler(zx_status_t status, uint32_t zero) {
 
 zx_status_t App::Run(zx::time deadline, bool once) {
   zx_status_t status = async::PostTask(loop_.dispatcher(), [this]() {
+    if (bootstrap_impl_->IsServing()) {
+      return;
+    }
     zx_status_t status = StartFdWaiters();
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "failed to wait for first packet: " << status;

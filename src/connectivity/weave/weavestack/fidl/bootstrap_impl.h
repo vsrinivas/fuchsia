@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <optional>
 #include <string>
 
 namespace weavestack {
@@ -24,11 +25,20 @@ class BootstrapImpl : public fuchsia::weave::Bootstrap {
   ~BootstrapImpl();
 
   // Initialize and register this instance as FIDL handler.
-  zx_status_t Init();
+  //
+  // In the event of successful initialization and registration, a ZX_OK will be
+  // returned. In the event of a failure, the appropriate ZX status will be
+  // returned. If the initialization decides that no attempt at registration
+  // should occur (such as when WeaveStack is not in bootstrap mode), then
+  // std::nullopt is returned.
+  std::optional<zx_status_t> Init();
 
   // Implementation of the fuchsia.weave.Bootstrap interface.
   void ImportWeaveConfig(fuchsia::mem::Buffer config_json,
                          ImportWeaveConfigCallback callback) override;
+
+  // Returns true if the FIDL is currently being served.
+  bool IsServing() const;
 
  private:
   // Prevent copy/move construction

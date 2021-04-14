@@ -33,9 +33,9 @@ BootstrapImpl::~BootstrapImpl() {
   }
 }
 
-zx_status_t BootstrapImpl::Init() {
+std::optional<zx_status_t> BootstrapImpl::Init() {
   if (!ShouldServe()) {
-    return ZX_OK;
+    return std::nullopt;
   }
 
   // Register with the context.
@@ -84,6 +84,8 @@ void BootstrapImpl::ImportWeaveConfig(fuchsia::mem::Buffer config_json,
   }
   bindings_.CloseAll(ZX_OK);
 }
+
+bool BootstrapImpl::IsServing() const { return serving_; }
 
 bool BootstrapImpl::ShouldServe() { return files::IsFile(kMigrationConfigPath); }
 
