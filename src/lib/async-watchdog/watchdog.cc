@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/watchdog/watchdog.h"
+#include "src/lib/async-watchdog/watchdog.h"
 
 #include <lib/async/cpp/time.h>
 #include <lib/backtrace-request/backtrace-request.h>
@@ -10,13 +10,14 @@
 
 #include <mutex>
 
-namespace scenic_impl {
+namespace async_watchdog {
 
-WatchdogImpl::WatchdogImpl(uint64_t warning_interval_ms, uint64_t timeout_ms,
-                           async_dispatcher_t* watchdog_dispatcher,
+WatchdogImpl::WatchdogImpl(std::string thread_name, uint64_t warning_interval_ms,
+                           uint64_t timeout_ms, async_dispatcher_t* watchdog_dispatcher,
                            async_dispatcher_t* watched_thread_dispatcher,
                            fit::closure run_update_fn, fit::function<bool(void)> check_update_fn)
-    : warning_interval_(zx::msec(warning_interval_ms)),
+    : thread_name_(thread_name),
+      warning_interval_(zx::msec(warning_interval_ms)),
       timeout_(zx::msec(timeout_ms)),
       watchdog_dispatcher_(watchdog_dispatcher),
       watched_thread_dispatcher_(watched_thread_dispatcher),
@@ -75,8 +76,8 @@ void WatchdogImpl::HandleTimer() {
                      << "Please see klog for backtrace of all threads.";
 
     if (duration_since_last_response >= timeout_) {
-      FX_CHECK(false) << "Fatal: Scenic watchdog has detected timeout for more than "
-                      << timeout_.to_msecs() << " ms in Scenic main thread.";
+      FX_CHECK(false) << "Fatal: Watchdog has detected timeout for more than "
+                      << timeout_.to_msecs() << " ms in " << thread_name_;
     }
   }
 
@@ -91,7 +92,7 @@ void WatchdogImpl::PostTasks() {
   handle_timer_task_.PostDelayed(watchdog_dispatcher_, warning_interval_);
 }
 
-Watchdog::Watchdog(uint64_t warning_interval_ms, uint64_t timeout_ms,
+Watchdog::Watchdog(std::string thread_name, uint64_t warning_interval_ms, uint64_t timeout_ms,
                    async_dispatcher_t* watched_thread_dispatcher)
     : loop_(&kAsyncLoopConfigNeverAttachToThread) {
   loop_.StartThread();
@@ -104,7 +105,7 @@ Watchdog::Watchdog(uint64_t warning_interval_ms, uint64_t timeout_ms,
     return result;
   };
 
-  watchdog_impl_ = std::make_unique<WatchdogImpl>(warning_interval_ms, timeout_ms,
+  watchdog_impl_ = std::make_unique<WatchdogImpl>(thread_name, warning_interval_ms, timeout_ms,
                                                   loop_.dispatcher(), watched_thread_dispatcher,
                                                   std::move(post_update), std::move(check_update));
   watchdog_impl_->Initialize();
@@ -112,4 +113,4 @@ Watchdog::Watchdog(uint64_t warning_interval_ms, uint64_t timeout_ms,
 
 Watchdog::~Watchdog() { watchdog_impl_->Finalize(); }
 
-}  // namespace scenic_impl
+}  // namespace async_watchdog

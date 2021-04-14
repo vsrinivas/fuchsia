@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_WATCHDOG_WATCHDOG_H_
-#define SRC_UI_SCENIC_LIB_WATCHDOG_WATCHDOG_H_
+#ifndef SRC_LIB_ASYNC_WATCHDOG_WATCHDOG_H_
+#define SRC_LIB_ASYNC_WATCHDOG_WATCHDOG_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -14,12 +14,11 @@
 
 #include <mutex>
 #include <vector>
-namespace scenic_impl {
+namespace async_watchdog {
 
 class WatchdogImpl;
 
-// A Watchdog class which monitors the aliveness of the async loop of thread
-// that creates this object.
+// A Watchdog class which monitors the aliveness of an async loop.
 //
 // Watchdog starts a new thread and lets the async loop run on that thread.
 // Every |timeout_ms| milliseconds, the Watchdog class will post an "update"
@@ -32,11 +31,13 @@ class Watchdog {
  public:
   // Watchdog constructor.
   // Params:
+  // - |thread_name|: Name for thread that's being checked.
   // - |warning_interval_ms|: Period of watchdog checks.
   // - |timeout_ms|: maximum timeout allowed for a thread to be
   //        unresponsive.
   // - |dispatcher|: the async dispatcher the user wants Watchdog to monitor.
-  Watchdog(uint64_t warning_interval_ms, uint64_t timeout_ms, async_dispatcher_t* dispatcher);
+  Watchdog(std::string thread_name, uint64_t warning_interval_ms, uint64_t timeout_ms,
+           async_dispatcher_t* dispatcher);
   ~Watchdog();
 
  private:
@@ -47,6 +48,7 @@ class Watchdog {
 class WatchdogImpl {
  public:
   // Params:
+  // - |thread_name|: Name for thread that's being checked.
   // - |warning_interval_ms|: Period of consecutive watchdog timer tasks.
   //       If watched thread is unresponsive for this time, watchdog will
   //       print out current stack trace.
@@ -61,7 +63,7 @@ class WatchdogImpl {
   //       is updated.
   //       Returns false if |run_update_fn| was not called during the
   //       past |timeout_ms| ms; Otherwise returns true.
-  WatchdogImpl(uint64_t warning_interval_ms, uint64_t timeout_ms,
+  WatchdogImpl(std::string thread_name, uint64_t warning_interval_ms, uint64_t timeout_ms,
                async_dispatcher_t* watchdog_dispatcher,
                async_dispatcher_t* watched_thread_dispatcher, fit::closure run_update_fn,
                fit::function<bool(void)> check_update_fn);
@@ -93,6 +95,8 @@ class WatchdogImpl {
   // Helper method used by Initialize() and HandleTimer().
   // Posts tasks to watched and watchdog threads.
   void PostTasks();
+
+  const std::string thread_name_;
 
   zx::time last_update_timestamp_ = zx::time(0);
 
@@ -129,6 +133,6 @@ class WatchdogImpl {
   async::TaskClosureMethod<WatchdogImpl, &WatchdogImpl::HandleTimer> handle_timer_task_{this};
 };
 
-}  // namespace scenic_impl
+}  // namespace async_watchdog
 
-#endif  // SRC_UI_SCENIC_LIB_WATCHDOG_WATCHDOG_H_
+#endif  // SRC_LIB_ASYNC_WATCHDOG_WATCHDOG_H_

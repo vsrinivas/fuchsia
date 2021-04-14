@@ -202,8 +202,9 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
 
 #endif  // NDEBUG
 
-  watchdog_ = std::make_unique<Watchdog>(kWatchdogWarningIntervalMs, kWatchdogTimeoutMs,
-                                         async_get_default_dispatcher());
+  watchdog_ = std::make_unique<async_watchdog::Watchdog>(
+      "Scenic main thread", kWatchdogWarningIntervalMs, kWatchdogTimeoutMs,
+      async_get_default_dispatcher());
 }
 
 void App::InitializeServices(escher::EscherUniquePtr escher,

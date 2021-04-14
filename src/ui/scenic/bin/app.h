@@ -10,6 +10,7 @@
 
 #include <memory>
 
+#include "src/lib/async-watchdog/watchdog.h"
 #include "src/lib/fsl/io/device_watcher.h"
 #include "src/ui/lib/display/get_hardware_display_controller.h"
 #include "src/ui/lib/escher/escher.h"
@@ -26,7 +27,6 @@
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/shutdown/lifecycle_controller_impl.h"
 #include "src/ui/scenic/lib/shutdown/shutdown_manager.h"
-#include "src/ui/scenic/lib/watchdog/watchdog.h"
 
 namespace scenic_impl {
 
@@ -69,7 +69,7 @@ class App {
   std::shared_ptr<gfx::Engine> engine_;
   std::shared_ptr<Scenic> scenic_;
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
-  std::unique_ptr<Watchdog> watchdog_;
+  std::unique_ptr<async_watchdog::Watchdog> watchdog_;
 
   std::shared_ptr<allocation::Allocator> allocator_;
 

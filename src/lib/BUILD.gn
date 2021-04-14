@@ -57,6 +57,7 @@ group("tests") {
     "analytics:tests",
     "assembly:tests",
     "async-utils:tests",
+    "async-watchdog:tests",
     "backoff:tests",
     "bootfs:tests",
     "by_addr:tests",

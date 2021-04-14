@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/watchdog/watchdog.h"
+#include "src/lib/async-watchdog/watchdog.h"
 
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
-namespace scenic_impl {
+namespace async_watchdog {
 
 using WatchdogUnittest = gtest::TestLoopFixture;
 
@@ -20,7 +20,7 @@ class TestWatchdog {
                fit::closure run_update, fit::function<bool(void)> check_update)
       : watchdog_loop_(watchdog_loop), watched_thread_loop_(watched_thread_loop) {
     watchdog_impl_ = std::make_unique<WatchdogImpl>(
-        warning_interval_ms, timeout_ms, watchdog_loop_->dispatcher(),
+        "TestWatchdog thread", warning_interval_ms, timeout_ms, watchdog_loop_->dispatcher(),
         watched_thread_loop_->dispatcher(), std::move(run_update), std::move(check_update));
     watchdog_impl_->Initialize();
   }
@@ -97,4 +97,4 @@ TEST_F(WatchdogUnittest, DISABLED_MultipleTimeoutsAllowed) {
   EXPECT_EQ(*counter_check, 2);
 }
 
-}  // namespace scenic_impl
+}  // namespace async_watchdog
