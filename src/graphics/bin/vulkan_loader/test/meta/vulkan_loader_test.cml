@@ -1,0 +1,66 @@
+{
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/vulkan_loader_tests#meta/vulkan_loader_test_driver.cm",
+        },
+        {
+            name: "vulkan_loader",
+            url: "fuchsia-pkg://fuchsia.com/vulkan_loader_tests#meta/vulkan_loader.cm",
+        },
+        {
+            name: "test_lib_provider",
+            url: "fuchsia-pkg://fuchsia.com/vulkan_loader_tests#meta/vulkan_loader_test_lib_provider.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: [
+                "#test_driver",
+                "#test_lib_provider",
+                "#vulkan_loader",
+            ],
+        },
+        {
+            protocol: "fuchsia.vulkan.loader.Loader",
+            from: "#vulkan_loader",
+            to: [ "#test_driver" ],
+        },
+        {
+            directory: "system-lib",
+            from: "#test_lib_provider",
+            to: [ "#vulkan_loader" ],
+        },
+        {
+            directory: "dev-gpu",
+            from: "#test_lib_provider",
+            to: [ "#vulkan_loader" ],
+        },
+        {
+            directory: "dev-goldfish-pipe",
+            from: "#test_lib_provider",
+            to: [ "#vulkan_loader" ],
+        },
+        {
+            directory: "dev-goldfish-control",
+            from: "#test_lib_provider",
+            to: [ "#vulkan_loader" ],
+        },
+        {
+            directory: "dev-goldfish-address-space",
+            from: "#test_lib_provider",
+            to: [ "#vulkan_loader" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test_driver",
+        },
+    ],
+}

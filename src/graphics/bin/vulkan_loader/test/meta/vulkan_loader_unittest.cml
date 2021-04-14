@@ -2,11 +2,7 @@
     children: [
         {
             name: "test_driver",
-            url: "fuchsia-pkg://fuchsia.com/vulkan_loader_tests#meta/vulkan_loader_test_driver.cm",
-        },
-        {
-            name: "vulkan_loader",
-            url: "fuchsia-pkg://fuchsia.com/vulkan_loader_tests#meta/vulkan_loader.cm",
+            url: "fuchsia-pkg://fuchsia.com/vulkan_loader_tests#meta/vulkan_loader_unittest_driver.cm",
         },
         {
             name: "test_lib_provider",
@@ -23,18 +19,12 @@
             to: [
                 "#test_driver",
                 "#test_lib_provider",
-                "#vulkan_loader",
             ],
-        },
-        {
-            protocol: "fuchsia.vulkan.loader.Loader",
-            from: "#vulkan_loader",
-            to: [ "#test_driver" ],
         },
         {
             directory: "system-lib",
             from: "#test_lib_provider",
-            to: [ "#vulkan_loader" ],
+            to: [ "#test_driver" ],
         },
     ],
     expose: [

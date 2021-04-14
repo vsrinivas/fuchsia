@@ -1,0 +1,109 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":vulkan_loader_tests" ]
+}
+
+executable("test_bin") {
+  testonly = true
+  output_name = "vulkan_loader_test"
+  sources = [ "test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/lib/fdio",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("unittest_bin") {
+  testonly = true
+  output_name = "vulkan_loader_unittest"
+  sources = [ "unittest.cc" ]
+  deps = [
+    "..:app",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+executable("pkg-server-bin") {
+  testonly = true
+  output_name = "pkg-server"
+
+  sources = [ "pkg-server-main.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.gpu.magma",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.process.lifecycle",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/lib/storage/vfs/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("vulkan_loader_test_driver") {
+  testonly = true
+  manifest = "meta/vulkan_loader_test_driver.cml"
+  deps = [ ":test_bin" ]
+}
+
+fuchsia_component("vulkan_loader_test_lib_provider") {
+  testonly = true
+  manifest = "meta/vulkan_loader_test_lib_provider.cml"
+  deps = [ ":pkg-server-bin" ]
+}
+
+fuchsia_component("vulkan_loader_test") {
+  testonly = true
+  manifest = "meta/vulkan_loader_test.cml"
+}
+
+fuchsia_component("vulkan_loader_unittest_driver") {
+  testonly = true
+  manifest = "meta/vulkan_loader_unittest_driver.cml"
+  deps = [ ":unittest_bin" ]
+}
+
+fuchsia_component("vulkan_loader_unittest") {
+  testonly = true
+  manifest = "meta/vulkan_loader_unittest.cml"
+}
+
+fuchsia_test_package("vulkan_loader_tests") {
+  test_components = [
+    ":vulkan_loader_test",
+    ":vulkan_loader_unittest",
+  ]
+  deps = [
+    ":vulkan_loader_test_driver",
+    ":vulkan_loader_test_lib_provider",
+    ":vulkan_loader_unittest_driver",
+    "..:vulkan_loader_cmp",
+  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}

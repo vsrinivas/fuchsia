@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/vulkan_loader",
@@ -14,6 +17,26 @@
             directory: "system-lib",
             rights: [ "rx*" ],
             path: "/system/lib",
+        },
+        {
+            directory: "dev-gpu",
+            rights: [ "rw*" ],
+            path: "/dev/class/gpu",
+        },
+        {
+            directory: "dev-goldfish-pipe",
+            rights: [ "rw*" ],
+            path: "/dev/class/goldfish-pipe",
+        },
+        {
+            directory: "dev-goldfish-control",
+            rights: [ "rw*" ],
+            path: "/dev/class/goldfish-control",
+        },
+        {
+            directory: "dev-goldfish-address-space",
+            rights: [ "rw*" ],
+            path: "/dev/class/goldfish-address-space",
         },
     ],
     expose: [

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fuchsia/gpu/magma/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -15,6 +16,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "src/graphics/bin/vulkan_loader/app.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 
@@ -64,6 +66,14 @@ int main(int argc, const char* const* argv) {
   fxl::SetLogSettingsFromCommandLine(fxl::CommandLineFromArgcArgv(argc, argv));
 
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+
+  LoaderApp app(context.get());
+  zx_status_t status = app.InitDeviceWatcher();
+
+  if (status != ZX_OK) {
+    FX_LOGS(INFO) << "Failed to initialize device watcher " << status;
+    return -1;
+  }
 
   LoaderImpl loader_impl;
   loader_impl.Add(context->outgoing());

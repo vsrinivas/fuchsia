@@ -38,9 +38,14 @@ int main(int argc, const char* const* argv) {
   auto remote = fbl::MakeRefCounted<fs::RemoteDir>(
       fidl::ClientEnd<fuchsia_io::Directory>(pkg_dir.TakeChannel()));
   root->AddEntry("pkg", remote);
+
+  // Add a dev directory that the loader can watch for devices to be added.
+  auto dev_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  root->AddEntry("dev", dev_dir);
   zx::channel dir_request = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
-  status = vfs.Serve(root, fidl::ServerEnd<fuchsia_io::Node>(std::move(dir_request)),
-                     fs::VnodeConnectionOptions::ReadExec());
+  auto options = fs::VnodeConnectionOptions::ReadExec();
+  options.rights.write = 1;
+  status = vfs.Serve(root, fidl::ServerEnd<fuchsia_io::Node>(std::move(dir_request)), options);
 
   if (status != ZX_OK) {
     FX_PLOGST(FATAL, nullptr, status) << "Failed to serve outgoing.";

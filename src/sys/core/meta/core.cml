@@ -859,6 +859,34 @@
             to: [ "#vulkan_loader" ],
             subdir: "lib",
         },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-gpu",
+            to: [ "#vulkan_loader" ],
+            subdir: "class/gpu",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-goldfish-pipe",
+            to: [ "#vulkan_loader" ],
+            subdir: "class/goldfish-pipe",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-goldfish-control",
+            to: [ "#vulkan_loader" ],
+            subdir: "class/goldfish-control",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-goldfish-address-space",
+            to: [ "#vulkan_loader" ],
+            subdir: "class/goldfish-address-space",
+        },
     ],
     expose: [
         // Non-zircon services for svchost
