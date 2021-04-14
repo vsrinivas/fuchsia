@@ -2,13 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/dart/dart_library.gni")
 import("//build/flutter/flutter_component.gni")
-import("//src/sys/build/components.gni")
 
 dart_library("lib") {
   package_name = "spinning_cube"
-  sources = [ "main.dart", "spinning_cube_gem.dart" ]
+  sources = [
+    "main.dart",
+    "spinning_cube_gem.dart",
+  ]
   deps = [
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/pub/vector_math",
@@ -18,13 +21,9 @@ dart_library("lib") {
 flutter_component("component") {
   component_name = "spinning-cube"
   manifest = "meta/spinning_cube.cmx"
-  deps = [
-    ":lib"
-  ]
+  deps = [ ":lib" ]
 }
 
 fuchsia_package("spinning-cube") {
-  deps = [
-    ":component"
-  ]
+  deps = [ ":component" ]
 }
