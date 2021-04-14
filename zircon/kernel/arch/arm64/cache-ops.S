@@ -61,7 +61,9 @@ END_FUNCTION(arm64_clean_cache_range_pou)
     // void arch_sync_cache_range(vaddr_t start, size_t len);
 FUNCTION(arch_sync_cache_range)
     cache_range_op dc cvau arm64_dcache_size // clean dcache to PoU by MVA
-    cache_range_op ic ivau arm64_icache_size // invalidate icache to PoU by MVA
+    // Invalidate entire icache to ensure in the case that the icache is VIPT that any virtual
+    // aliases are invalidated.
+    ic ialluis
     isb
     ret
     SPECULATION_POSTFENCE
