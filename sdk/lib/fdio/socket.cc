@@ -126,6 +126,377 @@ socklen_t fidl_to_sockaddr(const fnet::wire::SocketAddress& fidl, struct sockadd
   }
 }
 
+// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/include/net/tcp.h#L1012
+constexpr socklen_t kTcpCANameMax = 16;
+constexpr const char kCcCubic[kTcpCANameMax] = "cubic";
+constexpr const char kCcReno[kTcpCANameMax] = "reno";
+
+struct SockOptResult {
+  const zx_status_t status;
+  const int16_t err;
+
+  bool ok() const { return status == ZX_OK && err == 0; }
+
+  static inline SockOptResult Ok() { return SockOptResult{ZX_OK, 0}; }
+
+  static inline SockOptResult Errno(int16_t err) { return SockOptResult{ZX_OK, err}; }
+
+  static inline SockOptResult Zx(zx_status_t status) { return SockOptResult{status, 0}; }
+
+  template <typename T>
+  static inline SockOptResult FromFidlResponse(const T& response) {
+    if (response.status() != ZX_OK) {
+      return SockOptResult::Zx(response.status());
+    }
+    const auto& result = response.value().result;
+    if (result.is_err()) {
+      return SockOptResult::Errno(static_cast<int16_t>(result.err()));
+    }
+    return SockOptResult::Ok();
+  }
+};
+
+class GetSockOptProcessor {
+ public:
+  GetSockOptProcessor(void* optval, socklen_t* optlen) : optval_(optval), optlen_(optlen) {}
+
+  template <typename T, typename F>
+  SockOptResult Process(T response, F getter) {
+    if (response.status() != ZX_OK) {
+      return SockOptResult::Zx(response.status());
+    }
+    auto& value = response.value();
+    if (value.result.is_err()) {
+      return SockOptResult::Errno(static_cast<int16_t>(value.result.err()));
+    }
+    return StoreOption(getter(value.result.response()));
+  }
+
+  template <typename T>
+  SockOptResult StoreOption(const T& value) {
+    static_assert(sizeof(T) != sizeof(T), "function must be specialized");
+  };
+
+ private:
+  SockOptResult StoreRaw(const void* data, socklen_t data_len) {
+    if (data_len > *optlen_) {
+      return SockOptResult::Errno(EINVAL);
+    }
+    memcpy(optval_, data, data_len);
+    *optlen_ = data_len;
+    return SockOptResult::Ok();
+  }
+
+  void* const optval_;
+  socklen_t* const optlen_;
+};
+
+template <>
+SockOptResult GetSockOptProcessor::StoreOption(const int32_t& value) {
+  return StoreRaw(&value, sizeof(int32_t));
+}
+
+template <>
+SockOptResult GetSockOptProcessor::StoreOption(const uint32_t& value) {
+  return StoreRaw(&value, sizeof(uint32_t));
+}
+
+template <>
+SockOptResult GetSockOptProcessor::StoreOption(const uint8_t& value) {
+  return StoreRaw(&value, sizeof(uint8_t));
+}
+
+template <>
+SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::Domain& value) {
+  int32_t domain;
+  switch (value) {
+    case fsocket::wire::Domain::IPV4:
+      domain = AF_INET;
+      break;
+    case fsocket::wire::Domain::IPV6:
+      domain = AF_INET6;
+      break;
+  }
+  return StoreOption(domain);
+}
+
+template <>
+SockOptResult GetSockOptProcessor::StoreOption(const bool& value) {
+  return StoreOption(static_cast<uint32_t>(value));
+}
+
+template <>
+SockOptResult GetSockOptProcessor::StoreOption(const struct linger& value) {
+  return StoreRaw(&value, sizeof(struct linger));
+}
+
+template <>
+SockOptResult GetSockOptProcessor::StoreOption(const fidl::StringView& value) {
+  if (value.empty()) {
+    *optlen_ = 0;
+  } else if (*optlen_ > value.size()) {
+    char* p = std::copy(value.begin(), value.end(), static_cast<char*>(optval_));
+    *p = 0;
+    *optlen_ = static_cast<socklen_t>(value.size()) + 1;
+  } else {
+    return SockOptResult::Errno(EINVAL);
+  }
+  return SockOptResult::Ok();
+}
+
+// Helper type to provide GetSockOptProcessor with a truncating string view conversion.
+struct TruncatingStringView {
+  explicit TruncatingStringView(fidl::StringView string) : string(string) {}
+
+  fidl::StringView string;
+};
+
+template <>
+SockOptResult GetSockOptProcessor::StoreOption(const TruncatingStringView& value) {
+  *optlen_ = std::min(*optlen_, static_cast<socklen_t>(value.string.size()));
+  char* p = std::copy_n(value.string.begin(), *optlen_ - 1, static_cast<char*>(optval_));
+  *p = 0;
+  return SockOptResult::Ok();
+}
+
+template <>
+SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::OptionalUint8& value) {
+  switch (value.which()) {
+    case fsocket::wire::OptionalUint8::Tag::kValue:
+      return StoreOption(static_cast<int32_t>(value.value()));
+    case fsocket::wire::OptionalUint8::Tag::kUnset:
+      return StoreOption(-1);
+  }
+}
+
+template <>
+SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::OptionalUint32& value) {
+  switch (value.which()) {
+    case fsocket::wire::OptionalUint32::Tag::kValue:
+      ZX_ASSERT(value.value() < std::numeric_limits<int32_t>::max());
+      return StoreOption(static_cast<int32_t>(value.value()));
+    case fsocket::wire::OptionalUint32::Tag::kUnset:
+      return StoreOption(-1);
+  }
+}
+
+template <>
+SockOptResult GetSockOptProcessor::StoreOption(const fnet::wire::Ipv4Address& value) {
+  static_assert(sizeof(struct in_addr) == decltype(value.addr)::size());
+  return StoreRaw(value.addr.data(), decltype(value.addr)::size());
+}
+
+template <>
+SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::TcpInfo& value) {
+  struct tcp_info i;
+  if (value.has_rtt_usec()) {
+    i.tcpi_rtt = value.rtt_usec();
+  }
+  if (value.has_rtt_var_usec()) {
+    i.tcpi_rttvar = value.rtt_var_usec();
+  }
+  return StoreRaw(&i, std::min(*optlen_, socklen_t(sizeof(i))));
+}
+
+// Used for various options that allow the caller to supply larger buffers than needed.
+struct PartialCopy {
+  int32_t value;
+  // Appears to be true for IP_* and false for IPV6_*.
+  bool allow_char;
+};
+
+template <>
+SockOptResult GetSockOptProcessor::StoreOption(const PartialCopy& value) {
+  socklen_t want_size =
+      *optlen_ < sizeof(int32_t) && value.allow_char ? sizeof(uint8_t) : sizeof(value.value);
+  *optlen_ = std::min(want_size, *optlen_);
+  memcpy(optval_, &value.value, *optlen_);
+  return SockOptResult::Ok();
+}
+
+class SetSockOptProcessor {
+ public:
+  SetSockOptProcessor(const void* optval, socklen_t optlen) : optval_(optval), optlen_(optlen) {}
+
+  template <typename T>
+  int16_t Get(T* out) {
+    if (optlen_ < sizeof(T)) {
+      return EINVAL;
+    }
+    memcpy(out, optval_, sizeof(T));
+    return 0;
+  }
+
+  template <typename T, typename F>
+  SockOptResult Process(F f) {
+    T v;
+    int16_t result = Get(&v);
+    if (result) {
+      return SockOptResult::Errno(result);
+    }
+    return SockOptResult::FromFidlResponse(f(std::move(v)));
+  }
+
+ private:
+  const void* const optval_;
+  socklen_t const optlen_;
+  fsocket::wire::Empty empty_;
+};
+
+template <>
+int16_t SetSockOptProcessor::Get(fidl::StringView* out) {
+  const char* optval = static_cast<const char*>(optval_);
+  *out = fidl::StringView::FromExternal(optval, strnlen(optval, optlen_));
+  return 0;
+}
+
+template <>
+int16_t SetSockOptProcessor::Get(bool* out) {
+  int32_t i;
+  int16_t r = Get(&i);
+  *out = i != 0;
+  return r;
+}
+
+template <>
+int16_t SetSockOptProcessor::Get(uint32_t* out) {
+  auto* alt = reinterpret_cast<int32_t*>(out);
+  int16_t r = Get(alt);
+  if (r) {
+    return r;
+  }
+  if (*alt < 0) {
+    return EINVAL;
+  }
+  return 0;
+}
+
+template <typename T, typename V>
+struct OptionalStorage {
+  T opt;
+  union U {
+    fsocket::wire::Empty empty;
+    V value;
+
+    U() { memset(this, 0x00, sizeof(U)); }
+  } v;
+
+  void set_unset() {
+    opt.set_unset(fidl::ObjectView<fsocket::wire::Empty>::FromExternal(&v.empty));
+  }
+
+  void set_value(V value) {
+    v.value = value;
+    opt.set_value(fidl::ObjectView<V>::FromExternal(&v.value));
+  }
+};
+
+using OptionalUint8 = OptionalStorage<fsocket::wire::OptionalUint8, uint8_t>;
+using OptionalUint32 = OptionalStorage<fsocket::wire::OptionalUint32, uint32_t>;
+
+template <>
+int16_t SetSockOptProcessor::Get(OptionalUint8* out) {
+  int32_t i;
+  if (int16_t r = Get(&i); r) {
+    return r;
+  }
+  if (i < -1 || i > std::numeric_limits<uint8_t>::max()) {
+    return EINVAL;
+  }
+  if (i == -1) {
+    out->set_unset();
+  } else {
+    out->set_value(static_cast<uint8_t>(i));
+  }
+  return 0;
+}
+
+// Like OptionalUint8, but permits truncation to a single byte.
+struct OptionalUint8CharAllowed {
+  OptionalUint8 inner;
+};
+
+template <>
+int16_t SetSockOptProcessor::Get(OptionalUint8CharAllowed* out) {
+  if (optlen_ == sizeof(uint8_t)) {
+    out->inner.set_value(out->inner.v.value);
+    memcpy(&out->inner.v.value, optval_, sizeof(uint8_t));
+    return 0;
+  }
+  return Get(&out->inner);
+}
+
+template <>
+int16_t SetSockOptProcessor::Get(fsocket::wire::IpMulticastMembership* out) {
+  union {
+    struct ip_mreqn reqn;
+    struct ip_mreq req;
+  } r;
+  struct in_addr* local;
+  struct in_addr* mcast;
+  if (optlen_ < sizeof(struct ip_mreqn)) {
+    if (Get(&r.req) != 0) {
+      return EINVAL;
+    }
+    out->iface = 0;
+    local = &r.req.imr_interface;
+    mcast = &r.req.imr_multiaddr;
+  } else {
+    if (Get(&r.reqn) != 0) {
+      return EINVAL;
+    }
+    out->iface = r.reqn.imr_ifindex;
+    local = &r.reqn.imr_address;
+    mcast = &r.reqn.imr_multiaddr;
+  }
+  std::copy_n(reinterpret_cast<const uint8_t*>(local), out->local_addr.addr.size(),
+              out->local_addr.addr.begin());
+  std::copy_n(reinterpret_cast<const uint8_t*>(mcast), out->mcast_addr.addr.size(),
+              out->mcast_addr.addr.begin());
+  return 0;
+}
+
+template <>
+int16_t SetSockOptProcessor::Get(fsocket::wire::Ipv6MulticastMembership* out) {
+  struct ipv6_mreq req;
+  if (Get(&req) != 0) {
+    return EINVAL;
+  }
+  out->iface = req.ipv6mr_interface;
+  auto const& mcast = req.ipv6mr_multiaddr.s6_addr;
+  std::copy(std::begin(mcast), std::end(mcast), out->mcast_addr.addr.begin());
+  return 0;
+}
+
+template <>
+int16_t SetSockOptProcessor::Get(fsocket::wire::TcpCongestionControl* out) {
+  if (strncmp(static_cast<const char*>(optval_), kCcCubic, optlen_) == 0) {
+    *out = fsocket::wire::TcpCongestionControl::CUBIC;
+    return 0;
+  }
+  if (strncmp(static_cast<const char*>(optval_), kCcReno, optlen_) == 0) {
+    *out = fsocket::wire::TcpCongestionControl::RENO;
+    return 0;
+  }
+  return ENOENT;
+}
+
+struct IntOrChar {
+  int32_t value;
+};
+
+template <>
+int16_t SetSockOptProcessor::Get(IntOrChar* out) {
+  if (Get(&out->value) == 0) {
+    return 0;
+  }
+  if (optlen_ == 0) {
+    return EINVAL;
+  }
+  out->value = static_cast<const uint8_t*>(optval_)[0];
+  return 0;
+}
+
 template <typename T,
           typename =
               std::enable_if_t<std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>> ||
@@ -254,6 +625,456 @@ struct BaseSocket {
 
   zx_status_t getpeername(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
     return getname(client().GetPeerName(), addr, addrlen, out_code);
+  }
+
+  SockOptResult getsockopt_fidl(int level, int optname, void* optval, socklen_t* optlen) {
+    GetSockOptProcessor proc(optval, optlen);
+    switch (level) {
+      case SOL_SOCKET:
+        switch (optname) {
+          case SO_TYPE:
+            if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>>) {
+              return proc.StoreOption<int32_t>(SOCK_DGRAM);
+            }
+            if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>>) {
+              return proc.StoreOption<int32_t>(SOCK_STREAM);
+            }
+          case SO_DOMAIN:
+            return proc.Process(client().GetInfo(),
+                                [](const auto& response) { return response.domain; });
+          case SO_TIMESTAMP:
+            return proc.Process(client().GetTimestamp(),
+                                [](const auto& response) { return response.value; });
+          case SO_PROTOCOL:
+            if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>>) {
+              return proc.Process(client().GetInfo(), [](const auto& response) {
+                switch (response.proto) {
+                  case fsocket::wire::DatagramSocketProtocol::UDP:
+                    return IPPROTO_UDP;
+                  case fsocket::wire::DatagramSocketProtocol::ICMP_ECHO:
+                    switch (response.domain) {
+                      case fsocket::wire::Domain::IPV4:
+                        return IPPROTO_ICMP;
+                      case fsocket::wire::Domain::IPV6:
+                        return IPPROTO_ICMPV6;
+                    }
+                }
+              });
+            }
+            if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>>) {
+              return proc.Process(client().GetInfo(), [](const auto& response) {
+                switch (response.proto) {
+                  case fsocket::wire::StreamSocketProtocol::TCP:
+                    return IPPROTO_TCP;
+                }
+              });
+            }
+
+          case SO_ERROR: {
+            auto response = client().GetError();
+            if (response.status() != ZX_OK) {
+              return SockOptResult::Zx(response.status());
+            }
+            int32_t error_code = 0;
+            auto& value = response.value();
+            if (value.result.is_err()) {
+              error_code = static_cast<int32_t>(value.result.err());
+            }
+            return proc.StoreOption(error_code);
+          }
+          case SO_SNDBUF:
+            return proc.Process(client().GetSendBuffer(), [](const auto& response) {
+              return static_cast<uint32_t>(response.value_bytes);
+            });
+          case SO_RCVBUF:
+            return proc.Process(client().GetReceiveBuffer(), [](const auto& response) {
+              return static_cast<uint32_t>(response.value_bytes);
+            });
+          case SO_REUSEADDR:
+            return proc.Process(client().GetReuseAddress(),
+                                [](const auto& response) { return response.value; });
+          case SO_REUSEPORT:
+            return proc.Process(client().GetReusePort(),
+                                [](const auto& response) { return response.value; });
+          case SO_BINDTODEVICE:
+            return proc.Process(
+                client().GetBindToDevice(),
+                [](auto& response) -> const fidl::StringView& { return response.value; });
+          case SO_BROADCAST:
+            return proc.Process(client().GetBroadcast(),
+                                [](const auto& response) { return response.value; });
+          case SO_KEEPALIVE:
+            return proc.Process(client().GetKeepAlive(),
+                                [](const auto& response) { return response.value; });
+          case SO_LINGER:
+            return proc.Process(client().GetLinger(), [](const auto& response) {
+              struct linger l;
+              l.l_onoff = response.linger;
+              // NB: l_linger is typed as int but interpreted as unsigned by
+              // linux.
+              l.l_linger = static_cast<int>(response.length_secs);
+              return l;
+            });
+          case SO_ACCEPTCONN:
+            return proc.Process(client().GetAcceptConn(),
+                                [](const auto& response) { return response.value; });
+          case SO_OOBINLINE:
+            return proc.Process(client().GetOutOfBandInline(),
+                                [](const auto& response) { return response.value; });
+          case SO_NO_CHECK:
+            return proc.Process(client().GetNoCheck(),
+                                [](const auto& response) { return response.value; });
+          case SO_SNDTIMEO:
+          case SO_RCVTIMEO:
+          case SO_PEERCRED:
+            return SockOptResult::Errno(EOPNOTSUPP);
+          default:
+            return SockOptResult::Errno(ENOPROTOOPT);
+        }
+      case SOL_IP:
+        switch (optname) {
+          case IP_TTL:
+            return proc.Process(client().GetIpTtl(), [](const auto& response) {
+              return static_cast<int32_t>(response.value);
+            });
+          case IP_MULTICAST_TTL:
+            return proc.Process(client().GetIpMulticastTtl(), [](const auto& response) {
+              return PartialCopy{
+                  .value = response.value,
+                  .allow_char = true,
+              };
+            });
+          case IP_MULTICAST_IF:
+            return proc.Process(client().GetIpMulticastInterface(),
+                                [](const auto& response) { return response.value; });
+          case IP_MULTICAST_LOOP:
+            return proc.Process(client().GetIpMulticastLoopback(), [](const auto& response) {
+              return PartialCopy{
+                  .value = response.value,
+                  .allow_char = true,
+              };
+            });
+          case IP_TOS:
+            return proc.Process(client().GetIpTypeOfService(), [](const auto& response) {
+              return PartialCopy{
+                  .value = response.value,
+                  .allow_char = true,
+              };
+            });
+          case IP_RECVTOS:
+            return proc.Process(client().GetIpReceiveTypeOfService(), [](const auto& response) {
+              return PartialCopy{
+                  .value = response.value,
+                  .allow_char = true,
+              };
+            });
+          case IP_PKTINFO:
+            return proc.Process(client().GetIpPacketInfo(),
+                                [](const auto& response) { return response.value; });
+          default:
+            return SockOptResult::Errno(ENOPROTOOPT);
+        }
+      case SOL_IPV6:
+        switch (optname) {
+          case IPV6_V6ONLY:
+            return proc.Process(client().GetIpv6Only(),
+                                [](const auto& response) { return response.value; });
+          case IPV6_TCLASS:
+            return proc.Process(client().GetIpv6TrafficClass(), [](const auto& response) {
+              return PartialCopy{
+                  .value = response.value,
+                  .allow_char = false,
+              };
+            });
+          case IPV6_MULTICAST_IF:
+            return proc.Process(client().GetIpv6MulticastInterface(), [](const auto& response) {
+              return static_cast<uint32_t>(response.value);
+            });
+          case IPV6_MULTICAST_HOPS:
+            return proc.Process(client().GetIpv6MulticastHops(), [](const auto& response) {
+              return PartialCopy{
+                  .value = response.value,
+                  .allow_char = false,
+              };
+            });
+          case IPV6_MULTICAST_LOOP:
+            return proc.Process(client().GetIpv6MulticastLoopback(), [](const auto& response) {
+              return PartialCopy{
+                  .value = response.value,
+                  .allow_char = false,
+              };
+            });
+          case IPV6_RECVTCLASS:
+            return proc.Process(client().GetIpv6ReceiveTrafficClass(), [](const auto& response) {
+              return PartialCopy{
+                  .value = response.value,
+                  .allow_char = false,
+              };
+            });
+          default:
+            return SockOptResult::Errno(ENOPROTOOPT);
+        }
+      case SOL_TCP:
+        if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>>) {
+          switch (optname) {
+            case TCP_NODELAY:
+              return proc.Process(client().GetTcpNoDelay(),
+                                  [](const auto& response) { return response.value; });
+            case TCP_CORK:
+              return proc.Process(client().GetTcpCork(),
+                                  [](const auto& response) { return response.value; });
+            case TCP_QUICKACK:
+              return proc.Process(client().GetTcpQuickAck(),
+                                  [](const auto& response) { return response.value; });
+            case TCP_MAXSEG:
+              return proc.Process(client().GetTcpMaxSegment(),
+                                  [](const auto& response) { return response.value_bytes; });
+            case TCP_KEEPIDLE:
+              return proc.Process(client().GetTcpKeepAliveIdle(),
+                                  [](const auto& response) { return response.value_secs; });
+            case TCP_KEEPINTVL:
+              return proc.Process(client().GetTcpKeepAliveInterval(),
+                                  [](const auto& response) { return response.value_secs; });
+            case TCP_KEEPCNT:
+              return proc.Process(client().GetTcpKeepAliveCount(),
+                                  [](const auto& response) { return response.value; });
+            case TCP_USER_TIMEOUT:
+              return proc.Process(client().GetTcpUserTimeout(),
+                                  [](const auto& response) { return response.value_millis; });
+            case TCP_CONGESTION:
+              return proc.Process(client().GetTcpCongestion(), [](const auto& response) {
+                switch (response.value) {
+                  case fsocket::wire::TcpCongestionControl::CUBIC:
+                    return TruncatingStringView(
+                        fidl::StringView::FromExternal(kCcCubic, sizeof(kCcCubic)));
+                  case fsocket::wire::TcpCongestionControl::RENO:
+                    return TruncatingStringView(
+                        fidl::StringView::FromExternal(kCcReno, sizeof(kCcReno)));
+                }
+              });
+            case TCP_DEFER_ACCEPT:
+              return proc.Process(client().GetTcpDeferAccept(),
+                                  [](const auto& response) { return response.value_secs; });
+            case TCP_INFO:
+              return proc.Process(
+                  client().GetTcpInfo(),
+                  [](const auto& response) -> const auto& { return response.info; });
+            case TCP_SYNCNT:
+              return proc.Process(client().GetTcpSynCount(),
+                                  [](const auto& response) { return response.value; });
+            case TCP_WINDOW_CLAMP:
+              return proc.Process(client().GetTcpWindowClamp(),
+                                  [](const auto& response) { return response.value; });
+            case TCP_LINGER2:
+              return proc.Process(client().GetTcpLinger(),
+                                  [](const auto& response) -> const fsocket::wire::OptionalUint32& {
+                                    return response.value_secs;
+                                  });
+            default:
+              return SockOptResult::Errno(ENOPROTOOPT);
+          }
+        }
+      default:
+        return SockOptResult::Errno(EPROTONOSUPPORT);
+    }
+  }
+
+  SockOptResult setsockopt_fidl(int level, int optname, const void* optval, socklen_t optlen) {
+    SetSockOptProcessor proc(optval, optlen);
+    switch (level) {
+      case SOL_SOCKET:
+        switch (optname) {
+          case SO_TIMESTAMP:
+            return proc.Process<bool>([this](bool value) { return client().SetTimestamp(value); });
+          case SO_SNDBUF:
+            return proc.Process<int32_t>([this](int32_t value) {
+              // NB: SNDBUF treated as unsigned, we just cast the value to skip sign check.
+              return client().SetSendBuffer(static_cast<uint64_t>(value));
+            });
+          case SO_RCVBUF:
+            // NB: RCVBUF treated as unsigned, we just cast the value to skip sign check.
+            return proc.Process<int32_t>([this](int32_t value) {
+              return client().SetReceiveBuffer(static_cast<uint64_t>(value));
+            });
+          case SO_REUSEADDR:
+            return proc.Process<bool>(
+                [this](bool value) { return client().SetReuseAddress(value); });
+          case SO_REUSEPORT:
+            return proc.Process<bool>([this](bool value) { return client().SetReusePort(value); });
+          case SO_BINDTODEVICE:
+            return proc.Process<fidl::StringView>(
+                [this](fidl::StringView value) { return client().SetBindToDevice(value); });
+          case SO_BROADCAST:
+            return proc.Process<bool>([this](bool value) { return client().SetBroadcast(value); });
+          case SO_KEEPALIVE:
+            return proc.Process<bool>([this](bool value) { return client().SetKeepAlive(value); });
+          case SO_LINGER:
+            return proc.Process<struct linger>([this](struct linger value) {
+              // NB: l_linger is typed as int but interpreted as unsigned by linux.
+              return client().SetLinger(value.l_onoff != 0, static_cast<uint32_t>(value.l_linger));
+            });
+          case SO_OOBINLINE:
+            return proc.Process<bool>(
+                [this](bool value) { return client().SetOutOfBandInline(value); });
+          case SO_NO_CHECK:
+            return proc.Process<bool>([this](bool value) { return client().SetNoCheck(value); });
+          case SO_SNDTIMEO:
+          case SO_RCVTIMEO:
+            return SockOptResult::Errno(ENOTSUP);
+          default:
+            return SockOptResult::Errno(ENOPROTOOPT);
+        }
+      case SOL_IP:
+        switch (optname) {
+          case IP_MULTICAST_TTL:
+            return proc.Process<OptionalUint8CharAllowed>([this](OptionalUint8CharAllowed value) {
+              return client().SetIpMulticastTtl(value.inner.opt);
+            });
+          case IP_ADD_MEMBERSHIP: {
+            return proc.Process<fsocket::wire::IpMulticastMembership>(
+                [this](fsocket::wire::IpMulticastMembership value) {
+                  return client().AddIpMembership(value);
+                });
+          }
+          case IP_DROP_MEMBERSHIP:
+            return proc.Process<fsocket::wire::IpMulticastMembership>(
+                [this](fsocket::wire::IpMulticastMembership value) {
+                  return client().DropIpMembership(value);
+                });
+          case IP_MULTICAST_IF: {
+            if (optlen == sizeof(struct in_addr)) {
+              return proc.Process<struct in_addr>([this](struct in_addr value) {
+                fnet::wire::Ipv4Address addr;
+                std::copy_n(reinterpret_cast<const uint8_t*>(&value.s_addr), sizeof(value.s_addr),
+                            addr.addr.begin());
+                return client().SetIpMulticastInterface(0, addr);
+              });
+            }
+            return proc.Process<fsocket::wire::IpMulticastMembership>(
+                [this](fsocket::wire::IpMulticastMembership value) {
+                  return client().SetIpMulticastInterface(value.iface, value.local_addr);
+                });
+          }
+          case IP_MULTICAST_LOOP:
+            return proc.Process<IntOrChar>([this](IntOrChar value) {
+              return client().SetIpMulticastLoopback(value.value != 0);
+            });
+          case IP_TTL:
+            return proc.Process<OptionalUint8>(
+                [this](OptionalUint8 value) { return client().SetIpTtl(value.opt); });
+          case IP_TOS:
+            if (optlen == 0) {
+              return SockOptResult::Ok();
+            }
+            return proc.Process<IntOrChar>([this](IntOrChar value) {
+              return client().SetIpTypeOfService(static_cast<uint8_t>(value.value));
+            });
+          case IP_RECVTOS:
+            return proc.Process<IntOrChar>([this](IntOrChar value) {
+              return client().SetIpReceiveTypeOfService(value.value != 0);
+            });
+          case IP_PKTINFO:
+            return proc.Process<IntOrChar>(
+                [this](IntOrChar value) { return client().SetIpPacketInfo(value.value != 0); });
+          case MCAST_JOIN_GROUP:
+            return SockOptResult::Errno(ENOTSUP);
+          default:
+            return SockOptResult::Errno(ENOPROTOOPT);
+        }
+      case SOL_IPV6:
+        switch (optname) {
+          case IPV6_V6ONLY:
+            return proc.Process<bool>([this](bool value) { return client().SetIpv6Only(value); });
+          case IPV6_ADD_MEMBERSHIP:
+            return proc.Process<fsocket::wire::Ipv6MulticastMembership>(
+                [this](fsocket::wire::Ipv6MulticastMembership value) {
+                  return client().AddIpv6Membership(value);
+                });
+          case IPV6_DROP_MEMBERSHIP:
+            return proc.Process<fsocket::wire::Ipv6MulticastMembership>(
+                [this](fsocket::wire::Ipv6MulticastMembership value) {
+                  return client().DropIpv6Membership(value);
+                });
+          case IPV6_MULTICAST_IF:
+            return proc.Process<IntOrChar>([this](IntOrChar value) {
+              return client().SetIpv6MulticastInterface(value.value);
+            });
+          case IPV6_MULTICAST_HOPS:
+            return proc.Process<OptionalUint8>(
+                [this](OptionalUint8 value) { return client().SetIpv6MulticastHops(value.opt); });
+          case IPV6_MULTICAST_LOOP:
+            return proc.Process<bool>(
+                [this](bool value) { return client().SetIpv6MulticastLoopback(value); });
+          case IPV6_TCLASS:
+            return proc.Process<OptionalUint8>(
+                [this](OptionalUint8 value) { return client().SetIpv6TrafficClass(value.opt); });
+          case IPV6_RECVTCLASS:
+            return proc.Process<bool>(
+                [this](bool value) { return client().SetIpv6ReceiveTrafficClass(value); });
+          default:
+            return SockOptResult::Errno(ENOPROTOOPT);
+        }
+      case SOL_TCP:
+        if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>>) {
+          switch (optname) {
+            case TCP_NODELAY:
+              return proc.Process<bool>(
+                  [this](bool value) { return client().SetTcpNoDelay(value); });
+            case TCP_CORK:
+              return proc.Process<bool>([this](bool value) { return client().SetTcpCork(value); });
+            case TCP_QUICKACK:
+              return proc.Process<bool>(
+                  [this](bool value) { return client().SetTcpQuickAck(value); });
+            case TCP_MAXSEG:
+              return proc.Process<uint32_t>(
+                  [this](uint32_t value) { return client().SetTcpMaxSegment(value); });
+            case TCP_KEEPIDLE:
+              return proc.Process<uint32_t>(
+                  [this](uint32_t value) { return client().SetTcpKeepAliveIdle(value); });
+            case TCP_KEEPINTVL:
+              return proc.Process<uint32_t>(
+                  [this](uint32_t value) { return client().SetTcpKeepAliveInterval(value); });
+            case TCP_KEEPCNT:
+              return proc.Process<uint32_t>(
+                  [this](uint32_t value) { return client().SetTcpKeepAliveCount(value); });
+            case TCP_USER_TIMEOUT:
+              return proc.Process<uint32_t>(
+                  [this](uint32_t value) { return client().SetTcpUserTimeout(value); });
+            case TCP_CONGESTION:
+              return proc.Process<fsocket::wire::TcpCongestionControl>(
+                  [this](fsocket::wire::TcpCongestionControl value) {
+                    return client().SetTcpCongestion(value);
+                  });
+            case TCP_DEFER_ACCEPT:
+              return proc.Process<int32_t>([this](int32_t value) {
+                if (value < 0) {
+                  value = 0;
+                }
+                return client().SetTcpDeferAccept(value);
+              });
+            case TCP_SYNCNT:
+              return proc.Process<uint32_t>(
+                  [this](uint32_t value) { return client().SetTcpSynCount(value); });
+            case TCP_WINDOW_CLAMP:
+              return proc.Process<uint32_t>(
+                  [this](uint32_t value) { return client().SetTcpWindowClamp(value); });
+            case TCP_LINGER2:
+              return proc.Process<int32_t>([this](int32_t value) {
+                OptionalUint32 opt;
+                if (value < 0) {
+                  opt.set_unset();
+                } else {
+                  opt.set_value(static_cast<uint32_t>(value));
+                }
+                return client().SetTcpLinger(opt.opt);
+              });
+            default:
+              return SockOptResult::Errno(ENOPROTOOPT);
+          }
+        }
+      default:
+        return SockOptResult::Errno(EPROTONOSUPPORT);
+    }
   }
 
   void getsockopt_inner(const fidl::VectorView<uint8_t>& fidl_optval, int level, int optname,
@@ -549,6 +1370,21 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
   }
 }
 
+// TODO(https://fxbug.dev/44347): Remove after ABI transition.
+bool use_legacy_sockopt_fidl() {
+  static std::once_flag once;
+  static bool legacy;
+
+  std::call_once(once, [&]() {
+    legacy = []() {
+      constexpr char kLegacySockoptFIDL[] = "LEGACY_SOCKOPT_FIDL";
+      const char* const legacy_env = getenv(kLegacySockoptFIDL);
+      return legacy_env && strcmp(legacy_env, "1") == 0;
+    }();
+  });
+  return legacy;
+}
+
 }  // namespace
 
 // A |zxio_t| backend that uses a fuchsia.posix.socket.DatagramSocket object.
@@ -632,14 +1468,26 @@ struct datagram_socket : public zxio {
 
   zx_status_t getsockopt(int level, int optname, void* optval, socklen_t* optlen,
                          int16_t* out_code) override {
-    return BaseSocket(zxio_datagram_socket().client)
-        .getsockopt(level, optname, optval, optlen, out_code);
+    if (use_legacy_sockopt_fidl()) {
+      return BaseSocket(zxio_datagram_socket().client)
+          .getsockopt(level, optname, optval, optlen, out_code);
+    }
+    SockOptResult result =
+        BaseSocket(zxio_datagram_socket().client).getsockopt_fidl(level, optname, optval, optlen);
+    *out_code = result.err;
+    return result.status;
   }
 
   zx_status_t setsockopt(int level, int optname, const void* optval, socklen_t optlen,
                          int16_t* out_code) override {
-    return BaseSocket(zxio_datagram_socket().client)
-        .setsockopt(level, optname, optval, optlen, out_code);
+    if (use_legacy_sockopt_fidl()) {
+      return BaseSocket(zxio_datagram_socket().client)
+          .setsockopt(level, optname, optval, optlen, out_code);
+    }
+    SockOptResult result =
+        BaseSocket(zxio_datagram_socket().client).setsockopt_fidl(level, optname, optval, optlen);
+    *out_code = result.err;
+    return result.status;
   }
 
   zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,
@@ -1055,14 +1903,26 @@ struct stream_socket : public pipe {
 
   zx_status_t getsockopt(int level, int optname, void* optval, socklen_t* optlen,
                          int16_t* out_code) override {
-    return BaseSocket(zxio_stream_socket().client)
-        .getsockopt(level, optname, optval, optlen, out_code);
+    if (use_legacy_sockopt_fidl()) {
+      return BaseSocket(zxio_stream_socket().client)
+          .getsockopt(level, optname, optval, optlen, out_code);
+    }
+    SockOptResult result =
+        BaseSocket(zxio_stream_socket().client).getsockopt_fidl(level, optname, optval, optlen);
+    *out_code = result.err;
+    return result.status;
   }
 
   zx_status_t setsockopt(int level, int optname, const void* optval, socklen_t optlen,
                          int16_t* out_code) override {
-    return BaseSocket(zxio_stream_socket().client)
-        .setsockopt(level, optname, optval, optlen, out_code);
+    if (use_legacy_sockopt_fidl()) {
+      return BaseSocket(zxio_stream_socket().client)
+          .setsockopt(level, optname, optval, optlen, out_code);
+    }
+    SockOptResult result =
+        BaseSocket(zxio_stream_socket().client).setsockopt_fidl(level, optname, optval, optlen);
+    *out_code = result.err;
+    return result.status;
   }
 
   zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,

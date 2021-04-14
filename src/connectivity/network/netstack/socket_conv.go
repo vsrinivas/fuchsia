@@ -36,6 +36,8 @@ import (
 // #include <netinet/udp.h>
 import "C"
 
+// TODO(https://fxbug.dev/44347) Remove this file after ABI transition.
+
 // Functions below are adapted from
 // https://github.com/google/gvisor/blob/HEAD/pkg/sentry/socket/netstack/netstack.go
 //
@@ -1147,27 +1149,36 @@ func toNetSocketAddress(protocol tcpip.NetworkProtocolNumber, addr tcpip.FullAdd
 	}
 }
 
-func toTCPIPFullAddress(addr fidlnet.SocketAddress) (tcpip.FullAddress, error) {
-	skipZeros := func(b []uint8) tcpip.Address {
-		if isZeros(b) {
-			return ""
-		}
-		return tcpip.Address(b)
+func bytesToAddressDroppingUnspecified(b []uint8) tcpip.Address {
+	if isZeros(b) {
+		return ""
 	}
+	return tcpip.Address(b)
+}
+
+func toTCPIPFullAddress(addr fidlnet.SocketAddress) (tcpip.FullAddress, error) {
 	switch addr.Which() {
 	case fidlnet.SocketAddressIpv4:
 		return tcpip.FullAddress{
 			NIC:  0,
-			Addr: skipZeros(addr.Ipv4.Address.Addr[:]),
+			Addr: bytesToAddressDroppingUnspecified(addr.Ipv4.Address.Addr[:]),
 			Port: addr.Ipv4.Port,
 		}, nil
 	case fidlnet.SocketAddressIpv6:
 		return tcpip.FullAddress{
 			NIC:  tcpip.NICID(addr.Ipv6.ZoneIndex),
-			Addr: skipZeros(addr.Ipv6.Address.Addr[:]),
+			Addr: bytesToAddressDroppingUnspecified(addr.Ipv6.Address.Addr[:]),
 			Port: addr.Ipv6.Port,
 		}, nil
 	default:
 		return tcpip.FullAddress{}, fmt.Errorf("invalid fuchsia.net/SocketAddress variant: %d", addr.Which())
 	}
+}
+
+func toTcpIpAddressDroppingUnspecifiedv4(fidl fidlnet.Ipv4Address) tcpip.Address {
+	return bytesToAddressDroppingUnspecified(fidl.Addr[:])
+}
+
+func toTcpIpAddressDroppingUnspecifiedv6(fidl fidlnet.Ipv6Address) tcpip.Address {
+	return bytesToAddressDroppingUnspecified(fidl.Addr[:])
 }

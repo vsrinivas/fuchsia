@@ -43,13 +43,17 @@ fn with_tcp_stream(f: impl FnOnce(std::net::TcpStream) -> ()) {
                         responder,
                     } => {
                         let () = assert_eq!(i32::from(level), libc::IPPROTO_TCP);
-                        let option_value = match i32::from(optname) {
-                            libc::TCP_USER_TIMEOUT => TCP_USER_TIMEOUT_OPTION_VALUE,
-                            optname => panic!("unhandled GetSockOpt option name: {}", optname),
-                        };
+                        let () = assert_eq!(i32::from(optname), libc::TCP_USER_TIMEOUT);
                         let () = responder
-                            .send(&mut Ok(option_value.to_le_bytes().to_vec()))
+                            .send(&mut Ok(TCP_USER_TIMEOUT_OPTION_VALUE.to_le_bytes().to_vec()))
                             .expect("send GetSockOpt response");
+                    }
+                    fidl_fuchsia_posix_socket::StreamSocketRequest::GetTcpUserTimeout {
+                        responder,
+                    } => {
+                        let () = responder
+                            .send(&mut Ok(TCP_USER_TIMEOUT_OPTION_VALUE as u32))
+                            .expect("send TcpUserTimeout response");
                     }
                     request => panic!("unhandled StreamSocketRequest: {:?}", request),
                 })

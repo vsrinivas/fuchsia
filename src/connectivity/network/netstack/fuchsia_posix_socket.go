@@ -12,6 +12,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"reflect"
 	"runtime"
 	"sort"
@@ -60,6 +61,34 @@ import (
 import "C"
 
 const endpointWithSocketAllowedEvents = waiter.EventIn
+
+const (
+	// NB: these constants are defined in gVisor as well, but not exported.
+	ccReno  = "reno"
+	ccCubic = "cubic"
+)
+
+func optionalUint8ToInt(v socket.OptionalUint8, unset int) (int, tcpip.Error) {
+	switch v.Which() {
+	case socket.OptionalUint8Value:
+		return int(v.Value), nil
+	case socket.OptionalUint8Unset:
+		return unset, nil
+	default:
+		return -1, &tcpip.ErrInvalidOptionValue{}
+	}
+}
+
+func optionalUint32ToInt(v socket.OptionalUint32, unset int) (int, tcpip.Error) {
+	switch v.Which() {
+	case socket.OptionalUint32Value:
+		return int(v.Value), nil
+	case socket.OptionalUint32Unset:
+		return unset, nil
+	default:
+		return -1, &tcpip.ErrInvalidOptionValue{}
+	}
+}
 
 var _ io.Writer = (*socketWriter)(nil)
 
@@ -378,6 +407,7 @@ func (ep *endpoint) GetPeerName(fidl.Context) (socket.BaseSocketGetPeerNameResul
 	}), nil
 }
 
+// TODO(https://fxbug.dev/44347) Remove after ABI transition.
 func (ep *endpoint) SetSockOpt(_ fidl.Context, level, optName int16, optVal []uint8) (socket.BaseSocketSetSockOptResult, error) {
 	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
 		if len(optVal) < sizeOfInt32 {
@@ -398,6 +428,7 @@ func (ep *endpoint) SetSockOpt(_ fidl.Context, level, optName int16, optVal []ui
 	return socket.BaseSocketSetSockOptResultWithResponse(socket.BaseSocketSetSockOptResponse{}), nil
 }
 
+// TODO(https://fxbug.dev/44347) Remove after ABI transition.
 func (ep *endpoint) GetSockOpt(_ fidl.Context, level, optName int16) (socket.BaseSocketGetSockOptResult, error) {
 	var val interface{}
 	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
@@ -430,6 +461,457 @@ func (ep *endpoint) GetSockOpt(_ fidl.Context, level, optName int16) (socket.Bas
 	return socket.BaseSocketGetSockOptResultWithResponse(socket.BaseSocketGetSockOptResponse{
 		Optval: b,
 	}), nil
+}
+
+func (ep *endpoint) GetTimestamp(fidl.Context) (socket.BaseSocketGetTimestampResult, error) {
+	ep.mu.Lock()
+	value := ep.mu.sockOptTimestamp
+	ep.mu.Unlock()
+	return socket.BaseSocketGetTimestampResultWithResponse(socket.BaseSocketGetTimestampResponse{Value: value}), nil
+}
+
+func (ep *endpoint) SetTimestamp(_ fidl.Context, value bool) (socket.BaseSocketSetTimestampResult, error) {
+	ep.mu.Lock()
+	ep.mu.sockOptTimestamp = value
+	ep.mu.Unlock()
+	return socket.BaseSocketSetTimestampResultWithResponse(socket.BaseSocketSetTimestampResponse{}), nil
+}
+
+func (ep *endpoint) domain() (socket.Domain, tcpip.Error) {
+	switch ep.netProto {
+	case ipv4.ProtocolNumber:
+		return socket.DomainIpv4, nil
+	case ipv6.ProtocolNumber:
+		return socket.DomainIpv6, nil
+	}
+	return 0, &tcpip.ErrNotSupported{}
+}
+
+func (ep *endpoint) GetError(fidl.Context) (socket.BaseSocketGetErrorResult, error) {
+	if err := ep.hardError.storeAndRetrieveLocked(ep.ep.LastError()); err != nil {
+		return socket.BaseSocketGetErrorResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketGetErrorResultWithResponse(socket.BaseSocketGetErrorResponse{}), nil
+}
+
+func (ep *endpoint) SetSendBuffer(_ fidl.Context, size uint64) (socket.BaseSocketSetSendBufferResult, error) {
+	// Guard against overflow.
+	if size > math.MaxInt64 {
+		size = math.MaxInt64
+	}
+	ep.ep.SocketOptions().SetSendBufferSize(int64(size), true)
+	return socket.BaseSocketSetSendBufferResultWithResponse(socket.BaseSocketSetSendBufferResponse{}), nil
+}
+
+func (ep *endpoint) GetSendBuffer(fidl.Context) (socket.BaseSocketGetSendBufferResult, error) {
+	size := ep.ep.SocketOptions().GetSendBufferSize()
+	return socket.BaseSocketGetSendBufferResultWithResponse(socket.BaseSocketGetSendBufferResponse{ValueBytes: uint64(size)}), nil
+}
+
+func (ep *endpoint) SetReceiveBuffer(_ fidl.Context, size uint64) (socket.BaseSocketSetReceiveBufferResult, error) {
+	// Guard against overflow.
+	if maxInt := uint64(int(^uint(0) >> 1)); size > maxInt {
+		size = maxInt
+	}
+	if err := ep.ep.SetSockOptInt(tcpip.ReceiveBufferSizeOption, int(size)); err != nil {
+		return socket.BaseSocketSetReceiveBufferResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketSetReceiveBufferResultWithResponse(socket.BaseSocketSetReceiveBufferResponse{}), nil
+}
+
+func (ep *endpoint) GetReceiveBuffer(fidl.Context) (socket.BaseSocketGetReceiveBufferResult, error) {
+	size, err := ep.ep.GetSockOptInt(tcpip.ReceiveBufferSizeOption)
+	if err != nil {
+		return socket.BaseSocketGetReceiveBufferResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketGetReceiveBufferResultWithResponse(socket.BaseSocketGetReceiveBufferResponse{ValueBytes: uint64(size)}), nil
+}
+
+func (ep *endpoint) SetReuseAddress(_ fidl.Context, value bool) (socket.BaseSocketSetReuseAddressResult, error) {
+	ep.ep.SocketOptions().SetReuseAddress(value)
+	return socket.BaseSocketSetReuseAddressResultWithResponse(socket.BaseSocketSetReuseAddressResponse{}), nil
+}
+
+func (ep *endpoint) GetReuseAddress(fidl.Context) (socket.BaseSocketGetReuseAddressResult, error) {
+	value := ep.ep.SocketOptions().GetReuseAddress()
+	return socket.BaseSocketGetReuseAddressResultWithResponse(socket.BaseSocketGetReuseAddressResponse{Value: value}), nil
+}
+
+func (ep *endpoint) SetReusePort(_ fidl.Context, value bool) (socket.BaseSocketSetReusePortResult, error) {
+	ep.ep.SocketOptions().SetReusePort(value)
+	return socket.BaseSocketSetReusePortResultWithResponse(socket.BaseSocketSetReusePortResponse{}), nil
+}
+
+func (ep *endpoint) GetReusePort(fidl.Context) (socket.BaseSocketGetReusePortResult, error) {
+	value := ep.ep.SocketOptions().GetReusePort()
+	return socket.BaseSocketGetReusePortResultWithResponse(socket.BaseSocketGetReusePortResponse{Value: value}), nil
+}
+
+func (ep *endpoint) GetAcceptConn(fidl.Context) (socket.BaseSocketGetAcceptConnResult, error) {
+	value := false
+	if ep.transProto == tcp.ProtocolNumber {
+		value = tcp.EndpointState(ep.ep.State()) == tcp.StateListen
+	}
+	return socket.BaseSocketGetAcceptConnResultWithResponse(socket.BaseSocketGetAcceptConnResponse{Value: value}), nil
+}
+
+func (ep *endpoint) SetBindToDevice(_ fidl.Context, value string) (socket.BaseSocketSetBindToDeviceResult, error) {
+	if err := func() tcpip.Error {
+		if len(value) == 0 {
+			return ep.ep.SocketOptions().SetBindToDevice(0)
+		}
+		for id, info := range ep.ns.stack.NICInfo() {
+			if value == info.Name {
+				return ep.ep.SocketOptions().SetBindToDevice(int32(id))
+			}
+		}
+		return &tcpip.ErrUnknownDevice{}
+	}(); err != nil {
+		return socket.BaseSocketSetBindToDeviceResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketSetBindToDeviceResultWithResponse(socket.BaseSocketSetBindToDeviceResponse{}), nil
+}
+
+func (ep *endpoint) GetBindToDevice(fidl.Context) (socket.BaseSocketGetBindToDeviceResult, error) {
+	id := ep.ep.SocketOptions().GetBindToDevice()
+	if id == 0 {
+		return socket.BaseSocketGetBindToDeviceResultWithResponse(socket.BaseSocketGetBindToDeviceResponse{}), nil
+	}
+	if name := ep.ns.stack.FindNICNameFromID(tcpip.NICID(id)); len(name) != 0 {
+		return socket.BaseSocketGetBindToDeviceResultWithResponse(
+			socket.BaseSocketGetBindToDeviceResponse{
+				Value: name,
+			}), nil
+	}
+	return socket.BaseSocketGetBindToDeviceResultWithErr(posix.ErrnoEnodev), nil
+}
+
+func (ep *endpoint) SetBroadcast(_ fidl.Context, value bool) (socket.BaseSocketSetBroadcastResult, error) {
+	ep.ep.SocketOptions().SetBroadcast(value)
+	return socket.BaseSocketSetBroadcastResultWithResponse(socket.BaseSocketSetBroadcastResponse{}), nil
+}
+
+func (ep *endpoint) GetBroadcast(fidl.Context) (socket.BaseSocketGetBroadcastResult, error) {
+	value := ep.ep.SocketOptions().GetBroadcast()
+	return socket.BaseSocketGetBroadcastResultWithResponse(socket.BaseSocketGetBroadcastResponse{Value: value}), nil
+}
+
+func (ep *endpoint) SetKeepAlive(_ fidl.Context, value bool) (socket.BaseSocketSetKeepAliveResult, error) {
+	ep.ep.SocketOptions().SetKeepAlive(value)
+	return socket.BaseSocketSetKeepAliveResultWithResponse(socket.BaseSocketSetKeepAliveResponse{}), nil
+}
+
+func (ep *endpoint) GetKeepAlive(fidl.Context) (socket.BaseSocketGetKeepAliveResult, error) {
+	value := ep.ep.SocketOptions().GetKeepAlive()
+	return socket.BaseSocketGetKeepAliveResultWithResponse(socket.BaseSocketGetKeepAliveResponse{Value: value}), nil
+}
+
+func (ep *endpoint) SetLinger(_ fidl.Context, linger bool, seconds uint32) (socket.BaseSocketSetLingerResult, error) {
+	ep.ep.SocketOptions().SetLinger(tcpip.LingerOption{
+		Enabled: linger,
+		Timeout: time.Second * time.Duration(seconds),
+	})
+	return socket.BaseSocketSetLingerResultWithResponse(socket.BaseSocketSetLingerResponse{}), nil
+}
+
+func (ep *endpoint) GetLinger(fidl.Context) (socket.BaseSocketGetLingerResult, error) {
+	value := ep.ep.SocketOptions().GetLinger()
+	return socket.BaseSocketGetLingerResultWithResponse(
+		socket.BaseSocketGetLingerResponse{
+			Linger:     value.Enabled,
+			LengthSecs: uint32(value.Timeout / time.Second),
+		},
+	), nil
+}
+
+func (ep *endpoint) SetOutOfBandInline(_ fidl.Context, value bool) (socket.BaseSocketSetOutOfBandInlineResult, error) {
+	ep.ep.SocketOptions().SetOutOfBandInline(value)
+	return socket.BaseSocketSetOutOfBandInlineResultWithResponse(socket.BaseSocketSetOutOfBandInlineResponse{}), nil
+}
+
+func (ep *endpoint) GetOutOfBandInline(fidl.Context) (socket.BaseSocketGetOutOfBandInlineResult, error) {
+	value := ep.ep.SocketOptions().GetOutOfBandInline()
+	return socket.BaseSocketGetOutOfBandInlineResultWithResponse(
+		socket.BaseSocketGetOutOfBandInlineResponse{
+			Value: value,
+		},
+	), nil
+}
+
+func (ep *endpoint) SetNoCheck(_ fidl.Context, value bool) (socket.BaseSocketSetNoCheckResult, error) {
+	ep.ep.SocketOptions().SetNoChecksum(value)
+	return socket.BaseSocketSetNoCheckResultWithResponse(socket.BaseSocketSetNoCheckResponse{}), nil
+}
+
+func (ep *endpoint) GetNoCheck(fidl.Context) (socket.BaseSocketGetNoCheckResult, error) {
+	value := ep.ep.SocketOptions().GetNoChecksum()
+	return socket.BaseSocketGetNoCheckResultWithResponse(socket.BaseSocketGetNoCheckResponse{Value: value}), nil
+}
+
+func (ep *endpoint) SetIpv6Only(_ fidl.Context, value bool) (socket.BaseSocketSetIpv6OnlyResult, error) {
+	ep.ep.SocketOptions().SetV6Only(value)
+	return socket.BaseSocketSetIpv6OnlyResultWithResponse(socket.BaseSocketSetIpv6OnlyResponse{}), nil
+}
+
+func (ep *endpoint) GetIpv6Only(fidl.Context) (socket.BaseSocketGetIpv6OnlyResult, error) {
+	value := ep.ep.SocketOptions().GetV6Only()
+	return socket.BaseSocketGetIpv6OnlyResultWithResponse(socket.BaseSocketGetIpv6OnlyResponse{Value: value}), nil
+}
+
+func (ep *endpoint) SetIpv6TrafficClass(_ fidl.Context, value socket.OptionalUint8) (socket.BaseSocketSetIpv6TrafficClassResult, error) {
+	v, err := optionalUint8ToInt(value, 0)
+	if err != nil {
+		return socket.BaseSocketSetIpv6TrafficClassResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	if err := ep.ep.SetSockOptInt(tcpip.IPv6TrafficClassOption, v); err != nil {
+		return socket.BaseSocketSetIpv6TrafficClassResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketSetIpv6TrafficClassResultWithResponse(socket.BaseSocketSetIpv6TrafficClassResponse{}), nil
+}
+
+func (ep *endpoint) GetIpv6TrafficClass(fidl.Context) (socket.BaseSocketGetIpv6TrafficClassResult, error) {
+	value, err := ep.ep.GetSockOptInt(tcpip.IPv6TrafficClassOption)
+	if err != nil {
+		return socket.BaseSocketGetIpv6TrafficClassResultWithErr(tcpipErrorToCode(err)), nil
+	}
+
+	return socket.BaseSocketGetIpv6TrafficClassResultWithResponse(
+		socket.BaseSocketGetIpv6TrafficClassResponse{
+			Value: uint8(value),
+		},
+	), nil
+}
+
+func (ep *endpoint) SetIpv6MulticastInterface(_ fidl.Context, value uint64) (socket.BaseSocketSetIpv6MulticastInterfaceResult, error) {
+	opt := tcpip.MulticastInterfaceOption{
+		NIC: tcpip.NICID(value),
+	}
+	if err := ep.ep.SetSockOpt(&opt); err != nil {
+		return socket.BaseSocketSetIpv6MulticastInterfaceResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketSetIpv6MulticastInterfaceResultWithResponse(socket.BaseSocketSetIpv6MulticastInterfaceResponse{}), nil
+}
+
+func (ep *endpoint) GetIpv6MulticastInterface(fidl.Context) (socket.BaseSocketGetIpv6MulticastInterfaceResult, error) {
+	var value tcpip.MulticastInterfaceOption
+	if err := ep.ep.GetSockOpt(&value); err != nil {
+		return socket.BaseSocketGetIpv6MulticastInterfaceResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketGetIpv6MulticastInterfaceResultWithResponse(socket.BaseSocketGetIpv6MulticastInterfaceResponse{Value: uint64(value.NIC)}), nil
+}
+
+func (ep *endpoint) SetIpv6MulticastHops(_ fidl.Context, value socket.OptionalUint8) (socket.BaseSocketSetIpv6MulticastHopsResult, error) {
+	v, err := optionalUint8ToInt(value, 1)
+	if err != nil {
+		return socket.BaseSocketSetIpv6MulticastHopsResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	if err := ep.ep.SetSockOptInt(tcpip.MulticastTTLOption, v); err != nil {
+		return socket.BaseSocketSetIpv6MulticastHopsResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketSetIpv6MulticastHopsResultWithResponse(socket.BaseSocketSetIpv6MulticastHopsResponse{}), nil
+}
+
+func (ep *endpoint) GetIpv6MulticastHops(fidl.Context) (socket.BaseSocketGetIpv6MulticastHopsResult, error) {
+	value, err := ep.ep.GetSockOptInt(tcpip.MulticastTTLOption)
+	if err != nil {
+		return socket.BaseSocketGetIpv6MulticastHopsResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketGetIpv6MulticastHopsResultWithResponse(
+		socket.BaseSocketGetIpv6MulticastHopsResponse{
+			Value: uint8(value),
+		},
+	), nil
+}
+
+func (ep *endpoint) SetIpv6MulticastLoopback(_ fidl.Context, value bool) (socket.BaseSocketSetIpv6MulticastLoopbackResult, error) {
+	ep.ep.SocketOptions().SetMulticastLoop(value)
+	return socket.BaseSocketSetIpv6MulticastLoopbackResultWithResponse(socket.BaseSocketSetIpv6MulticastLoopbackResponse{}), nil
+}
+
+func (ep *endpoint) GetIpv6MulticastLoopback(fidl.Context) (socket.BaseSocketGetIpv6MulticastLoopbackResult, error) {
+	value := ep.ep.SocketOptions().GetMulticastLoop()
+	return socket.BaseSocketGetIpv6MulticastLoopbackResultWithResponse(socket.BaseSocketGetIpv6MulticastLoopbackResponse{Value: value}), nil
+}
+
+func (ep *endpoint) SetIpTtl(_ fidl.Context, value socket.OptionalUint8) (socket.BaseSocketSetIpTtlResult, error) {
+	v, err := optionalUint8ToInt(value, -1)
+	if err != nil {
+		return socket.BaseSocketSetIpTtlResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	switch v {
+	case -1:
+		// Unset maps to default value
+		v = 0
+	case 0:
+		return socket.BaseSocketSetIpTtlResultWithErr(posix.ErrnoEinval), nil
+	}
+	if err := ep.ep.SetSockOptInt(tcpip.TTLOption, v); err != nil {
+		return socket.BaseSocketSetIpTtlResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketSetIpTtlResultWithResponse(socket.BaseSocketSetIpTtlResponse{}), nil
+
+}
+
+func (ep *endpoint) GetIpTtl(fidl.Context) (socket.BaseSocketGetIpTtlResult, error) {
+	value, err := ep.ep.GetSockOptInt(tcpip.TTLOption)
+	if err != nil {
+		return socket.BaseSocketGetIpTtlResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	if value == 0 {
+		value = DefaultTTL
+	}
+	return socket.BaseSocketGetIpTtlResultWithResponse(socket.BaseSocketGetIpTtlResponse{Value: uint8(value)}), nil
+}
+
+func (ep *endpoint) SetIpMulticastTtl(_ fidl.Context, value socket.OptionalUint8) (socket.BaseSocketSetIpMulticastTtlResult, error) {
+	// Linux translates -1 (unset) to 1
+	v, err := optionalUint8ToInt(value, 1)
+	if err != nil {
+		return socket.BaseSocketSetIpMulticastTtlResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	if err := ep.ep.SetSockOptInt(tcpip.MulticastTTLOption, v); err != nil {
+		return socket.BaseSocketSetIpMulticastTtlResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketSetIpMulticastTtlResultWithResponse(socket.BaseSocketSetIpMulticastTtlResponse{}), nil
+}
+
+func (ep *endpoint) GetIpMulticastTtl(fidl.Context) (socket.BaseSocketGetIpMulticastTtlResult, error) {
+	value, err := ep.ep.GetSockOptInt(tcpip.MulticastTTLOption)
+	if err != nil {
+		return socket.BaseSocketGetIpMulticastTtlResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketGetIpMulticastTtlResultWithResponse(socket.BaseSocketGetIpMulticastTtlResponse{Value: uint8(value)}), nil
+}
+
+func (ep *endpoint) SetIpMulticastInterface(_ fidl.Context, iface uint64, value fidlnet.Ipv4Address) (socket.BaseSocketSetIpMulticastInterfaceResult, error) {
+	opt := tcpip.MulticastInterfaceOption{
+		NIC:           tcpip.NICID(iface),
+		InterfaceAddr: toTcpIpAddressDroppingUnspecifiedv4(value),
+	}
+	if err := ep.ep.SetSockOpt(&opt); err != nil {
+		return socket.BaseSocketSetIpMulticastInterfaceResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketSetIpMulticastInterfaceResultWithResponse(socket.BaseSocketSetIpMulticastInterfaceResponse{}), nil
+}
+
+func (ep *endpoint) GetIpMulticastInterface(fidl.Context) (socket.BaseSocketGetIpMulticastInterfaceResult, error) {
+	var v tcpip.MulticastInterfaceOption
+	if err := ep.ep.GetSockOpt(&v); err != nil {
+		return socket.BaseSocketGetIpMulticastInterfaceResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	var addr fidlnet.Ipv4Address
+	if len(v.InterfaceAddr) == header.IPv4AddressSize {
+		copy(addr.Addr[:], v.InterfaceAddr)
+	}
+	return socket.BaseSocketGetIpMulticastInterfaceResultWithResponse(
+		socket.BaseSocketGetIpMulticastInterfaceResponse{
+			Value: addr,
+		},
+	), nil
+}
+
+func (ep *endpoint) SetIpMulticastLoopback(_ fidl.Context, value bool) (socket.BaseSocketSetIpMulticastLoopbackResult, error) {
+	ep.ep.SocketOptions().SetMulticastLoop(value)
+	return socket.BaseSocketSetIpMulticastLoopbackResultWithResponse(socket.BaseSocketSetIpMulticastLoopbackResponse{}), nil
+}
+
+func (ep *endpoint) GetIpMulticastLoopback(fidl.Context) (socket.BaseSocketGetIpMulticastLoopbackResult, error) {
+	value := ep.ep.SocketOptions().GetMulticastLoop()
+	return socket.BaseSocketGetIpMulticastLoopbackResultWithResponse(socket.BaseSocketGetIpMulticastLoopbackResponse{Value: value}), nil
+}
+
+func (ep *endpoint) SetIpTypeOfService(_ fidl.Context, value uint8) (socket.BaseSocketSetIpTypeOfServiceResult, error) {
+	if err := ep.ep.SetSockOptInt(tcpip.IPv4TOSOption, int(value)); err != nil {
+		return socket.BaseSocketSetIpTypeOfServiceResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketSetIpTypeOfServiceResultWithResponse(socket.BaseSocketSetIpTypeOfServiceResponse{}), nil
+}
+
+func (ep *endpoint) GetIpTypeOfService(fidl.Context) (socket.BaseSocketGetIpTypeOfServiceResult, error) {
+	value, err := ep.ep.GetSockOptInt(tcpip.IPv4TOSOption)
+	if err != nil {
+		return socket.BaseSocketGetIpTypeOfServiceResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	if value < 0 || value > math.MaxUint8 {
+		value = 0
+	}
+	return socket.BaseSocketGetIpTypeOfServiceResultWithResponse(socket.BaseSocketGetIpTypeOfServiceResponse{Value: uint8(value)}), nil
+}
+
+func (ep *endpoint) AddIpMembership(_ fidl.Context, membership socket.IpMulticastMembership) (socket.BaseSocketAddIpMembershipResult, error) {
+	opt := tcpip.AddMembershipOption{
+		NIC:           tcpip.NICID(membership.Iface),
+		InterfaceAddr: toTcpIpAddressDroppingUnspecifiedv4(membership.LocalAddr),
+		MulticastAddr: toTcpIpAddressDroppingUnspecifiedv4(membership.McastAddr),
+	}
+	if err := ep.ep.SetSockOpt(&opt); err != nil {
+		return socket.BaseSocketAddIpMembershipResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketAddIpMembershipResultWithResponse(socket.BaseSocketAddIpMembershipResponse{}), nil
+}
+
+func (ep *endpoint) DropIpMembership(_ fidl.Context, membership socket.IpMulticastMembership) (socket.BaseSocketDropIpMembershipResult, error) {
+	opt := tcpip.RemoveMembershipOption{
+		NIC:           tcpip.NICID(membership.Iface),
+		InterfaceAddr: toTcpIpAddressDroppingUnspecifiedv4(membership.LocalAddr),
+		MulticastAddr: toTcpIpAddressDroppingUnspecifiedv4(membership.McastAddr),
+	}
+	if err := ep.ep.SetSockOpt(&opt); err != nil {
+		return socket.BaseSocketDropIpMembershipResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketDropIpMembershipResultWithResponse(socket.BaseSocketDropIpMembershipResponse{}), nil
+}
+
+func (ep *endpoint) AddIpv6Membership(_ fidl.Context, membership socket.Ipv6MulticastMembership) (socket.BaseSocketAddIpv6MembershipResult, error) {
+	opt := tcpip.AddMembershipOption{
+		NIC:           tcpip.NICID(membership.Iface),
+		MulticastAddr: toTcpIpAddressDroppingUnspecifiedv6(membership.McastAddr),
+	}
+	if err := ep.ep.SetSockOpt(&opt); err != nil {
+		return socket.BaseSocketAddIpv6MembershipResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketAddIpv6MembershipResultWithResponse(socket.BaseSocketAddIpv6MembershipResponse{}), nil
+}
+
+func (ep *endpoint) DropIpv6Membership(_ fidl.Context, membership socket.Ipv6MulticastMembership) (socket.BaseSocketDropIpv6MembershipResult, error) {
+	opt := tcpip.RemoveMembershipOption{
+		NIC:           tcpip.NICID(membership.Iface),
+		MulticastAddr: toTcpIpAddressDroppingUnspecifiedv6(membership.McastAddr),
+	}
+	if err := ep.ep.SetSockOpt(&opt); err != nil {
+		return socket.BaseSocketDropIpv6MembershipResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketDropIpv6MembershipResultWithResponse(socket.BaseSocketDropIpv6MembershipResponse{}), nil
+}
+
+func (ep *endpoint) SetIpv6ReceiveTrafficClass(_ fidl.Context, value bool) (socket.BaseSocketSetIpv6ReceiveTrafficClassResult, error) {
+	ep.ep.SocketOptions().SetReceiveTClass(value)
+	return socket.BaseSocketSetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseSocketSetIpv6ReceiveTrafficClassResponse{}), nil
+}
+
+func (ep *endpoint) GetIpv6ReceiveTrafficClass(fidl.Context) (socket.BaseSocketGetIpv6ReceiveTrafficClassResult, error) {
+	value := ep.ep.SocketOptions().GetReceiveTClass()
+	return socket.BaseSocketGetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseSocketGetIpv6ReceiveTrafficClassResponse{Value: value}), nil
+}
+
+func (ep *endpoint) SetIpReceiveTypeOfService(_ fidl.Context, value bool) (socket.BaseSocketSetIpReceiveTypeOfServiceResult, error) {
+	ep.ep.SocketOptions().SetReceiveTOS(value)
+	return socket.BaseSocketSetIpReceiveTypeOfServiceResultWithResponse(socket.BaseSocketSetIpReceiveTypeOfServiceResponse{}), nil
+}
+
+func (ep *endpoint) GetIpReceiveTypeOfService(fidl.Context) (socket.BaseSocketGetIpReceiveTypeOfServiceResult, error) {
+	value := ep.ep.SocketOptions().GetReceiveTOS()
+	return socket.BaseSocketGetIpReceiveTypeOfServiceResultWithResponse(socket.BaseSocketGetIpReceiveTypeOfServiceResponse{Value: value}), nil
+}
+
+func (ep *endpoint) SetIpPacketInfo(_ fidl.Context, value bool) (socket.BaseSocketSetIpPacketInfoResult, error) {
+	ep.ep.SocketOptions().SetReceivePacketInfo(value)
+	return socket.BaseSocketSetIpPacketInfoResultWithResponse(socket.BaseSocketSetIpPacketInfoResponse{}), nil
+}
+
+func (ep *endpoint) GetIpPacketInfo(fidl.Context) (socket.BaseSocketGetIpPacketInfoResult, error) {
+	value := ep.ep.SocketOptions().GetReceivePacketInfo()
+	return socket.BaseSocketGetIpPacketInfoResultWithResponse(socket.BaseSocketGetIpPacketInfoResponse{Value: value}), nil
 }
 
 // endpointWithSocket implements a network socket that uses a zircon socket for
@@ -580,6 +1062,14 @@ func (epe *endpointWithEvent) GetSockOpt(ctx fidl.Context, level, optName int16)
 		}
 	}
 	return opts, err
+}
+
+func (epe *endpointWithEvent) GetError(ctx fidl.Context) (socket.BaseSocketGetErrorResult, error) {
+	result, err := epe.endpoint.GetError(ctx)
+	if err := epe.pending.update(epe.ep.Readiness, epe.local.SignalPeer); err != nil {
+		panic(err)
+	}
+	return result, err
 }
 
 func (epe *endpointWithEvent) Shutdown(_ fidl.Context, how socket.ShutdownMode) (socket.DatagramSocketShutdownResult, error) {
@@ -1251,6 +1741,26 @@ func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress
 	return socket.DatagramSocketSendMsgResultWithResponse(socket.DatagramSocketSendMsgResponse{Len: n}), nil
 }
 
+func (s *datagramSocketImpl) GetInfo(fidl.Context) (socket.DatagramSocketGetInfoResult, error) {
+	domain, err := s.domain()
+	if err != nil {
+		return socket.DatagramSocketGetInfoResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	var proto socket.DatagramSocketProtocol
+	switch transProto := s.transProto; transProto {
+	case udp.ProtocolNumber:
+		proto = socket.DatagramSocketProtocolUdp
+	case header.ICMPv4ProtocolNumber, header.ICMPv6ProtocolNumber:
+		proto = socket.DatagramSocketProtocolIcmpEcho
+	default:
+		panic(fmt.Sprintf("unhandled transport protocol: %d", transProto))
+	}
+	return socket.DatagramSocketGetInfoResultWithResponse(socket.DatagramSocketGetInfoResponse{
+		Domain: domain,
+		Proto:  proto,
+	}), nil
+}
+
 type streamSocketImpl struct {
 	*endpointWithSocket
 
@@ -1411,6 +1921,279 @@ func (s *streamSocketImpl) Accept(_ fidl.Context, wantAddr bool) (socket.StreamS
 		response.Addr = &sockaddr
 	}
 	return socket.StreamSocketAcceptResultWithResponse(response), nil
+}
+
+func (s *streamSocketImpl) GetInfo(fidl.Context) (socket.StreamSocketGetInfoResult, error) {
+	domain, err := s.domain()
+	if err != nil {
+		return socket.StreamSocketGetInfoResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	var proto socket.StreamSocketProtocol
+	switch transProto := s.transProto; transProto {
+	case tcp.ProtocolNumber:
+		proto = socket.StreamSocketProtocolTcp
+	default:
+		panic(fmt.Sprintf("unhandled transport protocol: %d", transProto))
+	}
+	return socket.StreamSocketGetInfoResultWithResponse(socket.StreamSocketGetInfoResponse{
+		Domain: domain,
+		Proto:  proto,
+	}), nil
+}
+
+func (s *streamSocketImpl) SetTcpNoDelay(_ fidl.Context, value bool) (socket.StreamSocketSetTcpNoDelayResult, error) {
+	s.ep.SocketOptions().SetDelayOption(!value)
+	return socket.StreamSocketSetTcpNoDelayResultWithResponse(socket.StreamSocketSetTcpNoDelayResponse{}), nil
+}
+
+func (s *streamSocketImpl) GetTcpNoDelay(fidl.Context) (socket.StreamSocketGetTcpNoDelayResult, error) {
+	value := s.ep.SocketOptions().GetDelayOption()
+	return socket.StreamSocketGetTcpNoDelayResultWithResponse(
+		socket.StreamSocketGetTcpNoDelayResponse{
+			Value: !value,
+		},
+	), nil
+}
+
+func (s *streamSocketImpl) SetTcpCork(_ fidl.Context, value bool) (socket.StreamSocketSetTcpCorkResult, error) {
+	s.ep.SocketOptions().SetCorkOption(value)
+	return socket.StreamSocketSetTcpCorkResultWithResponse(socket.StreamSocketSetTcpCorkResponse{}), nil
+}
+
+func (s *streamSocketImpl) GetTcpCork(fidl.Context) (socket.StreamSocketGetTcpCorkResult, error) {
+	value := s.ep.SocketOptions().GetCorkOption()
+	return socket.StreamSocketGetTcpCorkResultWithResponse(socket.StreamSocketGetTcpCorkResponse{Value: value}), nil
+}
+
+func (s *streamSocketImpl) SetTcpQuickAck(_ fidl.Context, value bool) (socket.StreamSocketSetTcpQuickAckResult, error) {
+	s.ep.SocketOptions().SetQuickAck(value)
+	return socket.StreamSocketSetTcpQuickAckResultWithResponse(socket.StreamSocketSetTcpQuickAckResponse{}), nil
+}
+
+func (s *streamSocketImpl) GetTcpQuickAck(fidl.Context) (socket.StreamSocketGetTcpQuickAckResult, error) {
+	value := s.ep.SocketOptions().GetQuickAck()
+	return socket.StreamSocketGetTcpQuickAckResultWithResponse(socket.StreamSocketGetTcpQuickAckResponse{Value: value}), nil
+}
+
+func (s *streamSocketImpl) SetTcpMaxSegment(_ fidl.Context, valueBytes uint32) (socket.StreamSocketSetTcpMaxSegmentResult, error) {
+	if err := s.ep.SetSockOptInt(tcpip.MaxSegOption, int(valueBytes)); err != nil {
+		return socket.StreamSocketSetTcpMaxSegmentResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketSetTcpMaxSegmentResultWithResponse(socket.StreamSocketSetTcpMaxSegmentResponse{}), nil
+}
+
+func (s *streamSocketImpl) GetTcpMaxSegment(fidl.Context) (socket.StreamSocketGetTcpMaxSegmentResult, error) {
+	value, err := s.ep.GetSockOptInt(tcpip.MaxSegOption)
+	if err != nil {
+		return socket.StreamSocketGetTcpMaxSegmentResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketGetTcpMaxSegmentResultWithResponse(socket.StreamSocketGetTcpMaxSegmentResponse{
+		ValueBytes: uint32(value),
+	}), nil
+}
+
+func (s *streamSocketImpl) SetTcpKeepAliveIdle(_ fidl.Context, valueSecs uint32) (socket.StreamSocketSetTcpKeepAliveIdleResult, error) {
+	// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/net/ipv4/tcp.c#L2991
+	if valueSecs < 1 || valueSecs > maxTCPKeepIdle {
+		return socket.StreamSocketSetTcpKeepAliveIdleResultWithErr(posix.ErrnoEinval), nil
+	}
+	opt := tcpip.KeepaliveIdleOption(time.Second * time.Duration(valueSecs))
+	if err := s.ep.SetSockOpt(&opt); err != nil {
+		return socket.StreamSocketSetTcpKeepAliveIdleResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketSetTcpKeepAliveIdleResultWithResponse(socket.StreamSocketSetTcpKeepAliveIdleResponse{}), nil
+}
+
+func (s *streamSocketImpl) GetTcpKeepAliveIdle(fidl.Context) (socket.StreamSocketGetTcpKeepAliveIdleResult, error) {
+	var value tcpip.KeepaliveIdleOption
+	if err := s.ep.GetSockOpt(&value); err != nil {
+		return socket.StreamSocketGetTcpKeepAliveIdleResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketGetTcpKeepAliveIdleResultWithResponse(socket.StreamSocketGetTcpKeepAliveIdleResponse{
+		ValueSecs: uint32(time.Duration(value).Seconds()),
+	}), nil
+}
+
+func (s *streamSocketImpl) SetTcpKeepAliveInterval(_ fidl.Context, valueSecs uint32) (socket.StreamSocketSetTcpKeepAliveIntervalResult, error) {
+	// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/net/ipv4/tcp.c#L3008
+	if valueSecs < 1 || valueSecs > maxTCPKeepIntvl {
+		return socket.StreamSocketSetTcpKeepAliveIntervalResultWithErr(posix.ErrnoEinval), nil
+	}
+	opt := tcpip.KeepaliveIntervalOption(time.Second * time.Duration(valueSecs))
+	if err := s.ep.SetSockOpt(&opt); err != nil {
+		return socket.StreamSocketSetTcpKeepAliveIntervalResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketSetTcpKeepAliveIntervalResultWithResponse(socket.StreamSocketSetTcpKeepAliveIntervalResponse{}), nil
+}
+
+func (s *streamSocketImpl) GetTcpKeepAliveInterval(fidl.Context) (socket.StreamSocketGetTcpKeepAliveIntervalResult, error) {
+	var value tcpip.KeepaliveIntervalOption
+	if err := s.ep.GetSockOpt(&value); err != nil {
+		return socket.StreamSocketGetTcpKeepAliveIntervalResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketGetTcpKeepAliveIntervalResultWithResponse(socket.StreamSocketGetTcpKeepAliveIntervalResponse{
+		ValueSecs: uint32(time.Duration(value).Seconds()),
+	}), nil
+}
+
+func (s *streamSocketImpl) SetTcpKeepAliveCount(_ fidl.Context, value uint32) (socket.StreamSocketSetTcpKeepAliveCountResult, error) {
+	// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/net/ipv4/tcp.c#L3014
+	if value < 1 || value > maxTCPKeepCnt {
+		return socket.StreamSocketSetTcpKeepAliveCountResultWithErr(posix.ErrnoEinval), nil
+	}
+	if err := s.ep.SetSockOptInt(tcpip.KeepaliveCountOption, int(value)); err != nil {
+		return socket.StreamSocketSetTcpKeepAliveCountResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketSetTcpKeepAliveCountResultWithResponse(socket.StreamSocketSetTcpKeepAliveCountResponse{}), nil
+}
+
+func (s *streamSocketImpl) GetTcpKeepAliveCount(fidl.Context) (socket.StreamSocketGetTcpKeepAliveCountResult, error) {
+	value, err := s.ep.GetSockOptInt(tcpip.KeepaliveCountOption)
+	if err != nil {
+		return socket.StreamSocketGetTcpKeepAliveCountResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketGetTcpKeepAliveCountResultWithResponse(socket.StreamSocketGetTcpKeepAliveCountResponse{Value: uint32(value)}), nil
+}
+
+func (s *streamSocketImpl) SetTcpUserTimeout(_ fidl.Context, valueMillis uint32) (socket.StreamSocketSetTcpUserTimeoutResult, error) {
+	opt := tcpip.TCPUserTimeoutOption(time.Millisecond * time.Duration(valueMillis))
+	if err := s.ep.SetSockOpt(&opt); err != nil {
+		return socket.StreamSocketSetTcpUserTimeoutResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketSetTcpUserTimeoutResultWithResponse(socket.StreamSocketSetTcpUserTimeoutResponse{}), nil
+}
+
+func (s *streamSocketImpl) GetTcpUserTimeout(fidl.Context) (socket.StreamSocketGetTcpUserTimeoutResult, error) {
+	var value tcpip.TCPUserTimeoutOption
+	if err := s.ep.GetSockOpt(&value); err != nil {
+		return socket.StreamSocketGetTcpUserTimeoutResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketGetTcpUserTimeoutResultWithResponse(socket.StreamSocketGetTcpUserTimeoutResponse{
+		ValueMillis: uint32(time.Duration(value).Milliseconds()),
+	}), nil
+}
+
+func (s *streamSocketImpl) SetTcpCongestion(_ fidl.Context, value socket.TcpCongestionControl) (socket.StreamSocketSetTcpCongestionResult, error) {
+	var cc string
+	switch value {
+	case socket.TcpCongestionControlReno:
+		cc = ccReno
+	case socket.TcpCongestionControlCubic:
+		cc = ccCubic
+	default:
+		// Linux returns ENOENT when an invalid congestion
+		// control algorithm is specified.
+		return socket.StreamSocketSetTcpCongestionResultWithErr(posix.ErrnoEnoent), nil
+	}
+	opt := tcpip.CongestionControlOption(cc)
+	if err := s.ep.SetSockOpt(&opt); err != nil {
+		return socket.StreamSocketSetTcpCongestionResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketSetTcpCongestionResultWithResponse(socket.StreamSocketSetTcpCongestionResponse{}), nil
+}
+
+func (s *streamSocketImpl) GetTcpCongestion(fidl.Context) (socket.StreamSocketGetTcpCongestionResult, error) {
+	var value tcpip.CongestionControlOption
+	if err := s.ep.GetSockOpt(&value); err != nil {
+		return socket.StreamSocketGetTcpCongestionResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	var cc socket.TcpCongestionControl
+	switch string(value) {
+	case ccReno:
+		cc = socket.TcpCongestionControlReno
+	case ccCubic:
+		cc = socket.TcpCongestionControlCubic
+	default:
+		return socket.StreamSocketGetTcpCongestionResultWithErr(posix.ErrnoEopnotsupp), nil
+	}
+	return socket.StreamSocketGetTcpCongestionResultWithResponse(socket.StreamSocketGetTcpCongestionResponse{Value: cc}), nil
+}
+
+func (s *streamSocketImpl) SetTcpDeferAccept(_ fidl.Context, valueSecs uint32) (socket.StreamSocketSetTcpDeferAcceptResult, error) {
+	opt := tcpip.TCPDeferAcceptOption(time.Second * time.Duration(valueSecs))
+	if err := s.ep.SetSockOpt(&opt); err != nil {
+		return socket.StreamSocketSetTcpDeferAcceptResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketSetTcpDeferAcceptResultWithResponse(socket.StreamSocketSetTcpDeferAcceptResponse{}), nil
+}
+
+func (s *streamSocketImpl) GetTcpDeferAccept(fidl.Context) (socket.StreamSocketGetTcpDeferAcceptResult, error) {
+	var value tcpip.TCPDeferAcceptOption
+	if err := s.ep.GetSockOpt(&value); err != nil {
+		return socket.StreamSocketGetTcpDeferAcceptResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketGetTcpDeferAcceptResultWithResponse(socket.StreamSocketGetTcpDeferAcceptResponse{
+		ValueSecs: uint32(time.Duration(value).Seconds()),
+	}), nil
+}
+
+func (s *streamSocketImpl) GetTcpInfo(fidl.Context) (socket.StreamSocketGetTcpInfoResult, error) {
+	var value tcpip.TCPInfoOption
+	if err := s.ep.GetSockOpt(&value); err != nil {
+		return socket.StreamSocketGetTcpInfoResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	var info socket.TcpInfo
+	info.SetRttUsec(uint32(value.RTT.Microseconds()))
+	info.SetRttVarUsec(uint32(value.RTTVar.Microseconds()))
+	return socket.StreamSocketGetTcpInfoResultWithResponse(socket.StreamSocketGetTcpInfoResponse{
+		Info: info,
+	}), nil
+}
+
+func (s *streamSocketImpl) SetTcpSynCount(_ fidl.Context, value uint32) (socket.StreamSocketSetTcpSynCountResult, error) {
+	if err := s.ep.SetSockOptInt(tcpip.TCPSynCountOption, int(value)); err != nil {
+		return socket.StreamSocketSetTcpSynCountResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketSetTcpSynCountResultWithResponse(socket.StreamSocketSetTcpSynCountResponse{}), nil
+}
+
+func (s *streamSocketImpl) GetTcpSynCount(fidl.Context) (socket.StreamSocketGetTcpSynCountResult, error) {
+	value, err := s.ep.GetSockOptInt(tcpip.TCPSynCountOption)
+	if err != nil {
+		return socket.StreamSocketGetTcpSynCountResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketGetTcpSynCountResultWithResponse(socket.StreamSocketGetTcpSynCountResponse{Value: uint32(value)}), nil
+}
+
+func (s *streamSocketImpl) SetTcpWindowClamp(_ fidl.Context, value uint32) (socket.StreamSocketSetTcpWindowClampResult, error) {
+	if err := s.ep.SetSockOptInt(tcpip.TCPWindowClampOption, int(value)); err != nil {
+		return socket.StreamSocketSetTcpWindowClampResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketSetTcpWindowClampResultWithResponse(socket.StreamSocketSetTcpWindowClampResponse{}), nil
+}
+
+func (s *streamSocketImpl) GetTcpWindowClamp(fidl.Context) (socket.StreamSocketGetTcpWindowClampResult, error) {
+	value, err := s.ep.GetSockOptInt(tcpip.TCPWindowClampOption)
+	if err != nil {
+		return socket.StreamSocketGetTcpWindowClampResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketGetTcpWindowClampResultWithResponse(socket.StreamSocketGetTcpWindowClampResponse{Value: uint32(value)}), nil
+}
+
+func (s *streamSocketImpl) SetTcpLinger(_ fidl.Context, valueSecs socket.OptionalUint32) (socket.StreamSocketSetTcpLingerResult, error) {
+	v, err := optionalUint32ToInt(valueSecs, -1)
+	if err != nil {
+		return socket.StreamSocketSetTcpLingerResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	opt := tcpip.TCPLingerTimeoutOption(time.Second * time.Duration(v))
+	if err := s.ep.SetSockOpt(&opt); err != nil {
+		return socket.StreamSocketSetTcpLingerResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.StreamSocketSetTcpLingerResultWithResponse(socket.StreamSocketSetTcpLingerResponse{}), nil
+}
+
+func (s *streamSocketImpl) GetTcpLinger(fidl.Context) (socket.StreamSocketGetTcpLingerResult, error) {
+	var value tcpip.TCPLingerTimeoutOption
+	if err := s.ep.GetSockOpt(&value); err != nil {
+		return socket.StreamSocketGetTcpLingerResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	v := socket.OptionalUint32WithUnset(socket.Empty{})
+	if seconds := time.Duration(value) / time.Second; seconds != 0 {
+		v = socket.OptionalUint32WithValue(uint32(seconds))
+	}
+	return socket.StreamSocketGetTcpLingerResultWithResponse(socket.StreamSocketGetTcpLingerResponse{
+		ValueSecs: v,
+	}), nil
 }
 
 func (ns *Netstack) onAddEndpoint(e *endpoint) {

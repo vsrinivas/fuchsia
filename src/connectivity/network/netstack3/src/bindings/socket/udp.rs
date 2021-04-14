@@ -495,6 +495,188 @@ where
                         DatagramSocketRequest::NodeSetFlags { flags: _, responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
                         }
+                        DatagramSocketRequest::GetInfo { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetTimestamp { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetTimestamp { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetError { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetSendBuffer { value_bytes: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetSendBuffer { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetReceiveBuffer { value_bytes: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetReceiveBuffer { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetReuseAddress { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetReuseAddress { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetReusePort { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetReusePort { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetAcceptConn { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetBindToDevice { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetBindToDevice { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetBroadcast { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetBroadcast { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetKeepAlive { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetKeepAlive { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetLinger {
+                            linger: _,
+                            length_secs: _,
+                            responder,
+                        } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetLinger { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetOutOfBandInline { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetOutOfBandInline { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetNoCheck { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetNoCheck { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetIpv6Only { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetIpv6Only { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetIpv6TrafficClass { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetIpv6TrafficClass { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetIpv6MulticastInterface {
+                            value: _,
+                            responder,
+                        } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetIpv6MulticastInterface { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetIpv6MulticastHops { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetIpv6MulticastHops { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetIpv6MulticastLoopback { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetIpv6MulticastLoopback { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetIpTtl { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetIpTtl { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetIpMulticastTtl { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetIpMulticastTtl { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetIpMulticastInterface {
+                            iface: _,
+                            address: _,
+                            responder,
+                        } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetIpMulticastInterface { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetIpMulticastLoopback { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetIpMulticastLoopback { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetIpTypeOfService { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetIpTypeOfService { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::AddIpMembership { membership: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::DropIpMembership { membership: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::AddIpv6Membership { membership: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::DropIpv6Membership { membership: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetIpv6ReceiveTrafficClass {
+                            value: _,
+                            responder,
+                        } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetIpv6ReceiveTrafficClass { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetIpReceiveTypeOfService {
+                            value: _,
+                            responder,
+                        } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetIpReceiveTypeOfService { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::SetIpPacketInfo { value: _, responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
+                        DatagramSocketRequest::GetIpPacketInfo { responder } => {
+                            responder_send!(responder, &mut Err(Errno::Eopnotsupp));
+                        }
                     }
                 }
                 Err(err) => {

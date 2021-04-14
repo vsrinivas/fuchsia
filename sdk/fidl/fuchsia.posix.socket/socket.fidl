@@ -47,9 +47,201 @@ protocol BaseSocket {
     GetPeerName() -> (fuchsia.net.SocketAddress addr) error fuchsia.posix.Errno;
 
     /// Sets the value of a socket option.
+    // TODO(https://fxbug.dev/44347): Remove after ABI transition.
+    [Deprecated = "Use individual Set functions instead"]
     SetSockOpt(int16 level, int16 optname, sockopt optval) -> () error fuchsia.posix.Errno;
     /// Retrieves the value of a socket option.
+    // TODO(https://fxbug.dev/44347): Remove after ABI transition.
+    [Deprecated = "Use individual functions instead"]
     GetSockOpt(int16 level, int16 optname) -> (sockopt optval) error fuchsia.posix.Errno;
+
+    /// Set `SOL_SOCKET` -> `SO_REUSEADDR`.
+    SetReuseAddress(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_SOCKET` -> `SO_REUSEADDR`.
+    GetReuseAddress() -> (bool value) error fuchsia.posix.Errno;
+
+    // NOTE: get `SOL_SOCKET` -> `SO_TYPE` is implemented in the client (libfdio).
+
+    /// Get `SOL_SOCKET` -> `SO_ERROR`.
+    /// Returns the last error if there is an error set on the socket.
+    GetError() -> () error fuchsia.posix.Errno;
+
+    /// Set `SOL_SOCKET` -> `SO_BROADCAST`.
+    SetBroadcast(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_SOCKET` -> `SO_BROADCAST`.
+    GetBroadcast() -> (bool value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_SOCKET` -> `SO_SNDBUF`.
+    SetSendBuffer(uint64 value_bytes) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_SOCKET` -> `SO_SNDBUF`.
+    GetSendBuffer() -> (uint64 value_bytes) error fuchsia.posix.Errno;
+
+    /// Set `SOL_SOCKET` -> `SO_RCVBUF`.
+    SetReceiveBuffer(uint64 value_bytes) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_SOCKET` -> `SO_RCVBUF`.
+    GetReceiveBuffer() -> (uint64 value_bytes) error fuchsia.posix.Errno;
+
+    /// Set `SOL_SOCKET` -> `SO_KEEPALIVE`.
+    SetKeepAlive(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_SOCKET` -> `SO_KEEPALIVE`.
+    GetKeepAlive() -> (bool value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_SOCKET` -> `SO_OOBINLINE`.
+    SetOutOfBandInline(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_SOCKET` -> `SO_OOBINLINE`.
+    GetOutOfBandInline() -> (bool value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_SOCKET` -> `SO_NO_CHECK`.
+    SetNoCheck(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_SOCKET` -> `SO_NO_CHECK`.
+    GetNoCheck() -> (bool value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_SOCKET` -> `SO_LINGER`.
+    SetLinger(bool linger, uint32 length_secs) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_SOCKET` -> `SO_LINGER`.
+    GetLinger() -> (bool linger, uint32 length_secs) error fuchsia.posix.Errno;
+
+    /// Set `SOL_SOCKET` -> `SO_REUSEPORT`.
+    SetReusePort(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_SOCKET` -> `SO_REUSEPORT`.
+    GetReusePort() -> (bool value) error fuchsia.posix.Errno;
+
+    // NOTE: get `SOL_SOCKET` -> `SO_PEERCRED` not supported in netstack.
+
+    // NOTE: get/set `SOL_SOCKET` -> `SO_SNDTIMEO` is implemented in the client (libfdio).
+    // NOTE: get/set `SOL_SOCKET` -> `SO_RCVTIMEO` is implemented in the client (libfdio).
+
+    /// Get `SOL_SOCKET` -> `SO_ACCEPTCONN`.
+    GetAcceptConn() -> (bool value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_SOCKET` -> `SO_BINDTODEVICE`.
+    SetBindToDevice(interface_name value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_SOCKET` -> `SO_BINDTODEVICE`.
+    GetBindToDevice() -> (interface_name value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_SOCKET` -> `SO_TIMESTAMP`.
+    SetTimestamp(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_SOCKET` -> `SO_TIMESTAMP`.
+    GetTimestamp() -> (bool value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IP` -> `IP_TOS`.
+    SetIpTypeOfService(uint8 value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_IP` -> `IP_TOS`.
+    GetIpTypeOfService() -> (uint8 value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IP` -> `IP_TTL`.
+    // [1, 255] but -1 means ipv4.sysctl_ip_default_ttl.
+    // https://github.com/torvalds/linux/blob/v5.11/net/ipv4/ip_sockglue.c#L1596-L1603
+    SetIpTtl(OptionalUint8 value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_IP` -> `IP_TTL`.
+    GetIpTtl() -> (uint8 value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IP` -> `IP_PKTINFO`.
+    SetIpPacketInfo(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_IP` -> `IP_PKTINFO`.
+    GetIpPacketInfo() -> (bool value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IP` -> `IP_RECVTOS`.
+    SetIpReceiveTypeOfService(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_IP` -> `IP_RECVTOS`.
+    GetIpReceiveTypeOfService() -> (bool value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IP` -> `IP_MULTICAST_IF`.
+    SetIpMulticastInterface(fuchsia.net.interface_id iface, fuchsia.net.Ipv4Address address) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_IP` -> `IP_MULTICAST_IF`.
+    GetIpMulticastInterface() -> (fuchsia.net.Ipv4Address value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IP` -> `IP_MULTICAST_TTL`.
+    // [1, 255] but -1 means 1.
+    // https://github.com/torvalds/linux/blob/v5.11/net/ipv4/ip_sockglue.c#L1086-L1096
+    SetIpMulticastTtl(OptionalUint8 value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_IP` -> `IP_MULTICAST_TTL`.
+    GetIpMulticastTtl() -> (uint8 value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IP` -> `IP_MULTICAST_LOOP`.
+    SetIpMulticastLoopback(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_IP` -> `IP_MULTICAST_LOOP`.
+    GetIpMulticastLoopback() -> (bool value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IP` -> `IP_ADD_MEMBERSHIP`
+    AddIpMembership(IpMulticastMembership membership) -> () error fuchsia.posix.Errno;
+    /// Set `SOL_IP` -> `IP_DROP_MEMBERSHIP`
+    DropIpMembership(IpMulticastMembership membership) -> () error fuchsia.posix.Errno;
+
+    /// Set `SOL_IPV6` -> `IPV6_ADD_MEMBERSHIP`.
+    AddIpv6Membership(Ipv6MulticastMembership membership) -> () error fuchsia.posix.Errno;
+    /// Set `SOL_IPV6` -> `IPV6_DROP_MEMBERSHIP`.
+    DropIpv6Membership(Ipv6MulticastMembership membership) -> () error fuchsia.posix.Errno;
+
+    /// Set `SOL_IPV6` -> `IPV6_MULTICAST_IF`.
+    SetIpv6MulticastInterface(fuchsia.net.interface_id value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_IPV6` -> `IPV6_MULTICAST_IF`.
+    GetIpv6MulticastInterface() -> (fuchsia.net.interface_id value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IPV6` -> `IPV6_MULTICAST_HOPS`.
+    // [-1, 255] where -1 means IPV6_DEFAULT_MCASTHOPS, which is 1.
+    // https://github.com/torvalds/linux/blob/v5.11/net/ipv6/ipv6_sockglue.c#L742-L751
+    SetIpv6MulticastHops(OptionalUint8 value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_IPV6` -> `IPV6_MULTICAST_HOPS`.
+    GetIpv6MulticastHops() -> (uint8 value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IPV6` -> `IPV6_MULTICAST_LOOP`.
+    SetIpv6MulticastLoopback(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_IPV6` -> `IPV6_MULTICAST_LOOP`.
+    GetIpv6MulticastLoopback() -> (bool value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IPV6` -> `IPV6_V6ONLY`.
+    SetIpv6Only(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_IPV6` -> `IPV6_V6ONLY`.
+    GetIpv6Only() -> (bool value) error fuchsia.posix.Errno;
+
+    // NOTE: get `SOL_IPV6` -> `IPV6_PATHMTU` not supported in netstack.
+
+    /// Set `SOL_IPV6` -> `IPV6_RECVTCLASS`.
+    SetIpv6ReceiveTrafficClass(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_IPV6` -> `IPV6_RECVTCLASS`.
+    GetIpv6ReceiveTrafficClass() -> (bool value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IPV6` -> `IPV6_TCLASS`
+    // NOTE: see https://tools.ietf.org/html/rfc3542.html for definitions.
+    //
+    // [-1, 255] where -1 means "kernel default", which is 0.
+    // https://github.com/torvalds/linux/blob/v5.11/net/ipv6/ipv6_sockglue.c#L592-L602
+    SetIpv6TrafficClass(OptionalUint8 value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_IPV6` -> `IPV6_TCLASS`.
+    GetIpv6TrafficClass() -> (uint8 value) error fuchsia.posix.Errno;
+};
+
+/// IPv4 multicast membership options.
+struct IpMulticastMembership {
+    /// Interface index for membership.
+    fuchsia.net.interface_id iface;
+    /// Local interface address requesting or relinquishing ownership.
+    fuchsia.net.Ipv4Address local_addr;
+    /// Address of the multicast group the membership refers to.
+    fuchsia.net.Ipv4Address mcast_addr;
+};
+
+/// IPv6 multicast membership options.
+struct Ipv6MulticastMembership {
+    /// Interface index for membership.
+    fuchsia.net.interface_id iface;
+    /// Address of the multicast group the membership refers to.
+    fuchsia.net.Ipv6Address mcast_addr;
+};
+
+/// An optional byte value.
+// This exists because FIDL does not allow optional integers.
+union OptionalUint8 {
+    1: uint8 value;
+    2: Empty unset;
+};
+
+/// An optional uint32 value.
+// This exists because FIDL does not allow optional integers.
+union OptionalUint32 {
+    1: uint32 value;
+    2: Empty unset;
 };
 
 struct Empty {
@@ -101,6 +293,9 @@ protocol DatagramSocket {
     RecvMsg(bool want_addr, uint32 data_len, bool want_control, RecvMsgFlags flags) -> (fuchsia.net.SocketAddress? addr, bytes data, RecvControlData control, uint32 truncated) error fuchsia.posix.Errno;
     /// Sends a message on the socket.
     SendMsg(fuchsia.net.SocketAddress? addr, bytes:MAX data, SendControlData control, SendMsgFlags flags) -> (int64 len) error fuchsia.posix.Errno;
+
+    /// Retrieves creation information from the socket.
+    GetInfo() -> (Domain domain, DatagramSocketProtocol proto) error fuchsia.posix.Errno;
 };
 
 /// A stream socket.
@@ -119,6 +314,93 @@ protocol StreamSocket {
     Listen(int16 backlog) -> () error fuchsia.posix.Errno;
     /// Accepts a buffered incoming connection.
     Accept(bool want_addr) -> (fuchsia.net.SocketAddress? addr, StreamSocket s) error fuchsia.posix.Errno;
+
+    /// Retrieves creation information from the socket.
+    GetInfo() -> (Domain domain, StreamSocketProtocol proto) error fuchsia.posix.Errno;
+
+    /// Set `SOL_TCP` -> `TCP_NODELAY`.
+    SetTcpNoDelay(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_TCP` -> `TCP_NODELAY`.
+    GetTcpNoDelay() -> (bool value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_TCP` -> `TCP_MAXSEG`.
+    SetTcpMaxSegment(uint32 value_bytes) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_TCP` -> `TCP_MAXSEG`.
+    GetTcpMaxSegment() -> (uint32 value_bytes) error fuchsia.posix.Errno;
+
+    /// Set `SOL_TCP` -> `TCP_CORK`.
+    SetTcpCork(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_TCP` -> `TCP_CORK`.
+    GetTcpCork() -> (bool value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_TCP` -> `TCP_KEEPIDLE`.
+    SetTcpKeepAliveIdle(uint32 value_secs) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_TCP` -> `TCP_KEEPIDLE`.
+    GetTcpKeepAliveIdle() -> (uint32 value_secs) error fuchsia.posix.Errno;
+
+    /// Set `SOL_TCP` -> `TCP_KEEPINTVL`.
+    SetTcpKeepAliveInterval(uint32 value_secs) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_TCP` -> `TCP_KEEPINTVL`.
+    GetTcpKeepAliveInterval() -> (uint32 value_secs) error fuchsia.posix.Errno;
+
+    /// Set `SOL_TCP` -> `TCP_KEEPCNT`.
+    SetTcpKeepAliveCount(uint32 value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_TCP` -> `TCP_KEEPCNT`.
+    GetTcpKeepAliveCount() -> (uint32 value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_TCP` -> `TCP_SYNCNT`.
+    SetTcpSynCount(uint32 value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_TCP` -> `TCP_SYNCNT`.
+    GetTcpSynCount() -> (uint32 value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_TCP` -> `TCP_LINGER2`.
+    SetTcpLinger(OptionalUint32 value_secs) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_TCP` -> `TCP_LINGER2`.
+    GetTcpLinger() -> (OptionalUint32 value_secs) error fuchsia.posix.Errno;
+
+    /// Set `SOL_TCP` -> `TCP_DEFER_ACCEPT`.
+    SetTcpDeferAccept(uint32 value_secs) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_TCP` -> `TCP_DEFER_ACCEPT`.
+    GetTcpDeferAccept() -> (uint32 value_secs) error fuchsia.posix.Errno;
+
+    /// Set `SOL_TCP` -> `TCP_WINDOW_CLAMP`.
+    SetTcpWindowClamp(uint32 value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_TCP` -> `TCP_WINDOW_CLAMP`.
+    GetTcpWindowClamp() -> (uint32 value) error fuchsia.posix.Errno;
+
+    /// Get `SOL_TCP` -> `TCP_INFO`.
+    GetTcpInfo() -> (TcpInfo info) error fuchsia.posix.Errno;
+
+    /// Set `SOL_TCP` -> `TCP_QUICKACK`.
+    SetTcpQuickAck(bool value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_TCP` -> `TCP_QUICKACK`.
+    GetTcpQuickAck() -> (bool value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_TCP` -> `TCP_CONGESTION`.
+    SetTcpCongestion(TcpCongestionControl value) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_TCP` -> `TCP_CONGESTION`.
+    GetTcpCongestion() -> (TcpCongestionControl value) error fuchsia.posix.Errno;
+
+    /// Set `SOL_TCP` -> `TCP_USER_TIMEOUT`.
+    SetTcpUserTimeout(uint32 value_millis) -> () error fuchsia.posix.Errno;
+    /// Get `SOL_TCP` -> `TCP_USER_TIMEOUT`.
+    GetTcpUserTimeout() -> (uint32 value_millis) error fuchsia.posix.Errno;
+
+    // NOTE: set `SOL_TCP` -> `TCP_REPAIR_OPTIONS` not supported in netstack.
+    // NOTE: get `SOL_CTP` -> `TCP_NOTSENT_LOWAT` not supported in netstack.
+    // NOTE: get `SOL_TCP` -> `TCP_CC_INFO` not supported in netstack.
+};
+
+/// TCP congestion control modes.
+enum TcpCongestionControl {
+    RENO = 1;
+    CUBIC = 2;
+};
+
+/// TCP protocol information.
+table TcpInfo {
+    1: uint32 rtt_usec;
+    2: uint32 rtt_var_usec;
 };
 
 /// Holds information about an interface and its addresses.
