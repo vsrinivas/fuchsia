@@ -278,6 +278,9 @@ zx::status<> FsMount(const std::string& device_path, const std::string& mount_pa
                      disk_format_t format, const mount_options_t& mount_options,
                      zx::channel* outgoing_directory = nullptr);
 
+// Unmounts using fs/Admin.Shutdown.
+zx::status<> FsAdminUnmount(const std::string& mount_path, const zx::channel& outgoing_directory);
+
 zx::status<std::pair<ramdevice_client::RamNand, std::string>> OpenRamNand(
     const TestFilesystemOptions& options);
 

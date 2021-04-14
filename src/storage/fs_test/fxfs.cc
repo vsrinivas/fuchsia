@@ -28,7 +28,16 @@ class FxfsInstance : public FilesystemInstance {
     // seems to not support the new layout.
     mount_options_t new_options = options;
     new_options.admin = false;
-    return FsMount(device_path_, mount_path, DISK_FORMAT_FXFS, new_options);
+    return FsMount(device_path_, mount_path, DISK_FORMAT_FXFS, new_options, &outgoing_directory_);
+  }
+
+  zx::status<> Unmount(const std::string& mount_path) override {
+    zx::status<> status = FsAdminUnmount(mount_path, outgoing_directory_);
+    if (status.is_error()) {
+      return status;
+    }
+    outgoing_directory_.reset();
+    return zx::ok();
   }
 
   zx::status<> Fsck() override {
@@ -53,6 +62,7 @@ class FxfsInstance : public FilesystemInstance {
  private:
   RamDevice device_;
   std::string device_path_;
+  zx::channel outgoing_directory_;
 };
 
 std::unique_ptr<FilesystemInstance> FxfsFilesystem::Create(RamDevice device,

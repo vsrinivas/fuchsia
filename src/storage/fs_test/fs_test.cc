@@ -283,6 +283,29 @@ zx::status<> FsMount(const std::string& device_path, const std::string& mount_pa
   return zx::ok();
 }
 
+zx::status<> FsAdminUnmount(const std::string& mount_path, const zx::channel& outgoing_directory) {
+  // Detach from the namespace.
+  if (auto status = FsUnbind(mount_path); status.is_error()) {
+    return status;
+  }
+
+  // Now shut down the filesystem.
+  fidl::SynchronousInterfacePtr<fuchsia::fs::Admin> admin;
+  std::string service_name = std::string("svc/") + fuchsia::fs::Admin::Name_;
+  auto status = zx::make_status(fdio_service_connect_at(
+      outgoing_directory.get(), service_name.c_str(), admin.NewRequest().TakeChannel().get()));
+  if (status.is_error()) {
+    std::cout << "Unable to connect to admin service: " << status.status_string() << std::endl;
+    return status;
+  }
+  status = zx::make_status(admin->Shutdown());
+  if (status.is_error()) {
+    std::cout << "Shut down failed: " << status.status_string() << std::endl;
+    return status;
+  }
+  return zx::ok();
+}
+
 // Returns device and device path.
 zx::status<std::pair<ramdevice_client::RamNand, std::string>> OpenRamNand(
     const TestFilesystemOptions& options) {
@@ -536,23 +559,8 @@ class FatfsInstance : public FilesystemInstance {
   }
 
   zx::status<> Unmount(const std::string& mount_path) override {
-    // Detach from the namespace.
-    if (auto status = FsUnbind(mount_path); status.is_error()) {
-      return status;
-    }
-
-    // Now shut down the filesystem.
-    fidl::SynchronousInterfacePtr<fuchsia::fs::Admin> admin;
-    std::string service_name = std::string("svc/") + fuchsia::fs::Admin::Name_;
-    auto status = zx::make_status(fdio_service_connect_at(
-        outgoing_directory_.get(), service_name.c_str(), admin.NewRequest().TakeChannel().get()));
+    zx::status<> status = FsAdminUnmount(mount_path, outgoing_directory_);
     if (status.is_error()) {
-      std::cout << "Unable to connect to admin service: " << status.status_string() << std::endl;
-      return status;
-    }
-    status = zx::make_status(admin->Shutdown());
-    if (status.is_error()) {
-      std::cout << "Shut down failed: " << status.status_string() << std::endl;
       return status;
     }
     outgoing_directory_.reset();
