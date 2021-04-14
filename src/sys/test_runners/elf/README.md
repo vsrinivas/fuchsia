@@ -22,8 +22,7 @@ fx build
 
 ## Arguments
 
-Test authors can specify command line arguments to their tests in their
-component manifest file. These will be passed to the test when it is run.
+See [passsing-arguments](passing-arguments) to learn more.
 
 ## Testing
 
@@ -40,3 +39,4 @@ all the test logic exists in `src/test_server.rs`. Unit tests are co-located
 with the implementation.
 
 [test-runner]: ../README.md
+[passing-arguments]: /docs/concepts/testing/v2/test_runner_framework.md#passing_arguments

@@ -98,7 +98,7 @@ pub enum NamespaceError {
 /// Error returned when validating arguments.
 #[derive(Debug, Error)]
 pub enum ArgumentError {
-    #[error("Restricted argument passed: {}", _0)]
+    #[error("Restricted argument passed: {}.\nSee https://fuchsia.dev/fuchsia-src/concepts/testing/v2/test_runner_framework#passing_arguments to learn more.", _0)]
     RestrictedArg(String),
 }
 

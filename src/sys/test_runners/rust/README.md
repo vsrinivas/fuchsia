@@ -30,14 +30,7 @@ Test cases are executed concurrently (max 10 test cases at a time by default).
 
 ## Arguments
 
-Test authors can specify command line arguments to their tests in their
-component manifest file. These will be passed to the test when it is run.
-
-The following flags are restricted and the test fails if any are passed as
-fuchsia.test.Suite provides equivalent functionality that replaces them
-
-- `nocapture`
-- `list`
+See [passsing-arguments](passing-arguments) to learn more.
 
 ## Limitations
 
@@ -61,3 +54,4 @@ with the implementation. Integration tests are located in `tests` folder.
 
 [test-runner]: ../README.md
 [override-parallel]: /docs/concepts/testing/v2_test_component.md#running_test_cases_in_parallel
+[passing-arguments]: /docs/concepts/testing/v2/test_runner_framework.md#passing_arguments

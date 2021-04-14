@@ -171,6 +171,80 @@ If using `run-test-suite` to launch tests, pass this as an argument:
 fx shell run-test-suite --parallel=5 <test_url>
 ```
 
+### Running test multiple times
+
+To run a test multiple times use:
+
+```posix-terminal
+ fx test --count=<n> <test_url>
+```
+
+If an iteration times out, no further iteration will be executed.
+
+### Passing arguments
+
+Custom arguments to the tests can be passed using `fx test`:
+
+```posix-terminal
+fx test <test_url> -- <custom_args>
+```
+
+Individual test runners have restrictions on these custom flags:
+
+#### GoogleTest runner {#gtest-runner-custom-arg}
+
+Note the following known behavior change:
+
+**--gtest_break_on_failure**: As each test case is executed in a different process,
+this flag will not work.
+
+The following flags are restricted and the test fails if any are passed as
+fuchsia.test.Suite provides equivalent functionality that replaces them.
+
+- **--gtest_filter** - Instead use:
+
+```posix-terminal
+ fx test --test-filter=<my_filter> <test_url>
+```
+
+- **--gtest_also_run_disabled_tests** - Instead use:
+
+```posix-terminal
+ fx test --also-run-disabled-tests <test_url>
+```
+
+- **--gtest_repeat** - See [Running test multiple times](#running_test_multiple_times).
+- **--gtest_output** - Emitting gtest json output is not supported.
+- **--gtest_list_tests** - Listing test cases is not supported.
+
+#### Rust runner {#rust-runner-custom-arg}
+
+The following flags are restricted and the test fails if any are passed as
+fuchsia.test.Suite provides equivalent functionality that replaces them.
+
+- **--nocapture** - Output is printed by default.
+- **--list** - Listing test cases is not supported.
+
+#### Go test runner {#gotest-runner-custom-arg}
+
+Note the following known behavior change:
+
+**-test.failfast**: As each test case is executed in a different process, this
+flag will only influence sub-tests.
+
+The following flags are restricted and the test fails if any are passed as
+fuchsia.test.Suite provides equivalent functionality that replaces them
+
+- **-test.run** - Instead use:
+
+```posix-terminal
+ fx test --test-filter=<my_filter> <test_url>
+```
+
+- **-test.count** - See [Running test multiple times](#running_test_multiple_times).
+- **-test.v** - Output is printed by default.
+- **-test.parallel** - See [Controlling parallel execution of test cases](#controlling_parallel_execution_of_test_cases).
+
 ## Temporary storage
 
 To use temporary storage in your test, add the following to your component manifest:
