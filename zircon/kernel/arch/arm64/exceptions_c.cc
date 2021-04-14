@@ -375,15 +375,6 @@ static void arm64_data_abort_handler(iframe_t* iframe, uint exception_flags, uin
                 iframe->elr, far, iss, WnR, CM, dfsc, dfsc_to_string(dfsc));
 }
 
-static inline void fix_exception_percpu_pointer(uint32_t exception_flags, uint64_t* regs) {
-  // If we're returning to kernel space, make sure we restore the correct
-  // per-CPU pointer to the fixed register.
-  // TODO: move this fixup to the assembly glue that wraps the C irq/exception code
-  if ((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0) {
-    regs[15] = (uint64_t)arm64_read_percpu_ptr();
-  }
-}
-
 /* called from assembly */
 extern "C" void arm64_sync_exception(iframe_t* iframe, uint exception_flags, uint32_t esr) {
   uint32_t ec = BITS_SHIFT(esr, 31, 26);
@@ -452,8 +443,6 @@ extern "C" void arm64_sync_exception(iframe_t* iframe, uint exception_flags, uin
      */
     arch_iframe_process_pending_signals(iframe);
   }
-
-  fix_exception_percpu_pointer(exception_flags, iframe->r);
 }
 
 /* called from assembly */
@@ -488,8 +477,6 @@ extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
   if (do_preempt) {
     Thread::Current::Preempt();
   }
-
-  fix_exception_percpu_pointer(exception_flags, iframe->r);
 }
 
 /* called from assembly */

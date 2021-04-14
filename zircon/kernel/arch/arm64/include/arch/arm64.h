@@ -127,6 +127,5 @@ __END_CDECLS
 
 /* used in above exception_flags arguments */
 #define ARM64_EXCEPTION_FLAG_LOWER_EL (1 << 0)
-#define ARM64_EXCEPTION_FLAG_ARM32 (1 << 1)
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_H_

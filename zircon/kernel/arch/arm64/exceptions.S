@@ -16,8 +16,7 @@
 #define __has_feature(x) 0
 #endif
 
-.section .text.boot.vectab,"ax",@progbits
-.align 12
+.text
 
 #define DW_REG_lr   30
 #define DW_REG_sp   31
@@ -75,7 +74,7 @@ cfi_register_is_zero DW_REG_sp
 cfi_register_is_zero DW_REG_ELR_mode
 .endm
 
-.macro regrestore
+.macro regrestore, from_lower_el_64
 // Preserve x0-x1 for syscall returns (eventually x0-x7)
 ldp  lr, x9, [sp, #regsave_special_reg_offset]
 .cfi_same_value lr
@@ -92,7 +91,14 @@ pop_regs x6, x7
 pop_regs x8, x9
 pop_regs x10, x11
 pop_regs x12, x13
+.if \from_lower_el_64
 pop_regs x14, x15
+.else
+// If restoring from EL1 -> EL1, leave x15 alone since it's holding the current
+// per cpu pointer. It may have changed since we originally took the exception
+// if we had been rescheduled to another cpu.
+pop_regs x14, xzr
+.endif
 pop_regs x16, x17
 pop_regs x18, x19
 pop_regs x20, x21
@@ -212,41 +218,65 @@ mark_lr_sp_inaccessible
 #endif
 .endm
 
+// Unhandled exception or irq. Save the full state and pass the which value through to
+// the inner routine.
 .macro invalid_exception, which
     start_isr_func_cfi
     regsave
     restore_fixed_regs x9
-    mov x1, #\which
     mov x0, sp
+    mov x1, #\which
     bl  arm64_invalid_exception
     b   .
 .endm
 
-.macro irq_exception, exception_flags
+.macro irq_exception, from_lower_el_64
     start_isr_func_cfi
     regsave
-    msr daifclr, #1 /* reenable fiqs once elr and spsr have been saved */
-    mov x0, sp
-    mov x1, #\exception_flags
-.if (\exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)
+.if \from_lower_el_64
     restore_fixed_regs x9
+    mov x1, #ARM64_EXCEPTION_FLAG_LOWER_EL
 .else
     restore_percpu_ptr x9
+    mov x1, #0
 .endif
+    msr daifclr, #1 // reenable fiqs once elr, spsr, and fixed regs have been saved
+    mov x0, sp
     bl  arm64_irq
-    msr daifset, #1 /* disable fiqs to protect elr and spsr restore */
-.if (\exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)
+    msr daifset, #1 // disable fiqs to protect elr and spsr restore
+.if \from_lower_el_64
     b   arm64_exc_shared_restore_lower_el
 .else
     b   arm64_exc_shared_restore
 .endif
 .endm
 
-.macro sync_exception, exception_flags, from_lower_el_64=0
+.macro fiq_exception, from_lower_el_64
+    start_isr_func_cfi
+    regsave
+.if \from_lower_el_64
+    restore_fixed_regs x9
+    mov x1, #ARM64_EXCEPTION_FLAG_LOWER_EL
+.else
+    restore_percpu_ptr x9
+    mov x1, #0
+.endif
+    mov x0, sp
+    bl  platform_fiq
+.if \from_lower_el_64
+    b   arm64_exc_shared_restore_lower_el
+.else
+    b   arm64_exc_shared_restore
+.endif
+.endm
+
+// TODO: find the appropriate place to reenable FIQs here when they're needed.
+.macro sync_exception, from_lower_el_64
     start_isr_func_cfi
     regsave
     mrs x9, esr_el1
 .if \from_lower_el_64
+    restore_fixed_regs x11
     // If this is a syscall, x0-x7 contain args and x16 contains syscall num.
     // x10 contains elr_el1.
     lsr x11, x9, #26              // shift esr right 26 bits to get ec
@@ -257,19 +287,25 @@ mark_lr_sp_inaccessible
 .endif
     // Prepare the default sync_exception args
     mov w2, w9
-    mov x1, #\exception_flags
-.if (\exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)
+.if \from_lower_el_64
+    // We've just run out of space to fit in the 0x80 bytes of the sync exception vector.
+    // branch to another block of code later in the file that will finish getting ready
+    // and call arm64_sync_exception.
     b arm64_sync_exception_lower_el
 .else
     mov x0, sp
+    mov x1, #0
     bl arm64_sync_exception
     b  arm64_exc_shared_restore
 .endif
 .endm
 
+// main vector table, aligned on 2048 byte boundary
+.align 11
 FUNCTION_LABEL(arm64_el1_exception_base)
 
-/* exceptions from current EL, using SP0 */
+// exceptions from current EL, using SP0
+// the first 4 are invalid because SP0 is not used in EL1
 .org 0x000
 LOCAL_FUNCTION_LABEL(arm64_el1_sync_exc_current_el_SP0)
     invalid_exception 0
@@ -290,25 +326,20 @@ LOCAL_FUNCTION_LABEL(arm64_el1_err_exc_current_el_SP0)
     invalid_exception 3
 END_FUNCTION(arm64_el1_err_exc_current_el_SP0)
 
-/* exceptions from current EL, using SPx */
+// exceptions from current EL, using SPx
 .org 0x200
 LOCAL_FUNCTION_LABEL(arm64_el1_sync_exc_current_el_SPx)
-    sync_exception 0 /* same EL, arm64 */
+    sync_exception 0 // same EL, arm64
 END_FUNCTION(arm64_el1_sync_exc_current_el_SPx)
 
 .org 0x280
 LOCAL_FUNCTION_LABEL(arm64_el1_irq_current_el_SPx)
-    irq_exception 0 /* same EL, arm64 */
+    irq_exception 0 // same EL, arm64
 END_FUNCTION(arm64_el1_irq_current_el_SPx)
 
 .org 0x300
 LOCAL_FUNCTION_LABEL(arm64_el1_fiq_current_el_SPx)
-    start_isr_func_cfi
-    regsave
-    restore_percpu_ptr x9
-    mov x0, sp
-    bl  platform_fiq
-    b  arm64_exc_shared_restore
+    fiq_exception 0 // same EL, arm64
 END_FUNCTION(arm64_el1_fiq_current_el_SPx)
 
 .org 0x380
@@ -316,25 +347,20 @@ LOCAL_FUNCTION_LABEL(arm64_el1_err_exc_current_el_SPx)
     invalid_exception 0x13
 END_FUNCTION(arm64_el1_err_exc_current_el_SPx)
 
-/* exceptions from lower EL, running arm64 */
+// exceptions from lower EL, running arm64
 .org 0x400
 LOCAL_FUNCTION_LABEL(arm64_el1_sync_exc_lower_el_64)
-    sync_exception (ARM64_EXCEPTION_FLAG_LOWER_EL), 1
+    sync_exception 1 // lower EL, arm64
 END_FUNCTION(arm64_el1_sync_exc_lower_el_64)
 
 .org 0x480
 LOCAL_FUNCTION_LABEL(arm64_el1_irq_lower_el_64)
-    irq_exception (ARM64_EXCEPTION_FLAG_LOWER_EL)
+    irq_exception 1 // lower EL, arm64
 END_FUNCTION(arm64_el1_irq_lower_el_64)
 
 .org 0x500
 LOCAL_FUNCTION_LABEL(arm64_el1_fiq_lower_el_64)
-    start_isr_func_cfi
-    regsave
-    restore_fixed_regs x9
-    mov x0, sp
-    bl  platform_fiq
-    b  arm64_exc_shared_restore_lower_el
+    fiq_exception 1 // lower EL, arm64
 END_FUNCTION(arm64_el1_fiq_lower_el_64)
 
 .org 0x580
@@ -342,20 +368,21 @@ LOCAL_FUNCTION_LABEL(arm64_el1_err_exc_lower_el_64)
     invalid_exception 0x23
 END_FUNCTION(arm64_el1_err_exc_lower_el_64)
 
-/* exceptions from lower EL, running arm32 */
+// exceptions from lower EL, running arm32
+// all of these are invalid since there is no arm32 user space
 .org 0x600
 LOCAL_FUNCTION_LABEL(arm64_el1_sync_exc_lower_el_32)
-    sync_exception (ARM64_EXCEPTION_FLAG_LOWER_EL|ARM64_EXCEPTION_FLAG_ARM32)
+    invalid_exception 0x30
 END_FUNCTION(arm64_el1_sync_exc_lower_el_32)
 
 .org 0x680
 LOCAL_FUNCTION_LABEL(arm64_el1_irq_lower_el_32)
-    irq_exception (ARM64_EXCEPTION_FLAG_LOWER_EL|ARM64_EXCEPTION_FLAG_ARM32)
+    invalid_exception 0x31
 END_FUNCTION(arm64_el1_irq_lower_el_32)
 
 .org 0x700
-LOCAL_FUNCTION(arm64_el1_fiq_lower_el_32)
-    b arm64_el1_fiq_lower_el_64
+LOCAL_FUNCTION_LABEL(arm64_el1_fiq_lower_el_32)
+    invalid_exception 0x32
 END_FUNCTION(arm64_el1_fiq_lower_el_32)
 
 .org 0x780
@@ -366,26 +393,29 @@ END_FUNCTION(arm64_el1_err_exc_lower_el_32)
 LOCAL_FUNCTION_LABEL(arm64_sync_exception_lower_el)
     start_isr_func_cfi
     mov x0, sp
-    restore_fixed_regs x9
+    mov x1, #ARM64_EXCEPTION_FLAG_LOWER_EL
     bl  arm64_sync_exception
     b arm64_exc_shared_restore_lower_el
 END_FUNCTION(arm64_sync_exception_lower_el)
 
-// CFI is independent of any other concept of function boundary.
-// Everything in start_helper applies the same whether entering at
-// the first or the second entry point.  The first entry point is used
-// when returning to user mode, the second when returning to kernel.
+// The first entry point is used when returning to user mode,
+// the second when returning to kernel.
 LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore_lower_el)
     start_helper
     save_shadow_call_sp x9
-    // Fall through to join the same-EL case.
+    regrestore 1 // lower EL
+    eret
+    // Prevent speculation through ERET
+    SPECULATION_POSTFENCE
+END_FUNCTION(arm64_exc_shared_restore_lower_el)
+
 LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore)
-    regrestore
+    start_helper
+    regrestore 0 // same EL
     eret
     // Prevent speculation through ERET
     SPECULATION_POSTFENCE
 END_FUNCTION(arm64_exc_shared_restore)
-END_DATA(arm64_exc_shared_restore_lower_el)
 
 //
 // Syscall args are in x0-x7 already.
@@ -406,7 +436,9 @@ END_DATA(arm64_exc_shared_restore_lower_el)
 .endm
 
 //
-// Expected state prior to arm64_syscall_dispatcher branch...
+// Expected state prior to arm64_syscall_dispatcher branch:
+//
+// percpu and shadow call stack registers have been restored
 //
 // x0-x7 - contains syscall arguments
 // x9    - contains esr_el1
@@ -414,14 +446,13 @@ END_DATA(arm64_exc_shared_restore_lower_el)
 // x16   - contains syscall_num
 // sp    - points to base of frame (frame->r[0])
 //
-// Expected state prior to branching to syscall_dispatcher macro
+// Expected state prior to branching to syscall_dispatcher macro:
 //
 // x0-x7  - contains syscall arguments
 // x10    - contains userspace pc
 //
 LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     start_isr_func_cfi
-    restore_fixed_regs x11
     // Verify syscall number and call the unknown handler if bad.
     cmp  x16, #ZX_SYS_COUNT
     bhs  .Lunknown_syscall
