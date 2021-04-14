@@ -13,6 +13,7 @@ impl From<FxfsError> for Status {
             FxfsError::NotDir => Status::NOT_DIR,
             FxfsError::NotFile => Status::NOT_FILE,
             FxfsError::NotFound => Status::NOT_FOUND,
+            FxfsError::NotEmpty => Status::NOT_EMPTY,
             FxfsError::ReadOnlyFilesystem => Status::ACCESS_DENIED,
         }
     }

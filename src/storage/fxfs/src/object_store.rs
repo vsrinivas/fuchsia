@@ -362,7 +362,8 @@ impl ObjectStore {
                     iter.advance_with_hint(&ObjectKey::extent(oid, attr_id, 0..1)).await?;
                 } else {
                     // We expect either attribute records or extent records.
-                    bail!(FxfsError::Inconsistent);
+                    return Err(anyhow!(FxfsError::Inconsistent)
+                        .context(format!("Unexpected item {:?}", item)));
                 }
             }
             transaction.add(
