@@ -9,8 +9,8 @@
 
 #include <string>
 
-#include "src/lib/analytics/cpp/google_analytics/event.h"
 #include "src/lib/analytics/cpp/google_analytics/general_parameters.h"
+#include "src/lib/analytics/cpp/google_analytics/hit.h"
 
 namespace analytics::google_analytics {
 
@@ -27,7 +27,7 @@ namespace analytics::google_analytics {
 //     ga_client.SetUserAgent("Example Agent")
 //     int64_t value = 12345;
 //     auto event = Event("category", "action", "label", value);
-//     ga_client.AddEvent(event)
+//     ga_client.AddHit(event)
 //
 // For an example implementation, please see
 // //src/developer/debug/zxdb/console/google_analytics_client.[cc,h]
@@ -48,7 +48,7 @@ class Client {
   // Add parameters shared by all metrics, for example, an (application name).
   void AddSharedParameters(const GeneralParameters& shared_parameters);
 
-  void AddEvent(const Event& event);
+  void AddHit(const Hit& hit);
 
  private:
   bool IsReady() const;

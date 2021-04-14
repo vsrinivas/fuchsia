@@ -17,6 +17,12 @@ constexpr char kCustomDimensionKeyFormat[] = "cd%d";
 constexpr int kCustomDimensionIndexMin = 1;
 constexpr int kCustomDimensionIndexMax = 200;
 
+// Google Analytics custom metrics.
+// See https://developers.google.com/analytics/devguides/collection/protocol/v1/parameters#cm_
+constexpr char kCustomMetricKeyFormat[] = "cm%d";
+constexpr int kCustomMetricIndexMin = 1;
+constexpr int kCustomMetricIndexMax = 200;
+
 // Other general parameters.
 // See https://developers.google.com/analytics/devguides/collection/protocol/v1/parameters
 constexpr char kApplicationNameKey[] = "an";
@@ -29,6 +35,11 @@ GeneralParameters::~GeneralParameters() = default;
 void GeneralParameters::SetCustomDimension(int index, std::string_view value) {
   FX_DCHECK(index >= kCustomDimensionIndexMin && index <= kCustomDimensionIndexMax);
   parameters_[fxl::StringPrintf(kCustomDimensionKeyFormat, index)] = value;
+}
+
+void GeneralParameters::SetCustomMetric(int index, int64_t value) {
+  FX_DCHECK(index >= kCustomMetricIndexMin && index <= kCustomMetricIndexMax);
+  parameters_[fxl::StringPrintf(kCustomMetricKeyFormat, index)] = std::to_string(value);
 }
 
 void GeneralParameters::SetApplicationName(std::string_view application_name) {

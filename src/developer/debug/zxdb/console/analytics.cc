@@ -40,7 +40,7 @@ void Analytics::IfEnabledSendInvokeEvent(Session* session) {
 
     GoogleAnalyticsEvent event(kEventCategoryGeneral, kEventActionInvoke);
     event.AddGeneralParameters(parameters);
-    SendGoogleAnalyticsEvent(event);
+    SendGoogleAnalyticsHit(event);
   }
 }
 

@@ -62,7 +62,7 @@ namespace analytics::core_dev_tools {
 //     // The definition of a static public function in ToolAnalytics
 //     void ToolAnalytics::IfEnabledSendExitEvent() {
 //       if(<runtime analytics enabled>) {
-//         SendGoogleAnalyticsEvent(<...>);
+//         SendGoogleAnalyticsHit(<...>);
 //       }
 //     }
 //
@@ -135,9 +135,9 @@ class Analytics {
       // for more information.
       parameters.SetApplicationName("");
 
-      GoogleAnalyticsEvent event(kEventCategoryGeneral, kEventActionInvoke);
+      google_analytics::Event event(kEventCategoryGeneral, kEventActionInvoke);
       event.AddGeneralParameters(parameters);
-      SendGoogleAnalyticsEvent(event);
+      SendGoogleAnalyticsHit(event);
     }
   }
 
@@ -151,12 +151,12 @@ class Analytics {
   static constexpr char kEventCategoryGeneral[] = "general";
   static constexpr char kEventActionInvoke[] = "invoke";
 
-  static void SendGoogleAnalyticsEvent(const google_analytics::Event& event) {
+  static void SendGoogleAnalyticsHit(const google_analytics::Hit& hit) {
     if (!client_is_cleaned_up_) {
       if (!client_) {
         CreateAndPrepareGoogleAnalyticsClient();
       }
-      client_->AddEvent(event);
+      client_->AddHit(hit);
     }
   }
 
@@ -214,11 +214,11 @@ class Analytics {
   };
 
   static void SendAnalyticsManualEnableEvent() {
-    SendGoogleAnalyticsEvent(google_analytics::Event(kEventCategoryAnalytics, kEventActionEnable));
+    SendGoogleAnalyticsHit(google_analytics::Event(kEventCategoryAnalytics, kEventActionEnable));
   }
 
   static void SendAnalyticsDisableEvent() {
-    SendGoogleAnalyticsEvent(google_analytics::Event(kEventCategoryAnalytics, kEventActionDisable));
+    SendGoogleAnalyticsHit(google_analytics::Event(kEventCategoryAnalytics, kEventActionDisable));
   }
 
   inline static bool client_is_cleaned_up_ = false;

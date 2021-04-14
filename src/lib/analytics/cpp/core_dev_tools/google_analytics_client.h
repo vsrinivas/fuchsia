@@ -7,11 +7,14 @@
 
 #include "src/lib/analytics/cpp/core_dev_tools/analytics_executor.h"
 #include "src/lib/analytics/cpp/google_analytics/client.h"
+#include "src/lib/analytics/cpp/google_analytics/event.h"
+#include "src/lib/analytics/cpp/google_analytics/timing.h"
 
 namespace analytics::core_dev_tools {
 
 // Forwarding types from analytics::google_analytics
 using GoogleAnalyticsEvent = ::analytics::google_analytics::Event;
+using GoogleAnalyticsTiming = ::analytics::google_analytics::Timing;
 
 // To use this client, one needs to (if not already) add the following lines to the main()
 // function before any threads are spawned and any use of Curl or this client:

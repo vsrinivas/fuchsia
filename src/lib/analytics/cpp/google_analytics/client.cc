@@ -32,12 +32,12 @@ void Client::AddSharedParameters(const GeneralParameters& shared_parameters) {
   shared_parameters_.insert(parameters.begin(), parameters.end());
 }
 
-void Client::AddEvent(const Event& event) {
+void Client::AddHit(const Hit& hit) {
   FX_DCHECK(IsReady());
 
   std::map<std::string, std::string> parameters(shared_parameters_);
-  const auto& event_parameters = event.parameters();
-  parameters.insert(event_parameters.begin(), event_parameters.end());
+  const auto& hit_parameters = hit.parameters();
+  parameters.insert(hit_parameters.begin(), hit_parameters.end());
 
   SendData(user_agent_, std::move(parameters));
 }

@@ -4,9 +4,10 @@
 
 #include "src/lib/analytics/cpp/google_analytics/event.h"
 
+namespace analytics::google_analytics {
+
 namespace {
 
-constexpr char kHitTypeKey[] = "t";
 constexpr char kHitType[] = "event";
 constexpr char kCategoryKey[] = "ec";
 constexpr char kActionKey[] = "ea";
@@ -15,22 +16,15 @@ constexpr char kValueKey[] = "ev";
 
 }  // namespace
 
-namespace analytics::google_analytics {
-
 Event::Event(std::string_view category, std::string_view action,
              const std::optional<std::string_view>& label, const std::optional<int64_t>& value) {
-  parameters_[kHitTypeKey] = kHitType;
-  parameters_[kCategoryKey] = category;
-  parameters_[kActionKey] = action;
+  SetParameter(Hit::kHitTypeKey, kHitType);
+  SetParameter(kCategoryKey, category);
+  SetParameter(kActionKey, action);
   if (label.has_value())
-    parameters_[kLabelKey] = label.value();
+    SetParameter(kLabelKey, label.value());
   if (value.has_value())
-    parameters_[kValueKey] = std::to_string(value.value());
-}
-
-void Event::AddGeneralParameters(const GeneralParameters& general_parameters) {
-  const auto& parameters = general_parameters.parameters();
-  parameters_.insert(parameters.begin(), parameters.end());
+    SetParameter(kValueKey, std::to_string(value.value()));
 }
 
 }  // namespace analytics::google_analytics

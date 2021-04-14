@@ -31,6 +31,7 @@ class GeneralParameters {
 
  protected:
   void SetCustomDimension(int index, std::string_view value);
+  void SetCustomMetric(int index, int64_t value);
   void SetApplicationName(std::string_view application_name);
   void SetApplicationVersion(std::string_view application_version);
 
