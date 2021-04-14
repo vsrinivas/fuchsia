@@ -40,7 +40,7 @@ using sysmem_driver::MemoryAllocator;
 namespace sysmem_driver {
 namespace {
 
-// These defaults only take effect if there is no SYSMEM_METADATA, and also
+// These defaults only take effect if there is no SYSMEM_METADATA_TYPE, and also
 // neither of these kernel cmdline parameters set:
 // driver.sysmem.contiguous_memory_size
 // driver.sysmem.protected_memory_size
@@ -336,7 +336,7 @@ zx_status_t Device::Bind() {
   sysmem_metadata_t metadata;
 
   size_t metadata_actual;
-  status = DdkGetMetadata(SYSMEM_METADATA, &metadata, sizeof(metadata), &metadata_actual);
+  status = DdkGetMetadata(SYSMEM_METADATA_TYPE, &metadata, sizeof(metadata), &metadata_actual);
   if (status == ZX_OK && metadata_actual == sizeof(metadata)) {
     pdev_device_info_vid_ = metadata.vid;
     pdev_device_info_pid_ = metadata.pid;

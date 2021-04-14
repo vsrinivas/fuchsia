@@ -5,7 +5,7 @@
 library fuchsia.sysmem;
 
 /// "SyM"
-const uint32 SYSMEM_METADATA = 0x53794d64;  // 0x53794d00 | DEVICE_METADATA_PRIVATE
+const uint32 SYSMEM_METADATA_TYPE = 0x53794d64;  // 0x53794d00 | DEVICE_METADATA_PRIVATE
 
 struct SysmemMetadata {
   uint32 vid;

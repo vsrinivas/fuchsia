@@ -74,7 +74,7 @@ FakeDisplayDeviceTree::FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper
                                              bool start_vsync)
     : sysmem_(std::move(sysmem)) {
   pdev_.UseFakeBti();
-  ddk_.SetMetadata(SYSMEM_METADATA, &sysmem_metadata_, sizeof(sysmem_metadata_));
+  ddk_.SetMetadata(SYSMEM_METADATA_TYPE, &sysmem_metadata_, sizeof(sysmem_metadata_));
 
   // Protocols for sysmem
   ddk_.SetProtocol(ZX_PROTOCOL_PBUS, pbus_.proto());

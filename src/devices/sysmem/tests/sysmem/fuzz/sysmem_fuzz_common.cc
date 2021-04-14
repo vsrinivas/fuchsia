@@ -37,7 +37,7 @@ bool FakeDdkSysmem::Init() {
       .protected_memory_size = 1024 * 1024,
       .contiguous_memory_size = 0,
   };
-  ddk_.SetMetadata(SYSMEM_METADATA, &metadata, sizeof(metadata));
+  ddk_.SetMetadata(SYSMEM_METADATA_TYPE, &metadata, sizeof(metadata));
 
   pdev_.UseFakeBti();
 

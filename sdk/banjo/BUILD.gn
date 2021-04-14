@@ -136,7 +136,6 @@ _fidl_translated_deps -= [
   "fuchsia.hardware.wlan.mac",  # Blocked by fuchsia.hardware.wlan.info.
   "fuchsia.hardware.wlanif",  # Blocked by fuchsia.hardware.wlan.info.
   "fuchsia.hardware.wlanphyimpl",  # Blocked by ddk.hw.wlan.wlaninfo.
-  "fuchsia.sysmem",  # A struct and a constant share the same canonical name.
   "zircon.hw.pci",  # Dummy library.
 ]
 

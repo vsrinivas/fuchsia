@@ -31,7 +31,7 @@ zx_status_t QemuArm64::SysmemInit() {
   };
 
   const pbus_metadata_t kSysmemMetadataList[] = {{
-      .type = SYSMEM_METADATA,
+      .type = SYSMEM_METADATA_TYPE,
       .data_buffer = reinterpret_cast<const uint8_t*>(&kSysmemMetadata),
       .data_size = sizeof(kSysmemMetadata),
   }};
