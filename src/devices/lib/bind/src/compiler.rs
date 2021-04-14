@@ -426,7 +426,7 @@ impl<'a> SymbolicInstructionInfo<'a> {
         SymbolicInstructionInfo {
             location: None,
             instruction: SymbolicInstruction::AbortIfNotEqual {
-                lhs: Symbol::NumberValue(BIND_AUTOBIND.into()),
+                lhs: Symbol::DeprecatedKey(BIND_AUTOBIND),
                 rhs: Symbol::NumberValue(0),
             },
         }

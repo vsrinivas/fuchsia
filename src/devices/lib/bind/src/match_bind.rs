@@ -45,7 +45,6 @@ impl DeviceMatcher {
     }
 
     pub fn match_bind(mut self) -> Result<bool, BytecodeError> {
-        // TODO(fxb/69608): Handle jump instructions.
         while let Some(byte) = self.iter.next() {
             let op_byte = FromPrimitive::from_u8(byte).ok_or(BytecodeError::InvalidOp(byte))?;
             match op_byte {

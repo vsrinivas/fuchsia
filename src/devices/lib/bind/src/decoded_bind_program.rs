@@ -21,7 +21,6 @@ pub struct DecodedProgram {
     pub instructions: Vec<u8>,
 }
 
-#[allow(dead_code)]
 impl DecodedProgram {
     pub fn new(mut bytecode: Vec<u8>) -> Result<Self, BytecodeError> {
         if bytecode.len() < MINIMUM_BYTECODE_SZ {
