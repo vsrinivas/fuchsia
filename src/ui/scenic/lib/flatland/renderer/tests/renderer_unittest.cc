@@ -531,7 +531,8 @@ VK_TEST_F(VulkanRendererTest, DeregistrationTest) {
   DeregistrationTest(&renderer, sysmem_allocator_.get());
 }
 
-VK_TEST_F(VulkanRendererTest, RenderImageAfterBufferCollectionReleasedTest) {
+// TODO(fx.bug/dev:66216) This test is flaking on FEMU.
+VK_TEST_F(VulkanRendererTest, DISABLED_RenderImageAfterBufferCollectionReleasedTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
