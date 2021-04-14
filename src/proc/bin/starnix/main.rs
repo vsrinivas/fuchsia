@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Error},
-    fidl::endpoints::{ClientEnd, ServerEnd},
+    anyhow::{anyhow, format_err, Context, Error},
+    fidl::endpoints::{self, ClientEnd, ServerEnd},
     fidl_fuchsia_component_runner::{
         self as fcrunner, ComponentControllerMarker, ComponentStartInfo,
     },
-    fidl_fuchsia_io as fio, fidl_fuchsia_starnix_developer as fstardev, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fidl_fuchsia_starnix_developer as fstardev, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync,
     fuchsia_component::client as fclient,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{
@@ -19,6 +20,7 @@ use {
     futures::{StreamExt, TryStreamExt},
     io_util::directory,
     log::{error, info},
+    rand::Rng,
     std::ffi::CString,
     std::mem,
     std::sync::Arc,
@@ -173,11 +175,35 @@ async fn start_runner(
 }
 
 async fn start(url: String) -> Result<(), Error> {
-    let _instance = fclient::ScopedInstance::new("playground".to_string(), url).await?;
-    // Dropping _instance here will cause the component to be destroyed, but we
-    // don't know how to stop processes anyway, so starnix will keep running
-    // the program. Eventually, we'll keep track of all the running instances
-    // and be able to stop them.
+    // TODO(fxbug.dev/74511): The amount of setup required here is a bit lengthy. Ideally,
+    // fuchsia-component would provide native bindings for the Realm API that could reduce this
+    // logic to a few lines.
+
+    const COLLECTION: &str = "playground";
+    let realm = fclient::realm().context("failed to connect to Realm service")?;
+    let mut collection_ref = fsys::CollectionRef { name: COLLECTION.into() };
+    let id: u64 = rand::thread_rng().gen();
+    let child_name = format!("starnix-{}", id);
+    let child_decl = fsys::ChildDecl {
+        name: Some(child_name.clone()),
+        url: Some(url),
+        startup: Some(fsys::StartupMode::Lazy),
+        environment: None,
+        ..fsys::ChildDecl::EMPTY
+    };
+    let () = realm
+        .create_child(&mut collection_ref, child_decl)
+        .await?
+        .map_err(|e| format_err!("failed to create child: {:?}", e))?;
+    let mut child_ref =
+        fsys::ChildRef { name: child_name.clone(), collection: Some(COLLECTION.into()) };
+    let (_, server) = endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
+    let () = realm
+        .bind_child(&mut child_ref, server)
+        .await?
+        .map_err(|e| format_err!("failed to bind to child: {:?}", e))?;
+    // We currently don't track the instance so we will never terminate it. Eventually, we'll keep
+    // track of all the running instances and be able to stop them.
     Ok(())
 }
 
