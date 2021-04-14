@@ -3,18 +3,29 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_test.gni")
+
+fidl("fidl.rust.test.external") {
+  testonly = true
+  sources = [ "handle_rights.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+  experimental_flags = [ "enable_handle_rights" ]
+}
 
 rustc_test("fidl_rust_external_tests_bin") {
   assert(is_fuchsia)
   output_name = "fidl_rust_external_tests"
   edition = "2018"
   deps = [
+    ":fidl.rust.test.external-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/testing/fidl:placeholders-rustc",
   ]
   sources = [
+    "src/handle_rights.rs",
     "src/lib.rs",
     "src/server_sender.rs",
     "src/stream_handler_test.rs",

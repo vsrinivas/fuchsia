@@ -1,0 +1,19 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.rust.test.external;
+
+using zx;
+
+protocol SendHandleProtocol {
+    SendHandle(zx.handle:<EVENT, zx.rights.TRANSFER> h);
+};
+
+protocol EchoHandleProtocol {
+    EchoHandle(zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.DUPLICATE> h) -> (zx.handle:<EVENT, zx.rights.TRANSFER> h);
+};
+
+protocol PushEventProtocol {
+    -> PushEvent(zx.handle:<EVENT, zx.rights.TRANSFER> h);
+};

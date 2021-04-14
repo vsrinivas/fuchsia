@@ -4,5 +4,6 @@
 
 #![cfg(test)]
 
+mod handle_rights;
 mod server_sender;
 mod stream_handler_test;
