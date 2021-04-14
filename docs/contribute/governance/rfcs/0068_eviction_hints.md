@@ -24,10 +24,10 @@ context switches and disk IO. To try to reduce the performance impact of
 repaging, the kernel uses a least-recently-used scheme to find pages to evict.
 
 This eviction scheme is not always optimal, and can sometimes cause us to evict
-pages that haven’t been accessed in a while but are required on performance
+pages that haven't been accessed in a while but are required on performance
 critical paths, e.g. the audio stack. On the other end of the spectrum, we have
 pages that are not required by applications anymore and could be safely evicted,
-e.g. “inactive” blobs that do not have any clients. These inactive pages get
+e.g. "inactive" blobs that do not have any clients. These inactive pages get
 mixed in with pages from active blobs that currently do have clients but have
 simply not been accessed in a while. We could benefit from moving these inactive
 pages to the front of the line for eviction.
@@ -40,8 +40,8 @@ Userspace applications that access blobs, and blobfs which serves these blobs,
 have more context than the kernel around the relative importance of pages. They
 could pass along this additional information to the kernel as eviction hints.
 
-This RFC proposes an API which can be used to hint in two directions - “consider
-these pages for eviction first” and “protect these pages from being evicted”.
+This RFC proposes an API which can be used to hint in two directions - "consider
+these pages for eviction first" and "protect these pages from being evicted".
 Using the previous examples, inactive blobs fall under the former category,
 while pages required for performance critical tasks fall under the latter.
 
@@ -153,7 +153,7 @@ prevents an `OP_DONT_NEED` coming from a clone from overriding an
 
 - Per the description of the ops above, an `OP_DONT_NEED` that follows an
   `OP_ALWAYS_NEED` will move the page to the inactive queue, but since the
-  `always_need` flag is set, it won’t be evicted.
+  `always_need` flag is set, it won't be evicted.
 
 - An `OP_ALWAYS_NEED` following an `OP_DONT_NEED` will move the page from the
   inactive page queue to the first LRU queue, and set the `always_need` flag.
@@ -266,7 +266,7 @@ We could use more specific op names like `ZX_VMO_OP_EVICT_FIRST/LAST` and
 `ZX_VMO_OP_RECLAIM_FIRST/LAST`, which describe the associated eviction behavior
 more precisely. However, these cannot be extended to more generic future
 applications. `RECLAIM_FIRST/LAST` might be a little broader than
-`EVICT_FIRST/LAST` and could be applied to various definitions of “reclamation”,
+`EVICT_FIRST/LAST` and could be applied to various definitions of "reclamation",
 e.g. in-memory compression which does not strictly evict the pages, but it still
 ties the ops with a notion of memory reclamation.
 

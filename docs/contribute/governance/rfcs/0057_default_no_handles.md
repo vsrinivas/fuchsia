@@ -110,7 +110,7 @@ arrays.
 Note that this key is not redundant with `"max_handles"`. Value types must have
 `max_handles` set to zero, but resource types can have any number of
 `max_handles`, as it reflects the actual contents of the declaration (as opposed
-to the library author’s intent to allow handles).
+to the library author's intent to allow handles).
 
 ### Bindings {#bindings}
 
@@ -159,8 +159,8 @@ The high-level implementation steps include:
 ## Ergonomics {#ergonomics}
 
 This proposal makes FIDL more complex since it introduces a new concept. Unlike
-other FIDL constructs such as “struct” and “protocol,” new users are unlikely to
-guess what “resource” means, so they will need to learn from documentation.
+other FIDL constructs such as "struct" and "protocol," new users are unlikely to
+guess what "resource" means, so they will need to learn from documentation.
 
 It is arguable whether this proposal makes the FIDL language more or less
 ergonomic. It helps by drawing attention to declarations that contain handles,
@@ -244,7 +244,7 @@ This feature will be tested in the following ways:
 ## Drawbacks, Alternatives, and Unknowns {#unknowns}
 
 This proposal introduces a new keyword, which makes the language more complex.
-Having too many keywords could be a problem; “strict resource union” is a bit of
+Having too many keywords could be a problem; "strict resource union" is a bit of
 a mouthful.
 
 This proposal weakens FIDL evolvability guarantees in two ways:
@@ -298,7 +298,7 @@ to add the `resource` keyword. However, it has its challenges:
 Several open questions remain for this proposal:
 
 *   How should we migrate existing FIDL libraries? Marking _all_ existing
-    declarations with `resource` would be safe, but not reflect library authors’
+    declarations with `resource` would be safe, but not reflect library authors'
     intentions. Marking only the bare minimum (i.e., types that contain handles)
     would work, but might be too aggressive in assuming that anything without
     handles was intended to never contain any.
@@ -311,7 +311,7 @@ Several open questions remain for this proposal:
 ## Prior Art and References
 
 The goal of this proposal is to allow source-breaking changes to occur when
-changing a type’s value/resource status.
+changing a type's value/resource status.
 [RFC-0024](/docs/contribute/governance/rfcs/0024_mandatory_source_compatibility.md) is relevant to this
 goal, since it established the source-compatibility standard for FIDL. It also
 touched on the issue of handles making it difficult to use the `Clone` trait in
@@ -319,7 +319,7 @@ Rust, which this proposal solves.
 
 We are not aware of other IPC systems addressing this exact issue
 (distinguishing types that may contain handles, or system resources). However,
-the concept of annotating types in a way that “infects” all use-sites is common
+the concept of annotating types in a way that "infects" all use-sites is common
 in programming languages. For example, async functions in JavaScript, Python,
 and Rust have this behaviour, as well as the IO monad in Haskell.
 

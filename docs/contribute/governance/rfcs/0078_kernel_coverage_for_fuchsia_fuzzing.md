@@ -147,9 +147,9 @@ The following alternatives were considered but rejected as a part of this design
 
 - **Data Format**: One alternative is to keep the current Sancov format, but export it per-thread via a syscall.  Although this would work, it is inefficient because it requires copying the entire 400KiB PC table to userspace each time, whereas the actual list of PCs hit during a single system call is generally far less (for example a `zx_channel_read` of a 1KiB buffer with 2 handles collects 163 PCs and `zx_channel_write` collects 127 pcs, vs ~51k total pcs).
 
-- **Instrumentation Method**: Two compiler-instrumented coverage alternatives are Intel Processor Trace or QEMU instrumentation. These alternatives may be viable, but they take significant effort to set up, and are not as flexible as Clang’s SanitizerCoverage instrumentation.
+- **Instrumentation Method**: Two compiler-instrumented coverage alternatives are Intel Processor Trace or QEMU instrumentation. These alternatives may be viable, but they take significant effort to set up, and are not as flexible as Clang's SanitizerCoverage instrumentation.
 
-- **API Design**: Instead of having a separate cover_collect method for copying coverage information to userspace, our original design consisted of sharing a VMO between the kernel and userspace.  However, we decided against it as doing so was not recommended by the Zircon team: vmos are not intended to be shared between kernel and userspace, but the benefit would be that we wouldn’t need to copy the coverage from kernel to userspace.
+- **API Design**: Instead of having a separate cover_collect method for copying coverage information to userspace, our original design consisted of sharing a VMO between the kernel and userspace.  However, we decided against it as doing so was not recommended by the Zircon team: vmos are not intended to be shared between kernel and userspace, but the benefit would be that we wouldn't need to copy the coverage from kernel to userspace.
 
 - **Testing Approach**: A more expensive (but potentially more thorough) testing approach was considered: Tests are run on the host and spin up a VM. Tests execute a sequence of system calls, then exfiltrate the coverage out of the VM, and the sancov code coverage tool is used to verify that PCs belong to the expected kernel functions.
 

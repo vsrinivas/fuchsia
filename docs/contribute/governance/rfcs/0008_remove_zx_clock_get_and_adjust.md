@@ -23,7 +23,7 @@ time:
 2. In 2019 the `zx_clock_create`, `zx_clock_read`, `zx_clock_update` and
    `zx_clock_get_details` syscalls were added to perform rich management of
    clock objects, letting userspace define and maintain any number of clocks.
-   `zx_clock_get_monotonic` was also added to read the kernel’s monotonic clock.
+   `zx_clock_get_monotonic` was also added to read the kernel's monotonic clock.
 
 Fuchsia currently defines two different UTC clocks; a kernel UTC clock that may
 be read using `zx_clock_get` and a userspace UTC clock that may be read using

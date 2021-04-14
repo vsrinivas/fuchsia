@@ -17,7 +17,7 @@ primarily implemented in FIDL and a large amount of documentation is being left
 in comments that is hard to surface. Even worse, it is not uncommon for people
 to look at generated bindings to figure out how to use an interface. This
 proposal is the first step of a comprehensive documentation strategy for the
-FIDL language and it’s interfaces.
+FIDL language and it's interfaces.
 
 ## Design
 
@@ -76,7 +76,7 @@ interface Control {
 This would de-sugar to:
 
 ```
- [Doc=”Sent when an adapter with the given |identifier| has been\n removed from the system\n”]
+ [Doc="Sent when an adapter with the given |identifier| has been\n removed from the system\n"]
 ```
 
 ### Documentation comment contents
@@ -102,7 +102,7 @@ the documentation is not successfully generated.
 
 A standard tool, called fidldoc, should be added to the tools directory. Fidldoc
 will generate markdown after consuming the FIDL JSON IR. Markdown is the current
-format that we are using with the other first-class language’s documentation
+format that we are using with the other first-class language's documentation
 tooling.
 
 ### Other
@@ -156,7 +156,7 @@ generator approach for this. Output format of the generated documentation may
 also be up for discussion.
 
 Another alternative is to represent the documentation comments as first-class
-citizens in the AST. While there aren’t any real drawbacks to this strategy, you
+citizens in the AST. While there aren't any real drawbacks to this strategy, you
 lose some of the extensibility benefits of modeling it as an attribute. Someday
 we may want to add additional information for our documentation tooling and the
 attribute style makes this possible without breaking changes. For example, we

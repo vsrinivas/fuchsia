@@ -76,8 +76,8 @@ in just the same way as it is now, but throughout the upgrade period there is
 always the option to go back to the first partition, which is guaranteed to
 remain untouched.
 
-For the A/B extents, it’s easy to see how the first partition’s data is
-preserved; the second partition wouldn’t see the first partition’s data. For the
+For the A/B extents, it's easy to see how the first partition's data is
+preserved; the second partition wouldn't see the first partition's data. For the
 journal, the shared region — only the writable partition would be able to write
 to it; i.e. the second partition. For the shared data region, the bitmap would
 indicate which of the blocks could be written to. Any blocks marked as used by
@@ -272,11 +272,11 @@ partition B is inactive.
 
 ### Changes to FVM Metadata
 
-FVM’s metadata has the following structure:
+FVM's metadata has the following structure:
 
 Region           | Description                                                                                                                                                   |
 ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-Superblock       | What you’d expect.                                                                                                                                            |
+Superblock       | What you'd expect.                                                                                                                                            |
 Partition table  | An array of entries, one for each partition, containing things like name of partition, type, etc.                                                             |
 Slice allocation | An array of entries, one for each allocatable slice that indicates which partition it is allocated to (if any) and the logical offset within that partition. |
 
@@ -421,9 +421,9 @@ it has some significant downsides:
 There are challenges with developing a full FVM snapshot feature. Traditional
 snapshot mechanisms are typically dynamic in nature, which means that metadata
 needs to be updated as writes arrive. Furthermore, there is a mismatch between
-FVM’s slice size (currently 1 MiB, soon to be 32 KiB) and Blobfs’s block size (8
+FVM's slice size (currently 1 MiB, soon to be 32 KiB) and Blobfs's block size (8
 KiB). Addressing this would involve a substantial increase in complexity to FVM
-and there are also edge cases where it’s possible to run out of space. Maybe a
+and there are also edge cases where it's possible to run out of space. Maybe a
 scheme could be developed that had static mappings, but before too long, you
 would end up with a proposal not too dissimilar from the one presented here.
 Altogether, this would likely take much longer to implement, would potentially
@@ -491,12 +491,12 @@ changed.
     option of leaving room and adding this at a later
     stage.
 
-[^3]: The journal’s region can be shared. At the time at which the
+[^3]: The journal's region can be shared. At the time at which the
     second partition is activated, the journal can be flushed at which time it
     is no longer needed for the locked, read-only partition; it is only needed
     to prevent inconsistencies on the writable
     partition.
 
 [^4]: It is possible this bootable state could be stored elsewhere
-    and passed to FVM at bind time, but it’s likely easier to just store this
+    and passed to FVM at bind time, but it's likely easier to just store this
     state within FVM.

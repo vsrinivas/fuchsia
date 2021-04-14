@@ -163,12 +163,12 @@ Another strategy for balancing the concerns of performance and flexibility would
 be to approach the ideal balance by overemphasizing flexibility.  The difficulty
 with this approach is that human beings engineer systems by adding code rather
 than removing code (e.g., similar to sculpting in clay rather than sculpting in
-marble).  It’s easier to add flexibility by adding code than it is to add
+marble).  It's easier to add flexibility by adding code than it is to add
 performance by adding code.
 
 ## Prior art and references
 
-Many other languages have adopted the “you only pay for what you use” design
+Many other languages have adopted the "you only pay for what you use" design
 principle, including C++ [1] and Rust [2].
 
 [1] B. Stroustrup. The Design and Evolution of C++. Addison Wesley, ISBN

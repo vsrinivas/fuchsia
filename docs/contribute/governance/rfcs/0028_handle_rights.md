@@ -274,12 +274,12 @@ information for the capability.
 #### Alternative: Lower and Upper Bounds for Rights
 
 Initial design called for lower and upper bounds on rights (e.g. "without
-executable right", or “with writable right”). From a security standpoint, the
-line of thinking is that Fuchsia should adopt a “default deny” policy for all
+executable right", or "with writable right"). From a security standpoint, the
+line of thinking is that Fuchsia should adopt a "default deny" policy for all
 capabilities (and rights).
 
-So if a capability (or right) isn’t explicitly mentioned anywhere then it
-shouldn’t be granted. Component manifests already behave this way for sandboxing
+So if a capability (or right) isn't explicitly mentioned anywhere then it
+shouldn't be granted. Component manifests already behave this way for sandboxing
 and ideally so should FIDL APIs.
 
 We may want to additionally allow expressing explicitly "optional rights", i.e.
@@ -300,7 +300,7 @@ expect changes in rights values in FIDL to not substantively cause changes in
 the generated source code. However, there may be some use cases for breaking
 source compatibility - such as generating specific methods (such as write()) if
 a given right is present (in this case `zx.rights.WRITE`). Because of this, we
-aren’t prescribing that rights changes can’t break source compatibility.
+aren't prescribing that rights changes can't break source compatibility.
 
 <!-- xrefs -->
 [FIDL language specification]: /docs/reference/fidl/language/language.md

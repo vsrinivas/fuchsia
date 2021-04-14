@@ -213,7 +213,7 @@ method-declaration = ( ordinal , ":" ) , method-parameters ;
 method-parameters = IDENTIFIER , parameter-list , ( "->" , parameter-list )
                      | "->" , IDENTIFIER , parameter-list ;
 
-compose-declaration = “compose", compound-identifier ;
+compose-declaration = "compose", compound-identifier ;
 ```
 
 A composed protocol may only be mentioned once.

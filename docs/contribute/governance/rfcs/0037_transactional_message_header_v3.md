@@ -53,7 +53,7 @@ described above.
 
 ### Evolution of Transactional Message Header
 
-FIDL2 (“v2”):
+FIDL2 ("v2"):
 
 * Transaction ID (`uint32`)
 * Reserved (`uint32`)
@@ -84,7 +84,7 @@ syscall has stabilized, and this requirement is no longer needed.
 
 ### Version 3
 
-We stabilize the transactional message header (“v3”) to be:
+We stabilize the transactional message header ("v3") to be:
 
 * Transaction ID (`uint32`)
 * Flags (`array<uint8>:3`, i.e. 3 bytes)

@@ -18,7 +18,7 @@ changes following these principles.
 *   Changing types to **separate layout from constraints** to place layout
     related type information on the left hand side of the `:` separator with
     constraints information on the right hand side, e.g. `array<T, 5>` vs
-    `vector<T>:5` more clearly conveys that an array’s size is layout
+    `vector<T>:5` more clearly conveys that an array's size is layout
     impacting, whereas it is a constraint for vectors.
 *   Introduction of **anonymous layouts**. For instance `table { f1 uint8; f2
     uint16; }` can be used directly within a method parameter list.
@@ -218,7 +218,7 @@ This means that syntax choices meant to align syntax consistency with ABI
 consistency should consider ABI under the binary wire format (and not, say,
 other formats like JSON).
 
-As an example, names do not matter when it comes to types’ ABI — names _do_
+As an example, names do not matter when it comes to types' ABI — names _do_
 matter for protocols and methods. While names might matter for a possible JSON
 format we choose to over rotate towards the binary ABI format when making syntax
 choices, and would not alter the syntax to advantage a textual representation if
@@ -226,7 +226,7 @@ it hinders the understanding of ABI rules.
 
 #### Fewest features {#fewest-features}
 
-Wright’s ["form and function should be one"](https://www.guggenheim.org/teaching-materials/the-architecture-of-the-solomon-r-guggenheim-museum/form-follows-function)
+Wright's ["form and function should be one"](https://www.guggenheim.org/teaching-materials/the-architecture-of-the-solomon-r-guggenheim-museum/form-follows-function)
 makes us strive for similar looking constructs to have similar looking meaning,
 and vice versa. As an example, all extensible data, which internally leverage
 [envelopes][envelopes], are always presented with `ordinal:`.
@@ -253,7 +253,7 @@ consideration is to help library authors in aggregate achieve consistency: in
 wrapped type, as having a sane default provides greater consistency for enums
 across FIDL libraries. This in turn provides a migration path to switch enums
 down the road, e.g. should a library define a general purpose `ErrorStatus`
-enum, it could be replaced later by another ‘better’ general purpose
+enum, it could be replaced later by another 'better' general purpose
 `ErrorStatusV2`.
 
 ## Design {#design}
@@ -537,8 +537,8 @@ type Outer = struct {
 };
 ```
 
-The first outer struct layout’s naming context is `some.library/Outer`, and the
-second inner struct layout’s naming context is `some.library/Outer, inner`.
+The first outer struct layout's naming context is `some.library/Outer`, and the
+second inner struct layout's naming context is `some.library/Outer, inner`.
 
 #### Generated flattened name {#flattened-name}
 
@@ -736,7 +736,7 @@ type Foo = struct {
 
 In addition to changes to the syntax to features which currently exist, we look
 and set the direction for features which are expected to see the light of day in
-the near future. Here, the focus is on intended expressivity and it’s syntactic
+the near future. Here, the focus is on intended expressivity and it's syntactic
 rendering (not on the precise semantics, which warrants separate RFCs). For
 instance, while we describe transport generalization, we do not discuss various
 thorny design issues (e.g. extent of configurability, representation in JSON
@@ -807,7 +807,7 @@ The syntax of tables and extensible unions hides the use of envelopes:
 *   A `union` is a `struct { tag uint64; variant envelope<...>; }`.
 
 Right now, the `ordinal:` which appears in `table` and `union` declarations are
-the only places where envelopes exist, and it’s useful to think of this syntax
+the only places where envelopes exist, and it's useful to think of this syntax
 as the "sugared" introduction of an envelope. Essentially, we can de-sugar as
 follows:
 
@@ -886,7 +886,7 @@ would place this constraint on the ordinal `ordinal:C` such as:
 
 ### Properties
 
-FIDL’s type system is already one which has the concept of constraints. We have
+FIDL's type system is already one which has the concept of constraints. We have
 `vector<uint8>:8` to mean that a vector has at most 8 elements, or `string:optional`
 to relax the optionality constraint and allow the string to be optional.
 
@@ -998,8 +998,8 @@ Which would allow `handle` or `handle:VMO` (or in another library
 
 An [experimental](https://fuchsia-review.googlesource.com/c/fuchsia/+/390333)
 implementation exists, and will be used to break the cyclic dependency between
-Zircon and FIDL (until this change, Zircon’s API was described in FIDL, but FIDL
-was partly defined in terms of Zircon’s API).
+Zircon and FIDL (until this change, Zircon's API was described in FIDL, but FIDL
+was partly defined in terms of Zircon's API).
 
 ## Implementation Strategy
 
@@ -1108,7 +1108,7 @@ correctness.
 
 ### Using colon to separate name from type
 
-Since we’re moving types to be second, we could also consider using the quite
+Since we're moving types to be second, we could also consider using the quite
 common `:` separator as is done in type theory, Rust, Kotlin, the ML languages
 (SML, Haskell, OCaml), Scala, Nim, Python, TypeScript, and many more:
 
@@ -1132,7 +1132,7 @@ member, const, or other).
 
 This proposal chooses not to explore this simplification.
 
-Removing semicolons makes little syntactic difference for FIDL authors. It’s
+Removing semicolons makes little syntactic difference for FIDL authors. It's
 also not a key change to make, and should we want to explore this in the future
 it will be easy to modify (e.g. [Go's approach to remove semicolons](https://golang.org/doc/effective_go.html#semicolons)).
 
@@ -1187,7 +1187,7 @@ While it may seem odd to prefer syntactic conciseness over explicitly choosing a
 wrapped type, having a sane default provides greater consistency for enums
 across FIDL libraries. This in term provides a migration path to switch enums
 down the road, e.g. should a library define a general purpose `ErrorStatus`
-enum, it could be replaced later by another ‘better’ general purpose
+enum, it could be replaced later by another 'better' general purpose
 `ErrorStatusV2`.
 
 [envelopes]: /docs/contribute/governance/rfcs/0047_tables.md#envelopes

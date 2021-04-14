@@ -96,7 +96,7 @@ When proposing a CL to bump the backstop, authors should:
 
 ## Design
 
-Let’s introduce an `epoch.json` file to be present both in the [update package](/docs/concepts/
+Let's introduce an `epoch.json` file to be present both in the [update package](/docs/concepts/
 packages/update_pkg.md) and on the system. It should be a JSON file with two string keys:
 
 * "version", which should have a single string value for the `epoch.json` schema version. In
@@ -114,7 +114,7 @@ For example, `epoch.json` may look like:
 }
 ```
 
-In order to safely bump the epoch, let’s also introduce an `epoch_history` file that gets compiled
+In order to safely bump the epoch, let's also introduce an `epoch_history` file that gets compiled
 into `epoch.json` via the build system. The `epoch_history` file could be in the form:
 
 ```

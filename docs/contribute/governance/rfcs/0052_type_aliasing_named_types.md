@@ -12,7 +12,7 @@ Note: Formerly known as [FTP](../deprecated-ftp-process.md)-052.
 Portions of
 [RFC-0019](/docs/contribute/governance/rfcs/0019_using_evolution_uint64.md)
 introduced the notion of type aliasing into FIDL.
-This proposal aims to formally evolve FIDL’s type aliasing and new type
+This proposal aims to formally evolve FIDL's type aliasing and new type
 declaration mechanisms and their effects on bindings. More specifically, this
 proposes refinements to the type alias grammar, exposition of type aliases to
 bindings, and a new feature known as new types.

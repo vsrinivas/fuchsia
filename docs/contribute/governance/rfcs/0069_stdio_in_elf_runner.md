@@ -88,8 +88,8 @@ runner will not bind the _stdout_ and _stderr_ handles to the LogSink service
 (current behavior) and those streams will continue to be ignored. When these
 values are set to `log`, the ELF runner will create a socket that will capture
 the output of the _stdout_ and _stderr_ streams. It will then forward the bytes
-read to the LogSink service. For _stdout_, it’ll send INFO messages;
-for _stderr_, it’ll send WARN messages. Messages will be newline-delimited,
+read to the LogSink service. For _stdout_, it'll send INFO messages;
+for _stderr_, it'll send WARN messages. Messages will be newline-delimited,
 and each line will be partitioned as an atomic message to the LogSink service.
 The maximum message size for the LogSink service is 32KB, so we'll cap the
 byte stream buffer at 30KB (to allow for some space for message metadata).
@@ -218,14 +218,14 @@ We've also explored implementing the translation layer, the part that
 parses the stdout/stderr byte streams and forwards them to the LogSink service,
 in a new component, owned and managed by the Component Framework team. However,
 after several discussions, it was decided that this approach would be
-impractical because we’d have to devise a way to retain logging attribution
+impractical because we'd have to devise a way to retain logging attribution
 when we log the messages. Archivist uses the event capability to acquire
 component source info (e.g. moniker) and all that information would be lost if
 we use a middle-layer component.
 
 ### FDIO
 
-We've also explored using fdio, Fuchsia’s POSIX-compatibility
+We've also explored using fdio, Fuchsia's POSIX-compatibility
 library, to implement this feature. That is, making a new type that recognizes
 the stdout/stderr file descriptors and internally (within fdio) redirecting the
 output to LogSink. However, after several discussions, it was decided to forgo
@@ -233,7 +233,7 @@ modifying fdio because to do so would make implementation more difficult. We
 discovered that there are edge cases for POSIX compatibility that couldn't be
 implemented using a LogSink forwarder in fdio. Also, an fdio-based implementation
 would yield more uncertainties, and duplicate effort. Alternatively, if we use
-a socket, as proposed above, it’ll be POSIX compliant “out of the box”.
+a socket, as proposed above, it'll be POSIX compliant "out of the box".
 
 [LogSink]: /docs/development/diagnostics/logs/recording.md
 [component manager]: /docs/concepts/components/v2/component_manager.md

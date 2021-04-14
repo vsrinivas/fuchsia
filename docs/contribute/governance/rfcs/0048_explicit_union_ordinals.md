@@ -77,7 +77,7 @@ See the [Implementation Strategy](#implementation-strategy) section for how to s
 
 ### JSON Wire Format
 
-It’s been discussed in the past that when we create a JSON wire format, renaming
+It's been discussed in the past that when we create a JSON wire format, renaming
 of types and members will pose ABI implications in that format.
 
 It's useful to separate ABI breakage on a per 'wire format' basis. We can get
@@ -87,10 +87,10 @@ they can evolve. Others should benefit from more flexible rules where possible.
 
 ### Looking ahead: sparse tables
 
-There’s been discussion of supporting sparse tables, i.e. a third layout to
+There's been discussion of supporting sparse tables, i.e. a third layout to
 record-like data in addition to [structs][wire-format-structs] and
 [tables][wire-format-tables]. Should we decide to introduce this third option,
-the strawman syntax would follow this proposal, and the current tables’ syntax:
+the strawman syntax would follow this proposal, and the current tables' syntax:
 
 ```fidl
 sparse_table Example {
@@ -107,7 +107,7 @@ hashed) ordinal syntax and the proposed (64-bit explicit) ordinal syntax. This
 can be done by:
 
 1. Adding a check in fidlc to ensure that the value of a 32-bit hashed ordinal
-   is never lower than N. For example, if N is 512, a hashed ordinal’s hex value
+   is never lower than N. For example, if N is 512, a hashed ordinal's hex value
    MUST be at least 0x200.
   * A hashed ordinal that is < 0x200 will result in a compile error, and the
     field name must be manually renamed with the [Selector=] attribute. We would
@@ -181,13 +181,13 @@ None that is particularly relevant.
 
 ##### Footnote1
 
-“Union” in this document refers to [extensible unions](/docs/contribute/governance/rfcs/0061_extensible_unions.md), not “static”
+"Union" in this document refers to [extensible unions](/docs/contribute/governance/rfcs/0061_extensible_unions.md), not "static"
 unions nearing their end-of-life.
 
 ##### Footnote2
 
 Odd in the sense that names have no impact on the binary wire format of messages
-(i.e. bits, enum, struct, table), except for unions. It’s therefore a case that
+(i.e. bits, enum, struct, table), except for unions. It's therefore a case that
 stands out as being different than others.
 
 ##### Footnote3

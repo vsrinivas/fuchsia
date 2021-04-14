@@ -129,7 +129,7 @@ At **runtime**, the FIDL encoder..
 
 * packs as many boxed objects as will fit into the message body, following all
   other out-of-line objects
-* packs all remaining boxed objects that didn’t fit into a VMO
+* packs all remaining boxed objects that didn't fit into a VMO
 
 At **runtime**, the FIDL decoder..
 
@@ -182,7 +182,7 @@ interface Database {
 
     // ERROR: reply may exceed message size limit
     // consider wrapping large objects in a box<>,
-    // “Record” size is unbounded
+    // "Record" size is unbounded
     2: BadSelectTop(string:1000 query) -> (Record record);
 
     // OK
@@ -190,7 +190,7 @@ interface Database {
 
     // ERROR: reply may exceed message size limit
     // consider wrapping large objects in a box<>,
-    // “vector<Record>” size is unbounded
+    // "vector<Record>" size is unbounded
     4: BadSelectAll(string:1000 query) -> (vector<Record> records);
 };
 
@@ -224,7 +224,7 @@ _(Section is incomplete.)_
 
 _(Section is incomplete.)_
 
-Idea 1: define “ensure not shared” flag, verify VMO has exactly one handle,
+Idea 1: define "ensure not shared" flag, verify VMO has exactly one handle,
 shares no pages with other VMOs, and is not mapped, can pass this flag to
 zx_vmo_read/write/map, etc.
 

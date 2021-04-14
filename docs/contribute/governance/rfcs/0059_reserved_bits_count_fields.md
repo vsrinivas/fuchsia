@@ -34,15 +34,15 @@ Builder effort, the bindings now keep track of memory ownership to simplify
 object creation for users. In particular, for vectors, the most significant bit
 (MSB) of the count field is used to store ownership information (see
 [vector_view.h]).
-This bit is zeroed during linearization and doesn’t affect the FIDL wire format,
+This bit is zeroed during linearization and doesn't affect the FIDL wire format,
 but it does prevent the LLCPP bindings from using the MSB for count values.
 
-The goal of this is to formalize the reservation of the MSB of the vector’s
+The goal of this is to formalize the reservation of the MSB of the vector's
 count field for use by bindings and extend the reservation to the upper 8-bits.
 
 Separately, there is some inconsistency in maximum counts between bindings.
 Various parts of the C++ language bindings and compiler assume a maximum size of
-32-bits, but this size was never formalized and isn’t followed by other
+32-bits, but this size was never formalized and isn't followed by other
 bindings. This FTP formalizes a maximum size of 32-bits for vector/string/array
 counts.
 
@@ -73,7 +73,7 @@ The wire format documentation will be updated to show the reserved bits.
 ## Backwards Compatibility
 
 Channels max out at a byte size of 65536 (16-bits) per message so parts of the
-system that FIDL-encode into channel messages won’t have any compatibility
+system that FIDL-encode into channel messages won't have any compatibility
 issues. Additionally, a vector/string/array max count of 2<sup>32</sup>-1 is already
 assumed by some parts of the code.
 

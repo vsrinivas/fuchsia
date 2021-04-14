@@ -17,7 +17,7 @@ packages and other compiled artifacts.
 
 Product assembly, the process of creating a set of artifacts for delivering
 Fuchsia to a device out of the components and packages that are in the Fuchsia
-platform [fuchsia.git] and the product’s own, and other repo(s), should be
+platform [fuchsia.git] and the product's own, and other repo(s), should be
 possible without using a complete `fuchsia.git` checkout and build.
 
 This tool performs the final step of the product assembly process, the creation

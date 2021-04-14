@@ -6,7 +6,7 @@
 ## Summary
 
 [Logging](/docs/concepts/diagnostics/logs/README.md) is used extensively throughout
-Fuchsia’s code, but messages are logged with inconsistent severities. This
+Fuchsia's code, but messages are logged with inconsistent severities. This
 diminishes the value of information in the logs. Below we propose semantic
 meaning for different log severity levels, and implications for logging at
 certain severities in various environments.
@@ -114,7 +114,7 @@ several ways in which we automatically treat logs based on their severity.
 #### Logs as in-field analytics
 
 We choose to treat the presence of an ERROR log entry as an indication of a
-software bug that needs to be fixed. It’s safe to assume that a software author
+software bug that needs to be fixed. It's safe to assume that a software author
 would be interested in knowing that their software is logging errors outside
 their local environment. Therefore we will count the presence of ERROR and FATAL
 log entries broken down by source component instance, report them via Cobalt,
@@ -134,7 +134,7 @@ frequency with which it generates various logs relative to other components.
 
 #### Logs as (un)expected behavior under test
 
-It’s safe to assume that a software author would be interested in knowing that
+It's safe to assume that a software author would be interested in knowing that
 their software is logging errors under controlled conditions set during a test,
 when such behavior is not expected. Therefore we will introduce behavior into
 the test runtime that will cause tests to fail if unexpected ERROR logs are

@@ -187,7 +187,7 @@ problem that would be useful to you. The earlier you discover this information,
 the better.
 
 Please note that the idea does not need to be polished before starting this step.
-It’s best to start socializing as early as possible to receive feedback on
+It's best to start socializing as early as possible to receive feedback on
 whether the idea is feasible and if the direction is correct. This can potentially
 save the authors time and effort in case the idea does not materialize or if
 the direction needs to change significantly.

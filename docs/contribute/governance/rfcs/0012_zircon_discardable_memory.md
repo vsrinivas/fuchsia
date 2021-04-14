@@ -24,7 +24,7 @@ free memory on the table. This can affect performance, as a lot of this memory
 is used by applications for caching purposes. On the other hand, underestimating
 the amount of free memory in use, can cause us to quickly use up all of the
 available memory on the system, leading to an out-of-memory (OOM) scenario.
-Furthermore, the definition of “free” memory itself is complex.
+Furthermore, the definition of "free" memory itself is complex.
 
 The Zircon kernel monitors the amount of free physical memory and generates
 memory pressure signals at various levels. The purpose of these signals is to
@@ -130,7 +130,7 @@ support this feature.
     zero.
 
 - Locking itself does not commit any pages in the VMO. It just marks the state
-  of the VMO as “undiscardable” by the kernel. The client can commit pages in
+  of the VMO as "undiscardable" by the kernel. The client can commit pages in
   the VMO using any of the existing methods that apply to regular VMOs, e.g.
   `zx_vmo_write()`, `ZX_VMO_OP_COMMIT`, mapping the VMO and directly writing to
   mapped addresses.
@@ -198,10 +198,10 @@ has it locked.
 
 The semantics of existing VMO operations will remain the same as before. For
 example, `zx_vmo_read()` will not verify that a discardable VMO is locked before
-permitting the operation. It is the client’s responsibility to ensure that they
+permitting the operation. It is the client's responsibility to ensure that they
 have the VMO locked when they are accessing it, to ensure that the kernel does
 not discard it from under them. This limits the surface area of this change. The
-only guarantee the kernel provides is that it won’t discard a VMO’s pages while
+only guarantee the kernel provides is that it won't discard a VMO's pages while
 it is locked.
 
 Any mappings for the VMO will continue to be valid even if the VMO is discarded,
@@ -211,7 +211,7 @@ not need to recreate mappings if the VMO has been discarded.
 After the kernel has discarded a VMO, any further operations on it without first
 locking it, will fail as if the VMO had no committed pages, and there exists no
 mechanism to commit pages on demand.  For example, a `zx_vmo_read()` will fail
-with `ZX_ERR_OUT_OF_RANGE`. If the VMO was mapped in a process’ address space,
+with `ZX_ERR_OUT_OF_RANGE`. If the VMO was mapped in a process' address space,
 unlocked accesses to mapped addresses will result in fatal page fault
 exceptions.
 
@@ -220,14 +220,14 @@ exceptions.
 #### Tracking metadata
 
 - The `options_` bitmask in `VmObjectPaged` will be extended to support a
-  `kDiscardable` flag; we’re currently only using 4 bits out of 32.
+  `kDiscardable` flag; we're currently only using 4 bits out of 32.
 - A new `lock_count` field will be added to `VmObjectPaged`, which will track
   the number of outstanding lock operations on the VMO.
 - The kernel will maintain a global list of *reclaimable* VMOs, i.e. all
   unlocked discardable VMOs on the system. The list will be updated as follows:
-    - A `ZX_VMO_OP_LOCK` will increment the VMO’s `lock_count`. If `lock_count`
+    - A `ZX_VMO_OP_LOCK` will increment the VMO's `lock_count`. If `lock_count`
       goes from 0->1, the VMO will be removed from the global reclaimable list.
-    - A `ZX_VMO_OP_UNLOCK` will decrement the VMO’s `lock_count`. If
+    - A `ZX_VMO_OP_UNLOCK` will decrement the VMO's `lock_count`. If
       `lock_count` drops to 0, the VMO will be added to the global reclaimable
       list.
 
@@ -243,7 +243,7 @@ consider are mentioned later.
 
 #### Discard operation
 
-A “discard” is implemented on the kernel side by decommitting all the pages of
+A "discard" is implemented on the kernel side by decommitting all the pages of
 the VMO, and setting the internal state of the VMO as `discarded`.
 `VmObjectPaged::GetPageLocked()` will fail with `ZX_ERR_NOT_FOUND` if the VMO's
 state is `discarded`. The `discarded` state is cleared on a subsequent
@@ -304,10 +304,10 @@ few reasons behind this.
   the generic use case, where a VMO is used to represent an anonymous memory
   buffer, repopulating discarded pages would likely be zero fills, which might
   not always make sense w.r.t. the remaining pages that were left undiscarded.
-  It might also not be valuable to hold on to only a subset of the VMO’s pages,
+  It might also not be valuable to hold on to only a subset of the VMO's pages,
   i.e. the VMO is meaningful only when it is fully populated.
 - VMO granularity keeps the `VmObjectPaged` implementation simple, requiring
-  minimal tracking metadata. We don’t need to track locked ranges to later match
+  minimal tracking metadata. We don't need to track locked ranges to later match
   with unlocks. There is no complicated range merging involved either.
 - It also keeps the reclamation logic fairly lightweight, allowing for large
   chunks of memory to be freed at once. Supporting page granularity instead
@@ -360,7 +360,7 @@ the cost of a syscall.
 A discardable VMO can be associated with a metex, which will be used to lock and
 unlock it, instead of the `zx_vmo_op_range()` syscall.  A metex can have three
 states: locked (in use by the userspace client), discardable (eligible for
-reclamation by the kernel), and “needs syscall” (might have been reclaimed by
+reclamation by the kernel), and "needs syscall" (might have been reclaimed by
 the kernel, a syscall is required to check the state).  Locking and unlocking
 the VMO can be performed without entering the kernel by atomically flipping the
 state of the metex between locked and discardable.  When the kernel discards the

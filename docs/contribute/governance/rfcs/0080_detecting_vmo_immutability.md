@@ -60,7 +60,7 @@ The application using Overnet sees the following:
 
 ![View from the application perspective](0080_overnet_app_view.png)
 
-Overnet doesn’t currently support sending messages containing VMOs. This has
+Overnet doesn't currently support sending messages containing VMOs. This has
 been a pain point for several Overnet clients that have needed to send
 messages larger than the existing 64k channel limit and would otherwise send
 large chunks of data in VMOs (wrapped in the fuchsia.mem.Buffer or
