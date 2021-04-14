@@ -59,7 +59,7 @@ def language_version_from_pubspec(pubspec):
 
 
 def collect_packages(items, relative_to):
-    '''Reads metadata produced by GN and creates a list of packages.
+    '''Reads metadata produced by GN to create lists of packages and pubspecs.
   - items: a list of objects collected from gn
   - relative_to: The directory which the packages are relative to. This is
                   the location that contains the package_config.json file
@@ -67,10 +67,12 @@ def collect_packages(items, relative_to):
   Returns None if there was a problem parsing packages
   '''
     packages = []
+    pubspec_paths = []
     for item in items:
         if 'language_version' in item:
             language_version = item['language_version']
         elif 'pubspec_path' in item:
+            pubspec_paths.append(item['pubspec_path'])
             language_version = language_version_from_pubspec(
                 item['pubspec_path'])
         else:
@@ -93,7 +95,7 @@ def collect_packages(items, relative_to):
 
         packages.append(package)
 
-    return packages
+    return packages, pubspec_paths
 
 
 def main():
@@ -103,6 +105,7 @@ def main():
     parser.add_argument(
         '--output', help='Path to the updated package_config', required=True)
     parser.add_argument('--root', help='Path to fuchsia root', required=True)
+    parser.add_argument('--depfile', help='Path to the depfile', required=True)
     args = parser.parse_args()
 
     sys.path += [os.path.join(args.root, 'third_party', 'pyyaml', 'lib3')]
@@ -111,9 +114,12 @@ def main():
         contents = json.load(input_file)
 
     output_dir = os.path.dirname(os.path.abspath(args.output))
-    packages = collect_packages(contents, output_dir)
+    packages, pubspec_paths = collect_packages(contents, output_dir)
     if packages is None:
         return 1
+
+    with open(args.depfile, 'w') as depfile:
+        depfile.write('%s: %s' % (args.output, ' '.join(pubspec_paths)))
 
     with open(args.output, 'w') as output_file:
         package_config = PackageConfig(packages)

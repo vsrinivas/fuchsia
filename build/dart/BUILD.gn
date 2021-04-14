@@ -17,6 +17,11 @@ declare_args() {
   concurrent_dart_jobs = default_concurrent_jobs.dart
 }
 
+python_binary("gen_dart_package_config") {
+  main_source = "gen_dart_package_config.py"
+  deps = [ "//third_party/pyyaml:yaml" ]
+}
+
 python_binary("run_analysis") {
   main_source = "run_analysis.py"
   deps = [ "//third_party/pyyaml:yaml" ]

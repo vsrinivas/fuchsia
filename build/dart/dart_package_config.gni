@@ -77,11 +77,12 @@ template("dart_package_config") {
                              "visibility",
                            ])
 
-    hermetic_deps = false
-    script = "//build/dart/gen_dart_package_config.py"
+    script = get_label_info("//build/dart:gen_dart_package_config",
+                            "target_out_dir") + "/gen_dart_package_config.pyz"
 
     inputs = [ intermediate_file ]
     outputs = [ package_config_file ]
+    depfile = "${target_gen_dir}/${target_name}.d"
 
     args = [
       "--input",
@@ -90,12 +91,17 @@ template("dart_package_config") {
       rebase_path(package_config_file, root_build_dir),
       "--root",
       rebase_path("//", root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
     ]
 
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ ":$generate_target" ]
+    deps += [
+      ":$generate_target",
+      "//build/dart:gen_dart_package_config",
+    ]
 
     metadata = {
       # Add a barrier here to avoid double of inclusion of elements listed in
