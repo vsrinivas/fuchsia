@@ -18,4 +18,7 @@ bool string_view_tests();
 bool unittest_tests();
 bool zbitl_tests();
 
+// These are in kernel/lib/arch/test.
+bool ArchRandomTests();
+
 #endif  // ZIRCON_KERNEL_PHYS_TEST_PHYS_UNITTESTS_H_

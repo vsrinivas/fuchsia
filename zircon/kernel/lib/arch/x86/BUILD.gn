@@ -26,6 +26,7 @@ zx_library("x86") {
     sources = [
       "boot-cpuid.S",
       "boot-cpuid.cc",
+      "random.cc",
     ]
     if (toolchain.environment != "kernel.phys32") {
       sources += [ "descriptor-regs.S" ]

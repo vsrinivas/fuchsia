@@ -106,6 +106,7 @@ if (toolchain.environment == "kernel") {
     ]
     deps = [
       "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/arch/test:kernel-tests",
       "//zircon/kernel/lib/console",
       "//zircon/kernel/lib/crypto",
       "//zircon/kernel/lib/debuglog",

@@ -24,4 +24,8 @@ zx_library("arm64") {
     "lib/arch/zbi-boot.h",
   ]
   sdk_migrated = true
+
+  if (!is_host) {
+    sources += [ "random.cc" ]
+  }
 }

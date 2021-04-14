@@ -32,3 +32,13 @@ if (is_host) {
     ]
   }
 }
+
+if (is_kernel) {
+  source_set("kernel-tests") {
+    sources = [ "random-tests.cc" ]
+    deps = [
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/unittest",
+    ]
+  }
+}
