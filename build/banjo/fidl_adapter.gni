@@ -22,6 +22,7 @@ import("//build/testing/golden_file.gni")
 template("fidl_adapter") {
   not_needed(invoker,
              [
+               "disable_verification",
                "needs_composite",
                "sdk_category",
              ])
@@ -53,6 +54,11 @@ template("fidl_adapter") {
       public_deps = deps
     }
   } else if (is_fuchsia) {
+    verify = true
+    if (defined(invoker.disable_verification) && invoker.disable_verification) {
+      verify = false
+    }
+
     not_needed(invoker, "*")
 
     original_target_name = target_name
@@ -126,10 +132,10 @@ template("fidl_adapter") {
 
       public_configs = [ ":$c_config_target_name" ]
 
-      deps = [
-        ":$c_fidlgen_target_name",
-        ":$c_verification_target_name",
-      ]
+      deps = [ ":$c_fidlgen_target_name" ]
+      if (verify) {
+        deps += [ ":$c_verification_target_name" ]
+      }
 
       public_deps = []
       if (defined(invoker.deps)) {

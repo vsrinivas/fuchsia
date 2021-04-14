@@ -51,10 +51,14 @@ template("banjo") {
   if (defined(invoker.needs_composite)) {
     not_needed(invoker, [ "needs_composite" ])
   }
+  if (defined(invoker.disable_verification)) {
+    not_needed(invoker, [ "disable_verification" ])
+  }
 
   excluded_variables = [
     "fidl_only",
     "translate_to_fidl",
+    "disable_verification",
   ]
 
   if (current_toolchain == banjo_toolchain) {
@@ -89,6 +93,9 @@ template("banjo") {
       # Add an extra set of targets handling Banjo sources as a FIDL library.
       fidl_adapter(target_name) {
         forward_variables_from(invoker, "*", excluded_variables)
+        if (defined(invoker.disable_verification)) {
+          forward_variables_from(invoker, [ "disable_verification" ])
+        }
       }
     }
   }
