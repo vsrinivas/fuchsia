@@ -220,6 +220,17 @@ impl ExtentValue {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub enum ObjectKind {
+    File {
+        /// The number of references to this file.
+        refs: u64,
+        /// The number of bytes allocated to all extents for this file.
+        allocated_size: u64,
+    },
+    Directory,
+}
+
 /// ObjectValue is the value of an item in the object store.
 /// Note that the tree stores deltas on objects, so these values describe deltas. Unless specified
 /// otherwise, a value indicates an insert/replace mutation.
@@ -227,10 +238,9 @@ impl ExtentValue {
 pub enum ObjectValue {
     /// Some keys (e.g. tombstones) have no value.
     None,
-    /// A generic object in the store with no parent. (Most objects will likely be |Child| of some
-    /// other objects.)
-    Object { object_descriptor: ObjectDescriptor, refs: u64 },
-    /// An attribute associated with an object. |size| is the size of the attribute in bytes.
+    /// The value for an ObjectKey::Object record.
+    Object { kind: ObjectKind },
+    /// An attribute associated with a file object. |size| is the size of the attribute in bytes.
     Attribute { size: u64 },
     /// An extent associated with an object.
     Extent(ExtentValue),
@@ -240,9 +250,9 @@ pub enum ObjectValue {
 }
 
 impl ObjectValue {
-    /// Creates an ObjectValue for a generic parentless object.
-    pub fn object(object_descriptor: ObjectDescriptor, refs: u64) -> ObjectValue {
-        ObjectValue::Object { object_descriptor, refs }
+    /// Creates an ObjectValue for a file object.
+    pub fn file(refs: u64, allocated_size: u64) -> ObjectValue {
+        ObjectValue::Object { kind: ObjectKind::File { refs, allocated_size } }
     }
     /// Creates an ObjectValue for an object attribute.
     pub fn attribute(size: u64) -> ObjectValue {

@@ -344,7 +344,7 @@ mod tests {
             )
             .await
             .expect("create_object_with_id failed");
-        handle.extend(&mut transaction, super::first_extent()).await;
+        handle.extend(&mut transaction, super::first_extent()).await.expect("extend failed");
 
         transaction.commit().await;
 

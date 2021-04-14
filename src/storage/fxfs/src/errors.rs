@@ -14,6 +14,8 @@ pub enum FxfsError {
     Internal,
     #[error("Expected directory")]
     NotDir,
+    #[error("Expected file")]
+    NotFile,
     #[error("Not found")]
     NotFound,
 }

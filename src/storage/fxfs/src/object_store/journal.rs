@@ -294,7 +294,7 @@ impl Journal {
                 HandleOptions { overwrite: true, ..Default::default() },
             )
             .await?;
-        super_block_handle.extend(&mut transaction, super_block::first_extent()).await;
+        super_block_handle.extend(&mut transaction, super_block::first_extent()).await?;
 
         // and the journal object...
         journal_handle =

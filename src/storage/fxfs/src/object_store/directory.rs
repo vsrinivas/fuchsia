@@ -7,7 +7,7 @@ use {
         errors::FxfsError,
         object_handle::ObjectHandle,
         object_store::{
-            record::{ObjectKey, ObjectValue},
+            record::{ObjectItem, ObjectKey, ObjectKind, ObjectValue},
             transaction::{Mutation, Transaction},
             HandleOptions, ObjectStore, StoreObjectHandle,
         },
@@ -117,28 +117,19 @@ impl ObjectStore {
             self.store_object_id,
             Mutation::insert_object(
                 ObjectKey::object(object_id),
-                ObjectValue::object(ObjectDescriptor::Directory, 1),
+                ObjectValue::Object { kind: ObjectKind::Directory },
             ),
         );
         Ok(Directory::new(self.clone(), object_id))
     }
 
     pub async fn open_directory(self: &Arc<Self>, object_id: u64) -> Result<Directory, Error> {
-        let item =
-            self.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)?;
-        match item.value {
-            ObjectValue::Object { object_descriptor: ObjectDescriptor::Directory, refs } => {
-                if refs == 0 {
-                    bail!(FxfsError::NotFound);
-                } else {
-                    Ok(Directory::new(self.clone(), object_id))
-                }
-            }
-            ObjectValue::Object { object_descriptor, .. } => {
-                log::debug!("Expected directory, found: {:?}", object_descriptor);
-                bail!(FxfsError::NotDir);
-            }
-            _ => bail!(FxfsError::Inconsistent),
+        if let ObjectItem { value: ObjectValue::Object { kind: ObjectKind::Directory }, .. } =
+            self.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)?
+        {
+            Ok(Directory::new(self.clone(), object_id))
+        } else {
+            bail!(FxfsError::NotDir);
         }
     }
 }

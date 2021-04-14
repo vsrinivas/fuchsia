@@ -11,6 +11,7 @@ impl From<FxfsError> for Status {
             FxfsError::Inconsistent => Status::IO_DATA_INTEGRITY,
             FxfsError::Internal => Status::INTERNAL,
             FxfsError::NotDir => Status::NOT_DIR,
+            FxfsError::NotFile => Status::NOT_FILE,
             FxfsError::NotFound => Status::NOT_FOUND,
         }
     }
