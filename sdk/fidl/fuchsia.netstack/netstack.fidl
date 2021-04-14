@@ -166,8 +166,10 @@ protocol Netstack {
     // in general.
     GetDhcpClient(uint32 nicid, request<fuchsia.net.dhcp.Client> client) -> () error zx.status;
 
-    /// Begin a route transaction for atomically getting and setting the route
-    /// table.  Returns true if a transaction can be started.
+    /// Begin a route transaction to synchronize updates to the route table.
+    ///
+    /// Returns `ZX_OK` if a transaction can be started; `ZX_ERR_SHOULD_WAIT` if a transaction is
+    /// currently in progress.
     StartRouteTableTransaction(request<RouteTableTransaction> route_table_transaction) -> (zx.status status);
 
     /// Emitted when an interface is added or removed, or when an interface's properties changed.
