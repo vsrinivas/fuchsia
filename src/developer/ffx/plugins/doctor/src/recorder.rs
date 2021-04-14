@@ -7,7 +7,7 @@ use {
     chrono::prelude::*,
     std::{
         fs::File,
-        io::{copy, Write},
+        io::{copy, Seek, SeekFrom, Write},
         path::PathBuf,
     },
     zip::{
@@ -17,6 +17,7 @@ use {
 };
 
 const DOCTOR_OUTPUT_NAME: &str = "doctor_output.txt";
+const FILE_MAX_BYTES: i64 = 4_000_000; // 4MB
 
 pub trait Recorder {
     fn add_sources(&mut self, source_files: Vec<PathBuf>);
@@ -42,6 +43,14 @@ impl DoctorRecorder {
             source_name,
             FileOptions::default().compression_method(CompressionMethod::Stored),
         )?;
+
+        if let Ok(meta) = f.metadata() {
+            if meta.len() > FILE_MAX_BYTES as u64 {
+                f.seek(SeekFrom::End(-FILE_MAX_BYTES))?;
+                zip.write(b"<doctor: truncated for size>")?;
+            }
+        }
+
         copy(&mut f, zip).map(|_| {}).map_err(|e| anyhow!(e))
     }
 }
