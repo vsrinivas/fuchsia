@@ -703,14 +703,14 @@ int count = CountPlanets(result.Unwrap()->planets);
 Implementing a server for a FIDL protocol involves providing a concrete
 implementation of `TicTacToe`.
 
-The generated `fidl::WireInterface<TicTacToe>` class has pure virtual methods
+The generated `fidl::WireServer<TicTacToe>` class has pure virtual methods
 corresponding to the method calls defined in the FIDL protocol. Users implement
 a `TicTacToe` server by providing a concrete implementation of
-`fidl::WireInterface<TicTacToe>`, which has the following pure virtual methods:
+`fidl::WireServer<TicTacToe>`, which has the following pure virtual methods:
 
-* `virtual void StartGame(bool start_first, StartGameCompleter::Sync
+* `virtual void StartGame(StartGameRequestView request, StartGameCompleter::Sync
   _completer)`
-* `virtual void MakeMove(uint8_t row, uint8_t col, MakeMoveCompleter::Sync
+* `virtual void MakeMove(MakeMoveRequestView request, MakeMoveCompleter::Sync
   _completer)`
 
 Refer to the [example LLCPP server][llcpp-server-example] for how to bind and
@@ -720,16 +720,26 @@ The LLCPP bindings also provide functions for manually dispatching a message
 given an implementation, `fidl::WireTryDispatch<TicTacToe>` and
 `fidl::WireDispatch<TicTacToe>`:
 
-* `bool fidl::WireTryDispatch<TicTacToe>(fidl::WireInterface<TicTacToe>* impl,
+* `bool fidl::WireTryDispatch<TicTacToe>(fidl::WireServer<TicTacToe>* impl,
   fidl_incoming_msg_t* msg, ::fidl::Transaction* txn)`: Attempts to dispatch the
   incoming message. If there is no matching handler, it returns false, leaving
   the message and transaction intact. In all other cases, it consumes the
   message and returns true.
-* `bool fidl::WireDispatch<TicTacToe>(fidl::WireInterface<TicTacToe>* impl,
+* `bool fidl::WireDispatch<TicTacToe>(fidl::WireServer<TicTacToe>* impl,
   fidl_incoming_msg_t* msg, ::fidl::Transaction* txn)`: Dispatches the incoming
   message. If there is no matching handler, it closes all handles in the message
   and closes the channel with a `ZX_ERR_NOT_SUPPORTED` epitaph, and returns
   false.
+
+#### Requests {#server-requests}
+
+The request is provided as the first argument of each generated FIDL method
+handler. This a view of the request (a pointer). All the request arguments are
+accessed using the arrow operator and the argument name.
+
+For example:
+* `request->start_first`
+* `request->row`
 
 #### Completers {#server-completers}
 
@@ -740,10 +750,10 @@ sending a reply, closing the channel with an epitaph, etc, and come in both
 synchronous and asynchronous versions (though the `::Sync` class is provided as
 an argument by default). In this example, this completers are:
 
-* `fidl::WireInterface<TicTacToe>::StartGameCompleter::Sync`
-* `fidl::WireInterface<TicTacToe>::StartGameCompleter::Async`
-* `fidl::WireInterface<TicTacToe>::MakeMoveCompleter::Sync`
-* `fidl::WireInterface<TicTacToe>::MakeMoveCompleter::Async`
+* `fidl::WireServer<TicTacToe>::StartGameCompleter::Sync`
+* `fidl::WireServer<TicTacToe>::StartGameCompleter::Async`
+* `fidl::WireServer<TicTacToe>::MakeMoveCompleter::Sync`
+* `fidl::WireServer<TicTacToe>::MakeMoveCompleter::Async`
 
 All completer classes provide the following methods:
 
