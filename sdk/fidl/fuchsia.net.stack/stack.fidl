@@ -197,8 +197,10 @@ protocol Stack {
     // pagination.
     GetForwardingTable() -> (vector<ForwardingEntry>:MAX table);
 
-    /// Add a new entry to the forwarding table. If the table already contains an entry with the same
-    /// subnet, an error is returned. The entry may be deleted using DelForwardingEntry first.
+    /// Add a new entry to the forwarding table.
+    ///
+    /// If the table already contains an entry with the same subnet and destination, an already
+    /// exists error is returned.
     AddForwardingEntry(ForwardingEntry entry) -> () error Error;
 
     /// Removes the forwarding entry with the given subnet. This will not affect any overlapping
