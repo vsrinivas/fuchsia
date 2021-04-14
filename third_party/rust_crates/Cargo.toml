@@ -105,6 +105,7 @@ proptest-derive = "0.1.1"
 rand = "0.6"
 rand_core = "0.4.0"
 rand_os = "0.1.2"
+rand_xorshift = "0.1.1"
 rayon = "1.2.1"
 regex = "1.0.6"
 regex-syntax = "0.6.5"
@@ -182,7 +183,6 @@ owning_ref = "0.4.0"
 pretty = "0.5.2"
 prettytable-rs = "0.8.0"
 proc-macro-nested = "0.1.7"
-rand_xorshift = "0.1.1"
 rust_icu_common = { version = "0.4.1", default-features = false, features = ["renaming"] }
 rust_icu_sys = { version = "0.4.1", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
 rust_icu_ucal = { version = "0.4.1", default-features = false, features = ["renaming", "icu_version_in_env"] }

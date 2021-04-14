@@ -112,6 +112,7 @@ group("tests") {
   deps = [
     ":netstack3",
     ":netstack3-tests",
+    "core:netstack3-core_test($host_toolchain)",
     "tools",
   ]
 }
