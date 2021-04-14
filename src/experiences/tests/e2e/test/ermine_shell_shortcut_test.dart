@@ -97,7 +97,7 @@ void main() {
     // Shortcut Alt + Space should hide Ask box.
     await shortcutCombo(Key.leftAlt, Key.space);
     await ermine.driver.waitForAbsent(find.byType('Ask'));
-  });
+  }, skip: true);
 
   test('Toggle QuickSettings using shortcut', () async {
     // Launch terminal. This should display Home screen with terminal view.
