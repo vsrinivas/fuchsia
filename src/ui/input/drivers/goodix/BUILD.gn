@@ -24,7 +24,10 @@ driver_module("goodix-module") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  sources = [ "gt92xx.cc" ]
+  sources = [
+    "gt92xx-firmware.cc",
+    "gt92xx.cc",
+  ]
   defines = [ "GT9293_ASTRO_FIRMWARE_PATH=\"$astro_firmware_path\"" ]
   deps = [
     ":gt92xx_bind",
@@ -42,6 +45,8 @@ driver_module("goodix-module") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace:trace-driver",
@@ -74,6 +79,8 @@ test("gt92xx-test") {
   output_name = "gt92xx-test"
   configs += [ "//build/config:all_source" ]
   sources = [
+    "gt92xx-firmware-test.cc",
+    "gt92xx-firmware.cc",
     "gt92xx-test.cc",
     "gt92xx.cc",
   ]
@@ -85,6 +92,7 @@ test("gt92xx-test") {
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/devices/i2c/testing/fake-i2c",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
@@ -97,6 +105,7 @@ test("gt92xx-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace:trace-driver",

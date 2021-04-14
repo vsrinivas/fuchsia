@@ -83,7 +83,10 @@ int Gt92xxDevice::Thread() {
     // ready when interrupt is generated, so allow a couple retries to check
     // touch status.
     while (!(touch_stat & GT_REG_TOUCH_STATUS_READY) && (retry_cnt < 3)) {
-      touch_stat = Read(GT_REG_TOUCH_STATUS);
+      zx::status<uint8_t> read_status = Read(GT_REG_TOUCH_STATUS);
+      if (read_status.is_ok()) {
+        touch_stat = read_status.value();
+      }
       if (!(touch_stat & GT_REG_TOUCH_STATUS_READY)) {
         retry_cnt++;
         zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
@@ -210,14 +213,6 @@ zx_status_t Gt92xxDevice::Init() {
     return status;
   }
 
-  uint8_t fw = Read(GT_REG_FIRMWARE);
-  if (fw != GT_FIRMWARE_MAGIC) {
-    zxlogf(ERROR, "Invalid gt92xx firmware configuration!");
-    return ZX_ERR_BAD_STATE;
-  }
-  // Device requires 50ms delay after this check (per datasheet)
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
-
   // Get the config data
   fbl::Vector<uint8_t> Conf(GetConfData());
 
@@ -230,7 +225,7 @@ zx_status_t Gt92xxDevice::Init() {
                   (GT_REG_CONFIG_REFRESH - GT_REG_CONFIG_DATA + 1));
 
   // Write conf data to registers
-  status = i2c_.WriteReadSync(&Conf[0], Conf.size(), NULL, 0);
+  status = Write(Conf.data(), Conf.size());
   if (status != ZX_OK) {
     return status;
   }
@@ -247,32 +242,7 @@ zx_status_t Gt92xxDevice::Init() {
     return status;
   }
 
-  node_ = inspector_.GetRoot().CreateChild("Chip info");
-
-  uint8_t config_version;
-  status = Read(GT_REG_CONFIG_DATA, &config_version, sizeof(config_version));
-  if (status == ZX_OK) {
-    node_.CreateByteVector("CONFIG_VERSION", {config_version}, &values_);
-    zxlogf(INFO, "  CONFIG_VERSION: 0x%02x", config_version);
-  } else {
-    node_.CreateString("CONFIG_VERSION", "error", &values_);
-    zxlogf(ERROR, "  CONFIG_VERSION: error %d", status);
-  }
-
-  union {
-    uint8_t fw_buffer[2];
-    uint16_t fw_version;
-  };
-  status = Read(GT_REG_FW_VERSION, fw_buffer, sizeof(fw_buffer));
-  if (status == ZX_OK) {
-    node_.CreateByteVector("FW_VERSION", {fw_buffer[1], fw_buffer[0]}, &values_);
-    fw_version = le16toh(fw_version);
-    zxlogf(INFO, "  FW_VERSION: 0x%04x", fw_version);
-  } else {
-    node_.CreateString("FW_VERSION", "error", &values_);
-    zxlogf(ERROR, "  FW_VERSION: error %d", status);
-  }
-
+  LogFirmwareStatus();
   return ZX_OK;
 }
 
@@ -285,25 +255,10 @@ void Gt92xxDevice::HWReset() {
   // Delay for 100us
   zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
 
-  reset_gpio_.Write(1);  // Release the reset
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
-  int_gpio_.ConfigIn(0);                         // Make interrupt pin an input again;
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));  // Wait for reset to complete
-}
-
-zx_status_t Gt92xxDevice::UpdateFirmwareIfNeeded() {
-  zx::vmo firmware_vmo;
-  size_t firmware_size = 0;
-  zx_status_t status = load_firmware(parent(), GT9293_ASTRO_FIRMWARE_PATH,
-                                     firmware_vmo.reset_and_get_address(), &firmware_size);
-  if (status != ZX_OK) {
-    zxlogf(WARNING, "Failed to load firmware: %d", status);
-    return ZX_OK;
-  }
-
-  // TODO(b/181266286): Implement the firmware download process.
-
-  return ZX_OK;
+  reset_gpio_.Write(1);                              // Release the reset
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(5 + 50)));  // Interrupt still output low
+  int_gpio_.ConfigIn(0);                             // Make interrupt pin an input again;
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));      // Wait for reset before sending config
 }
 
 zx_status_t Gt92xxDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
@@ -388,25 +343,53 @@ zx_status_t Gt92xxDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
   return ZX_OK;
 }
 
-uint8_t Gt92xxDevice::Read(uint16_t addr) {
+zx::status<uint8_t> Gt92xxDevice::Read(uint16_t addr) {
   uint8_t rbuf;
-  Read(addr, &rbuf, 1);
-  return rbuf;
+  zx_status_t status = Read(addr, &rbuf, 1);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(rbuf);
 }
 
-zx_status_t Gt92xxDevice::Read(uint16_t addr, uint8_t* buf, uint8_t len) {
-  uint8_t tbuf[2];
-  tbuf[0] = static_cast<uint8_t>(addr >> 8);
-  tbuf[1] = static_cast<uint8_t>(addr & 0xff);
-  return i2c_.WriteReadSync(tbuf, 2, buf, len);
+zx_status_t Gt92xxDevice::Read(uint16_t addr, uint8_t* buf, size_t len) {
+  zx_status_t status;
+  for (int i = 0; i < kI2cRetries; i++) {
+    uint8_t tbuf[2];
+    tbuf[0] = static_cast<uint8_t>(addr >> 8);
+    tbuf[1] = static_cast<uint8_t>(addr & 0xff);
+    if ((status = i2c_.WriteReadSync(tbuf, 2, buf, len)) == ZX_OK) {
+      return ZX_OK;
+    }
+  }
+  zxlogf(ERROR, "Failed to read %s 0x%04x: %d", len <= 1 ? "register" : "from", addr, status);
+  return status;
 }
 
 zx_status_t Gt92xxDevice::Write(uint16_t addr, uint8_t val) {
-  uint8_t tbuf[3];
-  tbuf[0] = static_cast<uint8_t>(addr >> 8);
-  tbuf[1] = static_cast<uint8_t>(addr & 0xff);
-  tbuf[2] = val;
-  return i2c_.WriteReadSync(tbuf, 3, NULL, 0);
+  zx_status_t status;
+  for (int i = 0; i < kI2cRetries; i++) {
+    uint8_t tbuf[3];
+    tbuf[0] = static_cast<uint8_t>(addr >> 8);
+    tbuf[1] = static_cast<uint8_t>(addr & 0xff);
+    tbuf[2] = val;
+    if ((status = i2c_.WriteSync(tbuf, 3)) == ZX_OK) {
+      return ZX_OK;
+    }
+  }
+  zxlogf(ERROR, "Failed to write register 0x%04x: %d", addr, status);
+  return status;
+}
+
+zx_status_t Gt92xxDevice::Write(uint8_t* buf, size_t len) {
+  zx_status_t status;
+  for (int i = 0; i < kI2cRetries; i++) {
+    if ((status = i2c_.WriteSync(buf, len)) == ZX_OK) {
+      return ZX_OK;
+    }
+  }
+  zxlogf(ERROR, "Failed to write to 0x%04x: %d", (buf[0] << 8) | buf[1], status);
+  return status;
 }
 
 }  // namespace goodix

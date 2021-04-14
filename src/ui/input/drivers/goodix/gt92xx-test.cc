@@ -6,12 +6,12 @@
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
 #include <atomic>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/buttons.h>
 #include <hid/gt92xx.h>
 #include <zxtest/zxtest.h>
@@ -81,11 +81,7 @@ TEST(GoodixTest, Init) {
 
   Gt92xxTest device(i2c, intr, reset);
 
-  mock_i2c
-      .ExpectWrite({static_cast<uint8_t>(GT_REG_FIRMWARE >> 8),
-                    static_cast<uint8_t>(GT_REG_FIRMWARE & 0xff)})
-      .ExpectReadStop({GT_FIRMWARE_MAGIC})
-      .ExpectWriteStop(Gt92xxDevice::GetConfData())
+  mock_i2c.ExpectWriteStop(Gt92xxDevice::GetConfData())
       .ExpectWriteStop({static_cast<uint8_t>(GT_REG_TOUCH_STATUS >> 8),
                         static_cast<uint8_t>(GT_REG_TOUCH_STATUS & 0xff), 0x00})
       .ExpectWrite({static_cast<uint8_t>(GT_REG_CONFIG_DATA >> 8),

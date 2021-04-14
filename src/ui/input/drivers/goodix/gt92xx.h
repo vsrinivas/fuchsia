@@ -9,8 +9,10 @@
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/device-protocol/i2c-channel.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/interrupt.h>
+#include <lib/zx/status.h>
 #include <threads.h>
 #include <zircon/types.h>
 
@@ -19,10 +21,29 @@
 
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
+#include <fbl/span.h>
 #include <fbl/vector.h>
 #include <hid/gt92xx.h>
 
 // clang-format off
+#define GT_REG_DSP_CONTROL      0x4010
+#define GT_REG_SRAM_BANK        0x4048
+#define GT_REG_MEM_CD_ENABLE    0x4049
+#define GT_REG_CACHE_ENABLE     0x404b
+#define GT_REG_TIMER0_ENABLE    0x40b0
+#define GT_REG_SW_RESET         0x4180
+#define   GT_HOLD_SS51          0b0100
+#define   GT_HOLD_DSP           0b1000
+#define GT_REG_CPU_RESET        0x4184
+#define GT_REG_BOOTCONTROL_B0   0x4190
+#define GT_REG_BOOT_OPTION_B0   0x4218
+
+#define GT_REG_FW_MESSAGE       0x41e4
+#define GT_REG_FW_MESSAGE_RETRIES 3
+
+#define GT_REG_HW_INFO          0x4220
+#define GT_REG_BOOT_CONTROL     0x5094
+
 #define GT_REG_SLEEP            0x8040
 #define GT_REG_CONFIG_DATA      0x8047
 #define GT_REG_MAX_X_LO         0x8048
@@ -32,7 +53,7 @@
 #define GT_REG_NUM_FINGERS      0x804c
 
 #define GT_REG_CONFIG_REFRESH   0x812a
-#define GT_REG_VERSION          0x8140
+#define GT_REG_PRODUCT_INFO     0x8140
 #define GT_REG_FW_VERSION       0x8144
 #define GT_REG_SENSOR_ID        0x814a
 #define GT_REG_TOUCH_STATUS     0x814e
@@ -49,6 +70,12 @@ namespace goodix {
 class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
                      public ddk::HidbusProtocol<Gt92xxDevice, ddk::base_protocol> {
  public:
+  struct SectionInfo {
+    uint16_t address;
+    uint8_t sram_bank;
+    uint8_t copy_command;
+  };
+
   Gt92xxDevice(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient intr,
                ddk::GpioProtocolClient reset)
       : ddk::Device<Gt92xxDevice, ddk::Unbindable>(device),
@@ -95,15 +122,78 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
 
   static constexpr uint32_t kMaxPoints = 5;
 
+  static constexpr int kI2cRetries = 5;
+
+  static bool ProductIdsMatch(const uint8_t* firmware_product_id, const uint8_t* chip_product_id);
+
   zx_status_t ShutDown() __TA_EXCLUDES(client_lock_);
+
+  void LogFirmwareStatus();
+
   // performs hardware reset using gpio
   void HWReset();
 
+  zx_status_t SetSramBank(uint8_t bank) { return Write(GT_REG_SRAM_BANK, bank); }
+
+  zx_status_t EnableCodeAccess() { return Write(GT_REG_MEM_CD_ENABLE, 1); }
+  zx_status_t DisableCodeAccess() { return Write(GT_REG_MEM_CD_ENABLE, 0); }
+
+  zx_status_t DisableCache() { return Write(GT_REG_CACHE_ENABLE, 0); }
+
+  zx_status_t DisableWdt() { return Write(GT_REG_TIMER0_ENABLE, 0); }
+
+  zx_status_t HoldSs51AndDsp() { return Write(GT_REG_SW_RESET, GT_HOLD_SS51 | GT_HOLD_DSP); }
+  zx_status_t HoldSs51ReleaseDsp() { return Write(GT_REG_SW_RESET, GT_HOLD_SS51); }
+  zx_status_t ReleaseSs51HoldDsp() { return Write(GT_REG_SW_RESET, GT_HOLD_DSP); }
+  zx_status_t ReleaseSs51AndDsp() { return Write(GT_REG_SW_RESET, 0); }
+  zx::status<bool> Ss51AndDspHeld() {
+    auto status = Read(GT_REG_SW_RESET);
+    if (status.is_ok()) {
+      return zx::ok(status.value() == (GT_HOLD_SS51 | GT_HOLD_DSP));
+    }
+    return status.take_error();
+  }
+
+  zx_status_t TriggerSoftwareReset() { return Write(GT_REG_CPU_RESET, 1); }
+
+  zx_status_t SetBootFromSram() { return Write(GT_REG_BOOTCONTROL_B0, 0b10); }
+
+  zx_status_t SetScramble() { return Write(GT_REG_BOOT_OPTION_B0, 0); }
+
+  zx_status_t WriteCopyCommand(uint8_t command) { return Write(GT_REG_BOOT_CONTROL, command); }
+  zx::status<bool> DeviceBusy() {
+    auto status = Read(GT_REG_BOOT_CONTROL);
+    if (status.is_ok()) {
+      return zx::ok(status.value() != 0);
+    }
+    return status.take_error();
+  }
+
+  zx::status<fzl::VmoMapper> LoadAndVerifyFirmware();
+  bool IsFirmwareApplicable(const fzl::VmoMapper& firmware_mapper);
+  zx_status_t EnterUpdateMode();
+  void LeaveUpdateMode();
+  zx_status_t WritePayload(uint16_t address, fbl::Span<const uint8_t> data);
+  zx_status_t VerifyPayload(uint16_t address, fbl::Span<const uint8_t> data);
+  zx_status_t WaitUntilNotBusy();
+  zx_status_t WriteDspIsp(fbl::Span<const uint8_t> dsp_isp);
+  zx_status_t WriteGwakeOrLinkSection(SectionInfo section_info, fbl::Span<const uint8_t> section);
+  zx_status_t WriteGwake(fbl::Span<const uint8_t> section);
+  zx_status_t WriteSs51Section(uint8_t section_number, fbl::Span<const uint8_t> section);
+  zx_status_t WriteSs51(fbl::Span<const uint8_t> section);
+  zx_status_t WriteDsp(fbl::Span<const uint8_t> section);
+  zx_status_t WriteBootOrBootIsp(SectionInfo section_info, fbl::Span<const uint8_t> section);
+  zx_status_t WriteBoot(fbl::Span<const uint8_t> section);
+  zx_status_t WriteBootIsp(fbl::Span<const uint8_t> section);
+  zx_status_t WriteLink(fbl::Span<const uint8_t> section);
+  zx_status_t WriteLinkSection(uint8_t section_number, fbl::Span<const uint8_t> section);
+
   zx_status_t UpdateFirmwareIfNeeded();
 
-  uint8_t Read(uint16_t addr);
-  zx_status_t Read(uint16_t addr, uint8_t* buf, uint8_t len);
+  zx::status<uint8_t> Read(uint16_t addr);
+  zx_status_t Read(uint16_t addr, uint8_t* buf, size_t len);
   zx_status_t Write(uint16_t addr, uint8_t val);
+  zx_status_t Write(uint8_t* buf, size_t len);
 
   ddk::I2cChannel i2c_;
   ddk::GpioProtocolClient int_gpio_;
@@ -117,6 +207,17 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
   inspect::Inspector inspector_;
   inspect::Node node_;
   inspect::ValueList values_;
+
+  enum {
+    kNoFirmware = 0,         // No firmware file was supplied
+    kInternalError,          // An internal error was encountered when loading the firmware
+    kFirmwareInvalid,        // The firmware file is corrupt or invalid
+    kFirmwareNotApplicable,  // The supplied firmware is not applicable to the chip
+    kChipFirmwareCurrent,    // The chip firmware is already at the latest version
+    kFirmwareUpdateError,    // The chip did something unexpected, or there was an error on the bus
+    kFirmwareUpdated,        // The firmware updated completed successfully
+    kFirmwareStatusCount,
+  } firmware_status_ = kFirmwareUpdateError;
 };
 }  // namespace goodix
 
