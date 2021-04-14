@@ -10,14 +10,18 @@ those access against constraints such as declared inputs and outputs.
 # found in the LICENSE file.
 
 import argparse
+import dataclasses
 import enum
 import itertools
 import os
+import re
 import shlex
 import subprocess
 import sys
+
 from typing import AbstractSet, Any, Callable, Collection, FrozenSet, Iterable, Optional, Sequence, TextIO, Tuple
-import dataclasses
+
+trailing_white_spaces = re.compile("\\\s+\r?\n")
 
 
 def _partition(
@@ -497,7 +501,6 @@ def parse_depfile(depfile_lines: Iterable[str]) -> DepFile:
     See https://github.com/ninja-build/ninja/blob/master/src/depfile_parser_test.cc
     for examples of format using Ninja syntax.
 
-    Limitation: For now, assume one dep per line.
     TODO(fangism): ignore blank/comment lines
 
     Args:
@@ -506,7 +509,41 @@ def parse_depfile(depfile_lines: Iterable[str]) -> DepFile:
     Returns:
       DepFile object, collection of dependencies.
     """
-    return DepFile(deps=[parse_dep_edges(line) for line in depfile_lines])
+
+    # Go through all lines and join continuations. Doing this manually to avoid
+    # copies as much as possible.
+    lines = []
+    current_line = []
+    for line in depfile_lines:
+        # We currently don't allow consecutive backslashes in filenames to
+        # simplify depfile parsing. Support can be added if use cases come up.
+        #
+        # Ninja's implementation:
+        # https://github.com/ninja-build/ninja/blob/5993141c0977f563de5e064fbbe617f9dc34bb8d/src/depfile_parser.cc#L39
+        if r"\\" in line:
+            raise ValueError(
+                f'Consecutive backslashes found in depfile line "{line}", this is not supported by action tracer'
+            )
+        # We currently don't have any use cases with trailing whitespaces in
+        # file names, so treat them as errors when they show up at the end of a
+        # line, because users usually want a line continuation. We can
+        # reconsider this check when use cases come up.
+        if trailing_white_spaces.match(line):
+            raise ValueError(
+                f'Backslash followed by trailing whitespaces at end of line "{line}", remove whitespaces for proper line continuation'
+            )
+
+        if line.endswith(("\\\n", "\\\r\n")):
+            current_line.append(line.rstrip("\\\r\n"))
+            continue
+        current_line.append(line)
+        lines.append("".join(current_line))
+        current_line = []
+
+    if current_line:
+        raise ValueError("Line continuation found at end of file")
+
+    return DepFile(deps=[parse_dep_edges(line) for line in lines])
 
 
 def _verbose_path(path: str) -> str:

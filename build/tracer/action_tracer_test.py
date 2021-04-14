@@ -167,6 +167,72 @@ class ParseDepFileTests(unittest.TestCase):
         self.assertEqual(depfile.all_ins, {"B", "D", "E"})
         self.assertEqual(depfile.all_outs, {"A", "C"})
 
+    def test_continuation(self):
+        depfile = action_tracer.parse_depfile(
+            [
+                "a \\\n",
+                "b: \\\n",
+                "c \\\n",
+                "d",
+            ])
+        self.assertEqual(
+            depfile.deps, [
+                action_tracer.DepEdges(ins={"c", "d"}, outs={"a", "b"}),
+            ])
+        self.assertEqual(depfile.all_ins, {"c", "d"})
+        self.assertEqual(depfile.all_outs, {"a", "b"})
+
+    def test_carriage_continuation(self):
+        depfile = action_tracer.parse_depfile(
+            [
+                "a \\\r\n",
+                "b: c \\\r\n",
+                "d e",
+            ])
+        self.assertEqual(
+            depfile.deps, [
+                action_tracer.DepEdges(ins={"c", "d", "e"}, outs={"a", "b"}),
+            ])
+        self.assertEqual(depfile.all_ins, {"c", "d", "e"})
+        self.assertEqual(depfile.all_outs, {"a", "b"})
+
+    def test_space_in_filename(self):
+        depfile = action_tracer.parse_depfile(["a\\ b: c d"])
+        self.assertEqual(
+            depfile.deps, [
+                action_tracer.DepEdges(ins={"c", "d"}, outs={"a b"}),
+            ])
+        self.assertEqual(depfile.all_ins, {"c", "d"})
+        self.assertEqual(depfile.all_outs, {"a b"})
+
+    def test_consecutive_backslashes(self):
+        with self.assertRaises(ValueError):
+            depfile = action_tracer.parse_depfile(["a\\\\ b: c"])
+
+    def test_trailing_escaped_whitespace(self):
+        with self.assertRaises(ValueError):
+            depfile = action_tracer.parse_depfile([
+                "a \\ \r\n",
+                "b: c",
+            ])
+        with self.assertRaises(ValueError):
+            depfile = action_tracer.parse_depfile([
+                "a \\ \n",
+                "b: c",
+            ])
+        with self.assertRaises(ValueError):
+            depfile = action_tracer.parse_depfile([
+                "a \\    \n",
+                "b: c",
+            ])
+
+    def test_unfinished_line_continuation(self):
+        with self.assertRaises(ValueError):
+            depfile = action_tracer.parse_depfile([
+                "a \\\n",
+                "b: c \\\n",
+            ])
+
 
 class ParseFsatraceOutputTests(unittest.TestCase):
 
