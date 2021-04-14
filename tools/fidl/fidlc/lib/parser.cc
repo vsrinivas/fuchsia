@@ -449,7 +449,7 @@ std::unique_ptr<raw::AliasDeclaration> Parser::ParseAliasDeclaration(
   if (!Ok())
     return Fail();
 
-  auto type_ctor = ParseTypeConstructorOld();
+  auto type_ctor = ParseTypeConstructor();
   if (!Ok())
     return Fail();
 
