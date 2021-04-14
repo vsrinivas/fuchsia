@@ -53,7 +53,7 @@ source_set("source") {
     "//zircon/public/lib/safemath",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.camerahwaccel",
+    "//sdk/banjo/fuchsia.hardware.camerahwaccel:fuchsia.hardware.camerahwaccel_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gdc:fuchsia.hardware.gdc_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.ge2d:fuchsia.hardware.ge2d_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.isp:fuchsia.hardware.isp_banjo_cpp",

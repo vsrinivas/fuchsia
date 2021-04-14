@@ -5,9 +5,10 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.camerahwaccel") {
+  fidl_only = true
   sources = [ "camerahwaccel.banjo" ]
 }
 
 group("fuchsia.hardware.camerahwaccel_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.camerahwaccel" ]
+  public_deps = [ ":fuchsia.hardware.camerahwaccel_banjo_cpp_2" ]
 }

@@ -31,7 +31,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.bt.vendor",
   "fuchsia.hardware.buttons",
   "fuchsia.hardware.camera",
-  "fuchsia.hardware.camerahwaccel",
   "fuchsia.hardware.clockimpl",
   "fuchsia.hardware.display.capture",
   "fuchsia.hardware.display.clamprgb",

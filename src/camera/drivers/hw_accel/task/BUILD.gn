@@ -9,7 +9,7 @@ source_set("camera-task") {
     "task.h",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.camerahwaccel",
+    "//sdk/banjo/fuchsia.hardware.camerahwaccel:fuchsia.hardware.camerahwaccel_banjo_cpp",
     "//sdk/banjo/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/fit-promise",
