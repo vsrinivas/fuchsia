@@ -347,18 +347,17 @@ class ErmineDriver {
   /// A helper function to wait for completion of a computation within timeout.
   Future<T> waitFor<T>(WaitForCompletion<T> completion,
       {Duration timeout = waitForTimeout}) async {
-    final completer = Completer<T>();
     final end = DateTime.now().add(timeout);
+    T result;
     while (DateTime.now().isBefore(end)) {
-      final result = await completion();
+      result = await completion();
       if (result == null || result is bool && result == false) {
         // Add a delay so as not to spam the system.
         await Future.delayed(Duration(seconds: 1));
         continue;
       }
-      completer.complete(result);
       break;
     }
-    return completer.future;
+    return result;
   }
 }

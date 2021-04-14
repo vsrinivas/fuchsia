@@ -62,7 +62,7 @@ void main() {
     // running.
     // TODO(fxb/69291): Remove this workaround once we can properly close hidden
     // components
-    if (skipTests.any((isSkipped) => !isSkipped)) {
+    if (await ermine.isRunning(testserverUrl, timeout: _timeoutTenSec)) {
       FlutterDriver browser = await ermine.launchAndWaitForSimpleBrowser();
       const stopUrl = 'http://127.0.0.1:8080/stop';
       await browser.requestData(stopUrl);
