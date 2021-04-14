@@ -9,6 +9,8 @@
 
 use fuchsia_zircon as zircon;
 
+use banjo_banjo_examples_callback2 as banjo_examples_callback2;
+use banjo_examples_callback2::*;
 
 
 #[repr(C)]

@@ -178,9 +178,20 @@ pub fn primitive_type_to_c_str(ty: &PrimitiveSubtype) -> Result<String, Error> {
 }
 
 pub fn not_callback(id: &CompoundIdentifier, ir: &FidlIr) -> Result<bool, Error> {
-    if let Some(layout) = ir.get_protocol_attributes(id)?.get("BanjoLayout") {
-        if layout == "ddk-callback" {
+    if ir.is_external_decl(id)? {
+        // This is a workaround for the fact that FidlIr doesn't contain attributes for external
+        // libraries.
+        if &Declaration::Interface != ir.get_declaration(id)? {
+            return Err(anyhow!("Expected an interface an interface"));
+        }
+        if id.get_name().ends_with("Callback") {
             return Ok(false);
+        }
+    } else {
+        if let Some(layout) = ir.get_protocol_attributes(id)?.get("BanjoLayout") {
+            if layout == "ddk-callback" {
+                return Ok(false);
+            }
         }
     }
     Ok(true)

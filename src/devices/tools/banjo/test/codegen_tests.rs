@@ -78,7 +78,12 @@ mod c {
         "c/protocol-other-types.h"
     );
     codegen_test!(interface, CBackend, [zx!(), "banjo/interface.test.banjo"], "c/interface.h");
-    codegen_test!(callback, CBackend, [zx!(), "banjo/callback.test.banjo"], "c/callback.h");
+    codegen_test!(
+        callback,
+        CBackend,
+        [zx!(), "banjo/callback2.test.banjo", "banjo/callback.test.banjo"],
+        "c/callback.h"
+    );
 }
 
 mod rust {
@@ -242,7 +247,7 @@ mod cpp {
     codegen_test!(
         callback,
         CppBackend,
-        [zx!(), "banjo/callback.test.banjo"],
+        [zx!(), "banjo/callback2.test.banjo", "banjo/callback.test.banjo"],
         "cpp/callback.h",
         CppSubtype::Base
     );
@@ -355,7 +360,7 @@ mod cpp {
     codegen_test!(
         internal_callback,
         CppBackend,
-        [zx!(), "banjo/callback.test.banjo"],
+        [zx!(), "banjo/callback2.test.banjo", "banjo/callback.test.banjo"],
         "cpp/callback-internal.h",
         CppSubtype::Internal
     );

@@ -96,4 +96,9 @@ codegen_test!(
     [zx!(), "banjo/interface.test.banjo"],
     "ast/interface.test.ast"
 );
-codegen_test!(callback, AstBackend, [zx!(), "banjo/callback.test.banjo"], "ast/callback.test.ast");
+codegen_test!(
+    callback,
+    AstBackend,
+    [zx!(), "banjo/callback2.test.banjo", "banjo/callback.test.banjo"],
+    "ast/callback.test.ast"
+);

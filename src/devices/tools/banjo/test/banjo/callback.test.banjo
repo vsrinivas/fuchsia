@@ -4,6 +4,7 @@
 
 library banjo.examples.callback;
 
+using banjo.examples.callback2;
 using zx;
 
 struct Point {
@@ -25,8 +26,9 @@ protocol Draw {
 
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Drawing {
-    RegisterCallback() -> ();
+    RegisterCallback(Draw cb) -> ();
     DeregisterCallback() -> ();
+    RegisterCallback2(banjo.examples.callback2.DrawCallback cb) -> ();
     DrawLots(zx.handle:VMO commands) -> (int32 result, Point p);
     DrawArray(array<Point>:4 points) -> (zx.status rv);
     Describe(string:64 one) -> (string:128 two);

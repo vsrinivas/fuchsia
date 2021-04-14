@@ -7,7 +7,7 @@
 
 #pragma once
 
-
+#include <banjo/examples/callback2/c/banjo.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -31,8 +31,9 @@ struct point {
 };
 
 struct drawing_protocol_ops {
-    void (*register_callback)(void* ctx);
+    void (*register_callback)(void* ctx, const draw_t* cb);
     void (*deregister_callback)(void* ctx);
+    void (*register_callback2)(void* ctx, const draw_callback_t* cb);
     int32_t (*draw_lots)(void* ctx, zx_handle_t commands, point_t* out_p);
     zx_status_t (*draw_array)(void* ctx, const point_t points[4]);
     void (*describe)(void* ctx, const char* one, char* out_two, size_t two_capacity);
@@ -51,12 +52,16 @@ struct draw {
 
 
 // Helpers
-static inline void drawing_register_callback(const drawing_protocol_t* proto) {
-    proto->ops->register_callback(proto->ctx);
+static inline void drawing_register_callback(const drawing_protocol_t* proto, const draw_t* cb) {
+    proto->ops->register_callback(proto->ctx, cb);
 }
 
 static inline void drawing_deregister_callback(const drawing_protocol_t* proto) {
     proto->ops->deregister_callback(proto->ctx);
+}
+
+static inline void drawing_register_callback2(const drawing_protocol_t* proto, const draw_callback_t* cb) {
+    proto->ops->register_callback2(proto->ctx, cb);
 }
 
 static inline int32_t drawing_draw_lots(const drawing_protocol_t* proto, zx_handle_t commands, point_t* out_p) {

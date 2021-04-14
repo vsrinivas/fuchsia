@@ -639,6 +639,21 @@ impl FidlIr {
         }
         Err(anyhow!("Identifier does not represent a protocol: {:?}", identifier))
     }
+
+    pub fn is_external_decl(&self, identifier: &CompoundIdentifier) -> Result<bool, Error> {
+        self.declarations
+            .0
+            .get(identifier)
+            .map(|_| false)
+            .ok_or(anyhow!("~~ error never seen ~~~"))
+            .or_else(|_| {
+                self.library_dependencies
+                    .iter()
+                    .find(|library| library.declarations.0.get(identifier).is_some())
+                    .ok_or(anyhow!("Could not find declaration: {:?}", identifier))
+                    .map(|_| true)
+            })
+    }
 }
 
 impl Type {

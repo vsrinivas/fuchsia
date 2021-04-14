@@ -52,7 +52,18 @@ _simple_libraries = [
       "cpp",
       "cpp_internal",
     ]
-    deps = [ "//zircon/vdso/zx" ]
+    deps = [
+      ":callback2",
+      "//zircon/vdso/zx",
+    ]
+  },
+  {
+    name = "callback2"
+    backends = [
+      "c",
+      "cpp",
+      "cpp_internal",
+    ]
   },
   {
     name = "constants"

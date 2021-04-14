@@ -13,10 +13,13 @@ namespace ddk {
 namespace internal {
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_drawing_protocol_register_callback, DrawingRegisterCallback,
-        void (C::*)());
+        void (C::*)(const draw_t* cb));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_drawing_protocol_deregister_callback, DrawingDeregisterCallback,
         void (C::*)());
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_drawing_protocol_register_callback2, DrawingRegisterCallback2,
+        void (C::*)(const draw_callback_t* cb));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_drawing_protocol_draw_lots, DrawingDrawLots,
         int32_t (C::*)(zx::vmo commands, point_t* out_p));
@@ -32,11 +35,15 @@ template <typename D>
 constexpr void CheckDrawingProtocolSubclass() {
     static_assert(internal::has_drawing_protocol_register_callback<D>::value,
         "DrawingProtocol subclasses must implement "
-        "void DrawingRegisterCallback();");
+        "void DrawingRegisterCallback(const draw_t* cb);");
 
     static_assert(internal::has_drawing_protocol_deregister_callback<D>::value,
         "DrawingProtocol subclasses must implement "
         "void DrawingDeregisterCallback();");
+
+    static_assert(internal::has_drawing_protocol_register_callback2<D>::value,
+        "DrawingProtocol subclasses must implement "
+        "void DrawingRegisterCallback2(const draw_callback_t* cb);");
 
     static_assert(internal::has_drawing_protocol_draw_lots<D>::value,
         "DrawingProtocol subclasses must implement "

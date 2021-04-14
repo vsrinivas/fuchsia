@@ -66,6 +66,10 @@ do
     dependencies="$dependencies --files $BANJO_FILES/point.test.banjo"
   fi
 
+  if [ "$filename" = "callback" ]; then
+    dependencies="$dependencies --files $BANJO_FILES/callback2.test.banjo"
+  fi
+
   if [ "$filename" = "enums" ] || [ "$filename" = "types" ] || [ "$filename" = "example-0" ] \
     || [ "$filename" = "example-1" ] || [ "$filename" = "example-2" ] \
     || [ "$filename" = "example-3" ] || [ "$filename" = "alignment" ] \

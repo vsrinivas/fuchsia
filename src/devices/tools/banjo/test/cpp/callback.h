@@ -8,6 +8,7 @@
 #pragma once
 
 #include <banjo/examples/callback/c/banjo.h>
+#include <banjo/examples/callback2/c/banjo.h>
 #include <ddktl/device-internal.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -42,9 +43,11 @@
 //     DrawingDevice(zx_device_t* parent)
 //         : DrawingDeviceType(parent) {}
 //
-//     void DrawingRegisterCallback();
+//     void DrawingRegisterCallback(const draw_t* cb);
 //
 //     void DrawingDeregisterCallback();
+//
+//     void DrawingRegisterCallback2(const draw_callback_t* cb);
 //
 //     int32_t DrawingDrawLots(zx::vmo commands, point_t* out_p);
 //
@@ -64,6 +67,7 @@ public:
         internal::CheckDrawingProtocolSubclass<D>();
         drawing_protocol_ops_.register_callback = DrawingRegisterCallback;
         drawing_protocol_ops_.deregister_callback = DrawingDeregisterCallback;
+        drawing_protocol_ops_.register_callback2 = DrawingRegisterCallback2;
         drawing_protocol_ops_.draw_lots = DrawingDrawLots;
         drawing_protocol_ops_.draw_array = DrawingDrawArray;
         drawing_protocol_ops_.describe = DrawingDescribe;
@@ -81,11 +85,14 @@ protected:
     drawing_protocol_ops_t drawing_protocol_ops_ = {};
 
 private:
-    static void DrawingRegisterCallback(void* ctx) {
-        static_cast<D*>(ctx)->DrawingRegisterCallback();
+    static void DrawingRegisterCallback(void* ctx, const draw_t* cb) {
+        static_cast<D*>(ctx)->DrawingRegisterCallback(cb);
     }
     static void DrawingDeregisterCallback(void* ctx) {
         static_cast<D*>(ctx)->DrawingDeregisterCallback();
+    }
+    static void DrawingRegisterCallback2(void* ctx, const draw_callback_t* cb) {
+        static_cast<D*>(ctx)->DrawingRegisterCallback2(cb);
     }
     static int32_t DrawingDrawLots(void* ctx, zx_handle_t commands, point_t* out_p) {
         auto ret = static_cast<D*>(ctx)->DrawingDrawLots(zx::vmo(commands), out_p);
@@ -171,12 +178,16 @@ public:
         ops_ = nullptr;
     }
 
-    void RegisterCallback() const {
-        ops_->register_callback(ctx_);
+    void RegisterCallback(const draw_t* cb) const {
+        ops_->register_callback(ctx_, cb);
     }
 
     void DeregisterCallback() const {
         ops_->deregister_callback(ctx_);
+    }
+
+    void RegisterCallback2(const draw_callback_t* cb) const {
+        ops_->register_callback2(ctx_, cb);
     }
 
     int32_t DrawLots(zx::vmo commands, point_t* out_p) const {
