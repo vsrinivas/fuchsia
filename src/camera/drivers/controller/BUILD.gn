@@ -55,7 +55,7 @@ source_set("source") {
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.camerahwaccel",
     "//sdk/banjo/fuchsia.hardware.gdc",
-    "//sdk/banjo/fuchsia.hardware.ge2d",
+    "//sdk/banjo/fuchsia.hardware.ge2d:fuchsia.hardware.ge2d_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.isp:fuchsia.hardware.isp_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",

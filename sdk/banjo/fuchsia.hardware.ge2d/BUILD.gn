@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.ge2d") {
+  fidl_only = true
   sources = [ "ge2d.banjo" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.camera",
@@ -12,4 +13,8 @@ banjo("fuchsia.hardware.ge2d") {
     "//sdk/banjo/fuchsia.sysmem",
     "//sdk/banjo/zx",
   ]
+}
+
+group("fuchsia.hardware.ge2d_banjo_cpp") {
+  public_deps = [ ":fuchsia.hardware.ge2d_banjo_cpp_2" ]
 }

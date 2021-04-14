@@ -19,7 +19,7 @@ source_set("config") {
     "luis_product_config.h",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.ge2d",
+    "//sdk/banjo/fuchsia.hardware.ge2d:fuchsia.hardware.ge2d_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",

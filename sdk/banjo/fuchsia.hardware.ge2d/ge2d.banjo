@@ -23,7 +23,7 @@ struct ResizeInfo {
     Ge2dRotation output_rotation;
 };
 
-struct WaterMarkInfo {
+resource struct WaterMarkInfo {
     // Where to place WaterMark on the input image
     uint32 loc_x;
     uint32 loc_y;
@@ -59,7 +59,7 @@ protocol Ge2d {
                    fuchsia.sysmem.BufferCollectionInfo_2 output_buffer_collection,
                    ResizeInfo info,
                    fuchsia.sysmem.ImageFormat_2 image_format,
-                   vector<fuchsia.sysmem.ImageFormat_2> output_image_format_table,
+                   vector<fuchsia.sysmem.ImageFormat_2>:MAX output_image_format_table,
                    uint32 output_image_format_index,
                    fuchsia.hardware.camerahwaccel.HwAccelFrameCallback frame_callback,
                    fuchsia.hardware.camerahwaccel.HwAccelResChangeCallback res_callback,
@@ -73,8 +73,8 @@ protocol Ge2d {
     // applies to both input and output frames. Watermark info is per-resolution.
     InitTaskWaterMark(fuchsia.sysmem.BufferCollectionInfo_2 input_buffer_collection,
                       fuchsia.sysmem.BufferCollectionInfo_2 output_buffer_collection,
-                      vector<WaterMarkInfo> info,
-                      vector<fuchsia.sysmem.ImageFormat_2> image_format_table,
+                      vector<WaterMarkInfo>:MAX info,
+                      vector<fuchsia.sysmem.ImageFormat_2>:MAX image_format_table,
                       uint32 image_format_index,
                       fuchsia.hardware.camerahwaccel.HwAccelFrameCallback frame_callback,
                       fuchsia.hardware.camerahwaccel.HwAccelResChangeCallback res_callback,
@@ -85,8 +85,8 @@ protocol Ge2d {
     // index will be identical with the input image index, so the caller must manage the output
     // buffer lifetimes.  Watermark info is per-resolution.
     InitTaskInPlaceWaterMark(fuchsia.sysmem.BufferCollectionInfo_2 buffer_collection,
-                      vector<WaterMarkInfo> info,
-                      vector<fuchsia.sysmem.ImageFormat_2> image_format_table,
+                      vector<WaterMarkInfo>:MAX info,
+                      vector<fuchsia.sysmem.ImageFormat_2>:MAX image_format_table,
                       uint32 image_format_index,
                       fuchsia.hardware.camerahwaccel.HwAccelFrameCallback frame_callback,
                       fuchsia.hardware.camerahwaccel.HwAccelResChangeCallback res_callback,

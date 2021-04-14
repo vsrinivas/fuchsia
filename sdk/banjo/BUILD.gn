@@ -43,7 +43,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.ethernet.board",
   "fuchsia.hardware.ethernet.mac",
   "fuchsia.hardware.gdc",
-  "fuchsia.hardware.ge2d",
   "fuchsia.hardware.goldfish.addressspace",
   "fuchsia.hardware.goldfish.control",
   "fuchsia.hardware.goldfish.pipe",
@@ -118,7 +117,6 @@ _fidl_translated_deps -= [
   "fuchsia.hardware.display.controller",  # Blocked by
                                           # fuchsia.hardware.audiotypes.
   "fuchsia.hardware.gdc",  # Blocked by fuchsia.sysmem.
-  "fuchsia.hardware.ge2d",  # Blocked by fuchsia.sysmem.
   "fuchsia.hardware.hidbus",  # Multiple enum variants with the same value.
   "fuchsia.hardware.pciroot",  # Blocked by zircon.hw.pci.
   "fuchsia.hardware.serialimpl",  # Blocked by fuchsia.hardware.serial.
