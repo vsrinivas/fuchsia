@@ -812,19 +812,44 @@ TEST(ConstsTests, BadMaxBoundTestLibraryQualified) {
   TestLibrary dependency("dependency.fidl", R"FIDL(
 library dependency;
 
-type Example = struct {};
+struct Example {};
 )FIDL",
-                         &shared, experimental_flags);
-  ASSERT_TRUE(dependency.Compile());
+                         &shared);
+  TestLibrary converted_dependency;
+  ASSERT_COMPILED_AND_CONVERT_INTO(dependency, converted_dependency);
 
-  TestLibrary library(R"FIDL(
+  TestLibrary library("example.fidl", R"FIDL(
 library example;
 
 using dependency;
 
 type Example = struct { s string:dependency.MAX; };
 )FIDL",
-                      experimental_flags);
+                      &shared, experimental_flags);
+  ASSERT_TRUE(library.AddDependentLibrary(std::move(converted_dependency)));
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotParseSizeBound);
+}
+
+TEST(ConstsTests, BadMaxBoundTestLibraryQualifiedWithOldDep) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  SharedAmongstLibraries shared;
+  TestLibrary dependency("dependency.fidl", R"FIDL(
+library dependency;
+
+struct Example {};
+)FIDL",
+                         &shared);
+  ASSERT_TRUE(dependency.Compile());
+
+  TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+using dependency;
+
+type Example = struct { s string:dependency.MAX; };
+)FIDL",
+                      &shared, experimental_flags);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotParseSizeBound);
 }

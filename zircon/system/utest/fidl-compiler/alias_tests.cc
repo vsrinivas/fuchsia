@@ -418,12 +418,13 @@ TEST(AliasTests, GoodUsingLibrary) {
 library dependent;
 
 struct Bar {
-    int8 s;
+  int8 s;
 };
 
 )FIDL",
                          &shared);
-  ASSERT_TRUE(dependency.Compile());
+  TestLibrary converted_dependency;
+  ASSERT_COMPILED_AND_CONVERT_INTO(dependency, converted_dependency);
 
   TestLibrary library("example.fidl", R"FIDL(
 library example;
@@ -435,7 +436,34 @@ alias Bar2 = dependent.Bar;
 )FIDL",
                       &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, converted_dependency);
+}
+
+TEST(AliasTests, GoodUsingLibraryWithOldDep) {
+  SharedAmongstLibraries shared;
+  TestLibrary dependency("dependent.fidl", R"FIDL(
+library dependent;
+
+struct Bar {
+  int8 s;
+};
+
+)FIDL",
+                         &shared);
+  TestLibrary cloned_dependency;
+  ASSERT_COMPILED_AND_CLONE_INTO(dependency, cloned_dependency);
+
+  TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+using dependent;
+
+alias Bar2 = dependent.Bar;
+
+)FIDL",
+                      &shared);
+  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+  ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, cloned_dependency);
 }
 
 TEST(AliasTests, BadDisallowOldUsingSyntax) {

@@ -341,7 +341,13 @@ different "flavors" of tests:
 * (2) Success or failure tests that only run in one syntax: these are unchanged
   from before. Tests that somehow only apply to one syntax or the other fall in
   this category.
-* (3) Failure tests that run in either syntax: unfortunately, two copies must be
+* (3) Success tests that include dependent libraries must be duplicated, so that
+  two scenarios may be tested: the case in which the dependent library has been
+  converted to the old syntax, and the case in which it has not. For the latter,
+  the second test must be defined using a name identical to the first's with
+  `WithOldDep` appended. For example, the companion to `FooTest.UsingLibrary`
+  would be `FooTest.UsingLibraryWithOldDep`.
+* (4) Failure tests that run in either syntax: unfortunately, two copies must be
   made in this scenario, for example `FooTest.SomeErrorOld` for the old syntax
   and `FooTest.SomeError` for the corresponding new syntax test. These should
   ideally be located next to each other in the same file.
