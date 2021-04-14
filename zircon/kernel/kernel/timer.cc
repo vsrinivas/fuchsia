@@ -61,10 +61,6 @@ KCOUNTER(timer_fired_counter, "timer.fired")
 // firing are not counted.
 KCOUNTER(timer_canceled_counter, "timer.canceled")
 
-zx_ticks_t current_ticks(void) {
-  return platform_current_ticks();
-}
-
 namespace {
 
 MonitoredSpinLock timer_lock __CPU_ALIGN_EXCLUSIVE;
