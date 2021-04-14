@@ -64,6 +64,7 @@ pub struct SecurityPolicy {
 pub struct JobPolicyAllowlists {
     ambient_mark_vmo_exec: Option<Vec<String>>,
     main_process_critical: Option<Vec<String>>,
+    create_raw_processes: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -246,6 +247,7 @@ fn translate_job_policy(
     component_internal::JobPolicyAllowlists {
         ambient_mark_vmo_exec: job_policy.ambient_mark_vmo_exec,
         main_process_critical: job_policy.main_process_critical,
+        create_raw_processes: job_policy.create_raw_processes,
         ..component_internal::JobPolicyAllowlists::EMPTY
     }
 }
@@ -434,6 +436,7 @@ mod tests {
                 job_policy: {
                     main_process_critical: [ "/", "/bar" ],
                     ambient_mark_vmo_exec: ["/foo"],
+                    create_raw_processes: ["/baz"],
                 },
                 capability_policy: [
                     {
@@ -490,6 +493,7 @@ mod tests {
                     job_policy: Some(component_internal::JobPolicyAllowlists {
                         main_process_critical: Some(vec!["/".to_string(), "/bar".to_string()]),
                         ambient_mark_vmo_exec: Some(vec!["/foo".to_string()]),
+                        create_raw_processes: Some(vec!["/baz".to_string()]),
                         ..component_internal::JobPolicyAllowlists::EMPTY
                     }),
                     capability_policy: Some(component_internal::CapabilityPolicyAllowlists {

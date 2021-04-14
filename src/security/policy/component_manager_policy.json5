@@ -11,6 +11,8 @@
                 "/bootstrap/power_manager",
                 "/bootstrap/shutdown_shim",
             ],
+            create_raw_processes: [
+            ],
         },
         capability_policy: [
             {
