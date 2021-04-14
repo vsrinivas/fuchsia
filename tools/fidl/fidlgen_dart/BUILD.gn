@@ -41,11 +41,9 @@ if (is_host) {
     deps = [ ":fidlgen_dart" ]
   }
 
-  dartfmt_command = rebase_path("${dart_sdk}/bin/dartfmt")
-
   golden_test("fidlgen_dart_golden_tests") {
     goldens_dir = "goldens"
-    reformat_goldens_command = dartfmt_command
+    reformat_goldens_bin = "${dart_sdk}/bin/dartfmt"
     deps = []
     entries = []
     foreach(info, fidl_testdata_info) {

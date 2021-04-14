@@ -20,6 +20,9 @@ import("//build/testing/host_test_data.gni")
 # golden_test("foo_golden_tests") {
 #   goldens_dir = "goldens"
 #   deps = [ ":generate_json" ]
+#   reformat_goldens_bin = "path/to/my/json/formatter"
+#   reformat_goldens_args = [ "--pretty" ]
+#   reformat_goldens_inputs = [ "path/to/my/json/formatter.config" ]
 #   entries = [
 #     {
 #       golden = "out.json.golden"
@@ -48,18 +51,34 @@ import("//build/testing/host_test_data.gni")
 #     Directory of golden files, relative to the invoking BUILD.gn file. Must
 #     contain a goldens.txt file. Each file path listed in goldens.txt must
 #     exist, otherwise a gen-time error is produced.
+#     Type: path
 #
 #   entries (required)
 #     List of scopes, each with `golden` and `generated` fields. The `golden`
 #     field is a file path relative to `goldens_dir`. The `generated` field is
 #     an absolute path to the corresponding generated file, which must be
 #     produced by one of the targets in `deps`.
+#     Type: list(scope)
 #
-#   reformat_goldens_command (optional)
+#   reformat_goldens_bin (optional)
 #     A command that will reformat from stdin to stdout.
 #     The command will be invoked for each golden file checked into the tree
 #     before comparing it to the newly generated version. This allows changes
 #     to source formatting tools to not cause goldens tests to fail.
+#     Type: string
+#     Default: /bin/cat
+#
+#   reformat_goldens_args (optional)
+#     A list of args for invoking `reformat_goldens_bin`.
+#     Type: list(string)
+#     Default: empty
+#
+#   reformat_goldens_inputs (optional)
+#     Inputs the reformat_goldens_command uses, this should typically include
+#     a config file the formatter uses, if any. This makes sure when the config
+#     changes, this template can correctly rerun the reformat action.
+#     Type: list(string)
+#     Default: empty
 #
 #   deps (required)
 #   visibility
@@ -70,11 +89,6 @@ template("golden_test") {
   assert(defined(invoker.goldens_dir))
   assert(defined(invoker.entries))
   assert(defined(invoker.deps))
-
-  reformat_goldens = "cat"
-  if (defined(invoker.reformat_goldens_command)) {
-    reformat_goldens = invoker.reformat_goldens_command
-  }
 
   copied_goldens_dir = "${target_gen_dir}/${target_name}"
   manifest_file = "${target_gen_dir}/${target_name}_manifest.json"
@@ -104,8 +118,6 @@ template("golden_test") {
     not_needed([ "reformat_goldens" ])
   } else {
     action_foreach(target_reformat_goldens) {
-      hermetic_deps = false
-
       testonly = true
       visibility = [ ":*" ]
 
@@ -115,12 +127,30 @@ template("golden_test") {
 
       script = "/bin/sh"
       sources = rebase_path(goldens_list, ".", invoker.goldens_dir)
+      inputs = []
+      reformat_goldens_bin = "/bin/cat"
+      if (defined(invoker.reformat_goldens_bin)) {
+        inputs += [ rebase_path(invoker.reformat_goldens_bin) ]
+        reformat_goldens_bin =
+            rebase_path(invoker.reformat_goldens_bin, root_build_dir)
+      }
+      if (defined(invoker.reformat_goldens_inputs)) {
+        inputs += invoker.reformat_goldens_inputs
+      }
+
       outputs = [ "${copied_goldens_dir}/{{source_file_part}}" ]
       output_dir = rebase_path(copied_goldens_dir, root_build_dir)
+
+      fmt_args = ""
+      if (defined(invoker.reformat_goldens_args)) {
+        fmt_args = string_join(" ", invoker.reformat_goldens_args)
+      }
       args = [
         "-c",
-        "${reformat_goldens} < '{{source}}' > " +
-            "'${output_dir}/{{source_file_part}}'",
+
+        # Combine formatter invocation in one arg so it's escaped properly,
+        # otherwise redirects won't work.
+        "${reformat_goldens_bin} ${fmt_args} < {{source}} > ${output_dir}/{{source_file_part}}",
       ]
     }
   }

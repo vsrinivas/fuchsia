@@ -55,12 +55,11 @@ if (is_host) {
     deps = [ ":gopkg" ]
   }
 
-  clang_format = rebase_path("${clang_prefix}/clang-format", "", root_build_dir)
-  reformat_command = "'${clang_format}' --style=google"
-
   golden_test("fidlgen_llcpp_golden_tests") {
     goldens_dir = "goldens"
-    reformat_goldens_command = reformat_command
+    reformat_goldens_bin =
+        rebase_path("${clang_prefix}/clang-format", "", root_build_dir)
+    reformat_goldens_args = [ "--style=google" ]
     deps = []
     entries = []
     foreach(info, fidl_testdata_info) {
