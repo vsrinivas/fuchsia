@@ -923,37 +923,37 @@ OBJECT_GET_INFO_JOB_DISPLAY_TEST(
     "      debugger_attached: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m\n"
     "    }\n");
 
-#define OBJECT_GET_INFO_PROCESS_DISPLAY_TEST_CONTENT(result, expected)                             \
-  zx_info_process_t buffer;                                                                        \
-  buffer.return_code = -1;                                                                         \
-  buffer.started = true;                                                                           \
-  buffer.exited = true;                                                                            \
-  buffer.debugger_attached = false;                                                                \
-  auto value =                                                                                     \
-      ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_PROCESS, reinterpret_cast<void*>(&buffer), \
-                      sizeof(buffer), nullptr, nullptr);                                           \
+#define OBJECT_GET_INFO_PROCESS_V1_DISPLAY_TEST_CONTENT(result, expected)                  \
+  zx_info_process_v1_t buffer;                                                             \
+  buffer.return_code = -1;                                                                 \
+  buffer.started = true;                                                                   \
+  buffer.exited = true;                                                                    \
+  buffer.debugger_attached = false;                                                        \
+  auto value =                                                                             \
+      ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_PROCESS_V1,                        \
+                      reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr); \
   PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
 
-#define OBJECT_GET_INFO_PROCESS_DISPLAY_TEST(name, errno, expected) \
-  TEST_F(InterceptionWorkflowTestX64, name) {                       \
-    OBJECT_GET_INFO_PROCESS_DISPLAY_TEST_CONTENT(errno, expected);  \
-  }                                                                 \
-  TEST_F(InterceptionWorkflowTestArm, name) {                       \
-    OBJECT_GET_INFO_PROCESS_DISPLAY_TEST_CONTENT(errno, expected);  \
+#define OBJECT_GET_INFO_PROCESS_V1_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                          \
+    OBJECT_GET_INFO_PROCESS_V1_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                    \
+  TEST_F(InterceptionWorkflowTestArm, name) {                          \
+    OBJECT_GET_INFO_PROCESS_V1_DISPLAY_TEST_CONTENT(errno, expected);  \
   }
 
-OBJECT_GET_INFO_PROCESS_DISPLAY_TEST(
+OBJECT_GET_INFO_PROCESS_V1_DISPLAY_TEST(
     ZxObjectGetInfoProcess, ZX_OK,
     "\n"
     "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-    "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_PROCESS\x1B[0m, "
+    "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_PROCESS_V1\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m16\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "    info: \x1B[32mzx_info_process_t\x1B[0m = {\n"
+    "    info: \x1B[32mzx_info_process_v1_t\x1B[0m = {\n"
     "      return_code: \x1B[32mint64\x1B[0m = \x1B[34m-1\x1B[0m\n"
     "      started: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m\n"
     "      exited: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m\n"

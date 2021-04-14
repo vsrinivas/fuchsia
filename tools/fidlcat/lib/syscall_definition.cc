@@ -558,36 +558,38 @@ const ZxInfoMaps* ZxInfoMaps::GetClass() {
   return instance_;
 }
 
-class ZxInfoProcess : public Class<zx_info_process_t> {
+class ZxInfoProcessV1 : public Class<zx_info_process_v1_t> {
  public:
-  static const ZxInfoProcess* GetClass();
+  static const ZxInfoProcessV1* GetClass();
 
-  static int64_t return_code(const zx_info_process_t* from) { return from->return_code; }
-  static bool started(const zx_info_process_t* from) { return from->started; }
-  static bool exited(const zx_info_process_t* from) { return from->exited; }
-  static bool debugger_attached(const zx_info_process_t* from) { return from->debugger_attached; }
+  static int64_t return_code(const zx_info_process_v1_t* from) { return from->return_code; }
+  static bool started(const zx_info_process_v1_t* from) { return from->started; }
+  static bool exited(const zx_info_process_v1_t* from) { return from->exited; }
+  static bool debugger_attached(const zx_info_process_v1_t* from) {
+    return from->debugger_attached;
+  }
 
  private:
-  ZxInfoProcess() : Class("zx_info_process_t") {
-    AddField(std::make_unique<ClassField<zx_info_process_t, int64_t>>(
+  ZxInfoProcessV1() : Class("zx_info_process_v1_t") {
+    AddField(std::make_unique<ClassField<zx_info_process_v1_t, int64_t>>(
         "return_code", SyscallType::kInt64, return_code));
-    AddField(std::make_unique<ClassField<zx_info_process_t, bool>>("started", SyscallType::kBool,
-                                                                   started));
-    AddField(std::make_unique<ClassField<zx_info_process_t, bool>>("exited", SyscallType::kBool,
-                                                                   exited));
-    AddField(std::make_unique<ClassField<zx_info_process_t, bool>>(
+    AddField(std::make_unique<ClassField<zx_info_process_v1_t, bool>>("started", SyscallType::kBool,
+                                                                      started));
+    AddField(std::make_unique<ClassField<zx_info_process_v1_t, bool>>("exited", SyscallType::kBool,
+                                                                      exited));
+    AddField(std::make_unique<ClassField<zx_info_process_v1_t, bool>>(
         "debugger_attached", SyscallType::kBool, debugger_attached));
   }
-  ZxInfoProcess(const ZxInfoProcess&) = delete;
-  ZxInfoProcess& operator=(const ZxInfoProcess&) = delete;
-  static ZxInfoProcess* instance_;
+  ZxInfoProcessV1(const ZxInfoProcessV1&) = delete;
+  ZxInfoProcessV1& operator=(const ZxInfoProcessV1&) = delete;
+  static ZxInfoProcessV1* instance_;
 };
 
-ZxInfoProcess* ZxInfoProcess::instance_ = nullptr;
+ZxInfoProcessV1* ZxInfoProcessV1::instance_ = nullptr;
 
-const ZxInfoProcess* ZxInfoProcess::GetClass() {
+const ZxInfoProcessV1* ZxInfoProcessV1::GetClass() {
   if (instance_ == nullptr) {
-    instance_ = new ZxInfoProcess;
+    instance_ = new ZxInfoProcessV1;
   }
   return instance_;
 }
@@ -3216,11 +3218,11 @@ void SyscallDecoderDispatcher::Populate() {
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic), ZX_INFO_JOB)
         ->SetId(kZxObjectGetInfo_ZX_INFO_JOB);
     zx_object_get_info
-        ->OutputObject<zx_info_process_t>(ZX_OK, "info",
-                                          std::make_unique<ArgumentAccess<uint8_t>>(buffer),
-                                          ZxInfoProcess::GetClass())
+        ->OutputObject<zx_info_process_v1_t>(ZX_OK, "info",
+                                             std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                             ZxInfoProcessV1::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
-                                   ZX_INFO_PROCESS)
+                                   ZX_INFO_PROCESS_V1)
         ->SetId(kZxObjectGetInfo_ZX_INFO_PROCESS);
     zx_object_get_info
         ->OutputObject<zx_info_process_v2_t>(ZX_OK, "info",
