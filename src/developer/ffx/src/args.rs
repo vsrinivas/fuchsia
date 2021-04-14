@@ -15,7 +15,7 @@ use {
 pub struct Ffx {
     #[argh(option, short = 'c')]
     /// override default configuration
-    pub config: Option<String>,
+    pub config: Vec<String>,
 
     #[argh(option, short = 'e')]
     /// override default environment settings

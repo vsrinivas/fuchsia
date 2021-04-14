@@ -15,10 +15,7 @@ use {
     std::{
         collections::HashMap,
         path::PathBuf,
-        sync::{
-            atomic::{AtomicBool, Ordering},
-            Mutex,
-        },
+        sync::{Mutex, Once},
         time::Instant,
     },
 };
@@ -33,8 +30,9 @@ struct CacheItem {
 
 type Cache = RwLock<HashMap<Option<String>, CacheItem>>;
 
+static INIT: Once = Once::new();
+
 lazy_static::lazy_static! {
-    static ref INIT: AtomicBool = AtomicBool::new(false);
     static ref ENV_FILE: Mutex<Option<String>> = Mutex::new(None);
     static ref RUNTIME: Mutex<Option<Value>> = Mutex::new(None);
     static ref CACHE: Cache = RwLock::new(HashMap::new());
@@ -55,28 +53,29 @@ pub fn env_file() -> Option<String> {
 }
 
 pub fn init_config(
-    runtime: &Option<String>,
+    runtime: &[String],
     runtime_overrides: &Option<String>,
     env_override: &Option<String>,
 ) -> Result<()> {
+    let mut ret = Ok(());
+
     // If it's already been initialize, just fail silently. This will allow a setup method to be
     // called by unit tests over and over again without issue.
-    #[allow(deprecated)] // TODO(fxbug.dev/67113) migrate to compare_exchange
-    if INIT.compare_and_swap(false, true, Ordering::Release) {
-        Ok(())
-    } else {
-        init_config_impl(runtime, runtime_overrides, env_override)
-    }
+    INIT.call_once(|| {
+        ret = init_config_impl(runtime, runtime_overrides, env_override);
+    });
+
+    ret
 }
 
 fn init_config_impl(
-    runtime: &Option<String>,
+    runtime: &[String],
     runtime_overrides: &Option<String>,
     env_override: &Option<String>,
 ) -> Result<()> {
     let mut populated_runtime = Value::Null;
-    vec![runtime, runtime_overrides].iter().try_for_each(|r| {
-        if let Some(v) = populate_runtime_config(r)? {
+    runtime.iter().chain(runtime_overrides).try_for_each(|r| {
+        if let Some(v) = populate_runtime_config(&Some(r.clone()))? {
             crate::api::value::merge(&mut populated_runtime, &v)
         };
         Result::<()>::Ok(())

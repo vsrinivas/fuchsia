@@ -282,7 +282,7 @@ async fn run() -> Result<()> {
     // Configuration initialization must happen before ANY calls to the config (or the cache won't
     // properly have the runtime parameters.
     let overrides = set_hash_config(app.runtime_config_overrides())?;
-    ffx_config::init_config(&app.config, &overrides, &app.env)?;
+    ffx_config::init_config(&*app.config, &overrides, &app.env)?;
     let log_to_stdio = app.verbose || is_daemon(&app.subcommand);
     ffx_config::logging::init(log_to_stdio).await?;
 

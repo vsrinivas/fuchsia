@@ -141,7 +141,7 @@ pub async fn spawn_daemon() -> Result<()> {
 
     let mut cmd = Command::new(ffx_path);
     cmd.stdin(Stdio::null()).stdout(stdout).stderr(stderr).env("RUST_BACKTRACE", "full");
-    if let Some(c) = ffx.config.as_ref() {
+    for c in ffx.config.iter() {
         cmd.arg("--config").arg(c);
     }
     if let Some(e) = ffx.env.as_ref() {
