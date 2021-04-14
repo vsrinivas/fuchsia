@@ -23,7 +23,9 @@ pub const UNREDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
     IPv6C: fec8::7d84:c1dc:ab34:656a, \
     IPv6LL: fe80::7d84:c1dc:ab34:656a, \
     UUID: ddd0fA34-1016-11eb-adc1-0242ac120002, \
-    MAC: de:ad:BE:EF:42:5a,";
+    MAC: de:ad:BE:EF:42:5a, \
+    HTTP: http://fuchsia.dev/fuchsia/testing?q=Test, \
+    HTTPS: https://fuchsia.dev/fuchsia/testing?q=Test";
 
 // NOTE: The integers in this string are brittle but deterministic. See the comment in the impl
 // of Redactor for explanation.
@@ -32,7 +34,8 @@ pub const REDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
     IPv4_Dup: <REDACTED-IPV4: 1>, IPv461: ::ffff:<REDACTED-IPV4: 3>, \
     IPv462: ::ffff:<REDACTED-IPV4: 7>, \
     IPv6: <REDACTED-IPV6: 5>, IPv6C: <REDACTED-IPV6: 6>, IPv6LL: fe80::<REDACTED-IPV6-LL: 4>, \
-    UUID: <REDACTED-UUID>, MAC: de:ad:BE:<REDACTED-MAC: 8>,";
+    UUID: <REDACTED-UUID>, MAC: de:ad:BE:<REDACTED-MAC: 8>, \
+    HTTP: <REDACTED-URL>, HTTPS: <REDACTED-URL>";
 
 pub fn emit_canary() {
     tracing::info!("{}", UNREDACTED_CANARY_MESSAGE);
@@ -152,6 +155,12 @@ const DEFAULT_REDACTION_PATTERNS: &[RedactionPattern] = &[
         matcher: r"\b(?P<oui>([0-9a-fA-F]{1,2}([\.:-])){3})([0-9a-fA-F]{1,2}([\.:-])){2}[0-9a-fA-F]{1,2}\b",
         replacement: "REDACTED-MAC: ", // MapType::Mac is handled differently
         use_map: MapType::Mac,
+    },
+    // http(s) urls
+    RedactionPattern {
+        matcher: r#"https?://[^"',;!<> ]*"#,
+        replacement: "<REDACTED-URL>",
+        use_map: MapType::No,
     },
 ];
 
@@ -300,6 +309,10 @@ mod test {
         uuid: "UUID: ddd0fA34-1016-11eb-adc1-0242ac120002" => "UUID: <REDACTED-UUID>",
         mac_address: "MAC address: 00:0a:95:9F:68:16 12:34:95:9F:68:16" =>
             "MAC address: 00:0a:95:<REDACTED-MAC: 1> 12:34:95:<REDACTED-MAC: 2>",
+        http: "HTTP: http://fuchsia.dev/" =>
+            "HTTP: <REDACTED-URL>",
+        https: "HTTPS: https://fuchsia.dev/" =>
+            "HTTPS: <REDACTED-URL>",
         combined: "Combined: Email alice@website.tld, IPv4 8.8.8.8" =>
                 "Combined: Email <REDACTED-EMAIL>, IPv4 <REDACTED-IPV4: 1>",
         preserve: "service::fidl service:fidl" => "service::fidl service:fidl",
