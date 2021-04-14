@@ -20,12 +20,6 @@ $ ./build.sh
 Next, edit the `//src/proc/bin/starnix/BUILD.gn` file and uncomment the lines indicated by comments
 about testing locally.
 
-### Disable create_raw_processes security policy.
-
-In `//src/sys/component_manager/src/elf_runner/mod.rs`, comment out the code block that prevents
-direct creation of processes. To find the code block, look for the comment "Prevent direct
-creation of processes".
-
 ### Add starnix to core.cml
 
 In order to make starnix available in the system, we need to add starnix to the
