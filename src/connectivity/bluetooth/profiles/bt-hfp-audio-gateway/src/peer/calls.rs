@@ -365,11 +365,21 @@ impl Calls {
             .map(|(idx, call)| Call::new(idx, call.number.clone(), call.state, call.direction))
     }
 
-    /// Answer the call that has been in the IncomingRinging state the longest.
-    /// Returns an Error if there are no calls in the IncomingRinging state.
+    /// Answer a single call based on the following policy:
+    ///
+    ///   * The oldest Incoming Ringing call is answered.
+    ///   * If there are no Incoming Ringing calls, the oldest Incoming Waiting call is answered.
+    ///   * If there are no calls in any of the previously specified states, return an Error.
+    // Incoming Waiting is prioritized last because implementations should be using the AT+CHLD
+    // command to manage waiting calls instead of the ATA command.
     pub fn answer(&mut self) -> Result<(), CallError> {
-        let state = CallState::IncomingRinging;
-        let idx = self.oldest_by_state(state).ok_or(CallError::None(vec![state]))?.0;
+        use CallState::*;
+        let states = vec![IncomingRinging, IncomingWaiting];
+        let idx = self
+            .oldest_by_state(states[0])
+            .or_else(|| self.oldest_by_state(states[1]))
+            .ok_or(CallError::None(states))?
+            .0;
         self.request_active(idx, true)
     }
 
@@ -385,16 +395,22 @@ impl Calls {
     ///   * The oldest Incoming Ringing call is terminated.
     ///   * If there are no Incoming Ringing calls, the oldest Ongoing Active call is terminated.
     ///   * If there are no Ongoing Active calls, the oldest Ongoing Held call is terminated.
+    ///   * If there are no Ongoing Held calls, the oldest Incoming Waiting call is terminated.
     ///   * If there are no calls in any of the previously specified states, return an Error.
     // If it becomes desirable for this policy to be configurable, it should be pulled out into the
     // component's configuration data.
+    //
+    // Incoming Waiting is prioritized last because implementations should be using the AT+CHLD
+    // command to manage waiting calls instead of the AT+CHUP command.
     pub fn hang_up(&mut self) -> Result<(), CallError> {
         use CallState::*;
+        let states = vec![IncomingRinging, OngoingActive, OngoingHeld, IncomingWaiting];
         let idx = self
-            .oldest_by_state(IncomingRinging)
-            .or_else(|| self.oldest_by_state(OngoingActive))
-            .or_else(|| self.oldest_by_state(OngoingHeld))
-            .ok_or(CallError::None(vec![IncomingRinging, OngoingActive, OngoingHeld]))?
+            .oldest_by_state(states[0])
+            .or_else(|| self.oldest_by_state(states[1]))
+            .or_else(|| self.oldest_by_state(states[2]))
+            .or_else(|| self.oldest_by_state(states[3]))
+            .ok_or(CallError::None(states))?
             .0;
         self.request_terminate(idx)
     }
