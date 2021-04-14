@@ -30,7 +30,7 @@ source_set("lib") {
     "ge2d_task.h",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.amlogiccanvas",
+    "//sdk/banjo/fuchsia.hardware.amlogiccanvas:fuchsia.hardware.amlogiccanvas_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.ge2d",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
@@ -95,7 +95,7 @@ executable("ge2d_task_unittest_bin") {
   sources = [ "ge2d_task_unittest.cc" ]
   deps = [
     ":lib",
-    "//sdk/banjo/fuchsia.hardware.amlogiccanvas",
+    "//sdk/banjo/fuchsia.hardware.amlogiccanvas:fuchsia.hardware.amlogiccanvas_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.ge2d",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",

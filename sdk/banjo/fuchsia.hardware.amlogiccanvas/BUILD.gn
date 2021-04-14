@@ -5,10 +5,11 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.amlogiccanvas") {
+  fidl_only = true
   sources = [ "amlogic-canvas.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
 
 group("fuchsia.hardware.amlogiccanvas_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.amlogiccanvas" ]
+  public_deps = [ ":fuchsia.hardware.amlogiccanvas_banjo_cpp_2" ]
 }

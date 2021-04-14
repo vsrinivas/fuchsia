@@ -17,7 +17,7 @@ bind_rules("vim-display-bind") {
 source_set("common") {
   public_deps = [
     ":vim-display-bind",
-    "//sdk/banjo/fuchsia.hardware.amlogiccanvas",
+    "//sdk/banjo/fuchsia.hardware.amlogiccanvas:fuchsia.hardware.amlogiccanvas_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.audiotypes",
     "//sdk/banjo/fuchsia.hardware.display.controller",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
