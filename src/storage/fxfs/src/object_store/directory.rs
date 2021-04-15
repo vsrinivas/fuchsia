@@ -5,7 +5,10 @@
 use {
     crate::{
         errors::FxfsError,
-        lsm_tree::types::{ItemRef, LayerIterator},
+        lsm_tree::{
+            merge::{Merger, MergerIterator},
+            types::{ItemRef, LayerIterator},
+        },
         object_handle::ObjectHandle,
         object_store::{
             record::{ObjectItem, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue},
@@ -39,34 +42,10 @@ impl Directory {
         return self.object_id;
     }
 
-    // TODO(jfsulliv): This is only necessary because we don't have some sort of iterator for
-    // children yet. When we implement that, get rid of this.
     pub async fn has_children(&self) -> Result<bool, Error> {
-        let layer_set = self.object_store().tree().layer_set();
+        let layer_set = self.store.tree().layer_set();
         let mut merger = layer_set.merger();
-        let key = ObjectKey::child(self.object_id, "").search_key();
-        let mut iter = merger.seek(Bound::Included(&key)).await?;
-        loop {
-            match iter.get() {
-                Some(ItemRef {
-                    key: ObjectKey { object_id, data: ObjectKeyData::Child { .. } },
-                    value: ObjectValue::Child { .. },
-                }) if *object_id == self.object_id => return Ok(true),
-                Some(ItemRef {
-                    key: ObjectKey { object_id, data: ObjectKeyData::Child { .. } },
-                    value: ObjectValue::None,
-                }) if *object_id == self.object_id => {
-                    // TODO(csuter): The choice of key for this call is actually irrelevant, since
-                    // the first seek call should have loaded all layer iterators, and the hint
-                    // provided to |advance_with_hint| only serves to abort early if the lower
-                    // layers need to be loaded. Consider replacing the above |seek| with a variant
-                    // that would let us simply |advance|.
-                    iter.advance_with_hint(&key).await?;
-                }
-                _ => break,
-            }
-        }
-        Ok(false)
+        Ok(self.iter(&mut merger).await?.get().is_some())
     }
 
     /// Returns the object ID and descriptor for the given child, or FxfsError::NotFound if not
@@ -179,6 +158,66 @@ impl Directory {
             Mutation::replace_or_insert_object(ObjectKey::child(self.object_id, name), new_value),
         );
         Ok(())
+    }
+
+    /// Returns an iterator that will return directory entries skipping deleted ones.  Example
+    /// usage:
+    ///
+    ///   let layer_set = dir.object_store().tree().layer_set();
+    ///   let mut merger = layer_set.merger();
+    ///   let mut iter = dir.iter(&mut merger).await?;
+    ///
+    pub async fn iter<'a, 'b>(
+        &self,
+        merger: &'a mut Merger<'b, ObjectKey, ObjectValue>,
+    ) -> Result<DirectoryIterator<'a, 'b>, Error> {
+        let key = ObjectKey::child(self.object_id, "");
+        let mut iter = merger.seek(Bound::Included(&key)).await?;
+        // Skip deleted entries.
+        // TODO(csuter): Remove this once we've developed a filtering iterator.
+        loop {
+            match iter.get() {
+                Some(ItemRef { key: ObjectKey { object_id, .. }, value: ObjectValue::None })
+                    if *object_id == self.object_id => {}
+                _ => break,
+            }
+            iter.advance_with_hint(&key).await?;
+        }
+        Ok(DirectoryIterator { object_id: self.object_id, iter })
+    }
+}
+
+pub struct DirectoryIterator<'a, 'b> {
+    object_id: u64,
+    iter: MergerIterator<'a, 'b, ObjectKey, ObjectValue>,
+}
+
+impl DirectoryIterator<'_, '_> {
+    pub fn get(&self) -> Option<(&str, u64, &ObjectDescriptor)> {
+        match self.iter.get() {
+            Some(ItemRef {
+                key: ObjectKey { object_id: oid, data: ObjectKeyData::Child { name } },
+                value: ObjectValue::Child { object_id, object_descriptor },
+            }) if *oid == self.object_id => Some((name, *object_id, object_descriptor)),
+            _ => None,
+        }
+    }
+
+    pub async fn advance(&mut self) -> Result<(), Error> {
+        loop {
+            // TODO(csuter): The choice of key for this call is actually irrelevant, since the first
+            // seek call should have loaded all layer iterators, and the hint provided to
+            // |advance_with_hint| only serves to abort early if the lower layers need to be
+            // loaded. Consider replacing the above |seek| with a variant that would let us simply
+            // |advance|.
+            self.iter.advance_with_hint(&ObjectKey::child(0, "")).await?;
+            // Skip deleted entries.
+            match self.iter.get() {
+                Some(ItemRef { key: ObjectKey { object_id, .. }, value: ObjectValue::None })
+                    if *object_id == self.object_id => {}
+                _ => return Ok(()),
+            }
+        }
     }
 }
 
@@ -354,12 +393,12 @@ mod tests {
             .expect("create_directory failed");
 
         dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         dir.remove_child(&mut transaction, "foo").await.expect("remove_child failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         assert_eq!(
             dir.lookup("foo")
@@ -386,7 +425,7 @@ mod tests {
         let child =
             dir.create_child_dir(&mut transaction, "foo").await.expect("create_child_dir failed");
         child.create_child_file(&mut transaction, "bar").await.expect("create_child_file failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
@@ -400,12 +439,12 @@ mod tests {
         );
 
         child.remove_child(&mut transaction, "bar").await.expect("remove_child failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         dir.remove_child(&mut transaction, "foo").await.expect("remove_child failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         assert_eq!(
             dir.lookup("foo")
@@ -430,17 +469,17 @@ mod tests {
             .expect("create_directory failed");
 
         dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         dir.remove_child(&mut transaction, "foo").await.expect("remove_child failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         dir.lookup("foo").await.expect("lookup failed");
     }
@@ -459,13 +498,13 @@ mod tests {
                 .expect("create_directory failed");
 
             dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
-            fs.commit_transaction(transaction).await;
+            transaction.commit().await;
             dir.lookup("foo").await.expect("lookup failed");
 
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
             dir.remove_child(&mut transaction, "foo").await.expect("remove_child failed");
-            fs.commit_transaction(transaction).await;
+            transaction.commit().await;
 
             fs.sync(SyncOptions::default()).await.expect("sync failed");
             dir.object_id()
@@ -503,14 +542,14 @@ mod tests {
             .create_child_file(&mut transaction, "foo")
             .await
             .expect("create_child_file failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         move_child(&mut transaction, &child_dir1, "foo", &child_dir2, "bar")
             .await
             .expect("move_child failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         assert_eq!(
             child_dir1
@@ -548,7 +587,7 @@ mod tests {
             .create_child_file(&mut transaction, "bar")
             .await
             .expect("create_child_file failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         {
             let mut buf = foo.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
@@ -565,7 +604,7 @@ mod tests {
         move_child(&mut transaction, &child_dir1, "foo", &child_dir2, "bar")
             .await
             .expect("move_child failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         assert_eq!(
             child_dir1
@@ -618,7 +657,7 @@ mod tests {
             .create_child_file(&mut transaction, "baz")
             .await
             .expect("create_child_file failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
@@ -644,12 +683,12 @@ mod tests {
             .await
             .expect("create_directory failed");
         dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         move_child(&mut transaction, &dir, "foo", &dir, "bar").await.expect("move_child failed");
-        fs.commit_transaction(transaction).await;
+        transaction.commit().await;
 
         assert_eq!(
             dir.lookup("foo")
@@ -660,5 +699,44 @@ mod tests {
             FxfsError::NotFound
         );
         dir.lookup("bar").await.expect("lookup new name failed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_iterate() {
+        let device = Arc::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
+        let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        let dir = fs
+            .root_store()
+            .create_directory(&mut transaction)
+            .await
+            .expect("create_directory failed");
+        let _cat =
+            dir.create_child_file(&mut transaction, "cat").await.expect("create_child_file failed");
+        let _ball = dir
+            .create_child_file(&mut transaction, "ball")
+            .await
+            .expect("create_child_file failed");
+        let _apple = dir
+            .create_child_file(&mut transaction, "apple")
+            .await
+            .expect("create_child_file failed");
+        let _dog =
+            dir.create_child_file(&mut transaction, "dog").await.expect("create_child_file failed");
+        transaction.commit().await;
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        dir.remove_child(&mut transaction, "apple").await.expect("remove_child failed");
+        transaction.commit().await;
+        let layer_set = dir.object_store().tree().layer_set();
+        let mut merger = layer_set.merger();
+        let mut iter = dir.iter(&mut merger).await.expect("iter failed");
+        let mut entries = Vec::new();
+        while let Some((name, _, _)) = iter.get() {
+            entries.push(name.to_string());
+            iter.advance().await.expect("advance failed");
+        }
+        assert_eq!(&entries, &["ball", "cat", "dog"]);
     }
 }
