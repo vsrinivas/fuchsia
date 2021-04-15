@@ -164,7 +164,7 @@ impl Eq for AllocatorMutation {}
 /// TODO(csuter): At the moment, these keys only apply to writers, but there needs to be some
 /// support for readers, since there are races that can occur whilst a transaction is being
 /// committed.
-#[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum LockKey {
     /// Used to lock changes to a particular object attribute (e.g. writes).
     ObjectAttribute { store_object_id: u64, object_id: u64, attribute_id: u64 },
@@ -317,6 +317,7 @@ struct Locks {
     keys: HashMap<LockKey, LockEntry>,
 }
 
+#[derive(Debug)]
 struct LockEntry {
     sequence: u64,
     read_count: u64,
@@ -324,6 +325,7 @@ struct LockEntry {
     wakers: Vec<Waker>,
 }
 
+#[derive(Debug)]
 enum LockState {
     Unlocked,
     Locked,
@@ -383,9 +385,33 @@ impl LockManager {
     pub fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
         let mut locks = self.locks.lock().unwrap();
         for lock in transaction.lock_keys.drain(..) {
-            let (_, entry) = locks.keys.remove_entry(&lock).unwrap();
-            for waker in entry.wakers {
-                waker.wake();
+            let Locks { sequence: _, keys } = &mut *locks;
+            match keys.entry(lock.clone()) {
+                Entry::Vacant(_) => unreachable!(),
+                Entry::Occupied(mut occupied) => {
+                    let entry = occupied.get_mut();
+                    let wakers = std::mem::take(&mut entry.wakers);
+                    match entry.state {
+                        LockState::Committing(_) => {
+                            occupied.remove_entry();
+                        }
+                        LockState::Locked => {
+                            // If the lock is dropped before it is committed, there might be active
+                            // readers referencing the same lock key, so we shouldn't remove it from
+                            // the lock-set yet.
+                            // The last reader will remove the entry (See ReadGuard::drop).
+                            if entry.read_count == 0 {
+                                occupied.remove_entry();
+                            } else {
+                                entry.state = LockState::Unlocked;
+                            }
+                        }
+                        LockState::Unlocked => unreachable!(),
+                    }
+                    for waker in wakers {
+                        waker.wake();
+                    }
+                }
             }
         }
     }
@@ -611,5 +637,26 @@ mod tests {
                 *done.lock().unwrap() = true;
             },
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_drop_uncommitted_transaction() {
+        let device = Arc::new(FakeDevice::new(1024, 1024));
+        let fs = FakeFilesystem::new(device);
+        let key = LockKey::object(1, 1);
+
+        // Dropping while there's a reader.
+        {
+            let mut write_lock =
+                fs.clone().new_transaction(&[key.clone()]).await.expect("new_transaction failed");
+            let _read_lock = fs.read_lock(&[key.clone()]).await;
+            fs.clone().drop_transaction(&mut write_lock);
+        }
+        // Dropping while there's no reader.
+        let mut write_lock =
+            fs.clone().new_transaction(&[key.clone()]).await.expect("new_transaction failed");
+        fs.clone().drop_transaction(&mut write_lock);
+        // Make sure we can take the lock again (i.e. it was actually released).
+        fs.clone().new_transaction(&[key.clone()]).await.expect("new_transaction failed");
     }
 }
