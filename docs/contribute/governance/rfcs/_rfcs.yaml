@@ -1117,5 +1117,18 @@
   gerrit_change_id: ['499278']
   status: 'Accepted'
   reviewers: ['jsankey@google.com', 'pascallouis@google.com']
-  submitted: '2020-03-09'
-  reviewed: '2020-04-07'
+  submitted: '2021-03-09'
+  reviewed: '2021-04-07'
+
+- name: 'RFC-0087'
+  title: 'Updates to FTP-050: FIDL Method Parameter Syntax'
+  short_description: 'Modify the syntax for specifying request and response parameters by explicitly defining the top level type.'
+  authors: ['fcz@google.com']
+  file: '0087_fidl_method_syntax.md'
+  area: ['FIDL']
+  issue: ['71818']
+  gerrit_change_id: [ '497299' ]
+  status: 'Accepted'
+  reviewers: ['mkember@google.com', 'pascallouis@google.com', 'surajmalhotra@google.com', 'yifeit@google.com']
+  submitted: '2021-03-09'
+  reviewed: '2021-04-14'

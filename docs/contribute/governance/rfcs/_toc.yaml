@@ -185,3 +185,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0085_reducing_zx_status_t_space.md
 - title: "RFC-0086 - Updates to RFC-0050: FIDL Attributes Syntax"
   path: /docs/contribute/governance/rfcs/0086_rfc_0050_attributes.md
+- title: "RFC-0087 - Updates to FTP-050: FIDL Method Parameter Syntax"
+  path: /docs/contribute/governance/rfcs/0087_fidl_method_syntax.md
