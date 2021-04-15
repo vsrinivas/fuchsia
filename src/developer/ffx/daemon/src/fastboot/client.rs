@@ -44,8 +44,8 @@ impl<T: AsyncRead + AsyncWrite + Unpin + Send> FastbootImpl<T> {
     }
 
     async fn usb(&mut self) -> Result<&mut T> {
-        if let None = self.usb {
-            self.usb = Some(self.usb_factory.open(&self.target).await?);
+        if self.usb.is_none() {
+            self.usb.replace(self.usb_factory.open(&self.target).await?);
         }
         Ok(self.usb.as_mut().expect("usb interface not available"))
     }
@@ -55,8 +55,16 @@ impl<T: AsyncRead + AsyncWrite + Unpin + Send> FastbootImpl<T> {
         mut stream: FastbootRequestStream,
     ) -> Result<()> {
         while let Some(req) = stream.try_next().await? {
-            self.handle_fastboot_request(req).await?;
+            match self.handle_fastboot_request(req).await {
+                Ok(_) => (),
+                Err(e) => {
+                    self.clear_usb().await;
+                    return Err(e);
+                }
+            }
         }
+        // Make sure the serial is no longer in use.
+        self.clear_usb().await;
         Ok(())
     }
 
@@ -282,6 +290,7 @@ mod test {
                 Ok(_) => log::debug!("Fastboot proxy finished - client disconnected"),
                 Err(e) => log::error!("There was an error handling fastboot requests: {:?}", e),
             }
+            assert!(fb.usb.is_none());
         })
         .detach();
         (target, proxy)
