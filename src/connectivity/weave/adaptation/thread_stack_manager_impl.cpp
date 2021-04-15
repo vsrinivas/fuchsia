@@ -85,7 +85,7 @@ WEAVE_ERROR ThreadStackManagerImpl::_GetAndLogThreadTopologyFull() {
   return delegate_->GetAndLogThreadTopologyFull();
 }
 
-const std::string& ThreadStackManagerImpl::GetInterfaceName() const {
+std::string ThreadStackManagerImpl::GetInterfaceName() const {
   return delegate_->GetInterfaceName();
 }
 

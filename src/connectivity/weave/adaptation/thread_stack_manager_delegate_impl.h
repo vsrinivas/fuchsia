@@ -40,7 +40,7 @@ class NL_DLL_EXPORT ThreadStackManagerDelegateImpl : public ThreadStackManagerIm
   WEAVE_ERROR GetAndLogThreadStatsCounters() override;
   WEAVE_ERROR GetAndLogThreadTopologyMinimal() override;
   WEAVE_ERROR GetAndLogThreadTopologyFull() override;
-  const std::string& GetInterfaceName() const override;
+  std::string GetInterfaceName() const override;
   bool IsThreadSupported() const override;
   WEAVE_ERROR GetPrimary802154MACAddress(uint8_t* mac_address) override;
   WEAVE_ERROR SetThreadJoinable(bool enable) override;

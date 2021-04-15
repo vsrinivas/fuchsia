@@ -600,9 +600,7 @@ zx_status_t ThreadStackManagerDelegateImpl::GetProtocols(Protocols protocols) {
   return ZX_OK;
 }
 
-const std::string& ThreadStackManagerDelegateImpl::GetInterfaceName() const {
-  return interface_name_;
-}
+std::string ThreadStackManagerDelegateImpl::GetInterfaceName() const { return interface_name_; }
 
 bool ThreadStackManagerDelegateImpl::IsThreadSupported() const { return is_thread_supported_; }
 

@@ -10,9 +10,11 @@
 // clang-format on
 
 #include <fuchsia/net/cpp/fidl.h>
-#include <fuchsia/net/stack/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <netinet/ip6.h>
+
+#include <optional>
 
 // ==================== WARM Platform Functions ====================
 
@@ -22,65 +24,56 @@ namespace Warm {
 namespace Platform {
 
 namespace {
-using namespace ::nl::Weave::DeviceLayer;
-using namespace ::nl::Weave::DeviceLayer::Internal;
-using namespace ::nl;
-using namespace ::nl::Weave;
-using namespace ::nl::Weave::Warm;
+using DeviceLayer::ConnectivityMgrImpl;
+using DeviceLayer::ThreadStackMgrImpl;
 
-using fuchsia::net::stack::Error;
-
+// Fixed name for tunnel interface.
 constexpr char kTunInterfaceName[] = "weav-tun0";
-constexpr uint8_t kSubnetPrefixLen = 48;
 
-// Get the interface name associated with the interface type. Returns true on success or false if
-// the type is not yet supported.
-bool GetInterfaceName(InterfaceType interface_type, std::string *interface_name) {
+// Route metric values for primary and backup tunnels. Higher priority tunnels
+// have lower metric values so that they are prioritized in the routing table.
+constexpr uint32_t kRouteMetric_HighPriority = 0;
+constexpr uint32_t kRouteMetric_MediumPriority = 99;
+constexpr uint32_t kRouteMetric_LowPriority = 999;
+
+// Returns the interface name associated with the given interface type.
+// Unsupported interface types will not populate the optional.
+std::optional<std::string> GetInterfaceName(InterfaceType interface_type) {
   switch (interface_type) {
     case kInterfaceTypeThread:
-      *interface_name = ThreadStackMgrImpl().GetInterfaceName();
-      return true;
+      return ThreadStackMgrImpl().GetInterfaceName();
     case kInterfaceTypeTunnel:
-      *interface_name = kTunInterfaceName;
-      return true;
-    case kInterfaceTypeWiFi: {
-      auto wifi_iface_name = ConnectivityMgrImpl().GetWiFiInterfaceName();
-      *interface_name = wifi_iface_name.value_or("");
-      return wifi_iface_name.has_value();
-    }
+      return kTunInterfaceName;
+    case kInterfaceTypeWiFi:
+      return ConnectivityMgrImpl().GetWiFiInterfaceName();
     default:
-      return false;
+      FX_LOGS(ERROR) << "Unknown interface type: " << interface_type;
+      return std::nullopt;
   }
 }
 
-// Get network interface id.
-zx_status_t GetInterface(fuchsia::net::stack::StackSyncPtr &stack_sync_ptr,
-                         std::string interface_name, uint64_t *interface_id) {
-  std::vector<fuchsia::net::stack::InterfaceInfo> ifs;
+// Returns the interface id associated with the given interface name. On
+// failures to fetch the list, no value will be returned. When the interface
+// does not exist, the interface ID '0' will be returned (it is guaranteed by
+// the networking stack that all valid interface IDs are positive).
+std::optional<uint64_t> GetInterfaceId(fuchsia::netstack::NetstackSyncPtr &stack_sync_ptr,
+                                       std::string interface_name) {
+  std::vector<fuchsia::netstack::NetInterface2> ifs;
 
-  if (interface_id == NULL) {
-    FX_LOGS(ERROR) << "interface_id is NULL.";
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  zx_status_t status = stack_sync_ptr->ListInterfaces(&ifs);
+  zx_status_t status = stack_sync_ptr->GetInterfaces2(&ifs);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "ListInterfaces failed: " << zx_status_get_string(status);
-    return status;
+    FX_LOGS(ERROR) << "Failed to acquire interface list: " << zx_status_get_string(status);
+    return std::nullopt;
   }
 
-  std::vector<fuchsia::net::stack::InterfaceInfo>::iterator it;
-  it = std::find_if(ifs.begin(), ifs.end(), [&](const fuchsia::net::stack::InterfaceInfo &info) {
-    return info.properties.name == interface_name;
-  });
-
+  std::vector<fuchsia::netstack::NetInterface2>::iterator it = std::find_if(
+      ifs.begin(), ifs.end(),
+      [&](const fuchsia::netstack::NetInterface2 &info) { return info.name == interface_name; });
   if (it == ifs.end()) {
-    FX_LOGS(ERROR) << "Unable to find interface \"" << interface_name << "\".";
-    return ZX_ERR_NOT_FOUND;
+    FX_LOGS(ERROR) << "Failed to acquire interface id for " << interface_name;
+    return 0;
   }
-
-  *interface_id = it->id;
-  return ZX_OK;
+  return it->id;
 }
 
 }  // namespace
@@ -99,128 +92,153 @@ void RequestInvokeActions(void) { ::nl::Weave::Warm::InvokeActions(); }
 // Add or remove address on tunnel interface.
 PlatformResult AddRemoveHostAddress(InterfaceType interface_type, const Inet::IPAddress &address,
                                     uint8_t prefix_length, bool add) {
-  fuchsia::net::stack::StackSyncPtr stack_sync_ptr;
-  fuchsia::net::IpAddress addr;
-  fuchsia::net::Ipv6Address v6;
-  uint64_t interface_id = 0;
-  fuchsia::net::Subnet ifaddr;
   auto svc = nl::Weave::DeviceLayer::PlatformMgrImpl().GetComponentContextForProcess()->svc();
 
-  // Determine interface name to add to/remove from.
-  std::string interface_name;
-  if (!GetInterfaceName(interface_type, &interface_name)) {
-    FX_LOGS(ERROR) << "Cannot handle interface type \"" << interface_type << "\".";
+  // Determine interface name to add/remove from.
+  std::optional<std::string> interface_name = GetInterfaceName(interface_type);
+  if (!interface_name) {
     return kPlatformResultFailure;
   }
 
-  // Connect to the net Stack and grab the interface ID requested.
+  fuchsia::netstack::NetstackSyncPtr stack_sync_ptr;
   zx_status_t status = svc->Connect(stack_sync_ptr.NewRequest());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Connect to netstack failed: " << status;
+    FX_LOGS(ERROR) << "Failed to connect to netstack: " << zx_status_get_string(status);
     return kPlatformResultFailure;
   }
-  status = GetInterface(stack_sync_ptr, interface_name, &interface_id);
-  if (!add && status == ZX_ERR_NOT_FOUND) {
-    // When removing, don't report error if interface isn't found as the interface itself may have
-    // been removed beforehand.
+
+  // Determine the interface ID to add/remove from.
+  std::optional<uint64_t> interface_id = GetInterfaceId(stack_sync_ptr, interface_name.value());
+  if (!add && interface_id && interface_id.value() == 0) {
+    // When removing, don't report an error if the interface wasn't found. The
+    // interface may already have been removed at this point.
+    FX_LOGS(INFO) << "Interface " << interface_name.value() << " has already been removed.";
     return kPlatformResultSuccess;
-  } if (status != ZX_OK) {
+  } else if (!interface_id) {
     return kPlatformResultFailure;
   }
 
-  // Set up the ip address and prefix.
-  std::memcpy(v6.addr.data(), (uint8_t *)(address.Addr), v6.addr.size());
-  addr.set_ipv6(v6);
-  ifaddr.addr = std::move(addr);
-  ifaddr.prefix_len = prefix_length;
+  // Construct the IP address for the interface.
+  fuchsia::net::IpAddress ip_addr;
+  fuchsia::net::Ipv6Address ipv6_addr;
 
-  if (add) {
-    // Add the address to the interface.
-    fuchsia::net::stack::Stack_AddInterfaceAddress_Result result;
-    status = stack_sync_ptr->AddInterfaceAddress(interface_id, std::move(ifaddr), &result);
-    if (status != ZX_OK || result.is_err()) {
-      FX_LOGS(ERROR) << "Failed to add interface address to id: " << interface_id
-                     << " status: " << zx_status_get_string(status);
-      return kPlatformResultFailure;
-    }
-  } else {
-    // Remove the address from the interface.
-    fuchsia::net::stack::Stack_DelInterfaceAddress_Result result;
-    status = stack_sync_ptr->DelInterfaceAddress(interface_id, std::move(ifaddr), &result);
-    if (status != ZX_OK || result.is_err()) {
-      FX_LOGS(ERROR) << "Failed to delete interface address for id: " << interface_id
-                     << " status: " << zx_status_get_string(status);
-      return kPlatformResultFailure;
-    }
+  std::memcpy(ipv6_addr.addr.data(), (uint8_t *)(address.Addr), ipv6_addr.addr.size());
+  ip_addr.set_ipv6(ipv6_addr);
+
+  // Add or remove the address from the interface.
+  fuchsia::netstack::NetErr result;
+  status = add ? stack_sync_ptr->SetInterfaceAddress(interface_id.value(), std::move(ip_addr),
+                                                     prefix_length, &result)
+               : stack_sync_ptr->RemoveInterfaceAddress(interface_id.value(), std::move(ip_addr),
+                                                        prefix_length, &result);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to configure interface address to interface id "
+                   << interface_id.value() << ": " << zx_status_get_string(status);
+    return kPlatformResultFailure;
+  } else if (result.status != fuchsia::netstack::Status::OK) {
+    FX_LOGS(ERROR) << "Unable to configure interface address to interface id "
+                   << interface_id.value() << ": " << result.message;
+    return kPlatformResultFailure;
   }
 
-  FX_LOGS(INFO) << "AddRemoveHostAddress successful.";
-
+  FX_LOGS(INFO) << (add ? "Added" : "Removed") << " host address from interface id "
+                << interface_id.value();
   return kPlatformResultSuccess;
 }
 
 // Add or remove route to/from forwarding table.
 PlatformResult AddRemoveHostRoute(InterfaceType interface_type, const Inet::IPPrefix &prefix,
                                   RoutePriority priority, bool add) {
-  uint64_t interface_id = 0;
-  fuchsia::net::stack::StackSyncPtr stack_sync_ptr;
-  fuchsia::net::Ipv6Address v6;
-  fuchsia::net::stack::ForwardingEntry entry;
   auto svc = nl::Weave::DeviceLayer::PlatformMgrImpl().GetComponentContextForProcess()->svc();
 
   // Determine interface name to add to/remove from.
-  std::string interface_name;
-  if (!GetInterfaceName(interface_type, &interface_name)) {
-    FX_LOGS(ERROR) << "Cannot handle interface type \"" << interface_type << "\".";
+  std::optional<std::string> interface_name = GetInterfaceName(interface_type);
+  if (!interface_name) {
     return kPlatformResultFailure;
   }
 
-  // Connect to the net Stack and grab the interface ID requested.
+  fuchsia::netstack::NetstackSyncPtr stack_sync_ptr;
   zx_status_t status = svc->Connect(stack_sync_ptr.NewRequest());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Connect to netstack failed: " << status;
+    FX_LOGS(ERROR) << "Failed to connect to netstack: " << zx_status_get_string(status);
     return kPlatformResultFailure;
   }
-  status = GetInterface(stack_sync_ptr, interface_name, &interface_id);
-  if (status != ZX_OK) {
+
+  // Determine the interface ID to add/remove from.
+  std::optional<uint64_t> interface_id = GetInterfaceId(stack_sync_ptr, interface_name.value());
+  if (!add && interface_id && interface_id.value() == 0) {
+    // When removing, don't report an error if the interface wasn't found. The
+    // interface may already have been removed at this point.
+    FX_LOGS(INFO) << "Interface " << interface_name.value() << " has already been removed.";
     return kPlatformResultSuccess;
+  } else if (!interface_id) {
+    return kPlatformResultFailure;
   }
 
-  std::memcpy(v6.addr.data(), (uint8_t *)(prefix.IPAddr.Addr), v6.addr.size());
-  if (add) {
-    // Add the forwarding entry for the specified interface.
-    fuchsia::net::stack::Stack_AddForwardingEntry_Result result;
-    entry.subnet.addr.set_ipv6(v6);
-    entry.subnet.prefix_len = kSubnetPrefixLen;
-    entry.destination.set_device_id(interface_id);
-    status = stack_sync_ptr->AddForwardingEntry(std::move(entry), &result);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "AddForwardingEntry failed: " << zx_status_get_string(status);
-      return kPlatformResultFailure;
-    }
-
-    if (result.is_err()) {
-      FX_LOGS(ERROR) << "AddForwardingEntry failed result:";
-      return kPlatformResultFailure;
-    }
-  } else {
-    // Remove the forwarding entry for the specified interface.
-    fuchsia::net::Subnet subnet;
-    subnet.addr.set_ipv6(v6);
-    subnet.prefix_len = prefix.Length;
-    fuchsia::net::stack::Stack_DelForwardingEntry_Result result;
-    status = stack_sync_ptr->DelForwardingEntry(std::move(subnet), &result);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "DelForwardingEntry failed: " << zx_status_get_string(status);
-      return kPlatformResultFailure;
-    }
-    if (result.is_err()) {
-      FX_LOGS(ERROR) << "DelForwardingEntry failed result.";
-      return kPlatformResultFailure;
-    }
+  // Begin route table transaction to add or remove forwarding entries.
+  fuchsia::netstack::RouteTableTransactionSyncPtr route_table_sync_ptr;
+  zx_status_t transaction_status;
+  status = stack_sync_ptr->StartRouteTableTransaction(route_table_sync_ptr.NewRequest(),
+                                                      &transaction_status);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to start route table transaction: " << zx_status_get_string(status);
+    return kPlatformResultFailure;
+  } else if (transaction_status != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to start route table transaction: "
+                   << zx_status_get_string(transaction_status);
+    return kPlatformResultFailure;
   }
 
-  FX_LOGS(INFO) << "AddRemoveHostRoute successful.";
+  // Construct route table entry to add or remove.
+  fuchsia::netstack::RouteTableEntry2 route_table_entry;
+  fuchsia::net::IpAddress destination;
+  fuchsia::net::IpAddress netmask;
+
+  fuchsia::net::Ipv6Address ipv6_addr;
+  std::memcpy(ipv6_addr.addr.data(), (uint8_t *)(prefix.IPAddr.Addr), ipv6_addr.addr.size());
+  destination.set_ipv6(ipv6_addr);
+
+  fuchsia::net::Ipv6Address subnet_addr;
+  size_t subnet_addr_size_bytes = prefix.Length / 8;
+  if (subnet_addr_size_bytes >= subnet_addr.addr.size()) {
+    FX_LOGS(ERROR) << "Unexpected prefix /" << prefix.Length;
+    return kPlatformResultFailure;
+  }
+  std::memset(subnet_addr.addr.data(), 0, subnet_addr.addr.size());
+  std::memset(subnet_addr.addr.data(), 0xFF, subnet_addr_size_bytes);
+  netmask.set_ipv6(subnet_addr);
+
+  route_table_entry.destination = std::move(destination);
+  route_table_entry.netmask = std::move(netmask);
+  route_table_entry.nicid = interface_id.value();
+  switch (priority) {
+    case RoutePriority::kRoutePriorityHigh:
+      route_table_entry.metric = kRouteMetric_HighPriority;
+      break;
+    case RoutePriority::kRoutePriorityMedium:
+      route_table_entry.metric = kRouteMetric_MediumPriority;
+      break;
+    case RoutePriority::kRoutePriorityLow:
+      route_table_entry.metric = kRouteMetric_LowPriority;
+      break;
+    default:
+      FX_LOGS(WARNING) << "Unhandled route priority type, using lowest priority.";
+      route_table_entry.metric = kRouteMetric_LowPriority;
+  }
+
+  // Start route table transaction.
+  status = add ? route_table_sync_ptr->AddRoute(std::move(route_table_entry), &transaction_status)
+               : route_table_sync_ptr->DelRoute(std::move(route_table_entry), &transaction_status);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to modify route: " << zx_status_get_string(status);
+    return kPlatformResultFailure;
+  } else if (transaction_status != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to modify route: " << zx_status_get_string(transaction_status);
+    return kPlatformResultFailure;
+  }
+
+  FX_LOGS(INFO) << (add ? "Added" : "Removed") << " host route to/from interface id "
+                << interface_id.value();
   return kPlatformResultSuccess;
 }
 
@@ -249,7 +267,7 @@ PlatformResult AddRemoveThreadRoute(InterfaceType inInterfaceType, const Inet::I
 
 PlatformResult SetThreadRoutePriority(InterfaceType inInterfaceType, const Inet::IPPrefix &inPrefix,
                                       RoutePriority inPriority) {
-  // Route priority not supported.
+  // This will be handled during the subsequent AddRemoveHostAddress from WARM.
   return kPlatformResultSuccess;
 }
 #endif  // WARM_CONFIG_SUPPORT_BORDER_ROUTING

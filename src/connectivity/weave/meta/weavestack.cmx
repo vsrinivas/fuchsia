@@ -21,6 +21,7 @@
             "fuchsia.net.routes.State",
             "fuchsia.net.stack.Stack",
             "fuchsia.net.tun.Control",
+            "fuchsia.netstack.Netstack",
             "fuchsia.posix.socket.Provider",
             "fuchsia.weave.FactoryDataManager",
             "fuchsia.weave.Signer"

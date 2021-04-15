@@ -67,7 +67,7 @@ class NL_DLL_EXPORT ThreadStackManagerImpl final : public ThreadStackManager {
     // Log a Weave event for a full Thread topology.
     virtual WEAVE_ERROR GetAndLogThreadTopologyFull() = 0;
     // Get the name of the thread interface.
-    virtual const std::string& GetInterfaceName() const = 0;
+    virtual std::string GetInterfaceName() const = 0;
     // Determine if Thread is supported. If `false` all calls other than
     // InitThreadStack should return unsuccessfully with no side effects.
     virtual bool IsThreadSupported() const = 0;
@@ -139,7 +139,7 @@ class NL_DLL_EXPORT ThreadStackManagerImpl final : public ThreadStackManager {
   WEAVE_ERROR _GetAndLogThreadTopologyFull();
 
   // ThreadStackManagerImpl-specific functionality.
-  const std::string& GetInterfaceName() const;
+  std::string GetInterfaceName() const;
   bool IsThreadSupported() const;
   WEAVE_ERROR SetThreadJoinable(bool enable);
 
