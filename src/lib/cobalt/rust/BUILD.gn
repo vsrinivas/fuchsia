@@ -14,6 +14,7 @@ rustc_library("fuchsia-cobalt") {
   deps = [
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
@@ -29,6 +30,7 @@ rustc_library("fuchsia-cobalt") {
     "src/cobalt_event_builder.rs",
     "src/connector.rs",
     "src/lib.rs",
+    "src/metric_event_builder.rs",
     "src/sender.rs",
   ]
 }
