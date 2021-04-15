@@ -77,6 +77,9 @@ const TARGET_IN_FASTBOOT: &str = "\
 This command cannot be run against a target in the Fastboot state. Try
 rebooting the device or flashing the device into a running state.";
 
+const DAEMON_CONNECTION_ISSUE: &str = "\
+Timed out waiting on the Daemon.\nRun `ffx doctor` for further diagnostics";
+
 lazy_static! {
     static ref DAEMON_ONCE: Once<DaemonProxy> = Once::new();
 }
@@ -112,7 +115,11 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
             }
         };
 
-    let daemon_hash = proxy.get_hash().await?;
+    let daemon_hash = timeout(proxy_timeout().await?, proxy.get_hash())
+        .await
+        .context("timeout")
+        .map_err(|_| ffx_error!("{}", DAEMON_CONNECTION_ISSUE))?
+        .context("Getting hash from daemon")?;
     if hash == daemon_hash {
         link_task.detach();
         return Ok(proxy);
