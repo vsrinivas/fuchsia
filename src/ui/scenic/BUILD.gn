@@ -111,12 +111,6 @@ test_package("scenic_tests") {
       log_settings = {
         max_severity = "ERROR"
       }
-      name = "flatland_display_compositor_pixeltests_with_fake_display"
-    },
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
       name = "flatland_display_compositor_unittests"
     },
     {
