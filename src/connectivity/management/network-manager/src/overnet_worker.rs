@@ -47,20 +47,19 @@ pub(super) async fn setup_overnet_service<M: ServiceMarker>(
 
     Ok(server
         .try_filter_map(
-            |ServiceProviderRequest::ConnectToService { chan, info: _, control_handle: _ }| async {
-                match fasync::Channel::from_channel(chan) {
-                    Ok(c) => Ok(Some(M::RequestStream::from_channel(c))),
-                    // The client gave us an invalid channel, log the error but do not terminate the
-                    // server stream so we handle future requests.
-                    Err(e) => {
-                        error!(
-                            "failed to create fasync::Channel to connect to overnet service {}: {}",
-                            &M::NAME,
-                            e
-                        );
-                        Ok(None)
-                    }
-                }
+            |ServiceProviderRequest::ConnectToService { chan, info: _, control_handle: _ }| {
+                futures::future::ready(
+                    fasync::Channel::from_channel(chan)
+                        .map(|c| Some(M::RequestStream::from_channel(c)))
+                        .or_else(|e| {
+                            error!(
+                                "failed to create fasync::Channel to connect to overnet service {}: {}",
+                                &M::NAME,
+                                e
+                            );
+                            Ok(None)
+                        }),
+                )
             },
         )
         .map(|r| {

@@ -105,13 +105,16 @@ impl EventLoop {
     }
 
     pub async fn run(mut self) -> Result<(), Error> {
-        if let Err(e) = self.device.load_config().await {
-            // TODO(cgibson): Kick off some sort of recovery process here: Prompt the user to
-            // download a recovery app, set a static IP on the first interface and set everything
-            // else down, restructure packet filter rules, etc.
-            error!("Failed to load a device config: {}", e);
+        match self.device.load_config().await {
+            Ok(()) => info!("Successfully loaded configuration"),
+            Err(e) => {
+                // TODO(cgibson): Kick off some sort of recovery process here: Prompt the user to
+                // download a recovery app, set a static IP on the first interface and set everything
+                // else down, restructure packet filter rules, etc.
+                error!("Failed to load a device config: {}", e);
+            }
         }
-        self.device.setup_services().await.context("setup_services")?;
+        let () = self.device.setup_services().await.context("setup_services")?;
         let interface_watcher = self.device.populate_state().await.context("populate_state")?;
         let interface_event_stream =
             fidl_fuchsia_net_interfaces_ext::event_stream(interface_watcher).fuse();
@@ -135,7 +138,7 @@ impl EventLoop {
         // NetworkManager to exit as overnet may not be available on all builds.
         let overnet_stream = match crate::overnet_worker::new_stream().await {
             Err(e) => {
-                error!("error setting up overnet services: {}", e);
+                warn!("error setting up overnet services: {}", e);
                 // We use a stream that is always pending so that the loop below may
                 // assume that `overnet_stream` is not expected to end (which is the
                 // case when we successfully setup and publish overnet services).
@@ -272,17 +275,11 @@ impl EventLoop {
             }
             RouterAdminRequest::RemoveWan { wan_id, responder } => {
                 let mut r = self.fidl_delete_lif(wan_id).await;
-                responder.send(r.as_mut()).or_else(|e| {
-                    error!("Error sending response: {:?}", e);
-                    Err(e)
-                })
+                responder.send(r.as_mut())
             }
             RouterAdminRequest::RemoveLan { lan_id, responder } => {
                 let mut r = self.fidl_delete_lif(lan_id).await;
-                responder.send(r.as_mut()).or_else(|e| {
-                    error!("Error sending response: {:?}", e);
-                    Err(e)
-                })
+                responder.send(r.as_mut())
             }
             RouterAdminRequest::SetWanProperties { wan_id, properties, responder } => {
                 let properties = fidl_fuchsia_router_config::LifProperties::Wan(properties);
@@ -460,7 +457,7 @@ impl EventLoop {
         let lif = self.device.create_lif(lif_type, name, Some(vlan), &ports).await;
         match lif {
             Err(e) => {
-                error!("Error creating lif {:?}", e);
+                warn!("Error creating lif {:?}", e);
                 Err(fidl_fuchsia_router_config::Error {
                     code: fidl_fuchsia_router_config::ErrorCode::AlreadyExists,
                     description: None,
@@ -477,7 +474,7 @@ impl EventLoop {
         let lif = self.device.delete_lif(u128::from_ne_bytes(id.uuid)).await;
         match lif {
             Err(e) => {
-                error!("Error deleting lif {:?}", e);
+                warn!("Error deleting lif {:?}", e);
                 Some(fidl_fuchsia_router_config::Error {
                     code: fidl_fuchsia_router_config::ErrorCode::NotFound,
                     description: None,
@@ -694,15 +691,16 @@ impl EventLoop {
             }
             RouterStateRequest::GetFilters { responder } => {
                 let result = self.device.get_filters().await.context("Error getting filters");
-                let mut filter_rules = Vec::new();
                 match result {
-                    Ok(f) => {
-                        filter_rules = f.into_iter().collect();
-                        info!("Filter rules returned: {:?}", filter_rules.len());
+                    Ok(mut f) => {
+                        info!("Filter rules returned: {:?}", f);
+                        responder.send(&mut f.iter_mut())
                     }
-                    Err(e) => error!("Failed parsing filter rules: {}", e),
+                    Err(e) => {
+                        warn!("Failed to get filter rules: {:?}", e);
+                        responder.send(&mut std::iter::empty())
+                    }
                 }
-                responder.send(&mut filter_rules.iter_mut())
             }
             RouterStateRequest::GetIpv6PinHole { rule_id, responder } => {
                 info!("{:?}", rule_id);

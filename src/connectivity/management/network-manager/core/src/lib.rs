@@ -150,13 +150,7 @@ impl DeviceState {
 
     /// Loads the device configuration.
     pub async fn load_config(&mut self) -> error::Result<()> {
-        if let Err(e) = self.config.load_config().await {
-            error!("Failed to validate config from both user and factory files: {}", e);
-            Err(e)
-        } else {
-            info!("Successfully loaded configuration!");
-            Ok(())
-        }
+        self.config.load_config().await
     }
 
     /// Returns a client for a `fuchsia.net.name.DnsServerWatcher` from the netstack.
@@ -757,10 +751,7 @@ impl DeviceState {
 
     /// Returns the currently installed packet filter rules.
     pub async fn get_filters(&self) -> error::Result<Vec<netconfig::FilterRule>> {
-        self.packet_filter.get_filters().await.map_err(|e| {
-            warn!("Failed to get filter rules: {:?}", e);
-            e
-        })
+        self.packet_filter.get_filters().await
     }
 
     /// Sets the DNS servers for name resolution.
