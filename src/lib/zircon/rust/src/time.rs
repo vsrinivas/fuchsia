@@ -111,6 +111,14 @@ where
     }
 }
 
+impl ops::Neg for Duration {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self(-self.0)
+    }
+}
+
 impl Duration {
     /// Sleep for the given amount of time.
     pub fn sleep(self) {
