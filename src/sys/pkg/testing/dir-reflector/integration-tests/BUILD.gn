@@ -24,7 +24,7 @@ rustc_test("driver-bin") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/syslog/rust:syslog",
     "//src/sys/pkg/testing/dir-reflector:test.pkg.reflector-rustc",

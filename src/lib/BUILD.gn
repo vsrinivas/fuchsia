@@ -87,6 +87,7 @@ group("tests") {
     "fuchsia-async:tests",
     "fuchsia-async-testloop:tests",
     "fuchsia-component:tests",
+    "fuchsia-component-test:tests",
     "fuchsia-hyper:tests",
     "fuchsia-runtime:tests",
     "fuchsia-url:tests",

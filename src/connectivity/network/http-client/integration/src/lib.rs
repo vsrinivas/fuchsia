@@ -5,8 +5,8 @@
 #![cfg(test)]
 
 use {
-    fidl_fuchsia_net_http as http, fuchsia_async as fasync,
-    fuchsia_component::client::ScopedInstance, fuchsia_zircon as zx, futures::StreamExt as _,
+    fidl_fuchsia_net_http as http, fuchsia_async as fasync, fuchsia_component_test::ScopedInstance,
+    fuchsia_zircon as zx, futures::StreamExt as _,
 };
 
 const ROOT_DOCUMENT: &str = "Root document\n";

@@ -29,50 +29,6 @@ rustc_test("fuchsia-component-v1-test") {
   sources = [ "components_v1/lib.rs" ]
 }
 
-# This test launches a v2 component in a separate instance of component
-# manager, so it can use test events.
-rustc_test("fuchsia-component-v2-test") {
-  edition = "2018"
-  source_root = "components_v2/lib.rs"
-  deps = [
-    ":fuchsia.component.client.test-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/syslog/rust:syslog",
-    "//src/sys/component_manager/testing:test_utils_lib",
-    "//src/sys/lib/component-events",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:test-case",
-  ]
-
-  sources = [ "components_v2/lib.rs" ]
-}
-
-rustc_binary("realm") {
-  edition = "2018"
-  source_root = "components_v2/realm.rs"
-  testonly = true
-  deps = [
-    ":fuchsia.component.client.test-rustc",
-    "//examples/components/routing/fidl:echo-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
-    "//src/sys/component_manager/testing:test_utils_lib",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
-  ]
-
-  sources = [ "components_v2/realm.rs" ]
-}
-
 fidl("fuchsia.component.test") {
   sources = [ "test.test.fidl" ]
 }
@@ -88,37 +44,9 @@ fuchsia_component("fuchsia_component_v1_test_component") {
   deps = [ ":fuchsia-component-v1-test" ]
 }
 
-fuchsia_component("fuchsia_component_v2_test_component") {
-  component_name = "fuchsia_component_v2_test"
-  manifest = "meta/fuchsia_component_v2_test.cmx"
-  testonly = true
-  deps = [ ":fuchsia-component-v2-test" ]
-}
-
-fuchsia_component("realm_component") {
-  component_name = "realm"
-  manifest = "meta/realm.cml"
-  testonly = true
-  deps = [ ":realm" ]
-}
-
-fuchsia_component("realm_with_wait_component") {
-  component_name = "realm_with_wait"
-  manifest = "meta/realm_with_wait.cml"
-  testonly = true
-  deps = [ ":realm" ]
-}
-
 fuchsia_test_package("fuchsia-component-tests") {
-  test_components = [
-    ":fuchsia_component_v1_test_component",
-    ":fuchsia_component_v2_test_component",
-  ]
-  deps = [
-    ":realm_component",
-    ":realm_with_wait_component",
-    "//examples/components/routing/echo_server:echo_server_component",
-  ]
+  test_components = [ ":fuchsia_component_v1_test_component" ]
+  deps = [ "//examples/components/routing/echo_server:echo_server_component" ]
 }
 
 group("tests") {

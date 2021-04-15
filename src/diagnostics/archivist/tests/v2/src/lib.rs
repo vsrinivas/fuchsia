@@ -7,7 +7,7 @@ use {
     diagnostics_hierarchy::assert_data_tree,
     diagnostics_reader::{ArchiveReader, Inspect},
     diagnostics_testing::Severity,
-    fuchsia_component::client::ScopedInstance,
+    fuchsia_component_test::ScopedInstance,
     fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
     futures::stream::StreamExt,
     log::info,

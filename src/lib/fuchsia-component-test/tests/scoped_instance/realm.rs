@@ -4,7 +4,8 @@
 use {
     anyhow::{format_err, Context, Error},
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client::{connect_to_childs_service, ScopedInstance},
+    fuchsia_component::client::connect_to_childs_service,
+    fuchsia_component_test::ScopedInstance,
     fuchsia_syslog as syslog,
     futures::future::join_all,
     log::*,
@@ -20,7 +21,7 @@ struct Args {
 fn main() {
     let Args { wait } = argh::from_env();
     let mut exec = fasync::Executor::new().expect("failed to make async executor");
-    syslog::init_with_tags(&["components_v2_realm"]).expect("could not initialize logging");
+    syslog::init().expect("could not initialize logging");
     info!("Realm started");
 
     // Create 3 scoped instances
@@ -80,7 +81,8 @@ fn main() {
 }
 
 async fn create_instances() -> Result<Vec<ScopedInstance>, Error> {
-    let url = "fuchsia-pkg://fuchsia.com/fuchsia-component-tests#meta/echo_server.cm".to_string();
+    let url =
+        "fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/echo_server.cm".to_string();
     // Create 4 scoped instances, and confirm that each is funcitoning correctly by using a FIDL
     // service from it
     let instances = vec![

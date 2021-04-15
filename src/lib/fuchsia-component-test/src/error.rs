@@ -125,3 +125,5 @@ pub enum RealmError {
     #[error("cannot modify component {}, as it comes from a URL", _0)]
     ComponentNotModifiable(Moniker),
 }
+
+// TODO: Define an error type for ScopedInstance

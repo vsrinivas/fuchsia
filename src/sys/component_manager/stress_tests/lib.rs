@@ -6,23 +6,21 @@ use {
     anyhow::{format_err, Context, Error},
     fidl::endpoints::Proxy,
     fidl_test_componentmanager_stresstests as fstresstests,
-    fuchsia_component::client,
+    fuchsia_component_test::ScopedInstance,
 };
 pub struct Child {
-    pub instance: client::ScopedInstance,
+    pub instance: ScopedInstance,
     pub realm: fstresstests::ChildRealmProxy,
 }
 
 pub async fn create_child(collection: &str, url: &str) -> Result<Child, Error> {
-    let instance = client::ScopedInstance::new(collection.to_string(), url.to_string())
+    let instance = ScopedInstance::new(collection.to_string(), url.to_string())
         .await
         .context(format_err!("Cannot create child for '{}:{}'", collection, url))?;
-    let realm = instance
-        .connect_to_protocol_at_exposed_dir::<fstresstests::ChildRealmMarker>()
-        .context(format_err!(
-            "Cannot connect to child realm service for '{}'",
-            instance.child_name()
-        ))?;
+    let realm =
+        instance.connect_to_protocol_at_exposed_dir::<fstresstests::ChildRealmMarker>().context(
+            format_err!("Cannot connect to child realm service for '{}'", instance.child_name()),
+        )?;
     Ok(Child { instance, realm })
 }
 

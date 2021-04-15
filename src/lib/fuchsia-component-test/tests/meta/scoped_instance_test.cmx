@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/fuchsia_component_v2_test"
+        "binary": "bin/scoped_instance_test"
     },
     "sandbox": {
         "features": [

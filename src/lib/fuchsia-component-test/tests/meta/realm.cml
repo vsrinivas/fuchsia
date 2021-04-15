@@ -4,7 +4,10 @@
 
 // This realm contains the test cases for fuchsia_component_v2_test.
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/realm",
@@ -16,11 +19,6 @@
         },
     ],
     use: [
-        // Needed to instantiate dynamic components.
-        {
-            protocol: "fuchsia.sys2.Realm",
-            from: "framework",
-        },
         {
             protocol: "fuchsia.component.client.test.EmptyProtocol",
             from: "parent",

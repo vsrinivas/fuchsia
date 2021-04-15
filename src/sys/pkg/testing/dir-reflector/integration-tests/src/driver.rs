@@ -11,7 +11,7 @@ use {
     fidl_test_pkg_reflector::ReflectorMarker,
     fidl_test_pkg_thinger::ThingerMarker,
     fuchsia_async as fasync,
-    fuchsia_component::client::ScopedInstance,
+    fuchsia_component_test::ScopedInstance,
     fuchsia_syslog::fx_log_info,
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,

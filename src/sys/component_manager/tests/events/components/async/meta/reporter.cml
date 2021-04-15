@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/async_reporter",
@@ -15,10 +18,7 @@
             protocol: [ "fuchsia.sys2.EventSource" ],
         },
         {
-            protocol: [
-                "fidl.examples.routing.echo.Echo",
-                "fuchsia.sys2.Realm",
-            ],
+            protocol: [ "fidl.examples.routing.echo.Echo" ],
             from: "framework",
         },
         {

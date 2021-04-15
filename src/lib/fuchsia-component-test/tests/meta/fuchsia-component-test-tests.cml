@@ -1,5 +1,5 @@
 {
-    include: [ "src/sys/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml" ],
+    include: [ "src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml" ],
     program: {
         runner: "rust_test_runner",
         binary: "bin/fuchsia_component_test_tests_bin",

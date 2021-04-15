@@ -36,8 +36,8 @@ impl ProtocolInjector for PassthroughInjector {
     }
 }
 
-#[test_case("fuchsia-pkg://fuchsia.com/fuchsia-component-tests#meta/realm_with_wait.cm"; "wait")]
-#[test_case("fuchsia-pkg://fuchsia.com/fuchsia-component-tests#meta/realm.cm"; "no_wait")]
+#[test_case("fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/realm_with_wait.cm"; "wait")]
+#[test_case("fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/realm.cm"; "no_wait")]
 #[fasync::run_singlethreaded(test)]
 async fn scoped_instances(root_component: &'static str) -> Result<(), Error> {
     syslog::init_with_tags(&["fuchsia_component_v2_test"]).expect("could not initialize logging");

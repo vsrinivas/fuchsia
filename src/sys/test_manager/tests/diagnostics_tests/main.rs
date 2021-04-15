@@ -5,7 +5,7 @@
 use {
     diagnostics_reader::{ArchiveReader, Inspect, Logs},
     fuchsia_async as fasync,
-    fuchsia_component::client::ScopedInstance,
+    fuchsia_component_test::ScopedInstance,
     fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
     futures::StreamExt,
 };

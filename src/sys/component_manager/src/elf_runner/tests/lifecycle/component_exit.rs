@@ -13,7 +13,7 @@ use {
         sequence::EventSequence,
     },
     fidl_fidl_test_components as test_protocol, fuchsia_async as fasync,
-    fuchsia_component::client::ScopedInstance,
+    fuchsia_component_test::ScopedInstance,
     fuchsia_syslog::fx_log_info,
     futures_util::stream::TryStreamExt,
     std::sync::{Arc, Mutex},

@@ -8,7 +8,7 @@ use {
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::EventSequence,
     },
-    fuchsia_component::client::ScopedInstance,
+    fuchsia_component_test::ScopedInstance,
 };
 
 #[fuchsia::test]

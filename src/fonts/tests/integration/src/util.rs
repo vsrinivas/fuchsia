@@ -5,7 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     fidl::endpoints::{DiscoverableService, ServiceMarker},
-    fuchsia_component::client::ScopedInstance,
+    fuchsia_component_test::ScopedInstance,
     futures::lock::Mutex,
     lazy_static::lazy_static,
     std::collections::HashMap,

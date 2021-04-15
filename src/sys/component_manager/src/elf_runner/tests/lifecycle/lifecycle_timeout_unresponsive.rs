@@ -8,7 +8,7 @@ use {
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{EventSequence, Ordering},
     },
-    fuchsia_component::client::ScopedInstance,
+    fuchsia_component_test::ScopedInstance,
 };
 
 /// This test invokes components which don't stop when they're told to. We

@@ -8,7 +8,8 @@ use {
         matcher::EventMatcher,
     },
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client::{connect_to_service, ScopedInstance},
+    fuchsia_component::client::connect_to_service,
+    fuchsia_component_test::ScopedInstance,
     fuchsia_syslog as syslog,
 };
 

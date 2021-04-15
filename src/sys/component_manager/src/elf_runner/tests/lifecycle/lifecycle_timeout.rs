@@ -8,7 +8,7 @@ use {
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{EventSequence, Ordering},
     },
-    fuchsia_component::client::ScopedInstance,
+    fuchsia_component_test::ScopedInstance,
 };
 
 /// Test that a component tree which contains a root component with no program
