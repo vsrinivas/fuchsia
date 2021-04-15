@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.sysmem") {
+  fidl_only = true
   sources = [
     "constraints.banjo",
     "format_modifier.banjo",

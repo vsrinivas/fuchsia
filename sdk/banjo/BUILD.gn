@@ -94,7 +94,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.wlanif",
   "fuchsia.hardware.wlanphy",
   "fuchsia.hardware.wlanphyimpl",
-  "fuchsia.sysmem",
   "zircon.hw.pci",
 ]
 

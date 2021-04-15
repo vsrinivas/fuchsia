@@ -8,7 +8,7 @@ source_set("sysmem") {
     "sysmem.h",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.sysmem",
+    "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
   ]
 }

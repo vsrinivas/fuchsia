@@ -33,7 +33,7 @@ source_set("fake_buffer_collection") {
     "fake_buffer_collection.h",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.sysmem",
+    "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
     "//src/devices/lib/sysmem",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -74,7 +74,7 @@ executable("fake_buffer_collection_unittest_bin") {
   sources = [ "fake_buffer_collection_unittest.cc" ]
   deps = [
     ":fake_buffer_collection",
-    "//sdk/banjo/fuchsia.sysmem",
+    "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
