@@ -36,9 +36,7 @@ such things to occur that isn't a several hundred person email list.
 ## Design
 
 An FTP (FIDL Tuning Proposal) goes through several stages. These
-stages correspond to the Status: field of the heading of the template.
-
-NB: The template is currently Google-internal.
+stages correspond to the Status: field of the heading of the [template].
 
 ### Draft
 
@@ -130,7 +128,7 @@ process.
 
 This document (FTP-001) is the first such example of this process.
 
-Ideally the template, plus the final version of this proposal, are
+Ideally the [template], plus the final version of this proposal, are
 sufficient documentation for the process.
 
 ## Backwards compatibility
@@ -198,3 +196,4 @@ In particular, I looked a lot at the [Python PEP] process and the
 [Rust RFC]: https://github.com/rust-lang/rfcs
 [tutorial]: /docs/development/languages/fidl/tutorials/overview.md
 [Wadler's Law]: https://wiki.haskell.org/Wadler's_Law
+[template]: /docs/contribute/governance/deprecated-ftp-template.md

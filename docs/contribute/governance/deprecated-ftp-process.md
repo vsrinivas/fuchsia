@@ -43,8 +43,7 @@ Additional details are provided in
 ### Design
 
 An FTP (FIDL Tuning Proposal) goes through several stages. These stages
-correspond to the `Status:` field of the heading of the
-[template][ftp-template].
+correspond to the `Status:` field of the heading of the [template].
 
 #### Draft
 
@@ -182,3 +181,4 @@ process.
 <!-- xref -->
 [FIDL]: /docs/development/languages/fidl/README.md
 [tutorial]: /docs/development/languages/fidl/tutorials/overview.md
+[template]: /docs/contribute/governance/deprecated-ftp-template.md
