@@ -134,11 +134,14 @@ template("fuchsia_component") {
                              "testonly",
                              "visibility",
                            ])
+
     if (!defined(deps)) {
       deps = []
     }
     deps += [ ":$manifest_resource_target" ]
-
+    if (manifest_extension == "cmx") {
+      deps += [ "//build/components:cmx_allowlist" ]
+    }
     if (check_references) {
       deps += [ ":$validate_target" ]
     }
