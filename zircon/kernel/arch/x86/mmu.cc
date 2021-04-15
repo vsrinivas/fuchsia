@@ -148,7 +148,7 @@ bool x86_mmu_check_paddr(paddr_t paddr) {
  */
 static void x86_tlb_nonglobal_invalidate() {
   // Read CR3 and immediately write it back.
-  arch::X86Cr3::Modify([](auto& cr3) {});
+  arch::X86Cr3::Read().Write();
 }
 
 /**
@@ -158,7 +158,7 @@ static void x86_tlb_global_invalidate() {
   /* See Intel 3A section 4.10.4.1 */
   auto cr4 = arch::X86Cr4::Read();
   if (likely(cr4.pge())) {
-    arch::X86Cr4::Write(cr4.set_pge(false));
+    cr4.set_pge(false).Write();
   } else {
     x86_tlb_nonglobal_invalidate();
   }
@@ -248,7 +248,7 @@ bool x86_enable_pcid() {
     return false;
   }
 
-  arch::X86Cr4::Modify([](auto& cr4) { cr4.set_pcide(true); });
+  arch::X86Cr4::Read().set_pcide(true).Write();
   return true;
 }
 
@@ -489,9 +489,7 @@ uint X86PageTableEpt::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level)
   return mmu_flags;
 }
 
-static void disable_global_pages() {
-  arch::X86Cr4::Modify([](auto& cr4) { cr4.set_pge(false); });
-}
+static void disable_global_pages() { arch::X86Cr4::Read().set_pge(false).Write(); }
 
 void x86_mmu_early_init() {
   x86_mmu_percpu_init();
@@ -733,21 +731,21 @@ zx_status_t X86ArchVmAspace::HarvestNonTerminalAccessed(vaddr_t vaddr, size_t co
 }
 
 void x86_mmu_percpu_init(void) {
-  arch::X86Cr0::Modify([](auto& cr0) {
-    cr0.set_wp(true)     // Set write protect.
-        .set_nw(false)   // Clear not-write-through.
-        .set_cd(false);  // Clear cache-disable.
-  });
+  arch::X86Cr0::Read()
+      .set_wp(true)   // Set write protect.
+      .set_nw(false)  // Clear not-write-through.
+      .set_cd(false)  // Clear cache-disable.
+      .Write();
 
   // Set the SMEP & SMAP bits in CR4.
-  arch::X86Cr4::Modify([](auto& cr4) {
-    if (x86_feature_test(X86_FEATURE_SMEP)) {
-      cr4.set_smep(true);
-    }
-    if (g_x86_feature_has_smap) {
-      cr4.set_smap(true);
-    }
-  });
+  arch::X86Cr4 cr4 = arch::X86Cr4::Read();
+  if (x86_feature_test(X86_FEATURE_SMEP)) {
+    cr4.set_smep(true);
+  }
+  if (g_x86_feature_has_smap) {
+    cr4.set_smap(true);
+  }
+  cr4.Write();
 
   // Set NXE bit in X86_MSR_IA32_EFER.
   uint64_t efer_msr = read_msr(X86_MSR_IA32_EFER);

@@ -85,7 +85,7 @@ class BootstrapMemoryManager final : public page_table::MemoryManager {
 void SwitchToPageTable(Paddr root) {
   // Disable support for global pages ("page global enable"), which
   // otherwise would not be flushed in the operation below.
-  arch::X86Cr4::Write(arch::X86Cr4::Read().set_pge(0));
+  arch::X86Cr4::Read().set_pge(0).Write();
 
   // Set the new page table root. This will flush the TLB.
   arch::X86Cr3::Write(root.value());

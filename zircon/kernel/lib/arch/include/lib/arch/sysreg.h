@@ -232,6 +232,8 @@ struct SysRegDerived : public RegisterType {
   static auto Write(T&& arg) {
     return SysReg().Write<RegisterTag>(std::forward<T>(arg));
   }
+
+  void Write() { SysReg().Write<RegisterTag>(*this); }
 };
 
 template <class RegisterTag, typename IntType = uint64_t, typename Printer = void>
