@@ -10,7 +10,7 @@ use {
 };
 
 static OVERRIDE_CONFIG_FILE_PATH: &'static str = "/config/data/build-config.json";
-static DEFAULT_CONFIG_FILE_PATH: &'static str = "/pkg/data/default.json";
+static DEFAULT_CONFIG_FILE_PATH: &'static str = "/pkg/data/bt-gap-default.json";
 
 /// The `build_config` module enables build-time configuration of the Bluetooth Host Subsystem.
 /// Default configuration parameters are taken from //src/connectivity/bluetooth/core/bt-gap/

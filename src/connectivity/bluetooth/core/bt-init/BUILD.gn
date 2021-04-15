@@ -44,7 +44,7 @@ rustc_binary("bin") {
 
 resource("default-config") {
   sources = [ "config/default.json" ]
-  outputs = [ "data/default.json" ]
+  outputs = [ "data/bt-init-default.json" ]
 }
 
 fuchsia_package_with_single_component("bt-init") {

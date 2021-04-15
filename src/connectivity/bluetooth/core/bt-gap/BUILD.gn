@@ -83,7 +83,7 @@ rustc_binary("bin") {
 
 resource("default-config") {
   sources = [ "config/default.json" ]
-  outputs = [ "data/default.json" ]
+  outputs = [ "data/bt-gap-default.json" ]
 }
 
 fuchsia_component("component") {

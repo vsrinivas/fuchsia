@@ -11,7 +11,7 @@ use {
     std::{fs::OpenOptions, io::Read},
 };
 
-static CONFIG_FILE_PATH: &'static str = "/pkg/data/default.json";
+static CONFIG_FILE_PATH: &'static str = "/pkg/data/bt-init-default.json";
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
