@@ -109,9 +109,6 @@ _fidl_translated_deps = _all_libraries_deps
 # Remove libraries that have not been vetted yet.
 _fidl_translated_deps -= [
   "ddk.hw.wlan.wlaninfo",  # Identifiers starting with a digit.
-  "fuchsia.hardware.audiotypes",  # Identifiers starting with a digit.
-  "fuchsia.hardware.display.controller",  # Blocked by
-                                          # fuchsia.hardware.audiotypes.
   "fuchsia.hardware.hidbus",  # Multiple enum variants with the same value.
   "fuchsia.hardware.pciroot",  # Blocked by zircon.hw.pci.
   "fuchsia.hardware.serialimpl",  # Blocked by fuchsia.hardware.serial.
