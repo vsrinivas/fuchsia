@@ -6,7 +6,8 @@
 #### CATEGORY=Source tree
 ### updates OWNERS files for Rust third_party dependencies
 
-## usage: fx update-rust-3p-owners
+## usage: fx update-rust-3p-owners [--no-vendor-and-gn-update] [--num-threads N]
+##
 ## Updates third_party/rust_crates/vendor/*/OWNERS based on the contents of
 ## third_party/rust_crates/Cargo.toml
 ##
@@ -21,12 +22,36 @@ fx-config-read
 OWNERS_TOOL_TARGET="host-tools/auto_owners"
 OWNERS_TOOL_BIN="${FUCHSIA_BUILD_DIR}/${OWNERS_TOOL_TARGET}"
 
+# Parse arguments
+while [[ $# -ge 1 ]]; do
+  case "$1" in
+    -h|--help)
+      fx-command-help
+      exit 0
+      ;;
+    --no-vendor-and-gn-update)
+      SKIP_VENDOR_AND_GN_UPDATE="true"
+      ;;
+    --num-threads)
+      shift
+      [[ ! $1 ]] && die "--num-threads requires an argument after it"
+      NUM_THREADS="--num-threads $1"
+      ;;
+    -*)
+      echo "Cannot understand option $1"
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+
 fx-command-run build ${OWNERS_TOOL_TARGET} || ( \
   fx-error "Failed to build rust owners tool."; \
   exit 1
 )
 
-if [ "$1" != "--no-vendor-and-gn-update" ]; then
+if [[ ! -n "$SKIP_VENDOR_AND_GN_UPDATE" ]]; then
   fx-command-run update-rustc-third-party || ( \
     fx-error "Failed to run 3p update script."; \
     exit 1
@@ -34,6 +59,7 @@ if [ "$1" != "--no-vendor-and-gn-update" ]; then
 fi
 
 (cd $FUCHSIA_DIR; $OWNERS_TOOL_BIN \
+  $NUM_THREADS \
   --overrides $FUCHSIA_DIR/third_party/rust_crates/owners.toml \
   --metadata $FUCHSIA_BUILD_DIR/rustlang/3p-crates-metadata.json \
   --out-dir $FUCHSIA_BUILD_DIR \
