@@ -102,7 +102,7 @@ __NO_SAFESTACK static void arm64_context_switch_spec_mitigations(Thread* oldthre
   // 2a) We are switching between threads in different address spaces AND
   // 2b)    the old address space is not nullptr (not a kernel thread).
   //        If the old thread is a kernel thread, it can be trusted not to attack userspace
-  if (__arm64_percpu->should_invalidate_bp_on_context_switch &&
+  if (arm64_read_percpu_ptr()->should_invalidate_bp_on_context_switch &&
       ((oldthread->aspace() != newthread->aspace()) && oldthread->aspace())) {
     arm64_uarch_do_spectre_v2_mitigation();
   }
@@ -117,9 +117,8 @@ __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
   __dsb(ARM_MB_SY);
 
   // Set the current cpu pointer in the new thread's structure so it can be
-  // restored on exception entry. Use the direct variable instead of the accessor here
-  // to avoid an extra function call to a non SAFESTACK accessor function
-  newthread->arch().current_percpu_ptr = __arm64_percpu;
+  // restored on exception entry.
+  newthread->arch().current_percpu_ptr = arm64_read_percpu_ptr();
 
   if (likely(!oldthread->IsUserStateSavedLocked())) {
     arm64_fpu_context_switch(oldthread, newthread);

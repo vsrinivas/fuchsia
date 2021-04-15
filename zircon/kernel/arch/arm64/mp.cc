@@ -104,10 +104,11 @@ void arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi) {
 void arm64_init_percpu_early(void) {
   // slow lookup the current cpu id and setup the percpu structure
   cpu_num_t cpu = arch_curr_cpu_num_slow();
-  uint32_t midr = __arm_rsr64("midr_el1") & 0xFFFFFFFF;
-
-  arm64_percpu_array[cpu].microarch = midr_to_microarch(midr);
   arm64_write_percpu_ptr(&arm64_percpu_array[cpu]);
+
+  // read the midr and set the microarch of this cpu in the percpu array
+  uint32_t midr = __arm_rsr64("midr_el1") & 0xFFFFFFFF;
+  arm64_percpu_array[cpu].microarch = midr_to_microarch(midr);
 }
 
 void arch_mp_init_percpu(void) { interrupt_init_percpu(); }

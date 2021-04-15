@@ -56,7 +56,7 @@ FUNCTION(arm64_context_switch)
     push_regs x25, x26
     push_regs x23, x24
     push_regs x21, x22
-    push_regs x19, x20
+    push_regs x19, xzr // don't save x20, it is the percpu pointer
 
     /* save old sp */
     mov  x9, sp
@@ -71,7 +71,7 @@ FUNCTION(arm64_context_switch)
 #endif
 
     /* restore new frame */
-    pop_regs x19, x20
+    pop_regs x19, xzr // don't restore x20, it's the percpu pointer
     pop_regs x21, x22
     pop_regs x23, x24
     pop_regs x25, x26

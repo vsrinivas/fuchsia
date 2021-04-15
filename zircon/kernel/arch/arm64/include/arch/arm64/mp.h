@@ -65,14 +65,19 @@ void arch_init_cpu_map(uint cluster_count, const uint* cluster_cpus);
 void arch_register_mpid(uint cpu_id, uint64_t mpid);
 void arm64_init_percpu_early(void);
 
-// Use the x15 register to always point at the local cpu structure to allow fast access
-// a per cpu structure.
-// Do not directly access fields of this structure
-register struct arm64_percpu* __arm64_percpu __asm("x15");
+// Use the x20 register to always point at the local cpu structure for fast access.
+// x20 is the first available callee-saved register that clang will allow to be marked
+// as fixed (via -ffixed-x20 command line). Since it's callee saved when making firmware
+// calls to PSCI or SMCC the register will be naturally saved and restored.
+static inline void arm64_write_percpu_ptr(struct arm64_percpu* percpu) {
+  __asm__ volatile("mov x20, %0" :: "r"(percpu));
+}
 
-static inline void arm64_write_percpu_ptr(struct arm64_percpu* percpu) { __arm64_percpu = percpu; }
-
-static inline struct arm64_percpu* arm64_read_percpu_ptr(void) { return __arm64_percpu; }
+static inline struct arm64_percpu* arm64_read_percpu_ptr(void) {
+  struct arm64_percpu* p;
+  __asm__("mov %0, x20" : "=r"(p));
+  return p;
+}
 
 static inline uint32_t arm64_read_percpu_u32(size_t offset) {
   uint32_t val;
@@ -80,17 +85,17 @@ static inline uint32_t arm64_read_percpu_u32(size_t offset) {
   // mark as volatile to force a read of the field to make sure
   // the compiler always emits a read when asked and does not cache
   // a copy between
-  __asm__ volatile("ldr %w[val], [x15, %[offset]]" : [val] "=r"(val) : [offset] "Ir"(offset));
+  __asm__ volatile("ldr %w[val], [x20, %[offset]]" : [val] "=r"(val) : [offset] "Ir"(offset));
   return val;
 }
 
 static inline void arm64_write_percpu_u32(size_t offset, uint32_t val) {
-  __asm__("str %w[val], [x15, %[offset]]" ::[val] "r"(val), [offset] "Ir"(offset) : "memory");
+  __asm__("str %w[val], [x20, %[offset]]" ::[val] "r"(val), [offset] "Ir"(offset) : "memory");
 }
 
 // Return a pointer to the high-level percpu struct for the calling CPU.
 static inline struct percpu* arch_get_curr_percpu(void) {
-  return __arm64_percpu->high_level_percpu;
+  return arm64_read_percpu_ptr()->high_level_percpu;
 }
 
 static inline cpu_num_t arch_curr_cpu_num(void) {
@@ -137,7 +142,7 @@ cpu_num_t arm64_mpidr_to_cpu_num(uint64_t mpidr);
   arm64_write_percpu_u32(offsetof(struct arm64_percpu, field), (value))
 
 // Setup the high-level percpu struct pointer for |cpu_num|.
-void arch_setup_percpu(cpu_num_t cpu_num, struct percpu *percpu);
+void arch_setup_percpu(cpu_num_t cpu_num, struct percpu* percpu);
 
 __END_CDECLS
 

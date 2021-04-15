@@ -20,7 +20,7 @@
  * Register use:
  *  x0-x3   Arguments
  *  x9-x14  Scratch
- *  x19-x28 Globals
+ *  x21-x28 Globals
  */
 tmp                     .req x9
 tmp2                    .req x10
@@ -29,10 +29,10 @@ tmp3                    .req x11
 tmp4                    .req x12
 tmp5                    .req x13
 
-cpuid                   .req x19
-page_table0             .req x20
-page_table1             .req x21
-kernel_vaddr            .req x22
+cpuid                   .req x21
+page_table0             .req x22
+page_table1             .req x23
+kernel_vaddr            .req x24
 
 // Collect timestamp in tmp, tmp2.  Also clobbers tmp3-5.
 .macro sample_ticks

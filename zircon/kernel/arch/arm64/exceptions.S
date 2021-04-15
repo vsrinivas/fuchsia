@@ -91,17 +91,17 @@ pop_regs x6, x7
 pop_regs x8, x9
 pop_regs x10, x11
 pop_regs x12, x13
-.if \from_lower_el_64
 pop_regs x14, x15
-.else
-// If restoring from EL1 -> EL1, leave x15 alone since it's holding the current
-// per cpu pointer. It may have changed since we originally took the exception
-// if we had been rescheduled to another cpu.
-pop_regs x14, xzr
-.endif
 pop_regs x16, x17
 pop_regs x18, x19
+.if \from_lower_el_64
 pop_regs x20, x21
+.else
+// If restoring from EL1 -> EL1, leave x20 alone since it's holding the current
+// per cpu pointer. It may have changed since we originally took the exception
+// if we had been rescheduled to another cpu.
+pop_regs xzr, x21
+.endif
 pop_regs x22, x23
 pop_regs x24, x25
 pop_regs x26, x27

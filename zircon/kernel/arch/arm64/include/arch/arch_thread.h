@@ -65,6 +65,10 @@ struct arch_thread {
   // restore the fixed register on exception entry. Swapped on context switch.
   struct arm64_percpu* current_percpu_ptr;
 
+  // Saved pointer to the shadow call sp to restore similar to the percpu ptr above.
+  // Must be placed immediately after current_percpu_ptr in the structure because some
+  // code in exception save/restore path in exceptions.S uses a double load/store to load
+  // this and current_percpu_ptr in one instruction.
 #if __has_feature(shadow_call_stack)
   uintptr_t* shadow_call_sp;
 #endif
@@ -111,6 +115,8 @@ static_assert(thread_pointer_offsetof(current_percpu_ptr) == CURRENT_PERCPU_PTR_
 #if __has_feature(shadow_call_stack)
 static_assert(thread_pointer_offsetof(shadow_call_sp) == CURRENT_SCSP_OFFSET,
               "shadow call stack pointer offset in wrong place");
+static_assert(CURRENT_SCSP_OFFSET == CURRENT_PERCPU_PTR_OFFSET + 8,
+              "shadow call stack pointer not immediately after percpu");
 #endif
 
 __END_CDECLS

@@ -60,8 +60,8 @@ if (toolchain.environment == "physmem" ||
   # This is kept consistent between the kernel proper and phys
   # so (pure PIC) code should be callable from the kernel proper.
   config("abi") {
-    # x15 is reserved so we can use it to point at the per-CPU structure.
-    cflags = [ "-ffixed-x15" ]
+    # x20 is reserved so we can use it to point at the per-CPU structure.
+    cflags = [ "-ffixed-x20" ]
 
     if (!is_gcc) {
       # Use the right thread-pointer ABI for the kernel.
