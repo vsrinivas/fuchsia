@@ -3313,22 +3313,61 @@ TEST(NetStreamTest, NonBlockingConnectRefused) {
 }
 
 TEST(NetStreamTest, GetTcpInfo) {
-  fbl::unique_fd connfd;
-  ASSERT_TRUE(connfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  tcp_info info;
-  socklen_t info_len = sizeof(tcp_info);
-  ASSERT_EQ(getsockopt(connfd.get(), SOL_TCP, TCP_INFO, &info, &info_len), 0) << strerror(errno);
-  ASSERT_EQ(sizeof(tcp_info), info_len);
+  {
+    tcp_info info;
+    socklen_t info_len = sizeof(tcp_info);
+    ASSERT_EQ(getsockopt(fd.get(), SOL_TCP, TCP_INFO, &info, &info_len), 0) << strerror(errno);
+    ASSERT_EQ(sizeof(tcp_info), info_len);
+
+#if defined(__Fuchsia__)
+    switch (auto i = *reinterpret_cast<uint8_t*>(&info); i) {
+      case 0:
+        // Legacy FIDL that sends the entire structure, which was zero-initialized in Go. As a
+        // result, this is untestable (because some of these fields have legit zero values) so we
+        // don't test it.
+        //
+        // TODO(https://fxbug.dev/44347): Remove after ABI transition.
+        break;
+      case 0xff: {
+        // Unsupported fields are intentionally initialized with garbage for explicitness.
+        uint32_t initialization;
+        memset(&initialization, i, sizeof(initialization));
+
+        ASSERT_NE(info.tcpi_rto, initialization);
+        ASSERT_NE(info.tcpi_rtt, initialization);
+        ASSERT_NE(info.tcpi_rttvar, initialization);
+        ASSERT_NE(info.tcpi_snd_ssthresh, initialization);
+        ASSERT_NE(info.tcpi_snd_cwnd, initialization);
+
+        tcp_info expected;
+        memset(&expected, initialization, sizeof(expected));
+        expected.tcpi_rto = info.tcpi_rto;
+        expected.tcpi_rtt = info.tcpi_rtt;
+        expected.tcpi_rttvar = info.tcpi_rttvar;
+        expected.tcpi_snd_ssthresh = info.tcpi_snd_ssthresh;
+        expected.tcpi_snd_cwnd = info.tcpi_snd_cwnd;
+
+        ASSERT_EQ(memcmp(&info, &expected, sizeof(tcp_info)), 0);
+      } break;
+      default:
+        GTEST_FAIL() << "unexpected initialization to " << i;
+    }
+#endif
+  }
 
   // Test that we can partially retrieve TCP_INFO.
-  uint8_t tcpi_state;
-  info_len = sizeof(tcpi_state);
-  ASSERT_EQ(getsockopt(connfd.get(), SOL_TCP, TCP_INFO, &tcpi_state, &info_len), 0)
-      << strerror(errno);
-  ASSERT_EQ(sizeof(tcpi_state), info_len);
+  {
+    uint8_t tcpi_state;
+    socklen_t info_len = sizeof(tcpi_state);
+    ASSERT_EQ(getsockopt(fd.get(), SOL_TCP, TCP_INFO, &tcpi_state, &info_len), 0)
+        << strerror(errno);
+    ASSERT_EQ(info_len, sizeof(tcpi_state));
+  }
 
-  ASSERT_EQ(0, close(connfd.release()));
+  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 TEST(NetStreamTest, GetSocketAcceptConn) {

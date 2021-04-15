@@ -2133,8 +2133,11 @@ func (s *streamSocketImpl) GetTcpInfo(fidl.Context) (socket.StreamSocketGetTcpIn
 		return socket.StreamSocketGetTcpInfoResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	var info socket.TcpInfo
+	info.SetRtoUsec(uint32(value.RTO.Microseconds()))
 	info.SetRttUsec(uint32(value.RTT.Microseconds()))
 	info.SetRttVarUsec(uint32(value.RTTVar.Microseconds()))
+	info.SetSndSsthresh(value.SndSsthresh)
+	info.SetSndCwnd(value.SndCwnd)
 	return socket.StreamSocketGetTcpInfoResultWithResponse(socket.StreamSocketGetTcpInfoResponse{
 		Info: info,
 	}), nil

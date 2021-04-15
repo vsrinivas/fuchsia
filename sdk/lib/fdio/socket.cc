@@ -288,14 +288,32 @@ SockOptResult GetSockOptProcessor::StoreOption(const fnet::wire::Ipv4Address& va
 
 template <>
 SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::TcpInfo& value) {
-  struct tcp_info i;
+  tcp_info info;
+  // Explicitly initialize unsupported fields to a garbage value. It would probably be quieter to
+  // zero-initialize, but that can mask bugs in the interpretation of fields for which zero is a
+  // valid value.
+  //
+  // Note that "unsupported" includes fields not defined in FIDL *and* fields not populated by the
+  // server.
+  memset(&info, 0xff, sizeof(info));
+
+  if (value.has_rto_usec()) {
+    info.tcpi_rto = value.rto_usec();
+  }
   if (value.has_rtt_usec()) {
-    i.tcpi_rtt = value.rtt_usec();
+    info.tcpi_rtt = value.rtt_usec();
   }
   if (value.has_rtt_var_usec()) {
-    i.tcpi_rttvar = value.rtt_var_usec();
+    info.tcpi_rttvar = value.rtt_var_usec();
   }
-  return StoreRaw(&i, std::min(*optlen_, socklen_t(sizeof(i))));
+  if (value.has_snd_ssthresh()) {
+    info.tcpi_snd_ssthresh = value.snd_ssthresh();
+  }
+  if (value.has_snd_cwnd()) {
+    info.tcpi_snd_cwnd = value.snd_cwnd();
+  }
+
+  return StoreRaw(&info, std::min(*optlen_, socklen_t(sizeof(info))));
 }
 
 // Used for various options that allow the caller to supply larger buffers than needed.

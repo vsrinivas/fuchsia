@@ -399,8 +399,11 @@ enum TcpCongestionControl {
 
 /// TCP protocol information.
 table TcpInfo {
-    1: uint32 rtt_usec;
-    2: uint32 rtt_var_usec;
+    1: uint32 rto_usec;
+    2: uint32 rtt_usec;
+    3: uint32 rtt_var_usec;
+    4: uint32 snd_ssthresh;
+    5: uint32 snd_cwnd;
 };
 
 /// Holds information about an interface and its addresses.
