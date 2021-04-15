@@ -73,7 +73,7 @@ impl CapabilityProvider for RealmCapabilityProvider {
         Ok(fasync::Task::spawn(async move {
             if let Err(e) = host.serve(component, stream).await {
                 // TODO: Set an epitaph to indicate this was an unexpected error.
-                warn!("serve failed: {:?}", e);
+                warn!("serve failed: {}", e);
             }
         })
         .into())
@@ -110,7 +110,7 @@ impl RealmCapabilityHost {
                 let method_name = request.method_name();
                 let res = self.handle_request(request, &component).await;
                 if let Err(e) = &res {
-                    error!("Error occurred sending Realm response for {}: {:?}", method_name, e);
+                    error!("Error occurred sending Realm response for {}: {}", method_name, e);
                 }
                 res
             })
@@ -167,10 +167,7 @@ impl RealmCapabilityHost {
             ModelError::InstanceAlreadyExists { .. } => fcomponent::Error::InstanceAlreadyExists,
             ModelError::CollectionNotFound { .. } => fcomponent::Error::CollectionNotFound,
             ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
-            e => {
-                error!("add_dynamic_child() failed: {:?}", e);
-                fcomponent::Error::Internal
-            }
+            _ => fcomponent::Error::Internal,
         })
     }
 
@@ -183,8 +180,8 @@ impl RealmCapabilityHost {
         let partial_moniker = PartialMoniker::new(child.name, child.collection);
         let child = {
             let state = component.lock_resolved_state().await.map_err(|e| match e {
-                ComponentInstanceError::ResolveFailed { moniker, err } => {
-                    debug!("failed to resolve instance with moniker {}: {:?}", moniker, err);
+                ComponentInstanceError::ResolveFailed { moniker, err, .. } => {
+                    debug!("failed to resolve instance with moniker {}: {}", moniker, err);
                     fcomponent::Error::InstanceCannotResolve
                 }
                 e => {
@@ -201,15 +198,15 @@ impl RealmCapabilityHost {
                 .await
                 .map_err(|e| match e {
                     ModelError::ResolverError { err, .. } => {
-                        debug!("failed to resolve child: {:?}", err);
+                        debug!("failed to resolve child: {}", err);
                         fcomponent::Error::InstanceCannotResolve
                     }
                     ModelError::RunnerError { err } => {
-                        debug!("failed to start child: {:?}", err);
+                        debug!("failed to start child: {}", err);
                         fcomponent::Error::InstanceCannotStart
                     }
                     e => {
-                        error!("bind() failed: {:?}", e);
+                        error!("bind() failed: {}", e);
                         fcomponent::Error::Internal
                     }
                 })?
@@ -231,11 +228,12 @@ impl RealmCapabilityHost {
                     ()
                 }
                 Err(e) => {
-                    error!("open_exposed() failed: {:?}", e);
+                    debug!("open_exposed() failed: {}", e);
                     return Err(fcomponent::Error::Internal);
                 }
             }
         } else {
+            debug!("bind_child() failed: instance not found {:?}", child);
             return Err(fcomponent::Error::InstanceNotFound);
         }
         Ok(())
@@ -253,7 +251,7 @@ impl RealmCapabilityHost {
                 ModelError::InstanceNotFoundInRealm { .. } => fcomponent::Error::InstanceNotFound,
                 ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
                 e => {
-                    error!("remove_dynamic_child() failed: {:?}", e);
+                    error!("remove_dynamic_child() failed: {}", e);
                     fcomponent::Error::Internal
                 }
             })?;
@@ -274,7 +272,7 @@ impl RealmCapabilityHost {
     ) -> Result<(), fcomponent::Error> {
         let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
         let state = component.lock_resolved_state().await.map_err(|e| {
-            error!("failed to resolve InstanceState: {:?}", e);
+            error!("failed to resolve InstanceState: {}", e);
             fcomponent::Error::Internal
         })?;
         let decl = state.decl();
@@ -312,7 +310,7 @@ impl RealmCapabilityHost {
         fasync::Task::spawn(async move {
             if let Err(e) = Self::serve_child_iterator(children, stream, batch_size).await {
                 // TODO: Set an epitaph to indicate this was an unexpected error.
-                warn!("serve_child_iterator failed: {:?}", e);
+                warn!("serve_child_iterator failed: {}", e);
             }
         })
         .detach();

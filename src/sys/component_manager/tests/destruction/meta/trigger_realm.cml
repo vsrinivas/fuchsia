@@ -22,6 +22,16 @@
     capabilities: [
         { protocol: "fidl.test.components.Trigger" },
     ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#trigger_a",
+                "#trigger_b",
+            ],
+        },
+    ],
 
     // Expose my Trigger service so the integration test can invoke it.
     expose: [

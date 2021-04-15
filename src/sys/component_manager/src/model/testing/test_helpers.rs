@@ -698,6 +698,7 @@ pub struct TestEnvironmentBuilder {
     root_component: String,
     components: Vec<(&'static str, ComponentDecl)>,
     runtime_config: RuntimeConfig,
+    enable_hub: bool,
 }
 
 impl TestEnvironmentBuilder {
@@ -706,6 +707,7 @@ impl TestEnvironmentBuilder {
             root_component: "root".to_owned(),
             components: vec![],
             runtime_config: Default::default(),
+            enable_hub: true,
         }
     }
 
@@ -721,6 +723,11 @@ impl TestEnvironmentBuilder {
 
     pub fn set_runtime_config(mut self, runtime_config: RuntimeConfig) -> Self {
         self.runtime_config = runtime_config;
+        self
+    }
+
+    pub fn enable_hub(mut self, val: bool) -> Self {
+        self.enable_hub = val;
         self
     }
 
@@ -741,6 +748,7 @@ impl TestEnvironmentBuilder {
                 .add_resolver("test".to_string(), Box::new(mock_resolver))
                 .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone())
                 .set_runtime_config(self.runtime_config)
+                .enable_hub(self.enable_hub)
                 .build()
                 .await
                 .expect("builtin environment setup failed"),
@@ -778,12 +786,13 @@ impl ActionsTest {
             TestEnvironmentBuilder::new()
                 .set_root_component(root_component)
                 .set_components(components)
+                // Don't install the Hub's hooks because the Hub expects components
+                // to start and stop in a certain lifecycle ordering. In particular, some unit
+                // tests register individual actions in a way that confuses the hub's expectations.
+                .enable_hub(false)
                 .build()
                 .await;
 
-        // TODO(fsamuel): Don't install the Hub's hooks because the Hub expects components
-        // to start and stop in a certain lifecycle ordering. In particular, some unit
-        // tests will destroy component instances before binding to their parents.
         let test_hook = Arc::new(TestHook::new());
         model.root.hooks.install(test_hook.hooks()).await;
         model.root.hooks.install(extra_hooks).await;

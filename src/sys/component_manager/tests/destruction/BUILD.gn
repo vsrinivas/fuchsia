@@ -42,6 +42,27 @@ rustc_binary("destruction_collection_realm_bin") {
   sources = [ "collection_realm.rs" ]
 }
 
+rustc_binary("destroy_and_recreate_bin") {
+  name = "destroy_and_recreate"
+  edition = "2018"
+  source_root = "destroy_and_recreate.rs"
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "destroy_and_recreate.rs" ]
+}
+
 rustc_binary("destruction_trigger_bin") {
   name = "destruction_trigger"
   edition = "2018"
@@ -75,10 +96,17 @@ fuchsia_component("collection_realm") {
   manifest = "meta/collection_realm.cml"
 }
 
+fuchsia_component("destroy_and_recreate") {
+  testonly = true
+  deps = [ ":destroy_and_recreate_bin" ]
+  manifest = "meta/destroy_and_recreate.cml"
+}
+
 fuchsia_unittest_package("destruction_integration_test") {
   manifest = "meta/destruction_integration_test.cmx"
   deps = [
     ":collection_realm",
+    ":destroy_and_recreate",
     ":destruction_integration_test_bin",
     ":trigger",
     ":trigger_realm",

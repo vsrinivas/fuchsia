@@ -10,17 +10,17 @@ use {
         hooks::{Event, EventPayload},
     },
     async_trait::async_trait,
-    moniker::ChildMoniker,
+    moniker::PartialMoniker,
     std::sync::Arc,
 };
 
 /// Marks a child of a component as deleted, after shutting it down.
 pub struct MarkDeletedAction {
-    moniker: ChildMoniker,
+    moniker: PartialMoniker,
 }
 
 impl MarkDeletedAction {
-    pub fn new(moniker: ChildMoniker) -> Self {
+    pub fn new(moniker: PartialMoniker) -> Self {
         Self { moniker }
     }
 }
@@ -38,13 +38,12 @@ impl Action for MarkDeletedAction {
 
 async fn do_mark_deleted(
     component: &Arc<ComponentInstance>,
-    moniker: ChildMoniker,
+    moniker: PartialMoniker,
 ) -> Result<(), ModelError> {
-    let partial_moniker = moniker.to_partial();
     let child = {
         let state = component.lock_state().await;
         match *state {
-            InstanceState::Resolved(ref s) => s.get_live_child(&partial_moniker).map(|r| r.clone()),
+            InstanceState::Resolved(ref s) => s.get_live_child(&moniker).map(|r| r.clone()),
             InstanceState::Destroyed => None,
             InstanceState::New | InstanceState::Discovered => {
                 panic!("do_mark_deleted: not resolved");
@@ -60,7 +59,7 @@ async fn do_mark_deleted(
         let mut state = component.lock_state().await;
         match *state {
             InstanceState::Resolved(ref mut s) => {
-                s.mark_child_deleted(&partial_moniker);
+                s.mark_child_deleted(&moniker);
             }
             InstanceState::Destroyed => {}
             InstanceState::New | InstanceState::Discovered => {
@@ -78,7 +77,7 @@ pub mod tests {
     use {
         super::*,
         crate::model::{
-            actions::{test_utils::is_deleting, ActionSet},
+            actions::{test_utils::is_marked_deleted, ActionSet},
             testing::{
                 test_helpers::{
                     component_decl_with_test_runner, ActionsTest, ComponentDeclBuilder,
@@ -101,10 +100,10 @@ pub mod tests {
 
         // Register `mark_deleted` action, and wait for it. Component should be marked deleted.
         let component_root = test.look_up(vec![].into()).await;
-        ActionSet::register(component_root.clone(), MarkDeletedAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), MarkDeletedAction::new("a".into()))
             .await
             .expect("mark delete failed");
-        assert!(is_deleting(&component_root, "a:0".into()).await);
+        assert!(is_marked_deleted(&component_root, &"a:0".into()).await);
         {
             let events: Vec<_> = test
                 .test_hook
@@ -125,10 +124,10 @@ pub mod tests {
         }
 
         // Execute action again, same state and no new events.
-        ActionSet::register(component_root.clone(), MarkDeletedAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), MarkDeletedAction::new("a".into()))
             .await
             .expect("mark delete failed");
-        assert!(is_deleting(&component_root, "a:0".into()).await);
+        assert!(is_marked_deleted(&component_root, &"a:0".into()).await);
         {
             let events: Vec<_> = test
                 .test_hook
@@ -167,18 +166,18 @@ pub mod tests {
 
         // Register `mark_deleted` action for "a" only.
         let component_root = test.look_up(vec![].into()).await;
-        ActionSet::register(component_root.clone(), MarkDeletedAction::new("coll:a:1".into()))
+        ActionSet::register(component_root.clone(), MarkDeletedAction::new("coll:a".into()))
             .await
             .expect("mark delete failed");
-        assert!(is_deleting(&component_root, "coll:a:1".into()).await);
-        assert!(!is_deleting(&component_root, "coll:b:2".into()).await);
+        assert!(is_marked_deleted(&component_root, &"coll:a:1".into()).await);
+        assert!(!is_marked_deleted(&component_root, &"coll:b:2".into()).await);
 
         // Register `mark_deleted` action for "b".
-        ActionSet::register(component_root.clone(), MarkDeletedAction::new("coll:b:1".into()))
+        ActionSet::register(component_root.clone(), MarkDeletedAction::new("coll:b".into()))
             .await
             .expect("mark delete failed");
-        assert!(is_deleting(&component_root, "coll:a:1".into()).await);
-        assert!(is_deleting(&component_root, "coll:b:2".into()).await);
+        assert!(is_marked_deleted(&component_root, &"coll:a:1".into()).await);
+        assert!(is_marked_deleted(&component_root, &"coll:b:2".into()).await);
         {
             let events: Vec<_> = test
                 .test_hook

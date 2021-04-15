@@ -14,7 +14,7 @@ use {
 };
 
 #[fasync::run_singlethreaded(test)]
-async fn destruction() {
+async fn destroy() {
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/collection_realm.cm",
     )
@@ -66,4 +66,17 @@ async fn destruction() {
     // Assert the expected lifecycle events. The leaves can be stopped/destroyed in either order.
     event.resume().await.unwrap();
     expectation.await.unwrap();
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn destroy_and_recreate() {
+    let mut test = OpaqueTest::default(
+        "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/destroy_and_recreate.cm",
+    )
+    .await
+    .expect("failed to start test");
+    let event_source = test.connect_to_event_source().await.unwrap();
+    event_source.start_component_tree().await;
+    let status = test.component_manager_app.wait().await.expect("failed to wait for component");
+    assert!(status.success(), "test failed");
 }

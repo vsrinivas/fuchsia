@@ -443,10 +443,11 @@ impl ComponentInstance {
         if let Some(tup) = tup {
             let (instance, _) = tup;
             let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
-            ActionSet::register(self.clone(), MarkDeletedAction::new(child_moniker.clone()))
+            ActionSet::register(self.clone(), MarkDeletedAction::new(partial_moniker.clone()))
                 .await?;
-            let fut = ActionSet::register(self.clone(), DeleteChildAction::new(child_moniker));
-            Ok(fut)
+            let mut actions = self.lock_actions().await;
+            let nf = actions.register_no_wait(self, DeleteChildAction::new(child_moniker));
+            Ok(nf)
         } else {
             Err(ModelError::instance_not_found_in_realm(
                 self.abs_moniker.clone(),
@@ -562,7 +563,8 @@ impl ComponentInstance {
             // above.
             if let Some(coll) = m.collection() {
                 if transient_colls.contains(coll) {
-                    ActionSet::register(self.clone(), MarkDeletedAction::new(m.clone())).await?;
+                    ActionSet::register(self.clone(), MarkDeletedAction::new(m.to_partial()))
+                        .await?;
                     let nf = ActionSet::register(self.clone(), DeleteChildAction::new(m));
                     futures.push(nf);
                 }

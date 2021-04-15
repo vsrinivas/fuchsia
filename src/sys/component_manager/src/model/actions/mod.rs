@@ -77,7 +77,7 @@ use {
         task::{Context, Poll},
         Future,
     },
-    moniker::ChildMoniker,
+    moniker::{ChildMoniker, PartialMoniker},
     std::any::Any,
     std::collections::HashMap,
     std::fmt::Debug,
@@ -105,7 +105,7 @@ pub enum ActionKey {
     Start,
     Stop,
     Shutdown,
-    MarkDeleted(ChildMoniker),
+    MarkDeleted(PartialMoniker),
     DeleteChild(ChildMoniker),
     Destroy,
 }
@@ -409,10 +409,10 @@ pub(crate) mod test_utils {
         component.lock_execution().await.runtime.is_some()
     }
 
-    pub async fn is_deleting(component: &ComponentInstance, moniker: ChildMoniker) -> bool {
+    pub async fn is_marked_deleted(component: &ComponentInstance, moniker: &ChildMoniker) -> bool {
         let partial = moniker.to_partial();
         match *component.lock_state().await {
-            InstanceState::Resolved(ref s) => match s.get_child(&moniker) {
+            InstanceState::Resolved(ref s) => match s.get_child(moniker) {
                 Some(child) => {
                     let child_execution = child.lock_execution().await;
                     s.get_live_child(&partial).is_none() && child_execution.is_shut_down()
@@ -426,11 +426,11 @@ pub(crate) mod test_utils {
         }
     }
 
-    /// Verifies that a child component is deleted by checking its InstanceState and verifying that it
-    /// does not exist in the InstanceState of its parent. Assumes the parent is not destroyed yet.
+    /// Verifies that a child component is deleted by checking its InstanceState and verifying that
+    /// it does not exist in the InstanceState of its parent. Assumes the parent is not destroyed
+    /// yet.
     pub async fn is_child_deleted(parent: &ComponentInstance, child: &ComponentInstance) -> bool {
         let child_moniker = child.abs_moniker.leaf().expect("Root component cannot be destroyed");
-        let partial_moniker = child_moniker.to_partial();
 
         // Verify the parent-child relationship
         assert_eq!(parent.abs_moniker.child(child_moniker.clone()), child.abs_moniker);
@@ -443,14 +443,9 @@ pub(crate) mod test_utils {
 
         let child_state = child.lock_state().await;
         let child_execution = child.lock_execution().await;
-
-        let found_partial_moniker = parent_resolved_state
-            .live_children()
-            .find(|(curr_partial_moniker, _)| **curr_partial_moniker == partial_moniker);
         let found_child_moniker = parent_resolved_state.all_children().get(child_moniker);
 
-        found_partial_moniker.is_none()
-            && found_child_moniker.is_none()
+        found_child_moniker.is_none()
             && matches!(*child_state, InstanceState::Destroyed)
             && child_execution.runtime.is_none()
             && child_execution.is_shut_down()

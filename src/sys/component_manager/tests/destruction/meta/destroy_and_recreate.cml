@@ -1,0 +1,19 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/destroy_and_recreate",
+    },
+    collections: [
+        {
+            name: "coll",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+}

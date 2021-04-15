@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -27,7 +27,7 @@ async fn main() {
     {
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
         let child_decl = fsys::ChildDecl {
-            name: Some("parent".to_string()),
+            name: Some("trigger".to_string()),
             url: Some(
                 "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/trigger_realm.cm"
                     .to_string(),
@@ -47,7 +47,7 @@ async fn main() {
     info!("Binding to child");
     {
         let mut child_ref =
-            fsys::ChildRef { name: "parent".to_string(), collection: Some("coll".to_string()) };
+            fsys::ChildRef { name: "trigger".to_string(), collection: Some("coll".to_string()) };
         let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
         realm
             .bind_child(&mut child_ref, server_end)
@@ -59,10 +59,10 @@ async fn main() {
     }
 
     // Destroy the child.
-    info!("Destroying child");
+    info!("Destroying and recreating child");
     {
         let mut child_ref =
-            fsys::ChildRef { name: "parent".to_string(), collection: Some("coll".to_string()) };
+            fsys::ChildRef { name: "trigger".to_string(), collection: Some("coll".to_string()) };
         realm
             .destroy_child(&mut child_ref)
             .await
@@ -70,9 +70,43 @@ async fn main() {
             .expect("failed to destroy child");
     }
 
-    info!("Done");
-    loop {
-        fasync::Timer::new(fasync::Time::after(zx::Duration::from_hours(1))).await;
+    // Recreate the child immediately.
+    {
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+        let child_decl = fsys::ChildDecl {
+            name: Some("trigger".to_string()),
+            url: Some(
+                "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/trigger_realm.cm"
+                    .to_string(),
+            ),
+            startup: Some(fsys::StartupMode::Lazy),
+            environment: None,
+            ..fsys::ChildDecl::EMPTY
+        };
+        realm
+            .create_child(&mut collection_ref, child_decl)
+            .await
+            .expect(&format!("create_child failed"))
+            .expect(&format!("failed to create child"));
+    }
+
+    // Sleep so that it's more likely that, if the new component is destroyed incorrectly,
+    // this test will fail.
+    fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(5))).await;
+
+    // Rebind to the child.
+    info!("Re-binding to child");
+    {
+        let mut child_ref =
+            fsys::ChildRef { name: "trigger".to_string(), collection: Some("coll".to_string()) };
+        let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        realm
+            .bind_child(&mut child_ref, server_end)
+            .await
+            .expect(&format!("bind_child failed"))
+            .expect(&format!("failed to bind to child"));
+        let trigger = open_trigger_svc(&dir).expect("failed to open trigger service");
+        trigger.run().await.expect("trigger failed");
     }
 }
 

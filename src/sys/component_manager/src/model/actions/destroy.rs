@@ -5,8 +5,8 @@
 use {
     crate::model::{
         actions::{
-            Action, ActionKey, ActionSet, DeleteChildAction, DiscoverAction, ResolveAction,
-            StartAction,
+            Action, ActionKey, ActionSet, DeleteChildAction, DiscoverAction, MarkDeletedAction,
+            ResolveAction, StartAction,
         },
         component::{BindReason, ComponentInstance, InstanceState},
         error::ModelError,
@@ -49,13 +49,22 @@ async fn do_destroy(component: &Arc<ComponentInstance>) -> Result<(), ModelError
             component.abs_moniker
         );
     }
+
     let nfs = {
         match *component.lock_state().await {
             InstanceState::Resolved(ref s) => {
                 let mut nfs = vec![];
                 for (m, _) in s.all_children().iter() {
                     let component = component.clone();
-                    let nf = ActionSet::register(component, DeleteChildAction::new(m.clone()));
+                    let m = m.clone();
+                    let nf = async move {
+                        ActionSet::register(
+                            component.clone(),
+                            MarkDeletedAction::new(m.to_partial()),
+                        )
+                        .await?;
+                        ActionSet::register(component, DeleteChildAction::new(m)).await
+                    };
                     nfs.push(nf);
                 }
                 nfs
@@ -109,7 +118,7 @@ pub mod tests {
         super::*,
         crate::model::{
             actions::{
-                test_utils::{is_child_deleted, is_destroyed, is_executing},
+                test_utils::{is_child_deleted, is_destroyed, is_executing, is_marked_deleted},
                 ActionNotifier, ShutdownAction,
             },
             binding::Binder,
@@ -149,10 +158,17 @@ pub mod tests {
             .expect("could not bind to a");
         assert!(is_executing(&component_a).await);
 
+        // Register shutdown first because DeleteChild requires the component to be shut down.
+        ActionSet::register(component_a.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
         // Register delete child action, and wait for it. Component should be destroyed.
         ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
+        // DeleteChild should not mark the instance non-live. That's done by MarkDeleted which we
+        // don't call here.
+        assert!(!is_marked_deleted(&component_root, &"a:0".into()).await);
         assert!(is_child_deleted(&component_root, &component_a).await);
         {
             let events: Vec<_> = test
@@ -180,6 +196,7 @@ pub mod tests {
         ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
+        assert!(!is_marked_deleted(&component_root, &"a:0".into()).await);
         assert!(is_child_deleted(&component_root, &component_a).await);
     }
 
@@ -221,6 +238,9 @@ pub mod tests {
 
         // Register delete child action, and wait for it. Components should be destroyed.
         let component_container = test.look_up(vec!["container:0"].into()).await;
+        ActionSet::register(component_container.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
         ActionSet::register(component_root.clone(), DeleteChildAction::new("container:0".into()))
             .await
             .expect("destroy failed");
@@ -323,9 +343,19 @@ pub mod tests {
 
         // Register delete child action, while `action` is stalled.
         let component_root = test.look_up(vec![].into()).await;
+        let component_a = match *component_root.lock_state().await {
+            InstanceState::Resolved(ref s) => {
+                s.get_live_child(&PartialMoniker::from("a")).expect("child a not found")
+            }
+            _ => panic!("not resolved"),
+        };
         let (f, delete_handle) = {
             let component_root = component_root.clone();
+            let component_a = component_a.clone();
             async move {
+                ActionSet::register(component_a, ShutdownAction::new())
+                    .await
+                    .expect("shutdown failed");
                 ActionSet::register(component_root, DeleteChildAction::new("a:0".into()))
                     .await
                     .expect("destroy failed");
@@ -335,12 +365,6 @@ pub mod tests {
         fasync::Task::spawn(f).detach();
 
         // Check that `action` is being waited on.
-        let component_a = match *component_root.lock_state().await {
-            InstanceState::Resolved(ref s) => {
-                s.get_live_child(&PartialMoniker::from("a")).expect("child a not found")
-            }
-            _ => panic!("not resolved"),
-        };
         let action_key = action.key();
         loop {
             let actions = component_a.lock_actions().await;
@@ -458,6 +482,9 @@ pub mod tests {
         };
 
         // Register delete action on "a", and wait for it.
+        ActionSet::register(component_a.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
         ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
@@ -530,6 +557,9 @@ pub mod tests {
         // Register destroy action on "a", and wait for it. This should cause all components
         // in "a"'s component to be shut down and destroyed, in bottom-up order, but "x" is still
         // running.
+        ActionSet::register(component_a.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
         ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("delete child failed");
@@ -644,6 +674,9 @@ pub mod tests {
 
         // Register destroy action on "a", and wait for it. This should cause all components
         // that were started to be destroyed, in bottom-up order.
+        ActionSet::register(component_a.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
         ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("delete child failed");
@@ -770,6 +803,9 @@ pub mod tests {
 
         // Register delete action on "a", and wait for it. "b"'s component is deleted, but "b"
         // returns an error so the delete action on "a" does not succeed.
+        ActionSet::register(component_a.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
         ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect_err("destroy succeeded unexpectedly");

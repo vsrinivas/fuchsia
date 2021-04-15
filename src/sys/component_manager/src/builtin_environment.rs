@@ -51,7 +51,7 @@ use {
         root_stop_notifier::RootStopNotifier,
         work_scheduler::WorkScheduler,
     },
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{bail, format_err, Context as _, Error},
     cm_rust::{CapabilityName, RunnerRegistration},
     cm_types::Url,
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd, ServiceMarker},
@@ -70,6 +70,7 @@ use {
     futures::{channel::oneshot, prelude::*},
     log::*,
     std::{
+        default,
         path::PathBuf,
         sync::{Arc, Weak},
     },
@@ -78,7 +79,6 @@ use {
 // Allow shutdown to take up to an hour.
 pub static SHUTDOWN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60 * 60);
 
-#[derive(Default)]
 pub struct BuiltinEnvironmentBuilder {
     // TODO(60804): Make component manager's namespace injectable here.
     runtime_config: Option<RuntimeConfig>,
@@ -87,6 +87,21 @@ pub struct BuiltinEnvironmentBuilder {
     utc_clock: Option<Arc<Clock>>,
     add_environment_resolvers: bool,
     inspector: Option<Inspector>,
+    enable_hub: bool,
+}
+
+impl default::Default for BuiltinEnvironmentBuilder {
+    fn default() -> Self {
+        Self {
+            runtime_config: None,
+            runners: vec![],
+            resolvers: ResolverRegistry::default(),
+            utc_clock: None,
+            add_environment_resolvers: false,
+            inspector: None,
+            enable_hub: true,
+        }
+    }
 }
 
 impl BuiltinEnvironmentBuilder {
@@ -105,6 +120,11 @@ impl BuiltinEnvironmentBuilder {
 
     pub fn set_inspector(mut self, inspector: Inspector) -> Self {
         self.inspector = Some(inspector);
+        self
+    }
+
+    pub fn enable_hub(mut self, val: bool) -> Self {
+        self.enable_hub = val;
         self
     }
 
@@ -247,6 +267,7 @@ impl BuiltinEnvironmentBuilder {
             builtin_runners,
             self.utc_clock,
             self.inspector.unwrap_or(component::inspector().clone()),
+            self.enable_hub,
         )
         .await?)
     }
@@ -333,7 +354,7 @@ pub struct BuiltinEnvironment {
     pub work_scheduler: Arc<WorkScheduler>,
     pub realm_capability_host: Arc<RealmCapabilityHost>,
     pub storage_admin_capability_host: Arc<StorageAdmin>,
-    pub hub: Arc<Hub>,
+    pub hub: Option<Arc<Hub>>,
     pub builtin_runners: Vec<Arc<BuiltinRunner>>,
     pub event_registry: Arc<EventRegistry>,
     pub event_source_factory: Arc<EventSourceFactory>,
@@ -358,6 +379,7 @@ impl BuiltinEnvironment {
         builtin_runners: Vec<Arc<BuiltinRunner>>,
         utc_clock: Option<Arc<Clock>>,
         inspector: Inspector,
+        enable_hub: bool,
     ) -> Result<BuiltinEnvironment, ModelError> {
         let execution_mode = match runtime_config.debug {
             true => ExecutionMode::Debug,
@@ -617,8 +639,13 @@ impl BuiltinEnvironment {
         let stop_notifier = Arc::new(RootStopNotifier::new());
         model.root.hooks.install(stop_notifier.hooks()).await;
 
-        let hub = Arc::new(Hub::new(root_component_url.as_str().to_owned())?);
-        model.root.hooks.install(hub.hooks()).await;
+        let hub = if enable_hub {
+            let hub = Arc::new(Hub::new(root_component_url.as_str().to_owned())?);
+            model.root.hooks.install(hub.hooks()).await;
+            Some(hub)
+        } else {
+            None
+        };
 
         // Set up the Component Tree Diagnostics runtime statistics.
         let component_tree_stats =
@@ -714,13 +741,19 @@ impl BuiltinEnvironment {
     }
 
     /// Setup a ServiceFs that contains the Hub and (optionally) the `EventSource` service.
-    async fn create_service_fs<'a>(&self) -> Result<ServiceFs<ServiceObj<'a, ()>>, ModelError> {
+    async fn create_service_fs<'a>(&self) -> Result<ServiceFs<ServiceObj<'a, ()>>, Error> {
+        if let None = self.hub {
+            bail!("Hub must be enabled if OutDirContents is not `None`");
+        }
+
         // Create the ServiceFs
         let mut service_fs = ServiceFs::new();
 
         // Setup the hub
         let (hub_proxy, hub_server_end) = create_proxy::<DirectoryMarker>().unwrap();
         self.hub
+            .as_ref()
+            .unwrap()
             .open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, hub_server_end.into_channel())
             .await?;
         service_fs.add_remote("hub", hub_proxy);
@@ -750,7 +783,7 @@ impl BuiltinEnvironment {
     }
 
     /// Bind ServiceFs to a provided channel
-    async fn bind_service_fs(&mut self, channel: zx::Channel) -> Result<(), ModelError> {
+    async fn bind_service_fs(&mut self, channel: zx::Channel) -> Result<(), Error> {
         let mut service_fs = self.create_service_fs().await?;
 
         // Bind to the channel
@@ -770,7 +803,7 @@ impl BuiltinEnvironment {
     }
 
     /// Bind ServiceFs to the outgoing directory of this component, if it exists.
-    pub async fn bind_service_fs_to_out(&mut self) -> Result<(), ModelError> {
+    pub async fn bind_service_fs_to_out(&mut self) -> Result<(), Error> {
         if let Some(handle) = fuchsia_runtime::take_startup_handle(
             fuchsia_runtime::HandleType::DirectoryRequest.into(),
         ) {
@@ -786,7 +819,7 @@ impl BuiltinEnvironment {
 
     /// Bind ServiceFs to a new channel and return the Hub directory.
     /// Used mainly by integration tests.
-    pub async fn bind_service_fs_for_hub(&mut self) -> Result<DirectoryProxy, ModelError> {
+    pub async fn bind_service_fs_for_hub(&mut self) -> Result<DirectoryProxy, Error> {
         // Create a channel that ServiceFs will operate on
         let (service_fs_proxy, service_fs_server_end) = create_proxy::<DirectoryMarker>().unwrap();
 
