@@ -133,37 +133,19 @@ impl V1Realm {
 
     pub fn print_tree_recursive(&self, level: usize, only: Only, verbose: bool) {
         let space = SPACER.repeat(level - 1);
-        match only {
-            Only::CML => {}
-            Only::Stopped => {}
-            Only::CMX => {
-                if verbose {
-                    println!("{:<width$}{}{}", "Realm", space, self.name, width = WIDTH_CS_TREE);
-                } else {
-                    println!("{}{}", space, self.name);
-                }
-            }
-            Only::Running => {
-                if verbose {
-                    println!("{:<width$}{}{}", "Running", space, self.name, width = WIDTH_CS_TREE);
-                } else {
-                    println!("{}{}", space, self.name);
-                }
-            }
-            Only::All => {
-                if verbose {
-                    println!(
-                        "{:<width_realm$}{:<width_running$}{}{}",
-                        "Realm",
-                        "Running",
-                        space,
-                        self.name,
-                        width_realm = WIDTH_CS_TREE,
-                        width_running = WIDTH_CS_TREE
-                    );
-                } else {
-                    println!("{}{}", space, self.name);
-                }
+        if only == Only::CMX || only == Only::Running || only == Only::All {
+            if verbose {
+                println!(
+                    "{:<width_type$}{:<width_running_stopped$}{}{}",
+                    "Realm",
+                    "Running",
+                    space,
+                    self.name,
+                    width_type = WIDTH_CS_TREE,
+                    width_running_stopped = WIDTH_CS_TREE
+                );
+            } else {
+                println!("{}{}", space, self.name);
             }
         }
         for child in &self.child_components {
@@ -299,37 +281,19 @@ impl V1Component {
 
     fn print_tree_recursive(&self, level: usize, only: Only, verbose: bool) {
         let space = SPACER.repeat(level - 1);
-        match only {
-            Only::CML => {}
-            Only::Stopped => {}
-            Only::CMX => {
-                if verbose {
-                    println!("{:<width$}{}{}", "CMX", space, self.name, width = WIDTH_CS_TREE);
-                } else {
-                    println!("{}{}", space, self.name);
-                }
-            }
-            Only::Running => {
-                if verbose {
-                    println!("{:<width$}{}{}", "Running", space, self.name, width = WIDTH_CS_TREE);
-                } else {
-                    println!("{}{}", space, self.name);
-                }
-            }
-            Only::All => {
-                if verbose {
-                    println!(
-                        "{:<width_cmx$}{:<width_running$}{}{}",
-                        "CMX",
-                        "Running",
-                        space,
-                        self.name,
-                        width_cmx = WIDTH_CS_TREE,
-                        width_running = WIDTH_CS_TREE
-                    );
-                } else {
-                    println!("{}{}", space, self.name);
-                }
+        if only == Only::CMX || only == Only::Running || only == Only::All {
+            if verbose {
+                println!(
+                    "{:<width_type$}{:<width_running_stopped$}{}{}",
+                    "CMX",
+                    "Running",
+                    space,
+                    self.name,
+                    width_type = WIDTH_CS_TREE,
+                    width_running_stopped = WIDTH_CS_TREE
+                );
+            } else {
+                println!("{}{}", space, self.name);
             }
         }
         for child in &self.child_components {

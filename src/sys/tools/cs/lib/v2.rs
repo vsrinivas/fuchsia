@@ -211,32 +211,36 @@ impl V2Component {
 
     pub fn print_tree(&self, only: Only, verbose: bool) {
         if verbose {
-            if only == Only::CML || only == Only::CMX {
-                println!("{:<width$}Component Name", "Component Type", width = WIDTH_CS_TREE);
-            }
-            if only == Only::Running || only == Only::Stopped {
-                println!("{:<width$}Component Name", "Running/Stopped", width = WIDTH_CS_TREE);
-            }
-            if only == Only::All {
-                println!(
-                    "{:<width_type$}{:<width_running_stopped$}Component Name",
-                    "Component Type",
-                    "Running/Stopped",
-                    width_type = WIDTH_CS_TREE,
-                    width_running_stopped = WIDTH_CS_TREE
-                );
-            }
+            println!(
+                "{:<width_type$}{:<width_running_stopped$}Component Name",
+                "Component Type",
+                "Running/Stopped",
+                width_type = WIDTH_CS_TREE,
+                width_running_stopped = WIDTH_CS_TREE
+            );
         }
         self.print_tree_recursive(1, only, verbose);
     }
 
     fn print_tree_recursive(&self, level: usize, only: Only, verbose: bool) {
         let space = SPACER.repeat(level - 1);
+        let running_or_stopped = match self.execution {
+            Some(_) => "Running",
+            None => "Stopped",
+        };
         match only {
             Only::CMX => {}
             Only::CML => {
                 if verbose {
-                    println!("{:<width$}{}{}", "CML", space, self.name, width = WIDTH_CS_TREE);
+                    println!(
+                        "{:<width_type$}{:<width_running_stopped$}{}{}",
+                        "CML",
+                        running_or_stopped,
+                        space,
+                        self.name,
+                        width_type = WIDTH_CS_TREE,
+                        width_running_stopped = WIDTH_CS_TREE
+                    );
                 } else {
                     println!("{}{}", space, self.name);
                 }
@@ -245,11 +249,13 @@ impl V2Component {
                 if self.execution.is_some() {
                     if verbose {
                         println!(
-                            "{:<width$}{}{}",
+                            "{:<width_type$}{:<width_running_stopped$}{}{}",
+                            "CML",
                             "Running",
                             space,
                             self.name,
-                            width = WIDTH_CS_TREE
+                            width_type = WIDTH_CS_TREE,
+                            width_running_stopped = WIDTH_CS_TREE
                         );
                     } else {
                         println!("{}{}", space, self.name);
@@ -259,47 +265,35 @@ impl V2Component {
             Only::Stopped => {
                 if self.execution == None {
                     if verbose {
-                        println!(
-                            "{:<width$}{}{}",
-                            "Stopped",
-                            space,
-                            self.name,
-                            width = WIDTH_CS_TREE
-                        );
+                        if self.execution == None {
+                            println!(
+                                "{:<width_type$}{:<width_running_stopped$}{}{}",
+                                "CML",
+                                "Stopped",
+                                space,
+                                self.name,
+                                width_type = WIDTH_CS_TREE,
+                                width_running_stopped = WIDTH_CS_TREE
+                            );
+                        }
                     } else {
                         println!("{}{}", space, self.name);
                     }
                 }
             }
             Only::All => {
-                if self.execution.is_some() {
-                    if verbose {
-                        println!(
-                            "{:<width_cml$}{:<width_running$}{}{}",
-                            "CML",
-                            "Running",
-                            space,
-                            self.name,
-                            width_cml = WIDTH_CS_TREE,
-                            width_running = WIDTH_CS_TREE
-                        );
-                    } else {
-                        println!("{}{}", space, self.name);
-                    }
+                if verbose {
+                    println!(
+                        "{:<width_type$}{:<width_running_stopped$}{}{}",
+                        "CML",
+                        running_or_stopped,
+                        space,
+                        self.name,
+                        width_type = WIDTH_CS_TREE,
+                        width_running_stopped = WIDTH_CS_TREE
+                    );
                 } else {
-                    if verbose {
-                        println!(
-                            "{:<width_cml$}{:<width_stopped$}{}{}",
-                            "CML",
-                            "Stopped",
-                            space,
-                            self.name,
-                            width_cml = WIDTH_CS_TREE,
-                            width_stopped = WIDTH_CS_TREE
-                        );
-                    } else {
-                        println!("{}{}", space, self.name);
-                    }
+                    println!("{}{}", space, self.name);
                 }
             }
         }
