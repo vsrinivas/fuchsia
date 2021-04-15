@@ -1,0 +1,15 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.hfp.test;
+
+/// Provides additional methods not in `Hfp` that are strictly for testing.
+[Discoverable]
+protocol HfpTest {
+    /// Set the value of the AG battery indicator.
+    ///
+    /// `level` must be within the range 0-5 inclusive. Values outside of this
+    /// range cause the channel to close.
+    BatteryIndicator(uint8 level);
+};
