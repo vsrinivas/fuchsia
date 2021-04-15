@@ -97,6 +97,9 @@ def main():
         dirs_to_delete.append(dest_dir)
 
         for source in info['sources']:
+            # NOTE: the following line is temporary to facilitate soft
+            # transitioning third-party repos.
+            source = os.path.join(info['source_root'], source)
             files_to_copy.append(source)
             dest = os.path.join(dest_dir, os.path.basename(source))
             shutil.copy2(source, dest)

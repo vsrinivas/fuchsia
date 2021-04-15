@@ -68,7 +68,7 @@ template("python_library") {
         {
           library_name = library_name
           source_root = rebase_path(source_root, root_build_dir)
-          sources = rebase_path(invoker.sources, root_build_dir)
+          sources = invoker.sources
         },
       ]
       library_info_barrier = []
