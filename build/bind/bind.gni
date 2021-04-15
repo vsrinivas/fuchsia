@@ -373,6 +373,9 @@ template("bind_rules") {
     if (defined(invoker.output_bytecode) && invoker.output_bytecode) {
       args += [ "--output-bytecode" ]
     }
+    if (defined(invoker.use_new_bytecode) && invoker.use_new_bytecode) {
+      args += [ "--use-new-bytecode" ]
+    }
     if (defined(invoker.rules)) {
       args += [ rebase_path(invoker.rules, root_build_dir) ]
     }

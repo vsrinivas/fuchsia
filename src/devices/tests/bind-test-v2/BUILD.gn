@@ -1,4 +1,4 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -8,9 +8,9 @@ import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("test") {
-  output_name = "bind-test"
+  output_name = "bind-test-v2"
 
-  sources = [ "bind-test.cc" ]
+  sources = [ "bind-test-v2.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
@@ -33,27 +33,27 @@ test("test") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_package("bind-test") {
-  executable_path = "test/bind-test"
+isolated_devmgr_unittest_package("bind-test-v2") {
+  executable_path = "test/bind-test-v2"
 
   deps = [
-    ":bind-test-driver",
+    ":bind-test-driver-v2",
     ":test",
     "//src/devices/misc/drivers/test",
     "//src/devices/tests/sysdev",
   ]
 }
 
-bind_rules("bind") {
-  rules = "bind-test.bind"
-  output = "bind-test-bind.h"
+bind_rules("bind-v2") {
+  rules = "bind-test-v2.bind"
+  output = "bind-test-v2-bind.h"
   disable_autobind = true
-  use_new_bytecode = false
+  use_new_bytecode = true
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
-driver_module("bind-test-driver") {
-  output_name = "bind-test"
+driver_module("bind-test-driver-v2") {
+  output_name = "bind-test-v2"
   test = true
   configs += [
     "//build/config:all_source",
@@ -62,9 +62,9 @@ driver_module("bind-test-driver") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
-  sources = [ "bind-test-driver.cc" ]
+  sources = [ "bind-test-driver-v2.cc" ]
   deps = [
-    ":bind",
+    ":bind-v2",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]

@@ -1605,43 +1605,56 @@ void Coordinator::GetBindRules(::fidl::StringView driver_path_view,
     return;
   }
 
-  // Only the old bytecode version is supported.
-  if (driver->bytecode_version != 1) {
-    completer.ReplyError(ZX_ERR_NOT_FOUND);
-    return;
+  if (driver->bytecode_version == 1) {
+    auto* binding = std::get_if<std::unique_ptr<zx_bind_inst_t[]>>(&driver->binding);
+    if (!binding) {
+      completer.ReplyError(ZX_ERR_NOT_FOUND);
+      return;
+    }
+    auto binding_insts = binding->get();
+
+    uint32_t count = 0;
+    if (driver->binding_size > 0) {
+      count = driver->binding_size / sizeof(binding_insts[0]);
+    }
+    if (count > fuchsia_device_manager_BIND_RULES_INSTRUCTIONS_MAX) {
+      completer.ReplyError(ZX_ERR_BUFFER_TOO_SMALL);
+      return;
+    }
+
+    using fuchsia_device_manager::wire::BindInstruction;
+    std::vector<BindInstruction> instructions;
+    for (uint32_t i = 0; i < count; i++) {
+      instructions.push_back(BindInstruction{
+          .op = binding_insts[i].op,
+          .arg = binding_insts[i].arg,
+          .debug = binding_insts[i].debug,
+      });
+    }
+
+    auto instructions_vec_view = ::fidl::VectorView<BindInstruction>::FromExternal(instructions);
+
+    completer.ReplySuccess(fuchsia_device_manager::wire::BindRulesBytecode::WithBytecodeV1(
+        fidl::ObjectView<::fidl::VectorView<BindInstruction>>::FromExternal(
+            &instructions_vec_view)));
+  } else if (driver->bytecode_version == 2) {
+    auto* binding = std::get_if<std::unique_ptr<uint8_t[]>>(&driver->binding);
+    if (!binding) {
+      completer.ReplyError(ZX_ERR_NOT_FOUND);
+      return;
+    }
+
+    std::vector<uint8_t> bytecode;
+    for (uint32_t i = 0; i < driver->binding_size; i++) {
+      bytecode.push_back(binding->get()[i]);
+    }
+
+    auto bytecode_vec_view = ::fidl::VectorView<uint8_t>::FromExternal(bytecode);
+    completer.ReplySuccess(fuchsia_device_manager::wire::BindRulesBytecode::WithBytecodeV2(
+        fidl::ObjectView<::fidl::VectorView<uint8_t>>::FromExternal(&bytecode_vec_view)));
+  } else {
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
   }
-
-  auto* binding = std::get_if<std::unique_ptr<zx_bind_inst_t[]>>(&driver->binding);
-  if (!binding) {
-    completer.ReplyError(ZX_ERR_NOT_FOUND);
-    return;
-  }
-  auto binding_insts = binding->get();
-
-  uint32_t count = 0;
-  if (driver->binding_size > 0) {
-    count = driver->binding_size / sizeof(binding_insts[0]);
-  }
-  if (count > fuchsia_device_manager_BIND_RULES_INSTRUCTIONS_MAX) {
-    completer.ReplyError(ZX_ERR_BUFFER_TOO_SMALL);
-    return;
-  }
-
-  using fuchsia_device_manager::wire::BindInstruction;
-
-  std::vector<BindInstruction> instructions;
-  for (uint32_t i = 0; i < count; i++) {
-    instructions.push_back(BindInstruction{
-        .op = binding_insts[i].op,
-        .arg = binding_insts[i].arg,
-        .debug = binding_insts[i].debug,
-    });
-  }
-
-  auto instructions_vec_view = ::fidl::VectorView<BindInstruction>::FromExternal(instructions);
-
-  completer.ReplySuccess(fuchsia_device_manager::wire::BindRulesBytecode::WithBytecodeV1(
-      fidl::ObjectView<::fidl::VectorView<BindInstruction>>::FromExternal(&instructions_vec_view)));
 }
 
 void Coordinator::Register(fuchsia_pkg::wire::PackageUrl driver_url,
