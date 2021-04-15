@@ -140,7 +140,7 @@ template("fuchsia_component") {
     }
     deps += [ ":$manifest_resource_target" ]
     if (manifest_extension == "cmx") {
-      deps += [ "//build/components:cmx_allowlist" ]
+      deps += [ "//build/components/cmx:cmx_allowlist" ]
     }
     if (check_references) {
       deps += [ ":$validate_target" ]
