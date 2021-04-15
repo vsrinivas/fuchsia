@@ -56,6 +56,7 @@ type buildModules interface {
 
 // Build runs `ninja` given a static and context spec. It's intended to be
 // consumed as a library function.
+// TODO(olivernewman): Add tests for this function.
 func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.Context) (*fintpb.BuildArtifacts, error) {
 	platform, err := hostplatform.Name()
 	if err != nil {
@@ -71,6 +72,7 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	if err != nil {
 		return nil, err
 	}
+	artifacts.BuiltTargets = targets
 	// The ninja log is generated automatically by Ninja and its path is
 	// constant relative to the build directory.
 	artifacts.NinjaLogPath = filepath.Join(contextSpec.BuildDir, ninjaLogPath)
