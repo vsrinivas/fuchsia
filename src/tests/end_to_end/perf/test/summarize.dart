@@ -7,9 +7,14 @@ import 'dart:io';
 
 import 'package:tuple/tuple.dart';
 
-double mean(List values) {
+num mean(List values) {
   if (values.isEmpty) {
     throw ArgumentError('Cannot calculate the mean for an empty list');
+  }
+  // If the list contains just a single value, preserve the value's
+  // type (int vs. double).
+  if (values.length == 1) {
+    return values[0];
   }
   double sum = 0;
   for (final value in values) {
@@ -18,9 +23,12 @@ double mean(List values) {
   return sum / values.length;
 }
 
-double meanExcludingWarmup(List values) {
-  if (values.length <= 1) {
-    throw ArgumentError('List contains only ${values.length} values');
+num meanExcludingWarmup(List values) {
+  if (values.isEmpty) {
+    throw ArgumentError('Cannot calculate the mean for an empty list');
+  }
+  if (values.length == 1) {
+    return values[0];
   }
   double sum = 0;
   for (int index = 1; index < values.length; index++) {
@@ -84,11 +92,15 @@ dynamic summarizeFuchsiaPerfFiles(List<File> jsonFiles) {
   }
 
   for (final entry in outputList) {
-    // Round the result to an integer to reduce the size of the output
-    // files, especially when they are compressed.  When the resulting
-    // times are in nanoseconds, we generally don't care about
-    // fractional nanoseconds.
-    entry['values'] = [mean(entry['values']).round()];
+    num meanVal = mean(entry['values']);
+    if (entry['unit'] == 'nanoseconds') {
+      // Round the result to an integer to reduce the size of the output
+      // files, especially when they are compressed.  When the resulting
+      // times are in nanoseconds, we generally don't care about
+      // fractional nanoseconds.
+      meanVal = meanVal.round();
+    }
+    entry['values'] = [meanVal];
   }
 
   return outputList;

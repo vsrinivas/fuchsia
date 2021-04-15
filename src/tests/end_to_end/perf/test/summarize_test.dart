@@ -12,7 +12,10 @@ import 'summarize.dart';
 void main() {
   test('mean', () {
     expect(mean([100, 101, 102, 103]), equals(101.5));
+    expect(mean([123.45]), equals(123.45));
     expect(mean([123]), equals(123));
+    // The int (non-double) type should be preserved for single-item inputs.
+    expect(mean([123]), TypeMatcher<int>());
     expect(() {
       mean([]);
     }, throwsA(TypeMatcher<ArgumentError>()));
@@ -21,9 +24,10 @@ void main() {
   test('meanExcludingWarmup', () {
     expect(meanExcludingWarmup([999, 200, 201, 202, 203]), equals(201.5));
     expect(meanExcludingWarmup([999, 123]), equals(123));
-    expect(() {
-      meanExcludingWarmup([999]);
-    }, throwsA(TypeMatcher<ArgumentError>()));
+    expect(meanExcludingWarmup([999.88]), equals(999.88));
+    expect(meanExcludingWarmup([999]), equals(999));
+    // The int (non-double) type should be preserved for single-item inputs.
+    expect(meanExcludingWarmup([999]), TypeMatcher<int>());
     expect(() {
       meanExcludingWarmup([]);
     }, throwsA(TypeMatcher<ArgumentError>()));
@@ -136,6 +140,33 @@ void main() {
             // This expected value is the mean of [100.5, 200.5],
             // rounded to an integer.
             'values': [151],
+          }
+        ]));
+  });
+
+  // summarizeFuchsiaPerfFiles() should not apply rounding for units
+  // other than nanoseconds.
+  test('summarize_results_no_rounding', () {
+    final files = [
+      writeTempFile(jsonEncode([
+        {
+          'label': 'test1',
+          'test_suite': 'suite1',
+          'unit': 'milliseconds',
+          // This gives a meanExcludingWarmup of 100.5.
+          'values': [5000, 100.5],
+        }
+      ])),
+    ];
+    final output = summarizeFuchsiaPerfFiles(files);
+    expect(
+        output,
+        equals([
+          {
+            'label': 'test1',
+            'test_suite': 'suite1',
+            'unit': 'milliseconds',
+            'values': [100.5],
           }
         ]));
   });

@@ -117,7 +117,9 @@ class PerfTestHelper {
     final result = await sl4fDriver.ssh.run(command);
     expect(result.exitCode, equals(0));
     try {
-      await processResults(resultsFile);
+      final File localResultsFile = await storage.dumpFile(
+          resultsFile, 'results', 'fuchsiaperf_full.json');
+      await processResultsSummarized([localResultsFile]);
     } finally {
       // Clean up: remove the temporary file.
       final result = await sl4fDriver.ssh.run('rm -f $resultsFile');
