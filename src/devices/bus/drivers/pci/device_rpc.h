@@ -73,21 +73,16 @@ struct PciRpcMsg {
   zx_txid_t txid;  // handled by zx_channel_call
   uint32_t op;
   zx_status_t ret;
-  // Subtract the size of the preceeding 6 uint32_ts to keep
-  // the structure inside a single page.
   union {
-    bool enable;
+    PciMsgBar bar;
     PciMsgCfg cfg;
     PciMsgIrq irq;
-    PciMsgBar bar;
     PciMsgDeviceInfo info;
     PciMsgCapability cap;
-    uint8_t data[ZX_PAGE_SIZE - 24u];
     uint32_t bti_index;
-    zx_handle_t handle;
+    bool enable;
   };
 };
-static_assert(sizeof(PciRpcMsg) <= ZX_PAGE_SIZE);
 
 }  // namespace pci
 

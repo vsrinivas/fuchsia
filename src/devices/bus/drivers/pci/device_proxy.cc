@@ -46,7 +46,7 @@ zx_status_t PciProxy::RpcRequest(PciRpcOp op, zx_handle_t* rd_handle, const zx_h
   }
 
   req->op = op;
-  zx_channel_call_args_t cc_args = {};
+  zx_channel_call_args_t cc_args{};
   cc_args.wr_bytes = req;
   cc_args.wr_num_bytes = sizeof(*req);
   cc_args.rd_bytes = resp;
@@ -93,8 +93,8 @@ zx_status_t PciProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
 // TODO(fxbug.dev/33713): Convert this to using a better wire format when we no longer
 // have to support the kernel driver.
 zx_status_t PciProxy::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
-  PciRpcMsg req = {};
-  PciRpcMsg resp = {};
+  PciRpcMsg req{};
+  PciRpcMsg resp{};
   zx_handle_t handle;
 
   req.bar.id = bar_id;
@@ -137,8 +137,8 @@ zx_status_t PciProxy::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
 }
 
 zx_status_t PciProxy::PciEnableBusMaster(bool enable) {
-  PciRpcMsg req = {};
-  PciRpcMsg resp = {};
+  PciRpcMsg req{};
+  PciRpcMsg resp{};
 
   req.enable = enable;
   return RpcRequest(PCI_OP_ENABLE_BUS_MASTER, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr, &req,
@@ -148,15 +148,15 @@ zx_status_t PciProxy::PciEnableBusMaster(bool enable) {
 zx_status_t PciProxy::PciResetDevice() { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t PciProxy::PciAckInterrupt() {
-  PciRpcMsg req = {};
-  PciRpcMsg resp = {};
+  PciRpcMsg req{};
+  PciRpcMsg resp{};
   return RpcRequest(PCI_OP_ACK_INTERRUPT, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr,
                     /*req=*/&req, /*resp=*/&resp);
 }
 
 zx_status_t PciProxy::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle) {
-  PciRpcMsg req = {};
-  PciRpcMsg resp = {};
+  PciRpcMsg req{};
+  PciRpcMsg resp{};
 
   req.irq.which_irq = which_irq;
   zx_handle_t irq_handle;
@@ -170,8 +170,8 @@ zx_status_t PciProxy::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_han
 }
 
 zx_status_t PciProxy::PciConfigureIrqMode(uint32_t requested_irq_count, pci_irq_mode_t* mode) {
-  PciRpcMsg req = {};
-  PciRpcMsg resp = {};
+  PciRpcMsg req{};
+  PciRpcMsg resp{};
 
   req.irq.requested_irqs = requested_irq_count;
   zx_status_t st = RpcRequest(PCI_OP_CONFIGURE_IRQ_MODE, /*rd_handle=*/nullptr,
@@ -186,8 +186,8 @@ zx_status_t PciProxy::PciConfigureIrqMode(uint32_t requested_irq_count, pci_irq_
 }
 
 zx_status_t PciProxy::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
-  PciRpcMsg req = {};
-  PciRpcMsg resp = {};
+  PciRpcMsg req{};
+  PciRpcMsg resp{};
 
   req.irq.mode = mode;
   resp.irq.mode = mode;
@@ -200,8 +200,8 @@ zx_status_t PciProxy::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irq
 }
 
 zx_status_t PciProxy::PciSetIrqMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
-  PciRpcMsg req = {};
-  PciRpcMsg resp = {};
+  PciRpcMsg req{};
+  PciRpcMsg resp{};
 
   req.irq.mode = mode;
   req.irq.requested_irqs = requested_irq_count;
@@ -209,8 +209,8 @@ zx_status_t PciProxy::PciSetIrqMode(pci_irq_mode_t mode, uint32_t requested_irq_
 }
 
 zx_status_t PciProxy::PciGetDeviceInfo(pcie_device_info_t* out_info) {
-  PciRpcMsg req = {};
-  PciRpcMsg resp = {};
+  PciRpcMsg req{};
+  PciRpcMsg resp{};
 
   zx_status_t st =
       RpcRequest(PCI_OP_GET_DEVICE_INFO, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr, &req, &resp);
@@ -222,8 +222,8 @@ zx_status_t PciProxy::PciGetDeviceInfo(pcie_device_info_t* out_info) {
 
 template <typename T>
 zx_status_t PciProxy::PciConfigRead(uint16_t offset, T* out_value) {
-  PciRpcMsg req = {};
-  PciRpcMsg resp = {};
+  PciRpcMsg req{};
+  PciRpcMsg resp{};
 
   req.cfg.offset = offset;
   req.cfg.width = static_cast<uint16_t>(sizeof(T));
@@ -249,8 +249,8 @@ zx_status_t PciProxy::PciConfigRead32(uint16_t offset, uint32_t* out_value) {
 
 template <typename T>
 zx_status_t PciProxy::PciConfigWrite(uint16_t offset, T value) {
-  PciRpcMsg req = {};
-  PciRpcMsg resp = {};
+  PciRpcMsg req{};
+  PciRpcMsg resp{};
 
   req.cfg.offset = offset;
   req.cfg.width = static_cast<uint16_t>(sizeof(T));
@@ -279,8 +279,7 @@ zx_status_t PciProxy::PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8
     return ZX_ERR_INVALID_ARGS;
   }
 
-  PciRpcMsg req;
-  memset(&req, 0, sizeof(req));
+  PciRpcMsg req{};
   req.cap.id = cap_id;
   if (offset == kPciCapOffsetFirst) {
     req.cap.is_first = true;
@@ -289,8 +288,7 @@ zx_status_t PciProxy::PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8
     req.cap.offset = offset;
   }
 
-  PciRpcMsg resp;
-  memset(&resp, 0, sizeof(resp));
+  PciRpcMsg resp{};
   zx_status_t st = RpcRequest(PCI_OP_GET_NEXT_CAPABILITY, /*rd_handle=*/nullptr,
                               /*wr_handle=*/nullptr, &req, &resp);
   if (st == ZX_OK) {
@@ -309,8 +307,7 @@ zx_status_t PciProxy::PciGetNextExtendedCapability(uint16_t cap_id, uint16_t off
     return ZX_ERR_INVALID_ARGS;
   }
 
-  PciRpcMsg req;
-  memset(&req, 0, sizeof(req));
+  PciRpcMsg req{};
   req.cap.id = cap_id;
   if (offset == kPciExtCapOffsetFirst) {
     req.cap.is_first = true;
@@ -320,8 +317,7 @@ zx_status_t PciProxy::PciGetNextExtendedCapability(uint16_t cap_id, uint16_t off
   }
   req.cap.is_extended = true;
 
-  PciRpcMsg resp;
-  memset(&resp, 0, sizeof(resp));
+  PciRpcMsg resp{};
   zx_status_t st = RpcRequest(PCI_OP_GET_NEXT_CAPABILITY, /*rd_handle=*/nullptr,
                               /*wr_handle=*/nullptr, &req, &resp);
   if (st == ZX_OK) {
@@ -331,8 +327,8 @@ zx_status_t PciProxy::PciGetNextExtendedCapability(uint16_t cap_id, uint16_t off
 }
 
 zx_status_t PciProxy::PciGetBti(uint32_t index, zx::bti* out_bti) {
-  PciRpcMsg req = {};
-  PciRpcMsg resp = {};
+  PciRpcMsg req{};
+  PciRpcMsg resp{};
   req.bti_index = index;
   zx_handle_t handle;
   zx_status_t st =
@@ -344,8 +340,8 @@ zx_status_t PciProxy::PciGetBti(uint32_t index, zx::bti* out_bti) {
 }
 
 zx_status_t PciProxy::SysmemConnect(zx::channel allocator_request) {
-  PciRpcMsg req = {};
-  PciRpcMsg resp = {};
+  PciRpcMsg req{};
+  PciRpcMsg resp{};
   zx_handle_t handle = allocator_request.release();
   return RpcRequest(PCI_OP_CONNECT_SYSMEM, /*rd_handle=*/nullptr, /*wr_handle=*/&handle, &req,
                     &resp);
@@ -359,7 +355,7 @@ static zx_status_t pci_device_proxy_create(void* ctx, zx_device_t* parent, const
 }
 
 static constexpr zx_driver_ops_t pci_device_proxy_driver_ops = []() {
-  zx_driver_ops_t ops = {};
+  zx_driver_ops_t ops{};
   ops.version = DRIVER_OPS_VERSION;
   ops.create = pci_device_proxy_create;
   return ops;
