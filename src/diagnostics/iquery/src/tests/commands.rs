@@ -127,7 +127,8 @@ async fn log() {
     assert_command!(
         command: "logs",
         golden_basename: log,
-        args: []
+        args: [],
+        test_opts: [ "with_retries" ]
     );
     utils::wait_for_terminated(app).await;
 }
