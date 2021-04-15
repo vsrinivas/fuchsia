@@ -6,12 +6,12 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/handle.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/gpt.h>
 #include <soc/aml-common/aml-sdmmc.h>
 #include <soc/aml-s905d3/s905d3-gpio.h>
@@ -55,10 +55,17 @@ static aml_sdmmc_config_t config = {
 };
 
 static const guid_map_t guid_map[] = {
-    {"misc", GUID_ABR_META_VALUE},       {"boot_a", GUID_ZIRCON_A_VALUE},
-    {"boot_b", GUID_ZIRCON_B_VALUE},     {"cache", GUID_ZIRCON_R_VALUE},
-    {"vbmeta_a", GUID_VBMETA_A_VALUE},   {"vbmeta_b", GUID_VBMETA_B_VALUE},
-    {"reserved_c", GUID_VBMETA_R_VALUE}, {"data", GUID_FVM_VALUE},
+    {"misc", GUID_ABR_META_VALUE},
+    {"boot_a", GUID_ZIRCON_A_VALUE},
+    {"boot_b", GUID_ZIRCON_B_VALUE},
+    {"cache", GUID_ZIRCON_R_VALUE},
+    {"zircon_r", GUID_ZIRCON_R_VALUE},
+    {"vbmeta_a", GUID_VBMETA_A_VALUE},
+    {"vbmeta_b", GUID_VBMETA_B_VALUE},
+    {"vbmeta_r", GUID_VBMETA_R_VALUE},
+    {"reserved_c", GUID_VBMETA_R_VALUE},
+    {"data", GUID_FVM_VALUE},
+    {"fvm", GUID_FVM_VALUE},
 };
 
 static_assert(sizeof(guid_map) / sizeof(guid_map[0]) <= DEVICE_METADATA_GUID_MAP_MAX_ENTRIES);

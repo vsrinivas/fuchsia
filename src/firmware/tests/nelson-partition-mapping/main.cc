@@ -13,6 +13,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fit/defer.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <zircon/device/block.h>
@@ -68,7 +69,9 @@ class PartitionMappingTest : public zxtest::Test {
   }
 
   static std::string GetType(const fdio_cpp::FdioCaller& caller) {
-    auto guid_resp = fidl::WireCall<fuchsia_partition::Partition>(caller.channel()).GetTypeGuid();
+    auto guid_resp = fidl::WireCall<fuchsia_partition::Partition>(
+                         fidl::UnownedClientEnd<fuchsia_partition::Partition>(caller.channel()))
+                         .GetTypeGuid();
     if (guid_resp.ok() && guid_resp->status == ZX_OK && guid_resp->guid) {
       return gpt::KnownGuid::TypeDescription(guid_resp->guid->value.data());
     }
@@ -76,7 +79,9 @@ class PartitionMappingTest : public zxtest::Test {
   }
 
   static std::string GetLabel(const fdio_cpp::FdioCaller& caller) {
-    auto name_resp = fidl::WireCall<fuchsia_partition::Partition>(caller.channel()).GetName();
+    auto name_resp = fidl::WireCall<fuchsia_partition::Partition>(
+                         fidl::UnownedClientEnd<fuchsia_partition::Partition>(caller.channel()))
+                         .GetName();
     if (name_resp.ok() && name_resp->status == ZX_OK) {
       return std::string(name_resp->name.data(), name_resp->name.size());
     }
@@ -86,9 +91,10 @@ class PartitionMappingTest : public zxtest::Test {
 
 TEST_F(PartitionMappingTest, NelsonPartitionMapping) {
   std::unordered_map<std::string, std::string> mapping = {
-      {"misc", "misc"},           {"boot_a", "zircon-a"},   {"boot_b", "zircon-b"},
-      {"cache", "zircon-r"},      {"vbmeta_a", "vbmeta_a"}, {"vbmeta_b", "vbmeta_b"},
-      {"reserved_c", "vbmeta_r"}, {"data", "fuchsia-fvm"},
+      {"misc", "misc"},         {"boot_a", "zircon-a"},     {"boot_b", "zircon-b"},
+      {"cache", "zircon-r"},    {"zircon_r", "zircon-r"},   {"vbmeta_a", "vbmeta_a"},
+      {"vbmeta_b", "vbmeta_b"}, {"reserved_c", "vbmeta_r"}, {"vbmeta_r", "vbmeta_r"},
+      {"fvm", "fuchsia-fvm"},
   };
   ScanBlockAndValidateMapping(mapping);
 }
