@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/coding.h>
-#include <lib/fidl/coding_unstable.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/visitor.h>
 #include <lib/fidl/walker.h>
@@ -588,34 +587,14 @@ zx_status_t fidl_linearize_and_encode_msg(const fidl_type_t* type, void* value,
                                        out_num_actual_handles, out_error_msg);
 }
 
-zx_status_t unstable_fidl_encode_iovec(const fidl_type_t* type, void* value,
-                                       zx_channel_iovec_t* iovecs, uint32_t num_iovecs,
-                                       zx_handle_t* handles, uint32_t num_handles,
-                                       uint8_t* backing_buffer, uint32_t num_backing_buffer,
-                                       uint32_t* out_actual_iovec, uint32_t* out_actual_handles,
-                                       const char** out_error_msg) {
-  uint32_t actual_bytes;
-  zx_status_t status =
-      fidl_linearize_and_encode(type, value, backing_buffer, num_backing_buffer, handles,
-                                num_handles, &actual_bytes, out_actual_handles, out_error_msg);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (num_iovecs < 1) {
-    *out_error_msg = "iovec array is smaller than required";
-    return ZX_ERR_INVALID_ARGS;
-  }
-  iovecs[0] = zx_channel_iovec_t{.buffer = backing_buffer, .capacity = actual_bytes, .reserved = 0};
-  *out_actual_iovec = 1;
-  return ZX_OK;
-}
-zx_status_t unstable_fidl_encode_iovec_etc(const fidl_type_t* type, void* value,
-                                           zx_channel_iovec_t* iovecs, uint32_t num_iovecs,
-                                           zx_handle_disposition_t* handle_dispositions,
-                                           uint32_t num_handle_dispositions,
-                                           uint8_t* backing_buffer, uint32_t num_backing_buffer,
-                                           uint32_t* out_actual_iovec, uint32_t* out_actual_handles,
-                                           const char** out_error_msg) {
+namespace fidl {
+namespace internal {
+
+zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iovec_t* iovecs,
+                           uint32_t num_iovecs, zx_handle_disposition_t* handle_dispositions,
+                           uint32_t num_handle_dispositions, uint8_t* backing_buffer,
+                           uint32_t num_backing_buffer, uint32_t* out_actual_iovec,
+                           uint32_t* out_actual_handles, const char** out_error_msg) {
   uint32_t actual_bytes;
   zx_status_t status = fidl_linearize_and_encode_etc(
       type, value, backing_buffer, num_backing_buffer, handle_dispositions, num_handle_dispositions,
@@ -631,3 +610,6 @@ zx_status_t unstable_fidl_encode_iovec_etc(const fidl_type_t* type, void* value,
   *out_actual_iovec = 1;
   return ZX_OK;
 }
+
+}  // namespace internal
+}  // namespace fidl

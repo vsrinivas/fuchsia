@@ -16,7 +16,6 @@ zx_library("fidl_base") {
   host = true
   sdk_headers = [
     "lib/fidl/coding.h",
-    "lib/fidl/coding_unstable.h",
     "lib/fidl/txn_header.h",
     "lib/fidl/internal.h",
     "lib/fidl/internal_callable_traits.h",

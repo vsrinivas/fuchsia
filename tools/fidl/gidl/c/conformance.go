@@ -51,24 +51,6 @@ TEST(C_Conformance, {{ .Name }}_LinearizeAndEncode) {
 {{- if .FuchsiaOnly }}
 #endif  // __Fuchsia__
 {{- end }}
-
-{{- if .FuchsiaOnly }}
-#ifdef __Fuchsia__
-{{- end }}
-TEST(C_Conformance, {{ .Name }}_EncodeIovec) {
-	{{- if .HandleDefs }}
-	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
-	{{- end }}
-	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
-	{{ .ValueBuild }}
-	const std::vector<uint8_t> expected_bytes = {{ .Bytes }};
-	const std::vector<zx_handle_t> expected_handles = {{ .Handles }};
-	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(c_conformance_utils::EncodeIovecSuccess(decltype(obj)::Type, &obj, expected_bytes, expected_handles));
-}
-{{- if .FuchsiaOnly }}
-#endif  // __Fuchsia__
-{{- end }}
 {{ end }}
 
 {{ range .EncodeFailureCases }}
@@ -83,27 +65,6 @@ TEST(C_Conformance, {{ .Name }}_LinearizeAndEncode_Failure) {
 	{{ .ValueBuild }}
 	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
 	EXPECT_TRUE(c_conformance_utils::LinearizeAndEncodeFailure(decltype(obj)::Type, &obj, {{ .ErrorCode }}));
-	{{- if .HandleDefs }}
-	for (zx_handle_t handle : handle_defs) {
-		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
-	}
-	{{- end }}
-}
-{{- if .FuchsiaOnly }}
-#endif  // __Fuchsia__
-{{- end }}
-
-{{- if .FuchsiaOnly }}
-#ifdef __Fuchsia__
-{{- end }}
-TEST(C_Conformance, {{ .Name }}_EncodeIovec_Failure) {
-	{{- if .HandleDefs }}
-	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
-	{{- end }}
-	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
-	{{ .ValueBuild }}
-	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(c_conformance_utils::EncodeIovecFailure(obj.Type, &obj, {{ .ErrorCode }}));
 	{{- if .HandleDefs }}
 	for (zx_handle_t handle : handle_defs) {
 		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));

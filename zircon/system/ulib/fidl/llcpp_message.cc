@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/coding.h>
-#include <lib/fidl/coding_unstable.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/errors.h>
@@ -117,7 +116,7 @@ void OutgoingMessage::EncodeImpl(const fidl_type_t* message_type, void* data) {
   uint32_t num_iovecs_actual;
   uint32_t num_handles_actual;
   status_ =
-      unstable_fidl_encode_iovec_etc(message_type, data, iovecs(), iovec_capacity(), handles(),
+      fidl::internal::EncodeIovecEtc(message_type, data, iovecs(), iovec_capacity(), handles(),
                                      handle_capacity(), backing_buffer(), backing_buffer_capacity(),
                                      &num_iovecs_actual, &num_handles_actual, &error_);
   if (status_ != ZX_OK) {
