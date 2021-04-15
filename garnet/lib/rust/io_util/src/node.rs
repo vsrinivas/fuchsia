@@ -7,7 +7,7 @@
 use {
     fidl_fuchsia_io::{
         DirectoryEvent, DirectoryObject, DirectoryProxy, FileEvent, FileObject, FileProxy,
-        NodeInfo, NodeProxy, Vmofile,
+        NodeEvent, NodeInfo, NodeProxy, Vmofile,
     },
     fuchsia_zircon_status as zx_status,
     futures::prelude::*,
@@ -145,6 +145,23 @@ pub fn open_in_namespace(path: &str, flags: u32) -> Result<NodeProxy, OpenError>
 pub async fn close(node: NodeProxy) -> Result<(), CloseError> {
     let status = node.close().await.map_err(CloseError::SendCloseRequest)?;
     zx_status::Status::ok(status).map_err(CloseError::CloseError)
+}
+
+/// Consume the first event from this NodeProxy's event stream, returning the proxy if it is
+/// the expected type or an error otherwise.
+pub(crate) async fn verify_node_describe_event(node: NodeProxy) -> Result<NodeProxy, OpenError> {
+    let mut events = node.take_event_stream();
+    let NodeEvent::OnOpen_ { s: status, info } = events
+        .next()
+        .await
+        .ok_or(OpenError::OnOpenEventStreamClosed)?
+        .map_err(OpenError::OnOpenDecode)?;
+
+    let () = zx_status::Status::ok(status).map_err(OpenError::OpenError)?;
+
+    info.ok_or(OpenError::MissingOnOpenInfo)?;
+
+    Ok(node)
 }
 
 /// Consume the first event from this DirectoryProxy's event stream, returning the proxy if it is

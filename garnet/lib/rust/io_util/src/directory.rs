@@ -137,6 +137,27 @@ pub async fn open_file(
     node::verify_file_describe_event(file).await
 }
 
+/// Opens the given `path` from the given `parent` directory as a [`NodeProxy`], verifying that the
+/// target implements the fuchsia.io.Node protocol.
+pub async fn open_node(
+    parent: &DirectoryProxy,
+    path: &str,
+    flags: u32,
+    mode: u32,
+) -> Result<NodeProxy, OpenError> {
+    let (file, server_end) =
+        fidl::endpoints::create_proxy::<NodeMarker>().map_err(OpenError::CreateProxy)?;
+
+    let flags = flags | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE;
+
+    parent
+        .open(flags, mode, path, ServerEnd::new(server_end.into_channel()))
+        .map_err(OpenError::SendOpenRequest)?;
+
+    // wait for the file to open and report success.
+    node::verify_node_describe_event(file).await
+}
+
 /// Opens the given `path` from the given `parent` directory as a [`NodeProxy`]. The target is not
 /// verified to be any particular type and may not implement the fuchsia.io.Node protocol.
 pub fn open_node_no_describe(
@@ -483,6 +504,30 @@ mod tests {
         let fake = open_node_no_describe(&pkg, "fake", OPEN_RIGHT_READABLE, 0).unwrap();
         // The open error is not detected until the proxy is interacted with.
         assert_matches!(crate::node::close(fake).await, Err(_));
+    }
+
+    // open_node
+
+    #[fasync::run_singlethreaded(test)]
+    async fn open_node_opens_real_node() {
+        let pkg = open_pkg();
+        let node = open_node(&pkg, "data", OPEN_RIGHT_READABLE, 0).await.unwrap();
+        crate::node::close(node).await.unwrap();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn open_node_opens_fake_node() {
+        let pkg = open_pkg();
+        // The open error should be detected immediately.
+        assert_matches!(open_node(&pkg, "fake", OPEN_RIGHT_READABLE, 0).await, Err(_));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn open_node_opens_service_node() {
+        let svc = open_in_namespace("/svc", OPEN_RIGHT_READABLE).unwrap();
+        let _node =
+            open_node(&svc, "fuchsia.logger.LogSink", OPEN_RIGHT_READABLE, 0).await.unwrap();
+        // Closing the node will hang forever, so don't bother.
     }
 
     // clone_no_describe
