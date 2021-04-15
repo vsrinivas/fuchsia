@@ -2,14 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
+import("//build/fidl/fidl.gni")
 
-banjo("fuchsia.hardware.spi") {
-  fidl_only = true
-  sources = [ "spi.banjo" ]
-  deps = [ "//sdk/banjo/zx" ]
-}
-
-group("fuchsia.hardware.spi_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.spi_banjo_cpp_2" ]
+fidl("fuchsia.hardware.spi") {
+  sources = [ "spi.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
