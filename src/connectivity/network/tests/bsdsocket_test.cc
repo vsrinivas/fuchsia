@@ -1383,6 +1383,18 @@ TEST(LocalhostTest, AcceptAfterReset) {
     };
     ASSERT_EQ(setsockopt(client.get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)
         << strerror(errno);
+
+    // Ensure the accept queue has the passive connection enqueued before attempting to reset it.
+    struct pollfd pfd = {
+        .fd = server.get(),
+        .events = POLLIN,
+    };
+    int n = poll(&pfd, 1, kTimeout);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
+    EXPECT_EQ(pfd.revents, POLLIN);
+
+    // Close the client and trigger a RST.
     ASSERT_EQ(close(client.release()), 0) << strerror(errno);
   }
 
@@ -1404,13 +1416,12 @@ TEST(LocalhostTest, AcceptAfterReset) {
   {
     struct pollfd pfd = {
         .fd = conn.get(),
-        .events = POLLIN,
     };
 
     int n = poll(&pfd, 1, kTimeout);
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
-    EXPECT_EQ(pfd.revents, POLLIN | POLLERR | POLLHUP);
+    EXPECT_EQ(pfd.revents, POLLERR | POLLHUP);
   }
 
   int err;
