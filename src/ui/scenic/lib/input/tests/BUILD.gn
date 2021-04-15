@@ -60,6 +60,7 @@ source_set("util") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//src/ui/scenic/lib/gfx",
+    "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/hid",
   ]

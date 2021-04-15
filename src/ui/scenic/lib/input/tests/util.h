@@ -22,6 +22,7 @@
 #include "src/ui/scenic/lib/scenic/scenic.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
+#include "src/ui/scenic/lib/view_tree/view_tree_snapshotter.h"
 
 namespace lib_ui_input_tests {
 
@@ -147,6 +148,7 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
   std::shared_ptr<scenic_impl::gfx::Engine> engine_;
   std::shared_ptr<scenic_impl::display::Display> display_;
+  std::shared_ptr<view_tree::ViewTreeSnapshotter> view_tree_snapshotter_;
 
   scenic_impl::input::InputSystem* input_system_ = nullptr;
   fuchsia::ui::pointerinjector::DevicePtr injector_;

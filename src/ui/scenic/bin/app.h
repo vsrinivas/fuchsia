@@ -27,6 +27,7 @@
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/shutdown/lifecycle_controller_impl.h"
 #include "src/ui/scenic/lib/shutdown/shutdown_manager.h"
+#include "src/ui/scenic/lib/view_tree/view_tree_snapshotter.h"
 
 namespace scenic_impl {
 
@@ -78,6 +79,8 @@ class App {
   std::shared_ptr<flatland::DefaultFlatlandPresenter> flatland_presenter_;
   std::shared_ptr<flatland::FlatlandManager> flatland_manager_;
   std::shared_ptr<flatland::DisplayCompositor> flatland_compositor_;
+
+  std::shared_ptr<view_tree::ViewTreeSnapshotter> view_tree_snapshotter_;
 
   AnnotationRegistry annotation_registry_;
 

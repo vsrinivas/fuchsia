@@ -163,10 +163,27 @@ void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
                                                /* display_manager */ nullptr,
                                                /*image_pipe_updater*/ nullptr);
   scenic->SetFrameScheduler(frame_scheduler_);
-  frame_scheduler_->Initialize(/*frame_renderer*/ engine_, /*session_updaters*/ {scenic});
 
   input_system_ =
       scenic->RegisterSystem<InputSystem>(engine_->scene_graph(), auto_focus_behavior()).get();
+
+  {
+    std::vector<view_tree::SubtreeSnapshotGenerator> subtrees;
+    subtrees.emplace_back(
+        [engine = engine_]() { return engine->scene_graph()->view_tree().Snapshot(); });
+    std::vector<view_tree::ViewTreeSnapshotter::Subscriber> subscribers;
+    subscribers.push_back({.on_new_view_tree =
+                               [input = input_system_](auto snapshot) {
+                                 input->OnNewViewTreeSnapshot(std::move(snapshot));
+                               },
+                           .dispatcher = async_get_default_dispatcher()});
+
+    view_tree_snapshotter_ = std::make_shared<view_tree::ViewTreeSnapshotter>(
+        std::move(subtrees), std::move(subscribers));
+  }
+
+  frame_scheduler_->Initialize(/*frame_renderer*/ engine_,
+                               /*session_updaters*/ {scenic, view_tree_snapshotter_});
 }
 
 void InputSystemTest::Inject(float x, float y, fuchsia::ui::pointerinjector::EventPhase phase) {

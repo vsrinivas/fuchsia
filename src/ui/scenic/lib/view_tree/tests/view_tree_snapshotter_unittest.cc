@@ -133,7 +133,7 @@ TEST(ViewTreeSnapshotterTest, BasicTreeTest) {
 
   ViewTreeSnapshotter tree(BasicTree(), std::move(subscribers));
 
-  tree.UpdateSnapshot();
+  tree.UpdateSessions({}, {});
   loop.RunUntilIdle();
   EXPECT_TRUE(callback_fired);
 }
@@ -151,7 +151,7 @@ TEST(ViewTreeSnapshotterTest, Subscriber_RunsOnCorrectDispatcher) {
 
   ViewTreeSnapshotter tree(BasicTree(), std::move(subscribers));
 
-  tree.UpdateSnapshot();
+  tree.UpdateSessions({}, {});
 
   EXPECT_FALSE(callback_fired);
   loop1.RunUntilIdle();
@@ -177,7 +177,7 @@ TEST(ViewTreeSnapshotterTest, MultipleSubscribers) {
 
   ViewTreeSnapshotter tree(BasicTree(), std::move(subscribers));
 
-  tree.UpdateSnapshot();
+  tree.UpdateSessions({}, {});
   loop.RunUntilIdle();
   EXPECT_TRUE(snapshot1);
   EXPECT_TRUE(snapshot2);
@@ -190,8 +190,8 @@ TEST(ViewTreeSnapshotterTest, MultipleSubscribers) {
   EXPECT_EQ(snapshot1, snapshot3);
 }
 
-// Check that multiple calls to UpdateSnapshot() are handled correctly.
-TEST(ViewTreeSnapshotterTest, MultipleUpdateSnapshot) {
+// Check that multiple calls to UpdateSessions() are handled correctly.
+TEST(ViewTreeSnapshotterTest, MultipleUpdateSessionsCalls) {
   std::vector<SubtreeSnapshotGenerator> subtrees;
   bool first_call = true;
   subtrees.emplace_back([&first_call] {
@@ -215,7 +215,7 @@ TEST(ViewTreeSnapshotterTest, MultipleUpdateSnapshot) {
 
   ViewTreeSnapshotter tree(std::move(subtrees), std::move(subscribers));
 
-  tree.UpdateSnapshot();
+  tree.UpdateSessions({}, {});
   loop.RunUntilIdle();
   ASSERT_TRUE(snapshot1);
   EXPECT_EQ(snapshot1->root, kRoot1A);
@@ -223,7 +223,7 @@ TEST(ViewTreeSnapshotterTest, MultipleUpdateSnapshot) {
   std::shared_ptr<const Snapshot> snapshot1_copy = snapshot1;
   EXPECT_EQ(snapshot1_copy, snapshot1);
 
-  tree.UpdateSnapshot();
+  tree.UpdateSessions({}, {});
   loop.RunUntilIdle();
   EXPECT_NE(snapshot1_copy, snapshot1);
   EXPECT_EQ(snapshot1->root, kRoot4B);
@@ -252,8 +252,8 @@ TEST(ViewTreeSnapshotterTest, SubscriberCallbackLifetime) {
 
   auto tree = std::make_unique<ViewTreeSnapshotter>(std::move(subtrees), std::move(subscribers));
 
-  tree->UpdateSnapshot();
-  tree->UpdateSnapshot();
+  tree->UpdateSessions({}, {});
+  tree->UpdateSessions({}, {});
   tree.reset();
   EXPECT_EQ(called_count, 0);
 

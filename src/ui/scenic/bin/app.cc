@@ -307,11 +307,9 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   scenic_->SetDisplayInfoDelegate(display_info_delegate_.get());
 #endif
 
-#ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
   auto input = scenic_->RegisterSystem<input::InputSystem>(engine_->scene_graph(),
                                                            GetPointerAutoFocusBehavior());
   FX_DCHECK(input);
-#endif
 
   flatland_presenter_->SetFrameScheduler(frame_scheduler_);
 
@@ -333,11 +331,25 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(flatland_handler));
   FX_DCHECK(status == ZX_OK);
 
+  {
+    std::vector<view_tree::SubtreeSnapshotGenerator> subtrees;
+    subtrees.emplace_back(
+        [engine = engine_] { return engine->scene_graph()->view_tree().Snapshot(); });
+    std::vector<view_tree::ViewTreeSnapshotter::Subscriber> subscribers;
+    subscribers.push_back(
+        {.on_new_view_tree =
+             [input = input](auto snapshot) { input->OnNewViewTreeSnapshot(std::move(snapshot)); },
+         .dispatcher = async_get_default_dispatcher()});
+    view_tree_snapshotter_ = std::make_shared<view_tree::ViewTreeSnapshotter>(
+        std::move(subtrees), std::move(subscribers));
+  }
+
   // |session_updaters| will be updated in submission order.
   // TODO(fxbug.dev/73451): Add ViewTreeSnapshotter to the end of |session_updaters|.
   frame_scheduler_->Initialize(
       /*frame_renderer*/ engine_,
-      /*session_updaters*/ {scenic_, image_pipe_updater_, flatland_manager_});
+      /*session_updaters*/ {scenic_, image_pipe_updater_, flatland_manager_,
+                            view_tree_snapshotter_});
 }
 
 }  // namespace scenic_impl

@@ -21,6 +21,7 @@
 #include "src/ui/scenic/lib/input/input_command_dispatcher.h"
 #include "src/ui/scenic/lib/scenic/system.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace scenic_impl {
 namespace input {
@@ -86,7 +87,9 @@ class InputSystem : public System,
     return pointer_event_registry_->accessibility_pointer_event_listener();
   }
 
-  bool IsOwnedByRootSession(const gfx::ViewTree& view_tree, zx_koid_t koid) const;
+  void OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapshot> snapshot) {
+    view_tree_snapshot_ = std::move(snapshot);
+  }
 
   // |fuchsia.ui.pointercapture.ListenerRegistry|
   void RegisterListener(
@@ -110,8 +113,7 @@ class InputSystem : public System,
  private:
   // Perform a hit test with |event| in |view_tree| and returns the koids of all hit views, in order
   // from closest to furthest.
-  std::vector<zx_koid_t> HitTest(const gfx::ViewTree& view_tree, const InternalPointerEvent& event,
-                                 bool semantic_hit_test) const;
+  std::vector<zx_koid_t> HitTest(const InternalPointerEvent& event, bool semantic_hit_test) const;
 
   // Injects a touch event directly to the View with koid |target|.
   void InjectTouchEventExclusive(const InternalPointerEvent& event);
@@ -133,20 +135,18 @@ class InputSystem : public System,
 
   // Send a copy of the event to the singleton listener of the pointer capture API if there is one.
   // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
-  void ReportPointerEventToPointerCaptureListener(const InternalPointerEvent& event,
-                                                  const gfx::ViewTree& view_tree) const;
+  void ReportPointerEventToPointerCaptureListener(const InternalPointerEvent& event) const;
 
   // Enqueue the pointer event into the EventReporter of a View.
   void ReportPointerEventToGfxLegacyView(const InternalPointerEvent& event, zx_koid_t view_ref_koid,
-                                         fuchsia::ui::input::PointerEventType type,
-                                         const gfx::ViewTree& view_tree) const;
+                                         fuchsia::ui::input::PointerEventType type) const;
 
   // Takes a ViewRef koid and creates a GfxLegacyContender that delivers events to the corresponding
   // SessionListener on contest victory.
   ContenderId AddGfxLegacyContender(StreamId stream_id, zx_koid_t view_ref_koid);
 
   fuchsia::ui::input::accessibility::PointerEvent CreateAccessibilityEvent(
-      const InternalPointerEvent& event, const gfx::ViewTree& view_tree);
+      const InternalPointerEvent& event);
 
   // Collects all the GestureContenders for a new touch event stream.
   std::vector<ContenderId> CollectContenders(StreamId stream_id, const InternalPointerEvent& event);
@@ -161,6 +161,17 @@ class InputSystem : public System,
   // Destroy the arena if the contest is complete (i.e. no contenders left or contest over and
   // stream ended).
   void DestroyArenaIfComplete(StreamId stream_id);
+
+  // Helper methods for getting transforms out of |view_tree_snapshot_|. Return std::nullopt if the
+  // passed in koids weren't represented in the |view_tree_snapshot_|.
+
+  // Returns the transform from world space to view space.
+  std::optional<glm::mat4> GetViewFromWorldTransform(zx_koid_t view_ref_koid) const;
+  // Returns the transform from view space to world space.
+  std::optional<glm::mat4> GetWorldFromViewTransform(zx_koid_t view_ref_koid) const;
+  // Returns the transform from source view space to destination view space.
+  std::optional<glm::mat4> GetDestinationViewFromSourceViewTransform(zx_koid_t source,
+                                                                     zx_koid_t destination) const;
 
   // Determines whether focus should be automatically changed by pointer input.
   const bool pointer_auto_focus_;
@@ -199,6 +210,12 @@ class InputSystem : public System,
   std::unordered_map<ContenderId, GestureContender*> contenders_;
 
   std::unordered_map<StreamId, GestureArena> gesture_arenas_;
+
+  // Snapshot of the ViewTree. Replaced with a new snapshot on call to OnNewViewTreeSnapshot(),
+  // which happens once per rendered frame. This is the source of truth for the state of the
+  // graphics system.
+  std::shared_ptr<const view_tree::Snapshot> view_tree_snapshot_ =
+      std::make_shared<const view_tree::Snapshot>();
 };
 
 }  // namespace input
