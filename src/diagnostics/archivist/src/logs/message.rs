@@ -973,7 +973,7 @@ mod tests {
         packet.fill_data(msg_start..msg_end, msg_ascii);
 
         let min_buffer = &packet.as_bytes()[..METADATA_SIZE + msg_end + 1]; // null-terminated
-        let full_buffer = &packet.as_bytes()[..];
+        let full_buffer = &packet.as_bytes();
 
         let min_parsed = Message::from_logger(&*TEST_IDENTITY, min_buffer).unwrap();
         let full_parsed = Message::from_logger(&*TEST_IDENTITY, full_buffer).unwrap();

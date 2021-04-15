@@ -365,9 +365,9 @@ pub mod identifier {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             use zerocopy::AsBytes as _;
             let (id_type, id) = match self {
-                Self { inner: ClientIdentifierInner::Id(v) } => (CLIENT_IDENTIFIER_ID, v.as_ref()),
+                Self { inner: ClientIdentifierInner::Id(v) } => (CLIENT_IDENTIFIER_ID, &v[..]),
                 Self { inner: ClientIdentifierInner::Chaddr(v) } => {
-                    (CLIENT_IDENTIFIER_CHADDR, &v.as_bytes()[..])
+                    (CLIENT_IDENTIFIER_CHADDR, v.as_bytes())
                 }
             };
             write!(f, "{}:{}", id_type, hex::encode(id))

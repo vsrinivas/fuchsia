@@ -266,7 +266,7 @@ impl<A: Appendable> Writer<A> {
         self.write_kde_hdr(hdr)?;
 
         // IGTK KDE
-        self.buf.append_bytes(&igtk_kde.id.to_le_bytes()[..])?;
+        self.buf.append_bytes(&igtk_kde.id.to_le_bytes())?;
         self.buf.append_bytes(&igtk_kde.ipn[..])?;
         self.buf.append_bytes(&igtk_kde.igtk[..])?;
         Ok(())

@@ -747,7 +747,7 @@ mod tests {
             Payload(u64::from_le_bytes(*<&[u8; 8]>::try_from(&buf[offset..offset + 8])?));
         payload.set_array_slots_count(255);
 
-        buf[offset..offset + 8].clone_from_slice(&payload.value().to_le_bytes()[..]);
+        buf[offset..offset + 8].clone_from_slice(&payload.value().to_le_bytes());
         assert!(PartialNodeHierarchy::try_from(Snapshot::build(&buf)).is_err());
 
         Ok(())

@@ -73,10 +73,10 @@ impl TryFrom<Vec<u8>> for Reply {
 impl From<Reply> for Vec<u8> {
     fn from(reply: Reply) -> Vec<u8> {
         match reply {
-            Reply::Info(s) => [b"INFO", &s.into_bytes()[..]].concat(),
-            Reply::Fail(s) => [b"FAIL", &s.into_bytes()[..]].concat(),
-            Reply::Okay(s) => [b"OKAY", &s.into_bytes()[..]].concat(),
-            Reply::Data(s) => [b"DATA", &format!("{:08X}", s).into_bytes()[..]].concat(),
+            Reply::Info(s) => [b"INFO", s.as_bytes()].concat(),
+            Reply::Fail(s) => [b"FAIL", s.as_bytes()].concat(),
+            Reply::Okay(s) => [b"OKAY", s.as_bytes()].concat(),
+            Reply::Data(s) => [b"DATA", format!("{:08X}", s).as_bytes()].concat(),
         }
     }
 }

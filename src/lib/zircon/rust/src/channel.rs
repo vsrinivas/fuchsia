@@ -810,7 +810,7 @@ mod tests {
 
     #[test]
     fn channel_write_too_many_bytes() {
-        Channel::create().unwrap().0.write(&too_many_bytes()[..], &mut vec![]).unwrap_err();
+        Channel::create().unwrap().0.write(&too_many_bytes(), &mut vec![]).unwrap_err();
     }
 
     #[test]
@@ -820,7 +820,7 @@ mod tests {
 
     #[test]
     fn channel_write_etc_too_many_bytes() {
-        Channel::create().unwrap().0.write_etc(&too_many_bytes()[..], &mut []).unwrap_err();
+        Channel::create().unwrap().0.write_etc(&too_many_bytes(), &mut []).unwrap_err();
     }
 
     #[test]
@@ -837,7 +837,7 @@ mod tests {
         Channel::create()
             .unwrap()
             .0
-            .call(Time::INFINITE, &too_many_bytes()[..], &mut vec![], &mut MessageBuf::new())
+            .call(Time::INFINITE, &too_many_bytes(), &mut vec![], &mut MessageBuf::new())
             .unwrap_err();
     }
 
@@ -855,7 +855,7 @@ mod tests {
         Channel::create()
             .unwrap()
             .0
-            .call_etc(Time::INFINITE, &too_many_bytes()[..], &mut vec![], &mut MessageBufEtc::new())
+            .call_etc(Time::INFINITE, &too_many_bytes(), &mut vec![], &mut MessageBufEtc::new())
             .unwrap_err();
     }
 

@@ -291,7 +291,7 @@ fn h(salt: &[u8], ikm: &[u8]) -> Vec<u8> {
 
 fn cn(key: &[u8], counter: u16, data: Vec<&[u8]>) -> Vec<u8> {
     let mut hasher = hmac::HmacSha256::new(key);
-    hasher.update(&counter.to_le_bytes()[..]);
+    hasher.update(&counter.to_le_bytes());
     for data_part in data {
         hasher.update(data_part);
     }

@@ -99,7 +99,7 @@ impl TryFrom<ClientVariable> for Vec<u8> {
             ClientVariable::Secure => Ok(b"secure".to_vec()),
             ClientVariable::IsUserSpace => Ok(b"is-userspace".to_vec()),
             ClientVariable::Oem(s) => {
-                let bytes = s.into_bytes();
+                let bytes = s.as_bytes();
                 // Need to make sure it won't break the "getvar:" command
                 if bytes.len() > (MAX_COMMAND_LENGTH - 7) {
                     Err(anyhow!("Client Variable name is too long"))
@@ -112,7 +112,7 @@ impl TryFrom<ClientVariable> for Vec<u8> {
 }
 
 fn concat_message(cmd: &[u8], s: String) -> Result<Vec<u8>, anyhow::Error> {
-    let bytes = s.into_bytes();
+    let bytes = s.as_bytes();
     if MAX_COMMAND_LENGTH - cmd.len() < bytes.len() {
         return Err(anyhow!("Message name is too long for command."));
     }
@@ -125,9 +125,7 @@ impl TryFrom<Command> for Vec<u8> {
     fn try_from(command: Command) -> Result<Self, Self::Error> {
         match command {
             Command::GetVar(v) => Ok([b"getvar:", &Vec::<u8>::try_from(v)?[..]].concat()),
-            Command::Download(s) => {
-                Ok([b"download:", &format!("{:08X}", s).into_bytes()[..]].concat())
-            }
+            Command::Download(s) => Ok([b"download:", format!("{:08X}", s).as_bytes()].concat()),
             Command::Upload => Ok(b"upload".to_vec()),
             Command::Flash(s) => concat_message(b"flash:", s),
             Command::Erase(s) => concat_message(b"erase:", s),

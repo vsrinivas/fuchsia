@@ -411,22 +411,25 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionsImpl {
 
         match opt {
             DhcpOption::ClientId(duid) | DhcpOption::ServerId(duid) => {
-                let uuid = duid_uuid();
-                let (duid, len) = u16::try_from(duid.len()).map_or_else(
-                    |_: std::num::TryFromIntError| {
-                        // Do not panic, so DUIDs with length exceeding u16
-                        // won't introduce DoS vulnerability.
-                        (&uuid.as_bytes()[..], 18)
-                    },
-                    |len| (duid, len),
-                );
-                let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
-                let () = buf.write_obj_front(duid).expect("buffer is too small");
+                match u16::try_from(duid.len()) {
+                    Ok(len) => {
+                        let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
+                        let () = buf.write_obj_front(*duid).expect("buffer is too small");
+                    }
+                    Err(std::num::TryFromIntError { .. }) => {
+                        // Do not panic, so DUIDs with length exceeding u16 won't introduce DoS
+                        // vulnerability.
+                        let duid = duid_uuid();
+                        let len = u16::try_from(duid.len()).expect("uuid length is too long");
+                        let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
+                        let () = buf.write_obj_front(&duid).expect("buffer is too small");
+                    }
+                }
             }
             DhcpOption::Oro(requested_opts) => {
                 let empty = Vec::new();
                 let (requested_opts, len) = u16::try_from(2 * requested_opts.len()).map_or_else(
-                    |_: std::num::TryFromIntError| {
+                    |std::num::TryFromIntError { .. }| {
                         // Do not panic, so OROs with size exceeding u16 won't introduce DoS
                         // vulnerability.
                         (&empty, 0)
@@ -459,7 +462,7 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionsImpl {
                 let empty = Vec::new();
                 let (recursive_name_servers, len) =
                     u16::try_from(16 * recursive_name_servers.len()).map_or_else(
-                        |_: std::num::TryFromIntError| {
+                        |std::num::TryFromIntError { .. }| {
                             // Do not panic, so DnsServers with size exceeding `u16` won't introduce
                             // DoS vulnerability.
                             (&empty, 0)
@@ -477,7 +480,7 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionsImpl {
                 let (domains, len) =
                     u16::try_from(domains.iter().fold(0, |tot, domain| tot + domain.bytes_len()))
                         .map_or_else(
-                            |_: std::num::TryFromIntError| {
+                            |std::num::TryFromIntError { .. }| {
                                 // Do not panic, so DomainList with size exceeding `u16` won't
                                 // introduce DoS vulnerability.
                                 (&empty, 0)

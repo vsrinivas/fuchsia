@@ -304,15 +304,15 @@ impl Header {
             crc32,
         } = self;
 
-        cursor.write_all(&magic_number.to_le_bytes()[..]).unwrap();
-        cursor.write_all(&process_id.to_le_bytes()[..]).unwrap();
-        cursor.write_all(&fd_unique_id.to_le_bytes()[..]).unwrap();
-        cursor.write_all(&generator_unique_id.to_le_bytes()[..]).unwrap();
-        cursor.write_all(&io_op_unique_id.to_le_bytes()[..]).unwrap();
-        cursor.write_all(&file_offset.to_le_bytes()[..]).unwrap();
-        cursor.write_all(&size.to_le_bytes()[..]).unwrap();
-        cursor.write_all(&seed.to_le_bytes()[..]).unwrap();
-        cursor.write_all(&crc32.to_le_bytes()[..]).unwrap();
+        cursor.write_all(&magic_number.to_le_bytes()).unwrap();
+        cursor.write_all(&process_id.to_le_bytes()).unwrap();
+        cursor.write_all(&fd_unique_id.to_le_bytes()).unwrap();
+        cursor.write_all(&generator_unique_id.to_le_bytes()).unwrap();
+        cursor.write_all(&io_op_unique_id.to_le_bytes()).unwrap();
+        cursor.write_all(&file_offset.to_le_bytes()).unwrap();
+        cursor.write_all(&size.to_le_bytes()).unwrap();
+        cursor.write_all(&seed.to_le_bytes()).unwrap();
+        cursor.write_all(&crc32.to_le_bytes()).unwrap();
     }
 }
 

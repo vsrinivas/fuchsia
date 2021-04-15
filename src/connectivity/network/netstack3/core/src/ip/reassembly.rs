@@ -986,13 +986,13 @@ mod tests {
         bytes[40] = IpProto::Tcp.into();
         bytes[42] = fragment_offset >> 5;
         bytes[43] = ((fragment_offset & 0x1F) << 3) | if m_flag { 1 } else { 0 };
-        bytes[44..48].copy_from_slice(&(fragment_id as u32).to_be_bytes()[..]);
+        bytes[44..48].copy_from_slice(&(fragment_id as u32).to_be_bytes());
         bytes.extend(
             body_offset + fragment_offset * FRAGMENT_BLOCK_SIZE
                 ..body_offset + fragment_offset * FRAGMENT_BLOCK_SIZE + FRAGMENT_BLOCK_SIZE,
         );
         let payload_len = (bytes.len() - 40) as u16;
-        bytes[4..6].copy_from_slice(&payload_len.to_be_bytes()[..]);
+        bytes[4..6].copy_from_slice(&payload_len.to_be_bytes());
         let mut buf = Buf::new(bytes, ..);
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
 
@@ -1285,10 +1285,10 @@ mod tests {
         bytes[40] = IpProto::Tcp.into();
         bytes[42] = 0;
         bytes[43] = (1 << 3) | 1;
-        bytes[44..48].copy_from_slice(&u32::try_from(fragment_id).unwrap().to_be_bytes()[..]);
+        bytes[44..48].copy_from_slice(&u32::try_from(fragment_id).unwrap().to_be_bytes());
         bytes.extend(FRAGMENT_BLOCK_SIZE..FRAGMENT_BLOCK_SIZE * 2 - 1);
         let payload_len = (bytes.len() - 40) as u16;
-        bytes[4..6].copy_from_slice(&payload_len.to_be_bytes()[..]);
+        bytes[4..6].copy_from_slice(&payload_len.to_be_bytes());
         let mut buf = Buf::new(bytes, ..);
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
         assert_frag_proc_state_invalid!(process_fragment::<Ipv6, _, &[u8]>(&mut ctx, packet));
@@ -1305,10 +1305,10 @@ mod tests {
         bytes[40] = IpProto::Tcp.into();
         bytes[42] = 0;
         bytes[43] = 1 << 3;
-        bytes[44..48].copy_from_slice(&u32::try_from(fragment_id).unwrap().to_be_bytes()[..]);
+        bytes[44..48].copy_from_slice(&u32::try_from(fragment_id).unwrap().to_be_bytes());
         bytes.extend(FRAGMENT_BLOCK_SIZE..FRAGMENT_BLOCK_SIZE * 2 - 1);
         let payload_len = (bytes.len() - 40) as u16;
-        bytes[4..6].copy_from_slice(&payload_len.to_be_bytes()[..]);
+        bytes[4..6].copy_from_slice(&payload_len.to_be_bytes());
         let mut buf = Buf::new(bytes, ..);
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
         let (key, packet_len) = assert_frag_proc_state_ready!(

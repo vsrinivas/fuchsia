@@ -12,11 +12,11 @@ pub fn kdf_sha256(k: &[u8], label: &str, context: &[u8], bits: u16) -> Vec<u8> {
     let mut result = Vec::with_capacity((iterations * 256 / 8) as usize);
     for i in 1u16..=iterations {
         let mut hmac = HmacSha256::new(k);
-        hmac.update(&i.to_le_bytes()[..]);
+        hmac.update(&i.to_le_bytes());
         hmac.update(label.as_bytes());
         hmac.update(context);
-        hmac.update(&bits.to_le_bytes()[..]);
-        result.extend_from_slice(&hmac.finish().bytes()[..]);
+        hmac.update(&bits.to_le_bytes());
+        result.extend_from_slice(&hmac.finish().bytes());
     }
     result.truncate((bits / 8) as usize);
     result

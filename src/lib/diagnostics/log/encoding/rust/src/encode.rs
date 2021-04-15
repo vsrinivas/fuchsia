@@ -108,7 +108,7 @@ where
         header.set_len(length);
 
         assert_eq!(length % 8, 0, "all records must be written 8-byte aligned");
-        self.buf.fill_slot(header_slot, &header.0.to_le_bytes()[..]);
+        self.buf.fill_slot(header_slot, &header.0.to_le_bytes());
 
         Ok(())
     }
@@ -148,7 +148,7 @@ where
         assert_eq!(record_len % 8, 0, "arguments must be 8-byte aligned");
 
         header.set_size_words((record_len / 8) as u16);
-        self.buf.fill_slot(header_slot, &header.0.to_le_bytes()[..]);
+        self.buf.fill_slot(header_slot, &header.0.to_le_bytes());
 
         Ok(())
     }

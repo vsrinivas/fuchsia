@@ -114,7 +114,7 @@ where
     // [7] https://en.wikipedia.org/wiki/Random_oracle
 
     fn write_u64(hmac: &mut HmacSha256, u: u64) {
-        hmac.update(&u.to_be_bytes()[..]);
+        hmac.update(&u.to_be_bytes());
     }
 
     fn write_usize(hmac: &mut HmacSha256, u: usize) {
@@ -131,7 +131,7 @@ where
 
     // Write prefix address; no need to prefix with length because this is
     // always the same length.
-    hmac.update(&prefix.network().ipv6_bytes()[..]);
+    hmac.update(&prefix.network().ipv6_bytes());
     // Write prefix length, which is a single byte.
     hmac.update(&[prefix.prefix()][..]);
 
