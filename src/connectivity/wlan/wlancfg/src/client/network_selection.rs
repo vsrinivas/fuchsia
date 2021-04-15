@@ -58,7 +58,7 @@ const SCORE_PENALTY_FOR_RECENT_FAILURE: i8 = 5;
 /// on a retry.
 const SCORE_PENALTY_FOR_RECENT_CREDENTIAL_REJECTED: i8 = 30;
 
-const INSPECT_EVENT_LIMIT_FOR_NETWORK_SELECTIONS: usize = 20;
+const INSPECT_EVENT_LIMIT_FOR_NETWORK_SELECTIONS: usize = 10;
 
 pub struct NetworkSelector {
     saved_network_manager: Arc<SavedNetworksManager>,
