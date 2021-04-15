@@ -1083,8 +1083,16 @@ void Controller::DdkRelease() {
   delete this;
 }
 
+// Use the same default watchdog timeout as scenic, which may help ensure watchdog logs/errors
+// happen close together and can be correlated.
+static constexpr uint64_t kWatchdogWarningIntervalMs = 15000;
+static constexpr uint64_t kWatchdogTimeoutMs = 45000;
+
 Controller::Controller(zx_device_t* parent)
-    : ControllerParent(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+    : ControllerParent(parent),
+      loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+      watchdog_("display-client-loop", kWatchdogWarningIntervalMs, kWatchdogTimeoutMs,
+                loop_.dispatcher()) {
   mtx_init(&mtx_, mtx_plain);
   root_ = inspector_.GetRoot().CreateChild("display");
   last_vsync_ns_property_ = root_.CreateUint("last_vsync_timestamp_ns", 0);

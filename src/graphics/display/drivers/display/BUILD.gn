@@ -52,6 +52,7 @@ source_set("shared") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//src/devices/lib/audio",
     "//src/devices/lib/mmio",
+    "//src/lib/async-watchdog",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/lib/eld",
