@@ -38,13 +38,13 @@ extern "C" {
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/pcie_device.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-pci.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ddk-tester-pci.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
 
 namespace {
 
-TEST(FakePcieDdkTester, DeviceLifeCycle) {
-  wlan::testing::FakePcieDdkTester tester;
+TEST(FakeDdkTesterPci, DeviceLifeCycle) {
+  wlan::testing::FakeDdkTesterPci tester;
 
   // Create() allocates and binds the device.
   EXPECT_OK(wlan::iwlwifi::PcieDevice::Create(nullptr, fake_ddk::kFakeParent, false),

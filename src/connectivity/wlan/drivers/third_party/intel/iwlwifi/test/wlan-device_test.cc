@@ -17,8 +17,8 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/pcie_device.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-pci.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ddk-tester.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 
@@ -35,6 +35,13 @@ void recv_wrapper(void* cookie, uint32_t flags, const uint8_t* data, size_t leng
   auto recv = reinterpret_cast<recv_cb_t*>(cookie);
   recv->Call(cookie, flags, data, length, info);
 }
+
+class StubDevice : public wlan::iwlwifi::Device {
+ public:
+  explicit StubDevice(zx_device_t* parent) : Device(parent){};
+  void DdkRelease() { delete this; };
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); };
+};
 
 class WlanDeviceTest : public SingleApTest {
  public:
@@ -308,7 +315,7 @@ TEST_F(WlanDeviceTest, MacRelease) {
 // TODO(fxbug.dev/63618): Modify tests that use wlanphy_ops, to use the below approach.
 // Once that is done, this test can be removed since it will get covered by existing tests.
 TEST_F(WlanDeviceTest, CreateAndDestroyIfaceTest) {
-  FakePcieDdkTester tester;
+  FakeDdkTester tester;
 
   wlanphy_impl_create_iface_req_t req = {
       .role = WLAN_INFO_MAC_ROLE_CLIENT,
@@ -316,7 +323,7 @@ TEST_F(WlanDeviceTest, CreateAndDestroyIfaceTest) {
   };
   uint16_t out_id;
 
-  auto device = std::make_unique<wlan::iwlwifi::PcieDevice>(fake_ddk::kFakeParent);
+  auto device = std::make_unique<StubDevice>(fake_ddk::kFakeParent);
   device->override_iwl_trans(sim_trans_.iwl_trans());
 
   EXPECT_OK(device->WlanphyImplCreateIface(&req, &out_id), "failed to create iface");
