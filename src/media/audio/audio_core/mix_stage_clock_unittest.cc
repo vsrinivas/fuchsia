@@ -107,7 +107,7 @@ static constexpr auto kAdjustableLimitSettledErr = zx::nsec(100);
 static constexpr auto kRevertToMonoLimitSettledErr = zx::nsec(10);
 
 // When tuning a new set of PID coefficients, set this to enable additional results logging.
-constexpr bool kDisplayForPidCoefficientsTuning = true;
+constexpr bool kDisplayForPidCoefficientsTuning = false;
 // Verbose logging of the shape/timing of clock convergence.
 constexpr bool kTraceClockSyncConvergence = false;
 

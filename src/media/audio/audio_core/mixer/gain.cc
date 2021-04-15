@@ -13,35 +13,99 @@ namespace media::audio {
 void Gain::SetSourceGainWithRamp(float source_gain_db, zx::duration duration,
                                  __UNUSED fuchsia::media::audio::RampType ramp_type) {
   TRACE_DURATION("audio", "Gain::SetSourceGainWithRamp");
-  FX_DCHECK(source_gain_db <= kMaxGainDb) << "Ramp target gain (" << source_gain_db
+  FX_DCHECK(source_gain_db <= kMaxGainDb) << "Ramp target source_gain (" << source_gain_db
                                           << " db) cannot exceed maximum (" << kMaxGainDb << " db)";
-  FX_DCHECK(duration.get() >= 0) << "Specified ramp duration (" << duration.to_nsecs()
-                                 << " ns) cannot be negative";
 
   if (duration <= zx::nsec(0)) {
+    FX_LOGS(WARNING) << "Gain(" << this << "): SetSourceGainWithRamp non-positive duration ("
+                     << duration.to_usecs() << " usec); calling SetSourceGain(" << source_gain_db
+                     << " dB)";
     SetSourceGain(source_gain_db);
     return;
   }
 
-  if (source_gain_db != target_source_gain_db_) {
-    // Start ramping.
-    source_ramp_duration_ = duration;
-    frames_ramped_ = 0;
-
-    start_source_gain_db_ = target_source_gain_db_;
-    start_source_scale_ = DbToScale(target_source_gain_db_);
-
-    end_source_gain_db_ = source_gain_db;
-    end_source_scale_ = DbToScale(source_gain_db);
-  } else {
-    // Already at the ramp destination: we are done.
+  if (source_gain_db == target_source_gain_db_) {
+    if constexpr (kLogSetRamp) {
+      FX_LOGS(INFO) << "Gain(" << this << "): SetSourceGainWithRamp is no-change (already "
+                    << source_gain_db << " dB); " << duration.to_usecs() << "-usec ramp is ignored";
+    }
     source_ramp_duration_ = zx::nsec(0);
+    return;
   }
 
-  if constexpr (kVerboseRampDebug) {
-    FX_LOGS(INFO) << "Gain(" << this << "): SetSourceGainWithRamp(" << source_gain_db << " dB, "
-                  << duration.to_nsecs() << " nsec)";
+  if (source_gain_db <= kMinGainDb && target_source_gain_db_ <= kMinGainDb) {
+    if constexpr (kLogSetRamp) {
+      FX_LOGS(INFO) << "Gain(" << this << "): SetSourceGainWithRamp starts at/below min ("
+                    << target_source_gain_db_ << " dB) and ends at/below min (" << source_gain_db
+                    << " dB); " << duration.to_usecs() << "-usec ramp is ignored";
+    }
+    SetSourceGain(source_gain_db);
+    return;
   }
+
+  if constexpr (kLogSetRamp) {
+    FX_LOGS(INFO) << "Gain(" << this << "): SetSourceGainWithRamp(" << source_gain_db << " dB, "
+                  << duration.to_usecs() << " usec)";
+  }
+
+  // Start ramping.
+  source_ramp_duration_ = duration;
+  source_frames_ramped_ = 0;
+
+  start_source_gain_db_ = target_source_gain_db_;
+  start_source_scale_ = DbToScale(target_source_gain_db_);
+
+  end_source_gain_db_ = source_gain_db;
+  end_source_scale_ = DbToScale(source_gain_db);
+}
+
+void Gain::SetDestGainWithRamp(float dest_gain_db, zx::duration duration,
+                               __UNUSED fuchsia::media::audio::RampType ramp_type) {
+  TRACE_DURATION("audio", "Gain::SetDestGainWithRamp");
+  FX_DCHECK(dest_gain_db <= kMaxGainDb) << "Ramp target dest_gain (" << dest_gain_db
+                                        << " db) cannot exceed maximum (" << kMaxGainDb << " db)";
+
+  if (duration <= zx::nsec(0)) {
+    FX_LOGS(WARNING) << "Gain(" << this << "): SetDestGainWithRamp non-positive duration ("
+                     << duration.to_usecs() << " usec); calling SetDestGain(" << dest_gain_db
+                     << " dB)";
+    SetDestGain(dest_gain_db);
+    return;
+  }
+
+  if (dest_gain_db == target_dest_gain_db_) {
+    if constexpr (kLogSetRamp) {
+      FX_LOGS(INFO) << "Gain(" << this << "): SetDestGainWithRamp ramp is no-change (already "
+                    << dest_gain_db << " dB); " << duration.to_usecs() << "-usec ramp is ignored";
+    }
+    dest_ramp_duration_ = zx::nsec(0);
+    return;
+  }
+
+  if (dest_gain_db <= kMinGainDb && target_dest_gain_db_ <= kMinGainDb) {
+    if constexpr (kLogSetRamp) {
+      FX_LOGS(INFO) << "Gain(" << this << "): SetDestGainWithRamp starts at/below min ("
+                    << target_dest_gain_db_ << " dB) and ends at/below min (" << dest_gain_db
+                    << " dB); " << duration.to_usecs() << "-usec ramp is ignored";
+    }
+    SetDestGain(dest_gain_db);
+    return;
+  }
+
+  if constexpr (kLogSetRamp) {
+    FX_LOGS(INFO) << "Gain(" << this << "): SetDestGainWithRamp(" << dest_gain_db << " dB, "
+                  << duration.to_usecs() << " usec)";
+  }
+
+  // Start ramping.
+  dest_ramp_duration_ = duration;
+  dest_frames_ramped_ = 0;
+
+  start_dest_gain_db_ = target_dest_gain_db_;
+  start_dest_scale_ = DbToScale(target_dest_gain_db_);
+
+  end_dest_gain_db_ = dest_gain_db;
+  end_dest_scale_ = DbToScale(dest_gain_db);
 }
 
 void Gain::Advance(int64_t num_frames, const TimelineRate& destination_frames_per_reference_tick) {
@@ -55,31 +119,70 @@ void Gain::Advance(int64_t num_frames, const TimelineRate& destination_frames_pe
   FX_CHECK(destination_frames_per_reference_tick.invertible())
       << "Output clock must be running! Numerator of dest_frames/ref_tick is zero";
 
-  frames_ramped_ += num_frames;
-  zx::duration advance_duration =
-      zx::nsec(destination_frames_per_reference_tick.Inverse().Scale(frames_ramped_));
-  float source_gain_db;
+  // First advance any source-gain ramps
+  if (source_ramp_duration_.get() > 0) {
+    source_frames_ramped_ += num_frames;
+    zx::duration advance_duration =
+        zx::nsec(destination_frames_per_reference_tick.Inverse().Scale(source_frames_ramped_));
+    float source_gain_db;
 
-  if (source_ramp_duration_ > advance_duration) {
-    auto scale_from_ramp = static_cast<double>(advance_duration.to_nsecs()) /
-                           static_cast<double>(source_ramp_duration_.to_nsecs()) *
-                           (end_source_scale_ - start_source_scale_);
-    AScale source_scale = static_cast<AScale>(scale_from_ramp + start_source_scale_);
-    source_gain_db = ScaleToDb(source_scale);
-  } else {
-    source_ramp_duration_ = zx::nsec(0);
-    frames_ramped_ = 0;
-    source_gain_db = end_source_gain_db_;
+    if (source_ramp_duration_ > advance_duration) {
+      // Even after this advance, some duration of source_ramp remains
+      auto scale_from_ramp = static_cast<double>(advance_duration.to_nsecs()) /
+                             static_cast<double>(source_ramp_duration_.to_nsecs()) *
+                             (end_source_scale_ - start_source_scale_);
+      AScale source_scale = static_cast<AScale>(scale_from_ramp + start_source_scale_);
+      source_gain_db = ScaleToDb(source_scale);
+    } else {
+      // This advance takes us beyond the end of source_ramp.
+      source_ramp_duration_ = zx::nsec(0);
+      source_frames_ramped_ = 0;
+      source_gain_db = end_source_gain_db_;
+    }
+
+    target_source_gain_db_ = source_gain_db;
+
+    if constexpr (kLogRampAdvance) {
+      FX_LOGS(INFO) << "Gain(" << this << ") advanced " << advance_duration.to_usecs()
+                    << " usec for " << num_frames
+                    << " source frames. Total frames ramped: " << source_frames_ramped_ << ".";
+      FX_LOGS(INFO) << "source_gain_db is now " << source_gain_db << " for this "
+                    << source_ramp_duration_.to_usecs() << "-usec ramp to " << end_source_gain_db_
+                    << " dB.";
+    }
   }
 
-  target_source_gain_db_ = source_gain_db;
+  // Then advance any dest-gain ramps
+  if (dest_ramp_duration_.get() > 0) {
+    dest_frames_ramped_ += num_frames;
+    zx::duration advance_duration =
+        zx::nsec(destination_frames_per_reference_tick.Inverse().Scale(dest_frames_ramped_));
+    float dest_gain_db;
 
-  if constexpr (kVerboseRampDebug) {
-    FX_LOGS(INFO) << "Advanced " << advance_duration.to_nsecs() << " nsec for " << num_frames
-                  << " frames. Total frames ramped: " << frames_ramped_ << ".";
-    FX_LOGS(INFO) << "source_gain_db is now " << source_gain_db << " for this "
-                  << source_ramp_duration_.to_nsecs() << "-nsec ramp to " << end_source_gain_db_
-                  << " dB.";
+    if (dest_ramp_duration_ > advance_duration) {
+      // Even after this advance, some duration of dest_ramp remains
+      auto scale_from_ramp = static_cast<double>(advance_duration.to_nsecs()) /
+                             static_cast<double>(dest_ramp_duration_.to_nsecs()) *
+                             (end_dest_scale_ - start_dest_scale_);
+      AScale dest_scale = static_cast<AScale>(scale_from_ramp + start_dest_scale_);
+      dest_gain_db = ScaleToDb(dest_scale);
+    } else {
+      // This advance takes us beyond the end of dest_ramp.
+      dest_ramp_duration_ = zx::nsec(0);
+      dest_frames_ramped_ = 0;
+      dest_gain_db = end_dest_gain_db_;
+    }
+
+    target_dest_gain_db_ = dest_gain_db;
+
+    if constexpr (kLogRampAdvance) {
+      FX_LOGS(INFO) << "Gain(" << this << ") advanced " << advance_duration.to_usecs()
+                    << " usec for " << num_frames
+                    << " dest frames. Total frames ramped: " << dest_frames_ramped_ << ".";
+      FX_LOGS(INFO) << "dest_gain_db is now " << dest_gain_db << " for this "
+                    << dest_ramp_duration_.to_usecs() << "-usec ramp to " << end_dest_gain_db_
+                    << " dB.";
+    }
   }
 }
 
@@ -93,51 +196,95 @@ void Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
 
   FX_CHECK(scale_arr != nullptr) << "Null pointer; cannot copy the array of scale values";
 
-  AScale scale;
   if (!IsRamping()) {
     // Gain is flat for this mix job; retrieve gainscale once and set them all.
-    scale = GetGainScale();
+    AScale scale = GetGainScale();
     for (int64_t idx = 0; idx < num_frames; ++idx) {
       scale_arr[idx] = scale;
     }
-  } else {
-    // If the output device's clock is not running, then it isn't possible to
-    // convert from output frames to wallclock (local) time.
-    FX_CHECK(destination_frames_per_reference_tick.invertible())
-        << "Output clock must be running! Numerator of dest_frames/ref_tick is zero";
+    return;
+  }
 
-    // Compose the ramp, in pieces
-    TimelineRate output_to_local = destination_frames_per_reference_tick.Inverse();
-    AScale dest_scale = DbToScale(target_dest_gain_db_);
-    AScale start_scale = start_source_scale_ * dest_scale;
-    AScale end_scale = end_source_scale_ * dest_scale;
-    const float kInverseRampDuration = 1.0f / static_cast<float>(source_ramp_duration_.to_nsecs());
+  // If the output device's clock is not running, then it isn't possible to
+  // convert from output frames to wallclock (local) time.
+  FX_CHECK(destination_frames_per_reference_tick.invertible())
+      << "Output clock must be running! Numerator of dest_frames/ref_tick is zero";
+
+  // Compose the ramp, in pieces
+  TimelineRate output_to_local = destination_frames_per_reference_tick.Inverse();
+
+  // If the source side is ramping, calculate that component
+  if (source_ramp_duration_.get() > 0) {
+    AScale start_source_scale = start_source_scale_;
+    AScale end_source_scale = end_source_scale_;
+    const float kInverseSourceRampDuration =
+        1.0f / static_cast<float>(source_ramp_duration_.to_nsecs());
 
     for (int64_t idx = 0; idx < num_frames; ++idx) {
-      zx::duration frame_time = zx::nsec(output_to_local.Scale(frames_ramped_ + idx));
+      zx::duration frame_time = zx::nsec(output_to_local.Scale(source_frames_ramped_ + idx));
       if (frame_time >= source_ramp_duration_) {
-        scale_arr[idx] = end_scale;
+        scale_arr[idx] = end_source_scale;
       } else {
-        auto ramp_fraction = static_cast<float>(frame_time.to_nsecs()) * kInverseRampDuration;
-        scale_arr[idx] = start_scale + (end_scale - start_scale) * ramp_fraction;
+        auto ramp_fraction = static_cast<float>(frame_time.to_nsecs()) * kInverseSourceRampDuration;
+        scale_arr[idx] =
+            start_source_scale + (end_source_scale - start_source_scale) * ramp_fraction;
       }
+    }
+  } else {
+    // ...otherwise, the source contribution to our array is constant
+    auto source_scale = DbToScale(current_source_gain_db_);
+    for (int64_t idx = 0; idx < num_frames; ++idx) {
+      scale_arr[idx] = source_scale;
+    }
+  }
+
+  // If the dest side is ramping, calculate and multiply-in that component
+  if (dest_ramp_duration_.get() > 0) {
+    AScale start_dest_scale = start_dest_scale_;
+    AScale end_dest_scale = end_dest_scale_;
+    const float kInverseDestRampDuration =
+        1.0f / static_cast<float>(dest_ramp_duration_.to_nsecs());
+
+    for (int64_t idx = 0; idx < num_frames; ++idx) {
+      zx::duration frame_time = zx::nsec(output_to_local.Scale(dest_frames_ramped_ + idx));
+      if (frame_time >= dest_ramp_duration_) {
+        scale_arr[idx] *= end_dest_scale;
+      } else {
+        auto ramp_fraction = static_cast<float>(frame_time.to_nsecs()) * kInverseDestRampDuration;
+        scale_arr[idx] *= (start_dest_scale + (end_dest_scale - start_dest_scale) * ramp_fraction);
+      }
+    }
+  } else {
+    // ...otherwise, the dest contribution to our array is constant
+    AScale dest_scale = DbToScale(current_dest_gain_db_);
+    for (int64_t idx = 0; idx < num_frames; ++idx) {
+      scale_arr[idx] *= dest_scale;
     }
   }
 }
 
 // Calculate a stream's gain-scale multiplier from source and dest gains in
 // dB. Optimize to avoid doing the full calculation unless we must.
-Gain::AScale Gain::GetGainScale(float source_gain_db, float dest_gain_db) {
+Gain::AScale Gain::GetGainScale() {
   TRACE_DURATION("audio", "Gain::GetGainScale");
 
+  if (IsMute()) {
+    return kMuteScale;
+  }
+
   // If nothing changed, return the previously-computed amplitude scale value.
-  if ((current_source_gain_db_ == source_gain_db) && (current_dest_gain_db_ == dest_gain_db)) {
+  if ((current_source_gain_db_ == target_source_gain_db_) &&
+      (current_dest_gain_db_ == target_dest_gain_db_)) {
     return combined_gain_scale_;
   }
 
-  current_source_gain_db_ = source_gain_db;
-  current_dest_gain_db_ = dest_gain_db;
+  // Something changed. Cache the vals so the above check can eliminate unneeded DbToScale calls.
+  // This means that in every case below we must also set the corresponding combined_gain_scale_.
+  current_source_gain_db_ = target_source_gain_db_;
+  current_dest_gain_db_ = target_dest_gain_db_;
 
+  // We can avoid DbToScale calls with a few quick checks for Unity, Min and Max.
+  //
   // If sum of the source and dest cancel each other, the combined is kUnityScale.
   if ((current_dest_gain_db_ + current_source_gain_db_) == kUnityGainDb) {
     combined_gain_scale_ = kUnityScale;
@@ -152,11 +299,10 @@ Gain::AScale Gain::GetGainScale(float source_gain_db, float dest_gain_db) {
     } else if (effective_gain_db >= kMaxGainDb) {
       combined_gain_scale_ = kMaxScale;
     } else {
-      // Else, we do need to compute the combined gain-scale.
+      // Else, we really do need to compute the combined gain-scale.
       combined_gain_scale_ = DbToScale(effective_gain_db);
     }
   }
-
   return combined_gain_scale_;
 }
 

@@ -17,9 +17,10 @@
 
 namespace media::audio {
 
-constexpr bool kVerboseGainDebug = false;
-constexpr bool kVerboseMuteDebug = false;
-constexpr bool kVerboseRampDebug = false;
+constexpr bool kLogSetGain = false;
+constexpr bool kLogSetMute = false;
+constexpr bool kLogSetRamp = false;
+constexpr bool kLogRampAdvance = false;
 
 // A class containing factors used for software scaling in the mixer pipeline.
 // Not thread safe.
@@ -36,18 +37,11 @@ class Gain {
   static constexpr float kUnityGainDb = 0.0f;
   static constexpr float kMinGainDb = fuchsia::media::audio::MUTED_GAIN_DB;
 
-  // constructor
-  Gain()
-      : target_source_gain_db_(kUnityGainDb),
-        target_dest_gain_db_(kUnityGainDb),
-        frames_ramped_(0) {}
-
   // Amplitude scale factors are expressed as 32-bit IEEE-754 floating point.
   using AScale = float;
 
-  // Note: multiply-by-.05 equals divide-by-20 -- and is faster on non-optimized
-  // builds. Note: 0.05 must be double (not float), for the precision we
-  // require.
+  // Note: multiply-by-.05 equals divide-by-20 -- and is faster on most
+  // builds. Note: 0.05 must be double (not float) for the required precision.
   static AScale DbToScale(float gain_db) { return static_cast<AScale>(pow(10.0f, gain_db * 0.05)); }
   static float ScaleToDb(AScale scale) { return std::log10(scale) * 20.0f; }
   // Higher-precision (but slower) version currently used only by fidelity tests
@@ -95,11 +89,21 @@ class Gain {
   // the range [-inf, 24.0]. Callers must guarantee single-threaded semantics
   // for each Gain instance.
   void SetSourceGain(float gain_db) {
+    if constexpr (kLogSetGain) {
+      FX_LOGS(INFO) << "Gain(" << this << "): SetSourceGain(" << gain_db << "), was tgt_src_db "
+                    << target_source_gain_db_ << ", start_src_db " << start_source_gain_db_
+                    << ", end_src_db " << end_source_gain_db_ << ", tgt_dst_db "
+                    << target_dest_gain_db_;
+    }
     source_ramp_duration_ = zx::nsec(0);
     target_source_gain_db_ = gain_db;
-    if constexpr (kVerboseGainDebug) {
-      FX_LOGS(INFO) << "Gain(" << this << "): SetSourceGain(" << gain_db << ")";
+  }
+  void SetSourceMute(bool mute) {
+    if constexpr (kLogSetMute) {
+      FX_LOGS(INFO) << "Gain(" << this << "): SetSourceMute(" << (mute ? "TRUE" : "FALSE")
+                    << "), was " << (source_mute_ ? "TRUE" : "FALSE");
     }
+    source_mute_ = mute;
   }
 
   // Smoothly change the source gain over the specified period of playback time.
@@ -109,6 +113,9 @@ class Gain {
 
   // Stop ramping the source gain: advance immediately to the final source gain.
   void CompleteSourceRamp() {
+    if constexpr (kLogRampAdvance) {
+      FX_LOGS(INFO) << "Gain(" << this << "): " << __func__;
+    }
     if (source_ramp_duration_ > zx::nsec(0)) {
       source_ramp_duration_ = zx::nsec(0);
       SetSourceGain(end_source_gain_db_);
@@ -125,63 +132,108 @@ class Gain {
   // gain held by the audio_capturer_impl or output device. We use this snapshot
   // when performing the current Mix operation for that particular source.
   void SetDestGain(float gain_db) {
+    if constexpr (kLogSetGain) {
+      FX_LOGS(INFO) << "Gain(" << this << "): SetDestGain(" << gain_db << "), was tgt_dst_db "
+                    << target_dest_gain_db_ << ", start_dst_db " << start_dest_gain_db_
+                    << ", end_dst_db " << end_dest_gain_db_ << ", tgt_src_db "
+                    << target_source_gain_db_;
+    }
+    dest_ramp_duration_ = zx::nsec(0);
     target_dest_gain_db_ = gain_db;
-    if constexpr (kVerboseGainDebug) {
-      FX_LOGS(INFO) << "Gain(" << this << "): SetDestGain(" << gain_db << ")";
+  }
+
+  // Smoothly change the dest gain over the specified period of playback time.
+  void SetDestGainWithRamp(
+      float gain_db, zx::duration duration,
+      fuchsia::media::audio::RampType ramp_type = fuchsia::media::audio::RampType::SCALE_LINEAR);
+
+  // Stop ramping the dest gain: advance immediately to the final dest gain.
+  void CompleteDestRamp() {
+    if constexpr (kLogRampAdvance) {
+      FX_LOGS(INFO) << __func__;
+    }
+    if (dest_ramp_duration_ > zx::nsec(0)) {
+      dest_ramp_duration_ = zx::nsec(0);
+      SetDestGain(end_dest_gain_db_);
     }
   }
 
   float GetGainDb() { return ScaleToDb(GetGainScale()); }
 
   // Calculate the stream's gain-scale, from cached source and dest values.
-  AScale GetGainScale() { return GetGainScale(target_source_gain_db_, target_dest_gain_db_); }
+  AScale GetGainScale();
 
   void GetScaleArray(AScale* scale_arr, int64_t num_frames, const TimelineRate& rate);
 
   // Advance the state of any gain ramp by the specified number of frames.
   void Advance(int64_t num_frames, const TimelineRate& rate);
 
-  // Convenience functions to aid in performance optimization.
-  // NOTE: These methods expect the caller to use SetDestGain, NOT the
-  // GetGainScale(dest_gain_db) variant -- it doesn't cache dest_gain_db.
-  bool IsUnity() {
-    float temp_db = target_source_gain_db_ + target_dest_gain_db_;
-
-    return (temp_db == 0) && !IsRamping();
-  }
-
+  // These functions determine which performance-optimized templatized functions we use for a Mix.
+  // Thus they include knowledge about the foreseeable future (e.g. ramping).
+  //
+  // IsSilent:      Muted OR (current gain is silent AND not ramping toward >kMinGainDb).
+  // IsUnity:       Current gain == kUnityGainDb AND not ramping.
+  // IsRamping:     Remaining ramp duration > 0 AND not muted.
+  //
   bool IsSilent() {
-    return (IsSilentNow() && (!IsRamping() || start_source_gain_db_ >= end_source_gain_db_ ||
-                              end_source_gain_db_ <= kMinGainDb));
+    // Not only currently silent, but also either
+    return IsSilentNow() &&
+           // ... source gain causes silence (is below mute point), regardless of dest gain, or
+           ((target_source_gain_db_ <= kMinGainDb && source_ramp_duration_.get() == 0) ||
+            // .. dest gain causes silence (is below mute point), regardless of source gain, or
+            (target_dest_gain_db_ <= kMinGainDb && dest_ramp_duration_.get() == 0) ||
+            ((source_ramp_duration_.get() == 0 || start_source_gain_db_ >= end_source_gain_db_) &&
+             // ... all stages that are ramping must be downward.
+             (dest_ramp_duration_.get() == 0 || start_dest_gain_db_ >= end_dest_gain_db_)));
   }
 
-  // TODO(perley/mpuryear): Handle usage ramping.
-  bool IsRamping() { return (source_ramp_duration_.get() > 0); }
+  bool IsUnity() {
+    return !IsMute() && !IsRamping() && (target_source_gain_db_ + target_dest_gain_db_ == 0.0f);
+  }
+
+  bool IsRamping() {
+    return !IsMute() && (source_ramp_duration_.get() > 0 || dest_ramp_duration_.get() > 0);
+  }
 
  private:
-  // Called by the above GetGainScale variants. For performance reasons, this
-  // implementation caches values and recomputes the result only as needed.
-  AScale GetGainScale(float source_gain_db, float dest_gain_db);
-
-  // Used internally only -- reflects the instananeous gain state
-  bool IsSilentNow() {
-    return (target_source_gain_db_ <= kMinGainDb) || (target_dest_gain_db_ <= kMinGainDb) ||
+  // Internal functions for querying the current state of the Gain object
+  //
+  // Object is muted and will remain silent, regardless of gain or ramp values
+  bool IsMute() const { return source_mute_; }
+  // CURRENT gain <= kMinGainDb, including mute effects.
+  bool IsSilentNow() const {
+    return IsMute() || (target_source_gain_db_ <= kMinGainDb) ||
+           (target_dest_gain_db_ <= kMinGainDb) ||
            (target_source_gain_db_ + target_dest_gain_db_ <= kMinGainDb);
   }
 
   float target_source_gain_db_ = kUnityGainDb;
   float target_dest_gain_db_ = kUnityGainDb;
 
+  bool source_mute_ = false;
+
   float current_source_gain_db_ = kUnityGainDb;
   float current_dest_gain_db_ = kUnityGainDb;
   AScale combined_gain_scale_ = kUnityScale;
 
   float start_source_scale_ = kUnityScale;
+  float start_dest_scale_ = kUnityScale;
   float start_source_gain_db_ = kUnityGainDb;
+  float start_dest_gain_db_ = kUnityGainDb;
+
   float end_source_scale_ = kUnityScale;
+  float end_dest_scale_ = kUnityScale;
   float end_source_gain_db_ = kUnityGainDb;
+  float end_dest_gain_db_ = kUnityGainDb;
+
   zx::duration source_ramp_duration_;
-  int64_t frames_ramped_;
+  zx::duration dest_ramp_duration_;
+  int64_t source_frames_ramped_ = 0;
+  int64_t dest_frames_ramped_ = 0;
+
+  // Ultimately we will split source+dest portions, each in its own separate GainStage object which
+  // can be individually controlled. The mixer will have access to a container CombinedGain or
+  // GainSequence object that can only be read, reset and advanced.
 };
 
 }  // namespace media::audio
