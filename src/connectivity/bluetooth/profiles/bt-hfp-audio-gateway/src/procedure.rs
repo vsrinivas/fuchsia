@@ -72,6 +72,10 @@ pub mod transfer_hf_indicator;
 pub mod volume_synchronization;
 
 use answer::AnswerProcedure;
+
+/// Defines the implementation of the the Audio Volume Control Procedure.
+pub mod volume_control;
+
 use call_line_ident_notifications::CallLineIdentNotificationsProcedure;
 use call_waiting_notifications::CallWaitingNotificationsProcedure;
 use dtmf::{DtmfCode, DtmfProcedure};
@@ -87,6 +91,7 @@ use ring::RingProcedure;
 use slc_initialization::SlcInitProcedure;
 use subscriber_number_information::{build_cnum_response, SubscriberNumberInformationProcedure};
 use transfer_hf_indicator::TransferHfIndicatorProcedure;
+use volume_control::VolumeControlProcedure;
 use volume_synchronization::VolumeSynchronizationProcedure;
 
 // TODO (fxbug.dev/74091): Add multiparty support.
@@ -187,6 +192,8 @@ pub enum ProcedureMarker {
     TransferHfIndicator,
     /// The Call Hold procedure as defined in HFP v1.8 Section 4.22
     Hold,
+    /// The Audio Volume Control procedure as definied in HFP v.18 Section 4.29.1
+    VolumeControl,
 }
 
 impl ProcedureMarker {
@@ -214,6 +221,7 @@ impl ProcedureMarker {
             Self::HangUp => Box::new(HangUpProcedure::new()),
             Self::TransferHfIndicator => Box::new(TransferHfIndicatorProcedure::new()),
             Self::Hold => Box::new(HoldProcedure::new()),
+            Self::VolumeControl => Box::new(VolumeControlProcedure::new()),
         }
     }
 
@@ -459,6 +467,10 @@ pub enum AgUpdate {
     Ring(Call),
     /// The information of an IncomingRinging call.
     CallWaiting(Call),
+    /// The volume to set the HF speaker to.
+    SpeakerVolumeControl(Gain),
+    /// The volume to set the HF speaker to.
+    MicrophoneVolumeControl(Gain),
 }
 
 impl From<AgUpdate> for ProcedureRequest {
@@ -534,6 +546,12 @@ impl From<AgUpdate> for ProcedureRequest {
                     ty: call.number.type_(),
                     number: call.number.into(),
                 })]
+            }
+            AgUpdate::SpeakerVolumeControl(gain) => {
+                vec![at::success(at::Success::Vgs { level: gain.into() })]
+            }
+            AgUpdate::MicrophoneVolumeControl(gain) => {
+                vec![at::success(at::Success::Vgm { level: gain.into() })]
             }
         }
         .into()

@@ -298,9 +298,8 @@ impl PeerTask {
                     }
                 }
                 // New request on the gain control protocol
-                _request = self.gain_control.select_next_some() => {
-                    unimplemented!();
-                }
+                request = self.gain_control.select_next_some() =>
+                       self.connection.receive_ag_request(ProcedureMarker::VolumeControl, request.into()).await,
                 // A new call state has been received from the call service
                 update = self.calls.select_next_some() => {
                     self.ringer.ring(self.calls.should_ring());

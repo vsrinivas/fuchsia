@@ -69,6 +69,7 @@ rustc_binary("bin") {
     "src/procedure/slc_initialization.rs",
     "src/procedure/subscriber_number_information.rs",
     "src/procedure/transfer_hf_indicator.rs",
+    "src/procedure/volume_control.rs",
     "src/procedure/volume_synchronization.rs",
     "src/profile.rs",
     "src/protocol.rs",

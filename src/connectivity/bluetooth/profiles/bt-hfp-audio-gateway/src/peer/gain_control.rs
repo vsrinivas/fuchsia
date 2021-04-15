@@ -21,7 +21,7 @@ use {
     },
 };
 
-use crate::error::Error;
+use crate::{error::Error, procedure::AgUpdate};
 
 type NotifyFn<Resp> = Box<dyn Fn(&u8, Resp) -> bool>;
 type GainHangingGet<Resp> = HangingGet<u8, Resp, NotifyFn<Resp>>;
@@ -35,6 +35,12 @@ pub struct Gain(u8);
 impl From<Gain> for u8 {
     fn from(gain: Gain) -> Self {
         gain.0
+    }
+}
+
+impl From<Gain> for i64 {
+    fn from(gain: Gain) -> Self {
+        gain.0 as i64
     }
 }
 
@@ -72,9 +78,9 @@ impl TryFrom<i64> for Gain {
 pub(super) struct GainControl {
     client_end: Option<ClientEnd<HeadsetGainMarker>>,
     request_stream: HeadsetGainRequestStream,
-    _speaker_gain_hanging_get: GainHangingGet<HeadsetGainWatchSpeakerGainResponder>,
+    speaker_gain_hanging_get: GainHangingGet<HeadsetGainWatchSpeakerGainResponder>,
     speaker_gain_hanging_get_subscriber: GainSubscriber<HeadsetGainWatchSpeakerGainResponder>,
-    _microphone_gain_hanging_get: GainHangingGet<HeadsetGainWatchMicrophoneGainResponder>,
+    microphone_gain_hanging_get: GainHangingGet<HeadsetGainWatchMicrophoneGainResponder>,
     microphone_gain_hanging_get_subscriber: GainSubscriber<HeadsetGainWatchMicrophoneGainResponder>,
     terminated: bool,
 }
@@ -85,21 +91,21 @@ impl GainControl {
             let _ = r.send(*s);
             true
         });
-        let mut _speaker_gain_hanging_get = HangingGet::new(0, f);
+        let mut speaker_gain_hanging_get = HangingGet::new(0, f);
         let f: NotifyFn<HeadsetGainWatchMicrophoneGainResponder> = Box::new(|s, r| {
             let _ = r.send(*s);
             true
         });
-        let mut _microphone_gain_hanging_get = HangingGet::new(0, f);
+        let mut microphone_gain_hanging_get = HangingGet::new(0, f);
         let (client_end, request_stream) = fidl::endpoints::create_request_stream()
             .map_err(|e| Error::system("Could not create gain control fidl endpoints", e))?;
         Ok(Self {
             client_end: Some(client_end),
             request_stream,
-            speaker_gain_hanging_get_subscriber: _speaker_gain_hanging_get.new_subscriber(),
-            _speaker_gain_hanging_get,
-            microphone_gain_hanging_get_subscriber: _microphone_gain_hanging_get.new_subscriber(),
-            _microphone_gain_hanging_get,
+            speaker_gain_hanging_get_subscriber: speaker_gain_hanging_get.new_subscriber(),
+            speaker_gain_hanging_get,
+            microphone_gain_hanging_get_subscriber: microphone_gain_hanging_get.new_subscriber(),
+            microphone_gain_hanging_get,
             terminated: false,
         })
     }
@@ -121,7 +127,7 @@ impl GainControl {
 
     /// Report the speaker gain value received from the Hands Free to the call manager.
     pub fn report_speaker_gain(&mut self, gain: Gain) {
-        self._speaker_gain_hanging_get.new_publisher().update(move |s| {
+        self.speaker_gain_hanging_get.new_publisher().update(move |s| {
             if *s == gain.0 {
                 false
             } else {
@@ -133,7 +139,7 @@ impl GainControl {
 
     /// Report the microphone gain value received from the Hands Free to the call manager.
     pub fn report_microphone_gain(&mut self, gain: Gain) {
-        self._microphone_gain_hanging_get.new_publisher().update(move |s| {
+        self.microphone_gain_hanging_get.new_publisher().update(move |s| {
             if *s == gain.0 {
                 false
             } else {
@@ -173,9 +179,18 @@ impl GainControl {
     }
 }
 
+impl From<GainRequest> for AgUpdate {
+    fn from(gain_request: GainRequest) -> Self {
+        match gain_request {
+            GainRequest::Speaker(gain) => AgUpdate::SpeakerVolumeControl(gain),
+            GainRequest::Microphone(gain) => AgUpdate::MicrophoneVolumeControl(gain),
+        }
+    }
+}
+
 /// Item type returned by `<GainControl as Stream>::poll_next`.
 #[cfg_attr(test, derive(Debug))]
-pub(super) enum GainRequest {
+pub(crate) enum GainRequest {
     Speaker(Gain),
     Microphone(Gain),
 }
