@@ -436,9 +436,25 @@ impl Message {
     /// Convert this `Message` to a FIDL representation suitable for sending to `LogListenerSafe`.
     pub fn for_listener(&self) -> LogMessage {
         let mut msg = self.msg().unwrap_or("").to_string();
+        let mut file = None;
+        let mut line = None;
 
         for property in self.non_legacy_contents() {
-            write!(&mut msg, " {}", property).expect("allocations have to fail for this to fail");
+            match property {
+                LogsProperty::String(LogsField::FilePath, tag) => {
+                    file = Some(tag);
+                }
+                LogsProperty::Uint(LogsField::LineNumber, tag) => {
+                    line = Some(tag);
+                }
+                other => {
+                    write!(&mut msg, " {}", other)
+                        .expect("allocations have to fail for this to fail");
+                }
+            }
+        }
+        if let (Some(file), Some(line)) = (file, line) {
+            msg = format!("[{}({})] {}", file, line, msg);
         }
 
         let mut tags: Vec<_> = self.tags().map(String::from).collect();
@@ -1247,6 +1263,11 @@ mod tests {
             timestamp: 72,
             severity: StreamSeverity::Error,
             arguments: vec![
+                Argument {
+                    name: FILE_PATH_LABEL.to_string(),
+                    value: Value::Text("some_file.cc".to_string()),
+                },
+                Argument { name: LINE_NUMBER_LABEL.to_string(), value: Value::UnsignedInt(420) },
                 Argument { name: "arg1".to_string(), value: Value::SignedInt(-23) },
                 Argument { name: PID_LABEL.to_string(), value: Value::UnsignedInt(43) },
                 Argument { name: TID_LABEL.to_string(), value: Value::UnsignedInt(912) },
@@ -1272,6 +1293,8 @@ mod tests {
                 LogsHierarchy::new(
                     "root",
                     vec![
+                        LogsProperty::String(LogsField::FilePath, "some_file.cc".to_string()),
+                        LogsProperty::Uint(LogsField::LineNumber, 420),
                         LogsProperty::Int(LogsField::Other("arg1".to_string()), -23),
                         LogsProperty::Uint(LogsField::ProcessId, 43),
                         LogsProperty::Uint(LogsField::ThreadId, 912),
@@ -1290,7 +1313,7 @@ mod tests {
                 dropped_logs: 2,
                 pid: 43,
                 tid: 912,
-                msg: "msg arg1=-23".into(),
+                msg: "[some_file.cc(420)] msg arg1=-23".into(),
                 tags: vec!["tag".into()]
             }
         );
