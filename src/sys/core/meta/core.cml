@@ -125,6 +125,10 @@
             url: "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cm",
             environment: "#universe-resolver-env",
         },
+        {
+            name: "ssh-key-manager",
+            url: "fuchsia-pkg://fuchsia.com/ssh-key-manager#meta/ssh-key-manager.cm",
+        },
     ],
     capabilities: [
         {
@@ -161,6 +165,11 @@
             protocol: "fuchsia.sys2.ComponentResolver",
             from: "parent",
             to: "#universe-resolver",
+        },
+        {
+            protocol: "fuchsia.ssh.AuthorizedKeys",
+            from: "#ssh-key-manager",
+            to: [ "#appmgr" ],
         },
         {
             storage: "data",
@@ -402,6 +411,7 @@
                 "#remote-control",
                 "#sampler",
                 "#session-manager",
+                "#ssh-key-manager",
                 "#stash",
                 "#stash2",
                 "#stash_secure",
@@ -663,6 +673,13 @@
             directory: "minfs",
             from: "parent",
             to: "#appmgr",
+        },
+        {
+            directory: "minfs",
+            from: "parent",
+            as: "ssh",
+            to: [ "#ssh-key-manager" ],
+            subdir: "ssh",
         },
         {
             directory: "pkgfs",

@@ -1,0 +1,53 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ssh;
+
+using zx;
+
+/// Maximum length of a single SSH key. See sshd(8).
+const uint32 MAX_SSH_KEY_LENGTH = 8192;
+
+struct SshAuthorizedKeyEntry {
+    /// The entry in authorized_keys.
+    string:MAX_SSH_KEY_LENGTH key;
+};
+
+/// Protocol for managing SSH keys on a device.
+[Discoverable]
+protocol AuthorizedKeys {
+    /// Add a key to the device's authorized key list.
+    AddKey(SshAuthorizedKeyEntry key) -> () error zx.status;
+
+    /// Watch for keys by sending events to the given KeyWatcher.
+    WatchKeys(request<KeyWatcher> watcher);
+
+    /// Remove the given key. |key| should be a value returned by |KeyIterator|.
+    RemoveKey(SshAuthorizedKeyEntry key) -> () error zx.status;
+};
+
+enum KeyEventType {
+    /// This key already existed when WatchKeys was called.
+    EXISTING = 1;
+    /// This key was added after WatchKeys was called.
+    ADDED = 2;
+    /// This key was removed after WatchKeys was called.
+    REMOVED = 3;
+    /// This is the end of the EXISTING keys.
+    FINISHED_EXISTING = 4;
+};
+
+/// Event for an SSH key being added or removed.
+struct KeyEvent {
+    /// What is happening to this key?
+    KeyEventType event;
+    /// The key. Present for all KeyEventType except FINISHED_EXISTING.
+    SshAuthorizedKeyEntry? key;
+};
+
+/// Used to send updates about the authorized key list from server to client.
+protocol KeyWatcher {
+    /// Blocks until the next event is ready.
+    Next() -> (KeyEvent event);
+};

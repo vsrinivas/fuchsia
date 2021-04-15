@@ -1,0 +1,28 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/ssh_key_manager",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.ssh.AuthorizedKeys" ],
+        },
+    ],
+    use: [
+        {
+            directory: "ssh",
+            rights: [ "rw*" ],
+            path: "/ssh",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.ssh.AuthorizedKeys" ],
+            from: "self",
+        },
+    ],
+}

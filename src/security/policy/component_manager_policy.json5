@@ -213,6 +213,7 @@
                     "/core",
                     "/core/appmgr",
                     "/core/minfs",
+                    "/core/ssh-key-manager",
                 ],
             },
             {

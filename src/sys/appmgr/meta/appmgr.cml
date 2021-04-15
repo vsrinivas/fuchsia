@@ -404,6 +404,10 @@
             protocol: "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
             path: "/svc_for_sys/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
         },
+        {
+            protocol: "fuchsia.ssh.AuthorizedKeys",
+            path: "/svc_for_sys/fuchsia.ssh.AuthorizedKeys",
+        },
 
         // From dhcpd
         {

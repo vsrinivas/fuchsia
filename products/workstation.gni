@@ -13,6 +13,7 @@ base_package_labels += [
   "//garnet/packages/config:shortcut",
   "//src/dart:dart_jit",
   "//src/dart:dart_jit_product",
+  "//src/developer/ssh-key-manager",
   "//src/fonts",
   "//src/fonts:open-fonts-collection",
   "//src/identity/bin:tier_2",
