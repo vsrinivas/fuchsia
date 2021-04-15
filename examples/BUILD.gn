@@ -6,6 +6,7 @@ group("examples") {
   testonly = true
   deps = [
     ":tests",
+    "components",
     "cowsay",
     "criterion_bench",
     "dart",
@@ -21,16 +22,13 @@ group("examples") {
     "rust",
     "speech",
     "time",
-    "//examples/components/basic:components-basic-example",
-    "//examples/components/basic:tests",
-    "//examples/components/routing:components-routing-example",
-    "//examples/components/routing_failed:components-routing-failed-example",
   ]
 }
 
 group("tests") {
   testonly = true
   data_deps = [
+    "components:tests",
     "dart:tests",
     "diagnostics:tests",
     "drivers/fifo:tests",
@@ -41,6 +39,5 @@ group("tests") {
     "isolated_cache:tests",
     "rolldice:rolldice-tests",
     "rust:tests",
-    "//examples/components/basic:tests",
   ]
 }

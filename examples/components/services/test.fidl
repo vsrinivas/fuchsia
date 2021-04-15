@@ -1,0 +1,32 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.examples.services;
+
+/// A Service representing a BankAccount, with two views of the data: read-only, and read-write.
+service BankAccount {
+    ReadOnlyAccount read_only;
+    ReadWriteAccount read_write;
+};
+
+/// Provides read-only access to a bank account.
+protocol ReadOnlyAccount {
+    /// Returns the bank account owner's name.
+    GetOwner() -> (string:MAX owner);
+
+    /// Returns the bank account's current balance in cents.
+    GetBalance() -> (int64 balance);
+};
+
+/// Provides read-write access to a bank account.
+protocol ReadWriteAccount {
+    compose ReadOnlyAccount;
+
+    /// Withdraws `amount` cents from the bank account.
+    /// Returns false if the account had insufficient funds.
+    Debit(int64 amount) -> (bool succeeded);
+
+    /// Deposits `amount` cents to the bank account.
+    Credit(int64 amount) -> ();
+};
