@@ -241,9 +241,9 @@ if [[ $# -lt 1 ]]; then
 fi
 
 command_name="$1"
-command_path="$(find_executable ${command_name})"
+command_path=( $(find_executable ${command_name}) )
 
-if [[ $? -ne 0 || ! -x "${command_path}" ]]; then
+if [[ $? -ne 0 || ! -x "${command_path[0]}" ]]; then
   if [[ -n "${command_path}" ]]; then
     _path_message=" in the expected location $(_relative "${command_path}")"
   fi
@@ -273,7 +273,7 @@ fi
 
 track-command-execution "${metric_name}" "$@" &
 declare -r start_time="$SECONDS"
-"${command_path}" "$@"
+"${command_path[@]}" "$@"
 declare -r retval=$?
 declare -r end_time="$SECONDS"
 declare -r elapsed_time=$(( 1000 * (end_time - start_time) )) # milliseconds
