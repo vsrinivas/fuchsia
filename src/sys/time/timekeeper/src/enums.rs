@@ -204,6 +204,21 @@ pub enum FrequencyDiscardReason {
     UtcBeforeWindow,
     InsufficientSamples,
     PotentialLeapSecond,
+    #[allow(unused)]
+    TimeStep,
+}
+
+impl Into<Option<CobaltTrackEvent>> for FrequencyDiscardReason {
+    fn into(self) -> Option<CobaltTrackEvent> {
+        match self {
+            Self::UtcBeforeWindow => Some(CobaltTrackEvent::FrequencyWindowDiscardedBeforeWindow),
+            Self::InsufficientSamples => {
+                Some(CobaltTrackEvent::FrequencyWindowDiscardedSampleCount)
+            }
+            Self::PotentialLeapSecond => Some(CobaltTrackEvent::FrequencyWindowDiscardedLeapSecond),
+            Self::TimeStep => None,
+        }
+    }
 }
 
 /// The reasons a time source may have failed.

@@ -18,14 +18,15 @@ use {
     time_metrics_registry::{
         RealTimeClockEventsMetricDimensionEventType as RtcEvent,
         TimeMetricDimensionDirection as Direction, TimeMetricDimensionExperiment as Experiment,
-        TimeMetricDimensionRole as CobaltRole, TimeMetricDimensionTrack as CobaltTrack,
+        TimeMetricDimensionIteration as Iteration, TimeMetricDimensionRole as CobaltRole,
+        TimeMetricDimensionTrack as CobaltTrack,
         TimekeeperLifecycleEventsMetricDimensionEventType as LifecycleEvent,
         TimekeeperTimeSourceEventsMetricDimensionEventType as TimeSourceEvent,
         TimekeeperTrackEventsMetricDimensionEventType as TrackEvent,
         REAL_TIME_CLOCK_EVENTS_METRIC_ID, TIMEKEEPER_CLOCK_CORRECTION_METRIC_ID,
-        TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID, TIMEKEEPER_MONITOR_DIFFERENCE_METRIC_ID,
-        TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID, TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
-        TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+        TIMEKEEPER_FREQUENCY_ESTIMATE_METRIC_ID, TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
+        TIMEKEEPER_MONITOR_DIFFERENCE_METRIC_ID, TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID,
+        TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID, TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
     },
     time_util::time_at_monotonic,
 };
@@ -82,6 +83,21 @@ impl CobaltDiagnostics {
             PERIOD_DURATION,
             // Unfortunately Cobalt does not follow the standard of nanoseconds everywhere.
             sqrt_covariance.into_micros(),
+        );
+    }
+
+    /// Records an update to the estimated frequency.
+    fn record_frequency_update(&self, track: Track, rate_adjust_ppm: i32, window_count: u32) {
+        let iteration = match window_count {
+            1 => Iteration::First,
+            2 => Iteration::Second,
+            _ => Iteration::Subsequent,
+        };
+        self.sender.lock().log_event_count(
+            TIMEKEEPER_FREQUENCY_ESTIMATE_METRIC_ID,
+            (iteration, Into::<CobaltTrack>::into(track), self.experiment),
+            PERIOD_DURATION,
+            rate_adjust_ppm as i64,
         );
     }
 
@@ -176,13 +192,22 @@ impl Diagnostics for CobaltDiagnostics {
                     1,
                 );
             }
-            // TODO(fxbug.dev/56868): Record frequency events in Cobalt.
-            Event::FrequencyWindowDiscarded { .. } => {}
+            Event::FrequencyWindowDiscarded { track, reason } => {
+                if let Some(event) = Into::<Option<TrackEvent>>::into(reason) {
+                    self.sender.lock().log_event_count(
+                        TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+                        (event, Into::<CobaltTrack>::into(track), self.experiment),
+                        PERIOD_DURATION,
+                        1,
+                    );
+                }
+            }
             Event::KalmanFilterUpdated { track, sqrt_covariance, .. } => {
                 self.record_kalman_filter_update(track, sqrt_covariance);
             }
-            // TODO(fxbug.dev/56868): Record frequency events in Cobalt.
-            Event::FrequencyUpdated { .. } => {}
+            Event::FrequencyUpdated { track, rate_adjust_ppm, window_count, .. } => {
+                self.record_frequency_update(track, rate_adjust_ppm, window_count);
+            }
             Event::ClockCorrection { track, correction, strategy } => {
                 self.record_clock_correction(track, correction, strategy);
             }
@@ -212,8 +237,8 @@ mod test {
     use {
         super::*,
         crate::enums::{
-            ClockUpdateReason, InitializeRtcOutcome, Role, SampleValidationError, TimeSourceError,
-            WriteRtcOutcome,
+            ClockUpdateReason, FrequencyDiscardReason, InitializeRtcOutcome, Role,
+            SampleValidationError, TimeSourceError, WriteRtcOutcome,
         },
         fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, Event as EmptyEvent, EventPayload},
         futures::{channel::mpsc, FutureExt, StreamExt},
@@ -360,6 +385,24 @@ mod test {
     async fn record_time_track_events() {
         let (diagnostics, mut mpsc_receiver) = create_test_object();
 
+        diagnostics.record(Event::FrequencyWindowDiscarded {
+            track: Track::Primary,
+            reason: FrequencyDiscardReason::InsufficientSamples,
+        });
+        assert_eq!(
+            mpsc_receiver.next().await,
+            Some(CobaltEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+                event_codes: vec![
+                    TrackEvent::FrequencyWindowDiscardedSampleCount as u32,
+                    CobaltTrack::Primary as u32,
+                    TEST_EXPERIMENT as u32
+                ],
+                component: None,
+                payload: event_count_payload(1),
+            })
+        );
+
         diagnostics.record(Event::KalmanFilterUpdated {
             track: Track::Primary,
             monotonic: zx::Time::from_nanos(333_000_000_000),
@@ -386,6 +429,26 @@ mod test {
                 event_codes: vec![CobaltTrack::Primary as u32, TEST_EXPERIMENT as u32],
                 component: None,
                 payload: event_count_payload(55555),
+            })
+        );
+
+        diagnostics.record(Event::FrequencyUpdated {
+            track: Track::Primary,
+            monotonic: zx::Time::from_nanos(888_000_000_000),
+            rate_adjust_ppm: -4,
+            window_count: 7,
+        });
+        assert_eq!(
+            mpsc_receiver.next().await,
+            Some(CobaltEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_FREQUENCY_ESTIMATE_METRIC_ID,
+                event_codes: vec![
+                    Iteration::Subsequent as u32,
+                    CobaltTrack::Primary as u32,
+                    TEST_EXPERIMENT as u32
+                ],
+                component: None,
+                payload: event_count_payload(-4),
             })
         );
 
