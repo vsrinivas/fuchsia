@@ -2,20 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
+import("//build/fidl/fidl.gni")
 
-banjo("fuchsia.hardware.isp") {
-  disable_verification = true
-  fidl_only = true
-  sources = [ "isp.banjo" ]
-  deps = [
+fidl("fuchsia.hardware.isp") {
+  sources = [ "isp.fidl" ]
+  public_deps = [
     "//sdk/banjo/fuchsia.hardware.camera",
     "//sdk/banjo/fuchsia.hardware.camerahwaccel",
     "//sdk/banjo/fuchsia.sysmem",
-    "//sdk/banjo/zx",
+    "//zircon/vdso/zx",
   ]
-}
-
-group("fuchsia.hardware.isp_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.isp_banjo_cpp_2" ]
 }

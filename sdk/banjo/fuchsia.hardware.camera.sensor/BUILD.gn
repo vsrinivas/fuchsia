@@ -2,22 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
+import("//build/fidl/fidl.gni")
 
-banjo("fuchsia.hardware.camera.sensor") {
-  fidl_only = true
-  sources = [ "camera-sensor.banjo" ]
-  deps = [
+fidl("fuchsia.hardware.camera.sensor") {
+  sources = [ "camera-sensor.fidl" ]
+  public_deps = [
     "//sdk/banjo/fuchsia.hardware.camera",
-    "//sdk/banjo/zx",
+    "//zircon/vdso/zx",
   ]
-}
-
-group("fuchsia.hardware.camera.sensor_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.camera.sensor_banjo_cpp_2" ]
-}
-
-group("fuchsia.hardware.camera.sensor_banjo_cpp_mock") {
-  testonly = true
-  public_deps = [ ":fuchsia.hardware.camera.sensor_banjo_cpp_mock_2" ]
 }

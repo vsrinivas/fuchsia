@@ -54,7 +54,7 @@ protocol Isp {
                        fuchsia.sysmem.ImageFormat_2 image_format,
                        fuchsia.hardware.camera.FrameRate rate, StreamType type,
                        fuchsia.hardware.camerahwaccel.HwAccelFrameCallback frame_callback)
-                            -> (zx.status s, OutputStream st);
+        -> (zx.status s, OutputStream st);
 
     // Configures the ISP to provide the streams with frame rate
     // within the given range.
@@ -64,7 +64,7 @@ protocol Isp {
     //   ZX_ERR_NOT_SUPPORTED if sensor doesn't support a specific frame rate.
     SetFrameRateRange(fuchsia.hardware.camera.FrameRate min_frame_rate,
                       fuchsia.hardware.camera.FrameRate max_frame_rate)
-                        -> (zx.status s);
+        -> (zx.status s);
 
     /// Changes the vendor-defined test pattern mode and sets any associated data.
     ///     |mode|  The test pattern to use. A value of 0 disables it.

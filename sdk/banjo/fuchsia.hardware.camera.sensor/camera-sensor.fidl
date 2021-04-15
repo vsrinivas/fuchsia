@@ -85,7 +85,7 @@ struct OperatingMode {
 };
 
 /// This structure maps the sensor's frame rates to coarse max integration time.
-struct FrameRateInfo  {
+struct FrameRateInfo {
     fuchsia.hardware.camera.FrameRate frame_rate;
     uint32 max_coarse_integration_time;
 };

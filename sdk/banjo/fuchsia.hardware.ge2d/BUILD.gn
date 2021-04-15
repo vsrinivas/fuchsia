@@ -2,19 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
+import("//build/fidl/fidl.gni")
 
-banjo("fuchsia.hardware.ge2d") {
-  fidl_only = true
-  sources = [ "ge2d.banjo" ]
-  deps = [
+fidl("fuchsia.hardware.ge2d") {
+  sources = [ "ge2d.fidl" ]
+  public_deps = [
     "//sdk/banjo/fuchsia.hardware.camera",
     "//sdk/banjo/fuchsia.hardware.camerahwaccel",
     "//sdk/banjo/fuchsia.sysmem",
-    "//sdk/banjo/zx",
+    "//zircon/vdso/zx",
   ]
-}
-
-group("fuchsia.hardware.ge2d_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.ge2d_banjo_cpp_2" ]
 }

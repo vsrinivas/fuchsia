@@ -2,13 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
+import("//build/fidl/fidl.gni")
 
-banjo("fuchsia.hardware.camerahwaccel") {
-  fidl_only = true
-  sources = [ "camerahwaccel.banjo" ]
-}
-
-group("fuchsia.hardware.camerahwaccel_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.camerahwaccel_banjo_cpp_2" ]
+fidl("fuchsia.hardware.camerahwaccel") {
+  sources = [ "camerahwaccel.fidl" ]
 }

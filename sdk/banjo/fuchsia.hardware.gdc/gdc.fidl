@@ -31,7 +31,7 @@ protocol Gdc {
              fuchsia.hardware.camerahwaccel.HwAccelFrameCallback frame_callback,
              fuchsia.hardware.camerahwaccel.HwAccelResChangeCallback res_callback,
              fuchsia.hardware.camerahwaccel.HwAccelRemoveTaskCallback task_remove_callback)
-             -> (zx.status s, uint32 task_index);
+        -> (zx.status s, uint32 task_index);
 
     // De-registers the task.
     // NOTE: Ensure that after calling RemoveTask() on a particular |task_index|,
