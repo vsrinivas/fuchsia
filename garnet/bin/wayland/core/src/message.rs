@@ -4,7 +4,6 @@
 
 use std::io::{self, Read, Write};
 
-use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use thiserror::Error;
 
 use fuchsia_trace as ftrace;
@@ -182,11 +181,11 @@ impl Message {
     pub fn write_arg(&mut self, arg: Arg) -> io::Result<()> {
         ftrace::duration!("wayland", "Message::write_arg");
         match arg {
-            Arg::Int(i) => self.byte_buf.write_i32::<NativeEndian>(i),
-            Arg::Uint(i) => self.byte_buf.write_u32::<NativeEndian>(i),
-            Arg::Fixed(i) => self.byte_buf.write_i32::<NativeEndian>(i.bits()),
-            Arg::Object(i) => self.byte_buf.write_u32::<NativeEndian>(i),
-            Arg::NewId(i) => self.byte_buf.write_u32::<NativeEndian>(i),
+            Arg::Int(i) => self.byte_buf.write_all(&i.to_ne_bytes()[..]),
+            Arg::Uint(i) => self.byte_buf.write_all(&i.to_ne_bytes()[..]),
+            Arg::Fixed(i) => self.byte_buf.write_all(&i.bits().to_ne_bytes()[..]),
+            Arg::Object(i) => self.byte_buf.write_all(&i.to_ne_bytes()[..]),
+            Arg::NewId(i) => self.byte_buf.write_all(&i.to_ne_bytes()[..]),
             Arg::String(s) => self.write_slice(s.as_bytes(), true),
             Arg::Array(a) => self.write_slice(a.as_slice(), false),
             Arg::Handle(h) => {
@@ -196,17 +195,27 @@ impl Message {
         }
     }
 
+    fn read_i32(&mut self) -> io::Result<i32> {
+        let mut buf = [0; std::mem::size_of::<i32>()];
+        let () = self.byte_buf.read_exact(&mut buf)?;
+        Ok(i32::from_ne_bytes(buf))
+    }
+
+    fn read_u32(&mut self) -> io::Result<u32> {
+        let mut buf = [0; std::mem::size_of::<u32>()];
+        let () = self.byte_buf.read_exact(&mut buf)?;
+        Ok(u32::from_ne_bytes(buf))
+    }
+
     /// Reads an Arg out of this Message and return the value.
     pub fn read_arg(&mut self, arg: ArgKind) -> io::Result<Arg> {
         ftrace::duration!("wayland", "Message::read_arg");
         match arg {
-            ArgKind::Int => self.byte_buf.read_i32::<NativeEndian>().map(Arg::Int),
-            ArgKind::Uint => self.byte_buf.read_u32::<NativeEndian>().map(Arg::Uint),
-            ArgKind::Fixed => {
-                self.byte_buf.read_i32::<NativeEndian>().map(|i| Arg::Fixed(i.into()))
-            }
-            ArgKind::Object => self.byte_buf.read_u32::<NativeEndian>().map(Arg::Object),
-            ArgKind::NewId => self.byte_buf.read_u32::<NativeEndian>().map(Arg::NewId),
+            ArgKind::Int => self.read_i32().map(Arg::Int),
+            ArgKind::Uint => self.read_u32().map(Arg::Uint),
+            ArgKind::Fixed => self.read_i32().map(|i| Arg::Fixed(i.into())),
+            ArgKind::Object => self.read_u32().map(Arg::Object),
+            ArgKind::NewId => self.read_u32().map(Arg::NewId),
             ArgKind::String => self
                 .read_slice(true)
                 .map(|vec| String::from_utf8_lossy(vec.as_slice()).to_string())
@@ -248,21 +257,21 @@ impl Message {
     }
 
     pub fn read_header(&mut self) -> io::Result<MessageHeader> {
-        let sender = self.byte_buf.read_u32::<NativeEndian>()?;
-        let word = self.byte_buf.read_u32::<NativeEndian>()?;
+        let sender = self.read_u32()?;
+        let word = self.read_u32()?;
         Ok(MessageHeader { sender, length: (word >> 16) as u16, opcode: word as u16 })
     }
 
     pub fn write_header(&mut self, header: &MessageHeader) -> io::Result<()> {
-        self.byte_buf.write_u32::<NativeEndian>(header.sender)?;
+        self.byte_buf.write_all(&header.sender.to_ne_bytes()[..])?;
         self.byte_buf
-            .write_u32::<NativeEndian>((header.length as u32) << 16 | header.opcode as u32)?;
+            .write_all(&((header.length as u32) << 16 | header.opcode as u32).to_ne_bytes()[..])?;
         Ok(())
     }
 
     fn read_slice(&mut self, null_term: bool) -> io::Result<Vec<u8>> {
         let pos = self.byte_buf.position();
-        let len = self.byte_buf.read_u32::<NativeEndian>()?;
+        let len = self.read_u32()?;
         let mut vec: Vec<u8> = Vec::with_capacity(len as usize);
         if len == 0 {
             return Ok(vec);
@@ -291,8 +300,9 @@ impl Message {
         }
 
         let pad = compute_padding(self.byte_buf.position() - pos);
-        if pad > 0 {
-            self.byte_buf.read_uint::<NativeEndian>(pad)?;
+        for _ in 0..pad {
+            let mut buf = [0; 1];
+            self.byte_buf.read_exact(&mut buf)?;
         }
         assert!(self.byte_buf.position() % 4 == 0);
         Ok(vec)
@@ -305,16 +315,16 @@ impl Message {
             len += 1;
         }
 
-        self.byte_buf.write_u32::<NativeEndian>(len)?;
+        self.byte_buf.write_all(&len.to_ne_bytes())?;
         self.byte_buf.write_all(s)?;
         if null_term {
-            self.byte_buf.write_u8(0)?;
+            self.byte_buf.write_all(&0u8.to_ne_bytes()[..])?;
         }
 
         // Pad to 32-bit boundary.
         let pad = compute_padding(self.byte_buf.position() - pos);
-        if pad > 0 {
-            self.byte_buf.write_uint::<NativeEndian>(0, pad)?;
+        for _ in 0..pad {
+            self.byte_buf.write_all(&0u8.to_ne_bytes()[..])?;
         }
         assert!(self.byte_buf.position() % 4 == 0);
         Ok(())
