@@ -30,7 +30,7 @@ source_set("lib") {
 
   deps = [
     ":imx227_bind",
-    "//sdk/banjo/fuchsia.hardware.camera",
+    "//sdk/banjo/fuchsia.hardware.camera:fuchsia.hardware.camera_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/lib/syslog/cpp",
     "//src/devices/lib/driver",
