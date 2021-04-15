@@ -1596,8 +1596,8 @@ uint32_t Coordinator::GetSuspendFlagsFromSystemPowerState(
   }
 }
 
-void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
-                                 GetBindProgramCompleter::Sync& completer) {
+void Coordinator::GetBindRules(::fidl::StringView driver_path_view,
+                               GetBindRulesCompleter::Sync& completer) {
   std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
   const Driver* driver = LibnameToDriver(driver_path);
   if (driver == nullptr) {
@@ -1622,22 +1622,26 @@ void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
   if (driver->binding_size > 0) {
     count = driver->binding_size / sizeof(binding_insts[0]);
   }
-  if (count > fuchsia_device_manager_BIND_PROGRAM_INSTRUCTIONS_MAX) {
+  if (count > fuchsia_device_manager_BIND_RULES_INSTRUCTIONS_MAX) {
     completer.ReplyError(ZX_ERR_BUFFER_TOO_SMALL);
     return;
   }
 
-  std::vector<fuchsia_device_manager::wire::BindInstruction> instructions;
+  using fuchsia_device_manager::wire::BindInstruction;
+
+  std::vector<BindInstruction> instructions;
   for (uint32_t i = 0; i < count; i++) {
-    instructions.push_back(fuchsia_device_manager::wire::BindInstruction{
+    instructions.push_back(BindInstruction{
         .op = binding_insts[i].op,
         .arg = binding_insts[i].arg,
         .debug = binding_insts[i].debug,
     });
   }
-  completer.ReplySuccess(
-      ::fidl::VectorView<fuchsia_device_manager::wire::BindInstruction>::FromExternal(
-          instructions));
+
+  auto instructions_vec_view = ::fidl::VectorView<BindInstruction>::FromExternal(instructions);
+
+  completer.ReplySuccess(fuchsia_device_manager::wire::BindRulesBytecode::WithBytecodeV1(
+      fidl::ObjectView<::fidl::VectorView<BindInstruction>>::FromExternal(&instructions_vec_view)));
 }
 
 void Coordinator::Register(fuchsia_pkg::wire::PackageUrl driver_url,

@@ -94,20 +94,20 @@ class BindCompilerTest : public testing::Test {
   std::string relative_device_path_;
 };
 
-// Check that calling GetBindProgram with an invalid driver path returns ZX_ERR_NOT_FOUND.
+// Check that calling GetBindRules with an invalid driver path returns ZX_ERR_NOT_FOUND.
 TEST_F(BindCompilerTest, InvalidDriver) {
-  fuchsia::device::manager::BindDebugger_GetBindProgram_Result result;
-  ASSERT_EQ(bind_debugger_->GetBindProgram("abc", &result), ZX_OK);
+  fuchsia::device::manager::BindDebugger_GetBindRules_Result result;
+  ASSERT_EQ(bind_debugger_->GetBindRules("abc", &result), ZX_OK);
   ASSERT_TRUE(result.is_err());
   ASSERT_EQ(result.err(), ZX_ERR_NOT_FOUND);
 }
 
 // Get the bind program of the test driver and check that it has the expected instructions.
 TEST_F(BindCompilerTest, ValidDriver) {
-  fuchsia::device::manager::BindDebugger_GetBindProgram_Result result;
-  ASSERT_EQ(bind_debugger_->GetBindProgram(driver_libpath_, &result), ZX_OK);
+  fuchsia::device::manager::BindDebugger_GetBindRules_Result result;
+  ASSERT_EQ(bind_debugger_->GetBindRules(driver_libpath_, &result), ZX_OK);
   ASSERT_TRUE(result.is_response());
-  auto instructions = result.response().instructions;
+  auto instructions = result.response().bind_rules.bytecode_v1();
 
   zx_bind_inst_t expected_instructions[] = {
       BI_ABORT_IF_AUTOBIND,

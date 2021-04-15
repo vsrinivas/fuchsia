@@ -26,6 +26,14 @@ struct BindInstruction {
     uint32 debug;
 };
 
+union BindRulesBytecode {
+    /// Bind rules in the old bytecode format.
+    1: vector<BindInstruction>:BIND_RULES_INSTRUCTIONS_MAX bytecode_v1;
+
+    /// Bind rules in the new bytecode format.
+    2: vector<uint8>:MAX bytecode_v2;
+};
+
 // Identifier used to let the devcoordinator describe specific devices during
 // composite construction
 alias LocalDeviceId = uint64;
@@ -59,7 +67,7 @@ const uint32 DEVICE_FRAGMENT_PARTS_MAX = 16;
 const uint32 DEVICE_FRAGMENT_PART_INSTRUCTIONS_MAX = 32;
 
 // Maximum number of instructions in a driver bind program
-const uint32 BIND_PROGRAM_INSTRUCTIONS_MAX = 256;
+const uint32 BIND_RULES_INSTRUCTIONS_MAX = 256;
 
 /// Bit flags for device add configuration
 bits AddDeviceConfig : uint32 {
@@ -293,8 +301,8 @@ protocol BindDebugger {
     /// ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path.
     /// ZX_ERR_BUFFER_TOO_SMALL indicates that the driver's bind program is longer than the
     /// maximum number of instructions (BIND_PROGRAM_INSTRUCTIONS_MAX).
-    GetBindProgram(string:DEVICE_PATH_MAX driver_path)
-        -> (vector<BindInstruction>:BIND_PROGRAM_INSTRUCTIONS_MAX instructions)
+    GetBindRules(string:DEVICE_PATH_MAX driver_path)
+        -> (BindRulesBytecode bind_rules)
         error zx.status;
 
     /// Returns the list of properties of the given device.

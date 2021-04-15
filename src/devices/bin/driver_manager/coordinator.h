@@ -382,8 +382,8 @@ class Coordinator : public fidl::WireInterface<device_manager_fidl::BindDebugger
                                   bool autobind);
 
   // Bind debugger interface
-  void GetBindProgram(::fidl::StringView driver_path,
-                      GetBindProgramCompleter::Sync& completer) override;
+  void GetBindRules(::fidl::StringView driver_path,
+                    GetBindRulesCompleter::Sync& completer) override;
   void GetDeviceProperties(::fidl::StringView name,
                            GetDevicePropertiesCompleter::Sync& completer) override;
 

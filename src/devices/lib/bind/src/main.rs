@@ -5,7 +5,7 @@
 use bind::debugger;
 use bind::encode_bind_program_v1::RawInstruction;
 use bind::instruction::DeviceProperty;
-use fidl_fuchsia_device_manager::BindDebuggerMarker;
+use fidl_fuchsia_device_manager::{BindDebuggerMarker, BindRulesBytecode};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
@@ -41,19 +41,27 @@ async fn main() {
         }
     };
 
-    let bind_program = match service.get_bind_program(&opt.driver_path).await {
+    let bind_rules_result = match service.get_bind_rules(&opt.driver_path).await {
         Err(fidl_err) => {
-            eprintln!("FIDL call to get bind program failed: {}", fidl_err);
+            eprintln!("FIDL call to get bind rules failed: {}", fidl_err);
             std::process::exit(1);
         }
         Ok(Err(zx_err)) => {
             eprintln!(
-                "FIDL call to get bind program returned an error: {}",
+                "FIDL call to get bind rules returned an error: {}",
                 zx::Status::from_raw(zx_err)
             );
             std::process::exit(1);
         }
-        Ok(Ok(program)) => program,
+        Ok(Ok(rules)) => rules,
+    };
+
+    let bind_rules = match bind_rules_result {
+        BindRulesBytecode::BytecodeV1(rules) => rules,
+        BindRulesBytecode::BytecodeV2(_) => {
+            eprintln!("Currently the debugger only supports the old bytecode");
+            std::process::exit(1);
+        }
     };
 
     let device_properties = match service.get_device_properties(&opt.device_path).await {
@@ -71,7 +79,7 @@ async fn main() {
         Ok(Ok(props)) => props,
     };
 
-    let raw_instructions = bind_program
+    let raw_instructions = bind_rules
         .into_iter()
         .map(|instruction| RawInstruction([instruction.op, instruction.arg, instruction.debug]))
         .collect::<Vec<RawInstruction<[u32; 3]>>>();
