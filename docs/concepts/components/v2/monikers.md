@@ -99,9 +99,9 @@ Represented by the minimal sequence of child monikers encountered when tracing
 upwards from a source to the common ancestor of the source and target and then
 downwards to the target.
 
-A relative path begins with `.` and is followed by path segments. `\` denotes
+A relative path begins with `.` and is followed by path segments. ` \ ` denotes
 an upwards traversal segment. `/` denotes a downwards traversal segment. There
-is no trailing `\` or `/`.
+is no trailing ` \ ` or `/`.
 
 Relative monikers are invertible; a path from source to target can be
 transformed into a path from target to the source because information about

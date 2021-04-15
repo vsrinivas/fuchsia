@@ -60,7 +60,7 @@ A component resolver can be implemented by
 
 When the component manager is asked to resolve a component URL, it finds the component resolver
 registered to the URL’s scheme and asks it to resolve the URL over the
-[`fuchsia.sys2.ComponentResolver’] FIDL protocol.
+[`fuchsia.sys2.ComponentResolver`] FIDL protocol.
 
 If resolution succeeds, the component resolver must return a [`ComponentDecl`], the FIDL
 representation of a [component manifest][component-manifest]. If the component being resolved has

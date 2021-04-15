@@ -125,7 +125,7 @@ information.
 [doc-realms]: /docs/concepts/components/v2/realms.md
 [doc-realm-framework-protocol]: /docs/concepts/components/v2/realms.md#realm-framework-protocol
 [doc-monikers]: /docs/concepts/components/v2/monikers.md
-[doc-component_urls]: /docs/concepts/components/component_urls.md
+[doc-component-urls]: /docs/concepts/components/component_urls.md
 [doc-capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
 [doc-component-declaration]: /docs/concepts/components/v2/declarations.md
 [glossary-component]: /docs/glossary.md#component
