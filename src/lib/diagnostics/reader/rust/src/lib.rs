@@ -457,13 +457,13 @@ mod tests {
         super::*,
         anyhow::format_err,
         diagnostics_data::{Data, LifecycleType},
+        diagnostics_hierarchy::assert_data_tree as assert_inspect_tree,
         fidl_fuchsia_diagnostics as fdiagnostics,
         fidl_fuchsia_sys::ComponentControllerEvent,
         fuchsia_component::{
             client::App,
             server::{NestedEnvironment, ServiceFs},
         },
-        fuchsia_inspect::assert_inspect_tree,
         fuchsia_zircon as zx,
         futures::{StreamExt, TryStreamExt},
     };

@@ -4,8 +4,8 @@
 
 use {
     anyhow::Error,
+    diagnostics_hierarchy::assert_data_tree as assert_inspect_tree,
     diagnostics_reader::{ArchiveReader, Inspect},
-    fuchsia_inspect::testing::assert_inspect_tree,
 };
 
 #[fuchsia::test]
