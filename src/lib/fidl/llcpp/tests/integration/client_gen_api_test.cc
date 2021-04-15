@@ -310,4 +310,42 @@ TEST(GenAPITestCase, UnbindPreventsSubsequentCalls) {
   EXPECT_EQ(1, server_ptr->num_one_way());
 }
 
+// If writing to the channel fails, the response context ownership should be
+// released back to the user with a call to |OnError|.
+TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
+  zx::status endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [client_end, server_end] = std::move(*endpoints);
+  {
+    zx::channel client_channel_non_writable;
+    ASSERT_OK(
+        client_end.channel().replace(ZX_RIGHT_READ | ZX_RIGHT_WAIT, &client_channel_non_writable));
+    client_end.channel() = std::move(client_channel_non_writable);
+  }
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fidl::Client<Example> client(std::move(client_end), loop.dispatcher());
+  loop.StartThread("client-test");
+
+  class TestResponseContext final : public fidl::WireResponseContext<Example::TwoWay> {
+   public:
+    explicit TestResponseContext(sync_completion_t* error) : error_(error) {}
+
+    void OnError() override { sync_completion_signal(error_); }
+
+    void OnReply(fidl::WireResponse<Example::TwoWay>* message) override { FAIL(); }
+
+   private:
+    sync_completion_t* error_;
+  };
+
+  sync_completion_t error;
+  TestResponseContext context(&error);
+
+  fidl::Buffer<fidl::WireRequest<Example::TwoWay>> buffer;
+  fidl::Result result = client->TwoWay(buffer.view(), "foo", &context);
+  ASSERT_STATUS(ZX_ERR_ACCESS_DENIED, result.status());
+  ASSERT_OK(sync_completion_wait(&error, ZX_TIME_INFINITE));
+}
+
 }  // namespace

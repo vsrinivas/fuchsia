@@ -150,7 +150,7 @@ void OutgoingMessage::WriteImpl(zx_handle_t channel) {
   }
   if (!ok()) {
     client->ForgetAsyncTxn(context);
-    delete context;
+    context->OnError();
   }
   return ::fidl::Result(status_, error_);
 }

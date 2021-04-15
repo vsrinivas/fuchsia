@@ -21,14 +21,34 @@
 namespace fidl {
 namespace internal {
 
-// ResponseContext contains the state for an outstanding asynchronous transaction. It inherits from
-// an intrusive container node so that ClientBase can track it. The user (or generated code) passes
-// a pointer to the ResponseContext to the ClientBase, implicitly transferring ownership. Ownership
-// is only returned to the caller once either OnReply() or OnError() is invoked.
-// TODO(fxbug.dev/50664): fbl::WAVLTree must be made available in the SDK, otherwise it needs to be
-// replaced here with some tree that is available there.
-// NOTE: ResponseContext uses list_node_t in order to safely iterate over outstanding transactions
-// on ClientBase destruction while invoking OnError() which can destroy the ResponseContext.
+// |ResponseContext| contains information about an outstanding asynchronous
+// method call. It inherits from an intrusive container node so that
+// |ClientBase| can track it without requiring heap allocation.
+//
+// The generated code will define type-specific response contexts e.g.
+// `FooMethodResponseContext`, that inherits from |ResponseContext| and
+// interprets the bytes passed to the |OnReply| call appropriately.
+// Users should interact with those subclasses; the notes here on lifecycle
+// apply to those subclasses too.
+//
+// ## Lifecycle
+//
+// The bindings runtime has no opinions about how |ResponseContext|s are
+// allocated.
+//
+// Once a |ResponseContext| is passed to the bindings runtime, ownership
+// is transferred to the bindings (in particular, the |ClientBase| object).
+// Ownership is returned back to the caller when either |OnReply| or |OnError|
+// is invoked. This means that the user or generated code must keep the
+// response context object alive for the duration of the async method call.
+//
+// TODO(fxbug.dev/50664): fbl::WAVLTree must be made available in the SDK,
+// otherwise it needs to be replaced here with some tree that is available
+// there.
+//
+// NOTE: |ResponseContext| are additionally referenced with a |list_node_t|
+// in order to safely iterate over outstanding transactions on |ClientBase|
+// destruction, invoking |OnError| on each outstanding response context.
 class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, private list_node_t {
  public:
   ResponseContext(const fidl_type_t* type, uint64_t ordinal)
@@ -38,7 +58,7 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
         ordinal_(ordinal) {}
   virtual ~ResponseContext() = default;
 
-  // Neither copyable nor movable.
+  // |ResponseContext| objects are "pinned" in memory.
   ResponseContext(const ResponseContext& other) = delete;
   ResponseContext& operator=(const ResponseContext& other) = delete;
   ResponseContext(ResponseContext&& other) = delete;
@@ -49,18 +69,23 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
   zx_txid_t Txid() const { return txid_; }
 
   // Invoked if a response has been received for this context.
+  //
+  // |OnReply| is allowed to consume the current object.
   virtual void OnReply(uint8_t* reply) = 0;
 
-  // Invoked if an error occurs handling the response message prior to invoking the user-specified
-  // callback or if the ClientBase is destroyed with the transaction outstanding. Note that
-  // OnError() may be invoked within ~ClientBase(), so the user must ensure that a ClientBase
-  // is not destroyed while holding any locks OnError() would take.
+  // Invoked if an error occurs handling the response message prior to invoking
+  // the user-specified callback or if the ClientBase is destroyed with the
+  // transaction outstanding. Note that |OnError| may be invoked within
+  // ~ClientBase(), so the user must ensure that a FIDL client is not
+  // destroyed while holding any locks which |OnError| would take.
+  //
+  // |OnError| is allowed to consume the current object.
   virtual void OnError() = 0;
 
  private:
   friend class ClientBase;
 
-  // For use with fbl::WAVLTree.
+  // For use with |fbl::WAVLTree|.
   struct Traits {
     static zx_txid_t GetKey(const ResponseContext& context) { return context.txid_; }
     static bool LessThan(const zx_txid_t& key1, const zx_txid_t& key2) { return key1 < key2; }
