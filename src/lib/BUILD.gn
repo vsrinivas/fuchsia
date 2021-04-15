@@ -98,6 +98,7 @@ group("tests") {
     "icu:tests",
     "icu_data:tests",
     "inet:tests",
+    "inject:tests",
     "intl:tests",
     "isolated_devmgr:tests",
     "json_parser:tests",
