@@ -77,11 +77,11 @@ void main() {
         expect(
             await getInspectValues(
                 inspect, '$componentManagerAppmgrPath/*/@samples/*:cpu_time'),
-            multiValue(greaterThan(0), length: greaterThan(0)));
+            multiValue(greaterThanOrEqualTo(0), length: greaterThan(0)));
         expect(
             await getInspectValues(
                 inspect, '$componentManagerAppmgrPath/*/@samples/*:queue_time'),
-            multiValue(greaterThan(0), length: greaterThan(0)));
+            multiValue(greaterThanOrEqualTo(0), length: greaterThan(0)));
         expect(
             await getInspectValues(
                 inspect, '$componentManagerAppmgrPath/*/@samples/*:timestamp'),
