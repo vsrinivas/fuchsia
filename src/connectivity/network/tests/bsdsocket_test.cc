@@ -4363,17 +4363,22 @@ TEST_P(NetSocketTest, SocketPeekTest) {
   EXPECT_EQ(recvbuf[0], sendbuf[0]);
 
   // Second peek across first 2 packets and drain them from the socket receive queue.
-  // Toggle the flags to MSG_PEEK every other iteration.
   ssize_t torecv = sizeof(recvbuf);
   for (int i = 0; torecv > 0; i++) {
     int flags = i % 2 ? 0 : MSG_PEEK;
     ssize_t readLen = 0;
-    EXPECT_EQ(readLen = asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), flags,
-                                        &addr, &addrlen, socketType, expect_success_timeout),
-              expectReadLen);
-    if (HasFailure()) {
-      break;
-    }
+    // Retry socket read with MSG_PEEK to ensure all of the expected data is received.
+    //
+    // TODO(https://fxbug.dev/74639) : Use SO_RCVLOWAT instead of retry.
+    do {
+      readLen = asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), flags, &addr,
+                                &addrlen, socketType, expect_success_timeout);
+      if (HasFailure()) {
+        break;
+      }
+    } while (flags == MSG_PEEK && readLen < expectReadLen);
+    EXPECT_EQ(readLen, expectReadLen);
+
     EXPECT_EQ(recvbuf[0], sendbuf[0]);
     EXPECT_EQ(recvbuf[6], sendbuf[6]);
     // For SOCK_STREAM, we validate peek across 2 packets with a single recv call.
