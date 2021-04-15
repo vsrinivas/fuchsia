@@ -2,17 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
+import("//build/fidl/fidl.gni")
 
-banjo("fuchsia.hardware.platform.bus") {
-  fidl_only = true
-  sources = [ "platform-bus.banjo" ]
-  deps = [
+fidl("fuchsia.hardware.platform.bus") {
+  sources = [ "platform-bus.fidl" ]
+  public_deps = [
     "//sdk/banjo/fuchsia.hardware.platform.device",
-    "//sdk/banjo/zx",
+    "//zircon/vdso/zx",
   ]
-}
-
-group("fuchsia.hardware.platform.bus_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.platform.bus_banjo_cpp_2" ]
 }

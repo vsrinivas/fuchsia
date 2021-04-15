@@ -91,7 +91,7 @@ protocol PbusSysSuspend {
              uint8 suspend_reason) -> (zx.status out_status, uint8 out_state);
 };
 
-[Transport = "Banjo", BanjoLayout="ddk-protocol", DefaultProtocol]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol", DefaultProtocol]
 protocol PBus {
     /// Adds a new platform device to the bus, using configuration provided by |dev|.
     /// Platform devices are created in their own separate devhosts.
