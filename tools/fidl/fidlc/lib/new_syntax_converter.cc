@@ -138,8 +138,8 @@ std::optional<UnderlyingType> resolve_type(
       lib_name.emplace_back(id->components[i]->span().data());
     }
 
-    const flat::Libraries* libs = lib->GetLibraries();
-    if (libs->Lookup(lib_name, &dep_lib)) {
+    auto filename = id->span().source_file().filename();
+    if (lib->LookupDependency(filename, lib_name, &dep_lib)) {
       return resolve_identifier(id->components.back(), dep_lib);
     }
   };

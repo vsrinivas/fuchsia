@@ -2176,6 +2176,109 @@ type Foo = resource struct {
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, deps, flags));
 }
 
+TEST(ConverterTests, TypesBehindTwoAliasedImports) {
+  std::string dep1 = R"FIDL(
+library dep1;
+
+using zx;
+
+bits B {
+  BM = 1;
+};
+enum E : uint64 {
+  EM = 1;
+};
+table T {
+  1: string TM;
+};
+strict union U {
+  1: string UM;
+};
+struct S {};
+protocol P {};
+
+alias A = array<uint8>:4;
+alias H = zx.handle?;
+alias I = handle;
+alias V = vector<U>?;
+alias Y = bytes?;
+alias Z = string?;
+)FIDL";
+
+  std::string dep2 = R"FIDL(
+library dep2;
+
+using dep1 as imported;
+
+alias A = imported.A;
+alias B = imported.B;
+alias E = imported.E;
+alias H = imported.H;
+alias I = imported.I;
+alias P = imported.P;
+alias S = imported.S;
+alias T = imported.T;
+alias U = imported.U;
+alias V = imported.V;
+alias Y = imported.Y;
+alias Z = imported.Z;
+)FIDL";
+
+  std::string old_version = R"FIDL(
+library example;
+
+using dep2 as d2;
+
+resource struct Foo {
+  d2.A a1;
+  array<d2.B>:4 a2;
+  array<d2.S?>:4 a3;
+  d2.Y b1;
+  d2.Z b2;
+  vector<d2.E>:16 v1;
+  vector<d2.T>:16 v2;
+  d2.V:16 v3;
+  d2.P p1;
+  d2.P? p2;
+  request<d2.P> r1;
+  request<d2.P>? r2;
+  d2.H h1;
+  d2.I h2;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+using dep2 as d2;
+
+type Foo = resource struct {
+  a1 d2.A;
+  a2 array<d2.B,4>;
+  a3 array<box<d2.S>,4>;
+  b1 d2.Y;
+  b2 d2.Z;
+  v1 vector<d2.E>:16;
+  v2 vector<d2.T>:16;
+  v3 d2.V:16;
+  p1 d2.P;
+  p2 d2.P:optional;
+  r1 server_end:d2.P;
+  r2 server_end:<optional,d2.P>;
+  h1 d2.H;
+  h2 d2.I;
+};
+)FIDL";
+  std::vector<std::string> deps;
+  deps.emplace_back(dep1);
+  deps.emplace_back(dep2);
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, deps, flags));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, deps, flags));
+}
+
 TEST(ConverterTests, TypesBehindAliasThenImport) {
   std::string dep1 = R"FIDL(
 library dep1;

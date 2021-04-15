@@ -716,10 +716,15 @@ class Dependencies {
   // Returns true if this dependency set contains a library with the given name and filename.
   bool Contains(std::string_view filename, const std::vector<std::string_view>& name);
 
-  // Looks up a dependent library by |filename| and |name|, and marks it as
-  // used.
-  bool LookupAndUse(std::string_view filename, const std::vector<std::string_view>& name,
-                    Library** out_library);
+  enum class LookupMode {
+    kSilent,
+    kUse,
+  };
+
+  // Looks up a dependent library by |filename| and |name|, and optionally marks
+  // it as used or not.
+  bool Lookup(std::string_view filename, const std::vector<std::string_view>& name, LookupMode mode,
+              Library** out_library) const;
 
   // VerifyAllDependenciesWereUsed verifies that all regisered dependencies
   // were used, i.e. at least one lookup was made to retrieve them.
@@ -956,7 +961,9 @@ class Library {
   // TODO(fxbug.dev/70247): this method has been created solely for the benefit
   //   of fidlconv.  Once the conversion using that tool has been completed and
   //   and the tool has been removed, this method should be removed as well.
-  const Libraries* GetLibraries() const;
+  // Looks up a dependent library by |filename| and |name|.
+  bool LookupDependency(std::string_view filename, const std::vector<std::string_view>& name,
+                        Library** out_library) const;
 
   template <typename NumericType>
   bool ParseNumericLiteral(const raw::NumericLiteral* literal, NumericType* out_value) const;
@@ -1102,7 +1109,7 @@ class VerifyResourcenessStep : public StepBase {
   void ForDecl(const Decl* decl);
 
  private:
-  // Returns the effective resourcenss of |type|. The set of effective resource
+  // Returns the effective resourceness of |type|. The set of effective resource
   // types includes (1) nominal resource types per the FTP-057 definition, and
   // (2) declarations that have an effective resource member (or equivalently,
   // transitively contain a nominal resource).

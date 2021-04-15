@@ -1175,8 +1175,8 @@ bool Dependencies::Contains(std::string_view filename, const std::vector<std::st
   return iter2 != iter1->second->end();
 }
 
-bool Dependencies::LookupAndUse(std::string_view filename,
-                                const std::vector<std::string_view>& name, Library** out_library) {
+bool Dependencies::Lookup(std::string_view filename, const std::vector<std::string_view>& name,
+                          Dependencies::LookupMode mode, Library** out_library) const {
   auto iter1 = dependencies_.find(std::string(filename));
   if (iter1 == dependencies_.end()) {
     return false;
@@ -1188,7 +1188,9 @@ bool Dependencies::LookupAndUse(std::string_view filename,
   }
 
   auto ref = iter2->second;
-  ref->used_ = true;
+  if (mode == Dependencies::LookupMode::kUse) {
+    ref->used_ = true;
+  }
   *out_library = ref->library_;
   return true;
 }
@@ -1265,6 +1267,11 @@ void Library::ValidateAttributesConstraints(const Decl* decl,
   }
 }
 
+bool Library::LookupDependency(std::string_view filename, const std::vector<std::string_view>& name,
+                               Library** out_library) const {
+  return dependencies_.Lookup(filename, name, Dependencies::LookupMode::kSilent, out_library);
+}
+
 SourceSpan Library::GeneratedSimpleName(const std::string& name) {
   return generated_source_file_.AddLine(name);
 }
@@ -1299,7 +1306,7 @@ std::optional<Name> Library::CompileCompoundIdentifier(
 
   auto filename = compound_identifier->span().source_file().filename();
   Library* dep_library = nullptr;
-  if (dependencies_.LookupAndUse(filename, library_name, &dep_library)) {
+  if (dependencies_.Lookup(filename, library_name, Dependencies::LookupMode::kUse, &dep_library)) {
     return Name::CreateSourced(dep_library, decl_name);
   }
 
@@ -1316,7 +1323,8 @@ std::optional<Name> Library::CompileCompoundIdentifier(
   member_library_name.pop_back();
 
   Library* member_dep_library = nullptr;
-  if (dependencies_.LookupAndUse(filename, member_library_name, &member_dep_library)) {
+  if (dependencies_.Lookup(filename, member_library_name, Dependencies::LookupMode::kUse,
+                           &member_dep_library)) {
     return Name::CreateSourced(member_dep_library, member_decl_name,
                                std::string(member_name.data()));
   }
@@ -2890,8 +2898,6 @@ Decl* Library::LookupDeclByName(Name::Key name) const {
   }
   return iter->second;
 }
-
-const Libraries* Library::GetLibraries() const { return all_libraries_; }
 
 template <typename NumericType>
 bool Library::ParseNumericLiteral(const raw::NumericLiteral* literal,
