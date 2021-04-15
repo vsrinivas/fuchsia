@@ -90,58 +90,43 @@ if (is_host) {
     non_go_deps = [ ":gidl_mixer_test_json" ]
   }
 
-  llcpp_gidl_output_prefix = "conformance_suite__"
-  foreach(gidl_file, conformance_suite_golden_gidl_files) {
-    gidl_name = get_path_info(gidl_file, "name")
-    target = "${llcpp_gidl_output_prefix}${gidl_name}"
-    gidl_llcpp_conformance(target) {
-      inputs = [ gidl_file ]
+  conformance_golden_items = [
+    {
+      language = "go"
+      extension = "go"
+    },
+    {
+      language = "hlcpp"
+      extension = "cc"
+    },
+    {
+      language = "llcpp"
+      extension = "cc"
+    },
+  ]
+
+  foreach(item, conformance_golden_items) {
+    gidl("${item.language}_goldens") {
+      type = "conformance"
+      language = item.language
+      inputs = conformance_suite_golden_gidl_files
       fidl = conformance_suite_fidl_target
-      deps = [ "//third_party/googletest:gtest" ]
-      if (is_fuchsia) {
-        deps += [ "//sdk/cts/tests/pkg/fidl/cpp:handle_util" ]
-      }
+      output = "$target_gen_dir/${item.language}_golden.${item.extension}"
     }
-  }
-
-  gidl_hlcpp_conformance("gidl_hlcpp_goldens") {
-    inputs = conformance_suite_golden_gidl_files
-    fidl = conformance_suite_fidl_target
-  }
-
-  go_golden_generated_source = "$target_gen_dir/gidl_conformance_goldens.go"
-  gidl("gidl_go_goldens") {
-    type = "conformance"
-    language = "go"
-    inputs = conformance_suite_golden_gidl_files
-    fidl = conformance_suite_fidl_target
-    output = go_golden_generated_source
   }
 
   golden_test("gidl_golden_tests") {
     goldens_dir = "goldens"
-    deps = [
-      ":gidl_go_goldens",
-      ":gidl_hlcpp_goldens_gidl",
-    ]
-    entries = [
-      {
-        golden = "go_golden.go.golden"
-        generated = go_golden_generated_source
-      },
-      {
-        golden = "hlcpp_golden.cc.golden"
-        generated = "${target_gen_dir}/gidl_generated_gidl_hlcpp_goldens.cc"
-      },
-    ]
-    foreach(gidl_file, conformance_suite_golden_gidl_files) {
-      gidl_name = get_path_info(gidl_file, "name")
-      target = "${llcpp_gidl_output_prefix}${gidl_name}"
-      deps += [ ":${target}" ]
+    deps = []
+    entries = []
+
+    foreach(item, conformance_golden_items) {
+      deps += [ ":${item.language}_goldens" ]
       entries += [
         {
-          golden = "llcpp_${gidl_name}.cc.golden"
-          generated = "${target_gen_dir}/gidl_generated_${target}.cc"
+          golden = "${item.language}_golden.${item.extension}.golden"
+          generated =
+              "$target_gen_dir/${item.language}_golden.${item.extension}"
         },
       ]
     }
