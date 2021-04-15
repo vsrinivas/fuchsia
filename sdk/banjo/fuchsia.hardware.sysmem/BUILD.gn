@@ -2,14 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
+import("//build/fidl/fidl.gni")
 
-banjo("fuchsia.hardware.sysmem") {
-  fidl_only = true
-  sources = [ "sysmem.banjo" ]
-  deps = [ "//sdk/banjo/zx" ]
-}
-
-group("fuchsia.hardware.sysmem_banjo_cpp") {
-  public_deps = [ ":fuchsia.hardware.sysmem_banjo_cpp_2" ]
+fidl("fuchsia.hardware.sysmem") {
+  sources = [ "sysmem.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
