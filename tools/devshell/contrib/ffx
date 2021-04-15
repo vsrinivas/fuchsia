@@ -34,4 +34,6 @@ else
   args=(--target "$(get-device-pair)" "$@")
 fi
 
-exec "${FUCHSIA_BUILD_DIR}/host-tools/ffx" "${args[@]}"
+config="{ \"sdk\": { \"root\": \"${FUCHSIA_BUILD_DIR}\", \"type\": \"in-tree\" } }"
+
+exec "${FUCHSIA_BUILD_DIR}/host-tools/ffx" "--config" "${config}" "${args[@]}"
