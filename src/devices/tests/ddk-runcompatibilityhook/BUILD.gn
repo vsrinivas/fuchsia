@@ -81,6 +81,12 @@ isolated_devmgr_unittest_package("ddk-runcompatibilityhook-test-package") {
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
   ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {
