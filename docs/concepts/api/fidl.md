@@ -721,9 +721,12 @@ care and upfront planning.
 
 Marking a type as [`flexible`][flexible-lang] makes it possible to handle data that is unknown
 to the current FIDL schema, and is recommended for types that may add or
-remove members in the future (e.g. configs, metadata, or errors). It is always
+remove members in the future (e.g., configs, metadata, or errors). It is always
 possible to [soft transition][flexible-transition] between `strict` and
-`flexible` for an existing type.
+`flexible` for an existing type. For types that accept the `strict`/`flexible`
+modifier (`bits`, `enum`, and `union`), such a modifier should always be
+specified rather than relying on defaults (e.g., always prefer `flexible bits
+...` to just `bits ...`).
 
 Using `strict` or `flexible` does not have any significant performance impact.
 

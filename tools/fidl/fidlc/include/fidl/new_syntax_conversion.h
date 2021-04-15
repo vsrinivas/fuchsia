@@ -192,7 +192,7 @@ class FlexibleTypeConversion : public MemberedDeclarationConversion {
     if (syntax == fidl::utils::Syntax::kNew) {
       modifiers += ((strictness_.value_or(types::Strictness::kStrict) == types::Strictness::kStrict)
                         ? "strict "
-                        : "");
+                        : "flexible ");
     } else if (strictness_ != std::nullopt) {
       if (strictness_.value() == types::Strictness::kStrict) {
         modifiers += "strict ";

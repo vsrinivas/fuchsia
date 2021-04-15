@@ -232,7 +232,7 @@ flexible bits Foo {
 library example;
 
 /// Doc comment.
-type Foo = bits {
+type Foo = flexible bits {
   SMALLEST = 1;
   BIGGEST = 0x80000000;
 };
@@ -307,7 +307,7 @@ flexible bits Foo : uint64 {
 library example;
 
 /// Doc comment.
-type Foo = bits : uint64 {
+type Foo = flexible bits : uint64 {
   SMALLEST = 1;
   BIGGEST = 0x8000000000000000;
 };
@@ -403,7 +403,7 @@ flexible enum Foo {
 library example;
 
 /// Doc comment.
-type Foo = enum {
+type Foo = flexible enum {
   FOO = 1;
   BAR = 2;
 };
@@ -478,7 +478,7 @@ flexible enum Foo : uint64 {
 library example;
 
 /// Doc comment.
-type Foo = enum : uint64 {
+type Foo = flexible enum : uint64 {
   FOO = 1;
   BAR = 2;
 };
@@ -1292,7 +1292,7 @@ flexible union U {
   std::string new_version = R"FIDL(
 library example;
 
-type U = union {
+type U = flexible union {
   1: a int32;
 };
 )FIDL";
@@ -1335,7 +1335,7 @@ flexible union U {
   std::string new_version = R"FIDL(
 library example;
 
-type U = union {
+type U = flexible union {
   1: reserved;
   2: a int32;
 };
@@ -1438,7 +1438,7 @@ library example;
 
 using zx;
 
-type U = resource union {
+type U = resource flexible union {
   1: h zx.handle:VMO;
 };
 )FIDL";
