@@ -25,28 +25,37 @@ const std::string kLocalArgument = "--local";
 const std::string kRemoteArgument = "--remote";
 const std::string kInstanceName = "mdns_test_instance_name";
 
-const int iterations = 100;
+const size_t kIterations = 100;
 const zx_duration_t kTimeout = ZX_SEC(120);
 
 const std::string kBusName = "netemul-test-bus";
 const std::string kLocalClientName = "local";
 const std::string kRemoteClientName = "remote";
 
-const auto kLocalV4Addr1 = inet::IpAddress(192, 168, 0, 1);
-const auto kLocalV4Addr2 = inet::IpAddress(192, 168, 1, 1);
-const auto kRemoteV4Addr1 = inet::IpAddress(192, 168, 0, 2);
-const auto kRemoteV4Addr2 = inet::IpAddress(192, 168, 1, 2);
+const auto kLocalV4Addr = inet::IpAddress(192, 168, 0, 1);
+const auto kRemoteV4Addr = inet::IpAddress(192, 168, 0, 2);
 
-const auto localV4Addrs = std::vector<inet::IpAddress>{kLocalV4Addr1, kLocalV4Addr2};
-const auto remoteV4Addrs = std::vector<inet::IpAddress>{kRemoteV4Addr1, kRemoteV4Addr2};
+const auto kLocalV6LinkLocalAddr = inet::IpAddress(0xfe80, 0, 0, 0, 0, 0, 0, 0x001);
+const auto kRemoteV6LinkLocalAddr = inet::IpAddress(0xfe80, 0, 0, 0, 0, 0, 0, 0x002);
+
+const auto kLocalV6Addr = inet::IpAddress(0x2001, 0, 0, 0, 0, 0, 0, 0x001);
+const auto kRemoteV6Addr = inet::IpAddress(0x2001, 0, 0, 0, 0, 0, 0, 0x002);
+
+const auto remoteAddrs =
+    std::vector<inet::IpAddress>{kRemoteV4Addr, kRemoteV6LinkLocalAddr, kRemoteV6Addr};
+const auto localAddrs =
+    std::vector<inet::IpAddress>{kLocalV4Addr, kLocalV6LinkLocalAddr, kLocalV6Addr};
 
 // All possible connections keyed on sender's address.
-std::unordered_map<inet::IpAddress, inet::IpAddress> connections({
-    {kLocalV4Addr1, kRemoteV4Addr1},
-    {kLocalV4Addr2, kRemoteV4Addr2},
-    {kRemoteV4Addr1, kLocalV4Addr1},
-    {kRemoteV4Addr2, kLocalV4Addr2},
-});
+std::unordered_map<inet::IpAddress, inet::IpAddress> connections(
+    {{kLocalV4Addr, kRemoteV4Addr},
+     {kRemoteV4Addr, kLocalV4Addr},
+
+     {kLocalV6Addr, kRemoteV6Addr},
+     {kRemoteV6Addr, kLocalV6Addr},
+
+     {kLocalV6LinkLocalAddr, kRemoteV6LinkLocalAddr},
+     {kRemoteV6LinkLocalAddr, kLocalV6LinkLocalAddr}});
 
 namespace mdns::test {
 
@@ -113,19 +122,13 @@ class TestAgent {
                 std::cerr << "All test agents are ready, sending requests.\n";
                 // Send requests for multiple iterations so leaked messages
                 // from previous iterations can be discovered.
-                for (int i = 0; i < iterations; i++) {
+                for (size_t i = 0; i < kIterations; i++) {
                   SendRequest();
                 }
               });
         },
         // This lambda is called when inbound MDNS messages are received.
         [this](std::unique_ptr<DnsMessage> _, const ReplyAddress& reply_address) {
-          // TODO(http://fxbug.dev/49859): test IPv6 connections as well when
-          // both addresses can be configured at the same time.
-          if (reply_address.interface_address().is_v6()) {
-            return;
-          }
-
           auto interface_addr = reply_address.interface_address();
           auto from = reply_address.socket_address().address();
 
@@ -143,9 +146,9 @@ class TestAgent {
 
           response_count_++;
           // Transceiver sends out requests on all interfaces. Each interface
-          // has exactly one IPv4 address, so one response should be received
+          // has exactly one IP address, so one response should be received
           // for each address.
-          if (response_count_ >= int(Addrs().size()) * iterations) {
+          if (response_count_ >= Addrs().size() * kIterations) {
             Quit(0);
           }
         },
@@ -153,7 +156,7 @@ class TestAgent {
   }
 
   const std::vector<inet::IpAddress>& Addrs() {
-    return client_name_ == kLocalClientName ? localV4Addrs : remoteV4Addrs;
+    return client_name_ == kLocalClientName ? localAddrs : remoteAddrs;
   }
 
   void OpenBus() {
@@ -190,7 +193,7 @@ class TestAgent {
     quit_callback_(exit_code);
   }
 
-  int response_count_ = 0;
+  size_t response_count_ = 0;
   bool sending_ = false;
   // client_name_ is used to subscribe to and wait on the Bus provided by
   // netemul, so multiple test agents can wait for others to come online before
