@@ -76,6 +76,7 @@ set -e
 readonly GOMA_AUTH="$PREBUILT_GOMA_DIR/goma_auth.py"
 readonly GOMA_CTL="$PREBUILT_GOMA_DIR/goma_ctl.py"
 readonly GOMACC="$PREBUILT_GOMA_DIR/gomacc"
+readonly PYTHON_CMD="$PREBUILT_PYTHON3_DIR/bin/python3"
 GOMA_CACHE_DIR="${FUCHSIA_DIR}/.jiri_root/goma_cache"
 
 if [[ ! -x "$GOMA_AUTH" || ! -x "$GOMA_CTL" ]]; then
@@ -129,9 +130,9 @@ function main {
   check
   check-build $update
 
-  "$GOMA_AUTH" info || "$GOMA_AUTH" login "$@"
-  if "$GOMA_CTL" status; then
-    "$GOMA_CTL" update_hook
+  "$PYTHON_CMD" "$GOMA_AUTH" info || "$PYTHON_CMD" "$GOMA_AUTH" login "$@"
+  if "$PYTHON_CMD" "$GOMA_CTL" status; then
+    "$PYTHON_CMD" "$GOMA_CTL" update_hook
     return 0
   fi
   goma_tmp_dir=""
@@ -155,11 +156,11 @@ function main {
     echo ""
   fi
 
-  GOMACTL_USE_PROXY="$use_http2" GOMA_LOCAL_OUTPUT_CACHE_DIR="$goma_tmp_dir" "$GOMA_CTL" ensure_start
+  GOMACTL_USE_PROXY="$use_http2" GOMA_LOCAL_OUTPUT_CACHE_DIR="$goma_tmp_dir" "$PYTHON_CMD" "$GOMA_CTL" ensure_start
 }
 
 function kill-goma {
-  "$GOMA_CTL" ensure_stop
+  "$PYTHON_CMD" "$GOMA_CTL" ensure_stop
 }
 
 # TODO(mcgrathr): Remove this after some period when old installs are gone.
@@ -171,7 +172,7 @@ function check {
     echo "*** But check your dot files to make sure it's not set at login."
   fi
 
-  local goma_dir="$("$GOMA_CTL" goma_dir 2> /dev/null)"
+  local goma_dir="$("$PYTHON_CMD" "$GOMA_CTL" goma_dir 2> /dev/null)"
   if [[ -d "$goma_dir" && \
         "$(cd "$goma_dir" && /bin/pwd)" = "$(cd "$PREBUILT_GOMA_DIR" && /bin/pwd)" ]]; then
     return 0
