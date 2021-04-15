@@ -16,13 +16,13 @@
 #include "src/devices/bus/drivers/pci/device_rpc.h"
 
 namespace pci {
-class DeviceProxy;
-using PciDeviceProxyType = ddk::Device<pci::DeviceProxy, ddk::GetProtocolable>;
-class DeviceProxy : public PciDeviceProxyType,
-                    public ddk::PciProtocol<pci::DeviceProxy>,
-                    public ddk::SysmemProtocol<pci::DeviceProxy> {
+class PciProxy;
+using PciProxyType = ddk::Device<pci::PciProxy, ddk::GetProtocolable>;
+class PciProxy : public PciProxyType,
+                 public ddk::PciProtocol<pci::PciProxy>,
+                 public ddk::SysmemProtocol<pci::PciProxy> {
  public:
-  DeviceProxy(zx_device_t* parent, zx_handle_t rpcch) : PciDeviceProxyType(parent), rpcch_(rpcch) {}
+  PciProxy(zx_device_t* parent, zx_handle_t rpcch) : PciProxyType(parent), rpcch_(rpcch) {}
   static zx_status_t Create(zx_device_t* parent, zx_handle_t rpcch, const char* name);
   // A helper method to reduce the complexity of each individual PciProtocol method.
   zx_status_t RpcRequest(PciRpcOp op, zx_handle_t* rd_handle, const zx_handle_t* wr_handle,
