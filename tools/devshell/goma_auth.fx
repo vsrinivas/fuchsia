@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Build
-#### EXECUTABLE=${PREBUILT_3P_DIR}/goma/${HOST_PLATFORM}/goma_auth.py
+#### EXECUTABLE=${PREBUILT_3P_DIR}/python3/${HOST_PLATFORM}/bin/python3 ${PREBUILT_3P_DIR}/goma/${HOST_PLATFORM}/goma_auth.py
 ### set up authentication for the Goma distributed compilation client
 ## The only common use is `fx goma_auth login`.
 ##
