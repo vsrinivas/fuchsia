@@ -27,12 +27,20 @@
 #     Type: string
 #     Default: ${target_name}
 #
-#   sources
+#   source_root (optional)
+#     Path to root of the package, where __init__.py is.
+#     Type: path
+#     Default: current directory
+#
+#   sources (required)
+#     List of sources for this python library, relative to source_root.
+#     Type: list(path)
 #
 # Metadata
 #
 #   library_info
-#     Exactly one scope including name of this library and its sources.
+#     Exactly one scope including name of this library, path to its root and all
+#     of its sources (relative to root).
 #
 #   library_info_barrier
 #     Empty for stopping metadata walks.
@@ -51,10 +59,15 @@ template("python_library") {
       library_name = invoker.library_name
     }
 
+    source_root = "."
+    if (defined(invoker.source_root)) {
+      source_root = invoker.source_root
+    }
     metadata = {
       library_info = [
         {
           library_name = library_name
+          source_root = rebase_path(source_root, root_build_dir)
           sources = rebase_path(invoker.sources, root_build_dir)
         },
       ]
