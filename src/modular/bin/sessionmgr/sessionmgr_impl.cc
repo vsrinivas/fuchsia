@@ -103,7 +103,8 @@ void SessionmgrImpl::Initialize(
     std::string session_id,
     fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
     fuchsia::sys::ServiceList additional_services_for_agents,
-    fuchsia::ui::views::ViewToken view_token) {
+    fuchsia::ui::views::ViewToken view_token, fuchsia::ui::views::ViewRefControl control_ref,
+    fuchsia::ui::views::ViewRef view_ref) {
   FX_LOGS(INFO) << "SessionmgrImpl::Initialize() called.";
 
   session_context_ = session_context.Bind();
@@ -122,8 +123,12 @@ void SessionmgrImpl::Initialize(
   InitializeAgentRunner(config_accessor_.session_shell_app_config().url());
   InitializeStartupAgents();
 
+  scenic::ViewRefPair view_ref_pair =
+      scenic::ViewRefPair{.control_ref = {std::move(control_ref.reference)},
+                          .view_ref = {std::move(view_ref.reference)}};
+
   InitializeSessionShell(CloneStruct(config_accessor_.session_shell_app_config()),
-                         std::move(view_token));
+                         std::move(view_token), std::move(view_ref_pair));
 
   // We create |story_provider_impl_| after |agent_runner_| so
   // story_provider_impl_ is terminated before agent_runner_, which will cause
@@ -355,16 +360,18 @@ void SessionmgrImpl::InitializeSessionCtl() {
 
 void SessionmgrImpl::InitializeSessionShell(
     fuchsia::modular::session::AppConfig session_shell_config,
-    fuchsia::ui::views::ViewToken view_token) {
+    fuchsia::ui::views::ViewToken view_token, scenic::ViewRefPair view_ref_pair) {
   session_shell_url_ = session_shell_config.url();
 
   // We setup our own view and make the fuchsia::modular::SessionShell a child
   // of it.
   auto scenic = sessionmgr_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+
   scenic::ViewContext view_context = {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
       .view_token = std::move(view_token),
+      .view_ref_pair = std::move(view_ref_pair),
       .component_context = sessionmgr_context_,
   };
   session_shell_view_host_ = std::make_unique<ViewHost>(std::move(view_context));

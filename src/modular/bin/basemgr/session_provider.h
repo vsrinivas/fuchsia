@@ -12,6 +12,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 
 #include "src/modular/bin/basemgr/session_context_impl.h"
@@ -50,7 +51,8 @@ class SessionProvider {
   // start a new session.
   //
   // Returns fit::ok if a new session was started successfully.
-  StartSessionResult StartSession(fuchsia::ui::views::ViewToken view_token);
+  StartSessionResult StartSession(fuchsia::ui::views::ViewToken view_token,
+                                  scenic::ViewRefPair view_ref_pair);
 
   // Asynchronously tears down the sessionmgr process. |callback| is invoked
   // once teardown is complete or has timed out.

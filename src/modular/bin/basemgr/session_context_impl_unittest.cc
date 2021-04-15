@@ -36,10 +36,12 @@ TEST_F(SessionContextImplTest, StartSessionmgr) {
       });
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
   auto modular_config_accessor = modular::ModularConfigAccessor(modular::DefaultConfig());
 
   modular::SessionContextImpl impl(
       &launcher, std::move(sessionmgr_app_config), &modular_config_accessor, std::move(view_token),
+      std::move(view_ref_pair),
       /*additional_services_for_agents=*/fuchsia::sys::ServiceList(),
       /*get_presentation=*/
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> /* unused */) {},
@@ -64,10 +66,12 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
 
   auto modular_config_accessor = modular::ModularConfigAccessor(modular::DefaultConfig());
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
 
   bool done_callback_called = false;
   modular::SessionContextImpl impl(
       &launcher, std::move(sessionmgr_app_config), &modular_config_accessor, std::move(view_token),
+      std::move(view_ref_pair),
       /*additional_services_for_agents=*/fuchsia::sys::ServiceList(),
       /*get_presentation=*/
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> /* unused */) {},

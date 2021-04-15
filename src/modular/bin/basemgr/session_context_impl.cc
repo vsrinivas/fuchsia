@@ -18,6 +18,7 @@ SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher,
                                        fuchsia::modular::session::AppConfig sessionmgr_app_config,
                                        const modular::ModularConfigAccessor* const config_accessor,
                                        fuchsia::ui::views::ViewToken view_token,
+                                       scenic::ViewRefPair view_ref_pair,
                                        fuchsia::sys::ServiceList additional_services_for_agents,
                                        GetPresentationCallback get_presentation,
                                        OnSessionShutdownCallback on_session_shutdown)
@@ -42,7 +43,8 @@ SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher,
   // Initialize the Sessionmgr service.
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
   sessionmgr_->Initialize(sessions::kSessionId, session_context_binding_.NewBinding(),
-                          std::move(additional_services_for_agents), std::move(view_token));
+                          std::move(additional_services_for_agents), std::move(view_token),
+                          std::move(view_ref_pair.control_ref), std::move(view_ref_pair.view_ref));
 
   sessionmgr_app_->SetAppErrorHandler([weak_this = weak_factory_.GetWeakPtr()] {
     FX_LOGS(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "

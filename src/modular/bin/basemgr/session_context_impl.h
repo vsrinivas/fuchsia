@@ -13,6 +13,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 
 #include <optional>
 
@@ -50,7 +51,7 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   SessionContextImpl(fuchsia::sys::Launcher* launcher,
                      fuchsia::modular::session::AppConfig sessionmgr_app_config,
                      const modular::ModularConfigAccessor* config_accessor,
-                     fuchsia::ui::views::ViewToken view_token,
+                     fuchsia::ui::views::ViewToken view_token, scenic::ViewRefPair view_ref_pair,
                      fuchsia::sys::ServiceList additional_services_for_agents,
                      GetPresentationCallback get_presentation,
                      OnSessionShutdownCallback on_session_shutdown);

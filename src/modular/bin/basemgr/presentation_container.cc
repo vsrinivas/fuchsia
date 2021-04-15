@@ -10,12 +10,12 @@
 
 namespace modular {
 
-PresentationContainer::PresentationContainer(
-    fuchsia::ui::policy::Presenter* const presenter,
-    fuchsia::ui::views::ViewHolderToken view_holder_token)
+PresentationContainer::PresentationContainer(fuchsia::ui::policy::Presenter* const presenter,
+                                             fuchsia::ui::views::ViewHolderToken view_holder_token,
+                                             fuchsia::ui::views::ViewRef view_ref)
     : presenter_(presenter) {
-  presenter_->PresentOrReplaceView(std::move(view_holder_token),
-                                   presentation_state_.presentation.NewRequest());
+  presenter_->PresentOrReplaceView2(std::move(view_holder_token), std::move(view_ref),
+                                    presentation_state_.presentation.NewRequest());
 }
 
 PresentationContainer::~PresentationContainer() = default;

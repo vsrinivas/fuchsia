@@ -24,7 +24,9 @@ protocol Sessionmgr {
     Initialize(string session_id,
                SessionContext session_context,
                fuchsia.sys.ServiceList additional_services_for_agents,
-               fuchsia.ui.views.ViewToken view_token);
+               fuchsia.ui.views.ViewToken view_token,
+               fuchsia.ui.views.ViewRefControl control_ref,
+               fuchsia.ui.views.ViewRef view_ref);
 };
 
 /// This interface is provided by basemgr to `Sessionmgr`.

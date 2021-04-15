@@ -53,7 +53,9 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void Initialize(std::string session_id,
                   fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
                   fuchsia::sys::ServiceList additional_services_for_agents,
-                  fuchsia::ui::views::ViewToken view_token) override;
+                  fuchsia::ui::views::ViewToken view_token,
+                  fuchsia::ui::views::ViewRefControl control_ref,
+                  fuchsia::ui::views::ViewRef view_ref) override;
 
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeSessionEnvironment(std::string session_id);
@@ -63,7 +65,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeStoryProvider(fuchsia::modular::session::AppConfig story_shell_config,
                                bool use_session_shell_for_story_shell_factory);
   void InitializeSessionShell(fuchsia::modular::session::AppConfig session_shell_config,
-                              fuchsia::ui::views::ViewToken view_token);
+                              fuchsia::ui::views::ViewToken view_token,
+                              scenic::ViewRefPair view_ref_pair);
   void InitializePuppetMaster();
   void InitializeElementManager();
   void InitializeSessionCtl();

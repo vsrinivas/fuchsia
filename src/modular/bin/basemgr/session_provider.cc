@@ -37,7 +37,7 @@ SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launche
 }
 
 SessionProvider::StartSessionResult SessionProvider::StartSession(
-    fuchsia::ui::views::ViewToken view_token) {
+    fuchsia::ui::views::ViewToken view_token, scenic::ViewRefPair view_ref_pair) {
   if (is_session_running()) {
     FX_LOGS(WARNING) << "StartSession() called when session context already "
                         "exists. Try calling SessionProvider::Teardown()";
@@ -58,7 +58,7 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
       session_launcher_service_dir_.CloneChannel().TakeChannel();
   session_context_ = std::make_unique<SessionContextImpl>(
       launcher_, std::move(sessionmgr_app_config), config_accessor_, std::move(view_token),
-      std::move(services_from_session_launcher),
+      std::move(view_ref_pair), std::move(services_from_session_launcher),
       /*get_presentation=*/
       [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
         delegate_->GetPresentation(std::move(request));

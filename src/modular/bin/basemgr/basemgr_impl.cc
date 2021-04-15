@@ -8,6 +8,7 @@
 #include <lib/fit/bridge.h>
 #include <lib/fostr/fidl/fuchsia/modular/session/formatting.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "src/lib/fsl/vmo/strings.h"
@@ -215,13 +216,16 @@ BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
   }
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-  auto start_session_result = session_provider_->StartSession(std::move(view_token));
+  scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
+  auto view_ref_clone = fidl::Clone(view_ref_pair.view_ref);
+  auto start_session_result =
+      session_provider_->StartSession(std::move(view_token), std::move(view_ref_pair));
   FX_CHECK(start_session_result.is_ok());
 
   // TODO(fxbug.dev/56132): Ownership of the Presenter should be moved to the session shell.
   if (presenter_) {
-    presentation_container_ =
-        std::make_unique<PresentationContainer>(presenter_.get(), std::move(view_holder_token));
+    presentation_container_ = std::make_unique<PresentationContainer>(
+        presenter_.get(), std::move(view_holder_token), std::move(view_ref_clone));
     presenter_.set_error_handler(
         [this](zx_status_t /* unused */) { presentation_container_.reset(); });
   }
