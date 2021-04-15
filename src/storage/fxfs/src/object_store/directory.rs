@@ -83,8 +83,8 @@ impl Directory {
         } else if let ObjectValue::None = item.value {
             bail!(FxfsError::NotFound);
         } else {
-            return Err(anyhow!(FxfsError::Inconsistent)
-                .context(format!("Unexpected item in lookup: {:?}", item)));
+            Err(anyhow!(FxfsError::Inconsistent)
+                .context(format!("Unexpected item in lookup: {:?}", item)))
         }
     }
 
@@ -195,10 +195,6 @@ pub async fn move_child<'a>(
     dst: &'a Directory,
     dst_name: &str,
 ) -> Result<(), Error> {
-    if src.object_id() == dst.object_id() {
-        // TODO(jfsulliv): Support the case where src == dst.
-        panic!("moving within a dir unimplemented");
-    }
     let (object_id, descriptor) = src.lookup(src_name).await?;
     if let Err(e) = dst
         .replace_child(transaction, dst_name, ObjectValue::child(object_id, descriptor.clone()))
@@ -634,5 +630,35 @@ mod tests {
                 .expect("wrong error"),
             FxfsError::NotEmpty
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_move_child_within_dir() {
+        let device = Arc::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
+        let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        let dir = fs
+            .root_store()
+            .create_directory(&mut transaction)
+            .await
+            .expect("create_directory failed");
+        dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
+        fs.commit_transaction(transaction).await;
+
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        move_child(&mut transaction, &dir, "foo", &dir, "bar").await.expect("move_child failed");
+        fs.commit_transaction(transaction).await;
+
+        assert_eq!(
+            dir.lookup("foo")
+                .await
+                .expect_err("lookup old name succeeded")
+                .downcast::<FxfsError>()
+                .expect("wrong error"),
+            FxfsError::NotFound
+        );
+        dir.lookup("bar").await.expect("lookup new name failed");
     }
 }
