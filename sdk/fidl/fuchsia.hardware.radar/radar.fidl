@@ -1,0 +1,160 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.radar;
+using zx;
+
+/// Arbitrary limit on the number of VMOs in one call to `RegisterVmos()` or
+/// `UnregisterVmos()`; enough for ten seconds of radar data for the existing
+/// driver.
+const uint32 VMO_VECTOR_MAX_COUNT = 300;
+
+enum StatusCode {
+    /// An unspecified error occurred (generally should not be used).
+    UNSPECIFIED = 0;
+
+    /// The request completed successfully.
+    SUCCESS = 1;
+
+    /// `Connect()` was called but the driver is busy handling another client.
+    /// The other client will have to close its channel for the driver to become
+    /// available again.
+    ALREADY_BOUND = 2;
+
+    /// `Connect()` encountered an error trying to bind to the provided server
+    /// channel.
+    BIND_ERROR = 3;
+
+    /// The vectors passed to `RegisterVmos()` did not have the same size.
+    INVALID_ARGS = 4;
+
+    /// A VMO handle was invalid.
+    VMO_BAD_HANDLE = 5;
+
+    /// A VMO was already registered with this ID.
+    VMO_ALREADY_REGISTERED = 6;
+
+    /// No registered VMO was found for the given ID.
+    VMO_NOT_FOUND = 7;
+
+    /// A client VMO could not be written to or mapped due to insufficient
+    /// permissions.
+    VMO_ACCESS_DENIED = 8;
+
+    /// A client VMO was smaller than the burst size (see `GetBurstSize()`).
+    VMO_TOO_SMALL = 9;
+
+    /// A burst was received, but no unlocked VMOs are available.
+    OUT_OF_VMOS = 10;
+
+    /// A burst was not received within the expected window.
+    SENSOR_TIMEOUT = 11;
+
+    /// An unspecified driver or sensor error was encountered.
+    SENSOR_ERROR = 12;
+};
+
+struct Burst {
+    uint32 vmo_id;
+    zx.time timestamp;
+};
+
+protocol RadarBurstReader {
+    /// Returns the size in bytes of each burst reported by this driver. Clients
+    /// should use this size to create VMOs to be registered by the driver.
+    ///
+    /// - response `burst_size` the size of each radar burst in bytes.
+    GetBurstSize() -> (uint32 burst_size);
+
+    /// Registers the VMOs for future use and associates them with vmo_ids,
+    /// which can be used with `UnregisterVmos()` and `OnBurst()`. vmos will be
+    /// mapped by the driver using `ZX_VM_PERM_WRITE`. The client should only
+    /// read registered VMOs that are sent via `OnBurst()`. The size of vmo is
+    /// assumed to be at least the burst size, and the sizes of `vmo_ids` and
+    /// `vmos` must be the same.
+    ///
+    /// + request `vmo_ids` the ID numbers to associate with each VMO.
+    /// + request `vmos` the VMO handles corresponding to each ID.
+    /// * error one of the following `StatusCode` values:
+    /// *     `INVALID_ARGS`: `vmo_ids` and `vmos` were of different sizes.
+    /// *     `VMO_BAD_HANDLE`: A handle in `vmos` was invalid.
+    /// *     `VMO_ALREADY_REGISTERED`: An ID in `vmo_ids` was already
+    /// *         registered.
+    /// *     `VMO_ACCESS_DENIED`: A VMO in `vmos` could not be mapped due to
+    /// *         insufficient permissions.
+    /// *     `VMO_TOO_SMALL`: A VMO in `vmos` was smaller than the burst size.
+    RegisterVmos(vector<uint32>:VMO_VECTOR_MAX_COUNT vmo_ids,
+                 vector<zx.handle:VMO>:VMO_VECTOR_MAX_COUNT vmos)
+        -> () error StatusCode;
+
+    /// Removes the associations with the given VMO IDs and returns the VMOs to
+    /// the client. The driver will not send any more `OnBurst()` events with
+    /// these VMO IDs after replying, however the client may still receive
+    /// bursts with these IDs if they were in flight during this call. The
+    /// driver must return all of the requested VMOs, or return an error. In
+    /// case of an error, the driver may have unregistered some or all of the
+    /// requested VMOs.
+    ///
+    /// + request `vmo_ids` the IDs of the VMOs to unregister and return.
+    /// - response `vmos` the VMO handles corresponding to `vmo_ids`.
+    /// * error one of the following `StatusCode` values:
+    /// *     `INVALID_ARGS`: `vmo_ids` was too big.
+    /// *     `VMO_NOT_FOUND`: An ID in `vmo_ids` was not registered.
+    UnregisterVmos(vector<uint32>:VMO_VECTOR_MAX_COUNT vmo_ids)
+        -> (vector<zx.handle:VMO>:VMO_VECTOR_MAX_COUNT vmos) error StatusCode;
+
+    /// Tells the driver to start sending bursts via `OnBurst()`.
+    StartBursts();
+
+    /// Tells the driver to stop sending bursts via `OnBurst()`. If all clients
+    /// call `StopBursts()` then the driver may choose to stop its worker thread.
+    /// The driver may wait for a single burst read to complete, but will not
+    /// access any of the client’s VMOs or call its observer after replying.
+    ///
+    /// Note that already inflight `OnBurst()` bursts may still be received by
+    /// the client.
+    StopBursts() -> ();
+
+    /// Returns the ID of a VMO containing a single burst, the time the burst
+    /// was received. Ownership of the VMO must be returned to the driver by
+    /// calling `UnlockVmo()`, and won't be written by the driver until then.
+    /// See the doc for the burst format specification.
+    ///
+    /// The driver will drop bursts if there are no unlocked VMOs. This also
+    /// provides flow control for the number of events in flight. When a burst
+    /// is received and no VMOs are unlocked, `OnBurst()` will be called with
+    /// `OUT_OF_VMOS` set as the error. `OnBurst` will not be called again until
+    /// at least one VMO has been unlocked.
+    ///
+    /// + request `burst` the ID of a VMO containing the burst, as well as the
+    ///     time the burst was received.
+    /// * error one of the following `StatusCode` values:
+    /// *     `OUT_OF_VMOS`: No unlocked VMOs were available to hold the burst.
+    /// *         The driver will wait for at least one VMO to become available
+    /// *         before sending more events to this client.
+    /// *     `SENSOR_TIMEOUT`: The driver could not drain the sensor FIFO
+    /// *         quickly enough.
+    /// *     `SENSOR_ERROR`: An unspecified driver or sensor error occurred
+    /// *         when trying to read the burst.
+    -> OnBurst(Burst burst) error StatusCode;
+
+    /// Signals to the driver that the client is no longer reading the VMO. The
+    /// client must not access the VMO after calling this.
+    ///
+    /// + request `vmo_id` the ID of the VMO to return to the driver.
+    UnlockVmo(uint32 vmo_id);
+};
+
+/// The main protocol implemented by radar drivers. Clients use this protocol to
+/// establish a `RadarBurstReader` connection with the driver.
+protocol RadarBurstReaderProvider {
+    /// + request `server` the `RadarBurstReader` server end for the driver to
+    ///     bind to.
+    /// * error one of the following `StatusCode` values:
+    ///     `BIND_ERROR`: An error was encountered while trying to bind to the
+    ///         provided server channel.
+    ///     `ALREADY_BOUND`: Another client has already established a
+    ///         `RadarBurstReader` connection with the driver.
+    Connect(request<RadarBurstReader> server) -> () error StatusCode;
+};
