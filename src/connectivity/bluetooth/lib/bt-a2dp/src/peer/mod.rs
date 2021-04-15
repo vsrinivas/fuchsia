@@ -235,6 +235,7 @@ impl Peer {
             }
             avdtp.open(&remote_id).await?;
 
+            trace!("{} Connecting transport channel...", peer_id);
             let channel = profile
                 .connect(
                     &mut peer_id.into(),
@@ -243,6 +244,7 @@ impl Peer {
                 .await
                 .context("FIDL error: {}")?
                 .or(Err(avdtp::Error::PeerDisconnected))?;
+            trace!("{} Connected transport channel, converting to local Channel..", peer_id);
             let channel = match channel.try_into() {
                 Err(_e) => {
                     warn!("Couldn't connect media transport {}: no channel", peer_id);
@@ -250,6 +252,8 @@ impl Peer {
                 }
                 Ok(c) => c,
             };
+
+            trace!("{} Connected transport channel, passing to Peer..", peer_id);
 
             {
                 let strong = PeerInner::upgrade(peer.clone())?;

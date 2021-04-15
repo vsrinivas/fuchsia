@@ -24,7 +24,7 @@ use {
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_bluetooth::{
         profile::{find_profile_descriptors, find_service_classes, profile_descriptor_to_assigned},
-        types::{Channel, PeerId, Uuid},
+        types::{PeerId, Uuid},
     },
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     fuchsia_component::server::ServiceFs,
@@ -32,9 +32,9 @@ use {
     fuchsia_inspect_derive::Inspect,
     fuchsia_zircon as zx,
     futures::{self, Stream, StreamExt},
-    log::{error, info, trace, warn},
+    log::{debug, error, info, trace, warn},
     parking_lot::Mutex,
-    std::{convert::TryFrom, convert::TryInto, sync::Arc},
+    std::{convert::TryFrom, sync::Arc},
 };
 
 mod avrcp_relay;
@@ -328,48 +328,18 @@ impl StreamsBuilder {
 async fn connect_after_timeout(
     peer_id: PeerId,
     peers: Arc<Mutex<ConnectedPeers>>,
-    profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
     initiator_delay: zx::Duration,
 ) {
     trace!("waiting {}ms before connecting to peer {}.", initiator_delay.into_millis(), peer_id);
     fuchsia_async::Timer::new(initiator_delay.after_now()).await;
-    if peers.lock().is_connected(&peer_id) {
-        return;
-    }
 
-    trace!("peer {} didn't connect - initiating connection", peer_id);
-    let channel = match profile_svc
-        .connect(
-            &mut peer_id.into(),
-            &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
-                psm: Some(bredr::PSM_AVDTP),
-                parameters: Some(bredr::ChannelParameters {
-                    channel_mode: Some(channel_mode),
-                    ..bredr::ChannelParameters::EMPTY
-                }),
-                ..bredr::L2capParameters::EMPTY
-            }),
-        )
-        .await
-    {
-        Err(e) => {
-            warn!("FIDL error on connect: {:?}", e);
-            return;
-        }
-        Ok(Err(e)) => {
-            warn!("Couldn't connect to {}: {:?}", peer_id, e);
-            return;
-        }
-        Ok(Ok(channel)) => channel,
-    };
-
-    let channel: Channel = match channel.try_into() {
-        Err(e) => {
-            warn!("Didn't get channel from peer {}: {}", peer_id, e);
-            return;
-        }
-        Ok(chan) => chan,
+    trace!("{}: trying to connect control channel..", peer_id);
+    let connect_fut = peers.lock().try_connect(peer_id.clone(), channel_mode);
+    let channel = match connect_fut.await {
+        Err(e) => return warn!("Failed to connect control channel to {}: {:?}", peer_id, e),
+        Ok(None) => return warn!("Control channel already connected for {}", peer_id),
+        Ok(Some(channel)) => channel,
     };
 
     info!(
@@ -379,7 +349,7 @@ async fn connect_after_timeout(
         channel.max_tx_size()
     );
     if let Err(e) = peers.lock().connected(peer_id, channel, Some(zx::Duration::from_nanos(0))) {
-        warn!("Problem connecting to peer: {}", e);
+        warn!("Problem delivering connection to peer: {}", e);
     }
 }
 
@@ -389,7 +359,6 @@ fn handle_services_found(
     peer_id: &PeerId,
     attributes: &[bredr::Attribute],
     peers: Arc<Mutex<ConnectedPeers>>,
-    profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
     initiator_delay: Option<zx::Duration>,
 ) {
@@ -416,17 +385,13 @@ fn handle_services_found(
         }
     };
 
+    debug!("Marking peer {} found...", peer_id);
     peers.lock().found(peer_id.clone(), profile);
-
-    if peers.lock().is_connected(&peer_id) {
-        return;
-    }
 
     if let Some(initiator_delay) = initiator_delay {
         fasync::Task::local(connect_after_timeout(
             peer_id.clone(),
             peers.clone(),
-            profile_svc,
             channel_mode,
             initiator_delay,
         ))
@@ -610,13 +575,12 @@ async fn main() -> Result<(), Error> {
         Ok(profile) => profile,
     };
 
-    handle_profile_events(profile, peers, profile_svc, config.channel_mode, initiator_delay).await
+    handle_profile_events(profile, peers, config.channel_mode, initiator_delay).await
 }
 
 async fn handle_profile_events(
     mut profile: impl Stream<Item = Result<profile::ProfileEvent, profile::Error>> + Unpin,
     peers: Arc<Mutex<ConnectedPeers>>,
-    profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
     initiator_delay: Option<zx::Duration>,
 ) -> Result<(), Error> {
@@ -644,7 +608,6 @@ async fn handle_profile_events(
                     &peer_id,
                     &attributes,
                     peers.clone(),
-                    profile_svc.clone(),
                     channel_mode.clone(),
                     initiator_delay,
                 );
@@ -663,9 +626,10 @@ mod tests {
     use fidl_fuchsia_bluetooth_a2dp as a2dp;
     use fidl_fuchsia_bluetooth_bredr::{ProfileRequest, ProfileRequestStream};
     use fidl_fuchsia_cobalt::CobaltEvent;
-    use fuchsia_bluetooth::types::PeerId;
+    use fuchsia_bluetooth::types::Channel;
     use futures::channel::mpsc;
     use futures::{task::Poll, StreamExt};
+    use std::convert::TryInto;
 
     pub(crate) fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
         const BUFFER_SIZE: usize = 100;
@@ -677,8 +641,7 @@ mod tests {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
     }
 
-    fn setup_connected_peers(
-    ) -> (Arc<Mutex<ConnectedPeers>>, bredr::ProfileProxy, ProfileRequestStream) {
+    fn setup_connected_peers() -> (Arc<Mutex<ConnectedPeers>>, ProfileRequestStream) {
         let (proxy, stream) = create_proxy_and_stream::<bredr::ProfileMarker>()
             .expect("Profile proxy should be created");
         let (cobalt_sender, _) = fake_cobalt_sender();
@@ -686,10 +649,10 @@ mod tests {
             stream::Streams::new(),
             CodecNegotiation::build(vec![], avdtp::EndpointType::Sink).unwrap(),
             1,
-            proxy.clone(),
+            proxy,
             Some(cobalt_sender),
         )));
-        (peers, proxy, stream)
+        (peers, stream)
     }
 
     #[test]
@@ -758,7 +721,7 @@ mod tests {
     /// not connected, and the timeout completes.
     fn wait_to_initiate_success_with_no_connected_peer() {
         let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
-        let (peers, proxy, mut prof_stream) = setup_connected_peers();
+        let (peers, mut prof_stream) = setup_connected_peers();
         // Initialize context to a fixed point in time.
         exec.set_fake_time(fasync::Time::from_nanos(1000000000));
         let peer_id = PeerId(1);
@@ -779,7 +742,6 @@ mod tests {
             &peer_id,
             &attributes,
             peers.clone(),
-            proxy.clone(),
             bredr::ChannelMode::Basic,
             Some(DEFAULT_INITIATOR_DELAY),
         );
@@ -820,7 +782,7 @@ mod tests {
     /// before `INITIATOR_DELAY` timeout completes.
     fn wait_to_initiate_returns_early_with_connected_peer() {
         let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
-        let (peers, proxy, mut prof_stream) = setup_connected_peers();
+        let (peers, mut prof_stream) = setup_connected_peers();
         // Initialize context to a fixed point in time.
         exec.set_fake_time(fasync::Time::from_nanos(1000000000));
         let peer_id = PeerId(1);
@@ -841,7 +803,6 @@ mod tests {
             &peer_id,
             &attributes,
             peers.clone(),
-            proxy.clone(),
             bredr::ChannelMode::Basic,
             Some(DEFAULT_INITIATOR_DELAY),
         );
@@ -891,7 +852,7 @@ mod tests {
     #[test]
     fn test_audio_mode_connection() {
         let mut exec = fasync::Executor::new().expect("executor should build");
-        let (peers, _profile_proxy, _profile_stream) = setup_connected_peers();
+        let (peers, _profile_stream) = setup_connected_peers();
 
         let (proxy, stream) = create_proxy_and_stream::<a2dp::AudioModeMarker>()
             .expect("AudioMode proxy should be created");

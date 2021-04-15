@@ -60,6 +60,17 @@ To view the current state of the profile, use `fx iquery show bt-a2dp.cmx`.
 ```
  root:
       connected:
+        preferred_peer_direction = Sink [or Source]
+        local_streams:
+           [repeated for each stream that will be provided to a newly connected peer]
+           stream_1:
+             endpoint_state = StreamEndpoint {id: 5, [...]}
+        discovered:
+            [below repeated for each peer encountered since starting A2DP]
+            peer_14:
+               id = 2c1044bce7b57143
+               desciriptor = ProfileDescriptor { profile_id: AdvancedAudioDistribution, [...] }
+               connection_count = 3
         [below repeated for each connected peer]
         peer_0:
           id = 2c1044bce7b57143

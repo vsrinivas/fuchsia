@@ -5,34 +5,107 @@
 use {
     anyhow::{format_err, Error},
     bt_avdtp as avdtp,
-    fidl_fuchsia_bluetooth_bredr::{ProfileDescriptor, ProfileProxy},
+    fidl_fuchsia_bluetooth_bredr::{self as bredr, ChannelMode, ProfileDescriptor, ProfileProxy},
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
         detachable_map::{DetachableMap, DetachableWeak},
+        inspect::DebugExt,
         types::{Channel, PeerId},
     },
     fuchsia_cobalt::CobaltSender,
-    fuchsia_inspect::{self as inspect, Property},
+    fuchsia_inspect::{self as inspect, NumericProperty, Property},
     fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
         stream::{Stream, StreamExt},
         task::{Context, Poll},
+        Future,
     },
     log::{info, warn},
-    std::{collections::HashMap, pin::Pin, sync::Arc},
+    std::{collections::HashMap, convert::TryInto, pin::Pin, sync::Arc},
 };
 
 use crate::{codec::CodecNegotiation, peer::Peer, permits::Permits, stream::Streams};
+
+/// Statistics node for tracking various information about a peer that has been encountered.
+/// Typically used as an inspect tree node.
+struct PeerStats {
+    id: PeerId,
+    inspect_node: inspect::Node,
+    /// The number of times that this peer has been successfully connected to since discovery.
+    connection_count: inspect::UintProperty,
+}
+
+impl PeerStats {
+    fn new(id: PeerId) -> Self {
+        Self { id, inspect_node: Default::default(), connection_count: Default::default() }
+    }
+
+    fn set_descriptor(&mut self, descriptor: &ProfileDescriptor) {
+        self.inspect_node.record_string("descriptor", descriptor.debug());
+    }
+
+    fn record_connected(&mut self) {
+        self.connection_count.add(1);
+    }
+}
+
+impl Inspect for &mut PeerStats {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect_node = parent.create_child(name);
+        self.inspect_node.record_string("id", self.id.to_string());
+        self.connection_count = self.inspect_node.create_uint("connection_count", 0);
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+struct DiscoveredPeers {
+    /// The peers that we have discovered, with their descriptors.
+    descriptors: HashMap<PeerId, ProfileDescriptor>,
+    /// Holds the child nodes which include the ids and profile descriptors for inspect.
+    stats: HashMap<PeerId, PeerStats>,
+    /// Inspect node, usually at "discovered" in the tree.
+    inspect_node: inspect::Node,
+}
+
+impl DiscoveredPeers {
+    fn insert(&mut self, id: PeerId, descriptor: ProfileDescriptor) {
+        self.descriptors.insert(id, descriptor);
+        self.stats
+            .entry(id)
+            .or_insert({
+                let mut new_stats = PeerStats::new(id);
+                let _ = new_stats.iattach(&self.inspect_node, inspect::unique_name("peer_"));
+                new_stats
+            })
+            .set_descriptor(&descriptor);
+    }
+
+    fn connected(&mut self, id: PeerId) {
+        self.stats.get_mut(&id).map(|stats| stats.record_connected());
+    }
+
+    fn get(&self, id: &PeerId) -> Option<&ProfileDescriptor> {
+        self.descriptors.get(id)
+    }
+}
+
+impl Inspect for &mut DiscoveredPeers {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect_node = parent.create_child(name);
+        Ok(())
+    }
+}
 
 /// ConnectedPeers manages the set of connected peers based on discovery, new connection, and
 /// peer session lifetime.
 pub struct ConnectedPeers {
     /// The set of connected peers.
     connected: DetachableMap<PeerId, Peer>,
-    /// ProfileDescriptors from discovering the peer, stored here before a peer connects.
-    descriptors: HashMap<PeerId, ProfileDescriptor>,
+    /// ProfileDescriptors from discovering the peer, stored here even if the peer is disconnected
+    discovered: DiscoveredPeers,
     /// A set of streams which can be used as a template for each newly connected peer.
     streams: Streams,
     /// The permits that each peer uses to validate that we can start a stream.
@@ -64,7 +137,7 @@ impl ConnectedPeers {
     ) -> Self {
         Self {
             connected: DetachableMap::new(),
-            descriptors: HashMap::new(),
+            discovered: DiscoveredPeers::default(),
             streams,
             codec_negotiation,
             profile,
@@ -117,7 +190,7 @@ impl ConnectedPeers {
     }
 
     pub fn found(&mut self, id: PeerId, desc: ProfileDescriptor) {
-        self.descriptors.insert(id, desc.clone());
+        self.discovered.insert(id, desc.clone());
         self.get(&id).map(|p| p.set_descriptor(desc));
     }
 
@@ -128,6 +201,52 @@ impl ConnectedPeers {
 
     pub fn preferred_direction(&self) -> avdtp::EndpointType {
         self.codec_negotiation.direction()
+    }
+
+    pub fn try_connect(
+        &self,
+        id: PeerId,
+        channel_mode: ChannelMode,
+    ) -> impl Future<Output = Result<Option<Channel>, Error>> {
+        let proxy = self.profile.clone();
+        let connected = self.is_connected(&id);
+        async move {
+            if connected {
+                return Ok(None);
+            }
+
+            let channel = match proxy
+                .connect(
+                    &mut id.into(),
+                    &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
+                        psm: Some(bredr::PSM_AVDTP),
+                        parameters: Some(bredr::ChannelParameters {
+                            channel_mode: Some(channel_mode),
+                            ..bredr::ChannelParameters::EMPTY
+                        }),
+                        ..bredr::L2capParameters::EMPTY
+                    }),
+                )
+                .await
+            {
+                Err(e) => {
+                    warn!("FIDL error on connect: {:?}", e);
+                    return Err(e.into());
+                }
+                Ok(Err(e)) => {
+                    warn!("Couldn't connect to {}: {:?}", id, e);
+                    return Err(format_err!("Bluetooth error: {:?}", e));
+                }
+                Ok(Ok(channel)) => channel,
+            };
+
+            info!("{} got channel back when connecting..", id);
+
+            let channel = channel
+                .try_into()
+                .map_err(|e| format_err!("Couldn't convert fidl to BT channel: {:?}", e))?;
+            Ok(Some(channel))
+        }
     }
 
     /// Accept a channel that was connected to the peer `id`.
@@ -142,6 +261,7 @@ impl ConnectedPeers {
     ) -> Result<DetachableWeak<PeerId, Peer>, Error> {
         if let Some(weak) = self.get_weak(&id) {
             let peer = weak.upgrade().ok_or(format_err!("Disconnected connecting transport"))?;
+            info!("{} Connecting transport channel..", id);
             if let Err(e) = peer.receive_channel(channel) {
                 warn!("{} failed to connect channel: {}", id, e);
                 return Err(e.into());
@@ -163,7 +283,9 @@ impl ConnectedPeers {
             self.cobalt_sender.clone(),
         );
 
-        if let Some(desc) = self.descriptors.get(&id) {
+        self.discovered.connected(id);
+
+        if let Some(desc) = self.discovered.get(&id) {
             peer.set_descriptor(desc.clone());
         }
 
@@ -191,6 +313,7 @@ impl ConnectedPeers {
                     delay.into_millis() as f64 / 1000.0
                 );
                 fasync::Timer::new(fasync::Time::after(delay)).await;
+
                 if let Err(e) = ConnectedPeers::start_streaming(&peer, negotiation).await {
                     info!("Peer {} start failed with error: {:?}", peer.key(), e);
                     peer.detach();
@@ -237,7 +360,8 @@ impl Inspect for &mut ConnectedPeers {
         let peer_dir_str = format!("{:?}", self.preferred_direction());
         self.inspect_peer_direction =
             self.inspect.create_string("preferred_peer_direction", peer_dir_str);
-        self.streams.iattach(&self.inspect, "local_streams")
+        self.streams.iattach(&self.inspect, "local_streams")?;
+        self.discovered.iattach(&self.inspect, "discovered")
     }
 }
 
@@ -630,12 +754,12 @@ mod tests {
         peers.iattach(inspect.root(), "peers").expect("should attach to inspect tree");
 
         assert_inspect_tree!(inspect, root: {
-            peers: { local_streams: contains {}, preferred_peer_direction: "Sink" }});
+            peers: { local_streams: contains {}, discovered: contains {}, preferred_peer_direction: "Sink" }});
 
         peers.set_preferred_direction(avdtp::EndpointType::Source);
 
         assert_inspect_tree!(inspect, root: {
-            peers: { local_streams: contains {}, preferred_peer_direction: "Source" }});
+            peers: { local_streams: contains {}, discovered: contains {}, preferred_peer_direction: "Source" }});
 
         // Connect a peer, it should show up in the tree.
         let (_remote, channel) = Channel::create();
@@ -643,6 +767,7 @@ mod tests {
 
         assert_inspect_tree!(inspect, root: {
             peers: {
+                discovered: contains {},
                 preferred_peer_direction: "Source",
                 local_streams: contains {},
                 peer_0: { id: "0000000000000001", local_streams: contains {} }
