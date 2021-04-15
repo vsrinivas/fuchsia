@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Build
-#### EXECUTABLE=${PREBUILT_3P_DIR}/goma/${HOST_PLATFORM}/goma_ctl.py
+#### EXECUTABLE=${PREBUILT_3P_DIR}/python3/${HOST_PLATFORM}/bin/python3 ${PREBUILT_3P_DIR}/goma/${HOST_PLATFORM}/goma_ctl.py
 ### control the local Goma distributed compilation client
 ## See usage and detailed help by running `fx goma_ctl --help`.
 ##
