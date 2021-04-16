@@ -119,6 +119,7 @@
         {
             name: "soundplayer",
             url: "fuchsia-pkg://fuchsia.com/soundplayer#meta/soundplayer.cm",
+            environment: "#universe-resolver-env",
         },
         {
             name: "vulkan_loader",
