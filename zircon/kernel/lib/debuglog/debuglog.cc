@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
 #include <lib/fit/defer.h>
@@ -76,7 +76,7 @@ void dlog_init_early() {
 // The compile switch (if enabled) overrides the kernel cmdline switch.
 void dlog_bypass_init() {
   if (dlog_bypass_ == false) {
-    dlog_bypass_ = gCmdline.GetBool(kernel_option::kBypassDebuglog, false);
+    dlog_bypass_ = gBootOptions->bypass_debuglog;
   }
 }
 

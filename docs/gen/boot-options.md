@@ -300,6 +300,16 @@ idle.
 TODO(fxbug.dev/68456): Determine an upper bound for this value to prevent
 consuming too much memory.
 
+### kernel.bypass-debuglog=\<bool>
+**Default:** `false`
+
+When enabled, forces output to the console instead of buffering it. The reason
+we have both a compile switch and a cmdline parameter is to facilitate prints
+in the kernel before cmdline is parsed to be forced to go to the console.
+The compile switch setting overrides the cmdline parameter (if both are present).
+Note that both the compile switch and the cmdline parameter have the side effect
+of disabling irq driven uart Tx.
+
 
 ## Options available only on arm64 machines
 

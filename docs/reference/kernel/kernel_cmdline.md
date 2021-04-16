@@ -241,15 +241,6 @@ If the event stream is enabled, specifies the frequency at which it will attempt
 to run. The resolution is limited, so the driver will only be able to pick the
 nearest power of 2 from the cpu timer counter. The default is 10000.
 
-## kernel.bypass-debuglog=\<bool>
-
-When enabled, forces output to the console instead of buffering it. The reason
-we have both a compile switch and a cmdline parameter is to facilitate prints
-in the kernel before cmdline is parsed to be forced to go to the console.
-The compile switch setting overrides the cmdline parameter (if both are present).
-Note that both the compile switch and the cmdline parameter have the side effect
-of disabling irq driven uart Tx.
-
 ## kernel.cprng-reseed-require.hw-rng=\<bool>
 
 When enabled and if HW RNG fails at reseeding, CPRNG panics. Defaults to false.

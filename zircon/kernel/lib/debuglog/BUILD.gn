@@ -13,7 +13,7 @@ zx_library("debuglog") {
     ":tests",
     "//sdk/lib/fit",
     "//zircon/kernel/dev/udisplay:headers",
-    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/crashlog",
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/ktl",
