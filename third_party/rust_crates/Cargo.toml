@@ -35,6 +35,7 @@ bitfield = "0.13"
 bitflags = "1"
 bumpalo = "3.2.1"
 byteorder = { version = "1", features = ["i128"] }
+bytes = "0.5.4"
 cargo_metadata = "0.9.1"
 chrono = "0.4.11"
 chrono-english = "0.1.4"
@@ -168,7 +169,6 @@ features = ["chrono", "registry", "tracing-log"]
 # Target-side only dependencies
 [target.'cfg(target_os = "fuchsia")'.dependencies]
 ansi_term = "0.11.0"
-bytes = "0.5.4"
 # do not add back without verifying certificate transparency is ready to use - see fxbug.dev/25100
 # ct-logs = "0.6"
 derivative = "2.1.1"

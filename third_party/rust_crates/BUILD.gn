@@ -88,10 +88,8 @@ group("byteorder") {
   deps = [ ":byteorder-v1_3_1" ]
 }
 
-if (current_os == "fuchsia") {
-  group("bytes") {
-    deps = [ ":bytes-v0_5_4" ]
-  }
+group("bytes") {
+  deps = [ ":bytes-v0_5_4" ]
 }
 
 group("cargo_metadata") {
