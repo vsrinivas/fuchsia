@@ -85,25 +85,29 @@ mod tests {
         anyhow::Context as _,
         fidl_fuchsia_input_injection::{InputDeviceRegistryMarker, InputDeviceRegistryRequest},
         fuchsia_async as fasync,
-        futures::StreamExt,
+        futures::{pin_mut, task::Poll, StreamExt},
         matches::assert_matches,
     };
 
-    #[fasync::run_until_stalled(test)]
-    async fn add_keyboard_device_invokes_fidl_register_method_exactly_once() -> Result<(), Error> {
+    #[test]
+    fn add_keyboard_device_invokes_fidl_register_method_exactly_once() -> Result<(), Error> {
+        let mut executor = fasync::Executor::new().context("creating executor")?;
         let (proxy, request_stream) =
             endpoints::create_proxy_and_stream::<InputDeviceRegistryMarker>()
                 .context("failed to create proxy and stream for InputDeviceRegistry")?;
         InputDeviceRegistry { proxy }.add_keyboard_device().context("adding keyboard")?;
-        assert_matches!(
-            request_stream.collect::<Vec<_>>().await.as_slice(),
-            [Ok(InputDeviceRegistryRequest::Register { .. })]
-        );
+
+        let requests = match executor.run_until_stalled(&mut request_stream.collect::<Vec<_>>()) {
+            Poll::Ready(reqs) => reqs,
+            Poll::Pending => return Err(format_err!("request_stream did not terminate")),
+        };
+        assert_matches!(requests.as_slice(), [Ok(InputDeviceRegistryRequest::Register { .. })]);
         Ok(())
     }
 
-    #[fasync::run_until_stalled(test)]
-    async fn add_keyboard_device_registers_a_keyboard() -> Result<(), Error> {
+    #[test]
+    fn add_keyboard_device_registers_a_keyboard() -> Result<(), Error> {
+        let mut executor = fasync::Executor::new().context("creating executor")?;
         // Create an `InputDeviceRegistry`, and add a keyboard to it.
         let (registry_proxy, mut registry_request_stream) =
             endpoints::create_proxy_and_stream::<InputDeviceRegistryMarker>()
@@ -112,30 +116,40 @@ mod tests {
         let input_device =
             input_device_registry.add_keyboard_device().context("adding keyboard")?;
 
-        // `input_device_registry` should send a `Register` messgage to `registry_request_stream`.
-        // Use `registry_request_stream` to grab the `ClientEnd` of the keyboard added above,
-        // and convert the `ClientEnd` into an `InputDeviceProxy`.
-        let input_device_proxy = match registry_request_stream
-            .next()
-            .await
-            .context("stream read should yield Some")?
-            .context("fidl read")?
-        {
-            InputDeviceRegistryRequest::Register { device, .. } => device,
-        }
-        .into_proxy()
-        .context("converting client_end to proxy")?;
+        let test_fut = async {
+            // `input_device_registry` should send a `Register` messgage to `registry_request_stream`.
+            // Use `registry_request_stream` to grab the `ClientEnd` of the keyboard added above,
+            // and convert the `ClientEnd` into an `InputDeviceProxy`.
+            let input_device_proxy = match registry_request_stream
+                .next()
+                .await
+                .context("stream read should yield Some")?
+                .context("fidl read")?
+            {
+                InputDeviceRegistryRequest::Register { device, .. } => device,
+            }
+            .into_proxy()
+            .context("converting client_end to proxy")?;
 
-        // Send a `GetDescriptor` request to `input_device`, and verify that the device
-        // is as keyboard.
-        let input_device_get_descriptor_fut = input_device_proxy.get_descriptor();
-        let input_device_server_fut = input_device.serve_reports();
-        std::mem::drop(input_device_proxy); // Terminate stream served by `input_device_server_fut`.
-        assert_matches!(
-            futures::future::join(input_device_server_fut, input_device_get_descriptor_fut).await,
-            (_, Ok(DeviceDescriptor { keyboard: Some(_), .. }))
-        );
-        Ok(())
+            // Send a `GetDescriptor` request to `input_device`, and verify that the device
+            // is as keyboard.
+            let input_device_get_descriptor_fut = input_device_proxy.get_descriptor();
+            let input_device_server_fut = input_device.serve_reports();
+            std::mem::drop(input_device_proxy); // Terminate stream served by `input_device_server_fut`.
+            assert_matches!(
+                futures::future::join(input_device_server_fut, input_device_get_descriptor_fut)
+                    .await,
+                (_, Ok(DeviceDescriptor { keyboard: Some(_), .. }))
+            );
+
+            Ok(())
+        };
+        pin_mut!(test_fut);
+
+        match executor.run_until_stalled(&mut test_fut) {
+            Poll::Ready(r) => r,
+            Poll::Pending => Err(format_err!("test did not complete")),
+        }
     }
 
     // Because `input_synthesis` is a library, unimplemented features should yield `Error`s,
