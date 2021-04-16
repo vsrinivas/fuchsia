@@ -5,9 +5,9 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/clock.h>
 #include <soc/aml-a311d/a311d-hw.h>
 #include <soc/aml-meson/g12b-clk.h>
@@ -23,6 +23,10 @@ static const pbus_mmio_t clk_mmios[] = {
     {
         .base = A311D_DOS_BASE,
         .length = A311D_DOS_LENGTH,
+    },
+    {
+        .base = A311D_MSR_CLK_BASE,
+        .length = A311D_MSR_CLK_LENGTH,
     },
 };
 
