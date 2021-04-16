@@ -62,7 +62,7 @@ struct arch_exception_context {
 // Register state layout used by arm64_context_switch().
 struct arm64_context_switch_frame {
   uint64_t r19;
-  uint64_t r20;
+  uint64_t zero; // slot where x20 (percpu pointer) would be saved if it were
   uint64_t r21;
   uint64_t r22;
   uint64_t r23;

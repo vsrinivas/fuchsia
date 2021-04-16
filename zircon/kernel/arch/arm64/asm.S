@@ -51,12 +51,13 @@ FUNCTION(arm64_context_switch)
 
     /* save old frame */
     /* This layout should match struct context_switch_frame */
-    push_regs x29, x30
-    push_regs x27, x28
-    push_regs x25, x26
-    push_regs x23, x24
-    push_regs x21, x22
-    push_regs x19, xzr // don't save x20, it is the percpu pointer
+    sub_from_sp (6 * 16)
+    str  x19, [sp] // don't save x20, it is the percpu pointer
+    stp  x21, x22, [sp, (1 * 16)]
+    stp  x23, x24, [sp, (2 * 16)]
+    stp  x25, x26, [sp, (3 * 16)]
+    stp  x27, x28, [sp, (4 * 16)]
+    stp  x29, x30, [sp, (5 * 16)]
 
     /* save old sp */
     mov  x9, sp
@@ -71,12 +72,13 @@ FUNCTION(arm64_context_switch)
 #endif
 
     /* restore new frame */
-    pop_regs x19, xzr // don't restore x20, it's the percpu pointer
-    pop_regs x21, x22
-    pop_regs x23, x24
-    pop_regs x25, x26
-    pop_regs x27, x28
-    pop_regs x29, x30
+    ldr  x19, [sp] // don't restore x20, it's the percpu pointer
+    ldp  x21, x22, [sp, (1 * 16)]
+    ldp  x23, x24, [sp, (2 * 16)]
+    ldp  x29, x30, [sp, (5 * 16)] // Restore earlier for better scheduling with ret
+    ldp  x25, x26, [sp, (3 * 16)]
+    ldp  x27, x28, [sp, (4 * 16)]
+    add_to_sp (6 * 16)
 
     ret
     // Prevent speculation through RET
