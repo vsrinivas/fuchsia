@@ -124,7 +124,6 @@ extern Cmdline gCmdline;
 
 // TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
-static constexpr const char kEnableDebuggingSyscalls[] = "kernel.enable-debugging-syscalls";
 static constexpr const char kEnableSerialSysaclls[] = "kernel.enable-serial-syscalls";
 static constexpr const char kEntropyTestLen[] = "kernel.entropy-test.len";
 static constexpr const char kEntropyTestSrc[] = "kernel.entropy-test.src";

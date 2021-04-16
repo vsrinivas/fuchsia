@@ -6,10 +6,11 @@
 
 #include "priv.h"
 
+#include <lib/boot-options/boot-options.h>
 #include <lib/cmdline.h>
 
 bool DebuggingSyscallsEnabled() {
-  static bool enabled = gCmdline.GetBool(kernel_option::kEnableDebuggingSyscalls, false);
+  static const bool enabled = gBootOptions->enable_debugging_syscalls;
   return enabled;
 }
 

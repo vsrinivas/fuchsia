@@ -14,6 +14,7 @@ zx_library("ktrace") {
   ]
   deps = [
     "//zircon/kernel/hypervisor:headers",
+    "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/cmdline",
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/ktl",

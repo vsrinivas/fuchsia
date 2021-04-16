@@ -297,6 +297,19 @@ DEFINE_OPTION("kernel.debug_uart_poll", bool, debug_uart_poll, {false}, R"""(
 If true, will periodically poll UART and forwards its contents into the console.
 )""")
 
+DEFINE_OPTION("kernel.enable-debugging-syscalls", bool, enable_debugging_syscalls, {false}, R"""(
+When disabled, certain debugging-related syscalls will fail with
+`ZX_ERR_NOT_SUPPORTED`. These are:
+- `zx_debug_send_command()`
+- `zx_ktrace_control()`
+- `zx_ktrace_init()`
+- `zx_ktrace_read()`
+- `zx_mtrace_control()`
+- `zx_process_write_memory()`
+- `zx_system_mexec()`
+- `zx_system_mexec_payload_get()
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 
