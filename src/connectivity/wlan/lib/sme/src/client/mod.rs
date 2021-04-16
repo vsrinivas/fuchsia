@@ -317,6 +317,7 @@ impl ClientSme {
 
         match req.bss_desc {
             Some(bss_desc) => {
+                info!("Received ConnectRequest with BssDescription.");
                 let bss_desc = match BssDescription::from_fidl(*bss_desc) {
                     Ok(bss_desc) => bss_desc,
                     Err(e) => {
@@ -325,11 +326,6 @@ impl ClientSme {
                         return receiver;
                     }
                 };
-
-                info!(
-                    "Received ConnectRequest for {}",
-                    bss_desc.to_string(&self.context.inspect.hasher)
-                );
 
                 // We can connect directly now.
                 let viable_bss = match get_protection(
@@ -550,8 +546,7 @@ impl super::Station for ClientSme {
                                     let best_bssid = best_bss.bssid;
                                     let best_bss_protection = best_compatible_bss.protection;
 
-                                    info!("Attempting to connect to:");
-                                    info!("  {}", best_bss.to_string(&self.context.inspect.hasher));
+                                    info!("Attempting to connect...");
 
                                     let candidate_network = info::CandidateNetwork {
                                         bss: best_bss.clone(),
