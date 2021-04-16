@@ -118,9 +118,6 @@ _fidl_translated_deps -= [
   "fuchsia.hardware.usb.function",  # Blocked by zircon.hw.usb.
   "fuchsia.hardware.usb.hci",  # Blocked by zircon.hw.usb.
   "fuchsia.hardware.usb.request",  # Blocked by zircon.hw.usb.
-  "fuchsia.hardware.wlan.info",  # Variable names starting with `_`.
-  "fuchsia.hardware.wlan.mac",  # Blocked by fuchsia.hardware.wlan.info.
-  "fuchsia.hardware.wlanif",  # Blocked by fuchsia.hardware.wlan.info.
   "zircon.hw.pci",  # Dummy library.
 ]
 
@@ -129,8 +126,8 @@ _fidl_translated_deps -= [
 _rust_translated_deps = [
   "ddk.hw.wlan.ieee80211",
   "ddk.hw.wlan.wlaninfo",
+  "fuchsia.hardware.wlan.info",
 
-  # "fuchsia.hardware.wlan.info",  # Not FIDL-compliant yet.
   # "fuchsia.hardware.wlan.mac",  # Not FIDL-compliant yet.
 ]
 

@@ -1,6 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be found
-// in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 library ddk.hw.wlan.wlaninfo;
 
@@ -9,111 +9,111 @@ using ddk.hw.wlan.ieee80211;
 /// Role of a WLAN device.
 enum WlanInfoMacRole : uint8 {
     /// Device operating as a non-AP station (i.e., a client of an AP).
-    client = 0x1;
+    CLIENT = 0x1;
 
     /// Device operating as an access point.
-    ap = 0x2;
+    AP = 0x2;
 
     /// Device operating as a mesh node.
-    mesh = 0x4;
+    MESH = 0x4;
 };
 
 enum WlanInfoPhyType {
     /// IEEE 802.11 for 1, 2 Mbps.
-    dsss = 0x01;
+    DSSS = 0x01;
 
     /// IEEE 802.11 for 5.5, 11 Mbps. ERP-CCK.
-    cck = 0x02;
+    CCK = 0x02;
 
     /// IEEE 802.11g, 1, 2, 5,5, 11, 12, 24 Mbps + [6, 54] Mbps.
-    erp = 0x04;
+    ERP = 0x04;
 
     // FIDL enums don't allow two definitions of the same number, please use
     // WLAN_INFO_PHY_TYPE_OFDM.
     // TODO(http://fxbug.dev/74579): Clean this up.
     // IEEE 802.11a/g.
-    //ofdm = 0x4;
+    //OFDM = 0x4;
 
     /// IEEE 802.11n.
-    ht = 0x08;
+    HT = 0x08;
 
     /// IEEE 802.11ac.
-    vht = 0x10;
+    VHT = 0x10;
 
     /// IEEE 802.11ax.
-    hew = 0x20;
+    HEW = 0x20;
 };
 
 const uint32 WLAN_INFO_PHY_TYPE_OFDM = 0x4;
 
 enum WlanInfoDriverFeature : uint32 {
     /// Device or driver implements scanning.
-    scan_offload = 0x00000001;
+    SCAN_OFFLOAD = 0x00000001;
 
     /// Device or driver implements rate selection.
-    rate_selection = 0x00000002;
+    RATE_SELECTION = 0x00000002;
 
     /// Device is not a physical device.
-    synth = 0x00000004;
+    SYNTH = 0x00000004;
 
     /// Driver supports transmission reports, and will use the
     /// wlanmac_ifc.report_tx_status() callback to report the status of each queued
     /// transmission.
-    tx_status_report = 0x00000008;
+    TX_STATUS_REPORT = 0x00000008;
 
     /// Set this flag to indicate whether SME should trust this device or driver to
     /// handle DFS channels correctly in an active scan (e.g. it makes sure DFS
     /// channel is safe to transmit before doing so).
-    dfs = 0x00000010;
+    DFS = 0x00000010;
 
     /// Driver responds to probe requests in hardware.
-    probe_resp_offload = 0x00000020;
+    PROBE_RESP_OFFLOAD = 0x00000020;
 
     /// Driver supports running the SAE handshake in SME.
-    sae_sme_auth = 0x00000040;
+    SAE_SME_AUTH = 0x00000040;
 
     /// Driver implements the SAE handshake.
-    sae_driver_auth = 0x00000080;
+    SAE_DRIVER_AUTH = 0x00000080;
 
     /// Driver supports management frame protection and IGTK installation.
-    mfp = 0x00000100;
+    MFP = 0x00000100;
 };
 
 /// IEEE Std 802.11-206 Section 9.4.1.4 Capability Information Field
 enum WlanInfoHardwareCapability : uint32 {
     /// Short packet preamble.
-    short_preamble = 0x0020;
+    SHORT_PREAMBLE = 0x0020;
 
     /// Spectrum management.
-    spectrum_mgmt = 0x0100;
+    SPECTRUM_MGMT = 0x0100;
 
     // QoS capable.
-    qos = 0x0200;
+    QOS = 0x0200;
 
     /// Short slot times after packet collision.
-    short_slot_time = 0x0400;
+    SHORT_SLOT_TIME = 0x0400;
 
     /// Radio measurement.
-    radio_msmt = 0x1000;
+    RADIO_MSMT = 0x1000;
 
     // Supports simutaneous client-ap use
     // TODO(fxbug.dev/54923): Move SIMULTANEOUS_CLIENT_AP to a different Fuchsia specific capability enum.
     // This enum should only be used for IEEE 802.11 fields. This type should also be reduced
     // to uint16_t once this is done.
-    simultaneous_client_ap = 0x10000;
+    SIMULTANEOUS_CLIENT_AP = 0x10000;
 };
 
 /// This is a simplified expression of channel starting frequencies. Expand this
 /// list as Fuchsia evolves.
 enum WlanInfoBand {
     /// Channel starting frequency: 2.407 GHz.
-    two_ghz = 0;
+    TWO_GHZ = 0;
 
     /// Channel starting frequency: 5.000 GHz.
-    five_ghz = 1;
+    FIVE_GHZ = 1;
 
     /// The number of defined bands.
-    count = 2;
+    COUNT = 2;
 };
 
 const uint32 WLAN_INFO_BAND_2GHZ = 0;

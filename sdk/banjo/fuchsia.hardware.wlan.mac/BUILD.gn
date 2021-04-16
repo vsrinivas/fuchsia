@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.wlan.mac") {
+  disable_verification = true
   sources = [ "mac.banjo" ]
   deps = [
     "//sdk/banjo/ddk.hw.wlan.ieee80211",

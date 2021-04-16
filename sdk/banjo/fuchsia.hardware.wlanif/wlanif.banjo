@@ -1,6 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be found
-// in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 library fuchsia.hardware.wlanif;
 
@@ -33,12 +33,12 @@ struct WlanifSsid {
 struct WlanifScanReq {
     uint64 txn_id;
     fuchsia.hardware.wlan.info.WlanBssType bss_type;
-    array<uint8>:MAC_ARRAY_LENGTH bssid;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH bssid;
     WlanifSsid ssid;
     WlanScanType scan_type;
     uint32 probe_delay;
     uint64 num_channels;
-    array<uint8>:WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channel_list;
+    array<uint8>:ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channel_list;
     uint32 min_channel_time;
     uint32 max_channel_time;
     uint64 num_ssids;
@@ -56,14 +56,14 @@ const uint32 WLAN_IE_BODY_MAX_LEN = 255;
 const uint32 WLAN_VIE_MAX_LEN = 510;  // max length for two elements (WPA and WSC)
 
 struct WlanifBssDescription {
-    array<uint8>:MAC_ARRAY_LENGTH bssid;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH bssid;
     fuchsia.hardware.wlan.info.WlanBssType bss_type;
     uint32 beacon_period;
     uint64 timestamp;
     uint64 local_time;
     uint16 cap;
 
-    vector<uint8> ies_bytes;
+    vector<uint8>:MAX ies_bytes;
 
     fuchsia.hardware.wlan.info.WlanChannel chan;
     int8 rssi_dbm;
@@ -88,26 +88,26 @@ enum WlanAuthType : uint8 {
 };
 
 struct WlanifAuthReq {
-    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
     WlanAuthType auth_type;
     uint32 auth_failure_timeout;
 
     // Used to pass an SAE password when SAE_DRIVER_AUTH is in use.
-    [Mutable] vector<uint8> sae_password;
+    [Mutable] vector<uint8>:MAX sae_password;
 };
 
 struct WlanifAuthInd {
-    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
     WlanAuthType auth_type;
 };
 
 struct WlanifDeauthReq {
-    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
     ddk.hw.wlan.ieee80211.ReasonCode reason_code;
 };
 
 struct WlanifAssocReq {
-    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
     uint64 rsne_len;
     array<uint8>:WLAN_IE_BODY_MAX_LEN rsne;
     uint64 vendor_ie_len;
@@ -115,7 +115,7 @@ struct WlanifAssocReq {
 };
 
 struct WlanifAssocInd {
-    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
     uint16 listen_interval;
     WlanifSsid ssid;
     uint64 rsne_len;
@@ -125,12 +125,12 @@ struct WlanifAssocInd {
 };
 
 struct WlanifDisassocReq {
-    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
     uint16 reason_code;
 };
 
 struct WlanifResetReq {
-    array<uint8>:MAC_ARRAY_LENGTH sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH sta_address;
     bool set_default_mib;
 };
 
@@ -151,10 +151,10 @@ struct WlanifStopReq {
 };
 
 struct SetKeyDescriptor {
-    vector<uint8> key;
+    vector<uint8>:MAX key;
     uint16 key_id;
     fuchsia.hardware.wlan.info.WlanKeyType key_type;
-    array<uint8>:MAC_ARRAY_LENGTH address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH address;
     uint64 rsc;
     array<uint8>:3 cipher_suite_oui;
     uint8 cipher_suite_type;
@@ -170,7 +170,7 @@ struct WlanifSetKeysReq {
 struct DeleteKeyDescriptor {
     uint16 key_id;
     fuchsia.hardware.wlan.info.WlanKeyType key_type;
-    array<uint8>:MAC_ARRAY_LENGTH address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH address;
 };
 
 struct WlanifDelKeysReq {
@@ -179,24 +179,24 @@ struct WlanifDelKeysReq {
 };
 
 struct WlanifEapolReq {
-    array<uint8>:MAC_ARRAY_LENGTH src_addr;
-    array<uint8>:MAC_ARRAY_LENGTH dst_addr;
-    vector<uint8> data;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH src_addr;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH dst_addr;
+    vector<uint8>:MAX data;
 };
 
 /// This struct is sent from SME to wlanif, indicating the result of SAE handshake process.
 struct WlanifSaeHandshakeResp {
-    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
     ddk.hw.wlan.ieee80211.StatusCode status_code;
 };
 
 /// This struct is sent in both directions, containing the information of SAE authentication
 /// frames, sae_fields maps to challenge text, see IEEE Std 802.11-2016, 9.3.3.12.
 struct WlanifSaeFrame {
-    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
     ddk.hw.wlan.ieee80211.StatusCode status_code;
     uint16 seq_num;
-    vector<uint8> sae_fields;
+    vector<uint8>:MAX sae_fields;
 };
 
 /// Bits used to request management frame subtypes to be captured. Also used by driver to indicate
@@ -270,22 +270,22 @@ enum WlanAuthResult : uint8 {
 };
 
 struct WlanifAuthConfirm {
-    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
     WlanAuthType auth_type;
     WlanAuthResult result_code;
 };
 
 struct WlanifAuthResp {
-    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
     WlanAuthResult result_code;
 };
 
 struct WlanifDeauthConfirm {
-    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
 };
 
 struct WlanifDeauthIndication {
-    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
     ddk.hw.wlan.ieee80211.ReasonCode reason_code;
     /// locally_initiated is true if deauth is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to deauth frame)
@@ -312,7 +312,7 @@ struct WlanifAssocConfirm {
 };
 
 struct WlanifAssocResp {
-    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
     WlanAssocResult result_code;
     uint16 association_id;
 };
@@ -322,7 +322,7 @@ struct WlanifDisassocConfirm {
 };
 
 struct WlanifDisassocIndication {
-    array<uint8>:MAC_ARRAY_LENGTH PeerStaAddress;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
     ddk.hw.wlan.ieee80211.ReasonCode reason_code;
     /// locally_initiated is true if diassoc is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to disassoc frame)
@@ -360,7 +360,7 @@ struct WlanifEapolConfirm {
     /// This value corresponds to the dst_addr in the EapolRequest we're confirming.
     /// IEEE 802.11-2016 does not include this field, but we need it to disambiguate
     /// if multiple EAPoL handshakes are ongoing.
-    array<uint8>:MAC_ARRAY_LENGTH dst_addr;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH dst_addr;
 };
 
 struct WlanifSignalReportIndication {
@@ -369,23 +369,23 @@ struct WlanifSignalReportIndication {
 };
 
 struct WlanifEapolIndication {
-    array<uint8>:MAC_ARRAY_LENGTH src_addr;
-    array<uint8>:MAC_ARRAY_LENGTH dst_addr;
-    vector<uint8> data;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH src_addr;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH dst_addr;
+    vector<uint8>:MAX data;
 };
 
 struct WlanifSaeHandshakeInd {
-    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
 };
 
 struct WlanifBandCapabilities {
     /// Values from enum Band (WLAN_BAND_*)
     uint8 band_id;
     uint64 num_rates;
-    array<uint16>:WLAN_INFO_BAND_INFO_MAX_RATES rates;
+    array<uint16>:ddk.hw.wlan.wlaninfo.WLAN_INFO_BAND_INFO_MAX_RATES rates;
     uint16 base_frequency;
     uint64 num_channels;
-    array<uint8>:WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channels;
+    array<uint8>:ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channels;
     bool ht_supported;
     ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities ht_caps;
     bool vht_supported;
@@ -400,20 +400,20 @@ enum WlanifFeature : uint32 {
 };
 
 struct WlanifQueryInfo {
-    array<uint8>:MAC_ARRAY_LENGTH mac_addr;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH mac_addr;
     /// WLAN_MAC_ROLE_*
     ddk.hw.wlan.wlaninfo.WlanInfoMacRole role;
     /// WLANIF_FEATURE_*
     uint32 features;
     uint64 num_bands;
-    array<WlanifBandCapabilities>:WLAN_INFO_MAX_BANDS bands;
+    array<WlanifBandCapabilities>:ddk.hw.wlan.wlaninfo.WLAN_INFO_MAX_BANDS bands;
     /// WLAN_DRIVER_FEATURE_*
     uint32 driver_features;
 };
 
 struct WlanifCounter {
     uint64 count;
-    string name;
+    string:MAX name;
 };
 
 struct WlanifPacketCounter {
@@ -433,7 +433,7 @@ struct WlanifDispatcherStats {
 };
 
 struct WlanifRssiStats {
-    vector<uint64> hist;
+    vector<uint64>:MAX hist;
 };
 
 // LINT.IfChange
@@ -610,7 +610,7 @@ struct WlanifMlmeStats {
 
 struct WlanifStats {
     WlanifDispatcherStats dispatcher_stats;
-    vector<WlanifMlmeStats> mlme_stats;
+    vector<WlanifMlmeStats>:MAX mlme_stats;
 };
 
 struct WlanifStatsQueryResponse {
@@ -618,7 +618,7 @@ struct WlanifStatsQueryResponse {
 };
 
 struct WlanifCapturedFrameResult {
-    vector<uint8> data;
+    vector<uint8>:MAX data;
 };
 
 struct WlanifChannelSwitchInfo {
@@ -626,8 +626,8 @@ struct WlanifChannelSwitchInfo {
 };
 
 struct WlanifPmkInfo {
-    vector<uint8> pmk;
-    vector<uint8> pmkid;
+    vector<uint8>:MAX pmk;
+    vector<uint8>:MAX pmkid;
 };
 
 [Transport = "Banjo", BanjoLayout = "ddk-interface"]
@@ -660,7 +660,7 @@ protocol WlanifImplIfc {
     OnWmmStatusResp(zx.status s, fuchsia.hardware.wlan.info.WlanWmmParams wmm_params) -> ();
 
     // Data operations
-    DataRecv([Buffer] vector<uint8> data, uint32 flags) -> ();
+    DataRecv([Buffer] vector<uint8>:MAX data, uint32 flags) -> ();
 };
 
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]

@@ -26,7 +26,7 @@ struct WlanmacInfo {
     ddk.hw.wlan.wlaninfo.WlanInfoHardwareCapability caps;
 
     /// Supported bands.
-    array<ddk.hw.wlan.wlaninfo.WlanInfoBandInfo>:WLAN_INFO_MAX_BANDS bands;
+    array<ddk.hw.wlan.wlaninfo.WlanInfoBandInfo>:ddk.hw.wlan.wlaninfo.WLAN_INFO_MAX_BANDS bands;
     uint32 bands_count;
 };
 
@@ -84,10 +84,12 @@ enum WlanTxInfoValid : uint8 {
     DATA_RATE = 0x1;
     TX_VECTOR_IDX = 0x2;
     PHY = 0x4;
-    CHAN_WIDTH = 0x4;
+    //CHAN_WIDTH = 0x4;
     MCS = 0x8;
     // Bits 5-31 reserved
 };
+
+const uint8 WLAN_TX_INFO_VALID_CHAN_WIDTH = 0x4;
 
 struct WlanTxInfo {
     /// Transmit flags. These represent boolean options as opposed to enums or other value-based
@@ -194,7 +196,7 @@ struct WlanHwScanConfig {
     /// Number of channels in the |channels| array. Must be at least 1
     uint8 num_channels;
     /// Channel numbers to scan
-    array<uint8>:WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channels;
+    array<uint8>:ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channels;
     /// SSID for directed probe requests
     fuchsia.hardware.wlan.info.WlanSsid ssid;
 };
