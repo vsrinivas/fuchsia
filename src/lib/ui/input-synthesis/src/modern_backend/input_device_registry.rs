@@ -86,27 +86,41 @@ mod tests {
         fidl_fuchsia_input_injection::{InputDeviceRegistryMarker, InputDeviceRegistryRequest},
         fuchsia_async as fasync,
         futures::{pin_mut, task::Poll, StreamExt},
-        matches::assert_matches,
+        test_case::test_case,
     };
 
-    #[test]
-    fn add_keyboard_device_invokes_fidl_register_method_exactly_once() -> Result<(), Error> {
+    #[test_case(&super::InputDeviceRegistry::add_keyboard_device; "keyboard_device")]
+    fn add_device_invokes_fidl_register_method_exactly_once(
+        add_device_method: &dyn Fn(
+            &mut super::InputDeviceRegistry,
+        ) -> Result<Box<dyn synthesizer::InputDevice>, Error>,
+    ) -> Result<(), Error> {
         let mut executor = fasync::Executor::new().context("creating executor")?;
         let (proxy, request_stream) =
             endpoints::create_proxy_and_stream::<InputDeviceRegistryMarker>()
                 .context("failed to create proxy and stream for InputDeviceRegistry")?;
-        InputDeviceRegistry { proxy }.add_keyboard_device().context("adding keyboard")?;
+        add_device_method(&mut InputDeviceRegistry { proxy }).context("adding device")?;
 
         let requests = match executor.run_until_stalled(&mut request_stream.collect::<Vec<_>>()) {
             Poll::Ready(reqs) => reqs,
             Poll::Pending => return Err(format_err!("request_stream did not terminate")),
         };
-        assert_matches!(requests.as_slice(), [Ok(InputDeviceRegistryRequest::Register { .. })]);
+        matches::assert_matches!(
+            requests.as_slice(),
+            [Ok(InputDeviceRegistryRequest::Register { .. })]
+        );
+
         Ok(())
     }
 
-    #[test]
-    fn add_keyboard_device_registers_a_keyboard() -> Result<(), Error> {
+    #[test_case(&super::InputDeviceRegistry::add_keyboard_device =>
+                matches Ok(DeviceDescriptor { keyboard: Some(_), .. });
+                "keyboard_device")]
+    fn add_device_registers_correct_device_type(
+        add_device_method: &dyn Fn(
+            &mut super::InputDeviceRegistry,
+        ) -> Result<Box<dyn synthesizer::InputDevice>, Error>,
+    ) -> Result<DeviceDescriptor, Error> {
         let mut executor = fasync::Executor::new().context("creating executor")?;
         // Create an `InputDeviceRegistry`, and add a keyboard to it.
         let (registry_proxy, mut registry_request_stream) =
@@ -114,7 +128,7 @@ mod tests {
                 .context("failed to create proxy and stream for InputDeviceRegistry")?;
         let mut input_device_registry = InputDeviceRegistry { proxy: registry_proxy };
         let input_device =
-            input_device_registry.add_keyboard_device().context("adding keyboard")?;
+            add_device_method(&mut input_device_registry).context("adding keyboard")?;
 
         let test_fut = async {
             // `input_device_registry` should send a `Register` messgage to `registry_request_stream`.
@@ -136,13 +150,11 @@ mod tests {
             let input_device_get_descriptor_fut = input_device_proxy.get_descriptor();
             let input_device_server_fut = input_device.serve_reports();
             std::mem::drop(input_device_proxy); // Terminate stream served by `input_device_server_fut`.
-            assert_matches!(
-                futures::future::join(input_device_server_fut, input_device_get_descriptor_fut)
-                    .await,
-                (_, Ok(DeviceDescriptor { keyboard: Some(_), .. }))
-            );
 
-            Ok(())
+            let (_server_result, get_descriptor_result) =
+                futures::future::join(input_device_server_fut, input_device_get_descriptor_fut)
+                    .await;
+            get_descriptor_result.map_err(anyhow::Error::from)
         };
         pin_mut!(test_fut);
 
