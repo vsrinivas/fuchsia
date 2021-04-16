@@ -190,7 +190,9 @@ group("test") {
 
     # TODO(fxbug.dev/70684): re-enable when fixing flake.
     # ":archivist_reader_test($host_toolchain)",
-    ":inspect_metrics_emulator_test($host_toolchain)",
+
+    # TODO(fxbug.dev/74407: re-enable when fixing flake.
+    # ":inspect_metrics_emulator_test($host_toolchain)",
 
     # TODO(fxbug.dev/71024): re-enable when fixing flake.
     #":inspect_metrics_test($host_toolchain)",
