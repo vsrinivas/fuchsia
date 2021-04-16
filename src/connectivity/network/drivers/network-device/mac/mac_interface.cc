@@ -48,6 +48,11 @@ zx_status_t MacInterface::Create(ddk::MacAddrImplProtocolClient parent,
   }
 
   mac->impl_.GetFeatures(&mac->features_);
+  if ((mac->features_.supported_modes & ~kSupportedModesMask) != 0) {
+    LOGF_ERROR("mac-addr-device:Init: Invalid supported modes bitmask: %08X",
+               mac->features_.supported_modes);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   if (mac->features_.supported_modes & MODE_MULTICAST_FILTER) {
     mac->default_mode_ = MODE_MULTICAST_FILTER;
   } else if (mac->features_.supported_modes & MODE_MULTICAST_PROMISCUOUS) {
@@ -55,17 +60,14 @@ zx_status_t MacInterface::Create(ddk::MacAddrImplProtocolClient parent,
   } else if (mac->features_.supported_modes & MODE_PROMISCUOUS) {
     mac->default_mode_ = MODE_PROMISCUOUS;
   } else {
-    LOG_ERROR("mac-addr-device:Init: Invalid device features");
+    // No supported modes.
+    LOGF_ERROR("mac-addr-device:Init: Invalid supported modes bitmask: %08X",
+               mac->features_.supported_modes);
     return ZX_ERR_NOT_SUPPORTED;
   }
   // Limit multicast filter count to protocol definition.
   if (mac->features_.multicast_filter_count > MAX_MAC_FILTER) {
     mac->features_.multicast_filter_count = MAX_MAC_FILTER;
-  }
-  if ((mac->features_.supported_modes & ~kSupportedModesMask) != 0) {
-    LOGF_ERROR("mac-addr-device:Init: Invalid supported modes bitmask: %08X",
-               mac->features_.supported_modes);
-    return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Set the default mode to the parent on initialization.
