@@ -13,12 +13,20 @@ found in the LICENSE file. -->
         }
     </style>
 </head>
-
+<script>
+    function playAudio() {
+        var audio = document.getElementById("audio");
+        audio.volume = 1.0;
+        audio.load();
+        audio.play();
+    }
+</script>
 <body>
-    <audio controls>
+    <audio id="audio" controls>
         <source src="sample_audio.mp3" type="audio/mpeg">
         Audio is not supported.
     </audio>
+    <button id="play" onclick="playAudio()">PLAY</button>
 </body>
 
 </html>

@@ -7,6 +7,7 @@ import 'dart:math';
 
 import 'package:ermine_driver/ermine_driver.dart';
 import 'package:flutter_driver/flutter_driver.dart';
+import 'package:gcloud_lib/gcloud_lib.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 import 'package:webdriver/sync_io.dart';
@@ -16,7 +17,7 @@ const _timeoutTenSec = Duration(seconds: 10);
 const _sampleViewRect = Rectangle(100, 200, 100, 100);
 const testserverUrl =
     'fuchsia-pkg://fuchsia.com/ermine_testserver#meta/ermine_testserver.cmx';
-const skipTests = [false, true, true, true];
+const skipTests = [false, true, true, true, true];
 
 void main() {
   Sl4f sl4f;
@@ -32,6 +33,7 @@ void main() {
   final redTabFinder = find.text('Red Page');
   final greenTabFinder = find.text('Green Page');
   final blueTabFinder = find.text('Blue Page');
+  final audioTabFinder = find.text('Audio Test');
 
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
@@ -457,5 +459,61 @@ void main() {
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     print('Closed the browser');
   }, skip: skipTests[3]);
-  // TODO(fxb/68716): Test audio playing
+
+  test('Should be able play audios on web', () async {
+    FlutterDriver browser;
+    browser = await ermine.launchAndWaitForSimpleBrowser();
+
+    final record = Audio(sl4f);
+    // TODO(fxb/74647): Need a way to avoid hardcoding api key.
+    final gcloud = GCloud.withClientViaApiKey('key');
+
+    // Access to audio.html where the following audio is played:
+    // experiences/bin/ermine_testserver/public/simple_browser_test/sample_audio.mp3
+    // It plays human voice saying "How old is Obama".
+    await input.text('http://127.0.0.1:8080/audio.html');
+    await input.keyPress(kEnterKey);
+    await browser.waitFor(audioTabFinder, timeout: _timeoutTenSec);
+
+    expect(await browser.getText(audioTabFinder), isNotNull);
+    print('Opened http://127.0.0.1:8080/audio.html');
+
+    final webdriver =
+        (await webDriverConnector.webDriversForHost('127.0.0.1')).single;
+
+    final audio = await _waitForWebElement(webdriver, By.id('audio'));
+    expect(audio, isNotNull);
+    print('The textfield is found.');
+
+    final playButton = await _waitForWebElement(webdriver, By.id('play'));
+    expect(playButton, isNotNull);
+    print('The PLAY button is found.');
+
+    final ttsResult = await ermine.waitFor(() async {
+      // Starts recording.
+      await record.startOutputSave();
+      await Future.delayed(_timeoutOneSec);
+      playButton.click();
+      // The audio play time.
+      await Future.delayed(Duration(seconds: 5));
+      // Finishes recording.
+      await record.stopOutputSave();
+      final audioOutput = await record.getOutputAudio();
+
+      final ttsList =
+          await speechToText(gcloud.speech, audioOutput.audioData, 'en-us');
+      final tts = ttsList.first.toLowerCase();
+      print('STT result: $tts');
+      return tts == 'how old is obama';
+    });
+
+    expect(ttsResult, isTrue);
+
+    gcloud.close();
+    await browser.close();
+    await ermine.driver.requestData('close');
+    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
+    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
+    print('Closed the browser');
+  }, skip: skipTests[4]);
 }
