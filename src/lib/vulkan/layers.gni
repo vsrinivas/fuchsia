@@ -2,4 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# The content of this file is obsolete. To depend on the compact image layer,
+# simply depend on //src/lib/vulkan/compact_image:compact_image_layer instead,
+# this will add both the loadable module, configuration JSON file and related
+# dependencies.
+
 import("//third_party/Vulkan-ValidationLayers/build-gn/layers-fuchsia.gni")

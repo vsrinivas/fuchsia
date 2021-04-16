@@ -1,0 +1,22 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build_overrides/vulkan_validation_layers.gni")
+
+# This builds a list of scopes for //src/lib/vulkan/validation_layers, which is
+# used to build an SDK atom for the layers. Keep this in sync with the content of
+# the imported .gni file above.
+#
+# See //src/lib/vulkan/BUILD.gn for the schema of each scope item in the list.
+#
+vulkan_validation_layers_sdk_atom_infos = [
+  {
+    module_name = "VkLayer_khronos_validation.so"
+    module_label =
+        "//third_party/Vulkan-ValidationLayers:vulkan_validation_layers"
+    config_label = "//third_party/Vulkan-ValidationLayers:vulkan_gen_json_files"
+    config_file =
+        "$root_out_dir/$vulkan_data_subdir/VkLayer_khronos_validation.json"
+  },
+]

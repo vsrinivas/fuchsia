@@ -3,6 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/dist/resource.gni")
+
+# IMPORTANT: Keep in sync with //sdk/lib/vulkan/compact_image/sdk_atom_info.gni
 
 # Compile a set of glsl shaders, each into a C header SPIR-V module.
 #
@@ -66,4 +69,17 @@ loadable_module("compact_image") {
   ]
   ldflags = [ "-static-libstdc++" ]
   configs += [ ":shaders_config" ]
+}
+
+resource("compact_image-config") {
+  sources = [ "VkLayer_compact_image.json" ]
+  outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
+  visibility = [ ":*" ]
+}
+
+group("compact_image_layer") {
+  deps = [
+    ":compact_image",
+    ":compact_image-config",
+  ]
 }

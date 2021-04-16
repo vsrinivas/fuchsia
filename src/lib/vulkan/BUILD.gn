@@ -6,9 +6,6 @@ import("//build/components.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/lib/vulkan/build/config.gni")
-import("//src/lib/vulkan/compact_image.gni")
-import("//src/lib/vulkan/image_pipe_swapchain.gni")
-import("//src/lib/vulkan/layers.gni")
 
 # Centralizing the GN points of entry into Vulkan ecosystem repositories here is helpful
 # for grasping the full scope.  Note, there are also entry points in //sdk/BUILD.gn.
@@ -80,23 +77,57 @@ config("vulkan_hpp") {
   ]
 }
 
-resource("validation-layers") {
-  sources = []
-  foreach(resource, vulkan_validation_layers.resources) {
-    sources += [ resource.path ]
-  }
-  outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
-  data_deps = vulkan_validation_layers.public_deps
+# Remove this once all callers are updated to reference the destination.
+group("validation-layers") {
+  deps = [ "//src/lib/vulkan/validation_layers" ]
 }
 
-resource("image-pipe-swapchain-fb") {
-  sources = []
-  foreach(resource, image_pipe_swapchain_fb.resources) {
-    sources += [ resource.path ]
-  }
-  outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
-  data_deps = image_pipe_swapchain_fb.public_deps
+# Remove this once all callers are updated to reference the destination.
+group("image-pipe-swapchain-fb") {
+  deps = [ "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer" ]
 }
+
+import("//src/lib/vulkan/compact_image/sdk_atom_info.gni")
+import("//src/lib/vulkan/swapchain/sdk_atom_info.gni")
+import("//src/lib/vulkan/validation_layers/sdk_atom_info.gni")
+
+# A list of scopes describing the Vulkan layers to add to the SDK.
+# Each item is a scope describing a given layer, which consists
+# in a loadable module and a JSON configuration file.
+#
+# The expected schema is the following:
+#
+#   module_name (optional)
+#     [string] Name of the loadable module (e.g. 'VkLayer_khrnos_validation.so).
+#     If not specified, then 'module_file' is required and will be used to
+#     determine the name.
+#
+#   module_label (required)
+#     [GN label] Label of the target generating the module, if it is not a
+#     prebuilt one.
+#
+#   module_file (optional)
+#     [GN path] Path to the loadable module. Required if 'module_name' is not
+#     defined. Otherwise, if 'module_label' is defined, this defaults to
+#     '$root_out_dir/$module_name'.
+#
+#   config_name (optional)
+#     [string] Name of the configuration file (e.g. 'VkLayer_khronos_validation.json').
+#     If not specified, then 'config_file' is required and will be used to
+#     determine the name.
+#
+#   config_label (optional)
+#     [GN label] Label of the target generating the config file, if it is not
+#     a prebuilt one.
+#
+#   config_file (required)
+#     [GN path] Path to the configuration file.
+#
+vulkan_layers_sdk_atom_infos = vulkan_validation_layers_sdk_atom_infos
+vulkan_layers_sdk_atom_infos += [
+  vulkan_image_pipe_swapchain_sdk_atom_info,
+  vulkan_compact_image_sdk_atom_info,
+]
 
 sdk_atom("vulkan_layers") {
   id = "sdk://pkg/vulkan_layers"
@@ -104,38 +135,61 @@ sdk_atom("vulkan_layers") {
   category = "partner"
 
   files = []
+  non_sdk_deps = []
 
-  resources = vulkan_validation_layers.resources +
-              image_pipe_swapchain.resources + compact_image.resources
+  _sdk_binaries = []
+  _sdk_resources = []
 
-  loadable_modules =
-      vulkan_validation_layers.loadable_modules +
-      image_pipe_swapchain.loadable_modules + compact_image.loadable_modules
-  non_sdk_deps = vulkan_validation_layers.public_deps +
-                 image_pipe_swapchain.public_deps + compact_image.public_deps
-
-  sdk_resources = []
-  foreach(resource, resources) {
-    destination = "pkg/vulkan_layers/data/" + resource.dest
+  foreach(info, vulkan_layers_sdk_atom_infos) {
+    # Add loadable module to metadata and file list
+    if (defined(info.module_name)) {
+      _module_name = info.module_name
+    } else {
+      assert(defined(info.module_file),
+             "module_file is required if module_name is not defined: $info")
+      _module_name = get_path_info(info.module_file, "file")
+    }
+    if (defined(info.module_file)) {
+      _module_file = info.module_file
+    } else {
+      assert(defined(info.module_name),
+             "module_name is required if module_file is not defined: $info")
+      _module_file = "$root_out_dir/${_module_name}"
+    }
+    _destination = "arch/$target_cpu/dist/" + _module_name
+    _sdk_binaries += [ _destination ]
     files += [
       {
-        source = resource.path
-        dest = destination
+        source = _module_file
+        dest = _destination
       },
     ]
-    sdk_resources += [ destination ]
-  }
+    if (defined(info.module_label)) {
+      non_sdk_deps += [ info.module_label ]
+    }
 
-  sdk_binaries = []
-  foreach(loadable_module, loadable_modules) {
-    destination = "arch/$target_cpu/dist/" + loadable_module.name
+    # Add config file to metadata and file list
+    if (defined(info.config_name)) {
+      _config_name = info.config_name
+    } else {
+      assert(defined(info.config_file),
+             "config_file is required if config_name is not defined: $info")
+      _config_name = get_path_info(info.config_file, "file")
+    }
+    assert(defined(info.config_file), "config_file is required: $info")
+    _config_file = info.config_file
+    _destination =
+        "pkg/vulkan_layers/data/vulkan/explicit_layer.d/${_config_name}"
+    _sdk_resources += [ _destination ]
     files += [
       {
-        source = "$root_out_dir/" + loadable_module.name
-        dest = destination
+        source = _config_file
+        dest = _destination
       },
     ]
-    sdk_binaries += [ destination ]
+    if (defined(info.config_label)) {
+      non_sdk_deps += [ info.config_label ]
+    }
   }
 
   meta = {
@@ -146,13 +200,13 @@ sdk_atom("vulkan_layers") {
       name = "vulkan_layers"
       root = "pkg/vulkan_layers"
       resources = []
-      resources = sdk_resources
+      resources = _sdk_resources
       binaries = {
       }
       if (target_cpu == "arm64") {
-        binaries.arm64 = sdk_binaries
+        binaries.arm64 = _sdk_binaries
       } else if (target_cpu == "x64") {
-        binaries.x64 = sdk_binaries
+        binaries.x64 = _sdk_binaries
       } else {
         assert(false, "Unknown CPU type: %target_cpu")
       }

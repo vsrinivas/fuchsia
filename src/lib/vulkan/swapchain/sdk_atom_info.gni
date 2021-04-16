@@ -1,0 +1,12 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Used by //sdk/lib/vulkan:vulkan_layers to build an SDK atom for the Fuchsia
+# image pipe Vulkan layer(s). Keep in sync with //sdk/lub/vulkan/swapchain/BUILD.gn
+
+vulkan_image_pipe_swapchain_sdk_atom_info = {
+  module_name = "VkLayer_image_pipe_swapchain.so"
+  module_label = "//src/lib/vulkan/swapchain:swapchain"
+  config_file = "//src/lib/vulkan/swapchain/VkLayer_image_pipe_swapchain.json"
+}

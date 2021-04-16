@@ -1,0 +1,27 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/resource.gni")
+import("//third_party/Vulkan-ValidationLayers/build-gn/layers-fuchsia.gni")
+
+# This defines a target that any fuchsia_component() or fuchsia_package()
+# can simply depend on to get the Vulkan validation layers loadable modules
+# and JSON configuration files properly installed.
+
+# Create a resource() target for each JSON configuration file to install
+# under data/ in final packages.
+_all_resources = []
+foreach(resource, vulkan_validation_layers.resources) {
+  _resource_filename = get_path_info(resource.dest, "file")
+  _resource_target = "vulkan_validation_layers.resource.${_resource_filename}"
+  resource(_resource_target) {
+    sources = [ "//" + rebase_path(resource.path, "//", root_build_dir) ]
+    outputs = [ "data/${resource.dest}" ]
+  }
+  _all_resources += [ ":${_resource_target}" ]
+}
+
+group("validation_layers") {
+  deps = vulkan_validation_layers.public_deps + _all_resources
+}

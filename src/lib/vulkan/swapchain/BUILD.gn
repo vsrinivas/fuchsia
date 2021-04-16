@@ -2,6 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Define targets used to build the image pipe swapchain Vulkan layers,
+# each one has one loadable module, and a JSON configuration file.
+#
+# fuchsia_component() and fuchsia_package() instances should depend on
+# 'image_pipe_swapchain_layer' or 'image_pipe_swapchain_xxx_layer' to get both
+# the module and the configuration file properly installed into the final package.
+
+# IMPORTANT: Keep in sync with //src/lib/vulkan/swapchain/sdk_atom_info.gni
+
+import("//build/dist/resource.gni")
+
 source_set("surface_header") {
   sources = [ "image_pipe_surface.h" ]
   public_deps = [
@@ -28,6 +39,19 @@ loadable_module("swapchain") {
     "//zircon/system/ulib/trace",
   ]
   ldflags = [ "-static-libstdc++" ]
+}
+
+resource("swapchain-config") {
+  sources = [ "VkLayer_image_pipe_swapchain.json" ]
+  outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
+  visibility = [ ":*" ]
+}
+
+group("image_pipe_swapchain_layer") {
+  deps = [
+    ":swapchain",
+    ":swapchain-config",
+  ]
 }
 
 source_set("display") {
@@ -68,6 +92,19 @@ loadable_module("fb") {
   ldflags = [ "-static-libstdc++" ]
 }
 
+resource("fb-config") {
+  sources = [ "VkLayer_image_pipe_swapchain_fb.json" ]
+  outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
+  visibility = [ ":*" ]
+}
+
+group("image_pipe_swapchain_fb_layer") {
+  deps = [
+    ":fb",
+    ":fb-config",
+  ]
+}
+
 loadable_module("fb_skip_present") {
   output_name = "VkLayer_image_pipe_swapchain_fb_skip_present"
   defines = [
@@ -82,6 +119,19 @@ loadable_module("fb_skip_present") {
     "//zircon/system/ulib/trace",
   ]
   ldflags = [ "-static-libstdc++" ]
+}
+
+resource("fb_skip_present-config") {
+  sources = [ "VkLayer_image_pipe_swapchain_fb_skip_present.json" ]
+  outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
+  visibility = [ ":*" ]
+}
+
+group("image_pipe_swapchain_fb_skip_present_layer") {
+  deps = [
+    ":fb_skip_present",
+    ":fb_skip_present-config",
+  ]
 }
 
 loadable_module("copy") {
@@ -107,19 +157,35 @@ loadable_module("copy") {
   }
 }
 
-loadable_module("wayland_copy") {
-  output_name = "VkLayer_wayland_swapchain_copy"
-  defines = [ "USE_SWAPCHAIN_SURFACE_COPY" ]
-  sources = [
-    "image_pipe_swapchain_layer.cc",
-    "linux_platform_event.cc",
-    "swapchain_copy_surface.cc",
-    "swapchain_copy_surface.h",
-  ]
+resource("copy-config") {
+  sources = [ "VkLayer_image_pipe_swapchain_copy.json" ]
+  outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
+  visibility = [ ":*" ]
+}
+
+group("image_pipe_swapchain_copy_layer") {
+  testonly = true
   deps = [
-    ":surface_header",
-    "//src/lib/vulkan:micro_layer_common",
+    ":copy",
+    ":copy-config",
   ]
+}
+
+if (is_linux) {
+  loadable_module("wayland_copy") {
+    output_name = "VkLayer_wayland_swapchain_copy"
+    defines = [ "USE_SWAPCHAIN_SURFACE_COPY" ]
+    sources = [
+      "image_pipe_swapchain_layer.cc",
+      "linux_platform_event.cc",
+      "swapchain_copy_surface.cc",
+      "swapchain_copy_surface.h",
+    ]
+    deps = [
+      ":surface_header",
+      "//src/lib/vulkan:micro_layer_common",
+    ]
+  }
 }
 
 group("wayland_copy_linux_x64") {
