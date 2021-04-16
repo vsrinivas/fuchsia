@@ -211,95 +211,71 @@ type Root struct {
 	Unions      []Union
 }
 
-func changeName(name string) string {
-	return name + "$"
+type nameContext struct{ fidlgen.NameContext }
+
+func newNameContext() nameContext {
+	return nameContext{fidlgen.NewNameContext()}
+}
+
+func (ctx nameContext) changeIfReserved(name string) string {
+	if ctx.IsReserved(name) {
+		return name + "$"
+	}
+	return name
 }
 
 var (
 	// Name of a bits member
-	bitsMemberContext = fidlgen.NewNameContext(changeName)
+	bitsMemberContext = newNameContext()
 	// Name of an enum member
-	enumMemberContext = fidlgen.NewNameContext(changeName)
+	enumMemberContext = newNameContext()
 	// Name of a struct member
-	structMemberContext = fidlgen.NewNameContext(changeName)
+	structMemberContext = newNameContext()
 	// Name of a table member
-	tableMemberContext = fidlgen.NewNameContext(changeName)
+	tableMemberContext = newNameContext()
 	// Name of a union member
-	unionMemberContext = fidlgen.NewNameContext(changeName)
+	unionMemberContext = newNameContext()
 	// Tag of a union member
-	unionMemberTagContext = fidlgen.NewNameContext(changeName)
+	unionMemberTagContext = newNameContext()
 	// Name of a constant
-	constantContext = fidlgen.NewNameContext(changeName)
+	constantContext = newNameContext()
 	// Name of a top-level declaration (other than a constant)
-	declarationContext = fidlgen.NewNameContext(changeName)
+	declarationContext = newNameContext()
 	// Name of a method
-	methodContext = fidlgen.NewNameContext(changeName)
-	// Everywhere
+	methodContext = newNameContext()
 )
 
 func init() {
-	var allContexts = []fidlgen.NameContext{
+	// Reserve names that are universally reserved:
+	for _, ctx := range []nameContext{
 		enumMemberContext, structMemberContext, tableMemberContext,
 		unionMemberContext, unionMemberTagContext, constantContext,
 		declarationContext, methodContext, bitsMemberContext,
+	} {
+		ctx.ReserveNames([]string{"assert", "async", "await", "break", "case",
+			"catch", "class", "const", "continue", "default", "do", "else",
+			"enum", "extends", "false", "final", "finally", "for", "if", "in",
+			"is", "new", "null", "override", "rethrow", "return", "String",
+			"super", "switch", "this", "throw", "true", "try", "var", "void",
+			"while", "with", "yield"})
 	}
 
-	fidlgen.ReserveNames(map[string][]fidlgen.NameContext{
-		"assert":       allContexts,
-		"async":        allContexts,
-		"await":        allContexts,
-		"break":        allContexts,
-		"bool":         {structMemberContext, tableMemberContext, enumMemberContext},
-		"case":         allContexts,
-		"catch":        allContexts,
-		"class":        allContexts,
-		"const":        allContexts,
-		"continue":     allContexts,
-		"default":      allContexts,
-		"do":           allContexts,
-		"double":       {structMemberContext, tableMemberContext},
-		"dynamic":      {bitsMemberContext, enumMemberContext, methodContext, unionMemberContext, constantContext, tableMemberContext, structMemberContext},
-		"else":         allContexts,
-		"enum":         allContexts,
-		"extends":      allContexts,
-		"false":        allContexts,
-		"final":        allContexts,
-		"finally":      allContexts,
-		"for":          allContexts,
-		"hashCode":     {methodContext, bitsMemberContext, enumMemberContext, unionMemberContext, structMemberContext, tableMemberContext},
-		"noSuchMethod": {methodContext, enumMemberContext, unionMemberContext, structMemberContext, tableMemberContext},
-		"runtimeType":  {methodContext, enumMemberContext, unionMemberContext, structMemberContext, tableMemberContext},
-		"index":        {unionMemberTagContext},
-		"if":           allContexts,
-		"in":           allContexts,
-		"int":          {bitsMemberContext, enumMemberContext, methodContext, unionMemberContext, constantContext, tableMemberContext, structMemberContext},
-		"is":           allContexts,
-		"List":         {declarationContext},
-		"Map":          {declarationContext},
-		"new":          allContexts,
-		"Never":        {declarationContext},
-		"null":         allContexts,
-		"Null":         {declarationContext},
-		"num":          {enumMemberContext, methodContext, unionMemberContext, constantContext, tableMemberContext, structMemberContext},
-		"Object":       {declarationContext},
-		"override":     allContexts,
-		"rethrow":      allContexts,
-		"return":       allContexts,
-		"String":       allContexts,
-		"super":        allContexts,
-		"switch":       allContexts,
-		"this":         allContexts,
-		"throw":        allContexts,
-		"toString":     {methodContext, bitsMemberContext, enumMemberContext, structMemberContext, tableMemberContext, unionMemberContext},
-		"true":         allContexts,
-		"try":          allContexts,
-		"values":       {unionMemberTagContext},
-		"var":          allContexts,
-		"void":         allContexts,
-		"while":        allContexts,
-		"with":         allContexts,
-		"yield":        allContexts,
-	})
+	constantContext.ReserveNames([]string{"dynamic", "int", "num"})
+	declarationContext.ReserveNames([]string{"List", "Map", "Never", "Null",
+		"Object"})
+	methodContext.ReserveNames([]string{"dynamic", "hashCode", "int",
+		"noSuchMethod", "num", "runtimeType", "toString"})
+	bitsMemberContext.ReserveNames([]string{"dynamic", "hashCode", "int",
+		"toString"})
+	enumMemberContext.ReserveNames([]string{"bool", "dynamic", "hashCode",
+		"int", "noSuchMethod", "num", "runtimeType", "toString"})
+	structMemberContext.ReserveNames([]string{"bool", "double", "dynamic",
+		"hashCode", "int", "noSuchMethod", "num", "runtimeType", "toString"})
+	tableMemberContext.ReserveNames([]string{"bool", "double", "dynamic",
+		"hashCode", "int", "noSuchMethod", "num", "runtimeType", "toString"})
+	unionMemberContext.ReserveNames([]string{"dynamic", "hashCode", "int",
+		"noSuchMethod", "num", "runtimeType", "toString"})
+	unionMemberTagContext.ReserveNames([]string{"index", "values"})
 }
 
 var declForPrimitiveType = map[fidlgen.PrimitiveSubtype]string{
@@ -517,39 +493,39 @@ func (c *compiler) _typeSymbolForCompoundIdentifier(ident fidlgen.CompoundIdenti
 	return t
 }
 
-func (c *compiler) compileUpperCamelIdentifier(val fidlgen.Identifier, context fidlgen.NameContext) string {
-	return context.ChangeIfReserved(fidlgen.ToUpperCamelCase(string(val)))
+func (c *compiler) compileUpperCamelIdentifier(val fidlgen.Identifier, context nameContext) string {
+	return context.changeIfReserved(fidlgen.ToUpperCamelCase(string(val)))
 }
 
-func (c *compiler) compileLowerCamelIdentifier(val fidlgen.Identifier, context fidlgen.NameContext) string {
-	return context.ChangeIfReserved(fidlgen.ToLowerCamelCase(string(val)))
+func (c *compiler) compileLowerCamelIdentifier(val fidlgen.Identifier, context nameContext) string {
+	return context.changeIfReserved(fidlgen.ToLowerCamelCase(string(val)))
 }
 
-func (c *compiler) compileCompoundIdentifier(val fidlgen.CompoundIdentifier, context fidlgen.NameContext) string {
+func (c *compiler) compileCompoundIdentifier(val fidlgen.CompoundIdentifier, context nameContext) string {
 	strs := []string{}
 	if c.inExternalLibrary(val) {
 		strs = append(strs, libraryPrefix(val.Library))
 	}
-	strs = append(strs, context.ChangeIfReserved(string(val.Name)))
+	strs = append(strs, context.changeIfReserved(string(val.Name)))
 	if val.Member != "" {
-		strs = append(strs, context.ChangeIfReserved(string(val.Member)))
+		strs = append(strs, context.changeIfReserved(string(val.Member)))
 	}
 	return strings.Join(strs, ".")
 }
 
-func (c *compiler) compileUpperCamelCompoundIdentifier(val fidlgen.CompoundIdentifier, ext string, context fidlgen.NameContext) string {
+func (c *compiler) compileUpperCamelCompoundIdentifier(val fidlgen.CompoundIdentifier, ext string, context nameContext) string {
 	str := fidlgen.ToUpperCamelCase(string(val.Name)) + ext
 	val.Name = fidlgen.Identifier(str)
 	return c.compileCompoundIdentifier(val, context)
 }
 
-func (c *compiler) compileLowerCamelCompoundIdentifier(val fidlgen.CompoundIdentifier, ext string, context fidlgen.NameContext) string {
+func (c *compiler) compileLowerCamelCompoundIdentifier(val fidlgen.CompoundIdentifier, ext string, context nameContext) string {
 	str := fidlgen.ToLowerCamelCase(string(val.Name)) + ext
 	val.Name = fidlgen.Identifier(str)
 	return c.compileCompoundIdentifier(val, context)
 }
 
-func (c *compiler) compileConstantIdentifier(val fidlgen.CompoundIdentifier, context fidlgen.NameContext) string {
+func (c *compiler) compileConstantIdentifier(val fidlgen.CompoundIdentifier, context nameContext) string {
 	if val.Member != "" {
 		// val.Name here is the type.
 		// Format: Type.memberIdentifier
