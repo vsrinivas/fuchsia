@@ -25,6 +25,7 @@
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input2.Keyboard",
                 "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.input3.KeyEventInjector",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.shortcut.Manager",
             ],
