@@ -11,6 +11,7 @@
 #include <lib/acpi_lite.h>
 #include <lib/acpi_lite/debug_port.h>
 #include <lib/arch/intrin.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/cbuf.h>
 #include <lib/cmdline.h>
 #include <lib/debuglog.h>
@@ -555,7 +556,7 @@ void pc_init_debug() {
   }
 
   // If we don't support interrupts, set up a polling timer.
-  if ((debug_port.irq == 0) || gCmdline.GetBool(kernel_option::kDebugUartPoll, false)) {
+  if ((debug_port.irq == 0) || gBootOptions->debug_uart_poll) {
     printf("debug-uart: polling enabled\n");
     platform_debug_start_uart_timer();
     return;

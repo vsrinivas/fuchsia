@@ -293,6 +293,10 @@ Note that both the compile switch and the cmdline parameter have the side effect
 of disabling irq driven uart Tx.
 )""")
 
+DEFINE_OPTION("kernel.debug_uart_poll", bool, debug_uart_poll, {false}, R"""(
+If true, will periodically poll UART and forwards its contents into the console.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

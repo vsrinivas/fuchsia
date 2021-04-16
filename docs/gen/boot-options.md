@@ -310,6 +310,11 @@ The compile switch setting overrides the cmdline parameter (if both are present)
 Note that both the compile switch and the cmdline parameter have the side effect
 of disabling irq driven uart Tx.
 
+### kernel.debug_uart_poll=\<bool>
+**Default:** `false`
+
+If true, will periodically poll UART and forwards its contents into the console.
+
 
 ## Options available only on arm64 machines
 
