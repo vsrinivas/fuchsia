@@ -352,6 +352,21 @@ zx_status_t fdio_namespace::Unbind(const char* path) {
   }
 }
 
+bool fdio_namespace::IsBound(const char* path) {
+  if ((path == nullptr) || (path[0] != '/')) {
+    return false;
+  }
+  path++;
+
+  fbl::AutoLock lock(&lock_);
+  fbl::RefPtr<LocalVnode> vn = root_;
+  zx_status_t status = WalkLocked(&vn, &path);
+  if (status != ZX_OK) {
+    return false;
+  }
+  return strcmp(path, ".") == 0 && vn->Remote().is_valid();
+}
+
 zx_status_t fdio_namespace::Bind(const char* path, fidl::ClientEnd<fio::Directory> remote) {
   if (!remote.is_valid()) {
     return ZX_ERR_BAD_HANDLE;

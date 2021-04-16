@@ -5,7 +5,7 @@
   "pkg/fdio/include/lib/fdio/inotify.h": "4dd379830d6d237add713b367077e70a",
   "pkg/fdio/include/lib/fdio/io.h": "d73c16f16c2e2119441bf3c239842882",
   "pkg/fdio/include/lib/fdio/limits.h": "9b99b72bd188543dba96528bf5797ca8",
-  "pkg/fdio/include/lib/fdio/namespace.h": "3873240b2cc88598cf51e013cdcb8760",
+  "pkg/fdio/include/lib/fdio/namespace.h": "b6a11e3cceaefa88953d09a2a6be4d37",
   "pkg/fdio/include/lib/fdio/private.h": "9c26a262b5ef7100a264fef47933f242",
   "pkg/fdio/include/lib/fdio/spawn.h": "5adc836d73e75c575d5e80532d9313ea",
   "pkg/fdio/include/lib/fdio/unsafe.h": "0f1327d553659715440d494fd90e47dc",

@@ -532,7 +532,17 @@ TEST(SpawnTest, SpawnActionsCloneDir) {
     ASSERT_OK(zx::channel::create(0, &h1, &h2));
     fdio_ns_t* ns = nullptr;
     ASSERT_OK(fdio_ns_get_installed(&ns));
+
+    EXPECT_FALSE(fdio_ns_is_bound(ns, nullptr));
+    EXPECT_FALSE(fdio_ns_is_bound(ns, ""));
+    EXPECT_FALSE(fdio_ns_is_bound(ns, "/"));
+    EXPECT_FALSE(fdio_ns_is_bound(ns, "/foo/bar/baz"));
+
     ASSERT_OK(fdio_ns_bind(ns, "/foo/bar/baz", h1.release()));
+
+    EXPECT_FALSE(fdio_ns_is_bound(ns, "/foo/bar"));
+    EXPECT_TRUE(fdio_ns_is_bound(ns, "/foo/bar/baz"));
+    EXPECT_FALSE(fdio_ns_is_bound(ns, "/foo/bar/baz/qux"));
 
     const char* argv[] = {bin_path, "--action", "ns-entry", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL_EXCEPT_NS, bin_path, argv,

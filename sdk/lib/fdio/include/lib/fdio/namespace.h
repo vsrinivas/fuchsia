@@ -41,6 +41,9 @@ zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t h);
 // Returns ZX_ERR_INVALID_ARGS if |path| is otherwise invalid.
 zx_status_t fdio_ns_unbind(fdio_ns_t* ns, const char* path);
 
+// Whether |path| is bound to a remote directory in |ns|.
+bool fdio_ns_is_bound(fdio_ns_t* ns, const char* path);
+
 // Create a new directory within a namespace, bound to the
 // directory referenced by the file descriptor fd.
 // The path must be an absolute path, like "/x/y/z", containing

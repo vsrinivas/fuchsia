@@ -57,6 +57,11 @@ __EXPORT
 zx_status_t fdio_ns_unbind(fdio_ns_t* ns, const char* path) { return ns->Unbind(path); }
 
 __EXPORT
+bool fdio_ns_is_bound(fdio_ns_t* ns, const char* path) {
+  return ns->IsBound(path);
+}
+
+__EXPORT
 zx_status_t fdio_ns_bind_fd(fdio_ns_t* ns, const char* path, int fd) {
   zx_handle_t handle = ZX_HANDLE_INVALID;
   zx_status_t status = fdio_fd_clone(fd, &handle);

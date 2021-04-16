@@ -85,6 +85,8 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   // Returns ZX_ERR_INVALID_ARGS for an unsupported |path|.
   zx_status_t Unbind(const char* path);
 
+  bool IsBound(const char* path);
+
  private:
   fdio_namespace();
 
