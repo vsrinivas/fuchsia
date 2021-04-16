@@ -117,6 +117,7 @@ variant("profile") {
 # DO NOT NAME THIS WITH PREFIX `rust-`. The prefix will be stripped in some cases, and fail to
 # work with other cases that do not expect the stripped prefix.
 variant("coverage-rust") {
+  rustflags = [ "-Zinstrument-coverage" ]
   if (!is_kernel && is_fuchsia) {
     # The statically-linked profiling runtime depends on libzircon.
     # TODO(fxbug.dev/61522): Ensure this works with shared_library() instances too!
@@ -124,9 +125,6 @@ variant("coverage-rust") {
 
     dynamic_linker_flags = "-dynamic-linker=coverage-rust/ld.so.1"
     ldflags = [ "-Wl,$dynamic_linker_flags" ]
-    rustflags = [
-      "-Zinstrument-coverage",
-      "-Clink-arg=$dynamic_linker_flags",
-    ]
+    rustflags += [ "-Clink-arg=$dynamic_linker_flags" ]
   }
 }
