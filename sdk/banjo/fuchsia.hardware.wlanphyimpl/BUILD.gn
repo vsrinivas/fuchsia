@@ -5,6 +5,8 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.wlanphyimpl") {
+  disable_verification = true
+  fidl_only = true
   sources = [ "wlanphy-impl.banjo" ]
   deps = [
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",

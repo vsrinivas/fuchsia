@@ -1,6 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be found
-// in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 library fuchsia.hardware.wlanphyimpl;
 
@@ -9,7 +9,7 @@ using fuchsia.hardware.ethernet.mac;
 using zx;
 
 /// Parameters to create an interface.
-struct WlanphyImplCreateIfaceReq {
+resource struct WlanphyImplCreateIfaceReq {
     /// The station role for this interface. A device may support multiple roles,
     /// but an interface is instantiated with a single role.
     ddk.hw.wlan.wlaninfo.WlanInfoMacRole role;
@@ -21,7 +21,7 @@ struct WlanphyImplCreateIfaceReq {
     bool has_init_mac_addr;
 
     /// The initial mac address set from configuration layer.
-    array<uint8>:MAC_ARRAY_LENGTH init_mac_addr;
+    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH init_mac_addr;
 };
 
 /// Info about this WLAN PHY.

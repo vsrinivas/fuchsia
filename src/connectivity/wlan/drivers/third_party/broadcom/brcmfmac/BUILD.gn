@@ -189,7 +189,7 @@ source_set("core") {
     ":linuxisms",
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/fuchsia.hardware.ethernet",
-    "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
+    "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.factory.wlan:fuchsia.factory.wlan_llcpp",
     "//sdk/fidl/fuchsia.wlan.common",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/recovery",

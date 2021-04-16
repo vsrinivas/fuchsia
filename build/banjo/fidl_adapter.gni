@@ -374,11 +374,16 @@ template("fidl_adapter") {
 
       deps = [
         ":$cpp_private_fidlgen_target_name",
-        ":$cpp_private_verification_target_name",
         ":$cpp_public_fidlgen_target_name",
-        ":$cpp_public_verification_target_name",
         "//src/zircon/lib/zircon",
       ]
+
+      if (verify) {
+        deps += [
+          ":$cpp_private_verification_target_name",
+          ":$cpp_public_verification_target_name",
+        ]
+      }
 
       public_deps = [
         ":$c_target_name",

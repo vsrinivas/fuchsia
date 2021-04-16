@@ -25,7 +25,7 @@ source_set("iwlwifi_sim_trans_ss") {
   deps = [
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/fuchsia.hardware.pci",
-    "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
+    "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//src/devices/lib/driver",
     "//src/devices/pci/testing:pci-protocol-fake",
     "//src/devices/testing/fake_ddk",

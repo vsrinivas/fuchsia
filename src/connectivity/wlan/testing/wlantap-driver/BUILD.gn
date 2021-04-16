@@ -35,7 +35,7 @@ driver_module("wlantap_driver") {
     ":wlantapctl_bind",
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
-    "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
+    "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap",
     "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap_llcpp",
     "//src/connectivity/wlan/lib/common/cpp:common",
