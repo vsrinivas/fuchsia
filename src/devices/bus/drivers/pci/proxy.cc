@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/bus/drivers/pci/device_proxy.h"
+#include "src/devices/bus/drivers/pci/proxy.h"
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
@@ -14,8 +14,8 @@
 #include <cstring>
 
 #include "src/devices/bus/drivers/pci/common.h"
-#include "src/devices/bus/drivers/pci/device_rpc.h"
 #include "src/devices/bus/drivers/pci/pci_proxy_bind.h"
+#include "src/devices/bus/drivers/pci/proxy_rpc.h"
 
 // This file contains the PciProtocol implementation that is proxied over
 // a channel to the specific pci::Device objects in the PCI Bus Driver.
@@ -352,16 +352,16 @@ zx_status_t PciProxy::SysmemConnect(zx::channel allocator_request) {
 
 }  // namespace pci
 
-static zx_status_t pci_device_proxy_create(void* ctx, zx_device_t* parent, const char* name,
-                                           const char* args, zx_handle_t rpcch) {
+static zx_status_t pci_proxy_create(void* ctx, zx_device_t* parent, const char* name,
+                                    const char* args, zx_handle_t rpcch) {
   return pci::PciProxy::Create(parent, rpcch, name);
 }
 
-static constexpr zx_driver_ops_t pci_device_proxy_driver_ops = []() {
+static constexpr zx_driver_ops_t pci_proxy_driver_ops = []() {
   zx_driver_ops_t ops{};
   ops.version = DRIVER_OPS_VERSION;
-  ops.create = pci_device_proxy_create;
+  ops.create = pci_proxy_create;
   return ops;
 }();
 
-ZIRCON_DRIVER(pci_proxy, pci_device_proxy_driver_ops, "zircon", "0.1");
+ZIRCON_DRIVER(pci_proxy, pci_proxy_driver_ops, "zircon", "0.1");

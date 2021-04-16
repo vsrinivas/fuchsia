@@ -18,7 +18,7 @@
 
 #include "src/devices/bus/drivers/pci/common.h"
 #include "src/devices/bus/drivers/pci/device.h"
-#include "src/devices/bus/drivers/pci/device_rpc.h"
+#include "src/devices/bus/drivers/pci/proxy_rpc.h"
 
 #define RPC_ENTRY zxlogf(DEBUG, "[%s] %s: entry", cfg_->addr(), __func__)
 

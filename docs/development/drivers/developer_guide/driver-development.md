@@ -101,7 +101,7 @@ following macro. `"zircon"` is the vendor id and `"0.1"` is the driver version.
 ZIRCON_DRIVER(ahci, ahci_driver_ops, "zircon", "0.1");
 ```
 
-The [PCI driver](/src/devices/bus/drivers/pci/kpci/kpci.cc) publishes the
+The [PCI driver](/src/devices/bus/drivers/pci/kpci.cc) publishes the
 matching device with the following properties:
 
 ```c

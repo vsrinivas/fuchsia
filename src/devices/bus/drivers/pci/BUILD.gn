@@ -59,8 +59,8 @@ source_set("user_pci") {
   ]
 }
 
-source_set("user_pci.proxy") {
-  sources = [ "device_proxy.cc" ]
+source_set("pci.proxy") {
+  sources = [ "proxy.cc" ]
   public_deps = [
     ":pci_proxy_bind",
     "//sdk/banjo/fuchsia.hardware.pci",
@@ -116,7 +116,7 @@ if (platform_enable_user_pci) {
     if (is_fuchsia) {
       configs += [ "//build/unification/config:zircon-migrated" ]
     }
-    sources = [ "kpci/kpci.cc" ]
+    sources = [ "kpci.cc" ]
     deps = [
       ":pci_bind",
       "//sdk/banjo/fuchsia.hardware.pci",
@@ -146,8 +146,8 @@ driver_module("bus-pci.proxy") {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
   deps = [
+    ":pci.proxy",
     ":pci_proxy_bind",
-    ":user_pci.proxy",
   ]
 }
 

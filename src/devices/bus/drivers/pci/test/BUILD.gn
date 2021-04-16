@@ -86,7 +86,7 @@ driver_module("pci_fake.proxy") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
-  deps = [ "//src/devices/bus/drivers/pci:user_pci.proxy" ]
+  deps = [ "//src/devices/bus/drivers/pci:pci.proxy" ]
 }
 
 driver_module("pci_protocol_test_driver") {

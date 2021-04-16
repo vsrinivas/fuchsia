@@ -35,7 +35,7 @@
 #include "src/devices/bus/drivers/pci/capabilities/msix.h"
 #include "src/devices/bus/drivers/pci/capabilities/pci_express.h"
 #include "src/devices/bus/drivers/pci/config.h"
-#include "src/devices/bus/drivers/pci/device_rpc.h"
+#include "src/devices/bus/drivers/pci/proxy_rpc.h"
 #include "src/devices/bus/drivers/pci/ref_counted.h"
 
 namespace pci {

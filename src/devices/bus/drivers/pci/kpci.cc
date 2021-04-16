@@ -26,8 +26,8 @@
 
 #include <ddktl/device.h>
 
-#include "src/devices/bus/drivers/pci/device_rpc.h"
 #include "src/devices/bus/drivers/pci/pci_bind.h"
+#include "src/devices/bus/drivers/pci/proxy_rpc.h"
 
 struct kpci_device {
   zx_device_t* zxdev;

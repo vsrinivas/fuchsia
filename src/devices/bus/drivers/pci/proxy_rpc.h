@@ -1,8 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_DEVICE_RPC_H_
-#define SRC_DEVICES_BUS_DRIVERS_PCI_DEVICE_RPC_H_
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_PROXY_RPC_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_PROXY_RPC_H_
 
 #include <stdint.h>
 #include <zircon/syscalls/pci.h>
@@ -86,4 +86,4 @@ struct PciRpcMsg {
 
 }  // namespace pci
 
-#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_DEVICE_RPC_H_
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_PROXY_RPC_H_
