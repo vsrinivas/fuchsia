@@ -8,19 +8,22 @@ use {
     stress_test::actor::{Actor, ActorError},
 };
 
-/// An actor that kills component manager, disconnecting the device from
-/// the FVM driver.
+/// An actor that destroys the ramdisk
 pub struct InstanceActor {
-    pub fvm: FvmInstance,
-    pub instance_killed: bool,
+    pub instance: Option<FvmInstance>,
+}
+
+impl InstanceActor {
+    pub fn new(fvm: FvmInstance) -> Self {
+        Self { instance: Some(fvm) }
+    }
 }
 
 #[async_trait]
 impl Actor for InstanceActor {
     async fn perform(&mut self) -> Result<(), ActorError> {
-        assert!(!self.instance_killed);
-        self.fvm.kill_component_manager();
-        self.instance_killed = true;
+        let fvm = self.instance.take();
+        assert!(fvm.is_some());
         Err(ActorError::ResetEnvironment)
     }
 }

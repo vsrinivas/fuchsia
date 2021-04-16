@@ -48,7 +48,6 @@ impl FvmEnvironment {
         };
         let mut rng = SmallRng::from_seed(seed.to_le_bytes());
 
-        let block_path = fvm.block_path();
         let mut volume_actors = vec![];
         for i in 0..args.num_volumes {
             // Create the new volume
@@ -56,8 +55,7 @@ impl FvmEnvironment {
             let volume_guid = fvm.new_volume(&volume_name, TYPE_GUID).await;
 
             // Connect to the volume
-            let volume =
-                VolumeConnection::new(block_path.clone(), volume_guid, args.fvm_slice_size).await;
+            let volume = VolumeConnection::new(volume_guid, args.fvm_slice_size).await;
 
             // Create the actor
             let rng = SmallRng::from_seed(rng.gen());
@@ -69,7 +67,7 @@ impl FvmEnvironment {
             volume_actors.push((volume_guid, volume_actor));
         }
 
-        let instance_actor = Arc::new(Mutex::new(InstanceActor { fvm, instance_killed: false }));
+        let instance_actor = Arc::new(Mutex::new(InstanceActor::new(fvm)));
 
         Self { seed, args, vmo, instance_actor, volume_actors }
     }
@@ -99,24 +97,26 @@ impl Environment for FvmEnvironment {
             runners.push(ActorRunner::new(actor_name, None, actor.clone()));
         }
 
-        if self.args.disconnect_secs > 0 {
-            runners.push(ActorRunner::new(
-                "instance_actor",
-                Some(Duration::from_secs(self.args.disconnect_secs)),
-                self.instance_actor.clone(),
-            ))
+        if let Some(secs) = self.args.disconnect_secs {
+            if secs > 0 {
+                runners.push(ActorRunner::new(
+                    "instance_actor",
+                    Some(Duration::from_secs(secs)),
+                    self.instance_actor.clone(),
+                ))
+            }
         }
 
         runners
     }
 
     async fn reset(&mut self) {
-        let block_path = {
+        {
             let mut actor = self.instance_actor.lock().await;
 
             // The environment is only reset when the instance is killed.
             // TODO(72385): Pass the actor error here, so it can be printed out on assert failure.
-            assert!(actor.instance_killed);
+            assert!(actor.instance.is_none());
 
             // Start isolated-devmgr and FVM
             let fvm = FvmInstance::new(
@@ -127,21 +127,15 @@ impl Environment for FvmEnvironment {
             )
             .await;
 
-            let block_path = fvm.block_path();
-
             // Replace the FVM instance
-            actor.fvm = fvm;
-            actor.instance_killed = false;
-
-            block_path
-        };
+            actor.instance = Some(fvm);
+        }
 
         for (guid, actor) in &self.volume_actors {
             let mut actor = actor.lock().await;
 
             // Connect to the volume
-            let volume =
-                VolumeConnection::new(block_path.clone(), *guid, self.args.fvm_slice_size).await;
+            let volume = VolumeConnection::new(*guid, self.args.fvm_slice_size).await;
 
             // Replace the volume
             actor.volume = volume;

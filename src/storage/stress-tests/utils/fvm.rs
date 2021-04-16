@@ -4,11 +4,7 @@
 
 use {
     crate::io::Directory,
-    component_events::{
-        events::{Event, EventMode, EventSubscription, Started},
-        matcher::EventMatcher,
-    },
-    fidl_fuchsia_device::{ControllerMarker, ControllerProxy},
+    fidl_fuchsia_device::ControllerMarker,
     fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_hardware_block_volume::{
         VolumeManagerMarker, VolumeManagerProxy, VolumeMarker, VolumeProxy,
@@ -24,9 +20,22 @@ use {
         path::PathBuf,
         time::Duration,
     },
-    storage_isolated_driver_manager::{bind_fvm, rebind_fvm},
-    test_utils_lib::opaque_test::OpaqueTest,
+    storage_isolated_driver_manager::bind_fvm,
 };
+
+// These are the paths associated with isolated-devmgr's dev directory.
+//
+// We make some assumptions when using these paths:
+// * there exists an isolated-devmgr component that is a child of the test
+// * that component exposes its /dev directory
+// * the test exposes the /dev directory from isolated-devmgr
+//
+// The test can then access /dev of isolated-devmgr by accessing its own expose
+// directory from the hub. Touching /dev will cause isolated-devmgr to be started
+// by component manager.
+pub const DEV_PATH: &'static str = "/hub/exec/expose/dev";
+pub const BLOCK_PATH: &'static str = "/hub/exec/expose/dev/class/block";
+pub const RAMCTL_PATH: &'static str = "/hub/exec/expose/dev/misc/ramctl";
 
 #[link(name = "fs-management")]
 extern "C" {
@@ -35,37 +44,17 @@ extern "C" {
     pub fn fvm_init(fd: c_int, slice_size: usize) -> zx_status_t;
 }
 
-async fn start_test() -> OpaqueTest {
-    let test: OpaqueTest = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/storage-isolated-devmgr#meta/isolated-devmgr.cm",
-    )
-    .await
-    .unwrap();
-
-    // Wait for the root component to start
-    let event_source = test.connect_to_event_source().await.unwrap();
-    let mut started_event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
-        .await
-        .unwrap();
-    event_source.start_component_tree().await;
-    EventMatcher::ok().moniker(".").expect_match::<Started>(&mut started_event_stream).await;
-
-    test
+fn wait_for_ramctl() {
+    ramdevice_client::wait_for_device(RAMCTL_PATH, Duration::from_secs(20))
+        .expect("Could not wait for ramctl from isolated-devmgr");
 }
 
-fn create_ramdisk(test: &OpaqueTest, vmo: &Vmo, ramdisk_block_size: u64) -> RamdiskClient {
-    // Wait until the ramctl driver is available
-    let dev_path = test.get_hub_v2_path().join("exec/expose/dev");
-    let ramctl_path = dev_path.join("misc/ramctl");
-    let ramctl_path = ramctl_path.to_str().unwrap();
-    ramdevice_client::wait_for_device(ramctl_path, Duration::from_secs(20)).unwrap();
-
+fn create_ramdisk(vmo: &Vmo, ramdisk_block_size: u64) -> RamdiskClient {
     let duplicated_handle = vmo.as_handle_ref().duplicate(Rights::SAME_RIGHTS).unwrap();
     let duplicated_vmo = Vmo::from(duplicated_handle);
 
     // Create the ramdisks
-    let dev_root = OpenOptions::new().read(true).write(true).open(&dev_path).unwrap();
+    let dev_root = OpenOptions::new().read(true).write(true).open(&DEV_PATH).unwrap();
     VmoRamdiskClientBuilder::new(duplicated_vmo)
         .block_size(ramdisk_block_size)
         .dev_root(dev_root)
@@ -81,7 +70,7 @@ fn init_fvm(ramdisk_path: &str, fvm_slice_size: u64) {
     Status::ok(status).unwrap();
 }
 
-async fn start_fvm_driver(ramdisk_path: &str) -> (ControllerProxy, VolumeManagerProxy) {
+async fn start_fvm_driver(ramdisk_path: &str) -> VolumeManagerProxy {
     let controller = connect_to_service_at_path::<ControllerMarker>(ramdisk_path).unwrap();
     bind_fvm(&controller).await.unwrap();
 
@@ -92,7 +81,7 @@ async fn start_fvm_driver(ramdisk_path: &str) -> (ControllerProxy, VolumeManager
 
     // Connect to the Volume Manager
     let proxy = connect_to_service_at_path::<VolumeManagerMarker>(fvm_path).unwrap();
-    (controller, proxy)
+    proxy
 }
 
 async fn does_guid_match(volume_proxy: &VolumeProxy, expected_instance_guid: &Guid) -> bool {
@@ -118,37 +107,18 @@ pub struct FvmInstance {
     /// Used to create new FVM volumes
     volume_manager: VolumeManagerProxy,
 
-    /// A proxy to fuchsia.device.Controller protocol
-    /// Used to bind/rebind the FVM driver to the ramdisk device
-    controller: ControllerProxy,
-
     /// Manages the ramdisk device that is backed by a VMO
     _ramdisk: RamdiskClient,
-
-    /// The component manager process that runs isolated-devmgr
-    test: OpaqueTest,
 }
 
 impl FvmInstance {
-    /// Kill the test's component manager process.
-    /// This should take down the entire test's component tree with it,
-    /// including the driver manager and ramdisk + fvm drivers.
-    pub fn kill_component_manager(&mut self) {
-        self.test.component_manager_app.kill().unwrap();
-    }
-
-    /// Force rebind the FVM driver. This is similar to a device disconnect/reconnect.
-    pub async fn rebind_fvm_driver(&mut self) {
-        rebind_fvm(&self.controller).await.unwrap();
-    }
-
     /// Start an isolated FVM driver against the given VMO.
     /// If `init` is true, initialize the VMO with FVM layout first.
     pub async fn new(init: bool, vmo: &Vmo, fvm_slice_size: u64, ramdisk_block_size: u64) -> Self {
-        let test = start_test().await;
-        let ramdisk = create_ramdisk(&test, &vmo, ramdisk_block_size);
+        wait_for_ramctl();
+        let ramdisk = create_ramdisk(&vmo, ramdisk_block_size);
 
-        let dev_path = test.get_hub_v2_path().join("exec/expose/dev");
+        let dev_path = PathBuf::from(DEV_PATH);
         let ramdisk_path = dev_path.join(ramdisk.get_path());
         let ramdisk_path = ramdisk_path.to_str().unwrap();
 
@@ -156,14 +126,9 @@ impl FvmInstance {
             init_fvm(ramdisk_path, fvm_slice_size);
         }
 
-        let (controller, volume_manager) = start_fvm_driver(ramdisk_path).await;
+        let volume_manager = start_fvm_driver(ramdisk_path).await;
 
-        Self { test, controller, _ramdisk: ramdisk, volume_manager }
-    }
-
-    /// Get the full path to /dev/class/block from the devmgr running in this test
-    pub fn block_path(&self) -> PathBuf {
-        self.test.get_hub_v2_path().join("exec/expose/dev/class/block")
+        Self { _ramdisk: ramdisk, volume_manager }
     }
 
     /// Create a new FVM volume with the given name and type GUID. This volume will consume
@@ -183,18 +148,13 @@ impl FvmInstance {
 
         instance_guid
     }
-
-    /// Get the full path to a volume in this test that matches the given instance GUID.
-    /// This function will wait until a matching volume is found.
-    pub async fn get_volume_path(&self, instance_guid: &Guid) -> PathBuf {
-        get_volume_path(self.block_path(), instance_guid).await
-    }
 }
 
 /// Gets the full path to a volume matching the given instance GUID at the given
 /// /dev/class/block path. This function will wait until a matching volume is found.
-pub async fn get_volume_path(block_path: PathBuf, instance_guid: &Guid) -> PathBuf {
-    let dir = Directory::from_namespace(block_path.clone(), OPEN_RIGHT_READABLE).unwrap();
+pub async fn get_volume_path(instance_guid: &Guid) -> PathBuf {
+    let dir = Directory::from_namespace(BLOCK_PATH, OPEN_RIGHT_READABLE).unwrap();
+    let block_path = PathBuf::from(BLOCK_PATH);
     loop {
         // TODO(xbhatnag): Find a better way to wait for the volume to appear
         for entry in dir.entries().await.unwrap() {

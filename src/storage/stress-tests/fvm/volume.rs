@@ -8,7 +8,6 @@ use {
     fuchsia_component::client::{connect_channel_to_service_at_path, connect_to_service_at_path},
     fuchsia_zircon::{Channel, Status},
     remote_block_device::{BlockClient, BufferSlice, MutableBufferSlice, RemoteBlockClient},
-    std::path::PathBuf,
     storage_stress_test_utils::fvm::get_volume_path,
 };
 
@@ -44,8 +43,8 @@ pub struct VolumeConnection {
 }
 
 impl VolumeConnection {
-    pub async fn new(block_path: PathBuf, volume_guid: Guid, slice_size: u64) -> Self {
-        let volume_path = get_volume_path(block_path, &volume_guid).await;
+    pub async fn new(volume_guid: Guid, slice_size: u64) -> Self {
+        let volume_path = get_volume_path(&volume_guid).await;
         let volume_path = volume_path.to_str().unwrap();
 
         let volume_proxy = connect_to_service_at_path::<VolumeMarker>(volume_path).unwrap();

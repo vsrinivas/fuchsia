@@ -67,8 +67,7 @@ impl MinfsEnvironment {
         let volume_guid = fvm.new_volume("minfs", TYPE_GUID).await;
 
         // Find the path to the volume
-        let block_path = fvm.block_path();
-        let volume_path = get_volume_path(block_path, &volume_guid).await;
+        let volume_path = get_volume_path(&volume_guid).await;
 
         // Initialize minfs on volume
         let mut minfs = Minfs::new(volume_path.to_str().unwrap()).unwrap();
@@ -157,10 +156,7 @@ impl Environment for MinfsEnvironment {
 
             // The environment is only reset when the instance is killed.
             // TODO(72385): Pass the actor error here, so it can be printed out on assert failure.
-            assert!(actor.instance_killed);
-
-            // Kill the minfs process in case it was still running
-            let _ = actor.minfs.kill();
+            assert!(actor.instance.is_none());
 
             // Create a ramdisk and setup FVM.
             let fvm = FvmInstance::new(
@@ -172,8 +168,7 @@ impl Environment for MinfsEnvironment {
             .await;
 
             // Find the path to the volume
-            let block_path = fvm.block_path();
-            let volume_path = get_volume_path(block_path, &self.volume_guid).await;
+            let volume_path = get_volume_path(&self.volume_guid).await;
 
             // Initialize minfs on volume
             let mut minfs = Minfs::new(volume_path.to_str().unwrap()).unwrap();
@@ -183,9 +178,7 @@ impl Environment for MinfsEnvironment {
             minfs.mount(MINFS_MOUNT_PATH).unwrap();
 
             // Replace the fvm and minfs instances
-            actor.fvm = fvm;
-            actor.minfs = minfs;
-            actor.instance_killed = false;
+            actor.instance = Some((minfs, fvm));
         }
 
         // Replace the root directory with a new one

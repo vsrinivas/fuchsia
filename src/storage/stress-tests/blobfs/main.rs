@@ -10,10 +10,9 @@ mod read_actor;
 
 use {
     crate::environment::BlobfsEnvironment,
-    anyhow::Error,
     argh::FromArgs,
     fuchsia_async as fasync,
-    log::{info, LevelFilter},
+    log::LevelFilter,
     stress_test::{run_test, StdoutLogger},
 };
 
@@ -45,21 +44,24 @@ pub struct Args {
     #[argh(option, default = "32768")]
     fvm_slice_size: u64,
 
-    /// controls how often blobfs is disconnected by
-    /// crashing the block device.
+    /// controls how often blobfs is killed and the ramdisk is unbound
     #[argh(option, short = 'd')]
     disconnect_secs: Option<u64>,
 
     /// if set, the test runs for this time limit before exiting successfully.
     #[argh(option, short = 't')]
     time_limit_secs: Option<u64>,
+
+    /// parameter passed in by rust test runner
+    #[argh(switch)]
+    nocapture: bool,
 }
 
 // The path to the blobfs filesystem in the test's namespace
 pub const BLOBFS_MOUNT_PATH: &str = "/blobfs";
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded(test)]
+async fn test() {
     // Get arguments from command line
     let args: Args = argh::from_env();
 
@@ -71,8 +73,4 @@ async fn main() -> Result<(), Error> {
 
     // Run the test
     run_test(env).await;
-
-    info!("Stress test is exiting successfully!");
-
-    Ok(())
 }

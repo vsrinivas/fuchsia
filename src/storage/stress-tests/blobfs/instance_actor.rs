@@ -9,26 +9,25 @@ use {
     stress_test::actor::{Actor, ActorError},
 };
 
-/// An actor that severs the connection between blobfs and the
-/// underlying block device by killing component manager.
+/// An actor that kills blobfs and destroys the ramdisk
 pub struct InstanceActor {
-    pub blobfs: Filesystem<Blobfs>,
-    pub fvm: FvmInstance,
-    pub instance_killed: bool,
+    pub instance: Option<(Filesystem<Blobfs>, FvmInstance)>,
 }
 
 impl InstanceActor {
     pub fn new(fvm: FvmInstance, blobfs: Filesystem<Blobfs>) -> Self {
-        Self { fvm, blobfs, instance_killed: false }
+        Self { instance: Some((blobfs, fvm)) }
     }
 }
 
 #[async_trait]
 impl Actor for InstanceActor {
     async fn perform(&mut self) -> Result<(), ActorError> {
-        assert!(!self.instance_killed);
-        self.fvm.kill_component_manager();
-        self.instance_killed = true;
+        if let Some((mut blobfs, _)) = self.instance.take() {
+            blobfs.kill().expect("Could not kill blobfs");
+        } else {
+            panic!("Instance was already killed!")
+        }
         Err(ActorError::ResetEnvironment)
     }
 }

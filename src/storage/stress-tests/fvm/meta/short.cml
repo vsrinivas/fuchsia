@@ -1,0 +1,57 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/fvm_stressor",
+        args: [
+            // Run a 100 operations. This should fit in the CQ/CI time limits.
+            "--num-operations",
+            "100",
+
+            // Use a smaller ramdisk for short tests
+            "--ramdisk-block-count",
+            "27136",
+
+            // Enable debug logging for this variant
+            "-l",
+            "debug",
+        ],
+    },
+    children: [
+        {
+            name: "isolated-devmgr",
+            url: "fuchsia-pkg://fuchsia.com/storage-isolated-devmgr#meta/isolated-devmgr.cm",
+        },
+    ],
+    use: [
+        // Used to access the /dev directory of isolated-devmgr
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: [ "#isolated-devmgr" ],
+        },
+    ],
+    expose: [
+        // Makes it easier to access the /dev directory of isolated-devmgr from the hub
+        {
+            directory: "dev",
+            from: "#isolated-devmgr",
+        },
+    ],
+}

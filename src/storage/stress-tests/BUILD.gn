@@ -8,55 +8,55 @@ import("//build/rust/rustc_library.gni")
 
 fuchsia_component("minfs-crash") {
   testonly = true
-  manifest = "minfs/meta/crash.cmx"
+  manifest = "minfs/meta/crash.cml"
   deps = [ "minfs:stressor-bin" ]
 }
 
 fuchsia_component("minfs-no-crash") {
   testonly = true
-  manifest = "minfs/meta/no-crash.cmx"
+  manifest = "minfs/meta/no-crash.cml"
   deps = [ "minfs:stressor-bin" ]
 }
 
 fuchsia_component("blobfs-crash") {
   testonly = true
-  manifest = "blobfs/meta/crash.cmx"
+  manifest = "blobfs/meta/crash.cml"
   deps = [ "blobfs:stressor-bin" ]
 }
 
 fuchsia_component("blobfs-no-crash") {
   testonly = true
-  manifest = "blobfs/meta/no-crash.cmx"
+  manifest = "blobfs/meta/no-crash.cml"
   deps = [ "blobfs:stressor-bin" ]
 }
 
 fuchsia_component("fvm-no-crash") {
   testonly = true
-  manifest = "fvm/meta/no-crash.cmx"
+  manifest = "fvm/meta/no-crash.cml"
   deps = [ "fvm:stressor-bin" ]
 }
 
 fuchsia_component("fvm-crash") {
   testonly = true
-  manifest = "fvm/meta/crash.cmx"
+  manifest = "fvm/meta/crash.cml"
   deps = [ "fvm:stressor-bin" ]
 }
 
 fuchsia_component("blobfs-short") {
   testonly = true
-  manifest = "blobfs/meta/short.cmx"
+  manifest = "blobfs/meta/short.cml"
   deps = [ "blobfs:stressor-bin" ]
 }
 
 fuchsia_component("fvm-short") {
   testonly = true
-  manifest = "fvm/meta/short.cmx"
+  manifest = "fvm/meta/short.cml"
   deps = [ "fvm:stressor-bin" ]
 }
 
 fuchsia_component("minfs-short") {
   testonly = true
-  manifest = "minfs/meta/short.cmx"
+  manifest = "minfs/meta/short.cml"
   deps = [ "minfs:stressor-bin" ]
 }
 

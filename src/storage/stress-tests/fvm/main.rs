@@ -9,11 +9,10 @@ pub mod volume_actor;
 pub mod vslice;
 
 use {
-    anyhow::Error,
     argh::FromArgs,
     environment::FvmEnvironment,
     fuchsia_async as fasync,
-    log::{info, LevelFilter},
+    log::LevelFilter,
     stress_test::{run_test, StdoutLogger},
 };
 
@@ -64,21 +63,17 @@ pub struct Args {
     #[argh(option, default = "65536")]
     max_vslice_count: u64,
 
-    /// controls how often volumes are force-disconnected,
-    /// either by crashing FVM or by rebinding the driver.
-    /// disabled if set to 0.
-    #[argh(option, default = "0")]
-    disconnect_secs: u64,
+    /// controls how often the ramdisk is unbound
+    #[argh(option, short = 'd')]
+    disconnect_secs: Option<u64>,
 
-    /// when force-disconnection is enabled, this
-    /// defines the probability with which a rebind
-    /// happens instead of a crash.
-    #[argh(option, default = "0.0")]
-    rebind_probability: f64,
+    /// parameter passed in by rust test runner
+    #[argh(switch)]
+    nocapture: bool,
 }
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded(test)]
+async fn test() {
     // Get arguments from command line
     let args: Args = argh::from_env();
 
@@ -90,8 +85,4 @@ async fn main() -> Result<(), Error> {
 
     // Run the test
     run_test(env).await;
-
-    info!("Stress test is exiting successfully!");
-
-    Ok(())
 }

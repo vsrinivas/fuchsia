@@ -67,8 +67,7 @@ impl BlobfsEnvironment {
         let volume_guid = fvm.new_volume("blobfs", TYPE_GUID).await;
 
         // Find the path to the volume
-        let block_path = fvm.block_path();
-        let volume_path = get_volume_path(block_path, &volume_guid).await;
+        let volume_path = get_volume_path(&volume_guid).await;
 
         // Initialize blobfs on volume
         let mut blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
@@ -193,10 +192,7 @@ impl Environment for BlobfsEnvironment {
 
             // The environment is only reset when the instance is killed.
             // TODO(72385): Pass the actor error here, so it can be printed out on assert failure.
-            assert!(actor.instance_killed);
-
-            // Kill the blobfs process in case it was still running
-            let _ = actor.blobfs.kill();
+            assert!(actor.instance.is_none());
 
             // Create a ramdisk and setup FVM.
             let fvm = FvmInstance::new(
@@ -208,8 +204,7 @@ impl Environment for BlobfsEnvironment {
             .await;
 
             // Find the path to the volume
-            let block_path = fvm.block_path();
-            let volume_path = get_volume_path(block_path, &self.volume_guid).await;
+            let volume_path = get_volume_path(&self.volume_guid).await;
 
             // Initialize blobfs on volume
             let mut blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
@@ -219,9 +214,7 @@ impl Environment for BlobfsEnvironment {
             blobfs.mount(BLOBFS_MOUNT_PATH).unwrap();
 
             // Replace the fvm and blobfs instances
-            actor.fvm = fvm;
-            actor.blobfs = blobfs;
-            actor.instance_killed = false;
+            actor.instance = Some((blobfs, fvm));
         }
 
         // Replace the root directory with a new one

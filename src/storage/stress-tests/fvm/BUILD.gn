@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
-rustc_binary("stressor-bin") {
+rustc_test("stressor-bin") {
   name = "fvm_stressor"
   edition = "2018"
   source_root = "main.rs"

@@ -9,26 +9,25 @@ use {
     stress_test::actor::{Actor, ActorError},
 };
 
-/// An actor that severs the connection between minfs and the
-/// underlying block device by killing component manager.
+/// An actor that kills minfs and destroys the ramdisk
 pub struct InstanceActor {
-    pub fvm: FvmInstance,
-    pub minfs: Filesystem<Minfs>,
-    pub instance_killed: bool,
+    pub instance: Option<(Filesystem<Minfs>, FvmInstance)>,
 }
 
 impl InstanceActor {
     pub fn new(fvm: FvmInstance, minfs: Filesystem<Minfs>) -> Self {
-        Self { fvm, minfs, instance_killed: false }
+        Self { instance: Some((minfs, fvm)) }
     }
 }
 
 #[async_trait]
 impl Actor for InstanceActor {
     async fn perform(&mut self) -> Result<(), ActorError> {
-        assert!(!self.instance_killed);
-        self.fvm.kill_component_manager();
-        self.instance_killed = true;
+        if let Some((mut minfs, _)) = self.instance.take() {
+            minfs.kill().expect("Could not kill minfs");
+        } else {
+            panic!("Instance was already killed!")
+        }
         Err(ActorError::ResetEnvironment)
     }
 }
