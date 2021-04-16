@@ -388,7 +388,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "gpio-light",
       "class/light/000",
 
-      "spi/aml-spi-1/spi/spi-1-0",
+      "spi-1/aml-spi-1/spi/spi-1-0",
       "selina/selina",
       "class/radar/000",
 
@@ -506,7 +506,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "ft5726-touch",
       "tee/optee",
       "sys/platform/00:00:f/fallback-rtc",
-      "spi/aml-spi-0/spi/spi-0-0",
+      "spi-0/aml-spi-0/spi/spi-0-0",
       "sherlock-buttons/hid-buttons",
       "nrf52840-radio",
       "backlight/ti-lp8556",

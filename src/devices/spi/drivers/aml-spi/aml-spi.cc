@@ -285,61 +285,52 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     return status;
   }
 
-  if (info.mmio_count != info.irq_count) {
-    zxlogf(ERROR, "%s: mmio_count %u does not match irq_count %u", __func__, info.mmio_count,
-           info.irq_count);
-    status = ZX_ERR_INVALID_ARGS;
-    return status;
-  }
-
   size_t actual;
-  amlspi_cs_map_t gpio_map[info.mmio_count];
-  status = device_get_metadata(device, DEVICE_METADATA_AMLSPI_CS_MAPPING, gpio_map, sizeof gpio_map,
-                               &actual);
+  amlspi_cs_map_t gpio_map = {};
+  status = device_get_metadata(device, DEVICE_METADATA_AMLSPI_CS_MAPPING, &gpio_map,
+                               sizeof gpio_map, &actual);
   if ((status != ZX_OK) || (actual != sizeof gpio_map)) {
     zxlogf(ERROR, "%s: failed to read GPIO/chip select map", __func__);
     return status;
   }
 
-  for (uint32_t i = 0; i < info.mmio_count; i++) {
-    std::optional<ddk::MmioBuffer> mmio;
-    status = pdev.MapMmio(i, &mmio);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: pdev_map_&mmio__buffer #%d failed %d", __func__, i, status);
-      return status;
-    }
-
-    fbl::Array<ChipInfo> chips = InitChips(&gpio_map[i], device);
-    if (!chips) {
-      return ZX_ERR_NO_RESOURCES;
-    }
-    if (chips.size() == 0) {
-      continue;
-    }
-
-    fbl::AllocChecker ac;
-    std::unique_ptr<AmlSpi> spi(new (&ac) AmlSpi(device, *std::move(mmio), std::move(chips)));
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-
-    char devname[32];
-    sprintf(devname, "aml-spi-%d", i);
-
-    status = spi->DdkAdd(devname);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkDeviceAdd failed for %s", __func__, devname);
-      return status;
-    }
-
-    status = spi->DdkAddMetadata(DEVICE_METADATA_PRIVATE, &i, sizeof i);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkAddMetadata failed for %s", __func__, devname);
-      return status;
-    }
-
-    __UNUSED auto* _ = spi.release();
+  std::optional<ddk::MmioBuffer> mmio;
+  status = pdev.MapMmio(0, &mmio);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: pdev_map_&mmio__buffer failed %d", __func__, status);
+    return status;
   }
+
+  fbl::Array<ChipInfo> chips = InitChips(&gpio_map, device);
+  if (!chips) {
+    return ZX_ERR_NO_RESOURCES;
+  }
+  if (chips.size() == 0) {
+    return ZX_OK;
+  }
+
+  fbl::AllocChecker ac;
+  std::unique_ptr<AmlSpi> spi(new (&ac) AmlSpi(device, *std::move(mmio), std::move(chips)));
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  char devname[32];
+  sprintf(devname, "aml-spi-%d", gpio_map.bus_id);
+
+  status = spi->DdkAdd(devname);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DdkDeviceAdd failed for %s", __func__, devname);
+    return status;
+  }
+
+  status = spi->DdkAddMetadata(DEVICE_METADATA_PRIVATE, &gpio_map.bus_id, sizeof gpio_map.bus_id);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DdkAddMetadata failed for %s", __func__, devname);
+    return status;
+  }
+
+  __UNUSED auto* _ = spi.release();
 
   return ZX_OK;
 }

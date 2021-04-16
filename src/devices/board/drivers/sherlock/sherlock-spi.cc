@@ -29,10 +29,6 @@ static const pbus_mmio_t spi_mmios[] = {
         .base = T931_SPICC0_BASE,
         .length = 0x44,
     },
-    {
-        .base = T931_SPICC1_BASE,
-        .length = 0x44,
-    },
 };
 
 static const pbus_irq_t spi_irqs[] = {
@@ -40,25 +36,22 @@ static const pbus_irq_t spi_irqs[] = {
         .irq = T931_SPICC0_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
-    {
-        .irq = T931_SPICC1_IRQ,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
 };
 
 static const spi_channel_t spi_channels[] = {
     // Thread SPI
-    {.bus_id = SHERLOCK_SPICC0,
-     .cs = 0,  // index into matching chip-select map
-     .vid = PDEV_VID_NORDIC,
-     .pid = PDEV_PID_NORDIC_NRF52840,
-     .did = PDEV_DID_NORDIC_THREAD}};
-
-static const amlspi_cs_map_t spi_cs_map[] = {
     {
-        .bus_id = SHERLOCK_SPICC0, .cs_count = 1, .cs = {0}  // index into fragments list
+        .bus_id = SHERLOCK_SPICC0,
+        .cs = 0,  // index into matching chip-select map
+        .vid = PDEV_VID_NORDIC,
+        .pid = PDEV_PID_NORDIC_NRF52840,
+        .did = PDEV_DID_NORDIC_THREAD,
     },
-    {.bus_id = SHERLOCK_SPICC1, .cs_count = 0, .cs = {}}};
+};
+
+static const amlspi_cs_map_t spi_cs_map = {
+    .bus_id = SHERLOCK_SPICC0, .cs_count = 1, .cs = {0}  // index into fragments list
+};
 
 static const pbus_metadata_t spi_metadata[] = {
     {
@@ -75,7 +68,7 @@ static const pbus_metadata_t spi_metadata[] = {
 
 static pbus_dev_t spi_dev = []() {
   pbus_dev_t dev = {};
-  dev.name = "spi";
+  dev.name = "spi-0";
   dev.vid = PDEV_VID_AMLOGIC;
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_AMLOGIC_SPI;
@@ -111,19 +104,9 @@ static const device_fragment_part_t spi0_reset_register_fragment[] = {
     {countof(spi0_reset_register_match), spi0_reset_register_match},
 };
 
-static const zx_bind_inst_t spi1_reset_register_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
-    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_SPICC1_RESET),
-};
-static const device_fragment_part_t spi1_reset_register_fragment[] = {
-    {countof(root_match), root_match},
-    {countof(spi1_reset_register_match), spi1_reset_register_match},
-};
-
 static constexpr device_fragment_t fragments[] = {
     {"gpio-cs-0", std::size(gpio_spicc0_ss0_fragment), gpio_spicc0_ss0_fragment},
-    {"reset-0", std::size(spi0_reset_register_fragment), spi0_reset_register_fragment},
-    {"reset-1", std::size(spi1_reset_register_fragment), spi1_reset_register_fragment},
+    {"reset", std::size(spi0_reset_register_fragment), spi0_reset_register_fragment},
 };
 
 zx_status_t Sherlock::SpiInit() {

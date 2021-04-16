@@ -51,19 +51,17 @@ class FakeDdkSpi : public fake_ddk::Bind {
         mmio_mapper_.CreateAndMap(0x100, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &mmio_));
 
     pdev_.set_device_info(pdev_device_info_t{
-        .mmio_count = countof(kGpioMap),
-        .irq_count = countof(kGpioMap),
+        .mmio_count = 1,
+        .irq_count = 1,
     });
-    for (uint32_t i = 0; i < std::size(kGpioMap); i++) {
-      zx::vmo dup;
-      ASSERT_OK(mmio_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+    zx::vmo dup;
+    ASSERT_OK(mmio_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
 
-      pdev_.set_mmio(i, {
-                            .vmo = std::move(dup),
-                            .offset = 0,
-                            .size = mmio_mapper_.size(),
-                        });
-    }
+    pdev_.set_mmio(0, {
+                          .vmo = std::move(dup),
+                          .offset = 0,
+                          .size = mmio_mapper_.size(),
+                      });
   }
 
   ~FakeDdkSpi() override {
@@ -142,7 +140,6 @@ class FakeDdkSpi : public fake_ddk::Bind {
  private:
   static constexpr amlspi_cs_map_t kGpioMap[] = {
       {.bus_id = 0, .cs_count = 2, .cs = {5, 3}},
-      {.bus_id = 1, .cs_count = 1, .cs = {2}},
   };
 
   std::vector<ChildDevice> children_;
@@ -195,9 +192,6 @@ TEST(AmlSpiTest, DdkLifecycle) {
 
   EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
 
-  ASSERT_EQ(bind.children().size(), 2);
-  device_async_remove(reinterpret_cast<zx_device_t*>(bind.children()[0].device));
-
   ASSERT_EQ(bind.children().size(), 1);
   device_async_remove(reinterpret_cast<zx_device_t*>(bind.children()[0].device));
 
@@ -209,12 +203,10 @@ TEST(AmlSpiTest, ChipSelectCount) {
 
   EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
 
-  ASSERT_EQ(bind.children().size(), 2);
+  ASSERT_EQ(bind.children().size(), 1);
   AmlSpi& spi0 = *bind.children()[0].device;
-  AmlSpi& spi1 = *bind.children()[1].device;
 
   EXPECT_EQ(spi0.SpiImplGetChipSelectCount(), 2);
-  EXPECT_EQ(spi1.SpiImplGetChipSelectCount(), 1);
 }
 
 TEST(AmlSpiTest, Exchange) {
@@ -225,7 +217,7 @@ TEST(AmlSpiTest, Exchange) {
 
   EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
 
-  ASSERT_EQ(bind.children().size(), 2);
+  ASSERT_EQ(bind.children().size(), 1);
   AmlSpi& spi0 = *bind.children()[0].device;
 
   // Zero out rxcnt and txcnt just in case.
@@ -251,8 +243,8 @@ TEST(AmlSpiTest, RegisterVmo) {
 
   EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
 
-  ASSERT_EQ(bind.children().size(), 2);
-  AmlSpi& spi1 = *bind.children()[1].device;
+  ASSERT_EQ(bind.children().size(), 1);
+  AmlSpi& spi1 = *bind.children()[0].device;
 
   zx::vmo test_vmo;
   EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &test_vmo));
@@ -290,8 +282,8 @@ TEST(AmlSpiTest, Transmit) {
 
   EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
 
-  ASSERT_EQ(bind.children().size(), 2);
-  AmlSpi& spi1 = *bind.children()[1].device;
+  ASSERT_EQ(bind.children().size(), 1);
+  AmlSpi& spi1 = *bind.children()[0].device;
 
   zx::vmo test_vmo;
   EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &test_vmo));
@@ -323,8 +315,8 @@ TEST(AmlSpiTest, ReceiveVmo) {
 
   EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
 
-  ASSERT_EQ(bind.children().size(), 2);
-  AmlSpi& spi1 = *bind.children()[1].device;
+  ASSERT_EQ(bind.children().size(), 1);
+  AmlSpi& spi1 = *bind.children()[0].device;
 
   zx::vmo test_vmo;
   EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &test_vmo));
@@ -359,8 +351,8 @@ TEST(AmlSpiTest, ExchangeVmo) {
 
   EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
 
-  ASSERT_EQ(bind.children().size(), 2);
-  AmlSpi& spi1 = *bind.children()[1].device;
+  ASSERT_EQ(bind.children().size(), 1);
+  AmlSpi& spi1 = *bind.children()[0].device;
 
   zx::vmo test_vmo;
   EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &test_vmo));
@@ -396,7 +388,7 @@ TEST(AmlSpiTest, TransfersOutOfRange) {
 
   EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
 
-  ASSERT_EQ(bind.children().size(), 2);
+  ASSERT_EQ(bind.children().size(), 1);
   AmlSpi& spi0 = *bind.children()[0].device;
 
   zx::vmo test_vmo;
@@ -444,8 +436,8 @@ TEST(AmlSpiTest, VmoBadRights) {
 
   EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
 
-  ASSERT_EQ(bind.children().size(), 2);
-  AmlSpi& spi1 = *bind.children()[1].device;
+  ASSERT_EQ(bind.children().size(), 1);
+  AmlSpi& spi1 = *bind.children()[0].device;
 
   zx::vmo test_vmo;
   EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &test_vmo));

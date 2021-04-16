@@ -27,20 +27,12 @@ namespace nelson {
 
 static const pbus_mmio_t spi_mmios[] = {
     {
-        .base = S905D3_SPICC0_BASE,
-        .length = S905D3_SPICC0_LENGTH,
-    },
-    {
         .base = S905D3_SPICC1_BASE,
         .length = S905D3_SPICC1_LENGTH,
     },
 };
 
 static const pbus_irq_t spi_irqs[] = {
-    {
-        .irq = S905D3_SPICC0_IRQ,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
     {
         .irq = S905D3_SPICC1_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
@@ -55,13 +47,11 @@ static const spi_channel_t spi_channels[] = {
         .vid = PDEV_VID_INFINEON,
         .pid = PDEV_PID_INFINEON_BGT60TR13C,
         .did = PDEV_DID_RADAR_SENSOR,
-    }};
-
-static const amlspi_cs_map_t spi_cs_map[] = {
-    {.bus_id = NELSON_SPICC0, .cs_count = 0, .cs = {}},  // Unused.
-    {
-        .bus_id = NELSON_SPICC1, .cs_count = 1, .cs = {0}  // index into fragments list
     },
+};
+
+static const amlspi_cs_map_t spi_cs_map = {
+    .bus_id = NELSON_SPICC1, .cs_count = 1, .cs = {0}  // index into fragments list
 };
 
 static const pbus_metadata_t spi_metadata[] = {
@@ -79,7 +69,7 @@ static const pbus_metadata_t spi_metadata[] = {
 
 static pbus_dev_t spi_dev = []() {
   pbus_dev_t dev = {};
-  dev.name = "spi";
+  dev.name = "spi-1";
   dev.vid = PDEV_VID_AMLOGIC;
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_AMLOGIC_SPI;
@@ -106,15 +96,6 @@ static constexpr device_fragment_part_t gpio_spicc1_ss0_fragment[] = {
     {std::size(gpio_spicc1_ss0_match), gpio_spicc1_ss0_match},
 };
 
-static const zx_bind_inst_t spi0_reset_register_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
-    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_SPICC0_RESET),
-};
-static const device_fragment_part_t spi0_reset_register_fragment[] = {
-    {countof(root_match), root_match},
-    {countof(spi0_reset_register_match), spi0_reset_register_match},
-};
-
 static const zx_bind_inst_t spi1_reset_register_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
     BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_SPICC1_RESET),
@@ -126,8 +107,7 @@ static const device_fragment_part_t spi1_reset_register_fragment[] = {
 
 static constexpr device_fragment_t fragments[] = {
     {"gpio-cs-0", std::size(gpio_spicc1_ss0_fragment), gpio_spicc1_ss0_fragment},
-    {"reset-0", std::size(spi0_reset_register_fragment), spi0_reset_register_fragment},
-    {"reset-1", std::size(spi1_reset_register_fragment), spi1_reset_register_fragment},
+    {"reset", std::size(spi1_reset_register_fragment), spi1_reset_register_fragment},
 };
 
 zx_status_t Nelson::SpiInit() {
