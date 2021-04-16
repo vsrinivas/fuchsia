@@ -13,13 +13,13 @@
 
 namespace {
 
-inline bool isRootBridge(const pci_bdf_t& bdf) {
+inline bool isRootBridge(const zx_pci_bdf_t& bdf) {
   // The Root Bridge _must_ be BDF 0:0:0, there are no other devices on Bus 0
   // and we short circuit and return false.
   return bdf.bus_id == 0 && bdf.device_id == 0 && bdf.function_id == 0;
 }
 
-inline bool isDownstream(const pci_bdf_t& bdf) {
+inline bool isDownstream(const zx_pci_bdf_t& bdf) {
   // This is hacky but it's reasonable. The controller appears to (?) support
   // more than a single downstream device but we've never seen this in
   // practice. If we wanted to _actually_ support multiple downstream devices
@@ -82,7 +82,7 @@ zx_status_t DesignWarePcieAddressProvider::Translate(const uint8_t bus_id, const
     return ZX_ERR_BAD_STATE;
   }
 
-  const pci_bdf_t bdf = {
+  const zx_pci_bdf_t bdf = {
       .bus_id = bus_id,
       .device_id = device_id,
       .function_id = function_id,

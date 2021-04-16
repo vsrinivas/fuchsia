@@ -6,6 +6,7 @@
 #include <lib/fitx/result.h>
 #include <lib/pci/pciroot.h>
 #include <stdio.h>
+#include <zircon/hw/pci.h>
 
 #include <array>
 #include <cstring>

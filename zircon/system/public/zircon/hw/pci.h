@@ -11,14 +11,14 @@
 __BEGIN_CDECLS
 
 // Structure for passing around PCI address information
-typedef struct pci_bdf {
+typedef struct zx_pci_bdf {
   uint8_t bus_id;
   uint8_t device_id;
   uint8_t function_id;
-} pci_bdf_t;
+} zx_pci_bdf_t;
 
 // TODO(cja): This header is used for the transition of these defines from
-// kernel to userspace, but due to pci_bdf_t some of the kernel includes it.
+// kernel to userspace, but due to zx_pci_bdf_t some of the kernel includes it.
 // Make sure defines here don't clash with those in pci_common.h by having this
 // guard, but remove it after the transition.
 #ifndef WITH_KERNEL_PCIE

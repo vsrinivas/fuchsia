@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_PIO_H_
 #define SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_PIO_H_
 
+#include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <stdint.h>
 #include <zircon/hw/pci.h>
 #include <zircon/types.h>

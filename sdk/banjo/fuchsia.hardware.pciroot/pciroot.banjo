@@ -3,8 +3,13 @@
 // found in the LICENSE file.
 
 library fuchsia.hardware.pciroot;
-using zircon.hw.pci;
 using zx;
+
+struct PciBdf {
+  uint8 bus_id;
+  uint8 device_id;
+  uint8 function_id;
+};
 
 const uint8 DEVICES_PER_BUS = 64;
 const uint8 FUNCTIONS_PER_DEVICE = 8;
@@ -33,7 +38,7 @@ struct PciIrqRoutingEntry {
 /// the bus driver uses them depends on the irq routing table provided to them.
 /// The vector is supplied because interrupt objects cannot be inspected with
 /// zx_get_object_info.
-struct PciLegacyIrq {
+resource struct PciLegacyIrq {
     zx.handle:INTERRUPT interrupt;
     uint32 vector;
 };
@@ -43,7 +48,7 @@ struct PciLegacyIrq {
 /// for this segment group then a handle to a VMO for it will be provided via
 /// |ecam_vmo|. The VMO's start address will correspond to the base address of
 /// the bus number specified by |start_bus_num|.
-struct PciPlatformInfo {
+resource struct PciPlatformInfo {
     string:8 name;
     uint8 start_bus_num;
     uint8 end_bus_num;
@@ -73,17 +78,17 @@ protocol Pciroot {
     /// map in device config headers.
     DriverShouldProxyConfig() -> (bool use_proxy);
     /// Read 8 bytes from config space for device at bdf address |address|:we, offset |offset|.
-    ConfigRead8(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint8 value);
+    ConfigRead8(PciBdf address, uint16 offset) -> (zx.status s, uint8 value);
     /// Read 16 bytes from config space for device at bdf address |address|, offset |offset|.
-    ConfigRead16(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint16 value);
+    ConfigRead16(PciBdf address, uint16 offset) -> (zx.status s, uint16 value);
     /// Read 32 bytes from config space for device at bdf address |address|, offset |offset|.
-    ConfigRead32(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint32 value);
+    ConfigRead32(PciBdf address, uint16 offset) -> (zx.status s, uint32 value);
     /// Write 8 bytes to config space for device at bdf |address| offset |offset|.
-    ConfigWrite8(zircon.hw.pci.PciBdf address, uint16 offset, uint8 value) -> (zx.status s);
+    ConfigWrite8(PciBdf address, uint16 offset, uint8 value) -> (zx.status s);
     /// Write 16 bytes to config space for device at bdf |address| offset |offset|.
-    ConfigWrite16(zircon.hw.pci.PciBdf address, uint16 offset, uint16 value) -> (zx.status s);
+    ConfigWrite16(PciBdf address, uint16 offset, uint16 value) -> (zx.status s);
     /// Write 32 bytes to config space for device at bdf |address| offset |offset|.
-    ConfigWrite32(zircon.hw.pci.PciBdf address, uint16 offset, uint32 value) -> (zx.status s);
+    ConfigWrite32(PciBdf address, uint16 offset, uint32 value) -> (zx.status s);
     /// Request address space reservations from platform bus to use for mapping bars / bridges
     /// |in_base| is an optional requested start address which should otherwise be 0. |size| is the
     /// size of the request in bytes. |low| dictates whether the allocation should be an address
