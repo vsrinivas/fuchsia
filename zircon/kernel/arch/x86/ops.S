@@ -22,17 +22,12 @@
 %rax 1st return register
 */
 
-/* void x86_idle(); */
-FUNCTION(x86_idle)
-    pushf
-    popq %rax
-    andq $0x200, %rax
-    test %rax, %rax
-    je 1f                   /* don't halt if local interrupts are disabled */
-    hlt
-1:
+/* void x86_enable_ints_and_hlt(); */
+FUNCTION(x86_enable_ints_and_hlt)
+    sti
+    hlt  /* HLT must immediately follow STI; it executes in the interrupt shadow */
     ret
-END_FUNCTION(x86_idle)
+END_FUNCTION(x86_enable_ints_and_hlt)
 
 
 /* zx_status_t read_msr_safe(uint32_t msr_id, uint64_t *val); */

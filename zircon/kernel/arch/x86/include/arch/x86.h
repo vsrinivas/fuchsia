@@ -420,7 +420,9 @@ void x86_monitor(volatile void* addr);
 // See Table 4-11 in the "Intel 64 and IA-32 Architectures Software Developer's
 // Manual, Vol 2B" for encoding.
 void x86_mwait(uint32_t hints);
-void x86_idle(void);
+
+// Enable interrupts and halt this processor. Requires interrupts are disabled on entry.
+void x86_enable_ints_and_hlt(void);
 
 void mds_buff_overwrite(void);
 void x86_ras_fill(void);

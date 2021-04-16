@@ -417,10 +417,16 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
       bool no_fast_wakeup =
           percpu->halt_interlock.compare_exchange_strong(halt_interlock_spinning, 2);
       if (no_fast_wakeup) {
-        x86_idle();
-      } else {
-        Thread::Current::Preempt();
+        arch_disable_ints();
+        if (!Thread::Current::preemption_state().preempt_pending().load()) {
+          x86_enable_ints_and_hlt();
+        } else {
+          // Re-enable interrupts if a reschedule IPI, timer tick, or other PreemptSetPending
+          // happened and we didn't call x86_idle.
+          arch_enable_ints();
+        }
       }
+      Thread::Current::Preempt();
     }
   }
 }
