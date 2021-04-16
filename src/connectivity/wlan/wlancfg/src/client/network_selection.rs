@@ -82,6 +82,7 @@ impl InternalBss<'_> {
         return rssi;
     }
 
+    #[allow(unused)]
     fn print_without_pii(&self, hasher: &WlanHasher) {
         let channel = Channel::from_fidl(self.bss_info.channel);
         let rssi = self.bss_info.rssi;
@@ -360,14 +361,11 @@ impl ScanResultUpdate for NetworkSelectorScanUpdater {
 fn select_best_connection_candidate<'a>(
     bss_list: Vec<InternalBss<'a>>,
     ignore_list: &Vec<types::NetworkIdentifier>,
-    hasher: &WlanHasher,
+    _hasher: &WlanHasher,
 ) -> Option<(types::ConnectionCandidate, types::WlanChan, types::Bssid)> {
     info!("Selecting from {} BSSs found for saved networks", bss_list.len());
     bss_list
         .into_iter()
-        .inspect(|bss| {
-            bss.print_without_pii(hasher);
-        })
         .filter(|bss| {
             // Filter out incompatible BSSs
             if !bss.bss_info.compatible {
@@ -398,8 +396,7 @@ fn select_best_connection_candidate<'a>(
             bss_a.score().partial_cmp(&bss_b.score()).unwrap()
         })
         .map(|bss| {
-            info!("Selected BSS:");
-            bss.print_without_pii(hasher);
+            info!("Selected BSS");
             (
                 types::ConnectionCandidate {
                     network: bss.network_id,
