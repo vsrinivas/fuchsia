@@ -1,7 +1,7 @@
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-import("//build/package.gni")
+import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 group("manual_player") {
@@ -12,24 +12,16 @@ group("manual_player") {
   ]
 }
 
-package("tennis_manual_player") {
+fuchsia_package_with_single_component("tennis_manual_player") {
   deps = [ ":tennis_manual_player_bin" ]
-  binaries = [
-    {
-      name = "tennis_manual_player"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/tennis_manual_player.cmx")
-      dest = "tennis_manual_player.cmx"
-    },
-  ]
+  manifest = "meta/tennis_manual_player.cmx"
 }
+
 rustc_binary("tennis_manual_player_bin") {
   name = "tennis_manual_player"
   edition = "2018"
   source_root = "src/main.rs"
+  sources = [ "src/main.rs" ]
   deps = [
     "//sdk/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
     "//src/lib/fidl/rust/fidl",

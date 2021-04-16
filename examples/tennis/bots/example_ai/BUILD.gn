@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 group("example_ai") {
@@ -13,26 +13,16 @@ group("example_ai") {
   ]
 }
 
-package("tennis_example_ai") {
+fuchsia_package_with_single_component("tennis_example_ai") {
   deps = [ ":tennis_example_ai_bin" ]
-
-  binaries = [
-    {
-      name = "tennis_example_ai"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/tennis_example_ai.cmx")
-      dest = "tennis_example_ai.cmx"
-    },
-  ]
+  manifest = "meta/tennis_example_ai.cmx"
 }
 
 rustc_binary("tennis_example_ai_bin") {
   name = "tennis_example_ai"
   edition = "2018"
 
+  sources = [ "src/main.rs" ]
   deps = [
     "//sdk/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
     "//src/lib/fidl/rust/fidl",
