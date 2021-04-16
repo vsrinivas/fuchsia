@@ -144,7 +144,7 @@ zx_status_t Device::CreateProxy() {
       {BIND_TOPO_PCI, 0, static_cast<uint32_t>(BIND_TOPO_PCI_PACK(bus_id(), dev_id(), func_id()))},
   };
 
-  // Create an isolated devhost to load the proxy pci driver containing the DeviceProxy
+  // Create an isolated devhost to load the proxy pci driver containing the PciProxy
   // instance which will talk to this device.
   return DdkAdd(ddk::DeviceAddArgs(cfg_->addr())
                     .set_flags(DEVICE_ADD_MUST_ISOLATE)

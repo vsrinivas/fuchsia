@@ -8,12 +8,13 @@
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/zx/bti.h>
-#include <zircon/errors.h>
+#include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <cstring>
 
 #include "src/devices/bus/drivers/pci/common.h"
+#include "src/devices/bus/drivers/pci/device_rpc.h"
 #include "src/devices/bus/drivers/pci/pci_proxy_bind.h"
 
 // This file contains the PciProtocol implementation that is proxied over
@@ -28,6 +29,7 @@ zx_status_t PciProxy::Create(zx_device_t* parent, zx_handle_t rpcch, const char*
 zx_status_t PciProxy::RpcRequest(PciRpcOp op, zx_handle_t* rd_handle, const zx_handle_t* wr_handle,
                                  PciRpcMsg* req, PciRpcMsg* resp) {
   ZX_DEBUG_ASSERT(req != nullptr);
+  ZX_DEBUG_ASSERT(resp != nullptr);
   if (rpcch_ == ZX_HANDLE_INVALID) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -41,7 +43,7 @@ zx_status_t PciProxy::RpcRequest(PciRpcOp op, zx_handle_t* rd_handle, const zx_h
   }
 
   uint32_t wr_handle_cnt = 0;
-  if (wr_handle) {
+  if (wr_handle && *wr_handle != ZX_HANDLE_INVALID) {
     wr_handle_cnt = 1;
   }
 
@@ -50,7 +52,7 @@ zx_status_t PciProxy::RpcRequest(PciRpcOp op, zx_handle_t* rd_handle, const zx_h
   cc_args.wr_bytes = req;
   cc_args.wr_num_bytes = sizeof(*req);
   cc_args.rd_bytes = resp;
-  cc_args.rd_num_bytes = (resp) ? sizeof(*resp) : 0;
+  cc_args.rd_num_bytes = sizeof(*resp);
   cc_args.rd_handles = rd_handle;
   cc_args.rd_num_handles = rd_handle_cnt;
   cc_args.wr_handles = wr_handle;
@@ -148,10 +150,14 @@ zx_status_t PciProxy::PciEnableBusMaster(bool enable) {
 zx_status_t PciProxy::PciResetDevice() { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t PciProxy::PciAckInterrupt() {
+#ifdef USERSPACE_PCI
   PciRpcMsg req{};
   PciRpcMsg resp{};
   return RpcRequest(PCI_OP_ACK_INTERRUPT, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr,
                     /*req=*/&req, /*resp=*/&resp);
+#else
+  return ZX_OK;
+#endif
 }
 
 zx_status_t PciProxy::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle) {
@@ -188,9 +194,7 @@ zx_status_t PciProxy::PciConfigureIrqMode(uint32_t requested_irq_count, pci_irq_
 zx_status_t PciProxy::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
   PciRpcMsg req{};
   PciRpcMsg resp{};
-
   req.irq.mode = mode;
-  resp.irq.mode = mode;
   zx_status_t st =
       RpcRequest(PCI_OP_QUERY_IRQ_MODE, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr, &req, &resp);
   if (st == ZX_OK) {
@@ -211,9 +215,8 @@ zx_status_t PciProxy::PciSetIrqMode(pci_irq_mode_t mode, uint32_t requested_irq_
 zx_status_t PciProxy::PciGetDeviceInfo(pcie_device_info_t* out_info) {
   PciRpcMsg req{};
   PciRpcMsg resp{};
-
-  zx_status_t st =
-      RpcRequest(PCI_OP_GET_DEVICE_INFO, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr, &req, &resp);
+  zx_status_t st = RpcRequest(PCI_OP_GET_DEVICE_INFO, /*rd_handle=*/nullptr,
+                              /*wr_handle=*/nullptr, &req, &resp);
   if (st == ZX_OK) {
     *out_info = resp.info;
   }
@@ -361,4 +364,4 @@ static constexpr zx_driver_ops_t pci_device_proxy_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER(pci_device_proxy, pci_device_proxy_driver_ops, "zircon", "0.1");
+ZIRCON_DRIVER(pci_proxy, pci_device_proxy_driver_ops, "zircon", "0.1");

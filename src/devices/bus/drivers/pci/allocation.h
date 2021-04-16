@@ -86,7 +86,7 @@ class PciAllocation {
   // 1. The allocation object strictly bounds the VMO to the specified base & size
   // 2. The resource is already in the driver process's address space, so we're not
   //    leaking it anywhere out of band.
-  // 3. Device needs to be able to pass a resource to DeviceProxy for setting
+  // 3. Device needs to be able to pass a resource to PciProxy for setting
   //    IO permission bits.
   // This is only needed for PciRegionAllocators because PciRootAllocators do not
   // hold a backing PciAllocation object.

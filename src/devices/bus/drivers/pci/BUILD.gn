@@ -107,20 +107,7 @@ if (platform_enable_user_pci) {
       ":user_pci",
     ]
   }
-  driver_module("bus-pci.proxy") {
-    configs += [
-      "//build/config:all_source",
-      "//build/config/fuchsia:enable_zircon_asserts",
-    ]
-    if (is_fuchsia) {
-      configs += [ "//build/unification/config:zircon-migrated" ]
-    }
-    deps = [
-      ":pci_proxy_bind",
-      ":user_pci.proxy",
-    ]
-  }
-} else {
+} else {  # Kernel PCI
   driver_module("bus-pci") {
     configs += [
       "//build/config:all_source",
@@ -142,30 +129,26 @@ if (platform_enable_user_pci) {
       "//src/lib/ddk",
       "//src/lib/ddktl",
       "//zircon/public/lib/fidl",
+      "//zircon/public/lib/pretty",
     ]
   }
-  driver_module("bus-pci.proxy") {
-    configs += [
-      "//build/config:all_source",
-      "//build/config/fuchsia:enable_zircon_asserts",
-    ]
-    if (is_fuchsia) {
-      configs += [ "//build/unification/config:zircon-migrated" ]
-    }
-    sources = [ "kpci/proxy.c" ]
-    deps = [
-      ":pci_proxy_bind",
-      "//sdk/banjo/fuchsia.hardware.pci",
-      "//sdk/banjo/fuchsia.hardware.pciroot",
-      "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-      "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
-      "//src/devices/lib/driver",
-      "//src/devices/lib/pci",
-      "//src/devices/pci/lib/pci",
-      "//src/lib/ddk",
-      "//src/lib/ddktl",
-    ]
+}
+
+driver_module("bus-pci.proxy") {
+  if (platform_enable_user_pci) {
+    defines = [ "USERSPACE_PCI" ]
   }
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  deps = [
+    ":pci_proxy_bind",
+    ":user_pci.proxy",
+  ]
 }
 
 group("tests") {
