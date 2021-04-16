@@ -23,6 +23,7 @@ use {
     fidl_fuchsia_media_sessions2 as sessions2,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_bluetooth::{
+        assigned_numbers::AssignedNumber,
         profile::{find_profile_descriptors, find_service_classes, profile_descriptor_to_assigned},
         types::{PeerId, Uuid},
     },
@@ -353,8 +354,25 @@ async fn connect_after_timeout(
     }
 }
 
+/// Given a set of service classes, tries to find the preferred A2DP direction.
+fn find_preferred_direction(service_classes: Vec<AssignedNumber>) -> Option<avdtp::EndpointType> {
+    let source = service_classes
+        .iter()
+        .find(|an| an.number == bredr::ServiceClassProfileIdentifier::AudioSource as u16);
+    let sink = service_classes
+        .iter()
+        .find(|an| an.number == bredr::ServiceClassProfileIdentifier::AudioSink as u16);
+    match (source, sink) {
+        (Some(_), None) => Some(avdtp::EndpointType::Source),
+        (None, Some(_)) => Some(avdtp::EndpointType::Sink),
+        // Otherwise, either there are no A2DP services or both Sink & Source are specified
+        // in which case there is no preferred direction.
+        _ => None,
+    }
+}
+
 /// Handles found services. Stores the found information and then spawns a task which will
-/// assume initator role after a delay.
+/// assume initiator role after a delay.
 fn handle_services_found(
     peer_id: &PeerId,
     attributes: &[bredr::Attribute],
@@ -362,8 +380,9 @@ fn handle_services_found(
     channel_mode: bredr::ChannelMode,
     initiator_delay: Option<zx::Duration>,
 ) {
-    let service_names: Vec<&str> =
-        find_service_classes(attributes).iter().map(|an| an.name).collect();
+    let service_classes = find_service_classes(attributes);
+    let service_names: Vec<&str> = service_classes.iter().map(|an| an.name).collect();
+    let peer_preferred_direction = find_preferred_direction(service_classes);
     let profiles = find_profile_descriptors(attributes).unwrap_or(vec![]);
     let profile_names: Vec<String> = profiles
         .iter()
@@ -386,7 +405,7 @@ fn handle_services_found(
     };
 
     debug!("Marking peer {} found...", peer_id);
-    peers.lock().found(peer_id.clone(), profile);
+    peers.lock().found(peer_id.clone(), profile, peer_preferred_direction);
 
     if let Some(initiator_delay) = initiator_delay {
         fasync::Task::local(connect_after_timeout(
@@ -866,5 +885,35 @@ mod tests {
         exec.run_singlethreaded(proxy.set_role(a2dp::Role::Source)).expect("set role response");
 
         assert_eq!(avdtp::EndpointType::Sink, peers.lock().preferred_direction());
+    }
+
+    #[test]
+    fn find_preferred_direction_returns_expected_direction() {
+        let empty = Vec::new();
+        assert_eq!(find_preferred_direction(empty), None);
+
+        let no_a2dp_attributes =
+            vec![AssignedNumber { number: 0x1234, abbreviation: None, name: "FooBar" }];
+        assert_eq!(find_preferred_direction(no_a2dp_attributes), None);
+
+        let sink_attribute = AssignedNumber {
+            number: bredr::ServiceClassProfileIdentifier::AudioSink as u16,
+            abbreviation: None,
+            name: "AudioSink",
+        };
+        let source_attribute = AssignedNumber {
+            number: bredr::ServiceClassProfileIdentifier::AudioSource as u16,
+            abbreviation: None,
+            name: "AudioSource",
+        };
+
+        let only_sink = vec![sink_attribute.clone()];
+        assert_eq!(find_preferred_direction(only_sink), Some(avdtp::EndpointType::Sink));
+
+        let only_source = vec![source_attribute.clone()];
+        assert_eq!(find_preferred_direction(only_source), Some(avdtp::EndpointType::Source));
+
+        let both = vec![sink_attribute, source_attribute];
+        assert_eq!(find_preferred_direction(both), None);
     }
 }

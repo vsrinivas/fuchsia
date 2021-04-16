@@ -62,8 +62,9 @@ impl Inspect for &mut PeerStats {
 
 #[derive(Default)]
 struct DiscoveredPeers {
-    /// The peers that we have discovered, with their descriptors.
-    descriptors: HashMap<PeerId, ProfileDescriptor>,
+    /// The peers that we have discovered, with their descriptors and potential preferred
+    /// endpoint direction.
+    descriptors: HashMap<PeerId, (ProfileDescriptor, Option<avdtp::EndpointType>)>,
     /// Holds the child nodes which include the ids and profile descriptors for inspect.
     stats: HashMap<PeerId, PeerStats>,
     /// Inspect node, usually at "discovered" in the tree.
@@ -71,8 +72,13 @@ struct DiscoveredPeers {
 }
 
 impl DiscoveredPeers {
-    fn insert(&mut self, id: PeerId, descriptor: ProfileDescriptor) {
-        self.descriptors.insert(id, descriptor);
+    fn insert(
+        &mut self,
+        id: PeerId,
+        descriptor: ProfileDescriptor,
+        preferred_direction: Option<avdtp::EndpointType>,
+    ) {
+        self.descriptors.insert(id, (descriptor, preferred_direction));
         self.stats
             .entry(id)
             .or_insert({
@@ -87,7 +93,7 @@ impl DiscoveredPeers {
         self.stats.get_mut(&id).map(|stats| stats.record_connected());
     }
 
-    fn get(&self, id: &PeerId) -> Option<&ProfileDescriptor> {
+    fn get(&self, id: &PeerId) -> Option<&(ProfileDescriptor, Option<avdtp::EndpointType>)> {
         self.descriptors.get(id)
     }
 }
@@ -189,8 +195,13 @@ impl ConnectedPeers {
         strong.stream_start(remote_seid, negotiated).await.map_err(Into::into)
     }
 
-    pub fn found(&mut self, id: PeerId, desc: ProfileDescriptor) {
-        self.discovered.insert(id, desc.clone());
+    pub fn found(
+        &mut self,
+        id: PeerId,
+        desc: ProfileDescriptor,
+        preferred_direction: Option<avdtp::EndpointType>,
+    ) {
+        self.discovered.insert(id, desc.clone(), preferred_direction);
         self.get(&id).map(|p| p.set_descriptor(desc));
     }
 
@@ -251,7 +262,7 @@ impl ConnectedPeers {
 
     /// Accept a channel that was connected to the peer `id`.
     /// If `initiator_delay` is set, attempt to start a stream after the specified delay.
-    /// `initatiator_delay` has no effect if the peer already has a control channel.
+    /// `initiator_delay` has no effect if the peer already has a control channel.
     /// Returns a weak peer pointer (even if it was previously connected) if successful.
     pub fn connected(
         &mut self,
@@ -285,9 +296,12 @@ impl ConnectedPeers {
 
         self.discovered.connected(id);
 
-        if let Some(desc) = self.discovered.get(&id) {
+        let peer_preferred_direction = if let Some((desc, dir)) = self.discovered.get(&id) {
             peer.set_descriptor(desc.clone());
-        }
+            dir.clone()
+        } else {
+            None
+        };
 
         if let Err(e) = peer.iattach(&self.inspect, inspect::unique_name("peer_")) {
             warn!("Couldn't attach peer {} to inspect tree: {:?}", id, e);
@@ -305,7 +319,12 @@ impl ConnectedPeers {
         if let Some(delay) = initiator_delay {
             let peer = peer.clone();
             let peer_id = peer.key().clone();
-            let negotiation = self.codec_negotiation.clone();
+            let mut negotiation = self.codec_negotiation.clone();
+            // Bias the codec negotiation with the peer's preferred direction that was discovered
+            // from the SDP service search.
+            if let Some(dir) = peer_preferred_direction {
+                negotiation.set_direction(dir);
+            }
             let start_stream_task = fuchsia_async::Task::local(async move {
                 info!(
                     "Peer {}: dwelling {}s for peer initiation",
@@ -385,7 +404,9 @@ mod tests {
 
     use bt_avdtp::{Request, ServiceCapability};
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream};
+    use fidl_fuchsia_bluetooth_bredr::{
+        ProfileMarker, ProfileRequestStream, ServiceClassProfileIdentifier,
+    };
     use fidl_fuchsia_cobalt::CobaltEvent;
     use fuchsia_inspect::assert_inspect_tree;
     use futures::channel::mpsc;
@@ -503,17 +524,24 @@ mod tests {
         exercise_avdtp(&mut exec, remote2, &peer2);
     }
 
-    // Arbitrarily chosen ID for the SBC stream endpoint.
-    const SBC_SEID: u8 = 9;
+    // Arbitrarily chosen ID for the SBC sink stream endpoint.
+    const SBC_SINK_SEID: u8 = 9;
 
     // Arbitrarily chosen ID for the AAC stream endpoint.
     const AAC_SEID: u8 = 10;
 
-    fn build_test_stream(id: u8, codec_cap: avdtp::ServiceCapability) -> Stream {
+    // Arbitrarily chosen ID for the SBC source stream endpoint.
+    const SBC_SOURCE_SEID: u8 = 11;
+
+    fn build_test_stream(
+        id: u8,
+        type_: avdtp::EndpointType,
+        codec_cap: avdtp::ServiceCapability,
+    ) -> Stream {
         let endpoint = avdtp::StreamEndpoint::new(
             id,
             avdtp::MediaType::Audio,
-            avdtp::EndpointType::Sink,
+            type_,
             vec![avdtp::ServiceCapability::MediaTransport, codec_cap],
         )
         .expect("endpoint builds");
@@ -522,9 +550,49 @@ mod tests {
         Stream::build(endpoint, task_builder.builder())
     }
 
+    fn aac_sink_codec() -> avdtp::ServiceCapability {
+        AacCodecInfo::new(
+            AacObjectType::MANDATORY_SNK,
+            AacSamplingFrequency::MANDATORY_SNK,
+            AacChannels::MANDATORY_SNK,
+            true,
+            0, // 0 = Unknown constant bitrate support (A2DP Sec. 4.5.2.4)
+        )
+        .unwrap()
+        .into()
+    }
+
+    fn sbc_sink_codec() -> avdtp::ServiceCapability {
+        SbcCodecInfo::new(
+            SbcSamplingFrequency::MANDATORY_SNK,
+            SbcChannelMode::MANDATORY_SNK,
+            SbcBlockCount::MANDATORY_SNK,
+            SbcSubBands::MANDATORY_SNK,
+            SbcAllocation::MANDATORY_SNK,
+            SbcCodecInfo::BITPOOL_MIN,
+            SbcCodecInfo::BITPOOL_MAX,
+        )
+        .unwrap()
+        .into()
+    }
+
+    fn sbc_source_codec() -> avdtp::ServiceCapability {
+        SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ48000HZ,
+            SbcChannelMode::JOINT_STEREO,
+            SbcBlockCount::MANDATORY_SRC,
+            SbcSubBands::MANDATORY_SRC,
+            SbcAllocation::MANDATORY_SRC,
+            SbcCodecInfo::BITPOOL_MIN,
+            SbcCodecInfo::BITPOOL_MAX,
+        )
+        .unwrap()
+        .into()
+    }
+
     /// Sets up a test in which we expect to select a stream and connect to a peer.
     /// Returns the executor, connected peers (under test), request stream for profile interaction,
-    /// and an SBC and AAC service capability.
+    /// and an SBC and AAC Sink service capability.
     fn setup_negotiation_test() -> (
         fasync::Executor,
         ConnectedPeers,
@@ -538,42 +606,38 @@ mod tests {
             create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
         let (cobalt_sender, _) = fake_cobalt_sender();
 
-        let aac_codec: avdtp::ServiceCapability = AacCodecInfo::new(
-            AacObjectType::MANDATORY_SNK,
-            AacSamplingFrequency::MANDATORY_SNK,
-            AacChannels::MANDATORY_SNK,
-            true,
-            0, // 0 = Unknown constant bitrate support (A2DP Sec. 4.5.2.4)
-        )
-        .unwrap()
-        .into();
+        let aac_sink_codec: avdtp::ServiceCapability = aac_sink_codec();
+        let sbc_sink_codec: avdtp::ServiceCapability = sbc_sink_codec();
+        let sbc_source_codec: avdtp::ServiceCapability = sbc_source_codec();
 
-        let sbc_codec: avdtp::ServiceCapability = SbcCodecInfo::new(
-            SbcSamplingFrequency::MANDATORY_SNK,
-            SbcChannelMode::MANDATORY_SNK,
-            SbcBlockCount::MANDATORY_SNK,
-            SbcSubBands::MANDATORY_SNK,
-            SbcAllocation::MANDATORY_SNK,
-            SbcCodecInfo::BITPOOL_MIN,
-            SbcCodecInfo::BITPOOL_MAX,
-        )
-        .unwrap()
-        .into();
-
+        // Set up the codec negotiation with a default preferred direction of source.
         let negotiation = CodecNegotiation::build(
-            vec![aac_codec.clone(), sbc_codec.clone()],
-            avdtp::EndpointType::Sink,
+            vec![aac_sink_codec.clone(), sbc_sink_codec.clone(), sbc_source_codec.clone()],
+            avdtp::EndpointType::Source,
         )
         .unwrap();
 
         let mut streams = Streams::new();
-        streams.insert(build_test_stream(SBC_SEID, sbc_codec.clone()));
-        streams.insert(build_test_stream(AAC_SEID, aac_codec.clone()));
+        streams.insert(build_test_stream(
+            SBC_SINK_SEID,
+            avdtp::EndpointType::Sink,
+            sbc_sink_codec.clone(),
+        ));
+        streams.insert(build_test_stream(
+            AAC_SEID,
+            avdtp::EndpointType::Sink,
+            aac_sink_codec.clone(),
+        ));
+        streams.insert(build_test_stream(
+            SBC_SOURCE_SEID,
+            avdtp::EndpointType::Source,
+            sbc_source_codec.clone(),
+        ));
 
         let peers =
             ConnectedPeers::new(streams, negotiation.clone(), 1, proxy, Some(cobalt_sender));
 
-        (exec, peers, stream, sbc_codec, aac_codec)
+        (exec, peers, stream, sbc_sink_codec, aac_sink_codec)
     }
 
     #[test]
@@ -593,7 +657,7 @@ mod tests {
 
         // Before the delay expires, the peer starts the stream.
 
-        let seid: avdtp::StreamEndpointId = SBC_SEID.try_into().expect("seid to be okay");
+        let seid: avdtp::StreamEndpointId = SBC_SINK_SEID.try_into().expect("seid to be okay");
         let config_caps = &[ServiceCapability::MediaTransport, sbc_codec];
         let set_config_fut = remote.set_configuration(&seid, &seid, config_caps);
         pin_mut!(set_config_fut);
@@ -614,33 +678,52 @@ mod tests {
         assert!(exec.run_until_stalled(&mut remote_requests.next()).is_pending());
     }
 
+    fn sbc_source_endpoint() -> (avdtp::StreamEndpointId, avdtp::StreamInformation) {
+        let remote_sbc_seid: avdtp::StreamEndpointId = 1u8.try_into().unwrap();
+        let info = avdtp::StreamInformation::new(
+            remote_sbc_seid.clone(),
+            false,
+            avdtp::MediaType::Audio,
+            avdtp::EndpointType::Source,
+        );
+        (remote_sbc_seid, info)
+    }
+
+    fn aac_source_endpoint() -> (avdtp::StreamEndpointId, avdtp::StreamInformation) {
+        let remote_aac_seid: avdtp::StreamEndpointId = 2u8.try_into().unwrap();
+        let info = avdtp::StreamInformation::new(
+            remote_aac_seid.clone(),
+            false,
+            avdtp::MediaType::Audio,
+            avdtp::EndpointType::Source,
+        );
+        (remote_aac_seid, info)
+    }
+
+    fn sbc_sink_endpoint() -> (avdtp::StreamEndpointId, avdtp::StreamInformation) {
+        let remote_sbc_seid: avdtp::StreamEndpointId = 3u8.try_into().unwrap();
+        let info = avdtp::StreamInformation::new(
+            remote_sbc_seid.clone(),
+            false,
+            avdtp::MediaType::Audio,
+            avdtp::EndpointType::Sink,
+        );
+        (remote_sbc_seid, info)
+    }
+
+    /// Expects an AVDTP Discovery request on the `requests` stream. Responds to
+    /// the request with the provided `response` endpoints.
     fn expect_peer_discovery(
         exec: &mut fasync::Executor,
         requests: &mut avdtp::RequestStream,
-    ) -> (avdtp::StreamEndpointId, avdtp::StreamEndpointId) {
-        let remote_aac_seid: avdtp::StreamEndpointId = 2u8.try_into().unwrap();
-        let remote_sbc_seid: avdtp::StreamEndpointId = 1u8.try_into().unwrap();
+        response: Vec<avdtp::StreamInformation>,
+    ) {
         match exec.run_until_stalled(&mut requests.next()) {
             Poll::Ready(Some(Ok(avdtp::Request::Discover { responder }))) => {
-                let endpoints = vec![
-                    avdtp::StreamInformation::new(
-                        remote_sbc_seid.clone(),
-                        false,
-                        avdtp::MediaType::Audio,
-                        avdtp::EndpointType::Source,
-                    ),
-                    avdtp::StreamInformation::new(
-                        remote_aac_seid.clone(),
-                        false,
-                        avdtp::MediaType::Audio,
-                        avdtp::EndpointType::Source,
-                    ),
-                ];
-                responder.send(&endpoints).expect("response succeeds");
+                responder.send(&response).expect("response succeeds");
             }
             x => panic!("Expected a discovery request to be sent after delay, got {:?}", x),
         };
-        (remote_sbc_seid, remote_aac_seid)
     }
 
     #[test]
@@ -661,10 +744,14 @@ mod tests {
         // The delay expires, and the discovery is start!
         exec.set_fake_time(fasync::Time::after(delay) + zx::Duration::from_micros(1));
         exec.wake_expired_timers();
-        expect_peer_discovery(&mut exec, &mut remote_requests);
+        expect_peer_discovery(
+            &mut exec,
+            &mut remote_requests,
+            vec![sbc_source_endpoint().1, aac_source_endpoint().1],
+        );
 
         // The remote peer doesn't need to actually open, Set Configuration is enough of a signal.
-        let seid: avdtp::StreamEndpointId = SBC_SEID.try_into().expect("seid to be okay");
+        let seid: avdtp::StreamEndpointId = SBC_SINK_SEID.try_into().expect("seid to be okay");
         let config_caps = &[ServiceCapability::MediaTransport, sbc_codec.clone()];
         let set_config_fut = remote.set_configuration(&seid, &seid, config_caps);
         pin_mut!(set_config_fut);
@@ -685,6 +772,82 @@ mod tests {
                 Poll::Pending => break,
             }
         }
+    }
+
+    /// Tests connection initiation selects the appropriate stream endpoint based
+    /// on a biased codec negotiation that is set from the peer's discovered services.
+    #[test]
+    fn connect_initiation_uses_biased_codec_negotiation() {
+        let (mut exec, mut peers, _stream, sbc_codec, _aac_codec) = setup_negotiation_test();
+        let id = PeerId(1);
+        let (remote, channel) = Channel::create();
+
+        // New fake peer discovered with some descriptor - the peer's SDP entry shows Sink.
+        let remote = avdtp::Peer::new(remote);
+        let desc = ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 1,
+            minor_version: 2,
+        };
+        let preferred_direction = Some(avdtp::EndpointType::Sink);
+        let delay = zx::Duration::from_seconds(1);
+        peers.found(id, desc, preferred_direction);
+
+        peers.connected(id, channel, Some(delay)).expect("connect control channel is ok");
+        // run the start task until it's stalled.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+
+        let mut remote_requests = remote.take_request_stream();
+
+        // Should wait for the specified amount of time.
+        assert!(exec.run_until_stalled(&mut remote_requests.next()).is_pending());
+
+        exec.set_fake_time(fasync::Time::after(delay + zx::Duration::from_micros(1)));
+        exec.wake_expired_timers();
+
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        // Even though the peer supports both SBC Sink and Source, we expect to negotiate and start
+        // on the Sink endpoint since that is the preferred one.
+        let (peer_sbc_source_seid, peer_sbc_source_endpoint) = sbc_source_endpoint();
+        let (peer_sbc_sink_seid, peer_sbc_sink_endpoint) = sbc_sink_endpoint();
+        expect_peer_discovery(
+            &mut exec,
+            &mut remote_requests,
+            vec![peer_sbc_source_endpoint, peer_sbc_sink_endpoint],
+        );
+        for _twice in 1..=2 {
+            match exec.run_until_stalled(&mut remote_requests.next()) {
+                Poll::Ready(Some(Ok(avdtp::Request::GetCapabilities { stream_id, responder }))) => {
+                    let codec = match stream_id {
+                        id if id == peer_sbc_source_seid => sbc_codec.clone(),
+                        id if id == peer_sbc_sink_seid => sbc_codec.clone(),
+                        x => panic!("Got unexpected get_capabilities seid {:?}", x),
+                    };
+                    responder
+                        .send(&vec![avdtp::ServiceCapability::MediaTransport, codec])
+                        .expect("respond succeeds");
+                }
+                x => panic!("Expected a ready get capabilities request, got {:?}", x),
+            };
+        }
+
+        match exec.run_until_stalled(&mut remote_requests.next()) {
+            Poll::Ready(Some(Ok(avdtp::Request::SetConfiguration {
+                local_stream_id,
+                remote_stream_id,
+                capabilities: _,
+                responder,
+            }))) => {
+                // We expect the set configuration to apply to the remote peer's Sink SEID and the
+                // local Source SEID.
+                assert_eq!(peer_sbc_sink_seid, local_stream_id);
+                let local_sbc_sink_seid: avdtp::StreamEndpointId =
+                    SBC_SOURCE_SEID.try_into().unwrap();
+                assert_eq!(local_sbc_sink_seid, remote_stream_id);
+                responder.send().expect("response sends");
+            }
+            x => panic!("Expected a ready set configuration request, got {:?}", x),
+        };
     }
 
     #[test]
@@ -712,7 +875,13 @@ mod tests {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
 
         // Should discover remote streams, negotiate, and start.
-        let (peer_aac_seid, peer_sbc_seid) = expect_peer_discovery(&mut exec, &mut remote_requests);
+        let (peer_sbc_seid, peer_sbc_endpoint) = sbc_source_endpoint();
+        let (peer_aac_seid, peer_aac_endpoint) = aac_source_endpoint();
+        expect_peer_discovery(
+            &mut exec,
+            &mut remote_requests,
+            vec![peer_sbc_endpoint, peer_aac_endpoint],
+        );
         for _twice in 1..=2 {
             match exec.run_until_stalled(&mut remote_requests.next()) {
                 Poll::Ready(Some(Ok(avdtp::Request::GetCapabilities { stream_id, responder }))) => {
