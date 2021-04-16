@@ -24,19 +24,11 @@
 // result. Since this register is not preserved across the SMC call, it
 // must be stored on the stack. For the purposes of AAPCS64 compatibility,
 // the frame pointer (x29) is also stored on the stack.  Returns x0-x3, x6.
-// To preserve the kernel's invariants beyond APPCS64, the percpu_ptr and
-// shadow_call_sp registers are also saved and restored.
-//
-// WARNING: Preemption must be disabled by the caller to prevent the thread
-// from migrating in between saving and restoring percpu_ptr/shadow_call_sp.
-
 
 .macro smccc_call insn
-    push_regs percpu_ptr, shadow_call_sp
     push_regs x8, x29
     \insn     #0
     pop_regs  x8, x29
-    pop_regs percpu_ptr, shadow_call_sp
     stp       x0, x1, [x8]
     stp       x2, x3, [x8, #16]
     str       x6, [x8, #32]

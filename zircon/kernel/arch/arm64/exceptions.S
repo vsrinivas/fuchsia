@@ -196,9 +196,10 @@ mark_lr_sp_inaccessible
 #endif
 .endm
 
-// EL1-to-EL1 exceptions require reloading percpu_ptr, as SMCCC does not
-// preserve this fixed register and an exception may pend during an SMC/HVC
-// call, leaving the register value unpredictable as the handler is entered.
+// Lighter version of restore_fixed_regs for EL1-to-EL1 exceptions. Strictly
+// speaking not required, but in case of a firmware call via SMC or HVC accidentally
+// trashing the register, preserve this fixed register by reloading it from the
+// current thread pointer.
 .macro restore_percpu_ptr temp
     mrs \temp, tpidr_el1
     ldr percpu_ptr, [\temp, #CURRENT_PERCPU_PTR_OFFSET]
