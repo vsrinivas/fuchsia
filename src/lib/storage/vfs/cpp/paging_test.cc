@@ -88,19 +88,21 @@ class PagingTestFile : public PagedVnode {
 
     if (vmo_read_status_ != ZX_OK) {
       // We're supposed to report errors.
-      EXPECT_TRUE(
-          paged_vfs()->ReportPagerError(vmo(), offset, length, ZX_ERR_IO_DATA_INTEGRITY).is_ok());
+      EXPECT_TRUE(paged_vfs()
+                      ->ReportPagerError(paged_vmo(), offset, length, ZX_ERR_IO_DATA_INTEGRITY)
+                      .is_ok());
       return;
     }
 
     zx::vmo transfer;
     if (zx::vmo::create(length, 0, &transfer) != ZX_OK) {
-      ASSERT_TRUE(paged_vfs()->ReportPagerError(vmo(), offset, length, ZX_ERR_BAD_STATE).is_ok());
+      ASSERT_TRUE(
+          paged_vfs()->ReportPagerError(paged_vmo(), offset, length, ZX_ERR_BAD_STATE).is_ok());
       return;
     }
 
     transfer.write(&data_[offset], 0, std::min(data_.size() - offset, length));
-    ASSERT_TRUE(paged_vfs()->SupplyPages(vmo(), offset, length, transfer, 0).is_ok());
+    ASSERT_TRUE(paged_vfs()->SupplyPages(paged_vmo(), offset, length, transfer, 0).is_ok());
   }
 
   // Vnode implementation:
@@ -117,13 +119,13 @@ class PagingTestFile : public PagedVnode {
     std::lock_guard<std::mutex> lock(mutex_);
 
     // We need to signal after the VMO was mapped that it changed.
-    bool becoming_mapped = !vmo();
+    bool becoming_mapped = !paged_vmo();
 
-    if (auto result = EnsureCreateVmo(data_.size()); result.is_error())
+    if (auto result = EnsureCreatePagedVmo(data_.size()); result.is_error())
       return result.error_value();
 
     if (zx_status_t status =
-            vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, data_.size(), out_vmo);
+            paged_vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, data_.size(), out_vmo);
         status != ZX_OK)
       return status;
 
@@ -133,8 +135,8 @@ class PagingTestFile : public PagedVnode {
   }
 
  protected:
-  void OnNoClones() override FS_TA_REQUIRES(mutex_) {
-    PagedVnode::OnNoClones();  // Do normal behavior of releasing the VMO.
+  void OnNoPagedVmoClones() override FS_TA_REQUIRES(mutex_) {
+    PagedVnode::OnNoPagedVmoClones();  // Do normal behavior of releasing the VMO.
     shared_->SignalVmoPresenceChanged(false);
   }
 

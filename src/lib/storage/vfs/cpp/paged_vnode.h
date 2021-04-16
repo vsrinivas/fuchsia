@@ -56,36 +56,49 @@ class PagedVnode : public Vnode {
     return static_cast<PagedVfs*>(vfs());
   }
 
-  // This will be a null handle if there is no VMO associated with this vnode.
+  // Returns the vmo associated with the paging system, if any. This will be a null handle if there
+  // is no paged vmo associated with this vnode.
   //
-  // Populate with EnsureCreateVmo(), free with FreeVmo().
-  const zx::vmo& vmo() const FS_TA_REQUIRES(mutex_) { return vmo_info_.vmo; }
+  // Populate with EnsureCreatePagedVmo(), free with FreeVmo().
+  //
+  // This vmo must not be mapped and then written to. Doing so will cause the kernel to "page in"
+  // the vmo which will reenter the filesystem to populate it, which is not what you want when
+  // writing to it.
+  //
+  // It is theoretically possible to read from this vmo (either mapped or using zx::vmo::read()) but
+  // the caller must be VERY careful and it is strongly recommended that you avoid this. Reading
+  // will cause the data to be paged in which will reenter the PagedVnode. Therefore, the mutex_
+  // must NOT be held during the read process. The caller's memory management structure must then
+  // guarantee that everything remain valid across this unlocked period (the vnode could be closed
+  // on another thread) or it must be able to handle the ensuing race conditions.
+  const zx::vmo& paged_vmo() const FS_TA_REQUIRES(mutex_) { return paged_vmo_info_.vmo; }
 
   // Returns true if there are clones of the VMO alive that have been given out.
   bool has_clones() const FS_TA_REQUIRES(mutex_) { return has_clones_; }
 
-  // Populates the vmo() if necessary. Does nothing if it already exists. Access the created vmo
-  // with this class' vmo() getter.
+  // Populates the paged_vmo() if necessary. Does nothing if it already exists. Access the created
+  // vmo with this class' paged_vmo() getter.
   //
   // When a mapping is requested, the derived class should call this function and then create a
   // clone of this VMO with the desired flags. This class registers an observer for when the clone
   // count drops to 0 to clean up the VMO. This means that if the caller doesn't create a clone the
   // VMO will leak if it's registered as handling paging requests on the Vfs (which will keep this
   // object alive).
-  zx::status<> EnsureCreateVmo(uint64_t size) FS_TA_REQUIRES(mutex_);
+  zx::status<> EnsureCreatePagedVmo(uint64_t size) FS_TA_REQUIRES(mutex_);
 
   // Releases the vmo_ and unregisters for paging notifications from the PagedVfs.
-  void FreeVmo() FS_TA_REQUIRES(mutex_);
+  void FreePagedVmo() FS_TA_REQUIRES(mutex_);
 
   // Implementors of this class can override this function to response to the event that there
-  // are no more clones of the vmo_. The default implementation calls FreeVmo().
-  virtual void OnNoClones() FS_TA_REQUIRES(mutex_);
+  // are no more clones of the vmo_. The default implementation calls FreePagedVmo().
+  virtual void OnNoPagedVmoClones() FS_TA_REQUIRES(mutex_);
 
  private:
   // Callback handler for the "no clones" message. Due to kernel message delivery race conditions
-  // there might actually be clones. This checks and calls OnNoClones() when needed.
-  void OnNoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                         const zx_packet_signal_t* signal) FS_TA_EXCLUDES(mutex_);
+  // there might actually be clones. This checks and calls OnNoPagedVmoClones() when needed.
+  void OnNoPagedVmoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                 zx_status_t status, const zx_packet_signal_t* signal)
+      FS_TA_EXCLUDES(mutex_);
 
   // Starts the clone_watcher_ to observe the case of no vmo_ clones. The WaitMethod is called only
   // once per "watch" call so this needs to be re-called after triggering.
@@ -95,14 +108,14 @@ class PagedVnode : public Vnode {
 
   // The root VMO that paging happens out of for this vnode. VMOs that map the data into user
   // processes will be children of this VMO.
-  PagedVfs::VmoCreateInfo vmo_info_ FS_TA_GUARDED(mutex_);
+  PagedVfs::VmoCreateInfo paged_vmo_info_ FS_TA_GUARDED(mutex_);
 
   // Set when there are clones of the vmo_.
   bool has_clones_ FS_TA_GUARDED(mutex_) = false;
 
-  // Watches any clones of "vmo()" provided to clients. Observes the ZX_VMO_ZERO_CHILDREN signal.
-  // See WatchForZeroChildren().
-  async::WaitMethod<PagedVnode, &PagedVnode::OnNoClonesMessage> clone_watcher_
+  // Watches any clones of "paged_vmo()" provided to clients. Observes the ZX_VMO_ZERO_CHILDREN
+  // signal. See WatchForZeroChildren().
+  async::WaitMethod<PagedVnode, &PagedVnode::OnNoPagedVmoClonesMessage> clone_watcher_
       FS_TA_GUARDED(mutex_);
 };
 

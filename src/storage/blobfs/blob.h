@@ -165,14 +165,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Reads in and verifies the contents of this Blob.
   zx_status_t Verify() FS_TA_EXCLUDES(mutex_);
 
-  // Exposed for testing.
-  const zx::vmo& DataVmo() const FS_TA_EXCLUDES(mutex_) {
-    std::lock_guard lock(mutex_);
-    return vmo();
-  }
-
  private:
   friend class BlobLoaderTest;
+  friend class BlobTest;
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blob);
 
   // Returns whether there are any external references to the blob.
@@ -294,8 +289,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx_status_t WriteData(uint32_t block_count, BlobDataProducer& producer,
                         fs::DataStreamer& streamer) FS_TA_REQUIRES(mutex_);
 
-  // Sets the name on the vmo() to indicate where this blob came from.
-  void SetVmoName() FS_TA_REQUIRES(mutex_);
+  // Sets the name on the paged_vmo() to indicate where this blob came from. The name will vary
+  // according to whether the vmo is currently active to help developers find bugs.
+  void SetPagedVmoName(bool active) FS_TA_REQUIRES(mutex_);
 
   Blobfs* const blobfs_;  // Doesn't need locking because this is never changed.
   BlobState state_ FS_TA_GUARDED(mutex_) = BlobState::kEmpty;
@@ -341,8 +337,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   //  - After writing the complete data but before closing it. (We do not currently support
   //    reading from the blob in this state.)
   //
-  // In these cases, this VMO holds the data. It can be copied into the pager-backed vmo() as
-  // requested by the kernel. We can't just prepopulate the vmo() because writing into it will
+  // In these cases, this VMO holds the data. It can be copied into the paged_vmo() as
+  // requested by the kernel. We can't just prepopulate the paged_vmo() because writing into it will
   // attempt to page it in, reentering us. We could use the pager ops to supply data, but we can't
   // depend on the kernel never to flush these so need to have another copy.
   //
@@ -355,9 +351,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // and using the right compression formats). See also unpaged_backing_data_.
   //
   // In the new pager, these members are in the PagedVmo base class.
-  zx::vmo vmo_ FS_TA_GUARDED(mutex_);
-  const zx::vmo& vmo() const FS_TA_REQUIRES(mutex_) { return vmo_; }
-  void FreeVmo() FS_TA_REQUIRES(mutex_) { vmo_.reset(); }
+  zx::vmo paged_vmo_ FS_TA_GUARDED(mutex_);
+  const zx::vmo& paged_vmo() const FS_TA_REQUIRES(mutex_) { return paged_vmo_; }
+  void FreePagedVmo() FS_TA_REQUIRES(mutex_) { paged_vmo_.reset(); }
 #endif
 
   // VMO mappings for the blob's merkle tree and data.
@@ -376,7 +372,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   bool has_clones() const { return !!clone_ref_; }
 #endif
 
-  // Watches any clones of "vmo()" provided to clients. Observes the ZX_VMO_ZERO_CHILDREN signal.
+  // Watches any clones of "paged_vmo()" provided to clients. Observes the ZX_VMO_ZERO_CHILDREN
+  // signal.
   //
   // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
   // is complete.

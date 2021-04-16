@@ -29,14 +29,17 @@
 #include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
+
 namespace {
 
 constexpr const char kEmptyBlobName[] =
     "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b";
 
-constexpr uint32_t kBlockSize = 512;
-constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
+constexpr uint32_t kTestDeviceBlockSize = 512;
+constexpr uint32_t kTestDeviceNumBlocks = 400 * kBlobfsBlockSize / kTestDeviceBlockSize;
 namespace fio = fuchsia_io;
+
+}  // namespace
 
 class BlobTest : public BlobfsTestSetup,
                  public testing::TestWithParam<std::tuple<BlobLayoutFormat, CompressionAlgorithm>> {
@@ -44,7 +47,8 @@ class BlobTest : public BlobfsTestSetup,
   virtual uint64_t GetOldestMinorVersion() const { return kBlobfsCurrentMinorVersion; }
 
   void SetUp() override {
-    auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
+    auto device =
+        std::make_unique<block_client::FakeBlockDevice>(kTestDeviceNumBlocks, kTestDeviceBlockSize);
 
     FilesystemOptions filesystem_options{
         .blob_layout_format = std::get<0>(GetParam()),
@@ -63,6 +67,11 @@ class BlobTest : public BlobfsTestSetup,
     EXPECT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
     return root;
   }
+
+  const zx::vmo& GetPagedVmo(Blob& blob) {
+    std::lock_guard lock(blob.mutex_);
+    return blob.paged_vmo();
+  }
 };
 
 // Return an old revsions so we can test migrating blobs.
@@ -70,6 +79,8 @@ class BlobTestWithOldMinorVersion : public BlobTest {
  public:
   uint64_t GetOldestMinorVersion() const override { return kBlobfsMinorVersionBackupSuperblock; }
 };
+
+namespace {
 
 TEST_P(BlobTest, TruncateWouldOverflow) {
   fbl::RefPtr root = OpenRoot();
@@ -149,9 +160,9 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
   block_fifo_request_t request = {
       .opcode = BLOCKIO_READ,
       .vmoid = buffer.vmoid(),
-      .length = kBlobfsBlockSize / kBlockSize,
+      .length = kBlobfsBlockSize / kTestDeviceBlockSize,
       .vmo_offset = 0,
-      .dev_offset = block * kBlobfsBlockSize / kBlockSize,
+      .dev_offset = block * kBlobfsBlockSize / kTestDeviceBlockSize,
   };
   ASSERT_EQ(block_device->FifoTransaction(&request, 1), ZX_OK);
 
@@ -274,7 +285,8 @@ TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
 }
 
 TEST_P(BlobTest, WriteErrorsAreFused) {
-  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", kBlockSize * kNumBlocks);
+  std::unique_ptr<BlobInfo> info =
+      GenerateRandomBlob("", kTestDeviceBlockSize * kTestDeviceNumBlocks);
   auto root = OpenRoot();
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
@@ -395,7 +407,7 @@ TEST_P(BlobTest, BlobPrepareWriteFailure) {
   }
 }
 
-std::string VmoName(const zx::vmo& vmo) {
+std::string GetVmoName(const zx::vmo& vmo) {
   char buf[ZX_MAX_NAME_LEN + 1] = {'\0'};
   EXPECT_EQ(vmo.get_property(ZX_PROP_NAME, buf, ZX_MAX_NAME_LEN), ZX_OK);
   return std::string(buf, ::strlen(buf));
@@ -420,18 +432,18 @@ TEST_P(BlobTest, VmoNameActiveWhileFdOpen) {
   auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
 
   // Blobfs lazily creates the data VMO on first read.
-  EXPECT_FALSE(blob->DataVmo());
+  EXPECT_FALSE(GetPagedVmo(*blob));
   char c;
   size_t actual;
   ASSERT_EQ(blob->Read(&c, sizeof(c), 0u, &actual), ZX_OK);
-  EXPECT_TRUE(blob->DataVmo());
-  EXPECT_EQ(VmoName(blob->DataVmo()), active_name);
+  EXPECT_TRUE(GetPagedVmo(*blob));
+  EXPECT_EQ(GetVmoName(GetPagedVmo(*blob)), active_name);
 
   ASSERT_EQ(blob->Close(), ZX_OK);
-  EXPECT_EQ(VmoName(blob->DataVmo()), inactive_name);
+  EXPECT_EQ(GetVmoName(GetPagedVmo(*blob)), inactive_name);
 
   ASSERT_EQ(blob->OpenValidating(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
-  EXPECT_EQ(VmoName(blob->DataVmo()), active_name);
+  EXPECT_EQ(GetVmoName(GetPagedVmo(*blob)), active_name);
 
   ASSERT_EQ(blob->Close(), ZX_OK);
 }
@@ -458,7 +470,7 @@ TEST_P(BlobTest, VmoNameActiveWhileVmoClonesExist) {
   size_t size;
   ASSERT_EQ(blob->GetVmo(fio::wire::VMO_FLAG_READ, &vmo, &size), ZX_OK);
   ASSERT_EQ(blob->Close(), ZX_OK);
-  EXPECT_EQ(VmoName(blob->DataVmo()), active_name);
+  EXPECT_EQ(GetVmoName(GetPagedVmo(*blob)), active_name);
 
   // The ZX_VMO_ZERO_CHILDREN signal is asynchronous; unfortunately polling is the best we can do.
   vmo.reset();
@@ -467,7 +479,7 @@ TEST_P(BlobTest, VmoNameActiveWhileVmoClonesExist) {
   constexpr auto kMaxWait = std::chrono::seconds(60);
   while (std::chrono::steady_clock::now() <= start + kMaxWait) {
     loop().RunUntilIdle();
-    if (VmoName(blob->DataVmo()) == inactive_name) {
+    if (GetVmoName(GetPagedVmo(*blob)) == inactive_name) {
       active = false;
       break;
     }
@@ -517,7 +529,8 @@ TEST_P(BlobMigrationTest, MigrateLargeBlobSucceeds) {
 TEST_P(BlobMigrationTest, MigrateWhenNoSpaceSkipped) {
   auto root = OpenRoot();
   // Create a blob that takes up half the disk.
-  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", kNumBlocks * kBlockSize / 2);
+  std::unique_ptr<BlobInfo> info =
+      GenerateRandomBlob("", kTestDeviceNumBlocks * kTestDeviceBlockSize / 2);
 
   {
     fbl::RefPtr<fs::Vnode> file;
