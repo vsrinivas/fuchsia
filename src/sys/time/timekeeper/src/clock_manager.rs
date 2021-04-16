@@ -506,7 +506,7 @@ mod tests {
         super::*,
         crate::{
             diagnostics::{FakeDiagnostics, ANY_DURATION},
-            enums::{Role, WriteRtcOutcome},
+            enums::{FrequencyDiscardReason, Role, WriteRtcOutcome},
             rtc::FakeRtc,
             time_source::{Event as TimeSourceEvent, FakeTimeSource, Sample},
         },
@@ -935,6 +935,10 @@ mod tests {
                 monotonic: monotonic_ref,
                 utc: monotonic_ref + expected_offset,
                 sqrt_covariance: 62225396.nanos(),
+            },
+            Event::FrequencyWindowDiscarded {
+                track: *TEST_TRACK,
+                reason: FrequencyDiscardReason::TimeStep,
             },
             Event::ClockCorrection {
                 track: *TEST_TRACK,

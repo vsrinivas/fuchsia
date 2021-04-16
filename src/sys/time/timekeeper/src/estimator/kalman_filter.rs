@@ -135,7 +135,6 @@ impl KalmanFilter {
     }
 
     /// Updates the frequency used to estimate utc propagation.
-    #[allow(unused)]
     pub fn update_frequency(&mut self, frequency: f64) {
         // These infrequent updates are also a good opportunity to bring the reference utc forward
         // to the current internal state.

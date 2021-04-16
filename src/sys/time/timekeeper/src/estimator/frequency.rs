@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(unused)]
-
 use {
     crate::{enums::FrequencyDiscardReason, time_source::Sample},
     fuchsia_zircon as zx,
@@ -132,6 +130,7 @@ impl EstimationWindow {
 ///
 /// The frequency estimate is implemented as an exponentially weighted moving average of window
 /// frequency estimates, each calculated using least squares regression over a 24 hour window.
+#[derive(Debug)]
 pub struct FrequencyEstimator {
     /// The estimated frequency.
     estimate: f64,
@@ -198,6 +197,18 @@ impl FrequencyEstimator {
     /// This will discard any current estimation window so never leads to a new frequency estimate.
     pub fn update_disjoint(&mut self, sample: &Sample) {
         self.current_window = EstimationWindow::new(sample);
+    }
+
+    /// Returns the number of completed windows incorporated in this estimator.
+    #[cfg(test)]
+    pub fn window_count(&self) -> u32 {
+        self.window_count
+    }
+
+    /// Returns the number of samples in the current estimation window.
+    #[cfg(test)]
+    pub fn current_sample_count(&self) -> u32 {
+        self.current_window.sample_count
     }
 }
 
@@ -319,6 +330,9 @@ mod test {
             }
             assert_estimator_update(&mut estimator, &mut samples.remove(0), expected_freq, day);
         }
+
+        assert_eq!(estimator.window_count(), 4);
+        assert_eq!(estimator.current_sample_count(), 1);
     }
 
     #[fuchsia::test]

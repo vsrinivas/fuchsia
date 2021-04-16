@@ -57,10 +57,8 @@ pub enum Event {
         sqrt_covariance: zx::Duration,
     },
     /// A partially completed frequency window was discarded without being used.
-    #[allow(unused)]
     FrequencyWindowDiscarded { track: Track, reason: FrequencyDiscardReason },
     /// An estimated frequency was updated.
-    #[allow(unused)]
     FrequencyUpdated {
         /// The `Track` of the estimate.
         track: Track,

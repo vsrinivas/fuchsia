@@ -204,7 +204,6 @@ pub enum FrequencyDiscardReason {
     UtcBeforeWindow,
     InsufficientSamples,
     PotentialLeapSecond,
-    #[allow(unused)]
     TimeStep,
 }
 
