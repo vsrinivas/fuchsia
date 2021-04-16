@@ -231,11 +231,8 @@ dependencies = [
 
 [[package]]
 name = "backtrace-sys"
-version = "0.1.32"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d6575f128516de27e3ce99689419835fce9643a9b215a14d2b5b685be018491"
+version = "0.1.37"
 dependencies = [
- "cc",
  "libc",
 ]
 
@@ -4137,10 +4134,6 @@ dependencies = [
  "flate2",
  "podio",
 ]
-
-[[patch.unused]]
-name = "backtrace-sys"
-version = "0.1.28"
 
 [[patch.unused]]
 name = "cmake"

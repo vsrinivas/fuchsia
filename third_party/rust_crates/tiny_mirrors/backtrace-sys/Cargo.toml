@@ -4,9 +4,10 @@
 
 [package]
 name = "backtrace-sys"
-version = "0.1.28"
+version = "0.1.37"
+edition = "2018"
 authors = ["The Fuchsia Authors"]
 description = "A null replacement for the backtrace-sys crate"
 
 [dependencies]
-libc = "*"
+libc = "0.2"

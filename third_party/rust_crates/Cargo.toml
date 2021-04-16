@@ -481,7 +481,6 @@ env_vars = [ "CARGO_PKG_VERSION=0.2.60" ]
 # do not need to be run are sufficient for our build
 #
 # Keep this sorted alphabetically, please.
-[gn.package.backtrace-sys."0.1.32"]
 [gn.package.bincode."1.1.1"]
 [gn.package.crossbeam-epoch."0.8.2"]
 [gn.package.crossbeam-utils."0.7.2"]

@@ -1431,7 +1431,7 @@ rust_library("backtrace-v0_3_42") {
   }
 
   deps = []
-  deps += [ ":backtrace-sys-v0_1_32" ]
+  deps += [ ":backtrace-sys-v0_1_37" ]
   deps += [ ":cfg-if-v0_1_10" ]
   deps += [ ":libc-v0_2_88" ]
   deps += [ ":rustc-demangle-v0_1_16" ]
@@ -1453,10 +1453,10 @@ rust_library("backtrace-v0_3_42") {
   ]
 }
 
-rust_library("backtrace-sys-v0_1_32") {
+rust_library("backtrace-sys-v0_1_37") {
   crate_name = "backtrace_sys"
-  crate_root = "//third_party/rust_crates/vendor/backtrace-sys/src/lib.rs"
-  output_name = "backtrace_sys-ad4f80b07cdcc6a"
+  crate_root = "//third_party/rust_crates/tiny_mirrors/backtrace-sys/src/lib.rs"
+  output_name = "backtrace_sys-76b66386b02bc30d"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -1469,9 +1469,9 @@ rust_library("backtrace-sys-v0_1_32") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=ad4f80b07cdcc6a",
-    "-Cextra-filename=-ad4f80b07cdcc6a",
+    "--edition=2018",
+    "-Cmetadata=76b66386b02bc30d",
+    "-Cextra-filename=-76b66386b02bc30d",
   ]
 }
 

@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(libc)]
-extern crate libc;
-pub struct backtrace_state;
-
 use libc::uintptr_t;
 use std::os::raw::{c_void, c_char, c_int};
+
+pub struct backtrace_state;
 
 pub type backtrace_syminfo_callback =
     extern fn(data: *mut c_void,
