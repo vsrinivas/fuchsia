@@ -38,10 +38,11 @@ driver and `driver_manager` logs.
 [`log_listener`] emits lines in this format by default:
 
 ```
-[seconds.nanos][pid][tid][tags] LEVEL: message
+[seconds][pid][tid][tags] LEVEL: message
 ```
 
-The timestamp is from the monotonic clock by default.
+The timestamp is from the monotonic clock by default, and it is formatted with microsecond
+granularity.
 
 If the message "something happened" is written at WARN level by my-component.cmx from process=1902
 and thread=1904 at time=278.14, the default output would be:
