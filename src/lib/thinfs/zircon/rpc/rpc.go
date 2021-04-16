@@ -279,9 +279,8 @@ func (d *directoryWrapper) ReadDirents(_ fidl.Context, maxOut uint64) (int32, []
 	}
 	bytes := make([]byte, maxOut)
 	var written int
-	var i int
-	for i = range d.dirents {
-		dirent := d.dirents[i]
+	for len(d.dirents) > 0 {
+		dirent := d.dirents[0]
 		sysDirent := syscall.Dirent{}
 		name := dirent.GetName()
 		size := direntSize + len(name)
@@ -294,11 +293,7 @@ func (d *directoryWrapper) ReadDirents(_ fidl.Context, maxOut uint64) (int32, []
 		copy(bytes[written:], (*(*[direntSize]byte)(unsafe.Pointer(&sysDirent)))[:])
 		copy(bytes[written+direntSize:], name)
 		written += size
-	}
-	if i == len(d.dirents)-1 { // We finished reading the directory. Next readdir will be empty.
-		d.dirents = nil
-	} else { // Partial read
-		d.dirents = d.dirents[i:]
+		d.dirents = d.dirents[1:]
 	}
 	d.reading = true
 	return int32(zx.ErrOk), bytes[:written], nil
