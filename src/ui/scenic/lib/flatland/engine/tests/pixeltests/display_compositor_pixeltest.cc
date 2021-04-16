@@ -144,8 +144,12 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
       fuchsia::sysmem::ImageFormatConstraints& image_constraints =
           constraints.image_format_constraints[0];
 
+#ifdef FAKE_DISPLAY
+      image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+#else
       // Compatible with ZX_PIXEL_FORMAT_RGB_888. This format required for AMLOGIC capture.
       image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGR24;
+#endif  // FAKE_DISPLAY
 
       image_constraints.color_spaces_count = 1;
       image_constraints.color_space[0] = fuchsia::sysmem::ColorSpace{
@@ -255,10 +259,17 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
     EXPECT_TRUE(result_capture_result.is_response());
   }
 
+#ifdef FAKE_DISPLAY
+  bool CaptureCompare(void* capture_buf, void* actual_buf, size_t size, uint32_t height,
+                      uint32_t width) {
+    EXPECT_EQ(size, width * height * 4);
+    return memcmp(actual_buf, capture_buf, size) == 0;
+  }
+#else
   // This function is taken directly from the zircon display capture test and modified slightly
   // to fit this test.
-  bool AmlogicCaptureCompare(void* capture_buf, void* actual_buf, size_t size, uint32_t height,
-                             uint32_t width) {
+  bool CaptureCompare(void* capture_buf, void* actual_buf, size_t size, uint32_t height,
+                      uint32_t width) {
     auto image_buf = std::make_unique<uint8_t[]>(size);
     std::memcpy(image_buf.get(), actual_buf, size);
 
@@ -320,6 +331,7 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
     }
     return success;
   }
+#endif  // FAKE_DISPLAY
 };
 
 // Renders a fullscreen green rectangle to the provided display. This
@@ -411,15 +423,15 @@ TEST_F(DisplayCompositorPixelTest, FullscreenRectangleTest) {
   // Compare the capture vmo data to the texture data above. Since we're doing a full screen
   // render, the two should be identical. The comparison is a bit complicated though since
   // the images are of two different formats.
-  bool images_are_same =
-      AmlogicCaptureCompare(read_values.data(), write_values.data(), read_values.size(),
-                            display->height_in_px(), display->width_in_px());
+  bool images_are_same = CaptureCompare(read_values.data(), write_values.data(), read_values.size(),
+                                        display->height_in_px(), display->width_in_px());
   EXPECT_TRUE(images_are_same);
 }
 
 // Test the software path of the engine. Render 2 rectangles, each taking up half of the
 // display's screen, so that the left half is blue and the right half is red.
 VK_TEST_F(DisplayCompositorPixelTest, SoftwareRenderingTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   auto display = display_manager_->default_display();
   auto display_controller = display_manager_->default_display_controller();
 
@@ -516,8 +528,8 @@ VK_TEST_F(DisplayCompositorPixelTest, SoftwareRenderingTest) {
     CaptureDisplayOutput(capture_info, capture_image_id, &read_values);
 
     // Compare the capture vmo data to the values we are expecting.
-    bool images_are_same = AmlogicCaptureCompare(read_values.data(), vmo_host, read_values.size(),
-                                                 display->height_in_px(), display->width_in_px());
+    bool images_are_same = CaptureCompare(read_values.data(), vmo_host, read_values.size(),
+                                          display->height_in_px(), display->width_in_px());
     EXPECT_TRUE(images_are_same);
 
     // Make sure that the vmo_host has the right amount of blue and red colors, so
@@ -547,6 +559,7 @@ VK_TEST_F(DisplayCompositorPixelTest, SoftwareRenderingTest) {
 // Test to make sure that the engine can handle rendering a transparent object overlapping an
 // opaque one.
 VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   auto display = display_manager_->default_display();
   auto display_controller = display_manager_->default_display_controller();
 
@@ -650,8 +663,8 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
     CaptureDisplayOutput(capture_info, capture_image_id, &read_values);
 
     // Compare the capture vmo data to the values we are expecting.
-    bool images_are_same = AmlogicCaptureCompare(read_values.data(), vmo_host, read_values.size(),
-                                                 display->height_in_px(), display->width_in_px());
+    bool images_are_same = CaptureCompare(read_values.data(), vmo_host, read_values.size(),
+                                          display->height_in_px(), display->width_in_px());
     EXPECT_TRUE(images_are_same);
 
     // Make sure that the vmo_host has the right amount of blue and red colors, so

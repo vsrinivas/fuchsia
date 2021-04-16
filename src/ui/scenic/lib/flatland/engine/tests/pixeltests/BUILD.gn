@@ -4,6 +4,15 @@
 
 import("//build/board.gni")
 
+group("pixeltests") {
+  testonly = true
+
+  public_deps = [
+    ":pixeltests_with_fake_display",
+    ":pixeltests_with_real_display",
+  ]
+}
+
 config("engine_pixeltest_config") {
   defines = []
   if (board_name == "astro") {
@@ -11,25 +20,38 @@ config("engine_pixeltest_config") {
   }
 }
 
-group("pixeltests") {
-  testonly = true
-
-  public_deps = [ ":unittests" ]
-}
-
-executable("unittests") {
+executable("pixeltests_with_real_display") {
   output_name = "flatland_display_compositor_pixeltests"
   testonly = true
+  deps = [ ":pixeltest_lib" ]
+  sources = [ "display_compositor_pixeltest.cc" ]
+  public_configs = [ ":engine_pixeltest_config" ]
+}
+
+config("engine_pixeltest_with_fake_display_config") {
+  defines = [ "FAKE_DISPLAY" ]
+}
+
+executable("pixeltests_with_fake_display") {
+  output_name = "flatland_display_compositor_pixeltests_with_fake_display"
+  testonly = true
+  deps = [ ":pixeltest_lib" ]
+  sources = [ "display_compositor_pixeltest.cc" ]
+  public_configs = [ ":engine_pixeltest_with_fake_display_config" ]
+}
+
+source_set("pixeltest_lib") {
+  testonly = true
+
   sources = [
     "//src/ui/scenic/lib/flatland/engine/tests/common.cc",
     "//src/ui/scenic/lib/flatland/engine/tests/common.h",
-    "display_compositor_pixeltest.cc",
 
     # Registers a global Escher environment for testing.
     "run_all_unittests.cc",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/public/lib/gtest:gtest",
     "//src/lib/fsl:fsl",
     "//src/ui/lib/display:hdcp_client",
@@ -40,6 +62,4 @@ executable("unittests") {
     "//third_party/googletest:gmock",
     "//zircon/public/lib/zircon-internal",
   ]
-
-  public_configs = [ ":engine_pixeltest_config" ]
 }
