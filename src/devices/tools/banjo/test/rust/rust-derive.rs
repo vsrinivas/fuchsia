@@ -52,7 +52,7 @@ pub struct SmallArrayStruct {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct BigArrayStruct {
     pub big_array: [u8; 2048 as usize],
 }

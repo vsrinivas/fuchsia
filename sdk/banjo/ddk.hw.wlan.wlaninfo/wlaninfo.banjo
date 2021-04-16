@@ -28,8 +28,11 @@ enum WlanInfoPhyType {
     /// IEEE 802.11g, 1, 2, 5,5, 11, 12, 24 Mbps + [6, 54] Mbps.
     erp = 0x04;
 
-    /// IEEE 802.11a/g.
-    ofdm = 0x4;
+    // FIDL enums don't allow two definitions of the same number, please use
+    // WLAN_INFO_PHY_TYPE_OFDM.
+    // TODO(http://fxbug.dev/74579): Clean this up.
+    // IEEE 802.11a/g.
+    //ofdm = 0x4;
 
     /// IEEE 802.11n.
     ht = 0x08;
@@ -40,6 +43,8 @@ enum WlanInfoPhyType {
     /// IEEE 802.11ax.
     hew = 0x20;
 };
+
+const uint32 WLAN_INFO_PHY_TYPE_OFDM = 0x4;
 
 enum WlanInfoDriverFeature : uint32 {
     /// Device or driver implements scanning.
@@ -102,14 +107,17 @@ enum WlanInfoHardwareCapability : uint32 {
 /// list as Fuchsia evolves.
 enum WlanInfoBand {
     /// Channel starting frequency: 2.407 GHz.
-    2ghz = 0;
+    two_ghz = 0;
 
     /// Channel starting frequency: 5.000 GHz.
-    5ghz = 1;
+    five_ghz = 1;
 
     /// The number of defined bands.
     count = 2;
 };
+
+const uint32 WLAN_INFO_BAND_2GHZ = 0;
+const uint32 WLAN_INFO_BAND_5GHZ = 1;
 
 /// The maximum number of supported channels in a WlanInfoChannelList.
 const uint32 WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS = 64;

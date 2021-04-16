@@ -16,12 +16,12 @@ use {
 
 pub fn ddk_channel_from_fidl(fc: fidl_common::WlanChan) -> banjo_wlan_info::WlanChannel {
     let cbw = match fc.cbw {
-        fidl_common::Cbw::Cbw20 => banjo_wlan_info::WlanChannelBandwidth::_20,
-        fidl_common::Cbw::Cbw40 => banjo_wlan_info::WlanChannelBandwidth::_40,
-        fidl_common::Cbw::Cbw40Below => banjo_wlan_info::WlanChannelBandwidth::_40BELOW,
-        fidl_common::Cbw::Cbw80 => banjo_wlan_info::WlanChannelBandwidth::_80,
-        fidl_common::Cbw::Cbw160 => banjo_wlan_info::WlanChannelBandwidth::_160,
-        fidl_common::Cbw::Cbw80P80 => banjo_wlan_info::WlanChannelBandwidth::_80P80,
+        fidl_common::Cbw::Cbw20 => banjo_wlan_info::WlanChannelBandwidth::B_20,
+        fidl_common::Cbw::Cbw40 => banjo_wlan_info::WlanChannelBandwidth::B_40,
+        fidl_common::Cbw::Cbw40Below => banjo_wlan_info::WlanChannelBandwidth::B_40BELOW,
+        fidl_common::Cbw::Cbw80 => banjo_wlan_info::WlanChannelBandwidth::B_80,
+        fidl_common::Cbw::Cbw160 => banjo_wlan_info::WlanChannelBandwidth::B_160,
+        fidl_common::Cbw::Cbw80P80 => banjo_wlan_info::WlanChannelBandwidth::B_80P80,
     };
     banjo_wlan_info::WlanChannel { primary: fc.primary, cbw, secondary80: fc.secondary80 }
 }
@@ -140,7 +140,7 @@ mod tests {
         assert_eq!(
             banjo_wlan_info::WlanChannel {
                 primary: 149,
-                cbw: banjo_wlan_info::WlanChannelBandwidth::_40,
+                cbw: banjo_wlan_info::WlanChannelBandwidth::B_40,
                 secondary80: 42
             },
             ddk.chan
@@ -197,7 +197,7 @@ mod tests {
             data_rate: 0,
             chan: banjo_wlan_info::WlanChannel {
                 primary: 0,
-                cbw: banjo_wlan_info::WlanChannelBandwidth::_20,
+                cbw: banjo_wlan_info::WlanChannelBandwidth::B_20,
                 secondary80: 0,
             },
             mcs: 0,

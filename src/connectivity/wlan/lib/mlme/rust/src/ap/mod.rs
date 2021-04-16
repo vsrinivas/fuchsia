@@ -739,7 +739,7 @@ mod tests {
             valid_fields: 0,
             phy: 0,
             data_rate: 0,
-            chan: WlanChannel { primary: 0, cbw: WlanChannelBandwidth::_20, secondary80: 0 },
+            chan: WlanChannel { primary: 0, cbw: WlanChannelBandwidth::B_20, secondary80: 0 },
             mcs: 0,
             rssi_dbm: 0,
             snr_dbh: 0,
@@ -755,7 +755,7 @@ mod tests {
 
         // Frame from the same channel must be processed and a probe response sent.
         let rx_info_same_channel = banjo_wlan_mac::WlanRxInfo {
-            chan: WlanChannel { primary: 1, cbw: WlanChannelBandwidth::_20, secondary80: 0 },
+            chan: WlanChannel { primary: 1, cbw: WlanChannelBandwidth::B_20, secondary80: 0 },
             ..rx_info_wrong_channel
         };
         fake_device.wlan_queue.clear();
@@ -795,7 +795,7 @@ mod tests {
             WlanChannel {
                 primary: 2,
                 // TODO(fxbug.dev/40917): Correctly support this.
-                cbw: WlanChannelBandwidth::_20,
+                cbw: WlanChannelBandwidth::B_20,
                 secondary80: 0,
             }
         );

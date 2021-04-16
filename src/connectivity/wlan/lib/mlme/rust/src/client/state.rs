@@ -3235,7 +3235,7 @@ mod tests {
             data_rate: 0,
             chan: banjo_wlan_info::WlanChannel {
                 primary: 0,
-                cbw: banjo_wlan_info::WlanChannelBandwidth::_20,
+                cbw: banjo_wlan_info::WlanChannelBandwidth::B_20,
                 secondary80: 0,
             },
             mcs: 0,

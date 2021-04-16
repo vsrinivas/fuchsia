@@ -93,7 +93,7 @@ mod tests {
     const RX_INFO: banjo_wlan_mac::WlanRxInfo = banjo_wlan_mac::WlanRxInfo {
         chan: banjo_wlan_info::WlanChannel {
             primary: 11,
-            cbw: banjo_wlan_info::WlanChannelBandwidth::_20,
+            cbw: banjo_wlan_info::WlanChannelBandwidth::B_20,
             secondary80: 0,
         },
         rssi_dbm: -40,

@@ -192,7 +192,7 @@ impl<'a> BoundScanner<'a> {
                 .iter()
                 .map(|c| banjo_wlan_info::WlanChannel {
                     primary: *c,
-                    cbw: banjo_wlan_info::WlanChannelBandwidth::_20,
+                    cbw: banjo_wlan_info::WlanChannelBandwidth::B_20,
                     secondary80: 0,
                 })
                 .collect();
@@ -346,8 +346,10 @@ fn get_band_info(
     iface_info.bands[..iface_info.bands_count as usize]
         .iter()
         .filter(|b| match channel.primary {
-            x if x > _2GHZ_BAND_HIGHEST_CHANNEL => b.band == banjo_hw_wlaninfo::WlanInfoBand::_5GHZ,
-            _ => b.band == banjo_hw_wlaninfo::WlanInfoBand::_2GHZ,
+            x if x > _2GHZ_BAND_HIGHEST_CHANNEL => {
+                b.band == banjo_hw_wlaninfo::WlanInfoBand::FIVE_GHZ
+            }
+            _ => b.band == banjo_hw_wlaninfo::WlanInfoBand::TWO_GHZ,
         })
         .next()
 }
@@ -399,7 +401,7 @@ mod tests {
     const RX_INFO: banjo_wlan_mac::WlanRxInfo = banjo_wlan_mac::WlanRxInfo {
         chan: banjo_wlan_info::WlanChannel {
             primary: 11,
-            cbw: banjo_wlan_info::WlanChannelBandwidth::_20,
+            cbw: banjo_wlan_info::WlanChannelBandwidth::B_20,
             secondary80: 0,
         },
         rssi_dbm: -40,
@@ -905,7 +907,7 @@ mod tests {
     const fn chan(primary: u8) -> banjo_wlan_info::WlanChannel {
         banjo_wlan_info::WlanChannel {
             primary,
-            cbw: banjo_wlan_info::WlanChannelBandwidth::_20,
+            cbw: banjo_wlan_info::WlanChannelBandwidth::B_20,
             secondary80: 0,
         }
     }

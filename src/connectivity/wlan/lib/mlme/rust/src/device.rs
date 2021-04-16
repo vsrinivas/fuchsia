@@ -238,7 +238,7 @@ mod test_utils {
                 sme_sap,
                 wlan_channel: WlanChannel {
                     primary: 0,
-                    cbw: WlanChannelBandwidth::_20,
+                    cbw: WlanChannelBandwidth::B_20,
                     secondary80: 0,
                 },
                 hw_scan_req: None,
@@ -450,7 +450,7 @@ mod test_utils {
         let bands_count = 2;
         let mut bands = [default_band_info(); WLAN_INFO_MAX_BANDS as usize];
         bands[0] = WlanInfoBandInfo {
-            band: WlanInfoBand::_2GHZ,
+            band: WlanInfoBand::TWO_GHZ,
             rates: arr!([12, 24, 48, 54, 96, 108], WLAN_INFO_BAND_INFO_MAX_RATES as usize),
             supported_channels: WlanInfoChannelList {
                 base_freq: 2407,
@@ -468,7 +468,7 @@ mod test_utils {
             },
         };
         bands[1] = WlanInfoBandInfo {
-            band: WlanInfoBand::_5GHZ,
+            band: WlanInfoBand::FIVE_GHZ,
             rates: arr!([12, 24, 48, 54, 96, 108], WLAN_INFO_BAND_INFO_MAX_RATES as usize),
             supported_channels: WlanInfoChannelList {
                 base_freq: 5000,
@@ -489,7 +489,7 @@ mod test_utils {
         WlanmacInfo {
             mac_addr: [7u8; 6],
             mac_role: WlanInfoMacRole::CLIENT,
-            supported_phys: WlanInfoPhyType::OFDM | WlanInfoPhyType::HT | WlanInfoPhyType::VHT,
+            supported_phys: WlanInfoPhyType::ERP | WlanInfoPhyType::HT | WlanInfoPhyType::VHT,
             driver_features: WlanInfoDriverFeature(0),
             caps: WlanInfoHardwareCapability(0),
             bands,
@@ -621,19 +621,19 @@ mod tests {
         let dev = fake_device.as_device();
         dev.set_channel(WlanChannel {
             primary: 2,
-            cbw: WlanChannelBandwidth::_80P80,
+            cbw: WlanChannelBandwidth::B_80P80,
             secondary80: 4,
         })
         .expect("set_channel failed?");
         // Check the internal state.
         assert_eq!(
             fake_device.wlan_channel,
-            WlanChannel { primary: 2, cbw: WlanChannelBandwidth::_80P80, secondary80: 4 }
+            WlanChannel { primary: 2, cbw: WlanChannelBandwidth::B_80P80, secondary80: 4 }
         );
         // Check the external view of the internal state.
         assert_eq!(
             dev.channel(),
-            WlanChannel { primary: 2, cbw: WlanChannelBandwidth::_80P80, secondary80: 4 }
+            WlanChannel { primary: 2, cbw: WlanChannelBandwidth::B_80P80, secondary80: 4 }
         );
     }
 
@@ -774,7 +774,7 @@ mod tests {
             aid: 1,
             listen_interval: 2,
             phy: WlanPhyType::ERP,
-            chan: WlanChannel { primary: 3, cbw: WlanChannelBandwidth::_20, secondary80: 0 },
+            chan: WlanChannel { primary: 3, cbw: WlanChannelBandwidth::B_20, secondary80: 0 },
             qos: false,
             wmm_params: ddk_converter::blank_wmm_params(),
 

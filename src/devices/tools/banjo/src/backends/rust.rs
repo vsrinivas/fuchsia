@@ -104,83 +104,6 @@ fn can_derive_partialeq(
     }
 }
 
-// This is not the same as partialeq because we derive opaque Debugs for unions
-fn can_derive_debug(ast: &ast::BanjoAst, ty: &ast::Ty, parents: &mut HashSet<ast::Ident>) -> bool {
-    match ty {
-        ast::Ty::Bool
-        | ast::Ty::Int8
-        | ast::Ty::Int16
-        | ast::Ty::Int32
-        | ast::Ty::Int64
-        | ast::Ty::UInt8
-        | ast::Ty::UInt16
-        | ast::Ty::UInt32
-        | ast::Ty::UInt64
-        | ast::Ty::Float32
-        | ast::Ty::Float64
-        | ast::Ty::Protocol
-        | ast::Ty::Enum { .. } => {
-            return true;
-        }
-        ast::Ty::Vector { ref ty, size: _, nullable: _ } => can_derive_debug(ast, ty, parents),
-        ast::Ty::Str { size: _, .. } => {
-            return true;
-        }
-        ast::Ty::Union { .. } => {
-            return false; /* technically yes, but done in a custom derive */
-        }
-        ast::Ty::Struct => {
-            unreachable!();
-        }
-        ast::Ty::Array { ty, size } => match resolve_constant_uint(ast, size) {
-            Ok(size) if size <= 32 => can_derive_debug(ast, ty, parents),
-            _ => false,
-        },
-        ast::Ty::Identifier { id: type_id, .. } => {
-            if type_id.is_base_type() {
-                return true;
-            }
-            match ast
-                .id_to_decl(type_id)
-                .expect(&format!("can't find declaration for ident {:?}", type_id))
-            {
-                ast::Decl::Struct { fields, .. } => {
-                    for field in fields {
-                        if let ast::Ty::Identifier { id, .. } = &field.ty {
-                            // Circular reference. Skip the check on this field to prevent stack
-                            // overflow. It's still possible to derive Debug as long as other
-                            // fields do not prevent the derive.
-                            if id == type_id || parents.contains(id) {
-                                continue;
-                            }
-                        }
-                        parents.insert(type_id.clone());
-                        if !can_derive_debug(ast, &field.ty, parents) {
-                            return false;
-                        }
-                        parents.remove(type_id);
-                    }
-                    true
-                }
-                // union.rs template manually implements Debug.
-                // enum.rs template always derive Debug
-                ast::Decl::Union { .. } | ast::Decl::Enum { .. } => true,
-                ast::Decl::Constant { ty, .. } => can_derive_debug(ast, ty, parents),
-                ast::Decl::Alias(_, id) => {
-                    let alias_type = ast.id_to_type(&id);
-                    can_derive_debug(ast, &alias_type, parents)
-                }
-                // Resource is not generated right now. Just return `false` for now to be
-                // conservative, but consider revisiting this case when they are generated.
-                ast::Decl::Resource { .. } => false,
-                // Protocol will never be generated.
-                ast::Decl::Protocol { .. } => true,
-            }
-        }
-        ast::Ty::Handle { .. } => true,
-    }
-}
-
 fn resolve_constant_uint(ast: &ast::BanjoAst, constant: &ast::Constant) -> Result<u64, Error> {
     match constant.0.parse::<u64>() {
         Ok(uint) => Ok(uint),
@@ -329,14 +252,10 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                         "C"
                     };
                 let mut partial_eq = true;
-                let mut debug = true;
                 let mut parents = HashSet::new();
                 for field in fields {
                     parents.clear();
                     parents.insert(name.clone());
-                    if !can_derive_debug(ast, &field.ty, &mut parents) {
-                        debug = false;
-                    }
                     parents.clear();
                     parents.insert(name.clone());
                     if !can_derive_partialeq(ast, &field.ty, &mut parents) {
@@ -350,7 +269,7 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                 }
                 accum.push(format!(
                     include_str!("templates/rust/struct.rs"),
-                    debug = if debug { ", Debug" } else { "" },
+                    debug = ", Debug",
                     partial_eq = if partial_eq { ", PartialEq" } else { "" },
                     name = name.name(),
                     struct_fields = field_str.join("\n"),

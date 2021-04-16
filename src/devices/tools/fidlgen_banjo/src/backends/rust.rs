@@ -45,6 +45,11 @@ fn can_derive_partialeq(
             if type_id.is_base_type() {
                 return Ok(true);
             }
+            // FIDL IR doesn't have enough type information, so we conservatively assume we cannot
+            // derive ParitalEq.
+            if ir.is_external_decl(type_id)? {
+                return Ok(false);
+            }
             match ir.get_declaration(type_id)? {
                 Declaration::Const => {
                     let decl = ir.get_const(type_id)?;
@@ -85,74 +90,6 @@ fn can_derive_partialeq(
                     )
                 }
                 _ => Err(anyhow!("Can't evaluate PartialEq for {:?}", type_id)),
-            }
-        }
-    }
-}
-
-// This is not the same as partialeq because we derive opaque Debugs for unions
-fn can_derive_debug(
-    ty: &Type,
-    parents: &mut HashSet<CompoundIdentifier>,
-    ir: &FidlIr,
-) -> Result<bool, Error> {
-    match ty {
-        Type::Array { ref element_type, ref element_count } => {
-            if element_count.0 <= 32 {
-                can_derive_debug(element_type, parents, ir)
-            } else {
-                Ok(false)
-            }
-        }
-        Type::Vector { ref element_type, .. } => can_derive_debug(element_type, parents, ir),
-        Type::Str { .. } => Ok(true),
-        Type::Handle { .. } => Ok(true),
-        Type::Request { .. } => Ok(true),
-        Type::Primitive { .. } => Ok(true),
-        Type::Identifier { identifier: type_id, .. } => {
-            if type_id.is_base_type() {
-                return Ok(true);
-            }
-            match ir.get_declaration(type_id)? {
-                Declaration::Const => {
-                    let decl = ir.get_const(type_id)?;
-                    can_derive_debug(&decl._type, parents, ir)
-                }
-                // enum.rs template always derive Debug
-                Declaration::Enum { .. } => Ok(true),
-                // Protocols are not generated, but this supports some tests.
-                Declaration::Interface { .. } => Ok(true),
-                Declaration::Struct => {
-                    let decl = ir.get_struct(type_id)?;
-                    for field in &decl.members {
-                        if let Type::Identifier { identifier: field_id, .. } = &field._type {
-                            // Circular reference. Skip the check on this field to prevent stack
-                            // overflow. It's still possible to derive PartialEq as long as other
-                            // fields do not prevent the derive.
-                            if field_id == type_id || parents.contains(field_id) {
-                                continue;
-                            }
-                        }
-                        parents.insert(type_id.clone());
-                        if !can_derive_debug(&field._type, parents, ir)? {
-                            return Ok(false);
-                        }
-                        parents.remove(type_id);
-                    }
-                    Ok(true)
-                }
-                // union.rs template manually implements Debug.
-                Declaration::Union { .. } => Ok(true),
-                Declaration::TypeAlias { .. } => {
-                    let decl = ir.get_type_alias(type_id)?;
-                    let ident = CompoundIdentifier(decl.partial_type_ctor.name.clone());
-                    can_derive_debug(
-                        &Type::Identifier { identifier: ident, nullable: false },
-                        parents,
-                        ir,
-                    )
-                }
-                _ => Err(anyhow!("Don't know how to evaluate Debug for {:?}", type_id)),
             }
         }
     }
@@ -311,14 +248,10 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                 let mut field_str = Vec::new();
                 let alignment = if data.maybe_attributes.has("Packed") { "C, packed" } else { "C" };
                 let mut partial_eq = true;
-                let mut debug = true;
                 let mut parents = HashSet::new();
                 for field in &data.members {
                     parents.clear();
                     parents.insert(data.name.clone());
-                    if !can_derive_debug(&field._type, &mut parents, ir)? {
-                        debug = false;
-                    }
                     parents.clear();
                     parents.insert(data.name.clone());
                     if !can_derive_partialeq(&field._type, &mut parents, ir)? {
@@ -339,7 +272,7 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                 }
                 Ok(format!(
                     include_str!("templates/rust/struct.rs"),
-                    debug = if debug { ", Debug" } else { "" },
+                    debug = ", Debug",
                     partial_eq = if partial_eq { ", PartialEq" } else { "" },
                     name = data.name.get_name(),
                     struct_fields = field_str.join("\n"),

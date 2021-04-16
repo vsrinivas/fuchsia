@@ -434,7 +434,7 @@ impl RemoteClient {
                     chan: WlanChannel {
                         primary: channel,
                         // TODO(fxbug.dev/40917): Correctly support this.
-                        cbw: WlanChannelBandwidth::_20,
+                        cbw: WlanChannelBandwidth::B_20,
                         secondary80: 0,
                     },
 

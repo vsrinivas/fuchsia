@@ -1090,7 +1090,7 @@ mod tests {
     ];
     const MAIN_CHANNEL: banjo_wlan_info::WlanChannel = banjo_wlan_info::WlanChannel {
         primary: 11,
-        cbw: banjo_wlan_info::WlanChannelBandwidth::_20,
+        cbw: banjo_wlan_info::WlanChannelBandwidth::B_20,
         secondary80: 0,
     };
     const SCAN_CHANNEL_PRIMARY: u8 = 6;

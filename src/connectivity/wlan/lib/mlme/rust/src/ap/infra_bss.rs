@@ -91,7 +91,7 @@ impl InfraBss {
                 primary: channel,
 
                 // TODO(fxbug.dev/40917): Correctly support this.
-                cbw: WlanChannelBandwidth::_20,
+                cbw: WlanChannelBandwidth::B_20,
                 secondary80: 0,
             })
             .map_err(|s| Error::Status(format!("failed to set channel"), s))?;
@@ -643,7 +643,7 @@ mod tests {
 
         assert_eq!(
             fake_device.wlan_channel,
-            WlanChannel { primary: 1, cbw: WlanChannelBandwidth::_20, secondary80: 0 }
+            WlanChannel { primary: 1, cbw: WlanChannelBandwidth::B_20, secondary80: 0 }
         );
 
         let beacon_tmpl = vec![

@@ -272,13 +272,13 @@ mod tests {
     };
 
     const IMMEDIATE_CHANNEL: WlanChannel =
-        WlanChannel { primary: 11, cbw: WlanChannelBandwidth::_40, secondary80: 0 };
+        WlanChannel { primary: 11, cbw: WlanChannelBandwidth::B_40, secondary80: 0 };
 
     const QUEUE_CHANNEL_1: WlanChannel =
-        WlanChannel { primary: 5, cbw: WlanChannelBandwidth::_20, secondary80: 0 };
+        WlanChannel { primary: 5, cbw: WlanChannelBandwidth::B_20, secondary80: 0 };
 
     const QUEUE_CHANNEL_2: WlanChannel =
-        WlanChannel { primary: 6, cbw: WlanChannelBandwidth::_20, secondary80: 0 };
+        WlanChannel { primary: 6, cbw: WlanChannelBandwidth::B_20, secondary80: 0 };
 
     #[test]
     fn test_schedule_immediate_on_empty_queue() {

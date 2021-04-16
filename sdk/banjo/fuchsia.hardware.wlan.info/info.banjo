@@ -1,11 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be found
-// in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 library fuchsia.hardware.wlan.info;
 
 using ddk.hw.wlan.ieee80211;
-using zx;
 
 // LINT.IfChange
 enum WlanKeyType : uint8 {
@@ -67,17 +66,28 @@ struct WlanVhtOp {
 /// VHT notation
 enum WlanChannelBandwidth : uint8 {
     /// Default. Corresponds to SecondaryChannelOffset-None
-    _20 = 0;
-    _40 = 1;
-    /// Corresponds to SecondaryChannelOffset-Above
-    _40ABOVE = 1;
+    B_20 = 0;
+    B_40 = 1;
+    // Corresponds to SecondaryChannelOffset-Above
+    // TODO(http://fxbug.dev/74579): Clean this up.
+    //B_40ABOVE = 1;
     /// Corresponds to SecondaryChannelOffset-Below
-    _40BELOW = 2;
-    _80 = 3;
-    _160 = 4;
+    B_40BELOW = 2;
+    B_80 = 3;
+    B_160 = 4;
     /// Non-contiguous frequency segments
-    _80P80 = 5;
+    B_80P80 = 5;
 };
+
+// Temporarily redeclare above with old names to transition.
+// TODO(http://fxbug.dev/74579): Clean this up.
+const uint8 WLAN_CHANNEL_BANDWIDTH__20 = 0;
+const uint8 WLAN_CHANNEL_BANDWIDTH__40 = 1;
+const uint8 WLAN_CHANNEL_BANDWIDTH__40ABOVE = 1;
+const uint8 WLAN_CHANNEL_BANDWIDTH__40BELOW = 2;
+const uint8 WLAN_CHANNEL_BANDWIDTH__80 = 3;
+const uint8 WLAN_CHANNEL_BANDWIDTH__160 = 4;
+const uint8 WLAN_CHANNEL_BANDWIDTH__80P80 = 5;
 
 struct WlanChannel {
     /// Channel index used for the primary channel
@@ -102,16 +112,24 @@ enum WlanRxInfoValid : uint32 {
 /// Guard Interval
 enum WlanGi : uint8 {
     /// all 802.11 phy
-    _800NS = 0x1;
+    G_800NS = 0x1;
     /// 802.11n/ac
-    _400NS = 0x2;
+    G_400NS = 0x2;
     /// 802.11n/ac
-    _200NS = 0x4;
+    G_200NS = 0x4;
     /// 802.11ax
-    _3200NS = 0x10;
+    G_3200NS = 0x10;
     /// 802.11ax
-    _1600NS = 0x20;
+    G_1600NS = 0x20;
 };
+
+
+// Temporarily redeclare above with old names to transition.
+const uint8 WLAN_GI__800NS = 0x1;
+const uint8 WLAN_GI__400NS = 0x2;
+const uint8 WLAN_GI__200NS = 0x4;
+const uint8 WLAN_GI__3200NS = 0x10;
+const uint8 WLAN_GI__1600NS = 0x20;
 
 enum WlanBssType : uint8 {
     INFRASTRUCTURE = 1;
@@ -132,8 +150,9 @@ enum WlanPhyType : uint8 {
     /// IEEE 802.11g, 1, 2, 5,5, 11, 12, 24 Mbps + [6, 54] Mbps.
     ERP = 0x04;
 
-    /// IEEE 802.11a/g.
-    OFDM = 0x4;
+    // IEEE 802.11a/g.
+    // TODO(http://fxbug.dev/74579): Clean this up.
+    //OFDM = 0x4;
 
     /// IEEE 802.11n.
     HT = 0x08;
@@ -144,6 +163,8 @@ enum WlanPhyType : uint8 {
     /// IEEE 802.11ax.
     HEW = 0x20;
 };
+
+const uint8 WLAN_PHY_TYPE_OFDM = 0x4;
 
 struct WlanBssConfig {
     array<uint8>:6 bssid;
