@@ -29,9 +29,9 @@ readonly RAW_LINES="// Copyright 2020 The Fuchsia Authors. All rights reserved.
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 // TODO(fxbug.dev/74605): Remove once toolchain rolls and deref_nulptr is known.
-#![allow(unknown_lints)]
+#![cfg_attr(test, allow(unknown_lints))]
 // TODO(fxbug.dev/74605): Remove once bindgen is fixed.
-#![allow(deref_nullptr)]
+#![cfg_attr(test, allow(deref_nullptr))]
 
 // This attribute ensures proper linkage. Applying it to an empty block to satisfy
 // linking requirements for later blocks is explicitly suggested by
