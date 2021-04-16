@@ -30,7 +30,7 @@ impl DeprecatedConfigurator {
                 req = requests.select_next_some() => match req {
                     Ok(req) => match req {
                         fidl_deprecated::DeprecatedConfiguratorRequest::SuggestAccessPointMacAddress{mac, responder} => {
-                            info!("setting suggested AP MAC: {:?}", mac.octets);
+                            info!("setting suggested AP MAC");
                             let mac = match MacAddress::from_bytes(&mac.octets) {
                                 Ok(mac) => mac,
                                 Err(e) => {
