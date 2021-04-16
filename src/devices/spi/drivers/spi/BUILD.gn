@@ -46,6 +46,7 @@ driver_module("spi") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -81,6 +82,7 @@ test("spi-test-bin") {
     "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/spi",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

@@ -4,6 +4,9 @@
 
 #include "spi-child.h"
 
+#include <lib/ddk/trace/event.h>
+#include <lib/trace-engine/types.h>
+
 #include <ddktl/fidl.h>
 #include <fbl/vector.h>
 
@@ -87,7 +90,11 @@ void SpiChild::Transmit(sharedmemory::wire::SharedVmoBuffer buffer,
                         TransmitCompleter::Sync& completer) {
   sharedmemory::wire::SharedVmoIo_Transmit_Result result;
   sharedmemory::wire::SharedVmoIo_Transmit_Response response = {};
-  zx_status_t status = spi_.TransmitVmo(cs_, buffer.vmo_id, buffer.offset, buffer.size);
+  zx_status_t status;
+  {
+    TRACE_DURATION("spi", "Transmit", "cs", cs_, "size", buffer.size);
+    status = spi_.TransmitVmo(cs_, buffer.vmo_id, buffer.offset, buffer.size);
+  }
   if (status == ZX_OK) {
     result.set_response(
         fidl::ObjectView<sharedmemory::wire::SharedVmoIo_Transmit_Response>::FromExternal(
@@ -102,7 +109,11 @@ void SpiChild::Receive(sharedmemory::wire::SharedVmoBuffer buffer,
                        ReceiveCompleter::Sync& completer) {
   sharedmemory::wire::SharedVmoIo_Receive_Result result;
   sharedmemory::wire::SharedVmoIo_Receive_Response response = {};
-  zx_status_t status = spi_.ReceiveVmo(cs_, buffer.vmo_id, buffer.offset, buffer.size);
+  zx_status_t status;
+  {
+    TRACE_DURATION("spi", "Receive", "cs", cs_, "size", buffer.size);
+    status = spi_.ReceiveVmo(cs_, buffer.vmo_id, buffer.offset, buffer.size);
+  }
   if (status == ZX_OK) {
     result.set_response(
         fidl::ObjectView<sharedmemory::wire::SharedVmoIo_Receive_Response>::FromExternal(
@@ -123,6 +134,7 @@ void SpiChild::Exchange(sharedmemory::wire::SharedVmoBuffer tx_buffer,
   if (tx_buffer.size != rx_buffer.size) {
     status = ZX_ERR_INVALID_ARGS;
   } else {
+    TRACE_DURATION("spi", "Exchange", "cs", cs_, "size", tx_buffer.size);
     status = spi_.ExchangeVmo(cs_, tx_buffer.vmo_id, tx_buffer.offset, rx_buffer.vmo_id,
                               rx_buffer.offset, tx_buffer.size);
   }
