@@ -1,0 +1,20 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.hardware.pty.Device"
+            ]
+        }
+    },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/virtual_console_lib_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.hardware.pty.Device"
+        ]
+    }
+}

@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     cstr::cstr,
-    fidl::endpoints::Proxy,
+    fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_hardware_pty::{DeviceMarker, DeviceProxy, WindowSize},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
@@ -32,6 +32,17 @@ impl Pty {
         Ok(Pty { server_pty, shell_process })
     }
 
+    /// Creates a new instance of the Pty using an existing server end.
+    ///
+    /// The user must call resize to give the client a valid window size
+    /// before it will respond.
+    pub async fn with_server_end(server_end: ServerEnd<DeviceMarker>) -> Result<Self, Error> {
+        let server_pty = Pty::open_server_pty()?;
+        let shell_process = None;
+        Pty::open_client(&server_pty, server_end).await?;
+        Ok(Pty { server_pty, shell_process })
+    }
+
     /// Spawns the Pty.
     ///
     /// If no command is provided the default /boot/bin/sh will be used.
@@ -46,7 +57,7 @@ impl Pty {
             return Ok(());
         }
 
-        ftrace::duration!("terminal", "Pty:spawn");
+        ftrace::duration!("pty", "Pty:spawn");
 
         self.shell_process = Some(
             Pty::launch_shell(&self.server_pty, command.unwrap_or(&cstr!("/boot/bin/sh")))
@@ -92,7 +103,7 @@ impl Pty {
 
     /// Opens the initial server side of the pty.
     fn open_server_pty() -> Result<File, Error> {
-        ftrace::duration!("terminal", "Pty:open_server_pty");
+        ftrace::duration!("pty", "Pty:open_server_pty");
         let server_conn =
             connect_to_service::<DeviceMarker>().context("could not connect to pty service")?;
         let server_chan = server_conn
@@ -129,7 +140,7 @@ impl Pty {
     /// Launches the shell process by creating the client side of the pty and then spawning the
     /// shell.
     async fn launch_shell(server_pty: &File, command: &CStr) -> Result<zx::Process, Error> {
-        ftrace::duration!("terminal", "Pty:launch_shell");
+        ftrace::duration!("pty", "Pty:launch_shell");
         let client_pty =
             Pty::open_client_pty(server_pty).await.context("unable to create client_pty")?;
         let process = Pty::spawn_shell_process(client_pty, command)
@@ -140,8 +151,28 @@ impl Pty {
 
     /// Creates a File which is suitable to use as the client side of the Pty.
     async fn open_client_pty(server_pty: &File) -> Result<File, Error> {
-        ftrace::duration!("terminal", "Pty:open_client_pty");
+        ftrace::duration!("pty", "Pty:open_client_pty");
         let (client_end, server_end) = fidl::endpoints::create_endpoints()?;
+
+        // Open a client Pty device.
+        Self::open_client(server_pty, server_end).await?;
+
+        // convert the client side into a file descriptor. This must be called
+        // after the server side has been established.
+        let client_pty =
+            fdio::create_fd(client_end.into()).context("failed to create FD from client PTY")?;
+
+        Ok(client_pty)
+    }
+
+    /// Open a client Pty device. `server_end` should be a handle
+    /// to one endpoint of a channel that (on success) will become an open
+    /// connection to the newly created device.
+    async fn open_client(
+        server_pty: &File,
+        server_end: ServerEnd<DeviceMarker>,
+    ) -> Result<(), Error> {
+        ftrace::duration!("pty", "Pty:open_client");
 
         let server_pty_channel = fdio::clone_channel(server_pty)
             .context("failed to clone channel from server PTY FD")?;
@@ -156,17 +187,12 @@ impl Pty {
             .context("failed to interact with PTY device")?
             .context("failed to attach PTY to channel")?;
 
-        // convert the client side into a file descriptor. This must be called
-        // after the server side has been established.
-        let client_pty =
-            fdio::create_fd(client_end.into()).context("failed to create FD from client PTY")?;
-
-        Ok(client_pty)
+        Ok(())
     }
 
     /// spawns the shell and transfers the client pty to the process.
     fn spawn_shell_process(client_pty: File, command: &CStr) -> Result<zx::Process, Error> {
-        ftrace::duration!("terminal", "Pty:spawn_shell_process");
+        ftrace::duration!("pty", "Pty:spawn_shell_process");
         let process = fdio::spawn_etc(
             &zx::Job::from_handle(zx::Handle::invalid()),
             fdio::SpawnOptions::CLONE_ALL - fdio::SpawnOptions::CLONE_STDIO,
@@ -187,7 +213,7 @@ impl Pty {
         server_pty: &File,
         mut window_size: WindowSize,
     ) -> Result<(), Error> {
-        ftrace::duration!("terminal", "Pty:set_window_size");
+        ftrace::duration!("pty", "Pty:set_window_size");
         let server_pty_channel = fdio::clone_channel(server_pty)
             .context("failed to clone channel from server PTY FD")?;
         let server_pty_fidl_channel = fasync::Channel::from_channel(server_pty_channel)
@@ -207,6 +233,13 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn can_create_pty() -> Result<(), Error> {
         let _ = Pty::new()?;
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn can_create_pty_with_server_end() -> Result<(), Error> {
+        let (_, server_end) = fidl::endpoints::create_endpoints()?;
+        let _ = Pty::with_server_end(server_end).await?;
         Ok(())
     }
 

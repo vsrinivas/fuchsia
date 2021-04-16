@@ -4,7 +4,6 @@
 
 use {
     crate::key_util::get_input_sequence_for_key_event,
-    crate::pty::Pty,
     crate::ui::{PointerEventResponse, ScrollContext, TerminalScene},
     anyhow::{Context as _, Error},
     carnelian::{
@@ -18,6 +17,7 @@ use {
     fuchsia_zircon::{AsHandleRef, Signals},
     futures::{channel::mpsc, io::AsyncReadExt, select, FutureExt, StreamExt},
     log::error,
+    pty::Pty,
     std::{cell::RefCell, convert::TryFrom, ffi::CStr, fs::File, io::prelude::*, rc::Rc},
     term_model::{
         ansi::Processor,
