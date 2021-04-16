@@ -722,6 +722,35 @@ TEST(ImageFormat, R8G8Formats_V1_LLCPP) {
   EXPECT_EQ(18u * 17u * 1, ImageFormatImageSize(*optional_format));
 }
 
+TEST(ImageFormat, A2R10G10B10_Formats_V1_LLCPP) {
+  for (const auto& pixel_format_type : {sysmem_v1::wire::PixelFormatType::A2R10G10B10,
+                                        sysmem_v1::wire::PixelFormatType::A2B10G10R10}) {
+    sysmem_v1::wire::PixelFormat format = {
+        .type = pixel_format_type,
+        .has_format_modifier = true,
+        .format_modifier.value = sysmem_v1::wire::FORMAT_MODIFIER_LINEAR,
+    };
+
+    sysmem_v1::wire::ImageFormatConstraints constraints = {
+        .pixel_format = format,
+        .min_coded_width = 12,
+        .max_coded_width = 100,
+        .min_coded_height = 12,
+        .max_coded_height = 100,
+        .max_bytes_per_row = 100000,
+        .bytes_per_row_divisor = 1,
+    };
+
+    auto optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
+    EXPECT_TRUE(optional_format);
+    EXPECT_EQ(18u * 4, optional_format->bytes_per_row);
+    EXPECT_EQ(18u * 17u * 4, ImageFormatImageSize(*optional_format));
+    EXPECT_EQ(1, ImageFormatCodedWidthMinDivisor(optional_format->pixel_format));
+    EXPECT_EQ(1, ImageFormatCodedHeightMinDivisor(optional_format->pixel_format));
+    EXPECT_EQ(4, ImageFormatSampleAlignment(optional_format->pixel_format));
+  }
+}
+
 TEST(ImageFormat, GoldfishOptimal_V2_LLCPP) {
   fidl::FidlAllocator allocator;
   constexpr uint32_t kWidth = 64;

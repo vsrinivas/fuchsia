@@ -8,6 +8,7 @@
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/sysmem-version/sysmem-version.h>
 #include <zircon/assert.h>
+#include <zircon/pixelformat.h>
 
 #include <algorithm>
 #include <map>
@@ -72,6 +73,8 @@ const std::map<PixelFormatType, SamplingInfo> kPixelFormatSamplingInfo = {
     {PixelFormatType::L8, {{8}, kColorType_RGB}},
     {PixelFormatType::R8, {{8}, kColorType_RGB}},
     {PixelFormatType::R8G8, {{8}, kColorType_RGB}},
+    {PixelFormatType::A2B10G10R10, {{8}, kColorType_RGB}},
+    {PixelFormatType::A2R10G10B10, {{8}, kColorType_RGB}},
 };
 
 constexpr uint32_t kTransactionEliminationAlignment = 64;
@@ -319,6 +322,8 @@ static uint64_t linear_size(uint32_t coded_height, uint32_t bytes_per_row, Pixel
     case PixelFormatType::L8:
     case PixelFormatType::R8:
     case PixelFormatType::R8G8:
+    case PixelFormatType::A2B10G10R10:
+    case PixelFormatType::A2R10G10B10:
       return coded_height * bytes_per_row;
     case PixelFormatType::I420:
       return coded_height * bytes_per_row * 3 / 2;
@@ -363,6 +368,8 @@ class LinearFormats : public ImageFormatSet {
       case PixelFormatType::L8:
       case PixelFormatType::R8:
       case PixelFormatType::R8G8:
+      case PixelFormatType::A2B10G10R10:
+      case PixelFormatType::A2R10G10B10:
         return true;
     }
     return false;
@@ -521,6 +528,8 @@ class ArmTELinearFormats : public ImageFormatSet {
       case PixelFormatType::L8:
       case PixelFormatType::R8:
       case PixelFormatType::R8G8:
+      case PixelFormatType::A2B10G10R10:
+      case PixelFormatType::A2R10G10B10:
         return true;
     }
     return false;
@@ -722,6 +731,9 @@ uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem2::wire::PixelFormat& pixel
       return 8u;
     case PixelFormatType::R8G8:
       return 16u;
+    case PixelFormatType::A2B10G10R10:
+    case PixelFormatType::A2R10G10B10:
+      return 2u + 3 * 10u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format.type()));
   return 0u;
@@ -779,6 +791,10 @@ uint32_t ImageFormatStrideBytesPerWidthPixel(
       return 1u;
     case PixelFormatType::R8G8:
       return 2u;
+    case PixelFormatType::A2B10G10R10:
+      return 4u;
+    case PixelFormatType::A2R10G10B10:
+      return 4u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format.type()));
   return 0u;
@@ -860,6 +876,10 @@ uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem2::wire::PixelForma
       return 1u;
     case PixelFormatType::R8G8:
       return 1u;
+    case PixelFormatType::A2B10G10R10:
+      return 1u;
+    case PixelFormatType::A2R10G10B10:
+      return 1u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format.type()));
   return 0u;
@@ -913,6 +933,10 @@ uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem2::wire::PixelForm
     case PixelFormatType::R8:
       return 1u;
     case PixelFormatType::R8G8:
+      return 1u;
+    case PixelFormatType::A2B10G10R10:
+      return 1u;
+    case PixelFormatType::A2R10G10B10:
       return 1u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format.type()));
@@ -969,6 +993,10 @@ uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem2::wire::PixelFormat& pi
       return 1u;
     case PixelFormatType::R8G8:
       return 2u;
+    case PixelFormatType::A2B10G10R10:
+      return 4u;
+    case PixelFormatType::A2R10G10B10:
+      return 4u;
   }
   ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format.type()));
   return 0u;
@@ -1076,6 +1104,14 @@ bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem2::wire::PixelFormat& pixe
 
     case PixelFormatType::NV12:
       *zx_pixel_format_out = ZX_PIXEL_FORMAT_NV12;
+      return true;
+
+    case PixelFormatType::A2B10G10R10:
+      *zx_pixel_format_out = ZX_PIXEL_FORMAT_ABGR_2_10_10_10;
+      return true;
+
+    case PixelFormatType::A2R10G10B10:
+      *zx_pixel_format_out = ZX_PIXEL_FORMAT_ARGB_2_10_10_10;
       return true;
 
     default:
