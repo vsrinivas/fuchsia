@@ -56,9 +56,6 @@
 
 namespace blobfs {
 
-using ::digest::Digest;
-using ::digest::MerkleTreeCreator;
-
 // Data used exclusively during writeback.
 struct Blob::WriteInfo {
   // See comment for merkle_tree() below.
@@ -139,13 +136,13 @@ uint64_t Blob::SizeData() const {
   return 0;
 }
 
-Blob::Blob(Blobfs* bs, const Digest& digest)
+Blob::Blob(Blobfs* bs, const digest::Digest& digest)
     : CacheNode(bs->vfs(), digest), blobfs_(bs), clone_watcher_(this) {
   write_info_ = std::make_unique<WriteInfo>();
 }
 
 Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
-    : CacheNode(bs->vfs(), Digest(inode.merkle_root_hash)),
+    : CacheNode(bs->vfs(), digest::Digest(inode.merkle_root_hash)),
       blobfs_(bs),
       state_(BlobState::kReadable),
       syncing_state_(SyncingState::kDone),
@@ -298,7 +295,11 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
   return ZX_OK;
 }
 
-bool Blob::IsDataLoaded() const { return vmo().is_valid(); }
+bool Blob::IsDataLoaded() const {
+  // Data is served out of the vmo() when paged and the unpaged_backing_data_ when not, so either
+  // indicates validity.
+  return vmo().is_valid() || unpaged_backing_data_.is_valid();
+}
 
 bool Blob::IsPagerBacked() const {
   return SupportsPaging(inode_) && state() == BlobState::kReadable;
@@ -405,7 +406,9 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       return status;
     }
   } else {
-    if (zx_status_t status = vmo().write(data, offset, to_write); status != ZX_OK) {
+    // In the uncompressed case, the backing vmo should have been set up to write into already.
+    ZX_ASSERT(unpaged_backing_data_.is_valid());
+    if (zx_status_t status = unpaged_backing_data_.write(data, offset, to_write); status != ZX_OK) {
       FX_LOGS(ERROR) << "blob: VMO write failed: " << zx_status_get_string(status);
       return status;
     }
@@ -422,8 +425,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     return ZX_OK;
   }
 
-  zx_status_t status = Commit();
-  if (status != ZX_OK) {
+  if (zx_status_t status = Commit(); status != ZX_OK) {
     // Record the status so that if called again, we return the same status again.  This is done
     // because it's possible that the end-user managed to partially write some data to this blob in
     // which case the error could be dropped (by zxio or some other layer) and a short write
@@ -431,9 +433,10 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     // return the same error rather than ZX_ERR_BAD_STATE (see above).
     write_info_->write_error = status;
     set_state(BlobState::kError);
+    return status;
   }
 
-  return status;
+  return ZX_OK;
 }
 
 zx_status_t Blob::Commit() {
@@ -497,8 +500,9 @@ zx_status_t Blob::Commit() {
     }
   } else {
     // The data comes from the data buffer.
-    data_ptr = &data.emplace<SimpleBlobDataProducer>(
-        fbl::Span(static_cast<const uint8_t*>(data_mapping_.start()), inode_.blob_size));
+    ZX_ASSERT(unpaged_backing_data_.is_valid());
+    data_ptr = &data.emplace<SimpleBlobDataProducer>(fbl::Span(
+        static_cast<const uint8_t*>(unpaged_backing_data_mapper_.start()), inode_.blob_size));
   }
 
   SimpleBlobDataProducer merkle(fbl::Span(write_info_->merkle_tree(), merkle_size));
@@ -539,9 +543,10 @@ zx_status_t Blob::Commit() {
         return result;
       });
 
-  // Discard things we don't need any more.  This has to be after the Flush call above to ensure
+  // Discard things we don't need any more. This has to be after the Flush call above to ensure
   // all data has been copied from these buffers.
-  data_mapping_.Unmap();
+  unpaged_backing_data_mapper_.Unmap();
+  unpaged_backing_data_.reset();
   FreeVmo();
   write_info_->compressor.reset();
 
@@ -785,10 +790,8 @@ zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actua
     return ZX_ERR_BAD_STATE;
   }
 
-  auto status = LoadVmosFromDisk();
-  if (status != ZX_OK) {
+  if (zx_status_t status = LoadVmosFromDisk(); status != ZX_OK)
     return status;
-  }
 
   if (inode_.blob_size == 0) {
     *actual = 0;
@@ -801,12 +804,27 @@ zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actua
   if (len > (inode_.blob_size - off)) {
     len = inode_.blob_size - off;
   }
+  ZX_DEBUG_ASSERT(IsDataLoaded());
 
-  status = vmo().read(data, off, len);
-  if (status == ZX_OK) {
-    *actual = len;
+  if (IsPagerBacked()) {
+    // Send pager-backed vmo reads through the pager. This will potentially page-in the data by
+    // reentering us from the kernel on the pager thread.
+    //
+    // TODO(fxbug.dev/51111) In the new pager I think this will reenter blobfs with the lock held
+    // and deadlock. This is avoided in the old pager because the paging system never acquires the
+    // Blob's lock.
+    ZX_DEBUG_ASSERT(vmo().is_valid());
+    if (zx_status_t status = vmo().read(data, off, len); status != ZX_OK)
+      return status;
+  } else {
+    // For the unpaged case, read directly out of our local copy.
+    ZX_DEBUG_ASSERT(unpaged_backing_data_.is_valid());
+    if (zx_status_t status = unpaged_backing_data_.read(data, off, len); status != ZX_OK)
+      return status;
   }
-  return status;
+
+  *actual = len;
+  return ZX_OK;
 }
 
 #if defined(ENABLE_BLOBFS_NEW_PAGER)
@@ -878,22 +896,18 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
 #endif
 
 zx_status_t Blob::LoadUnpagedVmosFromDisk() {
-#if defined(ENABLE_BLOBFS_NEW_PAGER)
-  // TODO(fxbug.dev/51111): Figure out if we need to support unpaged blobs in the new system.
-  return ZX_ERR_NOT_SUPPORTED;
-#else
   ZX_ASSERT(!IsDataLoaded());
 
   zx::status<BlobLoader::UnpagedLoadResult> load_result =
       blobfs_->loader().LoadBlob(map_index_, &blobfs_->blob_corruption_notifier());
-  if (load_result.is_ok()) {
-    data_mapping_ = std::move(load_result->data_mapper);
-    merkle_mapping_ = std::move(load_result->merkle);
-    vmo_ = std::move(load_result->data_vmo);
-  }
+  if (load_result.is_error())
+    return load_result.error_value();
 
-  return load_result.status_value();
-#endif
+  unpaged_backing_data_ = std::move(load_result->data_vmo);
+  unpaged_backing_data_mapper_ = std::move(load_result->data_mapper);
+
+  merkle_mapping_ = std::move(load_result->merkle);
+  return ZX_OK;
 }
 
 zx_status_t Blob::LoadVmosFromDisk() {
@@ -923,30 +937,14 @@ zx_status_t Blob::PrepareDataVmoForWriting() {
   if (IsDataLoaded())
     return ZX_OK;
 
-#if defined(ENABLE_BLOBFS_NEW_PAGER)
-  // TODO(fxbug.dev/51111): Blob writing needs to be addressed in the new pager. The problem is
-  // that we can not write directly into the paged VMO (this will cause the kernel to try to fault
-  // it in so we can write to it, which will call back into us).
-  //
-  // The write path either needs to have a different mode where the vmo() isn't registered with the
-  // pager, or we need to write into a parallel write VMO. The latter option would be better
-  // because it would enable us to page from just-written blobs (currently you have to close and
-  // reopen the blob to support paging).
-  return ZX_ERR_NOT_SUPPORTED;
-#else
-
   uint64_t block_aligned_size = fbl::round_up(inode_.blob_size, kBlobfsBlockSize);
-  if (zx_status_t status = data_mapping_.CreateAndMap(
-          block_aligned_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo_);
+  if (zx_status_t status = unpaged_backing_data_mapper_.CreateAndMap(
+          block_aligned_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &unpaged_backing_data_);
       status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to map data vmo: " << zx_status_get_string(status);
     return status;
   }
 
-  SetVmoName();
-
   return ZX_OK;
-#endif
 }
 
 zx_status_t Blob::QueueUnlink() {
@@ -1016,7 +1014,8 @@ void Blob::ActivateLowMemory() {
 
   FreeVmo();
 
-  data_mapping_.Unmap();
+  unpaged_backing_data_mapper_.Unmap();
+  unpaged_backing_data_.reset();
   merkle_mapping_.Reset();
 }
 
@@ -1265,7 +1264,9 @@ zx_status_t Blob::CloseNode() {
   std::lock_guard lock(mutex_);
 
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kClose);
-  if (IsDataLoaded() && !HasReferences()) {
+
+  // Rename the paged blob to help indicate it's inactive. This is non-fatal if it fails.
+  if (vmo() && !HasReferences()) {
     fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
     FormatInactiveBlobDataVmoName(inode_, &data_vmo_name);
     if (zx_status_t status =
@@ -1274,6 +1275,7 @@ zx_status_t Blob::CloseNode() {
       FX_LOGS(WARNING) << "Failed to update blob VMO name: " << zx_status_get_string(status);
     }
   }
+
   // Attempt purge in case blob was unlinked prior to close
   return TryPurge();
 }

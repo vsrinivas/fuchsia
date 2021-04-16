@@ -50,29 +50,20 @@ namespace blobfs {
 class Blobfs;
 class BlobDataProducer;
 
-using digest::Digest;
-
 enum class BlobState : uint8_t {
-  // After Open:
-  kEmpty,
-  // After Space Reserved (but allocation not yet persisted).
-  kDataWrite,
-  // After Writing:
-  kReadable,
-  // After Unlink:
-  kPurged,
-  // Unrecoverable error states:
-  kError,
+  kEmpty,      // After open.
+  kDataWrite,  // After space reserved (but allocation not yet persisted).
+  kReadable,   // After writing.
+  kPurged,     // After unlink,
+  kError,      // Unrecoverable error state.
 };
-
-// clang-format on
 
 class Blob final : public CacheNode, fbl::Recyclable<Blob> {
  public:
   // Constructs a blob, reads in data, verifies the contents, then destroys the in-memory copy.
   static zx_status_t LoadAndVerifyBlob(Blobfs* bs, uint32_t node_index);
 
-  Blob(Blobfs* bs, const Digest& digest);
+  Blob(Blobfs* bs, const digest::Digest& digest);
 
   // Creates a readable blob from existing data.
   Blob(Blobfs* bs, uint32_t node_index, const Inode& inode);
@@ -81,11 +72,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // Note this Blob's hash is stored on the CacheNode base class:
   //
-  // const Digest& digest() const;
+  // const digest::Digest& digest() const;
 
-  ////////////////
-  // fs::Vnode interface.
-
+  // fs::Vnode implementation:
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final FS_TA_EXCLUDES(mutex_);
   fs::VnodeProtocolSet GetProtocols() const final FS_TA_EXCLUDES(mutex_);
@@ -109,13 +98,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   void VmoRead(uint64_t offset, uint64_t length) override FS_TA_EXCLUDES(mutex_);
 #endif
 
-  ////////////////
-  // fbl::Recyclable interface.
-
+  // fbl::Removeable implementation:
   void fbl_recycle() final { CacheNode::fbl_recycle(); }
-
-  ////////////////
-  // Other methods.
 
   // Returned true if this blob is marked for deletion.
   //
@@ -201,7 +185,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
     return !HasReferences() && (deletable_ || state() != BlobState::kReadable);
   }
 
-  // Returns whether the blob's contents are pager-backed or not.
+  // Returns whether the blob's is primarily pager-backed. We can still page from these blobs,
+  // but have to stopre an intermediate copy in unpaged_backing_data_.
   bool IsPagerBacked() const FS_TA_REQUIRES(mutex_);
 
   // Vnode protected overrides:
@@ -349,7 +334,26 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   uint32_t map_index_ FS_TA_GUARDED(mutex_) = 0;
 
+  // There are some cases where we can't read data into the paged vmo as the kernel requests:
+  //
+  //  - Using old compression formats that don't support seeking.
+  //  - When accumulating data being written to the blob.
+  //  - After writing the complete data but before closing it. (We do not currently support
+  //    reading from the blob in this state.)
+  //
+  // In these cases, this VMO holds the data. It can be copied into the pager-backed vmo() as
+  // requested by the kernel. We can't just prepopulate the vmo() because writing into it will
+  // attempt to page it in, reentering us. We could use the pager ops to supply data, but we can't
+  // depend on the kernel never to flush these so need to have another copy.
+  //
+  // This value is only used when !IsPagerBacked().
+  zx::vmo unpaged_backing_data_ FS_TA_GUARDED(mutex_);
+  fzl::VmoMapper unpaged_backing_data_mapper_ FS_TA_GUARDED(mutex_);
+
 #if !defined(ENABLE_BLOBFS_NEW_PAGER)
+  // The vmo registered with the pager. This will be valid for blobs that support paging (readable
+  // and using the right compression formats). See also unpaged_backing_data_.
+  //
   // In the new pager, these members are in the PagedVmo base class.
   zx::vmo vmo_ FS_TA_GUARDED(mutex_);
   const zx::vmo& vmo() const FS_TA_REQUIRES(mutex_) { return vmo_; }
@@ -365,10 +369,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // For small blobs, merkle_mapping_ may be absent, since small blobs may not have any stored
   // merkle tree.
   fzl::OwnedVmoMapper merkle_mapping_ FS_TA_GUARDED(mutex_);
-
-  // Mapped data VMO. This will be mapped during writing and for unpaged blobs, but the data
-  // will be unmapped otherwise.
-  fzl::VmoMapper data_mapping_ FS_TA_GUARDED(mutex_);  // Vmo is owned separately (see vmo()).
 
 #if !defined(ENABLE_BLOBFS_NEW_PAGER)
   // In the new pager the PagedVnode base class provides this function. Defining an identical
