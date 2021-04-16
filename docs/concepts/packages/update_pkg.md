@@ -25,7 +25,6 @@ perform. Then, the board file reads and verifies that there is no misconfigurati
 Then, the update package fetches the packages to serve. Finally, the update package writes
 the kernel images and ensures that `vbmeta` must be written after the kernel image.
 
-
 ## Content of the update package
 
 The structure of the update package--fuchsia-pkg://fuchsia.com/update--looks like:
