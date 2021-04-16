@@ -173,6 +173,7 @@ pub enum HandleSubtype {
     Interrupt,
     Iommu,
     Job,
+    Msi,
     Pager,
     PciDevice,
     Pmt,

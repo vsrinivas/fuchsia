@@ -141,6 +141,8 @@ std::string NameHandleSubtype(types::HandleSubtype subtype) {
       return "job";
     case types::HandleSubtype::kLog:
       return "debuglog";
+    case types::HandleSubtype::kMsiAllocation:
+      return "msi";
     case types::HandleSubtype::kPager:
       return "pager";
     case types::HandleSubtype::kPciDevice:
@@ -277,6 +279,8 @@ std::string NameHandleZXObjType(types::HandleSubtype subtype) {
       return "ZX_OBJ_TYPE_JOB";
     case types::HandleSubtype::kLog:
       return "ZX_OBJ_TYPE_LOG";
+    case types::HandleSubtype::kMsiAllocation:
+      return "ZX_OBJ_TYPE_MSI_ALLOCATION";
     case types::HandleSubtype::kPager:
       return "ZX_OBJ_TYPE_PAGER";
     case types::HandleSubtype::kPciDevice:

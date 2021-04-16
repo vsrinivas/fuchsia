@@ -1,7 +1,1496 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
+    "additionalProperties": false,
+    "definitions": {
+        "array-type": {
+            "description": "Definition of array type",
+            "properties": {
+                "element_count": {
+                    "$ref": "#/definitions/count",
+                    "description": "Number of elements in array type"
+                },
+                "element_type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Element type of array type"
+                },
+                "kind": {
+                    "description": "Selection of base type as array type",
+                    "enum": [
+                        "array"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "kind",
+                "element_type",
+                "element_count"
+            ],
+            "type": "object"
+        },
+        "attribute": {
+            "description": "Definition of an attribute list element",
+            "properties": {
+                "name": {
+                    "description": "Attribute name",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "Attribute value",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "name",
+                "value"
+            ],
+            "type": "object"
+        },
+        "attributes-list": {
+            "description": "Definition of an attribute list",
+            "items": {
+                "$ref": "#/definitions/attribute",
+                "description": "List of attributes"
+            },
+            "type": "array"
+        },
+        "binary-operator-constant": {
+            "description": "Definition of a constant value (using a binary operator)",
+            "properties": {
+                "expression": {
+                    "description": "Expression used in source code to define the constant",
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "Selection of constant value using a literal",
+                    "enum": [
+                        "binary_operator"
+                    ],
+                    "type": "string"
+                },
+                "value": {
+                    "description": "Evaluated value of the constant",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "kind",
+                "value",
+                "expression"
+            ],
+            "type": "object"
+        },
+        "bits": {
+            "description": "Definition of a bits declaration",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "mask": {
+                    "description": "Mask of all members",
+                    "type": "string"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of attributes of the bits declaration"
+                },
+                "members": {
+                    "description": "List of bits members",
+                    "items": {
+                        "$ref": "#/definitions/bits-member"
+                    },
+                    "type": "array"
+                },
+                "name": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Fully qualified name of the bits"
+                },
+                "strict": {
+                    "description": "Strictness of the bits",
+                    "type": "boolean"
+                },
+                "type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Type of the bits"
+                }
+            },
+            "required": [
+                "name",
+                "type",
+                "mask",
+                "members",
+                "strict"
+            ],
+            "type": "object"
+        },
+        "bits-member": {
+            "description": "Definition of an bits member",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of attributes of the bits member"
+                },
+                "name": {
+                    "$ref": "#/definitions/identifier",
+                    "description": "Name of the bits member"
+                },
+                "value": {
+                    "$ref": "#/definitions/constant",
+                    "description": "Value of the bits member"
+                }
+            },
+            "required": [
+                "name",
+                "value"
+            ],
+            "type": "object"
+        },
+        "compound-identifier": {
+            "description": "Definition of compound identifier",
+            "pattern": "([_A-Za-z][_A-Za-z0-9]*-)*[_A-Za-z][_A-Za-z0-9]*/[_A-Za-z][_A-Za-z0-9]*",
+            "type": "string"
+        },
+        "const": {
+            "description": "Definition of a constant declaration",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of attributes of the constant declaration"
+                },
+                "name": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Fully qualified name of the constant"
+                },
+                "type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Type of the constant"
+                },
+                "value": {
+                    "$ref": "#/definitions/constant",
+                    "description": "Value of the constant"
+                }
+            },
+            "required": [
+                "name",
+                "type",
+                "value"
+            ],
+            "type": "object"
+        },
+        "constant": {
+            "description": "Definition of a constant value",
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/identifier-constant",
+                    "description": "Selection of a constant value (using an identifier)"
+                },
+                {
+                    "$ref": "#/definitions/literal-constant",
+                    "description": "Selection of a constant value (using a literal)"
+                },
+                {
+                    "$ref": "#/definitions/binary-operator-constant",
+                    "description": "Selection of a constant value (using a binary operator)"
+                }
+            ]
+        },
+        "count": {
+            "description": "Definition of count",
+            "maximum": 4294967295,
+            "minimum": 0,
+            "type": "integer"
+        },
+        "declarations-map": {
+            "description": "Definition of declarations of a library",
+            "patternProperties": {
+                ".*": {
+                    "enum": [
+                        "bits",
+                        "const",
+                        "enum",
+                        "interface",
+                        "service",
+                        "experimental_resource",
+                        "struct",
+                        "table",
+                        "union",
+                        "type_alias"
+                    ],
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "enum": {
+            "description": "Definition of an enum declaration",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of attributes of the enum declaration"
+                },
+                "maybe_unknown_value": {
+                    "description": "Unknown member value (present for flexible enums only)",
+                    "type": "integer"
+                },
+                "members": {
+                    "description": "List of enum members",
+                    "items": {
+                        "$ref": "#/definitions/enum-member"
+                    },
+                    "type": "array"
+                },
+                "name": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Fully qualified name of the enum"
+                },
+                "strict": {
+                    "description": "Strictness of the enum",
+                    "type": "boolean"
+                },
+                "type": {
+                    "$ref": "#/definitions/integer-type",
+                    "description": "Type of the enum"
+                }
+            },
+            "required": [
+                "name",
+                "type",
+                "members",
+                "strict"
+            ],
+            "type": "object"
+        },
+        "enum-member": {
+            "description": "Definition of an enum member",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of attributes of the enum member"
+                },
+                "name": {
+                    "$ref": "#/definitions/identifier",
+                    "description": "Name of the enum member"
+                },
+                "value": {
+                    "$ref": "#/definitions/constant",
+                    "description": "Value of the enum member"
+                }
+            },
+            "required": [
+                "name",
+                "value"
+            ],
+            "type": "object"
+        },
+        "external-declarations-map": {
+            "description": "Definition of declarations of an external library",
+            "patternProperties": {
+                ".*": {
+                    "oneOf": [
+                        {
+                            "properties": {
+                                "kind": {
+                                    "enum": [
+                                        "struct",
+                                        "table",
+                                        "union"
+                                    ],
+                                    "type": "string"
+                                },
+                                "resource": {
+                                    "type": "boolean"
+                                }
+                            },
+                            "required": [
+                                "kind",
+                                "resource"
+                            ],
+                            "type": "object"
+                        },
+                        {
+                            "properties": {
+                                "kind": {
+                                    "enum": [
+                                        "bits",
+                                        "const",
+                                        "enum",
+                                        "interface",
+                                        "service",
+                                        "experimental_resource",
+                                        "type_alias"
+                                    ],
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "kind"
+                            ],
+                            "type": "object"
+                        }
+                    ]
+                }
+            },
+            "type": "object"
+        },
+        "fieldshape": {
+            "description": "Definition of a field shape",
+            "properties": {
+                "offset": {
+                    "$ref": "#/definitions/count",
+                    "description": "Offset in bytes at which a member starts"
+                },
+                "padding": {
+                    "$ref": "#/definitions/count",
+                    "description": "Padding in bytes which follows a member"
+                }
+            },
+            "required": [
+                "offset",
+                "padding"
+            ],
+            "type": "object"
+        },
+        "handle-subtype": {
+            "description": "Definition of handle sub-type",
+            "enum": [
+                "handle",
+                "bti",
+                "channel",
+                "clock",
+                "debuglog",
+                "event",
+                "eventpair",
+                "exception",
+                "fifo",
+                "guest",
+                "interrupt",
+                "iommu",
+                "job",
+                "msi",
+                "pager",
+                "pcidevice",
+                "pmt",
+                "port",
+                "process",
+                "profile",
+                "resource",
+                "socket",
+                "stream",
+                "suspendtoken",
+                "thread",
+                "timer",
+                "vcpu",
+                "vmar",
+                "vmo"
+            ],
+            "type": "string"
+        },
+        "handle-type": {
+            "description": "Definition of a handle type",
+            "properties": {
+                "kind": {
+                    "description": "Selection of base type as handle type",
+                    "enum": [
+                        "handle"
+                    ],
+                    "type": "string"
+                },
+                "nullable": {
+                    "description": "Flag indicating nullability of handle type",
+                    "type": "boolean"
+                },
+                "rights": {
+                    "description": "Rights that must be present on a handle",
+                    "type": "integer"
+                },
+                "subtype": {
+                    "$ref": "#/definitions/handle-subtype",
+                    "description": "Sub-type of handle type"
+                }
+            },
+            "required": [
+                "kind",
+                "subtype",
+                "rights",
+                "nullable"
+            ],
+            "type": "object"
+        },
+        "identifier": {
+            "description": "Definition of identifier",
+            "pattern": "^[A-Za-z]([_A-Za-z0-9]*[A-Za-z0-9])?$",
+            "type": "string"
+        },
+        "identifier-constant": {
+            "description": "Definition of a constant value (using an identifier)",
+            "properties": {
+                "expression": {
+                    "description": "Expression used in source code to define the constant",
+                    "type": "string"
+                },
+                "identifier": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Identifier used as constant value"
+                },
+                "kind": {
+                    "description": "Selection of constant value using an identifier",
+                    "enum": [
+                        "identifier"
+                    ],
+                    "type": "string"
+                },
+                "value": {
+                    "description": "Evaluated value of the constant",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "kind",
+                "identifier",
+                "value",
+                "expression"
+            ],
+            "type": "object"
+        },
+        "identifier-type": {
+            "description": "Definition of an identifier type",
+            "properties": {
+                "identifier": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Identifier type name"
+                },
+                "kind": {
+                    "description": "Selection of base type as identifier type",
+                    "enum": [
+                        "identifier"
+                    ],
+                    "type": "string"
+                },
+                "nullable": {
+                    "description": "Flag indicating nullability of identifier type",
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "kind",
+                "identifier",
+                "nullable"
+            ],
+            "type": "object"
+        },
+        "integer-type": {
+            "description": "Definition of integer primitive sub-type",
+            "enum": [
+                "int8",
+                "int16",
+                "int32",
+                "int64",
+                "uint8",
+                "uint16",
+                "uint32",
+                "uint64"
+            ],
+            "type": "string"
+        },
+        "interface": {
+            "description": "Definition of an interface declaration",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of attributes of the interface declaration"
+                },
+                "methods": {
+                    "description": "List of methods and events",
+                    "items": {
+                        "$ref": "#/definitions/interface-method"
+                    },
+                    "type": "array"
+                },
+                "name": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Name of the interface"
+                }
+            },
+            "required": [
+                "name",
+                "methods"
+            ],
+            "type": "object"
+        },
+        "interface-method": {
+            "description": "Definition of a method or event",
+            "properties": {
+                "has_request": {
+                    "description": "Flag indicating that interface method has a request component",
+                    "type": "boolean"
+                },
+                "has_response": {
+                    "description": "Flag indicating that interface method has a response component",
+                    "type": "boolean"
+                },
+                "is_composed": {
+                    "description": "Flag indicating whether method was composed into this protocol",
+                    "type": "boolean"
+                },
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of attributes of the method or event"
+                },
+                "maybe_request": {
+                    "description": "Optional list of interface method request parameters",
+                    "items": {
+                        "$ref": "#/definitions/interface-method-parameter"
+                    },
+                    "type": "array"
+                },
+                "maybe_request_type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                },
+                "maybe_response": {
+                    "description": "Optional list of interface method response parameters",
+                    "items": {
+                        "$ref": "#/definitions/interface-method-parameter"
+                    },
+                    "type": "array"
+                },
+                "maybe_response_type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                },
+                "name": {
+                    "$ref": "#/definitions/identifier",
+                    "description": "Name of the interface method"
+                },
+                "ordinal": {
+                    "$ref": "#/definitions/ordinal",
+                    "description": "Ordinal number of the interface method"
+                }
+            },
+            "required": [
+                "ordinal",
+                "name",
+                "has_request",
+                "has_response",
+                "is_composed"
+            ],
+            "type": "object"
+        },
+        "interface-method-parameter": {
+            "description": "Definition of parameter or return of a method or event",
+            "properties": {
+                "field_shape_v1": {
+                    "$ref": "#/definitions/fieldshape",
+                    "description": "Field shape"
+                },
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of attributes of the method or event parameter"
+                },
+                "name": {
+                    "$ref": "#/definitions/identifier",
+                    "description": "Name of the parameter or return"
+                },
+                "type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Type of the parameter or return"
+                }
+            },
+            "required": [
+                "type",
+                "name",
+                "field_shape_v1"
+            ],
+            "type": "object"
+        },
+        "library": {
+            "description": "Definition of library",
+            "properties": {
+                "declarations": {
+                    "$ref": "#/definitions/external-declarations-map",
+                    "description": "Declarations of library"
+                },
+                "name": {
+                    "$ref": "#/definitions/library-identifier",
+                    "description": "Name of library"
+                }
+            },
+            "required": [
+                "name",
+                "declarations"
+            ],
+            "type": "object"
+        },
+        "library-identifier": {
+            "description": "Definition of library identifier",
+            "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)*$",
+            "type": "string"
+        },
+        "literal-constant": {
+            "description": "Definition of a constant value (using a literal)",
+            "properties": {
+                "expression": {
+                    "description": "Expression used in source code to define the constant",
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "Selection of constant value using a literal",
+                    "enum": [
+                        "literal"
+                    ],
+                    "type": "string"
+                },
+                "literal": {
+                    "$ref": "#/definitions/literal-value",
+                    "description": "Literal used as constant value"
+                },
+                "value": {
+                    "description": "Evaluated value of the constant",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "kind",
+                "literal",
+                "value",
+                "expression"
+            ],
+            "type": "object"
+        },
+        "literal-value": {
+            "description": "Definition of a literal constant value",
+            "properties": {
+                "expression": {
+                    "description": "Original in source constant value, may be a const expression.",
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "Selection of string literal type",
+                    "enum": [
+                        "string",
+                        "numeric",
+                        "true",
+                        "false"
+                    ],
+                    "type": "string"
+                },
+                "value": {
+                    "description": "Resolved constant value",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "kind",
+                "value",
+                "expression"
+            ],
+            "type": "object"
+        },
+        "location": {
+            "properties": {
+                "column": {
+                    "maximum": 4294967295,
+                    "minimum": 1,
+                    "type": "integer"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "length": {
+                    "maximum": 4294967295,
+                    "minimum": 0,
+                    "type": "integer"
+                },
+                "line": {
+                    "maximum": 4294967295,
+                    "minimum": 1,
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "filename",
+                "line",
+                "column",
+                "length"
+            ],
+            "type": "object"
+        },
+        "ordinal": {
+            "description": "Definition of ordinal",
+            "maximum": 9223372036854775807,
+            "minimum": 1,
+            "type": "integer"
+        },
+        "primitive-subtype": {
+            "description": "Definition of primitive sub-type",
+            "oneOf": [
+                {
+                    "description": "Selection of non-integer primitive sub-type",
+                    "enum": [
+                        "bool",
+                        "float32",
+                        "float64"
+                    ],
+                    "type": "string"
+                },
+                {
+                    "$ref": "#/definitions/integer-type",
+                    "description": "Selection of integer primitive sub-type"
+                }
+            ]
+        },
+        "primitive-type": {
+            "description": "Definition of primitive type",
+            "properties": {
+                "kind": {
+                    "description": "Selection of base type as primitive type",
+                    "enum": [
+                        "primitive"
+                    ],
+                    "type": "string"
+                },
+                "subtype": {
+                    "$ref": "#/definitions/primitive-subtype",
+                    "description": "Sub-type of the primitive type"
+                }
+            },
+            "required": [
+                "kind",
+                "subtype"
+            ],
+            "type": "object"
+        },
+        "request-type": {
+            "description": "Definition of a request type",
+            "properties": {
+                "kind": {
+                    "description": "Selection of base type as request type",
+                    "enum": [
+                        "request"
+                    ],
+                    "type": "string"
+                },
+                "nullable": {
+                    "description": "Flag indicating nullability of request type",
+                    "type": "boolean"
+                },
+                "subtype": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Interface name of request type"
+                }
+            },
+            "required": [
+                "kind",
+                "subtype",
+                "nullable"
+            ],
+            "type": "object"
+        },
+        "resource": {
+            "description": "Definition of a resource declaration",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of attributes of the resource declaration"
+                },
+                "name": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Fully qualified name of the resource"
+                },
+                "properties": {
+                    "description": "List of properties",
+                    "items": {
+                        "$ref": "#/definitions/resource-property"
+                    },
+                    "type": "array"
+                },
+                "type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Type of the resource"
+                }
+            },
+            "required": [
+                "name",
+                "location",
+                "type"
+            ],
+            "type": "object"
+        },
+        "resource-property": {
+            "description": "Definition of a resource property",
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/identifier",
+                    "description": "Name of the property"
+                },
+                "type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Type of the resource property"
+                }
+            },
+            "required": [
+                "type",
+                "name"
+            ],
+            "type": "object"
+        },
+        "service": {
+            "description": "Definition of a service declaration",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of attributes of the service declaration"
+                },
+                "members": {
+                    "description": "List of service members",
+                    "items": {
+                        "$ref": "#/definitions/service-member"
+                    },
+                    "type": "array"
+                },
+                "name": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Name of service"
+                }
+            },
+            "required": [
+                "name",
+                "location",
+                "members"
+            ],
+            "type": "object"
+        },
+        "service-member": {
+            "description": "Definition of a service member",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of service member attributes"
+                },
+                "name": {
+                    "$ref": "#/definitions/identifier",
+                    "description": "Name of the service member"
+                },
+                "type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Type of the service member"
+                }
+            },
+            "required": [
+                "type",
+                "name",
+                "location"
+            ],
+            "type": "object"
+        },
+        "string-type": {
+            "description": "Definition of string type",
+            "properties": {
+                "kind": {
+                    "description": "Selection of base type as string type",
+                    "enum": [
+                        "string"
+                    ],
+                    "type": "string"
+                },
+                "maybe_element_count": {
+                    "$ref": "#/definitions/count",
+                    "description": "Optional size of string, in bytes"
+                },
+                "nullable": {
+                    "description": "Flag indicating nullability of string type",
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "kind",
+                "nullable"
+            ],
+            "type": "object"
+        },
+        "struct": {
+            "description": "Definition of a struct declaration",
+            "properties": {
+                "anonymous": {
+                    "description": "Flag indicating that struct is anonymous",
+                    "type": "boolean"
+                },
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "max_handles": {
+                    "$ref": "#/definitions/count",
+                    "description": "Maximum number of handles present in the struct"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of attributes of the struct declaration"
+                },
+                "members": {
+                    "description": "List of struct members",
+                    "items": {
+                        "$ref": "#/definitions/struct-member"
+                    },
+                    "type": "array"
+                },
+                "name": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Name of struct"
+                },
+                "resource": {
+                    "description": "True if the struct is a resource type (declared to contain handles)",
+                    "type": "boolean"
+                },
+                "type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                }
+            },
+            "required": [
+                "name",
+                "members",
+                "resource",
+                "type_shape_v1"
+            ],
+            "type": "object"
+        },
+        "struct-member": {
+            "description": "Definition of a struct member",
+            "properties": {
+                "field_shape_v1": {
+                    "$ref": "#/definitions/fieldshape",
+                    "description": "Field shape"
+                },
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of struct member attributes"
+                },
+                "maybe_default_value": {
+                    "$ref": "#/definitions/constant",
+                    "description": "Optional default value for struct member"
+                },
+                "name": {
+                    "$ref": "#/definitions/identifier",
+                    "description": "Name of struct member"
+                },
+                "type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Type of the struct member"
+                }
+            },
+            "required": [
+                "type",
+                "name",
+                "field_shape_v1"
+            ],
+            "type": "object"
+        },
+        "table": {
+            "description": "Definition of a table",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "max_handles": {
+                    "$ref": "#/definitions/count",
+                    "description": "Maximum number of handles present in the table"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of table attributes"
+                },
+                "members": {
+                    "description": "List of table members",
+                    "items": {
+                        "$ref": "#/definitions/table-member"
+                    },
+                    "type": "array"
+                },
+                "name": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Name of table"
+                },
+                "resource": {
+                    "description": "True if the table is a resource type (may contain handles)",
+                    "type": "boolean"
+                },
+                "strict": {
+                    "description": "Strictness of table",
+                    "type": "boolean"
+                },
+                "type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                }
+            },
+            "required": [
+                "name",
+                "members",
+                "type_shape_v1",
+                "strict",
+                "resource"
+            ],
+            "type": "object"
+        },
+        "table-member": {
+            "description": "Definition of a table member",
+            "properties": {
+                "alignment": {
+                    "$ref": "#/definitions/count",
+                    "description": "Alignment of table member"
+                },
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "max_out_of_line": {
+                    "$ref": "#/definitions/count",
+                    "description": "Maximum size of the out-of-line payload"
+                },
+                "maybe_default_value": {
+                    "$ref": "#/definitions/constant",
+                    "description": "Optional default value for table member"
+                },
+                "name": {
+                    "$ref": "#/definitions/identifier",
+                    "description": "Name of table member"
+                },
+                "offset": {
+                    "$ref": "#/definitions/count",
+                    "description": "Offset of table member"
+                },
+                "ordinal": {
+                    "$ref": "#/definitions/ordinal",
+                    "description": "Ordinal value of table member"
+                },
+                "reserved": {
+                    "description": "Flag indicating that field is reserved",
+                    "type": "boolean"
+                },
+                "size": {
+                    "$ref": "#/definitions/count",
+                    "description": "Size of table member"
+                },
+                "type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Type of table member"
+                }
+            },
+            "required": [
+                "ordinal",
+                "reserved"
+            ],
+            "type": "object"
+        },
+        "type": {
+            "description": "Definition of type",
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/array-type",
+                    "description": "Selection of array type"
+                },
+                {
+                    "$ref": "#/definitions/vector-type",
+                    "description": "Selection of vector type"
+                },
+                {
+                    "$ref": "#/definitions/string-type",
+                    "description": "Selection of string type"
+                },
+                {
+                    "$ref": "#/definitions/handle-type",
+                    "description": "Selection of handle type"
+                },
+                {
+                    "$ref": "#/definitions/request-type",
+                    "description": "Selection of request type"
+                },
+                {
+                    "$ref": "#/definitions/primitive-type",
+                    "description": "Selection of primitive type"
+                },
+                {
+                    "$ref": "#/definitions/identifier-type",
+                    "description": "Selection of identifier type"
+                }
+            ]
+        },
+        "type-constructor": {
+            "description": "Definition of a type constructor",
+            "properties": {
+                "args": {
+                    "description": "List of arguments",
+                    "items": {
+                        "$ref": "#/definitions/type-constructor"
+                    },
+                    "type": "array"
+                },
+                "maybe_handle_subtype": {
+                    "$ref": "#/definitions/handle-subtype",
+                    "description": "Optional handle subtype"
+                },
+                "maybe_size": {
+                    "$ref": "#/definitions/constant",
+                    "description": "Optional number of maximum elements"
+                },
+                "name": {
+                    "description": "Name of the type constructor",
+                    "type": "string"
+                },
+                "nullable": {
+                    "description": "Flag indicating nullability",
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "name",
+                "args",
+                "nullable"
+            ],
+            "type": "object"
+        },
+        "type_alias": {
+            "description": "Definition of a type alias",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "name": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Name of a type alias, i.e. the alias"
+                },
+                "partial_type_ctor": {
+                    "$ref": "#/definitions/type-constructor",
+                    "description": "Type constructor being aliased, possibly partial"
+                }
+            },
+            "required": [
+                "name",
+                "location",
+                "partial_type_ctor"
+            ],
+            "type": "object"
+        },
+        "typeshape": {
+            "description": "Definition of a type shape",
+            "properties": {
+                "alignment": {
+                    "$ref": "#/definitions/count",
+                    "description": "Alignment of this declaration"
+                },
+                "depth": {
+                    "$ref": "#/definitions/count",
+                    "description": "Maximum depth of this declaration"
+                },
+                "has_flexible_envelope": {
+                    "description": "Flag indicating if this declaration contains flexible envelopes (in unions or tables)",
+                    "type": "boolean"
+                },
+                "has_padding": {
+                    "description": "Flag indicating if there could be padding bytes in this declaration",
+                    "type": "boolean"
+                },
+                "inline_size": {
+                    "$ref": "#/definitions/count",
+                    "description": "Size of bytes in the inline portion of this declaration"
+                },
+                "max_handles": {
+                    "$ref": "#/definitions/count",
+                    "description": "Maximum number of handles this declaration can hold"
+                },
+                "max_out_of_line": {
+                    "$ref": "#/definitions/count",
+                    "description": "Maximum number of bytes in the out-of-line portion of this declaration"
+                }
+            },
+            "required": [
+                "inline_size",
+                "alignment",
+                "depth",
+                "max_handles",
+                "max_out_of_line",
+                "has_padding",
+                "has_flexible_envelope"
+            ],
+            "type": "object"
+        },
+        "union": {
+            "description": "Definition of an extensible union",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "max_handles": {
+                    "$ref": "#/definitions/count",
+                    "description": "Maximum number of handles present in the extensible union"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of extensible union attributes"
+                },
+                "members": {
+                    "description": "List of extensible union members",
+                    "items": {
+                        "$ref": "#/definitions/union-member"
+                    },
+                    "type": "array"
+                },
+                "name": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Name of extensible union"
+                },
+                "resource": {
+                    "description": "True if the union is a resource type (may contain handles)",
+                    "type": "boolean"
+                },
+                "strict": {
+                    "description": "Strictness of extensible union",
+                    "type": "boolean"
+                },
+                "type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                }
+            },
+            "required": [
+                "name",
+                "members",
+                "type_shape_v1",
+                "strict",
+                "resource"
+            ],
+            "type": "object"
+        },
+        "union-member": {
+            "description": "Definition of an extensible union member",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
+                "max_out_of_line": {
+                    "$ref": "#/definitions/count",
+                    "description": "Maximum size of the out-of-line payload"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of extensible union member attributes"
+                },
+                "name": {
+                    "$ref": "#/definitions/identifier",
+                    "description": "Name of extensible union member"
+                },
+                "offset": {
+                    "$ref": "#/definitions/count",
+                    "description": "Offset of extensible union member"
+                },
+                "ordinal": {
+                    "$ref": "#/definitions/ordinal",
+                    "description": "Ordinal value of extensible union member"
+                },
+                "reserved": {
+                    "description": "Flag indicating that the member is reserved",
+                    "type": "boolean"
+                },
+                "type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Type of extensible union member"
+                }
+            },
+            "required": [
+                "ordinal",
+                "reserved"
+            ],
+            "type": "object"
+        },
+        "vector-type": {
+            "description": "Definition of vector type",
+            "properties": {
+                "element_type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Element type of vector type"
+                },
+                "kind": {
+                    "description": "Selection of base type as vector type",
+                    "enum": [
+                        "vector"
+                    ],
+                    "type": "string"
+                },
+                "maybe_element_count": {
+                    "$ref": "#/definitions/count",
+                    "description": "Optional number of maximum elements in vector type"
+                },
+                "nullable": {
+                    "description": "Flag indicating nullability of vector type",
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "kind",
+                "element_type",
+                "nullable"
+            ],
+            "type": "object"
+        },
+        "version": {
+            "description": "Definition of version regex",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+            "type": "string"
+        }
+    },
     "description": "See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/json-ir.md",
-    "type": "object",
+    "properties": {
+        "bits_declarations": {
+            "description": "List of bits declarations",
+            "items": {
+                "$ref": "#/definitions/bits"
+            },
+            "type": "array"
+        },
+        "const_declarations": {
+            "description": "List of constants",
+            "items": {
+                "$ref": "#/definitions/const"
+            },
+            "type": "array"
+        },
+        "declaration_order": {
+            "description": "List of declarations in declaration order",
+            "items": {
+                "$ref": "#/definitions/compound-identifier"
+            },
+            "type": "array"
+        },
+        "declarations": {
+            "$ref": "#/definitions/declarations-map",
+            "description": "List of declarations and their types"
+        },
+        "enum_declarations": {
+            "description": "List of enumerations",
+            "items": {
+                "$ref": "#/definitions/enum"
+            },
+            "type": "array"
+        },
+        "experimental_resource_declarations": {
+            "description": "List of resources",
+            "items": {
+                "$ref": "#/definitions/resource"
+            },
+            "type": "array"
+        },
+        "interface_declarations": {
+            "description": "List of interfaces",
+            "items": {
+                "$ref": "#/definitions/interface"
+            },
+            "type": "array"
+        },
+        "library_dependencies": {
+            "description": "List of dependencies on other libraries",
+            "items": {
+                "$ref": "#/definitions/library"
+            },
+            "type": "array"
+        },
+        "maybe_attributes": {
+            "$ref": "#/definitions/attributes-list",
+            "description": "Optional list of attributes of the library"
+        },
+        "name": {
+            "$ref": "#/definitions/library-identifier",
+            "description": "Name of the library"
+        },
+        "service_declarations": {
+            "description": "List of services",
+            "items": {
+                "$ref": "#/definitions/service"
+            },
+            "type": "array"
+        },
+        "struct_declarations": {
+            "description": "List of structures",
+            "items": {
+                "$ref": "#/definitions/struct"
+            },
+            "type": "array"
+        },
+        "table_declarations": {
+            "description": "List of tables",
+            "items": {
+                "$ref": "#/definitions/table"
+            },
+            "type": "array"
+        },
+        "type_alias_declarations": {
+            "description": "List of type aliases",
+            "items": {
+                "$ref": "#/definitions/type_alias"
+            },
+            "type": "array"
+        },
+        "union_declarations": {
+            "description": "List of unions",
+            "items": {
+                "$ref": "#/definitions/union"
+            },
+            "type": "array"
+        },
+        "version": {
+            "$ref": "#/definitions/version",
+            "description": "Version of the JSON IR schema"
+        }
+    },
     "required": [
         "version",
         "name",
@@ -19,1493 +1508,5 @@
         "declarations",
         "library_dependencies"
     ],
-    "properties": {
-        "version": {
-            "description": "Version of the JSON IR schema",
-            "$ref": "#/definitions/version"
-        },
-        "name": {
-            "description": "Name of the library",
-            "$ref": "#/definitions/library-identifier"
-        },
-        "maybe_attributes": {
-            "description": "Optional list of attributes of the library",
-            "$ref": "#/definitions/attributes-list"
-        },
-        "bits_declarations": {
-            "description": "List of bits declarations",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/bits"
-            }
-        },
-        "const_declarations": {
-            "description": "List of constants",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/const"
-            }
-        },
-        "enum_declarations": {
-            "description": "List of enumerations",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/enum"
-            }
-        },
-        "experimental_resource_declarations": {
-            "description": "List of resources",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/resource"
-            }
-        },
-        "interface_declarations": {
-            "description": "List of interfaces",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/interface"
-            }
-        },
-        "service_declarations": {
-            "description": "List of services",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/service"
-            }
-        },
-        "struct_declarations": {
-            "description": "List of structures",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/struct"
-            }
-        },
-        "table_declarations": {
-            "description": "List of tables",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/table"
-            }
-        },
-        "union_declarations": {
-            "description": "List of unions",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/union"
-            }
-        },
-        "type_alias_declarations": {
-            "description": "List of type aliases",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/type_alias"
-            }
-        },
-        "declaration_order": {
-            "description": "List of declarations in declaration order",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/compound-identifier"
-            }
-        },
-        "declarations": {
-            "description": "List of declarations and their types",
-            "$ref": "#/definitions/declarations-map"
-        },
-        "library_dependencies": {
-            "description": "List of dependencies on other libraries",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/library"
-            }
-        }
-    },
-    "definitions": {
-        "bits": {
-            "description": "Definition of a bits declaration",
-            "type": "object",
-            "required": [
-                "name",
-                "type",
-                "mask",
-                "members",
-                "strict"
-            ],
-            "properties": {
-                "maybe_attributes": {
-                    "description": "Optional list of attributes of the bits declaration",
-                    "$ref": "#/definitions/attributes-list"
-                },
-                "name": {
-                    "description": "Fully qualified name of the bits",
-                    "$ref": "#/definitions/compound-identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "type": {
-                    "description": "Type of the bits",
-                    "$ref": "#/definitions/type"
-                },
-                "mask": {
-                    "description": "Mask of all members",
-                    "type": "string"
-                },
-                "members": {
-                    "description": "List of bits members",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/bits-member"
-                    }
-                },
-                "strict": {
-                    "description": "Strictness of the bits",
-                    "type": "boolean"
-                }
-            }
-        },
-        "bits-member": {
-            "description": "Definition of an bits member",
-            "type": "object",
-            "required": [
-                "name",
-                "value"
-            ],
-            "properties": {
-                "name": {
-                    "description": "Name of the bits member",
-                    "$ref": "#/definitions/identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "maybe_attributes": {
-                    "description": "Optional list of attributes of the bits member",
-                    "$ref": "#/definitions/attributes-list"
-                },
-                "value": {
-                    "description": "Value of the bits member",
-                    "$ref": "#/definitions/constant"
-                }
-            }
-        },
-        "const": {
-            "description": "Definition of a constant declaration",
-            "type": "object",
-            "required": [
-                "name",
-                "type",
-                "value"
-            ],
-            "properties": {
-                "maybe_attributes": {
-                    "description": "Optional list of attributes of the constant declaration",
-                    "$ref": "#/definitions/attributes-list"
-                },
-                "name": {
-                    "description": "Fully qualified name of the constant",
-                    "$ref": "#/definitions/compound-identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "type": {
-                    "description": "Type of the constant",
-                    "$ref": "#/definitions/type"
-                },
-                "value": {
-                    "description": "Value of the constant",
-                    "$ref": "#/definitions/constant"
-                }
-            }
-        },
-        "enum": {
-            "description": "Definition of an enum declaration",
-            "type": "object",
-            "required": [
-                "name",
-                "type",
-                "members",
-                "strict"
-            ],
-            "properties": {
-                "maybe_attributes": {
-                    "description": "Optional list of attributes of the enum declaration",
-                    "$ref": "#/definitions/attributes-list"
-                },
-                "name": {
-                    "description": "Fully qualified name of the enum",
-                    "$ref": "#/definitions/compound-identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "type": {
-                    "description": "Type of the enum",
-                    "$ref": "#/definitions/integer-type"
-                },
-                "members": {
-                    "description": "List of enum members",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/enum-member"
-                    }
-                },
-                "strict": {
-                    "description": "Strictness of the enum",
-                    "type": "boolean"
-                },
-                "maybe_unknown_value": {
-                    "description": "Unknown member value (present for flexible enums only)",
-                    "type": "integer"
-                }
-            }
-        },
-        "enum-member": {
-            "description": "Definition of an enum member",
-            "type": "object",
-            "required": [
-                "name",
-                "value"
-            ],
-            "properties": {
-                "name": {
-                    "description": "Name of the enum member",
-                    "$ref": "#/definitions/identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "maybe_attributes": {
-                    "description": "Optional list of attributes of the enum member",
-                    "$ref": "#/definitions/attributes-list"
-                },
-                "value": {
-                    "description": "Value of the enum member",
-                    "$ref": "#/definitions/constant"
-                }
-            }
-        },
-        "fieldshape": {
-            "description": "Definition of a field shape",
-            "type": "object",
-            "required": [
-                "offset",
-                "padding"
-            ],
-            "properties": {
-                "offset": {
-                    "description": "Offset in bytes at which a member starts",
-                    "$ref": "#/definitions/count"
-                },
-                "padding": {
-                    "description": "Padding in bytes which follows a member",
-                    "$ref": "#/definitions/count"
-                }
-            }
-        },
-        "interface": {
-            "description": "Definition of an interface declaration",
-            "type": "object",
-            "required": [
-                "name",
-                "methods"
-            ],
-            "properties": {
-                "maybe_attributes": {
-                    "description": "Optional list of attributes of the interface declaration",
-                    "$ref": "#/definitions/attributes-list"
-                },
-                "name": {
-                    "description": "Name of the interface",
-                    "$ref": "#/definitions/compound-identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "methods": {
-                    "description": "List of methods and events",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/interface-method"
-                    }
-                }
-            }
-        },
-        "interface-method": {
-            "description": "Definition of a method or event",
-            "type": "object",
-            "required": [
-                "ordinal",
-                "name",
-                "has_request",
-                "has_response",
-                "is_composed"
-            ],
-            "properties": {
-                "maybe_attributes": {
-                    "description": "Optional list of attributes of the method or event",
-                    "$ref": "#/definitions/attributes-list"
-                },
-                "ordinal": {
-                    "description": "Ordinal number of the interface method",
-                    "$ref": "#/definitions/ordinal"
-                },
-                "name": {
-                    "description": "Name of the interface method",
-                    "$ref": "#/definitions/identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "has_request": {
-                    "description": "Flag indicating that interface method has a request component",
-                    "type": "boolean"
-                },
-                "maybe_request": {
-                    "description": "Optional list of interface method request parameters",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/interface-method-parameter"
-                    }
-                },
-                "maybe_request_type_shape_v1": {
-                    "description": "Type shape of this declaration",
-                    "$ref": "#/definitions/typeshape"
-                },
-                "has_response": {
-                    "description": "Flag indicating that interface method has a response component",
-                    "type": "boolean"
-                },
-                "maybe_response": {
-                    "description": "Optional list of interface method response parameters",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/interface-method-parameter"
-                    }
-                },
-                "maybe_response_type_shape_v1": {
-                    "description": "Type shape of this declaration",
-                    "$ref": "#/definitions/typeshape"
-                },
-                "is_composed": {
-                    "description": "Flag indicating whether method was composed into this protocol",
-                    "type": "boolean"
-                }
-            }
-        },
-        "interface-method-parameter": {
-            "description": "Definition of parameter or return of a method or event",
-            "type": "object",
-            "required": [
-                "type",
-                "name",
-                "field_shape_v1"
-            ],
-            "properties": {
-                "maybe_attributes": {
-                  "description": "Optional list of attributes of the method or event parameter",
-                  "$ref": "#/definitions/attributes-list"
-                },
-                "type": {
-                    "description": "Type of the parameter or return",
-                    "$ref": "#/definitions/type"
-                },
-                "name": {
-                    "description": "Name of the parameter or return",
-                    "$ref": "#/definitions/identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "field_shape_v1": {
-                    "description": "Field shape",
-                    "$ref": "#/definitions/fieldshape"
-                }
-            }
-        },
-        "resource": {
-            "description": "Definition of a resource declaration",
-            "type": "object",
-            "required": [
-                "name",
-                "location",
-                "type"
-            ],
-            "properties": {
-                "maybe_attributes": {
-                    "description": "Optional list of attributes of the resource declaration",
-                    "$ref": "#/definitions/attributes-list"
-                },
-                "name": {
-                    "description": "Fully qualified name of the resource",
-                    "$ref": "#/definitions/compound-identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "type": {
-                    "description": "Type of the resource",
-                    "$ref": "#/definitions/type"
-                },
-                "properties": {
-                    "description": "List of properties",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resource-property"
-                    }
-                }
-            }
-        },
-        "resource-property": {
-            "description": "Definition of a resource property",
-            "type": "object",
-            "required": [
-                "type",
-                "name"
-            ],
-            "properties": {
-                "type": {
-                    "description": "Type of the resource property",
-                    "$ref": "#/definitions/type"
-                },
-                "name": {
-                    "description": "Name of the property",
-                    "$ref": "#/definitions/identifier"
-                }
-            }
-        },
-        "service": {
-            "description": "Definition of a service declaration",
-            "type": "object",
-            "required": [
-                "name",
-                "location",
-                "members"
-            ],
-            "properties": {
-                "name": {
-                    "description": "Name of service",
-                    "$ref": "#/definitions/compound-identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "members": {
-                    "description": "List of service members",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/service-member"
-                    }
-                },
-                "maybe_attributes": {
-                    "description": "Optional list of attributes of the service declaration",
-                    "$ref": "#/definitions/attributes-list"
-                }
-            }
-        },
-        "service-member": {
-            "description": "Definition of a service member",
-            "type": "object",
-            "required": [
-                "type",
-                "name",
-                "location"
-            ],
-            "properties": {
-                "type": {
-                    "description": "Type of the service member",
-                    "$ref": "#/definitions/type"
-                },
-                "name": {
-                    "description": "Name of the service member",
-                    "$ref": "#/definitions/identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "maybe_attributes": {
-                    "description": "Optional list of service member attributes",
-                    "$ref": "#/definitions/attributes-list"
-                }
-            }
-        },
-        "struct": {
-            "description": "Definition of a struct declaration",
-            "type": "object",
-            "required": [
-                "name",
-                "members",
-                "resource",
-                "type_shape_v1"
-            ],
-            "properties": {
-                "max_handles": {
-                    "description": "Maximum number of handles present in the struct",
-                    "$ref": "#/definitions/count"
-                },
-                "maybe_attributes": {
-                    "description": "Optional list of attributes of the struct declaration",
-                    "$ref": "#/definitions/attributes-list"
-                },
-                "name": {
-                    "description": "Name of struct",
-                    "$ref": "#/definitions/compound-identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "anonymous": {
-                    "description": "Flag indicating that struct is anonymous",
-                    "type": "boolean"
-                },
-                "members": {
-                    "description": "List of struct members",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/struct-member"
-                    }
-                },
-                "resource": {
-                    "description": "True if the struct is a resource type (declared to contain handles)",
-                    "type": "boolean"
-                },
-                "type_shape_v1": {
-                    "description": "Type shape of this declaration",
-                    "$ref": "#/definitions/typeshape"
-                }
-            }
-        },
-        "struct-member": {
-            "description": "Definition of a struct member",
-            "type": "object",
-            "required": [
-                "type",
-                "name",
-                "field_shape_v1"
-            ],
-            "properties": {
-                "type": {
-                    "description": "Type of the struct member",
-                    "$ref": "#/definitions/type"
-                },
-                "name": {
-                    "description": "Name of struct member",
-                    "$ref": "#/definitions/identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "field_shape_v1": {
-                    "description": "Field shape",
-                    "$ref": "#/definitions/fieldshape"
-                },
-                "maybe_attributes": {
-                    "description": "Optional list of struct member attributes",
-                    "$ref": "#/definitions/attributes-list"
-                },
-                "maybe_default_value": {
-                    "description": "Optional default value for struct member",
-                    "$ref": "#/definitions/constant"
-                }
-            }
-        },
-        "table": {
-            "description": "Definition of a table",
-            "type": "object",
-            "required": [
-                "name",
-                "members",
-                "type_shape_v1",
-                "strict",
-                "resource"
-            ],
-            "properties": {
-                "max_handles": {
-                    "description": "Maximum number of handles present in the table",
-                    "$ref": "#/definitions/count"
-                },
-                "maybe_attributes": {
-                    "description": "Optional list of table attributes",
-                    "$ref": "#/definitions/attributes-list"
-                },
-                "name": {
-                    "description": "Name of table",
-                    "$ref": "#/definitions/compound-identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "members": {
-                    "description": "List of table members",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/table-member"
-                    }
-                },
-                "strict": {
-                    "description": "Strictness of table",
-                    "type": "boolean"
-                },
-                "resource": {
-                    "description": "True if the table is a resource type (may contain handles)",
-                    "type": "boolean"
-                },
-                "type_shape_v1": {
-                    "description": "Type shape of this declaration",
-                    "$ref": "#/definitions/typeshape"
-                }
-            }
-        },
-        "table-member": {
-            "description": "Definition of a table member",
-            "type": "object",
-            "required": [
-                "ordinal",
-                "reserved"
-            ],
-            "properties": {
-                "reserved": {
-                    "description": "Flag indicating that field is reserved",
-                    "type": "boolean"
-                },
-                "type": {
-                    "description": "Type of table member",
-                    "$ref": "#/definitions/type"
-                },
-                "name": {
-                    "description": "Name of table member",
-                    "$ref": "#/definitions/identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "ordinal": {
-                    "description": "Ordinal value of table member",
-                    "$ref": "#/definitions/ordinal"
-                },
-                "size": {
-                    "description": "Size of table member",
-                    "$ref": "#/definitions/count"
-                },
-                "max_out_of_line": {
-                    "description": "Maximum size of the out-of-line payload",
-                    "$ref": "#/definitions/count"
-                },
-                "alignment": {
-                    "description": "Alignment of table member",
-                    "$ref": "#/definitions/count"
-                },
-                "offset": {
-                    "description": "Offset of table member",
-                    "$ref": "#/definitions/count"
-                },
-                "maybe_default_value": {
-                    "description": "Optional default value for table member",
-                    "$ref": "#/definitions/constant"
-                }
-            }
-        },
-        "typeshape": {
-            "description": "Definition of a type shape",
-            "type": "object",
-            "required": [
-                "inline_size",
-                "alignment",
-                "depth",
-                "max_handles",
-                "max_out_of_line",
-                "has_padding",
-                "has_flexible_envelope"
-            ],
-            "properties": {
-                "inline_size": {
-                    "description": "Size of bytes in the inline portion of this declaration",
-                    "$ref": "#/definitions/count"
-                },
-                "alignment": {
-                    "description": "Alignment of this declaration",
-                    "$ref": "#/definitions/count"
-                },
-                "depth": {
-                    "description": "Maximum depth of this declaration",
-                    "$ref": "#/definitions/count"
-                },
-                "max_handles": {
-                    "description": "Maximum number of handles this declaration can hold",
-                    "$ref": "#/definitions/count"
-                },
-                "max_out_of_line": {
-                    "description": "Maximum number of bytes in the out-of-line portion of this declaration",
-                    "$ref": "#/definitions/count"
-                },
-                "has_padding": {
-                    "description": "Flag indicating if there could be padding bytes in this declaration",
-                    "type": "boolean"
-                },
-                "has_flexible_envelope": {
-                    "description": "Flag indicating if this declaration contains flexible envelopes (in unions or tables)",
-                    "type": "boolean"
-                }
-            }
-        },
-        "union": {
-            "description": "Definition of an extensible union",
-            "type": "object",
-            "required": [
-                "name",
-                "members",
-                "type_shape_v1",
-                "strict",
-                "resource"
-            ],
-            "properties": {
-                "max_handles": {
-                    "description": "Maximum number of handles present in the extensible union",
-                    "$ref": "#/definitions/count"
-                },
-                "maybe_attributes": {
-                    "description": "Optional list of extensible union attributes",
-                    "$ref": "#/definitions/attributes-list"
-                },
-                "name": {
-                    "description": "Name of extensible union",
-                    "$ref": "#/definitions/compound-identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "members": {
-                    "description": "List of extensible union members",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/union-member"
-                    }
-                },
-                "strict": {
-                    "description": "Strictness of extensible union",
-                    "type": "boolean"
-                },
-                "resource": {
-                    "description": "True if the union is a resource type (may contain handles)",
-                    "type": "boolean"
-                },
-                "type_shape_v1": {
-                    "description": "Type shape of this declaration",
-                    "$ref": "#/definitions/typeshape"
-                }
-            }
-        },
-        "union-member": {
-            "description": "Definition of an extensible union member",
-            "type": "object",
-            "required": [
-                "ordinal",
-                "reserved"
-            ],
-            "properties": {
-                "ordinal": {
-                    "description": "Ordinal value of extensible union member",
-                    "$ref": "#/definitions/ordinal"
-                },
-                "reserved": {
-                    "description": "Flag indicating that the member is reserved",
-                    "type": "boolean"
-                },
-                "name": {
-                    "description": "Name of extensible union member",
-                    "$ref": "#/definitions/identifier"
-                },
-                "type": {
-                    "description": "Type of extensible union member",
-                    "$ref": "#/definitions/type"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "max_out_of_line": {
-                    "description": "Maximum size of the out-of-line payload",
-                    "$ref": "#/definitions/count"
-                },
-                "offset": {
-                    "description": "Offset of extensible union member",
-                    "$ref": "#/definitions/count"
-                },
-                "maybe_attributes": {
-                    "description": "Optional list of extensible union member attributes",
-                    "$ref": "#/definitions/attributes-list"
-                }
-            }
-        },
-        "type_alias": {
-            "description": "Definition of a type alias",
-            "type": "object",
-            "required": [
-                "name",
-                "location",
-                "partial_type_ctor"
-            ],
-            "properties": {
-                "name": {
-                    "description": "Name of a type alias, i.e. the alias",
-                    "$ref": "#/definitions/compound-identifier"
-                },
-                "location": {
-                    "description": "Source location of the declaration",
-                    "$ref": "#/definitions/location"
-                },
-                "partial_type_ctor": {
-                    "description": "Type constructor being aliased, possibly partial",
-                    "$ref": "#/definitions/type-constructor"
-                }
-            }
-        },
-        "type-constructor": {
-            "description": "Definition of a type constructor",
-            "type": "object",
-            "required": [
-                "name",
-                "args",
-                "nullable"
-            ],
-            "properties": {
-                "name": {
-                    "description": "Name of the type constructor",
-                    "type": "string"
-                },
-                "args": {
-                    "description": "List of arguments",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/type-constructor"
-                    }
-                },
-                "nullable": {
-                    "description": "Flag indicating nullability",
-                    "type": "boolean"
-                },
-                "maybe_size": {
-                    "description": "Optional number of maximum elements",
-                    "$ref": "#/definitions/constant"
-                },
-                "maybe_handle_subtype": {
-                    "description": "Optional handle subtype",
-                    "$ref": "#/definitions/handle-subtype"
-                }
-            }
-        },
-        "declarations-map": {
-            "description": "Definition of declarations of a library",
-            "type": "object",
-            "patternProperties": {
-                ".*": {
-                    "type": "string",
-                    "enum": [
-                        "bits",
-                        "const",
-                        "enum",
-                        "interface",
-                        "service",
-                        "experimental_resource",
-                        "struct",
-                        "table",
-                        "union",
-                        "type_alias"
-                    ]
-                }
-            }
-        },
-        "external-declarations-map": {
-            "description": "Definition of declarations of an external library",
-            "type": "object",
-            "patternProperties": {
-                ".*": {
-                    "oneOf": [
-                        {
-                            "type": "object",
-                            "required": [
-                                "kind",
-                                "resource"
-                            ],
-                            "properties": {
-                                "kind": {
-                                    "type": "string",
-                                    "enum": [
-                                        "struct",
-                                        "table",
-                                        "union"
-                                    ]
-                                },
-                                "resource": {
-                                    "type": "boolean"
-                                }
-                            }
-                        },
-                        {
-                            "type": "object",
-                            "required": [
-                                "kind"
-                            ],
-                            "properties": {
-                                "kind": {
-                                    "type": "string",
-                                    "enum": [
-                                        "bits",
-                                        "const",
-                                        "enum",
-                                        "interface",
-                                        "service",
-                                        "experimental_resource",
-                                        "type_alias"
-                                    ]
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
-        },
-        "library": {
-            "description": "Definition of library",
-            "type": "object",
-            "required": [
-                "name",
-                "declarations"
-            ],
-            "properties": {
-                "name": {
-                    "description": "Name of library",
-                    "$ref": "#/definitions/library-identifier"
-                },
-                "declarations": {
-                    "description": "Declarations of library",
-                    "$ref": "#/definitions/external-declarations-map"
-                }
-            }
-        },
-        "type": {
-            "description": "Definition of type",
-            "oneOf": [
-                {
-                    "description": "Selection of array type",
-                    "$ref": "#/definitions/array-type"
-                },
-                {
-                    "description": "Selection of vector type",
-                    "$ref": "#/definitions/vector-type"
-                },
-                {
-                    "description": "Selection of string type",
-                    "$ref": "#/definitions/string-type"
-                },
-                {
-                    "description": "Selection of handle type",
-                    "$ref": "#/definitions/handle-type"
-                },
-                {
-                    "description": "Selection of request type",
-                    "$ref": "#/definitions/request-type"
-                },
-                {
-                    "description": "Selection of primitive type",
-                    "$ref": "#/definitions/primitive-type"
-                },
-                {
-                    "description": "Selection of identifier type",
-                    "$ref": "#/definitions/identifier-type"
-                }
-            ]
-        },
-        "array-type": {
-            "description": "Definition of array type",
-            "type": "object",
-            "required": [
-                "kind",
-                "element_type",
-                "element_count"
-            ],
-            "properties": {
-                "kind": {
-                    "description": "Selection of base type as array type",
-                    "type": "string",
-                    "enum": [
-                        "array"
-                    ]
-                },
-                "element_type": {
-                    "description": "Element type of array type",
-                    "$ref": "#/definitions/type"
-                },
-                "element_count": {
-                    "description": "Number of elements in array type",
-                    "$ref": "#/definitions/count"
-                }
-            }
-        },
-        "vector-type": {
-            "description": "Definition of vector type",
-            "type": "object",
-            "required": [
-                "kind",
-                "element_type",
-                "nullable"
-            ],
-            "properties": {
-                "kind": {
-                    "description": "Selection of base type as vector type",
-                    "type": "string",
-                    "enum": [
-                        "vector"
-                    ]
-                },
-                "element_type": {
-                    "description": "Element type of vector type",
-                    "$ref": "#/definitions/type"
-                },
-                "maybe_element_count": {
-                    "description": "Optional number of maximum elements in vector type",
-                    "$ref": "#/definitions/count"
-                },
-                "nullable": {
-                    "description": "Flag indicating nullability of vector type",
-                    "type": "boolean"
-                }
-            }
-        },
-        "string-type": {
-            "description": "Definition of string type",
-            "type": "object",
-            "required": [
-                "kind",
-                "nullable"
-            ],
-            "properties": {
-                "kind": {
-                    "description": "Selection of base type as string type",
-                    "type": "string",
-                    "enum": [
-                        "string"
-                    ]
-                },
-                "maybe_element_count": {
-                    "description": "Optional size of string, in bytes",
-                    "$ref": "#/definitions/count"
-                },
-                "nullable": {
-                    "description": "Flag indicating nullability of string type",
-                    "type": "boolean"
-                }
-            }
-        },
-        "handle-type": {
-            "description": "Definition of a handle type",
-            "type": "object",
-            "required": [
-                "kind",
-                "subtype",
-                "rights",
-                "nullable"
-            ],
-            "properties": {
-                "kind": {
-                    "description": "Selection of base type as handle type",
-                    "type": "string",
-                    "enum": [
-                        "handle"
-                    ]
-                },
-                "subtype": {
-                    "description": "Sub-type of handle type",
-                    "$ref": "#/definitions/handle-subtype"
-                },
-                "rights": {
-                    "description": "Rights that must be present on a handle",
-                    "type": "integer"
-                },
-                "nullable": {
-                    "description": "Flag indicating nullability of handle type",
-                    "type": "boolean"
-                }
-            }
-        },
-        "request-type": {
-            "description": "Definition of a request type",
-            "type": "object",
-            "required": [
-                "kind",
-                "subtype",
-                "nullable"
-            ],
-            "properties": {
-                "kind": {
-                    "description": "Selection of base type as request type",
-                    "type": "string",
-                    "enum": [
-                        "request"
-                    ]
-                },
-                "subtype": {
-                    "description": "Interface name of request type",
-                    "$ref": "#/definitions/compound-identifier"
-                },
-                "nullable": {
-                    "description": "Flag indicating nullability of request type",
-                    "type": "boolean"
-                }
-            }
-        },
-        "attributes-list": {
-            "description": "Definition of an attribute list",
-            "type": "array",
-            "items": {
-                "description": "List of attributes",
-                "$ref": "#/definitions/attribute"
-            }
-        },
-        "attribute": {
-            "description": "Definition of an attribute list element",
-            "type": "object",
-            "required": [
-                "name",
-                "value"
-            ],
-            "properties": {
-                "name": {
-                    "description": "Attribute name",
-                    "type": "string"
-                },
-                "value": {
-                    "description": "Attribute value",
-                    "type": "string"
-                }
-            }
-        },
-        "primitive-type": {
-            "description": "Definition of primitive type",
-            "type": "object",
-            "required": [
-                "kind",
-                "subtype"
-            ],
-            "properties": {
-                "kind": {
-                    "description": "Selection of base type as primitive type",
-                    "type": "string",
-                    "enum": [
-                        "primitive"
-                    ]
-                },
-                "subtype": {
-                    "description": "Sub-type of the primitive type",
-                    "$ref": "#/definitions/primitive-subtype"
-                }
-            }
-        },
-        "identifier-type": {
-            "description": "Definition of an identifier type",
-            "type": "object",
-            "required": [
-                "kind",
-                "identifier",
-                "nullable"
-            ],
-            "properties": {
-                "kind": {
-                    "description": "Selection of base type as identifier type",
-                    "type": "string",
-                    "enum": [
-                        "identifier"
-                    ]
-                },
-                "identifier": {
-                    "description": "Identifier type name",
-                    "$ref": "#/definitions/compound-identifier"
-                },
-                "nullable": {
-                    "description": "Flag indicating nullability of identifier type",
-                    "type": "boolean"
-                }
-            }
-        },
-        "constant": {
-            "description": "Definition of a constant value",
-            "oneOf": [
-                {
-                    "description": "Selection of a constant value (using an identifier)",
-                    "$ref": "#/definitions/identifier-constant"
-                },
-                {
-                    "description": "Selection of a constant value (using a literal)",
-                    "$ref": "#/definitions/literal-constant"
-                },
-                {
-                    "description": "Selection of a constant value (using a binary operator)",
-                    "$ref": "#/definitions/binary-operator-constant"
-                }
-            ]
-        },
-        "identifier-constant": {
-            "description": "Definition of a constant value (using an identifier)",
-            "type": "object",
-            "required": [
-                "kind",
-                "identifier",
-                "value",
-                "expression"
-            ],
-            "properties": {
-                "kind": {
-                    "description": "Selection of constant value using an identifier",
-                    "type": "string",
-                    "enum": [
-                        "identifier"
-                    ]
-                },
-                "identifier": {
-                    "description": "Identifier used as constant value",
-                    "$ref": "#/definitions/compound-identifier"
-                },
-                "value": {
-                    "description": "Evaluated value of the constant",
-                    "type": "string"
-                },
-                "expression": {
-                    "description": "Expression used in source code to define the constant",
-                    "type": "string"
-                }
-            }
-        },
-        "binary-operator-constant": {
-            "description": "Definition of a constant value (using a binary operator)",
-            "type": "object",
-            "required": [
-                "kind",
-                "value",
-                "expression"
-            ],
-            "properties": {
-                "kind": {
-                    "description": "Selection of constant value using a literal",
-                    "type": "string",
-                    "enum": [
-                        "binary_operator"
-                    ]
-                },
-                "value": {
-                    "description": "Evaluated value of the constant",
-                    "type": "string"
-                },
-                "expression": {
-                    "description": "Expression used in source code to define the constant",
-                    "type": "string"
-                }
-            }
-        },
-        "literal-constant": {
-            "description": "Definition of a constant value (using a literal)",
-            "type": "object",
-            "required": [
-                "kind",
-                "literal",
-                "value",
-                "expression"
-            ],
-            "properties": {
-                "kind": {
-                    "description": "Selection of constant value using a literal",
-                    "type": "string",
-                    "enum": [
-                        "literal"
-                    ]
-                },
-                "literal": {
-                    "description": "Literal used as constant value",
-                    "$ref": "#/definitions/literal-value"
-                },
-                "value": {
-                    "description": "Evaluated value of the constant",
-                    "type": "string"
-                },
-                "expression": {
-                    "description": "Expression used in source code to define the constant",
-                    "type": "string"
-                }
-            }
-        },
-        "literal-value": {
-            "description": "Definition of a literal constant value",
-            "type": "object",
-            "required": [
-                "kind",
-                "value",
-                "expression"
-            ],
-            "properties": {
-                "kind": {
-                    "description": "Selection of string literal type",
-                    "type": "string",
-                    "enum": [
-                        "string",
-                        "numeric",
-                        "true",
-                        "false"
-                    ]
-                },
-                "value": {
-                    "description": "Resolved constant value",
-                    "type": "string"
-                },
-                "expression": {
-                    "description": "Original in source constant value, may be a const expression.",
-                    "type": "string"
-                }
-            }
-        },
-        "location": {
-            "type": "object",
-            "required": [
-                "filename",
-                "line",
-                "column",
-                "length"
-            ],
-            "properties": {
-                "filename": {
-                    "type": "string"
-                },
-                "line": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 4294967295
-                },
-                "column": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 4294967295
-                },
-                "length": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 4294967295
-                }
-            }
-        },
-        "handle-subtype": {
-            "description": "Definition of handle sub-type",
-            "type": "string",
-            "enum": [
-                "handle",
-                "bti",
-                "channel",
-                "clock",
-                "debuglog",
-                "event",
-                "eventpair",
-                "exception",
-                "fifo",
-                "guest",
-                "interrupt",
-                "iommu",
-                "job",
-                "pager",
-                "pcidevice",
-                "pmt",
-                "port",
-                "process",
-                "profile",
-                "resource",
-                "socket",
-                "stream",
-                "suspendtoken",
-                "thread",
-                "timer",
-                "vcpu",
-                "vmar",
-                "vmo"
-            ]
-        },
-        "primitive-subtype": {
-            "description": "Definition of primitive sub-type",
-            "oneOf": [
-                {
-                    "description": "Selection of non-integer primitive sub-type",
-                    "type": "string",
-                    "enum": [
-                        "bool",
-                        "float32",
-                        "float64"
-                    ]
-                },
-                {
-                    "description": "Selection of integer primitive sub-type",
-                    "$ref": "#/definitions/integer-type"
-                }
-            ]
-        },
-        "integer-type": {
-            "description": "Definition of integer primitive sub-type",
-            "type": "string",
-            "enum": [
-                "int8",
-                "int16",
-                "int32",
-                "int64",
-                "uint8",
-                "uint16",
-                "uint32",
-                "uint64"
-            ]
-        },
-        "ordinal": {
-            "description": "Definition of ordinal",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 9223372036854775807
-        },
-        "count": {
-            "description": "Definition of count",
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 4294967295
-        },
-        "compound-identifier": {
-            "description": "Definition of compound identifier",
-            "type": "string",
-            "pattern": "([_A-Za-z][_A-Za-z0-9]*-)*[_A-Za-z][_A-Za-z0-9]*/[_A-Za-z][_A-Za-z0-9]*"
-        },
-        "identifier": {
-            "description": "Definition of identifier",
-            "type": "string",
-            "pattern": "^[A-Za-z]([_A-Za-z0-9]*[A-Za-z0-9])?$"
-        },
-        "library-identifier": {
-            "description": "Definition of library identifier",
-            "type": "string",
-            "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)*$"
-        },
-        "version": {
-            "description": "Definition of version regex",
-            "type": "string",
-            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
-        }
-    },
-    "additionalProperties": false
+    "type": "object"
 }

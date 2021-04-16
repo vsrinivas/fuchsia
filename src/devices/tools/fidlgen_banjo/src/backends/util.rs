@@ -247,6 +247,7 @@ pub fn handle_type_to_cpp_str(ty: &HandleSubtype) -> String {
         HandleSubtype::Interrupt => String::from("zx::interrupt"),
         HandleSubtype::Iommu => String::from("zx::iommu"),
         HandleSubtype::Job => String::from("zx::job"),
+        HandleSubtype::Msi => String::from("zx::msi"),
         HandleSubtype::Pager => String::from("zx::pager"),
         HandleSubtype::PciDevice => String::from("zx::handle"),
         HandleSubtype::Pmt => String::from("zx::pmt"),
