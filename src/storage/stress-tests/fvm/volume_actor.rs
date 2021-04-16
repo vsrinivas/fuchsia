@@ -7,7 +7,7 @@ use {
     crate::vslice::{VSliceRange, VSliceRanges},
     async_trait::async_trait,
     fuchsia_zircon::Status,
-    log::debug,
+    log::{debug, info},
     rand::{prelude::IteratorRandom, rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
     std::collections::HashMap,
     stress_test::actor::{Actor, ActorError},
@@ -266,13 +266,18 @@ impl Actor for VolumeActor {
         match result {
             Ok(()) => Ok(()),
             Err(Status::NO_SPACE) => Ok(()),
-            Err(Status::PEER_CLOSED) | Err(Status::CANCELED) => {
+            // Any other error is assumed to come from an intentional crash.
+            // The environment verifies that an intentional crash occurred
+            // and will panic if that is not the case.
+            Err(s) => {
+                info!("Volume actor got status {} during operation {:?}", s, operation);
+
                 // Record this operation as pending.
                 // We will attempt to redo it when the connection is restored.
                 self.pending_op = Some(operation);
+
                 Err(ActorError::ResetEnvironment)
             }
-            Err(s) => panic!("Error occurred during {:?}: {}", operation, s),
         }
     }
 }

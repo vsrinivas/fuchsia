@@ -5,7 +5,7 @@
 use {
     async_trait::async_trait,
     fuchsia_zircon::Status,
-    log::debug,
+    log::{debug, info},
     rand::{rngs::SmallRng, seq::SliceRandom, Rng},
     storage_stress_test_utils::io::Directory,
     stress_test::actor::{Actor, ActorError},
@@ -47,10 +47,13 @@ impl Actor for DeletionActor {
         for blob in blobs_to_delete {
             match self.root_dir.remove(blob).await {
                 Ok(()) => {}
-                Err(Status::PEER_CLOSED) | Err(Status::CONNECTION_ABORTED) => {
-                    return Err(ActorError::ResetEnvironment)
+                // Any error is assumed to come from an intentional crash.
+                // The environment verifies that an intentional crash occurred
+                // and will panic if that is not the case.
+                Err(s) => {
+                    info!("Deletion actor got status: {}", s);
+                    return Err(ActorError::ResetEnvironment);
                 }
-                Err(s) => panic!("Error occurred during delete: {}", s),
             }
         }
 

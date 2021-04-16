@@ -6,6 +6,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_io::{OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_RIGHT_WRITABLE},
     fuchsia_zircon::Status,
+    log::info,
     storage_stress_test_utils::{data::FileFactory, io::Directory},
     stress_test::actor::{Actor, ActorError},
 };
@@ -47,10 +48,13 @@ impl Actor for FileActor {
         match self.create_file().await {
             Ok(()) => Ok(()),
             Err(Status::NO_SPACE) => Ok(()),
-            Err(Status::PEER_CLOSED) | Err(Status::IO) | Err(Status::IO_REFUSED) => {
+            // Any other error is assumed to come from an intentional crash.
+            // The environment verifies that an intentional crash occurred
+            // and will panic if that is not the case.
+            Err(s) => {
+                info!("File actor got status: {}", s);
                 Err(ActorError::ResetEnvironment)
             }
-            Err(s) => panic!("Error occurred during file create: {}", s),
         }
     }
 }

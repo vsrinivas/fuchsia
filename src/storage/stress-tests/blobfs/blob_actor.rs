@@ -7,6 +7,7 @@ use {
     fidl_fuchsia_io::{OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_RIGHT_WRITABLE},
     fuchsia_merkle::MerkleTree,
     fuchsia_zircon::Status,
+    log::info,
     storage_stress_test_utils::{data::FileFactory, io::Directory},
     stress_test::actor::{Actor, ActorError},
 };
@@ -51,11 +52,13 @@ impl Actor for BlobActor {
         match self.create_blob().await {
             Ok(()) => Ok(()),
             Err(Status::NO_SPACE) => Ok(()),
-            Err(Status::CONNECTION_ABORTED)
-            | Err(Status::PEER_CLOSED)
-            | Err(Status::IO)
-            | Err(Status::IO_REFUSED) => Err(ActorError::ResetEnvironment),
-            Err(s) => panic!("Error occurred during blob create: {}", s),
+            // Any other error is assumed to come from an intentional crash.
+            // The environment verifies that an intentional crash occurred
+            // and will panic if that is not the case.
+            Err(s) => {
+                info!("Blob actor got status: {}", s);
+                Err(ActorError::ResetEnvironment)
+            }
         }
     }
 }

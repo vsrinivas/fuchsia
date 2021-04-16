@@ -6,7 +6,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_io::{SeekOrigin, OPEN_RIGHT_READABLE},
     fuchsia_zircon::Status,
-    log::debug,
+    log::{debug, info},
     rand::{prelude::SliceRandom, rngs::SmallRng, Rng},
     storage_stress_test_utils::io::Directory,
     stress_test::actor::{Actor, ActorError},
@@ -73,11 +73,13 @@ impl Actor for ReadActor {
         match self.read_blob().await {
             Ok(()) => Ok(()),
             Err(Status::NOT_FOUND) => Ok(()),
-            Err(Status::CONNECTION_ABORTED)
-            | Err(Status::PEER_CLOSED)
-            | Err(Status::IO)
-            | Err(Status::IO_REFUSED) => Err(ActorError::ResetEnvironment),
-            Err(s) => panic!("Error occurred during blob read: {}", s),
+            // Any other error is assumed to come from an intentional crash.
+            // The environment verifies that an intentional crash occurred
+            // and will panic if that is not the case.
+            Err(s) => {
+                info!("Read actor got status: {}", s);
+                Err(ActorError::ResetEnvironment)
+            }
         }
     }
 }
