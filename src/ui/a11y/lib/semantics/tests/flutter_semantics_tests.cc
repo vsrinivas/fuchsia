@@ -17,7 +17,6 @@ namespace accessibility_test {
 namespace {
 
 constexpr char kClientUrl[] = "fuchsia-pkg://fuchsia.com/a11y-demo#meta/a11y-demo.cmx";
-constexpr zx::duration kTimeout = zx::sec(15);
 
 class FlutterSemanticsTests : public SemanticsIntegrationTest {
  public:
@@ -51,15 +50,12 @@ class FlutterSemanticsTests : public SemanticsIntegrationTest {
                               [&is_rendering](fuchsia::ui::gfx::ViewState view_state) {
                                 is_rendering = view_state.is_rendering;
                               });
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&is_rendering] { return is_rendering; }, kTimeout));
+    RunLoopUntil([&is_rendering] { return is_rendering; });
 
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [&] {
-          auto node = view_manager()->GetSemanticNode(view_ref_koid_, 0u);
-          return node != nullptr && node->has_attributes() && node->attributes().has_label();
-        },
-        kTimeout))
-        << "No root node found.";
+    RunLoopUntil([&] {
+      auto node = view_manager()->GetSemanticNode(view_ref_koid_, 0u);
+      return node != nullptr && node->has_attributes() && node->attributes().has_label();
+    });
 
     // a11y-demo's semantic tree:
     // ID: 0 Label:
@@ -136,12 +132,10 @@ TEST_F(FlutterSemanticsTests, PerformAction) {
   // Verify the counter is now at 1
   // TODO(fxb.dev/58276): Once we have the Semantic Event Updates work done, this logic can be
   // more clearly written as waiting for notification of an update then checking the tree.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this, root] {
-        auto node = FindNodeWithLabel(root, view_ref_koid(), "Blue tapped 1 time");
-        return node != nullptr;
-      },
-      kTimeout));
+  RunLoopUntil([this, root] {
+    auto node = FindNodeWithLabel(root, view_ref_koid(), "Blue tapped 1 time");
+    return node != nullptr;
+  });
 }
 
 // Loads ally-demo flutter app and validates scroll-to-make-visible
@@ -164,19 +158,17 @@ TEST_F(FlutterSemanticsTests, DISABLED_ScrollToMakeVisible) {
   // Verify the "Yellow" node has moved
   // TODO(fxb.dev/58276): Once we have the Semantic Event Updates work done, this logic can be
   // more clearly written as waiting for notification of an update then checking the tree.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this, root, &node_corner] {
-        auto node = FindNodeWithLabel(root, view_ref_koid(), "Yellow");
-        if (node == nullptr) {
-          return false;
-        }
+  RunLoopUntil([this, root, &node_corner] {
+    auto node = FindNodeWithLabel(root, view_ref_koid(), "Yellow");
+    if (node == nullptr) {
+      return false;
+    }
 
-        auto new_node_corner =
-            GetTransformForNode(view_ref_koid(), node->node_id()).Apply(node->location().min);
-        return node_corner.x != new_node_corner.x || node_corner.y != new_node_corner.y ||
-               node_corner.z != new_node_corner.z;
-      },
-      kTimeout));
+    auto new_node_corner =
+        GetTransformForNode(view_ref_koid(), node->node_id()).Apply(node->location().min);
+    return node_corner.x != new_node_corner.x || node_corner.y != new_node_corner.y ||
+           node_corner.z != new_node_corner.z;
+  });
 }
 
 }  // namespace

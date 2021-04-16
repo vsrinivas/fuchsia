@@ -16,8 +16,6 @@
 namespace accessibility_test {
 namespace {
 
-constexpr zx::duration kTimeout = zx::sec(60);
-
 class WebSemanticsTest : public SemanticsIntegrationTest {
  public:
   WebSemanticsTest() : SemanticsIntegrationTest("web_semantics_test"), view_ref_koid_(0) {}
@@ -87,15 +85,12 @@ class WebSemanticsTest : public SemanticsIntegrationTest {
                               [&is_rendering](fuchsia::ui::gfx::ViewState view_state) {
                                 is_rendering = view_state.is_rendering;
                               });
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&is_rendering] { return is_rendering; }, kTimeout));
+    RunLoopUntil([&is_rendering] { return is_rendering; });
 
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-        [this] {
-          auto node = view_manager()->GetSemanticNode(view_ref_koid_, 0u);
-          return node != nullptr && node->has_attributes() && node->attributes().has_label();
-        },
-        kTimeout))
-        << "No root node found.";
+    RunLoopUntil([this] {
+      auto node = view_manager()->GetSemanticNode(view_ref_koid_, 0u);
+      return node != nullptr && node->has_attributes() && node->attributes().has_label();
+    });
   }
 
   zx_koid_t view_ref_koid() const { return view_ref_koid_; }
@@ -178,12 +173,10 @@ TEST_F(WebSemanticsTest, PerformAction) {
   // Find the node with the counter to make sure it now reads 1
   // TODO(fxb.dev/58276): Once we have the Semantic Event Updates work done, this logic can be
   // more clearly written as waiting for notification of an update then checking the tree.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this, root] {
-        auto node = FindNodeWithLabel(root, view_ref_koid(), "1");
-        return node != nullptr;
-      },
-      kTimeout));
+  RunLoopUntil([this, root] {
+    auto node = FindNodeWithLabel(root, view_ref_koid(), "1");
+    return node != nullptr;
+  });
 }
 
 // BUG(fxb.dev/60002): Disable this test until the flakes are resolved.
@@ -211,19 +204,17 @@ TEST_F(WebSemanticsTest, DISABLED_ScrollToMakeVisible) {
   // definitively.
   // TODO(fxb.dev/58276): Once we have the Semantic Event Updates work done, this logic can be
   // more clearly written as waiting for notification of an update then checking the tree.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this, root, &node_corner] {
-        auto node = FindNodeWithLabel(root, view_ref_koid(), "Entry 999");
-        if (node == nullptr) {
-          return false;
-        }
+  RunLoopUntil([this, root, &node_corner] {
+    auto node = FindNodeWithLabel(root, view_ref_koid(), "Entry 999");
+    if (node == nullptr) {
+      return false;
+    }
 
-        auto new_node_corner =
-            GetTransformForNode(view_ref_koid(), node->node_id()).Apply(node->location().min);
-        return node_corner.x != new_node_corner.x || node_corner.y != new_node_corner.y ||
-               node_corner.z != new_node_corner.z;
-      },
-      kTimeout));
+    auto new_node_corner =
+        GetTransformForNode(view_ref_koid(), node->node_id()).Apply(node->location().min);
+    return node_corner.x != new_node_corner.x || node_corner.y != new_node_corner.y ||
+           node_corner.z != new_node_corner.z;
+  });
 }
 
 }  // namespace

@@ -24,8 +24,6 @@ namespace accessibility_test {
 
 namespace {
 
-constexpr zx::duration kTimeout = zx::sec(60);
-
 // Services to inject into the test environment that we want to re-create for each test case
 constexpr size_t kNumInjectedServices = 15;
 constexpr std::array<std::pair<const char*, const char*>, kNumInjectedServices> kInjectedServices =
@@ -124,7 +122,7 @@ void SemanticsIntegrationTest::SetUp() {
 
   // Wait for scenic to get initialized by calling GetDisplayInfo.
   scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo info) { QuitLoop(); });
-  RunLoopWithTimeout(kTimeout);
+  RunLoop();
 }
 
 fuchsia::ui::views::ViewToken SemanticsIntegrationTest::CreatePresentationViewToken() {
@@ -209,7 +207,7 @@ std::optional<uint32_t> SemanticsIntegrationTest::HitTest(zx_koid_t view_ref_koi
 
   view_manager()->ExecuteHitTesting(view_ref_koid, target, hit_callback);
 
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return target_hit.has_value(); }, kTimeout));
+  RunLoopUntil([&] { return target_hit.has_value(); });
   if (!target_hit.has_value() || !target_hit->has_node_id()) {
     return std::nullopt;
   }
@@ -243,12 +241,7 @@ bool SemanticsIntegrationTest::PerformAccessibilityAction(
   auto callback = [&callback_handled](bool handled) { callback_handled = handled; };
   view_manager()->PerformAccessibilityAction(view_ref_koid, node_id, action, callback);
 
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&callback_handled] { return callback_handled.has_value(); }, kTimeout));
-  if (!callback_handled.has_value()) {
-    // The EXPECT above will have failed, so this will show up as a test failure
-    return false;
-  }
+  RunLoopUntil([&callback_handled] { return callback_handled.has_value(); });
   return *callback_handled;
 }
 
