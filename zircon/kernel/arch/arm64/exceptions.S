@@ -6,6 +6,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch/arch_thread.h>
+#include <arch/regs.h>
 #include <arch/arm64.h>
 #include <arch/arm64/asm.h>
 #include <arch/asm_macros.h>
@@ -26,42 +27,40 @@
 #define lr x30
 #define elr1 DW_REG_ELR_mode
 
-// offset where sp,elr,spsr,lr,mdscr goes in the iframe
-#define regsave_special_reg_offset (30 * 8)
-// offset where ELR_EL1 is restored from
-#define regsave_elr_el1_offset (regsave_special_reg_offset + 16)
-
+// Save the full register state on the stack.
+// NOTE: Must stay in sync with the iframe_t definition in arch/regs.h
 .macro regsave
-// There are 5 regs @ regsave_special_reg_offset, plus one unused space = 6 to
-// maintain 16-byte padding.
-sub_from_sp (6*8)
-push_regs x28, x29
-push_regs x26, x27
-push_regs x24, x25
-push_regs x22, x23
-push_regs x20, x21
-push_regs x18, x19
-push_regs x16, x17
-push_regs x14, x15
-push_regs x12, x13
-push_regs x10, x11
-push_regs x8, x9
-push_regs x6, x7
-push_regs x4, x5
-push_regs x2, x3
-push_regs x0, x1
-// Preserve x0-x7 for syscall arguments
-mrs  x9, sp_el0
+// The first push decrements the SP as a side effect. In the case of a stack
+// overflow will result in an immediate fault, instead of 'walking the stack'
+// downwards in an exception loop if the sp were decremented first.
+stp   x0, x1, [sp, -ARM64_IFRAME_SIZE]!
+.cfi_adjust_cfa_offset -ARM64_IFRAME_SIZE
+stp   x2, x3, [sp, ARM64_IFRAME_OFFSET_R + (2 * 8)]
+stp   x4, x5, [sp, ARM64_IFRAME_OFFSET_R + (4 * 8)]
+stp   x6, x7, [sp, ARM64_IFRAME_OFFSET_R + (6 * 8)]
+stp   x8, x9, [sp, ARM64_IFRAME_OFFSET_R + (8 * 8)]
+stp   x10, x11, [sp, ARM64_IFRAME_OFFSET_R + (10 * 8)]
+stp   x12, x13, [sp, ARM64_IFRAME_OFFSET_R + (12 * 8)]
+stp   x14, x15, [sp, ARM64_IFRAME_OFFSET_R + (14 * 8)]
+stp   x16, x17, [sp, ARM64_IFRAME_OFFSET_R + (16 * 8)]
+stp   x18, x19, [sp, ARM64_IFRAME_OFFSET_R + (18 * 8)]
+stp   x20, x21, [sp, ARM64_IFRAME_OFFSET_R + (20 * 8)]
+stp   x22, x23, [sp, ARM64_IFRAME_OFFSET_R + (22 * 8)]
+stp   x24, x25, [sp, ARM64_IFRAME_OFFSET_R + (24 * 8)]
+stp   x26, x27, [sp, ARM64_IFRAME_OFFSET_R + (26 * 8)]
+stp   x28, x29, [sp, ARM64_IFRAME_OFFSET_R + (28 * 8)]
+// Stay away from x0-x7, since they may be holding syscall arguments.
+mrs   x9, sp_el0
 // x10 (containing elr_el1) is used in syscall handler
-mrs  x10, elr_el1
-mrs  x11, spsr_el1
-mrs  x12, mdscr_el1
-stp  lr, x9, [sp, #regsave_special_reg_offset]
-.cfi_rel_offset lr, (regsave_special_reg_offset)
-.cfi_rel_offset sp, (regsave_special_reg_offset + 8)
-stp  x10, x11, [sp, #regsave_special_reg_offset + 16]
-.cfi_rel_offset elr1, (regsave_special_reg_offset + 16)
-str x12, [sp, #regsave_special_reg_offset + 32]
+mrs   x10, elr_el1
+mrs   x11, spsr_el1
+mrs   x12, mdscr_el1
+stp   lr,  x9, [sp, ARM64_IFRAME_OFFSET_LR]
+.cfi_rel_offset lr, ARM64_IFRAME_OFFSET_LR
+.cfi_rel_offset sp, ARM64_IFRAME_OFFSET_USP
+stp   x10, x11, [sp, ARM64_IFRAME_OFFSET_ELR]
+.cfi_rel_offset elr1, ARM64_IFRAME_OFFSET_ELR
+stp   x12, xzr,[sp, ARM64_IFRAME_OFFSET_MDSCR]
 .endm
 
 // Once we pop the stack past the saved sp_el0, elr_el1 the userspace values
@@ -74,39 +73,39 @@ cfi_register_is_zero DW_REG_sp
 cfi_register_is_zero DW_REG_ELR_mode
 .endm
 
+// Reverse regsave above, popping the full register state off of the stack.
 .macro regrestore, from_lower_el_64
-// Preserve x0-x1 for syscall returns (eventually x0-x7)
-ldp  lr, x9, [sp, #regsave_special_reg_offset]
-.cfi_same_value lr
-ldp  x10, x11, [sp, #regsave_special_reg_offset + 16]
-ldr  x12, [sp, #regsave_special_reg_offset + 32]
-msr  sp_el0, x9
-msr  elr_el1, x10
-msr  spsr_el1, x11
-msr  mdscr_el1, x12
-pop_regs x0, x1
-pop_regs x2, x3
-pop_regs x4, x5
-pop_regs x6, x7
-pop_regs x8, x9
-pop_regs x10, x11
-pop_regs x12, x13
-pop_regs x14, x15
-pop_regs x16, x17
-pop_regs x18, x19
+ldp   lr,  x9, [sp, ARM64_IFRAME_OFFSET_LR]
+ldp   x10, x11, [sp, ARM64_IFRAME_OFFSET_ELR]
+ldr   x12, [sp, ARM64_IFRAME_OFFSET_MDSCR]
+msr   sp_el0, x9
+msr   elr_el1, x10
+msr   spsr_el1, x11
+msr   mdscr_el1, x12
+ldp   x0, x1, [sp, ARM64_IFRAME_OFFSET_R]
+ldp   x2, x3, [sp, ARM64_IFRAME_OFFSET_R + (2 * 8)]
+ldp   x4, x5, [sp, ARM64_IFRAME_OFFSET_R + (4 * 8)]
+ldp   x6, x7, [sp, ARM64_IFRAME_OFFSET_R + (6 * 8)]
+ldp   x8, x9, [sp, ARM64_IFRAME_OFFSET_R + (8 * 8)]
+ldp   x10, x11, [sp, ARM64_IFRAME_OFFSET_R + (10 * 8)]
+ldp   x12, x13, [sp, ARM64_IFRAME_OFFSET_R + (12 * 8)]
+ldp   x14, x15, [sp, ARM64_IFRAME_OFFSET_R + (14 * 8)]
+ldp   x16, x17, [sp, ARM64_IFRAME_OFFSET_R + (16 * 8)]
+ldp   x18, x19, [sp, ARM64_IFRAME_OFFSET_R + (18 * 8)]
 .if \from_lower_el_64
-pop_regs x20, x21
+ldp   x20, x21, [sp, ARM64_IFRAME_OFFSET_R + (20 * 8)]
 .else
 // If restoring from EL1 -> EL1, leave x20 alone since it's holding the current
 // per cpu pointer. It may have changed since we originally took the exception
 // if we had been rescheduled to another cpu.
-pop_regs xzr, x21
+ldp   xzr, x21, [sp, ARM64_IFRAME_OFFSET_R + (20 * 8)]
 .endif
-pop_regs x22, x23
-pop_regs x24, x25
-pop_regs x26, x27
-pop_regs x28, x29
-add_to_sp (6*8)
+ldp   x22, x23, [sp, ARM64_IFRAME_OFFSET_R + (22 * 8)]
+ldp   x24, x25, [sp, ARM64_IFRAME_OFFSET_R + (24 * 8)]
+ldp   x26, x27, [sp, ARM64_IFRAME_OFFSET_R + (26 * 8)]
+ldp   x28, x29, [sp, ARM64_IFRAME_OFFSET_R + (28 * 8)]
+.cfi_same_value lr
+add_to_sp ARM64_IFRAME_SIZE
 mark_lr_sp_inaccessible
 .endm
 
@@ -127,7 +126,7 @@ mark_lr_sp_inaccessible
 .macro start_helper_cfi
     .cfi_startproc simple
     .cfi_signal_frame
-    .cfi_def_cfa sp, (regsave_special_reg_offset + 4 * 8)
+    .cfi_def_cfa sp, ARM64_IFRAME_SIZE
 .endm
 
 // The CFA offset of integer register |regno| (regno = 0-29).
@@ -166,8 +165,8 @@ mark_lr_sp_inaccessible
     REG_CFA_OFFSET(27)
     REG_CFA_OFFSET(28)
     REG_CFA_OFFSET(29)
-    .cfi_offset sp, -(3 * 8)
-    .cfi_offset lr, -(4 * 8)
+    .cfi_offset lr, ARM64_IFRAME_OFFSET_LR
+    .cfi_offset sp, ARM64_IFRAME_OFFSET_USP
 .endm
 
 .macro start_helper
@@ -426,9 +425,9 @@ END_FUNCTION(arm64_exc_shared_restore)
 .macro syscall_dispatcher nargs, syscall
 .balign 16
 .if \nargs == 8
-    push_regs x10, x11 // push twice to maintain alignment
+    push_regs x10, xzr // push twice to maintain alignment
     bl  wrapper_\syscall
-    pop_regs x10, x11
+    add_to_sp 16
 .else
     mov x\nargs, x10
     bl  wrapper_\syscall
@@ -445,7 +444,7 @@ END_FUNCTION(arm64_exc_shared_restore)
 // x9    - contains esr_el1
 // x10   - contains elr_el1
 // x16   - contains syscall_num
-// sp    - points to base of frame (frame->r[0])
+// sp    - points to base of iframe
 //
 // Expected state prior to branching to syscall_dispatcher macro:
 //
@@ -480,16 +479,16 @@ LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
 .Lpost_syscall:
     // Upon return from syscall, x0 = status, x1 = thread signalled
     // Move the status to frame->r[0] for return to userspace.
-    str  x0, [sp]
+    str  x0, [sp, ARM64_IFRAME_OFFSET_R]
     // Spectre: ARM64 CPUs may speculatively execute instructions after an SVC instruction.
     // The userspace entry code has a speculation barrier; advance ELR_EL1 past in on the return
     // since it has already done its job.
 .ifne ARM64_SYSCALL_SPECULATION_BARRIER_SIZE - 12
 .error "Syscall speculation barrier must be 12 bytes"
 .endif
-    ldr  x10, [sp, #(regsave_elr_el1_offset)]
+    ldr  x10, [sp, ARM64_IFRAME_OFFSET_ELR]
     add  x10, x10, ARM64_SYSCALL_SPECULATION_BARRIER_SIZE
-    str  x10, [sp, #(regsave_elr_el1_offset)]
+    str  x10, [sp, ARM64_IFRAME_OFFSET_ELR]
     // Check for pending signals. If none, just return.
     cbz  x1, arm64_exc_shared_restore_lower_el
     mov  x0, sp

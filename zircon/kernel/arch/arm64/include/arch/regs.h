@@ -6,12 +6,13 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_REGS_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_REGS_H_
 
-#define ARM64_IFRAME_OFFSET_R 0
+#define ARM64_IFRAME_OFFSET_R (0 * 8)
 #define ARM64_IFRAME_OFFSET_LR (30 * 8)
 #define ARM64_IFRAME_OFFSET_USP (31 * 8)
 #define ARM64_IFRAME_OFFSET_ELR (32 * 8)
 #define ARM64_IFRAME_OFFSET_SPSR (33 * 8)
 #define ARM64_IFRAME_OFFSET_MDSCR (34 * 8)
+#define ARM64_IFRAME_SIZE ((30 + 5 + 1) * 8)
 
 #ifndef __ASSEMBLER__
 
@@ -26,10 +27,11 @@ struct iframe_t {
   uint64_t elr;
   uint64_t spsr;
   uint64_t mdscr;
-  uint64_t pad2[1];  // Keep structure multiple of 16-bytes for stack alignment.
+  uint64_t pad[1];  // Keep structure multiple of 16-bytes for stack alignment.
 };
 
 static_assert(sizeof(iframe_t) % 16u == 0u);
+static_assert(sizeof(iframe_t) == ARM64_IFRAME_SIZE);
 
 static_assert(__offsetof(iframe_t, r[0]) == ARM64_IFRAME_OFFSET_R, "");
 static_assert(__offsetof(iframe_t, lr) == ARM64_IFRAME_OFFSET_LR, "");
