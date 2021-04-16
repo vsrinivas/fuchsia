@@ -1,0 +1,79 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("bin") {
+  testonly = true
+  name = "starnix_test_runner"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/runner",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [
+    "src/main.rs",
+    "src/runner.rs",
+    "src/test_suite.rs",
+  ]
+}
+
+fuchsia_component("starnix_test_runner") {
+  testonly = true
+  manifest = "meta/starnix_test_runner.cml"
+  component_name = "starnix_test_runner"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("starnix_test_runner_parent") {
+  testonly = true
+  manifest = "meta/starnix_test_runner_parent.cml"
+  component_name = "starnix_test_runner_parent"
+}
+
+fuchsia_package("starnix-test-runner") {
+  testonly = true
+  deps = [
+    ":starnix_test_runner",
+    ":starnix_test_runner_parent",
+  ]
+}
+
+fuchsia_unittest_package("starnix-test-runner-tests") {
+  deps = [ ":bin_test" ]
+
+  manifest = "meta/starnix_test_runner_tests.cml"
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+group("starnix") {
+  testonly = true
+  deps = [ ":starnix-test-runner" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":starnix-test-runner-tests" ]
+}

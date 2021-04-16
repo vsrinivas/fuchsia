@@ -124,6 +124,7 @@ group("test_runners") {
     "gotests",
     "gtest",
     "rust",
+    "starnix",
   ]
 }
 
@@ -136,5 +137,6 @@ group("tests") {
     "gotests:tests",
     "gtest:tests",
     "rust:tests",
+    "starnix:tests",
   ]
 }

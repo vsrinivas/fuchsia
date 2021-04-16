@@ -20,6 +20,10 @@
                     from: "#rust_test_runner",
                 },
                 {
+                    runner: "starnix_test_runner",
+                    from: "#starnix_test_runner",
+                },
+                {
                     runner: "go_test_runner",
                     from: "#go_test_runner",
                 },

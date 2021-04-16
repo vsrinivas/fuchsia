@@ -434,7 +434,10 @@
             to: "#system-update-committer",
         },
         {
-            protocol: [ "fuchsia.sys2.EventSource" ],
+            protocol: [
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.sys2.EventSource",
+            ],
             from: "parent",
             to: "#test_manager",
         },

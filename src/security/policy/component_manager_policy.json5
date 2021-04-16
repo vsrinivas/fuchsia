@@ -13,6 +13,7 @@
             ],
             create_raw_processes: [
                 "/core/starnix_manager/starnix_runner",
+                "/core/test_manager/starnix_test_runner/starnix_runner",
             ],
         },
         capability_policy: [

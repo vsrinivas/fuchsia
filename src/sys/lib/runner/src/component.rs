@@ -21,7 +21,7 @@ use {
     lazy_static::lazy_static,
     library_loader,
     log::*,
-    std::convert::TryFrom,
+    std::convert::{TryFrom, TryInto},
     std::path::Path,
     std::path::PathBuf,
     thiserror::Error,
@@ -179,6 +179,9 @@ pub enum ComponentNamespaceError {
     #[error("cannot convert directory handle to proxy: {}.", _0)]
     IntoProxy(fidl::Error),
 
+    #[error("cannot convert directory proxy to handle: {:?}.", _0)]
+    IntoChannel(fio::DirectoryProxy),
+
     #[error("missing path in namespace entry")]
     MissingPath,
 }
@@ -189,6 +192,25 @@ pub enum ComponentNamespaceError {
 pub struct ComponentNamespace {
     /// Pair representing path and directory proxy.
     items: Vec<(String, fio::DirectoryProxy)>,
+}
+
+impl TryInto<Vec<fcrunner::ComponentNamespaceEntry>> for ComponentNamespace {
+    type Error = ComponentNamespaceError;
+
+    fn try_into(self) -> Result<Vec<fcrunner::ComponentNamespaceEntry>, Self::Error> {
+        self.items
+            .into_iter()
+            .map(|(path, proxy)| {
+                let dir_channel: zx::Channel =
+                    proxy.into_channel().map_err(ComponentNamespaceError::IntoChannel)?.into();
+                Ok(fcrunner::ComponentNamespaceEntry {
+                    path: Some(path.clone()),
+                    directory: Some(dir_channel.into()),
+                    ..fcrunner::ComponentNamespaceEntry::EMPTY
+                })
+            })
+            .collect()
+    }
 }
 
 impl TryFrom<Vec<fcrunner::ComponentNamespaceEntry>> for ComponentNamespace {

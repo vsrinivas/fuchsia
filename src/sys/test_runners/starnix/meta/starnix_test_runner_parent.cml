@@ -1,0 +1,39 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    children: [
+        {
+            name: "starnix_runner",
+            url: "fuchsia-pkg://fuchsia.com/starnix#meta/starnix_runner.cm",
+        },
+        {
+            name: "starnix_test_runner",
+            url: "fuchsia-pkg://fuchsia.com/starnix-test-runner#meta/starnix_test_runner.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#starnix_runner",
+                "#starnix_test_runner",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.kernel.VmexResource" ],
+            from: "parent",
+            to: [ "#starnix_runner" ],
+        },
+        {
+            protocol: [ "fuchsia.component.runner.ComponentRunner" ],
+            from: "#starnix_runner",
+            to: [ "#starnix_test_runner" ],
+        },
+    ],
+    expose: [
+        {
+            runner: "starnix_test_runner",
+            from: "#starnix_test_runner",
+        },
+    ],
+}
