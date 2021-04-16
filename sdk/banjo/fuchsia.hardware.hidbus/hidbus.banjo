@@ -28,10 +28,10 @@ enum HidDeviceClass : uint8 {
     KBD = 1;
     POINTER = 2;
     KBD_POINTER = 3;
-
-    FIRST = 0;
-    LAST = 3;
 };
+
+const uint8 HID_DEVICE_CLASS_FIRST = 0;
+const uint8 HID_DEVICE_CLASS_LAS = 3;
 
 struct HidInfo {
     uint8 dev_num;

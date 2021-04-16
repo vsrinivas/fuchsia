@@ -107,10 +107,7 @@ _fidl_translated_deps = _all_libraries_deps
 
 # Remove libraries that have not been vetted yet.
 _fidl_translated_deps -= [
-  "fuchsia.hardware.hidbus",  # Multiple enum variants with the same value.
   "fuchsia.hardware.pciroot",  # Blocked by zircon.hw.pci.
-  "fuchsia.hardware.serialimpl",  # Blocked by fuchsia.hardware.serial.
-  "fuchsia.hardware.serialimpl.async",  # Blocked by fuchsia.hardware.serial.
   "fuchsia.hardware.usb",  # Blocked by zircon.hw.usb.
   "fuchsia.hardware.usb.bus",  # Blocked by zircon.hw.usb.
   "fuchsia.hardware.usb.composite",  # Blocked by zircon.hw.usb.
