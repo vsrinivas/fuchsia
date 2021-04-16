@@ -1,0 +1,48 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//src/sys/build/components.gni")
+
+rustc_library("lib") {
+  name = "inspect_format"
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//src/lib/diagnostics/hierarchy/rust",
+    "//src/lib/mapped-vmo",
+    "//third_party/rust_crates:bitfield",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [
+    "src/bitfields.rs",
+    "src/block.rs",
+    "src/block_type.rs",
+    "src/constants.rs",
+    "src/container.rs",
+    "src/error.rs",
+    "src/lib.rs",
+    "src/utils.rs",
+  ]
+}
+
+fuchsia_unittest_package("inspect-format-tests") {
+  deps = [ ":lib_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":inspect-format-tests" ]
+}
+
+group("rust") {
+  deps = [ ":lib" ]
+}

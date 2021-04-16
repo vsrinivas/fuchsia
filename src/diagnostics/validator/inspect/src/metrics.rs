@@ -4,13 +4,7 @@
 
 use {
     anyhow::Error,
-    fuchsia_inspect::{
-        self,
-        format::{
-            block::{Block, PropertyFormat},
-            block_type::BlockType,
-        },
-    },
+    inspect_format::{Block, BlockType, PropertyFormat},
     serde::Serialize,
     std::{self, collections::HashMap},
 };
@@ -202,12 +196,7 @@ mod tests {
         super::*,
         crate::{data, puppet, results::Results},
         anyhow::{bail, format_err},
-        fuchsia_inspect::format::{
-            bitfields::{BlockHeader, Payload},
-            block::{ArrayFormat, PropertyFormat},
-            block_type::BlockType,
-            constants,
-        },
+        inspect_format::{constants, ArrayFormat, BlockHeader, BlockType, Payload, PropertyFormat},
     };
 
     #[fuchsia::test]

@@ -4,10 +4,8 @@
 
 //! Definitions for all the block types.
 
-use {
-    num_derive::{FromPrimitive, ToPrimitive},
-    std::fmt,
-};
+use num_derive::{FromPrimitive, ToPrimitive};
+use std::fmt;
 
 /// The type of a block.
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, FromPrimitive, ToPrimitive)]

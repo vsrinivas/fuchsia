@@ -7,11 +7,8 @@
 //! [inspect-vmo]: https://fuchsia.dev/fuchsia-src/reference/diagnostics/inspect/vmo-format
 
 use {
-    crate::{
-        error::Error,
-        format::{block::Block, block_type::BlockType, constants},
-        utils,
-    },
+    crate::error::Error,
+    inspect_format::{constants, utils, Block, BlockType},
     mapped_vmo::Mapping,
     num_traits::ToPrimitive,
     std::{cmp::min, sync::Arc},
@@ -206,10 +203,8 @@ impl Heap {
 mod tests {
     use {
         super::*,
-        crate::{
-            format::bitfields::{BlockHeader, Payload},
-            reader::snapshot::BlockIterator,
-        },
+        crate::reader::snapshot::BlockIterator,
+        inspect_format::{BlockHeader, Payload},
     };
 
     struct BlockDebug {

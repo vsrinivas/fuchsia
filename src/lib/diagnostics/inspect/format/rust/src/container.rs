@@ -5,10 +5,8 @@
 //! Defines multiple types of inspect containers: Mapped VMO for production and byte arrays
 //! for testing.
 
-use {
-    mapped_vmo::Mapping,
-    std::{cmp::min, ptr, sync::Arc},
-};
+use mapped_vmo::Mapping;
+use std::{cmp::min, ptr, sync::Arc};
 
 /// Trait implemented by an Inspect container that can be read from.
 pub trait ReadableBlockContainer {

@@ -14,7 +14,7 @@ use {
         ArrayContent, DiagnosticsHierarchy, LinkNodeDisposition, Property as iProperty,
     },
     difference,
-    fuchsia_inspect::{self, format::block::ArrayFormat},
+    inspect_format::ArrayFormat,
     num_derive::{FromPrimitive, ToPrimitive},
     std::{
         self,
@@ -1204,10 +1204,8 @@ mod tests {
         super::*,
         crate::*,
         fidl_test_inspect_validate::{Number, NumberType, ROOT_ID},
-        fuchsia_inspect::{
-            format::block_type::BlockType,
-            reader::{ArrayContent as iArrayContent, ArrayFormat},
-        },
+        fuchsia_inspect::reader::{ArrayContent as iArrayContent, ArrayFormat},
+        inspect_format::BlockType,
     };
 
     #[test]

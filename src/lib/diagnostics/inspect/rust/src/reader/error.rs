@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use crate::error;
-use crate::format::block_type::BlockType;
 use diagnostics_hierarchy::Error as HierarchyError;
 use fuchsia_zircon as zx;
+use inspect_format::{BlockType, Error as FormatError};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -26,7 +26,7 @@ pub enum ReaderError {
     MalformedTree,
 
     #[error("VMO format error")]
-    VmoFormat(#[source] error::Error),
+    VmoFormat(#[source] FormatError),
 
     #[error("Tried to read more slots than available at block index {0}")]
     AttemptedToReadTooManyArraySlots(u32),
@@ -69,4 +69,10 @@ pub enum ReaderError {
 
     #[error("Failed to lock inspector state")]
     FailedToLockState(#[source] error::Error),
+}
+
+impl From<FormatError> for ReaderError {
+    fn from(error: FormatError) -> Self {
+        Self::VmoFormat(error)
+    }
 }

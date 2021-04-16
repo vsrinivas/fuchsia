@@ -76,14 +76,7 @@
 //! [inspector]: Inspector
 
 use {
-    crate::{
-        format::{
-            block::{ArrayFormat, LinkNodeDisposition, PropertyFormat},
-            constants,
-        },
-        heap::Heap,
-        state::State,
-    },
+    crate::{heap::Heap, state::State},
     anyhow,
     derivative::Derivative,
     diagnostics_hierarchy::testing::DiagnosticsHierarchyGetter,
@@ -93,6 +86,9 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{future::BoxFuture, prelude::*},
+    inspect_format::{
+        constants, {ArrayFormat, LinkNodeDisposition, PropertyFormat},
+    },
     lazy_static::lazy_static,
     mapped_vmo::Mapping,
     parking_lot::Mutex,
@@ -115,7 +111,7 @@ use {
 };
 
 #[cfg(test)]
-use crate::format::block::Block;
+use inspect_format::Block;
 
 pub use diagnostics_hierarchy::{
     DiagnosticsHierarchy, ExponentialHistogramParams, LinearHistogramParams,
@@ -126,13 +122,11 @@ pub use {crate::error::Error, crate::state::Stats};
 
 pub mod component;
 mod error;
-pub mod format;
 pub mod health;
 pub mod heap;
 pub mod reader;
 pub mod service;
 mod state;
-mod utils;
 
 pub mod testing {
     pub use diagnostics_hierarchy::{
@@ -1346,12 +1340,7 @@ pub fn unique_name(prefix: &str) -> String {
 mod tests {
     use {
         super::*,
-        crate::{
-            assert_inspect_tree,
-            format::{block::LinkNodeDisposition, block_type::BlockType, constants},
-            heap::Heap,
-            reader,
-        },
+        crate::{assert_inspect_tree, heap::Heap, reader},
         anyhow::{bail, format_err},
         diagnostics_hierarchy::{DiagnosticsHierarchy, Property as DProperty},
         fdio,
@@ -1362,6 +1351,7 @@ mod tests {
         fuchsia_component::server::ServiceObj,
         fuchsia_zircon::{AsHandleRef, Peered},
         glob::glob,
+        inspect_format::{constants, BlockType, LinkNodeDisposition},
         mapped_vmo::Mapping,
         std::{convert::TryFrom, ffi::CString},
     };

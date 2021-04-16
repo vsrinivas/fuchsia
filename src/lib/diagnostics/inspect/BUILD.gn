@@ -7,6 +7,7 @@ group("tests") {
   deps = [
     "contrib/rust:tests",
     "derive:tests",
+    "format/rust:tests",
     "rust:tests",
   ]
 }

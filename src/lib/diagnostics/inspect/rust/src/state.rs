@@ -3,19 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        error::Error,
-        format::{
-            block::{ArrayFormat, Block, LinkNodeDisposition, PropertyFormat},
-            block_type::BlockType,
-            constants,
-        },
-        heap::Heap,
-        utils, Inspector,
-    },
+    crate::{error::Error, heap::Heap, Inspector},
     anyhow,
     derivative::Derivative,
     futures::future::BoxFuture,
+    inspect_format::{
+        constants, utils, BlockType, {ArrayFormat, Block, LinkNodeDisposition, PropertyFormat},
+    },
     mapped_vmo::Mapping,
     num_traits::ToPrimitive,
     parking_lot::{Mutex, MutexGuard},
@@ -526,7 +520,8 @@ impl InnerState {
                 parent_index,
                 content_block.index(),
                 disposition,
-            )
+            )?;
+            Ok(())
         });
         match result {
             Ok(()) => Ok(value_block),
@@ -607,7 +602,8 @@ impl InnerState {
     /// Sets all slots of the array at the given index to zero
     fn clear_array(&mut self, block_index: u32, start_slot_index: usize) -> Result<(), Error> {
         let block = self.heap.get_block(block_index)?;
-        block.array_clear(start_slot_index)
+        block.array_clear(start_slot_index)?;
+        Ok(())
     }
 
     fn allocate_reserved_value(
@@ -629,7 +625,8 @@ impl InnerState {
             .block_type()
         {
             BlockType::NodeValue | BlockType::Tombstone => {
-                parent_block.set_child_count(parent_block.child_count().unwrap() + 1)
+                parent_block.set_child_count(parent_block.child_count().unwrap() + 1)?;
+                Ok(())
             }
             BlockType::Header => Ok(()),
             _ => {
@@ -681,10 +678,11 @@ impl InnerState {
         // If the block is a NODE and has children, make it a TOMBSTONE so that
         // it's freed when the last of its children is freed. Otherwise, free it.
         if block.block_type() == BlockType::NodeValue && block.child_count()? != 0 {
-            block.become_tombstone()
+            block.become_tombstone()?;
         } else {
-            self.heap.free_block(block)
+            self.heap.free_block(block)?;
         }
+        Ok(())
     }
 
     fn inner_set_property_value(

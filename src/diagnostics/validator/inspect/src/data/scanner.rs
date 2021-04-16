@@ -7,16 +7,9 @@ use {
     crate::metrics::{BlockMetrics, BlockStatus},
     anyhow::{bail, format_err, Error},
     diagnostics_hierarchy::LinkNodeDisposition,
-    fuchsia_inspect::{
-        self,
-        format::{
-            block::{ArrayFormat, Block, PropertyFormat},
-            block_type::BlockType,
-            constants::MIN_ORDER_SIZE,
-        },
-        reader as ireader,
-    },
+    fuchsia_inspect::reader as ireader,
     fuchsia_zircon::Vmo,
+    inspect_format::{constants::MIN_ORDER_SIZE, ArrayFormat, Block, BlockType, PropertyFormat},
     std::{
         self,
         cmp::min,
@@ -641,11 +634,7 @@ mod tests {
         super::*,
         crate::*,
         fidl_test_inspect_validate::Number,
-        fuchsia_inspect::format::{
-            bitfields::{BlockHeader, Payload as BlockPayload},
-            block_type::BlockType,
-            constants,
-        },
+        inspect_format::{constants, BlockHeader, BlockType, Payload as BlockPayload},
     };
 
     // TODO(fxbug.dev/39975): Depending on the resolution of fxbug.dev/40012, move this const out of mod test.

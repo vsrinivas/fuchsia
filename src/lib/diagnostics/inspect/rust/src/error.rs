@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::format::block_type::BlockType;
 use anyhow;
 use fuchsia_zircon as zx;
+use inspect_format::{BlockType, Error as FormatError};
 
 /// Errors that Inspect API functions can return.
 #[derive(Clone, Debug, thiserror::Error)]
@@ -57,9 +57,6 @@ pub enum Error {
     #[error("Invalid block type at index {0}: {1}")]
     InvalidBlockTypeNumber(u32, u8),
 
-    #[error("Array index out of bounds: {0}")]
-    ArrayIndexOutOfBounds(usize),
-
     #[error("Invalid block type. Expected: {0}, actual: {1}")]
     UnexpectedBlockType(BlockType, BlockType),
 
@@ -92,6 +89,15 @@ pub enum Error {
 
     #[error("Failed to convert array slots to usize")]
     FailedToConvertArraySlotsToUsize,
+
+    #[error("Format error")]
+    VmoFormat(#[source] FormatError),
+}
+
+impl From<FormatError> for Error {
+    fn from(error: FormatError) -> Self {
+        Self::VmoFormat(error)
+    }
 }
 
 impl Error {

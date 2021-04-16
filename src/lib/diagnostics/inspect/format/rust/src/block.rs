@@ -4,24 +4,20 @@
 
 //! Utilities for writing VMO blocks in a type-safe way.
 
-use {
-    crate::{
-        error::Error,
-        format::{
-            bitfields::{BlockHeader, Payload},
-            block_type::BlockType,
-            constants,
-            container::{BlockContainerEq, ReadableBlockContainer, WritableBlockContainer},
-        },
-        utils,
-    },
-    byteorder::{ByteOrder, LittleEndian},
-    num_derive::{FromPrimitive, ToPrimitive},
-    num_traits::{FromPrimitive, ToPrimitive},
-    std::{
-        cmp::min,
-        sync::atomic::{fence, Ordering},
-    },
+use crate::{
+    bitfields::{BlockHeader, Payload},
+    block_type::BlockType,
+    constants,
+    container::{BlockContainerEq, ReadableBlockContainer, WritableBlockContainer},
+    error::Error,
+    utils,
+};
+use byteorder::{ByteOrder, LittleEndian};
+use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::{FromPrimitive, ToPrimitive};
+use std::{
+    cmp::min,
+    sync::atomic::{fence, Ordering},
 };
 
 pub use diagnostics_hierarchy::{ArrayFormat, LinkNodeDisposition};
@@ -333,7 +329,8 @@ impl<T: ReadableBlockContainer> Block<T> {
     }
 
     /// Check if the HEADER block is locked (when generation count is odd).
-    pub(in crate) fn check_locked(&self, value: bool) -> Result<(), Error> {
+    /// NOTE: this should only be used for testing.
+    pub fn check_locked(&self, value: bool) -> Result<(), Error> {
         let payload = self.read_payload();
         if (payload.header_generation_count() & 1 == 1) != value {
             return Err(Error::ExpectedLockState(value));
@@ -414,8 +411,9 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         Ok(())
     }
 
-    #[cfg(test)]
-    pub(crate) fn set_header_magic(&self, value: u32) -> Result<(), Error> {
+    /// Allows to set the magic value of the header.
+    /// NOTE: this should only be used for testing.
+    pub fn set_header_magic(&self, value: u32) -> Result<(), Error> {
         self.check_type(BlockType::Header)?;
         let mut header = self.read_header();
         header.set_header_magic(value);
@@ -772,7 +770,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     }
 
     /// Writes the given header and payload to the block in the container.
-    pub(in crate) fn write(&self, header: BlockHeader, payload: Payload) {
+    pub fn write(&self, header: BlockHeader, payload: Payload) {
         self.write_header(header);
         self.write_payload(payload);
     }

@@ -4,12 +4,21 @@
 
 //! # Inspect VMO format
 //!
-//! This module contains utilities for writing the [`Inspect VMO format`][inspect-vmo].
+//! This library contains utilities for writing the [`Inspect VMO format`][inspect-vmo].
 //!
 //! [inspect-vmo]: https://fuchsia.dev/fuchsia-src/reference/diagnostics/inspect/vmo-format
 
-pub mod bitfields;
-pub mod block;
-pub mod block_type;
+mod bitfields;
+mod block;
+mod block_type;
+mod container;
+mod error;
+
 pub mod constants;
-pub mod container;
+pub mod utils;
+
+pub use bitfields::*;
+pub use block::*;
+pub use block_type::*;
+pub use container::*;
+pub use error::*;

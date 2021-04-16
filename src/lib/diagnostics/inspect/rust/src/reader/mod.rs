@@ -32,16 +32,13 @@
 //! ```
 
 use {
-    crate::{
-        format::{block::PropertyFormat, block_type::BlockType},
-        reader::{
-            error::ReaderError,
-            snapshot::{ScannedBlock, Snapshot},
-        },
-        utils,
+    crate::reader::{
+        error::ReaderError,
+        snapshot::{ScannedBlock, Snapshot},
     },
     diagnostics_hierarchy::{testing::DiagnosticsHierarchyGetter, *},
     fuchsia_zircon::Vmo,
+    inspect_format::{utils, BlockType, PropertyFormat},
     maplit::btreemap,
     std::{borrow::Cow, cmp::min, collections::BTreeMap, convert::TryFrom},
 };
@@ -342,9 +339,9 @@ impl<'a> ScanResult<'a> {
     }
 
     fn parse_node(&mut self, block: &ScannedBlock<'_>) -> Result<(), ReaderError> {
-        let name_index = block.name_index().map_err(ReaderError::VmoFormat)?;
+        let name_index = block.name_index()?;
         let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
-        let parent_index = block.parent_index().map_err(ReaderError::VmoFormat)?;
+        let parent_index = block.parent_index()?;
         get_or_create_scanned_node!(self.parsed_nodes, block.index())
             .initialize(name, parent_index);
         if parent_index != block.index() {
@@ -354,7 +351,7 @@ impl<'a> ScanResult<'a> {
     }
 
     fn parse_numeric_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), ReaderError> {
-        let name_index = block.name_index().map_err(ReaderError::VmoFormat)?;
+        let name_index = block.name_index()?;
         let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
         let parent = get_or_create_scanned_node!(
             self.parsed_nodes,
@@ -362,15 +359,15 @@ impl<'a> ScanResult<'a> {
         );
         match block.block_type() {
             BlockType::IntValue => {
-                let value = block.int_value().map_err(ReaderError::VmoFormat)?;
+                let value = block.int_value()?;
                 parent.partial_hierarchy.properties.push(Property::Int(name, value));
             }
             BlockType::UintValue => {
-                let value = block.uint_value().map_err(ReaderError::VmoFormat)?;
+                let value = block.uint_value()?;
                 parent.partial_hierarchy.properties.push(Property::Uint(name, value));
             }
             BlockType::DoubleValue => {
-                let value = block.double_value().map_err(ReaderError::VmoFormat)?;
+                let value = block.double_value()?;
                 parent.partial_hierarchy.properties.push(Property::Double(name, value));
             }
             _ => {}
@@ -379,13 +376,13 @@ impl<'a> ScanResult<'a> {
     }
 
     fn parse_bool_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), ReaderError> {
-        let name_index = block.name_index().map_err(ReaderError::VmoFormat)?;
+        let name_index = block.name_index()?;
         let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
-        let parent_index = block.parent_index().map_err(ReaderError::VmoFormat)?;
+        let parent_index = block.parent_index()?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, parent_index);
         match block.block_type() {
             BlockType::BoolValue => {
-                let value = block.bool_value().map_err(ReaderError::VmoFormat)?;
+                let value = block.bool_value()?;
                 parent.partial_hierarchy.properties.push(Property::Bool(name, value));
             }
             _ => {}
@@ -394,11 +391,11 @@ impl<'a> ScanResult<'a> {
     }
 
     fn parse_array_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), ReaderError> {
-        let name_index = block.name_index().map_err(ReaderError::VmoFormat)?;
+        let name_index = block.name_index()?;
         let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
-        let parent_index = block.parent_index().map_err(ReaderError::VmoFormat)?;
+        let parent_index = block.parent_index()?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, parent_index);
-        let array_slots = block.array_slots().map_err(ReaderError::VmoFormat)?;
+        let array_slots = block.array_slots()?;
         if utils::array_capacity(block.order()) < array_slots {
             return Err(ReaderError::AttemptedToReadTooManyArraySlots(block.index()));
         }
@@ -440,13 +437,13 @@ impl<'a> ScanResult<'a> {
     }
 
     fn parse_property(&mut self, block: &ScannedBlock<'_>) -> Result<(), ReaderError> {
-        let name_index = block.name_index().map_err(ReaderError::VmoFormat)?;
+        let name_index = block.name_index()?;
         let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
-        let parent_index = block.parent_index().map_err(ReaderError::VmoFormat)?;
+        let parent_index = block.parent_index()?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, parent_index);
-        let total_length = block.property_total_length().map_err(ReaderError::VmoFormat)?;
+        let total_length = block.property_total_length()?;
         let mut buffer = vec![0u8; block.property_total_length().map_err(ReaderError::VmoFormat)?];
-        let mut extent_index = block.property_extent_index().map_err(ReaderError::VmoFormat)?;
+        let mut extent_index = block.property_extent_index()?;
         let mut offset = 0;
         // Incrementally add the contents of each extent in the extent linked list
         // until we reach the last extent or the maximum expected length.
@@ -455,11 +452,11 @@ impl<'a> ScanResult<'a> {
                 .snapshot
                 .get_block(extent_index)
                 .ok_or(ReaderError::GetExtent(extent_index))?;
-            let content = extent.extent_contents().map_err(ReaderError::VmoFormat)?;
+            let content = extent.extent_contents()?;
             let extent_length = min(total_length - offset, content.len());
             buffer[offset..offset + extent_length].copy_from_slice(&content[..extent_length]);
             offset += extent_length;
-            extent_index = extent.next_extent().map_err(ReaderError::VmoFormat)?;
+            extent_index = extent.next_extent()?;
         }
         match block.property_format().map_err(ReaderError::VmoFormat)? {
             PropertyFormat::String => {
@@ -476,18 +473,17 @@ impl<'a> ScanResult<'a> {
     }
 
     fn parse_link(&mut self, block: &ScannedBlock<'_>) -> Result<(), ReaderError> {
-        let name_index = block.name_index().map_err(ReaderError::VmoFormat)?;
+        let name_index = block.name_index()?;
         let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
-        let parent_index = block.parent_index().map_err(ReaderError::VmoFormat)?;
+        let parent_index = block.parent_index()?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, parent_index);
-        let link_content_index = block.link_content_index().map_err(ReaderError::VmoFormat)?;
+        let link_content_index = block.link_content_index()?;
         let content = self
             .snapshot
             .get_block(link_content_index)
             .ok_or(ReaderError::GetLinkContent(link_content_index))?
-            .name_contents()
-            .map_err(ReaderError::VmoFormat)?;
-        let disposition = block.link_node_disposition().map_err(ReaderError::VmoFormat)?;
+            .name_contents()?;
+        let disposition = block.link_node_disposition()?;
         parent.partial_hierarchy.links.push(LinkValue { name, content, disposition });
         Ok(())
     }
@@ -498,13 +494,12 @@ mod tests {
     use {
         super::*,
         crate::{
-            assert_inspect_tree,
-            format::{bitfields::Payload, constants},
-            ArrayProperty, ExponentialHistogramParams, HistogramProperty, Inspector,
-            LinearHistogramParams,
+            assert_inspect_tree, ArrayProperty, ExponentialHistogramParams, HistogramProperty,
+            Inspector, LinearHistogramParams,
         },
         anyhow::Error,
         futures::prelude::*,
+        inspect_format::{constants, Payload},
     };
 
     #[fuchsia::test]

@@ -39,6 +39,7 @@ rustc_binary("validator_bin") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/diagnostics/validator/inspect/fidl:validate-rustc",
     "//src/lib/diagnostics/hierarchy/rust",
+    "//src/lib/diagnostics/inspect/format/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fidl/rust/fidl",

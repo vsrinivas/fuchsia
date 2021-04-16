@@ -6,12 +6,9 @@
 //! implicit tree.
 
 use {
-    crate::{
-        format::{block::Block, block_type::BlockType, constants},
-        reader::error::ReaderError,
-        utils, Inspector,
-    },
+    crate::{reader::error::ReaderError, Inspector},
     fuchsia_zircon::Vmo,
+    inspect_format::{constants, utils, Block, BlockType},
     std::convert::TryFrom,
 };
 
@@ -205,8 +202,8 @@ impl<'h> Iterator for BlockIterator<'h> {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::format::container::WritableBlockContainer, anyhow::Error,
-        mapped_vmo::Mapping, std::sync::Arc,
+        super::*, anyhow::Error, inspect_format::WritableBlockContainer, mapped_vmo::Mapping,
+        std::sync::Arc,
     };
 
     #[test]

@@ -6,12 +6,13 @@ use {
     anyhow::Error,
     byteorder::{BigEndian, WriteBytesExt},
     fidl_fuchsia_bluetooth_snoop::PacketType,
-    fuchsia_inspect::{self as inspect, format::constants::MINIMUM_VMO_SIZE_BYTES, Property},
+    fuchsia_inspect::{self as inspect, Property},
     fuchsia_zircon as zx,
     futures::{
         future::{BoxFuture, FutureExt},
         lock::Mutex,
     },
+    inspect_format::constants::MINIMUM_VMO_SIZE_BYTES,
     itertools::Itertools,
     std::{
         collections::{

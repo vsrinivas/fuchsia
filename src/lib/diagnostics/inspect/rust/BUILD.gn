@@ -18,6 +18,7 @@ rustc_library("fuchsia-inspect") {
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/diagnostics/hierarchy/rust",
+    "//src/lib/diagnostics/inspect/format/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
@@ -49,12 +50,6 @@ rustc_library("fuchsia-inspect") {
   sources = [
     "src/component.rs",
     "src/error.rs",
-    "src/format/bitfields.rs",
-    "src/format/block.rs",
-    "src/format/block_type.rs",
-    "src/format/constants.rs",
-    "src/format/container.rs",
-    "src/format/mod.rs",
     "src/health.rs",
     "src/heap.rs",
     "src/lib.rs",
@@ -65,7 +60,6 @@ rustc_library("fuchsia-inspect") {
     "src/reader/tree_reader.rs",
     "src/service.rs",
     "src/state.rs",
-    "src/utils.rs",
   ]
 }
 
