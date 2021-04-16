@@ -298,6 +298,7 @@ void GenericPlatformManagerImpl_Fuchsia<ImplClass>::_ShutdownWeaveStack(void)
   FabricProvisioningSvr().Shutdown();
   DeviceControlSvr().Shutdown();
   DeviceDescriptionSvr().Shutdown();
+  Internal::ServiceDirectoryMgr.reset();
   SecurityMgr.Shutdown();
   ExchangeMgr.Shutdown();
   MessageLayer.Shutdown();
