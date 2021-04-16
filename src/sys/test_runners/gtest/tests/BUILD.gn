@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("tests_bin") {
   edition = "2018"
-  source_root = "main.rs"
+  source_root = "tests.rs"
   name = "gtest_runner_integration_test"
 
   deps = [
@@ -21,7 +21,10 @@ rustc_test("tests_bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  sources = [ "main.rs" ]
+  sources = [
+    "lib.rs",
+    "tests.rs",
+  ]
 
   inputs = [ "../test_data/sample_tests_golden_events.rsf" ]
 }
@@ -32,8 +35,42 @@ fuchsia_component("gtest_runner_integration_test") {
   deps = [ ":tests_bin" ]
 }
 
+rustc_test("stress_tests_bin") {
+  edition = "2018"
+  source_root = "stress_tests.rs"
+  name = "gtest_runner_stress_test"
+
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/test_executor/rust:test_executor",
+    "//src/sys/test_runners:test_lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [
+    "lib.rs",
+    "stress_tests.rs",
+  ]
+}
+
+fuchsia_component("gtest_runner_stress_test") {
+  testonly = true
+  manifest = "meta/gtest_runner_stress_test.cml"
+  deps = [ ":stress_tests_bin" ]
+}
+
 fuchsia_test_package("gtest-runner-integration-test") {
-  test_components = [ ":gtest_runner_integration_test" ]
+  test_components = [
+    ":gtest_runner_integration_test",
+    ":gtest_runner_stress_test",
+  ]
+
+  # fxbug.dev/74652: This stress test fails on coverage bot.
+  if (is_coverage) {
+    test_components -= [ ":gtest_runner_stress_test" ]
+  }
 }
 
 group("tests") {
