@@ -4,12 +4,13 @@
 
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/spi.h>
 #include <fbl/algorithm.h>
+#include <soc/aml-common/aml-registers.h>
 #include <soc/aml-common/aml-spi.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d3/s905d3-hw.h>
@@ -95,6 +96,7 @@ static pbus_dev_t spi_dev = []() {
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
+
 static constexpr zx_bind_inst_t gpio_spicc1_ss0_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SPICC1_SS0),
@@ -103,8 +105,29 @@ static constexpr device_fragment_part_t gpio_spicc1_ss0_fragment[] = {
     {std::size(root_match), root_match},
     {std::size(gpio_spicc1_ss0_match), gpio_spicc1_ss0_match},
 };
+
+static const zx_bind_inst_t spi0_reset_register_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
+    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_SPICC0_RESET),
+};
+static const device_fragment_part_t spi0_reset_register_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(spi0_reset_register_match), spi0_reset_register_match},
+};
+
+static const zx_bind_inst_t spi1_reset_register_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
+    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_SPICC1_RESET),
+};
+static const device_fragment_part_t spi1_reset_register_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(spi1_reset_register_match), spi1_reset_register_match},
+};
+
 static constexpr device_fragment_t fragments[] = {
     {"gpio-cs-0", std::size(gpio_spicc1_ss0_fragment), gpio_spicc1_ss0_fragment},
+    {"reset-0", std::size(spi0_reset_register_fragment), spi0_reset_register_fragment},
+    {"reset-1", std::size(spi1_reset_register_fragment), spi1_reset_register_fragment},
 };
 
 zx_status_t Nelson::SpiInit() {

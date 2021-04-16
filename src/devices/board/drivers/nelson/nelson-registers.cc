@@ -77,6 +77,26 @@ zx_status_t Nelson::RegistersInit() {
                                    },
                                });
 
+  register_entries[aml_registers::REGISTER_SPICC0_RESET] =
+      registers::BuildMetadata(allocator, aml_registers::REGISTER_SPICC0_RESET, RESET_MMIO,
+                               std::vector<registers::MaskEntryBuilder<uint32_t>>{
+                                   {
+                                       .mask = aml_registers::SPICC0_RESET_MASK,
+                                       .mmio_offset = S905D3_RESET6_REGISTER,
+                                       .reg_count = 1,
+                                   },
+                               });
+
+  register_entries[aml_registers::REGISTER_SPICC1_RESET] =
+      registers::BuildMetadata(allocator, aml_registers::REGISTER_SPICC1_RESET, RESET_MMIO,
+                               std::vector<registers::MaskEntryBuilder<uint32_t>>{
+                                   {
+                                       .mask = aml_registers::SPICC1_RESET_MASK,
+                                       .mmio_offset = S905D3_RESET6_REGISTER,
+                                       .reg_count = 1,
+                                   },
+                               });
+
   auto metadata =
       registers::BuildMetadata(allocator, std::move(mmio_entries), std::move(register_entries));
   fidl::OwnedEncodedMessage<registers::Metadata> encoded_metadata(&metadata);
