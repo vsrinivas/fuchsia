@@ -175,7 +175,8 @@ static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
     if (err != ZX_OK) {
       return err;
     }
-    BRCMF_ERR("random mac address to be assigned: " MAC_FMT_STR, MAC_FMT_ARGS(mac_addr));
+    BRCMF_ERR("random mac address to be assigned.");
+    BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(mac_addr));
   }
 
   err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, &fw_err);
