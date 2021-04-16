@@ -161,13 +161,13 @@ Example: `driver.usb_audio.disable`
 ## driver.\<name>.log=\<flags>
 
 Set the minumum log severity for a driver.  The textual constants
-"error", "warn", "info", "trace", "spew", may be used, and they map to the
+"error", "warn", "info", "debug", "trace", may be used, and they map to the
 corresponding bits in DDK\_LOG\_... in `ddk/debug.h`. If an unknown value is
-passed, the minimum log severity will be set to "spew". The default minimum log
+passed, the minimum log severity will be set to "trace". The default minimum log
 severity for a driver is "info".
 
 Note again that the name of the driver is the "Driver" argument to the
-ZIRCON\_DRIVER\_BEGIN macro. It is not, for example, the name of the device,
+ZIRCON\_DRIVER macro. It is not, for example, the name of the device,
 which for some drivers is almost identical, except that the device may be
 named "foo-bar" whereas the driver name must use underscores, e.g., "foo_bar".
 
@@ -178,7 +178,7 @@ the driver binds any devices. If `driver.tests.enable` is true then this
 defaults to enabled, otherwise the default is disabled.
 
 Note again that the name of the driver is the "Driver" argument to the
-ZIRCON\_DRIVER\_BEGIN macro. It is not, for example, the name of the device,
+ZIRCON\_DRIVER macro. It is not, for example, the name of the device,
 which for some drivers is almost identical, except that the device may be
 named "foo-bar" whereas the driver name must use underscores, e.g., "foo_bar".
 
