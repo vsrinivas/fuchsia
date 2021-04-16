@@ -124,9 +124,14 @@ class MountTestTemplate : public testing::Test {
   async::Loop& loop() { return loop_; }
 
   zx_status_t MountAndServe(minfs::ServeLayout serve_layout) {
-    return minfs::MountAndServe(
+    auto fs_or = minfs::MountAndServe(
         mount_options(), loop().dispatcher(), bcache(), std::move(root_server_end()),
         [this]() { loop().Quit(); }, serve_layout);
+    if (fs_or.is_error()) {
+      return fs_or.error_value();
+    }
+    fs_ = std::move(fs_or).value();
+    return ZX_OK;
   }
 
  private:
@@ -136,7 +141,8 @@ class MountTestTemplate : public testing::Test {
   std::unique_ptr<minfs::Bcache> bcache_ = nullptr;
   zx::channel root_client_end_;
   zx::channel root_server_end_;
-  async::Loop loop_ = async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
+  std::unique_ptr<fs::ManagedVfs> fs_;
+  async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 };
 
 using MountTest = MountTestTemplate<false>;

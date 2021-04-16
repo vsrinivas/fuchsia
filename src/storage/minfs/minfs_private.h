@@ -419,6 +419,9 @@ class Minfs :
   // Return true if dirty cache is enabled.
   static bool DirtyCacheEnabled();
 
+  // Logs mount time metrics such as the format version and oldest revision.
+  void LogMountMetrics();
+
  private:
   using HashTable = fbl::HashTable<ino_t, VnodeMinfs*>;
 
@@ -516,8 +519,9 @@ void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent);
 
 // Given an input bcache, initialize the filesystem and return a reference to the
 // root node.
-[[nodiscard]] zx_status_t Mount(std::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
-                                fbl::RefPtr<VnodeMinfs>* root_out);
+[[nodiscard]] zx::status<std::unique_ptr<Minfs>> Mount(std::unique_ptr<minfs::Bcache> bc,
+                                                       const MountOptions& options,
+                                                       fbl::RefPtr<VnodeMinfs>* root_out);
 }  // namespace minfs
 
 #endif  // SRC_STORAGE_MINFS_MINFS_PRIVATE_H_

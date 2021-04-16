@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+
 #include <block-client/cpp/fake-device.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <gtest/gtest.h>
@@ -66,10 +69,24 @@ TEST(MountTest, VersionLoggedWithCobalt) {
   };
   cobalt::CallCountMap call_counts;
   MountOptions options{.cobalt_factory = [&] { return std::make_unique<Logger>(&call_counts); }};
+
+  std::unique_ptr<fs::ManagedVfs> fs;
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  // Enclose the channels in a scope to ensure they are closed before we shut down.
   {
-    std::unique_ptr<Minfs> fs;
-    ASSERT_EQ(Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
+    zx::channel mount_channel, remote_mount_channel;
+    ASSERT_EQ(zx::channel::create(0, &mount_channel, &remote_mount_channel), ZX_OK);
+    auto fs_or = MountAndServe(
+        options, loop.dispatcher(), std::move(bcache), std::move(mount_channel), [] {},
+        ServeLayout::kExportDirectory);
+    ASSERT_EQ(fs_or.status_value(), ZX_OK);
+    fs = std::move(fs_or).value();
   }
+
+  fs->Shutdown([&loop](zx_status_t) { loop.Quit(); });
+  loop.Run();
+
   auto iter = call_counts.find(cobalt::LogMethod::kLogEventCount);
   ASSERT_NE(iter, call_counts.end());
   EXPECT_EQ(iter->second, 1u);

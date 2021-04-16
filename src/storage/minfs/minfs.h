@@ -19,8 +19,10 @@
 
 #ifdef __Fuchsia__
 #include <lib/async/dispatcher.h>
+#include <lib/zx/status.h>
 
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #endif
 
 #include <utility>
@@ -118,9 +120,12 @@ zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool
 // This function does not start the async_dispatcher_t object owned by |vfs|;
 // requests will not be dispatched if that async_dispatcher_t object is not
 // active.
-zx_status_t MountAndServe(const MountOptions& options, async_dispatcher_t* dispatcher,
-                          std::unique_ptr<minfs::Bcache> bcache, zx::channel mount_channel,
-                          fbl::Closure on_unmount, ServeLayout serve_layout);
+zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& options,
+                                                          async_dispatcher_t* dispatcher,
+                                                          std::unique_ptr<minfs::Bcache> bcache,
+                                                          zx::channel mount_channel,
+                                                          fbl::Closure on_unmount,
+                                                          ServeLayout serve_layout);
 #endif
 
 }  // namespace minfs

@@ -1235,14 +1235,6 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
       .dirty_cache_enabled = Minfs::DirtyCacheEnabled(),
   };
 
-  if (options.cobalt_factory) {
-    fs->cobalt_logger_ = options.cobalt_factory();
-    fs->cobalt_logger_->LogEventCount(static_cast<uint32_t>(fs_metrics::Event::kVersion),
-                                      static_cast<uint32_t>(fs_metrics::Component::kMinfs),
-                                      std::to_string(fs->Info().format_version) + "/" +
-                                          std::to_string(fs->Info().oldest_revision),
-                                      {}, 1);
-  }
   *out = std::move(fs);
 #else
   BlockOffsets offsets(*bc, *sb);
@@ -1327,8 +1319,9 @@ zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool
 
 #endif
 
-zx_status_t Mount(std::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
-                  fbl::RefPtr<VnodeMinfs>* root_out) {
+zx::status<std::unique_ptr<Minfs>> Mount(std::unique_ptr<minfs::Bcache> bc,
+                                         const MountOptions& options,
+                                         fbl::RefPtr<VnodeMinfs>* root_out) {
   TRACE_DURATION("minfs", "minfs_mount");
   FX_LOGS(DEBUG) << "dirty cache is " << (Minfs::DirtyCacheEnabled() ? "enabled." : "disabled.");
 
@@ -1336,46 +1329,46 @@ zx_status_t Mount(std::unique_ptr<minfs::Bcache> bc, const MountOptions& options
   zx_status_t status = Minfs::Create(std::move(bc), options, &fs);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to create filesystem object " << status;
-    return status;
+    return zx::error(status);
   }
 
   fbl::RefPtr<VnodeMinfs> vn;
   status = fs->VnodeGet(&vn, kMinfsRootIno);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "cannot find root inode: " << status;
-    return status;
+    return zx::error(status);
   }
 
   ZX_DEBUG_ASSERT(vn->IsDirectory());
 
-  __UNUSED auto r = fs.release();
   *root_out = std::move(vn);
-  return ZX_OK;
+  return zx::ok(std::move(fs));
 }
 
 #ifdef __Fuchsia__
-zx_status_t MountAndServe(const MountOptions& mount_options, async_dispatcher_t* dispatcher,
-                          std::unique_ptr<minfs::Bcache> bcache, zx::channel mount_channel,
-                          fbl::Closure on_unmount, ServeLayout serve_layout) {
+zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mount_options,
+                                                          async_dispatcher_t* dispatcher,
+                                                          std::unique_ptr<minfs::Bcache> bcache,
+                                                          zx::channel mount_channel,
+                                                          fbl::Closure on_unmount,
+                                                          ServeLayout serve_layout) {
   TRACE_DURATION("minfs", "MountAndServe");
-  minfs::MountOptions options = mount_options;
-  if (!options.cobalt_factory) {
-    options.cobalt_factory = [dispatcher] {
-      return cobalt::NewCobaltLoggerFromProjectId(
-          dispatcher, sys::ServiceDirectory::CreateFromNamespace(), fs_metrics::kCobaltProjectId);
-    };
-  }
 
   fbl::RefPtr<VnodeMinfs> data_root;
-  zx_status_t status = Mount(std::move(bcache), options, &data_root);
-  if (status != ZX_OK) {
-    return status;
+  auto fs_or = Mount(std::move(bcache), mount_options, &data_root);
+  if (fs_or.is_error()) {
+    return std::move(fs_or);
   }
+  std::unique_ptr<Minfs> fs = std::move(fs_or).value();
 
-  Minfs* vfs = data_root->Vfs();
-  vfs->SetMetrics(options.metrics);
-  vfs->SetUnmountCallback(std::move(on_unmount));
-  vfs->SetDispatcher(dispatcher);
+  fs->SetMetrics(mount_options.metrics);
+  fs->SetUnmountCallback(std::move(on_unmount));
+  fs->SetDispatcher(dispatcher);
+
+  // At time of writing the Cobalt client has certain requirements around which thread you interact
+  // with it on, so we interact with it by positing to the dispatcher.  See fxbug.dev/74396 for more
+  // details.
+  async::PostTask(dispatcher, [&fs = *fs] { fs.LogMountMetrics(); });
 
   fbl::RefPtr<fs::Vnode> export_root;
   switch (serve_layout) {
@@ -1389,7 +1382,24 @@ zx_status_t MountAndServe(const MountOptions& mount_options, async_dispatcher_t*
       break;
   }
 
-  return vfs->ServeDirectory(std::move(export_root), std::move(mount_channel));
+  zx_status_t status = fs->ServeDirectory(std::move(export_root), std::move(mount_channel));
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(std::move(fs));
+}
+
+void Minfs::LogMountMetrics() {
+  if (!mount_options_.cobalt_factory) {
+    cobalt_logger_ = cobalt::NewCobaltLoggerFromProjectId(
+        dispatcher(), sys::ServiceDirectory::CreateFromNamespace(), fs_metrics::kCobaltProjectId);
+  } else {
+    cobalt_logger_ = mount_options_.cobalt_factory();
+  }
+  cobalt_logger_->LogEventCount(
+      static_cast<uint32_t>(fs_metrics::Event::kVersion),
+      static_cast<uint32_t>(fs_metrics::Component::kMinfs),
+      std::to_string(Info().format_version) + "/" + std::to_string(Info().oldest_revision), {}, 1);
 }
 
 void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
@@ -1403,10 +1413,8 @@ void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
 
         auto on_unmount = std::move(on_unmount_);
 
-        // Explicitly delete this (rather than just letting the memory release when
-        // the process exits) to ensure that the block device's fifo has been
-        // closed.
-        delete this;
+        // Shut down the block cache.
+        bc_.reset();
 
         // Identify to the unmounting channel that teardown is complete.
         cb(ZX_OK);

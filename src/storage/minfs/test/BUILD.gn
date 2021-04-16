@@ -48,6 +48,8 @@ test("minfs_unit") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/block-client:fake-device",
@@ -237,11 +239,7 @@ fuchsia_test_package("minfs-tests") {
     ":minfs-micro-benchmark-test",
   ]
 
-  # TODO(https://fxbug.dev/73218): Re-enable minfs-integration-test in coverage build
-  # when it stops flaking.
-  if (!is_coverage) {
-    test_components += [ ":minfs-integration-test" ]
-  }
+  test_components += [ ":minfs-integration-test" ]
 
   deps = [ "//src/storage/bin/minfs" ]
 }

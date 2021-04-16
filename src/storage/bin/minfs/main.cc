@@ -84,13 +84,13 @@ int Mount(std::unique_ptr<minfs::Bcache> bcache, const minfs::MountOptions& opti
     FX_LOGS(WARNING) << "Unmounted";
   };
 
-  zx_status_t status = MountAndServe(options, loop.dispatcher(), std::move(bcache),
-                                     std::move(export_root), std::move(on_unmount), serve_layout);
-  if (status != ZX_OK) {
+  auto fs_or = MountAndServe(options, loop.dispatcher(), std::move(bcache), std::move(export_root),
+                             std::move(on_unmount), serve_layout);
+  if (fs_or.is_error()) {
     if (options.verbose) {
-      FX_LOGS(ERROR) << "Failed to mount: " << status;
+      FX_LOGS(ERROR) << "Failed to mount: " << fs_or.status_string();
     }
-    return -1;
+    return EXIT_FAILURE;
   }
 
   if (options.verbose) {
@@ -135,7 +135,7 @@ int usage(const std::vector<Command>& commands) {
     first = false;
   }
   fprintf(stderr, "\n");
-  return -1;
+  return EXIT_FAILURE;
 }
 
 // Creates a |minfs::Bcache| by consuming |device|.
@@ -147,7 +147,8 @@ int CreateBcacheUpdatingOptions(std::unique_ptr<block_client::RemoteBlockDevice>
   bool readonly_device = false;
   if (CreateBcache(std::move(device), &readonly_device, &bc) != ZX_OK) {
     fprintf(stderr, "minfs: error: cannot create block cache\n");
-    return -1;
+    FX_LOGS(ERROR) << "cannot create block cache";
+    return EXIT_FAILURE;
   }
   options->readonly_after_initialization |= readonly_device;
   options->repair_filesystem &= !readonly_device;
@@ -225,7 +226,7 @@ int main(int argc, char** argv) {
   zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(device_channel), &device);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not access block device";
-    return -1;
+    return EXIT_FAILURE;
   }
 
   std::unique_ptr<minfs::Bcache> bc;
@@ -244,5 +245,5 @@ int main(int argc, char** argv) {
   }
   fprintf(stderr, "minfs: unknown command\n");
   usage(commands);
-  return -1;
+  return EXIT_FAILURE;
 }
