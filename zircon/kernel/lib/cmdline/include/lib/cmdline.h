@@ -124,7 +124,6 @@ extern Cmdline gCmdline;
 
 // TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
-static constexpr const char kBufferchainReservePages[] = "kernel.bufferchain.reserve-pages";
 static constexpr const char kBypassDebuglog[] = "kernel.bypass-debuglog";
 static constexpr const char kDebugUartPoll[] = "kernel.debug_uart_poll";
 static constexpr const char kEnableDebuggingSyscalls[] = "kernel.enable-debugging-syscalls";

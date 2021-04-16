@@ -6,7 +6,7 @@
 
 #include "object/buffer_chain.h"
 
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 
 #include <lk/init.h>
 
@@ -36,16 +36,8 @@ zx_status_t BufferChain::AppendKernel(const char* src, size_t size) {
 template zx_status_t BufferChain::AppendCommon(user_in_ptr<const char> src, size_t size);
 
 void BufferChain::InitializePageCache(uint32_t /*level*/) {
-  // Reserve up to 32 pages per CPU for servicing BufferChains, unless
-  // overridden on the command line.
-  const size_t default_reserve_pages = 32;
-
-  // TODO(fxbug.dev/68456): Determin an upper bound for this value to prevent
-  // consuming too much memory.
-  const size_t reserve_pages =
-      gCmdline.GetUInt64(kernel_option::kBufferchainReservePages, default_reserve_pages);
-
-  zx::status<page_cache::PageCache> result = page_cache::PageCache::Create(reserve_pages);
+  zx::status<page_cache::PageCache> result =
+      page_cache::PageCache::Create(gBootOptions->bufferchain_reserve_pages);
   ASSERT(result.is_ok());
   page_cache_ = ktl::move(result.value());
 }

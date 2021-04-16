@@ -289,6 +289,17 @@ fatal page fault exception. For a software page fault triggered by a syscall,
 the syscall will fail with `ZX_ERR_TIMED_OUT`. A value of 0 indicates a page
 fault is never aborted due to a time out.
 
+### kernel.bufferchain.reserve-pages=\<uint64_t>
+**Default:** `0x20`
+
+Specifies the number of pages per CPU to reserve for buffer chain allocations
+(channel messages). Higher values reduce contention on the PMM when the
+system is under load at the cost of using more memory when the system is
+idle.
+
+TODO(fxbug.dev/68456): Determine an upper bound for this value to prevent
+consuming too much memory.
+
 
 ## Options available only on arm64 machines
 

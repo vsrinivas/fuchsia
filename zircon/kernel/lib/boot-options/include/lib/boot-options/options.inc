@@ -274,6 +274,16 @@ the syscall will fail with `ZX_ERR_TIMED_OUT`. A value of 0 indicates a page
 fault is never aborted due to a time out.
 )""")
 
+DEFINE_OPTION("kernel.bufferchain.reserve-pages", uint64_t, bufferchain_reserve_pages, {32}, R"""(
+Specifies the number of pages per CPU to reserve for buffer chain allocations
+(channel messages). Higher values reduce contention on the PMM when the
+system is under load at the cost of using more memory when the system is
+idle.
+
+TODO(fxbug.dev/68456): Determine an upper bound for this value to prevent
+consuming too much memory.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 
