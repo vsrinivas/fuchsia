@@ -299,7 +299,11 @@ bool DisplaySwapchain::SetDisplayColorConversion(
   // Now check the config.
   fuchsia::hardware::display::ConfigResult result;
   std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+
+  // TODO (fxbug.dev/73315): Remove this log once we close out the ticket.
+  FX_LOGS(INFO) << "DisplaySwapchain::SetDisplayColorConversion called.";
   display_controller->CheckConfig(/*discard=*/false, &result, &ops);
+  FX_LOGS(INFO) << "DisplaySwapchain::SetDisplayColorConversion - finished CheckConfig.";
 
   bool client_color_conversion_required = false;
   if (result != fuchsia::hardware::display::ConfigResult::OK) {
