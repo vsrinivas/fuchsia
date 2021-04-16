@@ -4,25 +4,14 @@
 
 #include "src/ui/scenic/bin/app.h"
 
-#include <lib/fit/bridge.h>
-#include <lib/fit/function.h>
-#include <lib/fit/single_threaded_executor.h>
 #include <lib/syslog/cpp/macros.h>
-
-#ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-#include "src/ui/scenic/lib/gfx/gfx_system.h"
-#endif
-
-#ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
-#include "src/ui/scenic/lib/input/input_system.h"
-#endif
 
 #include "rapidjson/document.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/files/file.h"
 #include "src/ui/lib/escher/vk/pipeline_builder.h"
 #include "src/ui/scenic/lib/gfx/api/internal_snapshot_impl.h"
-#include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
+#include "src/ui/scenic/lib/gfx/gfx_system.h"
 #include "src/ui/scenic/lib/scheduling/frame_metrics_registry.cb.h"
 #include "src/ui/scenic/lib/scheduling/windowed_frame_predictor.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
@@ -39,9 +28,9 @@ static const std::string kDependencyDir = "/dev/class/display-controller";
 static const std::string kDependencyDir = "/dev/class/gpu";
 #endif
 
-void ReadConfig(zx::duration* min_predicted_frame_duration, bool* enable_allocator_for_flatland) {
-  *min_predicted_frame_duration = scheduling::DefaultFrameScheduler::kMinPredictedFrameDuration;
-  *enable_allocator_for_flatland = false;
+// Reads the config file and returns a struct with all found values.
+scenic_impl::ConfigValues ReadConfig() {
+  scenic_impl::ConfigValues values;
 
   std::string config_string;
   if (files::ReadFileToString("/config/data/scenic_config", &config_string)) {
@@ -54,39 +43,29 @@ void ReadConfig(zx::duration* min_predicted_frame_duration, bool* enable_allocat
       FX_CHECK(val.IsInt()) << "min_preducted_frame_duration must be an integer";
       frame_scheduler_min_predicted_frame_duration_in_us = val.GetInt();
       FX_CHECK(frame_scheduler_min_predicted_frame_duration_in_us >= 0);
-    }
 
+      values.min_predicted_frame_duration =
+          zx::usec(frame_scheduler_min_predicted_frame_duration_in_us);
+    }
     FX_LOGS(INFO) << "Scenic min_predicted_frame_duration(us): "
-                  << frame_scheduler_min_predicted_frame_duration_in_us;
-    *min_predicted_frame_duration =
-        frame_scheduler_min_predicted_frame_duration_in_us > 0
-            ? zx::usec(frame_scheduler_min_predicted_frame_duration_in_us)
-            : scheduling::DefaultFrameScheduler::kMinPredictedFrameDuration;
+                  << values.min_predicted_frame_duration.to_usecs();
 
     if (document.HasMember("enable_allocator_for_flatland")) {
       auto& val = document["enable_allocator_for_flatland"];
       FX_CHECK(val.IsBool()) << "enable_allocator_for_flatland must be a boolean";
-      *enable_allocator_for_flatland = val.GetBool();
+      values.enable_allocator_for_flatland = val.GetBool();
     }
-  }
-}
-
-bool GetPointerAutoFocusBehavior() {
-  std::string scenic_config;
-  bool pointer_auto_focus = true;
-  if (files::ReadFileToString("/config/data/scenic_config", &scenic_config)) {
-    rapidjson::Document document;
-    document.Parse(scenic_config);
+    FX_LOGS(INFO) << "enable_allocator_for_flatland: " << values.enable_allocator_for_flatland;
 
     if (document.HasMember("pointer_auto_focus")) {
       auto& val = document["pointer_auto_focus"];
       FX_CHECK(val.IsBool()) << "pointer_auto_focus must be a boolean";
-      pointer_auto_focus = val.GetBool();
+      values.pointer_auto_focus_on = val.GetBool();
     }
+    FX_LOGS(INFO) << "Scenic pointer auto focus: " << values.pointer_auto_focus_on;
   }
 
-  FX_LOGS(INFO) << "Scenic pointer auto focus: " << pointer_auto_focus;
-  return pointer_auto_focus;
+  return values;
 }
 
 }  // namespace
@@ -128,6 +107,7 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
          fit::closure quit_callback)
     : executor_(async_get_default_dispatcher()),
       app_context_(std::move(app_context)),
+      config_values_(ReadConfig()),
       // TODO(fxbug.dev/40997): subsystems requiring graceful shutdown *on a loop* should register
       // themselves. It is preferable to cleanly shutdown using destructors only, if possible.
       shutdown_manager_(
@@ -225,12 +205,31 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
 
   escher_ = std::move(escher);
 
-  std::shared_ptr<cobalt::CobaltLogger> cobalt_logger = cobalt::NewCobaltLoggerFromProjectId(
+  cobalt_logger_ = cobalt::NewCobaltLoggerFromProjectId(
       async_get_default_dispatcher(), app_context_->svc(), cobalt_registry::kProjectId);
-  if (!cobalt_logger) {
+  if (!cobalt_logger_) {
     FX_LOGS(ERROR) << "CobaltLogger creation failed!";
   }
 
+  CreateFrameScheduler(display->vsync_timing());
+  InitializeGraphics(display);
+  InitializeInput();
+  InitializeHeartbeat();
+}
+
+void App::CreateFrameScheduler(std::shared_ptr<const scheduling::VsyncTiming> vsync_timing) {
+  TRACE_DURATION("gfx", "App::CreateFrameScheduler");
+  frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
+      std::move(vsync_timing),
+      std::make_unique<scheduling::WindowedFramePredictor>(
+          config_values_.min_predicted_frame_duration,
+          scheduling::DefaultFrameScheduler::kInitialRenderDuration,
+          scheduling::DefaultFrameScheduler::kInitialUpdateDuration),
+      scenic_->inspect_node()->CreateChild("FrameScheduler"), cobalt_logger_);
+}
+
+void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
+  TRACE_DURATION("gfx", "App::InitializeGraphics");
   // Replace Escher's default pipeline builder with one which will log to Cobalt upon each
   // unexpected lazy pipeline creation.  This allows us to detect when this slips through our
   // testing and occurs in the wild.  In order to detect problems ASAP during development, debug
@@ -238,8 +237,8 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   {
     auto pipeline_builder = std::make_unique<escher::PipelineBuilder>(escher_->vk_device());
     pipeline_builder->set_log_pipeline_creation_callback(
-        [cobalt_logger](const vk::GraphicsPipelineCreateInfo* graphics_info,
-                        const vk::ComputePipelineCreateInfo* compute_info) {
+        [cobalt_logger = cobalt_logger_](const vk::GraphicsPipelineCreateInfo* graphics_info,
+                                         const vk::ComputePipelineCreateInfo* compute_info) {
           // TODO(fxbug.dev/49972): pre-warm compute pipelines in addition to graphics pipelines.
           if (compute_info) {
             FX_LOGS(WARNING) << "Unexpected lazy creation of Vulkan compute pipeline.";
@@ -263,26 +262,13 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   // Allocator sets constraints from both gfx and flatland. |enable_allocator_for_flatland| check
   // allows us to disable flatland support via config while it is still in development, so it does
   // not affect Image3 use in gfx.
-  bool enable_allocator_for_flatland = false;
-  zx::duration min_predicted_frame_duration;
-  ReadConfig(&min_predicted_frame_duration, &enable_allocator_for_flatland);
-
-  {
-    TRACE_DURATION("gfx", "App::InitializeServices[frame-scheduler]");
-    frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
-        display->vsync_timing(),
-        std::make_unique<scheduling::WindowedFramePredictor>(
-            min_predicted_frame_duration, scheduling::DefaultFrameScheduler::kInitialRenderDuration,
-            scheduling::DefaultFrameScheduler::kInitialUpdateDuration),
-        scenic_->inspect_node()->CreateChild("FrameScheduler"), cobalt_logger);
-  }
 
   // Create Allocator with the available importers.
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers;
   auto gfx_buffer_collection_importer =
       std::make_shared<gfx::GfxBufferCollectionImporter>(escher_->GetWeakPtr());
   importers.push_back(gfx_buffer_collection_importer);
-  if (enable_allocator_for_flatland && flatland_compositor_)
+  if (config_values_.enable_allocator_for_flatland && flatland_compositor_)
     importers.push_back(flatland_compositor_);
   allocator_ = std::make_shared<allocation::Allocator>(
       app_context_.get(), importers, utils::CreateSysmemAllocatorSyncPtr("Allocator"));
@@ -296,7 +282,6 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   scenic_->SetFrameScheduler(frame_scheduler_);
   annotation_registry_.InitializeWithGfxAnnotationManager(engine_->annotation_manager());
 
-#ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
   image_pipe_updater_ = std::make_shared<gfx::ImagePipeUpdater>(frame_scheduler_);
   auto gfx = scenic_->RegisterSystem<gfx::GfxSystem>(engine_.get(), &sysmem_,
                                                      display_manager_.get(), image_pipe_updater_);
@@ -305,11 +290,6 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   scenic_->SetScreenshotDelegate(gfx.get());
   display_info_delegate_ = std::make_unique<DisplayInfoDelegate>(display);
   scenic_->SetDisplayInfoDelegate(display_info_delegate_.get());
-#endif
-
-  auto input = scenic_->RegisterSystem<input::InputSystem>(engine_->scene_graph(),
-                                                           GetPointerAutoFocusBehavior());
-  FX_DCHECK(input);
 
   flatland_presenter_->SetFrameScheduler(frame_scheduler_);
 
@@ -330,16 +310,27 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
           fit::bind_member(flatland_manager_.get(), &flatland::FlatlandManager::CreateFlatland);
   zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(flatland_handler));
   FX_DCHECK(status == ZX_OK);
+}
 
-  {
+void App::InitializeInput() {
+  TRACE_DURATION("gfx", "App::InitializeInput");
+  input_ = scenic_->RegisterSystem<input::InputSystem>(engine_->scene_graph(),
+                                                       config_values_.pointer_auto_focus_on);
+  FX_DCHECK(input_);
+}
+
+void App::InitializeHeartbeat() {
+  TRACE_DURATION("gfx", "App::InitializeHeartbeat");
+  {  // Initialize ViewTreeSnapshotter
     std::vector<view_tree::SubtreeSnapshotGenerator> subtrees;
-    subtrees.emplace_back(
-        [engine = engine_] { return engine->scene_graph()->view_tree().Snapshot(); });
+    subtrees.emplace_back([this] { return engine_->scene_graph()->view_tree().Snapshot(); });
+
     std::vector<view_tree::ViewTreeSnapshotter::Subscriber> subscribers;
     subscribers.push_back(
         {.on_new_view_tree =
-             [input = input](auto snapshot) { input->OnNewViewTreeSnapshot(std::move(snapshot)); },
+             [this](auto snapshot) { input_->OnNewViewTreeSnapshot(std::move(snapshot)); },
          .dispatcher = async_get_default_dispatcher()});
+
     view_tree_snapshotter_ = std::make_shared<view_tree::ViewTreeSnapshotter>(
         std::move(subtrees), std::move(subscribers));
   }

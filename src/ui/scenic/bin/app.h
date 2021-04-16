@@ -6,7 +6,6 @@
 #define SRC_UI_SCENIC_BIN_APP_H_
 
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/function.h>
 
 #include <memory>
 
@@ -23,6 +22,7 @@
 #include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
+#include "src/ui/scenic/lib/input/input_system.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/shutdown/lifecycle_controller_impl.h"
@@ -46,6 +46,14 @@ class DisplayInfoDelegate : public Scenic::GetDisplayInfoDelegateDeprecated {
   std::shared_ptr<display::Display> display_ = nullptr;
 };
 
+// Values read from config file. Set to their default values.
+struct ConfigValues {
+  zx::duration min_predicted_frame_duration =
+      scheduling::DefaultFrameScheduler::kMinPredictedFrameDuration;
+  bool enable_allocator_for_flatland = false;
+  bool pointer_auto_focus_on = true;
+};
+
 class App {
  public:
   explicit App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspect_node,
@@ -56,15 +64,22 @@ class App {
   void InitializeServices(escher::EscherUniquePtr escher,
                           std::shared_ptr<display::Display> display);
 
+  void CreateFrameScheduler(std::shared_ptr<const scheduling::VsyncTiming> vsync_timing);
+  void InitializeGraphics(std::shared_ptr<display::Display> display);
+  void InitializeInput();
+  void InitializeHeartbeat();
+
   async::Executor executor_;
   std::unique_ptr<sys::ComponentContext> app_context_;
+  const ConfigValues config_values_;
+
   std::shared_ptr<ShutdownManager> shutdown_manager_;
+  std::shared_ptr<cobalt::CobaltLogger> cobalt_logger_;
 
   gfx::Sysmem sysmem_;
   std::unique_ptr<display::DisplayManager> display_manager_;
   std::unique_ptr<DisplayInfoDelegate> display_info_delegate_;
   escher::EscherUniquePtr escher_;
-  std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
 
   std::shared_ptr<gfx::ImagePipeUpdater> image_pipe_updater_;
   std::shared_ptr<gfx::Engine> engine_;
@@ -79,6 +94,10 @@ class App {
   std::shared_ptr<flatland::DefaultFlatlandPresenter> flatland_presenter_;
   std::shared_ptr<flatland::FlatlandManager> flatland_manager_;
   std::shared_ptr<flatland::DisplayCompositor> flatland_compositor_;
+
+  std::shared_ptr<input::InputSystem> input_;
+
+  std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
 
   std::shared_ptr<view_tree::ViewTreeSnapshotter> view_tree_snapshotter_;
 

@@ -2,16 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# To build a different Scenic-y executable, cut'n'paste the
-# declare_args() and executable("scenic") into a different
-# BUILD.gn and then modify the args and the executable name,
-# as desired.
-
-declare_args() {
-  enable_gfx_subsystem = true
-  enable_input_subsystem = true
-}
-
 executable("bin") {
   output_name = "scenic"
 
@@ -30,8 +20,11 @@ executable("bin") {
     "//src/ui/lib/display:hdcp_client",
     "//src/ui/lib/display:hdcp_service",
     "//src/ui/scenic/lib/annotation:annotation_registry",
+    "//src/ui/scenic/lib/display",
     "//src/ui/scenic/lib/flatland/engine",
     "//src/ui/scenic/lib/flatland/renderer",
+    "//src/ui/scenic/lib/gfx",
+    "//src/ui/scenic/lib/input",
     "//src/ui/scenic/lib/scheduling:frame_metrics_registry",
     "//src/ui/scenic/lib/shutdown",
     "//src/ui/scenic/lib/shutdown:lifecycle_controller",
@@ -41,20 +34,6 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/inspect",
   ]
-  defines = []
-
-  if (enable_gfx_subsystem) {
-    defines += [ "SCENIC_ENABLE_GFX_SUBSYSTEM" ]
-    deps += [
-      "//src/ui/scenic/lib/display",
-      "//src/ui/scenic/lib/gfx",
-    ]
-  }
-
-  if (enable_input_subsystem) {
-    defines += [ "SCENIC_ENABLE_INPUT_SUBSYSTEM" ]
-    deps += [ "//src/ui/scenic/lib/input" ]
-  }
 
   # Extra stack needed to avoid crashes when loading vulkan validation layers
   # with asan enabled.
