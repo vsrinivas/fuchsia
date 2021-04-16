@@ -65,7 +65,7 @@ onerous during development, and on your local machine you may wish to see warnin
 let CQ enforce the hard boundary.
 
 The `rust_cap_lints` GN arg allows you to control this behavior in your development environment.
-Setting `rust_cap_lints = "warn"` in `fx args` or adding `--args='rust_cap_lints = "warn"'` to 
+Setting `rust_cap_lints = "warn"` in `fx args` or adding `--args='rust_cap_lints = "warn"'` to
 your `fx set` will allow you to develop locally without being blocked by warnings.
 
 ## Style
@@ -110,7 +110,7 @@ Public discussion happens on the [rust-users@fuchsia.dev] mailing list.
 
 - [Editor setup](editors.md)
 - [Measuring binary bloat](bloat.md)
-- [Managing third-party dependencies](third_party.md)
+- [Managing external dependencies](external_crates.md)
 - [Unsafe code](unsafe.md)
 - [Unstable features](unstable.md)
 - [Rust FIDL server/client tutorial][fidl-tutorial]

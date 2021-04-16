@@ -24,8 +24,8 @@ toc:
   path: /docs/development/languages/rust/testing.md
 - title: "Measuring Rust Binary Bloat"
   path: /docs/development/languages/rust/bloat.md
-- title: "Third-party Rust crates"
-  path: /docs/development/languages/rust/third_party.md
+- title: "External Rust crates"
+  path: /docs/development/languages/rust/external_crates.md
 - title: "Unsafe code in Rust"
   path: /docs/development/languages/rust/unsafe.md
 - title: "Unstable Rust features"
