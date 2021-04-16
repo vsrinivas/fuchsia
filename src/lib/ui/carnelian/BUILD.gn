@@ -433,7 +433,7 @@ resource("shaders") {
 template("carnelian_example") {
   example_deps = invoker.deps
   if (carnelian_enable_vulkan_validation) {
-    example_deps += [ "//src/lib/vulkan:validation-layers" ]
+    example_deps += [ "//src/lib/vulkan/validation_layers" ]
   }
   fuchsia_package_with_single_component(target_name) {
     forward_variables_from(invoker, [ "manifest" ])

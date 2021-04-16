@@ -10,9 +10,9 @@ fuchsia_component("vulkaninfo-cmp") {
   component_name = "vulkaninfo"
 
   deps = [
-    "//src/lib/vulkan:image-pipe-swapchain-fb",
-    "//src/lib/vulkan:validation-layers",
     "//src/lib/vulkan:vulkaninfo",
+    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
+    "//src/lib/vulkan/validation_layers",
   ]
 }
 

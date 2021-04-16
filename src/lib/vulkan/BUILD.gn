@@ -77,16 +77,6 @@ config("vulkan_hpp") {
   ]
 }
 
-# Remove this once all callers are updated to reference the destination.
-group("validation-layers") {
-  deps = [ "//src/lib/vulkan/validation_layers" ]
-}
-
-# Remove this once all callers are updated to reference the destination.
-group("image-pipe-swapchain-fb") {
-  deps = [ "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer" ]
-}
-
 import("//src/lib/vulkan/compact_image/sdk_atom_info.gni")
 import("//src/lib/vulkan/swapchain/sdk_atom_info.gni")
 import("//src/lib/vulkan/validation_layers/sdk_atom_info.gni")

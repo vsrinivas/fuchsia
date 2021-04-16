@@ -25,8 +25,8 @@ fuchsia_component("vkpriority_cmp") {
   component_name = "vkpriority"
   deps = [
     ":vkpriority_bin",
-    "//src/lib/vulkan:image-pipe-swapchain-fb",
-    "//src/lib/vulkan:validation-layers",
+    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
+    "//src/lib/vulkan/validation_layers",
   ]
 
   manifest = "meta/vkpriority.cmx"

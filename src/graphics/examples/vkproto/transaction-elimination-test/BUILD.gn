@@ -12,8 +12,8 @@ fuchsia_component("transaction_elimination_test") {
   deps = [
     ":bin",
     "//src/graphics/examples/vkproto:shaders",
-    "//src/lib/vulkan:image-pipe-swapchain-fb",
-    "//src/lib/vulkan:validation-layers",
+    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
+    "//src/lib/vulkan/validation_layers",
   ]
 }
 
