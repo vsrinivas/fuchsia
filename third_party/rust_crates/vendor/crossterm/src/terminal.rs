@@ -8,7 +8,7 @@
 //! to demonstrate the capabilities.
 //!
 //! Most terminal actions can be performed with commands.
-//! Please have a look at [command documention](../index.html#command-api) for a more detailed documentation.
+//! Please have a look at [command documentation](../index.html#command-api) for a more detailed documentation.
 //!
 //! ## Screen Buffer
 //!
@@ -81,10 +81,14 @@
 //!
 //! For manual execution control check out [crossterm::queue](../macro.queue.html).
 
+use std::fmt;
+
 #[cfg(windows)]
-use crossterm_winapi::{Handle, ScreenBuffer};
+use crossterm_winapi::{ConsoleMode, Handle, ScreenBuffer};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+#[cfg(windows)]
+use winapi::um::wincon::ENABLE_WRAP_AT_EOL_OUTPUT;
 
 #[doc(no_inline)]
 use crate::Command;
@@ -114,6 +118,44 @@ pub fn size() -> Result<(u16, u16)> {
     sys::size()
 }
 
+/// Disables line wrapping.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DisableLineWrap;
+
+impl Command for DisableLineWrap {
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        f.write_str(ansi::DISABLE_LINE_WRAP_CSI_SEQUENCE)
+    }
+
+    #[cfg(windows)]
+    fn execute_winapi(&self, _writer: impl FnMut() -> Result<()>) -> Result<()> {
+        let screen_buffer = ScreenBuffer::current()?;
+        let console_mode = ConsoleMode::from(screen_buffer.handle().clone());
+        let new_mode = console_mode.mode()? & !ENABLE_WRAP_AT_EOL_OUTPUT;
+        console_mode.set_mode(new_mode)?;
+        Ok(())
+    }
+}
+
+/// Enable line wrapping.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EnableLineWrap;
+
+impl Command for EnableLineWrap {
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        f.write_str(ansi::ENABLE_LINE_WRAP_CSI_SEQUENCE)
+    }
+
+    #[cfg(windows)]
+    fn execute_winapi(&self, _writer: impl FnMut() -> Result<()>) -> Result<()> {
+        let screen_buffer = ScreenBuffer::current()?;
+        let console_mode = ConsoleMode::from(screen_buffer.handle().clone());
+        let new_mode = console_mode.mode()? | ENABLE_WRAP_AT_EOL_OUTPUT;
+        console_mode.set_mode(new_mode)?;
+        Ok(())
+    }
+}
+
 /// A command that switches to alternate screen.
 ///
 /// # Notes
@@ -140,14 +182,12 @@ pub fn size() -> Result<(u16, u16)> {
 pub struct EnterAlternateScreen;
 
 impl Command for EnterAlternateScreen {
-    type AnsiType = &'static str;
-
-    fn ansi_code(&self) -> Self::AnsiType {
-        ansi::ENTER_ALTERNATE_SCREEN_CSI_SEQUENCE
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        f.write_str(ansi::ENTER_ALTERNATE_SCREEN_CSI_SEQUENCE)
     }
 
     #[cfg(windows)]
-    fn execute_winapi(&self) -> Result<()> {
+    fn execute_winapi(&self, _writer: impl FnMut() -> Result<()>) -> Result<()> {
         let alternate_screen = ScreenBuffer::create();
         alternate_screen.show()?;
         Ok(())
@@ -180,14 +220,12 @@ impl Command for EnterAlternateScreen {
 pub struct LeaveAlternateScreen;
 
 impl Command for LeaveAlternateScreen {
-    type AnsiType = &'static str;
-
-    fn ansi_code(&self) -> Self::AnsiType {
-        ansi::LEAVE_ALTERNATE_SCREEN_CSI_SEQUENCE
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        f.write_str(ansi::LEAVE_ALTERNATE_SCREEN_CSI_SEQUENCE)
     }
 
     #[cfg(windows)]
-    fn execute_winapi(&self) -> Result<()> {
+    fn execute_winapi(&self, _writer: impl FnMut() -> Result<()>) -> Result<()> {
         let screen_buffer = ScreenBuffer::from(Handle::current_out_handle()?);
         screen_buffer.show()?;
         Ok(())
@@ -219,14 +257,12 @@ pub enum ClearType {
 pub struct ScrollUp(pub u16);
 
 impl Command for ScrollUp {
-    type AnsiType = String;
-
-    fn ansi_code(&self) -> Self::AnsiType {
-        ansi::scroll_up_csi_sequence(self.0)
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        ansi::scroll_up_csi_sequence(f, self.0)
     }
 
     #[cfg(windows)]
-    fn execute_winapi(&self) -> Result<()> {
+    fn execute_winapi(&self, _writer: impl FnMut() -> Result<()>) -> Result<()> {
         sys::scroll_up(self.0)
     }
 }
@@ -240,14 +276,12 @@ impl Command for ScrollUp {
 pub struct ScrollDown(pub u16);
 
 impl Command for ScrollDown {
-    type AnsiType = String;
-
-    fn ansi_code(&self) -> Self::AnsiType {
-        ansi::scroll_down_csi_sequence(self.0)
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        ansi::scroll_down_csi_sequence(f, self.0)
     }
 
     #[cfg(windows)]
-    fn execute_winapi(&self) -> Result<()> {
+    fn execute_winapi(&self, _writer: impl FnMut() -> Result<()>) -> Result<()> {
         sys::scroll_down(self.0)
     }
 }
@@ -263,20 +297,18 @@ impl Command for ScrollDown {
 pub struct Clear(pub ClearType);
 
 impl Command for Clear {
-    type AnsiType = &'static str;
-
-    fn ansi_code(&self) -> Self::AnsiType {
-        match self.0 {
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        f.write_str(match self.0 {
             ClearType::All => ansi::CLEAR_ALL_CSI_SEQUENCE,
             ClearType::FromCursorDown => ansi::CLEAR_FROM_CURSOR_DOWN_CSI_SEQUENCE,
             ClearType::FromCursorUp => ansi::CLEAR_FROM_CURSOR_UP_CSI_SEQUENCE,
             ClearType::CurrentLine => ansi::CLEAR_FROM_CURRENT_LINE_CSI_SEQUENCE,
             ClearType::UntilNewLine => ansi::CLEAR_UNTIL_NEW_LINE_CSI_SEQUENCE,
-        }
+        })
     }
 
     #[cfg(windows)]
-    fn execute_winapi(&self) -> Result<()> {
+    fn execute_winapi(&self, _writer: impl FnMut() -> Result<()>) -> Result<()> {
         sys::clear(self.0)
     }
 }
@@ -290,14 +322,12 @@ impl Command for Clear {
 pub struct SetSize(pub u16, pub u16);
 
 impl Command for SetSize {
-    type AnsiType = String;
-
-    fn ansi_code(&self) -> Self::AnsiType {
-        ansi::set_size_csi_sequence(self.0, self.1)
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        ansi::set_size_csi_sequence(f, self.0, self.1)
     }
 
     #[cfg(windows)]
-    fn execute_winapi(&self) -> Result<()> {
+    fn execute_winapi(&self, _writer: impl FnMut() -> Result<()>) -> Result<()> {
         sys::set_size(self.0, self.1)
     }
 }
@@ -311,14 +341,12 @@ impl Command for SetSize {
 pub struct SetTitle<'a>(pub &'a str);
 
 impl<'a> Command for SetTitle<'a> {
-    type AnsiType = String;
-
-    fn ansi_code(&self) -> Self::AnsiType {
-        ansi::set_title_ansi_sequence(self.0)
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        ansi::set_title_ansi_sequence(f, self.0)
     }
 
     #[cfg(windows)]
-    fn execute_winapi(&self) -> Result<()> {
+    fn execute_winapi(&self, _writer: impl FnMut() -> Result<()>) -> Result<()> {
         sys::set_window_title(self.0)
     }
 }
@@ -330,10 +358,7 @@ impl_display!(for Clear);
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        io::{stdout, Write},
-        thread, time,
-    };
+    use std::{io::stdout, thread, time};
 
     use crate::execute;
 
@@ -343,8 +368,6 @@ mod tests {
     #[test]
     #[ignore]
     fn test_resize_ansi() {
-        try_enable_ansi();
-
         let (width, height) = size().unwrap();
 
         execute!(stdout(), SetSize(35, 35)).unwrap();
@@ -361,22 +384,5 @@ mod tests {
         thread::sleep(time::Duration::from_millis(30));
 
         assert_eq!((width, height), size().unwrap());
-    }
-
-    fn try_enable_ansi() -> bool {
-        #[cfg(windows)]
-        {
-            if cfg!(target_os = "windows") {
-                use crate::ansi_support::set_virtual_terminal_processing;
-
-                // if it is not listed we should try with WinApi to check if we do support ANSI-codes.
-                match set_virtual_terminal_processing(true) {
-                    Ok(_) => return true,
-                    Err(_) => return false,
-                }
-            }
-        }
-
-        true
     }
 }

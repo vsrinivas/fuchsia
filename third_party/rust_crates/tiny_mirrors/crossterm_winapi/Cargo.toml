@@ -4,5 +4,5 @@
 
 [package]
 name = "crossterm_winapi"
-version = "0.6.1"
+version = "0.7.0"
 authors = ["The Fuchsia Authors"]

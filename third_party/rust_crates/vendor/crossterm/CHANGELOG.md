@@ -1,3 +1,28 @@
+# Version 0.19
+- Use single thread for async event reader. 
+- Patch timeout handling for event polling this was not working correctly.
+- Add unix support for more key combinations mainly complex ones with ALT/SHIFT/CTRL.
+- Derive `PartialEq` and `Eq` for ContentStyle
+- Fix windows resize event size, this used to be the buffer size but is screen size now.
+- Change `Command::ansi_code` to `Command::write_ansi`, this way the ansi code will be written to given formatter.
+
+# Version 0.18.2
+- Fix panic when only setting bold and redirecting stdout.
+- Use `tty_fd` for set/get terminal attributes
+ 
+# Version 0.18.1
+- Fix enabling ANSI support when stdout is redirected
+- Update crossterm-winapi to 0.6.2
+
+# Version 0.18.0
+- Fix get position bug 
+- Fix windows 8 or lower write to user-given stdout instead of stdout.
+- Make MoveCursor(Left/Right/Up/Dow) command with input 0 not move.
+- Switch to futures-core to reduce dependencies.
+- Command API restricts to only accept `std::io::Write`
+- Make `supports_ansi` public
+- Implement ALT + numbers windows systems.
+
 # Version 0.17.7
 - Fix cursor position retrieval bug linux.
 

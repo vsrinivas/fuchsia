@@ -10,7 +10,7 @@ use winapi::um::{
 };
 
 use crate::{
-    event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseButton},
+    event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind},
     Result,
 };
 
@@ -79,19 +79,16 @@ fn parse_key_event_record(key_event: &KeyEventRecord) -> Option<KeyEvent> {
             let character_raw = key_event.u_char;
 
             if character_raw < 255 {
+                // Invalid character
+                if character_raw == 0 {
+                    return None;
+                }
+
                 let mut character = character_raw as u8 as char;
 
-                if modifiers.contains(KeyModifiers::ALT) {
-                    // If the ALT key is held down, pressing the A key produces ALT+A, which the system does not treat as a character at all, but rather as a system command.
-                    // The pressed command is stored in `virtual_key_code`.
-                    let command = key_event.virtual_key_code as u8 as char;
-
-                    if command.is_alphabetic() {
-                        character = command;
-                    } else {
-                        return None;
-                    }
-                } else if modifiers.contains(KeyModifiers::CONTROL) {
+                if modifiers.contains(KeyModifiers::CONTROL)
+                    && !modifiers.contains(KeyModifiers::ALT)
+                {
                     // we need to do some parsing
                     character = match character_raw as u8 {
                         c @ b'\x01'..=b'\x1A' => (c as u8 - 0x1 + b'a') as char,
@@ -145,32 +142,20 @@ fn parse_mouse_event_record(event: &MouseEvent) -> Result<Option<crate::event::M
         MouseButton::Left
     };
 
-    Ok(match event.event_flags {
+    let kind = match event.event_flags {
         EventFlags::PressOrRelease => {
             if button_state.release_button() {
                 // in order to read the up button type, we have to check the last down input record.
-                Some(crate::event::MouseEvent::Up(
-                    MouseButton::Left,
-                    xpos,
-                    ypos,
-                    modifiers,
-                ))
+                Some(MouseEventKind::Up(MouseButton::Left))
             } else {
-                Some(crate::event::MouseEvent::Down(
-                    button, xpos, ypos, modifiers,
-                ))
+                Some(MouseEventKind::Down(button))
             }
         }
         EventFlags::MouseMoved => {
-            // Click + Move
-            // Only register when mouse is not released
-            // because unix systems share this behaviour.
-            if !button_state.release_button() {
-                Some(crate::event::MouseEvent::Drag(
-                    button, xpos, ypos, modifiers,
-                ))
+            if button_state.release_button() {
+                Some(MouseEventKind::Moved)
             } else {
-                None
+                Some(MouseEventKind::Drag(button))
             }
         }
         EventFlags::MouseWheeled => {
@@ -178,14 +163,21 @@ fn parse_mouse_event_record(event: &MouseEvent) -> Result<Option<crate::event::M
             // from https://docs.microsoft.com/en-us/windows/console/mouse-event-record-str
             // if `button_state` is negative then the wheel was rotated backward, toward the user.
             if button_state.scroll_down() {
-                Some(crate::event::MouseEvent::ScrollDown(xpos, ypos, modifiers))
+                Some(MouseEventKind::ScrollDown)
             } else if button_state.scroll_up() {
-                Some(crate::event::MouseEvent::ScrollUp(xpos, ypos, modifiers))
+                Some(MouseEventKind::ScrollUp)
             } else {
                 None
             }
         }
         EventFlags::DoubleClick => None, // double click not supported by unix terminals
         EventFlags::MouseHwheeled => None, // horizontal scroll not supported by unix terminals
-    })
+    };
+
+    Ok(kind.map(|kind| crate::event::MouseEvent {
+        kind,
+        column: xpos,
+        row: ypos,
+        modifiers,
+    }))
 }

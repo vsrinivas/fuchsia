@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    queue,
+    command::execute_fmt,
     style::{
         Attribute, Color, Colorize, ContentStyle, ResetColor, SetAttributes, SetBackgroundColor,
         SetForegroundColor, Styler,
@@ -27,7 +27,7 @@ use crate::{
 ///
 /// println!("{}", styled);
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct StyledContent<D: Display> {
     /// The style (colors, content attributes).
     style: ContentStyle,
@@ -83,7 +83,7 @@ impl<D: Display> StyledContent<D> {
         &self.style
     }
 
-    /// Returns a mutable reference to the style, so that it can be futher
+    /// Returns a mutable reference to the style, so that it can be further
     /// manipulated
     #[inline]
     pub fn style_mut(&mut self) -> &mut ContentStyle {
@@ -93,29 +93,39 @@ impl<D: Display> StyledContent<D> {
 
 impl<D: Display> Display for StyledContent<D> {
     fn fmt(&self, f: &mut Formatter<'_>) -> result::Result<(), fmt::Error> {
+        let mut reset_background = false;
+        let mut reset_foreground = false;
         let mut reset = false;
 
         if let Some(bg) = self.style.background_color {
-            queue!(f, SetBackgroundColor(bg)).map_err(|_| fmt::Error)?;
-            reset = true;
+            execute_fmt(f, SetBackgroundColor(bg)).map_err(|_| fmt::Error)?;
+            reset_background = true;
         }
         if let Some(fg) = self.style.foreground_color {
-            queue!(f, SetForegroundColor(fg)).map_err(|_| fmt::Error)?;
-            reset = true;
+            execute_fmt(f, SetForegroundColor(fg)).map_err(|_| fmt::Error)?;
+            reset_foreground = true;
         }
 
         if !self.style.attributes.is_empty() {
-            queue!(f, SetAttributes(self.style.attributes)).map_err(|_| fmt::Error)?;
+            execute_fmt(f, SetAttributes(self.style.attributes)).map_err(|_| fmt::Error)?;
             reset = true;
         }
 
         self.content.fmt(f)?;
 
-        // TODO: There are specific command sequences for "reset forground
-        // color (39m)" and "reset background color (49m)"; consider using
-        // these.
         if reset {
-            queue!(f, ResetColor).map_err(|_| fmt::Error)?;
+            // NOTE: This will reset colors even though self has no colors, hence produce unexpected
+            // resets.
+            // TODO: reset the set attributes only.
+            execute_fmt(f, ResetColor).map_err(|_| fmt::Error)?;
+        } else {
+            // NOTE: Since the above bug, we do not need to reset colors when we reset attributes.
+            if reset_background {
+                execute_fmt(f, SetBackgroundColor(Color::Reset)).map_err(|_| fmt::Error)?;
+            }
+            if reset_foreground {
+                execute_fmt(f, SetForegroundColor(Color::Reset)).map_err(|_| fmt::Error)?;
+            }
         }
 
         Ok(())

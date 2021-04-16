@@ -1,10 +1,11 @@
+use std::io;
+
 use crate::{
-    event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent},
+    event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
     ErrorKind, Result,
 };
 
 use super::super::super::InternalEvent;
-use std::io;
 
 // Event parsing
 //
@@ -56,12 +57,16 @@ pub(crate) fn parse_event(buffer: &[u8], input_available: bool) -> Result<Option
                     }
                     b'[' => parse_csi(buffer),
                     b'\x1B' => Ok(Some(InternalEvent::Event(Event::Key(KeyCode::Esc.into())))),
-                    _ => parse_utf8_char(&buffer[1..]).map(|maybe_char| {
-                        maybe_char
-                            .map(KeyCode::Char)
-                            .map(|code| KeyEvent::new(code, KeyModifiers::ALT))
-                            .map(Event::Key)
-                            .map(InternalEvent::Event)
+                    _ => parse_event(&buffer[1..], input_available).map(|event_option| {
+                        event_option.map(|event| {
+                            if let InternalEvent::Event(Event::Key(key_event)) = event {
+                                let mut alt_key_event = key_event;
+                                alt_key_event.modifiers |= KeyModifiers::ALT;
+                                InternalEvent::Event(Event::Key(alt_key_event))
+                            } else {
+                                event
+                            }
+                        })
                     }),
                 }
             }
@@ -137,9 +142,12 @@ pub(crate) fn parse_csi(buffer: &[u8]) -> Result<Option<InternalEvent>> {
         b'B' => Some(Event::Key(KeyCode::Down.into())),
         b'H' => Some(Event::Key(KeyCode::Home.into())),
         b'F' => Some(Event::Key(KeyCode::End.into())),
-        b'Z' => Some(Event::Key(KeyCode::BackTab.into())),
-        b'M' => return parse_csi_x10_mouse(buffer),
-        b'<' => return parse_csi_xterm_mouse(buffer),
+        b'Z' => Some(Event::Key(KeyEvent {
+            code: KeyCode::BackTab,
+            modifiers: KeyModifiers::SHIFT,
+        })),
+        b'M' => return parse_csi_normal_mouse(buffer),
+        b'<' => return parse_csi_sgr_mouse(buffer),
         b'0'..=b'9' => {
             // Numbered escape code.
             if buffer.len() == 3 {
@@ -282,54 +290,24 @@ pub(crate) fn parse_csi_rxvt_mouse(buffer: &[u8]) -> Result<Option<InternalEvent
         .map_err(|_| could_not_parse_event_error())?;
     let mut split = s.split(';');
 
-    let cb = next_parsed::<u16>(&mut split)?;
+    let cb = next_parsed::<u8>(&mut split)?
+        .checked_sub(32)
+        .ok_or_else(could_not_parse_event_error)?;
+    let (kind, modifiers) = parse_cb(cb)?;
+
     let cx = next_parsed::<u16>(&mut split)? - 1;
     let cy = next_parsed::<u16>(&mut split)? - 1;
 
-    let mut modifiers = KeyModifiers::empty();
-
-    if cb & 0b0000_0100 == 0b0000_0100 {
-        modifiers |= KeyModifiers::SHIFT;
-    }
-
-    if cb & 0b0000_1000 == 0b0000_1000 {
-        modifiers |= KeyModifiers::ALT;
-    }
-
-    if cb & 0b0001_0000 == 0b0001_0000 {
-        modifiers |= KeyModifiers::CONTROL;
-    }
-
-    let event = if cb & 0b0110_0000 == 0b0110_0000 {
-        if cb & 0b0000_0001 == 0b0000_0001 {
-            MouseEvent::ScrollDown(cx, cy, modifiers)
-        } else {
-            MouseEvent::ScrollUp(cx, cy, modifiers)
-        }
-    } else {
-        let drag = cb & 0b0100_0000 == 0b0100_0000;
-
-        match (cb & 0b0000_0011, drag) {
-            (0b0000_0000, false) => MouseEvent::Down(MouseButton::Left, cx, cy, modifiers),
-            (0b0000_0010, false) => MouseEvent::Down(MouseButton::Right, cx, cy, modifiers),
-            (0b0000_0001, false) => MouseEvent::Down(MouseButton::Middle, cx, cy, modifiers),
-
-            (0b0000_0000, true) => MouseEvent::Drag(MouseButton::Left, cx, cy, modifiers),
-            (0b0000_0010, true) => MouseEvent::Drag(MouseButton::Right, cx, cy, modifiers),
-            (0b0000_0001, true) => MouseEvent::Drag(MouseButton::Middle, cx, cy, modifiers),
-
-            (0b0000_0011, false) => MouseEvent::Up(MouseButton::Left, cx, cy, modifiers),
-
-            _ => return Err(could_not_parse_event_error()),
-        }
-    };
-
-    Ok(Some(InternalEvent::Event(Event::Mouse(event))))
+    Ok(Some(InternalEvent::Event(Event::Mouse(MouseEvent {
+        kind,
+        column: cx,
+        row: cy,
+        modifiers,
+    }))))
 }
 
-pub(crate) fn parse_csi_x10_mouse(buffer: &[u8]) -> Result<Option<InternalEvent>> {
-    // X10 emulation mouse encoding: ESC [ M CB Cx Cy (6 characters only).
-    // NOTE (@imdaveho): cannot find documentation on this
+pub(crate) fn parse_csi_normal_mouse(buffer: &[u8]) -> Result<Option<InternalEvent>> {
+    // Normal mouse encoding: ESC [ M CB Cx Cy (6 characters only).
 
     assert!(buffer.starts_with(&[b'\x1B', b'[', b'M'])); // ESC [ M
 
@@ -337,51 +315,26 @@ pub(crate) fn parse_csi_x10_mouse(buffer: &[u8]) -> Result<Option<InternalEvent>
         return Ok(None);
     }
 
-    let cb = buffer[3] - 0x30;
+    let cb = buffer[3]
+        .checked_sub(32)
+        .ok_or_else(could_not_parse_event_error)?;
+    let (kind, modifiers) = parse_cb(cb)?;
+
     // See http://www.xfree86.org/current/ctlseqs.html#Mouse%20Tracking
     // The upper left character position on the terminal is denoted as 1,1.
     // Subtract 1 to keep it synced with cursor
     let cx = u16::from(buffer[4].saturating_sub(32)) - 1;
     let cy = u16::from(buffer[5].saturating_sub(32)) - 1;
 
-    let mut modifiers = KeyModifiers::empty();
-
-    if cb & 0b0000_0100 == 0b0000_0100 {
-        modifiers |= KeyModifiers::SHIFT;
-    }
-
-    if cb & 0b0000_1000 == 0b0000_1000 {
-        modifiers |= KeyModifiers::ALT;
-    }
-
-    if cb & 0b0001_0000 == 0b0001_0000 {
-        modifiers |= KeyModifiers::CONTROL;
-    }
-
-    let mouse_input_event = match cb & 0b0000_0011 {
-        0 => {
-            if cb & 0b0100_0000 == 0b0100_0000 {
-                MouseEvent::ScrollUp(cx, cy, modifiers)
-            } else {
-                MouseEvent::Down(MouseButton::Left, cx, cy, modifiers)
-            }
-        }
-        1 => {
-            if cb & 0b0100_0000 == 0b0100_0000 {
-                MouseEvent::ScrollDown(cx, cy, modifiers)
-            } else {
-                MouseEvent::Down(MouseButton::Middle, cx, cy, modifiers)
-            }
-        }
-        2 => MouseEvent::Down(MouseButton::Right, cx, cy, modifiers),
-        3 => MouseEvent::Up(MouseButton::Left, cx, cy, modifiers),
-        _ => return Err(could_not_parse_event_error()),
-    };
-
-    Ok(Some(InternalEvent::Event(Event::Mouse(mouse_input_event))))
+    Ok(Some(InternalEvent::Event(Event::Mouse(MouseEvent {
+        kind,
+        column: cx,
+        row: cy,
+        modifiers,
+    }))))
 }
 
-pub(crate) fn parse_csi_xterm_mouse(buffer: &[u8]) -> Result<Option<InternalEvent>> {
+pub(crate) fn parse_csi_sgr_mouse(buffer: &[u8]) -> Result<Option<InternalEvent>> {
     // ESC [ < Cb ; Cx ; Cy (;) (M or m)
 
     assert!(buffer.starts_with(&[b'\x1B', b'[', b'<'])); // ESC [ <
@@ -394,7 +347,8 @@ pub(crate) fn parse_csi_xterm_mouse(buffer: &[u8]) -> Result<Option<InternalEven
         .map_err(|_| could_not_parse_event_error())?;
     let mut split = s.split(';');
 
-    let cb = next_parsed::<u16>(&mut split)?;
+    let cb = next_parsed::<u8>(&mut split)?;
+    let (kind, modifiers) = parse_cb(cb)?;
 
     // See http://www.xfree86.org/current/ctlseqs.html#Mouse%20Tracking
     // The upper left character position on the terminal is denoted as 1,1.
@@ -402,50 +356,74 @@ pub(crate) fn parse_csi_xterm_mouse(buffer: &[u8]) -> Result<Option<InternalEven
     let cx = next_parsed::<u16>(&mut split)? - 1;
     let cy = next_parsed::<u16>(&mut split)? - 1;
 
+    // When button 3 in Cb is used to represent mouse release, you can't tell which button was
+    // released. SGR mode solves this by having the sequence end with a lowercase m if it's a
+    // button release and an uppercase M if it's a buton press.
+    //
+    // We've already checked that the last character is a lowercase or uppercase M at the start of
+    // this function, so we just need one if.
+    let kind = if buffer.last() == Some(&b'm') {
+        match kind {
+            MouseEventKind::Down(button) => MouseEventKind::Up(button),
+            other => other,
+        }
+    } else {
+        kind
+    };
+
+    Ok(Some(InternalEvent::Event(Event::Mouse(MouseEvent {
+        kind,
+        column: cx,
+        row: cy,
+        modifiers,
+    }))))
+}
+
+/// Cb is the byte of a mouse input that contains the button being used, the key modifiers being
+/// held and whether the mouse is dragging or not.
+///
+/// Bit layout of cb, from low to high:
+///
+/// - button number
+/// - button number
+/// - shift
+/// - meta (alt)
+/// - control
+/// - mouse is dragging
+/// - button number
+/// - button number
+fn parse_cb(cb: u8) -> Result<(MouseEventKind, KeyModifiers)> {
+    let button_number = (cb & 0b0000_0011) | ((cb & 0b1100_0000) >> 4);
+    let dragging = cb & 0b0010_0000 == 0b0010_0000;
+
+    let kind = match (button_number, dragging) {
+        (0, false) => MouseEventKind::Down(MouseButton::Left),
+        (1, false) => MouseEventKind::Down(MouseButton::Middle),
+        (2, false) => MouseEventKind::Down(MouseButton::Right),
+        (0, true) => MouseEventKind::Drag(MouseButton::Left),
+        (1, true) => MouseEventKind::Drag(MouseButton::Middle),
+        (2, true) => MouseEventKind::Drag(MouseButton::Right),
+        (3, false) => MouseEventKind::Up(MouseButton::Left),
+        (3, true) | (4, true) | (5, true) => MouseEventKind::Moved,
+        (4, false) => MouseEventKind::ScrollUp,
+        (5, false) => MouseEventKind::ScrollDown,
+        // We do not support other buttons.
+        _ => return Err(could_not_parse_event_error()),
+    };
+
     let mut modifiers = KeyModifiers::empty();
 
     if cb & 0b0000_0100 == 0b0000_0100 {
         modifiers |= KeyModifiers::SHIFT;
     }
-
     if cb & 0b0000_1000 == 0b0000_1000 {
         modifiers |= KeyModifiers::ALT;
     }
-
     if cb & 0b0001_0000 == 0b0001_0000 {
         modifiers |= KeyModifiers::CONTROL;
     }
 
-    let event = if cb & 0b0100_0000 == 0b0100_0000 {
-        if cb & 0b0000_0001 == 0b0000_0001 {
-            MouseEvent::ScrollDown(cx, cy, modifiers)
-        } else {
-            MouseEvent::ScrollUp(cx, cy, modifiers)
-        }
-    } else {
-        let up = match buffer.last().unwrap() {
-            b'm' => true,
-            b'M' => false,
-            _ => return Err(could_not_parse_event_error()),
-        };
-
-        let drag = cb & 0b0010_0000 == 0b0010_0000;
-
-        match (cb & 0b0000_0011, up, drag) {
-            (0, true, _) => MouseEvent::Up(MouseButton::Left, cx, cy, modifiers),
-            (0, false, false) => MouseEvent::Down(MouseButton::Left, cx, cy, modifiers),
-            (0, false, true) => MouseEvent::Drag(MouseButton::Left, cx, cy, modifiers),
-            (1, true, _) => MouseEvent::Up(MouseButton::Middle, cx, cy, modifiers),
-            (1, false, false) => MouseEvent::Down(MouseButton::Middle, cx, cy, modifiers),
-            (1, false, true) => MouseEvent::Drag(MouseButton::Middle, cx, cy, modifiers),
-            (2, true, _) => MouseEvent::Up(MouseButton::Right, cx, cy, modifiers),
-            (2, false, false) => MouseEvent::Down(MouseButton::Right, cx, cy, modifiers),
-            (2, false, true) => MouseEvent::Drag(MouseButton::Right, cx, cy, modifiers),
-            _ => return Err(could_not_parse_event_error()),
-        }
-    };
-
-    Ok(Some(InternalEvent::Event(Event::Mouse(event))))
+    Ok((kind, modifiers))
 }
 
 pub(crate) fn parse_utf8_char(buffer: &[u8]) -> Result<Option<char>> {
@@ -496,23 +474,45 @@ mod tests {
     #[test]
     fn test_esc_key() {
         assert_eq!(
-            parse_event("\x1B".as_bytes(), false).unwrap(),
+            parse_event(b"\x1B", false).unwrap(),
             Some(InternalEvent::Event(Event::Key(KeyCode::Esc.into()))),
         );
     }
 
     #[test]
     fn test_possible_esc_sequence() {
-        assert_eq!(parse_event("\x1B".as_bytes(), true).unwrap(), None,);
+        assert_eq!(parse_event(b"\x1B", true).unwrap(), None,);
     }
 
     #[test]
     fn test_alt_key() {
         assert_eq!(
-            parse_event("\x1Bc".as_bytes(), false).unwrap(),
+            parse_event(b"\x1Bc", false).unwrap(),
             Some(InternalEvent::Event(Event::Key(KeyEvent::new(
                 KeyCode::Char('c'),
                 KeyModifiers::ALT
+            )))),
+        );
+    }
+
+    #[test]
+    fn test_alt_shift() {
+        assert_eq!(
+            parse_event(b"\x1BH", false).unwrap(),
+            Some(InternalEvent::Event(Event::Key(KeyEvent::new(
+                KeyCode::Char('H'),
+                KeyModifiers::ALT | KeyModifiers::SHIFT
+            )))),
+        );
+    }
+
+    #[test]
+    fn test_alt_ctrl() {
+        assert_eq!(
+            parse_event(b"\x1B\x14", false).unwrap(),
+            Some(InternalEvent::Event(Event::Key(KeyEvent::new(
+                KeyCode::Char('t'),
+                KeyModifiers::ALT | KeyModifiers::CONTROL
             )))),
         );
     }
@@ -524,19 +524,19 @@ mod tests {
 
         // parse_csi_cursor_position
         assert_eq!(
-            parse_event("\x1B[20;10R".as_bytes(), false).unwrap(),
+            parse_event(b"\x1B[20;10R", false).unwrap(),
             Some(InternalEvent::CursorPosition(9, 19))
         );
 
         // parse_csi
         assert_eq!(
-            parse_event("\x1B[D".as_bytes(), false).unwrap(),
+            parse_event(b"\x1B[D", false).unwrap(),
             Some(InternalEvent::Event(Event::Key(KeyCode::Left.into()))),
         );
 
         // parse_csi_modifier_key_code
         assert_eq!(
-            parse_event("\x1B[2D".as_bytes(), false).unwrap(),
+            parse_event(b"\x1B[2D", false).unwrap(),
             Some(InternalEvent::Event(Event::Key(KeyEvent::new(
                 KeyCode::Left,
                 KeyModifiers::SHIFT
@@ -545,41 +545,41 @@ mod tests {
 
         // parse_csi_special_key_code
         assert_eq!(
-            parse_event("\x1B[3~".as_bytes(), false).unwrap(),
+            parse_event(b"\x1B[3~", false).unwrap(),
             Some(InternalEvent::Event(Event::Key(KeyCode::Delete.into()))),
         );
 
         // parse_csi_rxvt_mouse
         assert_eq!(
-            parse_event("\x1B[32;30;40;M".as_bytes(), false).unwrap(),
-            Some(InternalEvent::Event(Event::Mouse(MouseEvent::Down(
-                MouseButton::Left,
-                29,
-                39,
-                KeyModifiers::empty(),
-            ))))
+            parse_event(b"\x1B[32;30;40;M", false).unwrap(),
+            Some(InternalEvent::Event(Event::Mouse(MouseEvent {
+                kind: MouseEventKind::Down(MouseButton::Left),
+                column: 29,
+                row: 39,
+                modifiers: KeyModifiers::empty(),
+            })))
         );
 
-        // parse_csi_x10_mouse
+        // parse_csi_normal_mouse
         assert_eq!(
-            parse_event("\x1B[M0\x60\x70".as_bytes(), false).unwrap(),
-            Some(InternalEvent::Event(Event::Mouse(MouseEvent::Down(
-                MouseButton::Left,
-                63,
-                79,
-                KeyModifiers::empty(),
-            ))))
+            parse_event(b"\x1B[M0\x60\x70", false).unwrap(),
+            Some(InternalEvent::Event(Event::Mouse(MouseEvent {
+                kind: MouseEventKind::Down(MouseButton::Left),
+                column: 63,
+                row: 79,
+                modifiers: KeyModifiers::CONTROL,
+            })))
         );
 
-        // parse_csi_xterm_mouse
+        // parse_csi_sgr_mouse
         assert_eq!(
-            parse_event("\x1B[<0;20;10;M".as_bytes(), false).unwrap(),
-            Some(InternalEvent::Event(Event::Mouse(MouseEvent::Down(
-                MouseButton::Left,
-                19,
-                9,
-                KeyModifiers::empty(),
-            ))))
+            parse_event(b"\x1B[<0;20;10;M", false).unwrap(),
+            Some(InternalEvent::Event(Event::Mouse(MouseEvent {
+                kind: MouseEventKind::Down(MouseButton::Left),
+                column: 19,
+                row: 9,
+                modifiers: KeyModifiers::empty(),
+            })))
         );
 
         // parse_utf8_char
@@ -595,7 +595,7 @@ mod tests {
     #[test]
     fn test_parse_event() {
         assert_eq!(
-            parse_event("\t".as_bytes(), false).unwrap(),
+            parse_event(b"\t", false).unwrap(),
             Some(InternalEvent::Event(Event::Key(KeyCode::Tab.into()))),
         );
     }
@@ -603,7 +603,7 @@ mod tests {
     #[test]
     fn test_parse_csi_cursor_position() {
         assert_eq!(
-            parse_csi_cursor_position("\x1B[20;10R".as_bytes()).unwrap(),
+            parse_csi_cursor_position(b"\x1B[20;10R").unwrap(),
             Some(InternalEvent::CursorPosition(9, 19))
         );
     }
@@ -611,7 +611,7 @@ mod tests {
     #[test]
     fn test_parse_csi() {
         assert_eq!(
-            parse_csi("\x1B[D".as_bytes()).unwrap(),
+            parse_csi(b"\x1B[D").unwrap(),
             Some(InternalEvent::Event(Event::Key(KeyCode::Left.into()))),
         );
     }
@@ -619,7 +619,7 @@ mod tests {
     #[test]
     fn test_parse_csi_modifier_key_code() {
         assert_eq!(
-            parse_csi_modifier_key_code("\x1B[2D".as_bytes()).unwrap(),
+            parse_csi_modifier_key_code(b"\x1B[2D").unwrap(),
             Some(InternalEvent::Event(Event::Key(KeyEvent::new(
                 KeyCode::Left,
                 KeyModifiers::SHIFT
@@ -630,7 +630,7 @@ mod tests {
     #[test]
     fn test_parse_csi_special_key_code() {
         assert_eq!(
-            parse_csi_special_key_code("\x1B[3~".as_bytes()).unwrap(),
+            parse_csi_special_key_code(b"\x1B[3~").unwrap(),
             Some(InternalEvent::Event(Event::Key(KeyCode::Delete.into()))),
         );
     }
@@ -638,7 +638,7 @@ mod tests {
     #[test]
     fn test_parse_csi_special_key_code_multiple_values_not_supported() {
         assert_eq!(
-            parse_csi_special_key_code("\x1B[3;2~".as_bytes()).unwrap(),
+            parse_csi_special_key_code(b"\x1B[3;2~").unwrap(),
             Some(InternalEvent::Event(Event::Key(KeyEvent::new(
                 KeyCode::Delete,
                 KeyModifiers::SHIFT
@@ -649,66 +649,66 @@ mod tests {
     #[test]
     fn test_parse_csi_rxvt_mouse() {
         assert_eq!(
-            parse_csi_rxvt_mouse("\x1B[32;30;40;M".as_bytes()).unwrap(),
-            Some(InternalEvent::Event(Event::Mouse(MouseEvent::Down(
-                MouseButton::Left,
-                29,
-                39,
-                KeyModifiers::empty(),
-            ))))
+            parse_csi_rxvt_mouse(b"\x1B[32;30;40;M").unwrap(),
+            Some(InternalEvent::Event(Event::Mouse(MouseEvent {
+                kind: MouseEventKind::Down(MouseButton::Left),
+                column: 29,
+                row: 39,
+                modifiers: KeyModifiers::empty(),
+            })))
         );
     }
 
     #[test]
-    fn test_parse_csi_x10_mouse() {
+    fn test_parse_csi_normal_mouse() {
         assert_eq!(
-            parse_csi_x10_mouse("\x1B[M0\x60\x70".as_bytes()).unwrap(),
-            Some(InternalEvent::Event(Event::Mouse(MouseEvent::Down(
-                MouseButton::Left,
-                63,
-                79,
-                KeyModifiers::empty(),
-            ))))
+            parse_csi_normal_mouse(b"\x1B[M0\x60\x70").unwrap(),
+            Some(InternalEvent::Event(Event::Mouse(MouseEvent {
+                kind: MouseEventKind::Down(MouseButton::Left),
+                column: 63,
+                row: 79,
+                modifiers: KeyModifiers::CONTROL,
+            })))
         );
     }
 
     #[test]
-    fn test_parse_csi_xterm_mouse() {
+    fn test_parse_csi_sgr_mouse() {
         assert_eq!(
-            parse_csi_xterm_mouse("\x1B[<0;20;10;M".as_bytes()).unwrap(),
-            Some(InternalEvent::Event(Event::Mouse(MouseEvent::Down(
-                MouseButton::Left,
-                19,
-                9,
-                KeyModifiers::empty(),
-            ))))
+            parse_csi_sgr_mouse(b"\x1B[<0;20;10;M").unwrap(),
+            Some(InternalEvent::Event(Event::Mouse(MouseEvent {
+                kind: MouseEventKind::Down(MouseButton::Left),
+                column: 19,
+                row: 9,
+                modifiers: KeyModifiers::empty(),
+            })))
         );
         assert_eq!(
-            parse_csi_xterm_mouse("\x1B[<0;20;10M".as_bytes()).unwrap(),
-            Some(InternalEvent::Event(Event::Mouse(MouseEvent::Down(
-                MouseButton::Left,
-                19,
-                9,
-                KeyModifiers::empty(),
-            ))))
+            parse_csi_sgr_mouse(b"\x1B[<0;20;10M").unwrap(),
+            Some(InternalEvent::Event(Event::Mouse(MouseEvent {
+                kind: MouseEventKind::Down(MouseButton::Left),
+                column: 19,
+                row: 9,
+                modifiers: KeyModifiers::empty(),
+            })))
         );
         assert_eq!(
-            parse_csi_xterm_mouse("\x1B[<0;20;10;m".as_bytes()).unwrap(),
-            Some(InternalEvent::Event(Event::Mouse(MouseEvent::Up(
-                MouseButton::Left,
-                19,
-                9,
-                KeyModifiers::empty(),
-            ))))
+            parse_csi_sgr_mouse(b"\x1B[<0;20;10;m").unwrap(),
+            Some(InternalEvent::Event(Event::Mouse(MouseEvent {
+                kind: MouseEventKind::Up(MouseButton::Left),
+                column: 19,
+                row: 9,
+                modifiers: KeyModifiers::empty(),
+            })))
         );
         assert_eq!(
-            parse_csi_xterm_mouse("\x1B[<0;20;10m".as_bytes()).unwrap(),
-            Some(InternalEvent::Event(Event::Mouse(MouseEvent::Up(
-                MouseButton::Left,
-                19,
-                9,
-                KeyModifiers::empty(),
-            ))))
+            parse_csi_sgr_mouse(b"\x1B[<0;20;10m").unwrap(),
+            Some(InternalEvent::Event(Event::Mouse(MouseEvent {
+                kind: MouseEventKind::Up(MouseButton::Left),
+                column: 19,
+                row: 9,
+                modifiers: KeyModifiers::empty(),
+            })))
         );
     }
 
@@ -717,7 +717,7 @@ mod tests {
         // https://www.php.net/manual/en/reference.pcre.pattern.modifiers.php#54805
 
         // 'Valid ASCII' => "a",
-        assert_eq!(parse_utf8_char("a".as_bytes()).unwrap(), Some('a'),);
+        assert_eq!(parse_utf8_char(b"a").unwrap(), Some('a'),);
 
         // 'Valid 2 Octet Sequence' => "\xc3\xb1",
         assert_eq!(parse_utf8_char(&[0xC3, 0xB1]).unwrap(), Some('ñ'),);
@@ -759,7 +759,7 @@ mod tests {
     #[test]
     fn test_parse_char_event_lowercase() {
         assert_eq!(
-            parse_event("c".as_bytes(), false).unwrap(),
+            parse_event(b"c", false).unwrap(),
             Some(InternalEvent::Event(Event::Key(KeyEvent::new(
                 KeyCode::Char('c'),
                 KeyModifiers::empty()
@@ -770,7 +770,7 @@ mod tests {
     #[test]
     fn test_parse_char_event_uppercase() {
         assert_eq!(
-            parse_event("C".as_bytes(), false).unwrap(),
+            parse_event(b"C", false).unwrap(),
             Some(InternalEvent::Event(Event::Key(KeyEvent::new(
                 KeyCode::Char('C'),
                 KeyModifiers::SHIFT

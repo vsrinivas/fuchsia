@@ -47,6 +47,7 @@ see [Tested Terminals](#tested-terminals) for more info).
     - Alternate screen
     - Raw screen   
     - Set terminal title
+    - Enable/disable line wrapping
 - Event 
     - Input Events 
     - Mouse Events (press, release, position, button, drag)
@@ -66,6 +67,7 @@ WARNING: Do not change following heading title as it's used in the URL by other 
     - Windows 8.1 (N)
 - Ubuntu Desktop Terminal
     - Ubuntu 17.10
+    - Pop!_OS ( Ubuntu ) 20.04
 - (Arch, Manjaro) KDE Konsole
 - (Arch) Kitty
 - Linux Mint
@@ -84,7 +86,7 @@ Click to show Cargo.toml.
 
 ```toml
 [dependencies]
-crossterm = "0.17"
+crossterm = "0.18"
 ```
 
 </details>

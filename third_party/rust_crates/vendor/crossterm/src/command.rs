@@ -1,6 +1,5 @@
-use std::{fmt::Display, io::Write};
-
-use crate::{execute, queue};
+use std::fmt;
+use std::io::{self, Write};
 
 use super::error::Result;
 
@@ -11,14 +10,12 @@ use super::error::Result;
 /// In order to understand how to use and execute commands,
 /// it is recommended that you take a look at [Command Api](../#command-api) chapter.
 pub trait Command {
-    type AnsiType: Display;
-
-    /// Returns an ANSI code representation of this command.
+    /// Write an ANSI representation of this commmand to the given writer.
     /// An ANSI code can manipulate the terminal by writing it to the terminal buffer.
     /// However, only Windows 10 and UNIX systems support this.
     ///
     /// This method does not need to be accessed manually, as it is used by the crossterm's [Command Api](../#command-api)
-    fn ansi_code(&self) -> Self::AnsiType;
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result;
 
     /// Execute this command.
     ///
@@ -27,7 +24,7 @@ pub trait Command {
     ///
     /// This method does not need to be accessed manually, as it is used by the crossterm's [Command Api](../#command-api)
     #[cfg(windows)]
-    fn execute_winapi(&self) -> Result<()>;
+    fn execute_winapi(&self, writer: impl FnMut() -> Result<()>) -> Result<()>;
 
     /// Returns whether the ansi code representation of this command is supported by windows.
     ///
@@ -39,18 +36,15 @@ pub trait Command {
     }
 }
 
-impl<T: Command> Command for &T {
-    type AnsiType = T::AnsiType;
-
-    #[inline]
-    fn ansi_code(&self) -> Self::AnsiType {
-        T::ansi_code(self)
+impl<T: Command + ?Sized> Command for &T {
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        (**self).write_ansi(f)
     }
 
     #[inline]
     #[cfg(windows)]
-    fn execute_winapi(&self) -> Result<()> {
-        T::execute_winapi(self)
+    fn execute_winapi(&self, _writer: impl FnMut() -> Result<()>) -> Result<()> {
+        T::execute_winapi(self, _writer)
     }
 
     #[cfg(windows)]
@@ -60,23 +54,19 @@ impl<T: Command> Command for &T {
     }
 }
 
-/// An interface for commands that can be queued for further execution.
-pub trait QueueableCommand<T: Display>: Sized {
+/// An interface for types that can queue commands for further execution.
+pub trait QueueableCommand {
     /// Queues the given command for further execution.
-    fn queue(&mut self, command: impl Command<AnsiType = T>) -> Result<&mut Self>;
+    fn queue(&mut self, command: impl Command) -> Result<&mut Self>;
 }
 
-/// An interface for commands that are directly executed.
-pub trait ExecutableCommand<T: Display>: Sized {
+/// An interface for types that can directly execute commands.
+pub trait ExecutableCommand {
     /// Executes the given command directly.
-    fn execute(&mut self, command: impl Command<AnsiType = T>) -> Result<&mut Self>;
+    fn execute(&mut self, command: impl Command) -> Result<&mut Self>;
 }
 
-impl<T, A> QueueableCommand<A> for T
-where
-    A: Display,
-    T: Write,
-{
+impl<T: Write + ?Sized> QueueableCommand for T {
     /// Queues the given command for further execution.
     ///
     /// Queued commands will be executed in the following cases:
@@ -95,6 +85,7 @@ where
     ///
     /// ```rust
     /// use std::io::{Write, stdout};
+    ///
     /// use crossterm::{Result, QueueableCommand, style::Print};
     ///
     ///  fn main() -> Result<()> {
@@ -123,22 +114,29 @@ where
     /// # Notes
     ///
     /// * In the case of UNIX and Windows 10, ANSI codes are written to the given 'writer'.
-    /// * In case of Windows versions lower than 10, a direct WinApi call will be made.
+    /// * In case of Windows versions lower than 10, a direct WinAPI call will be made.
     ///     The reason for this is that Windows versions lower than 10 do not support ANSI codes,
     ///     and can therefore not be written to the given `writer`.
     ///     Therefore, there is no difference between [execute](./trait.ExecutableCommand.html)
     ///     and [queue](./trait.QueueableCommand.html) for those old Windows versions.
-    fn queue(&mut self, command: impl Command<AnsiType = A>) -> Result<&mut Self> {
-        queue!(self, command)?;
+    fn queue(&mut self, command: impl Command) -> Result<&mut Self> {
+        #[cfg(windows)]
+        if !command.is_ansi_code_supported() {
+            command.execute_winapi(|| {
+                write_command_ansi(self, &command)?;
+                // winapi doesn't support queuing
+                self.flush()?;
+                Ok(())
+            })?;
+            return Ok(self);
+        }
+
+        write_command_ansi(self, command)?;
         Ok(self)
     }
 }
 
-impl<T, A> ExecutableCommand<A> for T
-where
-    A: Display,
-    T: Write,
-{
+impl<T: Write + ?Sized> ExecutableCommand for T {
     /// Executes the given command directly.
     ///
     /// The given command its ANSI escape code will be written and flushed onto `Self`.
@@ -153,6 +151,7 @@ where
     ///
     /// ```rust
     /// use std::io::{Write, stdout};
+    ///
     /// use crossterm::{Result, ExecutableCommand, style::Print};
     ///
     ///  fn main() -> Result<()> {
@@ -174,13 +173,61 @@ where
     /// # Notes
     ///
     /// * In the case of UNIX and Windows 10, ANSI codes are written to the given 'writer'.
-    /// * In case of Windows versions lower than 10, a direct WinApi call will be made.
+    /// * In case of Windows versions lower than 10, a direct WinAPI call will be made.
     ///     The reason for this is that Windows versions lower than 10 do not support ANSI codes,
     ///     and can therefore not be written to the given `writer`.
     ///     Therefore, there is no difference between [execute](./trait.ExecutableCommand.html)
     ///     and [queue](./trait.QueueableCommand.html) for those old Windows versions.
-    fn execute(&mut self, command: impl Command<AnsiType = A>) -> Result<&mut Self> {
-        execute!(self, command)?;
+    fn execute(&mut self, command: impl Command) -> Result<&mut Self> {
+        self.queue(command)?;
+        self.flush()?;
         Ok(self)
     }
+}
+
+/// Writes the ANSI representation of a command to the given writer.
+fn write_command_ansi<C: Command>(
+    io: &mut (impl io::Write + ?Sized),
+    command: C,
+) -> io::Result<()> {
+    struct Adapter<T> {
+        inner: T,
+        res: io::Result<()>,
+    }
+
+    impl<T: Write> fmt::Write for Adapter<T> {
+        fn write_str(&mut self, s: &str) -> fmt::Result {
+            self.inner.write_all(s.as_bytes()).map_err(|e| {
+                self.res = Err(e);
+                fmt::Error
+            })
+        }
+    }
+
+    let mut adapter = Adapter {
+        inner: io,
+        res: Ok(()),
+    };
+
+    command
+        .write_ansi(&mut adapter)
+        .map_err(|fmt::Error| match adapter.res {
+            Ok(()) => panic!(
+                "<{}>::write_ansi incorrectly errored",
+                std::any::type_name::<C>()
+            ),
+            Err(e) => e,
+        })
+}
+
+/// Executes the ANSI representation of a command, using the given `fmt::Write`.
+pub(crate) fn execute_fmt(f: &mut impl fmt::Write, command: impl Command) -> fmt::Result {
+    #[cfg(windows)]
+    if !command.is_ansi_code_supported() {
+        return command
+            .execute_winapi(|| panic!("this writer should not be possible to use here"))
+            .map_err(|_| fmt::Error);
+    }
+
+    command.write_ansi(f)
 }

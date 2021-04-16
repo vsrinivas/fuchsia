@@ -34,11 +34,11 @@
 //!
 //! Linux and Windows 10 systems support ANSI escape codes. Those ANSI escape codes are strings or rather a
 //! byte sequence. When we `write` and `flush` those to the terminal we can perform some action.
-//! For older windows systems a WinApi call is made.
+//! For older windows systems a WinAPI call is made.
 //!
 //! ### Supported Commands
 //!
-//! - Module `cursor`
+//! - Module [`cursor`](cursor/index.html)
 //!   - Visibility - [`Show`](cursor/struct.Show.html), [`Hide`](cursor/struct.Hide.html)
 //!   - Appearance - [`EnableBlinking`](cursor/struct.EnableBlinking.html),
 //!     [`DisableBlinking`](cursor/struct.DisableBlinking.html)
@@ -48,21 +48,23 @@
 //!     [`MoveLeft`](cursor/struct.MoveLeft.html), [`MoveRight`](cursor/struct.MoveRight.html),
 //!     [`MoveTo`](cursor/struct.MoveTo.html), [`MoveToColumn`](cursor/struct.MoveToColumn.html),
 //!     [`MoveToNextLine`](cursor/struct.MoveToNextLine.html), [`MoveToPreviousLine`](cursor/struct.MoveToPreviousLine.html),
-//! - Module `event`
+//! - Module [`event`](event/index.html)
 //!   - Mouse events - [`EnableMouseCapture`](event/struct.EnableMouseCapture.html),
 //!     [`DisableMouseCapture`](event/struct.DisableMouseCapture.html)
-//! - Module `style`
+//! - Module [`style`](style/index.html)
 //!   - Colors - [`SetForegroundColor`](style/struct.SetForegroundColor.html),
 //!     [`SetBackgroundColor`](style/struct.SetBackgroundColor.html),
 //!     [`ResetColor`](style/struct.ResetColor.html), [`SetColors`](style/struct.SetColors.html)
 //!   - Attributes - [`SetAttribute`](style/struct.SetAttribute.html), [`SetAttributes`](style/struct.SetAttributes.html),
 //!     [`PrintStyledContent`](style/struct.PrintStyledContent.html)
-//! - Module `terminal`
+//! - Module [`terminal`](terminal/index.html)
 //!   - Scrolling - [`ScrollUp`](terminal/struct.ScrollUp.html),
 //!     [`ScrollDown`](terminal/struct.ScrollDown.html)
 //!   - Miscellaneous - [`Clear`](terminal/struct.Clear.html),
 //!     [`SetSize`](terminal/struct.SetSize.html)
 //!     [`SetTitle`](terminal/struct.SetTitle.html)
+//!     [`DisableLineWrap`](terminal/struct.DisableLineWrap.html)
+//!     [`EnableLineWrap`](terminal/struct.EnableLineWrap.html)
 //!   - Alternate screen - [`EnterAlternateScreen`](terminal/struct.EnterAlternateScreen.html),
 //!     [`LeaveAlternateScreen`](terminal/struct.LeaveAlternateScreen.html)
 //!
@@ -229,7 +231,6 @@
 //! [flush]: https://doc.rust-lang.org/std/io/trait.Write.html#tymethod.flush
 
 pub use crate::{
-    ansi::Ansi,
     command::{Command, ExecutableCommand, QueueableCommand},
     error::{ErrorKind, Result},
 };
@@ -246,9 +247,9 @@ pub mod terminal;
 /// A module to query if the current instance is a tty.
 pub mod tty;
 
-mod ansi;
 #[cfg(windows)]
-pub(crate) mod ansi_support;
+/// A module that exposes one function to check if the current terminal supports ansi sequences.
+pub mod ansi_support;
 mod command;
 mod error;
 pub(crate) mod macros;

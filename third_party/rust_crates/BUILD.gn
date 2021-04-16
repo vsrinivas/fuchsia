@@ -130,7 +130,7 @@ group("crossbeam") {
 
 if (!(current_os == "fuchsia")) {
   group("crossterm") {
-    deps = [ ":crossterm-v0_17_7" ]
+    deps = [ ":crossterm-v0_19_0" ]
   }
 }
 
@@ -666,7 +666,7 @@ if (!(current_os == "fuchsia")) {
 
 if (!(current_os == "fuchsia")) {
   group("signal-hook") {
-    deps = [ ":signal-hook-v0_1_16" ]
+    deps = [ ":signal-hook-v0_1_17" ]
   }
 }
 
@@ -2484,10 +2484,10 @@ rust_library("crossbeam-utils-v0_7_2") {
   ]
 }
 
-rust_library("crossterm-v0_17_7") {
+rust_library("crossterm-v0_19_0") {
   crate_name = "crossterm"
   crate_root = "//third_party/rust_crates/vendor/crossterm/src/lib.rs"
-  output_name = "crossterm-ccfb3daa259048ba"
+  output_name = "crossterm-3fc6a95bb38daeac"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -2496,14 +2496,14 @@ rust_library("crossterm-v0_17_7") {
   deps = []
   deps += [ ":bitflags-v1_2_1" ]
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":parking_lot-v0_10_2" ]
+  deps += [ ":parking_lot-v0_11_1" ]
   if (true) {
     deps += [ ":libc-v0_2_88" ]
     deps += [ ":mio-v0_7_0" ]
-    deps += [ ":signal-hook-v0_1_16" ]
+    deps += [ ":signal-hook-v0_1_17" ]
   }
   if (false) {
-    deps += [ ":crossterm_winapi-v0_6_1" ]
+    deps += [ ":crossterm_winapi-v0_7_0" ]
     deps += [ ":winapi-v0_3_9" ]
   }
 
@@ -2512,17 +2512,17 @@ rust_library("crossterm-v0_17_7") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=ccfb3daa259048ba",
-    "-Cextra-filename=-ccfb3daa259048ba",
+    "-Cmetadata=3fc6a95bb38daeac",
+    "-Cextra-filename=-3fc6a95bb38daeac",
     "--cfg=feature=\"default\"",
   ]
 }
 
-rust_library("crossterm_winapi-v0_6_1") {
+rust_library("crossterm_winapi-v0_7_0") {
   crate_name = "crossterm_winapi"
   crate_root =
       "//third_party/rust_crates/tiny_mirrors/crossterm_winapi/src/lib.rs"
-  output_name = "crossterm_winapi-3884a110943dbe32"
+  output_name = "crossterm_winapi-e4d128a29a118570"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -2535,8 +2535,8 @@ rust_library("crossterm_winapi-v0_6_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=3884a110943dbe32",
-    "-Cextra-filename=-3884a110943dbe32",
+    "-Cmetadata=e4d128a29a118570",
+    "-Cextra-filename=-e4d128a29a118570",
   ]
 }
 
@@ -5532,30 +5532,6 @@ rust_library("parking-v2_0_0") {
   ]
 }
 
-rust_library("parking_lot-v0_10_2") {
-  crate_name = "parking_lot"
-  crate_root = "//third_party/rust_crates/vendor/parking_lot-0.10.2/src/lib.rs"
-  output_name = "parking_lot-b84453ff4ae0bc4f"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":lock_api-v0_3_4" ]
-  deps += [ ":parking_lot_core-v0_7_2" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=b84453ff4ae0bc4f",
-    "-Cextra-filename=-b84453ff4ae0bc4f",
-    "--cfg=feature=\"default\"",
-  ]
-}
-
 rust_library("parking_lot-v0_11_1") {
   crate_name = "parking_lot"
   crate_root = "//third_party/rust_crates/vendor/parking_lot/src/lib.rs"
@@ -5638,46 +5614,6 @@ rust_library("parking_lot_core-v0_6_2") {
     "--edition=2018",
     "-Cmetadata=32ade8d5cf038200",
     "-Cextra-filename=-32ade8d5cf038200",
-  ]
-
-  aliased_deps = {
-    syscall = ":redox_syscall-v0_1_51"
-  }
-}
-
-rust_library("parking_lot_core-v0_7_2") {
-  crate_name = "parking_lot_core"
-  crate_root =
-      "//third_party/rust_crates/vendor/parking_lot_core-0.7.2/src/lib.rs"
-  output_name = "parking_lot_core-2c323f53cefd1228"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":cfg-if-v0_1_10" ]
-  deps += [ ":smallvec-v1_6_1" ]
-  if (false) {
-    deps += [ ":cloudabi-v0_0_3" ]
-  }
-  if (false) {
-    deps += [ ":redox_syscall-v0_1_51" ]
-  }
-  if (true) {
-    deps += [ ":libc-v0_2_88" ]
-  }
-  if (false) {
-    deps += [ ":winapi-v0_3_9" ]
-  }
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=2c323f53cefd1228",
-    "-Cextra-filename=-2c323f53cefd1228",
   ]
 
   aliased_deps = {
@@ -8526,10 +8462,10 @@ rust_library("sharded-slab-v0_0_9") {
   ]
 }
 
-rust_library("signal-hook-v0_1_16") {
+rust_library("signal-hook-v0_1_17") {
   crate_name = "signal_hook"
   crate_root = "//third_party/rust_crates/vendor/signal-hook/src/lib.rs"
-  output_name = "signal_hook-37c66c596290553a"
+  output_name = "signal_hook-deea52217afd7830"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -8545,8 +8481,8 @@ rust_library("signal-hook-v0_1_16") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=37c66c596290553a",
-    "-Cextra-filename=-37c66c596290553a",
+    "-Cmetadata=deea52217afd7830",
+    "-Cextra-filename=-deea52217afd7830",
     "--cfg=feature=\"mio-0_7-support\"",
     "--cfg=feature=\"mio_0_7\"",
   ]

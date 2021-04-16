@@ -5,44 +5,6 @@ macro_rules! csi {
     ($( $l:expr ),*) => { concat!("\x1B[", $( $l ),*) };
 }
 
-/// Writes an ansi code to the given writer.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! write_ansi_code {
-    ($writer:expr, $ansi_code:expr) => {{
-        use std::io::{self, ErrorKind};
-
-        write!($writer, "{}", $ansi_code)
-            .map_err(|e| io::Error::new(ErrorKind::Other, e))
-            .map_err($crate::ErrorKind::IoError)
-    }};
-}
-
-/// Writes/executes the given command.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! handle_command {
-    ($writer:expr, $command:expr) => {{
-        // Silent warning when the macro is used inside the `command` module
-        #[allow(unused_imports)]
-        use $crate::{write_ansi_code, Command};
-
-        #[cfg(windows)]
-        {
-            let command = $command;
-            if command.is_ansi_code_supported() {
-                write_ansi_code!($writer, command.ansi_code())
-            } else {
-                command.execute_winapi().map_err($crate::ErrorKind::from)
-            }
-        }
-        #[cfg(unix)]
-        {
-            write_ansi_code!($writer, $command.ansi_code())
-        }
-    }};
-}
-
 /// Queues one or more command(s) for further execution.
 ///
 /// Queued commands must be flushed to the underlying device to be executed.
@@ -88,7 +50,7 @@ macro_rules! handle_command {
 ///
 /// # Notes
 ///
-/// In case of Windows versions lower than 10, a direct WinApi call will be made.
+/// In case of Windows versions lower than 10, a direct WinAPI call will be made.
 /// The reason for this is that Windows versions lower than 10 do not support ANSI codes,
 /// and can therefore not be written to the given `writer`.
 /// Therefore, there is no difference between [execute](macro.execute.html)
@@ -96,11 +58,14 @@ macro_rules! handle_command {
 ///
 #[macro_export]
 macro_rules! queue {
-    ($writer:expr $(, $command:expr)* $(,)?) => {
-        Ok(()) $(
-            .and_then(|()| $crate::handle_command!($writer, $command))
-        )*
-    }
+    ($writer:expr $(, $command:expr)* $(,)?) => {{
+        use ::std::io::Write;
+
+        // This allows the macro to take both mut impl Write and &mut impl Write.
+        Ok($writer.by_ref())
+            $(.and_then(|writer| $crate::QueueableCommand::queue(writer, $command)))*
+            .map(|_| ())
+    }}
 }
 
 /// Executes one or more command(s).
@@ -139,19 +104,22 @@ macro_rules! queue {
 /// # Notes
 ///
 /// * In the case of UNIX and Windows 10, ANSI codes are written to the given 'writer'.
-/// * In case of Windows versions lower than 10, a direct WinApi call will be made.
+/// * In case of Windows versions lower than 10, a direct WinAPI call will be made.
 ///     The reason for this is that Windows versions lower than 10 do not support ANSI codes,
 ///     and can therefore not be written to the given `writer`.
 ///     Therefore, there is no difference between [execute](macro.execute.html)
 ///     and [queue](macro.queue.html) for those old Windows versions.
 #[macro_export]
 macro_rules! execute {
-    ($writer:expr $(, $command:expr)* $(,)? ) => {
+    ($writer:expr $(, $command:expr)* $(,)? ) => {{
+        use ::std::io::Write;
+
         // Queue each command, then flush
-        $crate::queue!($writer $(, $command)*).and_then(|()| {
-            $writer.flush().map_err($crate::ErrorKind::IoError)
-        })
-    }
+        $crate::queue!($writer $(, $command)*)
+            .and_then(|()| {
+                ::std::io::Write::flush($writer.by_ref()).map_err($crate::ErrorKind::IoError)
+            })
+    }}
 }
 
 #[doc(hidden)]
@@ -159,8 +127,8 @@ macro_rules! execute {
 macro_rules! impl_display {
     (for $($t:ty),+) => {
         $(impl ::std::fmt::Display for $t {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::result::Result<(), ::std::fmt::Error> {
-                $crate::queue!(f, self).map_err(|_| ::std::fmt::Error)
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                $crate::command::execute_fmt(f, self)
             }
         })*
     }
@@ -182,6 +150,7 @@ macro_rules! impl_from {
 mod tests {
     use std::io;
     use std::str;
+
     // Helper for execute tests to confirm flush
     #[derive(Default, Debug, Clone)]
     pub(self) struct FakeWrite {
@@ -206,7 +175,7 @@ mod tests {
 
     #[cfg(not(windows))]
     mod unix {
-        use std::io::Write;
+        use std::fmt;
 
         use super::FakeWrite;
         use crate::command::Command;
@@ -214,10 +183,8 @@ mod tests {
         pub struct FakeCommand;
 
         impl Command for FakeCommand {
-            type AnsiType = &'static str;
-
-            fn ansi_code(&self) -> Self::AnsiType {
-                "cmd"
+            fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+                f.write_str("cmd")
             }
         }
 
@@ -272,15 +239,16 @@ mod tests {
 
     #[cfg(windows)]
     mod windows {
+        use std::fmt;
+
         use std::cell::RefCell;
         use std::fmt::Debug;
-        use std::io::Write;
 
         use super::FakeWrite;
         use crate::command::Command;
         use crate::error::Result as CrosstermResult;
 
-        // We need to test two different APIs: winapi and the write api. We
+        // We need to test two different APIs: WinAPI and the write api. We
         // don't know until runtime which we're supporting (via
         // Command::is_ansi_code_supported), so we have to test them both. The
         // CI environment hopefully includes both versions of windows.
@@ -306,19 +274,20 @@ mod tests {
         }
 
         impl<'a> Command for FakeCommand<'a> {
-            type AnsiType = &'static str;
-
-            fn ansi_code(&self) -> Self::AnsiType {
-                self.value
+            fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+                f.write_str(self.value)
             }
 
-            fn execute_winapi(&self) -> CrosstermResult<()> {
+            fn execute_winapi(
+                &self,
+                _writer: impl FnMut() -> CrosstermResult<()>,
+            ) -> CrosstermResult<()> {
                 self.stream.borrow_mut().push(self.value);
                 Ok(())
             }
         }
 
-        // Helper function for running tests against either winapi or an
+        // Helper function for running tests against either WinAPI or an
         // io::Write.
         //
         // This function will execute the `test` function, which should
@@ -343,12 +312,12 @@ mod tests {
             }
 
             // We need this for type inference, for whatever reason.
-            const EMPTY_RESULT: [&'static str; 0] = [];
+            const EMPTY_RESULT: [&str; 0] = [];
 
             // TODO: confirm that the correct sink was used, based on
             // is_ansi_code_supported
             match (writer.buffer.is_empty(), stream.is_empty()) {
-                (true, true) if stream_result == &EMPTY_RESULT => {}
+                (true, true) if stream_result == EMPTY_RESULT => {}
                 (true, true) => panic!(
                     "Neither the event stream nor the writer were populated. Expected {:?}",
                     stream_result

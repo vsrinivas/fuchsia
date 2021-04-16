@@ -8,19 +8,22 @@ use crate::{
     style::{Attribute, Attributes, Color, Colored},
 };
 
-pub(crate) fn set_fg_csi_sequence(f: &mut Formatter, fg_color: Color) -> fmt::Result {
+pub(crate) fn set_fg_csi_sequence(f: &mut impl fmt::Write, fg_color: Color) -> fmt::Result {
     write!(f, csi!("{}m"), Colored::ForegroundColor(fg_color))
 }
 
-pub(crate) fn set_bg_csi_sequence(f: &mut Formatter, bg_color: Color) -> fmt::Result {
+pub(crate) fn set_bg_csi_sequence(f: &mut impl fmt::Write, bg_color: Color) -> fmt::Result {
     write!(f, csi!("{}m"), Colored::BackgroundColor(bg_color))
 }
 
-pub(crate) fn set_attr_csi_sequence(f: &mut Formatter, attribute: Attribute) -> fmt::Result {
+pub(crate) fn set_attr_csi_sequence(f: &mut impl fmt::Write, attribute: Attribute) -> fmt::Result {
     write!(f, csi!("{}m"), attribute.sgr())
 }
 
-pub(crate) fn set_attrs_csi_sequence(f: &mut Formatter, attributes: Attributes) -> fmt::Result {
+pub(crate) fn set_attrs_csi_sequence(
+    f: &mut impl fmt::Write,
+    attributes: Attributes,
+) -> fmt::Result {
     for attr in Attribute::iterator() {
         if attributes.has(attr) {
             write!(f, csi!("{}m"), attr.sgr())?;
@@ -32,7 +35,7 @@ pub(crate) fn set_attrs_csi_sequence(f: &mut Formatter, attributes: Attributes) 
 pub(crate) const RESET_CSI_SEQUENCE: &str = csi!("0m");
 
 impl fmt::Display for Colored {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let color;
 
         match *self {
@@ -90,13 +93,14 @@ impl Colored {
     /// This is the string that would appear within an `ESC [ <str> m` escape sequence, as found in
     /// various configuration files.
     ///
-    /// For example: `38;5;0 -> ForegroundColor(Black)`,
-    ///              `38;5;26 -> ForegroundColor(AnsiValue(26))`
-    ///              `48;2;50;60;70 -> BackgroundColor(Rgb(50, 60, 70))`
-    ///              `49 -> BackgroundColor(Reset)`
-    /// Invalid sequences map to None.
+    /// For example:
+    /// * `38;5;0 -> ForegroundColor(Black)`,
+    /// * `38;5;26 -> ForegroundColor(AnsiValue(26))`
+    /// * `48;2;50;60;70 -> BackgroundColor(Rgb(50, 60, 70))`
+    /// * `49 -> BackgroundColor(Reset)`
+    /// Invalid sequences map to `None`.
     ///
-    /// Currently, 3/4 bit color values aren't supported so return None.
+    /// Currently, 3/4 bit color values aren't supported so return `None`.
     ///
     /// See also: [Color::parse_ansi](enum.Color.html#method.parse_ansi)
     pub fn parse_ansi(ansi: &str) -> Option<Self> {
@@ -124,10 +128,13 @@ impl Colored {
 
 impl<'a> Color {
     /// Parses an ANSI color sequence.
-    /// For example: `5;0 -> Black`, `5;26 -> AnsiValue(26)`, `2;50;60;70 -> Rgb(50, 60, 70)`.
-    /// Invalid sequences map to None.
+    /// For example:
+    /// * `5;0 -> Black`,
+    /// * `5;26 -> AnsiValue(26)`,
+    /// * `2;50;60;70 -> Rgb(50, 60, 70)`.
+    /// Invalid sequences map to `None`.
     ///
-    /// Currently, 3/4 bit color values aren't supported so return None.
+    /// Currently, 3/4 bit color values aren't supported so return `None`.
     ///
     /// See also: [Colored::parse_ansi](enum.Colored.html#method.parse_ansi)
     pub fn parse_ansi(ansi: &str) -> Option<Self> {

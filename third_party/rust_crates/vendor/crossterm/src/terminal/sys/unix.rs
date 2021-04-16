@@ -1,16 +1,17 @@
 //! UNIX related logic for terminal manipulation.
+
+use std::fs::File;
+use std::os::unix::io::{IntoRawFd, RawFd};
 use std::{io, mem, process, sync::Mutex};
 
-use crate::event::sys::unix::file_descriptor::FileDesc;
 use lazy_static::lazy_static;
 use libc::{
-    cfmakeraw, ioctl, tcgetattr, tcsetattr, termios as Termios, winsize, STDIN_FILENO,
-    STDOUT_FILENO, TCSANOW, TIOCGWINSZ,
+    cfmakeraw, ioctl, tcgetattr, tcsetattr, termios as Termios, winsize, STDOUT_FILENO, TCSANOW,
+    TIOCGWINSZ,
 };
 
 use crate::error::{ErrorKind, Result};
-use std::fs::File;
-use std::os::unix::io::IntoRawFd;
+use crate::event::sys::unix::file_descriptor::{tty_fd, FileDesc};
 
 lazy_static! {
     // Some(Termios) -> we're in the raw mode and this is the previous mode
@@ -22,7 +23,7 @@ pub(crate) fn is_raw_mode_enabled() -> bool {
     TERMINAL_MODE_PRIOR_RAW_MODE.lock().unwrap().is_some()
 }
 
-#[allow(clippy::identity_conversion)]
+#[allow(clippy::useless_conversion)]
 pub(crate) fn size() -> Result<(u16, u16)> {
     // http://rosettacode.org/wiki/Terminal_control/Dimensions#Library:_BSD_libc
     let mut size = winsize {
@@ -40,7 +41,7 @@ pub(crate) fn size() -> Result<(u16, u16)> {
         STDOUT_FILENO
     };
 
-    if let Ok(true) = wrap_with_result(unsafe { ioctl(fd, TIOCGWINSZ.into(), &mut size) }) {
+    if wrap_with_result(unsafe { ioctl(fd, TIOCGWINSZ.into(), &mut size) }).is_ok() {
         Ok((size.ws_col, size.ws_row))
     } else {
         tput_size().ok_or_else(|| std::io::Error::last_os_error().into())
@@ -54,11 +55,13 @@ pub(crate) fn enable_raw_mode() -> Result<()> {
         return Ok(());
     }
 
-    let mut ios = get_terminal_attr()?;
+    let tty = tty_fd()?;
+    let fd = tty.raw_fd();
+    let mut ios = get_terminal_attr(fd)?;
     let original_mode_ios = ios;
 
     raw_terminal_attr(&mut ios);
-    set_terminal_attr(&ios)?;
+    set_terminal_attr(fd, &ios)?;
 
     // Keep it last - set the original mode only if we were able to switch to the raw mode
     *original_mode = Some(original_mode_ios);
@@ -70,7 +73,8 @@ pub(crate) fn disable_raw_mode() -> Result<()> {
     let mut original_mode = TERMINAL_MODE_PRIOR_RAW_MODE.lock().unwrap();
 
     if let Some(original_mode_ios) = original_mode.as_ref() {
-        set_terminal_attr(original_mode_ios)?;
+        let tty = tty_fd()?;
+        set_terminal_attr(tty.raw_fd(), original_mode_ios)?;
         // Keep it last - remove the original mode only if we were able to switch back
         *original_mode = None;
     }
@@ -116,22 +120,22 @@ fn raw_terminal_attr(termios: &mut Termios) {
     unsafe { cfmakeraw(termios) }
 }
 
-fn get_terminal_attr() -> Result<Termios> {
+fn get_terminal_attr(fd: RawFd) -> Result<Termios> {
     unsafe {
         let mut termios = mem::zeroed();
-        wrap_with_result(tcgetattr(STDIN_FILENO, &mut termios))?;
+        wrap_with_result(tcgetattr(fd, &mut termios))?;
         Ok(termios)
     }
 }
 
-fn set_terminal_attr(termios: &Termios) -> Result<bool> {
-    wrap_with_result(unsafe { tcsetattr(STDIN_FILENO, TCSANOW, termios) })
+fn set_terminal_attr(fd: RawFd, termios: &Termios) -> Result<()> {
+    wrap_with_result(unsafe { tcsetattr(fd, TCSANOW, termios) })
 }
 
-pub fn wrap_with_result(result: i32) -> Result<bool> {
+fn wrap_with_result(result: i32) -> Result<()> {
     if result == -1 {
         Err(ErrorKind::IoError(io::Error::last_os_error()))
     } else {
-        Ok(true)
+        Ok(())
     }
 }
