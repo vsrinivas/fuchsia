@@ -25,50 +25,46 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
  public:
   explicit ConvertingTreeVisitor(fidl::utils::Syntax syntax, const flat::Library* library)
       : to_syntax_(syntax), last_conversion_end_(nullptr), last_comment_(0), library_(library) {}
-
-  // The following block of visitors are purposeful noops. Their nodes are
-  // guaranteed to be identical in both the old and new syntax, so its best to
-  // just ignore their contents, and merely copy the gaps between convertible
-  // elements wholesale instead.
-  void OnAttribute(const raw::Attribute& element) override {}
-  void OnAttributeList(std::unique_ptr<raw::AttributeList> const& element) override {}
-  void OnBitsMember(std::unique_ptr<raw::BitsMember> const& element) override {}
-  void OnComposeProtocol(std::unique_ptr<raw::ComposeProtocol> const& element) override {}
-  void OnEnumMember(std::unique_ptr<raw::EnumMember> const& element) override {}
-  void OnServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> const& element) override {}
-  void OnServiceMember(std::unique_ptr<raw::ServiceMember> const& element) override {}
-  void OnSourceElementStart(const raw::SourceElement& element) override {}
-  void OnSourceElementEnd(const raw::SourceElement& element) override {}
-
   // TODO(azaslavsky): I'll eventually remove the commented out block below.  At
   //   the moment it serves as a useful list of TreeVisitor methods that are
   //   intended to be left unmodified by the ConvertingTreeVisitor.
-  // void OnBinaryOperatorConstant(std::unique_ptr<BinaryOperatorConstant> const& element) override
-  // {} void OnCompoundIdentifier(std::unique_ptr<CompoundIdentifier> const& element) override {}
-  // void OnConstant(std::unique_ptr<Constant> const& element) override {}
-  // void OnIdentifier(std::unique_ptr<Identifier> const& element) override;
-  // void OnIdentifierConstant(std::unique_ptr<IdentifierConstant> const& element) override {}
-  // void OnLiteral(std::unique_ptr<fidl::raw::Literal> const& element) override {}
-  // void OnLiteralConstant(std::unique_ptr<LiteralConstant> const& element) override {}
-  // void OnNullability(types::Nullability nullability) override {}
-  // void OnParameterList(std::unique_ptr<ParameterList> const& element) override {}
-  // void OnPrimitiveSubtype(types::PrimitiveSubtype subtype) override {}
-  // void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) override {}
-  // void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) override {}
-  // void OnResourceDeclaration(std::unique_ptr<fidl::raw::ResourceDeclaration> const& element)
-  // override {}
+  // void OnBinaryOperatorConstant(std::unique_ptr<BinaryOperatorConstant> const&) override;
+  // void OnComposeProtocol(std::unique_ptr<raw::ComposeProtocol> const&) override;
+  // void OnCompoundIdentifier(std::unique_ptr<CompoundIdentifier> const&) override;
+  // void OnConstant(std::unique_ptr<Constant> const&) override;
+  // void OnEnumMember(std::unique_ptr<raw::EnumMember> const&) override;
+  // void OnIdentifier(std::unique_ptr<Identifier> const&) override;
+  // void OnIdentifierConstant(std::unique_ptr<IdentifierConstant> const&) override;
+  // void OnLiteral(std::unique_ptr<fidl::raw::Literal> const&) override;
+  // void OnLiteralConstant(std::unique_ptr<LiteralConstant> const&) override;
+  // void OnNullability(types::Nullability nullability) override;
+  // void OnParameterList(std::unique_ptr<ParameterList> const&) override;
+  // void OnPrimitiveSubtype(types::PrimitiveSubtype subtype) override;
+  // void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const&) override;
+  // void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const&) override;
+  // void OnResourceDeclaration(std::unique_ptr<fidl::raw::ResourceDeclaration> const&) override;
+  // void OnServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> const&) override;
+  // void OnServiceMember(std::unique_ptr<raw::ServiceMember> const&) override;
+  // void OnSourceElementStart(const raw::SourceElement&) override;
+  // void OnSourceElementEnd(const raw::SourceElement&) override;
 
   // The remaining "On*" methods are loosely organized by keyword.  All of them
   // must be overwritten by the implementation.
 
+  // Attributes.
+  void OnAttribute(const raw::Attribute& element) override;
+  void OnAttributeList(std::unique_ptr<raw::AttributeList> const& element) override;
+
   // Bits.
   void OnBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> const& element) override;
+  void OnBitsMember(std::unique_ptr<raw::BitsMember> const& element) override;
 
   // Constants.
   void OnConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const& element) override;
 
   // Enums.
   void OnEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> const& element) override;
+  void OnEnumMember(std::unique_ptr<raw::EnumMember> const& element) override;
 
   // Files.
   void OnFile(std::unique_ptr<raw::File> const& element) override;
@@ -130,6 +126,39 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // spans may include weirdly-placed comments that we do not want to lose.
   // Instead, such comments should be appended to the conversion's prefix.
   std::vector<std::unique_ptr<Token>> comments_;
+
+  // Attributes are something of a special case.  Consider this struct with no
+  // attributes, where the top-level StructDeclaration conversion span
+  // (bounded by single arrows: «___») necessarily precedes all of its child
+  // spans (each bounded by inside of ««___»»):
+  //
+  //   «struct S» {
+  //     ««bool foo»»;
+  //     ««int8 vector<bar>»»;
+  //   };
+  //
+  // In fact, every conversion (except for attributes) exhibits this property.
+  // But if we add an attribute to the declaration above, this no longer holds:
+  //
+  //   ««[MaxBytes]»»
+  //   «struct S» {
+  //     ««bool foo»»;
+  //     ««int8 vector<bar>»»;
+  //   };
+  //
+  // Running AddChildText() on the children of this StructDeclaration in order
+  // would result in the [MaxBytes] appearing after the top-level
+  // type S = struct statement, which is not correct.
+  //
+  // The solution to this problem is for every raw AST node that can carry
+  // attributes to visit its AttributeList child twice: once prior to starting
+  // the conversion for the parent node itself, and then again as part of the
+  // normal flow of the default TreeVisitor.  To prevent attributes from
+  // appearing twice, each time an AttributeList is visited, it adds its pointer
+  // to this set if it is not already present.  If it is already present
+  // (meaning this is the second visit), then the visit is a noop, resulting in
+  // only one conversion in the correct place.
+  std::set<raw::AttributeList*> attribute_lists_seen_;
 
   // Keeps track of the last comment in the comments_ list to have been "tested"
   // for being inside a conversion span.  The char pointer at the vector index

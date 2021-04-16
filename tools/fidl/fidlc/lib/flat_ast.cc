@@ -1694,7 +1694,7 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
   result_members.push_back(std::move(response_member));
   result_members.push_back(std::move(error_member));
   std::vector<raw::Attribute> result_attributes;
-  result_attributes.emplace_back(*method, "Result", "");
+  result_attributes.emplace_back(*method, raw::Attribute::Provenance::kDefault, "Result", "");
   auto result_attributelist =
       std::make_unique<raw::AttributeList>(*method, std::move(result_attributes));
   auto union_decl = std::make_unique<Union>(std::move(result_attributelist), std::move(result_name),

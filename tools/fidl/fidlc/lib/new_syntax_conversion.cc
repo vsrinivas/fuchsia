@@ -6,8 +6,68 @@
 #include <vector>
 
 #include "fidl/new_syntax_converter.h"
+#include "fidl/utils.h"
 
 namespace fidl::conv {
+
+std::string AttributeConversion::Write(fidl::utils::Syntax syntax) {
+  if (syntax == fidl::utils::Syntax::kOld) {
+    std::string out = prefix() + name_;
+    if (!value_.empty()) {
+      out += " = \"" + value_ + "\"";
+    }
+    return out;
+  }
+
+  std::string out = prefix() + "@" + utils::to_lower_snake_case(name_);
+  if (!value_.empty()) {
+    // Special case: convert MaxBytes and MaxHandles from string to uint.
+    if (name_ == "MaxBytes" || name_ == "MaxHandles") {
+      out += "(" + value_ + ")";
+    } else {
+      out += "(\"" + value_ + "\")";
+    }
+  }
+  return out;
+};
+
+std::string AttributeListConversion::Write(fidl::utils::Syntax syntax) {
+  std::string out = prefix();
+
+  // If the first attribute is a doc comment, copy it wholesale to start the
+  // attributes block.
+  if (has_doc_comment_ && !attributes_.empty()) {
+    out += attributes_[0];
+    attributes_.erase(attributes_.begin());
+  }
+  if (attributes_.empty()) {
+    return out;
+  }
+  if (has_doc_comment_) {
+    out += "\n";
+  }
+
+  if (syntax == fidl::utils::Syntax::kOld) {
+    out += "[";
+    for (size_t i = 0; i < attributes_.size(); ++i) {
+      if (i > 0) {
+        out += ", ";
+      }
+      out += attributes_[i];
+    }
+    return out + "]";
+  }
+
+  if (!attributes_.empty()) {
+    for (size_t i = 0; i < attributes_.size(); ++i) {
+      if (i > 0) {
+        out += " ";
+      }
+      out += attributes_[i];
+    }
+  }
+  return out;
+};
 
 std::string TypeConversion::Write(fidl::utils::Syntax syntax) {
   std::string original = type_ctor_->copy_to_str();
@@ -145,6 +205,10 @@ std::string BitsDeclarationConversion::Write(fidl::utils::Syntax syntax) {
     out += prefix() + get_decl_str(syntax) + " " + name + get_wrapped_type();
   } else {
     out += prefix() + "type " + name + " = " + get_decl_str(syntax) + get_wrapped_type();
+  }
+
+  if (maybe_wrapped_type_) {
+    members_.erase(members_.begin());
   }
   for (const std::string& member : members_) {
     out += member;

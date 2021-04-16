@@ -300,7 +300,8 @@ std::unique_ptr<raw::Attribute> Parser::ParseAttribute() {
       str_value = std::string(value->span().data().data() + 1, value->span().data().size() - 2);
     }
   }
-  return std::make_unique<raw::Attribute>(scope.GetSourceElement(), str_name, str_value);
+  return std::make_unique<raw::Attribute>(
+      scope.GetSourceElement(), raw::Attribute::Provenance::kDefault, str_name, str_value);
 }
 
 std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList(
@@ -357,7 +358,8 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
   if (Peek().kind() == Token::Kind::kEndOfFile)
     reporter_->Report(WarnDocCommentMustBeFollowedByDeclaration, previous_token_);
 
-  return std::make_unique<raw::Attribute>(scope.GetSourceElement(), "Doc", str_value);
+  return std::make_unique<raw::Attribute>(
+      scope.GetSourceElement(), raw::Attribute::Provenance::kDocComment, "Doc", str_value);
 }
 
 std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList(bool for_parameter) {

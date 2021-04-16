@@ -85,6 +85,59 @@ class Conversion {
   std::vector<std::unique_ptr<CopyRange>> copy_ranges_;
 };
 
+// A conversion that leaves its contents exactly as it found them.  This is
+// useful for cases where a span is only converted in certain cases.
+class NoopConversion : public Conversion {
+ public:
+  explicit NoopConversion(const Token& start, const Token& end) : start_(start), end_(end) {}
+  ~NoopConversion() override = default;
+
+  const Token& start_;
+  const Token& end_;
+
+  void AddChildText(std::string child) override {}
+
+  std::string Write(fidl::utils::Syntax syntax) override {
+    const char* from = start_.data().data();
+    const char* until = end_.data().data() + end_.data().length();
+    return prefix() + std::string(from, until);
+  }
+};
+
+// Converts a single attribute, one of potentially several in an AttributeList.
+class AttributeConversion : public Conversion {
+ public:
+  AttributeConversion(const std::string& name, const std::string& value)
+      : name_(name), value_(value) {}
+  ~AttributeConversion() override = default;
+
+  const std::string& name_;
+  const std::string& value_;
+
+  void AddChildText(std::string child) override {}
+
+  std::string Write(fidl::utils::Syntax syntax) override;
+};
+
+// Handles an AttributeList.  Such lists have one peculiarity to be aware of,
+// which is the special handling they require when they include doc comments.
+// Unlike regular attributes, doc comments need not be converted, and should not
+// appear in the bracketed attribute list.  Because such comments are always
+// first in the AttributeList if they exist, we can just check if the first
+// comment is a doc comment, and special case its conversion.
+class AttributeListConversion : public Conversion {
+ public:
+  explicit AttributeListConversion(bool has_doc_comment) : has_doc_comment_(has_doc_comment) {}
+  ~AttributeListConversion() override = default;
+
+  std::vector<std::string> attributes_;
+  bool has_doc_comment_;
+
+  void AddChildText(std::string child) override { attributes_.push_back(child); }
+
+  std::string Write(fidl::utils::Syntax syntax) override;
+};
+
 // TypeConversion encapsulates the complex logic for converting various type
 // definitions from the old syntax to the new.  It may nest other
 // TypeConversions, as would be the case for something like "vector<handle?>."
@@ -270,7 +323,7 @@ class BitsDeclarationConversion : public FlexibleTypeConversion {
   const std::optional<std::reference_wrapper<std::unique_ptr<raw::TypeConstructorOld>>>
       maybe_wrapped_type_;
 
-  void AddChildText(std::string child) override {}
+  void AddChildText(std::string child) override { members_.push_back(child); }
 
   std::string Write(fidl::utils::Syntax syntax) override;
 

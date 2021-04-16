@@ -228,11 +228,21 @@ class BinaryOperatorConstant final : public Constant {
 
 class Attribute final : public SourceElement {
  public:
-  Attribute(SourceElement const& element, std::string name, std::string value)
-      : SourceElement(element), name(std::move(name)), value(std::move(value)) {}
+  enum Provenance {
+    kDefault,
+    kDocComment,
+  };
+
+  Attribute(SourceElement const& element, Provenance provenance, std::string name,
+            std::string value)
+      : SourceElement(element),
+        provenance(provenance),
+        name(std::move(name)),
+        value(std::move(value)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
+  Provenance provenance;
   const std::string name;
   const std::string value;
 };
