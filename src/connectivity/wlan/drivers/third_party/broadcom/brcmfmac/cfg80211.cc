@@ -332,7 +332,8 @@ static zx_status_t brcmf_set_iface_macaddr(net_device* ndev,
     return err;
   }
 
-  BRCMF_INFO("Setting mac address of ndev:%s to %s\n", ifp->ndev->name, MACSTR(mac_addr));
+  BRCMF_INFO("Setting mac address of ndev:%s.", ifp->ndev->name);
+  BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(mac_addr.byte));
   memcpy(ifp->mac_addr, mac_addr.byte, sizeof(ifp->mac_addr));
 
   return err;
@@ -382,8 +383,8 @@ static zx_status_t brcmf_set_ap_macaddr(struct brcmf_if* ifp,
 
   err = brcmf_set_iface_macaddr(ifp->ndev, mac_addr);
   if (err != ZX_OK) {
-    BRCMF_ERR("Failed to set MAC address %s for AP iface netdev: %s", MACSTR(mac_addr),
-              ifp->ndev->name);
+    BRCMF_ERR("Failed to set MAC address for AP iface netdev: %s.", ifp->ndev->name);
+    BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(mac_addr.byte));
     return err;
   }
 
@@ -651,23 +652,30 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
       } else {
         err = brcmf_bus_get_bootloader_macaddr(drvr->bus_if, client_mac_addr.byte);
         if (err != ZX_OK || client_mac_addr.IsZero() || client_mac_addr.IsBcast()) {
-          BRCMF_ERR("Failed to get valid mac address from bootloader: %s",
-                    (err != ZX_OK) ? zx_status_get_string(err) : MACSTR(client_mac_addr));
+          if (err != ZX_OK) {
+            BRCMF_ERR("Failed to get valid mac address from bootloader: %s",
+                      zx_status_get_string(err));
+          } else {
+            BRCMF_ERR("Failed to get valid mac address from bootloader.");
+            BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(client_mac_addr.byte));
+          }
           err = brcmf_gen_random_mac_addr(client_mac_addr.byte);
           if (err != ZX_OK) {
             BRCMF_ERR("Failed to generate random MAC address.");
             return err;
           }
-          BRCMF_ERR("Falling back to random mac address: %s", MACSTR(client_mac_addr));
+          BRCMF_ERR("Falling back to random mac address");
+          BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(client_mac_addr.byte));
         } else {
-          BRCMF_DBG(INFO, "Retrieved bootloader wifi MAC addresss: %s", MACSTR(client_mac_addr));
+          BRCMF_DBG(INFO, "Retrieved bootloader wifi MAC addresss");
+          BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(client_mac_addr.byte));
         }
       }
 
       err = brcmf_set_iface_macaddr(ndev, client_mac_addr);
       if (err != ZX_OK) {
-        BRCMF_ERR("Failed to set MAC address %s for client iface netdev:%s",
-                  MACSTR(client_mac_addr), ndev->name);
+        BRCMF_ERR("Failed to set MAC address for client iface netdev:%s", ndev->name);
+        BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(client_mac_addr.byte));
         return err;
       }
 
@@ -1171,8 +1179,8 @@ static void brcmf_notify_deauth(struct net_device* ndev, const uint8_t peer_sta_
   wlanif_deauth_confirm_t resp = {};
   memcpy(resp.peer_sta_address, peer_sta_address, ETH_ALEN);
 
-  BRCMF_IFDBG(WLANIF, ndev, "Sending deauth confirm to SME. address: " MAC_FMT_STR "",
-              MAC_FMT_ARGS(peer_sta_address));
+  BRCMF_IFDBG(WLANIF, ndev, "Sending deauth confirm to SME.");
+  BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR "", MAC_FMT_ARGS(peer_sta_address));
 
   wlanif_impl_ifc_deauth_conf(&ndev->if_proto, &resp);
 }
@@ -1200,11 +1208,8 @@ static void brcmf_notify_deauth_ind(net_device* ndev, const uint8_t mac_addr[ETH
   }
 
   wlanif_deauth_indication_t ind = {};
-  BRCMF_IFDBG(WLANIF, ndev,
-              "Link Down: Sending deauth ind to SME. address: " MAC_FMT_STR
-              ",  "
-              "reason: %" PRIu16,
-              MAC_FMT_ARGS(mac_addr), reason);
+  BRCMF_IFDBG(WLANIF, ndev, "Link Down: Sending deauth ind to SME. reason: %d", reason);
+  BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR "", MAC_FMT_ARGS(mac_addr));
 
   memcpy(ind.peer_sta_address, mac_addr, ETH_ALEN);
   ind.reason_code = reason;
@@ -1223,11 +1228,8 @@ static void brcmf_notify_disassoc_ind(net_device* ndev, const uint8_t mac_addr[E
 
   wlanif_disassoc_indication_t ind = {};
 
-  BRCMF_IFDBG(WLANIF, ndev,
-              "Link Down: Sending disassoc ind to SME. address: " MAC_FMT_STR
-              ",  "
-              "reason: %" PRIu16,
-              MAC_FMT_ARGS(mac_addr), reason);
+  BRCMF_IFDBG(WLANIF, ndev, "Link Down: Sending disassoc ind to SME. reason: %d", reason);
+  BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR ", ", MAC_FMT_ARGS(mac_addr));
   memcpy(ind.peer_sta_address, mac_addr, ETH_ALEN);
   ind.reason_code = reason;
   ind.locally_initiated = locally_initiated;
@@ -2088,10 +2090,9 @@ static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
   }
 
   if (memcmp(peer_sta_address, profile->bssid, ETH_ALEN)) {
-    BRCMF_ERR(
-        "peer_sta_address is not matching bssid in brcmf_cfg80211_profile. "
-        "peer_sta_address:" MAC_FMT_STR ", bssid in profile:" MAC_FMT_STR "",
-        MAC_FMT_ARGS(peer_sta_address), MAC_FMT_ARGS(profile->bssid));
+    BRCMF_ERR("peer_sta_address is not matching bssid in brcmf_cfg80211_profile. ");
+    BRCMF_DBG(TRACE, "  peer_sta_address:" MAC_FMT_STR ", bssid in profile:" MAC_FMT_STR "",
+              MAC_FMT_ARGS(peer_sta_address), MAC_FMT_ARGS(profile->bssid));
     status = ZX_ERR_INVALID_ARGS;
     goto done;
   }
@@ -2443,8 +2444,8 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
 
   auto ssid = brcmf_find_ssid_in_ies(result.bss.ies_bytes_list, result.bss.ies_bytes_count);
   BRCMF_DBG(SCAN, "Returning scan result id %lu", result.txn_id);
-  BRCMF_DBG(TRACE, "  ssid: %.*s, channel %d, dbm %d", (int)ssid.size(),
-            ssid.data(), channel, result.bss.rssi_dbm);
+  BRCMF_DBG(TRACE, "  ssid: %.*s, channel %d, dbm %d", (int)ssid.size(), ssid.data(), channel,
+            result.bss.rssi_dbm);
 
   ndev->scan_num_results++;
   wlanif_impl_ifc_on_scan_result(&ndev->if_proto, &result);
@@ -3421,7 +3422,7 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
   if (!ssid.empty()) {
     BRCMF_IFDBG(WLANIF, ndev, "Join request from SME.");
     BRCMF_DBG(TRACE, "  ssid: " SSID_FMT_STR ", bssid: " MAC_FMT_STR ", channel: %u",
-                SSID_FMT_ARGS(ssid), MAC_FMT_ARGS(sme_bss.bssid), sme_bss.chan.primary);
+              SSID_FMT_ARGS(ssid), MAC_FMT_ARGS(sme_bss.bssid), sme_bss.chan.primary);
     memcpy(&ifp->bss, &sme_bss, sizeof(ifp->bss));
     if (ifp->bss.ies_bytes_count > WLAN_MSDU_MAX_LEN) {
       ifp->bss.ies_bytes_count = WLAN_MSDU_MAX_LEN;
@@ -3460,22 +3461,21 @@ void brcmf_if_auth_req(net_device* ndev, const wlanif_auth_req_t* req) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   wlanif_auth_confirm_t response;
 
-  BRCMF_IFDBG(WLANIF, ndev, "Auth request from SME. type: %s, address: " MAC_FMT_STR "",
+  BRCMF_IFDBG(WLANIF, ndev, "Auth request from SME. type: %s",
               req->auth_type == WLAN_AUTH_TYPE_OPEN_SYSTEM           ? "open"
               : req->auth_type == WLAN_AUTH_TYPE_SHARED_KEY          ? "shared"
               : req->auth_type == WLAN_AUTH_TYPE_FAST_BSS_TRANSITION ? "fast BSS"
               : req->auth_type == WLAN_AUTH_TYPE_SAE                 ? "SAE"
-                                                                     : "invalid",
-              MAC_FMT_ARGS(req->peer_sta_address));
+                                                                     : "invalid");
+  BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(req->peer_sta_address));
 
   // Ensure that join bssid matches auth bssid
   if (memcmp(req->peer_sta_address, ifp->bss.bssid, ETH_ALEN)) {
     const uint8_t* old_mac = ifp->bss.bssid;
     const uint8_t* new_mac = req->peer_sta_address;
-    BRCMF_ERR("Auth MAC (" MAC_FMT_STR
-              ") != "
-              "join MAC (" MAC_FMT_STR ").",
-              MAC_FMT_ARGS(new_mac), MAC_FMT_ARGS(old_mac));
+    BRCMF_ERR("Auth MAC != Join MAC");
+    BRCMF_DBG(TRACE, "  auth mac: " MAC_FMT_STR "join mac: " MAC_FMT_STR, MAC_FMT_ARGS(new_mac),
+              MAC_FMT_ARGS(old_mac));
 
     // In debug builds, we should investigate why the MLME is giving us inconsitent
     // requests.
@@ -3512,7 +3512,7 @@ void brcmf_if_auth_req(net_device* ndev, const wlanif_auth_req_t* req) {
 void brcmf_if_auth_resp(net_device* ndev, const wlanif_auth_resp_t* ind) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
-  BRCMF_IFDBG(WLANIF, ndev, "Auth response from SME. result: %s, address: " MAC_FMT_STR "\n",
+  BRCMF_IFDBG(WLANIF, ndev, "Auth response from SME. result: %s",
               ind->result_code == WLAN_AUTH_RESULT_SUCCESS   ? "success"
               : ind->result_code == WLAN_AUTH_RESULT_REFUSED ? "refused"
               : ind->result_code == WLAN_AUTH_RESULT_ANTI_CLOGGING_TOKEN_REQUIRED
@@ -3521,8 +3521,8 @@ void brcmf_if_auth_resp(net_device* ndev, const wlanif_auth_resp_t* ind) {
                   ? "finite cyclic group not supported"
               : ind->result_code == WLAN_AUTH_RESULT_REJECTED        ? "rejected"
               : ind->result_code == WLAN_AUTH_RESULT_FAILURE_TIMEOUT ? "timeout"
-                                                                     : "invalid",
-              MAC_FMT_ARGS(ind->peer_sta_address));
+                                                                     : "invalid");
+  BRCMF_DBG(TRACE, "  , address: " MAC_FMT_STR, MAC_FMT_ARGS(ind->peer_sta_address));
 
   if (!brcmf_is_apmode(ifp->vif)) {
     BRCMF_ERR("Received AUTHENTICATE.response but not in AP mode - ignoring");
@@ -3589,9 +3589,9 @@ void brcmf_if_deauth_req(net_device* ndev, const wlanif_deauth_req_t* req) {
 void brcmf_if_assoc_req(net_device* ndev, const wlanif_assoc_req_t* req) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
-  BRCMF_IFDBG(WLANIF, ndev,
-              "Assoc request from SME. address: " MAC_FMT_STR ", rsne_len: %zd venie len %zd",
-              MAC_FMT_ARGS(req->peer_sta_address), req->rsne_len, req->vendor_ie_len);
+  BRCMF_IFDBG(WLANIF, ndev, "Assoc request from SME. rsne_len: %zd venie len %zd", req->rsne_len,
+              req->vendor_ie_len);
+  BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(req->peer_sta_address));
 
   if (req->rsne_len != 0) {
     BRCMF_DBG(TEMP, " * * RSNE non-zero! %ld", req->rsne_len);
@@ -3600,9 +3600,8 @@ void brcmf_if_assoc_req(net_device* ndev, const wlanif_assoc_req_t* req) {
   if (memcmp(req->peer_sta_address, ifp->bss.bssid, ETH_ALEN)) {
     const uint8_t* old_mac = ifp->bss.bssid;
     const uint8_t* new_mac = req->peer_sta_address;
-    BRCMF_ERR("Requested MAC " MAC_FMT_STR
-              " != "
-              "connected MAC " MAC_FMT_STR,
+    BRCMF_ERR("Requested MAC != Connected MAC");
+    BRCMF_DBG(TRACE, " requested mac: " MAC_FMT_STR ", connected mac: " MAC_FMT_STR,
               MAC_FMT_ARGS(new_mac), MAC_FMT_ARGS(old_mac));
     brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   } else {
@@ -3613,11 +3612,9 @@ void brcmf_if_assoc_req(net_device* ndev, const wlanif_assoc_req_t* req) {
 void brcmf_if_assoc_resp(net_device* ndev, const wlanif_assoc_resp_t* ind) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
-  BRCMF_IFDBG(WLANIF, ndev,
-              "Assoc response from SME. address: " MAC_FMT_STR
-              ", "
-              "result: %" PRIu8 ", aid: %" PRIu16 "",
-              MAC_FMT_ARGS(ind->peer_sta_address), ind->result_code, ind->association_id);
+  BRCMF_IFDBG(WLANIF, ndev, "Assoc response from SME. result: %" PRIu8 ", aid: %" PRIu16,
+              ind->result_code, ind->association_id);
+  BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(ind->peer_sta_address));
 
   if (!brcmf_is_apmode(ifp->vif)) {
     BRCMF_ERR("Received ASSOCIATE.response but not in AP mode - ignoring");
@@ -3654,9 +3651,8 @@ void brcmf_if_assoc_resp(net_device* ndev, const wlanif_assoc_resp_t* ind) {
 }
 
 void brcmf_if_disassoc_req(net_device* ndev, const wlanif_disassoc_req_t* req) {
-  BRCMF_IFDBG(WLANIF, ndev,
-              "Disassoc request from SME. address: " MAC_FMT_STR ", reason: %" PRIu16 "",
-              MAC_FMT_ARGS(req->peer_sta_address), req->reason_code);
+  BRCMF_IFDBG(WLANIF, ndev, "Disassoc request from SME. reason: %" PRIu16, req->reason_code);
+  BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(req->peer_sta_address));
   zx_status_t status =
       brcmf_cfg80211_disconnect(ndev, req->peer_sta_address, req->reason_code, false);
   if (status != ZX_OK) {
@@ -3665,8 +3661,8 @@ void brcmf_if_disassoc_req(net_device* ndev, const wlanif_disassoc_req_t* req) {
 }
 
 void brcmf_if_reset_req(net_device* ndev, const wlanif_reset_req_t* req) {
-  BRCMF_IFDBG(WLANIF, ndev, "Reset request from SME. address: " MAC_FMT_STR "",
-              MAC_FMT_ARGS(req->sta_address));
+  BRCMF_IFDBG(WLANIF, ndev, "Reset request from SME.");
+  BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(req->sta_address));
 
   BRCMF_ERR("Unimplemented");
 }
@@ -4640,10 +4636,9 @@ zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_hands
   if (memcmp(resp->peer_sta_address, ifp->bss.bssid, ETH_ALEN)) {
     const uint8_t* old_mac = ifp->bss.bssid;
     const uint8_t* new_mac = resp->peer_sta_address;
-    BRCMF_ERR("Auth MAC (" MAC_FMT_STR
-              ") !="
-              " join MAC (" MAC_FMT_STR ").",
-              MAC_FMT_ARGS(new_mac), MAC_FMT_ARGS(old_mac));
+    BRCMF_ERR("Auth MAC != Join MAC");
+    BRCMF_DBG(TRACE, " auth mac: " MAC_FMT_STR ", join mac: " MAC_FMT_STR, MAC_FMT_ARGS(new_mac),
+              MAC_FMT_ARGS(old_mac));
 
     // Just in case, in debug builds, we should investigate why the MLME is giving us inconsistent
     // requests.
@@ -5244,8 +5239,8 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
     memcpy(assoc_ind_params.rsne, rsn_ie, assoc_ind_params.rsne_len);
   }
 
-  BRCMF_IFDBG(WLANIF, ndev, "Sending assoc indication to SME. address: " MAC_FMT_STR "",
-              MAC_FMT_ARGS(assoc_ind_params.peer_sta_address));
+  BRCMF_IFDBG(WLANIF, ndev, "Sending assoc indication to SME.");
+  BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR "", MAC_FMT_ARGS(assoc_ind_params.peer_sta_address));
 
   wlanif_impl_ifc_assoc_ind(&ndev->if_proto, &assoc_ind_params);
   return ZX_OK;
@@ -5345,8 +5340,8 @@ static zx_status_t brcmf_process_auth_ind_event(struct brcmf_if* ifp,
       default:
         auth_type = "unknown";
     }
-    BRCMF_IFDBG(WLANIF, ndev, "Sending auth indication to SME. address: " MAC_FMT_STR ", type: %s",
-                MAC_FMT_ARGS(auth_ind_params.peer_sta_address), auth_type);
+    BRCMF_IFDBG(WLANIF, ndev, "Sending auth indication to SME. type: %s", auth_type);
+    BRCMF_DBG(TRACE, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(auth_ind_params.peer_sta_address));
 
     wlanif_impl_ifc_auth_ind(&ndev->if_proto, &auth_ind_params);
   }
