@@ -1,3 +1,7 @@
+{% set areas | yamlloads %}
+{% include "docs/contribute/governance/areas/_areas.yaml" %}
+{% endset %}
+
 # Fuchsia API Council Charter
 
 ## Overview
@@ -137,35 +141,30 @@ following responsibilities:
 
 ## Functional areas {#area}
 
-| Area              | Primary                  | Secondary                |
-| ----------------- | ------------------------ | ------------------------ |
-| Auth              | jsankey@google.com       | _none._                  |
-| Bluetooth         | jamuraa@google.com       | silberst@google.com      |
-| Component Runtime | geb@google.com           | lindkvist@google.com     |
-| DDK               | jocelyndang@google.com   | ravoorir@google.com      |
-| Developer         | dschuyler@google.com     | crjohns@google.com       |
-| Diagnostics       | crjohns@google.com       | _none._                  |
-| Drivers           | ravoorir@google.com      | jocelyndang@google.com   |
-| Experiences       | chaselatta@google.com    | ianloic@google.com       |
-| FIDL              | ianloic@google.com       | _none._                  |
-| Firmware          | dpursell@google.com      | _none._                  |
-| Graphics          | jbauman@google.com       | _none._                  |
-| HCI (a11y, i18n)  | neelsa@google.com        | jaeheon@google.com       |
-| Kernel            | cpu@google.com           | abarth@google.com        |
-| Ledger            | qsr@google.com           | _none._                  |
-| Media             | dalesat@google.com       | _none._                  |
-| Metrics           | camrdale@google.com      | _none._                  |
-| Netstack          | brunodalbo@google.com    | _none._                  |
-| Security          | jsankey@google.com       | _none._                  |
-| Sessions          | lindkvist@google.com     | _none._                  |
-| Software Delivery | computerdruid@google.com | _none._                  |
-| Storage           | manalib@google.com       | _none._                  |
-| System            | cpu@google.com           | _none._                  |
-| Toolchain         | mcgrathr@google.com      | _none._                  |
-| View System       | jaeheon@google.com       | neelsa@google.com        |
-| Virtualization    | abdulla@google.com       | _none._                  |
-| Web               | wez@google.com           | ianloic@google.com       |
-| WLAN              | silberst@google.com      | _none._                  |
+<table class="fixed">
+    <colgroup>
+        <col width="30%">
+        <col width="30%">
+        <col width="40%">
+    </colgroup>
+    <thead>
+        <tr>
+            <th>Area</th>
+            <th>Primary</th>
+            <th>Secondary</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for area in areas %}
+        <tr>
+            <!-- Cannot using HTML, and getting links to be re-written, so putting direct link. -->
+            <td><a href="https://fuchsia.dev/fuchsia-src/contribute/governance/areas/#{{ area.name|replace(" ", "-")|lower() }}">{{ area.name }}</a</td>
+            <td>{{ area.api_primary }}</td>
+            <td>{% if area.api_secondary == "" %}<i>none.</i>{% else %}{{ area.api_secondary }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
 As the project evolves, the list of functional areas (and therefore the makeup
 of the council) will evolve as well. The list of functional areas is maintained

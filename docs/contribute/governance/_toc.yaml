@@ -27,3 +27,6 @@ toc:
 - title: "APIs"
   section:
   - include: /docs/contribute/governance/apis/_toc.yaml
+- title: "Areas"
+  section:
+  - include: /docs/contribute/governance/areas/_toc.yaml
