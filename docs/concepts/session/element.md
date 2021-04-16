@@ -61,7 +61,8 @@ have recommended meanings with recommended standard schemas.
 
 ## Further reading {#further-reading}
 
-* [Graphical Presenter][doc-graphical-presenter]: a component role and protocol
+* [fuchsia.element.Spec][sdk-element-spec]: a FIDL table that describes an element to add to a session.
+* [Graphical Presenter][sdk-graphical-presenter]: a component role 
   for presenting elements using Fuchsia's graphical compositor,
   [Scenic][doc-scenic].
 
@@ -71,3 +72,5 @@ have recommended meanings with recommended standard schemas.
 [doc-scenic]: /docs/concepts/graphics/scenic/scenic.md
 [doc-component-collection]: /docs/concepts/components/v2/realms.md#collections
 [doc-graphical-presenter]: /docs/concepts/session/graphical_presenter.md
+[sdk-graphical-presenter]: /sdk/fidl/fuchsia.element/graphical_presenter.fidl
+[sdk-element-spec]: /sdk/fidl/fuchsia.element/element_manager.fidl
