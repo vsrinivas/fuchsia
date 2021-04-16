@@ -7,7 +7,17 @@
 #include "hdmitx-dwc-regs.h"
 #include "hdmitx-top-regs.h"
 
+#define HDMI_ASPECT_RATIO_NONE 0
+#define HDMI_ASPECT_RATIO_4x3 1
+#define HDMI_ASPECT_RATIO_16x9 2
+
+#define HDMI_COLORIMETRY_ITU601 1
+#define HDMI_COLORIMETRY_ITU709 2
+
 namespace amlogic_display {
+
+using fuchsia_hardware_hdmi::wire::ColorDepth;
+using fuchsia_hardware_hdmi::wire::ColorFormat;
 
 void AmlHdmitx::WriteReg(uint32_t addr, uint32_t data) {
   // determine if we are writing to HDMI TOP (AMLOGIC Wrapper) or HDMI IP
@@ -134,16 +144,16 @@ zx_status_t AmlHdmitx::InitHw() {
   return ZX_OK;
 }
 
-void AmlHdmitx::CalculateTxParam(const display_mode_t& mode, hdmi_param_tx* p) {
-  if ((mode.pixel_clock_10khz * 10) > 500000) {
+void AmlHdmitx::CalculateTxParam(const DisplayMode& mode, hdmi_param_tx* p) {
+  if ((mode.mode().pixel_clock_10khz * 10) > 500000) {
     p->is4K = true;
   } else {
     p->is4K = false;
   }
 
-  if (mode.h_addressable * 3 == mode.v_addressable * 4) {
+  if (mode.mode().h_addressable * 3 == mode.mode().v_addressable * 4) {
     p->aspect_ratio = HDMI_ASPECT_RATIO_4x3;
-  } else if (mode.h_addressable * 9 == mode.v_addressable * 16) {
+  } else if (mode.mode().h_addressable * 9 == mode.mode().v_addressable * 16) {
     p->aspect_ratio = HDMI_ASPECT_RATIO_16x9;
   } else {
     p->aspect_ratio = HDMI_ASPECT_RATIO_NONE;
@@ -152,11 +162,13 @@ void AmlHdmitx::CalculateTxParam(const display_mode_t& mode, hdmi_param_tx* p) {
   p->colorimetry = HDMI_COLORIMETRY_ITU601;
 }
 
-zx_status_t AmlHdmitx::InitInterface(const display_mode_t& mode, const color_param& c) {
+zx_status_t AmlHdmitx::InitInterface(const DisplayMode& mode) {
+  if (!mode.has_mode() || !mode.has_color()) {
+    DISP_ERROR("Display Mode needs both StandardDisplayMode and ColorParam\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   hdmi_param_tx p;
-  p.c.input_color_format = c.input_color_format;
-  p.c.output_color_format = c.output_color_format;
-  p.c.color_depth = c.color_depth;
   CalculateTxParam(mode, &p);
 
   // Configure HDMI TX IP
@@ -205,7 +217,7 @@ zx_status_t AmlHdmitx::InitInterface(const display_mode_t& mode, const color_par
   return ZX_OK;
 }
 
-void AmlHdmitx::ConfigHdmitx(const display_mode_t& mode, const hdmi_param_tx& p) {
+void AmlHdmitx::ConfigHdmitx(const DisplayMode& mode, const hdmi_param_tx& p) {
   uint32_t hdmi_data;
 
   // Output normal TMDS Data
@@ -214,34 +226,34 @@ void AmlHdmitx::ConfigHdmitx(const display_mode_t& mode, const hdmi_param_tx& p)
 
   // setup video input mapping
   hdmi_data = 0;
-  if (p.c.input_color_format == HDMI_COLOR_FORMAT_RGB) {
-    switch (p.c.color_depth) {
-      case HDMI_COLOR_DEPTH_24B:
+  if (mode.color().input_color_format == ColorFormat::CF_RGB) {
+    switch (mode.color().color_depth) {
+      case ColorDepth::CD_24B:
         hdmi_data |= TX_INVID0_VM_RGB444_8B;
         break;
-      case HDMI_COLOR_DEPTH_30B:
+      case ColorDepth::CD_30B:
         hdmi_data |= TX_INVID0_VM_RGB444_10B;
         break;
-      case HDMI_COLOR_DEPTH_36B:
+      case ColorDepth::CD_36B:
         hdmi_data |= TX_INVID0_VM_RGB444_12B;
         break;
-      case HDMI_COLOR_DEPTH_48B:
+      case ColorDepth::CD_48B:
       default:
         hdmi_data |= TX_INVID0_VM_RGB444_16B;
         break;
     }
-  } else if (p.c.input_color_format == HDMI_COLOR_FORMAT_444) {
-    switch (p.c.color_depth) {
-      case HDMI_COLOR_DEPTH_24B:
+  } else if (mode.color().input_color_format == ColorFormat::CF_444) {
+    switch (mode.color().color_depth) {
+      case ColorDepth::CD_24B:
         hdmi_data |= TX_INVID0_VM_YCBCR444_8B;
         break;
-      case HDMI_COLOR_DEPTH_30B:
+      case ColorDepth::CD_30B:
         hdmi_data |= TX_INVID0_VM_YCBCR444_10B;
         break;
-      case HDMI_COLOR_DEPTH_36B:
+      case ColorDepth::CD_36B:
         hdmi_data |= TX_INVID0_VM_YCBCR444_12B;
         break;
-      case HDMI_COLOR_DEPTH_48B:
+      case ColorDepth::CD_48B:
       default:
         hdmi_data |= TX_INVID0_VM_YCBCR444_16B;
         break;
@@ -262,7 +274,7 @@ void AmlHdmitx::ConfigHdmitx(const display_mode_t& mode, const hdmi_param_tx& p)
   WriteReg(HDMITX_DWC_TX_BCBDATA1, 0x00);
 
   // configure CSC (Color Space Converter)
-  ConfigCsc(p);
+  ConfigCsc(mode);
 
   // Video packet color depth and pixel repetition (none). writing 0 is also valid
   // hdmi_data = (4 << 4); // 4 == 24bit
@@ -300,46 +312,46 @@ void AmlHdmitx::ConfigHdmitx(const display_mode_t& mode, const hdmi_param_tx& p)
   hdmi_data |= FC_INVIDCONF_HSYNC_POL(mode->flags & MODE_FLAG_HSYNC_POSITIVE);
   hdmi_data |= FC_INVIDCONF_DE_POL_H;
   hdmi_data |= FC_INVIDCONF_DVI_HDMI_MODE;
-  if (mode.flags & MODE_FLAG_INTERLACED) {
+  if (mode.mode().flags & MODE_FLAG_INTERLACED) {
     hdmi_data |= FC_INVIDCONF_VBLANK_OSC | FC_INVIDCONF_IN_VID_INTERLACED;
   }
   WriteReg(HDMITX_DWC_FC_INVIDCONF, hdmi_data);
 
   // HActive
-  hdmi_data = mode.h_addressable;
+  hdmi_data = mode.mode().h_addressable;
   WriteReg(HDMITX_DWC_FC_INHACTV0, (hdmi_data & 0xff));
   WriteReg(HDMITX_DWC_FC_INHACTV1, ((hdmi_data >> 8) & 0x3f));
 
   // HBlank
-  hdmi_data = mode.h_blanking;
+  hdmi_data = mode.mode().h_blanking;
   WriteReg(HDMITX_DWC_FC_INHBLANK0, (hdmi_data & 0xff));
   WriteReg(HDMITX_DWC_FC_INHBLANK1, ((hdmi_data >> 8) & 0x1f));
 
   // VActive
-  hdmi_data = mode.v_addressable;
+  hdmi_data = mode.mode().v_addressable;
   WriteReg(HDMITX_DWC_FC_INVACTV0, (hdmi_data & 0xff));
   WriteReg(HDMITX_DWC_FC_INVACTV1, ((hdmi_data >> 8) & 0x1f));
 
   // VBlank
-  hdmi_data = mode.v_blanking;
+  hdmi_data = mode.mode().v_blanking;
   WriteReg(HDMITX_DWC_FC_INVBLANK, (hdmi_data & 0xff));
 
   // HFP
-  hdmi_data = mode.h_front_porch;
+  hdmi_data = mode.mode().h_front_porch;
   WriteReg(HDMITX_DWC_FC_HSYNCINDELAY0, (hdmi_data & 0xff));
   WriteReg(HDMITX_DWC_FC_HSYNCINDELAY1, ((hdmi_data >> 8) & 0x1f));
 
   // HSync
-  hdmi_data = mode.h_sync_pulse;
+  hdmi_data = mode.mode().h_sync_pulse;
   WriteReg(HDMITX_DWC_FC_HSYNCINWIDTH0, (hdmi_data & 0xff));
   WriteReg(HDMITX_DWC_FC_HSYNCINWIDTH1, ((hdmi_data >> 8) & 0x3));
 
   // VFront
-  hdmi_data = mode.v_front_porch;
+  hdmi_data = mode.mode().v_front_porch;
   WriteReg(HDMITX_DWC_FC_VSYNCINDELAY, (hdmi_data & 0xff));
 
   // VSync
-  hdmi_data = mode.v_sync_pulse;
+  hdmi_data = mode.mode().v_sync_pulse;
   WriteReg(HDMITX_DWC_FC_VSYNCINWIDTH, (hdmi_data & 0x3f));
 
   // Frame Composer control period duration (set to 12 per spec)
@@ -360,7 +372,7 @@ void AmlHdmitx::ConfigHdmitx(const display_mode_t& mode, const hdmi_param_tx& p)
   // Frame Composer AVI Packet config (set active_format_present bit)
   // aviconf0 populates Table 10 of CEA spec (AVI InfoFrame Data Byte 1)
   // Y1Y0 = 00 for RGB, 10 for 444
-  if (p.c.output_color_format == HDMI_COLOR_FORMAT_RGB) {
+  if (mode.color().output_color_format == ColorFormat::CF_RGB) {
     hdmi_data = FC_AVICONF0_RGB;
   } else {
     hdmi_data = FC_AVICONF0_444;
@@ -372,8 +384,8 @@ void AmlHdmitx::ConfigHdmitx(const display_mode_t& mode, const hdmi_param_tx& p)
   // aviconf1 populates Table 11 of AVI InfoFrame Data Byte 2
   // C1C0 = 0, M1M0=0x2 (16:9), R3R2R1R0=0x8 (same of M1M0)
   hdmi_data = FC_AVICONF1_R3R0;  // set to 0x8 (same as coded frame aspect ratio)
-  hdmi_data |= FC_AVICONF1_M1M0(p.aspect_ratio);
-  hdmi_data |= FC_AVICONF1_C1C0(p.colorimetry);
+  hdmi_data |= FC_AVICONF1_M1M0(static_cast<uint8_t>(p.aspect_ratio));
+  hdmi_data |= FC_AVICONF1_C1C0(static_cast<uint8_t>(p.colorimetry));
   WriteReg(HDMITX_DWC_FC_AVICONF1, hdmi_data);
 
   // Since we are support RGB/444, no need to write to ECx
@@ -388,7 +400,7 @@ void AmlHdmitx::ConfigHdmitx(const display_mode_t& mode, const hdmi_param_tx& p)
   WriteReg(HDMITX_DWC_FC_ACTSPC_HDLR_CFG, 0);
 
   // Frame composer 2d vact config
-  hdmi_data = mode.v_addressable;
+  hdmi_data = mode.mode().v_addressable;
   WriteReg(HDMITX_DWC_FC_INVACT_2D_0, (hdmi_data & 0xff));
   WriteReg(HDMITX_DWC_FC_INVACT_2D_1, ((hdmi_data >> 8) & 0xf));
 
@@ -456,7 +468,7 @@ void AmlHdmitx::ConfigHdmitx(const display_mode_t& mode, const hdmi_param_tx& p)
   DISP_INFO("done\n");
 }
 
-void AmlHdmitx::ConfigCsc(const hdmi_param_tx& p) {
+void AmlHdmitx::ConfigCsc(const DisplayMode& mode) {
   uint8_t csc_coef_a1_msb;
   uint8_t csc_coef_a1_lsb;
   uint8_t csc_coef_a2_msb;
@@ -484,7 +496,7 @@ void AmlHdmitx::ConfigCsc(const hdmi_param_tx& p) {
   uint8_t csc_scale;
   uint32_t hdmi_data;
 
-  if (p.c.input_color_format == p.c.output_color_format) {
+  if (mode.color().input_color_format == mode.color().output_color_format) {
     // no need to convert
     hdmi_data = MC_FLOWCTRL_BYPASS_CSC;
   } else {
@@ -499,8 +511,8 @@ void AmlHdmitx::ConfigCsc(const hdmi_param_tx& p) {
   // Co-efficient values are from DesignWare Core HDMI TX Video Datapath Application Note V2.1
 
   // First determine whether we need to convert or not
-  if (p.c.input_color_format != p.c.output_color_format) {
-    if (p.c.input_color_format == HDMI_COLOR_FORMAT_RGB) {
+  if (mode.color().input_color_format != mode.color().output_color_format) {
+    if (mode.color().input_color_format == ColorFormat::CF_RGB) {
       // from RGB
       csc_coef_a1_msb = 0x25;
       csc_coef_a1_lsb = 0x91;
@@ -516,20 +528,20 @@ void AmlHdmitx::ConfigCsc(const hdmi_param_tx& p) {
       csc_coef_b2_lsb = 0x00;
       csc_coef_b3_msb = 0xFA;
       csc_coef_b3_lsb = 0xCC;
-      switch (p.c.color_depth) {
-        case HDMI_COLOR_DEPTH_24B:
+      switch (mode.color().color_depth) {
+        case ColorDepth::CD_24B:
           csc_coef_b4_msb = 0x02;
           csc_coef_b4_lsb = 0x00;
           csc_coef_c4_msb = 0x02;
           csc_coef_c4_lsb = 0x00;
           break;
-        case HDMI_COLOR_DEPTH_30B:
+        case ColorDepth::CD_30B:
           csc_coef_b4_msb = 0x08;
           csc_coef_b4_lsb = 0x00;
           csc_coef_c4_msb = 0x08;
           csc_coef_c4_lsb = 0x00;
           break;
-        case HDMI_COLOR_DEPTH_36B:
+        case ColorDepth::CD_36B:
           csc_coef_b4_msb = 0x20;
           csc_coef_b4_lsb = 0x00;
           csc_coef_c4_msb = 0x20;
@@ -562,8 +574,8 @@ void AmlHdmitx::ConfigCsc(const hdmi_param_tx& p) {
       csc_coef_b2_lsb = 0x6e;
       csc_coef_b3_msb = 0x00;
       csc_coef_b3_lsb = 0x00;
-      switch (p.c.color_depth) {
-        case HDMI_COLOR_DEPTH_24B:
+      switch (mode.color().color_depth) {
+        case ColorDepth::CD_24B:
           csc_coef_a4_msb = 0x00;
           csc_coef_a4_lsb = 0x87;
           csc_coef_b4_msb = 0xff;
@@ -571,7 +583,7 @@ void AmlHdmitx::ConfigCsc(const hdmi_param_tx& p) {
           csc_coef_c4_msb = 0xff;
           csc_coef_c4_lsb = 0x1e;
           break;
-        case HDMI_COLOR_DEPTH_30B:
+        case ColorDepth::CD_30B:
           csc_coef_a4_msb = 0x02;
           csc_coef_a4_lsb = 0x1d;
           csc_coef_b4_msb = 0xfd;
@@ -579,7 +591,7 @@ void AmlHdmitx::ConfigCsc(const hdmi_param_tx& p) {
           csc_coef_c4_msb = 0xfc;
           csc_coef_c4_lsb = 0x75;
           break;
-        case HDMI_COLOR_DEPTH_36B:
+        case ColorDepth::CD_36B:
           csc_coef_a4_msb = 0x08;
           csc_coef_a4_lsb = 0x77;
           csc_coef_b4_msb = 0xf4;
@@ -662,7 +674,7 @@ void AmlHdmitx::ConfigCsc(const hdmi_param_tx& p) {
   WriteReg(HDMITX_DWC_CSC_COEF_C4_LSB, csc_coef_c4_lsb);
 
   hdmi_data = 0;
-  hdmi_data |= CSC_SCALE_COLOR_DEPTH(p.c.color_depth);
+  hdmi_data |= CSC_SCALE_COLOR_DEPTH(static_cast<uint8_t>(mode.color().color_depth));
   hdmi_data |= CSC_SCALE_CSCSCALE(csc_scale);
   WriteReg(HDMITX_DWC_CSC_SCALE, hdmi_data);
 }

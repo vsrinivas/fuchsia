@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_HDMITX_H_
 
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
+#include <fuchsia/hardware/hdmi/llcpp/fidl.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
@@ -18,28 +19,9 @@
 
 #include "common.h"
 
-#define HDMI_COLOR_DEPTH_24B 4
-#define HDMI_COLOR_DEPTH_30B 5
-#define HDMI_COLOR_DEPTH_36B 6
-#define HDMI_COLOR_DEPTH_48B 7
-
-#define HDMI_COLOR_FORMAT_RGB 0
-#define HDMI_COLOR_FORMAT_444 1
-
-#define HDMI_ASPECT_RATIO_NONE 0
-#define HDMI_ASPECT_RATIO_4x3 1
-#define HDMI_ASPECT_RATIO_16x9 2
-
-#define HDMI_COLORIMETRY_ITU601 1
-#define HDMI_COLORIMETRY_ITU709 2
-
 namespace amlogic_display {
 
-struct color_param {
-  uint8_t input_color_format;
-  uint8_t output_color_format;
-  uint8_t color_depth;
-};
+using fuchsia_hardware_hdmi::wire::DisplayMode;
 
 // TODO(fxb/69026): move HDMI to its own device
 class AmlHdmitx {
@@ -48,7 +30,7 @@ class AmlHdmitx {
 
   zx_status_t Init();
   zx_status_t InitHw();
-  zx_status_t InitInterface(const display_mode_t& mode, const color_param& c);
+  zx_status_t InitInterface(const DisplayMode& mode);
 
   void WriteReg(uint32_t addr, uint32_t data);
   uint32_t ReadReg(uint32_t addr);
@@ -63,13 +45,11 @@ class AmlHdmitx {
     uint8_t aspect_ratio;
     uint8_t colorimetry;
     bool is4K;
-
-    color_param c;
   };
-  void CalculateTxParam(const display_mode_t& mode, hdmi_param_tx* p);
+  void CalculateTxParam(const DisplayMode& mode, hdmi_param_tx* p);
 
-  void ConfigHdmitx(const display_mode_t& mode, const hdmi_param_tx& p);
-  void ConfigCsc(const hdmi_param_tx& p);
+  void ConfigHdmitx(const DisplayMode& mode, const hdmi_param_tx& p);
+  void ConfigCsc(const DisplayMode& mode);
 
   void ScdcWrite(uint8_t addr, uint8_t val);
   void ScdcRead(uint8_t addr, uint8_t* val);

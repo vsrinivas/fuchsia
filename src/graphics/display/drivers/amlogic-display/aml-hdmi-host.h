@@ -5,19 +5,16 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_HDMI_HOST_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_HDMI_HOST_H_
 
+#include <fuchsia/hardware/hdmi/llcpp/fidl.h>
 #include <lib/device-protocol/pdev.h>
 
 #include "aml-hdmitx.h"
 
 namespace amlogic_display {
 
-#define HDMI_COLOR_DEPTH_24B 4
-#define HDMI_COLOR_DEPTH_30B 5
-#define HDMI_COLOR_DEPTH_36B 6
-#define HDMI_COLOR_DEPTH_48B 7
-
-#define HDMI_COLOR_FORMAT_RGB 0
-#define HDMI_COLOR_FORMAT_444 1
+using fuchsia_hardware_hdmi::wire::ColorDepth;
+using fuchsia_hardware_hdmi::wire::ColorFormat;
+using fuchsia_hardware_hdmi::wire::ColorParam;
 
 #define VID_PLL_DIV_1 0
 #define VID_PLL_DIV_2 1
@@ -103,7 +100,7 @@ class AmlHdmiHost {
   void HostOff();
   zx_status_t ModeSet(const display_mode_t& mode);
 
-  void UpdateOutputColorFormat(uint8_t output_color_format) {
+  void UpdateOutputColorFormat(ColorFormat output_color_format) {
     color_.output_color_format = output_color_format;
   }
 
@@ -133,10 +130,10 @@ class AmlHdmiHost {
   std::optional<ddk::MmioBuffer> cbus_mmio_;
 
   hdmi_param p_;
-  color_param color_{
-      .input_color_format = HDMI_COLOR_FORMAT_444,
-      .output_color_format = HDMI_COLOR_FORMAT_444,
-      .color_depth = HDMI_COLOR_DEPTH_24B,
+  ColorParam color_{
+      .input_color_format = ColorFormat::CF_444,
+      .output_color_format = ColorFormat::CF_444,
+      .color_depth = ColorDepth::CD_24B,
   };
 };
 

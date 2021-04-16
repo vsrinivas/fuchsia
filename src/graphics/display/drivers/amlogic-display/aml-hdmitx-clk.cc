@@ -7,6 +7,22 @@
 #include "hhi-regs.h"
 #include "vpu-regs.h"
 
+#define VID_PLL_DIV_1 0
+#define VID_PLL_DIV_2 1
+#define VID_PLL_DIV_3 2
+#define VID_PLL_DIV_3p5 3
+#define VID_PLL_DIV_3p75 4
+#define VID_PLL_DIV_4 5
+#define VID_PLL_DIV_5 6
+#define VID_PLL_DIV_6 7
+#define VID_PLL_DIV_6p25 8
+#define VID_PLL_DIV_7 9
+#define VID_PLL_DIV_7p5 10
+#define VID_PLL_DIV_12 11
+#define VID_PLL_DIV_14 12
+#define VID_PLL_DIV_15 13
+#define VID_PLL_DIV_2p5 14
+
 namespace amlogic_display {
 
 // TODO(fxb/69072): Reconcile with amlogic-clock
@@ -53,12 +69,12 @@ zx_status_t AmlHdmiHost::ConfigurePll() {
   if (pll->viu_channel == 1) {
     VpuVpuViuVencMuxCtrlReg::Get()
         .ReadFrom(&(*vpu_mmio_))
-        .set_viu1_sel_venc(pll->viu_type)
+        .set_viu1_sel_venc(static_cast<uint8_t>(pll->viu_type))
         .WriteTo(&(*vpu_mmio_));
   } else {
     VpuVpuViuVencMuxCtrlReg::Get()
         .ReadFrom(&(*vpu_mmio_))
-        .set_viu2_sel_venc(pll->viu_type)
+        .set_viu2_sel_venc(static_cast<uint8_t>(pll->viu_type))
         .WriteTo(&(*vpu_mmio_));
   }
   HhiHdmiClkCntlReg::Get()
@@ -76,7 +92,7 @@ zx_status_t AmlHdmiHost::ConfigurePll() {
       .set_hdmi_dpll_od3(pll->od3 >> 1)
       .WriteTo(&(*hhi_mmio_));
 
-  ConfigureOd3Div(pll->vid_pll_div);
+  ConfigureOd3Div(static_cast<uint8_t>(pll->vid_pll_div));
 
   HhiVidClkCntlReg::Get().ReadFrom(&(*hhi_mmio_)).set_clk_in_sel(0).WriteTo(&(*hhi_mmio_));
   HhiVidClkDivReg::Get()

@@ -300,8 +300,9 @@ zx_status_t Vout::OnDisplaysChanged(added_display_info_t& info) {
       // Not used anywhere: ZX_PIXEL_FORMAT_RGB_x888;
       return ZX_OK;
     case kHdmi:
-      hdmi_.hdmi_host->UpdateOutputColorFormat(info.is_standard_srgb_out ? HDMI_COLOR_FORMAT_RGB
-                                                                         : HDMI_COLOR_FORMAT_444);
+      hdmi_.hdmi_host->UpdateOutputColorFormat(
+          info.is_standard_srgb_out ? fuchsia_hardware_hdmi::wire::ColorFormat::CF_RGB
+                                    : fuchsia_hardware_hdmi::wire::ColorFormat::CF_444);
       return ZX_OK;
     default:
       return ZX_ERR_NOT_SUPPORTED;

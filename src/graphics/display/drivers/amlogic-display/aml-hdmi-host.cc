@@ -27,6 +27,31 @@ static const struct reg_val_pair ENC_LUT_GEN[] = {
     {VPU_ENCP_VIDEO_EN, 1},           {0xFFFFFFFF, 0},
 };
 
+void TranslateDisplayMode(fidl::AnyAllocator& allocator, const display_mode_t& in_mode,
+                          const ColorParam& in_color, DisplayMode* out_mode) {
+  // Serves to translate between banjo struct display_mode_t and fidl struct DisplayMode
+  fuchsia_hardware_hdmi::wire::StandardDisplayMode mode{
+      .pixel_clock_10khz = in_mode.pixel_clock_10khz,
+      .h_addressable = in_mode.h_addressable,
+      .h_front_porch = in_mode.h_front_porch,
+      .h_sync_pulse = in_mode.h_sync_pulse,
+      .h_blanking = in_mode.h_blanking,
+      .v_addressable = in_mode.v_addressable,
+      .v_front_porch = in_mode.v_front_porch,
+      .v_sync_pulse = in_mode.v_sync_pulse,
+      .v_blanking = in_mode.v_blanking,
+      .flags = in_mode.flags,
+  };
+  out_mode->set_mode(allocator, mode);
+
+  ColorParam color{
+      .input_color_format = in_color.input_color_format,
+      .output_color_format = in_color.output_color_format,
+      .color_depth = in_color.color_depth,
+  };
+  out_mode->set_color(allocator, color);
+}
+
 }  // namespace
 
 zx_status_t AmlHdmiHost::Init() {
@@ -120,7 +145,10 @@ zx_status_t AmlHdmiHost::ModeSet(const display_mode_t& mode) {
   WRITE32_REG(HHI, HHI_VDAC_CNTL0_G12A, 0);
   WRITE32_REG(HHI, HHI_VDAC_CNTL1_G12A, 8);  // set Cdac_pwd [whatever that is]
 
-  auto status = hdmitx_->InitInterface(mode, color_);
+  fidl::FidlAllocator<2048> allocator;
+  DisplayMode translated_mode(allocator);
+  TranslateDisplayMode(allocator, mode, color_, &translated_mode);
+  auto status = hdmitx_->InitInterface(translated_mode);
   if (status != ZX_OK) {
     DISP_ERROR("Unable to initialize interface %d\n", status);
     return status;
