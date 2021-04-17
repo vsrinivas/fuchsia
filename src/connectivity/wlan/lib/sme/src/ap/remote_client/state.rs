@@ -543,7 +543,7 @@ impl States {
                         state.transition_to(Authenticated { timeout_event_id }).into()
                     }
                     Err(e) => {
-                        error!("client {:02X?} MLME-AUTHENTICATE.indication: {}", r_sta.addr, e);
+                        error!("client MLME-AUTHENTICATE.indication: {}", e);
                         r_sta.send_authenticate_resp(
                             ctx,
                             fidl_mlme::AuthenticateResultCodes::Refused,
@@ -605,8 +605,8 @@ impl States {
                         if let Some(rsna_link_state) = rsna_link_state.as_mut() {
                             if let Err(error) = rsna_link_state.initiate_key_exchange(r_sta, ctx) {
                                 error!(
-                                    "client {:02X?} MLME-ASSOCIATE.indication (key exchange): {}",
-                                    r_sta.addr, error
+                                    "client MLME-ASSOCIATE.indication (key exchange): {}",
+                                    error
                                 );
                                 r_sta.send_deauthenticate_req(
                                     ctx,
@@ -619,7 +619,7 @@ impl States {
                         state.transition_to(Associated { aid, rsna_link_state }).into()
                     }
                     Err(AssociationError { error, result_code, reason_code }) => {
-                        error!("client {:02X?} MLME-ASSOCIATE.indication: {}", r_sta.addr, error);
+                        error!("client MLME-ASSOCIATE.indication: {}", error);
                         r_sta.send_associate_resp(ctx, result_code, 0, CapabilityInfo(0), vec![]);
                         r_sta.send_deauthenticate_req(ctx, reason_code);
                         state.transition_to(Authenticating).into()
@@ -669,7 +669,7 @@ impl States {
         match self {
             States::Associated(mut state) => {
                 if let Err(e) = state.handle_eapol_ind(r_sta, ctx, data) {
-                    error!("client {:02X?} EAPOL.indication: {}", r_sta.addr, e);
+                    error!("client EAPOL.indication: {}", e);
                 }
                 state.into()
             }
@@ -726,9 +726,8 @@ impl States {
                 }
                 _ => {
                     error!(
-                        "client {:02X?} received AssociationTimeout in unexpected state; \
+                        "client received AssociationTimeout in unexpected state; \
                          ignoring timeout",
-                        r_sta.addr,
                     );
                     self
                 }
@@ -741,10 +740,7 @@ impl States {
                         Err(e) => {
                             let reason_code = match e {
                                 RsnaNegotiationError::Error(e) => {
-                                    error!(
-                                        "client {:02X?} RSNA negotiation error: {}",
-                                        r_sta.addr, e
-                                    );
+                                    error!("client RSNA negotiation error: {}", e);
                                     fidl_mlme::ReasonCode::UnspecifiedReason
                                 }
                                 RsnaNegotiationError::Timeout => {
@@ -758,9 +754,8 @@ impl States {
                 }
                 _ => {
                     error!(
-                        "client {:02X?} received RsnaTimeout in unexpected state; \
+                        "client received RsnaTimeout in unexpected state; \
                          ignoring timeout",
-                        r_sta.addr,
                     );
                     self
                 }
