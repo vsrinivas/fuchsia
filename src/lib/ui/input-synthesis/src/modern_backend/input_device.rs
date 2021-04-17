@@ -15,8 +15,9 @@ use {
     fidl::Error as FidlError,
     fidl_fuchsia_input::Key,
     fidl_fuchsia_input_report::{
-        DeviceDescriptor, InputDeviceRequest, InputDeviceRequestStream, InputReport,
-        InputReportsReaderMarker, KeyboardInputReport,
+        ContactInputReport, DeviceDescriptor, InputDeviceRequest, InputDeviceRequestStream,
+        InputReport, InputReportsReaderMarker, KeyboardInputReport, TouchInputReport,
+        TOUCH_MAX_CONTACTS,
     },
     fidl_fuchsia_ui_input::{KeyboardReport, Touch},
     futures::{future, pin_mut, StreamExt, TryFutureExt},
@@ -79,12 +80,46 @@ impl synthesizer::InputDevice for self::InputDevice {
         self.key_press(KeyboardReport { pressed_keys: usage.into_iter().collect() }, time)
     }
 
-    fn tap(&mut self, _pos: Option<(u32, u32)>, _time: u64) -> Result<(), Error> {
-        Err(format_err!("TODO: implement tap()"))
+    fn tap(&mut self, pos: Option<(u32, u32)>, time: u64) -> Result<(), Error> {
+        let fingers = pos.and_then(|(x, y)| {
+            // Note: we use finger_id `1` for consistency with the legacy_backend.
+            Some(vec![Touch { finger_id: 1, x: x as i32, y: y as i32, width: 0, height: 0 }])
+        });
+        self.multi_finger_tap(fingers, time)
     }
 
-    fn multi_finger_tap(&mut self, _fingers: Option<Vec<Touch>>, _time: u64) -> Result<(), Error> {
-        Err(format_err!("TODO: implement multi_finger_tap()"))
+    fn multi_finger_tap(&mut self, fingers: Option<Vec<Touch>>, time: u64) -> Result<(), Error> {
+        let num_fingers = match &fingers {
+            Some(fingers_vec) => fingers_vec.len(),
+            None => 0,
+        };
+        if num_fingers > usize::try_from(TOUCH_MAX_CONTACTS).context("usize is at least 32 bits")? {
+            return Err(format_err!(
+                "Got {} fingers, but max is {}",
+                num_fingers,
+                TOUCH_MAX_CONTACTS
+            ));
+        }
+        self.multi_finger_tap_internal(
+            TouchInputReport {
+                contacts: Some(fingers.map_or_else(Vec::new, |fingers_vec| {
+                    fingers_vec
+                        .into_iter()
+                        .map(|finger| ContactInputReport {
+                            contact_id: Some(finger.finger_id),
+                            position_x: Some(i64::from(finger.x)),
+                            position_y: Some(i64::from(finger.y)),
+                            contact_width: Some(i64::from(finger.width)),
+                            contact_height: Some(i64::from(finger.height)),
+                            ..ContactInputReport::EMPTY
+                        })
+                        .collect()
+                })),
+                pressed_buttons: Some(vec![]),
+                ..TouchInputReport::EMPTY
+            },
+            time,
+        )
     }
 
     /// Returns a `Future` which resolves when all `InputReport`s for this device
@@ -190,6 +225,19 @@ impl InputDevice {
                 pressed_keys3: Some(transform(&report)?),
                 ..KeyboardInputReport::EMPTY
             }),
+            ..InputReport::EMPTY
+        });
+        Ok(())
+    }
+
+    fn multi_finger_tap_internal(
+        &mut self,
+        touch: TouchInputReport,
+        time: u64,
+    ) -> Result<(), Error> {
+        self.reports.push(InputReport {
+            event_time: Some(i64::try_from(time).context("converting time to i64")?),
+            touch: Some(touch),
             ..InputReport::EMPTY
         });
         Ok(())
@@ -497,6 +545,211 @@ mod tests {
             );
             Ok(())
         }
+
+        #[fasync::run_until_stalled(test)]
+        async fn tap_generates_expected_report_for_some() -> Result<(), Error> {
+            let (_input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.tap(Some((10, 20)), DEFAULT_REPORT_TIMESTAMP)?;
+
+            let input_reports = get_input_reports(input_device, _input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    touch: Some(TouchInputReport {
+                        contacts: Some(vec![ContactInputReport {
+                            contact_id: Some(1),
+                            position_x: Some(10),
+                            position_y: Some(20),
+                            pressure: None,
+                            contact_width: Some(0),
+                            contact_height: Some(0),
+                            ..ContactInputReport::EMPTY
+                        }]),
+                        pressed_buttons: Some(vec![]),
+                        ..TouchInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn tap_generates_expected_report_for_none() -> Result<(), Error> {
+            let (_input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.tap(None, DEFAULT_REPORT_TIMESTAMP)?;
+
+            let input_reports = get_input_reports(input_device, _input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    touch: Some(TouchInputReport {
+                        contacts: Some(vec![]),
+                        pressed_buttons: Some(vec![]),
+                        ..TouchInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn multi_finger_tap_generates_report_for_single_finger() -> Result<(), Error> {
+            let (_input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.multi_finger_tap(
+                Some(vec![Touch { finger_id: 5, x: 10, y: 20, width: 100, height: 200 }]),
+                DEFAULT_REPORT_TIMESTAMP,
+            )?;
+
+            let input_reports = get_input_reports(input_device, _input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    touch: Some(TouchInputReport {
+                        contacts: Some(vec![ContactInputReport {
+                            contact_id: Some(5),
+                            position_x: Some(10),
+                            position_y: Some(20),
+                            pressure: None,
+                            contact_width: Some(100),
+                            contact_height: Some(200),
+                            ..ContactInputReport::EMPTY
+                        }]),
+                        pressed_buttons: Some(vec![]),
+                        ..TouchInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn multi_finger_tap_generates_expected_report_for_two_fingers() -> Result<(), Error> {
+            let (_input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.multi_finger_tap(
+                Some(vec![
+                    Touch { finger_id: 5, x: 10, y: 20, width: 100, height: 200 },
+                    Touch { finger_id: 0, x: 30, y: 40, width: 300, height: 400 },
+                ]),
+                DEFAULT_REPORT_TIMESTAMP,
+            )?;
+
+            let input_reports = get_input_reports(input_device, _input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    touch: Some(TouchInputReport {
+                        contacts: Some(vec![
+                            ContactInputReport {
+                                contact_id: Some(5),
+                                position_x: Some(10),
+                                position_y: Some(20),
+                                pressure: None,
+                                contact_width: Some(100),
+                                contact_height: Some(200),
+                                ..ContactInputReport::EMPTY
+                            },
+                            ContactInputReport {
+                                contact_id: Some(0),
+                                position_x: Some(30),
+                                position_y: Some(40),
+                                pressure: None,
+                                contact_width: Some(300),
+                                contact_height: Some(400),
+                                ..ContactInputReport::EMPTY
+                            }
+                        ]),
+                        pressed_buttons: Some(vec![]),
+                        ..TouchInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn multi_finger_tap_generates_expected_report_for_zero_fingers() -> Result<(), Error>
+        {
+            let (_input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.multi_finger_tap(Some(vec![]), DEFAULT_REPORT_TIMESTAMP)?;
+
+            let input_reports = get_input_reports(input_device, _input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    touch: Some(TouchInputReport {
+                        contacts: Some(vec![]),
+                        pressed_buttons: Some(vec![]),
+                        ..TouchInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn multi_finger_tap_generates_expected_report_for_none() -> Result<(), Error> {
+            let (_input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.multi_finger_tap(None, DEFAULT_REPORT_TIMESTAMP)?;
+
+            let input_reports = get_input_reports(input_device, _input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    touch: Some(TouchInputReport {
+                        contacts: Some(vec![]),
+                        pressed_buttons: Some(vec![]),
+                        ..TouchInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn multi_finger_tap_returns_error_when_num_fingers_is_to_large() {
+            let (_input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            assert_matches!(
+                input_device.multi_finger_tap(
+                    Some(
+                        (0..=TOUCH_MAX_CONTACTS)
+                            .map(|i| Touch {
+                                finger_id: i,
+                                x: i as i32,
+                                y: i as i32,
+                                width: i,
+                                height: i
+                            })
+                            .collect(),
+                    ),
+                    DEFAULT_REPORT_TIMESTAMP,
+                ),
+                Err(_)
+            );
+        }
     }
 
     mod future_resolution {
@@ -777,24 +1030,6 @@ mod tests {
             let media_buttons_result =
                 input_device.media_buttons(false, false, false, false, false, false, 0);
             assert_matches!(media_buttons_result, Err(_));
-            Ok(())
-        }
-
-        #[test]
-        fn tap_yields_error() -> Result<(), Error> {
-            let _executor = fuchsia_async::Executor::new(); // Create TLS executor used by `endpoints`.
-            let (_proxy, mut input_device) = make_input_device_proxy_and_struct();
-            let tap_result = input_device.tap(None, 0);
-            assert_matches!(tap_result, Err(_));
-            Ok(())
-        }
-
-        #[test]
-        fn multi_finger_tap_yields_error() -> Result<(), Error> {
-            let _executor = fuchsia_async::Executor::new(); // Create TLS executor used by `endpoints`.
-            let (_proxy, mut input_device) = make_input_device_proxy_and_struct();
-            let multi_finger_tap_result = input_device.multi_finger_tap(None, 0);
-            assert_matches!(multi_finger_tap_result, Err(_));
             Ok(())
         }
     }

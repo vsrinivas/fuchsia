@@ -4,13 +4,16 @@
 
 use {
     crate::{modern_backend::input_device::InputDevice, synthesizer},
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Context as _, Error},
     fidl::endpoints,
     fidl_fuchsia_input::Key,
     fidl_fuchsia_input_injection::InputDeviceRegistryProxy,
     fidl_fuchsia_input_report::{
-        DeviceDescriptor, InputDeviceMarker, KeyboardDescriptor, KeyboardInputDescriptor,
+        Axis, ContactInputDescriptor, DeviceDescriptor, InputDeviceMarker, KeyboardDescriptor,
+        KeyboardInputDescriptor, Range, TouchDescriptor, TouchInputDescriptor, TouchType, Unit,
+        UnitType,
     },
+    std::convert::TryFrom,
 };
 
 /// Implements the `synthesizer::InputDeviceRegistry` trait, and the client side
@@ -22,10 +25,45 @@ pub struct InputDeviceRegistry {
 impl synthesizer::InputDeviceRegistry for self::InputDeviceRegistry {
     fn add_touchscreen_device(
         &mut self,
-        _width: u32,
-        _height: u32,
+        width: u32,
+        height: u32,
     ) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
-        Err(format_err!("TODO: implement touchscreen support"))
+        const MAX_CONTACTS: u32 = 255;
+        self.add_device(DeviceDescriptor {
+            touch: Some(TouchDescriptor {
+                input: Some(TouchInputDescriptor {
+                    contacts: Some(
+                        std::iter::repeat(ContactInputDescriptor {
+                            position_x: Some(Axis {
+                                range: Range { min: 0, max: i64::from(width) },
+                                unit: Unit { type_: UnitType::Other, exponent: 0 },
+                            }),
+                            position_y: Some(Axis {
+                                range: Range { min: 0, max: i64::from(height) },
+                                unit: Unit { type_: UnitType::Other, exponent: 0 },
+                            }),
+                            contact_width: Some(Axis {
+                                range: Range { min: 0, max: i64::from(width) },
+                                unit: Unit { type_: UnitType::Other, exponent: 0 },
+                            }),
+                            contact_height: Some(Axis {
+                                range: Range { min: 0, max: i64::from(height) },
+                                unit: Unit { type_: UnitType::Other, exponent: 0 },
+                            }),
+                            ..ContactInputDescriptor::EMPTY
+                        })
+                        .take(usize::try_from(MAX_CONTACTS).context("usize is impossibly small")?)
+                        .collect(),
+                    ),
+                    max_contacts: Some(MAX_CONTACTS),
+                    touch_type: Some(TouchType::Touchscreen),
+                    buttons: Some(vec![]),
+                    ..TouchInputDescriptor::EMPTY
+                }),
+                ..TouchDescriptor::EMPTY
+            }),
+            ..DeviceDescriptor::EMPTY
+        })
     }
 
     fn add_keyboard_device(&mut self) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
@@ -82,7 +120,6 @@ impl InputDeviceRegistry {
 mod tests {
     use {
         super::{synthesizer::InputDeviceRegistry as _, *},
-        anyhow::Context as _,
         fidl_fuchsia_input_injection::{InputDeviceRegistryMarker, InputDeviceRegistryRequest},
         fuchsia_async as fasync,
         futures::{pin_mut, task::Poll, StreamExt},
@@ -90,6 +127,8 @@ mod tests {
     };
 
     #[test_case(&super::InputDeviceRegistry::add_keyboard_device; "keyboard_device")]
+    #[test_case(&|registry| InputDeviceRegistry::add_touchscreen_device(registry, 640, 480);
+                "touchscreen_device")]
     fn add_device_invokes_fidl_register_method_exactly_once(
         add_device_method: &dyn Fn(
             &mut super::InputDeviceRegistry,
@@ -116,6 +155,14 @@ mod tests {
     #[test_case(&super::InputDeviceRegistry::add_keyboard_device =>
                 matches Ok(DeviceDescriptor { keyboard: Some(_), .. });
                 "keyboard_device")]
+    #[test_case(&|registry| InputDeviceRegistry::add_touchscreen_device(registry, 640, 480) =>
+                matches Ok(DeviceDescriptor {
+                    touch: Some(TouchDescriptor {
+                        input: Some(TouchInputDescriptor { .. }),
+                        ..
+                    }),
+                    .. });
+                "touchscreen_device")]
     fn add_device_registers_correct_device_type(
         add_device_method: &dyn Fn(
             &mut super::InputDeviceRegistry,
@@ -168,16 +215,6 @@ mod tests {
     // rather than panic!()-ing.
     mod unimplemented_methods {
         use super::*;
-
-        #[test]
-        fn add_touchscreen_device_yields_error() -> Result<(), Error> {
-            let _executor = fuchsia_async::Executor::new(); // Create TLS executor used by `endpoints`.
-            let (proxy, _request_stream) =
-                endpoints::create_proxy_and_stream::<InputDeviceRegistryMarker>()
-                    .context("internal error creating InputDevice proxy and stream")?;
-            assert!(InputDeviceRegistry { proxy }.add_touchscreen_device(0, 0).is_err());
-            Ok(())
-        }
 
         #[test]
         fn add_media_buttons_device_yields_error() -> Result<(), Error> {
