@@ -4,6 +4,7 @@
 
 import 'package:ermine_driver/ermine_driver.dart';
 import 'package:flutter_driver/flutter_driver.dart';
+import 'package:fidl_fuchsia_input/fidl_async.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
@@ -13,7 +14,6 @@ import 'package:test/test.dart';
 void main() {
   Sl4f sl4f;
   ErmineDriver ermine;
-  Input input;
 
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
@@ -21,8 +21,6 @@ void main() {
 
     ermine = ErmineDriver(sl4f);
     await ermine.setUp();
-
-    input = Input(sl4f);
   });
 
   tearDownAll(() async {
@@ -40,25 +38,30 @@ void main() {
     final image = await scenic.takeScreenshot();
     bool isAllBlack = image.data.every((pixel) => pixel & 0x00ffffff == 0);
     expect(isAllBlack, false);
-  }, skip: true);
+  });
 
-  test('Text input should work', () async {
-    await ermine.gotoOverview();
+  test('Text input, pointer input and keyboard shortcut', () async {
+    await ermine.enterTextInAsk('terminal', gotoOverview: true);
 
-    // Clear the contents of the Ask bar.
-    await ermine.driver.requestData('clear');
+    // Verify the auto-complete list has terminal in it.
+    final terminalFinder = find.descendant(
+      of: find.byType('AskSuggestionList'),
+      matching: find.text('terminal'),
+      firstMatchOnly: true,
+    );
+    final askResult = await ermine.driver.getText(terminalFinder);
+    expect(askResult, 'terminal');
+
+    // Tap on 'terminal' auto-complete result.
+    final center = await ermine.driver.getCenter(terminalFinder);
+    await ermine.tap(center);
+
+    // Check that terminal was launched.
+    expect(await ermine.isRunning(terminalUrl), isTrue);
+
+    // Use keyboard shortcut to close terminal.
+    await ermine.twoKeyShortcut(Key.leftMeta, Key.w);
     await ermine.driver.waitUntilNoTransientCallbacks();
-
-    // Inject text 'spinning_square_view'.
-    await input.text('spinning_square_view');
-
-    // Verify text was injected into flutter widgets.
-    await ermine.driver.waitUntilNoTransientCallbacks();
-    await ermine.driver.waitFor(find.text('spinning_square_view'));
-    final askResult = await ermine.driver.getText(find.descendant(
-      of: find.byType('AskTextField'),
-      matching: find.text('spinning_square_view'),
-    ));
-    expect(askResult, 'spinning_square_view');
+    expect(await ermine.isStopped(terminalUrl), isTrue);
   });
 }

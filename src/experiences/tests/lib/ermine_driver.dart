@@ -6,9 +6,11 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:image/image.dart';
+import 'package:image/image.dart' hide Point;
 import 'package:flutter_driver/flutter_driver.dart';
 import 'package:flutter_driver_sl4f/flutter_driver_sl4f.dart';
+import 'package:fidl_fuchsia_input/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_input3/fidl_async.dart' hide KeyEvent;
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
@@ -20,6 +22,7 @@ const terminalUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
 // USB HID code for ENTER key.
 // See <https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf>
 const kEnterKey = 40;
+const kBackspaceKey = 0x2a;
 
 const waitForTimeout = Duration(seconds: 30);
 
@@ -67,8 +70,7 @@ class ErmineDriver {
     await _connector.initialize();
 
     // Now connect to ermine.
-    _driver =
-        await _connector.driverForIsolate('ermine', printCommunication: true);
+    _driver = await _connector.driverForIsolate('ermine');
     if (_driver == null) {
       fail('unable to connect to ermine.');
     }
@@ -124,6 +126,79 @@ class ErmineDriver {
     await _driver.requestData('overview');
     await _driver.waitUntilNoTransientCallbacks(timeout: Duration(seconds: 2));
     await _driver.waitFor(find.byValueKey('overview'));
+  }
+
+  /// Enters text into Ask bar.
+  /// Optionally clear existing content and goto Ask in Overview.
+  Future<void> enterTextInAsk(
+    String text, {
+    bool clear = true,
+    bool gotoOverview = false,
+  }) async {
+    final input = Input(sl4f);
+
+    if (gotoOverview) {
+      await this.gotoOverview();
+    } else {
+      // Invoke Ask using keyboard shortcut.
+      await twoKeyShortcut(Key.leftAlt, Key.space);
+      await driver.waitFor(find.byType('Ask'));
+    }
+
+    if (clear) {
+      await driver.requestData('clear');
+      await driver.waitUntilNoTransientCallbacks();
+      // Add a space and delete using backspace to resolve auto-complete.
+      await input.text(' ');
+      await input.keyPress(kBackspaceKey);
+      await driver.waitUntilNoTransientCallbacks();
+    }
+
+    await input.text(text);
+
+    // Verify text was injected into flutter widgets.
+    await driver.waitUntilNoTransientCallbacks();
+    await driver.waitFor(find.text(text));
+    final askResult = await driver.getText(find.descendant(
+      of: find.byType('AskTextField'),
+      matching: find.text(text),
+    ));
+    expect(askResult, text);
+  }
+
+  /// Tap the location given by [offset] in screen co-ordinates.
+  ///
+  /// Normalize to screen size of 1000x1000 expected by [Input.tap].
+  Future<void> tap(DriverOffset offset, {bool normalize = true}) async {
+    var point = Point<int>(offset.dx.toInt(), offset.dy.toInt());
+    if (normalize) {
+      // Get the size of screen by getting the size of the App widget.
+      final screen = await driver.getBottomRight(find.byType('App'));
+      point = Point<int>(
+        (offset.dx * 1000) ~/ screen.dx,
+        (offset.dy * 1000) ~/ screen.dy,
+      );
+    }
+
+    final input = Input(sl4f);
+    return input.tap(point);
+  }
+
+  /// Invoke a two key keyboard shortcut.
+  Future<void> twoKeyShortcut(Key modifier, Key key) async {
+    const key1Press = Duration(milliseconds: 100);
+    const key2Press = Duration(milliseconds: 200);
+    const key2Release = Duration(milliseconds: 400);
+    const key1Release = Duration(milliseconds: 600);
+
+    final input = Input(sl4f);
+    await input.keyEvents([
+      KeyEvent(modifier, key1Press, KeyEventType.pressed),
+      KeyEvent(key, key2Press, KeyEventType.pressed),
+      KeyEvent(key, key2Release, KeyEventType.released),
+      KeyEvent(modifier, key1Release, KeyEventType.released),
+    ]);
+    await driver.waitUntilNoTransientCallbacks();
   }
 
   /// Launches a simple browser and returns a [FlutterDriver] connected to it.

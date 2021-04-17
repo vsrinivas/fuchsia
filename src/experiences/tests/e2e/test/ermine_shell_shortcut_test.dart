@@ -51,36 +51,17 @@ void main() {
     await ermine.driver.waitForAbsent(find.byValueKey('overview'));
   }
 
-  Future<void> invokeShortcut(List<KeyEvent> keys) async {
-    await input.keyEvents(keys);
-    await ermine.driver.waitUntilNoTransientCallbacks(timeout: keyExecution);
-  }
-
-  Future<void> shortcutCombo(Key modifier, Key key) async {
-    const key1Press = Duration(milliseconds: 100);
-    const key2Press = Duration(milliseconds: 200);
-    const key2Release = Duration(milliseconds: 400);
-    const key1Release = Duration(milliseconds: 600);
-
-    return invokeShortcut([
-      KeyEvent(modifier, key1Press, KeyEventType.pressed),
-      KeyEvent(key, key2Press, KeyEventType.pressed),
-      KeyEvent(key, key2Release, KeyEventType.released),
-      KeyEvent(modifier, key1Release, KeyEventType.released),
-    ]);
-  }
-
   test('Toggle between Overview and Home screens', () async {
     // Launch terminal. This should display Home screen with terminal view.
     await launchTerminal();
 
     // Shortcut Meta + Esc should toggle to Overview screen.
-    await shortcutCombo(Key.leftMeta, Key.escape);
+    await ermine.twoKeyShortcut(Key.leftMeta, Key.escape);
     await ermine.driver.waitFor(find.byValueKey('overview'));
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: keyExecution);
 
     // Shortcut Meta + Esc should toggle back to Home screen.
-    await shortcutCombo(Key.leftMeta, Key.escape);
+    await ermine.twoKeyShortcut(Key.leftMeta, Key.escape);
     await ermine.driver.waitForAbsent(find.byValueKey('overview'));
   }, skip: true);
 
@@ -90,12 +71,12 @@ void main() {
     await ermine.driver.waitForAbsent(find.byType('Ask'));
 
     // Shortcut Alt + Space should display Ask box.
-    await shortcutCombo(Key.leftAlt, Key.space);
+    await ermine.twoKeyShortcut(Key.leftAlt, Key.space);
     await ermine.driver.waitFor(find.byType('Ask'));
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: keyExecution);
 
     // Shortcut Alt + Space should hide Ask box.
-    await shortcutCombo(Key.leftAlt, Key.space);
+    await ermine.twoKeyShortcut(Key.leftAlt, Key.space);
     await ermine.driver.waitForAbsent(find.byType('Ask'));
   }, skip: true);
 
@@ -105,15 +86,16 @@ void main() {
     await ermine.driver.waitForAbsent(find.byType('Status'));
 
     // Shortcut Alt + s should display Quick Settings.
-    await shortcutCombo(Key.leftAlt, Key.s);
+    await ermine.twoKeyShortcut(Key.leftAlt, Key.s);
     await ermine.driver.waitFor(find.byType('Status'));
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: keyExecution);
 
     // Shortcut Escape should hide QuickSettings.
-    await invokeShortcut([
+    await input.keyEvents([
       KeyEvent(Key.escape, keyDuration, KeyEventType.pressed),
       KeyEvent(Key.escape, keyDuration, KeyEventType.released),
     ]);
+    await ermine.driver.waitUntilNoTransientCallbacks(timeout: keyExecution);
     await ermine.driver.waitForAbsent(find.byType('Status'));
   });
 
@@ -123,15 +105,16 @@ void main() {
     await ermine.driver.waitForAbsent(find.byValueKey('keyboardHelp'));
 
     // Shortcut Meta + / should display keyboard help.
-    await shortcutCombo(Key.leftMeta, Key.slash);
+    await ermine.twoKeyShortcut(Key.leftMeta, Key.slash);
     await ermine.driver.waitFor(find.byValueKey('keyboardHelp'));
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: keyExecution);
 
     // Shortcut Escape should hide keyboard help.
-    await invokeShortcut([
+    await input.keyEvents([
       KeyEvent(Key.escape, keyDuration, KeyEventType.pressed),
       KeyEvent(Key.escape, keyDuration, KeyEventType.released),
     ]);
+    await ermine.driver.waitUntilNoTransientCallbacks(timeout: keyExecution);
     await ermine.driver.waitForAbsent(find.byValueKey('keyboardHelp'));
   });
 
@@ -141,12 +124,12 @@ void main() {
     await ermine.driver.waitForAbsent(find.byType('Thumbnails'));
 
     // Shortcut Meta + r should display Recents.
-    await shortcutCombo(Key.leftMeta, Key.r);
+    await ermine.twoKeyShortcut(Key.leftMeta, Key.r);
     await ermine.driver.waitFor(find.byType('Thumbnails'));
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: keyExecution);
 
     // Shortcut Meta + r should now hide (toggle) Recents.
-    await shortcutCombo(Key.leftMeta, Key.r);
+    await ermine.twoKeyShortcut(Key.leftMeta, Key.r);
     await ermine.driver.waitForAbsent(find.byType('Thumbnails'));
   });
 
@@ -156,12 +139,12 @@ void main() {
     await ermine.driver.waitForAbsent(find.byValueKey('fullscreen'));
 
     // Shortcut Meta + f should display terminal fullscreen.
-    await shortcutCombo(Key.leftMeta, Key.f);
+    await ermine.twoKeyShortcut(Key.leftMeta, Key.f);
     await ermine.driver.waitFor(find.byValueKey('fullscreen'));
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: keyExecution);
 
     // Shortcut Meta + f should restore(toggle) fullscreen.
-    await shortcutCombo(Key.leftMeta, Key.f);
+    await ermine.twoKeyShortcut(Key.leftMeta, Key.f);
     await ermine.driver.waitForAbsent(find.byValueKey('fullscreen'));
   });
 
@@ -171,7 +154,7 @@ void main() {
     await ermine.driver.waitFor(find.text('terminal.cmx'));
 
     // Shortcut Meta + w should close terminal view and display Overview.
-    await shortcutCombo(Key.leftMeta, Key.w);
+    await ermine.twoKeyShortcut(Key.leftMeta, Key.w);
     await ermine.driver.waitFor(find.byValueKey('overview'));
     await ermine.driver.waitForAbsent(find.text('terminal.cmx'));
   });
@@ -182,12 +165,12 @@ void main() {
     await ermine.driver.waitFor(find.text('terminal.cmx'));
 
     // Shortcut Meta + right should switch to new workspace on right.
-    await shortcutCombo(Key.leftMeta, Key.right);
+    await ermine.twoKeyShortcut(Key.leftMeta, Key.right);
     await ermine.driver.waitForAbsent(find.text('terminal.cmx'));
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: keyExecution);
 
     // Shortcut Meta + left should switch back to previous workspace on left.
-    await shortcutCombo(Key.leftMeta, Key.left);
+    await ermine.twoKeyShortcut(Key.leftMeta, Key.left);
     await ermine.driver.waitFor(find.text('terminal.cmx'));
   });
 }
