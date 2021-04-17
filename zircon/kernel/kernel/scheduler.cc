@@ -127,15 +127,6 @@ constexpr zx_time_t& operator+=(zx_time_t& value, SchedDuration delta) {
   return value;
 }
 
-// On ARM64 with safe-stack, it's no longer possible to use the unsafe-sp
-// after arch_set_current_thread (we'd now see newthread's unsafe-sp instead!).
-// Hence this function and everything it calls between this point and the
-// the low-level context switch must be marked with __NO_SAFESTACK.
-__NO_SAFESTACK void FinalContextSwitch(Thread* oldthread, Thread* newthread) TA_REQ(thread_lock) {
-  arch_set_current_thread(newthread);
-  arch_context_switch(oldthread, newthread);
-}
-
 // Writes a context switch record to the ktrace buffer. This is always enabled
 // so that user mode tracing can track which threads are running.
 inline void TraceContextSwitch(const Thread* current_thread, const Thread* next_thread,
@@ -1191,7 +1182,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     if (end_outer_trace) {
       end_outer_trace();
     }
-    FinalContextSwitch(current_thread, next_thread);
+    arch_context_switch(current_thread, next_thread);
   }
 }
 

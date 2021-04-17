@@ -39,8 +39,7 @@ static inline Thread* arch_get_current_thread() {
 }
 
 static inline void arch_set_current_thread(Thread* t) {
-  __arm_wsr64("tpidr_el1", (uint64_t)&t->arch_.thread_pointer_location);
-  __isb(ARM_MB_SY);
+  __arm_wsr64("tpidr_el1", (uint64_t)&t->arch().thread_pointer_location);
 }
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_CURRENT_THREAD_H_

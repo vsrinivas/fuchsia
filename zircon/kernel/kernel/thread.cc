@@ -1167,7 +1167,6 @@ void thread_construct_first(Thread* t, const char* name) {
   t->scheduler_state().hard_affinity_ = cpu_num_to_mask(cpu);
 
   arch_thread_construct_first(t);
-  arch_set_current_thread(t);
 
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
   thread_list->push_front(t);

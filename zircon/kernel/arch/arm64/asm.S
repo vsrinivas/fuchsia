@@ -37,9 +37,10 @@
 #define ICC_SRE_EL2             S3_4_C12_C9_5
 
 #if __has_feature(shadow_call_stack)
-// void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp, uintptr_t** old_scsp, uintptr_t* new_scsp);
+// void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp, vaddr_t new_tpidr,
+//                           uintptr_t** old_scsp, uintptr_t* new_scsp);
 #else
-// void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp);
+// void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp, vaddr_t new_tpidr);
 #endif
 FUNCTION(arm64_context_switch)
     /* The exclusive monitor is logically part of a thread's context.  Clear it to ensure the new
@@ -66,9 +67,12 @@ FUNCTION(arm64_context_switch)
     /* load new sp */
     mov  sp, x1
 
+    /* load the new tpidr */
+    msr  tpidr_el1, x2
+
 #if __has_feature(shadow_call_stack)
-    str shadow_call_sp, [x2]
-    mov shadow_call_sp, x3
+    str shadow_call_sp, [x3]
+    mov shadow_call_sp, x4
 #endif
 
     /* restore new frame */

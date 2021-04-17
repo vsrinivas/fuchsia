@@ -79,7 +79,10 @@ void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
   t->arch().debug_state.dr7 = X86_DR7_MASK;
 }
 
-void arch_thread_construct_first(Thread* t) {}
+void arch_thread_construct_first(Thread* t) {
+  // Set GS:current_thread pointer to this one to establish the new context.
+  arch_set_current_thread(t);
+}
 
 void arch_dump_thread(Thread* t) {
   if (t->state() != THREAD_RUNNING) {
@@ -269,6 +272,10 @@ void arch_context_switch(Thread* oldthread, Thread* newthread) {
   }
 
   x86_context_switch_spec_mitigations(oldthread, newthread);
+
+  // Set the GS:current_thread pointer to the new thread. From now on out we are
+  // inside the new thread as far as the high level kernel is concerned.
+  arch_set_current_thread(newthread);
 
   x86_64_context_switch(&oldthread->arch().sp, newthread->arch().sp
 #if __has_feature(safe_stack)

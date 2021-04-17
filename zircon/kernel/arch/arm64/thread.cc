@@ -61,11 +61,16 @@ __NO_SAFESTACK void arch_thread_construct_first(Thread* t) {
   // pointer points to now (set up in start.S) into the real thread
   // structure being set up now.
   Thread* fake = Thread::Current::Get();
-  t->arch().stack_guard = fake->arch().stack_guard;
-  t->arch().unsafe_sp = fake->arch().unsafe_sp;
+  const auto& fake_arch = fake->arch();
+
+  // Cache refs to the arch parts of the thread to avoid function calls to
+  // accessor routines because of the NO_STAFESTACK attribute here.
+  auto& arch = t->arch();
+  arch.stack_guard = fake_arch.stack_guard;
+  arch.unsafe_sp = fake_arch.unsafe_sp;
 
   // make sure the thread saves a copy of the current cpu pointer
-  t->arch().current_percpu_ptr = arm64_read_percpu_ptr();
+  arch.current_percpu_ptr = arm64_read_percpu_ptr();
 
   // Force the thread pointer immediately to the real struct.  This way
   // our callers don't have to avoid safe-stack code or risk losing track
@@ -77,25 +82,24 @@ __NO_SAFESTACK void arch_thread_construct_first(Thread* t) {
   arch_set_current_thread(t);
 }
 
-__NO_SAFESTACK static void arm64_tpidr_save_state(Thread* thread) {
+static void arm64_tpidr_save_state(Thread* thread) {
   thread->arch().tpidr_el0 = __arm_rsr64("tpidr_el0");
   thread->arch().tpidrro_el0 = __arm_rsr64("tpidrro_el0");
 }
 
-__NO_SAFESTACK static void arm64_tpidr_restore_state(Thread* thread) {
+static void arm64_tpidr_restore_state(Thread* thread) {
   __arm_wsr64("tpidr_el0", thread->arch().tpidr_el0);
   __arm_wsr64("tpidrro_el0", thread->arch().tpidrro_el0);
 }
 
-__NO_SAFESTACK static void arm64_debug_restore_state(Thread* thread) {
+static void arm64_debug_restore_state(Thread* thread) {
   // If the thread has debug state, then install it, replacing the current contents.
   if (unlikely(thread->arch().track_debug_state)) {
     arm64_write_hw_debug_regs(&thread->arch().debug_state);
   }
 }
 
-__NO_SAFESTACK static void arm64_context_switch_spec_mitigations(Thread* oldthread,
-                                                                 Thread* newthread) {
+static void arm64_context_switch_spec_mitigations(Thread* oldthread, Thread* newthread) {
   // Spectre V2: Flush Indirect Branch Predictor State, if:
   // 0) Speculative Execution infoleak mitigations are enabled AND
   // 1) The current CPU requires Spectre V2 mitigations AND
@@ -108,7 +112,7 @@ __NO_SAFESTACK static void arm64_context_switch_spec_mitigations(Thread* oldthre
   }
 }
 
-__NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
+void arch_context_switch(Thread* oldthread, Thread* newthread) {
   LTRACEF("old %p (%s), new %p (%s)\n", oldthread, oldthread->name(), newthread, newthread->name());
 
   // DSB here to make sure any pending TLB or cache operations that we may be
@@ -154,9 +158,11 @@ __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
   // and swap to the new stack.
 #if __has_feature(shadow_call_stack)
   arm64_context_switch(&oldthread->arch().sp, newthread->arch().sp,
+                       (vaddr_t)&newthread->arch().thread_pointer_location,
                        &oldthread->arch().shadow_call_sp, newthread->arch().shadow_call_sp);
 #else
-  arm64_context_switch(&oldthread->arch().sp, newthread->arch().sp);
+  arm64_context_switch(&oldthread->arch().sp, newthread->arch().sp,
+                       (vaddr_t)&newthread->arch().thread_pointer_location);
 #endif
 }
 
@@ -180,13 +186,13 @@ arm64_context_switch_frame* arm64_get_context_switch_frame(Thread* thread) {
   return reinterpret_cast<struct arm64_context_switch_frame*>(thread->arch().sp);
 }
 
-__NO_SAFESTACK void arch_save_user_state(Thread* thread) {
+void arch_save_user_state(Thread* thread) {
   arm64_fpu_save_state(thread);
   arm64_tpidr_save_state(thread);
   // Not saving debug state because the arch_thread_t's debug state is authoritative.
 }
 
-__NO_SAFESTACK void arch_restore_user_state(Thread* thread) {
+void arch_restore_user_state(Thread* thread) {
   arm64_debug_restore_state(thread);
   arm64_fpu_restore_state(thread);
   arm64_tpidr_restore_state(thread);
