@@ -109,7 +109,14 @@ void PageWatcher::PopulateAndVerifyPagesInRange(uint64_t offset, uint64_t length
     FX_LOGS(ERROR) << "Pager failed page request because blob is corrupt, error: "
                    << zx_status_get_string(static_cast<zx_status_t>(pager_error_status));
   } else {
-    pager_error_status = user_pager_->TransferPagesToVmo(offset, length, *vmo_, userpager_info_);
+    auto page_supplier = UserPager::PageSupplier(
+        [user_pager = user_pager_, dest_vmo = &vmo_](uint64_t offset, uint64_t length,
+                                                     const zx::vmo& aux_vmo, uint64_t aux_offset) {
+          return zx::make_status(
+              user_pager->Pager().supply_pages(**dest_vmo, offset, length, aux_vmo, aux_offset));
+        });
+    pager_error_status =
+        user_pager_->TransferPages(std::move(page_supplier), offset, length, userpager_info_);
     if (pager_error_status != PagerErrorStatus::kOK) {
       FX_LOGS(ERROR) << "Pager failed to transfer pages to the blob, error: "
                      << zx_status_get_string(static_cast<zx_status_t>(pager_error_status));

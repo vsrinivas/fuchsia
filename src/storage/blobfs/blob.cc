@@ -1194,11 +1194,13 @@ void Blob::VmoRead(uint64_t offset, uint64_t length) {
     return;
   }
 
-  // TODO(fxbug.dev/51111) This gets the pager state out of the PageWatcher to avoid forking the
-  // code too much during the pager code transition. When the old pager is not needed, the
-  // PageWatcher should be deleted and its state moved into this class.
+  auto page_supplier = PageSupplier(
+      [&paged_vfs, dest_vmo = paged_vmo()](uint64_t offset, uint64_t length, const zx::vmo& aux_vmo,
+                                           uint64_t aux_offset) {
+        return paged_vfs.SupplyPages(dest_vmo, offset, length, aux_vmo, aux_offset);
+      });
   pager::PagerErrorStatus pager_error_status =
-      blobfs_->pager()->TransferPagesToVmo(offset, length, paged_vmo(), pager_info_);
+      blobfs_->pager()->TransferPages(std::move(page_supplier), offset, length, pager_info_);
   if (pager_error_status != pager::PagerErrorStatus::kOK) {
     FX_LOGS(ERROR) << "Pager failed to transfer pages to the blob, error: "
                    << zx_status_get_string(static_cast<zx_status_t>(pager_error_status));
