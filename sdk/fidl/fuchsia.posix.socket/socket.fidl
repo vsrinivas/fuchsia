@@ -397,13 +397,73 @@ enum TcpCongestionControl {
     CUBIC = 2;
 };
 
-/// TCP protocol information.
+/// TCP congestion control state machine state.
+enum TcpCongestionControlState {
+    OPEN = 0;
+    DISORDER = 1;
+    CONGESTION_WINDOW_REDUCED = 2;
+    RECOVERY = 3;
+    LOSS = 4;
+};
+
+/// TCP protocol state.
 table TcpInfo {
-    1: uint32 rto_usec;
-    2: uint32 rtt_usec;
-    3: uint32 rtt_var_usec;
-    4: uint32 snd_ssthresh;
-    5: uint32 snd_cwnd;
+    1: reserved; // uint8_t tcpi_state;
+    2: TcpCongestionControlState ca_state;
+    3: reserved; // uint8_t tcpi_retransmits;
+    4: reserved; // uint8_t tcpi_probes;
+    5: reserved; // uint8_t tcpi_backoff;
+    6: reserved; // uint8_t tcpi_options;
+    7: reserved; // uint8_t tcpi_snd_wscale : 4, tcpi_rcv_wscale : 4;
+    8: reserved;
+    9: reserved; // uint8_t tcpi_delivery_rate_app_limited : 1, tcpi_fastopen_client_fail : 2;
+    10: reserved;
+    11: uint32 rto_usec;
+    12: reserved; // uint32_t tcpi_ato;
+    13: reserved; // uint32_t tcpi_snd_mss;
+    14: reserved; // uint32_t tcpi_rcv_mss;
+    15: reserved; // uint32_t tcpi_unacked;
+    16: reserved; // uint32_t tcpi_sacked;
+    17: reserved; // uint32_t tcpi_lost;
+    18: reserved; // uint32_t tcpi_retrans;
+    19: reserved; // uint32_t tcpi_fackets;
+    20: reserved; // uint32_t tcpi_last_data_sent;
+    21: reserved; // uint32_t tcpi_last_ack_sent;
+    22: reserved; // uint32_t tcpi_last_data_recv;
+    23: reserved; // uint32_t tcpi_last_ack_recv;
+    24: reserved; // uint32_t tcpi_pmtu;
+    25: reserved; // uint32_t tcpi_rcv_ssthresh;
+    26: uint32 rtt_usec;
+    27: uint32 rtt_var_usec;
+    28: uint32 snd_ssthresh;
+    29: uint32 snd_cwnd;
+    30: reserved; // uint32_t tcpi_advmss;
+    31: reserved; // uint32_t tcpi_reordering;
+    32: reserved; // uint32_t tcpi_rcv_rtt;
+    33: reserved; // uint32_t tcpi_rcv_space;
+    34: reserved; // uint32_t tcpi_total_retrans;
+    35: reserved; // uint64_t tcpi_pacing_rate;
+    36: reserved; // uint64_t tcpi_max_pacing_rate;
+    37: reserved; // uint64_t tcpi_bytes_acked;
+    38: reserved; // uint64_t tcpi_bytes_received;
+    39: reserved; // uint32_t tcpi_segs_out;
+    40: reserved; // uint32_t tcpi_segs_in;
+    41: reserved; // uint32_t tcpi_notsent_bytes;
+    42: reserved; // uint32_t tcpi_min_rtt;
+    43: reserved; // uint32_t tcpi_data_segs_in;
+    44: reserved; // uint32_t tcpi_data_segs_out;
+    45: reserved; // uint64_t tcpi_delivery_rate;
+    46: reserved; // uint64_t tcpi_busy_time;
+    47: reserved; // uint64_t tcpi_rwnd_limited;
+    48: reserved; // uint64_t tcpi_sndbuf_limited;
+    49: reserved; // uint32_t tcpi_delivered;
+    50: reserved; // uint32_t tcpi_delivered_ce;
+    51: reserved; // uint64_t tcpi_bytes_sent;
+    52: reserved; // uint64_t tcpi_bytes_retrans;
+    53: reserved; // uint32_t tcpi_dsack_dups;
+    54: bool reorder_seen;
+    55: reserved; // uint32_t tcpi_rcv_ooopack;
+    56: reserved; // uint32_t tcpi_snd_wnd;
 };
 
 /// Holds information about an interface and its addresses.

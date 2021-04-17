@@ -297,6 +297,25 @@ SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::TcpInfo& val
   // server.
   memset(&info, 0xff, sizeof(info));
 
+  if (value.has_ca_state()) {
+    switch (value.ca_state()) {
+      case fsocket::wire::TcpCongestionControlState::OPEN:
+        info.tcpi_ca_state = TCP_CA_Open;
+        break;
+      case fsocket::wire::TcpCongestionControlState::DISORDER:
+        info.tcpi_ca_state = TCP_CA_Disorder;
+        break;
+      case fsocket::wire::TcpCongestionControlState::CONGESTION_WINDOW_REDUCED:
+        info.tcpi_ca_state = TCP_CA_CWR;
+        break;
+      case fsocket::wire::TcpCongestionControlState::RECOVERY:
+        info.tcpi_ca_state = TCP_CA_Recovery;
+        break;
+      case fsocket::wire::TcpCongestionControlState::LOSS:
+        info.tcpi_ca_state = TCP_CA_Loss;
+        break;
+    }
+  }
   if (value.has_rto_usec()) {
     info.tcpi_rto = value.rto_usec();
   }
@@ -311,6 +330,9 @@ SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::TcpInfo& val
   }
   if (value.has_snd_cwnd()) {
     info.tcpi_snd_cwnd = value.snd_cwnd();
+  }
+  if (value.has_reorder_seen()) {
+    info.tcpi_reord_seen = value.reorder_seen();
   }
 
   return StoreRaw(&info, std::min(*optlen_, socklen_t(sizeof(info))));

@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"reflect"
 	"time"
+	"unsafe"
 
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -326,13 +328,20 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, tcpip.Error) {
 			return nil, err
 		}
 
-		info := C.struct_tcp_info{
-			tcpi_rto:          C.uint(v.RTO.Microseconds()),
-			tcpi_rtt:          C.uint(v.RTT.Microseconds()),
-			tcpi_rttvar:       C.uint(v.RTTVar.Microseconds()),
-			tcpi_snd_ssthresh: C.uint(v.SndSsthresh),
-			tcpi_snd_cwnd:     C.uint(v.SndCwnd),
+		var info C.struct_tcp_info
+		slice := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
+			Data: uintptr(unsafe.Pointer(&info)),
+			Len:  int(unsafe.Sizeof(info)),
+			Cap:  int(unsafe.Sizeof(info)),
+		}))
+		for i := range slice {
+			slice[i] = 0xff
 		}
+		info.tcpi_rto = C.uint(v.RTO.Microseconds())
+		info.tcpi_rtt = C.uint(v.RTT.Microseconds())
+		info.tcpi_rttvar = C.uint(v.RTTVar.Microseconds())
+		info.tcpi_snd_ssthresh = C.uint(v.SndSsthresh)
+		info.tcpi_snd_cwnd = C.uint(v.SndCwnd)
 		switch v.CcState {
 		case tcpip.Open:
 			info.tcpi_ca_state = C.TCP_CA_Open

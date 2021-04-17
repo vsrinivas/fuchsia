@@ -2133,11 +2133,22 @@ func (s *streamSocketImpl) GetTcpInfo(fidl.Context) (socket.StreamSocketGetTcpIn
 		return socket.StreamSocketGetTcpInfoResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	var info socket.TcpInfo
+	switch value.CcState {
+	case tcpip.Open:
+		info.CaState = socket.TcpCongestionControlStateOpen
+	case tcpip.RTORecovery:
+		info.CaState = socket.TcpCongestionControlStateLoss
+	case tcpip.FastRecovery, tcpip.SACKRecovery:
+		info.CaState = socket.TcpCongestionControlStateRecovery
+	case tcpip.Disorder:
+		info.CaState = socket.TcpCongestionControlStateDisorder
+	}
 	info.SetRtoUsec(uint32(value.RTO.Microseconds()))
 	info.SetRttUsec(uint32(value.RTT.Microseconds()))
 	info.SetRttVarUsec(uint32(value.RTTVar.Microseconds()))
 	info.SetSndSsthresh(value.SndSsthresh)
 	info.SetSndCwnd(value.SndCwnd)
+	info.SetReorderSeen(value.ReorderSeen)
 	return socket.StreamSocketGetTcpInfoResultWithResponse(socket.StreamSocketGetTcpInfoResponse{
 		Info: info,
 	}), nil
