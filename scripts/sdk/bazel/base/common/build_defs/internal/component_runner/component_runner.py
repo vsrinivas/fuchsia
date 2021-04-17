@@ -116,7 +116,8 @@ def main():
             host_address = host_address.replace('%', '%25')
             server_address = 'http://%s:8083/config.json' % host_address
             run_ssh_command(
-                'amberctl', 'add_src', '-n', 'devhost', '-f', server_address)
+                'pkgctl', 'repo', 'add', 'url', '-n', 'devhost', '-f', '1',
+                server_address)
             component_uri = "fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx" % (
                 args.package_name, component)
             run_ssh_command('run', component_uri, no_redirect=True)
