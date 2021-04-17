@@ -589,7 +589,7 @@ impl InfraBss {
     }
 
     fn handle_channel_switch(&mut self, info: fidl_mlme::ChannelSwitchInfo) {
-        info!("Channel switch for AP {:?}", info);
+        info!("Channel switch for AP.");
         self.op_radio_cfg.chan.primary = info.new_channel;
     }
 
@@ -602,32 +602,26 @@ impl InfraBss {
             // This is safe, as we will make a fresh the client state and return an appropriate
             // MLME-AUTHENTICATE.response to the MLME, indicating whether it should deauthenticate
             // the client or not.
-            warn!(
-                "client {:02X?} is trying to reauthenticate; removing client and starting again",
-                peer_addr
-            );
+            warn!("client is trying to reauthenticate; removing client and starting again");
         }
         let mut client = RemoteClient::new(peer_addr);
         client.handle_auth_ind(&mut self.ctx, ind.auth_type);
         if !client.authenticated() {
-            info!("client {:02X?} was not authenticated", peer_addr);
+            info!("client was not authenticated");
             return;
         }
 
-        info!("client {:02X?} authenticated", peer_addr);
+        info!("client authenticated");
         self.clients.insert(peer_addr, client);
     }
 
     fn handle_deauth(&mut self, peer_addr: &MacAddr) {
         if !self.remove_client(peer_addr) {
-            warn!(
-                "client {:02X?} never authenticated, ignoring deauthentication request",
-                peer_addr
-            );
+            warn!("client never authenticated, ignoring deauthentication request",);
             return;
         }
 
-        info!("client {:02X?} deauthenticated", peer_addr);
+        info!("client deauthenticated");
     }
 
     fn handle_assoc_ind(&mut self, ind: fidl_mlme::AssociateIndication) {
@@ -635,10 +629,7 @@ impl InfraBss {
 
         let client = match self.clients.get_mut(&peer_addr) {
             None => {
-                warn!(
-                    "client {:02X?} never authenticated, ignoring association indication",
-                    peer_addr
-                );
+                warn!("client never authenticated, ignoring association indication",);
                 return;
             }
             Some(client) => client,
@@ -655,12 +646,12 @@ impl InfraBss {
             ind.rsne,
         );
         if !client.authenticated() {
-            warn!("client {:02X?} failed to associate and was deauthenticated", peer_addr);
+            warn!("client failed to associate and was deauthenticated");
             self.remove_client(&peer_addr);
         } else if !client.associated() {
-            warn!("client {:02X?} failed to associate but did not deauthenticate", peer_addr);
+            warn!("client failed to associate but did not deauthenticate");
         } else {
-            info!("client {:02X?} associated", peer_addr);
+            info!("client associated");
         }
     }
 
@@ -669,10 +660,7 @@ impl InfraBss {
 
         let client = match self.clients.get_mut(&peer_addr) {
             None => {
-                warn!(
-                    "client {:02X?} never authenticated, ignoring disassociation indication",
-                    peer_addr
-                );
+                warn!("client never authenticated, ignoring disassociation indication");
                 return;
             }
             Some(client) => client,
@@ -680,9 +668,9 @@ impl InfraBss {
 
         client.handle_disassoc_ind(&mut self.ctx, &mut self.aid_map);
         if client.associated() {
-            panic!("client {:02X?} didn't disassociate? this should never happen!", peer_addr)
+            panic!("client didn't disassociate? this should never happen!")
         } else {
-            info!("client {:02X?} disassociated", peer_addr);
+            info!("client disassociated");
         }
     }
 
@@ -700,7 +688,7 @@ impl InfraBss {
                 client.handle_timeout(&mut self.ctx, timed_event.id, event);
                 if !client.authenticated() {
                     self.remove_client(&addr);
-                    info!("client {:02X?} lost authentication", addr);
+                    info!("client lost authentication");
                 }
             }
         }
@@ -710,7 +698,7 @@ impl InfraBss {
         let peer_addr = ind.src_addr;
         let client = match self.clients.get_mut(&peer_addr) {
             None => {
-                warn!("client {:02X?} never authenticated, ignoring EAPoL indication", peer_addr);
+                warn!("client never authenticated, ignoring EAPoL indication");
                 return;
             }
             Some(client) => client,
