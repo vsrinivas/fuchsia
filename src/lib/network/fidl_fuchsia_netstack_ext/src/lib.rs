@@ -4,7 +4,7 @@
 
 use fidl_fuchsia_net_ext::IpAddress;
 use fidl_fuchsia_netstack as fidl;
-use prettytable::{cell, row, Table};
+use prettytable::{cell, row, Row, Table};
 use std::io::Result;
 
 pub struct RouteTableEntry2 {
@@ -38,10 +38,10 @@ impl RouteTable {
 
     pub fn display(&self) -> Result<String> {
         let mut table = Table::new();
-        table.add_row(row!["Destination", "Netmask", "Gateway", "NicID"]);
+        let _: &mut Row = table.add_row(row!["Destination", "Netmask", "Gateway", "NicID"]);
         let RouteTable(route_table) = self;
         for fidl::RouteTableEntry { destination, netmask, gateway, nicid } in route_table.iter() {
-            table.add_row(row![
+            let _: &mut Row = table.add_row(row![
                 IpAddress::from(*destination).to_string(),
                 IpAddress::from(*netmask).to_string(),
                 IpAddress::from(*gateway).to_string(),
@@ -49,7 +49,7 @@ impl RouteTable {
             ]);
         }
         let mut bytes = Vec::new();
-        table.print(&mut bytes)?;
+        let _lines_printed: usize = table.print(&mut bytes)?;
         Ok(String::from_utf8(bytes).unwrap())
     }
 }

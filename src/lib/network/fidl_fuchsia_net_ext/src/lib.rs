@@ -459,22 +459,22 @@ mod tests {
     fn mac_addr_to_mac_addr_map_deserializes_to_hashmap() {
         let result: HashMap<MacAddress, MacAddress> =
             serde_json::from_str("{\"11:22:33:44:55:66\": \"AA:BB:CC:DD:EE:FF\"}").unwrap();
-        let mut expected = HashMap::new();
-        expected.insert(
+        let expected: HashMap<_, _> = std::iter::once((
             MacAddress { octets: [0x11, 0x22, 0x33, 0x44, 0x55, 0x66] },
             MacAddress { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] },
-        );
+        ))
+        .collect();
 
         assert_eq!(expected, result);
     }
 
     #[test]
     fn mac_addr_to_mac_addr_map_serializes_to_valid_json() {
-        let mut mac_addr_map = HashMap::new();
-        mac_addr_map.insert(
+        let mac_addr_map: HashMap<_, _> = std::iter::once((
             MacAddress { octets: [0x11, 0x22, 0x33, 0x44, 0x55, 0x66] },
             MacAddress { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] },
-        );
+        ))
+        .collect();
 
         let result = serde_json::to_string(&mac_addr_map).unwrap();
 

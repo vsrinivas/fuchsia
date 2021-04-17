@@ -39,6 +39,10 @@ def main():
         action="store_true",
         default=False,
         help="Print progress and stats")
+    parser.add_argument(
+        "--ignore-suffix",
+        help="comma-separated list of label suffixes to ignore",
+        default="")
 
     def verbose(*vargs, **kwargs):
         if args.verbose:
@@ -48,6 +52,10 @@ def main():
     verbose("Getting all labels list...")
     all_labels = gn_util.gn_refs(args.all)
     verbose(f"Found {len(all_labels)} elements in universe.")
+    ignore_suffix = args.ignore_suffix.split(",")
+    all_labels = (
+        label for label in all_labels
+        if not any(label.endswith(suffix) for suffix in ignore_suffix))
     allow_labels = gn_util.gn_refs(args.allow)
     verbose(f"Found {len(allow_labels)} elements to allow.")
     tree = Node("/")

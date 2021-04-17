@@ -32,6 +32,8 @@ rustc_library("fidl_fuchsia_net_interfaces_ext") {
     "src/lib.rs",
     "src/reachability.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("fidl-fuchsia-net-interfaces-ext-tests") {
