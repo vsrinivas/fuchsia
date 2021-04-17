@@ -745,13 +745,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/d4c3de1afa52c3f9aa19c603929d6f896788fd2a/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/2c1261fca7029beabb848be94cba68e3f7d22c22/build/crashpad_buildconfig.gni#22)
+
+### crashpad_http_transport_impl
+
+**Current value (from the default):** `"libcurl"`
+
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/2c1261fca7029beabb848be94cba68e3f7d22c22/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/d4c3de1afa52c3f9aa19c603929d6f896788fd2a/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/2c1261fca7029beabb848be94cba68e3f7d22c22/util/net/tls.gni#30)
 
 ### current_cpu
 
@@ -943,18 +949,6 @@ remove this option when the issues are addressed.
 **Current value (from the default):** `false`
 
 From //build/config/BUILD.gn:24
-
-### enable_gfx_subsystem
-
-**Current value (from the default):** `true`
-
-From //src/ui/scenic/bin/BUILD.gn:11
-
-### enable_input_subsystem
-
-**Current value (from the default):** `true`
-
-From //src/ui/scenic/bin/BUILD.gn:12
 
 ### enable_lock_dep
 Enable kernel lock dependency tracking.
@@ -2156,13 +2150,13 @@ From //build/images/fvm.gni:64
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/d4c3de1afa52c3f9aa19c603929d6f896788fd2a/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/2c1261fca7029beabb848be94cba68e3f7d22c22/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/d4c3de1afa52c3f9aa19c603929d6f896788fd2a/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/2c1261fca7029beabb848be94cba68e3f7d22c22/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -2914,7 +2908,7 @@ From //build/security.gni:36
 
 **Current value (from the default):** `false`
 
-From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/e80f3bd4ae03df48cde9590013c2111aa437f142/BUILD.gn#14)
+From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/039167570c8b1065d92e0733f307bd6443d4c96b/BUILD.gn#14)
 
 ### rust_cap_lints
 Sets the maximum lint level.
@@ -3614,6 +3608,13 @@ From //out/not-default/args.gn:8
 **Overridden from the default:** `false`
 
 From //build/toolchain/goma.gni:11
+
+### use_legacy_virtcon
+Set to use legacy virtcon implementation.
+
+**Current value (from the default):** `true`
+
+From //src/bringup/bundles/BUILD.gn:7
 
 ### use_lto
 Use link time optimization (LTO).
