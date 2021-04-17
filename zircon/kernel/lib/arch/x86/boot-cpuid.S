@@ -10,11 +10,15 @@
 #ifdef __x86_64__
 #define GLOBAL(x) (x)(%rip)
 #define LEA_GLOBAL(x, reg) lea (x)(%rip), reg
+#define BX %rbx
+#define REGSIZE 8
 #define START %rsi
 #define STOP %rdi
 #else
 #define GLOBAL(x) x
 #define LEA_GLOBAL(x, reg) mov $x, reg
+#define BX %ebx
+#define REGSIZE 4
 #define START %esi
 #define STOP %edi
 #endif // __x86_64__
@@ -30,6 +34,10 @@ mov %edx, CPUID_EDX + \addr
 // This initializes the CpuidIo objects returned by all the arch::BootCpuid
 // instantiations linked in.
 .function InitializeBootCpuid, global
+
+  push BX
+  .cfi_adjust_cfa_offset REGSIZE
+  .cfi_rel_offset BX, 0
 
   // The zeroth leaves (basic, hypervisor, and extended) are special because
   // they tell us what other leaves exist.
@@ -110,6 +118,10 @@ mov %edx, CPUID_EDX + \addr
 .Loopcheck:
   cmp START, STOP
   jne .Loop
+
+  pop BX
+  .cfi_adjust_cfa_offset -REGSIZE
+  .cfi_same_value BX
 
   ret
 
