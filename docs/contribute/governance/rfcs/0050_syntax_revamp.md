@@ -628,7 +628,7 @@ source compatibility for the introduction of this new declaration. Again, this
 is an improvement over the current situation where such source compatibility
 breakages are discovered later, and farther from where the decision was made.
 
-### Type Aliasing, and New Type (#newtypes)
+### Type Aliasing, and New Type {#newtypes}
 
 In [RFC-0052: Type Aliasing and New Types][rfc-0052] we evolved type aliasing and
 new type declarations.
@@ -927,7 +927,7 @@ layout name {
 };
 ```
 
-### Transport generalization (#transport-generalization)
+### Transport generalization {#transport-generalization}
 
 Declaring a new transport would at least require defining a new name, specifying
 constraints for the messages the transport supports (e.g. "no handles", "no

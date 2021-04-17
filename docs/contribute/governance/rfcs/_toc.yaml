@@ -119,7 +119,7 @@ toc:
   path: /docs/contribute/governance/rfcs/0052_type_aliasing_named_types.md
 - title: "RFC-0053: Epitaphs"
   path: /docs/contribute/governance/rfcs/0053_epitaphs.md
-- title: "RFC-0054: Handling of unknown fields and strictness"
+- title: "RFC-0054: Parameter attributes"
   path: /docs/contribute/governance/rfcs/0054_parameter_attributes.md
 - title: "RFC-0055: Documentation comments"
   path: /docs/contribute/governance/rfcs/0055_documentation_comments.md
@@ -149,41 +149,41 @@ toc:
   path: /docs/contribute/governance/rfcs/0067_rfc_process_additions.md
 - title: "RFC-0068: Page Eviction Hints"
   path: /docs/contribute/governance/rfcs/0068_eviction_hints.md
-- title: "RFC-0069 - Standard I/O in ELF Runner"
+- title: "RFC-0069: Standard I/O in ELF Runner"
   path: /docs/contribute/governance/rfcs/0069_stdio_in_elf_runner.md
-- title: "RFC-0070 - PCI protocol changes to support legacy interrupts"
+- title: "RFC-0070: PCI protocol changes to support legacy interrupts"
   path: /docs/contribute/governance/rfcs/0070_pci_protocol_legacy_interrupt_changes.md
-- title: "RFC-0071 - OTA backstop"
+- title: "RFC-0071: OTA backstop"
   path: /docs/contribute/governance/rfcs/0071_ota_backstop.md
-- title: "RFC-0072 - Standalone Image Assembly Tool"
+- title: "RFC-0072: Standalone Image Assembly Tool"
   path: /docs/contribute/governance/rfcs/0072_standalone_image_assembly_tool.md
-- title: "RFC-0073 - Raising x86-64 platform requirement to x86-64-v2"
+- title: "RFC-0073: Raising x86-64 platform requirement to x86-64-v2"
   path: /docs/contribute/governance/rfcs/0073_x86_64_platform_requirement.md
-- title: "RFC-0074 - Expose Process Start Time"
+- title: "RFC-0074: Expose Process Start Time"
   path: /docs/contribute/governance/rfcs/0074_expose_process_start_time.md
-- title: "RFC-0075 - Deprecate Zedboot-based paving for provisioning devices"
+- title: "RFC-0075: Deprecate Zedboot-based paving for provisioning devices"
   path: /docs/contribute/governance/rfcs/0075_deprecate_zedboot_paving.md
-- title: "RFC-0076 - FIDL API summaries"
+- title: "RFC-0076: FIDL API summaries"
   path: /docs/contribute/governance/rfcs/0076_fidl_api_summaries.md
-- title: "RFC-0077 - zx_clock_update accuracy improvement"
+- title: "RFC-0077: zx_clock_update accuracy improvement"
   path: /docs/contribute/governance/rfcs/0077_zx_clock_update_accuracy.md
-- title: "RFC-0078 - Kernel Sanitizer Coverage for Fuchsia Fuzzing"
+- title: "RFC-0078: Kernel Sanitizer Coverage for Fuchsia Fuzzing"
   path: /docs/contribute/governance/rfcs/0078_kernel_coverage_for_fuchsia_fuzzing.md
-- title: "RFC-0079 - Detecting debuglog data loss"
+- title: "RFC-0079: Detecting debuglog data loss"
   path: /docs/contribute/governance/rfcs/0079_detecting_debuglog_data_loss.md
-- title: "RFC-0080 - Detecting VMO Immutability"
+- title: "RFC-0080: Detecting VMO Immutability"
   path: /docs/contribute/governance/rfcs/0080_detecting_vmo_immutability.md
-- title: "RFC-0081 - fastboot boot"
+- title: "RFC-0081: fastboot boot"
   path: /docs/contribute/governance/rfcs/0081_fastboot_boot.md
-- title: "RFC-0082 - Runnning unmodified Linux programs on Fuchsia"
+- title: "RFC-0082: Runnning unmodified Linux programs on Fuchsia"
   path: /docs/contribute/governance/rfcs/0082_starnix.md
 - title: "RFC-0083: FIDL Versioning"
   path: /docs/contribute/governance/rfcs/0083_fidl_versioning.md
-- title: "RFC-0084 - Add more metrics to zx_info_task_runtime_t"
+- title: "RFC-0084: Add more metrics to zx_info_task_runtime_t"
   path: /docs/contribute/governance/rfcs/0084_zircon_more_per_task_runtime_information.md
-- title: "RFC-0085 - Reducing the zx_status_t space"
+- title: "RFC-0085: Reducing the zx_status_t space"
   path: /docs/contribute/governance/rfcs/0085_reducing_zx_status_t_space.md
-- title: "RFC-0086 - Updates to RFC-0050: FIDL Attributes Syntax"
+- title: "RFC-0086: Updates to RFC-0050: FIDL Attributes Syntax"
   path: /docs/contribute/governance/rfcs/0086_rfc_0050_attributes.md
-- title: "RFC-0087 - Updates to FTP-050: FIDL Method Parameter Syntax"
+- title: "RFC-0087: Updates to FTP-050: FIDL Method Parameter Syntax"
   path: /docs/contribute/governance/rfcs/0087_fidl_method_syntax.md

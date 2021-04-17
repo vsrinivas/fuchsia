@@ -31,7 +31,7 @@ For example, the `capability_ready` event defines a filter for the `path`. The
 `path` is one or more paths exposed to framework that the component is
 interested in offering or listening to.
 
-## Static Event Streams (#event-streams)
+## Static Event Streams {#event-streams}
 
 Event subscriptions can be set up statically in CML files via static event streams.
 Static event streams are similar to dynamically created event streams but are set

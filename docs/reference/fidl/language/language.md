@@ -10,7 +10,7 @@ Also, see a modified [EBNF description of the FIDL grammar][fidl-grammar].
 
 [TOC]
 
-# Syntax
+## Syntax
 
 FIDL provides a syntax for declaring named bits, constants, enums, structs,
 tables, unions, and protocols. These declarations are collected into libraries
@@ -20,8 +20,6 @@ FIDL declarations are stored in plain text UTF-8 files. Each file consists of a
 sequence of semicolon-delimited declarations. The order of declarations within a
 FIDL file, or among FIDL files within a library, is irrelevant. FIDL does not
 require (or support) forward declarations of any kind.
-
-## Tokens
 
 ### Comments
 
