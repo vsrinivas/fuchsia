@@ -33,7 +33,6 @@ driver_module("usb-cdc-function") {
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/system/ulib/inet6",
   ]
 }
 

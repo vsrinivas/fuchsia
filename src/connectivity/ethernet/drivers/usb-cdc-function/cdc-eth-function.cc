@@ -33,7 +33,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <inet6/inet6.h>
 #include <usb/usb-request.h>
 
 #include "src/connectivity/ethernet/drivers/usb-cdc-function/usb_cdc-bind.h"
@@ -47,6 +46,8 @@ namespace usb_cdc_function {
 
 #define BULK_MAX_PACKET 512  // FIXME(voydanoff) USB 3.0 support
 #define INTR_MAX_PACKET sizeof(usb_cdc_speed_change_notification_t)
+
+#define ETH_MTU 1500
 
 typedef struct {
   zx_device_t* zxdev = nullptr;
