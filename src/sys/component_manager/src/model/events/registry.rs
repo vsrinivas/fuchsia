@@ -398,7 +398,7 @@ impl EventRegistry {
             RouteSource::Event(CapabilitySource::Builtin {
                 capability: InternalCapability::Event(source_name),
                 ..
-            }) if source_name == "capability_ready".into() => {
+            }) if source_name == "capability_ready" => {
                 Ok((source_name, ExtendedMoniker::ComponentManager))
             }
             _ => unreachable!(),

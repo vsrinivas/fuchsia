@@ -939,6 +939,12 @@ impl From<String> for CapabilityName {
     }
 }
 
+impl<'a> PartialEq<&'a str> for CapabilityName {
+    fn eq(&self, other: &&'a str) -> bool {
+        self.0 == *other
+    }
+}
+
 impl fmt::Display for CapabilityName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)

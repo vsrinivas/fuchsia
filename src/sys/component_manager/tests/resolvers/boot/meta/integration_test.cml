@@ -1,0 +1,20 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "src/sys/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/integration_test_bin",
+    },
+    offer: [
+        {
+            // The component manager launched by RealmBuilder requires this to launch processes.
+            protocol: "fuchsia.process.Launcher",
+            from: "parent",
+            to: [ "#fuchsia_component_test_collection" ],
+        },
+    ],
+}

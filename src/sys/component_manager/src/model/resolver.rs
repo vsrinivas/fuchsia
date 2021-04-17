@@ -80,7 +80,7 @@ impl Resolver for ResolverRegistry {
     async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
         match Url::parse(component_url) {
             Ok(parsed_url) => {
-                if let Some(ref resolver) = self.resolvers.get(parsed_url.scheme()) {
+                if let Some(resolver) = self.resolvers.get(parsed_url.scheme()) {
                     resolver.resolve(component_url).await
                 } else {
                     Err(ResolverError::SchemeNotRegistered)
@@ -134,7 +134,16 @@ impl Resolver for RemoteResolver {
     }
 }
 
-async fn read_and_validate_manifest(
+pub struct BuiltinResolver(pub Arc<dyn Resolver + Send + Sync + 'static>);
+
+#[async_trait]
+impl Resolver for BuiltinResolver {
+    async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
+        self.0.resolve(component_url).await
+    }
+}
+
+pub async fn read_and_validate_manifest(
     data: fmem::Data,
 ) -> Result<fsys::ComponentDecl, ResolverError> {
     let bytes = match data {

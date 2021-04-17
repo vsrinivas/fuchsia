@@ -1,0 +1,45 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "component",
+            url: "fuchsia-boot:///#meta/trigger.cm",
+            environment: "#env",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#component" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fidl.test.components.Trigger",
+            from: "#component",
+        },
+    ],
+    environments: [
+        {
+            name: "env",
+            extends: "none",
+            runners: [
+                {
+                    runner: "elf",
+                    from: "parent",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "boot",
+                    from: "parent",
+                    scheme: "fuchsia-boot",
+                },
+            ],
+            __stop_timeout_ms: 6000,
+        },
+    ],
+}

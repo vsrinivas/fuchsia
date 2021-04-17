@@ -8,6 +8,7 @@ use {
             arguments::Arguments as BootArguments,
             capability::BuiltinCapability,
             debug_resource::DebugResource,
+            fuchsia_boot_resolver::{FuchsiaBootResolver, SCHEME as BOOT_SCHEME},
             hypervisor_resource::HypervisorResource,
             info_resource::InfoResource,
             ioport_resource::IoportResource,
@@ -29,7 +30,7 @@ use {
         diagnostics::ComponentTreeStats,
         elf_runner::ElfRunner,
         framework::RealmCapabilityHost,
-        fuchsia_boot_resolver, fuchsia_pkg_resolver,
+        fuchsia_pkg_resolver,
         model::{
             binding::Binder,
             component::ComponentManagerInstance,
@@ -45,7 +46,7 @@ use {
             hooks::EventType,
             hub::Hub,
             model::{Model, ModelParams},
-            resolver::{Resolver, ResolverRegistry},
+            resolver::{BuiltinResolver, Resolver, ResolverRegistry},
             storage::admin_protocol::StorageAdmin,
         },
         root_stop_notifier::RootStopNotifier,
@@ -67,13 +68,9 @@ use {
     fuchsia_inspect::{component, health::Reporter, Inspector},
     fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_zircon::{self as zx, Clock, HandleBased},
-    futures::{channel::oneshot, prelude::*},
+    futures::prelude::*,
     log::*,
-    std::{
-        default,
-        path::PathBuf,
-        sync::{Arc, Weak},
-    },
+    std::{path::PathBuf, sync::Arc},
 };
 
 // Allow shutdown to take up to an hour.
@@ -90,7 +87,7 @@ pub struct BuiltinEnvironmentBuilder {
     enable_hub: bool,
 }
 
-impl default::Default for BuiltinEnvironmentBuilder {
+impl Default for BuiltinEnvironmentBuilder {
     fn default() -> Self {
         Self {
             runtime_config: None,
@@ -220,8 +217,10 @@ impl BuiltinEnvironmentBuilder {
             })
             .collect();
 
-        let sender = if self.add_environment_resolvers {
-            Self::insert_namespace_resolvers(&mut self.resolvers, &runtime_config)?
+        let boot_resolver = if self.add_environment_resolvers {
+            let boot_resolver = register_boot_resolver(&mut self.resolvers)?;
+            register_appmgr_resolver(&mut self.resolvers, &runtime_config)?;
+            boot_resolver
         } else {
             None
         };
@@ -242,15 +241,6 @@ impl BuiltinEnvironmentBuilder {
         };
         let model = Model::new(params).await?;
 
-        // If we previously created a resolver that requires the Model (in
-        // add_available_resolvers_from_namespace), send the just-created model to it.
-        if let Some(sender) = sender {
-            // This only fails if the receiver has been dropped already which shouldn't happen.
-            sender
-                .send(Arc::downgrade(&model))
-                .map_err(|_| format_err!("sending model to resolver failed"))?;
-        }
-
         // Wrap BuiltinRunnerFactory in BuiltinRunner now that we have the definite RuntimeConfig.
         let builtin_runners = self
             .runners
@@ -265,56 +255,12 @@ impl BuiltinEnvironmentBuilder {
             root_component_url,
             runtime_config,
             builtin_runners,
+            boot_resolver,
             self.utc_clock,
             self.inspector.unwrap_or(component::inspector().clone()),
             self.enable_hub,
         )
         .await?)
-    }
-
-    /// Checks if the appmgr loader service is available through our namespace and connects to it if
-    /// so. If not available, returns Ok(None).
-    fn connect_sys_loader() -> Result<Option<LoaderProxy>, Error> {
-        let service_path = PathBuf::from(format!("/svc/{}", LoaderMarker::NAME));
-        if !service_path.exists() {
-            return Ok(None);
-        }
-
-        let loader = client::connect_to_service::<LoaderMarker>()
-            .context("error connecting to system loader")?;
-        return Ok(Some(loader));
-    }
-
-    /// Adds the namespace resolvers according to the policy in the RuntimeConfig.
-    fn insert_namespace_resolvers(
-        resolvers: &mut ResolverRegistry,
-        runtime_config: &RuntimeConfig,
-    ) -> Result<Option<oneshot::Sender<Weak<Model>>>, Error> {
-        // Either the fuchsia-boot or fuchsia-pkg resolver may be unavailable in certain contexts.
-        let boot_resolver = fuchsia_boot_resolver::FuchsiaBootResolver::new()
-            .context("Failed to create boot resolver")?;
-        match boot_resolver {
-            None => info!("No /boot directory in namespace, fuchsia-boot resolver unavailable"),
-            Some(r) => {
-                resolvers.register(fuchsia_boot_resolver::SCHEME.to_string(), Box::new(r));
-            }
-        };
-
-        if let Some(loader) = Self::connect_sys_loader()? {
-            match &runtime_config.builtin_pkg_resolver {
-                BuiltinPkgResolver::None => {
-                    warn!("Appmgr bridge package resolver is available, but not enabled, verify configuration correctness");
-                }
-                BuiltinPkgResolver::AppmgrBridge => {
-                    resolvers.register(
-                        fuchsia_pkg_resolver::SCHEME.to_string(),
-                        Box::new(fuchsia_pkg_resolver::FuchsiaPkgResolver::new(loader)),
-                    );
-                    return Ok(None);
-                }
-            }
-        }
-        Ok(None)
     }
 }
 
@@ -377,10 +323,11 @@ impl BuiltinEnvironment {
         root_component_url: Url,
         runtime_config: Arc<RuntimeConfig>,
         builtin_runners: Vec<Arc<BuiltinRunner>>,
+        boot_resolver: Option<Arc<FuchsiaBootResolver>>,
         utc_clock: Option<Arc<Clock>>,
         inspector: Inspector,
         enable_hub: bool,
-    ) -> Result<BuiltinEnvironment, ModelError> {
+    ) -> Result<BuiltinEnvironment, Error> {
         let execution_mode = match runtime_config.debug {
             true => ExecutionMode::Debug,
             false => ExecutionMode::Production,
@@ -623,7 +570,7 @@ impl BuiltinEnvironment {
 
         // Set up the realm service.
         let realm_capability_host =
-            Arc::new(RealmCapabilityHost::new(Arc::downgrade(&model), runtime_config));
+            Arc::new(RealmCapabilityHost::new(Arc::downgrade(&model), runtime_config.clone()));
         model.root.hooks.install(realm_capability_host.hooks()).await;
 
         // Set up the storage admin protocol
@@ -633,6 +580,11 @@ impl BuiltinEnvironment {
         // Set up the builtin runners.
         for runner in &builtin_runners {
             model.root.hooks.install(runner.hooks()).await;
+        }
+
+        // Set up the boot resolver so it is routable from "above root".
+        if let Some(boot_resolver) = boot_resolver {
+            model.root.hooks.install(boot_resolver.hooks()).await;
         }
 
         // Set up the root realm stop notifier.
@@ -914,4 +866,62 @@ impl BuiltinEnvironment {
             }
         }
     }
+}
+
+// Creates a FuchsiaBootResolver if the /boot directory is installed in component_manager's
+// namespace, and registers it with the ResolverRegistry. The resolver is returned to so that
+// it can be installed as a Builtin capability.
+fn register_boot_resolver(
+    resolvers: &mut ResolverRegistry,
+) -> Result<Option<Arc<FuchsiaBootResolver>>, Error> {
+    let boot_resolver = FuchsiaBootResolver::new().context("Failed to create boot resolver")?;
+    match boot_resolver {
+        None => {
+            info!("No /boot directory in namespace, fuchsia-boot resolver unavailable");
+            Ok(None)
+        }
+        Some(boot_resolver) => {
+            let resolver = Arc::new(boot_resolver);
+            resolvers
+                .register(BOOT_SCHEME.to_string(), Box::new(BuiltinResolver(resolver.clone())));
+            Ok(Some(resolver))
+        }
+    }
+}
+
+/// Adds the namespace resolvers according to the policy in the RuntimeConfig.
+fn register_appmgr_resolver(
+    resolvers: &mut ResolverRegistry,
+    runtime_config: &RuntimeConfig,
+) -> Result<(), Error> {
+    if let Some(loader) = connect_sys_loader()? {
+        match &runtime_config.builtin_pkg_resolver {
+            BuiltinPkgResolver::None => {
+                warn!(
+                    "Appmgr bridge package resolver is available, but not enabled, verify \
+                    configuration correctness"
+                );
+            }
+            BuiltinPkgResolver::AppmgrBridge => {
+                resolvers.register(
+                    fuchsia_pkg_resolver::SCHEME.to_string(),
+                    Box::new(fuchsia_pkg_resolver::FuchsiaPkgResolver::new(loader)),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Checks if the appmgr loader service is available through our namespace and connects to it if
+/// so. If not available, returns Ok(None).
+fn connect_sys_loader() -> Result<Option<LoaderProxy>, Error> {
+    let service_path = PathBuf::from(format!("/svc/{}", LoaderMarker::NAME));
+    if !service_path.exists() {
+        return Ok(None);
+    }
+
+    let loader = client::connect_to_service::<LoaderMarker>()
+        .context("error connecting to system loader")?;
+    return Ok(Some(loader));
 }

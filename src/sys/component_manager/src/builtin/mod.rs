@@ -5,6 +5,7 @@
 pub mod arguments;
 pub mod capability;
 pub mod debug_resource;
+pub mod fuchsia_boot_resolver;
 pub mod hypervisor_resource;
 pub mod info_resource;
 pub mod ioport_resource;

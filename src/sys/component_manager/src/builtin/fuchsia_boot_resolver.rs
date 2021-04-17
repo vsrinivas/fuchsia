@@ -3,15 +3,21 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::resolver::{ResolvedComponent, Resolver, ResolverError},
+    crate::{
+        builtin::capability::BuiltinCapability,
+        capability::InternalCapability,
+        model::resolver::{self, ResolvedComponent, Resolver, ResolverError},
+    },
     anyhow::Error,
     async_trait::async_trait,
-    cm_fidl_validator,
     fidl::endpoints::{ClientEnd, Proxy},
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
     fuchsia_url::boot_url::BootUrl,
-    std::path::{Path, PathBuf},
+    fuchsia_zircon::Status,
+    futures::TryStreamExt,
+    std::path::Path,
+    std::sync::Arc,
 };
 
 pub static SCHEME: &str = "fuchsia-boot";
@@ -53,51 +59,58 @@ impl FuchsiaBootResolver {
         FuchsiaBootResolver { boot_proxy: proxy }
     }
 
-    async fn resolve_async<'a>(
-        &'a self,
-        component_url: &'a str,
-    ) -> Result<ResolvedComponent, ResolverError> {
+    async fn resolve_async(
+        &self,
+        component_url: &str,
+    ) -> Result<fsys::Component, fsys::ResolverError> {
         // Parse URL.
-        let url =
-            BootUrl::parse(component_url).map_err(|e| ResolverError::manifest_not_found(e))?;
+        let url = BootUrl::parse(component_url).map_err(|_| fsys::ResolverError::InvalidArgs)?;
+
         // Package path is 'canonicalized' to ensure that it is relative, since absolute paths will
         // be (inconsistently) rejected by fuchsia.io methods.
-        let package_path = Path::new(io_util::canonicalize_path(url.path()));
-        let res = url.resource().ok_or(ResolverError::UrlMissingResource)?;
-        let res_path = match package_path.to_str() {
-            Some(".") => PathBuf::from(res),
-            _ => package_path.join(res),
+        let package_path = io_util::canonicalize_path(url.path());
+        let res = url.resource().ok_or(fsys::ResolverError::InvalidArgs)?;
+        let cm_path = if package_path == "." {
+            res.to_string()
+        } else {
+            Path::new(package_path).join(res).into_os_string().into_string().unwrap()
         };
 
-        // Read component manifest from resource into a component decl.
-        let cm_file = io_util::open_file(&self.boot_proxy, &res_path, fio::OPEN_RIGHT_READABLE)
-            .map_err(|e| ResolverError::manifest_not_found(e))?;
-        let component_decl = io_util::read_file_fidl(&cm_file)
-            .await
-            .map_err(|e| ResolverError::manifest_not_found(e))?;
-        // Validate the component manifest
-        cm_fidl_validator::validate(&component_decl)
-            .map_err(|e| ResolverError::manifest_invalid(e))?;
+        // Read the component manifest (.cm file) from the bootfs directory.
+        let cm_file =
+            io_util::directory::open_file(&self.boot_proxy, &cm_path, fio::OPEN_RIGHT_READABLE)
+                .await
+                .map_err(|_| fsys::ResolverError::ManifestNotFound)?;
+
+        let (status, buffer) =
+            cm_file.get_buffer(fio::VMO_FLAG_READ).await.map_err(|_| fsys::ResolverError::Io)?;
+        Status::ok(status).map_err(|_| fsys::ResolverError::Io)?;
+        let data = match buffer {
+            Some(buffer) => fmem::Data::Buffer(*buffer),
+            None => fmem::Data::Bytes(
+                io_util::file::read(&cm_file).await.map_err(|_| fsys::ResolverError::Io)?,
+            ),
+        };
 
         // Set up the fuchsia-boot path as the component's "package" namespace.
-        let path_proxy = io_util::open_directory(
+        let path_proxy = io_util::directory::open_directory_no_describe(
             &self.boot_proxy,
             package_path,
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )
-        .map_err(|e| {
-            ResolverError::package_not_found(e.context("failed to open package directory"))
-        })?;
-        let package = fsys::Package {
-            package_url: Some(url.root_url().to_string()),
-            package_dir: Some(ClientEnd::new(path_proxy.into_channel().unwrap().into_zx_channel())),
-            ..fsys::Package::EMPTY
-        };
+        .map_err(|_| fsys::ResolverError::Internal)?;
 
-        Ok(ResolvedComponent {
-            resolved_url: component_url.to_string(),
-            decl: component_decl,
-            package: Some(package),
+        Ok(fsys::Component {
+            resolved_url: Some(component_url.into()),
+            decl: Some(data),
+            package: Some(fsys::Package {
+                package_url: Some(url.root_url().to_string()),
+                package_dir: Some(ClientEnd::new(
+                    path_proxy.into_channel().unwrap().into_zx_channel(),
+                )),
+                ..fsys::Package::EMPTY
+            }),
+            ..fsys::Component::EMPTY
         })
     }
 }
@@ -105,7 +118,36 @@ impl FuchsiaBootResolver {
 #[async_trait]
 impl Resolver for FuchsiaBootResolver {
     async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
-        self.resolve_async(component_url).await
+        let fsys::Component { resolved_url, decl, package, .. } =
+            self.resolve_async(component_url).await?;
+        let resolved_url = resolved_url.unwrap();
+        let decl = resolver::read_and_validate_manifest(decl.unwrap()).await?;
+        Ok(ResolvedComponent { resolved_url, decl, package })
+    }
+}
+
+#[async_trait]
+impl BuiltinCapability for FuchsiaBootResolver {
+    const NAME: &'static str = "boot";
+    type Marker = fsys::ComponentResolverMarker;
+
+    async fn serve(
+        self: Arc<Self>,
+        mut stream: fsys::ComponentResolverRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(fsys::ComponentResolverRequest::Resolve { component_url, responder }) =
+            stream.try_next().await?
+        {
+            responder.send(&mut self.resolve_async(&component_url).await)?;
+        }
+        Ok(())
+    }
+
+    fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
+        match capability {
+            InternalCapability::Resolver(name) if *name == Self::NAME => true,
+            _ => false,
+        }
     }
 }
 
@@ -119,7 +161,6 @@ mod tests {
         fidl_fuchsia_io::{DirectoryMarker, DirectoryRequest, NodeMarker},
         fidl_fuchsia_sys2::ComponentDecl,
         fuchsia_async as fasync,
-        futures::prelude::*,
         std::path::PathBuf,
         vfs::{
             self, directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -143,13 +184,9 @@ mod tests {
             fasync::Task::local(async move {
                 while let Some(request) = stream.try_next().await.unwrap() {
                     match request {
-                        DirectoryRequest::Open {
-                            flags,
-                            mode: _,
-                            path,
-                            object,
-                            control_handle: _,
-                        } => Self::handle_open(&path, flags, object),
+                        DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
+                            Self::handle_open(&path, flags, mode, object)
+                        }
                         _ => panic!("Fake doesn't support request: {:?}", request),
                     }
                 }
@@ -158,7 +195,7 @@ mod tests {
             proxy
         }
 
-        fn handle_open(path_str: &str, flags: u32, server_end: ServerEnd<NodeMarker>) {
+        fn handle_open(path_str: &str, flags: u32, mode: u32, server_end: ServerEnd<NodeMarker>) {
             if path_str.is_empty() {
                 // We don't support this in this fake, drop the server_end
                 return;
@@ -175,14 +212,14 @@ mod tests {
                             // OPEN_RIGHT_EXECUTABLE. Also, pass through the input flags here to ensure that we
                             // don't artificially pass the test (i.e. the resolver needs to ask for the appropriate
                             // rights).
-                            let mut open_path = PathBuf::from("/pkg");
-                            open_path.extend(path_iter);
-                            io_util::connect_in_namespace(
-                                open_path.to_str().unwrap(),
-                                server_end.into_channel(),
-                                flags,
+                            let open_path: PathBuf = path_iter.collect();
+                            let pkg = io_util::directory::open_in_namespace(
+                                "/pkg",
+                                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
                             )
-                            .expect("failed to open path in namespace");
+                            .unwrap();
+                            pkg.open(flags, mode, open_path.to_str().unwrap(), server_end)
+                                .expect("failed to open path");
                         }
                         _ => return,
                     }
@@ -233,7 +270,7 @@ mod tests {
         let resolver = FuchsiaBootResolver::new_from_directory(FakeBootfs::new());
 
         let url = "fuchsia-boot:///packages/hello-world#meta/hello-world.cm";
-        let component = resolver.resolve_async(url).await?;
+        let component = resolver.resolve(url).await?;
 
         // Check that both the returned component manifest and the component manifest in
         // the returned package dir match the expected value. This also tests that
@@ -283,7 +320,7 @@ mod tests {
 
     macro_rules! test_resolve_error {
         ($resolver:ident, $url:expr, $resolver_error_expected:ident) => {
-            let res = $resolver.resolve_async($url).await;
+            let res = $resolver.resolve($url).await;
             match res.err().expect("unexpected success") {
                 ResolverError::$resolver_error_expected { .. } => {}
                 e => panic!("unexpected error {:?}", e),

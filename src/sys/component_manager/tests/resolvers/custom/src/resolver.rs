@@ -64,7 +64,7 @@ fn build_decl() -> fmem::Data {
             entries: Some(vec![fdata::DictionaryEntry {
                 key: "binary".to_string(),
                 value: Some(Box::new(fdata::DictionaryValue::Str(
-                    "bin/component_manager_test_resolvers_component".to_string(),
+                    "bin/component_manager_test_trigger_bin".to_string(),
                 ))),
             }]),
             ..fdata::Dictionary::EMPTY
