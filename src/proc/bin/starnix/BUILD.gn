@@ -7,10 +7,10 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
 group("starnix") {
-  deps = [
-    ":hello_starnix",
-    ":pkg",
-  ]
+  deps = [ ":pkg" ]
+  if (target_cpu == "x64") {
+    deps += [ "//src/proc/bin/starnix/fixtures/hello_starnix:hello-starnix" ]
+  }
 }
 
 if (target_cpu == "x64") {
@@ -69,28 +69,6 @@ if (target_cpu == "x64") {
   }
 }
 
-resource("hello_starnix_bin") {
-  # Switch these two |sources| declarations to test locally.
-  sources = [ "fixtures/hello_starnix.c" ]
-
-  # sources = [ "fixtures/hello_starnix.bin" ]
-
-  # We need to have this output in the package even when we do not actually have a
-  # hello_starnix.bin file in order for hello_starnix.cml to pass validation.
-  outputs = [ "bin/hello_starnix.bin" ]
-}
-
-fuchsia_component("hello_starnix_component") {
-  component_name = "hello_starnix"
-  manifest = "meta/hello_starnix.cml"
-
-  deps = [ ":hello_starnix_bin" ]
-}
-
-fuchsia_package("hello_starnix") {
-  deps = [ ":hello_starnix_component" ]
-}
-
 fuchsia_component("starnix_manager") {
   manifest = "meta/starnix_manager.cml"
 }
@@ -109,6 +87,9 @@ group("tests") {
   testonly = true
 
   if (target_cpu == "x64") {
-    deps = [ ":starnix-tests" ]
+    deps = [
+      ":starnix-tests",
+      "//src/proc/bin/starnix/fixtures/hello_starnix:hello-starnix-test",
+    ]
   }
 }

@@ -1,0 +1,43 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+config("config") {
+  asmflags = [ "-fPIC" ]
+}
+
+executable("bin") {
+  output_name = "hello_starnix"
+  sources = [ "hello.S" ]
+
+  disable_syslog_backend = true
+
+  configs += [
+    "//build/config/fuchsia:no_cpp_standard_library",
+    "//build/config/fuchsia:static-pie-config",
+    ":config",
+  ]
+}
+
+fuchsia_component("hello_starnix") {
+  component_name = "hello_starnix"
+  manifest = "meta/hello_starnix.cml"
+
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("hello_starnix_test") {
+  testonly = true
+  deps = [ ":bin" ]
+  manifest = "meta/hello_starnix_test.cml"
+}
+
+fuchsia_package("hello-starnix") {
+  deps = [ ":hello_starnix" ]
+}
+
+fuchsia_test_package("hello-starnix-test") {
+  test_components = [ ":hello_starnix_test" ]
+}

@@ -7,19 +7,6 @@ experimental and can run only trivial programs.
 
 Currently, we require a x86_64 host Linux system to run starnix.
 
-### Build example binary
-
-We cannot currently build an appropriate binary with the Fuchsia build system, which means you'll
-need to manually build a Linux binary.
-
-```sh
-$ cd src/proc/bin/starnix/fixtures
-$ ./build.sh
-```
-
-Next, edit the `//src/proc/bin/starnix/BUILD.gn` file and uncomment the lines indicated by comments
-about testing locally.
-
 ### Add starnix to core.cml
 
 In order to make starnix available in the system, we need to add starnix to the
@@ -66,4 +53,34 @@ If everything is working, you should see some log messages like the following:
 ```
 [00064.846853][33707][33709][starnix, starnix] INFO: main
 [00064.847640][33707][33709][starnix, starnix] INFO: start_component: fuchsia-pkg://fuchsia.com/hello_starnix#meta/hello_starnix.cm
+```
+
+### Run a Linux test binary
+
+Linux test binaries can be run using the starnix test runner. This can be done using the standard `fx test` command:
+
+```
+$ fx test hello-starnix-test --output
+```
+
+You should see output like:
+
+```
+Running test 'fuchsia-pkg://fuchsia.com/hello-starnix-test#meta/hello_starnix_test.cm'
+[RUNNING]       fuchsia-pkg://fuchsia.com/hello-starnix-test#meta/hello_starnix_test.cm
+[PASSED]        fuchsia-pkg://fuchsia.com/hello-starnix-test#meta/hello_starnix_test.cm
+```
+
+In the device logs you should see output like:
+
+```
+[starnix, starnix_runner] INFO: main
+[starnix, starnix_runner] INFO: start_component: fuchsia-pkg://fuchsia.com/hello-starnix-test#meta/hello_starnix_test.cm
+[starnix, strace] INFO: 1(0x1, 0x35a3ca6000, 0xe, 0x0, 0x0, 0x0)
+[starnix, starnix_runner::syscalls] INFO: write: hello starnix
+
+[starnix, strace] INFO: -> 0xe
+[starnix, strace] INFO: 60(0x0, 0x35a3ca6000, 0xe, 0x0, 0x0, 0x0)
+[starnix, starnix_runner::syscalls] INFO: exit: error_code=0
+[starnix, strace] INFO: -> 0x0
 ```
