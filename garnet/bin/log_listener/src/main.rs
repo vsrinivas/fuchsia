@@ -1652,7 +1652,6 @@ mod tests {
             [00051.028569][1051][1054][klog] INFO: bootsvc: Creating bootfs service...
             [00052.101073][5525][5550][klog] INFO: ath10k: ath10k: Probed chip QCA6174 ver: 2.1
             [00052.190295][4979][4996][klog] INFO: [ERROR:garnet/bin/appmgr/namespace_builder.cc(62)] Failed to migrate 'deprecated-global-persistent-storage' to new global data directory
-            [00052.282476][526727887][0][netstack] WARNING: main.go(154): OnInterfacesChanged failed: ErrBadHandle: zx.Channel.Write
             [00052.687460][5525][12795][klog] INFO: devhost: rpc:load-firmware failed: -25
             [00055.306545][526727887][0][netstack] INFO: netstack.go(363): NIC ethp001f6: DHCP acquired IP 192.168.42.193 for 24h0m0s
             [00229.964817][1170][1263][klog] INFO: bt#02: pc 0x644746c42725 sp 0x3279d688da00 (app:/boot/bin/sh,0x1b725)";

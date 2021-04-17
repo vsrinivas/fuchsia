@@ -324,7 +324,6 @@ func Main() {
 		nicRemovedHandlers: []NICRemovedHandler{&ndpDisp.dynamicAddressSourceObs, f},
 	}
 
-	ns.netstackService.mu.proxies = make(map[*netstack.NetstackEventProxy]struct{})
 	ns.interfaceWatchers.mu.watchers = make(map[*interfaceWatcherImpl]struct{})
 	ns.interfaceWatchers.mu.lastObserved = make(map[tcpip.NICID]interfaces.Properties)
 
@@ -440,30 +439,9 @@ func Main() {
 		appCtx.OutgoingService.AddService(
 			netstack.NetstackName,
 			func(ctx context.Context, c zx.Channel) error {
-				pxy := netstack.NetstackEventProxy{Channel: c}
-				// Send a synthetic InterfacesChanged event to each client when they join
-				// Prevents clients from having to race GetInterfaces / InterfacesChanged.
-				if err := pxy.OnInterfacesChanged(interfaces2ListToInterfacesList(ns.getNetInterfaces2())); err != nil {
-					if err, ok := err.(*zx.Error); !ok || err.Status != zx.ErrPeerClosed {
-						_ = syslog.Warnf("OnInterfacesChanged failed: %s", err)
-					}
-					return err
-				}
-
-				ns.netstackService.mu.Lock()
-				ns.netstackService.mu.proxies[&pxy] = struct{}{}
-				ns.netstackService.mu.Unlock()
-
-				go func() {
-					defer func() {
-						ns.netstackService.mu.Lock()
-						delete(ns.netstackService.mu.proxies, &pxy)
-						ns.netstackService.mu.Unlock()
-					}()
-					component.ServeExclusive(ctx, &stub, c, func(err error) {
-						_ = syslog.WarnTf(netstack.NetstackName, "%s", err)
-					})
-				}()
+				go component.ServeExclusive(ctx, &stub, c, func(err error) {
+					_ = syslog.WarnTf(netstack.NetstackName, "%s", err)
+				})
 
 				return nil
 			},

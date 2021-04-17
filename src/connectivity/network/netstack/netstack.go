@@ -327,13 +327,6 @@ type Netstack struct {
 	dnsConfig    dns.ServersConfig
 	nameProvider *device.NameProviderWithCtxInterface
 
-	netstackService struct {
-		mu struct {
-			sync.Mutex
-			proxies map[*netstack.NetstackEventProxy]struct{}
-		}
-	}
-
 	interfaceWatchers interfaceWatcherCollection
 
 	stack      *stack.Stack
@@ -458,21 +451,6 @@ func (ns *Netstack) name(nicid tcpip.NICID) string {
 	return name
 }
 
-func (ns *Netstack) onInterfacesChanged() {
-	// We must hold a lock through the entire process of preparing the event so
-	// we guarantee events cannot be reordered.
-	ns.netstackService.mu.Lock()
-	// TODO(fxbug.dev/21079): Switch to the new NetInterface struct once Chromium stops
-	// using netstack.fidl.
-	interfaces := interfaces2ListToInterfacesList(ns.getNetInterfaces2())
-	for pxy := range ns.netstackService.mu.proxies {
-		if err := pxy.OnInterfacesChanged(interfaces); err != nil {
-			_ = syslog.Warnf("OnInterfacesChanged failed: %s", err)
-		}
-	}
-	ns.netstackService.mu.Unlock()
-}
-
 // AddRoute adds a single route to the route table in a sorted fashion.
 func (ns *Netstack) AddRoute(r tcpip.Route, metric routes.Metric, dynamic bool) error {
 	_ = syslog.Infof("adding route %s metric=%d dynamic=%t", r, metric, dynamic)
@@ -582,7 +560,6 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolA
 		return false, fmt.Errorf("error removing address %s from NIC ID %d: %s", addr.AddressWithPrefix, nic, err)
 	}
 
-	ns.onInterfacesChanged()
 	ns.onPropertiesChange(nic)
 	return true, nil
 }
@@ -617,7 +594,6 @@ func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddr
 		return false, fmt.Errorf("error adding subnet route %s to NIC ID %d: %w", route, nic, err)
 	}
 
-	ns.onInterfacesChanged()
 	ns.onPropertiesChange(nic)
 	return true, nil
 }
@@ -680,7 +656,6 @@ func (ifs *ifState) dhcpAcquired(lost, acquired tcpip.AddressWithPrefix, config 
 		// deadlock while holding ifState.mu since dhcpAcquired is called on
 		// cancellation.
 		go func() {
-			ifs.ns.onInterfacesChanged()
 			ifs.ns.onPropertiesChange(ifs.nicid)
 		}()
 	}
@@ -856,7 +831,6 @@ func (ifs *ifState) onLinkOnlineChanged(linkOnline bool) {
 	ifs.mu.Unlock()
 	_ = syslog.Infof("NIC %s: observed linkOnline=%t interfacesChanged=%t", name, linkOnline, changed)
 	if changed {
-		ifs.ns.onInterfacesChanged()
 		ifs.ns.onPropertiesChange(ifs.nicid)
 	}
 }
@@ -891,7 +865,6 @@ func (ifs *ifState) setState(enabled bool) error {
 	_ = syslog.Infof("NIC %s: set adminUp=%t interfacesChanged=%t", name, enabled, changed)
 
 	if changed {
-		ifs.ns.onInterfacesChanged()
 		ifs.ns.onPropertiesChange(ifs.nicid)
 	}
 
@@ -921,7 +894,6 @@ func (ifs *ifState) Remove() {
 
 	_ = syslog.Infof("NIC %s: removed", name)
 
-	ifs.ns.onInterfacesChanged()
 	ifs.ns.interfaceWatchers.onInterfaceRemove(ifs.nicid)
 }
 
@@ -1131,7 +1103,6 @@ func (ns *Netstack) addEndpoint(
 		ifs.mu.Unlock()
 	}
 
-	ns.onInterfacesChanged()
 	ns.onInterfaceAdd(ifs.nicid)
 
 	return ifs, nil
