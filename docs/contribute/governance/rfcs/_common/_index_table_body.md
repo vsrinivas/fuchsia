@@ -1,5 +1,5 @@
   <tr>
-    {% setvar full_title %}{{ rfc.name }} - {{ rfc.title }}{% endsetvar %}
+    {% setvar full_title %}{{ rfc.name }}: {{ rfc.title }}{% endsetvar %}
     <td><p>{{ rfc.name }}<a name="{{ full_title|replace(" ", "-")|replace("(", "")|replace(")", "")|lower() }}"></a></p><h3 style="display:none">{{ full_title }}</h3></td>
     <td>
         <p>
