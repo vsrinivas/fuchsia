@@ -77,27 +77,33 @@ with `fx`, i.e. `fx gn` or `fx ninja`.
 First configure the primary build artifacts by choosing the board and product
 to build:
 
-```bash
-$ gn gen out/default --args='import("//boards/x64.gni") import("//products/core.gni")'
+```posix-terminal
+fx gn gen $(fx get-build-dir) --args='import("//boards/x64.gni") import("//products/core.gni")'
 ```
 
-This will create an `out/default` directory containing Ninja files.
+This will create a build directory (usually `out/default`) containing Ninja
+files.
 
 The equivalent `fx set` command is:
 
-```bash
-$ fx set core.x64
+```posix-terminal
+fx set core.x64
 ```
 
-For a list of all GN build arguments, run `gn args out/default --list`.
+For a list of all GN build arguments, run:
+
+```posix-terminal
+fx gn args $(fx get-build-dir) --list
+```
+
 For documentation on the `select_variant` argument, see [Variants](variants.md).
 
 ### Build step
 
 The next step is to run the actual build with Ninja:
 
-```bash
-$ ninja -C out/default
+```posix-terminal
+fx ninja -C $(fx get-build-dir)
 ```
 
 This is what gets run under the hood by `fx build`.
@@ -115,14 +121,14 @@ should be reported.
 
 ### Inspecting the content of a GN target
 
-```bash
-$ fx gn desc out/default //path/to/my:target
+```posix-terminal
+fx gn desc $(fx get-build-dir) //path/to/my:target
 ```
 
 ### Finding references to a GN target
 
-```bash
-$ gn refs out/default //path/to/my:target
+```posix-terminal
+fx gn refs $(fx get-build-dir) //path/to/my:target
 ```
 
 ### Referencing targets for the build host
@@ -148,8 +154,8 @@ file:
 If a target is defined in a GN build file as `//foo/bar/blah:dash`, that target
 (and its dependencies) can be built with:
 
-```bash
-$ ninja -C out/default -j64 foo/bar/blah:dash
+```posix-terminal
+fx ninja -C $(fx get-build-dir) -j64 foo/bar/blah:dash
 ```
 
 Note that this only works for targets in the default toolchain.
@@ -164,15 +170,15 @@ serve`, users must build the `updates` group.
 GN extensively documents which Ninja targets it generates. The documentation is
 accessible with:
 
-```bash
-$ gn help ninja_rules
+```posix-terminal
+fx gn help ninja_rules
 ```
 
 You can also browse the set of Ninja targets currently defined in your output
 directory with:
 
-```bash
-$ ninja -C out/default -t browse
+```posix-terminal
+fx ninja -C $(fx get-build-dir) -t browse
 ```
 
 Note that the presence of a Ninja target does not mean it will be built - for
