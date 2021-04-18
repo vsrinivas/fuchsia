@@ -67,9 +67,9 @@ ask authors to close any testing gaps that they identify as important.
 
 Currently, test coverage is collected only if:
 
-*   The code is written in C/C++.
-*   The code runs on Fuchsia devices in usermode, or is exercised by a host test.
-    Fuchsia kernel code coverage is not supported at this time.
+*   The code is written in C, C++, or Rust.
+*   The code either runs on Fuchsia devices in usermode, or is exercised by a
+    host test.
 *   The test is exercised under the `core.x64` or `core.arm64` configuration on
     qemu. Tests that only run in other configurations, such as on hardware
     targets, are not supported at this time.
@@ -82,10 +82,9 @@ to do so using unit tests and integration tests.
 
 Support for the following additional use cases is currently under development:
 
-*   Rust code coverage.
 *   Kernel code coverage.
 *   Coverage on product configurations other than `core`, for instance
-    `workstation`.
+    `bringup` or `workstation`.
 *   Coverage on hardware targets, that is collecting from tests that don't
     run on qemu.
 
