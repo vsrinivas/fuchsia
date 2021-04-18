@@ -63,10 +63,6 @@ def main():
     args = parser.parse_args()
 
     infos = json.load(args.library_infos)
-    # For writing a depfile.
-    files_to_copy = []
-    # For cleaning up the temporary app directory after zipapp.
-    files_to_delete, dirs_to_delete = [], []
 
     # Temporary directory to stage the source tree for this python binary,
     # including sources of itself and all the libraries it imports.
@@ -88,22 +84,23 @@ def main():
             return 1
         dest = os.path.join(app_dir, basename)
         shutil.copy2(source, dest)
-        files_to_delete.append(dest)
 
+    # For writing a depfile.
+    files_to_copy = []
     # Make sub directories for all libraries and copy over their sources.
     for info in infos:
-        dest_dir = os.path.join(app_dir, info['library_name'])
-        os.makedirs(dest_dir, exist_ok=True)
-        dirs_to_delete.append(dest_dir)
+        dest_lib_root = os.path.join(app_dir, info['library_name'])
+        os.makedirs(dest_lib_root, exist_ok=True)
 
+        src_lib_root = info['source_root']
+        # Sources are relative to library root.
         for source in info['sources']:
-            # NOTE: the following line is temporary to facilitate soft
-            # transitioning third-party repos.
-            source = os.path.join(info['source_root'], source)
-            files_to_copy.append(source)
-            dest = os.path.join(dest_dir, os.path.basename(source))
-            shutil.copy2(source, dest)
-            files_to_delete.append(dest)
+            src = os.path.join(src_lib_root, source)
+            dest = os.path.join(dest_lib_root, source)
+            # Make sub directories if necessary.
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            files_to_copy.append(src)
+            shutil.copy2(src, dest)
 
     args.depfile.write('{}: {}\n'.format(args.output, ' '.join(files_to_copy)))
 
@@ -119,7 +116,6 @@ def main():
     main_file = os.path.join(app_dir, "__main__.py")
     with open(main_file, 'w') as f:
         f.write(f'from {main_module} import *\n{args.main_callable}()')
-    files_to_delete.append(main_file)
 
     zipapp.create_archive(
         app_dir,
@@ -131,10 +127,12 @@ def main():
     # Manually remove the temporary app directory and all the files, instead of
     # using shutil.rmtree. rmtree records reads on directories which throws off
     # the action tracer.
-    for f in files_to_delete:
-        os.remove(f)
-    for d in dirs_to_delete:
-        os.rmdir(d)
+    for root, dirs, files in os.walk(app_dir, topdown=False):
+        for file in files:
+            os.remove(os.path.join(root, file))
+        for dir in dirs:
+            os.rmdir(os.path.join(root, dir))
+    os.rmdir(app_dir)
 
 
 if __name__ == '__main__':
