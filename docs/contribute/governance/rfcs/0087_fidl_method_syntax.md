@@ -1,11 +1,11 @@
 {% set rfcid = "RFC-0087" %}
 {% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
 # {{ rfc.name }} - {{ rfc.title }}
-*** DO NOT EDIT ABOVE THIS LINE
+<!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
 ## Summary
 
-After [FTP-050], the parameters of a FIDL method request or response are
+After [RFC-0050], the parameters of a FIDL method request or response are
 specified inline in the form of `(name1 Type1, name2 Type2)`, which implicitly
 defines a request/response type of a struct with the parameters as its members.
 This RFC proposes changing the syntax to specify the top level type explicitly,
@@ -42,13 +42,13 @@ name1 Type1; name2 Type2; })` provides two main benefits, by:
   where the extensibility of the request parameters is a priority - in this
   case, the user can [use a table][extensible-method-args] instead of a struct.
 
-The timing of the introduction of this RFC is linked to FTP-050 in two ways:
+The timing of the introduction of this RFC is linked to [RFC-0050] in two ways:
 
-* The introduction of anonymous layouts in the FTP makes it possible to reuse
+* The introduction of anonymous layouts in the RFC makes it possible to reuse
   this syntax for specifying the request/response type without needing to give
   it a separate name.
 * The syntax change proposed in this RFC can be grouped into the existing
-  implementation and migration required for FTP-050, obviating the need for a
+  implementation and migration required for [RFC-0050], obviating the need for a
   separate migration.
 
 ## Design
@@ -117,7 +117,7 @@ protocol-event = ( attribute-list ) , "->" , IDENTIFIER , method-params;
 method-params = "(" , type , ")"
 ```
 
-A `type` is as [defined][ftp50-grammar] in FTP-050, i.e. it is either a
+A `type` is [as defined in RFC-0050][grammar], i.e. it is either a
 reference to an existing type like `MyType<args>:constraints`, or an anonymous
 layout e.g. `struct { name Type; }:constraints`.
 
@@ -125,11 +125,11 @@ Though the grammar will allow arbitrary types to be used as requests and
 responses, the FIDL compiler will validate that the top level types are either
 structs, unions, or tables.
 
-As [specified][flattened-name] in FTP-050, the compiler reserves a name for any
-inlined top level request or response type which makes it possible to shift away
-from an inlined style when this is desired (for example to improve readability
-when the number of parameters increases). As an example, it is possible to
-change from:
+As [specified][flattened-name] in [RFC-0050], the compiler reserves a name for
+any inlined top level request or response type which makes it possible to shift
+away from an inlined style when this is desired (for example to improve
+readability when the number of parameters increases). As an example, it is
+possible to change from:
 
 ```fidl
 protocol MyProtocol {
@@ -185,7 +185,7 @@ corresponds to the top level struct type, and would have a single `uint32` `id`
 field.
 
 Note: The question of how an appropriate name for the top level type  is chosen
-is discussed in [FTP-050][flattened-name].
+is discussed in [RFC-0050][flattened-name].
 
 In the current syntax where all top level request or response types are
 implicitly structs, flattening the parameters so that they correspond directly
@@ -253,12 +253,12 @@ There are two parts to the implementation of this RFC: the first is the purely
 cosmetic change of modifying all existing files to conform to the new syntax
 proposed here, and the second part is changing the FIDL compiler and bindings to
 allow tables and unions as top level types. The syntax change will be
-implemented as part of the broader FTP-050 FIDL syntax conversion but support
+implemented as part of the broader [RFC-0050] FIDL syntax conversion but support
 for union and table top-level types can be deferred so as to avoid being a
 blocker for the FIDL syntax improvements project.  All FIDL files written in the
 "new" syntax will be expected to conform to the changes laid out in this RFC,
 and the formal FIDL grammar will be updated to reflect its design at the same
-time as the rest of FTP-050.
+time as the rest of [RFC-0050].
 
 There are some cases in the existing bindings where enabling top level types of
 tables and unions for requests and responses will not require significant
@@ -381,11 +381,11 @@ ordinals.
 
 <!-- xrefs -->
 
-[ftp-050]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md
+[RFC-0050]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md
 [traits]: /zircon/system/ulib/fidl/include/lib/fidl/llcpp/traits.h
 [fxbug.dev/7704]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=7704
 [extensible-method-args]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md#extensible-method-args
 [flattened-name]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md#flattened-name
-[ftp50-grammar]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md#grammar
+[grammar]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md#grammar
 [abi-first]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md#abi-first
 [dart-named-params]: https://dart.dev/guides/language/language-tour#named-parameters
