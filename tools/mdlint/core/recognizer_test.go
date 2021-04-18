@@ -24,7 +24,7 @@ type recognizeLinksTestCase struct {
 }
 
 type recognizerAcc struct {
-	DefaultLintRuleOverEvents
+	DefaultLintRuleOverPatterns
 
 	xrefUses []string
 	hrefUses []string
@@ -32,7 +32,7 @@ type recognizerAcc struct {
 	tocs     []string
 }
 
-var _ LintRuleOverEvents = (*recognizerAcc)(nil)
+var _ LintRuleOverPatterns = (*recognizerAcc)(nil)
 
 func (r *recognizerAcc) OnLinkByXref(xref Token) {
 	r.xrefUses = append(r.xrefUses, xref.Content)

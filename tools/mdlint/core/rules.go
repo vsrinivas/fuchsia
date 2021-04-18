@@ -62,8 +62,8 @@ func (DefaultLintRuleOverTokens) OnEnd()              {}
 
 func (DefaultLintRuleOverTokens) OnNext(tok Token) {}
 
-// LintRuleOverEvents defines how rules over events operate.
-type LintRuleOverEvents interface {
+// LintRuleOverPatterns defines how rules over patterns operate.
+type LintRuleOverPatterns interface {
 	commonLintRule
 
 	// OnLinkByXref is called when a link by label is read.
@@ -79,21 +79,21 @@ type LintRuleOverEvents interface {
 	OnTableOfContents(toc Token)
 }
 
-// The DefaultLintRuleOverEvents provides default implementation for the
-// LintRuleOverEvents interface.
-type DefaultLintRuleOverEvents struct{}
+// The DefaultLintRuleOverPatterns provides default implementation for the
+// LintRuleOverPatterns interface.
+type DefaultLintRuleOverPatterns struct{}
 
-var _ LintRuleOverEvents = (*DefaultLintRuleOverEvents)(nil)
+var _ LintRuleOverPatterns = (*DefaultLintRuleOverPatterns)(nil)
 
-func (DefaultLintRuleOverEvents) OnStart()            {}
-func (DefaultLintRuleOverEvents) OnDocStart(doc *Doc) {}
-func (DefaultLintRuleOverEvents) OnDocEnd()           {}
-func (DefaultLintRuleOverEvents) OnEnd()              {}
+func (DefaultLintRuleOverPatterns) OnStart()            {}
+func (DefaultLintRuleOverPatterns) OnDocStart(doc *Doc) {}
+func (DefaultLintRuleOverPatterns) OnDocEnd()           {}
+func (DefaultLintRuleOverPatterns) OnEnd()              {}
 
-func (DefaultLintRuleOverEvents) OnLinkByXref(xref Token)          {}
-func (DefaultLintRuleOverEvents) OnLinkByURL(url Token)            {}
-func (DefaultLintRuleOverEvents) OnXrefDefinition(xref, url Token) {}
-func (DefaultLintRuleOverEvents) OnTableOfContents(toc Token)      {}
+func (DefaultLintRuleOverPatterns) OnLinkByXref(xref Token)          {}
+func (DefaultLintRuleOverPatterns) OnLinkByURL(url Token)            {}
+func (DefaultLintRuleOverPatterns) OnXrefDefinition(xref, url Token) {}
+func (DefaultLintRuleOverPatterns) OnTableOfContents(toc Token)      {}
 
 // oneToManyOverTokens is a LintRuleOverTokens which simply dispatches to many
 // LintRuleOverTokens, therefore allowing to combine multiple rules where only
@@ -132,56 +132,56 @@ func (rules oneToManyOverTokens) OnNext(tok Token) {
 	}
 }
 
-// oneToManyOverEvents is a LintRuleOverEvents which simply dispatches to many
-// LintRuleOverEvents, therefore allowing to combine multiple rules where only
+// oneToManyOverPatterns is a LintRuleOverPatterns which simply dispatches to many
+// LintRuleOverPatterns, therefore allowing to combine multiple rules where only
 // one can be plugged in.
-type oneToManyOverEvents []LintRuleOverEvents
+type oneToManyOverPatterns []LintRuleOverPatterns
 
-var _ LintRuleOverEvents = (*oneToManyOverEvents)(nil)
+var _ LintRuleOverPatterns = (*oneToManyOverPatterns)(nil)
 
-func (rules oneToManyOverEvents) OnStart() {
+func (rules oneToManyOverPatterns) OnStart() {
 	for _, rule := range rules {
 		rule.OnStart()
 	}
 }
 
-func (rules oneToManyOverEvents) OnDocStart(doc *Doc) {
+func (rules oneToManyOverPatterns) OnDocStart(doc *Doc) {
 	for _, rule := range rules {
 		rule.OnDocStart(doc)
 	}
 }
 
-func (rules oneToManyOverEvents) OnDocEnd() {
+func (rules oneToManyOverPatterns) OnDocEnd() {
 	for _, rule := range rules {
 		rule.OnDocEnd()
 	}
 }
 
-func (rules oneToManyOverEvents) OnEnd() {
+func (rules oneToManyOverPatterns) OnEnd() {
 	for _, rule := range rules {
 		rule.OnEnd()
 	}
 }
 
-func (rules oneToManyOverEvents) OnLinkByXref(xref Token) {
+func (rules oneToManyOverPatterns) OnLinkByXref(xref Token) {
 	for _, rule := range rules {
 		rule.OnLinkByXref(xref)
 	}
 }
 
-func (rules oneToManyOverEvents) OnLinkByURL(url Token) {
+func (rules oneToManyOverPatterns) OnLinkByURL(url Token) {
 	for _, rule := range rules {
 		rule.OnLinkByURL(url)
 	}
 }
 
-func (rules oneToManyOverEvents) OnXrefDefinition(xref, url Token) {
+func (rules oneToManyOverPatterns) OnXrefDefinition(xref, url Token) {
 	for _, rule := range rules {
 		rule.OnXrefDefinition(xref, url)
 	}
 }
 
-func (rules oneToManyOverEvents) OnTableOfContents(toc Token) {
+func (rules oneToManyOverPatterns) OnTableOfContents(toc Token) {
 	for _, rule := range rules {
 		rule.OnTableOfContents(toc)
 	}

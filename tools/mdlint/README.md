@@ -44,11 +44,11 @@ The linter parses Markdown files successively, typically all files under a root
 directory.
 
 Each Markdown file is read as a stream of UTF-8 characters (runes), which is
-then [tokenized](#tokenization) into a stream of token. This stream of token is
-then pattern matched and recognized into a stream of events. This layered
-processing is similar to how streaming XML parsers are structured, and offers
-hook points for [linting rules](#linting-rules) to operate at various levels of
-abstraction.
+then [tokenized](#tokenization) into a stream of tokens. We recognize specific
+patterns from this token stream, giving rise to a stream of patterns. This
+layered processing is similar to how streaming XML parsers are structured, and
+offers hook points for [linting rules](#linting-rules) to operate at various
+levels of abstraction.
 
 ### Tokenization {#tokenization}
 
@@ -76,19 +76,19 @@ line.
 ### Recognition {#recognition}
 
 Once a Markdown document has been tokenized, the stream of token is then pattern
-matched and recognized into a stream of events. As an example, depending on
+matched and recognized into a stream of patterns. As an example, depending on
 placement, the text `[Example]` could be a link's text, a link's cross
 reference, both a link's test and its cross reference, or the start of a cross
 reference definition.
 
 Implementation wise, the recognition work is done in the `recognizer` which
-bridges the [`LintRuleOverTokens` rule](#rules) to a [`LintRuleOverEvents`
+bridges the [`LintRuleOverTokens` rule](#rules) to a [`LintRuleOverPatterns`
 rule](#rule).
 
 ### Rules {#rules}
 
-There are two sets of rules supported, rules over tokens, and rules over events.
-Both of these have common behavior which we describe first.
+There are two sets of rules supported, rules over tokens, and rules over
+patterns. Both of these have common behavior which we describe first.
 
 **Common behavior**
 
@@ -99,18 +99,18 @@ All rules are invoked:
 * On document end, i.e. when the linter completes the parsing of a new document.
 * On end, i.e. when the linter completes.
 
-**On tokens**
+**Over tokens**
 
 Rules over tokens are additionally invoked after a document starts to parse, and
 before a document completes:
 
 * On each token, i.e. as the name suggests.
 
-**On events**
+**Over patterns**
 
-Rules over events are additionally invoked after a document starts to parse, and
-before a document completes, for every event encountered. A non-exhaustive list
-includes:
+Rules over patterns are additionally invoked after a document starts to parse,
+and before a document completes, for every pattern encountered. A non-exhaustive
+list includes:
 
 * When a link using a cross reference is used.
 * When a link using a URL is used.
@@ -129,7 +129,7 @@ import (
 )
 
 func init() {
-	// or core.RegisterLintRuleOverEvents(...)
+	// or core.RegisterLintRuleOverPatterns(...)
 	core.RegisterLintRuleOverTokens(exampleRuleName, newExampleRule)
 }
 
@@ -139,7 +139,7 @@ type exampleRule struct {
     ...
 }
 
-var _ core.LintRuleOverTokens = (*exampleRule)(nil) // or core.LintRuleOverEvents
+var _ core.LintRuleOverTokens = (*exampleRule)(nil) // or core.LintRuleOverPatterns
 
 func newExampleRule(reporter core.Reporter) core.LintRuleOverTokens {
     return &exampleRule{ ... }
@@ -166,7 +166,7 @@ denotes an expected warning on a non-trimmed line.`,
 
 			"second.md": `Another Markdown document here.`,
 		},
-	// or runOverEvents
+	// or runOverPatterns
 	}.runOverTokens(t, newExampleRule)
 }
 ```

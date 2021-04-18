@@ -12,9 +12,9 @@ import (
 var tocRe = regexp.MustCompile(`(?i)^\[toc\]$`)
 
 // The recognizer is a LintRuleOverTokens which recognizes patterns of tokens
-// so that it can turn them into events and drive a LintRuleOverEvents.
+// so that it can turn them into patterns and drive a LintRuleOverPatterns.
 type recognizer struct {
-	rule LintRuleOverEvents
+	rule LintRuleOverPatterns
 
 	state     stepsToRecognizeLinks
 	accTokens []Token

@@ -102,9 +102,9 @@ func (ex ruleTestCase) runOverTokens(t *testing.T, instantiator func(core.Report
 	}
 }
 
-func (ex ruleTestCase) runOverEvents(t *testing.T, instantiator func(core.Reporter) core.LintRuleOverEvents) {
+func (ex ruleTestCase) runOverPatterns(t *testing.T, instantiator func(core.Reporter) core.LintRuleOverPatterns) {
 	ex.runOverTokens(t, func(reporter core.Reporter) core.LintRuleOverTokens {
-		return core.CombineRules(nil, []core.LintRuleOverEvents{instantiator(reporter)})
+		return core.CombineRules(nil, []core.LintRuleOverPatterns{instantiator(reporter)})
 	})
 }
 

@@ -16,7 +16,7 @@ wrong «[tipo in label]»
 
 [typo in label]: https://google.com`,
 		},
-	}.runOverEvents(t, newVerifyInternalLinks)
+	}.runOverPatterns(t, newVerifyInternalLinks)
 }
 
 func TestVerifyInternalLinks_duplicateXref(t *testing.T) {
@@ -26,7 +26,7 @@ func TestVerifyInternalLinks_duplicateXref(t *testing.T) {
 [twice]: https://google.com
 «[twice]»: http://google.com`,
 		},
-	}.runOverEvents(t, newVerifyInternalLinks)
+	}.runOverPatterns(t, newVerifyInternalLinks)
 }
 
 func TestVerifyInternalLinks_validLinkLabel(t *testing.T) {
@@ -37,7 +37,7 @@ func TestVerifyInternalLinks_validLinkLabel(t *testing.T) {
 
 [link label]: http://google.com`,
 		},
-	}.runOverEvents(t, newVerifyInternalLinks)
+	}.runOverPatterns(t, newVerifyInternalLinks)
 }
 
 // TODO(fxbug.dev/62964): Improve verifyInternalLinks rule.
@@ -46,7 +46,7 @@ func Ignore_TestVerifyInternalLinks_unknownFile(t *testing.T) {
 		files: map[string]string{
 			"example.md": `we do not know «[this page](nothere.md)»`,
 		},
-	}.runOverEvents(t, newVerifyInternalLinks)
+	}.runOverPatterns(t, newVerifyInternalLinks)
 }
 
 // TODO(fxbug.dev/62964): Improve verifyInternalLinks rule.
@@ -56,5 +56,5 @@ func Ignore_TestVerifyInternalLinks_unknownAnchor(t *testing.T) {
 			"one.md": `linking to «[wrong](two.md#anchor)»`,
 			"two.md": `## bad {#anquor}`,
 		},
-	}.runOverEvents(t, newVerifyInternalLinks)
+	}.runOverPatterns(t, newVerifyInternalLinks)
 }

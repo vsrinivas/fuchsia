@@ -9,22 +9,22 @@ import (
 )
 
 func init() {
-	core.RegisterLintRuleOverEvents(verifyInternalLinksName, newVerifyInternalLinks)
+	core.RegisterLintRuleOverPatterns(verifyInternalLinksName, newVerifyInternalLinks)
 }
 
 const verifyInternalLinksName = "verify-internal-links"
 
 type verifyInternalLinks struct {
-	core.DefaultLintRuleOverEvents
+	core.DefaultLintRuleOverPatterns
 	reporter core.Reporter
 
 	byXref []core.Token
 	xrefs  map[string]string
 }
 
-var _ core.LintRuleOverEvents = (*verifyInternalLinks)(nil)
+var _ core.LintRuleOverPatterns = (*verifyInternalLinks)(nil)
 
-func newVerifyInternalLinks(reporter core.Reporter) core.LintRuleOverEvents {
+func newVerifyInternalLinks(reporter core.Reporter) core.LintRuleOverPatterns {
 	return &verifyInternalLinks{reporter: reporter}
 }
 
