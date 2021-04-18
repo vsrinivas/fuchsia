@@ -5,7 +5,7 @@
 
 ## Summary
 
-Note: Formerly known as [FTP](../deprecated-ftp-process.md)-0012.
+Note: Formerly known as [FTP](../deprecated-ftp-process.md)-012.
 
 Allow empty structs in FIDL library declarations and define the encoding
 of that to be a struct with a single zero-valued `uint8`.

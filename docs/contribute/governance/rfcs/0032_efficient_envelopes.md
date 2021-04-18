@@ -5,7 +5,7 @@
 
 ## Rejection rationale
 
-Note: Formerly known as [FTP](../deprecated-ftp-process.md)-0032.
+Note: Formerly known as [FTP](../deprecated-ftp-process.md)-032.
 
 In February 21, 2019, this RFC was initially accepted. The FIDL team worked to
 stabilize the wire format for most of 2019, culminating in an all-hands-on-deck

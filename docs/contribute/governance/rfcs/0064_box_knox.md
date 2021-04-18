@@ -5,7 +5,7 @@
 
 ## Rejection rationale
 
-Note: Formerly known as [FTP](../deprecated-ftp-process.md)-0017.
+Note: Formerly known as [FTP](../deprecated-ftp-process.md)-017.
 
 The problem of transmitting large messages between peers over FIDL is important,
 a very current concern faced by developers, and a current deficiency of FIDL.

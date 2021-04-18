@@ -5,7 +5,7 @@
 
 ## Summary
 
-Note: Formerly known as [FTP](../deprecated-ftp-process.md)-0014.
+Note: Formerly known as [FTP](../deprecated-ftp-process.md)-014.
 
 APIs often need to indicate that requests could not be successfully completed.
 Often there is useful contextual information associated with the error that

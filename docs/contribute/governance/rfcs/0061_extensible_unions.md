@@ -5,7 +5,7 @@
 
 ## Summary
 
-Note: Formerly known as [FTP](../deprecated-ftp-process.md)-0015.
+Note: Formerly known as [FTP](../deprecated-ftp-process.md)-015.
 
 _Catering to Hawaii and Alaska_
 

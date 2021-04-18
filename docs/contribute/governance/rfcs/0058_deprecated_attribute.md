@@ -5,7 +5,7 @@
 
 ## Summary
 
-Note: Formerly known as [FTP](../deprecated-ftp-process.md)-0013.
+Note: Formerly known as [FTP](../deprecated-ftp-process.md)-013.
 
 Note: This FTP is superseded by [RFC-0083: FIDL Versioning][rfc-0083].
 
