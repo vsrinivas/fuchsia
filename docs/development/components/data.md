@@ -35,7 +35,7 @@ Add a dependency on the resource target from a component in order to ensure that
 the resource(s) are included in the same package.
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 # Sends a random greeting to a client
 executable("greeter") {
@@ -74,7 +74,7 @@ files.
 
 ```gn
 import("//build/dist/resource.gni")
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 # Sends a random greeting to a client
 executable("greeter") {

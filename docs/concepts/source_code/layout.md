@@ -200,7 +200,7 @@ The following is an example for a directory called `fortune`.
 
 ```gn
 import("//build/config/fuchsia/rules.gni")
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 group("fortune") {
   testonly = true

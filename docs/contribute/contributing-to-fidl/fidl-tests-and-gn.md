@@ -110,7 +110,7 @@ Assume we have a `:fidl_foo_tests_bin` target that produces a `fidl_foo_tests`
 binary. To wrap this in a package, use `fuchsia_unittest_package`:
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 fuchsia_unittest_package("fidl_foo_tests") {
   deps = [ ":fidl_foo_tests_bin" ]
@@ -131,7 +131,7 @@ If your test requires any component features, services, etc. beyond the
 
 ```gn
 # BUILD.gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 fuchsia_unittest_package("fidl_foo_tests") {
   manifest = "meta/fidl_foo_tests.cmx"
@@ -195,7 +195,7 @@ Tests that run both on host and device fall in two categories. In the first
 category, the test target simply builds under either toolchain. For example:
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 rustc_test("fidl_rust_conformance_tests_bin") {
   output_name = "fidl_rust_conformance_tests"              # host test name
@@ -226,7 +226,7 @@ requires wrapping the host test definition in `if (is_host) { ... }` to prevent
 GN complaining about multiple targets producing the same output. For example:
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 source_set("conformance_test_sources") {
   ...

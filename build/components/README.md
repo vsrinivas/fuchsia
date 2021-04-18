@@ -9,7 +9,7 @@ See: [https://fuchsia.dev/fuchsia-src/development/components/build]
 
 Add this line to your `BUILD.gn` file:
 ```
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 ```
 
 ## Examples

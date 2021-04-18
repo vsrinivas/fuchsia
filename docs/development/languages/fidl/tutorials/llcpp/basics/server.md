@@ -54,7 +54,7 @@ To create a component:
 1. Declare a target for the server in `examples/fidl/llcpp/server/BUILD.gn`:
 
    ```gn
-   import("//src/sys/build/components.gni")
+   import("//build/components.gni")
 
    # Declare an executable for the server. This produces a binary with the
    # specified output name that can run on Fuchsia.

@@ -890,7 +890,7 @@ a known good result (or a "golden file").
 {% verbatim %}
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 fuchsia_component("minifier_component") {
   ...
@@ -943,7 +943,7 @@ example we are required to rename different files to different destination
 paths for packaging.
 
 ```gn
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
 
 resource_group("favorite_recipes") {
   files = [

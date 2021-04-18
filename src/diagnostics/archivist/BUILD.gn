@@ -9,7 +9,6 @@ import("//build/fuzzing/fuzzer.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_fuzzer.gni")
 import("//build/rust/rustc_library.gni")
-import("//src/sys/build/components.gni")
 import("//tools/fidl/measure-tape/measure_tape.gni")
 
 measure_tape("logmessage_measure_tape") {
