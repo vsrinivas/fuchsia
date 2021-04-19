@@ -250,6 +250,13 @@
             from: "#bootstrap",
             to: "#core",
         },
+
+        // Offer boot resolver to `bootstrap` for driver usage.
+        {
+            resolver: "boot_resolver",
+            from: "parent",
+            to: "#bootstrap",
+        },
     ],
     environments: [
         {

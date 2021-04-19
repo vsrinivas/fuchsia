@@ -957,11 +957,18 @@
         },
         {
             name: "boot-driver-env",
-            extends: "realm",
+            extends: "none",
             runners: [
                 {
                     runner: "driver",
                     from: "#driver_manager",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "boot_resolver",
+                    from: "parent",
+                    scheme: "fuchsia-boot",
                 },
             ],
 
