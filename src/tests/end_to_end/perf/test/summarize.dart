@@ -92,15 +92,7 @@ dynamic summarizeFuchsiaPerfFiles(List<File> jsonFiles) {
   }
 
   for (final entry in outputList) {
-    num meanVal = mean(entry['values']);
-    if (entry['unit'] == 'nanoseconds') {
-      // Round the result to an integer to reduce the size of the output
-      // files, especially when they are compressed.  When the resulting
-      // times are in nanoseconds, we generally don't care about
-      // fractional nanoseconds.
-      meanVal = meanVal.round();
-    }
-    entry['values'] = [meanVal];
+    entry['values'] = [mean(entry['values'])];
   }
 
   return outputList;

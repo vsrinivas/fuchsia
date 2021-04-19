@@ -107,25 +107,25 @@ void main() {
         ]));
   });
 
-  // Test how summarizeFuchsiaPerfFiles() applies rounding.  Rounding
-  // should only be applied to the final result value, not the
-  // intermediate values.
-  test('summarize_results_rounding', () {
+  // Test that summarizeFuchsiaPerfFiles() works with fractional
+  // values.  Use test values that can be represented exactly by
+  // floating point numbers.
+  test('summarize_results_fractions', () {
     final files = [
       writeTempFile(jsonEncode([
         {
           'label': 'test1',
           'test_suite': 'suite1',
           'unit': 'nanoseconds',
-          // This gives a meanExcludingWarmup of 100.5.
-          'values': [5000, 100.5],
+          // This gives a meanExcludingWarmup of 2 / 256.
+          'values': [5000, 1 / 256, 3 / 256],
         },
         {
           'label': 'test1',
           'test_suite': 'suite1',
           'unit': 'nanoseconds',
-          // This gives a meanExcludingWarmup of 200.5.
-          'values': [5000, 200.5],
+          // This gives a meanExcludingWarmup of 6 / 256.
+          'values': [5000, 5 / 256, 7 / 256],
         },
       ])),
     ];
@@ -137,36 +137,7 @@ void main() {
             'label': 'test1',
             'test_suite': 'suite1',
             'unit': 'nanoseconds',
-            // This expected value is the mean of [100.5, 200.5],
-            // rounded to an integer.
-            'values': [151],
-          }
-        ]));
-  });
-
-  // summarizeFuchsiaPerfFiles() should not apply rounding for units
-  // other than nanoseconds.
-  test('summarize_results_no_rounding', () {
-    final files = [
-      writeTempFile(jsonEncode([
-        {
-          'label': 'test1',
-          'test_suite': 'suite1',
-          'unit': 'milliseconds',
-          // This gives a meanExcludingWarmup of 100.5.
-          'values': [5000, 100.5],
-        }
-      ])),
-    ];
-    final output = summarizeFuchsiaPerfFiles(files);
-    expect(
-        output,
-        equals([
-          {
-            'label': 'test1',
-            'test_suite': 'suite1',
-            'unit': 'milliseconds',
-            'values': [100.5],
+            'values': [4 / 256],
           }
         ]));
   });
