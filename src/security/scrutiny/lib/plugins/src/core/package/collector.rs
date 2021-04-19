@@ -15,6 +15,7 @@ use {
     cm_fidl_validator,
     fidl::encoding::decode_persistent,
     fidl_fuchsia_sys2 as fsys,
+    fuchsia_url::boot_url::BootUrl,
     lazy_static::lazy_static,
     log::{debug, error, info, warn},
     regex::Regex,
@@ -35,6 +36,8 @@ lazy_static! {
 pub const CONFIG_DATA_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/config-data";
 pub const REPOSITORY_PATH: &str = "amber-files/repository";
 pub const UPDATE_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/update";
+// The root v2 component manifest.
+pub const ROOT_RESOURCE: &str = "meta/root.cm";
 
 /// The PackageDataResponse contains all of the core model information extracted
 /// from the Fuchsia Archive (.far) packages from the current build.
@@ -328,7 +331,7 @@ impl PackageDataCollector {
         for (file_name, file_data) in zbi.bootfs.iter() {
             if file_name.ends_with(".cm") {
                 info!("Extracting bootfs manifest: {}", file_name);
-                let url = format!("fuchsia-boot:///#{}", file_name);
+                let url = BootUrl::new_resource("/".to_string(), file_name.to_string())?;
                 let base64_bytes = base64::encode(&file_data);
                 if let Ok(cm_decl) = decode_persistent::<fsys::ComponentDecl>(&file_data) {
                     if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
@@ -356,7 +359,7 @@ impl PackageDataCollector {
                                         if let Some(source_name) = &protocol.source_name {
                                             if let Some(fsys::Ref::Self_(_)) = &protocol.source {
                                                 service_map
-                                                    .insert(source_name.clone(), url.clone());
+                                                    .insert(source_name.clone(), url.to_string());
                                             }
                                         }
                                     }
@@ -365,10 +368,10 @@ impl PackageDataCollector {
                             }
                         }
 
-                        // The root.cm is special semantically as it offers from its parent
+                        // The root manifest is special semantically as it offers from its parent
                         // which is outside of the component model. So in this case offers
                         // should also be captured.
-                        if file_name == "meta/root.cm" {
+                        if file_name == ROOT_RESOURCE {
                             if let Some(offers) = cm_decl.offers {
                                 for offer in offers {
                                     match &offer {
@@ -376,8 +379,10 @@ impl PackageDataCollector {
                                             if let Some(source_name) = &protocol.source_name {
                                                 if let Some(fsys::Ref::Parent(_)) = &protocol.source
                                                 {
-                                                    service_map
-                                                        .insert(source_name.clone(), url.clone());
+                                                    service_map.insert(
+                                                        source_name.clone(),
+                                                        url.to_string(),
+                                                    );
                                                 }
                                             }
                                         }
@@ -390,10 +395,10 @@ impl PackageDataCollector {
                         // Add the components directly from the ZBI.
                         *component_id += 1;
                         components.insert(
-                            url.clone(),
+                            url.to_string(),
                             Component {
                                 id: *component_id,
-                                url: url.clone(),
+                                url: url.to_string(),
                                 version: 2,
                                 inferred: false,
                             },

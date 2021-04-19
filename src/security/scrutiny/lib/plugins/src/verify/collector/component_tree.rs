@@ -3,17 +3,33 @@
 // found in the LICENSE file.
 
 use {
-    crate::core::collection::{Components, ManifestData, Manifests},
+    crate::core::{
+        collection::{Components, ManifestData, Manifests, Zbi},
+        package::collector::ROOT_RESOURCE,
+    },
     crate::verify::collection::V2ComponentTree,
     anyhow::{anyhow, Result},
     cm_fidl_analyzer::component_tree::ComponentTreeBuilder,
     cm_rust::{ComponentDecl, FidlIntoNative},
+    cm_types::Url,
     fidl::encoding::decode_persistent,
-    fidl_fuchsia_sys2 as fsys2,
+    fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys2,
+    fuchsia_url::boot_url::BootUrl,
+    lazy_static::lazy_static,
     log::{info, warn},
+    routing::config::RuntimeConfig,
     scrutiny::model::{collector::DataCollector, model::DataModel},
-    std::{collections::HashMap, sync::Arc},
+    std::{collections::HashMap, convert::TryFrom, sync::Arc},
 };
+
+lazy_static! {
+    // The default root component URL used to identify the root of the ComponentTree
+    // unless the RuntimeConfig specifies a different root URL.
+    pub static ref DEFAULT_ROOT_URL: BootUrl =
+        BootUrl::new_resource("/".to_string(), ROOT_RESOURCE.to_string()).unwrap();
+}
+// The path to the runtime config in bootfs.
+pub const DEFAULT_CONFIG_PATH: &str = "config/component_manager";
 
 pub struct V2ComponentTreeDataCollector {}
 
@@ -50,19 +66,36 @@ impl V2ComponentTreeDataCollector {
         }
         Ok(decls)
     }
+
+    fn get_runtime_config(
+        &self,
+        config_path: &str,
+        model: &Arc<DataModel>,
+    ) -> Result<RuntimeConfig> {
+        let zbi = &model.get::<Zbi>()?;
+        match zbi.bootfs.get(config_path) {
+            Some(config_data) => Ok(RuntimeConfig::try_from(decode_persistent::<
+                component_internal::Config,
+            >(&config_data)?)?),
+            None => Err(anyhow!("file {} not found in bootfs", config_path.to_string())),
+        }
+    }
 }
 
 impl DataCollector for V2ComponentTreeDataCollector {
     fn collect(&self, model: Arc<DataModel>) -> Result<()> {
         let decls_by_url = self.get_decls(&model)?;
+        let runtime_config = self.get_runtime_config(DEFAULT_CONFIG_PATH, &model)?;
+        let root_url =
+            runtime_config.root_component_url.unwrap_or(Url::new(DEFAULT_ROOT_URL.to_string())?);
 
         info!(
-            "V2ComponentTreeDataCollector: Found {} v2 component declarations",
-            decls_by_url.len()
+            "V2ComponentTreeDataCollector: Found {} v2 component declarations with root URL {}",
+            decls_by_url.len(),
+            root_url.as_str(),
         );
 
-        let build_result = ComponentTreeBuilder::new(decls_by_url)
-            .build("fuchsia-boot:///#meta/root.cm".to_string());
+        let build_result = ComponentTreeBuilder::new(decls_by_url).build(root_url);
 
         for error in build_result.errors.iter() {
             warn!("V2ComponentTreeDataCollector: {}", error);
@@ -135,30 +168,34 @@ pub mod tests {
         Ok(Manifest { component_id, manifest: ManifestData::Version2(decl_base64), uses: vec![] })
     }
 
-    fn single_v2_component_model() -> Result<Arc<DataModel>> {
+    fn single_v2_component_model(root_component_url: Option<String>) -> Result<Arc<DataModel>> {
         let model = data_model();
         let root_id = 0;
-        let root_component =
-            make_v2_component(root_id, "fuchsia-boot:///#meta/root.cm".to_string());
+        let url = root_component_url.clone().unwrap_or(DEFAULT_ROOT_URL.to_string());
+        let root_component = make_v2_component(root_id, url);
         let root_manifest = make_v2_manifest(root_id, new_component_decl(vec![]))?;
+        let zbi = Zbi { ..zbi(root_component_url) };
+
         model.set(Components::new(vec![root_component]))?;
         model.set(Manifests::new(vec![root_manifest]))?;
+        model.set(zbi)?;
         Ok(model)
     }
 
     fn v1_and_v2_component_model() -> Result<Arc<DataModel>> {
         let model = data_model();
         let root_id = 0;
-        let root_component =
-            make_v2_component(root_id, "fuchsia-boot:///#meta/root.cm".to_string());
+        let root_component = make_v2_component(root_id, DEFAULT_ROOT_URL.to_string());
         let root_manifest = make_v2_manifest(root_id, new_component_decl(vec![]))?;
 
         let v1_id = 1;
         let v1_component = make_v1_component(v1_id);
         let v1_manifest = make_v1_manifest(v1_id);
+        let zbi = Zbi { ..zbi(None) };
 
         model.set(Components::new(vec![root_component, v1_component]))?;
         model.set(Manifests::new(vec![root_manifest, v1_manifest]))?;
+        model.set(zbi)?;
         Ok(model)
     }
 
@@ -169,7 +206,7 @@ pub mod tests {
         let bar_id = 2;
         let baz_id = 3;
 
-        let root_url = "fuchsia-boot:///#meta/root.cm".to_string();
+        let root_url = DEFAULT_ROOT_URL.to_string();
         let foo_url = "fuchsia-boot:///#meta/foo.cm".to_string();
         let bar_url = "fuchsia-boot:///#meta/bar.cm".to_string();
         let baz_url = "fuchsia-boot:///#meta/baz.cm".to_string();
@@ -192,6 +229,8 @@ pub mod tests {
         let bar_manifest = make_v2_manifest(bar_id, bar_decl)?;
         let baz_manifest = make_v2_manifest(baz_id, baz_decl)?;
 
+        let zbi = Zbi { ..zbi(None) };
+
         model.set(Components::new(vec![
             root_component,
             foo_component,
@@ -200,12 +239,33 @@ pub mod tests {
         ]))?;
 
         model.set(Manifests::new(vec![root_manifest, foo_manifest, bar_manifest, baz_manifest]))?;
+        model.set(zbi)?;
         Ok(model)
     }
 
+    fn zbi(root_component_url: Option<String>) -> Zbi {
+        let mut bootfs: HashMap<String, Vec<u8>> = HashMap::default();
+        let mut runtime_config = component_internal::Config::EMPTY;
+        runtime_config.root_component_url = root_component_url;
+        bootfs.insert(
+            DEFAULT_CONFIG_PATH.to_string(),
+            fidl::encoding::encode_persistent(&mut runtime_config).unwrap(),
+        );
+        return Zbi { sections: Vec::default(), bootfs, cmdline: "".to_string() };
+    }
+
     #[test]
-    fn single_v2_component() -> Result<()> {
-        let model = single_v2_component_model()?;
+    fn single_v2_component_default_url() -> Result<()> {
+        let model = single_v2_component_model(None)?;
+        V2ComponentTreeDataCollector::new().collect(model.clone())?;
+        let tree = &model.get::<V2ComponentTree>()?.tree;
+        assert_eq!(tree.len(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn single_v2_component_custom_url() -> Result<()> {
+        let model = single_v2_component_model(Some("fuchsia-boot:///#meta/foo.cm".to_string()))?;
         V2ComponentTreeDataCollector::new().collect(model.clone())?;
         let tree = &model.get::<V2ComponentTree>()?.tree;
         assert_eq!(tree.len(), 1);

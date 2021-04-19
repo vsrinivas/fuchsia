@@ -37,8 +37,11 @@ mod tests {
     use {
         super::*,
         crate::{
-            core::collection::{Component, Components, Manifest, ManifestData, Manifests},
-            verify::collection::V2ComponentTree,
+            core::collection::{Component, Components, Manifest, ManifestData, Manifests, Zbi},
+            verify::{
+                collection::V2ComponentTree,
+                collector::component_tree::{DEFAULT_CONFIG_PATH, DEFAULT_ROOT_URL},
+            },
         },
         anyhow::Result,
         cm_fidl_analyzer::{
@@ -52,10 +55,12 @@ mod tests {
             UseProtocolDecl, UseSource,
         },
         fidl::encoding::encode_persistent,
+        fidl_fuchsia_component_internal as component_internal,
         fidl_fuchsia_io2::Operations,
         fidl_fuchsia_sys2 as fsys2,
         scrutiny_testing::fake::*,
         serde_json::json,
+        std::collections::HashMap,
     };
 
     fn data_model() -> Arc<DataModel> {
@@ -153,14 +158,17 @@ mod tests {
         Ok(Manifest { component_id, manifest: ManifestData::Version2(decl_base64), uses: vec![] })
     }
 
-    fn single_v2_component_model() -> Result<Arc<DataModel>> {
+    fn single_v2_component_model(root_component_url: Option<String>) -> Result<Arc<DataModel>> {
         let model = data_model();
         let root_id = 0;
-        let root_component =
-            make_v2_component(root_id, "fuchsia-boot:///#meta/root.cm".to_string());
+        let root_component = make_v2_component(
+            root_id,
+            root_component_url.clone().unwrap_or(DEFAULT_ROOT_URL.to_string()),
+        );
         let root_manifest = make_v2_manifest(root_id, new_component_decl(vec![]))?;
         model.set(Components::new(vec![root_component]))?;
         model.set(Manifests::new(vec![root_manifest]))?;
+        model.set(Zbi { ..zbi(root_component_url) })?;
         Ok(model)
     }
 
@@ -171,7 +179,7 @@ mod tests {
         let bar_id = 2;
         let baz_id = 3;
 
-        let root_url = "fuchsia-boot:///#meta/root.cm".to_string();
+        let root_url = DEFAULT_ROOT_URL.to_string();
         let foo_url = "fuchsia-boot:///#meta/foo.cm".to_string();
         let bar_url = "fuchsia-boot:///#meta/bar.cm".to_string();
         let baz_url = "fuchsia-boot:///#meta/baz.cm".to_string();
@@ -202,6 +210,7 @@ mod tests {
         ]))?;
 
         model.set(Manifests::new(vec![root_manifest, foo_manifest, bar_manifest, baz_manifest]))?;
+        model.set(Zbi { ..zbi(None) })?;
         Ok(model)
     }
 
@@ -259,17 +268,41 @@ mod tests {
         Ok(model)
     }
 
+    fn zbi(root_component_url: Option<String>) -> Zbi {
+        let mut bootfs: HashMap<String, Vec<u8>> = HashMap::default();
+        let mut runtime_config = component_internal::Config::EMPTY;
+        runtime_config.root_component_url = root_component_url;
+        bootfs.insert(
+            DEFAULT_CONFIG_PATH.to_string(),
+            fidl::encoding::encode_persistent(&mut runtime_config).unwrap(),
+        );
+        return Zbi { sections: Vec::default(), bootfs, cmdline: "".to_string() };
+    }
+
     #[test]
-    fn test_map_tree_single_node() -> Result<()> {
-        let model = single_v2_component_model()?;
+    fn test_map_tree_single_node_default_url() -> Result<()> {
+        let model = single_v2_component_model(None)?;
         V2ComponentTreeDataCollector::new().collect(model.clone())?;
 
         let controller = TreeMappingController::default();
         let response = controller.query(model.clone(), json!("{}"))?;
         assert_eq!(
             response,
-            json!({"route": [{"node": "/", "url": "fuchsia-boot:///#meta/root.cm"}]})
+            json!({"route": [{"node": "/", "url": DEFAULT_ROOT_URL.to_string()}]})
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_map_tree_single_node_custom_url() -> Result<()> {
+        let root_url = "fuchsia-boot:///#meta/foo.cm".to_string();
+        let model = single_v2_component_model(Some(root_url.clone()))?;
+        V2ComponentTreeDataCollector::new().collect(model.clone())?;
+
+        let controller = TreeMappingController::default();
+        let response = controller.query(model.clone(), json!("{}"))?;
+        assert_eq!(response, json!({"route": [ {"node": "/", "url": root_url }]}));
 
         Ok(())
     }
@@ -283,12 +316,12 @@ mod tests {
         let response = controller.query(model.clone(), json!("{}"))?;
         assert!(
             (response
-                == json!({"route": [{"node": "/", "url": "fuchsia-boot:///#meta/root.cm"},
+                == json!({"route": [{"node": "/", "url": DEFAULT_ROOT_URL.to_string()},
                                  {"node": "/foo","url": "fuchsia-boot:///#meta/foo.cm"},
                                  {"node": "/bar", "url": "fuchsia-boot:///#meta/bar.cm"},
                                  {"node": "/foo/baz", "url": "fuchsia-boot:///#meta/baz.cm"}]}))
                 | (response
-                    == json!({"route": [{"node": "/", "url": "fuchsia-boot:///#meta/root.cm"},
+                    == json!({"route": [{"node": "/", "url": DEFAULT_ROOT_URL.to_string()},
                                  {"node": "/bar","url": "fuchsia-boot:///#meta/bar.cm"},
                                  {"node": "/foo", "url": "fuchsia-boot:///#meta/foo.cm"},
                                  {"node": "/foo/baz", "url": "fuchsia-boot:///#meta/baz.cm"}]}))
