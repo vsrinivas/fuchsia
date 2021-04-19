@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/fs-management"
+        "binary": "test/fs-management-test"
     },
     "sandbox": {
         "features": [

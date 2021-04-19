@@ -17,8 +17,7 @@ static constexpr uint8_t kGptMagic[] = {0x45, 0x46, 0x49, 0x20, 0x50, 0x41, 0x52
 void CreateEmptyRamdisk(zx::vmo vmo, ramdisk_client **client) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_OK(
-      fdio_service_connect("/svc/fuchsia.fsmanagement.devmgr.IsolatedDevmgr", remote.release()));
+  ASSERT_OK(fdio_service_connect("/svc/fuchsia.test.IsolatedDevmgr", remote.release()));
   int fd;
   fdio_fd_create(local.release(), &fd);
 
@@ -54,7 +53,7 @@ TEST(FormatDetectionTest, TestVbmetaRecognised) {
   ASSERT_OK(zx::vmo::create(2 * ZX_PAGE_SIZE, 0, &vmo));
 
   // Write the vbmeta magic string at the start of the device.
-  const unsigned char kVbmetaMagic[] = {'A','V','B','0'};
+  const unsigned char kVbmetaMagic[] = {'A', 'V', 'B', '0'};
   vmo.write(kVbmetaMagic, /*offset=*/0x0, sizeof(kVbmetaMagic));
 
   // Add the MBR magic string to the end of the first sector. These bytes in
