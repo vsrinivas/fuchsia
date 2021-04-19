@@ -41,22 +41,22 @@
 namespace fidl_test_protocols {
 namespace wire {
 
-enum class obj_type : uint32_t {
+enum class ObjType : uint32_t {
 
-  NONE = 0u,
+  kNone = 0u,
 
-  SOCKET = 14u,
+  kSocket = 14u,
 };
 
-struct WithErrorSyntax_ResponseAsStruct_Response;
+struct WithErrorSyntaxResponseAsStructResponse;
 
-class WithErrorSyntax_ResponseAsStruct_Result;
+class WithErrorSyntaxResponseAsStructResult;
 
-struct WithErrorSyntax_ErrorAsPrimitive_Response;
+struct WithErrorSyntaxErrorAsPrimitiveResponse;
 
-class WithErrorSyntax_ErrorAsPrimitive_Result;
+class WithErrorSyntaxErrorAsPrimitiveResult;
 
-struct WithErrorSyntax_ErrorAsEnum_Response;
+struct WithErrorSyntaxErrorAsEnumResponse;
 }  // namespace wire
 class DiscoverableProtocol;
 
@@ -69,12 +69,12 @@ namespace wire {
 
 enum class ErrorEnun : uint32_t {
 
-  ERR_FOO = 1u,
+  kErrFoo = 1u,
 
-  ERR_BAR = 2u,
+  kErrBar = 2u,
 };
 
-class WithErrorSyntax_ErrorAsEnum_Result;
+class WithErrorSyntaxErrorAsEnumResult;
 }  // namespace wire
 class WithErrorSyntax;
 namespace wire {
@@ -82,21 +82,21 @@ namespace wire {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
 
-class WithErrorSyntax_ResponseAsStruct_Result {
+class WithErrorSyntaxResponseAsStructResult {
  public:
-  WithErrorSyntax_ResponseAsStruct_Result()
+  WithErrorSyntaxResponseAsStructResult()
       : ordinal_(::fidl_test_protocols::wire::
-                     WithErrorSyntax_ResponseAsStruct_Result::Ordinal::Invalid),
+                     WithErrorSyntaxResponseAsStructResult::Ordinal::Invalid),
         envelope_{} {}
 
-  WithErrorSyntax_ResponseAsStruct_Result(
-      const WithErrorSyntax_ResponseAsStruct_Result&) = default;
-  WithErrorSyntax_ResponseAsStruct_Result& operator=(
-      const WithErrorSyntax_ResponseAsStruct_Result&) = default;
-  WithErrorSyntax_ResponseAsStruct_Result(
-      WithErrorSyntax_ResponseAsStruct_Result&&) = default;
-  WithErrorSyntax_ResponseAsStruct_Result& operator=(
-      WithErrorSyntax_ResponseAsStruct_Result&&) = default;
+  WithErrorSyntaxResponseAsStructResult(
+      const WithErrorSyntaxResponseAsStructResult&) = default;
+  WithErrorSyntaxResponseAsStructResult& operator=(
+      const WithErrorSyntaxResponseAsStructResult&) = default;
+  WithErrorSyntaxResponseAsStructResult(
+      WithErrorSyntaxResponseAsStructResult&&) = default;
+  WithErrorSyntaxResponseAsStructResult& operator=(
+      WithErrorSyntaxResponseAsStructResult&&) = default;
 
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
@@ -105,42 +105,42 @@ class WithErrorSyntax_ResponseAsStruct_Result {
 
   bool has_invalid_tag() const {
     return ordinal_ ==
-           ::fidl_test_protocols::wire::
-               WithErrorSyntax_ResponseAsStruct_Result::Ordinal::Invalid;
+           ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
+               Ordinal::Invalid;
   }
 
   bool is_response() const {
     return ordinal_ ==
-           ::fidl_test_protocols::wire::
-               WithErrorSyntax_ResponseAsStruct_Result::Ordinal::kResponse;
+           ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
+               Ordinal::kResponse;
   }
 
-  static WithErrorSyntax_ResponseAsStruct_Result WithResponse(
-      ::fidl::ObjectView<::fidl_test_protocols::wire::
-                             WithErrorSyntax_ResponseAsStruct_Response>
+  static WithErrorSyntaxResponseAsStructResult WithResponse(
+      ::fidl::ObjectView<
+          ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>
           val) {
-    WithErrorSyntax_ResponseAsStruct_Result result;
+    WithErrorSyntaxResponseAsStructResult result;
     result.set_response(val);
     return result;
   }
 
   template <typename... Args>
-  static WithErrorSyntax_ResponseAsStruct_Result WithResponse(
+  static WithErrorSyntaxResponseAsStructResult WithResponse(
       ::fidl::AnyAllocator& allocator, Args&&... args) {
-    WithErrorSyntax_ResponseAsStruct_Result result;
+    WithErrorSyntaxResponseAsStructResult result;
     result.set_response(
         ::fidl::ObjectView<::fidl_test_protocols::wire::
-                               WithErrorSyntax_ResponseAsStruct_Response>(
+                               WithErrorSyntaxResponseAsStructResponse>(
             allocator, std::forward<Args>(args)...));
     return result;
   }
 
   void set_response(
-      ::fidl::ObjectView<::fidl_test_protocols::wire::
-                             WithErrorSyntax_ResponseAsStruct_Response>
+      ::fidl::ObjectView<
+          ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>
           elem) {
     ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntax_ResponseAsStruct_Result::Ordinal::kResponse;
+        WithErrorSyntaxResponseAsStructResult::Ordinal::kResponse;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
@@ -148,49 +148,48 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   template <typename... Args>
   void set_response(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntax_ResponseAsStruct_Result::Ordinal::kResponse;
+        WithErrorSyntaxResponseAsStructResult::Ordinal::kResponse;
     set_response(
         ::fidl::ObjectView<::fidl_test_protocols::wire::
-                               WithErrorSyntax_ResponseAsStruct_Response>(
+                               WithErrorSyntaxResponseAsStructResponse>(
             allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Response&
+  ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse&
   mutable_response() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_protocols::wire::
-                  WithErrorSyntax_ResponseAsStruct_Result::Ordinal::kResponse);
-    return *static_cast<::fidl_test_protocols::wire::
-                            WithErrorSyntax_ResponseAsStruct_Response*>(
+                  WithErrorSyntaxResponseAsStructResult::Ordinal::kResponse);
+    return *static_cast<
+        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>(
         envelope_.data.get());
   }
-  const ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Response&
+  const ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse&
   response() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_protocols::wire::
-                  WithErrorSyntax_ResponseAsStruct_Result::Ordinal::kResponse);
-    return *static_cast<::fidl_test_protocols::wire::
-                            WithErrorSyntax_ResponseAsStruct_Response*>(
+                  WithErrorSyntaxResponseAsStructResult::Ordinal::kResponse);
+    return *static_cast<
+        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>(
         envelope_.data.get());
   }
 
   bool is_err() const {
-    return ordinal_ ==
-           ::fidl_test_protocols::wire::
-               WithErrorSyntax_ResponseAsStruct_Result::Ordinal::kErr;
+    return ordinal_ == ::fidl_test_protocols::wire::
+                           WithErrorSyntaxResponseAsStructResult::Ordinal::kErr;
   }
 
-  static WithErrorSyntax_ResponseAsStruct_Result WithErr(
+  static WithErrorSyntaxResponseAsStructResult WithErr(
       ::fidl::ObjectView<uint32_t> val) {
-    WithErrorSyntax_ResponseAsStruct_Result result;
+    WithErrorSyntaxResponseAsStructResult result;
     result.set_err(val);
     return result;
   }
 
   template <typename... Args>
-  static WithErrorSyntax_ResponseAsStruct_Result WithErr(
+  static WithErrorSyntaxResponseAsStructResult WithErr(
       ::fidl::AnyAllocator& allocator, Args&&... args) {
-    WithErrorSyntax_ResponseAsStruct_Result result;
+    WithErrorSyntaxResponseAsStructResult result;
     result.set_err(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
     return result;
@@ -198,7 +197,7 @@ class WithErrorSyntax_ResponseAsStruct_Result {
 
   void set_err(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntax_ResponseAsStruct_Result::Ordinal::kErr;
+        WithErrorSyntaxResponseAsStructResult::Ordinal::kErr;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
@@ -206,7 +205,7 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   template <typename... Args>
   void set_err(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntax_ResponseAsStruct_Result::Ordinal::kErr;
+        WithErrorSyntaxResponseAsStructResult::Ordinal::kErr;
     set_err(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
@@ -214,20 +213,20 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   uint32_t& mutable_err() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_protocols::wire::
-                  WithErrorSyntax_ResponseAsStruct_Result::Ordinal::kErr);
+                  WithErrorSyntaxResponseAsStructResult::Ordinal::kErr);
     return *static_cast<uint32_t*>(envelope_.data.get());
   }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_protocols::wire::
-                  WithErrorSyntax_ResponseAsStruct_Result::Ordinal::kErr);
+                  WithErrorSyntaxResponseAsStructResult::Ordinal::kErr);
     return *static_cast<uint32_t*>(envelope_.data.get());
   }
-  ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result::Tag
+  ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::Tag
   which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::fidl_test_protocols::wire::
-                           WithErrorSyntax_ResponseAsStruct_Result::Tag>(
+                           WithErrorSyntaxResponseAsStructResult::Tag>(
         ordinal_);
   }
 
@@ -246,7 +245,7 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result::Ordinal
+  ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::Ordinal
       ordinal_;
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
@@ -255,21 +254,21 @@ class WithErrorSyntax_ResponseAsStruct_Result {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 
-class WithErrorSyntax_ErrorAsPrimitive_Result {
+class WithErrorSyntaxErrorAsPrimitiveResult {
  public:
-  WithErrorSyntax_ErrorAsPrimitive_Result()
+  WithErrorSyntaxErrorAsPrimitiveResult()
       : ordinal_(::fidl_test_protocols::wire::
-                     WithErrorSyntax_ErrorAsPrimitive_Result::Ordinal::Invalid),
+                     WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::Invalid),
         envelope_{} {}
 
-  WithErrorSyntax_ErrorAsPrimitive_Result(
-      const WithErrorSyntax_ErrorAsPrimitive_Result&) = default;
-  WithErrorSyntax_ErrorAsPrimitive_Result& operator=(
-      const WithErrorSyntax_ErrorAsPrimitive_Result&) = default;
-  WithErrorSyntax_ErrorAsPrimitive_Result(
-      WithErrorSyntax_ErrorAsPrimitive_Result&&) = default;
-  WithErrorSyntax_ErrorAsPrimitive_Result& operator=(
-      WithErrorSyntax_ErrorAsPrimitive_Result&&) = default;
+  WithErrorSyntaxErrorAsPrimitiveResult(
+      const WithErrorSyntaxErrorAsPrimitiveResult&) = default;
+  WithErrorSyntaxErrorAsPrimitiveResult& operator=(
+      const WithErrorSyntaxErrorAsPrimitiveResult&) = default;
+  WithErrorSyntaxErrorAsPrimitiveResult(
+      WithErrorSyntaxErrorAsPrimitiveResult&&) = default;
+  WithErrorSyntaxErrorAsPrimitiveResult& operator=(
+      WithErrorSyntaxErrorAsPrimitiveResult&&) = default;
 
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
@@ -278,42 +277,42 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
 
   bool has_invalid_tag() const {
     return ordinal_ ==
-           ::fidl_test_protocols::wire::
-               WithErrorSyntax_ErrorAsPrimitive_Result::Ordinal::Invalid;
+           ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
+               Ordinal::Invalid;
   }
 
   bool is_response() const {
     return ordinal_ ==
-           ::fidl_test_protocols::wire::
-               WithErrorSyntax_ErrorAsPrimitive_Result::Ordinal::kResponse;
+           ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
+               Ordinal::kResponse;
   }
 
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(
-      ::fidl::ObjectView<::fidl_test_protocols::wire::
-                             WithErrorSyntax_ErrorAsPrimitive_Response>
+  static WithErrorSyntaxErrorAsPrimitiveResult WithResponse(
+      ::fidl::ObjectView<
+          ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse>
           val) {
-    WithErrorSyntax_ErrorAsPrimitive_Result result;
+    WithErrorSyntaxErrorAsPrimitiveResult result;
     result.set_response(val);
     return result;
   }
 
   template <typename... Args>
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(
+  static WithErrorSyntaxErrorAsPrimitiveResult WithResponse(
       ::fidl::AnyAllocator& allocator, Args&&... args) {
-    WithErrorSyntax_ErrorAsPrimitive_Result result;
+    WithErrorSyntaxErrorAsPrimitiveResult result;
     result.set_response(
         ::fidl::ObjectView<::fidl_test_protocols::wire::
-                               WithErrorSyntax_ErrorAsPrimitive_Response>(
+                               WithErrorSyntaxErrorAsPrimitiveResponse>(
             allocator, std::forward<Args>(args)...));
     return result;
   }
 
   void set_response(
-      ::fidl::ObjectView<::fidl_test_protocols::wire::
-                             WithErrorSyntax_ErrorAsPrimitive_Response>
+      ::fidl::ObjectView<
+          ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse>
           elem) {
     ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntax_ErrorAsPrimitive_Result::Ordinal::kResponse;
+        WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kResponse;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
@@ -321,49 +320,48 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   template <typename... Args>
   void set_response(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntax_ErrorAsPrimitive_Result::Ordinal::kResponse;
+        WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kResponse;
     set_response(
         ::fidl::ObjectView<::fidl_test_protocols::wire::
-                               WithErrorSyntax_ErrorAsPrimitive_Response>(
+                               WithErrorSyntaxErrorAsPrimitiveResponse>(
             allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Response&
+  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse&
   mutable_response() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_protocols::wire::
-                  WithErrorSyntax_ErrorAsPrimitive_Result::Ordinal::kResponse);
-    return *static_cast<::fidl_test_protocols::wire::
-                            WithErrorSyntax_ErrorAsPrimitive_Response*>(
+                  WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kResponse);
+    return *static_cast<
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse*>(
         envelope_.data.get());
   }
-  const ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Response&
+  const ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse&
   response() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_protocols::wire::
-                  WithErrorSyntax_ErrorAsPrimitive_Result::Ordinal::kResponse);
-    return *static_cast<::fidl_test_protocols::wire::
-                            WithErrorSyntax_ErrorAsPrimitive_Response*>(
+                  WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kResponse);
+    return *static_cast<
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse*>(
         envelope_.data.get());
   }
 
   bool is_err() const {
-    return ordinal_ ==
-           ::fidl_test_protocols::wire::
-               WithErrorSyntax_ErrorAsPrimitive_Result::Ordinal::kErr;
+    return ordinal_ == ::fidl_test_protocols::wire::
+                           WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr;
   }
 
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(
+  static WithErrorSyntaxErrorAsPrimitiveResult WithErr(
       ::fidl::ObjectView<uint32_t> val) {
-    WithErrorSyntax_ErrorAsPrimitive_Result result;
+    WithErrorSyntaxErrorAsPrimitiveResult result;
     result.set_err(val);
     return result;
   }
 
   template <typename... Args>
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(
+  static WithErrorSyntaxErrorAsPrimitiveResult WithErr(
       ::fidl::AnyAllocator& allocator, Args&&... args) {
-    WithErrorSyntax_ErrorAsPrimitive_Result result;
+    WithErrorSyntaxErrorAsPrimitiveResult result;
     result.set_err(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
     return result;
@@ -371,7 +369,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
 
   void set_err(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntax_ErrorAsPrimitive_Result::Ordinal::kErr;
+        WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
@@ -379,7 +377,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   template <typename... Args>
   void set_err(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntax_ErrorAsPrimitive_Result::Ordinal::kErr;
+        WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr;
     set_err(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
@@ -387,20 +385,20 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   uint32_t& mutable_err() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_protocols::wire::
-                  WithErrorSyntax_ErrorAsPrimitive_Result::Ordinal::kErr);
+                  WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr);
     return *static_cast<uint32_t*>(envelope_.data.get());
   }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_protocols::wire::
-                  WithErrorSyntax_ErrorAsPrimitive_Result::Ordinal::kErr);
+                  WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr);
     return *static_cast<uint32_t*>(envelope_.data.get());
   }
-  ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result::Tag
+  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::Tag
   which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::fidl_test_protocols::wire::
-                           WithErrorSyntax_ErrorAsPrimitive_Result::Tag>(
+                           WithErrorSyntaxErrorAsPrimitiveResult::Tag>(
         ordinal_);
   }
 
@@ -419,7 +417,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result::Ordinal
+  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::Ordinal
       ordinal_;
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
@@ -428,21 +426,21 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
-class WithErrorSyntax_ErrorAsEnum_Result {
+class WithErrorSyntaxErrorAsEnumResult {
  public:
-  WithErrorSyntax_ErrorAsEnum_Result()
-      : ordinal_(::fidl_test_protocols::wire::
-                     WithErrorSyntax_ErrorAsEnum_Result::Ordinal::Invalid),
+  WithErrorSyntaxErrorAsEnumResult()
+      : ordinal_(::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
+                     Ordinal::Invalid),
         envelope_{} {}
 
-  WithErrorSyntax_ErrorAsEnum_Result(
-      const WithErrorSyntax_ErrorAsEnum_Result&) = default;
-  WithErrorSyntax_ErrorAsEnum_Result& operator=(
-      const WithErrorSyntax_ErrorAsEnum_Result&) = default;
-  WithErrorSyntax_ErrorAsEnum_Result(WithErrorSyntax_ErrorAsEnum_Result&&) =
+  WithErrorSyntaxErrorAsEnumResult(const WithErrorSyntaxErrorAsEnumResult&) =
       default;
-  WithErrorSyntax_ErrorAsEnum_Result& operator=(
-      WithErrorSyntax_ErrorAsEnum_Result&&) = default;
+  WithErrorSyntaxErrorAsEnumResult& operator=(
+      const WithErrorSyntaxErrorAsEnumResult&) = default;
+  WithErrorSyntaxErrorAsEnumResult(WithErrorSyntaxErrorAsEnumResult&&) =
+      default;
+  WithErrorSyntaxErrorAsEnumResult& operator=(
+      WithErrorSyntaxErrorAsEnumResult&&) = default;
 
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
@@ -451,40 +449,39 @@ class WithErrorSyntax_ErrorAsEnum_Result {
 
   bool has_invalid_tag() const {
     return ordinal_ == ::fidl_test_protocols::wire::
-                           WithErrorSyntax_ErrorAsEnum_Result::Ordinal::Invalid;
+                           WithErrorSyntaxErrorAsEnumResult::Ordinal::Invalid;
   }
 
   bool is_response() const {
-    return ordinal_ ==
-           ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
-               Ordinal::kResponse;
+    return ordinal_ == ::fidl_test_protocols::wire::
+                           WithErrorSyntaxErrorAsEnumResult::Ordinal::kResponse;
   }
 
-  static WithErrorSyntax_ErrorAsEnum_Result WithResponse(
+  static WithErrorSyntaxErrorAsEnumResult WithResponse(
       ::fidl::ObjectView<
-          ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>
+          ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>
           val) {
-    WithErrorSyntax_ErrorAsEnum_Result result;
+    WithErrorSyntaxErrorAsEnumResult result;
     result.set_response(val);
     return result;
   }
 
   template <typename... Args>
-  static WithErrorSyntax_ErrorAsEnum_Result WithResponse(
+  static WithErrorSyntaxErrorAsEnumResult WithResponse(
       ::fidl::AnyAllocator& allocator, Args&&... args) {
-    WithErrorSyntax_ErrorAsEnum_Result result;
+    WithErrorSyntaxErrorAsEnumResult result;
     result.set_response(
         ::fidl::ObjectView<
-            ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>(
+            ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>(
             allocator, std::forward<Args>(args)...));
     return result;
   }
 
   void set_response(
       ::fidl::ObjectView<
-          ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>
+          ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>
           elem) {
-    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
+    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
         Ordinal::kResponse;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
@@ -492,49 +489,49 @@ class WithErrorSyntax_ErrorAsEnum_Result {
 
   template <typename... Args>
   void set_response(::fidl::AnyAllocator& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
+    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
         Ordinal::kResponse;
     set_response(
         ::fidl::ObjectView<
-            ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>(
+            ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>(
             allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response&
+  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse&
   mutable_response() {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
+              ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
                   Ordinal::kResponse);
     return *static_cast<
-        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response*>(
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse*>(
         envelope_.data.get());
   }
-  const ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response&
+  const ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse&
   response() const {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
+              ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
                   Ordinal::kResponse);
     return *static_cast<
-        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response*>(
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse*>(
         envelope_.data.get());
   }
 
   bool is_err() const {
     return ordinal_ == ::fidl_test_protocols::wire::
-                           WithErrorSyntax_ErrorAsEnum_Result::Ordinal::kErr;
+                           WithErrorSyntaxErrorAsEnumResult::Ordinal::kErr;
   }
 
-  static WithErrorSyntax_ErrorAsEnum_Result WithErr(
+  static WithErrorSyntaxErrorAsEnumResult WithErr(
       ::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnun> val) {
-    WithErrorSyntax_ErrorAsEnum_Result result;
+    WithErrorSyntaxErrorAsEnumResult result;
     result.set_err(val);
     return result;
   }
 
   template <typename... Args>
-  static WithErrorSyntax_ErrorAsEnum_Result WithErr(
+  static WithErrorSyntaxErrorAsEnumResult WithErr(
       ::fidl::AnyAllocator& allocator, Args&&... args) {
-    WithErrorSyntax_ErrorAsEnum_Result result;
+    WithErrorSyntaxErrorAsEnumResult result;
     result.set_err(::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnun>(
         allocator, std::forward<Args>(args)...));
     return result;
@@ -542,7 +539,7 @@ class WithErrorSyntax_ErrorAsEnum_Result {
 
   void set_err(
       ::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnun> elem) {
-    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
+    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
         Ordinal::kErr;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
@@ -550,31 +547,29 @@ class WithErrorSyntax_ErrorAsEnum_Result {
 
   template <typename... Args>
   void set_err(::fidl::AnyAllocator& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
+    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
         Ordinal::kErr;
     set_err(::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnun>(
         allocator, std::forward<Args>(args)...));
   }
 
   ::fidl_test_protocols::wire::ErrorEnun& mutable_err() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
-                  Ordinal::kErr);
+    ZX_ASSERT(ordinal_ == ::fidl_test_protocols::wire::
+                              WithErrorSyntaxErrorAsEnumResult::Ordinal::kErr);
     return *static_cast<::fidl_test_protocols::wire::ErrorEnun*>(
         envelope_.data.get());
   }
   const ::fidl_test_protocols::wire::ErrorEnun& err() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
-                  Ordinal::kErr);
+    ZX_ASSERT(ordinal_ == ::fidl_test_protocols::wire::
+                              WithErrorSyntaxErrorAsEnumResult::Ordinal::kErr);
     return *static_cast<::fidl_test_protocols::wire::ErrorEnun*>(
         envelope_.data.get());
   }
-  ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::Tag which()
+  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::Tag which()
       const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<
-        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::Tag>(
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::Tag>(
         ordinal_);
   }
 
@@ -593,7 +588,7 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::Ordinal
+  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::Ordinal
       ordinal_;
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
@@ -602,7 +597,7 @@ class WithErrorSyntax_ErrorAsEnum_Result {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
-struct WithErrorSyntax_ResponseAsStruct_Response {
+struct WithErrorSyntaxResponseAsStructResponse {
   static constexpr const fidl_type_t* Type =
       &fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -619,7 +614,7 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          WithErrorSyntax_ResponseAsStruct_Response* value)
+                          WithErrorSyntaxResponseAsStructResponse* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
               .iovec_capacity = ::fidl::internal::IovecBufferSize,
@@ -627,12 +622,12 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
               .backing_buffer_capacity = backing_buffer_size,
           }) {
       if (backing_buffer_size <
-          sizeof(WithErrorSyntax_ResponseAsStruct_Response)) {
+          sizeof(WithErrorSyntaxResponseAsStructResponse)) {
         ::fidl::internal::OutgoingMessageResultSetter::SetResult(
             message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
         return;
       }
-      message_.Encode<WithErrorSyntax_ResponseAsStruct_Response>(value);
+      message_.Encode<WithErrorSyntaxResponseAsStructResponse>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -655,8 +650,7 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
 
   class OwnedEncodedMessage final {
    public:
-    explicit OwnedEncodedMessage(
-        WithErrorSyntax_ResponseAsStruct_Response* value)
+    explicit OwnedEncodedMessage(WithErrorSyntaxResponseAsStructResponse* value)
         : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -686,21 +680,21 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
-      Decode<struct WithErrorSyntax_ResponseAsStruct_Response>();
+      Decode<struct WithErrorSyntaxResponseAsStructResponse>();
     }
     DecodedMessage(fidl_incoming_msg_t* msg)
         : ::fidl::internal::IncomingMessage(msg) {
-      Decode<struct WithErrorSyntax_ResponseAsStruct_Response>();
+      Decode<struct WithErrorSyntaxResponseAsStructResponse>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
     DecodedMessage* operator=(DecodedMessage&&) = delete;
 
-    struct WithErrorSyntax_ResponseAsStruct_Response* PrimaryObject() {
+    struct WithErrorSyntaxResponseAsStructResponse* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<
-          struct WithErrorSyntax_ResponseAsStruct_Response*>(bytes());
+      return reinterpret_cast<struct WithErrorSyntaxResponseAsStructResponse*>(
+          bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
@@ -713,7 +707,7 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
-struct WithErrorSyntax_ErrorAsPrimitive_Response {
+struct WithErrorSyntaxErrorAsPrimitiveResponse {
   static constexpr const fidl_type_t* Type =
       &fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -726,7 +720,7 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          WithErrorSyntax_ErrorAsPrimitive_Response* value)
+                          WithErrorSyntaxErrorAsPrimitiveResponse* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
               .iovec_capacity = ::fidl::internal::IovecBufferSize,
@@ -734,12 +728,12 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
               .backing_buffer_capacity = backing_buffer_size,
           }) {
       if (backing_buffer_size <
-          sizeof(WithErrorSyntax_ErrorAsPrimitive_Response)) {
+          sizeof(WithErrorSyntaxErrorAsPrimitiveResponse)) {
         ::fidl::internal::OutgoingMessageResultSetter::SetResult(
             message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
         return;
       }
-      message_.Encode<WithErrorSyntax_ErrorAsPrimitive_Response>(value);
+      message_.Encode<WithErrorSyntaxErrorAsPrimitiveResponse>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -762,8 +756,7 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
 
   class OwnedEncodedMessage final {
    public:
-    explicit OwnedEncodedMessage(
-        WithErrorSyntax_ErrorAsPrimitive_Response* value)
+    explicit OwnedEncodedMessage(WithErrorSyntaxErrorAsPrimitiveResponse* value)
         : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -793,21 +786,21 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
-      Decode<struct WithErrorSyntax_ErrorAsPrimitive_Response>();
+      Decode<struct WithErrorSyntaxErrorAsPrimitiveResponse>();
     }
     DecodedMessage(fidl_incoming_msg_t* msg)
         : ::fidl::internal::IncomingMessage(msg) {
-      Decode<struct WithErrorSyntax_ErrorAsPrimitive_Response>();
+      Decode<struct WithErrorSyntaxErrorAsPrimitiveResponse>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
     DecodedMessage* operator=(DecodedMessage&&) = delete;
 
-    struct WithErrorSyntax_ErrorAsPrimitive_Response* PrimaryObject() {
+    struct WithErrorSyntaxErrorAsPrimitiveResponse* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<
-          struct WithErrorSyntax_ErrorAsPrimitive_Response*>(bytes());
+      return reinterpret_cast<struct WithErrorSyntaxErrorAsPrimitiveResponse*>(
+          bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
@@ -820,7 +813,7 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
-struct WithErrorSyntax_ErrorAsEnum_Response {
+struct WithErrorSyntaxErrorAsEnumResponse {
   static constexpr const fidl_type_t* Type =
       &fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -833,19 +826,19 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          WithErrorSyntax_ErrorAsEnum_Response* value)
+                          WithErrorSyntaxErrorAsEnumResponse* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
               .iovec_capacity = ::fidl::internal::IovecBufferSize,
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(WithErrorSyntax_ErrorAsEnum_Response)) {
+      if (backing_buffer_size < sizeof(WithErrorSyntaxErrorAsEnumResponse)) {
         ::fidl::internal::OutgoingMessageResultSetter::SetResult(
             message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
         return;
       }
-      message_.Encode<WithErrorSyntax_ErrorAsEnum_Response>(value);
+      message_.Encode<WithErrorSyntaxErrorAsEnumResponse>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -868,7 +861,7 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
 
   class OwnedEncodedMessage final {
    public:
-    explicit OwnedEncodedMessage(WithErrorSyntax_ErrorAsEnum_Response* value)
+    explicit OwnedEncodedMessage(WithErrorSyntaxErrorAsEnumResponse* value)
         : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -898,20 +891,20 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
-      Decode<struct WithErrorSyntax_ErrorAsEnum_Response>();
+      Decode<struct WithErrorSyntaxErrorAsEnumResponse>();
     }
     DecodedMessage(fidl_incoming_msg_t* msg)
         : ::fidl::internal::IncomingMessage(msg) {
-      Decode<struct WithErrorSyntax_ErrorAsEnum_Response>();
+      Decode<struct WithErrorSyntaxErrorAsEnumResponse>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
     DecodedMessage* operator=(DecodedMessage&&) = delete;
 
-    struct WithErrorSyntax_ErrorAsEnum_Response* PrimaryObject() {
+    struct WithErrorSyntaxErrorAsEnumResponse* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct WithErrorSyntax_ErrorAsEnum_Response*>(
+      return reinterpret_cast<struct WithErrorSyntaxErrorAsEnumResponse*>(
           bytes());
     }
 
@@ -8366,10 +8359,9 @@ struct ::fidl::WireResponse<
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result result;
+  ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult result;
   explicit WireResponse(
-      ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result
-          result)
+      ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult result)
       : result(result) {
     _InitHeader();
   }
@@ -8390,7 +8382,7 @@ struct ::fidl::WireResponse<
    public:
     UnownedEncodedMessage(
         uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-        ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result
+        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult
             result)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
@@ -8451,7 +8443,7 @@ struct ::fidl::WireResponse<
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(
-        ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result
+        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult
             result)
         : message_(backing_buffer_.data(), backing_buffer_.size(), result) {}
     explicit OwnedEncodedMessage(
@@ -8670,10 +8662,9 @@ struct ::fidl::WireResponse<
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result result;
+  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result;
   explicit WireResponse(
-      ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result
-          result)
+      ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result)
       : result(result) {
     _InitHeader();
   }
@@ -8694,7 +8685,7 @@ struct ::fidl::WireResponse<
    public:
     UnownedEncodedMessage(
         uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult
             result)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
@@ -8755,7 +8746,7 @@ struct ::fidl::WireResponse<
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(
-        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult
             result)
         : message_(backing_buffer_.data(), backing_buffer_.size(), result) {}
     explicit OwnedEncodedMessage(
@@ -8972,9 +8963,9 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result result;
+  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result;
   explicit WireResponse(
-      ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result result)
+      ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result)
       : result(result) {
     _InitHeader();
   }
@@ -8995,7 +8986,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
    public:
     UnownedEncodedMessage(
         uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result result)
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
               .iovec_capacity = ::fidl::internal::IovecBufferSize,
@@ -9054,7 +9045,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(
-        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result result)
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result)
         : message_(backing_buffer_.data(), backing_buffer_.size(), result) {}
     explicit OwnedEncodedMessage(
         ::fidl::WireResponse<
@@ -9805,13 +9796,13 @@ class ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(
-        ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result
+        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult
             result);
     ::fidl::Result ReplySuccess(int64_t a, int64_t b, int64_t c);
     ::fidl::Result ReplyError(uint32_t error);
     ::fidl::Result Reply(
         ::fidl::BufferSpan _backing_buffer,
-        ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result
+        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult
             result);
     ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int64_t a,
                                 int64_t b, int64_t c);
@@ -9855,13 +9846,13 @@ class ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(
-        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult
             result);
     ::fidl::Result ReplySuccess();
     ::fidl::Result ReplyError(uint32_t error);
     ::fidl::Result Reply(
         ::fidl::BufferSpan _backing_buffer,
-        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult
             result);
     ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer);
 
@@ -9904,12 +9895,12 @@ class ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(
-        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result result);
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result);
     ::fidl::Result ReplySuccess();
     ::fidl::Result ReplyError(::fidl_test_protocols::wire::ErrorEnun error);
     ::fidl::Result Reply(
         ::fidl::BufferSpan _backing_buffer,
-        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result result);
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result);
     ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer);
 
    protected:
@@ -9985,98 +9976,98 @@ class ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_protocols::wire::obj_type>
+struct IsFidlType<::fidl_test_protocols::wire::ObjType>
     : public std::true_type {};
 
 template <>
 struct IsFidlType<
-    ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Response>
+    ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>
     : public std::true_type {};
 template <>
 struct IsStruct<
-    ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Response>
+    ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_protocols::wire::
-                                  WithErrorSyntax_ResponseAsStruct_Response>);
+    std::is_standard_layout_v<
+        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>);
 static_assert(
     offsetof(
-        ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Response,
+        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse,
         a) == 0);
 static_assert(
     offsetof(
-        ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Response,
+        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse,
         b) == 8);
 static_assert(
     offsetof(
-        ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Response,
+        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse,
         c) == 16);
-static_assert(sizeof(::fidl_test_protocols::wire::
-                         WithErrorSyntax_ResponseAsStruct_Response) ==
-              ::fidl_test_protocols::wire::
-                  WithErrorSyntax_ResponseAsStruct_Response::PrimarySize);
+static_assert(
+    sizeof(
+        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse) ==
+    ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse::
+        PrimarySize);
 
 template <>
 struct IsFidlType<
-    ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result>
+    ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult>
     : public std::true_type {};
 template <>
 struct IsUnion<
-    ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result>
+    ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<
-        ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result>);
+        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult>);
 
 template <>
 struct IsFidlType<
-    ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Response>
+    ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse>
     : public std::true_type {};
 template <>
 struct IsStruct<
-    ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Response>
+    ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_protocols::wire::
-                                  WithErrorSyntax_ErrorAsPrimitive_Response>);
+    std::is_standard_layout_v<
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse>);
 static_assert(
     offsetof(
-        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Response,
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse,
         __reserved) == 0);
-static_assert(sizeof(::fidl_test_protocols::wire::
-                         WithErrorSyntax_ErrorAsPrimitive_Response) ==
-              ::fidl_test_protocols::wire::
-                  WithErrorSyntax_ErrorAsPrimitive_Response::PrimarySize);
+static_assert(
+    sizeof(
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse) ==
+    ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse::
+        PrimarySize);
 
 template <>
 struct IsFidlType<
-    ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result>
+    ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>
     : public std::true_type {};
 template <>
 struct IsUnion<
-    ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result>
+    ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<
-        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result>);
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>);
 
 template <>
 struct IsFidlType<
-    ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>
+    ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>
     : public std::true_type {};
 template <>
-struct IsStruct<
-    ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>
+struct IsStruct<::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>
     : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>);
 static_assert(
-    std::is_standard_layout_v<
-        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>);
-static_assert(
-    offsetof(::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response,
+    offsetof(::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse,
              __reserved) == 0);
 static_assert(
-    sizeof(::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response) ==
-    ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response::
+    sizeof(::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse) ==
+    ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse::
         PrimarySize);
 
 template <>
@@ -10535,14 +10526,13 @@ struct IsFidlType<::fidl_test_protocols::wire::ErrorEnun>
     : public std::true_type {};
 
 template <>
-struct IsFidlType<
-    ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result>
+struct IsFidlType<::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>
     : public std::true_type {};
 template <>
-struct IsUnion<::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result>
+struct IsUnion<::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result>);
+              ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>);
 
 template <>
 struct IsFidlType<::fidl::WireRequest<

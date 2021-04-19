@@ -202,7 +202,7 @@ class Controller : public ControllerParent,
   ClientProxy* primary_client_ __TA_GUARDED(mtx()) = nullptr;
   bool primary_ready_ __TA_GUARDED(mtx());
   fuchsia_hardware_display::wire::VirtconMode vc_mode_ __TA_GUARDED(mtx()) =
-      fuchsia_hardware_display::wire::VirtconMode::INACTIVE;
+      fuchsia_hardware_display::wire::VirtconMode::kInactive;
   ClientProxy* active_client_ __TA_GUARDED(mtx()) = nullptr;
 
   async::Loop loop_;

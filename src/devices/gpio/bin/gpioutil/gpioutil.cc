@@ -12,7 +12,7 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
   }
 
   *write_value = 0;
-  *in_flag = fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL;
+  *in_flag = fuchsia_hardware_gpio::wire::GpioFlags::kNoPull;
   *out_value = 0;
   *ds_ua = 0;
   unsigned long flag = 0;

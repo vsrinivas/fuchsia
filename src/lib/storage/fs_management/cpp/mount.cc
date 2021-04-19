@@ -63,8 +63,8 @@ zx_status_t MakeDirAndRemoteMount(const char* path, zx::channel root) {
   if ((status = zx::channel::create(0, &parent, &parent_server)) != ZX_OK) {
     return status;
   }
-  uint32_t flags = fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE |
-                   fio::wire::OPEN_FLAG_DIRECTORY | fio::wire::OPEN_RIGHT_ADMIN;
+  uint32_t flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
+                   fio::wire::kOpenFlagDirectory | fio::wire::kOpenRightAdmin;
   if ((status = fdio_open(parent_path, flags, parent_server.release())) != ZX_OK) {
     return status;
   }
@@ -119,9 +119,9 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
 
   // Extract the handle to the root of the filesystem from the export root. The POSIX flag will
   // cause the writable and executable rights to be inherited (if present).
-  uint32_t flags = fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_FLAG_POSIX;
+  uint32_t flags = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosix;
   if (options->admin)
-    flags |= fio::wire::OPEN_RIGHT_ADMIN;
+    flags |= fio::wire::kOpenRightAdmin;
   auto handle_or = GetFsRootHandle(zx::unowned_channel(export_root), flags);
   if (handle_or.is_error()) {
     return handle_or.status_value();

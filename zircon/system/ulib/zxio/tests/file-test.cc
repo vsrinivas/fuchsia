@@ -196,7 +196,7 @@ TEST_F(File, WaitForReadable) {
   ASSERT_NO_FAILURES(OpenFile());
 
   zxio_signals_t observed = ZX_SIGNAL_NONE;
-  ASSERT_OK(server->event().signal(ZX_SIGNAL_NONE, fuchsia_io::wire::FILE_SIGNAL_READABLE));
+  ASSERT_OK(server->event().signal(ZX_SIGNAL_NONE, fuchsia_io::wire::kFileSignalReadable));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_READABLE, observed);
 }
@@ -207,7 +207,7 @@ TEST_F(File, WaitForWritable) {
   ASSERT_NO_FAILURES(OpenFile());
 
   zxio_signals_t observed = ZX_SIGNAL_NONE;
-  ASSERT_OK(server->event().signal(ZX_SIGNAL_NONE, fuchsia_io::wire::FILE_SIGNAL_WRITABLE));
+  ASSERT_OK(server->event().signal(ZX_SIGNAL_NONE, fuchsia_io::wire::kFileSignalWritable));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_WRITABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_WRITABLE, observed);
 }
@@ -249,11 +249,11 @@ class TestServerChannel final : public TestServerBase {
   }
 
   void Read(uint64_t count, ReadCompleter::Sync& completer) override {
-    if (count > fio::wire::MAX_BUF) {
+    if (count > fio::wire::kMaxBuf) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
     }
-    uint8_t buffer[fio::wire::MAX_BUF];
+    uint8_t buffer[fio::wire::kMaxBuf];
     zx_iovec_t vec = {
         .buffer = buffer,
         .capacity = count,
@@ -268,11 +268,11 @@ class TestServerChannel final : public TestServerBase {
   }
 
   void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync& completer) override {
-    if (count > fio::wire::MAX_BUF) {
+    if (count > fio::wire::kMaxBuf) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
     }
-    uint8_t buffer[fio::wire::MAX_BUF];
+    uint8_t buffer[fio::wire::kMaxBuf];
     zx_iovec_t vec = {
         .buffer = buffer,
         .capacity = count,
@@ -287,7 +287,7 @@ class TestServerChannel final : public TestServerBase {
   }
 
   void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) override {
-    if (data.count() > fio::wire::MAX_BUF) {
+    if (data.count() > fio::wire::kMaxBuf) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
     }
@@ -302,7 +302,7 @@ class TestServerChannel final : public TestServerBase {
 
   void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
                WriteAtCompleter::Sync& completer) override {
-    if (data.count() > fio::wire::MAX_BUF) {
+    if (data.count() > fio::wire::kMaxBuf) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
     }

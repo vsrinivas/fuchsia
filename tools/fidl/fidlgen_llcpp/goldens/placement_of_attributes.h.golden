@@ -49,7 +49,7 @@ struct ExampleStruct;
 
 enum class ExampleEnum : uint32_t {
 
-  MEMBER = 1u,
+  kMember = 1u,
 };
 
 // |ExampleBits| is strict, hence is guaranteed to only contain
@@ -63,7 +63,7 @@ class ExampleBits final {
   // Constructs an instance of |ExampleBits| from an underlying primitive value,
   // preserving any bit member not defined in the FIDL schema.
   explicit constexpr ExampleBits(uint32_t value) : value_(value) {}
-  const static ExampleBits MEMBER;
+  const static ExampleBits kMember;
   const static ExampleBits kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
@@ -104,7 +104,7 @@ class ExampleBits final {
   uint32_t value_ = 0;
 };
 constexpr const ::fidl_test_placementofattributes::wire::ExampleBits
-    ExampleBits::MEMBER =
+    ExampleBits::kMember =
         ::fidl_test_placementofattributes::wire::ExampleBits(1u);
 constexpr const ::fidl_test_placementofattributes::wire::ExampleBits
     ExampleBits::kMask =
@@ -630,7 +630,7 @@ struct ExampleStruct {
   };
 };
 
-constexpr uint32_t EXAMPLE_CONST = 0u;
+constexpr uint32_t kExampleConst = 0u;
 
 }  // namespace wire
 extern "C" const fidl_type_t

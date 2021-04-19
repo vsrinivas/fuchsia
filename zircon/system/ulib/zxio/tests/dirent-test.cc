@@ -76,7 +76,7 @@ class TestServer final : public fidl::WireRawChannelInterface<fio::Directory> {
     size_t actual = 0;
 
     for (; index_ < kEntryCount; index_++) {
-      const size_t name_length = std::min(static_cast<size_t>(index_) + 1, fio::wire::MAX_FILENAME);
+      const size_t name_length = std::min(static_cast<size_t>(index_) + 1, fio::wire::kMaxFilename);
       auto buffer_position = buffer_start + actual;
 
       struct dirent {
@@ -140,7 +140,7 @@ class TestServer final : public fidl::WireRawChannelInterface<fio::Directory> {
 
  private:
   std::atomic<uint32_t> num_close_ = 0;
-  char buffer_[fio::wire::MAX_BUF] = {};
+  char buffer_[fio::wire::kMaxBuf] = {};
   int index_ = 0;
 };
 
@@ -179,7 +179,7 @@ TEST_F(DirentTest, StandardBufferSize) {
     EXPECT_OK(zxio_dirent_iterator_next(&iterator, &entry));
     EXPECT_TRUE(entry->has.id);
     EXPECT_EQ(entry->id, count);
-    const size_t name_length = std::min(static_cast<size_t>(count) + 1, fio::wire::MAX_FILENAME);
+    const size_t name_length = std::min(static_cast<size_t>(count) + 1, fio::wire::kMaxFilename);
     EXPECT_EQ(entry->name_length, name_length);
   }
 

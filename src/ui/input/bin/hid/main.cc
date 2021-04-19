@@ -118,9 +118,9 @@ static zx_status_t parse_input_report_type(const char* arg,
     const char* name;
     fuchsia_hardware_input::wire::ReportType type;
   } LUT[] = {
-      {.name = "in", .type = fuchsia_hardware_input::wire::ReportType::INPUT},
-      {.name = "out", .type = fuchsia_hardware_input::wire::ReportType::OUTPUT},
-      {.name = "feature", .type = fuchsia_hardware_input::wire::ReportType::FEATURE},
+      {.name = "in", .type = fuchsia_hardware_input::wire::ReportType::kInput},
+      {.name = "out", .type = fuchsia_hardware_input::wire::ReportType::kOutput},
+      {.name = "feature", .type = fuchsia_hardware_input::wire::ReportType::kFeature},
   };
 
   for (size_t i = 0; i < std::size(LUT); ++i) {
@@ -256,7 +256,7 @@ static int hid_read_reports(input_args_t* args) {
   }
   report_event = std::move(result->event);
 
-  std::vector<uint8_t> report(fuchsia_hardware_input::wire::MAX_REPORT_LEN);
+  std::vector<uint8_t> report(fuchsia_hardware_input::wire::kMaxReportLen);
   for (uint32_t i = 0; i < args->num_reads; i++) {
     size_t returned_size;
     status =

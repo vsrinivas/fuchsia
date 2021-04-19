@@ -106,8 +106,8 @@ TEST_F(Remote, ServiceGetAttributes) {
   class TestServer : public TestServerBase {
    public:
     void GetAttr(GetAttrCompleter::Sync& completer) override {
-      completer.Reply(
-          ZX_OK, fuchsia_io::wire::NodeAttributes{.mode = fuchsia_io::wire::MODE_TYPE_SERVICE});
+      completer.Reply(ZX_OK,
+                      fuchsia_io::wire::NodeAttributes{.mode = fuchsia_io::wire::kModeTypeService});
     }
   };
   ASSERT_NO_FAILURES(StartServer<TestServer>());

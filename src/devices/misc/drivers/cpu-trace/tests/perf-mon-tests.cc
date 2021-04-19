@@ -127,7 +127,7 @@ TEST_F(Perfmon, BasicCycles) {
 #endif
   config.events[0].event = cycle_event_id;
   config.events[0].rate = 0;
-  config.events[0].flags |= FidlPerfmonEventConfigFlags::COLLECT_OS;
+  config.events[0].flags |= FidlPerfmonEventConfigFlags::kCollectOs;
   ASSERT_OK(device()->PmuStageConfig(&config));
 
   ASSERT_OK(device()->PmuStart());
@@ -147,7 +147,7 @@ TEST_F(Perfmon, OnlyNonCpuCountersSelected) {
   FidlPerfmonConfig config{};
   config.events[0].event = static_cast<perfmon::EventId>(SklMiscEvent::MISC_PKG_EDRAM_TEMP);
   config.events[0].rate = 0;
-  config.events[0].flags |= FidlPerfmonEventConfigFlags::COLLECT_OS;
+  config.events[0].flags |= FidlPerfmonEventConfigFlags::kCollectOs;
   ASSERT_OK(device()->PmuStageConfig(&config));
 
   ASSERT_OK(device()->PmuStart());

@@ -11,5 +11,5 @@ namespace fio = fuchsia_io;
 TEST_F(NamespaceTest, HasMiscData) {
   ExpectExists("/misc");
   ExpectPathSupportsStrictRights("/misc",
-                                 fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE);
+                                 fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable);
 }

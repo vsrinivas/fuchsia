@@ -66,23 +66,23 @@ void LogTester::EmitLog(fuchsia_validate_logs::wire::RecordSpec spec,
   using fuchsia_diagnostics::wire::Severity;
   fx_log_severity_t severity;
   switch (spec.record.severity) {
-    case Severity::TRACE:
+    case Severity::kTrace:
       severity = DDK_LOG_TRACE;
       break;
-    case Severity::DEBUG:
+    case Severity::kDebug:
       zxlogf(INFO, "Got a request to log at debug level -- this would do nothing.");
       severity = DDK_LOG_DEBUG;
       break;
-    case Severity::INFO:
+    case Severity::kInfo:
       severity = DDK_LOG_INFO;
       break;
-    case Severity::WARN:
+    case Severity::kWarn:
       severity = DDK_LOG_WARNING;
       break;
-    case Severity::ERROR:
+    case Severity::kError:
       severity = DDK_LOG_ERROR;
       break;
-    case Severity::FATAL:
+    case Severity::kFatal:
       // DDK doesn't appear to support FATAL logs.
       abort();
       break;

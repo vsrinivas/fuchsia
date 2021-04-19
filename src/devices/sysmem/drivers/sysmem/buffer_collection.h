@@ -102,7 +102,7 @@ class BufferCollection : public Node, public fidl::WireInterface<fuchsia_sysmem:
 
  private:
   using V1CBufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                                             fuchsia_sysmem::wire::BufferCollectionInfo_2>;
+                                             fuchsia_sysmem::wire::BufferCollectionInfo2>;
 
   friend class FidlServer;
 
@@ -132,9 +132,9 @@ class BufferCollection : public Node, public fidl::WireInterface<fuchsia_sysmem:
   fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo> CloneResultForSendingV2(
       const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
 
-  fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2> CloneResultForSendingV1(
+  fit::result<fuchsia_sysmem::wire::BufferCollectionInfo2> CloneResultForSendingV1(
       const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
-  fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2> CloneAuxBuffersResultForSendingV1(
+  fit::result<fuchsia_sysmem::wire::BufferCollectionInfo2> CloneAuxBuffersResultForSendingV1(
       const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
 
   static const fuchsia_sysmem_BufferCollection_ops_t kOps;

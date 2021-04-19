@@ -7,10 +7,10 @@ namespace fidl_test = fidl_test_bitsmemberremove;
 
 // [START contents]
 void use_member(fidl_test::wire::Flags bits) {
-  if (bits & fidl_test::wire::Flags::OPTION_A) {
+  if (bits & fidl_test::wire::Flags::kOptionA) {
     printf("option A is set\n");
   }
-  if (bits & fidl_test::wire::Flags::OPTION_B) {
+  if (bits & fidl_test::wire::Flags::kOptionB) {
     printf("option B is set\n");
   }
   if (bits.has_unknown_bits()) {

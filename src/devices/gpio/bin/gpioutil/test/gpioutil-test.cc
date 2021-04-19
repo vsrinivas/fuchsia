@@ -25,7 +25,7 @@ class FakeGpio : public fidl::WireInterface<Gpio> {
   }
 
   void ConfigIn(fuchsia_hardware_gpio::wire::GpioFlags flags, ConfigInCompleter::Sync& completer) {
-    if (flags != fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL) {
+    if (flags != fuchsia_hardware_gpio::wire::GpioFlags::kNoPull) {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
     }
@@ -118,7 +118,7 @@ TEST_F(GpioUtilTest, ReadTest) {
       0);
   EXPECT_EQ(func, 0);
   EXPECT_EQ(write_value, 0);
-  EXPECT_EQ(in_flag, fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL);
+  EXPECT_EQ(in_flag, fuchsia_hardware_gpio::wire::GpioFlags::kNoPull);
   EXPECT_EQ(out_value, 0);
   EXPECT_EQ(ds_ua, 0);
 
@@ -141,7 +141,7 @@ TEST_F(GpioUtilTest, WriteTest) {
       0);
   EXPECT_EQ(func, 1);
   EXPECT_EQ(write_value, 7);
-  EXPECT_EQ(in_flag, fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL);
+  EXPECT_EQ(in_flag, fuchsia_hardware_gpio::wire::GpioFlags::kNoPull);
   EXPECT_EQ(out_value, 0);
   EXPECT_EQ(ds_ua, 0);
 
@@ -164,7 +164,7 @@ TEST_F(GpioUtilTest, ConfigInTest) {
       0);
   EXPECT_EQ(func, 2);
   EXPECT_EQ(write_value, 0);
-  EXPECT_EQ(in_flag, fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL);
+  EXPECT_EQ(in_flag, fuchsia_hardware_gpio::wire::GpioFlags::kNoPull);
   EXPECT_EQ(out_value, 0);
   EXPECT_EQ(ds_ua, 0);
 
@@ -187,7 +187,7 @@ TEST_F(GpioUtilTest, ConfigOutTest) {
       0);
   EXPECT_EQ(func, 3);
   EXPECT_EQ(write_value, 0);
-  EXPECT_EQ(in_flag, fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL);
+  EXPECT_EQ(in_flag, fuchsia_hardware_gpio::wire::GpioFlags::kNoPull);
   EXPECT_EQ(out_value, 3);
   EXPECT_EQ(ds_ua, 0);
 
@@ -210,7 +210,7 @@ TEST_F(GpioUtilTest, SetDriveStrengthTest) {
       0);
   EXPECT_EQ(func, 4);
   EXPECT_EQ(write_value, 0);
-  EXPECT_EQ(in_flag, fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL);
+  EXPECT_EQ(in_flag, fuchsia_hardware_gpio::wire::GpioFlags::kNoPull);
   EXPECT_EQ(out_value, 0);
   EXPECT_EQ(ds_ua, 2000);
 

@@ -31,7 +31,7 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
   if (status != ZX_OK) {
     return status;
   }
-  uint32_t flags = fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE;
+  uint32_t flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
   return fidl::WireCall(directory)
       .Open(flags, FDIO_CONNECT_MODE, fidl::StringView::FromExternal(path, length),
             std::move(request))

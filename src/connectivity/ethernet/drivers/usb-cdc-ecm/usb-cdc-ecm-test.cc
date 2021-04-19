@@ -164,7 +164,7 @@ class EthernetInterface {
                                    nullptr, &vmo));
     io_buffer_ = static_cast<uint8_t*>(mapper_.start());
     io_buffer_size_ = optimal_vmo_size;
-    auto set_io_buffer_result = ethernet_client_.SetIOBuffer(std::move(vmo));
+    auto set_io_buffer_result = ethernet_client_.SetIoBuffer(std::move(vmo));
     ASSERT_OK(set_io_buffer_result.status());
     auto start_result = ethernet_client_.Start();
     ASSERT_OK(start_result.status());

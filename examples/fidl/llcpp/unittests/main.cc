@@ -14,14 +14,14 @@ using fuchsia_examples::wire::FileMode;
 
 // [START bits]
 TEST(FidlExamples, Bits) {
-  auto flags = FileMode::READ | FileMode::WRITE | FileMode::EXECUTE;
+  auto flags = FileMode::kRead | FileMode::kWrite | FileMode::kExecute;
   ASSERT_EQ(flags, FileMode::kMask);
 }
 // [END bits]
 
 // [START enums]
 TEST(FidlExamples, Enums) {
-  ASSERT_EQ(static_cast<uint32_t>(fuchsia_examples::wire::LocationType::MUSEUM), 1u);
+  ASSERT_EQ(static_cast<uint32_t>(fuchsia_examples::wire::LocationType::kMuseum), 1u);
 }
 // [END enums]
 

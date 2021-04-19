@@ -81,7 +81,7 @@ enum Platforms {
 };
 
 Platforms platform = UNKNOWN_PLATFORM;
-fbl::StringBuffer<sysinfo::wire::BOARD_NAME_LEN> board_name;
+fbl::StringBuffer<sysinfo::wire::kBoardNameLen> board_name;
 
 Platforms GetPlatform();
 void Usage();
@@ -200,7 +200,7 @@ bool update_display_layers(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
 
   for (auto& layer : layers) {
     uint64_t id = layer->id(display.id());
-    if (id != fhd::wire::INVALID_DISP_ID) {
+    if (id != fhd::wire::kInvalidDispId) {
       new_layers.push_back(id);
     }
   }
@@ -234,7 +234,7 @@ bool apply_config() {
     return false;
   }
 
-  if (result->res != fhd::wire::ConfigResult::OK) {
+  if (result->res != fhd::wire::ConfigResult::kOk) {
     printf("Config not valid (%d)\n", static_cast<uint32_t>(result->res));
     for (const auto& op : result->ops) {
       printf("Client composition op (display %ld, layer %ld): %hhu\n", op.display_id, op.layer_id,
@@ -402,7 +402,7 @@ zx_status_t capture_setup() {
 
   // set buffer constraints
   fhd::wire::ImageConfig image_config = {};
-  image_config.type = fhd::wire::TYPE_CAPTURE;
+  image_config.type = fhd::wire::kTypeCapture;
   auto constraints_resp = dc->SetBufferCollectionConstraints(kCollectionId, image_config);
   if (constraints_resp.status() != ZX_OK) {
     printf("Could not set capture constraints %s\n", constraints_resp.error());
@@ -427,20 +427,20 @@ zx_status_t capture_setup() {
 
   // finally setup our constraints
   sysmem::wire::BufferCollectionConstraints constraints = {};
-  constraints.usage.cpu = sysmem::wire::cpuUsageReadOften | sysmem::wire::cpuUsageWriteOften;
+  constraints.usage.cpu = sysmem::wire::kCpuUsageReadOften | sysmem::wire::kCpuUsageWriteOften;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
   constraints.buffer_memory_constraints.ram_domain_supported = true;
   constraints.image_format_constraints_count = 1;
   sysmem::wire::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
   if (platform == AMLOGIC_PLATFORM) {
-    image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGR24;
+    image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgr24;
   } else {
-    image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
+    image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgra32;
   }
   image_constraints.color_spaces_count = 1;
   image_constraints.color_space[0] = sysmem::wire::ColorSpace{
-      .type = sysmem::wire::ColorSpaceType::SRGB,
+      .type = sysmem::wire::ColorSpaceType::kSrgb,
   };
   image_constraints.min_coded_width = 0;
   image_constraints.max_coded_width = std::numeric_limits<uint32_t>::max();
@@ -949,8 +949,7 @@ int main(int argc, const char* argv[]) {
   fbl::AllocChecker ac;
   if (testbundle == INTEL) {
     // Intel only supports 90/270 rotation for Y-tiled images, so enable it for testing.
-    constexpr uint64_t kIntelYTilingModifier =
-        fuchsia_sysmem::wire::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+    constexpr uint64_t kIntelYTilingModifier = fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled;
 
     // Color layer which covers all displays
     std::unique_ptr<ColorLayer> layer0 = fbl::make_unique_checked<ColorLayer>(&ac, displays);
@@ -1065,7 +1064,7 @@ int main(int argc, const char* argv[]) {
     }
     layer1->SetLayerFlipping(true);
     if (enable_compression) {
-      layer1->SetFormatModifier(fuchsia_sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16);
+      layer1->SetFormatModifier(fuchsia_sysmem::wire::kFormatModifierArmAfbc16X16);
     }
     layers.push_back(std::move(layer1));
   } else if (testbundle == SIMPLE) {
@@ -1078,7 +1077,7 @@ int main(int argc, const char* argv[]) {
     }
 
     if (enable_compression) {
-      layer1->SetFormatModifier(fuchsia_sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16);
+      layer1->SetFormatModifier(fuchsia_sysmem::wire::kFormatModifierArmAfbc16X16);
     }
     if (apply_config_once) {
       max_apply_configs = 1;

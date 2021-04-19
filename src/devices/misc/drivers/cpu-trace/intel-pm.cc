@@ -195,10 +195,10 @@ zx_status_t PerfmonDevice::StageFixedConfig(const FidlPerfmonConfig* icfg, Stagi
   }
 
   unsigned enable = 0;
-  if (flags & FidlPerfmonEventConfigFlags::COLLECT_OS) {
+  if (flags & FidlPerfmonEventConfigFlags::kCollectOs) {
     enable |= FIXED_CTR_ENABLE_OS;
   }
-  if (flags & FidlPerfmonEventConfigFlags::COLLECT_USER) {
+  if (flags & FidlPerfmonEventConfigFlags::kCollectUser) {
     enable |= FIXED_CTR_ENABLE_USR;
   }
   ocfg->fixed_ctrl |= enable << IA32_FIXED_CTR_CTRL_EN_SHIFT(counter);
@@ -207,10 +207,10 @@ zx_status_t PerfmonDevice::StageFixedConfig(const FidlPerfmonConfig* icfg, Stagi
   if (uses_timebase) {
     ocfg->fixed_flags[ss->num_fixed] |= kPmuConfigFlagUsesTimebase;
   }
-  if (flags & FidlPerfmonEventConfigFlags::COLLECT_PC) {
+  if (flags & FidlPerfmonEventConfigFlags::kCollectPc) {
     ocfg->fixed_flags[ss->num_fixed] |= kPmuConfigFlagPc;
   }
-  if (flags & FidlPerfmonEventConfigFlags::COLLECT_LAST_BRANCH) {
+  if (flags & FidlPerfmonEventConfigFlags::kCollectLastBranch) {
     if (!LbrSupported(pmu_hw_properties())) {
       zxlogf(ERROR, "%s: Last branch not supported, event [%u]", __func__, ii);
       return ZX_ERR_INVALID_ARGS;
@@ -279,10 +279,10 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const FidlPerfmonConfig* icfg
   uint64_t evtsel = 0;
   evtsel |= details->event << IA32_PERFEVTSEL_EVENT_SELECT_SHIFT;
   evtsel |= details->umask << IA32_PERFEVTSEL_UMASK_SHIFT;
-  if (flags & FidlPerfmonEventConfigFlags::COLLECT_OS) {
+  if (flags & FidlPerfmonEventConfigFlags::kCollectOs) {
     evtsel |= IA32_PERFEVTSEL_OS_MASK;
   }
-  if (flags & FidlPerfmonEventConfigFlags::COLLECT_USER) {
+  if (flags & FidlPerfmonEventConfigFlags::kCollectUser) {
     evtsel |= IA32_PERFEVTSEL_USR_MASK;
   }
   if (details->flags & IPM_REG_FLAG_EDG) {
@@ -307,10 +307,10 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const FidlPerfmonConfig* icfg
   if (uses_timebase) {
     ocfg->programmable_flags[ss->num_programmable] |= kPmuConfigFlagUsesTimebase;
   }
-  if (flags & FidlPerfmonEventConfigFlags::COLLECT_PC) {
+  if (flags & FidlPerfmonEventConfigFlags::kCollectPc) {
     ocfg->programmable_flags[ss->num_programmable] |= kPmuConfigFlagPc;
   }
-  if (flags & FidlPerfmonEventConfigFlags::COLLECT_LAST_BRANCH) {
+  if (flags & FidlPerfmonEventConfigFlags::kCollectLastBranch) {
     if (!LbrSupported(pmu_hw_properties())) {
       zxlogf(ERROR, "%s: Last branch not supported, event [%u]", __func__, ii);
       return ZX_ERR_INVALID_ARGS;

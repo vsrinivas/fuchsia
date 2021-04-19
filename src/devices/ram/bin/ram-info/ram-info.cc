@@ -126,13 +126,13 @@ void CsvPrinter::Print(const ram_metrics::wire::BandwidthInfo& info) const {
   }
 }
 
-zx::status<std::array<uint64_t, ram_metrics::wire::MAX_COUNT_CHANNELS>> ParseChannelString(
+zx::status<std::array<uint64_t, ram_metrics::wire::kMaxCountChannels>> ParseChannelString(
     std::string_view str) {
   if (str[0] == '\0') {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  std::array<uint64_t, ram_metrics::wire::MAX_COUNT_CHANNELS> channels = {};
+  std::array<uint64_t, ram_metrics::wire::kMaxCountChannels> channels = {};
   std::string_view next_channel = str;
 
   for (uint64_t& channel : channels) {

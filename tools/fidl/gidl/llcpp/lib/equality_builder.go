@@ -218,10 +218,10 @@ func (b *equalityCheckBuilder) visitUnion(actualExpr fidlExpr, expectedValue gid
 	if !ok {
 		panic(fmt.Sprintf("field %s not found", field.Key.Name))
 	}
-	actualFieldExpr := fidlSprintf("%s.%s()", actualVar, field.Key.Name)
+	actualFieldExpr := fidlSprintf("%s.%s()", actualVar, fidlgen.ToSnakeCase(field.Key.Name))
 	fieldEquality := b.visit(actualFieldExpr, field.Value, fieldDecl)
-	return boolSprintf("(%s.which() == %s::Tag::k%s && %s)",
-		actualVar, declName(decl), fidlgen.ToUpperCamelCase(field.Key.Name), fieldEquality)
+	return boolSprintf("(%s.which() == %s::Tag::%s && %s)",
+		actualVar, declName(decl), fidlgen.ConstNameToKCamelCase(field.Key.Name), fieldEquality)
 }
 
 func (b *equalityCheckBuilder) visitList(actualExpr fidlExpr, expectedValue []interface{}, decl gidlmixer.ListDeclaration) boolExpr {

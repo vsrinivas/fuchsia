@@ -158,16 +158,16 @@ TEST_F(MultipleDeviceTestCase, UnbindThenResume) {
   zx_txid_t txid;
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(device(child_index)->controller_remote, &txid));
 
-  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::FULLY_ON));
+  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::kFullyOn));
 
   ASSERT_NO_FATAL_FAILURES(
-      CheckResumeReceived(sys_proxy_controller_remote_, SystemPowerState::FULLY_ON, ZX_OK));
+      CheckResumeReceived(sys_proxy_controller_remote_, SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   ASSERT_NO_FATAL_FAILURES(
-      CheckResumeReceived(platform_bus_controller_remote(), SystemPowerState::FULLY_ON, ZX_OK));
+      CheckResumeReceived(platform_bus_controller_remote(), SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(device(parent_index)->controller_remote,
-                                               SystemPowerState::FULLY_ON, ZX_OK));
+                                               SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(SendUnbindReply(device(child_index)->controller_remote, txid));
@@ -199,18 +199,18 @@ TEST_F(MultipleDeviceTestCase, ResumeThenUnbind) {
   device(parent_index)->device->set_state(Device::State::kSuspended);
   device(child_index)->device->set_state(Device::State::kSuspended);
 
-  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::FULLY_ON));
+  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::kFullyOn));
 
   zx_txid_t txid;
   ASSERT_NO_FATAL_FAILURES(
-      CheckResumeReceived(sys_proxy_controller_remote_, SystemPowerState::FULLY_ON, ZX_OK));
+      CheckResumeReceived(sys_proxy_controller_remote_, SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   ASSERT_NO_FATAL_FAILURES(
-      CheckResumeReceived(platform_bus_controller_remote(), SystemPowerState::FULLY_ON, ZX_OK));
+      CheckResumeReceived(platform_bus_controller_remote(), SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   // Don't reply to the resume yet.
   ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(device(parent_index)->controller_remote,
-                                               SystemPowerState::FULLY_ON, &txid));
+                                               SystemPowerState::kFullyOn, &txid));
   ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(device(parent_index)->device));
   coordinator_loop()->RunUntilIdle();
 
@@ -222,7 +222,7 @@ TEST_F(MultipleDeviceTestCase, ResumeThenUnbind) {
 
   // The Child should have started resuming now. Complete resume of child.
   ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(device(child_index)->controller_remote,
-                                               SystemPowerState::FULLY_ON, ZX_OK));
+                                               SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   // Since the resume is complete, unbinding the child should start now.
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(device(child_index)->controller_remote));
@@ -254,7 +254,7 @@ TEST_F(MultipleDeviceTestCase, SuspendThenResume) {
 
   // This should return without scheduling resume tasks since suspend is in
   // progress.
-  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::FULLY_ON));
+  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::kFullyOn));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(SendSuspendReply(device(child_index)->controller_remote, ZX_OK, txid));
@@ -288,19 +288,19 @@ TEST_F(MultipleDeviceTestCase, ResumeThenSuspend) {
   device(parent_index)->device->set_state(Device::State::kSuspended);
   device(child_index)->device->set_state(Device::State::kSuspended);
 
-  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::FULLY_ON));
+  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::kFullyOn));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(
-      CheckResumeReceived(sys_proxy_controller_remote_, SystemPowerState::FULLY_ON, ZX_OK));
+      CheckResumeReceived(sys_proxy_controller_remote_, SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   ASSERT_NO_FATAL_FAILURES(
-      CheckResumeReceived(platform_bus_controller_remote(), SystemPowerState::FULLY_ON, ZX_OK));
+      CheckResumeReceived(platform_bus_controller_remote(), SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   // Dont reply yet for the resume
   zx_txid_t txid;
   ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(device(parent_index)->controller_remote,
-                                               SystemPowerState::FULLY_ON, &txid));
+                                               SystemPowerState::kFullyOn, &txid));
   coordinator_loop()->RunUntilIdle();
 
   const uint32_t flags = DEVICE_SUSPEND_FLAG_SUSPEND_RAM;
@@ -311,7 +311,7 @@ TEST_F(MultipleDeviceTestCase, ResumeThenSuspend) {
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(device(child_index)->controller_remote,
-                                               SystemPowerState::FULLY_ON, ZX_OK));
+                                               SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   ASSERT_FALSE(DeviceHasPendingMessages(device(parent_index)->controller_remote));
   ASSERT_FALSE(DeviceHasPendingMessages(device(child_index)->controller_remote));
@@ -341,7 +341,7 @@ TEST_F(MultipleDeviceTestCase, DISABLED_ResumeTimeout) {
     resume_received_event.signal(0, ZX_USER_SIGNAL_0);
   };
 
-  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::FULLY_ON, std::move(callback)));
+  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::kFullyOn, std::move(callback)));
 
   // Dont reply for sys proxy resume. we should timeout
   async::Wait resume_task_sys_proxy(
@@ -349,7 +349,7 @@ TEST_F(MultipleDeviceTestCase, DISABLED_ResumeTimeout) {
       [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
         zx_txid_t txid;
         ASSERT_NO_FATAL_FAILURES(
-            CheckResumeReceived(sys_proxy_controller_remote_, SystemPowerState::FULLY_ON, &txid));
+            CheckResumeReceived(sys_proxy_controller_remote_, SystemPowerState::kFullyOn, &txid));
       });
   ASSERT_OK(resume_task_sys_proxy.Begin(driver_host_loop.dispatcher()));
 
@@ -415,7 +415,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl) {
   auto response = fidl::WireCall<fuchsia_device_manager::SystemStateTransition>(
                       zx::unowned_channel(system_state_transition_client.get()))
                       .SetTerminationSystemState(
-                          fuchsia_hardware_power_statecontrol::wire::SystemPowerState::POWEROFF);
+                          fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kPoweroff);
 
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
@@ -424,7 +424,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl) {
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(coordinator().shutdown_system_state(),
-            fuchsia_hardware_power_statecontrol::wire::SystemPowerState::POWEROFF);
+            fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kPoweroff);
 }
 
 TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
@@ -448,7 +448,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
   auto response = fidl::WireCall<fuchsia_device_manager::SystemStateTransition>(
                       zx::unowned_channel(channel.get()))
                       .SetTerminationSystemState(
-                          fuchsia_hardware_power_statecontrol::wire::SystemPowerState::MEXEC);
+                          fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kMexec);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -456,7 +456,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(coordinator().shutdown_system_state(),
-            fuchsia_hardware_power_statecontrol::wire::SystemPowerState::MEXEC);
+            fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kMexec);
 }
 
 TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
@@ -475,7 +475,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
   auto response = fidl::WireCall<fuchsia_device_manager::SystemStateTransition>(
                       zx::unowned_channel(system_state_transition_client.get()))
                       .SetTerminationSystemState(
-                          fuchsia_hardware_power_statecontrol::wire::SystemPowerState::FULLY_ON);
+                          fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kFullyOn);
 
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
@@ -485,7 +485,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
   ASSERT_EQ(call_status, ZX_ERR_INVALID_ARGS);
   // Default shutdown_system_state in test is MEXEC.
   ASSERT_EQ(coordinator().shutdown_system_state(),
-            fuchsia_hardware_power_statecontrol::wire::SystemPowerState::MEXEC);
+            fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kMexec);
 }
 
 TEST_F(MultipleDeviceTestCase, PowerManagerRegistration) {
@@ -521,7 +521,7 @@ TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
   // Create the watcher and make sure it's been registered.
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_OK(devfs_watch(root_node, std::move(remote), fuchsia_io::wire::WATCH_MASK_ADDED));
+  ASSERT_OK(devfs_watch(root_node, std::move(remote), fuchsia_io::wire::kWatchMaskAdded));
   ASSERT_TRUE(devfs_has_watchers(root_node));
 
   // Free our channel and make sure it gets de-registered.

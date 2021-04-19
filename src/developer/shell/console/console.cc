@@ -104,7 +104,7 @@ void Console::WaitForInterruptAsynchronously() {
           events = result->events;
         }
         WaitForInterruptAsynchronously();
-        if (events & fpty::wire::EVENT_INTERRUPT) {
+        if (events & fpty::wire::kEventInterrupt) {
           if (should_read_) {
             line_input_.OnInput(line_input::SpecialCharacters::kKeyControlC);
           } else {

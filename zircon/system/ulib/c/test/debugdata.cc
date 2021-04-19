@@ -185,9 +185,9 @@ TEST(DebugDataTests, LoadConfigWithoutSvc) {
 TEST(DebugDataTests, ConfirmMatchingFuchsiaIODefinitions) {
   namespace fio = fuchsia_io;
 
-  ASSERT_EQ(fuchsia_io_MAX_PATH, fio::wire::MAX_PATH);
-  ASSERT_EQ(fuchsia_io_OPEN_RIGHT_READABLE, fio::wire::OPEN_RIGHT_READABLE);
-  ASSERT_EQ(fuchsia_io_OPEN_RIGHT_WRITABLE, fio::wire::OPEN_RIGHT_WRITABLE);
+  ASSERT_EQ(fuchsia_io_MAX_PATH, fio::wire::kMaxPath);
+  ASSERT_EQ(fuchsia_io_OPEN_RIGHT_READABLE, fio::wire::kOpenRightReadable);
+  ASSERT_EQ(fuchsia_io_OPEN_RIGHT_WRITABLE, fio::wire::kOpenRightWritable);
 
   // LLCPP doesn't expose the ordinal, so we have to dig into internals to assert this.
   fidl::WireRequest<fio::Directory::Open> for_ordinal(zx_txid_t(0));

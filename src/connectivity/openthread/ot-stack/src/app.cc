@@ -106,7 +106,7 @@ void OtStackApp::UpdateClientInboundAllowance() {
 void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer) {
   if (!app_.connected_to_device_) {
     FX_LOGS(ERROR) << "ot-radio not connected when client called Open()";
-    completer.ReplyError(fidl_spinel::wire::Error::UNSPECIFIED);
+    completer.ReplyError(fidl_spinel::wire::Error::kUnspecified);
     app_.Shutdown();
     return;
   }
@@ -129,14 +129,14 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer
 void OtStackApp::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync& completer) {
   if (!app_.connected_to_device_) {
     FX_LOGS(ERROR) << "ot-radio not connected";
-    completer.ReplyError(fidl_spinel::wire::Error::UNSPECIFIED);
+    completer.ReplyError(fidl_spinel::wire::Error::kUnspecified);
     app_.Shutdown();
     return;
   }
   auto fidl_result = app_.device_client_ptr_->Close();
   if (fidl_result.status() != ZX_OK) {
     FX_LOGS(ERROR) << "FIDL error while sending req to ot-radio";
-    completer.ReplyError(fidl_spinel::wire::Error::UNSPECIFIED);
+    completer.ReplyError(fidl_spinel::wire::Error::kUnspecified);
     app_.Shutdown();
     return;
   }
@@ -539,7 +539,7 @@ void OtStackApp::OnError(fidl::WireResponse<fidl_spinel::Device::OnError>* event
 }
 
 zx_status_t OtStackApp::Unknown() {
-  (*binding_)->OnError(fidl_spinel::wire::Error::IO_ERROR, true);
+  (*binding_)->OnError(fidl_spinel::wire::Error::kIoError, true);
   DisconnectDevice();
   return ZX_ERR_IO;
 }

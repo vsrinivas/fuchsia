@@ -32,7 +32,7 @@ TEST_F(InterpreterTest, NoPendingInstruction) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kAnalysisError, context->result);
 
   std::string error_result = context->error_stream.str();
   ASSERT_EQ("No pending instruction to execute.\n", error_result);
@@ -51,7 +51,7 @@ TEST_F(InterpreterTest, GlobalExpression) {
 
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kAnalysisError, context->result);
 
   std::string error_result = context->error_stream.str();
   ASSERT_EQ("Node 1:1 can't be a root node.\n", error_result);
@@ -69,7 +69,7 @@ TEST_F(InterpreterTest, BadAst) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kAnalysisError, context->result);
 
   std::string error_result = context->error_stream.str();
   ASSERT_EQ("Pending AST nodes for execution context 1.\n", error_result);
@@ -212,7 +212,7 @@ TEST_F(InterpreterTest, Objects) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 
   CHECK_RESULT(0, "{}");
   CHECK_RESULT(1, "{alpha: uint64(4), beta: uint64(5)}");
@@ -243,7 +243,7 @@ TEST_F(InterpreterTest, VariableOk) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 
   CHECK_RESULT(0, "1");
   CHECK_RESULT(1, "10");
@@ -264,7 +264,7 @@ TEST_F(InterpreterTest, VariableNoType) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
 
   Finish(kExecute);
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kAnalysisError, context->result);
 
   std::string error_result = context->error_stream.str();
   ASSERT_EQ(
@@ -286,7 +286,7 @@ TEST_F(InterpreterTest, VariableDefinedTwice) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
 
   Finish(kExecute);
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kAnalysisError, context->result);
 
   std::string error_result = context->error_stream.str();
   ASSERT_EQ(
@@ -340,7 +340,7 @@ TEST_F(InterpreterTest, BadIntegerLiterals) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
 
   Finish(kExecute);
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR, context->result);
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kAnalysisError, context->result);
 
   std::string error_result = context->error_stream.str();
   ASSERT_EQ(
@@ -410,5 +410,5 @@ TEST_F(InterpreterTest, GoodIntegerLiterals) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 }

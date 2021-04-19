@@ -92,7 +92,7 @@ zx_status_t AudioDeviceStream::WatchPlugState(
   }
 
   if (prop->properties.plug_detect_capabilities() ==
-      audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY) {
+      audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify) {
     out_state->plug_state_time = state->plug_state.plug_state_time();
     out_state->flags = state->plug_state.plugged() ? AUDIO_PDNF_PLUGGED : 0;
     out_state->flags |= AUDIO_PDNF_CAN_NOTIFY;
@@ -251,7 +251,7 @@ zx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second, uint16_t ch
   audio_fidl::wire::PcmFormat pcm_format = {};
   pcm_format.number_of_channels = static_cast<uint8_t>(channel_cnt_);
   pcm_format.channels_to_use_bitmask = channels_to_use_bitmask;
-  pcm_format.sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
+  pcm_format.sample_format = audio_fidl::wire::SampleFormat::kPcmSigned;
   pcm_format.frame_rate = frames_per_second;
   pcm_format.bytes_per_sample = channel_size_ / 8;
   pcm_format.valid_bits_per_sample = sample_size_;

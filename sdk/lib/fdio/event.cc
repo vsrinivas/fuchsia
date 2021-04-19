@@ -21,8 +21,8 @@
 
 namespace fio2 = fuchsia_io2;
 
-#define FDIO_EVENT_READABLE static_cast<zx_signals_t>(fio2::wire::DeviceSignal::READABLE)
-#define FDIO_EVENT_WRITABLE static_cast<zx_signals_t>(fio2::wire::DeviceSignal::WRITABLE)
+#define FDIO_EVENT_READABLE static_cast<zx_signals_t>(fio2::wire::DeviceSignal::kReadable)
+#define FDIO_EVENT_WRITABLE static_cast<zx_signals_t>(fio2::wire::DeviceSignal::kWritable)
 
 // An implementation of a POSIX eventfd.
 struct fdio_event_t {

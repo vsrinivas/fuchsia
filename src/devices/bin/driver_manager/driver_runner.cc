@@ -278,20 +278,20 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
                     fidl::ServerEnd<fdf::Node> node, AddChildCompleter::Sync& completer) {
   if (!args.has_name()) {
     LOGF(ERROR, "Failed to add Node, a name must be provided");
-    completer.ReplyError(fdf::wire::NodeError::NAME_MISSING);
+    completer.ReplyError(fdf::wire::NodeError::kNameMissing);
     return;
   }
   auto name = args.name().get();
   if (name.find('.') != std::string_view::npos) {
     LOGF(ERROR, "Failed to add Node '%.*s', name must not contain '.'", name.size(), name.data());
-    completer.ReplyError(fdf::wire::NodeError::NAME_INVALID);
+    completer.ReplyError(fdf::wire::NodeError::kNameInvalid);
     return;
   }
   for (auto& child : children_) {
     if (child.name() == name) {
       LOGF(ERROR, "Failed to add Node '%.*s', name already exists among siblings", name.size(),
            name.data());
-      completer.ReplyError(fdf::wire::NodeError::NAME_ALREADY_EXISTS);
+      completer.ReplyError(fdf::wire::NodeError::kNameAlreadyExists);
       return;
     }
   }
@@ -305,7 +305,7 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
       if (!inserted) {
         LOGF(ERROR, "Failed to add Node '%.*s', offer '%.*s' already exists", name.size(),
              name.data(), offer.size(), offer.data());
-        completer.ReplyError(fdf::wire::NodeError::OFFER_ALREADY_EXISTS);
+        completer.ReplyError(fdf::wire::NodeError::kOfferAlreadyExists);
         return;
       }
       child->offers_.emplace_back(child->allocator_, offer.get());
@@ -319,20 +319,20 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
       if (!symbol.has_name()) {
         LOGF(ERROR, "Failed to add Node '%.*s', a symbol is missing a name", name.size(),
              name.data());
-        completer.ReplyError(fdf::wire::NodeError::SYMBOL_NAME_MISSING);
+        completer.ReplyError(fdf::wire::NodeError::kSymbolNameMissing);
         return;
       }
       if (!symbol.has_address()) {
         LOGF(ERROR, "Failed to add Node '%.*s', symbol '%.*s' is missing an address", name.size(),
              name.data(), symbol.name().size(), symbol.name().data());
-        completer.ReplyError(fdf::wire::NodeError::SYMBOL_ADDRESS_MISSING);
+        completer.ReplyError(fdf::wire::NodeError::kSymbolAddressMissing);
         return;
       }
       auto inserted = names.emplace(symbol.name().data(), symbol.name().size()).second;
       if (!inserted) {
         LOGF(ERROR, "Failed to add Node '%.*s', symbol '%.*s' already exists", name.size(),
              name.data(), symbol.name().size(), symbol.name().data());
-        completer.ReplyError(fdf::wire::NodeError::SYMBOL_ALREADY_EXISTS);
+        completer.ReplyError(fdf::wire::NodeError::kSymbolAlreadyExists);
         return;
       }
       fdf::wire::NodeSymbol node_symbol(child->allocator_);
@@ -602,7 +602,7 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
   fsys::wire::ChildDecl child_decl(allocator);
   child_decl.set_name(allocator, fidl::StringView::FromExternal(name))
       .set_url(allocator, fidl::StringView::FromExternal(url))
-      .set_startup(allocator, fsys::wire::StartupMode::LAZY);
+      .set_startup(allocator, fsys::wire::StartupMode::kLazy);
   auto create = realm_->CreateChild(
       fsys::wire::CollectionRef{.name = fidl::StringView::FromExternal(collection)},
       std::move(child_decl), std::move(create_callback));

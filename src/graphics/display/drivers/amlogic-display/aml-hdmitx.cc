@@ -226,34 +226,34 @@ void AmlHdmitx::ConfigHdmitx(const DisplayMode& mode, const hdmi_param_tx& p) {
 
   // setup video input mapping
   hdmi_data = 0;
-  if (mode.color().input_color_format == ColorFormat::CF_RGB) {
+  if (mode.color().input_color_format == ColorFormat::kCfRgb) {
     switch (mode.color().color_depth) {
-      case ColorDepth::CD_24B:
+      case ColorDepth::kCd24B:
         hdmi_data |= TX_INVID0_VM_RGB444_8B;
         break;
-      case ColorDepth::CD_30B:
+      case ColorDepth::kCd30B:
         hdmi_data |= TX_INVID0_VM_RGB444_10B;
         break;
-      case ColorDepth::CD_36B:
+      case ColorDepth::kCd36B:
         hdmi_data |= TX_INVID0_VM_RGB444_12B;
         break;
-      case ColorDepth::CD_48B:
+      case ColorDepth::kCd48B:
       default:
         hdmi_data |= TX_INVID0_VM_RGB444_16B;
         break;
     }
-  } else if (mode.color().input_color_format == ColorFormat::CF_444) {
+  } else if (mode.color().input_color_format == ColorFormat::kCf444) {
     switch (mode.color().color_depth) {
-      case ColorDepth::CD_24B:
+      case ColorDepth::kCd24B:
         hdmi_data |= TX_INVID0_VM_YCBCR444_8B;
         break;
-      case ColorDepth::CD_30B:
+      case ColorDepth::kCd30B:
         hdmi_data |= TX_INVID0_VM_YCBCR444_10B;
         break;
-      case ColorDepth::CD_36B:
+      case ColorDepth::kCd36B:
         hdmi_data |= TX_INVID0_VM_YCBCR444_12B;
         break;
-      case ColorDepth::CD_48B:
+      case ColorDepth::kCd48B:
       default:
         hdmi_data |= TX_INVID0_VM_YCBCR444_16B;
         break;
@@ -372,7 +372,7 @@ void AmlHdmitx::ConfigHdmitx(const DisplayMode& mode, const hdmi_param_tx& p) {
   // Frame Composer AVI Packet config (set active_format_present bit)
   // aviconf0 populates Table 10 of CEA spec (AVI InfoFrame Data Byte 1)
   // Y1Y0 = 00 for RGB, 10 for 444
-  if (mode.color().output_color_format == ColorFormat::CF_RGB) {
+  if (mode.color().output_color_format == ColorFormat::kCfRgb) {
     hdmi_data = FC_AVICONF0_RGB;
   } else {
     hdmi_data = FC_AVICONF0_444;
@@ -512,7 +512,7 @@ void AmlHdmitx::ConfigCsc(const DisplayMode& mode) {
 
   // First determine whether we need to convert or not
   if (mode.color().input_color_format != mode.color().output_color_format) {
-    if (mode.color().input_color_format == ColorFormat::CF_RGB) {
+    if (mode.color().input_color_format == ColorFormat::kCfRgb) {
       // from RGB
       csc_coef_a1_msb = 0x25;
       csc_coef_a1_lsb = 0x91;
@@ -529,19 +529,19 @@ void AmlHdmitx::ConfigCsc(const DisplayMode& mode) {
       csc_coef_b3_msb = 0xFA;
       csc_coef_b3_lsb = 0xCC;
       switch (mode.color().color_depth) {
-        case ColorDepth::CD_24B:
+        case ColorDepth::kCd24B:
           csc_coef_b4_msb = 0x02;
           csc_coef_b4_lsb = 0x00;
           csc_coef_c4_msb = 0x02;
           csc_coef_c4_lsb = 0x00;
           break;
-        case ColorDepth::CD_30B:
+        case ColorDepth::kCd30B:
           csc_coef_b4_msb = 0x08;
           csc_coef_b4_lsb = 0x00;
           csc_coef_c4_msb = 0x08;
           csc_coef_c4_lsb = 0x00;
           break;
-        case ColorDepth::CD_36B:
+        case ColorDepth::kCd36B:
           csc_coef_b4_msb = 0x20;
           csc_coef_b4_lsb = 0x00;
           csc_coef_c4_msb = 0x20;
@@ -575,7 +575,7 @@ void AmlHdmitx::ConfigCsc(const DisplayMode& mode) {
       csc_coef_b3_msb = 0x00;
       csc_coef_b3_lsb = 0x00;
       switch (mode.color().color_depth) {
-        case ColorDepth::CD_24B:
+        case ColorDepth::kCd24B:
           csc_coef_a4_msb = 0x00;
           csc_coef_a4_lsb = 0x87;
           csc_coef_b4_msb = 0xff;
@@ -583,7 +583,7 @@ void AmlHdmitx::ConfigCsc(const DisplayMode& mode) {
           csc_coef_c4_msb = 0xff;
           csc_coef_c4_lsb = 0x1e;
           break;
-        case ColorDepth::CD_30B:
+        case ColorDepth::kCd30B:
           csc_coef_a4_msb = 0x02;
           csc_coef_a4_lsb = 0x1d;
           csc_coef_b4_msb = 0xfd;
@@ -591,7 +591,7 @@ void AmlHdmitx::ConfigCsc(const DisplayMode& mode) {
           csc_coef_c4_msb = 0xfc;
           csc_coef_c4_lsb = 0x75;
           break;
-        case ColorDepth::CD_36B:
+        case ColorDepth::kCd36B:
           csc_coef_a4_msb = 0x08;
           csc_coef_a4_lsb = 0x77;
           csc_coef_b4_msb = 0xf4;

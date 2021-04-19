@@ -46,17 +46,17 @@ KeyboardWatcher main_watcher;
 
 int modifiers_from_fuchsia_key(fuchsia_input::wire::Key key) {
   switch (key) {
-    case fuchsia_input::wire::Key::LEFT_SHIFT:
+    case fuchsia_input::wire::Key::kLeftShift:
       return MOD_LSHIFT;
-    case fuchsia_input::wire::Key::RIGHT_SHIFT:
+    case fuchsia_input::wire::Key::kRightShift:
       return MOD_RSHIFT;
-    case fuchsia_input::wire::Key::LEFT_ALT:
+    case fuchsia_input::wire::Key::kLeftAlt:
       return MOD_LALT;
-    case fuchsia_input::wire::Key::RIGHT_ALT:
+    case fuchsia_input::wire::Key::kRightAlt:
       return MOD_RALT;
-    case fuchsia_input::wire::Key::LEFT_CTRL:
+    case fuchsia_input::wire::Key::kLeftCtrl:
       return MOD_LCTRL;
-    case fuchsia_input::wire::Key::RIGHT_CTRL:
+    case fuchsia_input::wire::Key::kRightCtrl:
       return MOD_RCTRL;
     default:
       return 0;
@@ -128,7 +128,7 @@ void Keyboard::SetCapsLockLed(bool caps_lock) {
   fidl::VectorView<fuchsia_input_report::wire::LedType> led_view;
   if (caps_lock) {
     led_view = fidl::VectorView<fuchsia_input_report::wire::LedType>(allocator, 1);
-    led_view[0] = fuchsia_input_report::wire::LedType::CAPS_LOCK;
+    led_view[0] = fuchsia_input_report::wire::LedType::kCapsLock;
   }
 
   fuchsia_input_report::wire::KeyboardOutputReport keyboard_report(allocator);
@@ -174,7 +174,7 @@ void Keyboard::ProcessInput(const fuchsia_input_report::wire::InputReport& repor
   for (fuchsia_input::wire::Key key : report.keyboard().pressed_keys3()) {
     if (!is_key_in_set(key, last_pressed_keys)) {
       modifiers_ |= modifiers_from_fuchsia_key(key);
-      if (key == fuchsia_input::wire::Key::CAPS_LOCK) {
+      if (key == fuchsia_input::wire::Key::kCapsLock) {
         modifiers_ ^= MOD_CAPSLOCK;
         SetCapsLockLed(modifiers_ & MOD_CAPSLOCK);
       }
@@ -200,7 +200,7 @@ void Keyboard::ProcessInput(const fuchsia_input_report::wire::InputReport& repor
 }
 
 void Keyboard::InputCallback(
-    fuchsia_input_report::wire::InputReportsReader_ReadInputReports_Result result) {
+    fuchsia_input_report::wire::InputReportsReaderReadInputReportsResult result) {
   if (result.is_err()) {
     printf("vc: InputCallback returns error: %d!\n", result.err());
     return;
@@ -275,7 +275,7 @@ zx_status_t Keyboard::Setup(
 }
 
 zx_status_t KeyboardWatcher::OpenFile(uint8_t evt, char* name) {
-  if ((evt != fio::wire::WATCH_EVENT_EXISTING) && (evt != fio::wire::WATCH_EVENT_ADDED)) {
+  if ((evt != fio::wire::kWatchEventExisting) && (evt != fio::wire::kWatchEventAdded)) {
     return ZX_OK;
   }
 
@@ -319,7 +319,7 @@ void KeyboardWatcher::DirCallback(async_dispatcher_t* dispatcher, async::WaitBas
   // Buffer contains events { Opcode, Len, Name[Len] }
   // See zircon/device/vfs.h for more detail
   // extra byte is for temporary NUL
-  std::array<uint8_t, fio::wire::MAX_BUF + 1> buffer;
+  std::array<uint8_t, fio::wire::kMaxBuf + 1> buffer;
   uint32_t len;
   if (zx_channel_read(wait->object(), 0, buffer.data(), nullptr, buffer.size() - 1, 0, &len,
                       nullptr) < 0) {
@@ -366,8 +366,8 @@ zx_status_t KeyboardWatcher::Setup(async_dispatcher_t* dispatcher, keypress_hand
 
   dir_caller_ = fdio_cpp::FdioCaller(std::move(fd));
 
-  auto result = fidl::WireCall(dir_caller_.directory())
-                    .Watch(fio::wire::WATCH_MASK_ALL, 0, std::move(server));
+  auto result =
+      fidl::WireCall(dir_caller_.directory()).Watch(fio::wire::kWatchMaskAll, 0, std::move(server));
   if (result.status() != ZX_OK) {
     return result.status();
   }

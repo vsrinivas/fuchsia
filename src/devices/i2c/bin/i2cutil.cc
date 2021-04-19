@@ -107,8 +107,8 @@ static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> 
     usage(argv[0]);
     return -1;
   }
-  if (n_segments > fuchsia_hardware_i2c::wire::MAX_COUNT_SEGMENTS) {
-    printf("No more than %u segments allowed\n", fuchsia_hardware_i2c::wire::MAX_COUNT_SEGMENTS);
+  if (n_segments > fuchsia_hardware_i2c::wire::kMaxCountSegments) {
+    printf("No more than %u segments allowed\n", fuchsia_hardware_i2c::wire::kMaxCountSegments);
     return -1;
   }
 

@@ -43,19 +43,8 @@ func (cv ConstantValue) String() string {
 func (c *compiler) compileConstant(val fidlgen.Constant, t *Type, typ fidlgen.Type) ConstantValue {
 	switch val.Kind {
 	case fidlgen.IdentifierConstant:
-		ci := fidlgen.ParseCompoundIdentifier(val.Identifier)
-		if len(ci.Member) > 0 {
-			member := changeIfReserved(ci.Member)
-			ci.Member = ""
-			dn := c.compileNameVariants(ci.Encode())
-			return ConstantValue{
-				Natural: dn.Natural.String() + "::" + member,
-				Wire:    dn.Wire.String() + "::" + member,
-			}
-		} else {
-			dn := c.compileNameVariants(val.Identifier)
-			return ConstantValue{Natural: dn.Natural.String(), Wire: dn.Wire.String()}
-		}
+		n := c.compileNameVariants(val.Identifier)
+		return ConstantValue{Natural: n.Natural.String(), Wire: n.Wire.String()}
 	case fidlgen.LiteralConstant:
 		lit := c.compileLiteral(val.Literal, typ)
 		return ConstantValue{Natural: lit, Wire: lit}

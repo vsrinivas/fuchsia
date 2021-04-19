@@ -125,10 +125,10 @@ zx_status_t PerfmonDevice::StageFixedConfig(const FidlPerfmonConfig* icfg, Stagi
   }
 
   uint32_t pmu_flags = 0;
-  if (flags & fidl_perfmon::wire::EventConfigFlags::COLLECT_OS) {
+  if (flags & fidl_perfmon::wire::EventConfigFlags::kCollectOs) {
     pmu_flags |= kPmuConfigFlagOs;
   }
-  if (flags & fidl_perfmon::wire::EventConfigFlags::COLLECT_USER) {
+  if (flags & fidl_perfmon::wire::EventConfigFlags::kCollectUser) {
     pmu_flags |= kPmuConfigFlagUser;
   }
   // TODO(fxbug.dev/33106): PC flag.
@@ -202,10 +202,10 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const FidlPerfmonConfig* icfg
   }
 
   uint32_t pmu_flags = 0;
-  if (flags & fidl_perfmon::wire::EventConfigFlags::COLLECT_OS) {
+  if (flags & fidl_perfmon::wire::EventConfigFlags::kCollectOs) {
     pmu_flags |= kPmuConfigFlagOs;
   }
-  if (flags & fidl_perfmon::wire::EventConfigFlags::COLLECT_USER) {
+  if (flags & fidl_perfmon::wire::EventConfigFlags::kCollectUser) {
     pmu_flags |= kPmuConfigFlagUser;
   }
   // TODO(fxbug.dev/33106): PC flag.

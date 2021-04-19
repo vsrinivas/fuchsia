@@ -65,7 +65,7 @@ uint32_t ImageFormatStrideBytesPerWidthPixel(const fuchsia_sysmem_PixelFormat* p
 // This would be height * stride, if it weren't for formats like NV12, where it
 // isn't.  The return value is in bytes.
 uint64_t ImageFormatImageSize(const fuchsia_sysmem2::wire::ImageFormat& image_format);
-uint64_t ImageFormatImageSize(const fuchsia_sysmem::wire::ImageFormat_2& image_format);
+uint64_t ImageFormatImageSize(const fuchsia_sysmem::wire::ImageFormat2& image_format);
 uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format);
 
 uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem2::wire::PixelFormat& pixel_format);
@@ -112,7 +112,7 @@ bool ImageFormatConvertZxToSysmem(zx_pixel_format_t zx_pixel_format,
 fit::result<fuchsia_sysmem2::wire::ImageFormat> ImageConstraintsToFormat(
     fidl::AnyAllocator& allocator, const fuchsia_sysmem2::wire::ImageFormatConstraints& constraints,
     uint32_t width, uint32_t height);
-fit::result<fuchsia_sysmem::wire::ImageFormat_2> ImageConstraintsToFormat(
+fit::result<fuchsia_sysmem::wire::ImageFormat2> ImageConstraintsToFormat(
     const fuchsia_sysmem::wire::ImageFormatConstraints& constraints, uint32_t width,
     uint32_t height);
 bool ImageConstraintsToFormat(const fuchsia_sysmem_ImageFormatConstraints* constraints,
@@ -121,14 +121,14 @@ bool ImageConstraintsToFormat(const fuchsia_sysmem_ImageFormatConstraints* const
 
 bool ImageFormatPlaneByteOffset(const fuchsia_sysmem2::wire::ImageFormat& image_format,
                                 uint32_t plane, uint64_t* offset_out);
-bool ImageFormatPlaneByteOffset(const fuchsia_sysmem::wire::ImageFormat_2& image_format,
+bool ImageFormatPlaneByteOffset(const fuchsia_sysmem::wire::ImageFormat2& image_format,
                                 uint32_t plane, uint64_t* offset_out);
 bool ImageFormatPlaneByteOffset(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
                                 uint64_t* offset_out);
 
 bool ImageFormatPlaneRowBytes(const fuchsia_sysmem2::wire::ImageFormat& image_format,
                               uint32_t plane, uint32_t* row_bytes_out);
-bool ImageFormatPlaneRowBytes(const fuchsia_sysmem::wire::ImageFormat_2& image_format,
+bool ImageFormatPlaneRowBytes(const fuchsia_sysmem::wire::ImageFormat2& image_format,
                               uint32_t plane, uint32_t* row_bytes_out);
 bool ImageFormatPlaneRowBytes(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
                               uint32_t* row_bytes);

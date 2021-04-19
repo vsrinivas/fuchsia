@@ -24,15 +24,15 @@
 #include "src/devices/cpu/drivers/aml-cpu-legacy/aml-cpu-legacy-bind.h"
 
 namespace {
-using fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES;
-using fuchsia_hardware_thermal::wire::MAX_DVFS_DOMAINS;
+using fuchsia_device::wire::kMaxDevicePerformanceStates;
+using fuchsia_hardware_thermal::wire::kMaxDvfsDomains;
 using fuchsia_hardware_thermal::wire::PowerDomain;
 
 constexpr zx_off_t kCpuVersionOffset = 0x220;
 
 uint16_t PstateToOperatingPoint(const uint32_t pstate, const size_t n_operating_points) {
   ZX_ASSERT(pstate < n_operating_points);
-  ZX_ASSERT(n_operating_points < MAX_DEVICE_PERFORMANCE_STATES);
+  ZX_ASSERT(n_operating_points < kMaxDevicePerformanceStates);
 
   // Operating points are indexed 0 to N-1.
   return static_cast<uint16_t>(n_operating_points - pstate - 1);
@@ -68,8 +68,8 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   // Initialize an array with the maximum possible number of PStates since we
   // determine the actual number of PStates at runtime by querying the thermal
   // driver.
-  device_performance_state_info_t perf_states[MAX_DEVICE_PERFORMANCE_STATES];
-  for (size_t i = 0; i < MAX_DEVICE_PERFORMANCE_STATES; i++) {
+  device_performance_state_info_t perf_states[kMaxDevicePerformanceStates];
+  for (size_t i = 0; i < kMaxDevicePerformanceStates; i++) {
     perf_states[i].state_id = static_cast<uint8_t>(i);
     perf_states[i].restore_latency = 0;
   }
@@ -138,7 +138,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   // has been called.
   {
     bool found_nonempty_domain = false;
-    for (size_t i = 0; i < MAX_DVFS_DOMAINS; i++) {
+    for (size_t i = 0; i < kMaxDvfsDomains; i++) {
       if (info->opps[i].count > 0) {
         found_nonempty_domain = true;
         break;
@@ -170,7 +170,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   }
 
   // Create an AmlCpu for each power domain with nonempty operating points.
-  for (size_t i = 0; i < MAX_DVFS_DOMAINS; i++) {
+  for (size_t i = 0; i < kMaxDvfsDomains; i++) {
     const fuchsia_thermal::wire::OperatingPoint& opps = info->opps[i];
 
     // If this domain is empty, don't create a driver.
@@ -178,7 +178,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
       continue;
     }
 
-    if (opps.count > MAX_DEVICE_PERFORMANCE_STATES) {
+    if (opps.count > kMaxDevicePerformanceStates) {
       zxlogf(ERROR, "aml-cpu: cpu power domain %zu has more operating points than we support\n", i);
       return ZX_ERR_INTERNAL;
     }

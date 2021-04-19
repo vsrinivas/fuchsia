@@ -1122,9 +1122,9 @@ zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
 
   std::lock_guard lock(mutex_);
 
-  if (flags & fuchsia_io::wire::VMO_FLAG_WRITE) {
+  if (flags & fuchsia_io::wire::kVmoFlagWrite) {
     return ZX_ERR_NOT_SUPPORTED;
-  } else if (flags & fuchsia_io::wire::VMO_FLAG_EXACT) {
+  } else if (flags & fuchsia_io::wire::kVmoFlagExact) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -1133,8 +1133,8 @@ zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   // We can ignore fuchsia_io_VMO_FLAG_PRIVATE, since private / shared access
   // to the underlying VMO can both be satisfied with a clone due to
   // the immutability of blobfs blobs.
-  rights |= (flags & fuchsia_io::wire::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
-  rights |= (flags & fuchsia_io::wire::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+  rights |= (flags & fuchsia_io::wire::kVmoFlagRead) ? ZX_RIGHT_READ : 0;
+  rights |= (flags & fuchsia_io::wire::kVmoFlagExec) ? ZX_RIGHT_EXECUTE : 0;
   return CloneDataVmo(rights, out_vmo, out_size);
 }
 

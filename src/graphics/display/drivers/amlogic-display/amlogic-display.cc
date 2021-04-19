@@ -155,7 +155,7 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
     return result->status;
   }
 
-  sysmem::wire::BufferCollectionInfo_2& collection_info = result->buffer_collection_info;
+  sysmem::wire::BufferCollectionInfo2& collection_info = result->buffer_collection_info;
 
   if (!collection_info.settings.has_image_format_constraints ||
       index >= collection_info.buffer_count) {
@@ -169,8 +169,8 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
       collection_info.settings.image_format_constraints.pixel_format.format_modifier.value;
 
   switch (format_modifier) {
-    case sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16:
-    case sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_TE: {
+    case sysmem::wire::kFormatModifierArmAfbc16X16:
+    case sysmem::wire::kFormatModifierArmAfbc16X16Te: {
       // AFBC does not use canvas.
       uint64_t offset = collection_info.buffers[index].vmo_usable_start;
       size_t size =
@@ -192,8 +192,8 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
       import_info->image_width = image->width;
       import_info->is_afbc = true;
     } break;
-    case sysmem::wire::FORMAT_MODIFIER_LINEAR:
-    case sysmem::wire::FORMAT_MODIFIER_ARM_LINEAR_TE: {
+    case sysmem::wire::kFormatModifierLinear:
+    case sysmem::wire::kFormatModifierArmLinearTe: {
       uint32_t minimum_row_bytes;
       if (!image_format::GetMinimumRowBytes(collection_info.settings.image_format_constraints,
                                             image->width, &minimum_row_bytes)) {
@@ -485,9 +485,9 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   sysmem::wire::BufferCollectionConstraints constraints = {};
   const char* buffer_name;
   if (config->type == IMAGE_TYPE_CAPTURE) {
-    constraints.usage.cpu = sysmem::wire::cpuUsageReadOften | sysmem::wire::cpuUsageWriteOften;
+    constraints.usage.cpu = sysmem::wire::kCpuUsageReadOften | sysmem::wire::kCpuUsageWriteOften;
   } else {
-    constraints.usage.display = sysmem::wire::displayUsageLayer;
+    constraints.usage.display = sysmem::wire::kDisplayUsageLayer;
   }
   constraints.has_buffer_memory_constraints = true;
   sysmem::wire::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
@@ -497,8 +497,8 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.cpu_domain_supported = false;
   buffer_constraints.inaccessible_domain_supported = true;
   buffer_constraints.heap_permitted_count = 2;
-  buffer_constraints.heap_permitted[0] = sysmem::wire::HeapType::SYSTEM_RAM;
-  buffer_constraints.heap_permitted[1] = sysmem::wire::HeapType::AMLOGIC_SECURE;
+  buffer_constraints.heap_permitted[0] = sysmem::wire::HeapType::kSystemRam;
+  buffer_constraints.heap_permitted[1] = sysmem::wire::HeapType::kAmlogicSecure;
   constraints.image_format_constraints_count = config->type == IMAGE_TYPE_CAPTURE ? 1 : 4;
   for (uint32_t i = 0; i < constraints.image_format_constraints_count; i++) {
     sysmem::wire::ImageFormatConstraints& image_constraints =
@@ -506,11 +506,11 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
 
     image_constraints.pixel_format.has_format_modifier = true;
     image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::SRGB;
+    image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::kSrgb;
     if (config->type == IMAGE_TYPE_CAPTURE) {
       ZX_DEBUG_ASSERT(i == 0);
-      image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGR24;
-      image_constraints.pixel_format.format_modifier.value = sysmem::wire::FORMAT_MODIFIER_LINEAR;
+      image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgr24;
+      image_constraints.pixel_format.format_modifier.value = sysmem::wire::kFormatModifierLinear;
       image_constraints.min_coded_width = vout_->display_width();
       image_constraints.max_coded_width = vout_->display_width();
       image_constraints.min_coded_height = vout_->display_height();
@@ -528,24 +528,24 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
       ZX_DEBUG_ASSERT(i <= 3);
       switch (i) {
         case 0:
-          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
+          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgra32;
           image_constraints.pixel_format.format_modifier.value =
-              sysmem::wire::FORMAT_MODIFIER_LINEAR;
+              sysmem::wire::kFormatModifierLinear;
           break;
         case 1:
-          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
+          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgra32;
           image_constraints.pixel_format.format_modifier.value =
-              sysmem::wire::FORMAT_MODIFIER_ARM_LINEAR_TE;
+              sysmem::wire::kFormatModifierArmLinearTe;
           break;
         case 2:
-          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::R8G8B8A8;
+          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kR8G8B8A8;
           image_constraints.pixel_format.format_modifier.value =
-              sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16;
+              sysmem::wire::kFormatModifierArmAfbc16X16;
           break;
         case 3:
-          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::R8G8B8A8;
+          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kR8G8B8A8;
           image_constraints.pixel_format.format_modifier.value =
-              sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_TE;
+              sysmem::wire::kFormatModifierArmAfbc16X16Te;
           break;
       }
       buffer_name = "Display";
@@ -598,7 +598,7 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_h
     return result->status;
   }
 
-  sysmem::wire::BufferCollectionInfo_2& collection_info = result->buffer_collection_info;
+  sysmem::wire::BufferCollectionInfo2& collection_info = result->buffer_collection_info;
 
   if (!collection_info.settings.has_image_format_constraints ||
       index >= collection_info.buffer_count) {
@@ -607,7 +607,7 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_h
 
   // Ensure the proper format
   ZX_DEBUG_ASSERT(collection_info.settings.image_format_constraints.pixel_format.type ==
-                  sysmem::wire::PixelFormatType::BGR24);
+                  sysmem::wire::PixelFormatType::kBgr24);
 
   // Allocate a canvas for the capture image
   canvas_info_t canvas_info = {};

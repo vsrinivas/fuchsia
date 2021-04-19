@@ -50,11 +50,11 @@ void StreamFileConnection::Read(uint64_t count, ReadCompleter::Sync& completer) 
     completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
     return;
   }
-  if (count > fio::wire::MAX_BUF) {
+  if (count > fio::wire::kMaxBuf) {
     completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
     return;
   }
-  uint8_t data[fio::wire::MAX_BUF];
+  uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
   zx_iovec_t vector = {
       .buffer = data,
@@ -77,11 +77,11 @@ void StreamFileConnection::ReadAt(uint64_t count, uint64_t offset,
     completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
     return;
   }
-  if (count > fio::wire::MAX_BUF) {
+  if (count > fio::wire::kMaxBuf) {
     completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
     return;
   }
-  uint8_t data[fio::wire::MAX_BUF];
+  uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
 
   zx_iovec_t vector = {

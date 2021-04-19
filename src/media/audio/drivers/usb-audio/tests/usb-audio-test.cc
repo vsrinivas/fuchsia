@@ -22,7 +22,7 @@ audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
   audio_fidl::wire::PcmFormat format;
   format.number_of_channels = 2;
   format.channels_to_use_bitmask = 0x03;
-  format.sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
+  format.sample_format = audio_fidl::wire::SampleFormat::kPcmSigned;
   format.frame_rate = 48'000;
   format.bytes_per_sample = 2;
   format.valid_bits_per_sample = 16;
@@ -283,7 +283,7 @@ TEST(UsbAudioTest, GetStreamProperties) {
   ASSERT_EQ(result->properties.can_mute(), true);
   ASSERT_EQ(result->properties.can_agc(), false);
   ASSERT_EQ(result->properties.plug_detect_capabilities(),
-            audio_fidl::wire::PlugDetectCapabilities::HARDWIRED);
+            audio_fidl::wire::PlugDetectCapabilities::kHardwired);
 
   fake_device.DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
@@ -339,7 +339,7 @@ TEST(UsbAudioTest, Enumerate) {
   auto& formats1 = supported_formats[0].pcm_supported_formats();
   ASSERT_EQ(1, formats1.number_of_channels.count());
   ASSERT_EQ(1, formats1.sample_formats.count());
-  ASSERT_EQ(audio_fidl::wire::SampleFormat::PCM_SIGNED, formats1.sample_formats[0]);
+  ASSERT_EQ(audio_fidl::wire::SampleFormat::kPcmSigned, formats1.sample_formats[0]);
   ASSERT_EQ(1, formats1.frame_rates.count());
   ASSERT_EQ(48'000, formats1.frame_rates[0]);
   ASSERT_EQ(1, formats1.bytes_per_sample.count());
@@ -350,7 +350,7 @@ TEST(UsbAudioTest, Enumerate) {
   auto& formats2 = supported_formats[1].pcm_supported_formats();
   ASSERT_EQ(1, formats2.number_of_channels.count());
   ASSERT_EQ(1, formats2.sample_formats.count());
-  ASSERT_EQ(audio_fidl::wire::SampleFormat::PCM_SIGNED, formats2.sample_formats[0]);
+  ASSERT_EQ(audio_fidl::wire::SampleFormat::kPcmSigned, formats2.sample_formats[0]);
   ASSERT_EQ(1, formats2.frame_rates.count());
   ASSERT_EQ(44'100, formats2.frame_rates[0]);
   ASSERT_EQ(1, formats2.bytes_per_sample.count());

@@ -25,7 +25,7 @@ zx_status_t Service::GetAttributes(VnodeAttributes* attr) {
   // TODO(fxbug.dev/31095): V_TYPE_FILE isn't right, we should use a type for services
   *attr = VnodeAttributes();
   attr->mode = V_TYPE_FILE;
-  attr->inode = fio::wire::INO_UNKNOWN;
+  attr->inode = fio::wire::kInoUnknown;
   attr->link_count = 1;
   return ZX_OK;
 }

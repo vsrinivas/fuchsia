@@ -697,9 +697,9 @@ zx_status_t VnodeMinfs::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) 
     info->free_shared_pool_bytes = fvm_info.slice_size * free_slices;
   }
 
-  static_assert(kFsName.size() + 1 < fuchsia_io::wire::MAX_FS_NAME_BUFFER, "Minfs name too long");
+  static_assert(kFsName.size() + 1 < fuchsia_io::wire::kMaxFsNameBuffer, "Minfs name too long");
   info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
-                          fuchsia_io::wire::MAX_FS_NAME_BUFFER - 1)] = '\0';
+                          fuchsia_io::wire::kMaxFsNameBuffer - 1)] = '\0';
   return ZX_OK;
 }
 

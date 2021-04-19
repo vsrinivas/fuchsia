@@ -600,8 +600,8 @@ zx_status_t InsntraceDevice::X86PtAllocBuffer(const BufferConfig* config,
 
   // TODO(dje): insntrace.fidl can't use vectors (yet) so the address ranges
   // are individually spelled out.
-  static_assert(fuchsia_insntrace::wire::MAX_NUM_ADDR_RANGES == 2);
-  static_assert(fuchsia_insntrace::wire::MAX_NUM_ADDR_RANGES == IPT_MAX_NUM_ADDR_RANGES);
+  static_assert(fuchsia_insntrace::wire::kMaxNumAddrRanges == 2);
+  static_assert(fuchsia_insntrace::wire::kMaxNumAddrRanges == IPT_MAX_NUM_ADDR_RANGES);
   per_trace->addr_ranges[0].a = config->address_range_0.start;
   per_trace->addr_ranges[0].b = config->address_range_0.end;
   per_trace->addr_ranges[1].a = config->address_range_1.start;
@@ -701,22 +701,22 @@ zx_status_t InsntraceDevice::IptInitialize(const fuchsia_insntrace::wire::Alloca
     return ZX_ERR_BAD_STATE;
 
   // TODO(dje): Until thread tracing is supported.
-  if (allocation->mode == fuchsia_insntrace::wire::Mode::THREAD)
+  if (allocation->mode == fuchsia_insntrace::wire::Mode::kThread)
     return ZX_ERR_NOT_SUPPORTED;
 
   zx_insntrace_trace_mode_t internal_mode;
   switch (allocation->mode) {
-    case fuchsia_insntrace::wire::Mode::CPU:
+    case fuchsia_insntrace::wire::Mode::kCpu:
       internal_mode = IPT_MODE_CPU;
       break;
-    case fuchsia_insntrace::wire::Mode::THREAD:
+    case fuchsia_insntrace::wire::Mode::kThread:
       internal_mode = IPT_MODE_THREAD;
       break;
     default:
       return ZX_ERR_INVALID_ARGS;
   }
 
-  if (allocation->num_traces > fuchsia_insntrace::wire::MAX_NUM_TRACES)
+  if (allocation->num_traces > fuchsia_insntrace::wire::kMaxNumTraces)
     return ZX_ERR_INVALID_ARGS;
   if (internal_mode == IPT_MODE_CPU) {
     // TODO(dje): KISS. No point in allowing anything else for now.
@@ -785,10 +785,10 @@ zx_status_t InsntraceDevice::IptGetAllocation(fuchsia_insntrace::wire::Allocatio
     return ZX_ERR_BAD_STATE;
   switch (mode_) {
     case IPT_MODE_CPU:
-      out_config->mode = fuchsia_insntrace::wire::Mode::CPU;
+      out_config->mode = fuchsia_insntrace::wire::Mode::kCpu;
       break;
     case IPT_MODE_THREAD:
-      out_config->mode = fuchsia_insntrace::wire::Mode::THREAD;
+      out_config->mode = fuchsia_insntrace::wire::Mode::kThread;
       break;
     default:
       __UNREACHABLE;
@@ -836,8 +836,8 @@ zx_status_t InsntraceDevice::IptGetBufferConfig(BufferDescriptor descriptor,
   out_config->address_space_match = per_trace->cr3_match;
   // TODO(dje): insntrace.fidl can't use vectors (yet) so the address ranges
   // are individually spelled out.
-  static_assert(fuchsia_insntrace::wire::MAX_NUM_ADDR_RANGES == 2);
-  static_assert(fuchsia_insntrace::wire::MAX_NUM_ADDR_RANGES == IPT_MAX_NUM_ADDR_RANGES);
+  static_assert(fuchsia_insntrace::wire::kMaxNumAddrRanges == 2);
+  static_assert(fuchsia_insntrace::wire::kMaxNumAddrRanges == IPT_MAX_NUM_ADDR_RANGES);
   out_config->address_range_0.start = per_trace->addr_ranges[0].a;
   out_config->address_range_0.end = per_trace->addr_ranges[0].b;
   out_config->address_range_1.start = per_trace->addr_ranges[1].a;

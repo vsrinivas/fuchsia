@@ -52,11 +52,11 @@ zx::status<Configuration> QueryBootConfig(fidl::UnownedClientEnd<fuchsia_io::Dir
   // Some bootloaders prefix slot with dash or underscore. We strip them for consistency.
   slot.remove_prefix(std::min(slot.find_first_not_of("_-"), slot.size()));
   if (slot.compare("a") == 0) {
-    return zx::ok(Configuration::A);
+    return zx::ok(Configuration::kA);
   } else if (slot.compare("b") == 0) {
-    return zx::ok(Configuration::B);
+    return zx::ok(Configuration::kB);
   } else if (slot.compare("r") == 0) {
-    return zx::ok(Configuration::RECOVERY);
+    return zx::ok(Configuration::kRecovery);
   }
   ERROR("Invalid value `%.*s` found in zvb.current_slot!\n", static_cast<int>(slot.size()),
         slot.data());

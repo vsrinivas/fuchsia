@@ -39,7 +39,7 @@ class LightDevice {
 
   const std::string GetName() const { return name_; }
   Capability GetCapability() const {
-    return pwm_.has_value() ? Capability::BRIGHTNESS : Capability::SIMPLE;
+    return pwm_.has_value() ? Capability::kBrightness : Capability::kSimple;
   }
   bool GetCurrentSimpleValue() const { return (value_ != 0); }
   zx_status_t SetSimpleValue(bool value);
@@ -80,31 +80,31 @@ class AmlLight : public AmlLightType,
   void SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync& completer);
 
   void GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync& completer) {
-    completer.ReplyError(LightError::NOT_SUPPORTED);
+    completer.ReplyError(LightError::kNotSupported);
   }
   void GetGroupCurrentSimpleValue(uint32_t group_id,
                                   GetGroupCurrentSimpleValueCompleter::Sync& completer) {
-    completer.ReplyError(LightError::NOT_SUPPORTED);
+    completer.ReplyError(LightError::kNotSupported);
   }
   void SetGroupSimpleValue(uint32_t group_id, ::fidl::VectorView<bool> values,
                            SetGroupSimpleValueCompleter::Sync& completer) {
-    completer.ReplyError(LightError::NOT_SUPPORTED);
+    completer.ReplyError(LightError::kNotSupported);
   }
   void GetGroupCurrentBrightnessValue(uint32_t group_id,
                                       GetGroupCurrentBrightnessValueCompleter::Sync& completer) {
-    completer.ReplyError(LightError::NOT_SUPPORTED);
+    completer.ReplyError(LightError::kNotSupported);
   }
   void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<double> values,
                                SetGroupBrightnessValueCompleter::Sync& completer) {
-    completer.ReplyError(LightError::NOT_SUPPORTED);
+    completer.ReplyError(LightError::kNotSupported);
   }
   void GetGroupCurrentRgbValue(uint32_t group_id,
                                GetGroupCurrentRgbValueCompleter::Sync& completer) {
-    completer.ReplyError(LightError::NOT_SUPPORTED);
+    completer.ReplyError(LightError::kNotSupported);
   }
   void SetGroupRgbValue(uint32_t group_id, ::fidl::VectorView<Rgb> values,
                         SetGroupRgbValueCompleter::Sync& completer) {
-    completer.ReplyError(LightError::NOT_SUPPORTED);
+    completer.ReplyError(LightError::kNotSupported);
   }
 
  private:

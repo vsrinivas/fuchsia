@@ -251,8 +251,7 @@ v1::wire::BufferMemoryConstraints V1RandomBufferMemoryConstraints() {
   random(&r.cpu_domain_supported);
   random(&r.inaccessible_domain_supported);
   random(&r.heap_permitted_count);
-  r.heap_permitted_count %=
-      fuchsia_sysmem::wire::MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED;
+  r.heap_permitted_count %= fuchsia_sysmem::wire::kMaxCountBufferMemoryConstraintsHeapPermitted;
   for (uint32_t i = 0; i < r.heap_permitted_count; ++i) {
     random(&r.heap_permitted[i]);
   }
@@ -279,7 +278,7 @@ v1::wire::ImageFormatConstraints V1RandomImageFormatConstraints() {
   v1::wire::ImageFormatConstraints r{};
   r.pixel_format = V1RandomPixelFormat();
   random(&r.color_spaces_count);
-  r.color_spaces_count %= fuchsia_sysmem::wire::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES;
+  r.color_spaces_count %= fuchsia_sysmem::wire::kMaxCountImageFormatConstraintsColorSpaces;
   for (uint32_t i = 0; i < r.color_spaces_count; ++i) {
     r.color_space[i] = V1RandomColorSpace();
   }
@@ -308,8 +307,8 @@ v1::wire::ImageFormatConstraints V1RandomImageFormatConstraints() {
   return r;
 }
 
-v1::wire::ImageFormat_2 V1RandomImageFormat() {
-  v1::wire::ImageFormat_2 r{};
+v1::wire::ImageFormat2 V1RandomImageFormat() {
+  v1::wire::ImageFormat2 r{};
   r.pixel_format = V1RandomPixelFormat();
   random(&r.coded_width);
   random(&r.coded_height);
@@ -357,10 +356,10 @@ v1::wire::VmoBuffer V1RandomVmoBuffer() {
   return r;
 }
 
-v1::wire::BufferCollectionInfo_2 V1RandomBufferCollectionInfo() {
-  v1::wire::BufferCollectionInfo_2 r{};
+v1::wire::BufferCollectionInfo2 V1RandomBufferCollectionInfo() {
+  v1::wire::BufferCollectionInfo2 r{};
   random(&r.buffer_count);
-  r.buffer_count %= v1::wire::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS;
+  r.buffer_count %= v1::wire::kMaxCountBufferCollectionInfoBuffers;
   r.settings = V1RandomSingleBufferSettings();
   for (uint32_t i = 0; i < r.buffer_count; ++i) {
     r.buffers[i] = V1RandomVmoBuffer();
@@ -382,7 +381,7 @@ v1::wire::BufferCollectionConstraints V1RandomBufferCollectionConstraints() {
   }
   random(&r.image_format_constraints_count);
   r.image_format_constraints_count %=
-      fuchsia_sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS;
+      fuchsia_sysmem::wire::kMaxCountBufferCollectionConstraintsImageFormatConstraints;
   for (uint32_t i = 0; i < r.image_format_constraints_count; ++i) {
     r.image_format_constraints[i] = V1RandomImageFormatConstraints();
   }

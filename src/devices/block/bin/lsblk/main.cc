@@ -67,7 +67,7 @@ static char* size_to_cstring(char* str, size_t maxlen, uint64_t size) {
 typedef struct blkinfo {
   char path[128];
   char topo[1024];
-  char label[fuchsia_partition::wire::NAME_LENGTH + 1];
+  char label[fuchsia_partition::wire::kNameLength + 1];
   char sizestr[6];
 } blkinfo_t;
 

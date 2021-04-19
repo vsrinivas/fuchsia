@@ -17,13 +17,13 @@ namespace optee {
 namespace {
 
 constexpr bool IsDirectionInput(fuchsia_tee::wire::Direction direction) {
-  return (direction == fuchsia_tee::wire::Direction::INPUT) ||
-         (direction == fuchsia_tee::wire::Direction::INOUT);
+  return (direction == fuchsia_tee::wire::Direction::kInput) ||
+         (direction == fuchsia_tee::wire::Direction::kInout);
 }
 
 constexpr bool IsDirectionOutput(fuchsia_tee::wire::Direction direction) {
-  return (direction == fuchsia_tee::wire::Direction::OUTPUT) ||
-         (direction == fuchsia_tee::wire::Direction::INOUT);
+  return (direction == fuchsia_tee::wire::Direction::kOutput) ||
+         (direction == fuchsia_tee::wire::Direction::kInout);
 }
 
 }  // namespace
@@ -67,13 +67,13 @@ zx_status_t Message::TryInitializeValue(const fuchsia_tee::wire::Value& value,
   }
 
   switch (value.direction()) {
-    case fuchsia_tee::wire::Direction::INPUT:
+    case fuchsia_tee::wire::Direction::kInput:
       out_param->attribute = MessageParam::kAttributeTypeValueInput;
       break;
-    case fuchsia_tee::wire::Direction::OUTPUT:
+    case fuchsia_tee::wire::Direction::kOutput:
       out_param->attribute = MessageParam::kAttributeTypeValueOutput;
       break;
-    case fuchsia_tee::wire::Direction::INOUT:
+    case fuchsia_tee::wire::Direction::kInout:
       out_param->attribute = MessageParam::kAttributeTypeValueInOut;
       break;
     default:
@@ -109,13 +109,13 @@ zx_status_t Message::TryInitializeBuffer(fuchsia_tee::wire::Buffer* buffer,
 
   MessageParam::AttributeType attribute;
   switch (buffer->direction()) {
-    case fuchsia_tee::wire::Direction::INPUT:
+    case fuchsia_tee::wire::Direction::kInput:
       attribute = MessageParam::kAttributeTypeTempMemInput;
       break;
-    case fuchsia_tee::wire::Direction::OUTPUT:
+    case fuchsia_tee::wire::Direction::kOutput:
       attribute = MessageParam::kAttributeTypeTempMemOutput;
       break;
-    case fuchsia_tee::wire::Direction::INOUT:
+    case fuchsia_tee::wire::Direction::kInout:
       attribute = MessageParam::kAttributeTypeTempMemInOut;
       break;
     default:
@@ -182,7 +182,7 @@ zx_status_t Message::CreateOutputParameterSet(
   // Ensure that the number of parameters returned by the TEE does not exceed the parameter set
   // array of parameters.
   const size_t count = header()->num_params - starting_param_index;
-  if (count > fuchsia_tee::wire::MAX_PARAMETERSET_COUNT) {
+  if (count > fuchsia_tee::wire::kMaxParametersetCount) {
     LOG(ERROR, "Message contained more parameters (%zd) than allowed", count);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -232,13 +232,13 @@ fuchsia_tee::wire::Value Message::CreateOutputValueParameter(fidl::AnyAllocator&
 
   switch (optee_param.attribute) {
     case MessageParam::kAttributeTypeValueInput:
-      direction = fuchsia_tee::wire::Direction::INPUT;
+      direction = fuchsia_tee::wire::Direction::kInput;
       break;
     case MessageParam::kAttributeTypeValueOutput:
-      direction = fuchsia_tee::wire::Direction::OUTPUT;
+      direction = fuchsia_tee::wire::Direction::kOutput;
       break;
     case MessageParam::kAttributeTypeValueInOut:
-      direction = fuchsia_tee::wire::Direction::INOUT;
+      direction = fuchsia_tee::wire::Direction::kInout;
       break;
     default:
       ZX_PANIC("Invalid OP-TEE attribute specified\n");
@@ -265,13 +265,13 @@ zx_status_t Message::CreateOutputBufferParameter(fidl::AnyAllocator& allocator,
   fuchsia_tee::wire::Direction direction;
   switch (optee_param.attribute) {
     case MessageParam::kAttributeTypeTempMemInput:
-      direction = fuchsia_tee::wire::Direction::INPUT;
+      direction = fuchsia_tee::wire::Direction::kInput;
       break;
     case MessageParam::kAttributeTypeTempMemOutput:
-      direction = fuchsia_tee::wire::Direction::OUTPUT;
+      direction = fuchsia_tee::wire::Direction::kOutput;
       break;
     case MessageParam::kAttributeTypeTempMemInOut:
-      direction = fuchsia_tee::wire::Direction::INOUT;
+      direction = fuchsia_tee::wire::Direction::kInout;
       break;
     default:
       ZX_PANIC("Invalid OP-TEE attribute specified\n");

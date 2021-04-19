@@ -33,7 +33,7 @@ class FakeCoordinator : public fidl::WireRawChannelInterface<fuchsia_device_mana
                  fuchsia_device_manager::wire::AddDeviceConfig device_add_config, bool has_init,
                  ::zx::vmo inspect, ::zx::channel client_remote,
                  AddDeviceCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::Coordinator_AddDevice_Result response;
+    fuchsia_device_manager::wire::CoordinatorAddDeviceResult response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
@@ -42,7 +42,7 @@ class FakeCoordinator : public fidl::WireRawChannelInterface<fuchsia_device_mana
   void AddCompositeDevice(::fidl::StringView name,
                           fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc,
                           AddCompositeDeviceCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::Coordinator_AddCompositeDevice_Result response;
+    fuchsia_device_manager::wire::CoordinatorAddCompositeDeviceResult response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
@@ -50,51 +50,51 @@ class FakeCoordinator : public fidl::WireRawChannelInterface<fuchsia_device_mana
   void PublishMetadata(::fidl::StringView device_path, uint32_t key,
                        ::fidl::VectorView<uint8_t> data,
                        PublishMetadataCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::Coordinator_PublishMetadata_Result response;
+    fuchsia_device_manager::wire::CoordinatorPublishMetadataResult response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
   }
   void MakeVisible(MakeVisibleCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::Coordinator_MakeVisible_Result response;
+    fuchsia_device_manager::wire::CoordinatorMakeVisibleResult response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
   }
   void BindDevice(::fidl::StringView driver_path, BindDeviceCompleter::Sync& completer) override {
     bind_count_++;
-    fuchsia_device_manager::wire::Coordinator_BindDevice_Result response;
+    fuchsia_device_manager::wire::CoordinatorBindDeviceResult response;
     zx_status_t status = ZX_OK;
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
   }
   void GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::Coordinator_GetTopologicalPath_Result response;
+    fuchsia_device_manager::wire::CoordinatorGetTopologicalPathResult response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
   }
   void LoadFirmware(::fidl::StringView fw_path, LoadFirmwareCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::Coordinator_LoadFirmware_Result response;
+    fuchsia_device_manager::wire::CoordinatorLoadFirmwareResult response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
   }
   void GetMetadata(uint32_t key, GetMetadataCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::Coordinator_GetMetadata_Result response;
+    fuchsia_device_manager::wire::CoordinatorGetMetadataResult response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
   }
   void GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::Coordinator_GetMetadataSize_Result response;
+    fuchsia_device_manager::wire::CoordinatorGetMetadataSizeResult response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
   }
   void AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data,
                    AddMetadataCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::Coordinator_AddMetadata_Result response;
+    fuchsia_device_manager::wire::CoordinatorAddMetadataResult response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
@@ -102,7 +102,7 @@ class FakeCoordinator : public fidl::WireRawChannelInterface<fuchsia_device_mana
   void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& completer) override {}
   void RunCompatibilityTests(int64_t hook_wait_time,
                              RunCompatibilityTestsCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::Coordinator_RunCompatibilityTests_Result response;
+    fuchsia_device_manager::wire::CoordinatorRunCompatibilityTestsResult response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));

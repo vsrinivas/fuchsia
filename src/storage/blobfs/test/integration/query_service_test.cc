@@ -77,7 +77,7 @@ class QueryServiceTest : public BlobfsWithFvmTest {
 
     EXPECT_EQ(info.block_size(), kBlobfsBlockSize);
     EXPECT_EQ(info.max_node_name_size(), digest::kSha256HexLength);
-    EXPECT_EQ(info.fs_type(), fuchsia_fs::wire::FsType::BLOBFS);
+    EXPECT_EQ(info.fs_type(), fuchsia_fs::wire::FsType::kBlobfs);
 
     const std::string expected_fs_name = "blobfs";
     ASSERT_EQ(expected_fs_name.size(), info.name().size());
@@ -120,7 +120,7 @@ TEST_F(QueryServiceTest, SelectiveQueryInfoEmpty) {
 
 TEST_F(QueryServiceTest, SelectiveQueryInfoSingleField) {
   fidl::WireSyncClient<fuchsia_fs::Query> query_service = ConnectToQueryService();
-  auto call_result = query_service.GetInfo(FilesystemInfoQuery::TOTAL_BYTES);
+  auto call_result = query_service.GetInfo(FilesystemInfoQuery::kTotalBytes);
   ASSERT_EQ(call_result.status(), ZX_OK);
   const auto& query_result = call_result.value().result;
   ASSERT_TRUE(query_result.is_response());

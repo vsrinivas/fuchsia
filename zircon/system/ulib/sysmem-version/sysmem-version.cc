@@ -367,7 +367,7 @@ V2CopyFromV1BufferCollectionConstraints(
 }
 
 fit::result<fuchsia_sysmem2::wire::ImageFormat> V2CopyFromV1ImageFormat(
-    fidl::AnyAllocator& allocator, const fuchsia_sysmem::wire::ImageFormat_2& v1) {
+    fidl::AnyAllocator& allocator, const fuchsia_sysmem::wire::ImageFormat2& v1) {
   fuchsia_sysmem2::wire::ImageFormat v2b(allocator);
   v2b.set_pixel_format(allocator, V2CopyFromV1PixelFormat(allocator, v1.pixel_format));
   PROCESS_SCALAR_FIELD_V1(coded_width);
@@ -392,7 +392,7 @@ fit::result<fuchsia_sysmem2::wire::ImageFormat> V2CopyFromV1ImageFormat(
 
 fit::result<fuchsia_sysmem2::wire::ImageFormat> V2CopyFromV1ImageFormat(
     fidl::AnyAllocator& allocator, const fuchsia_sysmem_ImageFormat_2& v1) {
-  using CStruct = FidlStruct<fuchsia_sysmem_ImageFormat_2, fuchsia_sysmem::wire::ImageFormat_2>;
+  using CStruct = FidlStruct<fuchsia_sysmem_ImageFormat_2, fuchsia_sysmem::wire::ImageFormat2>;
   return V2CopyFromV1ImageFormat(allocator, *CStruct::BorrowAsLlcpp(&v1));
 }
 
@@ -437,8 +437,8 @@ fuchsia_sysmem2::wire::VmoBuffer V2MoveFromV1VmoBuffer(
 }
 
 fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo> V2MoveFromV1BufferCollectionInfo(
-    fidl::AnyAllocator& allocator, fuchsia_sysmem::wire::BufferCollectionInfo_2&& to_move_v1) {
-  fuchsia_sysmem::wire::BufferCollectionInfo_2 v1 = std::move(to_move_v1);
+    fidl::AnyAllocator& allocator, fuchsia_sysmem::wire::BufferCollectionInfo2&& to_move_v1) {
+  fuchsia_sysmem::wire::BufferCollectionInfo2 v1 = std::move(to_move_v1);
   fuchsia_sysmem2::wire::BufferCollectionInfo v2b(allocator);
   auto settings_result = V2CopyFromV1SingleBufferSettings(allocator, v1.settings);
   if (!settings_result.is_ok()) {
@@ -487,7 +487,7 @@ V1CopyFromV2BufferCollectionConstraints(
   ZX_DEBUG_ASSERT(!v1.image_format_constraints_count);
   if (v2.has_image_format_constraints()) {
     if (v2.image_format_constraints().count() >
-        fuchsia_sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS) {
+        fuchsia_sysmem::wire::kMaxCountBufferCollectionConstraintsImageFormatConstraints) {
       LOG(ERROR,
           "v2 image_format_constraints count > v1 "
           "MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS");
@@ -529,7 +529,7 @@ fit::result<fuchsia_sysmem::wire::BufferMemoryConstraints> V1CopyFromV2BufferMem
   ZX_DEBUG_ASSERT(!v1.heap_permitted_count);
   if (v2.has_heap_permitted()) {
     if (v2.heap_permitted().count() >
-        fuchsia_sysmem::wire::MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED) {
+        fuchsia_sysmem::wire::kMaxCountBufferMemoryConstraintsHeapPermitted) {
       LOG(ERROR, "v2 heap_permitted count > v1 MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED");
       return fit::error();
     }
@@ -589,10 +589,10 @@ fit::result<fuchsia_sysmem::wire::ImageFormatConstraints> V1CopyFromV2ImageForma
   ZX_DEBUG_ASSERT(!v1.color_spaces_count);
   if (v2.has_color_spaces()) {
     if (v2.color_spaces().count() >
-        fuchsia_sysmem::wire::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES) {
+        fuchsia_sysmem::wire::kMaxCountImageFormatConstraintsColorSpaces) {
       LOG(ERROR,
           "v2.color_spaces().count() > "
-          "fuchsia_sysmem::wire::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES");
+          "fuchsia_sysmem::wire::kMaxCountImageFormatConstraintsColorSpaces");
       return fit::error();
     }
     v1.color_spaces_count = v2.color_spaces().count();
@@ -623,9 +623,9 @@ fit::result<fuchsia_sysmem::wire::ImageFormatConstraints> V1CopyFromV2ImageForma
   return fit::ok(std::move(v1));
 }
 
-fit::result<fuchsia_sysmem::wire::ImageFormat_2> V1CopyFromV2ImageFormat(
+fit::result<fuchsia_sysmem::wire::ImageFormat2> V1CopyFromV2ImageFormat(
     fuchsia_sysmem2::wire::ImageFormat& v2) {
-  fuchsia_sysmem::wire::ImageFormat_2 v1;
+  fuchsia_sysmem::wire::ImageFormat2 v1;
   if (v2.has_pixel_format()) {
     v1.pixel_format = V1CopyFromV2PixelFormat(v2.pixel_format());
   }
@@ -695,19 +695,19 @@ fuchsia_sysmem::wire::VmoBuffer V1AuxBuffersMoveFromV2VmoBuffer(
   return v1;
 }
 
-fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2> V1MoveFromV2BufferCollectionInfo(
+fit::result<fuchsia_sysmem::wire::BufferCollectionInfo2> V1MoveFromV2BufferCollectionInfo(
     fuchsia_sysmem2::wire::BufferCollectionInfo&& to_move_v2) {
   // This move is mainly to make it very clear what's going on here, but also to ensure that we
   // don't take any dependency on incorrect/stale failure to move out any of the handles in to_move.
   //
   // Always take ownership of the incoming handles, even on failure.
   fuchsia_sysmem2::wire::BufferCollectionInfo v2 = std::move(to_move_v2);
-  fuchsia_sysmem::wire::BufferCollectionInfo_2 v1;
+  fuchsia_sysmem::wire::BufferCollectionInfo2 v1;
   if (v2.has_buffers()) {
-    if (v2.buffers().count() > fuchsia_sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS) {
+    if (v2.buffers().count() > fuchsia_sysmem::wire::kMaxCountBufferCollectionInfoBuffers) {
       LOG(ERROR,
           "v2.buffers().count() > "
-          "fuchsia_sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS");
+          "fuchsia_sysmem::wire::kMaxCountBufferCollectionInfoBuffers");
       return fit::error();
     }
     v1.buffer_count = v2.buffers().count();
@@ -724,7 +724,7 @@ fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2> V1MoveFromV2BufferColl
   return fit::ok(std::move(v1));
 }
 
-[[nodiscard]] fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2>
+[[nodiscard]] fit::result<fuchsia_sysmem::wire::BufferCollectionInfo2>
 V1AuxBuffersMoveFromV2BufferCollectionInfo(
     fuchsia_sysmem2::wire::BufferCollectionInfo&& to_move_v2) {
   // This move is mainly to make it very clear what's going on here, but also to ensure that we
@@ -732,12 +732,12 @@ V1AuxBuffersMoveFromV2BufferCollectionInfo(
   //
   // Always take ownership of the incoming handles, even on failure.
   fuchsia_sysmem2::wire::BufferCollectionInfo v2 = std::move(to_move_v2);
-  fuchsia_sysmem::wire::BufferCollectionInfo_2 v1;
+  fuchsia_sysmem::wire::BufferCollectionInfo2 v1;
   if (v2.has_buffers()) {
-    if (v2.buffers().count() > fuchsia_sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS) {
+    if (v2.buffers().count() > fuchsia_sysmem::wire::kMaxCountBufferCollectionInfoBuffers) {
       LOG(ERROR,
           "v2.buffers().count() > "
-          "fuchsia_sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS");
+          "fuchsia_sysmem::wire::kMaxCountBufferCollectionInfoBuffers");
       return fit::error();
     }
     v1.buffer_count = v2.buffers().count();

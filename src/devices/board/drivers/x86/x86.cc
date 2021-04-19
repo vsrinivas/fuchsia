@@ -24,7 +24,7 @@
 #include "src/devices/board/drivers/x86/include/sysmem.h"
 #include "src/devices/board/drivers/x86/x64-bind.h"
 
-using fuchsia_hardware_acpi::wire::MAX_ACPI_TABLE_ENTRIES;
+using fuchsia_hardware_acpi::wire::kMaxAcpiTableEntries;
 using fuchsia_hardware_acpi::wire::TableInfo;
 
 zx_handle_t root_resource_handle;
@@ -206,7 +206,7 @@ zx_status_t X86::DdkMessage(fidl_incoming_msg* message, fidl_txn* txn) {
 zx_status_t X86::GetAcpiTableEntries(fbl::Vector<TableInfo>* entries) {
   ZX_DEBUG_ASSERT(acpica_initialized_);
 
-  for (uint32_t i = 0; i < MAX_ACPI_TABLE_ENTRIES; i++) {
+  for (uint32_t i = 0; i < kMaxAcpiTableEntries; i++) {
     // Fetch the next table entry.
     ACPI_TABLE_HEADER* table;
     ACPI_STATUS status = AcpiGetTableByIndex(i, &table);

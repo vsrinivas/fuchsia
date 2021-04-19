@@ -55,7 +55,7 @@ void HealthCheckService::Verify(fuv::wire::VerifyOptions options,
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
-    completer.ReplyError(fuv::wire::VerifyError::INTERNAL);
+    completer.ReplyError(fuv::wire::VerifyError::kInternal);
   }
 }
 

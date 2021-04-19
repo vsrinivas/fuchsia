@@ -142,10 +142,10 @@ void PerfmonDevice::FreeBuffersForTrace(PmuPerTraceState* per_trace, uint32_t nu
 void PerfmonDevice::PmuGetProperties(FidlPerfmonProperties* props) {
   zxlogf(DEBUG, "%s called", __func__);
 
-  props->api_version = fidl_perfmon::wire::API_VERSION;
+  props->api_version = fidl_perfmon::wire::kApiVersion;
   props->pm_version = pmu_hw_properties_.common.pm_version;
-  static_assert(perfmon::kMaxNumEvents == fidl_perfmon::wire::MAX_NUM_EVENTS);
-  props->max_num_events = fidl_perfmon::wire::MAX_NUM_EVENTS;
+  static_assert(perfmon::kMaxNumEvents == fidl_perfmon::wire::kMaxNumEvents);
+  props->max_num_events = fidl_perfmon::wire::kMaxNumEvents;
 
   // These numbers are for informational/debug purposes. There can be
   // further restrictions and limitations.
@@ -161,7 +161,7 @@ void PerfmonDevice::PmuGetProperties(FidlPerfmonProperties* props) {
   props->flags = fidl_perfmon::wire::PropertyFlags();
 #ifdef __x86_64__
   if (pmu_hw_properties_.lbr_stack_size > 0) {
-    props->flags |= fidl_perfmon::wire::PropertyFlags::HAS_LAST_BRANCH;
+    props->flags |= fidl_perfmon::wire::PropertyFlags::kHasLastBranch;
   }
 #endif
 }
@@ -276,7 +276,7 @@ static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConf
     EventRate rate = icfg->events[ii].rate;
     fidl_perfmon::wire::EventConfigFlags flags = icfg->events[ii].flags;
 
-    if (flags & fidl_perfmon::wire::EventConfigFlags::IS_TIMEBASE) {
+    if (flags & fidl_perfmon::wire::EventConfigFlags::kIsTimebase) {
       if (ocfg->timebase_event != kEventIdNone) {
         zxlogf(ERROR, "%s: multiple timebases [%u]", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
@@ -284,14 +284,14 @@ static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConf
       ocfg->timebase_event = icfg->events[ii].event;
     }
 
-    if (flags & fidl_perfmon::wire::EventConfigFlags::COLLECT_PC) {
+    if (flags & fidl_perfmon::wire::EventConfigFlags::kCollectPc) {
       if (rate == 0) {
         zxlogf(ERROR, "%s: PC flag requires own timebase, event [%u]", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
       }
     }
 
-    if (flags & fidl_perfmon::wire::EventConfigFlags::COLLECT_LAST_BRANCH) {
+    if (flags & fidl_perfmon::wire::EventConfigFlags::kCollectLastBranch) {
       // Further verification is architecture specific.
       if (icfg->events[ii].rate == 0) {
         zxlogf(ERROR, "%s: Last branch requires own timebase, event [%u]", __func__, ii);

@@ -47,7 +47,7 @@ class ErrorServer : public fidl::WireInterface<test::ErrorMethods> {
   void ManyArgsCustomError(bool should_error,
                            ManyArgsCustomErrorCompleter::Sync& completer) override {
     if (should_error) {
-      completer.ReplyError(test::wire::MyError::REALLY_BAD_ERROR);
+      completer.ReplyError(test::wire::MyError::kReallyBadError);
     } else {
       completer.ReplySuccess(1, 2, 3);
     }
@@ -98,7 +98,7 @@ TEST_F(ResultTest, OwnedCustomError) {
   auto resp = client.ManyArgsCustomError(true);
   ASSERT_TRUE(resp.ok());
   ASSERT_TRUE(resp->result.is_err());
-  EXPECT_EQ(resp->result.err(), test::wire::MyError::REALLY_BAD_ERROR);
+  EXPECT_EQ(resp->result.err(), test::wire::MyError::kReallyBadError);
 }
 
 TEST_F(ResultTest, OwnedSuccessNoArgs) {

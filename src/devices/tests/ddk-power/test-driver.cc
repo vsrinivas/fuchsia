@@ -66,9 +66,9 @@ class TestPowerDriver : public DeviceType,
                          SetTestStatusInfoCompleter::Sync& completer) override;
 
  private:
-  DevicePowerState current_power_state_ = DevicePowerState::DEVICE_POWER_STATE_D0;
+  DevicePowerState current_power_state_ = DevicePowerState::kDevicePowerStateD0;
   bool auto_suspend_enabled_ = false;
-  DevicePowerState deepest_autosuspend_sleep_state_ = DevicePowerState::DEVICE_POWER_STATE_D0;
+  DevicePowerState deepest_autosuspend_sleep_state_ = DevicePowerState::kDevicePowerStateD0;
   zx_status_t reply_suspend_status_ = ZX_OK;
   zx_status_t reply_resume_status_ = ZX_OK;
   zx::event suspend_complete_event_;

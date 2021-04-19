@@ -49,11 +49,11 @@ void RemoteFileConnection::Read(uint64_t count, ReadCompleter::Sync& completer) 
     completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
     return;
   }
-  if (count > fio::wire::MAX_BUF) {
+  if (count > fio::wire::kMaxBuf) {
     completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
     return;
   }
-  uint8_t data[fio::wire::MAX_BUF];
+  uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
   zx_status_t status = vnode()->Read(data, count, offset_, &actual);
   if (status == ZX_OK) {
@@ -75,11 +75,11 @@ void RemoteFileConnection::ReadAt(uint64_t count, uint64_t offset,
     completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
     return;
   }
-  if (count > fio::wire::MAX_BUF) {
+  if (count > fio::wire::kMaxBuf) {
     completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
     return;
   }
-  uint8_t data[fio::wire::MAX_BUF];
+  uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
   zx_status_t status = vnode()->Read(data, count, offset, &actual);
   if (status == ZX_OK) {
@@ -150,14 +150,14 @@ void RemoteFileConnection::Seek(int64_t offset, fuchsia_io::wire::SeekOrigin sta
   }
   size_t n;
   switch (start) {
-    case fio::wire::SeekOrigin::START:
+    case fio::wire::SeekOrigin::kStart:
       if (offset < 0) {
         completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
         return;
       }
       n = offset;
       break;
-    case fio::wire::SeekOrigin::CURRENT:
+    case fio::wire::SeekOrigin::kCurrent:
       n = offset_ + offset;
       if (offset < 0) {
         // if negative seek
@@ -175,7 +175,7 @@ void RemoteFileConnection::Seek(int64_t offset, fuchsia_io::wire::SeekOrigin sta
         }
       }
       break;
-    case fio::wire::SeekOrigin::END:
+    case fio::wire::SeekOrigin::kEnd:
       n = attr.content_size + offset;
       if (offset < 0) {
         // if negative seek

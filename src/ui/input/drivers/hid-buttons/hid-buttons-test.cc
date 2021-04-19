@@ -437,7 +437,7 @@ TEST(HidButtonsTest, GetStateTest) {
 
     // Reconfigure Polarity due to interrupt.
     device.GetGpio(1).ExpectRead(ZX_OK, 1);  // Read value.
-    auto result = client.GetState(ButtonType::MUTE);
+    auto result = client.GetState(ButtonType::kMute);
     EXPECT_EQ(result->pressed, true);
   }  // Close Client
 
@@ -484,11 +484,11 @@ TEST(HidButtonsTest, Notify1) {
     EXPECT_OK(zx::channel::create(0, &client_end, &server_end));
     device.GetButtonsFn()->ButtonsGetChannel(std::move(server_end));
     fidl::WireSyncClient<Buttons> client(std::move(client_end));
-    auto result1 = client.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::MUTE));
+    auto result1 = client.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kMute));
     EXPECT_OK(result1.status());
 
     // Interrupts
-    device.FakeInterrupt(ButtonType::MUTE);
+    device.FakeInterrupt(ButtonType::kMute);
     device.DebounceWait();
     {
       class EventHandler : public fidl::WireSyncEventHandler<Buttons> {
@@ -498,7 +498,7 @@ TEST(HidButtonsTest, Notify1) {
         bool ok() const { return ok_; }
 
         void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
-          if (event->type == ButtonType::MUTE && event->pressed == true) {
+          if (event->type == ButtonType::kMute && event->pressed == true) {
             ok_ = true;
           }
         }
@@ -512,7 +512,7 @@ TEST(HidButtonsTest, Notify1) {
       EventHandler event_handler;
       EXPECT_TRUE(client.HandleOneEvent(event_handler).ok() && event_handler.ok());
     }
-    device.FakeInterrupt(ButtonType::MUTE);
+    device.FakeInterrupt(ButtonType::kMute);
     device.DebounceWait();
     {
       class EventHandler : public fidl::WireSyncEventHandler<Buttons> {
@@ -522,7 +522,7 @@ TEST(HidButtonsTest, Notify1) {
         bool ok() const { return ok_; }
 
         void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
-          if (event->type == ButtonType::MUTE && event->pressed == false) {
+          if (event->type == ButtonType::kMute && event->pressed == false) {
             ok_ = true;
           }
         }
@@ -536,9 +536,9 @@ TEST(HidButtonsTest, Notify1) {
       EventHandler event_handler;
       EXPECT_TRUE(client.HandleOneEvent(event_handler).ok() && event_handler.ok());
     }
-    auto result2 = client.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::VOLUME_UP));
+    auto result2 = client.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kVolumeUp));
     EXPECT_OK(result2.status());
-    device.FakeInterrupt(ButtonType::VOLUME_UP);
+    device.FakeInterrupt(ButtonType::kVolumeUp);
     device.DebounceWait();
     {
       class EventHandler : public fidl::WireSyncEventHandler<Buttons> {
@@ -548,7 +548,7 @@ TEST(HidButtonsTest, Notify1) {
         bool ok() const { return ok_; }
 
         void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
-          if (event->type == ButtonType::VOLUME_UP && event->pressed == true) {
+          if (event->type == ButtonType::kVolumeUp && event->pressed == true) {
             ok_ = true;
           }
         }
@@ -625,7 +625,7 @@ TEST(HidButtonsTest, Notify2) {
     EXPECT_OK(zx::channel::create(0, &client_end2, &server_end2));
     device.GetButtonsFn()->ButtonsGetChannel(std::move(server_end2));
     fidl::WireSyncClient<Buttons> client2(std::move(client_end2));
-    auto result2_1 = client2.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::MUTE));
+    auto result2_1 = client2.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kMute));
     EXPECT_OK(result2_1.status());
 
     {  // Scoping for Client 1
@@ -634,11 +634,11 @@ TEST(HidButtonsTest, Notify2) {
       EXPECT_OK(zx::channel::create(0, &client_end1, &server_end1));
       device.GetButtonsFn()->ButtonsGetChannel(std::move(server_end1));
       fidl::WireSyncClient<Buttons> client1(std::move(client_end1));
-      auto result1_1 = client1.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::MUTE));
+      auto result1_1 = client1.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kMute));
       EXPECT_OK(result1_1.status());
 
       // Interrupts
-      device.FakeInterrupt(ButtonType::MUTE);
+      device.FakeInterrupt(ButtonType::kMute);
       device.DebounceWait();
       {
         class EventHandler : public fidl::WireSyncEventHandler<Buttons> {
@@ -648,7 +648,7 @@ TEST(HidButtonsTest, Notify2) {
           bool ok() const { return ok_; }
 
           void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
-            if (event->type == ButtonType::MUTE && event->pressed == true) {
+            if (event->type == ButtonType::kMute && event->pressed == true) {
               ok_ = true;
             }
           }
@@ -670,7 +670,7 @@ TEST(HidButtonsTest, Notify2) {
           bool ok() const { return ok_; }
 
           void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
-            if (event->type == ButtonType::MUTE && event->pressed == true) {
+            if (event->type == ButtonType::kMute && event->pressed == true) {
               ok_ = true;
             }
           }
@@ -684,7 +684,7 @@ TEST(HidButtonsTest, Notify2) {
         EventHandler event_handler;
         EXPECT_TRUE(client2.HandleOneEvent(event_handler).ok() && event_handler.ok());
       }
-      device.FakeInterrupt(ButtonType::MUTE);
+      device.FakeInterrupt(ButtonType::kMute);
       device.DebounceWait();
       {
         class EventHandler : public fidl::WireSyncEventHandler<Buttons> {
@@ -694,7 +694,7 @@ TEST(HidButtonsTest, Notify2) {
           bool ok() const { return ok_; }
 
           void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
-            if (event->type == ButtonType::MUTE && event->pressed == false) {
+            if (event->type == ButtonType::kMute && event->pressed == false) {
               ok_ = true;
             }
           }
@@ -716,7 +716,7 @@ TEST(HidButtonsTest, Notify2) {
           bool ok() const { return ok_; }
 
           void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
-            if (event->type == ButtonType::MUTE && event->pressed == false) {
+            if (event->type == ButtonType::kMute && event->pressed == false) {
               ok_ = true;
             }
           }
@@ -730,12 +730,12 @@ TEST(HidButtonsTest, Notify2) {
         EventHandler event_handler;
         EXPECT_TRUE(client2.HandleOneEvent(event_handler).ok() && event_handler.ok());
       }
-      auto result1_2 = client1.RegisterNotify((1 << static_cast<uint8_t>(ButtonType::VOLUME_UP)) |
-                                              (1 << static_cast<uint8_t>(ButtonType::MUTE)));
+      auto result1_2 = client1.RegisterNotify((1 << static_cast<uint8_t>(ButtonType::kVolumeUp)) |
+                                              (1 << static_cast<uint8_t>(ButtonType::kMute)));
       EXPECT_OK(result1_2.status());
-      auto result2_2 = client2.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::VOLUME_UP));
+      auto result2_2 = client2.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kVolumeUp));
       EXPECT_OK(result2_2.status());
-      device.FakeInterrupt(ButtonType::MUTE);
+      device.FakeInterrupt(ButtonType::kMute);
       device.DebounceWait();
       {
         class EventHandler : public fidl::WireSyncEventHandler<Buttons> {
@@ -745,7 +745,7 @@ TEST(HidButtonsTest, Notify2) {
           bool ok() const { return ok_; }
 
           void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
-            if (event->type == ButtonType::MUTE && event->pressed == true) {
+            if (event->type == ButtonType::kMute && event->pressed == true) {
               ok_ = true;
             }
           }
@@ -759,7 +759,7 @@ TEST(HidButtonsTest, Notify2) {
         EventHandler event_handler;
         EXPECT_TRUE(client1.HandleOneEvent(event_handler).ok() && event_handler.ok());
       }
-      device.FakeInterrupt(ButtonType::VOLUME_UP);
+      device.FakeInterrupt(ButtonType::kVolumeUp);
       device.DebounceWait();
       {
         class EventHandler : public fidl::WireSyncEventHandler<Buttons> {
@@ -769,7 +769,7 @@ TEST(HidButtonsTest, Notify2) {
           bool ok() const { return ok_; }
 
           void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
-            if (event->type == ButtonType::VOLUME_UP && event->pressed == false) {
+            if (event->type == ButtonType::kVolumeUp && event->pressed == false) {
               ok_ = true;
             }
           }
@@ -791,7 +791,7 @@ TEST(HidButtonsTest, Notify2) {
           bool ok() const { return ok_; }
 
           void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
-            if (event->type == ButtonType::VOLUME_UP && event->pressed == false) {
+            if (event->type == ButtonType::kVolumeUp && event->pressed == false) {
               ok_ = true;
             }
           }
@@ -808,7 +808,7 @@ TEST(HidButtonsTest, Notify2) {
     }  // Close Client 1
 
     device.Wait();
-    device.FakeInterrupt(ButtonType::VOLUME_UP);
+    device.FakeInterrupt(ButtonType::kVolumeUp);
     device.DebounceWait();
     {
       class EventHandler : public fidl::WireSyncEventHandler<Buttons> {
@@ -818,7 +818,7 @@ TEST(HidButtonsTest, Notify2) {
         bool ok() const { return ok_; }
 
         void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
-          if (event->type == ButtonType::VOLUME_UP && event->pressed == true) {
+          if (event->type == ButtonType::kVolumeUp && event->pressed == true) {
             ok_ = true;
           }
         }
@@ -853,7 +853,7 @@ TEST(HidButtonsTest, DuplicateReports) {
   device.GetGpio(0).ExpectRead(ZX_OK, 1);           // Read value to prepare report.
   device.GetGpio(1).ExpectRead(ZX_OK, 1);           // Read value to prepare report.
   device.GetGpio(2).ExpectRead(ZX_OK, 1);           // Read value to prepare report.
-  device.FakeInterrupt(ButtonType::RESET);
+  device.FakeInterrupt(ButtonType::kReset);
   device.DebounceWait();
 
   device.GetGpio(0)
@@ -863,7 +863,7 @@ TEST(HidButtonsTest, DuplicateReports) {
   device.GetGpio(0).ExpectRead(ZX_OK, 0);            // Read value to prepare report.
   device.GetGpio(1).ExpectRead(ZX_OK, 1);            // Read value to prepare report.
   device.GetGpio(2).ExpectRead(ZX_OK, 0);            // Read value to prepare report.
-  device.FakeInterrupt(ButtonType::VOLUME_UP);
+  device.FakeInterrupt(ButtonType::kVolumeUp);
   device.DebounceWait();
 
   device.GetGpio(2)
@@ -873,7 +873,7 @@ TEST(HidButtonsTest, DuplicateReports) {
   device.GetGpio(0).ExpectRead(ZX_OK, 0);            // Read value to prepare report.
   device.GetGpio(1).ExpectRead(ZX_OK, 1);            // Read value to prepare report.
   device.GetGpio(2).ExpectRead(ZX_OK, 0);            // Read value to prepare report.
-  device.FakeInterrupt(ButtonType::RESET);
+  device.FakeInterrupt(ButtonType::kReset);
   device.DebounceWait();
 
   hidbus_ifc_protocol_ops_t ops = {};
@@ -924,7 +924,7 @@ TEST(HidButtonsTest, CamMute) {
   device.GetGpio(0).ExpectRead(ZX_OK, 0);           // Read value to prepare report.
   device.GetGpio(1).ExpectRead(ZX_OK, 0);           // Read value to prepare report.
   device.GetGpio(2).ExpectRead(ZX_OK, 1);           // Read value to prepare report.
-  device.FakeInterrupt(ButtonType::CAM_MUTE);
+  device.FakeInterrupt(ButtonType::kCamMute);
   device.DebounceWait();
 
   device.HidbusStop();
@@ -946,7 +946,7 @@ TEST(HidButtonsTest, CamMute) {
   device.GetGpio(0).ExpectRead(ZX_OK, 0);            // Read value to prepare report.
   device.GetGpio(1).ExpectRead(ZX_OK, 0);            // Read value to prepare report.
   device.GetGpio(2).ExpectRead(ZX_OK, 0);            // Read value to prepare report.
-  device.FakeInterrupt(ButtonType::CAM_MUTE);
+  device.FakeInterrupt(ButtonType::kCamMute);
   device.DebounceWait();
 
   device.ShutDownTest();
@@ -984,8 +984,8 @@ TEST(HidButtonsTest, MicAndCamMute) {
   device.GetButtonsFn()->ButtonsGetChannel(std::move(server_end));
   fidl::WireSyncClient<Buttons> client(std::move(client_end));
   {
-    uint8_t types = (1 << static_cast<uint8_t>(ButtonType::MUTE)) |
-                    (1 << static_cast<uint8_t>(ButtonType::CAM_MUTE));
+    uint8_t types = (1 << static_cast<uint8_t>(ButtonType::kMute)) |
+                    (1 << static_cast<uint8_t>(ButtonType::kCamMute));
     auto result = client.RegisterNotify(types);
     EXPECT_OK(result.status());
   }
@@ -996,7 +996,7 @@ TEST(HidButtonsTest, MicAndCamMute) {
       .ExpectSetPolarity(ZX_OK, GPIO_POLARITY_LOW)  // Turn the polarity.
       .ExpectRead(ZX_OK, 1);                        // Still on, ok to continue.
   device.GetGpio(0).ExpectRead(ZX_OK, 1);           // Read value to prepare report.
-  device.FakeInterrupt(ButtonType::CAM_MUTE);
+  device.FakeInterrupt(ButtonType::kCamMute);
   device.DebounceWait();
 
   // Check that we get notified of both camera and mic presses.
@@ -1008,10 +1008,10 @@ TEST(HidButtonsTest, MicAndCamMute) {
     bool mic_pressed() const { return mic_pressed_; }
 
     void OnNotify(fidl::WireResponse<Buttons::OnNotify>* event) override {
-      if (event->type == ButtonType::MUTE && event->pressed == true) {
+      if (event->type == ButtonType::kMute && event->pressed == true) {
         mic_pressed_ = true;
       }
-      if (event->type == ButtonType::CAM_MUTE && event->pressed == true) {
+      if (event->type == ButtonType::kCamMute && event->pressed == true) {
         camera_pressed_ = true;
       }
     }

@@ -28,7 +28,7 @@ TEST(Mali, IcdList) {
   EXPECT_EQ(rsp->icd_list.count(), 2u);
   auto& icd_item = rsp->icd_list[0];
   EXPECT_TRUE(icd_item.has_flags());
-  EXPECT_TRUE(icd_item.flags() & fuchsia_gpu_magma::wire::IcdFlags::SUPPORTS_VULKAN);
+  EXPECT_TRUE(icd_item.flags() & fuchsia_gpu_magma::wire::IcdFlags::kSupportsVulkan);
   std::string res_string(icd_item.component_url().get());
   EXPECT_EQ(res_string.length(), icd_item.component_url().size());
   EXPECT_EQ(0u, res_string.find("fuchsia-pkg://fuchsia.com/libvulkan_arm_mali_"));

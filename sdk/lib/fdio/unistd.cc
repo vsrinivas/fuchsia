@@ -605,7 +605,7 @@ static zx_status_t fdio_stat(const fdio_ptr& io, struct stat* s) {
 
   memset(s, 0, sizeof(struct stat));
   s->st_mode = io->convert_to_posix_mode(attr.protocols, attr.abilities);
-  s->st_ino = attr.has.id ? attr.id : fio::wire::INO_UNKNOWN;
+  s->st_ino = attr.has.id ? attr.id : fio::wire::kInoUnknown;
   s->st_size = attr.content_size;
   s->st_blksize = VNATTR_BLKSIZE;
   s->st_blocks = attr.storage_size / VNATTR_BLKSIZE;
@@ -629,7 +629,7 @@ extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_opti
     return ZX_ERR_BAD_HANDLE;
   }
 
-  int vflags = zx_options | (flags & MAP_PRIVATE ? fio::wire::VMO_FLAG_PRIVATE : 0);
+  int vflags = zx_options | (flags & MAP_PRIVATE ? fio::wire::kVmoFlagPrivate : 0);
 
   zx::vmo vmo;
   size_t size;
@@ -1577,7 +1577,7 @@ struct dirent* readdir(DIR* dir) {
     errno = fdio_status_to_errno(status);
     return nullptr;
   }
-  de->d_ino = entry->has.id ? entry->id : fio::wire::INO_UNKNOWN;
+  de->d_ino = entry->has.id ? entry->id : fio::wire::kInoUnknown;
   de->d_off = 0;
   // The d_reclen field is nonstandard, but existing code
   // may expect it to be useful as an upper bound on the
@@ -2076,7 +2076,7 @@ static int fs_stat(int fd, struct statfs* buf) {
     return ERRNO(EIO);
   }
 
-  info->name[fio::wire::MAX_FS_NAME_BUFFER - 1] = '\0';
+  info->name[fio::wire::kMaxFsNameBuffer - 1] = '\0';
 
   struct statfs stats = {};
 

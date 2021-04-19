@@ -23,14 +23,14 @@ struct RamDeviceInfo {
   struct {
     const char* name;
     uint64_t mask;
-  } default_channels[fuchsia_hardware_ram_metrics::wire::MAX_COUNT_CHANNELS];
+  } default_channels[fuchsia_hardware_ram_metrics::wire::kMaxCountChannels];
 };
 
 class Printer {
  public:
   Printer(FILE* file, uint64_t cycles_to_measure)
       : file_(file),
-        rows_(fuchsia_hardware_ram_metrics::wire::MAX_COUNT_CHANNELS),
+        rows_(fuchsia_hardware_ram_metrics::wire::kMaxCountChannels),
         cycles_to_measure_(cycles_to_measure) {}
   virtual ~Printer() = default;
 
@@ -58,7 +58,7 @@ class CsvPrinter : public Printer {
   void Print(const fuchsia_hardware_ram_metrics::wire::BandwidthInfo& info) const override;
 };
 
-zx::status<std::array<uint64_t, fuchsia_hardware_ram_metrics::wire::MAX_COUNT_CHANNELS>>
+zx::status<std::array<uint64_t, fuchsia_hardware_ram_metrics::wire::kMaxCountChannels>>
 ParseChannelString(std::string_view str);
 
 std::tuple<zx::channel, ram_info::RamDeviceInfo> ConnectToRamDevice();

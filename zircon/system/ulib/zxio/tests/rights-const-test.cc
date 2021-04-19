@@ -15,32 +15,32 @@ namespace fio2 = fuchsia_io2;
 // expected set of rights.
 TEST(RightsConstTest, VerifyConstCalculations) {
   using fio2::wire::Operations;
+  static_assert(fio2::wire::kRStarDir ==
+                    static_cast<uint64_t>(Operations::kConnect | Operations::kEnumerate |
+                                          Operations::kTraverse | Operations::kReadBytes |
+                                          Operations::kGetAttributes),
+                "Operations::R_STAR does not match expected value");
   static_assert(
-      fio2::wire::R_STAR_DIR ==
-          static_cast<uint64_t>(Operations::CONNECT | Operations::ENUMERATE | Operations::TRAVERSE |
-                                Operations::READ_BYTES | Operations::GET_ATTRIBUTES),
-      "Operations::R_STAR does not match expected value");
-  static_assert(
-      fio2::wire::RW_STAR_DIR ==
-          static_cast<uint64_t>(Operations::CONNECT | Operations::ENUMERATE | Operations::TRAVERSE |
-                                Operations::READ_BYTES | Operations::WRITE_BYTES |
-                                Operations::MODIFY_DIRECTORY | Operations::GET_ATTRIBUTES |
-                                Operations::UPDATE_ATTRIBUTES),
+      fio2::wire::kRwStarDir ==
+          static_cast<uint64_t>(Operations::kConnect | Operations::kEnumerate |
+                                Operations::kTraverse | Operations::kReadBytes |
+                                Operations::kWriteBytes | Operations::kModifyDirectory |
+                                Operations::kGetAttributes | Operations::kUpdateAttributes),
       "Operations::RW_STAR_DIR does not match expected value");
-  static_assert(fio2::wire::RX_STAR_DIR ==
-                    static_cast<uint64_t>(Operations::CONNECT | Operations::ENUMERATE |
-                                          Operations::TRAVERSE | Operations::READ_BYTES |
-                                          Operations::GET_ATTRIBUTES | Operations::EXECUTE),
+  static_assert(fio2::wire::kRxStarDir ==
+                    static_cast<uint64_t>(Operations::kConnect | Operations::kEnumerate |
+                                          Operations::kTraverse | Operations::kReadBytes |
+                                          Operations::kGetAttributes | Operations::kExecute),
                 "Operations::RX_STAR_DIR does not match expected value");
   static_assert(
-      fio2::wire::W_STAR_DIR ==
-          static_cast<uint64_t>(Operations::CONNECT | Operations::ENUMERATE | Operations::TRAVERSE |
-                                Operations::WRITE_BYTES | Operations::MODIFY_DIRECTORY |
-                                Operations::UPDATE_ATTRIBUTES),
+      fio2::wire::kWStarDir ==
+          static_cast<uint64_t>(Operations::kConnect | Operations::kEnumerate |
+                                Operations::kTraverse | Operations::kWriteBytes |
+                                Operations::kModifyDirectory | Operations::kUpdateAttributes),
       "Operations::W_STAR_DIR does not match expected value");
   static_assert(
-      fio2::wire::X_STAR_DIR == static_cast<uint64_t>(Operations::CONNECT | Operations::ENUMERATE |
-                                                      Operations::TRAVERSE | Operations::EXECUTE),
+      fio2::wire::kXStarDir == static_cast<uint64_t>(Operations::kConnect | Operations::kEnumerate |
+                                                     Operations::kTraverse | Operations::kExecute),
       "Operations::X_STAR_DIR does not match expected value");
 }
 

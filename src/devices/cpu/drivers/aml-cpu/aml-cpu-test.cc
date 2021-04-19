@@ -18,7 +18,7 @@
 
 namespace amlogic_cpu {
 
-using fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES;
+using fuchsia_device::wire::kMaxDevicePerformanceStates;
 using CpuCtrlClient = fidl::WireSyncClient<fuchsia_cpuctrl::Device>;
 using inspect::InspectTestHelper;
 
@@ -132,7 +132,7 @@ TEST_F(AmlCpuTestFixture, TestGetPerformanceStateInfo) {
 
   // Make sure that we can't get any information about pstates that don't
   // exist.
-  for (size_t i = kTestOperatingPoints.size(); i < MAX_DEVICE_PERFORMANCE_STATES; i++) {
+  for (size_t i = kTestOperatingPoints.size(); i < kMaxDevicePerformanceStates; i++) {
     const uint32_t pstate = static_cast<uint32_t>(i);
     auto pstateInfo = cpu_client_->GetPerformanceStateInfo(pstate);
 

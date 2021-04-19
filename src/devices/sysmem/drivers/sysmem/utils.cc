@@ -8,16 +8,16 @@
 
 bool IsWriteUsage(const fuchsia_sysmem2::wire::BufferUsage& buffer_usage) {
   const uint32_t kCpuWriteBits =
-      fuchsia_sysmem2::wire::CPU_USAGE_WRITE_OFTEN | fuchsia_sysmem2::wire::CPU_USAGE_WRITE;
+      fuchsia_sysmem2::wire::kCpuUsageWriteOften | fuchsia_sysmem2::wire::kCpuUsageWrite;
   // This list may not be complete.
-  const uint32_t kVulkanWriteBits = fuchsia_sysmem2::wire::VULKAN_USAGE_TRANSFER_DST |
-                                    fuchsia_sysmem2::wire::VULKAN_USAGE_STORAGE;
+  const uint32_t kVulkanWriteBits =
+      fuchsia_sysmem2::wire::kVulkanUsageTransferDst | fuchsia_sysmem2::wire::kVulkanUsageStorage;
   // Display usages don't include any writing.
   const uint32_t kDisplayWriteBits = 0;
-  const uint32_t kVideoWriteBits = fuchsia_sysmem2::wire::VIDEO_USAGE_HW_DECODER |
-                                   fuchsia_sysmem2::wire::VIDEO_USAGE_HW_DECODER_INTERNAL |
-                                   fuchsia_sysmem2::wire::VIDEO_USAGE_DECRYPTOR_OUTPUT |
-                                   fuchsia_sysmem2::wire::VIDEO_USAGE_HW_ENCODER;
+  const uint32_t kVideoWriteBits = fuchsia_sysmem2::wire::kVideoUsageHwDecoder |
+                                   fuchsia_sysmem2::wire::kVideoUsageHwDecoderInternal |
+                                   fuchsia_sysmem2::wire::kVideoUsageDecryptorOutput |
+                                   fuchsia_sysmem2::wire::kVideoUsageHwEncoder;
 
   uint32_t cpu = buffer_usage.has_cpu() ? buffer_usage.cpu() : 0;
   uint32_t vulkan = buffer_usage.has_vulkan() ? buffer_usage.vulkan() : 0;

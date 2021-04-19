@@ -86,7 +86,7 @@ void AmlLight::GetNumLightGroups(GetNumLightGroupsCompleter::Sync& completer) {
 
 void AmlLight::GetInfo(uint32_t index, GetInfoCompleter::Sync& completer) {
   if (index >= lights_.size()) {
-    completer.ReplyError(LightError::INVALID_INDEX);
+    completer.ReplyError(LightError::kInvalidIndex);
     return;
   }
   auto name = lights_[index].GetName();
@@ -99,24 +99,24 @@ void AmlLight::GetInfo(uint32_t index, GetInfoCompleter::Sync& completer) {
 void AmlLight::GetCurrentSimpleValue(uint32_t index,
                                      GetCurrentSimpleValueCompleter::Sync& completer) {
   if (index >= lights_.size()) {
-    completer.ReplyError(LightError::INVALID_INDEX);
+    completer.ReplyError(LightError::kInvalidIndex);
     return;
   }
-  if (lights_[index].GetCapability() == Capability::SIMPLE) {
+  if (lights_[index].GetCapability() == Capability::kSimple) {
     completer.ReplySuccess(lights_[index].GetCurrentSimpleValue());
   } else {
-    completer.ReplyError(LightError::NOT_SUPPORTED);
+    completer.ReplyError(LightError::kNotSupported);
   }
 }
 
 void AmlLight::SetSimpleValue(uint32_t index, bool value,
                               SetSimpleValueCompleter::Sync& completer) {
   if (index >= lights_.size()) {
-    completer.ReplyError(LightError::INVALID_INDEX);
+    completer.ReplyError(LightError::kInvalidIndex);
     return;
   }
   if (lights_[index].SetSimpleValue(value) != ZX_OK) {
-    completer.ReplyError(LightError::FAILED);
+    completer.ReplyError(LightError::kFailed);
   } else {
     completer.ReplySuccess();
   }
@@ -125,35 +125,35 @@ void AmlLight::SetSimpleValue(uint32_t index, bool value,
 void AmlLight::GetCurrentBrightnessValue(uint32_t index,
                                          GetCurrentBrightnessValueCompleter::Sync& completer) {
   if (index >= lights_.size()) {
-    completer.ReplyError(LightError::INVALID_INDEX);
+    completer.ReplyError(LightError::kInvalidIndex);
     return;
   }
-  if (lights_[index].GetCapability() == Capability::BRIGHTNESS) {
+  if (lights_[index].GetCapability() == Capability::kBrightness) {
     completer.ReplySuccess(lights_[index].GetCurrentBrightnessValue());
   } else {
-    completer.ReplyError(LightError::NOT_SUPPORTED);
+    completer.ReplyError(LightError::kNotSupported);
   }
 }
 
 void AmlLight::SetBrightnessValue(uint32_t index, double value,
                                   SetBrightnessValueCompleter::Sync& completer) {
   if (index >= lights_.size()) {
-    completer.ReplyError(LightError::INVALID_INDEX);
+    completer.ReplyError(LightError::kInvalidIndex);
     return;
   }
   if (lights_[index].SetBrightnessValue(value) != ZX_OK) {
-    completer.ReplyError(LightError::FAILED);
+    completer.ReplyError(LightError::kFailed);
   } else {
     completer.ReplySuccess();
   }
 }
 
 void AmlLight::GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync& completer) {
-  completer.ReplyError(LightError::NOT_SUPPORTED);
+  completer.ReplyError(LightError::kNotSupported);
 }
 
 void AmlLight::SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync& completer) {
-  completer.ReplyError(LightError::INVALID_INDEX);
+  completer.ReplyError(LightError::kInvalidIndex);
 }
 
 zx_status_t AmlLight::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {

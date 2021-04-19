@@ -58,13 +58,13 @@ void SpiChild::ExchangeVector(::fidl::VectorView<uint8_t> txdata,
 void SpiChild::RegisterVmo(uint32_t vmo_id, fuchsia_mem::wire::Range vmo,
                            sharedmemory::wire::SharedVmoRight rights,
                            RegisterVmoCompleter::Sync& completer) {
-  sharedmemory::wire::SharedVmoRegister_RegisterVmo_Result result;
-  sharedmemory::wire::SharedVmoRegister_RegisterVmo_Response response = {};
+  sharedmemory::wire::SharedVmoRegisterRegisterVmoResult result;
+  sharedmemory::wire::SharedVmoRegisterRegisterVmoResponse response = {};
   zx_status_t status = spi_.RegisterVmo(cs_, vmo_id, std::move(vmo.vmo), vmo.offset, vmo.size,
                                         static_cast<uint32_t>(rights));
   if (status == ZX_OK) {
     result.set_response(
-        fidl::ObjectView<sharedmemory::wire::SharedVmoRegister_RegisterVmo_Response>::FromExternal(
+        fidl::ObjectView<sharedmemory::wire::SharedVmoRegisterRegisterVmoResponse>::FromExternal(
             &response));
   } else {
     result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
@@ -73,13 +73,13 @@ void SpiChild::RegisterVmo(uint32_t vmo_id, fuchsia_mem::wire::Range vmo,
 }
 
 void SpiChild::UnregisterVmo(uint32_t vmo_id, UnregisterVmoCompleter::Sync& completer) {
-  sharedmemory::wire::SharedVmoRegister_UnregisterVmo_Result result;
-  sharedmemory::wire::SharedVmoRegister_UnregisterVmo_Response response = {};
+  sharedmemory::wire::SharedVmoRegisterUnregisterVmoResult result;
+  sharedmemory::wire::SharedVmoRegisterUnregisterVmoResponse response = {};
   zx_status_t status = spi_.UnregisterVmo(cs_, vmo_id, &response.vmo);
   if (status == ZX_OK) {
     result.set_response(
         fidl::ObjectView<
-            sharedmemory::wire::SharedVmoRegister_UnregisterVmo_Response>::FromExternal(&response));
+            sharedmemory::wire::SharedVmoRegisterUnregisterVmoResponse>::FromExternal(&response));
   } else {
     result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
   }
@@ -88,8 +88,8 @@ void SpiChild::UnregisterVmo(uint32_t vmo_id, UnregisterVmoCompleter::Sync& comp
 
 void SpiChild::Transmit(sharedmemory::wire::SharedVmoBuffer buffer,
                         TransmitCompleter::Sync& completer) {
-  sharedmemory::wire::SharedVmoIo_Transmit_Result result;
-  sharedmemory::wire::SharedVmoIo_Transmit_Response response = {};
+  sharedmemory::wire::SharedVmoIoTransmitResult result;
+  sharedmemory::wire::SharedVmoIoTransmitResponse response = {};
   zx_status_t status;
   {
     TRACE_DURATION("spi", "Transmit", "cs", cs_, "size", buffer.size);
@@ -97,7 +97,7 @@ void SpiChild::Transmit(sharedmemory::wire::SharedVmoBuffer buffer,
   }
   if (status == ZX_OK) {
     result.set_response(
-        fidl::ObjectView<sharedmemory::wire::SharedVmoIo_Transmit_Response>::FromExternal(
+        fidl::ObjectView<sharedmemory::wire::SharedVmoIoTransmitResponse>::FromExternal(
             &response));
   } else {
     result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
@@ -107,8 +107,8 @@ void SpiChild::Transmit(sharedmemory::wire::SharedVmoBuffer buffer,
 
 void SpiChild::Receive(sharedmemory::wire::SharedVmoBuffer buffer,
                        ReceiveCompleter::Sync& completer) {
-  sharedmemory::wire::SharedVmoIo_Receive_Result result;
-  sharedmemory::wire::SharedVmoIo_Receive_Response response = {};
+  sharedmemory::wire::SharedVmoIoReceiveResult result;
+  sharedmemory::wire::SharedVmoIoReceiveResponse response = {};
   zx_status_t status;
   {
     TRACE_DURATION("spi", "Receive", "cs", cs_, "size", buffer.size);
@@ -116,7 +116,7 @@ void SpiChild::Receive(sharedmemory::wire::SharedVmoBuffer buffer,
   }
   if (status == ZX_OK) {
     result.set_response(
-        fidl::ObjectView<sharedmemory::wire::SharedVmoIo_Receive_Response>::FromExternal(
+        fidl::ObjectView<sharedmemory::wire::SharedVmoIoReceiveResponse>::FromExternal(
             &response));
   } else {
     result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
@@ -127,8 +127,8 @@ void SpiChild::Receive(sharedmemory::wire::SharedVmoBuffer buffer,
 void SpiChild::Exchange(sharedmemory::wire::SharedVmoBuffer tx_buffer,
                         sharedmemory::wire::SharedVmoBuffer rx_buffer,
                         ExchangeCompleter::Sync& completer) {
-  sharedmemory::wire::SharedVmoIo_Exchange_Result result;
-  sharedmemory::wire::SharedVmoIo_Exchange_Response response = {};
+  sharedmemory::wire::SharedVmoIoExchangeResult result;
+  sharedmemory::wire::SharedVmoIoExchangeResponse response = {};
 
   zx_status_t status;
   if (tx_buffer.size != rx_buffer.size) {
@@ -141,7 +141,7 @@ void SpiChild::Exchange(sharedmemory::wire::SharedVmoBuffer tx_buffer,
 
   if (status == ZX_OK) {
     result.set_response(
-        fidl::ObjectView<sharedmemory::wire::SharedVmoIo_Exchange_Response>::FromExternal(
+        fidl::ObjectView<sharedmemory::wire::SharedVmoIoExchangeResponse>::FromExternal(
             &response));
   } else {
     result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));

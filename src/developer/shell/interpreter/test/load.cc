@@ -26,7 +26,7 @@ TEST_F(InterpreterTest, LoadStringVariableOk) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 
   CHECK_RESULT(0, "\"A Marx brother\"");
 }
@@ -47,7 +47,7 @@ TEST_F(InterpreterTest, LoadStringVariableFromAnotherContext) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context_1->id));
   Run(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context_1->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context_1->GetResult());
 
   shell::console::AstBuilder builder_2(kFileId_2);
   // Second context.
@@ -63,7 +63,7 @@ TEST_F(InterpreterTest, LoadStringVariableFromAnotherContext) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context_2->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context_2->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context_2->GetResult());
 
   CHECK_RESULT(0, "\"A Marx brother\"");
 }
@@ -84,7 +84,7 @@ TEST_F(InterpreterTest, LoadInt8VariableOk) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 
   CHECK_RESULT(0, "-1");
 }
@@ -105,7 +105,7 @@ TEST_F(InterpreterTest, LoadUint8VariableOk) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 
   CHECK_RESULT(0, "1");
 }
@@ -126,7 +126,7 @@ TEST_F(InterpreterTest, LoadInt16VariableOk) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 
   CHECK_RESULT(0, "-1");
 }
@@ -147,7 +147,7 @@ TEST_F(InterpreterTest, LoadUint16VariableOk) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 
   CHECK_RESULT(0, "1");
 }
@@ -168,7 +168,7 @@ TEST_F(InterpreterTest, LoadInt32VariableOk) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 
   CHECK_RESULT(0, "-1");
 }
@@ -189,7 +189,7 @@ TEST_F(InterpreterTest, LoadUint32VariableOk) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 
   CHECK_RESULT(0, "1");
 }
@@ -210,7 +210,7 @@ TEST_F(InterpreterTest, LoadInt64VariableOk) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 
   CHECK_RESULT(0, "-1");
 }
@@ -231,7 +231,7 @@ TEST_F(InterpreterTest, LoadUint64VariableOk) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 
   CHECK_RESULT(0, "1");
 }

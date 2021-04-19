@@ -90,20 +90,20 @@ static zx_status_t ConvertOpteeToZxResult(fidl::AnyAllocator& allocator, uint32_
   switch (optee_return_origin) {
     case TEEC_ORIGIN_COMMS:
       zx_result->set_return_code(allocator, optee_return_code);
-      zx_result->set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+      zx_result->set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::kCommunication);
       break;
     case TEEC_ORIGIN_TEE:
       zx_result->set_return_code(allocator, optee_return_code);
-      zx_result->set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::TRUSTED_OS);
+      zx_result->set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::kTrustedOs);
       break;
     case TEEC_ORIGIN_TRUSTED_APP:
       zx_result->set_return_code(allocator, optee_return_code);
-      zx_result->set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::TRUSTED_APPLICATION);
+      zx_result->set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::kTrustedApplication);
       break;
     default:
       LOG(ERROR, "optee: returned an invalid return origin (%" PRIu32 ")", optee_return_origin);
       zx_result->set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
-      zx_result->set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+      zx_result->set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::kCommunication);
       return ZX_ERR_INTERNAL;
   }
   return ZX_OK;
@@ -128,7 +128,7 @@ static std::filesystem::path GetPathFromRawMemory(void* mem, size_t max_size) {
 }
 
 // Awaits the `fuchsia.io.Node/OnOpen` event that is fired when opening with
-// `fuchsia.io.OPEN_FLAG_DESCRIBE` flag and returns the status contained in the event.
+// `fuchsia.io.kOpenFlagDescribe` flag and returns the status contained in the event.
 //
 // This is useful for synchronously awaiting the result of an `Open` request.
 static zx_status_t AwaitIoOnOpenStatus(fidl::UnownedClientEnd<fuchsia_io::Node> node) {
@@ -166,8 +166,8 @@ static zx_status_t AwaitIoOnOpenStatus(fidl::UnownedClientEnd<fuchsia_io::Node> 
 static zx::status<fidl::ClientEnd<fuchsia_io::Node>> OpenObjectInDirectory(
     fidl::UnownedClientEnd<fuchsia_io::Directory> root, uint32_t flags, uint32_t mode,
     std::string path) {
-  // Ensure `OPEN_FLAG_DESCRIBE` is passed
-  flags |= fuchsia_io::wire::OPEN_FLAG_DESCRIBE;
+  // Ensure `kOpenFlagDescribe` is passed
+  flags |= fuchsia_io::wire::kOpenFlagDescribe;
 
   // Create temporary channel ends to make FIDL call
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
@@ -197,15 +197,15 @@ static zx::status<fidl::ClientEnd<fuchsia_io::Node>> OpenObjectInDirectory(
 //
 // Template Parameters:
 //  * kOpenFlags: The flags to call `fuchsia.io.Directory/Open` with. This must not contain
-//               `OPEN_FLAG_NOT_DIRECTORY`.
+//               `kOpenFlagNotDirectory`.
 // Parameters:
 //  * root: The channel to the directory to start the walk from.
 //  * path: The path relative to `root` to open.
 template <uint32_t kOpenFlags>
 static zx::status<fidl::ClientEnd<fuchsia_io::Directory>> RecursivelyWalkPath(
     fidl::UnownedClientEnd<fuchsia_io::Directory> root, std::filesystem::path path) {
-  static_assert((kOpenFlags & fuchsia_io::wire::OPEN_FLAG_NOT_DIRECTORY) == 0,
-                "kOpenFlags must not include fuchsia_io::wire::OPEN_FLAG_NOT_DIRECTORY");
+  static_assert((kOpenFlags & fuchsia_io::wire::kOpenFlagNotDirectory) == 0,
+                "kOpenFlags must not include fuchsia_io::wire::kOpenFlagNotDirectory");
   ZX_DEBUG_ASSERT(root.is_valid());
 
   // If the path is lexicographically equivalent to the (relative) root directory, clone the root
@@ -220,7 +220,7 @@ static zx::status<fidl::ClientEnd<fuchsia_io::Directory>> RecursivelyWalkPath(
     auto [client_end, server_end] = std::move(endpoints.value());
 
     auto result =
-        fidl::WireCall(root).Clone(fuchsia_io::wire::CLONE_FLAG_SAME_RIGHTS, std::move(server_end));
+        fidl::WireCall(root).Clone(fuchsia_io::wire::kCloneFlagSameRights, std::move(server_end));
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -231,7 +231,7 @@ static zx::status<fidl::ClientEnd<fuchsia_io::Directory>> RecursivelyWalkPath(
   // If the path is more than just the root, then we need to walk the path.
   fidl::ClientEnd<fuchsia_io::Directory> current_dir{};
   for (const auto& fragment : path) {
-    static constexpr uint32_t kOpenMode = fuchsia_io::wire::MODE_TYPE_DIRECTORY;
+    static constexpr uint32_t kOpenMode = fuchsia_io::wire::kModeTypeDirectory;
     auto new_client_end =
         OpenObjectInDirectory(current_dir.is_valid() ? current_dir.borrow() : root, kOpenFlags,
                               kOpenMode, fragment.string());
@@ -247,16 +247,16 @@ static zx::status<fidl::ClientEnd<fuchsia_io::Directory>> RecursivelyWalkPath(
 static inline zx::status<fidl::ClientEnd<fuchsia_io::Directory>> CreateDirectory(
     fidl::UnownedClientEnd<fuchsia_io::Directory> root, std::filesystem::path path) {
   static constexpr uint32_t kCreateFlags =
-      fuchsia_io::wire::OPEN_RIGHT_READABLE | fuchsia_io::wire::OPEN_RIGHT_WRITABLE |
-      fuchsia_io::wire::OPEN_FLAG_CREATE | fuchsia_io::wire::OPEN_FLAG_DIRECTORY;
+      fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable |
+      fuchsia_io::wire::kOpenFlagCreate | fuchsia_io::wire::kOpenFlagDirectory;
   return RecursivelyWalkPath<kCreateFlags>(std::move(root), std::move(path));
 }
 
 static inline zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpenDirectory(
     fidl::UnownedClientEnd<fuchsia_io::Directory> root, std::filesystem::path path) {
-  static constexpr uint32_t kOpenFlags = fuchsia_io::wire::OPEN_RIGHT_READABLE |
-                                         fuchsia_io::wire::OPEN_RIGHT_WRITABLE |
-                                         fuchsia_io::wire::OPEN_FLAG_DIRECTORY;
+  static constexpr uint32_t kOpenFlags = fuchsia_io::wire::kOpenRightReadable |
+                                         fuchsia_io::wire::kOpenRightWritable |
+                                         fuchsia_io::wire::kOpenFlagDirectory;
   return RecursivelyWalkPath<kOpenFlags>(std::move(root), std::move(path));
 }
 
@@ -321,7 +321,7 @@ void OpteeClient::OpenSession2(
   if (!create_result.is_ok()) {
     LOG(ERROR, "failed to create OpenSessionMessage (status: %d)", create_result.error());
     result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::kCommunication);
     completer.Reply(kInvalidSession, std::move(result));
     return;
   }
@@ -339,7 +339,7 @@ void OpteeClient::OpenSession2(
 
   if (call_code != kReturnOk) {
     result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::kCommunication);
     completer.Reply(kInvalidSession, std::move(result));
     return;
   }
@@ -359,7 +359,7 @@ void OpteeClient::OpenSession2(
     // It is okay that the session id is not in the session list.
     CloseSession(message.session_id());
     result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::kCommunication);
     completer.Reply(kInvalidSession, std::move(result));
     return;
   }
@@ -379,7 +379,7 @@ void OpteeClient::InvokeCommand(
 
   if (open_sessions_.find(session_id) == open_sessions_.end()) {
     result.set_return_code(allocator, TEEC_ERROR_BAD_STATE);
-    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::kCommunication);
     completer.Reply(std::move(result));
     return;
   }
@@ -390,7 +390,7 @@ void OpteeClient::InvokeCommand(
   if (!create_result.is_ok()) {
     LOG(ERROR, "failed to create InvokeCommandMessage (status: %d)", create_result.error());
     result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::kCommunication);
     completer.Reply(std::move(result));
     return;
   }
@@ -410,7 +410,7 @@ void OpteeClient::InvokeCommand(
 
   if (call_code != kReturnOk) {
     result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::kCommunication);
     completer.Reply(std::move(result));
     return;
   }
@@ -427,7 +427,7 @@ void OpteeClient::InvokeCommand(
   fidl::VectorView<fuchsia_tee::wire::Parameter> out_parameters;
   if (message.CreateOutputParameterSet(allocator, &out_parameters) != ZX_OK) {
     result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
-    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::COMMUNICATION);
+    result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::kCommunication);
     completer.Reply(std::move(result));
     return;
   }
@@ -971,17 +971,17 @@ zx_status_t OpteeClient::RpmbRouteFrames(std::optional<SharedMemoryView> tx_fram
   ZX_DEBUG_ASSERT(tx_frames.has_value());
   ZX_DEBUG_ASSERT(rx_frames.has_value());
 
-  using fuchsia_hardware_rpmb::wire::FRAME_SIZE;
+  using fuchsia_hardware_rpmb::wire::kFrameSize;
 
   zx_status_t status;
   RpmbFrame* frame = reinterpret_cast<RpmbFrame*>(tx_frames->vaddr());
 
-  if ((tx_frames->size() % FRAME_SIZE) || (rx_frames->size() % FRAME_SIZE)) {
+  if ((tx_frames->size() % kFrameSize) || (rx_frames->size() % kFrameSize)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  uint64_t tx_frame_cnt = tx_frames->size() / FRAME_SIZE;
-  uint64_t rx_frame_cnt = rx_frames->size() / FRAME_SIZE;
+  uint64_t tx_frame_cnt = tx_frames->size() / kFrameSize;
+  uint64_t rx_frame_cnt = rx_frames->size() / kFrameSize;
 
   switch (betoh16(frame->request)) {
     case RpmbFrame::kRpmbRequestKey:
@@ -1313,9 +1313,9 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
   }
 
   static constexpr uint32_t kOpenFlags =
-      fuchsia_io::wire::OPEN_RIGHT_READABLE | fuchsia_io::wire::OPEN_RIGHT_WRITABLE |
-      fuchsia_io::wire::OPEN_FLAG_NOT_DIRECTORY | fuchsia_io::wire::OPEN_FLAG_DESCRIBE;
-  static constexpr uint32_t kOpenMode = fuchsia_io::wire::MODE_TYPE_FILE;
+      fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable |
+      fuchsia_io::wire::kOpenFlagNotDirectory | fuchsia_io::wire::kOpenFlagDescribe;
+  static constexpr uint32_t kOpenMode = fuchsia_io::wire::kModeTypeFile;
   auto node = OpenObjectInDirectory(storage_dir.value().borrow(), kOpenFlags, kOpenMode,
                                     path.filename().string());
   if (node.status_value() == ZX_ERR_NOT_FOUND) {
@@ -1362,9 +1362,9 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCreateFile(
   }
 
   static constexpr uint32_t kCreateFlags =
-      fuchsia_io::wire::OPEN_RIGHT_READABLE | fuchsia_io::wire::OPEN_RIGHT_WRITABLE |
-      fuchsia_io::wire::OPEN_FLAG_CREATE | fuchsia_io::wire::OPEN_FLAG_DESCRIBE;
-  static constexpr uint32_t kCreateMode = fuchsia_io::wire::MODE_TYPE_FILE;
+      fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable |
+      fuchsia_io::wire::kOpenFlagCreate | fuchsia_io::wire::kOpenFlagDescribe;
+  static constexpr uint32_t kCreateMode = fuchsia_io::wire::kModeTypeFile;
   auto node = OpenObjectInDirectory(storage_dir.value().borrow(), kCreateFlags, kCreateMode,
                                     path.filename().string());
   if (node.is_error()) {
@@ -1428,7 +1428,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
   fidl::Buffer<fidl::WireRequest<fuchsia_io::File::ReadAt>> request_buffer;
   fidl::Buffer<fidl::WireResponse<fuchsia_io::File::ReadAt>> response_buffer;
   while (bytes_left > 0) {
-    uint64_t read_chunk_request = std::min(bytes_left, fuchsia_io::wire::MAX_BUF);
+    uint64_t read_chunk_request = std::min(bytes_left, fuchsia_io::wire::kMaxBuf);
     uint64_t read_chunk_actual = 0;
 
     auto result = fidl::WireCall(file).ReadAt(request_buffer.view(), read_chunk_request, offset,
@@ -1491,7 +1491,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
   uint64_t offset = message->file_offset();
   size_t bytes_left = message->file_contents_memory_size();
   while (bytes_left > 0) {
-    uint64_t write_chunk_request = std::min(bytes_left, fuchsia_io::wire::MAX_BUF);
+    uint64_t write_chunk_request = std::min(bytes_left, fuchsia_io::wire::kMaxBuf);
 
     auto result = fidl::WireCall(file).WriteAt(
         fidl::VectorView<uint8_t>::FromExternal(buffer, write_chunk_request), offset);
@@ -1632,9 +1632,9 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
 
   if (!message->should_overwrite()) {
     static constexpr uint32_t kCheckRenameFlags =
-        fuchsia_io::wire::OPEN_RIGHT_READABLE | fuchsia_io::wire::OPEN_FLAG_DESCRIBE;
+        fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenFlagDescribe;
     static constexpr uint32_t kCheckRenameMode =
-        fuchsia_io::wire::MODE_TYPE_FILE | fuchsia_io::wire::MODE_TYPE_DIRECTORY;
+        fuchsia_io::wire::kModeTypeFile | fuchsia_io::wire::kModeTypeDirectory;
     auto destination = OpenObjectInDirectory(new_storage.value().borrow(), kCheckRenameFlags,
                                              kCheckRenameMode, new_name);
     if (destination.is_ok()) {

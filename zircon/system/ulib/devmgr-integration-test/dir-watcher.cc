@@ -25,7 +25,7 @@ zx_status_t DirWatcher::Create(fbl::unique_fd dir_fd,
   }
   fdio_cpp::FdioCaller caller(std::move(dir_fd));
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(caller.borrow_channel()))
-                    .Watch(fio::wire::WATCH_MASK_REMOVED, 0, zx::channel(server.release()));
+                    .Watch(fio::wire::kWatchMaskRemoved, 0, zx::channel(server.release()));
   if (!result.ok()) {
     return result.status();
   }
@@ -51,13 +51,13 @@ zx_status_t DirWatcher::WaitForRemoval(const fbl::String& filename, zx::duration
     //  uint8_t event
     //  uint8_t len
     //  char* name
-    uint8_t buf[fio::wire::MAX_BUF];
+    uint8_t buf[fio::wire::kMaxBuf];
     uint32_t actual_len;
     status = client_.read(0, buf, nullptr, sizeof(buf), 0, &actual_len, nullptr);
     if (status != ZX_OK) {
       return status;
     }
-    if (buf[0] != fio::wire::WATCH_EVENT_REMOVED) {
+    if (buf[0] != fio::wire::kWatchEventRemoved) {
       continue;
     }
     if (filename.length() == 0) {

@@ -92,6 +92,11 @@ func ConstNameToAllCapsSnake(name string) string {
 	return strings.Join(parts, "_")
 }
 
+// Convert a const name to kCamelCase style
+func ConstNameToKCamelCase(name string) string {
+	return "k" + ToUpperCamelCase(RemoveLeadingK(name))
+}
+
 // Removes a leading 'k' if the second character is upper-case, otherwise
 // returns the argument
 func RemoveLeadingK(name string) string {

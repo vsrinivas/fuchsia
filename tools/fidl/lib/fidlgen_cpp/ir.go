@@ -275,7 +275,7 @@ func libraryParts(library fidlgen.LibraryIdentifier, identifierTransform identif
 	parts := []string{}
 	for _, part := range library {
 		if identifierTransform == changePartIfReserved {
-			parts = append(parts, changeIfReserved(part))
+			parts = append(parts, changeIfReserved(string(part), nsComponentContext))
 		} else {
 			parts = append(parts, string(part))
 		}
@@ -319,36 +319,18 @@ func (c *compiler) isInExternalLibrary(ci fidlgen.CompoundIdentifier) bool {
 
 func (c *compiler) compileNameVariants(eci fidlgen.EncodedCompoundIdentifier) nameVariants {
 	ci := fidlgen.ParseCompoundIdentifier(eci)
-	if ci.Member != fidlgen.Identifier("") {
-		panic(fmt.Sprintf("unexpected compound identifier with member: %v", eci))
-	}
-	name := changeIfReserved(ci.Name)
-	declInfo, ok := c.decls[eci]
+	declInfo, ok := c.decls[ci.EncodeDecl()]
 	if !ok {
 		panic(fmt.Sprintf("unknown identifier: %v", eci))
 	}
-	declType := declInfo.Type
-	switch declType {
-	case fidlgen.ConstDeclType, fidlgen.BitsDeclType, fidlgen.EnumDeclType, fidlgen.StructDeclType, fidlgen.TableDeclType, fidlgen.UnionDeclType:
-		return nameVariants{
-			Natural: naturalNamespace(ci.Library).member(name),
-			Wire:    wireNamespace(ci.Library).member(name),
-			Unified: unifiedNamespace(ci.Library).member(name),
-		}
-	case fidlgen.ProtocolDeclType, fidlgen.ServiceDeclType:
-		// TODO(yifeit): Protocols and services should not have DeclName.
-		// Not all bindings generate these types.
-		return nameVariants{
-			Natural: naturalNamespace(ci.Library).member(name),
-			Wire:    unifiedNamespace(ci.Library).member(name),
-			// Intentionally using the natural namespace, since we would like the unified bindings
-			// to transparently accept natural types, which may certainly contain protocol endpoints.
-			// TODO(fxbug.dev/72980): Switch to ClientEnd/ServerEnd and underscore namespace when
-			// corresponding endpoint types can easily convert into each other.
-			Unified: naturalNamespace(ci.Library).member(name),
-		}
+	ctx := declContext(declInfo.Type)
+	name := ctx.transform(ci) // Note: does not handle ci.Member
+	if len(ci.Member) == 0 {
+		return name
 	}
-	panic("Unknown decl type: " + string(declType))
+
+	member := memberNameContext(declInfo.Type).transform(ci.Member)
+	return name.nestVariants(member)
 }
 
 func (c *compiler) compileCodingTableType(eci fidlgen.EncodedCompoundIdentifier) string {
@@ -507,7 +489,7 @@ func compile(r fidlgen.Root, h HeaderOptions) Root {
 	library := make(fidlgen.LibraryIdentifier, 0)
 	rawLibrary := make(fidlgen.LibraryIdentifier, 0)
 	for _, identifier := range fidlgen.ParseLibraryName(r.Name) {
-		safeName := changeIfReserved(identifier)
+		safeName := changeIfReserved(string(identifier), nsComponentContext)
 		library = append(library, fidlgen.Identifier(safeName))
 		rawLibrary = append(rawLibrary, identifier)
 	}

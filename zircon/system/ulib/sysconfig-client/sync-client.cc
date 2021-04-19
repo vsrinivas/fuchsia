@@ -99,7 +99,7 @@ zx_status_t FindSysconfigPartition(const fbl::unique_fd& devfs_root,
     }
     const auto& response = result.value();
     const uint8_t type[] = GUID_SYS_CONFIG_VALUE;
-    if (memcmp(response.partition_info.partition_guid.data(), type, skipblock::wire::GUID_LEN) !=
+    if (memcmp(response.partition_info.partition_guid.data(), type, skipblock::wire::kGuidLen) !=
         0) {
       return ZX_OK;
     }
@@ -411,7 +411,7 @@ zx_status_t SyncClient::WriteBytesWithoutErase(size_t offset, size_t len, const 
       .size = len,
       // The option doesn't have effect, but not setting it to a valid enum value will result
       // in fidl errors.
-      .mode = skipblock::wire::WriteBytesMode::READ_MODIFY_ERASE_WRITE,
+      .mode = skipblock::wire::WriteBytesMode::kReadModifyEraseWrite,
   };
   auto result = skip_block_.WriteBytesWithoutErase(std::move(operation));
   return result.ok() ? result.value().status : result.status();
@@ -880,7 +880,7 @@ zx_status_t SyncClientAbrWearLeveling::FlushReset(const sysconfig_header* header
   // Write data to persistent storage.
   size_t write_size = kAstroSysconfigPartitionSize - (header->abr_metadata.size - kAstroPageSize);
   if (auto status = client_.Write(0, write_size, cache_.vmo(), 0,
-                                  skipblock::wire::WriteBytesMode::ERASE_WRITE);
+                                  skipblock::wire::WriteBytesMode::kEraseWrite);
       status != ZX_OK) {
     fprintf(stderr, "Failed to flush write. %s\n", zx_status_get_string(status));
     return status;

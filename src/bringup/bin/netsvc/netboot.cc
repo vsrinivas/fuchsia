@@ -325,7 +325,7 @@ static zx_status_t reboot() {
     return ZX_ERR_INTERNAL;
   }
   auto response = fidl::WireCall<statecontrol::Admin>(local.borrow())
-                      .Reboot(statecontrol::wire::RebootReason::USER_REQUEST);
+                      .Reboot(statecontrol::wire::RebootReason::kUserRequest);
   if (response.status() != ZX_OK) {
     return response.status();
   }

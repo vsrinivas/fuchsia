@@ -91,8 +91,8 @@ struct PlatformCostsEntry {
 static void AddRgbaPixelFormat(fidl::AnyAllocator& allocator, uint64_t format_modifier, double cost,
                                std::list<const UsagePixelFormatCostEntry>& result) {
   // Both RGBA and BGRA versions have similar cost, if they're supported.
-  for (auto format : {fuchsia_sysmem2::wire::PixelFormatType::BGRA32,
-                      fuchsia_sysmem2::wire::PixelFormatType::R8G8B8A8}) {
+  for (auto format : {fuchsia_sysmem2::wire::PixelFormatType::kBgra32,
+                      fuchsia_sysmem2::wire::PixelFormatType::kR8G8B8A8}) {
     fuchsia_sysmem2::wire::PixelFormat pixel_format(allocator);
     pixel_format.set_type(allocator, format);
     pixel_format.set_format_modifier_value(allocator, format_modifier);
@@ -136,37 +136,36 @@ const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = [] {
   // Non-16X16 can have large advantages for the display, but it's much worse for the GPU.
   constexpr double kNon16X16Cost = 4000.0;
   uint64_t modifiers[] = {
-      fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE_TILED_HEADER,
-      fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_TE,
-      fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_32X8_TE,
-      fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE,
-      fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TILED_HEADER,
-      fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV,
-      fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER,
-      fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16,
-      fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_32X8};
+      fuchsia_sysmem2::wire::kFormatModifierArmAfbc16X16SplitBlockSparseYuvTeTiledHeader,
+      fuchsia_sysmem2::wire::kFormatModifierArmAfbc16X16Te,
+      fuchsia_sysmem2::wire::kFormatModifierArmAfbc32X8Te,
+      fuchsia_sysmem2::wire::kFormatModifierArmAfbc16X16SplitBlockSparseYuvTe,
+      fuchsia_sysmem2::wire::kFormatModifierArmAfbc16X16SplitBlockSparseYuvTiledHeader,
+      fuchsia_sysmem2::wire::kFormatModifierArmAfbc16X16SplitBlockSparseYuv,
+      fuchsia_sysmem2::wire::kFormatModifierArmAfbc16X16YuvTiledHeader,
+      fuchsia_sysmem2::wire::kFormatModifierArmAfbc16X16,
+      fuchsia_sysmem2::wire::kFormatModifierArmAfbc32X8};
   for (auto modifier : modifiers) {
     double cost = 0.0;
-    if (!(modifier & fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_YUV_BIT))
+    if (!(modifier & fuchsia_sysmem2::wire::kFormatModifierArmYuvBit))
       cost += kNonYuvCost;
-    if (!(modifier & fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT))
+    if (!(modifier & fuchsia_sysmem2::wire::kFormatModifierArmTiledHeaderBit))
       cost += kNonTiledHeaderCost;
-    if (modifier & fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT)
+    if (modifier & fuchsia_sysmem2::wire::kFormatModifierArmTiledHeaderBit)
       cost += kSplitCost;
-    if (!(modifier & fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_SPARSE_BIT))
+    if (!(modifier & fuchsia_sysmem2::wire::kFormatModifierArmSparseBit))
       cost += kNonSparseCost;
-    if (!(modifier & fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_TE_BIT))
+    if (!(modifier & fuchsia_sysmem2::wire::kFormatModifierArmTeBit))
       cost += kNonTeCost;
 
     constexpr uint64_t kAfbcTypeMask = 0xf;
     if ((modifier & kAfbcTypeMask) !=
-        (fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_AFBC_16X16 & kAfbcTypeMask))
+        (fuchsia_sysmem2::wire::kFormatModifierArmAfbc16X16 & kAfbcTypeMask))
       cost += kNon16X16Cost;
     AddRgbaPixelFormat(allocator, modifier, cost, result);
   }
   // Should be higher cost than all AFBC formats.
-  AddRgbaPixelFormat(allocator, fuchsia_sysmem2::wire::FORMAT_MODIFIER_ARM_LINEAR_TE, 30000.0,
-                     result);
+  AddRgbaPixelFormat(allocator, fuchsia_sysmem2::wire::kFormatModifierArmLinearTe, 30000.0, result);
   return result;
 }();
 
@@ -180,13 +179,13 @@ const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries =
   std::list<const UsagePixelFormatCostEntry> result;
   // NV12 weakly preferred for VIDEO_USAGE_HW_DECODER.
   fuchsia_sysmem2::wire::PixelFormat pixel_format(allocator);
-  pixel_format.set_type(allocator, fuchsia_sysmem2::wire::PixelFormatType::NV12);
+  pixel_format.set_type(allocator, fuchsia_sysmem2::wire::PixelFormatType::kNv12);
   fuchsia_sysmem2::wire::BufferUsage buffer_usage(allocator);
   buffer_usage.set_none(allocator, 0u);
   buffer_usage.set_cpu(allocator, 0u);
   buffer_usage.set_vulkan(allocator, 0u);
   buffer_usage.set_display(allocator, 0u);
-  buffer_usage.set_video(allocator, fuchsia_sysmem2::wire::VIDEO_USAGE_HW_DECODER);
+  buffer_usage.set_video(allocator, fuchsia_sysmem2::wire::kVideoUsageHwDecoder);
   result.emplace_back(UsagePixelFormatCostEntry{
       // .pixel_format
       std::move(pixel_format),
@@ -201,11 +200,11 @@ const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries =
 // These costs are expected to be true on every platform.
 const std::list<const UsagePixelFormatCostEntry> kGeneric_Cost_Entries = [] {
   std::list<const UsagePixelFormatCostEntry> result;
-  AddRgbaPixelFormat(allocator, fuchsia_sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_YF_TILED, 1000.0,
+  AddRgbaPixelFormat(allocator, fuchsia_sysmem2::wire::kFormatModifierIntelI915YfTiled, 1000.0,
                      result);
-  AddRgbaPixelFormat(allocator, fuchsia_sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_Y_TILED, 2000.0,
+  AddRgbaPixelFormat(allocator, fuchsia_sysmem2::wire::kFormatModifierIntelI915YTiled, 2000.0,
                      result);
-  AddRgbaPixelFormat(allocator, fuchsia_sysmem2::wire::FORMAT_MODIFIER_INTEL_I915_X_TILED, 3000.0,
+  AddRgbaPixelFormat(allocator, fuchsia_sysmem2::wire::kFormatModifierIntelI915XTiled, 3000.0,
                      result);
   // LOG(INFO, "usage_pixel_format_cost.cc - allocator.debug_needed_buffer_size(): %zu",
   //    allocator.inner_allocator().debug_needed_buffer_size());

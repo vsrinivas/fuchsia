@@ -87,7 +87,7 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportImage(image_t* image,
     return result->status;
   }
 
-  sysmem::wire::BufferCollectionInfo_2& collection_info = result->buffer_collection_info;
+  sysmem::wire::BufferCollectionInfo2& collection_info = result->buffer_collection_info;
 
   if (!collection_info.settings.has_image_format_constraints ||
       index >= collection_info.buffer_count) {
@@ -95,12 +95,12 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportImage(image_t* image,
   }
 
   ZX_DEBUG_ASSERT(collection_info.settings.image_format_constraints.pixel_format.type ==
-                  sysmem::wire::PixelFormatType::BGRA32);
+                  sysmem::wire::PixelFormatType::kBgra32);
   ZX_DEBUG_ASSERT(
       collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
   ZX_DEBUG_ASSERT(
       collection_info.settings.image_format_constraints.pixel_format.format_modifier.value ==
-      sysmem::wire::FORMAT_MODIFIER_LINEAR);
+      sysmem::wire::kFormatModifierLinear);
 
   uint32_t minimum_row_bytes;
   if (!image_format::GetMinimumRowBytes(collection_info.settings.image_format_constraints,
@@ -279,7 +279,7 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplGetSysmemConnection(zx::channel
 zx_status_t Mt8167sDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     const image_t* config, zx_unowned_handle_t collection) {
   sysmem::wire::BufferCollectionConstraints constraints = {};
-  constraints.usage.display = sysmem::wire::displayUsageLayer;
+  constraints.usage.display = sysmem::wire::kDisplayUsageLayer;
   constraints.has_buffer_memory_constraints = true;
   sysmem::wire::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
   buffer_constraints.physically_contiguous_required = true;
@@ -288,14 +288,14 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.cpu_domain_supported = false;
   buffer_constraints.inaccessible_domain_supported = true;
   buffer_constraints.heap_permitted_count = 1;
-  buffer_constraints.heap_permitted[0] = sysmem::wire::HeapType::SYSTEM_RAM;
+  buffer_constraints.heap_permitted[0] = sysmem::wire::HeapType::kSystemRam;
   constraints.image_format_constraints_count = 1;
   sysmem::wire::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
+  image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgra32;
   image_constraints.pixel_format.has_format_modifier = true;
-  image_constraints.pixel_format.format_modifier.value = sysmem::wire::FORMAT_MODIFIER_LINEAR;
+  image_constraints.pixel_format.format_modifier.value = sysmem::wire::kFormatModifierLinear;
   image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::SRGB;
+  image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::kSrgb;
   image_constraints.bytes_per_row_divisor = 32;
   image_constraints.start_offset_divisor = 32;
 

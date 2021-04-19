@@ -120,7 +120,7 @@ TEST_F(TransactionCountingTest, CountStartsAtZero) {
   zx::channel fc1, fc1_remote;
   ASSERT_OK(zx::channel::create(0u, &fc1, &fc1_remote));
   ASSERT_OK(
-      fdio_open_at(client_end.get(), "file", fio::wire::OPEN_RIGHT_READABLE, fc1_remote.release()));
+      fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable, fc1_remote.release()));
 
   ASSERT_EQ(inflight_transactions(), 0);
 }
@@ -135,7 +135,7 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightReplyShortMessage) {
   zx::channel fc1, fc1_remote;
   ASSERT_OK(zx::channel::create(0u, &fc1, &fc1_remote));
   ASSERT_OK(
-      fdio_open_at(client_end.get(), "file", fio::wire::OPEN_RIGHT_READABLE, fc1_remote.release()));
+      fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable, fc1_remote.release()));
 
   SendHangingMessage(fc1);
   {
@@ -176,7 +176,7 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightReplyValidMessage) {
   zx::channel fc1, fc1_remote;
   ASSERT_OK(zx::channel::create(0u, &fc1, &fc1_remote));
   ASSERT_OK(
-      fdio_open_at(client_end.get(), "file", fio::wire::OPEN_RIGHT_READABLE, fc1_remote.release()));
+      fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable, fc1_remote.release()));
 
   SendHangingMessage(fc1);
   {
@@ -220,7 +220,7 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightCloseOnMessage) {
   zx::channel fc1, fc1_remote;
   ASSERT_OK(zx::channel::create(0u, &fc1, &fc1_remote));
   ASSERT_OK(
-      fdio_open_at(client_end.get(), "file", fio::wire::OPEN_RIGHT_READABLE, fc1_remote.release()));
+      fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable, fc1_remote.release()));
 
   SendHangingMessage(fc1);
   {
@@ -244,12 +244,12 @@ TEST_F(TransactionCountingTest, MultipleTransactionsInflight) {
   zx::channel fc1, fc1_remote;
   ASSERT_OK(zx::channel::create(0u, &fc1, &fc1_remote));
   ASSERT_OK(
-      fdio_open_at(client_end.get(), "file", fio::wire::OPEN_RIGHT_READABLE, fc1_remote.release()));
+      fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable, fc1_remote.release()));
 
   zx::channel fc2, fc2_remote;
   ASSERT_OK(zx::channel::create(0u, &fc2, &fc2_remote));
   ASSERT_OK(
-      fdio_open_at(client_end.get(), "file", fio::wire::OPEN_RIGHT_READABLE, fc2_remote.release()));
+      fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable, fc2_remote.release()));
 
   SendHangingMessage(fc1);
   auto txn1 = GetNextInflightTransaction();

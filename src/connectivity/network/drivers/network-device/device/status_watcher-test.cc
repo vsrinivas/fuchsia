@@ -20,7 +20,7 @@ namespace testing {
 using netdev::wire::StatusFlags;
 using network::internal::StatusWatcher;
 
-constexpr StatusFlags kStatusOnline = StatusFlags::ONLINE;
+constexpr StatusFlags kStatusOnline = StatusFlags::kOnline;
 constexpr StatusFlags kStatusOffline = StatusFlags();
 
 status_t MakeStatus(StatusFlags status_flags, uint32_t mtu) {
@@ -215,7 +215,7 @@ TEST_F(StatusWatcherTest, SingleStatus) {
   ASSERT_TRUE(opt.has_value());
   auto status = opt.value();
   ASSERT_EQ(status.mtu(), 100);
-  ASSERT_TRUE(status.flags() & StatusFlags::ONLINE);
+  ASSERT_TRUE(status.flags() & StatusFlags::kOnline);
 }
 
 TEST_F(StatusWatcherTest, QueuesStatus) {
@@ -234,17 +234,17 @@ TEST_F(StatusWatcherTest, QueuesStatus) {
   ASSERT_TRUE(opt.has_value());
   auto status = opt.value();
   EXPECT_EQ(status.mtu(), 100);
-  EXPECT_TRUE(status.flags() & StatusFlags::ONLINE);
+  EXPECT_TRUE(status.flags() & StatusFlags::kOnline);
   opt = cli.PopObserved();
   ASSERT_TRUE(opt.has_value());
   status = opt.value();
   EXPECT_EQ(status.mtu(), 200);
-  EXPECT_TRUE(status.flags() & StatusFlags::ONLINE);
+  EXPECT_TRUE(status.flags() & StatusFlags::kOnline);
   opt = cli.PopObserved();
   ASSERT_TRUE(opt.has_value());
   status = opt.value();
   EXPECT_EQ(status.mtu(), 300);
-  EXPECT_TRUE(status.flags() & StatusFlags::ONLINE);
+  EXPECT_TRUE(status.flags() & StatusFlags::kOnline);
 }
 
 TEST_F(StatusWatcherTest, DropsOldestStatus) {
@@ -263,12 +263,12 @@ TEST_F(StatusWatcherTest, DropsOldestStatus) {
   ASSERT_TRUE(opt.has_value());
   auto status = opt.value();
   ASSERT_EQ(status.mtu(), 200);
-  ASSERT_TRUE(status.flags() & StatusFlags::ONLINE);
+  ASSERT_TRUE(status.flags() & StatusFlags::kOnline);
   opt = cli.PopObserved();
   ASSERT_TRUE(opt.has_value());
   status = opt.value();
   ASSERT_EQ(status.mtu(), 300);
-  ASSERT_TRUE(status.flags() & StatusFlags::ONLINE);
+  ASSERT_TRUE(status.flags() & StatusFlags::kOnline);
   ASSERT_FALSE(cli.PopObserved().has_value());
 }
 
@@ -304,14 +304,14 @@ TEST_F(StatusWatcherTest, LockStepWatch) {
   cli.WaitForEventAndReset();
   auto evt = cli.PopObserved();
   ASSERT_TRUE(evt.has_value());
-  EXPECT_TRUE(evt->flags() & StatusFlags::ONLINE);
+  EXPECT_TRUE(evt->flags() & StatusFlags::kOnline);
   // wait for a bit to guarantee that WatchClient is hanging.
   ASSERT_NO_FATAL_FAILURES(cli.NoEvents(zx::msec(10)));
   watcher->PushStatus(MakeStatus(kStatusOffline, 100));
   ASSERT_NO_FATAL_FAILURES(cli.WaitForEventAndReset());
   evt = cli.PopObserved();
   ASSERT_TRUE(evt.has_value());
-  EXPECT_FALSE(evt->flags() & StatusFlags::ONLINE);
+  EXPECT_FALSE(evt->flags() & StatusFlags::kOnline);
 
   // go again with status set to online.
   ASSERT_NO_FATAL_FAILURES(cli.NoEvents(zx::msec(10)));
@@ -319,7 +319,7 @@ TEST_F(StatusWatcherTest, LockStepWatch) {
   ASSERT_NO_FATAL_FAILURES(cli.WaitForEventAndReset());
   evt = cli.PopObserved();
   ASSERT_TRUE(evt.has_value());
-  EXPECT_TRUE(evt->flags() & StatusFlags::ONLINE);
+  EXPECT_TRUE(evt->flags() & StatusFlags::kOnline);
 }
 
 TEST_F(StatusWatcherTest, IgnoresDuplicateStatus) {
@@ -344,7 +344,7 @@ TEST_F(StatusWatcherTest, IgnoresDuplicateStatus) {
   ASSERT_NO_FATAL_FAILURES(cli.WaitForEventAndReset());
   evt = cli.PopObserved();
   ASSERT_TRUE(evt.has_value());
-  EXPECT_FALSE(evt->flags() & StatusFlags::ONLINE);
+  EXPECT_FALSE(evt->flags() & StatusFlags::kOnline);
 }
 
 }  // namespace testing

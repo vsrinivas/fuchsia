@@ -34,7 +34,7 @@ namespace {
 // device suspension, as mexec::Boot expects a service to do so.
 struct FakeDeviceAdmin : public fidl::WireInterface<devmgr::Administrator> {
   void Suspend(uint32_t flags, SuspendCompleter::Sync& completer) override {
-    completer.Reply(flags == devmgr::wire::SUSPEND_FLAG_MEXEC ? ZX_OK : ZX_ERR_INVALID_ARGS);
+    completer.Reply(flags == devmgr::wire::kSuspendFlagMexec ? ZX_OK : ZX_ERR_INVALID_ARGS);
   }
 
   void UnregisterSystemStorageForShutdown(

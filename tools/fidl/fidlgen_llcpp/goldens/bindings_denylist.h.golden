@@ -1022,7 +1022,7 @@ class ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
 namespace fidl_test_bindingsdenylist {
 namespace wire {
 
-constexpr uint32_t AllBindings = 0u;
+constexpr uint32_t kAllBindings = 0u;
 
 }  // namespace wire
 }  // namespace fidl_test_bindingsdenylist

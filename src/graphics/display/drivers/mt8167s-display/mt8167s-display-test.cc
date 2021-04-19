@@ -42,7 +42,7 @@ class MockNoCpuBufferCollection : public mock_sysmem::MockBufferCollection {
   }
 
   void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& completer) override {
-    sysmem::wire::BufferCollectionInfo_2 info;
+    sysmem::wire::BufferCollectionInfo2 info;
     zx::vmo vmo;
     constexpr uint32_t kWidth = 800;
     constexpr uint32_t kHeight = 600;

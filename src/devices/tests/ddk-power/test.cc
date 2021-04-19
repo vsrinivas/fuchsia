@@ -19,15 +19,15 @@
 
 using driver_integration_test::IsolatedDevmgr;
 using fuchsia_device::Controller;
-using fuchsia_device::wire::DEVICE_PERFORMANCE_STATE_P0;
 using fuchsia_device::wire::DevicePerformanceStateInfo;
 using fuchsia_device::wire::DevicePowerState;
 using fuchsia_device::wire::DevicePowerStateInfo;
-using fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES;
-using fuchsia_device::wire::MAX_DEVICE_POWER_STATES;
+using fuchsia_device::wire::kDevicePerformanceStateP0;
+using fuchsia_device::wire::kMaxDevicePerformanceStates;
+using fuchsia_device::wire::kMaxDevicePowerStates;
 using fuchsia_device::wire::SystemPowerStateInfo;
 using fuchsia_device_power_test::TestDevice;
-using fuchsia_hardware_power_statecontrol::wire::MAX_SYSTEM_POWER_STATES;
+using fuchsia_hardware_power_statecontrol::wire::kMaxSystemPowerStates;
 using fuchsia_hardware_power_statecontrol::wire::SystemPowerState;
 namespace device_manager_fidl = fuchsia_device_manager;
 namespace lifecycle_fidl = fuchsia_process_lifecycle;
@@ -126,7 +126,7 @@ class PowerTestCase : public zxtest::Test {
 
 TEST_F(PowerTestCase, InvalidDevicePowerCaps_Less) {
   std::array<DevicePowerStateInfo, 1> states;
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD1;
   states[0].is_supported = true;
   auto response =
       fidl::WireCall<TestDevice>(zx::unowned(child_device_handle))
@@ -141,9 +141,9 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_Less) {
 }
 
 TEST_F(PowerTestCase, InvalidDevicePowerCaps_More) {
-  std::array<DevicePowerStateInfo, MAX_DEVICE_POWER_STATES + 1> states;
-  for (uint8_t i = 0; i < MAX_DEVICE_POWER_STATES + 1; i++) {
-    states[i].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  std::array<DevicePowerStateInfo, kMaxDevicePowerStates + 1> states;
+  for (uint8_t i = 0; i < kMaxDevicePowerStates + 1; i++) {
+    states[i].state_id = DevicePowerState::kDevicePowerStateD1;
     states[i].is_supported = true;
   }
   auto response =
@@ -160,10 +160,10 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_More) {
 }
 
 TEST_F(PowerTestCase, InvalidDevicePowerCaps_MissingRequired) {
-  std::array<DevicePowerStateInfo, MAX_DEVICE_POWER_STATES> states;
-  for (uint8_t i = 0; i < MAX_DEVICE_POWER_STATES; i++) {
+  std::array<DevicePowerStateInfo, kMaxDevicePowerStates> states;
+  for (uint8_t i = 0; i < kMaxDevicePowerStates; i++) {
     // Missing D0 and D3COLD
-    states[i].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+    states[i].state_id = DevicePowerState::kDevicePowerStateD1;
     states[i].is_supported = true;
   }
   auto response =
@@ -180,13 +180,13 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_MissingRequired) {
 }
 
 TEST_F(PowerTestCase, InvalidDevicePowerCaps_DuplicateCaps) {
-  std::array<DevicePowerStateInfo, MAX_DEVICE_POWER_STATES> states;
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  std::array<DevicePowerStateInfo, kMaxDevicePowerStates> states;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[1].is_supported = true;
   // Repeat
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   auto response =
       fidl::WireCall<TestDevice>(zx::unowned(child_device_handle))
@@ -203,9 +203,9 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_DuplicateCaps) {
 
 TEST_F(PowerTestCase, AddDevicePowerCaps_Success) {
   std::array<DevicePowerStateInfo, 2> states;
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[1].is_supported = true;
   auto response =
       fidl::WireCall<TestDevice>(zx::unowned(child_device_handle))
@@ -222,18 +222,18 @@ TEST_F(PowerTestCase, AddDevicePowerCaps_Success) {
 
 TEST_F(PowerTestCase, AddDevicePowerCaps_MakeVisible_Success) {
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD1;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
 
   DevicePerformanceStateInfo perf_states[3];
-  perf_states[0].state_id = DEVICE_PERFORMANCE_STATE_P0;
+  perf_states[0].state_id = kDevicePerformanceStateP0;
   perf_states[0].is_supported = true;
   perf_states[0].restore_latency = 0;
   perf_states[1].state_id = 1;
@@ -257,25 +257,25 @@ TEST_F(PowerTestCase, AddDevicePowerCaps_MakeVisible_Success) {
   out_dpstates = &response2->result.response().dpstates[0];
 
   ASSERT_TRUE(
-      out_dpstates[static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0)].is_supported);
+      out_dpstates[static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD0)].is_supported);
   ASSERT_TRUE(
-      out_dpstates[static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D1)].is_supported);
+      out_dpstates[static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD1)].is_supported);
   ASSERT_EQ(
-      out_dpstates[static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D1)].restore_latency,
+      out_dpstates[static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD1)].restore_latency,
       100);
   ASSERT_TRUE(
-      out_dpstates[static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D3COLD)].is_supported);
+      out_dpstates[static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD3Cold)].is_supported);
 
-  ASSERT_EQ(out_dpstates[static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D3COLD)]
-                .restore_latency,
-            1000);
+  ASSERT_EQ(
+      out_dpstates[static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD3Cold)].restore_latency,
+      1000);
   const DevicePerformanceStateInfo *out_perf_states;
   auto response =
       fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).GetDevicePerformanceStates();
   ASSERT_OK(response.status());
   out_perf_states = &response->states[0];
 
-  ASSERT_TRUE(out_perf_states[DEVICE_PERFORMANCE_STATE_P0].is_supported);
+  ASSERT_TRUE(out_perf_states[kDevicePerformanceStateP0].is_supported);
   ASSERT_TRUE(out_perf_states[1].is_supported);
   ASSERT_EQ(out_perf_states[1].restore_latency, 100);
   ASSERT_TRUE(out_perf_states[2].is_supported);
@@ -284,9 +284,9 @@ TEST_F(PowerTestCase, AddDevicePowerCaps_MakeVisible_Success) {
 
 TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_MissingRequired) {
   std::array<DevicePowerStateInfo, 2> states;
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[1].is_supported = true;
 
   std::array<DevicePerformanceStateInfo, 10> perf_states;
@@ -311,15 +311,15 @@ TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_MissingRequired) {
 
 TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_Duplicate) {
   std::array<DevicePowerStateInfo, 2> states;
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[1].is_supported = true;
 
   std::array<DevicePerformanceStateInfo, 10> perf_states;
-  perf_states[0].state_id = DEVICE_PERFORMANCE_STATE_P0;
+  perf_states[0].state_id = kDevicePerformanceStateP0;
   perf_states[0].is_supported = true;
-  perf_states[1].state_id = DEVICE_PERFORMANCE_STATE_P0;
+  perf_states[1].state_id = kDevicePerformanceStateP0;
   perf_states[1].is_supported = true;
   perf_states[2].state_id = 1;
   perf_states[2].is_supported = true;
@@ -340,13 +340,13 @@ TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_Duplicate) {
 
 TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_More) {
   std::array<DevicePowerStateInfo, 2> states;
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[1].is_supported = true;
 
-  std::array<DevicePerformanceStateInfo, MAX_DEVICE_PERFORMANCE_STATES + 1> perf_states;
-  for (size_t i = 0; i < (MAX_DEVICE_PERFORMANCE_STATES + 1); i++) {
+  std::array<DevicePerformanceStateInfo, kMaxDevicePerformanceStates + 1> perf_states;
+  for (size_t i = 0; i < (kMaxDevicePerformanceStates + 1); i++) {
     perf_states[i].state_id = static_cast<int32_t>(i);
     perf_states[i].is_supported = true;
   }
@@ -366,9 +366,9 @@ TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_More) {
 
 TEST_F(PowerTestCase, AddDevicePerformanceCaps_NoCaps) {
   std::array<DevicePowerStateInfo, 2> states;
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[1].is_supported = true;
   auto power_states = ::fidl::VectorView<DevicePowerStateInfo>::FromExternal(states);
 
@@ -388,14 +388,14 @@ TEST_F(PowerTestCase, AddDevicePerformanceCaps_NoCaps) {
 
 TEST_F(PowerTestCase, AddDevicePerformanceCaps_Success) {
   std::array<DevicePowerStateInfo, 2> states;
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[1].is_supported = true;
   auto power_states = ::fidl::VectorView<DevicePowerStateInfo>::FromExternal(states);
 
   std::array<DevicePerformanceStateInfo, 2> perf_states;
-  perf_states[0].state_id = DEVICE_PERFORMANCE_STATE_P0;
+  perf_states[0].state_id = kDevicePerformanceStateP0;
   perf_states[0].is_supported = true;
   perf_states[1].state_id = 1;
   perf_states[1].is_supported = true;
@@ -416,13 +416,13 @@ TEST_F(PowerTestCase, AddDevicePerformanceCaps_Success) {
 
 TEST_F(PowerTestCase, GetDevicePowerCaps_Success) {
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD1;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
@@ -439,33 +439,33 @@ TEST_F(PowerTestCase, GetDevicePowerCaps_Success) {
   out_dpstates = &response2->result.response().dpstates[0];
 
   ASSERT_TRUE(
-      out_dpstates[static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0)].is_supported);
+      out_dpstates[static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD0)].is_supported);
   ASSERT_TRUE(
-      out_dpstates[static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D1)].is_supported);
+      out_dpstates[static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD1)].is_supported);
   ASSERT_EQ(
-      out_dpstates[static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D1)].restore_latency,
+      out_dpstates[static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD1)].restore_latency,
       100);
   ASSERT_TRUE(
-      out_dpstates[static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D3COLD)].is_supported);
-  ASSERT_EQ(out_dpstates[static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D3COLD)]
-                .restore_latency,
-            1000);
+      out_dpstates[static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD3Cold)].is_supported);
+  ASSERT_EQ(
+      out_dpstates[static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD3Cold)].restore_latency,
+      1000);
 }
 
 TEST_F(PowerTestCase, GetDevicePerformanceStates_Success) {
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD1;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
 
   DevicePerformanceStateInfo perf_states[3];
-  perf_states[0].state_id = DEVICE_PERFORMANCE_STATE_P0;
+  perf_states[0].state_id = kDevicePerformanceStateP0;
   perf_states[0].is_supported = true;
   perf_states[0].restore_latency = 0;
   perf_states[1].state_id = 1;
@@ -483,7 +483,7 @@ TEST_F(PowerTestCase, GetDevicePerformanceStates_Success) {
   ASSERT_OK(response.status());
   out_dpstates = &response->states[0];
 
-  ASSERT_TRUE(out_dpstates[DEVICE_PERFORMANCE_STATE_P0].is_supported);
+  ASSERT_TRUE(out_dpstates[kDevicePerformanceStateP0].is_supported);
   ASSERT_TRUE(out_dpstates[1].is_supported);
   ASSERT_EQ(out_dpstates[1].restore_latency, 100);
   ASSERT_TRUE(out_dpstates[2].is_supported);
@@ -493,13 +493,13 @@ TEST_F(PowerTestCase, GetDevicePerformanceStates_Success) {
 TEST_F(PowerTestCase, SetPerformanceState_Success) {
   // Add Capabilities
   DevicePowerStateInfo states[2];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[1].is_supported = true;
 
   DevicePerformanceStateInfo perf_states[3];
-  perf_states[0].state_id = DEVICE_PERFORMANCE_STATE_P0;
+  perf_states[0].state_id = kDevicePerformanceStateP0;
   perf_states[0].is_supported = true;
   perf_states[0].restore_latency = 0;
   perf_states[1].state_id = 1;
@@ -536,13 +536,13 @@ TEST_F(PowerTestCase, SetPerformanceStateFail_HookNotPresent) {
 TEST_F(PowerTestCase, SetPerformanceStateFail_UnsupportedState) {
   // Add Capabilities
   DevicePowerStateInfo states[2];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[1].is_supported = true;
 
   DevicePerformanceStateInfo perf_states[2];
-  perf_states[0].state_id = DEVICE_PERFORMANCE_STATE_P0;
+  perf_states[0].state_id = kDevicePerformanceStateP0;
   perf_states[0].is_supported = true;
   perf_states[0].restore_latency = 0;
   perf_states[1].state_id = 1;
@@ -561,23 +561,23 @@ TEST_F(PowerTestCase, SetPerformanceStateFail_UnsupportedState) {
 TEST_F(PowerTestCase, Suspend_Success) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD1;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                            .Suspend(DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+                            .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
   ASSERT_OK(suspend_result.status());
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
-  ASSERT_EQ(suspend_response.out_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  ASSERT_EQ(suspend_response.out_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   auto response2 =
       fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
@@ -587,25 +587,25 @@ TEST_F(PowerTestCase, Suspend_Success) {
     call_status = response2->result.err();
   }
   ASSERT_OK(call_status);
-  ASSERT_EQ(response2->result.response().cur_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  ASSERT_EQ(response2->result.response().cur_state, DevicePowerState::kDevicePowerStateD3Cold);
 }
 
 TEST_F(PowerTestCase, AutoSuspend_Enable) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD1;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                            .ConfigureAutoSuspend(true, DevicePowerState::DEVICE_POWER_STATE_D1);
+                            .ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD1);
   ASSERT_OK(suspend_result.status());
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
@@ -620,26 +620,26 @@ TEST_F(PowerTestCase, AutoSuspend_Enable) {
   ASSERT_OK(call_status);
   ASSERT_EQ(response2->result.response().enabled, true);
   ASSERT_EQ(response2->result.response().deepest_sleep_state,
-            DevicePowerState::DEVICE_POWER_STATE_D1);
+            DevicePowerState::kDevicePowerStateD1);
 }
 
 TEST_F(PowerTestCase, AutoSuspend_Disable) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD1;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   {
     auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                              .ConfigureAutoSuspend(true, DevicePowerState::DEVICE_POWER_STATE_D1);
+                              .ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD1);
     ASSERT_OK(suspend_result.status());
     const auto &suspend_response = suspend_result.value();
     ASSERT_OK(suspend_response.status);
@@ -656,12 +656,12 @@ TEST_F(PowerTestCase, AutoSuspend_Disable) {
     ASSERT_OK(call_status);
     ASSERT_EQ(response->result.response().enabled, true);
     ASSERT_EQ(response->result.response().deepest_sleep_state,
-              DevicePowerState::DEVICE_POWER_STATE_D1);
+              DevicePowerState::kDevicePowerStateD1);
   }
 
   {
     auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                              .ConfigureAutoSuspend(false, DevicePowerState::DEVICE_POWER_STATE_D0);
+                              .ConfigureAutoSuspend(false, DevicePowerState::kDevicePowerStateD0);
     ASSERT_OK(suspend_result.status());
     auto &suspend_response = suspend_result.value();
     ASSERT_OK(suspend_response.status);
@@ -684,13 +684,13 @@ TEST_F(PowerTestCase, AutoSuspend_Disable) {
 TEST_F(PowerTestCase, AutoSuspend_DefaultDisabled) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD1;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
@@ -705,26 +705,25 @@ TEST_F(PowerTestCase, AutoSuspend_DefaultDisabled) {
   ASSERT_OK(call_status);
   ASSERT_EQ(response2->result.response().enabled, false);
   ASSERT_EQ(response2->result.response().deepest_sleep_state,
-            DevicePowerState::DEVICE_POWER_STATE_D0);
+            DevicePowerState::kDevicePowerStateD0);
 }
 
 TEST_F(PowerTestCase, DeviceSuspend_AutoSuspendEnabled) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD1;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
-  auto auto_suspend_result =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-          .ConfigureAutoSuspend(true, DevicePowerState::DEVICE_POWER_STATE_D1);
+  auto auto_suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
+                                 .ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD1);
   ASSERT_OK(auto_suspend_result.status());
   const auto &auto_suspend_response = auto_suspend_result.value();
   ASSERT_OK(auto_suspend_response.status);
@@ -739,11 +738,11 @@ TEST_F(PowerTestCase, DeviceSuspend_AutoSuspendEnabled) {
   ASSERT_OK(call_status);
   ASSERT_EQ(response2->result.response().enabled, true);
   ASSERT_EQ(response2->result.response().deepest_sleep_state,
-            DevicePowerState::DEVICE_POWER_STATE_D1);
+            DevicePowerState::kDevicePowerStateD1);
 
   {
     auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                              .Suspend(DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+                              .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
     ASSERT_OK(suspend_result.status());
     const auto &suspend_response = suspend_result.value();
     // Device suspend is not supported when auto suspend is configured.
@@ -754,13 +753,13 @@ TEST_F(PowerTestCase, DeviceSuspend_AutoSuspendEnabled) {
     // Disable autosuspend and try again
     auto auto_suspend_result =
         fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-            .ConfigureAutoSuspend(false, DevicePowerState::DEVICE_POWER_STATE_D0);
+            .ConfigureAutoSuspend(false, DevicePowerState::kDevicePowerStateD0);
     ASSERT_OK(auto_suspend_result.status());
     auto &auto_suspend_response = auto_suspend_result.value();
     ASSERT_OK(auto_suspend_response.status);
 
     auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                              .Suspend(DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+                              .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
     ASSERT_OK(suspend_result.status());
     ASSERT_OK(suspend_result.value().status);
   }
@@ -769,20 +768,20 @@ TEST_F(PowerTestCase, DeviceSuspend_AutoSuspendEnabled) {
 TEST_F(PowerTestCase, SystemSuspend_AutoSuspendEnabled) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D2;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD2;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
-  ::fidl::Array<SystemPowerStateInfo, MAX_SYSTEM_POWER_STATES> mapping{};
-  for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
-    mapping[i].dev_state = DevicePowerState::DEVICE_POWER_STATE_D2;
+  ::fidl::Array<SystemPowerStateInfo, kMaxSystemPowerStates> mapping{};
+  for (size_t i = 0; i < kMaxSystemPowerStates; i++) {
+    mapping[i].dev_state = DevicePowerState::kDevicePowerStateD2;
     mapping[i].wakeup_enable = false;
   }
 
@@ -798,9 +797,8 @@ TEST_F(PowerTestCase, SystemSuspend_AutoSuspendEnabled) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  auto auto_suspend_result =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-          .ConfigureAutoSuspend(true, DevicePowerState::DEVICE_POWER_STATE_D2);
+  auto auto_suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
+                                 .ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD2);
   ASSERT_OK(auto_suspend_result.status());
   const auto &auto_suspend_response = auto_suspend_result.value();
   ASSERT_OK(auto_suspend_response.status);
@@ -822,7 +820,7 @@ TEST_F(PowerTestCase, SystemSuspend_AutoSuspendEnabled) {
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(child_dev_suspend_response->result.response().cur_state,
-            DevicePowerState::DEVICE_POWER_STATE_D2);
+            DevicePowerState::kDevicePowerStateD2);
 
   // Wait till parent's suspend event is called.
   WaitForDeviceSuspendCompletion(zx::unowned(parent_device_handle));
@@ -835,29 +833,29 @@ TEST_F(PowerTestCase, SystemSuspend_AutoSuspendEnabled) {
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(parent_dev_suspend_response->result.response().cur_state,
-            DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+            DevicePowerState::kDevicePowerStateD3Cold);
 }
 
 TEST_F(PowerTestCase, SelectiveResume_Success) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD1;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                            .Suspend(DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+                            .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
   ASSERT_OK(suspend_result.status());
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
-  ASSERT_EQ(suspend_response.out_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  ASSERT_EQ(suspend_response.out_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   auto response2 =
       fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
@@ -867,15 +865,15 @@ TEST_F(PowerTestCase, SelectiveResume_Success) {
     call_status = response2->result.err();
   }
   ASSERT_OK(call_status);
-  ASSERT_EQ(response2->result.response().cur_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  ASSERT_EQ(response2->result.response().cur_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   auto resume_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).Resume();
   ASSERT_OK(resume_result.status());
 
   const auto &resume_response = resume_result.value();
   ASSERT_OK(resume_response.status);
-  ASSERT_EQ(resume_response.out_power_state, DevicePowerState::DEVICE_POWER_STATE_D0);
-  ASSERT_EQ(resume_response.out_perf_state, DEVICE_PERFORMANCE_STATE_P0);
+  ASSERT_EQ(resume_response.out_power_state, DevicePowerState::kDevicePowerStateD0);
+  ASSERT_EQ(resume_response.out_perf_state, kDevicePerformanceStateP0);
 
   auto response3 =
       fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
@@ -885,19 +883,19 @@ TEST_F(PowerTestCase, SelectiveResume_Success) {
     call_status = response3->result.err();
   }
   ASSERT_OK(call_status);
-  ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::DEVICE_POWER_STATE_D0);
+  ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::kDevicePowerStateD0);
 }
 
 TEST_F(PowerTestCase, DefaultSystemPowerStatesMapping) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD1;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
@@ -915,8 +913,8 @@ TEST_F(PowerTestCase, DefaultSystemPowerStatesMapping) {
 
   // Test Default mapping. For now, the default device power state is D3COLD and
   // wakeup_enable is false.
-  for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
-    ASSERT_EQ(states_mapping[i].dev_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  for (size_t i = 0; i < kMaxSystemPowerStates; i++) {
+    ASSERT_EQ(states_mapping[i].dev_state, DevicePowerState::kDevicePowerStateD3Cold);
     ASSERT_FALSE(states_mapping[i].wakeup_enable);
   }
 }
@@ -924,20 +922,20 @@ TEST_F(PowerTestCase, DefaultSystemPowerStatesMapping) {
 TEST_F(PowerTestCase, UpdatePowerStatesMapping_UnsupportedDeviceState) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD1;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
-  ::fidl::Array<SystemPowerStateInfo, MAX_SYSTEM_POWER_STATES> mapping{};
-  for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
-    mapping[i].dev_state = DevicePowerState::DEVICE_POWER_STATE_D2;
+  ::fidl::Array<SystemPowerStateInfo, kMaxSystemPowerStates> mapping{};
+  for (size_t i = 0; i < kMaxSystemPowerStates; i++) {
+    mapping[i].dev_state = DevicePowerState::kDevicePowerStateD2;
     mapping[i].wakeup_enable = false;
   }
 
@@ -961,29 +959,29 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_UnsupportedDeviceState) {
   ASSERT_STATUS(call_status, ZX_OK);
   states_mapping = &response2->result.response().mapping[0];
 
-  ASSERT_EQ(states_mapping[static_cast<uint8_t>(SystemPowerState::REBOOT)].dev_state,
-            DevicePowerState::DEVICE_POWER_STATE_D3COLD);
-  ASSERT_FALSE(states_mapping[static_cast<uint8_t>(SystemPowerState::REBOOT)].wakeup_enable);
+  ASSERT_EQ(states_mapping[static_cast<uint8_t>(SystemPowerState::kReboot)].dev_state,
+            DevicePowerState::kDevicePowerStateD3Cold);
+  ASSERT_FALSE(states_mapping[static_cast<uint8_t>(SystemPowerState::kReboot)].wakeup_enable);
 }
 
 TEST_F(PowerTestCase, UpdatePowerStatesMapping_UnsupportedWakeConfig) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD1;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
   states[1].wakeup_capable = false;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
-  ::fidl::Array<SystemPowerStateInfo, MAX_SYSTEM_POWER_STATES> mapping{};
-  for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
-    mapping[i].dev_state = DevicePowerState::DEVICE_POWER_STATE_D1;
+  ::fidl::Array<SystemPowerStateInfo, kMaxSystemPowerStates> mapping{};
+  for (size_t i = 0; i < kMaxSystemPowerStates; i++) {
+    mapping[i].dev_state = DevicePowerState::kDevicePowerStateD1;
     mapping[i].wakeup_enable = true;
   }
 
@@ -1007,28 +1005,28 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_UnsupportedWakeConfig) {
   ASSERT_STATUS(call_status, ZX_OK);
   states_mapping = &response2->result.response().mapping[0];
 
-  ASSERT_EQ(states_mapping[static_cast<uint8_t>(SystemPowerState::REBOOT)].dev_state,
-            DevicePowerState::DEVICE_POWER_STATE_D3COLD);
-  ASSERT_FALSE(states_mapping[static_cast<uint8_t>(SystemPowerState::REBOOT)].wakeup_enable);
+  ASSERT_EQ(states_mapping[static_cast<uint8_t>(SystemPowerState::kReboot)].dev_state,
+            DevicePowerState::kDevicePowerStateD3Cold);
+  ASSERT_FALSE(states_mapping[static_cast<uint8_t>(SystemPowerState::kReboot)].wakeup_enable);
 }
 
 TEST_F(PowerTestCase, UpdatePowerStatesMapping_Success) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD1;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
-  ::fidl::Array<SystemPowerStateInfo, MAX_SYSTEM_POWER_STATES> mapping{};
-  for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
-    mapping[i].dev_state = DevicePowerState::DEVICE_POWER_STATE_D1;
+  ::fidl::Array<SystemPowerStateInfo, kMaxSystemPowerStates> mapping{};
+  for (size_t i = 0; i < kMaxSystemPowerStates; i++) {
+    mapping[i].dev_state = DevicePowerState::kDevicePowerStateD1;
     mapping[i].wakeup_enable = false;
   }
 
@@ -1052,28 +1050,28 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_Success) {
   ASSERT_STATUS(call_status, ZX_OK);
   states_mapping = &response2->result.response().mapping[0];
 
-  ASSERT_EQ(states_mapping[static_cast<uint8_t>(SystemPowerState::REBOOT)].dev_state,
-            DevicePowerState::DEVICE_POWER_STATE_D1);
-  ASSERT_FALSE(states_mapping[static_cast<uint8_t>(SystemPowerState::REBOOT)].wakeup_enable);
+  ASSERT_EQ(states_mapping[static_cast<uint8_t>(SystemPowerState::kReboot)].dev_state,
+            DevicePowerState::kDevicePowerStateD1);
+  ASSERT_FALSE(states_mapping[static_cast<uint8_t>(SystemPowerState::kReboot)].wakeup_enable);
 }
 
 TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D2;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD2;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
-  ::fidl::Array<SystemPowerStateInfo, MAX_SYSTEM_POWER_STATES> mapping{};
-  for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
-    mapping[i].dev_state = DevicePowerState::DEVICE_POWER_STATE_D2;
+  ::fidl::Array<SystemPowerStateInfo, kMaxSystemPowerStates> mapping{};
+  for (size_t i = 0; i < kMaxSystemPowerStates; i++) {
+    mapping[i].dev_state = DevicePowerState::kDevicePowerStateD2;
     mapping[i].wakeup_enable = false;
   }
 
@@ -1085,7 +1083,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
     call_status = update_result->result.err();
   }
   ASSERT_OK(call_status);
-  SetTerminationSystemState(SystemPowerState::REBOOT);
+  SetTerminationSystemState(SystemPowerState::kReboot);
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
@@ -1105,7 +1103,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(child_dev_suspend_response->result.response().cur_state,
-            DevicePowerState::DEVICE_POWER_STATE_D2);
+            DevicePowerState::kDevicePowerStateD2);
 
   // Verify that the suspend reason is received correctly
   auto suspend_reason_response =
@@ -1131,26 +1129,26 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(parent_dev_suspend_response->result.response().cur_state,
-            DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+            DevicePowerState::kDevicePowerStateD3Cold);
 }
 
 TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D2;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD2;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
-  ::fidl::Array<SystemPowerStateInfo, MAX_SYSTEM_POWER_STATES> mapping{};
-  for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
-    mapping[i].dev_state = DevicePowerState::DEVICE_POWER_STATE_D2;
+  ::fidl::Array<SystemPowerStateInfo, kMaxSystemPowerStates> mapping{};
+  for (size_t i = 0; i < kMaxSystemPowerStates; i++) {
+    mapping[i].dev_state = DevicePowerState::kDevicePowerStateD2;
     mapping[i].wakeup_enable = false;
   }
 
@@ -1163,7 +1161,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
   }
   ASSERT_OK(call_status);
 
-  SetTerminationSystemState(SystemPowerState::REBOOT_RECOVERY);
+  SetTerminationSystemState(SystemPowerState::kRebootRecovery);
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
@@ -1183,7 +1181,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(child_dev_suspend_response->result.response().cur_state,
-            DevicePowerState::DEVICE_POWER_STATE_D2);
+            DevicePowerState::kDevicePowerStateD2);
 
   auto suspend_reason_response =
       fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentSuspendReason();
@@ -1207,19 +1205,19 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(parent_dev_suspend_response->result.response().cur_state,
-            DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+            DevicePowerState::kDevicePowerStateD3Cold);
 }
 
 TEST_F(PowerTestCase, SelectiveResume_AfterSetPerformanceState) {
   // Add Capabilities
   DevicePowerStateInfo states[2];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[1].is_supported = true;
 
   DevicePerformanceStateInfo perf_states[3];
-  perf_states[0].state_id = DEVICE_PERFORMANCE_STATE_P0;
+  perf_states[0].state_id = kDevicePerformanceStateP0;
   perf_states[0].is_supported = true;
   perf_states[0].restore_latency = 0;
   perf_states[1].state_id = 1;
@@ -1245,11 +1243,11 @@ TEST_F(PowerTestCase, SelectiveResume_AfterSetPerformanceState) {
 
   // Suspend and resume the device. Test if device resumes to saved performance state.
   auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                            .Suspend(DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+                            .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
   ASSERT_OK(suspend_result.status());
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
-  ASSERT_EQ(suspend_response.out_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  ASSERT_EQ(suspend_response.out_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   auto response3 =
       fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
@@ -1259,7 +1257,7 @@ TEST_F(PowerTestCase, SelectiveResume_AfterSetPerformanceState) {
     call_status = response3->result.err();
   }
   ASSERT_OK(call_status);
-  ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   // Resume
   auto resume_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).Resume();
@@ -1267,20 +1265,20 @@ TEST_F(PowerTestCase, SelectiveResume_AfterSetPerformanceState) {
 
   const auto &resume_response = resume_result.value();
   ASSERT_OK(resume_response.status);
-  ASSERT_EQ(resume_response.out_power_state, DevicePowerState::DEVICE_POWER_STATE_D0);
+  ASSERT_EQ(resume_response.out_power_state, DevicePowerState::kDevicePowerStateD0);
   ASSERT_EQ(resume_response.out_perf_state, 1);
 }
 
 TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToWorking) {
   // Add Capabilities
   DevicePowerStateInfo states[2];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[1].is_supported = true;
 
   DevicePerformanceStateInfo perf_states[3];
-  perf_states[0].state_id = DEVICE_PERFORMANCE_STATE_P0;
+  perf_states[0].state_id = kDevicePerformanceStateP0;
   perf_states[0].is_supported = true;
   perf_states[0].restore_latency = 0;
   perf_states[1].state_id = 1;
@@ -1306,11 +1304,11 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToWorking) {
 
   // Suspend
   auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                            .Suspend(DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+                            .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
   ASSERT_OK(suspend_result.status());
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
-  ASSERT_EQ(suspend_response.out_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  ASSERT_EQ(suspend_response.out_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   auto response3 =
       fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
@@ -1320,11 +1318,11 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToWorking) {
     call_status = response3->result.err();
   }
   ASSERT_OK(call_status);
-  ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   fuchsia_device_power_test::wire::TestStatusInfo info;
   info.resume_status = ZX_ERR_IO;
-  info.out_power_state = static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  info.out_power_state = static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD3Cold);
   info.out_performance_state = 1;
   auto response4 =
       fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).SetTestStatusInfo(info);
@@ -1347,13 +1345,13 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToWorking) {
 TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToPerformanceState) {
   // Add Capabilities
   DevicePowerStateInfo states[2];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[1].is_supported = true;
 
   DevicePerformanceStateInfo perf_states[3];
-  perf_states[0].state_id = DEVICE_PERFORMANCE_STATE_P0;
+  perf_states[0].state_id = kDevicePerformanceStateP0;
   perf_states[0].is_supported = true;
   perf_states[0].restore_latency = 0;
   perf_states[1].state_id = 1;
@@ -1379,11 +1377,11 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToPerformanceState) {
 
   // Suspend
   auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                            .Suspend(DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+                            .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
   ASSERT_OK(suspend_result.status());
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
-  ASSERT_EQ(suspend_response.out_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  ASSERT_EQ(suspend_response.out_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   auto response3 =
       fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
@@ -1393,11 +1391,11 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToPerformanceState) {
     call_status = response3->result.err();
   }
   ASSERT_OK(call_status);
-  ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   fuchsia_device_power_test::wire::TestStatusInfo info;
   info.resume_status = ZX_ERR_IO;
-  info.out_power_state = static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0);
+  info.out_power_state = static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD0);
   // The previous performance_state set was 1.
   info.out_performance_state = 2;
   auto response4 =
@@ -1428,13 +1426,13 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToPerformanceState) {
 TEST_F(PowerTestCase, DeviceResume_AutoSuspendEnabled) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
-  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].state_id = DevicePowerState::kDevicePowerStateD0;
   states[0].is_supported = true;
   states[0].restore_latency = 0;
-  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].state_id = DevicePowerState::kDevicePowerStateD1;
   states[1].is_supported = true;
   states[1].restore_latency = 100;
-  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].state_id = DevicePowerState::kDevicePowerStateD3Cold;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
@@ -1442,7 +1440,7 @@ TEST_F(PowerTestCase, DeviceResume_AutoSuspendEnabled) {
   {
     auto auto_suspend_result =
         fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-            .ConfigureAutoSuspend(true, DevicePowerState::DEVICE_POWER_STATE_D1);
+            .ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD1);
     ASSERT_OK(auto_suspend_result.status());
     const auto &auto_suspend_response = auto_suspend_result.value();
     ASSERT_OK(auto_suspend_response.status);
@@ -1459,7 +1457,7 @@ TEST_F(PowerTestCase, DeviceResume_AutoSuspendEnabled) {
     ASSERT_OK(call_status);
     ASSERT_EQ(response->result.response().enabled, true);
     ASSERT_EQ(response->result.response().deepest_sleep_state,
-              DevicePowerState::DEVICE_POWER_STATE_D1);
+              DevicePowerState::kDevicePowerStateD1);
   }
 
   {
@@ -1473,7 +1471,7 @@ TEST_F(PowerTestCase, DeviceResume_AutoSuspendEnabled) {
   {
     auto auto_suspend_result =
         fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-            .ConfigureAutoSuspend(false, DevicePowerState::DEVICE_POWER_STATE_D0);
+            .ConfigureAutoSuspend(false, DevicePowerState::kDevicePowerStateD0);
     ASSERT_OK(auto_suspend_result.status());
     auto &auto_suspend_response = auto_suspend_result.value();
     ASSERT_OK(auto_suspend_response.status);
@@ -1481,7 +1479,7 @@ TEST_F(PowerTestCase, DeviceResume_AutoSuspendEnabled) {
 
   {
     auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                              .Suspend(DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+                              .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
     ASSERT_OK(suspend_result.status());
     ASSERT_OK(suspend_result.value().status);
   }

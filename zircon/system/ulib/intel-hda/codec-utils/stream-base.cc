@@ -477,7 +477,7 @@ void IntelHDAStreamBase::CreateRingBuffer(
     return;
   }
 
-  if (format_pcm.sample_format == audio_fidl::wire::SampleFormat::PCM_FLOAT) {
+  if (format_pcm.sample_format == audio_fidl::wire::SampleFormat::kPcmFloat) {
     sample_format = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
     if (format_pcm.valid_bits_per_sample != 32 || format_pcm.bytes_per_sample != 4) {
       LOG("Unsupported format: Not 32 per sample/channel for float\n");
@@ -486,7 +486,7 @@ void IntelHDAStreamBase::CreateRingBuffer(
     }
   }
 
-  if (format_pcm.sample_format == audio_fidl::wire::SampleFormat::PCM_UNSIGNED) {
+  if (format_pcm.sample_format == audio_fidl::wire::SampleFormat::kPcmUnsigned) {
     sample_format |= AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
   }
 
@@ -683,8 +683,8 @@ void IntelHDAStreamBase::GetProperties(
   fidl::FidlAllocator allocator;
   audio_fidl::wire::StreamProperties response(allocator);
 
-  fidl::Array<uint8_t, audio_fidl::wire::UNIQUE_ID_SIZE> unique_id = {};
-  for (size_t i = 0; i < audio_fidl::wire::UNIQUE_ID_SIZE; ++i) {
+  fidl::Array<uint8_t, audio_fidl::wire::kUniqueIdSize> unique_id = {};
+  for (size_t i = 0; i < audio_fidl::wire::kUniqueIdSize; ++i) {
     unique_id.data_[i] = persistent_unique_id_.data[i];
   }
   response.set_unique_id(allocator, unique_id);
@@ -721,10 +721,10 @@ void IntelHDAStreamBase::GetProperties(
   OnPlugDetectLocked(channel, &plug);
   if (plug.flags & AUDIO_PDNF_CAN_NOTIFY) {
     response.set_plug_detect_capabilities(
-        allocator, audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+        allocator, audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
   } else if (plug.flags & AUDIO_PDNF_HARDWIRED) {
     response.set_plug_detect_capabilities(allocator,
-                                          audio_fidl::wire::PlugDetectCapabilities::HARDWIRED);
+                                          audio_fidl::wire::PlugDetectCapabilities::kHardwired);
   }
   completer.Reply(std::move(response));
 }

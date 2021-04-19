@@ -76,7 +76,7 @@ struct SocketAddress {
 fsocket::wire::RecvMsgFlags to_recvmsg_flags(int flags) {
   fsocket::wire::RecvMsgFlags r;
   if (flags & MSG_PEEK) {
-    r |= fsocket::wire::RecvMsgFlags::PEEK;
+    r |= fsocket::wire::RecvMsgFlags::kPeek;
   }
   return r;
 }
@@ -210,10 +210,10 @@ template <>
 SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::Domain& value) {
   int32_t domain;
   switch (value) {
-    case fsocket::wire::Domain::IPV4:
+    case fsocket::wire::Domain::kIpv4:
       domain = AF_INET;
       break;
-    case fsocket::wire::Domain::IPV6:
+    case fsocket::wire::Domain::kIpv6:
       domain = AF_INET6;
       break;
   }
@@ -299,19 +299,19 @@ SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::TcpInfo& val
 
   if (value.has_ca_state()) {
     switch (value.ca_state()) {
-      case fsocket::wire::TcpCongestionControlState::OPEN:
+      case fsocket::wire::TcpCongestionControlState::kOpen:
         info.tcpi_ca_state = TCP_CA_Open;
         break;
-      case fsocket::wire::TcpCongestionControlState::DISORDER:
+      case fsocket::wire::TcpCongestionControlState::kDisorder:
         info.tcpi_ca_state = TCP_CA_Disorder;
         break;
-      case fsocket::wire::TcpCongestionControlState::CONGESTION_WINDOW_REDUCED:
+      case fsocket::wire::TcpCongestionControlState::kCongestionWindowReduced:
         info.tcpi_ca_state = TCP_CA_CWR;
         break;
-      case fsocket::wire::TcpCongestionControlState::RECOVERY:
+      case fsocket::wire::TcpCongestionControlState::kRecovery:
         info.tcpi_ca_state = TCP_CA_Recovery;
         break;
-      case fsocket::wire::TcpCongestionControlState::LOSS:
+      case fsocket::wire::TcpCongestionControlState::kLoss:
         info.tcpi_ca_state = TCP_CA_Loss;
         break;
     }
@@ -511,11 +511,11 @@ int16_t SetSockOptProcessor::Get(fsocket::wire::Ipv6MulticastMembership* out) {
 template <>
 int16_t SetSockOptProcessor::Get(fsocket::wire::TcpCongestionControl* out) {
   if (strncmp(static_cast<const char*>(optval_), kCcCubic, optlen_) == 0) {
-    *out = fsocket::wire::TcpCongestionControl::CUBIC;
+    *out = fsocket::wire::TcpCongestionControl::kCubic;
     return 0;
   }
   if (strncmp(static_cast<const char*>(optval_), kCcReno, optlen_) == 0) {
-    *out = fsocket::wire::TcpCongestionControl::RENO;
+    *out = fsocket::wire::TcpCongestionControl::kReno;
     return 0;
   }
   return ENOENT;
@@ -556,7 +556,7 @@ struct BaseSocket {
       return endpoints.status_value();
     }
     zx_status_t status =
-        client().Clone(fio::wire::CLONE_FLAG_SAME_RIGHTS, std::move(endpoints->server)).status();
+        client().Clone(fio::wire::kCloneFlagSameRights, std::move(endpoints->server)).status();
     if (status != ZX_OK) {
       return status;
     }
@@ -689,13 +689,13 @@ struct BaseSocket {
             if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>>) {
               return proc.Process(client().GetInfo(), [](const auto& response) {
                 switch (response.proto) {
-                  case fsocket::wire::DatagramSocketProtocol::UDP:
+                  case fsocket::wire::DatagramSocketProtocol::kUdp:
                     return IPPROTO_UDP;
-                  case fsocket::wire::DatagramSocketProtocol::ICMP_ECHO:
+                  case fsocket::wire::DatagramSocketProtocol::kIcmpEcho:
                     switch (response.domain) {
-                      case fsocket::wire::Domain::IPV4:
+                      case fsocket::wire::Domain::kIpv4:
                         return IPPROTO_ICMP;
-                      case fsocket::wire::Domain::IPV6:
+                      case fsocket::wire::Domain::kIpv6:
                         return IPPROTO_ICMPV6;
                     }
                 }
@@ -704,7 +704,7 @@ struct BaseSocket {
             if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>>) {
               return proc.Process(client().GetInfo(), [](const auto& response) {
                 switch (response.proto) {
-                  case fsocket::wire::StreamSocketProtocol::TCP:
+                  case fsocket::wire::StreamSocketProtocol::kTcp:
                     return IPPROTO_TCP;
                 }
               });
@@ -884,10 +884,10 @@ struct BaseSocket {
             case TCP_CONGESTION:
               return proc.Process(client().GetTcpCongestion(), [](const auto& response) {
                 switch (response.value) {
-                  case fsocket::wire::TcpCongestionControl::CUBIC:
+                  case fsocket::wire::TcpCongestionControl::kCubic:
                     return TruncatingStringView(
                         fidl::StringView::FromExternal(kCcCubic, sizeof(kCcCubic)));
-                  case fsocket::wire::TcpCongestionControl::RENO:
+                  case fsocket::wire::TcpCongestionControl::kReno:
                     return TruncatingStringView(
                         fidl::StringView::FromExternal(kCcReno, sizeof(kCcReno)));
                 }
@@ -1219,23 +1219,23 @@ struct BaseSocket {
 };
 
 // Prevent divergence in flag bitmasks between libc and fuchsia.posix.socket FIDL library.
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::UP) == IFF_UP);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::BROADCAST) == IFF_BROADCAST);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::DEBUG) == IFF_DEBUG);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::LOOPBACK) == IFF_LOOPBACK);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::POINTTOPOINT) ==
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kUp) == IFF_UP);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kBroadcast) == IFF_BROADCAST);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kDebug) == IFF_DEBUG);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kLoopback) == IFF_LOOPBACK);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kPointtopoint) ==
               IFF_POINTOPOINT);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::NOTRAILERS) == IFF_NOTRAILERS);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::RUNNING) == IFF_RUNNING);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::NOARP) == IFF_NOARP);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::PROMISC) == IFF_PROMISC);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::ALLMULTI) == IFF_ALLMULTI);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::LEADER) == IFF_MASTER);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::FOLLOWER) == IFF_SLAVE);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::MULTICAST) == IFF_MULTICAST);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::PORTSEL) == IFF_PORTSEL);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::AUTOMEDIA) == IFF_AUTOMEDIA);
-static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::DYNAMIC) == IFF_DYNAMIC);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kNotrailers) == IFF_NOTRAILERS);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kRunning) == IFF_RUNNING);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kNoarp) == IFF_NOARP);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kPromisc) == IFF_PROMISC);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kAllmulti) == IFF_ALLMULTI);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kLeader) == IFF_MASTER);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kFollower) == IFF_SLAVE);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kMulticast) == IFF_MULTICAST);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kPortsel) == IFF_PORTSEL);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kAutomedia) == IFF_AUTOMEDIA);
+static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kDynamic) == IFF_DYNAMIC);
 
 template <typename F>
 Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
@@ -1670,13 +1670,13 @@ struct datagram_socket : public zxio {
     ShutdownMode mode;
     switch (how) {
       case SHUT_RD:
-        mode = ShutdownMode::READ;
+        mode = ShutdownMode::kRead;
         break;
       case SHUT_WR:
-        mode = ShutdownMode::WRITE;
+        mode = ShutdownMode::kWrite;
         break;
       case SHUT_RDWR:
-        mode = ShutdownMode::READ | ShutdownMode::WRITE;
+        mode = ShutdownMode::kRead | ShutdownMode::kWrite;
         break;
       default:
         return ZX_ERR_INVALID_ARGS;

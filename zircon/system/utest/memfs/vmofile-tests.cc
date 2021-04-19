@@ -80,14 +80,14 @@ TEST(VmofileTests, test_vmofile_basic) {
 
   zx::channel h, request;
   ASSERT_EQ(zx::channel::create(0, &h, &request), ZX_OK);
-  auto open_result = fidl::WireCall<fio::Directory>(zx::unowned_channel(client))
-                         .Open(fio::wire::OPEN_RIGHT_READABLE, 0, fidl::StringView("greeting"),
-                               std::move(request));
+  auto open_result =
+      fidl::WireCall<fio::Directory>(zx::unowned_channel(client))
+          .Open(fio::wire::kOpenRightReadable, 0, fidl::StringView("greeting"), std::move(request));
   ASSERT_EQ(open_result.status(), ZX_OK);
 
   {
     auto get_result =
-        fidl::WireCall<fio::File>(zx::unowned_channel(h)).GetBuffer(fio::wire::VMO_FLAG_READ);
+        fidl::WireCall<fio::File>(zx::unowned_channel(h)).GetBuffer(fio::wire::kVmoFlagRead);
     ASSERT_EQ(get_result.status(), ZX_OK);
     ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
     fuchsia_mem::wire::Buffer* buffer = get_result.Unwrap()->buffer.get();
@@ -98,7 +98,7 @@ TEST(VmofileTests, test_vmofile_basic) {
 
   {
     auto get_result = fidl::WireCall<fio::File>(zx::unowned_channel(h))
-                          .GetBuffer(fio::wire::VMO_FLAG_READ | fio::wire::VMO_FLAG_PRIVATE);
+                          .GetBuffer(fio::wire::kVmoFlagRead | fio::wire::kVmoFlagPrivate);
     ASSERT_EQ(get_result.status(), ZX_OK);
     ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
     fuchsia_mem::wire::Buffer* buffer = get_result.Unwrap()->buffer.get();
@@ -109,7 +109,7 @@ TEST(VmofileTests, test_vmofile_basic) {
 
   {
     auto get_result = fidl::WireCall<fio::File>(zx::unowned_channel(h))
-                          .GetBuffer(fio::wire::VMO_FLAG_READ | fio::wire::VMO_FLAG_EXEC);
+                          .GetBuffer(fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec);
     ASSERT_EQ(get_result.status(), ZX_OK);
     ASSERT_EQ(get_result.Unwrap()->s, ZX_ERR_ACCESS_DENIED);
     ASSERT_EQ(get_result.Unwrap()->buffer.get(), nullptr);
@@ -117,7 +117,7 @@ TEST(VmofileTests, test_vmofile_basic) {
 
   {
     auto get_result = fidl::WireCall<fio::File>(zx::unowned_channel(h))
-                          .GetBuffer(fio::wire::VMO_FLAG_READ | fio::wire::VMO_FLAG_WRITE);
+                          .GetBuffer(fio::wire::kVmoFlagRead | fio::wire::kVmoFlagWrite);
     ASSERT_EQ(get_result.status(), ZX_OK);
     ASSERT_EQ(get_result.Unwrap()->s, ZX_ERR_ACCESS_DENIED);
     ASSERT_EQ(get_result.Unwrap()->buffer.get(), nullptr);
@@ -136,7 +136,7 @@ TEST(VmofileTests, test_vmofile_basic) {
 
   {
     auto seek_result =
-        fidl::WireCall<fio::File>(zx::unowned_channel(h)).Seek(7u, fio::wire::SeekOrigin::START);
+        fidl::WireCall<fio::File>(zx::unowned_channel(h)).Seek(7u, fio::wire::SeekOrigin::kStart);
     ASSERT_EQ(seek_result.status(), ZX_OK);
     ASSERT_EQ(seek_result.Unwrap()->s, ZX_OK);
     ASSERT_EQ(seek_result.Unwrap()->offset, 7u);
@@ -170,13 +170,13 @@ TEST(VmofileTests, test_vmofile_exec) {
   zx::channel h, request;
   ASSERT_EQ(zx::channel::create(0, &h, &request), ZX_OK);
   auto open_result = fidl::WireCall<fio::Directory>(zx::unowned_channel(client))
-                         .Open(fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE, 0,
+                         .Open(fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable, 0,
                                fidl::StringView("read_exec"), std::move(request));
   ASSERT_EQ(open_result.status(), ZX_OK);
 
   {
     auto get_result =
-        fidl::WireCall<fio::File>(zx::unowned_channel(h)).GetBuffer(fio::wire::VMO_FLAG_READ);
+        fidl::WireCall<fio::File>(zx::unowned_channel(h)).GetBuffer(fio::wire::kVmoFlagRead);
     ASSERT_EQ(get_result.status(), ZX_OK);
     ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
     fuchsia_mem::wire::Buffer* buffer = get_result.Unwrap()->buffer.get();
@@ -189,7 +189,7 @@ TEST(VmofileTests, test_vmofile_exec) {
     // Providing a backing VMO with ZX_RIGHT_EXECUTE in CreateFromVmo above should cause
     // VMO_FLAG_EXEC to work.
     auto get_result = fidl::WireCall<fio::File>(zx::unowned_channel(h))
-                          .GetBuffer(fio::wire::VMO_FLAG_READ | fio::wire::VMO_FLAG_EXEC);
+                          .GetBuffer(fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec);
     ASSERT_EQ(get_result.status(), ZX_OK);
     ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
     auto buffer = get_result.Unwrap()->buffer.get();

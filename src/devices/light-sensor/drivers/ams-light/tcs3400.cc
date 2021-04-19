@@ -260,9 +260,9 @@ zx_status_t Tcs3400Device::HidbusQuery(uint32_t options, hid_info_t* info) {
   info->dev_num = 0;
   info->device_class = HID_DEVICE_CLASS_OTHER;
   info->boot_device = false;
-  info->vendor_id = static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::GOOGLE);
+  info->vendor_id = static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle);
   info->product_id =
-      static_cast<uint32_t>(fuchsia_input_report::wire::VendorGoogleProductId::AMS_LIGHT_SENSOR);
+      static_cast<uint32_t>(fuchsia_input_report::wire::VendorGoogleProductId::kAmsLightSensor);
 
   return ZX_OK;
 }

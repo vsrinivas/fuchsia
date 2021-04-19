@@ -15,11 +15,11 @@ go_library("fidlgen_cpp") {
     "enum.go",
     "handles.go",
     "ir.go",
+    "name_transforms.go",
     "names.go",
     "namespace.go",
     "namespaced_enum.go",
     "protocol.go",
-    "reserved_names.go",
     "service.go",
     "struct.go",
     "table.go",
@@ -37,10 +37,10 @@ go_library("cpp_test") {
   ]
   sources = [
     "ir_test.go",
+    "name_transforms_test.go",
     "names_test.go",
     "namespaced_enum_test.go",
     "protocol_test.go",
-    "reserved_names_test.go",
     "testutils_test.go",
   ]
 }

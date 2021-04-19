@@ -95,8 +95,8 @@ class OutgoingDirectoryTest : public zxtest::Test {
 
     zx::channel test_file, test_file_server;
     ASSERT_OK(zx::channel::create(0, &test_file, &test_file_server));
-    uint32_t file_flags = fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE |
-                          fio::wire::OPEN_FLAG_CREATE;
+    uint32_t file_flags =
+        fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable | fio::wire::kOpenFlagCreate;
     ASSERT_OK(data_client.Open(file_flags, 0, "test_file", std::move(test_file_server)).status());
 
     fidl::WireSyncClient<fio::File> file_client(std::move(test_file));
@@ -185,7 +185,7 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyMinfsDataRoot) {
 
   zx::channel fail_test_file, fail_test_file_server;
   ASSERT_OK(zx::channel::create(0, &fail_test_file, &fail_test_file_server));
-  uint32_t fail_file_flags = fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE;
+  uint32_t fail_file_flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
   // open "succeeds" but...
   ASSERT_OK(
       data_client.Open(fail_file_flags, 0, "test_file", std::move(fail_test_file_server)).status());
@@ -198,7 +198,7 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyMinfsDataRoot) {
   // the channel will be valid if we open the file read-only though
   zx::channel test_file, test_file_server;
   ASSERT_OK(zx::channel::create(0, &test_file, &test_file_server));
-  uint32_t file_flags = fio::wire::OPEN_RIGHT_READABLE;
+  uint32_t file_flags = fio::wire::kOpenRightReadable;
   ASSERT_OK(data_client.Open(file_flags, 0, "test_file", std::move(test_file_server)).status());
 
   fidl::WireSyncClient<fio::File> file_client(std::move(test_file));
@@ -221,7 +221,7 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {
   zx::channel test_file, test_file_server;
   ASSERT_OK(zx::channel::create(0, &test_file, &test_file_server));
   uint32_t file_flags =
-      fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE | fio::wire::OPEN_FLAG_CREATE;
+      fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable | fio::wire::kOpenFlagCreate;
   ASSERT_OK(fidl::WireCall<fio::Directory>(std::move(export_root))
                 .Open(file_flags, 0, fidl::StringView::FromExternal(test_file_name),
                       std::move(test_file_server))

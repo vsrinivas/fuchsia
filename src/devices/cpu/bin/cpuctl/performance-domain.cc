@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-using fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES;
+using fuchsia_device::wire::kMaxDevicePerformanceStates;
 
 std::variant<zx_status_t, CpuPerformanceDomain> CpuPerformanceDomain::CreateFromPath(
     const std::string& path) {
@@ -51,8 +51,8 @@ std::pair<zx_status_t, uint64_t> CpuPerformanceDomain::GetNumLogicalCores() {
 std::tuple<zx_status_t, uint64_t, cpuctrl::wire::CpuPerformanceStateInfo>
 CpuPerformanceDomain::GetCurrentPerformanceState() {
   constexpr cpuctrl::wire::CpuPerformanceStateInfo kEmptyPstate = {
-      .frequency_hz = cpuctrl::wire::FREQUENCY_UNKNOWN,
-      .voltage_uv = cpuctrl::wire::VOLTAGE_UNKNOWN,
+      .frequency_hz = cpuctrl::wire::kFrequencyUnknown,
+      .voltage_uv = cpuctrl::wire::kVoltageUnknown,
   };
   auto resp = device_client_.GetCurrentPerformanceState();
 
@@ -81,7 +81,7 @@ CpuPerformanceDomain::GetPerformanceStates() {
     return cached_pstates_;
   }
 
-  for (uint32_t i = 0; i < MAX_DEVICE_PERFORMANCE_STATES; i++) {
+  for (uint32_t i = 0; i < kMaxDevicePerformanceStates; i++) {
     auto resp = cpu_client_.GetPerformanceStateInfo(i);
 
     if (resp.status() != ZX_OK || resp->result.is_err()) {
@@ -95,7 +95,7 @@ CpuPerformanceDomain::GetPerformanceStates() {
 }
 
 zx_status_t CpuPerformanceDomain::SetPerformanceState(uint32_t new_performance_state) {
-  if (new_performance_state >= MAX_DEVICE_PERFORMANCE_STATES) {
+  if (new_performance_state >= kMaxDevicePerformanceStates) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 

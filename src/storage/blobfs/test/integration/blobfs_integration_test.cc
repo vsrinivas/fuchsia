@@ -474,8 +474,8 @@ void QueryInfo(fs_test::TestFilesystem& fs, size_t expected_nodes, size_t expect
   ASSERT_EQ(name, kFsName) << "Unexpected filesystem mounted";
   EXPECT_EQ(info.block_size(), kBlobfsBlockSize);
   EXPECT_EQ(info.max_node_name_size(), 64U);
-  static_assert(VFS_TYPE_BLOBFS == (unsigned long)fuchsia_fs::wire::FsType::BLOBFS);
-  EXPECT_EQ(info.fs_type(), fuchsia_fs::wire::FsType::BLOBFS);
+  static_assert(VFS_TYPE_BLOBFS == (unsigned long)fuchsia_fs::wire::FsType::kBlobfs);
+  EXPECT_EQ(info.fs_type(), fuchsia_fs::wire::FsType::kBlobfs);
   EXPECT_NE(info.fs_id(), 0ul);
 
   // Check that used_bytes are within a reasonable range
@@ -1167,7 +1167,7 @@ void OpenBlockDevice(const std::string& path,
   fdio_cpp::FdioCaller caller(std::move(fd));
   ASSERT_EQ(fidl::WireCall(
                 fidl::UnownedClientEnd<fio::Node>(zx::unowned_channel(caller.borrow_channel())))
-                .Clone(fio::wire::CLONE_FLAG_SAME_RIGHTS, std::move(server))
+                .Clone(fio::wire::kCloneFlagSameRights, std::move(server))
                 .status(),
             ZX_OK);
   ASSERT_EQ(block_client::RemoteBlockDevice::Create(channel.TakeChannel(), block_device), ZX_OK);

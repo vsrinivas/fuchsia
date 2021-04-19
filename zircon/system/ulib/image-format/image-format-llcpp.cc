@@ -46,10 +46,10 @@ fuchsia_sysmem_PixelFormat GetCPixelFormat(const fuchsia_sysmem::wire::PixelForm
   return c;
 }
 
-fuchsia_sysmem::wire::ImageFormat_2 GetCppImageFormat(const fuchsia_sysmem_ImageFormat_2& c) {
-  sysmem::wire::ImageFormat_2 cpp;
+fuchsia_sysmem::wire::ImageFormat2 GetCppImageFormat(const fuchsia_sysmem_ImageFormat_2& c) {
+  sysmem::wire::ImageFormat2 cpp;
   static_assert(sizeof(cpp) == sizeof(c), "LLCPP and C image formats don't match");
-  static_assert(std::is_trivially_copyable<fuchsia_sysmem::wire::ImageFormat_2>::value,
+  static_assert(std::is_trivially_copyable<fuchsia_sysmem::wire::ImageFormat2>::value,
                 "Not trivially copyable");
   // Hacky copy that should work for now. We need the static_cast because sysmem::wire::PixelFormat
   // is a non-trivial class and otherwise GCC complains.
@@ -58,9 +58,9 @@ fuchsia_sysmem::wire::ImageFormat_2 GetCppImageFormat(const fuchsia_sysmem_Image
   return cpp;
 }
 
-fuchsia_sysmem_ImageFormat_2 GetCImageFormat(const fuchsia_sysmem::wire::ImageFormat_2& cpp) {
+fuchsia_sysmem_ImageFormat_2 GetCImageFormat(const fuchsia_sysmem::wire::ImageFormat2& cpp) {
   fuchsia_sysmem_ImageFormat_2 c;
-  static_assert(std::is_trivially_copyable<fuchsia_sysmem::wire::ImageFormat_2>::value,
+  static_assert(std::is_trivially_copyable<fuchsia_sysmem::wire::ImageFormat2>::value,
                 "Not trivially copyable");
   static_assert(sizeof(c) == sizeof(cpp), "LLCPP and C image formats don't match");
   // Hacky copy that should work for now.
@@ -75,7 +75,7 @@ bool GetMinimumRowBytes(const fuchsia_sysmem::wire::ImageFormatConstraints& cons
   return ImageFormatMinimumRowBytes(&c_constraints, width, bytes_per_row_out);
 }
 
-std::optional<fuchsia_sysmem::wire::ImageFormat_2> ConstraintsToFormat(
+std::optional<fuchsia_sysmem::wire::ImageFormat2> ConstraintsToFormat(
     const fuchsia_sysmem::wire::ImageFormatConstraints& constraints, uint32_t coded_width,
     uint32_t coded_height) {
   auto c_constraints = GetCConstraints(constraints);
@@ -85,13 +85,13 @@ std::optional<fuchsia_sysmem::wire::ImageFormat_2> ConstraintsToFormat(
   return {GetCppImageFormat(image_format)};
 }
 
-bool GetPlaneByteOffset(const fuchsia_sysmem::wire::ImageFormat_2& image_format, uint32_t plane,
+bool GetPlaneByteOffset(const fuchsia_sysmem::wire::ImageFormat2& image_format, uint32_t plane,
                         uint64_t* offset_out) {
   fuchsia_sysmem_ImageFormat_2 c_constraints = GetCImageFormat(image_format);
   return ImageFormatPlaneByteOffset(&c_constraints, plane, offset_out);
 }
 
-bool GetPlaneRowBytes(const fuchsia_sysmem::wire::ImageFormat_2& image_format, uint32_t plane,
+bool GetPlaneRowBytes(const fuchsia_sysmem::wire::ImageFormat2& image_format, uint32_t plane,
                       uint32_t* row_bytes_out) {
   fuchsia_sysmem_ImageFormat_2 c_constraints = GetCImageFormat(image_format);
   return ImageFormatPlaneRowBytes(&c_constraints, plane, row_bytes_out);

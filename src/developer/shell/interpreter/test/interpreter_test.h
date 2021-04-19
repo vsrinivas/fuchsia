@@ -32,7 +32,7 @@ struct InterpreterTestContext {
   fuchsia_shell::wire::ExecuteResult GetResult() const;
 
   uint64_t id;
-  fuchsia_shell::wire::ExecuteResult result = fuchsia_shell::wire::ExecuteResult::UNDEF;
+  fuchsia_shell::wire::ExecuteResult result = fuchsia_shell::wire::ExecuteResult::kUndef;
   std::stringstream error_stream;
 };
 

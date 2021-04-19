@@ -193,8 +193,8 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
     zx_signals_t observed = 0;
     ASSERT_STATUS(event.wait_one(0, zx::time{}, &observed), ZX_ERR_TIMED_OUT);
     // Precisely this set of signals should be asserted
-    ASSERT_EQ(observed, fuchsia_device::wire::DEVICE_SIGNAL_READABLE |
-                            fuchsia_device::wire::DEVICE_SIGNAL_HANGUP);
+    ASSERT_EQ(observed, fuchsia_device::wire::kDeviceSignalReadable |
+                            fuchsia_device::wire::kDeviceSignalHangup);
 
     // Attempts to read should get 0 bytes and ZX_OK
     {
@@ -223,7 +223,7 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
   }
   // Wait for the server to signal that it got the client disconnect
   ASSERT_OK(
-      event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_HANGUP, zx::time::infinite(), nullptr));
+      event.wait_one(fuchsia_device::wire::kDeviceSignalHangup, zx::time::infinite(), nullptr));
 
   ASSERT_NO_FATAL_FAILURES(check_state());
 }
@@ -239,11 +239,11 @@ TEST_F(PtyTestCase, ServerWithClientInitialConditions) {
 
   zx_signals_t observed = 0;
   ASSERT_STATUS(server_event.wait_one(0, zx::time{}, &observed), ZX_ERR_TIMED_OUT);
-  ASSERT_EQ(observed, fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE);
+  ASSERT_EQ(observed, fuchsia_device::wire::kDeviceSignalWritable);
 
   observed = 0;
   ASSERT_STATUS(client_event.wait_one(0, zx::time{}, &observed), ZX_ERR_TIMED_OUT);
-  ASSERT_EQ(observed, fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE);
+  ASSERT_EQ(observed, fuchsia_device::wire::kDeviceSignalWritable);
 
   // Attempts to read on either side should get SHOULD_WAIT
   {
@@ -374,10 +374,10 @@ TEST_F(PtyTestCase, ClientClrSetFeature) {
 
   // Make sure we can set bits
   {
-    auto result = client.ClrSetFeature(0, fuchsia_hardware_pty::wire::FEATURE_RAW);
+    auto result = client.ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
-    ASSERT_EQ(result->features, fuchsia_hardware_pty::wire::FEATURE_RAW);
+    ASSERT_EQ(result->features, fuchsia_hardware_pty::wire::kFeatureRaw);
   }
 
   // If we don't change any bits, we should see the new settings
@@ -385,12 +385,12 @@ TEST_F(PtyTestCase, ClientClrSetFeature) {
     auto result = client.ClrSetFeature(0, 0);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
-    ASSERT_EQ(result->features, fuchsia_hardware_pty::wire::FEATURE_RAW);
+    ASSERT_EQ(result->features, fuchsia_hardware_pty::wire::kFeatureRaw);
   }
 
   // Make sure we can clear bits
   {
-    auto result = client.ClrSetFeature(fuchsia_hardware_pty::wire::FEATURE_RAW, 0);
+    auto result = client.ClrSetFeature(fuchsia_hardware_pty::wire::kFeatureRaw, 0);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->features, 0);
@@ -438,10 +438,10 @@ TEST_F(PtyTestCase, ClientIndependentFeatureFlags) {
   ASSERT_OK(OpenClient(&server, 0, &client2));
 
   {
-    auto result = client.ClrSetFeature(0, fuchsia_hardware_pty::wire::FEATURE_RAW);
+    auto result = client.ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
-    ASSERT_EQ(result->features, fuchsia_hardware_pty::wire::FEATURE_RAW);
+    ASSERT_EQ(result->features, fuchsia_hardware_pty::wire::kFeatureRaw);
   }
 
   {
@@ -528,25 +528,25 @@ TEST_F(PtyTestCase, ClientReadEventsClears) {
 
   // No events yet
   ASSERT_STATUS(
-      control_event.wait_one(fuchsia_hardware_pty::wire::SIGNAL_EVENT, zx::time{}, nullptr),
+      control_event.wait_one(fuchsia_hardware_pty::wire::kSignalEvent, zx::time{}, nullptr),
       ZX_ERR_TIMED_OUT);
 
   // Write a ^C byte from the server to trigger a cooked-mode event
   ASSERT_NO_FATAL_FAILURES(WriteCtrlC(&server));
 
-  ASSERT_OK(control_event.wait_one(fuchsia_hardware_pty::wire::SIGNAL_EVENT, zx::time::infinite(),
+  ASSERT_OK(control_event.wait_one(fuchsia_hardware_pty::wire::kSignalEvent, zx::time::infinite(),
                                    nullptr));
 
   {
     auto result = control_client.ReadEvents();
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
-    ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::EVENT_INTERRUPT);
+    ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::kEventInterrupt);
   }
 
   // Signal should have cleared
   ASSERT_STATUS(
-      control_event.wait_one(fuchsia_hardware_pty::wire::SIGNAL_EVENT, zx::time{}, nullptr),
+      control_event.wait_one(fuchsia_hardware_pty::wire::kSignalEvent, zx::time{}, nullptr),
       ZX_ERR_TIMED_OUT);
 
   // Event should have cleared
@@ -572,13 +572,13 @@ TEST_F(PtyTestCase, EventsSentWithNoControllingClient) {
   ASSERT_OK(OpenClient(&server, 0, &control_client));
 
   zx::eventpair control_event = GetEvent(&control_client);
-  ASSERT_OK(control_event.wait_one(fuchsia_hardware_pty::wire::SIGNAL_EVENT, zx::time{}, nullptr));
+  ASSERT_OK(control_event.wait_one(fuchsia_hardware_pty::wire::kSignalEvent, zx::time{}, nullptr));
 
   {
     auto result = control_client.ReadEvents();
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
-    ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::EVENT_INTERRUPT);
+    ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::kEventInterrupt);
   }
 }
 
@@ -616,19 +616,19 @@ TEST_F(PtyTestCase, ActiveClientCloses) {
 
   zx::eventpair control_event = GetEvent(&control_client);
   zx_signals_t observed = 0;
-  ASSERT_OK(control_event.wait_one(fuchsia_hardware_pty::wire::SIGNAL_EVENT, zx::time::infinite(),
+  ASSERT_OK(control_event.wait_one(fuchsia_hardware_pty::wire::kSignalEvent, zx::time::infinite(),
                                    &observed));
   // Wait again with no timeout, so that observed doesn't have any transient
   // signals in it.
   ASSERT_OK(
-      control_event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_HANGUP, zx::time{}, &observed));
+      control_event.wait_one(fuchsia_device::wire::kDeviceSignalHangup, zx::time{}, &observed));
   ASSERT_EQ(observed,
-            fuchsia_hardware_pty::wire::SIGNAL_EVENT | fuchsia_device::wire::DEVICE_SIGNAL_HANGUP);
+            fuchsia_hardware_pty::wire::kSignalEvent | fuchsia_device::wire::kDeviceSignalHangup);
 
   auto result = control_client.ReadEvents();
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
-  ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::EVENT_HANGUP);
+  ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::kEventHangup);
 }
 
 // Makes sure nothing goes wrong when the active client is the controling
@@ -642,7 +642,7 @@ TEST_F(PtyTestCase, ActiveClientClosesWhenControl) {
   zx::eventpair event = GetEvent(&server);
   zx_signals_t observed = 0;
   ASSERT_OK(
-      event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_HANGUP, zx::time::infinite(), &observed));
+      event.wait_one(fuchsia_device::wire::kDeviceSignalHangup, zx::time::infinite(), &observed));
 }
 
 TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
@@ -666,18 +666,18 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   zx::eventpair event = GetEvent(&client);
   zx_signals_t observed = 0;
   ASSERT_OK(
-      event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_HANGUP, zx::time::infinite(), &observed));
+      event.wait_one(fuchsia_device::wire::kDeviceSignalHangup, zx::time::infinite(), &observed));
   // Wait again with no timeout, so that observed doesn't have any transient
   // signals in it.
-  ASSERT_OK(event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_HANGUP, zx::time{}, &observed));
-  ASSERT_EQ(observed, fuchsia_device::wire::DEVICE_SIGNAL_HANGUP |
-                          fuchsia_device::wire::DEVICE_SIGNAL_READABLE);
+  ASSERT_OK(event.wait_one(fuchsia_device::wire::kDeviceSignalHangup, zx::time{}, &observed));
+  ASSERT_EQ(observed, fuchsia_device::wire::kDeviceSignalHangup |
+                          fuchsia_device::wire::kDeviceSignalReadable);
 
   {
     auto result = client.ReadEvents();
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
-    ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::EVENT_HANGUP);
+    ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::kEventHangup);
   }
 
   // Attempts to drain the buffer should succeed
@@ -725,7 +725,7 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
 
   zx::eventpair event = GetEvent(&server);
   ASSERT_OK(
-      event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, zx::time::infinite(), nullptr));
+      event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
     auto result = server.Read(std::size(kExpectedReadback) + 10);
     ASSERT_OK(result.status());
@@ -734,7 +734,7 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
     ASSERT_BYTES_EQ(result->data.data(), kExpectedReadback, std::size(kExpectedReadback));
   }
   // Nothing left to read
-  ASSERT_STATUS(event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, zx::time{}, nullptr),
+  ASSERT_STATUS(event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr),
                 ZX_ERR_TIMED_OUT);
 }
 
@@ -759,7 +759,7 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
 
   zx::eventpair event = GetEvent(&client);
   ASSERT_OK(
-      event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, zx::time::infinite(), nullptr));
+      event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
     auto result = client.Read(std::size(kExpectedReadbackWithNul) + 10);
     ASSERT_OK(result.status());
@@ -769,7 +769,7 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
                     std::size(kExpectedReadbackWithNul) - 1);
   }
   // Nothing left to read
-  ASSERT_STATUS(event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, zx::time{}, nullptr),
+  ASSERT_STATUS(event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr),
                 ZX_ERR_TIMED_OUT);
 }
 
@@ -780,7 +780,7 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
   ASSERT_OK(OpenClient(&server, 1, &client));
 
   {
-    auto result = client.ClrSetFeature(0, fuchsia_hardware_pty::wire::FEATURE_RAW);
+    auto result = client.ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -796,7 +796,7 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
 
   zx::eventpair event = GetEvent(&server);
   ASSERT_OK(
-      event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, zx::time::infinite(), nullptr));
+      event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
     auto result = server.Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
@@ -805,7 +805,7 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
     ASSERT_BYTES_EQ(result->data.data(), kTestData, std::size(kTestData));
   }
   // Nothing left to read
-  ASSERT_STATUS(event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, zx::time{}, nullptr),
+  ASSERT_STATUS(event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr),
                 ZX_ERR_TIMED_OUT);
 }
 
@@ -818,7 +818,7 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
   ASSERT_OK(OpenClient(&server, 0, &control_client));
 
   {
-    auto result = client.ClrSetFeature(0, fuchsia_hardware_pty::wire::FEATURE_RAW);
+    auto result = client.ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -834,7 +834,7 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
 
   zx::eventpair event = GetEvent(&client);
   ASSERT_OK(
-      event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, zx::time::infinite(), nullptr));
+      event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
     auto result = client.Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
@@ -843,7 +843,7 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
     ASSERT_BYTES_EQ(result->data.data(), kTestData, std::size(kTestData));
   }
   // Nothing left to read
-  ASSERT_STATUS(event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, zx::time{}, nullptr),
+  ASSERT_STATUS(event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr),
                 ZX_ERR_TIMED_OUT);
 
   // Make sure we didn't see an INTERRUPT_EVENT.
@@ -865,7 +865,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
 
   uint8_t kTestString[] = "abcdefghijklmnopqrstuvwxyz";
   size_t total_written = 0;
-  while (server_event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE, zx::time{}, nullptr) ==
+  while (server_event.wait_one(fuchsia_device::wire::kDeviceSignalWritable, zx::time{}, nullptr) ==
          ZX_OK) {
     auto result = server.Write(
         fidl::VectorView<uint8_t>::FromExternal(kTestString, std::size(kTestString) - 1));
@@ -887,7 +887,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
   size_t total_read = 0;
   while (total_read < total_written) {
     ASSERT_OK(
-        client_event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, zx::time{}, nullptr));
+        client_event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr));
     auto result = client.Read(std::size(kTestString) - 1);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
@@ -898,7 +898,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
   }
 
   ASSERT_STATUS(
-      client_event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, zx::time{}, nullptr),
+      client_event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr),
       ZX_ERR_TIMED_OUT);
 }
 
@@ -912,7 +912,7 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
 
   uint8_t kTestString[] = "abcdefghijklmnopqrstuvwxyz";
   size_t total_written = 0;
-  while (client_event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE, zx::time{}, nullptr) ==
+  while (client_event.wait_one(fuchsia_device::wire::kDeviceSignalWritable, zx::time{}, nullptr) ==
          ZX_OK) {
     auto result = client.Write(
         fidl::VectorView<uint8_t>::FromExternal(kTestString, std::size(kTestString) - 1));
@@ -934,7 +934,7 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
   size_t total_read = 0;
   while (total_read < total_written) {
     ASSERT_OK(
-        server_event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, zx::time{}, nullptr));
+        server_event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr));
     auto result = server.Read(std::size(kTestString) - 1);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
@@ -945,7 +945,7 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
   }
 
   ASSERT_STATUS(
-      server_event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, zx::time{}, nullptr),
+      server_event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr),
       ZX_ERR_TIMED_OUT);
 }
 
@@ -961,7 +961,7 @@ TEST_F(PtyTestCase, NonActiveClientsCantWrite) {
   zx::eventpair event = GetEvent(&other_client);
   zx_signals_t observed = 0;
   ASSERT_STATUS(event.wait_one(0, zx::time{}, &observed), ZX_ERR_TIMED_OUT);
-  ASSERT_FALSE(observed & fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE);
+  ASSERT_FALSE(observed & fuchsia_device::wire::kDeviceSignalWritable);
   {
     uint8_t byte = 0;
     auto result = other_client.Write(fidl::VectorView<uint8_t>::FromExternal(&byte, 1));
@@ -1006,7 +1006,7 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
   auto check_client = [&](Connection* client, uint8_t expected_value) {
     zx::eventpair event = GetEvent(client);
 
-    ASSERT_OK(event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, zx::time{}, nullptr));
+    ASSERT_OK(event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr));
 
     auto result = client->Read(10);
     ASSERT_OK(result.status());
@@ -1014,7 +1014,7 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
     ASSERT_EQ(result->data.count(), 1);
     ASSERT_EQ(result->data.data()[0], expected_value);
 
-    ASSERT_STATUS(event.wait_one(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, zx::time{}, nullptr),
+    ASSERT_STATUS(event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr),
                   ZX_ERR_TIMED_OUT);
   };
 

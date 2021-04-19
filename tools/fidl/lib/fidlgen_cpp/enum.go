@@ -30,9 +30,13 @@ func (e Enum) UnknownValueForTmpl() interface{} {
 
 type EnumMember struct {
 	Attributes
-	fidlgen.EnumMember
-	Name  string
-	Value ConstantValue
+	nameVariants
+	Value      ConstantValue
+	EnumMember fidlgen.EnumMember
+}
+
+func (m EnumMember) IsUnknown() bool {
+	return m.EnumMember.IsUnknown()
 }
 
 func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
@@ -46,15 +50,15 @@ func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{
-			Attributes: Attributes{v.Attributes},
-			EnumMember: v,
-			Name:       changeIfReserved(v.Name),
+			Attributes:   Attributes{v.Attributes},
+			nameVariants: enumMemberContext.transform(v.Name),
 			// TODO(fxbug.dev/7660): When we expose types consistently in the IR, we
 			// will not need to plug this here.
 			Value: c.compileConstant(v.Value, nil, fidlgen.Type{
 				Kind:             fidlgen.PrimitiveType,
 				PrimitiveSubtype: val.Type,
 			}),
+			EnumMember: v,
 		})
 	}
 	return r

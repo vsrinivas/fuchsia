@@ -5,8 +5,6 @@
 package fidlgen_cpp
 
 import (
-	"fmt"
-
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
@@ -38,10 +36,10 @@ var _ namespaced = (*Union)(nil)
 
 type UnionMember struct {
 	Attributes
+	nameVariants
 	Ordinal           uint64
 	Type              Type
-	Name              string
-	StorageName       string
+	StorageName       name
 	TagName           nameVariants
 	WireOrdinalName   name
 	Offset            int
@@ -49,11 +47,11 @@ type UnionMember struct {
 }
 
 func (um UnionMember) UpperCamelCaseName() string {
-	return fidlgen.ToUpperCamelCase(um.Name)
+	return fidlgen.ToUpperCamelCase(um.Name())
 }
 
 func (um UnionMember) NameAndType() (string, Type) {
-	return um.Name, um.Type
+	return um.Name(), um.Type
 }
 func (c *compiler) compileUnion(val fidlgen.Union) Union {
 	name := c.compileNameVariants(val.Name)
@@ -81,16 +79,16 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 		if mem.Reserved {
 			continue
 		}
-		n := changeIfReserved(mem.Name)
-		t := fmt.Sprintf("k%s", fidlgen.ToUpperCamelCase(n))
+		name := unionMemberContext.transform(mem.Name)
+		tag := unionMemberTagContext.transform(mem.Name)
 		u.Members = append(u.Members, UnionMember{
 			Attributes:        Attributes{mem.Attributes},
 			Ordinal:           uint64(mem.Ordinal),
 			Type:              c.compileType(mem.Type),
-			Name:              n,
-			StorageName:       changeIfReserved(mem.Name + "_"),
-			TagName:           u.TagEnum.nest(t),
-			WireOrdinalName:   u.WireOrdinalEnum.nest(t),
+			nameVariants:      name,
+			StorageName:       name.appendName("_").Natural,
+			TagName:           u.TagEnum.nestVariants(tag),
+			WireOrdinalName:   u.WireOrdinalEnum.nest(tag.Wire.Name()),
 			Offset:            mem.Offset,
 			HandleInformation: c.fieldHandleInformation(&mem.Type),
 		})

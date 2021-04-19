@@ -57,12 +57,12 @@ enum class MyStrictEnum : uint32_t {
   /// FOO member comment #1
   ///
   /// FOO member comment #3
-  FOO = 1u,
+  kFoo = 1u,
 
   /// BAR member comment #1
   ///
   /// BAR member comment #3
-  BAR = 2u,
+  kBar = 2u,
 };
 
 /// strict bits comment #1
@@ -79,8 +79,8 @@ class MyStrictBits final {
   // Constructs an instance of |MyStrictBits| from an underlying primitive
   // value, preserving any bit member not defined in the FIDL schema.
   explicit constexpr MyStrictBits(uint32_t value) : value_(value) {}
-  const static MyStrictBits MY_FIRST_BIT;
-  const static MyStrictBits MY_OTHER_BIT;
+  const static MyStrictBits kMyFirstBit;
+  const static MyStrictBits kMyOtherBit;
   const static MyStrictBits kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
@@ -122,11 +122,9 @@ class MyStrictBits final {
   uint32_t value_ = 0;
 };
 constexpr const ::fidl_test_doccomments::wire::MyStrictBits
-    MyStrictBits::MY_FIRST_BIT =
-        ::fidl_test_doccomments::wire::MyStrictBits(1u);
+    MyStrictBits::kMyFirstBit = ::fidl_test_doccomments::wire::MyStrictBits(1u);
 constexpr const ::fidl_test_doccomments::wire::MyStrictBits
-    MyStrictBits::MY_OTHER_BIT =
-        ::fidl_test_doccomments::wire::MyStrictBits(2u);
+    MyStrictBits::kMyOtherBit = ::fidl_test_doccomments::wire::MyStrictBits(2u);
 constexpr const ::fidl_test_doccomments::wire::MyStrictBits
     MyStrictBits::kMask = ::fidl_test_doccomments::wire::MyStrictBits(3u);
 
@@ -201,20 +199,20 @@ class MyFlexibleEnum final {
   /// FOO member comment #1
   ///
   /// FOO member comment #3
-  static const MyFlexibleEnum FOO;
+  static const MyFlexibleEnum kFoo;
 
   /// BAR member comment #1
   ///
   /// BAR member comment #3
-  static const MyFlexibleEnum BAR;
+  static const MyFlexibleEnum kBar;
 
  private:
   uint32_t value_;
 };
 constexpr const ::fidl_test_doccomments::wire::MyFlexibleEnum
-    MyFlexibleEnum::FOO = ::fidl_test_doccomments::wire::MyFlexibleEnum(1u);
+    MyFlexibleEnum::kFoo = ::fidl_test_doccomments::wire::MyFlexibleEnum(1u);
 constexpr const ::fidl_test_doccomments::wire::MyFlexibleEnum
-    MyFlexibleEnum::BAR = ::fidl_test_doccomments::wire::MyFlexibleEnum(2u);
+    MyFlexibleEnum::kBar = ::fidl_test_doccomments::wire::MyFlexibleEnum(2u);
 
 /// flexible bits comment #1
 ///
@@ -229,8 +227,8 @@ class MyFlexibleBits final {
   // Constructs an instance of |MyFlexibleBits| from an underlying primitive
   // value, preserving any bit member not defined in the FIDL schema.
   explicit constexpr MyFlexibleBits(uint32_t value) : value_(value) {}
-  const static MyFlexibleBits MY_FIRST_BIT;
-  const static MyFlexibleBits MY_OTHER_BIT;
+  const static MyFlexibleBits kMyFirstBit;
+  const static MyFlexibleBits kMyOtherBit;
   const static MyFlexibleBits kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
@@ -278,10 +276,10 @@ class MyFlexibleBits final {
   uint32_t value_ = 0;
 };
 constexpr const ::fidl_test_doccomments::wire::MyFlexibleBits
-    MyFlexibleBits::MY_FIRST_BIT =
+    MyFlexibleBits::kMyFirstBit =
         ::fidl_test_doccomments::wire::MyFlexibleBits(1u);
 constexpr const ::fidl_test_doccomments::wire::MyFlexibleBits
-    MyFlexibleBits::MY_OTHER_BIT =
+    MyFlexibleBits::kMyOtherBit =
         ::fidl_test_doccomments::wire::MyFlexibleBits(2u);
 constexpr const ::fidl_test_doccomments::wire::MyFlexibleBits
     MyFlexibleBits::kMask = ::fidl_test_doccomments::wire::MyFlexibleBits(3u);
@@ -345,32 +343,32 @@ class Table final {
   /// table field comment #1
   ///
   /// table field comment #3
-  const int32_t& Field() const {
+  const int32_t& field() const {
     ZX_ASSERT(has_Field());
-    return *frame_ptr_->Field_.data;
+    return *frame_ptr_->field_.data;
   }
-  int32_t& Field() {
+  int32_t& field() {
     ZX_ASSERT(has_Field());
-    return *frame_ptr_->Field_.data;
+    return *frame_ptr_->field_.data;
   }
   bool has_Field() const {
-    return max_ordinal_ >= 1 && frame_ptr_->Field_.data != nullptr;
+    return max_ordinal_ >= 1 && frame_ptr_->field_.data != nullptr;
   }
-  Table& set_Field(::fidl::ObjectView<int32_t> elem) {
+  Table& set_field(::fidl::ObjectView<int32_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->Field_.data = elem;
+    frame_ptr_->field_.data = elem;
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
-  Table& set_Field(std::nullptr_t) {
+  Table& set_field(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->Field_.data = nullptr;
+    frame_ptr_->field_.data = nullptr;
     return *this;
   }
   template <typename... Args>
-  Table& set_Field(::fidl::AnyAllocator& allocator, Args&&... args) {
+  Table& set_field(::fidl::AnyAllocator& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->Field_.data =
+    frame_ptr_->field_.data =
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
@@ -513,7 +511,7 @@ class Table final {
    private:
     Frame_(Frame_&&) noexcept = default;
     Frame_& operator=(Frame_&&) noexcept = default;
-    ::fidl::Envelope<int32_t> Field_;
+    ::fidl::Envelope<int32_t> field_;
 
     friend class Table;
   };
@@ -548,14 +546,14 @@ class StrictUnion {
            ::fidl_test_doccomments::wire::StrictUnion::Ordinal::Invalid;
   }
 
-  bool is_Field() const {
+  bool is_field() const {
     return ordinal_ ==
            ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField;
   }
 
   static StrictUnion WithField(::fidl::ObjectView<int32_t> val) {
     StrictUnion result;
-    result.set_Field(val);
+    result.set_field(val);
     return result;
   }
 
@@ -563,7 +561,7 @@ class StrictUnion {
   static StrictUnion WithField(::fidl::AnyAllocator& allocator,
                                Args&&... args) {
     StrictUnion result;
-    result.set_Field(
+    result.set_field(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
@@ -571,28 +569,28 @@ class StrictUnion {
   /// union member comment #1
   ///
   /// union member comment #3
-  void set_Field(::fidl::ObjectView<int32_t> elem) {
+  void set_field(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
-  void set_Field(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_field(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField;
-    set_Field(
+    set_field(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   /// union member comment #1
   ///
   /// union member comment #3
-  int32_t& mutable_Field() {
+  int32_t& mutable_field() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField);
     return *static_cast<int32_t*>(envelope_.data.get());
   }
-  const int32_t& Field() const {
+  const int32_t& field() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField);
     return *static_cast<int32_t*>(envelope_.data.get());
@@ -649,14 +647,14 @@ class FlexibleUnion {
            ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::Invalid;
   }
 
-  bool is_Field() const {
+  bool is_field() const {
     return ordinal_ ==
            ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField;
   }
 
   static FlexibleUnion WithField(::fidl::ObjectView<int32_t> val) {
     FlexibleUnion result;
-    result.set_Field(val);
+    result.set_field(val);
     return result;
   }
 
@@ -664,7 +662,7 @@ class FlexibleUnion {
   static FlexibleUnion WithField(::fidl::AnyAllocator& allocator,
                                  Args&&... args) {
     FlexibleUnion result;
-    result.set_Field(
+    result.set_field(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
@@ -672,28 +670,28 @@ class FlexibleUnion {
   /// union member comment #1
   ///
   /// union member comment #3
-  void set_Field(::fidl::ObjectView<int32_t> elem) {
+  void set_field(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
-  void set_Field(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_field(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField;
-    set_Field(
+    set_field(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   /// union member comment #1
   ///
   /// union member comment #3
-  int32_t& mutable_Field() {
+  int32_t& mutable_field() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField);
     return *static_cast<int32_t*>(envelope_.data.get());
   }
-  const int32_t& Field() const {
+  const int32_t& field() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField);
     return *static_cast<int32_t*>(envelope_.data.get());
@@ -734,7 +732,7 @@ struct Struct {
   /// struct member comment #1
   ///
   /// struct member comment #3
-  int32_t Field = {};
+  int32_t field = {};
 
   class UnownedEncodedMessage final {
    public:
@@ -1488,7 +1486,7 @@ namespace wire {
 /// const comment #1
 ///
 /// const comment #3
-constexpr int32_t C = 4u;
+constexpr int32_t kC = 4u;
 
 }  // namespace wire
 }  // namespace fidl_test_doccomments
@@ -1508,7 +1506,7 @@ template <>
 struct IsStruct<::fidl_test_doccomments::wire::Struct> : public std::true_type {
 };
 static_assert(std::is_standard_layout_v<::fidl_test_doccomments::wire::Struct>);
-static_assert(offsetof(::fidl_test_doccomments::wire::Struct, Field) == 0);
+static_assert(offsetof(::fidl_test_doccomments::wire::Struct, field) == 0);
 static_assert(sizeof(::fidl_test_doccomments::wire::Struct) ==
               ::fidl_test_doccomments::wire::Struct::PrimarySize);
 

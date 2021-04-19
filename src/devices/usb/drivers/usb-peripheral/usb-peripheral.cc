@@ -829,7 +829,7 @@ void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
                                      SetConfigurationCompleter::Sync& completer) {
   zxlogf(DEBUG, "%s", __func__);
   ZX_ASSERT(!config_descs.empty());
-  peripheral::wire::Device_SetConfiguration_Result response;
+  peripheral::wire::DeviceSetConfigurationResult response;
   uint8_t index = 0;
   for (auto& func_descs : config_descs) {
     auto descriptor = fbl::MakeRefCounted<UsbConfiguration>();
@@ -870,9 +870,9 @@ void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
     completer.Reply(std::move(response));
     return;
   }
-  peripheral::wire::Device_SetConfiguration_Response resp;
+  peripheral::wire::DeviceSetConfigurationResponse resp;
   response.set_response(
-      fidl::ObjectView<peripheral::wire::Device_SetConfiguration_Response>::FromExternal(&resp));
+      fidl::ObjectView<peripheral::wire::DeviceSetConfigurationResponse>::FromExternal(&resp));
   completer.Reply(std::move(response));
 }
 

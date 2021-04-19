@@ -22,13 +22,13 @@ using GpioDeviceType = ddk::Device<GpioDevice, ddk::Unbindable, ddk::Messageable
 using fuchsia_hardware_gpio::Gpio;
 using fuchsia_hardware_gpio::wire::GpioFlags;
 
-static_assert(GPIO_PULL_DOWN == static_cast<uint32_t>(GpioFlags::PULL_DOWN),
+static_assert(GPIO_PULL_DOWN == static_cast<uint32_t>(GpioFlags::kPullDown),
               "ConfigIn PULL_DOWN flag doesn't match.");
-static_assert(GPIO_PULL_UP == static_cast<uint32_t>(GpioFlags::PULL_UP),
+static_assert(GPIO_PULL_UP == static_cast<uint32_t>(GpioFlags::kPullUp),
               "ConfigIn PULL_UP flag doesn't match.");
-static_assert(GPIO_NO_PULL == static_cast<uint32_t>(GpioFlags::NO_PULL),
+static_assert(GPIO_NO_PULL == static_cast<uint32_t>(GpioFlags::kNoPull),
               "ConfigIn NO_PULL flag doesn't match.");
-static_assert(GPIO_PULL_MASK == static_cast<uint32_t>(GpioFlags::PULL_MASK),
+static_assert(GPIO_PULL_MASK == static_cast<uint32_t>(GpioFlags::kPullMask),
               "ConfigIn PULL_MASK flag doesn't match.");
 
 class GpioDevice : public GpioDeviceType,

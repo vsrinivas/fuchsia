@@ -111,7 +111,7 @@ class DeviceInterface : public fidl::WireInterface<netdev::Device>,
 
   // Serves the OpenSession FIDL handle method synchronously.
   zx_status_t OpenSession(fidl::StringView name, netdev::wire::SessionInfo session_info,
-                          netdev::wire::Device_OpenSession_Response* rsp);
+                          netdev::wire::DeviceOpenSessionResponse* rsp);
 
  private:
   // Helper class to keep track of clients bound to DeviceInterface.
@@ -181,10 +181,10 @@ class DeviceInterface : public fidl::WireInterface<netdev::Device>,
   // dispatcher used for slow-path operations:
   async_dispatcher_t* const dispatcher_;
   const ddk::NetworkDeviceImplProtocolClient device_;
-  std::array<uint8_t, netdev::wire::MAX_FRAME_TYPES> supported_rx_{};
-  std::array<tx_support_t, netdev::wire::MAX_FRAME_TYPES> supported_tx_{};
-  std::array<uint8_t, netdev::wire::MAX_ACCEL_FLAGS> accel_rx_{};
-  std::array<uint8_t, netdev::wire::MAX_ACCEL_FLAGS> accel_tx_{};
+  std::array<uint8_t, netdev::wire::kMaxFrameTypes> supported_rx_{};
+  std::array<tx_support_t, netdev::wire::kMaxFrameTypes> supported_tx_{};
+  std::array<uint8_t, netdev::wire::kMaxAccelFlags> accel_rx_{};
+  std::array<uint8_t, netdev::wire::kMaxAccelFlags> accel_tx_{};
 
   fbl::Mutex sessions_lock_ __TA_ACQUIRED_BEFORE(dead_sessions_lock_)
       __TA_ACQUIRED_BEFORE(vmos_lock_);

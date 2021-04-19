@@ -466,7 +466,7 @@ zx::status<fdio_ptr> fdio_namespace::OpenRoot() const {
   }
 
   zx_status_t status = fidl::WireCall(vn->Remote())
-                           .Clone(fio::wire::CLONE_FLAG_SAME_RIGHTS | fio::wire::OPEN_FLAG_DESCRIBE,
+                           .Clone(fio::wire::kCloneFlagSameRights | fio::wire::kOpenFlagDescribe,
                                   std::move(endpoints->server))
                            .status();
   if (status != ZX_OK) {

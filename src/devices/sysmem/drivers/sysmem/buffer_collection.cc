@@ -517,7 +517,7 @@ fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo> BufferCollection::Clone
   return fit::ok(std::move(v2_b));
 }
 
-fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2> BufferCollection::CloneResultForSendingV1(
+fit::result<fuchsia_sysmem::wire::BufferCollectionInfo2> BufferCollection::CloneResultForSendingV1(
     const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
   auto v2_result = CloneResultForSendingV2(buffer_collection_info);
   if (!v2_result.is_ok()) {
@@ -533,7 +533,7 @@ fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2> BufferCollection::Clon
   return v1_result;
 }
 
-fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2>
+fit::result<fuchsia_sysmem::wire::BufferCollectionInfo2>
 BufferCollection::CloneAuxBuffersResultForSendingV1(
     const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
   auto v2_result = CloneResultForSendingV2(buffer_collection_info);
@@ -573,7 +573,7 @@ void BufferCollection::OnBuffersAllocated(const AllocationResult& allocation_res
     return;
   }
 
-  fuchsia_sysmem::wire::BufferCollectionInfo_2 v1;
+  fuchsia_sysmem::wire::BufferCollectionInfo2 v1;
   if (logical_allocation_result_->status == ZX_OK) {
     ZX_DEBUG_ASSERT(logical_allocation_result_->buffer_collection_info);
     auto v1_result = CloneResultForSendingV1(*logical_allocation_result_->buffer_collection_info);
@@ -657,7 +657,7 @@ void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
     auto [async_id, txn] = std::move(pending_wait_for_buffers_allocated_.front());
     pending_wait_for_buffers_allocated_.pop_front();
 
-    fuchsia_sysmem::wire::BufferCollectionInfo_2 v1;
+    fuchsia_sysmem::wire::BufferCollectionInfo2 v1;
     if (logical_allocation_result_->status == ZX_OK) {
       ZX_DEBUG_ASSERT(logical_allocation_result_->buffer_collection_info);
       auto v1_result = CloneResultForSendingV1(*logical_allocation_result_->buffer_collection_info);

@@ -267,11 +267,11 @@ void Layer::SetPrimaryPosition(fhd::wire::Transform transform, fhd::wire::Frame 
 void Layer::SetPrimaryAlpha(fhd::wire::AlphaMode mode, float val) {
   primary_layer_t* primary_layer = &pending_layer_.cfg.primary;
 
-  static_assert(static_cast<alpha_t>(fhd::wire::AlphaMode::DISABLE) == ALPHA_DISABLE,
+  static_assert(static_cast<alpha_t>(fhd::wire::AlphaMode::kDisable) == ALPHA_DISABLE,
                 "Bad constant");
-  static_assert(static_cast<alpha_t>(fhd::wire::AlphaMode::PREMULTIPLIED) == ALPHA_PREMULTIPLIED,
+  static_assert(static_cast<alpha_t>(fhd::wire::AlphaMode::kPremultiplied) == ALPHA_PREMULTIPLIED,
                 "Bad constant");
-  static_assert(static_cast<alpha_t>(fhd::wire::AlphaMode::HW_MULTIPLY) == ALPHA_HW_MULTIPLY,
+  static_assert(static_cast<alpha_t>(fhd::wire::AlphaMode::kHwMultiply) == ALPHA_HW_MULTIPLY,
                 "Bad constant");
 
   primary_layer->alpha_mode = static_cast<alpha_t>(mode);

@@ -171,7 +171,7 @@ bool PrimaryLayer::Init(fidl::WireSyncClient<fhd::Controller>* dc) {
 
     auto set_alpha_result = dc->SetLayerPrimaryAlpha(
         layer->id,
-        alpha_enable_ ? fhd::wire::AlphaMode::HW_MULTIPLY : fhd::wire::AlphaMode::DISABLE,
+        alpha_enable_ ? fhd::wire::AlphaMode::kHwMultiply : fhd::wire::AlphaMode::kDisable,
         alpha_val_);
     if (!set_alpha_result.ok()) {
       printf("Setting layer alpha config failed\n");
@@ -209,16 +209,16 @@ void PrimaryLayer::StepLayout(int32_t frame_num) {
   if (rotates_) {
     switch ((frame_num / kRotationPeriod) % 4) {
       case 0:
-        rotation_ = Transform::IDENTITY;
+        rotation_ = Transform::kIdentity;
         break;
       case 1:
-        rotation_ = Transform::ROT_90;
+        rotation_ = Transform::kRot90;
         break;
       case 2:
-        rotation_ = Transform::ROT_180;
+        rotation_ = Transform::kRot180;
         break;
       case 3:
-        rotation_ = Transform::ROT_270;
+        rotation_ = Transform::kRot270;
         break;
     }
 
@@ -250,7 +250,7 @@ void PrimaryLayer::StepLayout(int32_t frame_num) {
     // Calculate the portion of the dest frame which shows up on this display
     if (compute_intersection(display, dest_frame_, &layers_[i].dest)) {
       // Find the subset of the src region which shows up on this display
-      if (rotation_ == Transform::IDENTITY || rotation_ == Transform::ROT_180) {
+      if (rotation_ == Transform::kIdentity || rotation_ == Transform::kRot180) {
         if (!scaling_) {
           layers_[i].src.x_pos = src_frame_.x_pos + (layers_[i].dest.x_pos - dest_frame_.x_pos);
           layers_[i].src.y_pos = src_frame_.y_pos;
@@ -375,7 +375,7 @@ bool CursorLayer::Init(fidl::WireSyncClient<fhd::Controller>* dc) {
     image_config.height = info.height;
     image_config.width = info.width;
     image_config.pixel_format = info.pixel_format;
-    image_config.type = fhd::wire::TYPE_SIMPLE;
+    image_config.type = fhd::wire::kTypeSimple;
     auto result = dc->SetLayerCursorConfig(layer->id, image_config);
     if (!result.ok()) {
       printf("Setting layer config failed\n");

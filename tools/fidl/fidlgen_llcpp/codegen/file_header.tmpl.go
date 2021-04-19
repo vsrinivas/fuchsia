@@ -77,6 +77,129 @@ const fileHeaderTmpl = `
 {{- if Eq .Kind Kinds.Service }}{{ template "ServiceDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDeclaration" . }}{{- end }}
 {{- end }}
+
+{{- /*
+    Some hacks to support migration of out-of-tree clients
+*/}}
+{{- range .Decls }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::ImageFormat2") }}
+    {{ EnsureNamespace . }}
+    using ImageFormat_2 = ImageFormat2;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::BufferCollectionInfo2") }}
+    {{ EnsureNamespace . }}
+    using BufferCollectionInfo_2 = BufferCollectionInfo2;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kCpuUsageReadOften") }}
+    {{ EnsureNamespace . }}
+    constexpr auto cpuUsageReadOften = kCpuUsageReadOften;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kCpuUsageWriteOften") }}
+    {{ EnsureNamespace . }}
+    constexpr auto cpuUsageWriteOften = kCpuUsageWriteOften;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kCpuUsageWrite") }}
+    {{ EnsureNamespace . }}
+    constexpr auto cpuUsageWrite = kCpuUsageWrite;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kCpuUsageRead") }}
+    {{ EnsureNamespace . }}
+    constexpr auto cpuUsageRead = kCpuUsageRead;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kFormatModifierLinear") }}
+    {{ EnsureNamespace . }}
+    constexpr auto FORMAT_MODIFIER_LINEAR = kFormatModifierLinear;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kFormatModifierGoogleGoldfishOptimal") }}
+    {{ EnsureNamespace . }}
+    constexpr auto FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL = kFormatModifierGoogleGoldfishOptimal;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kVulkanImageUsageSampled") }}
+    {{ EnsureNamespace . }}
+    constexpr auto VULKAN_IMAGE_USAGE_SAMPLED = kVulkanImageUsageSampled;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kVulkanImageUsageColorAttachment") }}
+    {{ EnsureNamespace . }}
+    constexpr auto VULKAN_IMAGE_USAGE_COLOR_ATTACHMENT = kVulkanImageUsageColorAttachment;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kVulkanImageUsageTransferSrc") }}
+    {{ EnsureNamespace . }}
+    constexpr auto VULKAN_IMAGE_USAGE_TRANSFER_SRC = kVulkanImageUsageTransferSrc;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kVulkanImageUsageTransferDst") }}
+    {{ EnsureNamespace . }}
+    constexpr auto VULKAN_IMAGE_USAGE_TRANSFER_DST = kVulkanImageUsageTransferDst;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kVulkanBufferUsageTransferSrc") }}
+    {{ EnsureNamespace . }}
+    constexpr auto VULKAN_BUFFER_USAGE_TRANSFER_SRC = kVulkanBufferUsageTransferSrc;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kVulkanBufferUsageTransferDst") }}
+    {{ EnsureNamespace . }}
+    constexpr auto VULKAN_BUFFER_USAGE_TRANSFER_DST = kVulkanBufferUsageTransferDst;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kVulkanBufferUsageUniformTexelBuffer") }}
+    {{ EnsureNamespace . }}
+    constexpr auto VULKAN_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER = kVulkanBufferUsageUniformTexelBuffer;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kVulkanBufferUsageStorageTexelBuffer") }}
+    {{ EnsureNamespace . }}
+    constexpr auto VULKAN_BUFFER_USAGE_STORAGE_TEXEL_BUFFER = kVulkanBufferUsageStorageTexelBuffer;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kVulkanBufferUsageUniformBuffer") }}
+    {{ EnsureNamespace . }}
+    constexpr auto VULKAN_BUFFER_USAGE_UNIFORM_BUFFER = kVulkanBufferUsageUniformBuffer;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kVulkanBufferUsageStorageBuffer") }}
+    {{ EnsureNamespace . }}
+    constexpr auto VULKAN_BUFFER_USAGE_STORAGE_BUFFER = kVulkanBufferUsageStorageBuffer;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kVulkanBufferUsageIndexBuffer") }}
+    {{ EnsureNamespace . }}
+    constexpr auto VULKAN_BUFFER_USAGE_INDEX_BUFFER = kVulkanBufferUsageIndexBuffer;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kVulkanBufferUsageVertexBuffer") }}
+    {{ EnsureNamespace . }}
+    constexpr auto VULKAN_BUFFER_USAGE_VERTEX_BUFFER = kVulkanBufferUsageVertexBuffer;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_sysmem::wire::kVulkanBufferUsageIndirectBuffer") }}
+    {{ EnsureNamespace . }}
+    constexpr auto VULKAN_BUFFER_USAGE_INDIRECT_BUFFER = kVulkanBufferUsageIndirectBuffer;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_io::wire::kOpenFlagCreate") }}
+    {{ EnsureNamespace . }}
+    constexpr auto OPEN_FLAG_CREATE = kOpenFlagCreate;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_io::wire::kOpenRightWritable") }}
+    {{ EnsureNamespace . }}
+    constexpr auto OPEN_RIGHT_WRITABLE = kOpenRightWritable;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal") }}
+    {{ EnsureNamespace . }}
+    constexpr auto MEMORY_PROPERTY_DEVICE_LOCAL = kMemoryPropertyDeviceLocal;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_hardware_goldfish::wire::kMemoryPropertyHostVisible") }}
+    {{ EnsureNamespace . }}
+    constexpr auto MEMORY_PROPERTY_HOST_VISIBLE = kMemoryPropertyHostVisible;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_hardware_goldfish::wire::kSignalReadable") }}
+    {{ EnsureNamespace . }}
+    constexpr auto SIGNAL_READABLE = kSignalReadable;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_hardware_goldfish::wire::kSignalHangup") }}
+    {{ EnsureNamespace . }}
+    constexpr auto SIGNAL_HANGUP = kSignalHangup;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_hardware_spi::wire::kMaxTransferSize") }}
+    {{ EnsureNamespace . }}
+    constexpr auto MAX_TRANSFER_SIZE = kMaxTransferSize;
+  {{- end }}
+  {{- if (eq .String "::fuchsia_hardware_radar::wire::kVmoVectorMaxCount") }}
+    {{ EnsureNamespace . }}
+    constexpr auto VMO_VECTOR_MAX_COUNT = kVmoVectorMaxCount;
+  {{- end }}
+{{- end }}
+
 {{ "" }}
 
 {{ EnsureNamespace "fidl" }}

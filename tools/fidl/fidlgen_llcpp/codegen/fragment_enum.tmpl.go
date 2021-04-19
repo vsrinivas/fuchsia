@@ -14,6 +14,15 @@ enum class {{ .Name }} : {{ .Type }} {
     {{ .Docs }}
     {{ .Name }} = {{ .Value }},
   {{- end }}
+  {{- if (or (eq .Namespace.String "::fuchsia_hardware_radar::wire")
+           (or (eq .Namespace.String "::fuchsia_hardware_goldfish::wire")
+               (eq .Namespace.String "::fuchsia_sysmem::wire" ) ) )
+  }}
+    // Generate old names temporarily for out-of-tree users
+    {{- range .Members }}
+      {{ .Natural.Name }} = {{ .Name }},
+    {{- end }}
+  {{- end }}
 };
 {{ else }}
 {{ .Docs }}

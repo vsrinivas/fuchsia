@@ -127,19 +127,19 @@ void zxio_remote_v2_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handl
   using fio2::wire::DeviceSignal;
   auto device_signal_part = DeviceSignal();
   if (zxio_signals & ZXIO_SIGNAL_READABLE) {
-    device_signal_part |= DeviceSignal::READABLE;
+    device_signal_part |= DeviceSignal::kReadable;
   }
   if (zxio_signals & ZXIO_SIGNAL_OUT_OF_BAND) {
-    device_signal_part |= DeviceSignal::OOB;
+    device_signal_part |= DeviceSignal::kOob;
   }
   if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
-    device_signal_part |= DeviceSignal::WRITABLE;
+    device_signal_part |= DeviceSignal::kWritable;
   }
   if (zxio_signals & ZXIO_SIGNAL_ERROR) {
-    device_signal_part |= DeviceSignal::ERROR;
+    device_signal_part |= DeviceSignal::kError;
   }
   if (zxio_signals & ZXIO_SIGNAL_PEER_CLOSED) {
-    device_signal_part |= DeviceSignal::HANGUP;
+    device_signal_part |= DeviceSignal::kHangup;
   }
   // static_cast is a-okay, because |DeviceSignal| values are defined
   // using Zircon ZX_USER_* signals.
@@ -157,19 +157,19 @@ void zxio_remote_v2_wait_end(zxio_t* io, zx_signals_t zx_signals,
   // static_cast is a-okay, because |DeviceSignal| values are defined
   // using Zircon ZX_USER_* signals.
   auto device_signal_part = DeviceSignal::TruncatingUnknown(zx_signals);
-  if (device_signal_part & DeviceSignal::READABLE) {
+  if (device_signal_part & DeviceSignal::kReadable) {
     zxio_signals |= ZXIO_SIGNAL_READABLE;
   }
-  if (device_signal_part & DeviceSignal::OOB) {
+  if (device_signal_part & DeviceSignal::kOob) {
     zxio_signals |= ZXIO_SIGNAL_OUT_OF_BAND;
   }
-  if (device_signal_part & DeviceSignal::WRITABLE) {
+  if (device_signal_part & DeviceSignal::kWritable) {
     zxio_signals |= ZXIO_SIGNAL_WRITABLE;
   }
-  if (device_signal_part & DeviceSignal::ERROR) {
+  if (device_signal_part & DeviceSignal::kError) {
     zxio_signals |= ZXIO_SIGNAL_ERROR;
   }
-  if (device_signal_part & DeviceSignal::HANGUP) {
+  if (device_signal_part & DeviceSignal::kHangup) {
     zxio_signals |= ZXIO_SIGNAL_PEER_CLOSED;
   }
   if (zx_signals & ZX_CHANNEL_PEER_CLOSED) {
@@ -294,10 +294,10 @@ void zxio_file_v2_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_
   *out_handle = rio.observer()->get();
   auto file_signal_part = FileSignal();
   if (zxio_signals & ZXIO_SIGNAL_READABLE) {
-    file_signal_part |= FileSignal::READABLE;
+    file_signal_part |= FileSignal::kReadable;
   }
   if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
-    file_signal_part |= FileSignal::WRITABLE;
+    file_signal_part |= FileSignal::kWritable;
   }
   auto zx_signals = static_cast<zx_signals_t>(file_signal_part);
   *out_zx_signals = zx_signals;
@@ -307,10 +307,10 @@ void zxio_file_v2_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* 
   using fio2::wire::FileSignal;
   zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
   auto file_signal_part = FileSignal::TruncatingUnknown(zx_signals);
-  if (file_signal_part & FileSignal::READABLE) {
+  if (file_signal_part & FileSignal::kReadable) {
     zxio_signals |= ZXIO_SIGNAL_READABLE;
   }
-  if (file_signal_part & FileSignal::WRITABLE) {
+  if (file_signal_part & FileSignal::kWritable) {
     zxio_signals |= ZXIO_SIGNAL_WRITABLE;
   }
   *out_zxio_signals = zxio_signals;
@@ -325,7 +325,7 @@ static zx_status_t zxio_remote_do_vector(const RemoteV2& rio, const zx_iovec_t* 
                           auto buffer = static_cast<uint8_t*>(data);
                           size_t total = 0;
                           while (capacity > 0) {
-                            size_t chunk = std::min(capacity, fio2::wire::MAX_TRANSFER_SIZE);
+                            size_t chunk = std::min(capacity, fio2::wire::kMaxTransferSize);
                             size_t actual;
                             zx_status_t status = fn(rio.control(), buffer, chunk, &actual);
                             if (status != ZX_OK) {

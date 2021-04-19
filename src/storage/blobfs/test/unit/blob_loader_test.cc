@@ -142,7 +142,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
   std::vector<uint8_t> LoadPagedBlobData(Blob* blob) {
     zx::vmo vmo;
     size_t size = 0;
-    EXPECT_EQ(ZX_OK, blob->GetVmo(fuchsia_io::wire::VMO_FLAG_READ, &vmo, &size));
+    EXPECT_EQ(ZX_OK, blob->GetVmo(fuchsia_io::wire::kVmoFlagRead, &vmo, &size));
     EXPECT_TRUE(vmo.is_valid());
 
     // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.

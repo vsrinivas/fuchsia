@@ -131,9 +131,9 @@ class AmlHdmiHost {
 
   hdmi_param p_;
   ColorParam color_{
-      .input_color_format = ColorFormat::CF_444,
-      .output_color_format = ColorFormat::CF_444,
-      .color_depth = ColorDepth::CD_24B,
+      .input_color_format = ColorFormat::kCf444,
+      .output_color_format = ColorFormat::kCf444,
+      .color_depth = ColorDepth::kCd24B,
   };
 };
 

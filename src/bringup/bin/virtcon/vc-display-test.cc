@@ -143,7 +143,7 @@ class StubDisplayController : public fidl::WireInterface<fhd::Controller> {
   }
 
   void CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) override {
-    _completer.Reply(fhd::wire::ConfigResult::OK,
+    _completer.Reply(fhd::wire::ConfigResult::kOk,
                      fidl::VectorView<fhd::wire::ClientCompositionOp>());
   }
 
@@ -273,21 +273,21 @@ class StubMultiBufferDisplayController : public StubDisplayController {
       uint64_t collection_id, fhd::wire::ImageConfig config,
       SetBufferCollectionConstraintsCompleter::Sync& _completer) override {
     sysmem::wire::BufferCollectionConstraints constraints;
-    constraints.usage.cpu = sysmem::wire::cpuUsageWriteOften | sysmem::wire::cpuUsageRead;
+    constraints.usage.cpu = sysmem::wire::kCpuUsageWriteOften | sysmem::wire::kCpuUsageRead;
     constraints.min_buffer_count = 1;
     constraints.image_format_constraints_count = 2;
     for (uint32_t i = 0; i < 2; i++) {
       auto& image_constraints = constraints.image_format_constraints[i];
       image_constraints = image_format::GetDefaultImageFormatConstraints();
       if (i == 0) {
-        image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
+        image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgra32;
       } else {
-        image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::RGB565;
+        image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kRgb565;
       }
       image_constraints.pixel_format.has_format_modifier = true;
-      image_constraints.pixel_format.format_modifier.value = sysmem::wire::FORMAT_MODIFIER_LINEAR;
+      image_constraints.pixel_format.format_modifier.value = sysmem::wire::kFormatModifierLinear;
       image_constraints.color_spaces_count = 1;
-      image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::SRGB;
+      image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::kSrgb;
       image_constraints.max_coded_width = 0xffffffff;
       image_constraints.max_coded_height = 0xffffffff;
       image_constraints.max_bytes_per_row = 0xffffffff;

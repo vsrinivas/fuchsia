@@ -95,7 +95,7 @@ void vc_toggle_framebuffer() {
   }
 
   zx_status_t status =
-      vc_set_mode(!g_vc_owns_display ? VirtconMode::FORCED : VirtconMode::FALLBACK);
+      vc_set_mode(!g_vc_owns_display ? VirtconMode::kForced : VirtconMode::kFallback);
   if (status != ZX_OK) {
     printf("vc: Failed to toggle ownership %d\n", status);
   }
@@ -268,7 +268,7 @@ zx_status_t configure_layer(display_info_t* display, uint64_t layer_id, uint64_t
   RETURN_IF_ERROR(dc_client->SetLayerPrimaryConfig(layer_id, *config),
                   "vc: Failed to set layer config");
   RETURN_IF_ERROR(dc_client->SetLayerPrimaryPosition(
-                      layer_id, fhd::wire::Transform::IDENTITY,
+                      layer_id, fhd::wire::Transform::kIdentity,
                       fhd::wire::Frame{.width = config->width, .height = config->height},
                       fhd::wire::Frame{.width = display->width, .height = display->height}),
                   "vc: Failed to set layer position");
@@ -281,7 +281,7 @@ zx_status_t apply_configuration() {
   auto check_rsp = dc_client->CheckConfig(false);
   RETURN_IF_ERROR(check_rsp, "vc: Failed to validate display config");
 
-  if (check_rsp->res != fhd::wire::ConfigResult::OK) {
+  if (check_rsp->res != fhd::wire::ConfigResult::kOk) {
     printf("vc: Config not valid %d\n", static_cast<int>(check_rsp->res));
     return ZX_ERR_INTERNAL;
   }
@@ -371,7 +371,7 @@ static zx_status_t create_buffer_collection(
   }
 
   sysmem::wire::BufferCollectionConstraints constraints;
-  constraints.usage.cpu = sysmem::wire::cpuUsageWriteOften | sysmem::wire::cpuUsageRead;
+  constraints.usage.cpu = sysmem::wire::kCpuUsageWriteOften | sysmem::wire::kCpuUsageRead;
   constraints.min_buffer_count = 1;
   constraints.has_buffer_memory_constraints = true;
   constraints.buffer_memory_constraints = image_format::GetDefaultBufferMemoryConstraints();
@@ -387,7 +387,7 @@ static zx_status_t create_buffer_collection(
   }
   image_constraints.pixel_format = image_format::GetCppPixelFormat(pixel_format);
   image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::SRGB;
+  image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::kSrgb;
   image_constraints.min_coded_width = display->width;
   image_constraints.min_coded_height = display->height;
   image_constraints.max_coded_width = 0xffffffff;
@@ -620,7 +620,7 @@ void initialize_display_channel(fidl::ClientEnd<fhd::Controller> channel) {
 #else
 
 static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
-  if ((evt != fio::wire::WATCH_EVENT_EXISTING) && (evt != fio::wire::WATCH_EVENT_ADDED)) {
+  if ((evt != fio::wire::kWatchEventExisting) && (evt != fio::wire::kWatchEventAdded)) {
     return ZX_OK;
   }
 
@@ -662,8 +662,8 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
 
   zx_handle_close(dc_wait.object());
 
-  status = vc_set_mode(g_hide_on_boot ? fhd::wire::VirtconMode::INACTIVE
-                                      : fhd::wire::VirtconMode::FALLBACK);
+  status = vc_set_mode(g_hide_on_boot ? fhd::wire::VirtconMode::kInactive
+                                      : fhd::wire::VirtconMode::kFallback);
   if (status != ZX_OK) {
     printf("vc: Failed to set initial ownership %d\n", status);
     vc_find_display_controller();
@@ -705,7 +705,7 @@ zx_status_t handle_device_dir_event(zx_handle_t handle, zx_signals_t signals,
   // Buffer contains events { Opcode, Len, Name[Len] }
   // See zircon/device/vfs.h for more detail
   // extra byte is for temporary NUL
-  uint8_t buf[fio::wire::MAX_BUF + 1];
+  uint8_t buf[fio::wire::kMaxBuf + 1];
   uint32_t len;
   if (zx_channel_read(handle, 0, buf, nullptr, sizeof(buf) - 1, 0, &len, nullptr) < 0) {
     printf("vc: failed to read from device directory\n");
@@ -762,7 +762,7 @@ static void vc_find_display_controller() {
   fdio_cpp::UnownedFdioCaller dir_caller(dc_dir_fd);
 
   auto result = fidl::WireCall(dir_caller.directory())
-                    .Watch(fio::wire::WATCH_MASK_ALL, 0, server.TakeChannel());
+                    .Watch(fio::wire::kWatchMaskAll, 0, server.TakeChannel());
   if (result.status() != ZX_OK) {
     printf("vc: Failed to watch dc directory\n");
     return;

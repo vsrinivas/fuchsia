@@ -38,33 +38,33 @@ std::unique_ptr<Type> GetType(ServerInterpreterContext* context, uint64_t node_f
   if (shell_type.is_builtin_type()) {
     using fuchsia_shell::wire::BuiltinType;
     switch (shell_type.builtin_type()) {
-      case BuiltinType::BOOL:
+      case BuiltinType::kBool:
         return std::make_unique<TypeBool>();
-      case BuiltinType::CHAR:
+      case BuiltinType::kChar:
         return std::make_unique<TypeChar>();
-      case BuiltinType::STRING:
+      case BuiltinType::kString:
         return std::make_unique<TypeString>();
-      case BuiltinType::INT8:
+      case BuiltinType::kInt8:
         return std::make_unique<TypeInt8>();
-      case BuiltinType::UINT8:
+      case BuiltinType::kUint8:
         return std::make_unique<TypeUint8>();
-      case BuiltinType::INT16:
+      case BuiltinType::kInt16:
         return std::make_unique<TypeInt16>();
-      case BuiltinType::UINT16:
+      case BuiltinType::kUint16:
         return std::make_unique<TypeUint16>();
-      case BuiltinType::INT32:
+      case BuiltinType::kInt32:
         return std::make_unique<TypeInt32>();
-      case BuiltinType::UINT32:
+      case BuiltinType::kUint32:
         return std::make_unique<TypeUint32>();
-      case BuiltinType::INT64:
+      case BuiltinType::kInt64:
         return std::make_unique<TypeInt64>();
-      case BuiltinType::UINT64:
+      case BuiltinType::kUint64:
         return std::make_unique<TypeUint64>();
-      case BuiltinType::INTEGER:
+      case BuiltinType::kInteger:
         return std::make_unique<TypeInteger>();
-      case BuiltinType::FLOAT32:
+      case BuiltinType::kFloat32:
         return std::make_unique<TypeFloat32>();
-      case BuiltinType::FLOAT64:
+      case BuiltinType::kFloat64:
         return std::make_unique<TypeFloat64>();
       default:
         break;
@@ -108,40 +108,40 @@ class SerializeHelper {
       }
       case ValueType::kInt8:
         id.value_id = builder_.AddIntegerLiteral(value.GetInt8());
-        id.type = GetBuiltin(BuiltinType::INT8);
+        id.type = GetBuiltin(BuiltinType::kInt8);
         break;
       case ValueType::kUint8:
         id.value_id = builder_.AddIntegerLiteral(value.GetUint8());
-        id.type = GetBuiltin(BuiltinType::UINT8);
+        id.type = GetBuiltin(BuiltinType::kUint8);
         break;
       case ValueType::kInt16:
         id.value_id = builder_.AddIntegerLiteral(value.GetInt16());
-        id.type = GetBuiltin(BuiltinType::INT16);
+        id.type = GetBuiltin(BuiltinType::kInt16);
         break;
       case ValueType::kUint16:
         id.value_id = builder_.AddIntegerLiteral(value.GetUint16());
-        id.type = GetBuiltin(BuiltinType::UINT16);
+        id.type = GetBuiltin(BuiltinType::kUint16);
         break;
       case ValueType::kInt32:
         id.value_id = builder_.AddIntegerLiteral(value.GetInt32());
-        id.type = GetBuiltin(BuiltinType::INT32);
+        id.type = GetBuiltin(BuiltinType::kInt32);
         break;
       case ValueType::kUint32:
         id.value_id = builder_.AddIntegerLiteral(value.GetUint32());
-        id.type = GetBuiltin(BuiltinType::UINT32);
+        id.type = GetBuiltin(BuiltinType::kUint32);
         break;
       case ValueType::kInt64:
         id.value_id = builder_.AddIntegerLiteral(value.GetInt64());
-        id.type = GetBuiltin(BuiltinType::INT64);
+        id.type = GetBuiltin(BuiltinType::kInt64);
         break;
       case ValueType::kUint64:
         id.value_id = builder_.AddIntegerLiteral(value.GetUint64());
-        id.type = GetBuiltin(BuiltinType::UINT64);
+        id.type = GetBuiltin(BuiltinType::kUint64);
         break;
       // Float ?
       case ValueType::kString:
         id.value_id = builder_.AddStringLiteral(value.GetString()->value());
-        id.type = GetBuiltin(BuiltinType::STRING);
+        id.type = GetBuiltin(BuiltinType::kString);
         break;
       case ValueType::kObject: {
         builder_.OpenObject();
@@ -235,17 +235,17 @@ void ServerInterpreter::DumpDone(ExecutionContext* context) {
 
 void ServerInterpreter::ContextDone(ExecutionContext* context) {
   FX_DCHECK(context != nullptr);
-  service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::OK);
+  service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::kOk);
 }
 
 void ServerInterpreter::ContextDoneWithAnalysisError(ExecutionContext* context) {
   FX_DCHECK(context != nullptr);
-  service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::ANALYSIS_ERROR);
+  service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::kAnalysisError);
 }
 
 void ServerInterpreter::ContextDoneWithExecutionError(ExecutionContext* context) {
   FX_DCHECK(context != nullptr);
-  service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::EXECUTION_ERROR);
+  service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::kExecutionError);
 }
 
 void ServerInterpreter::TextResult(ExecutionContext* context, std::string_view text) {

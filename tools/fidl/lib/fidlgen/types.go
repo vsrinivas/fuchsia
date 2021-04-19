@@ -79,12 +79,15 @@ func (li LibraryIdentifier) Encode() EncodedLibraryIdentifier {
 	return EncodedLibraryIdentifier(strings.Join(ss, "."))
 }
 
+func (ci CompoundIdentifier) EncodeDecl() EncodedCompoundIdentifier {
+	return EncodedCompoundIdentifier(string(ci.Library.Encode()) + "/" + string(ci.Name))
+}
+
 func (ci CompoundIdentifier) Encode() EncodedCompoundIdentifier {
-	rhs := string(ci.Name)
 	if ci.Member != "" {
-		rhs += "." + string(ci.Member)
+		return EncodedCompoundIdentifier(fmt.Sprintf("%s.%s", ci.EncodeDecl(), ci.Member))
 	}
-	return EncodedCompoundIdentifier(string(ci.Library.Encode()) + "/" + rhs)
+	return ci.EncodeDecl()
 }
 
 func (eli EncodedLibraryIdentifier) Parts() LibraryIdentifier {

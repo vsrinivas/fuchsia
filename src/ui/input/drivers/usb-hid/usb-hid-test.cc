@@ -163,9 +163,9 @@ class UsbTwoEndpointTest : public zxtest::Test {
 TEST_F(UsbOneEndpointTest, SetAndGetReport) {
   uint8_t buf[sizeof(hid_boot_mouse_report_t)] = {0xab, 0xbc, 0xde};
 
-  auto set_result = sync_client_->SetReport(fuchsia_hardware_input::wire::ReportType::INPUT, 0,
+  auto set_result = sync_client_->SetReport(fuchsia_hardware_input::wire::ReportType::kInput, 0,
                                             fidl::VectorView<uint8_t>::FromExternal(buf));
-  auto get_result = sync_client_->GetReport(fuchsia_hardware_input::wire::ReportType::INPUT, 0);
+  auto get_result = sync_client_->GetReport(fuchsia_hardware_input::wire::ReportType::kInput, 0);
 
   ASSERT_OK(set_result.status());
   ASSERT_OK(set_result->status);
@@ -184,9 +184,9 @@ TEST_F(UsbOneEndpointTest, UnBind) { ASSERT_NO_FATAL_FAILURES(bus_.Unbind(devpat
 TEST_F(UsbTwoEndpointTest, SetAndGetReport) {
   uint8_t buf[sizeof(hid_boot_mouse_report_t)] = {0xab, 0xbc, 0xde};
 
-  auto set_result = sync_client_->SetReport(fuchsia_hardware_input::wire::ReportType::INPUT, 0,
+  auto set_result = sync_client_->SetReport(fuchsia_hardware_input::wire::ReportType::kInput, 0,
                                             fidl::VectorView<uint8_t>::FromExternal(buf));
-  auto get_result = sync_client_->GetReport(fuchsia_hardware_input::wire::ReportType::INPUT, 0);
+  auto get_result = sync_client_->GetReport(fuchsia_hardware_input::wire::ReportType::kInput, 0);
 
   ASSERT_OK(set_result.status());
   ASSERT_OK(set_result->status);

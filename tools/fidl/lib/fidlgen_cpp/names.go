@@ -23,6 +23,9 @@ const (
 	naturalVariant variant = "natural"
 	unifiedVariant variant = "unified"
 	wireVariant    variant = "wire"
+
+	// for use in testing:
+	testingVariant variant = "testing"
 )
 
 var currentVariant = noVariant
@@ -117,6 +120,8 @@ func (dn nameVariants) String() string {
 		return dn.Unified.String()
 	case wireVariant:
 		return dn.Wire.String()
+	case testingVariant:
+		return fmt.Sprintf("%#v", dn)
 	}
 	panic("not reached")
 }
@@ -210,7 +215,26 @@ func (dn nameVariants) appendNamespace(c string) nameVariants {
 func (dn nameVariants) nest(c string) nameVariants {
 	return nameVariants{
 		Natural: dn.Natural.nest(c),
+		Unified: dn.Unified.nest(c),
 		Wire:    dn.Wire.nest(c),
+	}
+}
+
+// nestVariants returns a new name for a class nested inside the existing name.
+func (dn nameVariants) nestVariants(v nameVariants) nameVariants {
+	if len(v.Natural.Namespace()) != 0 {
+		panic(fmt.Sprintf("Can't nest a name with a namespace: %v", v.Natural.String()))
+	}
+	if len(v.Unified.Namespace()) != 0 {
+		panic(fmt.Sprintf("Can't nest a name with a namespace: %v", v.Unified.String()))
+	}
+	if len(v.Wire.Namespace()) != 0 {
+		panic(fmt.Sprintf("Can't nest a name with a namespace: %v", v.Wire.String()))
+	}
+	return nameVariants{
+		Natural: dn.Natural.nest(v.Natural.Name()),
+		Unified: dn.Unified.nest(v.Unified.Name()),
+		Wire:    dn.Wire.nest(v.Wire.Name()),
 	}
 }
 
@@ -358,7 +382,7 @@ type name struct {
 	ns   namespace
 }
 
-// MakeName takes a string with a :: separated name and makes a Name treating the last component
+// makeName takes a string with a :: separated name and makes a Name treating the last component
 // as the local name and the preceding components as the namespace.
 // This should only be used with string literals for creating well-known, simple names.
 func makeName(n string) name {
@@ -373,6 +397,14 @@ func makeName(n string) name {
 		name: stringNamePart(n[i+2:]),
 		ns:   newNamespace(n[0:i]),
 	}
+}
+
+// simpleName return a name with a single component
+func simpleName(n string) name {
+	if strings.ContainsAny(n, ":-./") {
+		panic(fmt.Sprintf("%#v is not a simple name", n))
+	}
+	return name{name: stringNamePart(n)}
 }
 
 // String returns the full name with a leading :: if the name has a namespace.

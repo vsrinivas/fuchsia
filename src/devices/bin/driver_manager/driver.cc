@@ -168,7 +168,7 @@ zx_status_t load_driver_vmo(std::string_view libname, zx::vmo vmo, DriverLoadCal
 zx_status_t load_vmo(std::string_view libname, zx::vmo* out_vmo) {
   int fd = -1;
   zx_status_t r = fdio_open_fd(
-      libname.data(), fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE, &fd);
+      libname.data(), fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable, &fd);
   if (r != ZX_OK) {
     LOGF(ERROR, "Cannot open driver '%s'", libname.data());
     return ZX_ERR_IO;

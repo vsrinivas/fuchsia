@@ -150,10 +150,9 @@ void DriverHost::Start(fdf::wire::DriverStartArgs start_args,
     completer.Close(endpoints.status_value());
     return;
   }
-  zx_status_t status =
-      fdio_open_at(pkg->handle(), binary->data(),
-                   fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE,
-                   endpoints->server.TakeChannel().release());
+  zx_status_t status = fdio_open_at(pkg->handle(), binary->data(),
+                                    fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
+                                    endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s", binary->data(),
          zx_status_get_string(status));
@@ -218,6 +217,6 @@ void DriverHost::Start(fdf::wire::DriverStartArgs start_args,
     }
     LOGF(INFO, "Started '%s'", binary.data());
   };
-  file->GetBuffer(fio::wire::VMO_FLAG_READ | fio::wire::VMO_FLAG_EXEC | fio::wire::VMO_FLAG_PRIVATE,
+  file->GetBuffer(fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec | fio::wire::kVmoFlagPrivate,
                   std::move(callback));
 }

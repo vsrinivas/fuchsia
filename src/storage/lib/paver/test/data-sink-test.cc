@@ -141,8 +141,8 @@ TEST(DataSinkTest, WriteAssetPaged) {
 
   // The Configuration and Asset type passed in here are not relevant. They just need to be valid
   // values.
-  ASSERT_OK(data_sink.WriteAsset(fuchsia_paver::wire::Configuration::A,
-                                 fuchsia_paver::wire::Asset::KERNEL, std::move(payload)));
+  ASSERT_OK(data_sink.WriteAsset(fuchsia_paver::wire::Configuration::kA,
+                                 fuchsia_paver::wire::Asset::kKernel, std::move(payload)));
 }
 
 }  // namespace

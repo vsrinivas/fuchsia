@@ -106,7 +106,7 @@ class MountTestTemplate : public testing::Test {
     zx::channel clone_root_client_end, clone_root_server_end;
     ZX_ASSERT(zx::channel::create(0, &clone_root_client_end, &clone_root_server_end) == ZX_OK);
     ZX_ASSERT(fidl::WireCall<fio::Node>(zx::unowned_channel(root_client_end()))
-                  .Clone(fio::wire::CLONE_FLAG_SAME_RIGHTS, std::move(clone_root_server_end))
+                  .Clone(fio::wire::kCloneFlagSameRights, std::move(clone_root_server_end))
                   .ok());
     return clone_root_client_end;
   }

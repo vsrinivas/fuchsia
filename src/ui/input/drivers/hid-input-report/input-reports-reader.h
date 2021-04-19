@@ -60,7 +60,7 @@ class InputReportsReader : public fidl::WireInterface<fuchsia_input_report::Inpu
       __TA_GUARDED(readers_lock_);
   fidl::FidlAllocator<kFidlReportBufferSize> report_allocator_ __TA_GUARDED(readers_lock_);
   fbl::RingBuffer<fuchsia_input_report::wire::InputReport,
-                  fuchsia_input_report::wire::MAX_DEVICE_REPORT_COUNT>
+                  fuchsia_input_report::wire::kMaxDeviceReportCount>
       reports_data_ __TA_GUARDED(readers_lock_);
 
   InputReportBase* base_;

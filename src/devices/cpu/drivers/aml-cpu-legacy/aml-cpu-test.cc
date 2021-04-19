@@ -80,12 +80,12 @@ class FakeMmio {
 
 using CpuCtrlSyncClient = fidl::WireSyncClient<fuchsia_cpuctrl::Device>;
 using ThermalSyncClient = fidl::WireSyncClient<fuchsia_thermal::Device>;
-using fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES;
+using fuchsia_device::wire::kMaxDevicePerformanceStates;
 
 constexpr size_t kBigClusterIdx =
-    static_cast<size_t>(fuchsia_thermal::wire::PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    static_cast<size_t>(fuchsia_thermal::wire::PowerDomain::kBigClusterPowerDomain);
 constexpr size_t kLittleClusterIdx =
-    static_cast<size_t>(fuchsia_thermal::wire::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN);
+    static_cast<size_t>(fuchsia_thermal::wire::PowerDomain::kLittleClusterPowerDomain);
 
 constexpr uint32_t kBigClusterCoreCount = 4;
 constexpr uint32_t kLittleClusterCoreCount = 2;
@@ -103,9 +103,9 @@ constexpr legacy_cluster_size_t kClusterSizeMetadata[] = {
 
 constexpr size_t PowerDomainToIndex(fuchsia_thermal::wire::PowerDomain pd) {
   switch (pd) {
-    case fuchsia_thermal::wire::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN:
+    case fuchsia_thermal::wire::PowerDomain::kLittleClusterPowerDomain:
       return kLittleClusterIdx;
-    case fuchsia_thermal::wire::PowerDomain::BIG_CLUSTER_POWER_DOMAIN:
+    case fuchsia_thermal::wire::PowerDomain::kBigClusterPowerDomain:
       return kBigClusterIdx;
   }
   __UNREACHABLE;
@@ -244,7 +244,7 @@ void FakeAmlThermal::SetTripCelsius(uint32_t id, float temp,
 
 void FakeAmlThermal::GetDvfsOperatingPoint(fuchsia_thermal::wire::PowerDomain pd,
                                            GetDvfsOperatingPointCompleter::Sync& completer) {
-  if (pd == fuchsia_thermal::wire::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN) {
+  if (pd == fuchsia_thermal::wire::PowerDomain::kLittleClusterPowerDomain) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
     return;
   }
@@ -254,7 +254,7 @@ void FakeAmlThermal::GetDvfsOperatingPoint(fuchsia_thermal::wire::PowerDomain pd
 
 void FakeAmlThermal::SetDvfsOperatingPoint(uint16_t idx, fuchsia_thermal::wire::PowerDomain pd,
                                            SetDvfsOperatingPointCompleter::Sync& completer) {
-  if (pd == fuchsia_thermal::wire::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN) {
+  if (pd == fuchsia_thermal::wire::PowerDomain::kLittleClusterPowerDomain) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
     return;
   }
@@ -431,7 +431,7 @@ TEST_F(AmlCpuTestFixture, TestGetPerformanceStateInfo) {
 
   // Make sure that we can't get any information about pstates that don't
   // exist.
-  for (uint32_t i = kFakeOperatingPoints.count; i < MAX_DEVICE_PERFORMANCE_STATES; i++) {
+  for (uint32_t i = kFakeOperatingPoints.count; i < kMaxDevicePerformanceStates; i++) {
     auto pstateInfo = cpu_client_->GetPerformanceStateInfo(i);
 
     // Even if it's an unsupported pstate, we still expect the transport to
@@ -465,7 +465,7 @@ TEST_F(AmlCpuTestFixture, TestSetPerformanceState) {
 
   // Next make sure that we can't drive the CPU into any unsupported
   // performance states.
-  for (uint32_t i = kFakeOperatingPoints.count; i < MAX_DEVICE_PERFORMANCE_STATES; i++) {
+  for (uint32_t i = kFakeOperatingPoints.count; i < kMaxDevicePerformanceStates; i++) {
     const uint16_t kInitialOperatingPoint = thermal_.ActiveOperatingPoint();
     uint32_t out_state = UINT32_MAX;
     zx_status_t st = dut_->DdkSetPerformanceState(i, &out_state);

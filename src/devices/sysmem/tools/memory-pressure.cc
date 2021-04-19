@@ -51,7 +51,7 @@ int MemoryPressureCommand(fxl::CommandLine command_line, bool sleep) {
     return 1;
   }
 
-  sysmem::wire::HeapType heap = sysmem::wire::HeapType::SYSTEM_RAM;
+  sysmem::wire::HeapType heap = sysmem::wire::HeapType::kSystemRam;
   std::string heap_string;
   if (command_line.GetOptionValue("heap", &heap_string)) {
     char* endptr;
@@ -68,16 +68,16 @@ int MemoryPressureCommand(fxl::CommandLine command_line, bool sleep) {
   std::string usage;
   if (command_line.GetOptionValue("usage", &usage)) {
     if (usage == "vulkan") {
-      constraints.usage.vulkan = sysmem::wire::vulkanUsageTransferDst;
+      constraints.usage.vulkan = sysmem::wire::kVulkanUsageTransferDst;
     } else if (usage == "cpu") {
-      constraints.usage.cpu = sysmem::wire::cpuUsageRead;
+      constraints.usage.cpu = sysmem::wire::kCpuUsageRead;
     } else {
       LogError("Invalid usage %s\n", usage.c_str());
       PrintHelp();
       return 1;
     }
   } else {
-    constraints.usage.vulkan = sysmem::wire::vulkanUsageTransferDst;
+    constraints.usage.vulkan = sysmem::wire::kVulkanUsageTransferDst;
   }
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;

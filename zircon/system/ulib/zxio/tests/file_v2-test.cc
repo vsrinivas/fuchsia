@@ -39,7 +39,7 @@ class TestServerBase : public fidl::WireInterface<fio2::File> {
 
   void Describe(fio2::wire::ConnectionInfoQuery query,
                 DescribeCompleter::Sync& completer) override {
-    if (query == fio2::wire::ConnectionInfoQuery::REPRESENTATION) {
+    if (query == fio2::wire::ConnectionInfoQuery::kRepresentation) {
       fidl::FidlAllocator allocator;
       fio2::wire::ConnectionInfo info(allocator);
       info.set_representation(allocator,
@@ -131,7 +131,7 @@ class FileV2 : public zxtest::Test {
     }
 
     auto result = fidl::WireCall<fio2::File>(client_end.borrow())
-                      .Describe(fio2::wire::ConnectionInfoQuery::REPRESENTATION);
+                      .Describe(fio2::wire::ConnectionInfoQuery::kRepresentation);
 
     if (result.status() != ZX_OK) {
       return status;
@@ -173,7 +173,7 @@ class TestServerEvent final : public TestServerBase {
 
   void Describe(fio2::wire::ConnectionInfoQuery query,
                 DescribeCompleter::Sync& completer) override {
-    if (query == fio2::wire::ConnectionInfoQuery::REPRESENTATION) {
+    if (query == fio2::wire::ConnectionInfoQuery::kRepresentation) {
       zx::event client_observer;
       zx_status_t status = observer_.duplicate(ZX_RIGHTS_BASIC, &client_observer);
       if (status != ZX_OK) {
@@ -211,8 +211,8 @@ TEST_F(FileV2, WaitForReadable) {
   ASSERT_OK(OpenFile());
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   // Signal readability on the server end.
-  ASSERT_OK(server->observer().signal(ZX_SIGNAL_NONE,
-                                      static_cast<zx_signals_t>(fio2::wire::FileSignal::READABLE)));
+  ASSERT_OK(server->observer().signal(
+      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio2::wire::FileSignal::kReadable)));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_READABLE, observed);
 }
@@ -223,8 +223,8 @@ TEST_F(FileV2, WaitForWritable) {
   ASSERT_OK(OpenFile());
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   // Signal writability on the server end.
-  ASSERT_OK(server->observer().signal(ZX_SIGNAL_NONE,
-                                      static_cast<zx_signals_t>(fio2::wire::FileSignal::WRITABLE)));
+  ASSERT_OK(server->observer().signal(
+      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio2::wire::FileSignal::kWritable)));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_WRITABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_WRITABLE, observed);
 }
@@ -239,11 +239,11 @@ class TestServerChannel final : public TestServerBase {
   }
 
   void Read(uint64_t count, ReadCompleter::Sync& completer) override {
-    if (count > fio2::wire::MAX_TRANSFER_SIZE) {
+    if (count > fio2::wire::kMaxTransferSize) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
     }
-    uint8_t buffer[fio2::wire::MAX_TRANSFER_SIZE];
+    uint8_t buffer[fio2::wire::kMaxTransferSize];
     zx_iovec_t vec = {
         .buffer = buffer,
         .capacity = count,
@@ -258,11 +258,11 @@ class TestServerChannel final : public TestServerBase {
   }
 
   void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync& completer) override {
-    if (count > fio2::wire::MAX_TRANSFER_SIZE) {
+    if (count > fio2::wire::kMaxTransferSize) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
     }
-    uint8_t buffer[fio2::wire::MAX_TRANSFER_SIZE];
+    uint8_t buffer[fio2::wire::kMaxTransferSize];
     zx_iovec_t vec = {
         .buffer = buffer,
         .capacity = count,
@@ -277,7 +277,7 @@ class TestServerChannel final : public TestServerBase {
   }
 
   void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) override {
-    if (data.count() > fio2::wire::MAX_TRANSFER_SIZE) {
+    if (data.count() > fio2::wire::kMaxTransferSize) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
     }
@@ -296,7 +296,7 @@ class TestServerChannel final : public TestServerBase {
 
   void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
                WriteAtCompleter::Sync& completer) override {
-    if (data.count() > fio2::wire::MAX_TRANSFER_SIZE) {
+    if (data.count() > fio2::wire::kMaxTransferSize) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
     }
@@ -347,7 +347,7 @@ class TestServerStream final : public TestServerBase {
 
   void Describe(fio2::wire::ConnectionInfoQuery query,
                 DescribeCompleter::Sync& completer) override {
-    if (query == fio2::wire::ConnectionInfoQuery::REPRESENTATION) {
+    if (query == fio2::wire::ConnectionInfoQuery::kRepresentation) {
       zx::stream client_stream;
       zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &client_stream);
       if (status != ZX_OK) {

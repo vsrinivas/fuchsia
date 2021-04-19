@@ -115,46 +115,46 @@ void SerialDevice::SetConfig(fuchsia_hardware_serial::wire::Config config,
   using fuchsia_hardware_serial::wire::StopWidth;
   uint32_t flags = 0;
   switch (config.character_width) {
-    case CharacterWidth::BITS_5:
+    case CharacterWidth::kBits5:
       flags |= SERIAL_DATA_BITS_5;
       break;
-    case CharacterWidth::BITS_6:
+    case CharacterWidth::kBits6:
       flags |= SERIAL_DATA_BITS_6;
       break;
-    case CharacterWidth::BITS_7:
+    case CharacterWidth::kBits7:
       flags |= SERIAL_DATA_BITS_7;
       break;
-    case CharacterWidth::BITS_8:
+    case CharacterWidth::kBits8:
       flags |= SERIAL_DATA_BITS_8;
       break;
   }
 
   switch (config.stop_width) {
-    case StopWidth::BITS_1:
+    case StopWidth::kBits1:
       flags |= SERIAL_STOP_BITS_1;
       break;
-    case StopWidth::BITS_2:
+    case StopWidth::kBits2:
       flags |= SERIAL_STOP_BITS_2;
       break;
   }
 
   switch (config.parity) {
-    case Parity::NONE:
+    case Parity::kNone:
       flags |= SERIAL_PARITY_NONE;
       break;
-    case Parity::EVEN:
+    case Parity::kEven:
       flags |= SERIAL_PARITY_EVEN;
       break;
-    case Parity::ODD:
+    case Parity::kOdd:
       flags |= SERIAL_PARITY_ODD;
       break;
   }
 
   switch (config.control_flow) {
-    case FlowControl::NONE:
+    case FlowControl::kNone:
       flags |= SERIAL_FLOW_CTRL_NONE;
       break;
-    case FlowControl::CTS_RTS:
+    case FlowControl::kCtsRts:
       flags |= SERIAL_FLOW_CTRL_CTS_RTS;
       break;
   }

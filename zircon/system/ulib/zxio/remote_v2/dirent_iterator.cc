@@ -59,7 +59,7 @@ class DirentIteratorImpl {
     const auto& entry = entries_[index_];
     index_++;
 
-    if (!entry.has_name() || entry.name().size() > fio2::wire::MAX_NAME_LENGTH) {
+    if (!entry.has_name() || entry.name().size() > fio2::wire::kMaxNameLength) {
       return ZX_ERR_INVALID_ARGS;
     }
 
@@ -118,7 +118,7 @@ class DirentIteratorImpl {
     // dirent segment from |response_buffer|, and populate |current_entry|
     // and |current_entry_name|.
     zxio_dirent_t current_entry;
-    char current_entry_name[fio2::wire::MAX_NAME_LENGTH + 1] = {};
+    char current_entry_name[fio2::wire::kMaxNameLength + 1] = {};
   };
 
   // The first field must be some kind of |zxio_t| pointer, to be compatible

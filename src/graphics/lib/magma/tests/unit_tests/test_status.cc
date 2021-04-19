@@ -29,15 +29,15 @@ TEST(MagmaUtil, Status) { TestStatus::Test(); }
 
 #if defined(__Fuchsia__)
 TEST(MagmaUtil, FidlStatus) {
-  EXPECT_EQ(Convert(MAGMA_STATUS_INTERNAL_ERROR), FidlStatus::INTERNAL_ERROR);
-  EXPECT_EQ(Convert(MAGMA_STATUS_INVALID_ARGS), FidlStatus::INVALID_ARGS);
-  EXPECT_EQ(Convert(MAGMA_STATUS_ACCESS_DENIED), FidlStatus::ACCESS_DENIED);
-  EXPECT_EQ(Convert(MAGMA_STATUS_MEMORY_ERROR), FidlStatus::MEMORY_ERROR);
-  EXPECT_EQ(Convert(MAGMA_STATUS_CONTEXT_KILLED), FidlStatus::CONTEXT_KILLED);
-  EXPECT_EQ(Convert(MAGMA_STATUS_CONNECTION_LOST), FidlStatus::CONNECTION_LOST);
-  EXPECT_EQ(Convert(MAGMA_STATUS_TIMED_OUT), FidlStatus::TIMED_OUT);
-  EXPECT_EQ(Convert(MAGMA_STATUS_UNIMPLEMENTED), FidlStatus::UNIMPLEMENTED);
-  EXPECT_EQ(Convert(MAGMA_STATUS_BAD_STATE), FidlStatus::BAD_STATE);
+  EXPECT_EQ(Convert(MAGMA_STATUS_INTERNAL_ERROR), FidlStatus::kInternalError);
+  EXPECT_EQ(Convert(MAGMA_STATUS_INVALID_ARGS), FidlStatus::kInvalidArgs);
+  EXPECT_EQ(Convert(MAGMA_STATUS_ACCESS_DENIED), FidlStatus::kAccessDenied);
+  EXPECT_EQ(Convert(MAGMA_STATUS_MEMORY_ERROR), FidlStatus::kMemoryError);
+  EXPECT_EQ(Convert(MAGMA_STATUS_CONTEXT_KILLED), FidlStatus::kContextKilled);
+  EXPECT_EQ(Convert(MAGMA_STATUS_CONNECTION_LOST), FidlStatus::kConnectionLost);
+  EXPECT_EQ(Convert(MAGMA_STATUS_TIMED_OUT), FidlStatus::kTimedOut);
+  EXPECT_EQ(Convert(MAGMA_STATUS_UNIMPLEMENTED), FidlStatus::kUnimplemented);
+  EXPECT_EQ(Convert(MAGMA_STATUS_BAD_STATE), FidlStatus::kBadState);
   EXPECT_EQ(MAGMA_STATUS_ALIAS_FOR_LAST, MAGMA_STATUS_BAD_STATE) << "test needs updating";
 }
 #endif

@@ -28,7 +28,7 @@ PseudoDir::~PseudoDir() {
 zx_status_t PseudoDir::GetAttributes(VnodeAttributes* attr) {
   *attr = VnodeAttributes();
   attr->mode = V_TYPE_DIR | V_IRUSR;
-  attr->inode = fio::wire::INO_UNKNOWN;
+  attr->inode = fio::wire::kInoUnknown;
   attr->link_count = 1;
   return ZX_OK;
 }
@@ -56,7 +56,7 @@ zx_status_t PseudoDir::Readdir(VdirCookie* cookie, void* data, size_t len, size_
   fs::DirentFiller df(data, len);
   zx_status_t r = 0;
   if (cookie->n < kDotId) {
-    uint64_t ino = fio::wire::INO_UNKNOWN;
+    uint64_t ino = fio::wire::kInoUnknown;
     if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR), ino)) != ZX_OK) {
       *out_actual = df.BytesFilled();
       return r;
@@ -107,7 +107,7 @@ zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
     return ZX_ERR_ALREADY_EXISTS;
   }
 
-  Notify(name, fio::wire::WATCH_EVENT_ADDED);
+  Notify(name, fio::wire::kWatchEventAdded);
   auto entry = std::make_unique<Entry>(next_node_id_++, std::move(name), std::move(vn));
   entries_by_name_.insert(entry.get());
   entries_by_id_.insert(std::move(entry));
@@ -121,7 +121,7 @@ zx_status_t PseudoDir::RemoveEntry(std::string_view name) {
   if (it != entries_by_name_.end()) {
     entries_by_name_.erase(it);
     entries_by_id_.erase(it->id());
-    Notify(name, fio::wire::WATCH_EVENT_REMOVED);
+    Notify(name, fio::wire::kWatchEventRemoved);
     return ZX_OK;
   }
 
@@ -135,7 +135,7 @@ zx_status_t PseudoDir::RemoveEntry(std::string_view name, fs::Vnode* vn) {
   if (it != entries_by_name_.end() && it->node().get() == vn) {
     entries_by_name_.erase(it);
     entries_by_id_.erase(it->id());
-    Notify(name, fio::wire::WATCH_EVENT_REMOVED);
+    Notify(name, fio::wire::kWatchEventRemoved);
     return ZX_OK;
   }
 
@@ -146,7 +146,7 @@ void PseudoDir::RemoveAllEntries() {
   std::lock_guard<std::mutex> lock(mutex_);
 
   for (auto& entry : entries_by_name_) {
-    Notify(entry.name(), fio::wire::WATCH_EVENT_REMOVED);
+    Notify(entry.name(), fio::wire::kWatchEventRemoved);
   }
   entries_by_name_.clear();
   entries_by_id_.clear();

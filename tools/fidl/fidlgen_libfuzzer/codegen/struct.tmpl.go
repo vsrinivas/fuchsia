@@ -24,7 +24,7 @@ struct Allocate<{{ .Natural.Name }}> {
     size_t out_size;
     {{- range .Members }}
     out_size = MinSize<{{ .Type.Natural }}>() + slack_per_member;
-    out.{{ .Name }} = Allocate<{{ .Type.Natural }}>{}(src, &out_size);
+    out.{{ .Natural.Name }} = Allocate<{{ .Type.Natural }}>{}(src, &out_size);
     {{- end }}
     {{- end }}
     return out;

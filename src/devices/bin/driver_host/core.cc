@@ -294,17 +294,17 @@ const char* removal_problem(uint32_t flags) {
 
 uint8_t device_get_suspend_reason(SystemPowerState power_state) {
   switch (power_state) {
-    case SystemPowerState::REBOOT:
+    case SystemPowerState::kReboot:
       return DEVICE_SUSPEND_REASON_REBOOT;
-    case SystemPowerState::REBOOT_RECOVERY:
+    case SystemPowerState::kRebootRecovery:
       return DEVICE_SUSPEND_REASON_REBOOT_RECOVERY;
-    case SystemPowerState::REBOOT_BOOTLOADER:
+    case SystemPowerState::kRebootBootloader:
       return DEVICE_SUSPEND_REASON_REBOOT_BOOTLOADER;
-    case SystemPowerState::MEXEC:
+    case SystemPowerState::kMexec:
       return DEVICE_SUSPEND_REASON_MEXEC;
-    case SystemPowerState::POWEROFF:
+    case SystemPowerState::kPoweroff:
       return DEVICE_SUSPEND_REASON_POWEROFF;
-    case SystemPowerState::SUSPEND_RAM:
+    case SystemPowerState::kSuspendRam:
       return DEVICE_SUSPEND_REASON_SUSPEND_RAM;
     default:
       return DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
@@ -322,19 +322,19 @@ zx_status_t device_get_dev_power_state_from_mapping(
   SystemPowerState sys_state;
   switch (flags) {
     case DEVICE_SUSPEND_FLAG_REBOOT:
-      sys_state = SystemPowerState::REBOOT;
+      sys_state = SystemPowerState::kReboot;
       break;
     case DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY:
-      sys_state = SystemPowerState::REBOOT_RECOVERY;
+      sys_state = SystemPowerState::kRebootRecovery;
       break;
     case DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER:
-      sys_state = SystemPowerState::REBOOT_BOOTLOADER;
+      sys_state = SystemPowerState::kRebootBootloader;
       break;
     case DEVICE_SUSPEND_FLAG_MEXEC:
-      sys_state = SystemPowerState::MEXEC;
+      sys_state = SystemPowerState::kMexec;
       break;
     case DEVICE_SUSPEND_FLAG_POWEROFF:
-      sys_state = SystemPowerState::POWEROFF;
+      sys_state = SystemPowerState::kPoweroff;
       break;
     default:
       return ZX_ERR_INVALID_ARGS;
@@ -349,7 +349,7 @@ zx_status_t device_get_dev_power_state_from_mapping(
 
 uint32_t get_perf_state(const fbl::RefPtr<zx_device>& dev, uint32_t requested_perf_state) {
   // Give preference to the performance state that is explicitly for this device.
-  if (dev->current_performance_state() != fuchsia_device::wire::DEVICE_PERFORMANCE_STATE_P0) {
+  if (dev->current_performance_state() != fuchsia_device::wire::kDevicePerformanceStateP0) {
     return dev->current_performance_state();
   }
   return requested_perf_state;
@@ -649,7 +649,7 @@ void DriverHostContext::DeviceSuspendReply(const fbl::RefPtr<zx_device_t>& dev, 
 void DriverHostContext::DeviceResumeReply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
                                           uint8_t out_power_state, uint32_t out_perf_state) {
   if (dev->resume_cb) {
-    if (out_power_state == static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0)) {
+    if (out_power_state == static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD0)) {
       // Update the current performance state.
       dev->set_current_performance_state(out_perf_state);
     }
@@ -780,8 +780,8 @@ void DriverHostContext::DeviceSystemResume(const fbl::RefPtr<zx_device>& dev,
   if (status == ZX_ERR_NOT_SUPPORTED) {
     status = ZX_OK;
   }
-  dev->resume_cb(status, static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0),
-                 fuchsia_device::wire::DEVICE_PERFORMANCE_STATE_P0);
+  dev->resume_cb(status, static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD0),
+                 fuchsia_device::wire::kDevicePerformanceStateP0);
 }
 
 void DriverHostContext::DeviceSuspendNew(const fbl::RefPtr<zx_device>& dev,
@@ -789,12 +789,12 @@ void DriverHostContext::DeviceSuspendNew(const fbl::RefPtr<zx_device>& dev,
   if (dev->auto_suspend_configured()) {
     LOGF(INFO, "Failed to suspend device %p '%s', auto suspend is enabled", dev.get(), dev->name());
     dev->suspend_cb(ZX_ERR_NOT_SUPPORTED,
-                    static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0));
+                    static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD0));
     return;
   }
   if (!(dev->IsPowerStateSupported(requested_state))) {
     dev->suspend_cb(ZX_ERR_INVALID_ARGS,
-                    static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0));
+                    static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD0));
     return;
   }
 
@@ -804,7 +804,7 @@ void DriverHostContext::DeviceSuspendNew(const fbl::RefPtr<zx_device>& dev,
     return;
   }
   dev->suspend_cb(ZX_ERR_NOT_SUPPORTED,
-                  static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0));
+                  static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD0));
 }
 
 zx_status_t DriverHostContext::DeviceSetPerformanceState(const fbl::RefPtr<zx_device>& dev,
@@ -830,20 +830,19 @@ void DriverHostContext::DeviceResumeNew(const fbl::RefPtr<zx_device>& dev) {
   if (dev->auto_suspend_configured()) {
     LOGF(INFO, "Failed to resume device %p '%s', auto suspend is enabled", dev.get(), dev->name());
     dev->resume_cb(ZX_ERR_NOT_SUPPORTED,
-                   static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0),
-                   fuchsia_device::wire::DEVICE_PERFORMANCE_STATE_P0);
+                   static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD0),
+                   fuchsia_device::wire::kDevicePerformanceStateP0);
     return;
   }
   // If new resume hook is implemented, prefer that.
   if (dev->ops()->resume) {
     uint32_t requested_perf_state =
-        internal::get_perf_state(dev, fuchsia_device::wire::DEVICE_PERFORMANCE_STATE_P0);
+        internal::get_perf_state(dev, fuchsia_device::wire::kDevicePerformanceStateP0);
     dev->ops()->resume(dev->ctx, requested_perf_state);
     return;
   }
-  dev->resume_cb(ZX_ERR_NOT_SUPPORTED,
-                 static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0),
-                 fuchsia_device::wire::DEVICE_PERFORMANCE_STATE_P0);
+  dev->resume_cb(ZX_ERR_NOT_SUPPORTED, static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD0),
+                 fuchsia_device::wire::kDevicePerformanceStateP0);
 }
 
 zx_status_t DriverHostContext::DeviceConfigureAutoSuspend(const fbl::RefPtr<zx_device>& dev,

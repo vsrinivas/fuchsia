@@ -162,7 +162,7 @@ zx_status_t Coordinator::RegisterWithPowerManager(zx::channel power_manager_clie
       [](fidl::WireResponse<power_manager_fidl::DriverManagerRegistration::Register>* response) {
         if (response->result.is_err()) {
           power_manager_fidl::wire::RegistrationError err = response->result.err();
-          if (err == power_manager_fidl::wire::RegistrationError::INVALID_HANDLE) {
+          if (err == power_manager_fidl::wire::RegistrationError::kInvalidHandle) {
             LOGF(ERROR, "Failed to register with power_manager.Invalid handle.\n");
             return;
           }
@@ -350,7 +350,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
                                             size_t max) const {
   // TODO: Remove VLA.
   char tmp[max];
-  char name_buf[fio::wire::MAX_FILENAME + strlen("dev/")];
+  char name_buf[fio::wire::kMaxFilename + strlen("dev/")];
   char* path = tmp + max - 1;
   *path = 0;
   size_t total = 1;
@@ -366,7 +366,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
       name = "dev";
     } else if (itr->composite() != nullptr) {
       strcpy(name_buf, "dev/");
-      strncpy(name_buf + strlen("dev/"), itr->name().data(), fio::wire::MAX_FILENAME);
+      strncpy(name_buf + strlen("dev/"), itr->name().data(), fio::wire::kMaxFilename);
       name_buf[sizeof(name_buf) - 1] = 0;
       name = name_buf;
     } else {
@@ -1577,20 +1577,20 @@ void Coordinator::BindDrivers() { AddAndBindDrivers(std::move(drivers_)); }
 uint32_t Coordinator::GetSuspendFlagsFromSystemPowerState(
     statecontrol_fidl::wire::SystemPowerState state) {
   switch (state) {
-    case statecontrol_fidl::wire::SystemPowerState::FULLY_ON:
+    case statecontrol_fidl::wire::SystemPowerState::kFullyOn:
       return 0;
-    case statecontrol_fidl::wire::SystemPowerState::REBOOT:
-      return statecontrol_fidl::wire::SUSPEND_FLAG_REBOOT;
-    case statecontrol_fidl::wire::SystemPowerState::REBOOT_BOOTLOADER:
-      return statecontrol_fidl::wire::SUSPEND_FLAG_REBOOT_BOOTLOADER;
-    case statecontrol_fidl::wire::SystemPowerState::REBOOT_RECOVERY:
-      return statecontrol_fidl::wire::SUSPEND_FLAG_REBOOT_RECOVERY;
-    case statecontrol_fidl::wire::SystemPowerState::POWEROFF:
-      return statecontrol_fidl::wire::SUSPEND_FLAG_POWEROFF;
-    case statecontrol_fidl::wire::SystemPowerState::MEXEC:
-      return statecontrol_fidl::wire::SUSPEND_FLAG_MEXEC;
-    case statecontrol_fidl::wire::SystemPowerState::SUSPEND_RAM:
-      return statecontrol_fidl::wire::SUSPEND_FLAG_SUSPEND_RAM;
+    case statecontrol_fidl::wire::SystemPowerState::kReboot:
+      return statecontrol_fidl::wire::kSuspendFlagReboot;
+    case statecontrol_fidl::wire::SystemPowerState::kRebootBootloader:
+      return statecontrol_fidl::wire::kSuspendFlagRebootBootloader;
+    case statecontrol_fidl::wire::SystemPowerState::kRebootRecovery:
+      return statecontrol_fidl::wire::kSuspendFlagRebootRecovery;
+    case statecontrol_fidl::wire::SystemPowerState::kPoweroff:
+      return statecontrol_fidl::wire::kSuspendFlagPoweroff;
+    case statecontrol_fidl::wire::SystemPowerState::kMexec:
+      return statecontrol_fidl::wire::kSuspendFlagMexec;
+    case statecontrol_fidl::wire::SystemPowerState::kSuspendRam:
+      return statecontrol_fidl::wire::kSuspendFlagSuspendRam;
     default:
       return 0;
   }

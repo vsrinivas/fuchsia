@@ -99,7 +99,7 @@ void DeviceControllerConnection::Resume(uint32_t target_system_state,
     }
     if (status != ZX_OK &&
         (out_power_state ==
-         static_cast<uint8_t>(fuchsia_device::wire::DevicePowerState::DEVICE_POWER_STATE_D0))) {
+         static_cast<uint8_t>(fuchsia_device::wire::DevicePowerState::kDevicePowerStateD0))) {
       // Do not fail system resume, when the device is unable to go into a particular performance
       // state, but resumed to a working state.
       status = ZX_OK;
@@ -191,8 +191,8 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync& completer) {
 
   this->dev()->unbind_cb = [dev = this->dev(), completer = completer.ToAsync(),
                             trace = std::move(trace)](zx_status_t status) mutable {
-    fuchsia_device_manager::wire::DeviceController_Unbind_Result result;
-    fuchsia_device_manager::wire::DeviceController_Unbind_Response response;
+    fuchsia_device_manager::wire::DeviceControllerUnbindResult result;
+    fuchsia_device_manager::wire::DeviceControllerUnbindResponse response;
     if (status != ZX_OK && dev->parent()) {
       // If unbind returns an error, and if client is waiting for unbind to complete,
       // inform the client.
@@ -202,8 +202,8 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync& completer) {
       }
     }
     result.set_response(
-        fidl::ObjectView<fuchsia_device_manager::wire::DeviceController_Unbind_Response>::
-            FromExternal(&response));
+        fidl::ObjectView<
+            fuchsia_device_manager::wire::DeviceControllerUnbindResponse>::FromExternal(&response));
     completer.Reply(std::move(result));
   };
   fbl::AutoLock lock(&driver_host_context_->api_lock());
@@ -213,10 +213,10 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync& completer) {
 void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync& completer) {
   ZX_ASSERT(this->dev()->removal_cb == nullptr);
   this->dev()->removal_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
-    fuchsia_device_manager::wire::DeviceController_CompleteRemoval_Result result;
-    fuchsia_device_manager::wire::DeviceController_CompleteRemoval_Response response;
+    fuchsia_device_manager::wire::DeviceControllerCompleteRemovalResult result;
+    fuchsia_device_manager::wire::DeviceControllerCompleteRemovalResponse response;
     result.set_response(
-        fidl::ObjectView<fuchsia_device_manager::wire::DeviceController_CompleteRemoval_Response>::
+        fidl::ObjectView<fuchsia_device_manager::wire::DeviceControllerCompleteRemovalResponse>::
             FromExternal(&response));
     completer.Reply(std::move(result));
   };

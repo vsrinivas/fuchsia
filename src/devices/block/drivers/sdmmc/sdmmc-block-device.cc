@@ -478,11 +478,11 @@ zx_status_t SdmmcBlockDevice::Trim(const block_trim_t& txn, const EmmcPartition 
 }
 
 zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
-  using fuchsia_hardware_rpmb::wire::FRAME_SIZE;
+  using fuchsia_hardware_rpmb::wire::kFrameSize;
 
-  const uint64_t tx_frame_count = request.tx_frames.size / FRAME_SIZE;
+  const uint64_t tx_frame_count = request.tx_frames.size / kFrameSize;
   const uint64_t rx_frame_count =
-      request.rx_frames.vmo.is_valid() ? (request.rx_frames.size / FRAME_SIZE) : 0;
+      request.rx_frames.vmo.is_valid() ? (request.rx_frames.size / kFrameSize) : 0;
   const bool read_needed = rx_frame_count > 0;
 
   zx_status_t status = SetPartition(RPMB_PARTITION);
@@ -523,7 +523,7 @@ zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
       .cmd_flags = SDMMC_WRITE_MULTIPLE_BLOCK_FLAGS,
       .arg = 0,  // Ignored by the card.
       .blockcount = static_cast<uint16_t>(tx_frame_count),
-      .blocksize = FRAME_SIZE,
+      .blocksize = kFrameSize,
       .use_dma = sdmmc_.UseDma(),
       .dma_vmo = sdmmc_.UseDma() ? request.tx_frames.vmo.get() : ZX_HANDLE_INVALID,
       .virt_buffer =
@@ -554,7 +554,7 @@ zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
       .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
       .arg = 0,
       .blockcount = static_cast<uint16_t>(rx_frame_count),
-      .blocksize = FRAME_SIZE,
+      .blocksize = kFrameSize,
       .use_dma = sdmmc_.UseDma(),
       .dma_vmo = sdmmc_.UseDma() ? request.rx_frames.vmo.get() : ZX_HANDLE_INVALID,
       .virt_buffer =
@@ -633,10 +633,10 @@ void SdmmcBlockDevice::Queue(BlockOperation txn) {
 }
 
 void SdmmcBlockDevice::RpmbQueue(RpmbRequestInfo info) {
-  using fuchsia_hardware_rpmb::wire::FRAME_SIZE;
+  using fuchsia_hardware_rpmb::wire::kFrameSize;
 
-  if (info.tx_frames.size % FRAME_SIZE != 0) {
-    zxlogf(ERROR, "sdmmc: tx frame buffer size not a multiple of %u", FRAME_SIZE);
+  if (info.tx_frames.size % kFrameSize != 0) {
+    zxlogf(ERROR, "sdmmc: tx frame buffer size not a multiple of %u", kFrameSize);
     info.completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -644,7 +644,7 @@ void SdmmcBlockDevice::RpmbQueue(RpmbRequestInfo info) {
   // Checking against SDMMC_SET_BLOCK_COUNT_MAX_BLOCKS is sufficient for casting to uint16_t.
   static_assert(SDMMC_SET_BLOCK_COUNT_MAX_BLOCKS <= UINT16_MAX);
 
-  const uint64_t tx_frame_count = info.tx_frames.size / FRAME_SIZE;
+  const uint64_t tx_frame_count = info.tx_frames.size / kFrameSize;
   if (tx_frame_count == 0) {
     info.completer.ReplyError(ZX_OK);
     return;
@@ -658,13 +658,13 @@ void SdmmcBlockDevice::RpmbQueue(RpmbRequestInfo info) {
   }
 
   if (info.rx_frames.vmo.is_valid()) {
-    if (info.rx_frames.size % FRAME_SIZE != 0) {
-      zxlogf(ERROR, "sdmmc: rx frame buffer size is not a multiple of %u", FRAME_SIZE);
+    if (info.rx_frames.size % kFrameSize != 0) {
+      zxlogf(ERROR, "sdmmc: rx frame buffer size is not a multiple of %u", kFrameSize);
       info.completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
     }
 
-    const uint64_t rx_frame_count = info.rx_frames.size / FRAME_SIZE;
+    const uint64_t rx_frame_count = info.rx_frames.size / kFrameSize;
     if (rx_frame_count > SDMMC_SET_BLOCK_COUNT_MAX_BLOCKS) {
       zxlogf(ERROR, "sdmmc: received %lu rx frames, maximum is %u", rx_frame_count,
              SDMMC_SET_BLOCK_COUNT_MAX_BLOCKS);

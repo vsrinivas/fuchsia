@@ -184,7 +184,7 @@ int main(int argc, const char** argv) {
       continue;
     }
     info = *result->info;
-    info.name[fio::wire::MAX_FS_NAME_BUFFER - 1] = '\0';
+    info.name[fio::wire::kMaxFsNameBuffer - 1] = '\0';
 
     auto result2 =
         fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))

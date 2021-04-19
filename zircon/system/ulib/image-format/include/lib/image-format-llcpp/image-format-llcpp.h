@@ -54,14 +54,14 @@ constexpr fuchsia_sysmem::wire::BufferMemoryConstraints GetDefaultBufferMemoryCo
 bool GetMinimumRowBytes(const fuchsia_sysmem::wire::ImageFormatConstraints& constraints,
                         uint32_t width, uint32_t* bytes_per_row_out);
 
-std::optional<fuchsia_sysmem::wire::ImageFormat_2> ConstraintsToFormat(
+std::optional<fuchsia_sysmem::wire::ImageFormat2> ConstraintsToFormat(
     const fuchsia_sysmem::wire::ImageFormatConstraints& constraints, uint32_t coded_width,
     uint32_t coded_height);
 
-bool GetPlaneByteOffset(const fuchsia_sysmem::wire::ImageFormat_2& image_format, uint32_t plane,
+bool GetPlaneByteOffset(const fuchsia_sysmem::wire::ImageFormat2& image_format, uint32_t plane,
                         uint64_t* offset_out);
 
-bool GetPlaneRowBytes(const fuchsia_sysmem::wire::ImageFormat_2& image_format, uint32_t plane,
+bool GetPlaneRowBytes(const fuchsia_sysmem::wire::ImageFormat2& image_format, uint32_t plane,
                       uint32_t* row_bytes_out);
 
 bool FormatCompatibleWithProtectedMemory(const fuchsia_sysmem::wire::PixelFormat& format);

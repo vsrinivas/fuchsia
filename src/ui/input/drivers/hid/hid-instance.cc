@@ -47,7 +47,7 @@ zx_status_t HidInstance::ReadReportFromFifo(uint8_t* buf, size_t buf_size, zx_ti
     return ZX_ERR_SHOULD_WAIT;
   }
 
-  size_t xfer = base_->GetReportSizeById(rpt_id, ReportType::INPUT);
+  size_t xfer = base_->GetReportSizeById(rpt_id, ReportType::kInput);
   if (xfer == 0) {
     zxlogf(ERROR, "error reading hid device: unknown report id (%u)!", rpt_id);
     return ZX_ERR_BAD_STATE;
@@ -88,7 +88,7 @@ void HidInstance::ReadReport(ReadReportCompleter::Sync& completer) {
     return;
   }
 
-  std::array<uint8_t, fuchsia_hardware_input::wire::MAX_REPORT_DATA> buf;
+  std::array<uint8_t, fuchsia_hardware_input::wire::kMaxReportData> buf;
   zx_time_t time = 0;
   size_t report_size = 0;
   zx_status_t status;
@@ -110,7 +110,7 @@ void HidInstance::ReadReports(ReadReportsCompleter::Sync& completer) {
     return;
   }
 
-  std::array<uint8_t, fuchsia_hardware_input::wire::MAX_REPORT_DATA> buf;
+  std::array<uint8_t, fuchsia_hardware_input::wire::kMaxReportData> buf;
   size_t buf_index = 0;
   zx_status_t status = ZX_OK;
   zx_time_t time;

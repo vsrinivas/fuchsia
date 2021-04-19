@@ -85,8 +85,8 @@ zx_status_t DeviceInterface::Init(const char* parent_name) {
   }
 
   device_.GetInfo(&device_info_);
-  if (device_info_.rx_types_count > netdev::wire::MAX_FRAME_TYPES ||
-      device_info_.tx_types_count > netdev::wire::MAX_FRAME_TYPES) {
+  if (device_info_.rx_types_count > netdev::wire::kMaxFrameTypes ||
+      device_info_.tx_types_count > netdev::wire::kMaxFrameTypes) {
     LOGF_ERROR("network-device: bind: device '%s' reports too many supported frame types",
                parent_name);
     return ZX_ERR_NOT_SUPPORTED;
@@ -107,8 +107,8 @@ zx_status_t DeviceInterface::Init(const char* parent_name) {
   std::copy_n(device_info_.tx_types_list, device_info_.tx_types_count, supported_tx_.begin());
   device_info_.tx_types_list = supported_tx_.data();
 
-  if (device_info_.rx_accel_count > netdev::wire::MAX_ACCEL_FLAGS ||
-      device_info_.tx_accel_count > netdev::wire::MAX_ACCEL_FLAGS) {
+  if (device_info_.rx_accel_count > netdev::wire::kMaxAccelFlags ||
+      device_info_.tx_accel_count > netdev::wire::kMaxAccelFlags) {
     LOGF_ERROR("network-device: bind: device '%s' reports too many acceleration flags",
                parent_name);
     return ZX_ERR_NOT_SUPPORTED;
@@ -216,8 +216,8 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
       .min_tx_buffer_tail = device_info_.tx_tail_length,
   };
 
-  std::array<netdev::wire::FrameType, netdev::wire::MAX_FRAME_TYPES> rx;
-  std::array<netdev::wire::FrameTypeSupport, netdev::wire::MAX_FRAME_TYPES> tx;
+  std::array<netdev::wire::FrameType, netdev::wire::kMaxFrameTypes> rx;
+  std::array<netdev::wire::FrameTypeSupport, netdev::wire::kMaxFrameTypes> tx;
   for (size_t i = 0; i < device_info_.rx_types_count; i++) {
     rx[i] = static_cast<netdev::wire::FrameType>(device_info_.rx_types_list[i]);
   }
@@ -234,8 +234,8 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
   info.tx_types = fidl::VectorView<netdev::wire::FrameTypeSupport>::FromExternal(
       tx.data(), device_info_.tx_types_count);
 
-  std::array<netdev::wire::RxAcceleration, netdev::wire::MAX_ACCEL_FLAGS> rx_accel;
-  std::array<netdev::wire::TxAcceleration, netdev::wire::MAX_ACCEL_FLAGS> tx_accel;
+  std::array<netdev::wire::RxAcceleration, netdev::wire::kMaxAccelFlags> rx_accel;
+  std::array<netdev::wire::TxAcceleration, netdev::wire::kMaxAccelFlags> tx_accel;
   for (size_t i = 0; i < device_info_.rx_accel_count; i++) {
     rx_accel[i] = static_cast<netdev::wire::RxAcceleration>(device_info_.rx_accel_list[i]);
   }
@@ -259,14 +259,14 @@ void DeviceInterface::GetStatus(GetStatusCompleter::Sync& completer) {
 void DeviceInterface::OpenSession(::fidl::StringView session_name,
                                   netdev::wire::SessionInfo session_info,
                                   OpenSessionCompleter::Sync& completer) {
-  netdev::wire::Device_OpenSession_Response rsp;
+  netdev::wire::DeviceOpenSessionResponse rsp;
   zx_status_t status = OpenSession(std::move(session_name), std::move(session_info), &rsp);
-  netdev::wire::Device_OpenSession_Result result;
+  netdev::wire::DeviceOpenSessionResult result;
   if (status != ZX_OK) {
     result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
   } else {
     result.set_response(
-        fidl::ObjectView<netdev::wire::Device_OpenSession_Response>::FromExternal(&rsp));
+        fidl::ObjectView<netdev::wire::DeviceOpenSessionResponse>::FromExternal(&rsp));
   }
   completer.Reply(std::move(result));
 }
@@ -316,7 +316,7 @@ void DeviceInterface::GetStatusWatcher(fidl::ServerEnd<netdev::StatusWatcher> wa
 
 zx_status_t DeviceInterface::OpenSession(fidl::StringView name,
                                          netdev::wire::SessionInfo session_info,
-                                         netdev::wire::Device_OpenSession_Response* rsp) {
+                                         netdev::wire::DeviceOpenSessionResponse* rsp) {
   {
     fbl::AutoLock teardown_lock(&teardown_lock_);
     // We're currently tearing down and can't open any new sessions.

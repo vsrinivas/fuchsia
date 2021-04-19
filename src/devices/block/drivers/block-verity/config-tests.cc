@@ -12,9 +12,9 @@ namespace {
 
 TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction) {
   fuchsia_hardware_block_verified::wire::HashFunction hash_function =
-      fuchsia_hardware_block_verified::wire::HashFunction::SHA256;
+      fuchsia_hardware_block_verified::wire::HashFunction::kSha256;
   fuchsia_hardware_block_verified::wire::BlockSize block_size =
-      fuchsia_hardware_block_verified::wire::BlockSize::SIZE_4096;
+      fuchsia_hardware_block_verified::wire::BlockSize::kSize4096;
   fidl::FidlAllocator allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
   config.set_hash_function(
@@ -32,9 +32,9 @@ TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction) {
 
 TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction512BackingBlockSize) {
   fuchsia_hardware_block_verified::wire::HashFunction hash_function =
-      fuchsia_hardware_block_verified::wire::HashFunction::SHA256;
+      fuchsia_hardware_block_verified::wire::HashFunction::kSha256;
   fuchsia_hardware_block_verified::wire::BlockSize block_size =
-      fuchsia_hardware_block_verified::wire::BlockSize::SIZE_4096;
+      fuchsia_hardware_block_verified::wire::BlockSize::kSize4096;
   fidl::FidlAllocator allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
   config.set_hash_function(
@@ -52,7 +52,7 @@ TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction512BackingBlockSize) {
 
 TEST(ConfigCheckTest, RejectsMissingHashFunction) {
   fuchsia_hardware_block_verified::wire::BlockSize block_size =
-      fuchsia_hardware_block_verified::wire::BlockSize::SIZE_4096;
+      fuchsia_hardware_block_verified::wire::BlockSize::kSize4096;
   fidl::FidlAllocator allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
   config.set_block_size(
@@ -67,7 +67,7 @@ TEST(ConfigCheckTest, RejectsMissingHashFunction) {
 
 TEST(ConfigCheckTest, RejectsMissingBlockSize) {
   fuchsia_hardware_block_verified::wire::HashFunction hash_function =
-      fuchsia_hardware_block_verified::wire::HashFunction::SHA256;
+      fuchsia_hardware_block_verified::wire::HashFunction::kSha256;
   fidl::FidlAllocator allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
   config.set_hash_function(
@@ -82,9 +82,9 @@ TEST(ConfigCheckTest, RejectsMissingBlockSize) {
 
 TEST(ConfigCheckTest, RejectsIfBlockSizeUnsupportable) {
   fuchsia_hardware_block_verified::wire::HashFunction hash_function =
-      fuchsia_hardware_block_verified::wire::HashFunction::SHA256;
+      fuchsia_hardware_block_verified::wire::HashFunction::kSha256;
   fuchsia_hardware_block_verified::wire::BlockSize block_size =
-      fuchsia_hardware_block_verified::wire::BlockSize::SIZE_4096;
+      fuchsia_hardware_block_verified::wire::BlockSize::kSize4096;
   fidl::FidlAllocator allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
   config.set_hash_function(

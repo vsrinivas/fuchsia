@@ -225,15 +225,15 @@ void CoreDisplayTest::FinalizeClientConstraints() {
 
   // token has been returned. Let's set contraints
   sysmem::wire::BufferCollectionConstraints constraints = {};
-  constraints.usage.cpu = sysmem::wire::cpuUsageReadOften | sysmem::wire::cpuUsageWriteOften;
+  constraints.usage.cpu = sysmem::wire::kCpuUsageReadOften | sysmem::wire::kCpuUsageWriteOften;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = false;
   constraints.image_format_constraints_count = 1;
   sysmem::wire::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
+  image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgra32;
   image_constraints.color_spaces_count = 1;
   image_constraints.color_space[0] = sysmem::wire::ColorSpace{
-      .type = sysmem::wire::ColorSpaceType::SRGB,
+      .type = sysmem::wire::ColorSpaceType::kSrgb,
   };
   image_constraints.min_coded_width = 0;
   image_constraints.max_coded_width = std::numeric_limits<uint32_t>::max();

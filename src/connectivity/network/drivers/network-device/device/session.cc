@@ -21,11 +21,11 @@ constexpr uint32_t kResumeTxKey = 1;
 constexpr uint32_t kTxAvailKey = 2;
 
 bool Session::IsListen() const {
-  return static_cast<bool>(flags_ & netdev::wire::SessionFlags::LISTEN_TX);
+  return static_cast<bool>(flags_ & netdev::wire::SessionFlags::kListenTx);
 }
 
 bool Session::IsPrimary() const {
-  return static_cast<bool>(flags_ & netdev::wire::SessionFlags::PRIMARY);
+  return static_cast<bool>(flags_ & netdev::wire::SessionFlags::kPrimary);
 }
 
 bool Session::IsPaused() const { return paused_; }
@@ -102,7 +102,7 @@ Session::Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo* info
       flags_(info->options),
       frame_type_count_(static_cast<uint32_t>(info->rx_frames.count())),
       parent_(parent) {
-  ZX_ASSERT(frame_type_count_ <= netdev::wire::MAX_FRAME_TYPES);
+  ZX_ASSERT(frame_type_count_ <= netdev::wire::kMaxFrameTypes);
   for (uint32_t i = 0; i < frame_type_count_; i++) {
     frame_types_[i] = static_cast<uint8_t>(info->rx_frames[i]);
   }
@@ -364,7 +364,7 @@ zx_status_t Session::FetchTx() {
     buffer->meta.flags = desc->inbound_flags;
     buffer->meta.frame_type = desc->frame_type;
     buffer->meta.info_type = desc->info_type;
-    if (buffer->meta.info_type != static_cast<uint32_t>(netdev::wire::InfoType::NO_INFO)) {
+    if (buffer->meta.info_type != static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo)) {
       LOGF_WARN("network-device(%s): Info type (%d) not recognized, discarding information", name(),
                 buffer->meta.info_type);
     }
@@ -391,7 +391,7 @@ zx_status_t Session::FetchTx() {
 
     // chain_length is the number of buffers to follow, so it must be strictly less than the maximum
     // descriptor chain value.
-    if (desc->chain_length >= netdev::wire::MAX_DESCRIPTOR_CHAIN) {
+    if (desc->chain_length >= netdev::wire::kMaxDescriptorChain) {
       LOGF_ERROR("network-device(%s): received invalid chain length: %d", name(),
                  desc->chain_length);
       return ZX_ERR_IO_INVALID;
@@ -518,18 +518,18 @@ void Session::MarkTxReturnResult(uint16_t descriptor_index, zx_status_t status) 
       break;
     case ZX_ERR_NOT_SUPPORTED:
       desc->return_flags =
-          static_cast<uint32_t>(TxReturnFlags::TX_RET_NOT_SUPPORTED | TxReturnFlags::TX_RET_ERROR);
+          static_cast<uint32_t>(TxReturnFlags::kTxRetNotSupported | TxReturnFlags::kTxRetError);
       break;
     case ZX_ERR_NO_RESOURCES:
-      desc->return_flags = static_cast<uint32_t>(TxReturnFlags::TX_RET_OUT_OF_RESOURCES |
-                                                 TxReturnFlags::TX_RET_ERROR);
+      desc->return_flags =
+          static_cast<uint32_t>(TxReturnFlags::kTxRetOutOfResources | TxReturnFlags::kTxRetError);
       break;
     case ZX_ERR_UNAVAILABLE:
       desc->return_flags =
-          static_cast<uint32_t>(TxReturnFlags::TX_RET_NOT_AVAILABLE | TxReturnFlags::TX_RET_ERROR);
+          static_cast<uint32_t>(TxReturnFlags::kTxRetNotAvailable | TxReturnFlags::kTxRetError);
       break;
     default:
-      desc->return_flags = static_cast<uint32_t>(TxReturnFlags::TX_RET_ERROR);
+      desc->return_flags = static_cast<uint32_t>(TxReturnFlags::kTxRetError);
       break;
   }
 }
@@ -599,7 +599,7 @@ zx_status_t Session::FillRxSpace(uint16_t descriptor_index, rx_space_buffer_t* b
 
   // chain_length is the number of buffers to follow, so it must be strictly less than the maximum
   // descriptor chain value.
-  if (desc->chain_length >= netdev::wire::MAX_DESCRIPTOR_CHAIN) {
+  if (desc->chain_length >= netdev::wire::kMaxDescriptorChain) {
     LOGF_ERROR("network-device(%s): received invalid chain length: %d", name(), desc->chain_length);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -755,9 +755,9 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
   auto* owner_desc = owner.descriptor(owner_index);
   auto* desc = descriptor(target_desc);
   // NOTE(brunodalbo) Do we want to listen on info as well?
-  desc->info_type = static_cast<uint32_t>(netdev::wire::InfoType::NO_INFO);
+  desc->info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
   desc->frame_type = owner_desc->frame_type;
-  desc->return_flags = static_cast<uint32_t>(netdev::wire::RxFlags::RX_ECHOED_TX);
+  desc->return_flags = static_cast<uint32_t>(netdev::wire::RxFlags::kRxEchoedTx);
 
   uint64_t my_offset = 0;
   uint64_t owner_offset = 0;
@@ -821,14 +821,14 @@ zx_status_t Session::LoadRxInfo(uint16_t descriptor_index, const rx_buffer_t* bu
   }
   auto len = static_cast<uint32_t>(buff->total_length);
 
-  if (buff->meta.info_type != static_cast<uint32_t>(netdev::wire::InfoType::NO_INFO)) {
+  if (buff->meta.info_type != static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo)) {
     LOGF_WARN("network-device(%s): InfoType not recognized :%d", name(), buff->meta.info_type);
   } else {
-    desc->info_type = static_cast<uint32_t>(netdev::wire::InfoType::NO_INFO);
+    desc->info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
   }
   desc->frame_type = buff->meta.frame_type;
   desc->inbound_flags = buff->meta.flags;
-  if (desc->chain_length >= netdev::wire::MAX_DESCRIPTOR_CHAIN) {
+  if (desc->chain_length >= netdev::wire::kMaxDescriptorChain) {
     LOGF_ERROR("network-device(%s): invalid descriptor %d chain length %d", name(),
                descriptor_index, desc->chain_length);
     return ZX_ERR_INVALID_ARGS;

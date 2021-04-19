@@ -96,7 +96,7 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
 
   fbl::unique_fd blob_dir;
   auto status = zx::make_status(
-      fdio_open_fd("/fs/blob", fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE,
+      fdio_open_fd("/fs/blob", fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
                    blob_dir.reset_and_get_address()));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "fdio_open_fd(/fs/blob) failed: " << status.status_string();

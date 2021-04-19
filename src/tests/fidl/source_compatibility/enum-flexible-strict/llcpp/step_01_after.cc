@@ -8,10 +8,10 @@ namespace fidl_test = fidl_test_enumflexiblestrict;
 // [START contents]
 fidl_test::wire::Color complement(fidl_test::wire::Color color) {
   switch (color) {
-    case fidl_test::wire::Color::RED:
-      return fidl_test::wire::Color::BLUE;
-    case fidl_test::wire::Color::BLUE:
-      return fidl_test::wire::Color::RED;
+    case fidl_test::wire::Color::kRed:
+      return fidl_test::wire::Color::kBlue;
+    case fidl_test::wire::Color::kBlue:
+      return fidl_test::wire::Color::kRed;
     default:
       return color;
   }

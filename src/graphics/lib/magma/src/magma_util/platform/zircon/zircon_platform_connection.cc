@@ -330,10 +330,10 @@ void ZirconPlatformConnection::BufferRangeOp(uint64_t buffer_id,
   FlowControl();
   uint32_t buffer_op;
   switch (op) {
-    case fuchsia_gpu_magma::wire::BufferOp::POPULATE_TABLES:
+    case fuchsia_gpu_magma::wire::BufferOp::kPopulateTables:
       buffer_op = MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES;
       break;
-    case fuchsia_gpu_magma::wire::BufferOp::DEPOPULATE_TABLES:
+    case fuchsia_gpu_magma::wire::BufferOp::kDepopulateTables:
       buffer_op = MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES;
       break;
     default:

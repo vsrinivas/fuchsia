@@ -87,7 +87,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& co
   } else {
     zxlogf(ERROR, "Error in handling FIDL close req: %s, power status: %u",
            zx_status_get_string(res), ot_radio_obj_.power_status_);
-    completer.ReplyError(lowpan_spinel_fidl::wire::Error::UNSPECIFIED);
+    completer.ReplyError(lowpan_spinel_fidl::wire::Error::kUnspecified);
   }
 }
 
@@ -99,7 +99,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync& 
   } else {
     zxlogf(ERROR, "Error in handling FIDL close req: %s, power status: %u",
            zx_status_get_string(res), ot_radio_obj_.power_status_);
-    completer.ReplyError(lowpan_spinel_fidl::wire::Error::UNSPECIFIED);
+    completer.ReplyError(lowpan_spinel_fidl::wire::Error::kUnspecified);
   }
 }
 
@@ -111,10 +111,10 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
 void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uint8_t> data,
                                                               SendFrameCompleter::Sync& completer) {
   if (ot_radio_obj_.power_status_ == OT_SPINEL_DEVICE_OFF) {
-    (*ot_radio_obj_.fidl_binding_)->OnError(lowpan_spinel_fidl::wire::Error::CLOSED, false);
+    (*ot_radio_obj_.fidl_binding_)->OnError(lowpan_spinel_fidl::wire::Error::kClosed, false);
   } else if (data.count() > kMaxFrameSize) {
     (*ot_radio_obj_.fidl_binding_)
-        ->OnError(lowpan_spinel_fidl::wire::Error::OUTBOUND_FRAME_TOO_LARGE, false);
+        ->OnError(lowpan_spinel_fidl::wire::Error::kOutboundFrameTooLarge, false);
   } else if (ot_radio_obj_.radiobound_allowance_ == 0) {
     // Client violates the protocol, close FIDL channel and device. Will not send OnError event.
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_OFF;

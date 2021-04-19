@@ -30,7 +30,7 @@ using WatcherTest = FilesystemTest;
 
 struct WatchBuffer {
   // Buffer containing cached messages
-  uint8_t buf[fio::wire::MAX_BUF];
+  uint8_t buf[fio::wire::kMaxBuf];
   // Offset into 'buf' of next message
   uint8_t* ptr;
   // Maximum size of buffer
@@ -81,7 +81,7 @@ TEST_P(WatcherTest, Add) {
   fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
 
   auto watch_result = fidl::WireCall<fio::Directory>(caller.channel())
-                          .Watch(fio::wire::WATCH_MASK_ADDED, 0, std::move(server));
+                          .Watch(fio::wire::kWatchMaskAdded, 0, std::move(server));
   ASSERT_EQ(watch_result.status(), ZX_OK);
   ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
 
@@ -95,16 +95,16 @@ TEST_P(WatcherTest, Add) {
   fbl::unique_fd fd(open(GetPath("dir/foo").c_str(), O_RDWR | O_CREAT));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "foo", fio::wire::WATCH_EVENT_ADDED));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "foo", fio::wire::kWatchEventAdded));
 
   // Renaming into directory should trigger the watcher
   ASSERT_EQ(rename(GetPath("dir/foo").c_str(), GetPath("dir/bar").c_str()), 0);
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "bar", fio::wire::WATCH_EVENT_ADDED));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "bar", fio::wire::kWatchEventAdded));
 
   if (fs().GetTraits().supports_hard_links) {
     // Linking into directory should trigger the watcher
     ASSERT_EQ(link(GetPath("dir/bar").c_str(), GetPath("dir/blat").c_str()), 0);
-    ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "blat", fio::wire::WATCH_EVENT_ADDED));
+    ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "blat", fio::wire::kWatchEventAdded));
     ASSERT_EQ(unlink(GetPath("dir/blat").c_str()), 0);
   }
 
@@ -139,7 +139,7 @@ TEST_P(WatcherTest, Existing) {
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
   fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
   uint32_t mask =
-      fio::wire::WATCH_MASK_ADDED | fio::wire::WATCH_MASK_EXISTING | fio::wire::WATCH_MASK_IDLE;
+      fio::wire::kWatchMaskAdded | fio::wire::kWatchMaskExisting | fio::wire::kWatchMaskIdle;
   {
     auto watch_result =
         fidl::WireCall<fio::Directory>(caller.channel()).Watch(mask, 0, std::move(server));
@@ -150,10 +150,10 @@ TEST_P(WatcherTest, Existing) {
   memset(&wb, 0, sizeof(wb));
 
   // The channel should see the contents of the directory
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, ".", fio::wire::WATCH_EVENT_EXISTING));
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "foo", fio::wire::WATCH_EVENT_EXISTING));
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "bar", fio::wire::WATCH_EVENT_EXISTING));
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "", fio::wire::WATCH_EVENT_IDLE));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, ".", fio::wire::kWatchEventExisting));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "foo", fio::wire::kWatchEventExisting));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "bar", fio::wire::kWatchEventExisting));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "", fio::wire::kWatchEventIdle));
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb, client));
 
   // Now, if we choose to add additional files, they'll show up separately
@@ -161,7 +161,7 @@ TEST_P(WatcherTest, Existing) {
   fd.reset(open(GetPath("dir/baz").c_str(), O_RDWR | O_CREAT));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "baz", fio::wire::WATCH_EVENT_ADDED));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "baz", fio::wire::kWatchEventAdded));
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb, client));
 
   // If we create a secondary watcher with the "EXISTING" request, we'll
@@ -176,11 +176,11 @@ TEST_P(WatcherTest, Existing) {
   }
   WatchBuffer wb2;
   memset(&wb2, 0, sizeof(wb2));
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, ".", fio::wire::WATCH_EVENT_EXISTING));
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, "foo", fio::wire::WATCH_EVENT_EXISTING));
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, "bar", fio::wire::WATCH_EVENT_EXISTING));
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, "baz", fio::wire::WATCH_EVENT_EXISTING));
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, "", fio::wire::WATCH_EVENT_IDLE));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, ".", fio::wire::kWatchEventExisting));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, "foo", fio::wire::kWatchEventExisting));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, "bar", fio::wire::kWatchEventExisting));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, "baz", fio::wire::kWatchEventExisting));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, "", fio::wire::kWatchEventIdle));
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb2, client2));
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb, client));
 
@@ -206,7 +206,7 @@ TEST_P(WatcherTest, Removed) {
 
   zx::channel client, server;
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-  uint32_t mask = fio::wire::WATCH_MASK_ADDED | fio::wire::WATCH_MASK_REMOVED;
+  uint32_t mask = fio::wire::kWatchMaskAdded | fio::wire::kWatchMaskRemoved;
   fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
 
   auto watch_result =
@@ -223,17 +223,17 @@ TEST_P(WatcherTest, Removed) {
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
 
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "foo", fio::wire::WATCH_EVENT_ADDED));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "foo", fio::wire::kWatchEventAdded));
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb, client));
 
   ASSERT_EQ(rename(GetPath("dir/foo").c_str(), GetPath("dir/bar").c_str()), 0);
 
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "foo", fio::wire::WATCH_EVENT_REMOVED));
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "bar", fio::wire::WATCH_EVENT_ADDED));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "foo", fio::wire::kWatchEventRemoved));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "bar", fio::wire::kWatchEventAdded));
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb, client));
 
   ASSERT_EQ(unlink(GetPath("dir/bar").c_str()), 0);
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "bar", fio::wire::WATCH_EVENT_REMOVED));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "bar", fio::wire::kWatchEventRemoved));
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb, client));
 
   // The fd is still owned by "dir".

@@ -22,24 +22,24 @@ TEST(Enum, Defaults) {
 TEST(FlexibleEnum, IsUnknown) {
   using EnumType = FlexibleEnum;
 
-  EXPECT_FALSE(EnumType::B.IsUnknown());
-  EXPECT_FALSE(EnumType::D.IsUnknown());
-  EXPECT_FALSE(EnumType::E.IsUnknown());
+  EXPECT_FALSE(EnumType::kB.IsUnknown());
+  EXPECT_FALSE(EnumType::kD.IsUnknown());
+  EXPECT_FALSE(EnumType::kE.IsUnknown());
 
-  EXPECT_TRUE(EnumType::CUSTOM.IsUnknown());
+  EXPECT_TRUE(EnumType::kCustom.IsUnknown());
   EXPECT_TRUE(EnumType::Unknown().IsUnknown());
 }
 
 TEST(FlexibleEnum, Equality) {
   using EnumType = FlexibleEnum;
 
-  EXPECT_TRUE(EnumType::B == EnumType(2));
-  EXPECT_TRUE(EnumType::D == EnumType(4));
-  EXPECT_TRUE(EnumType::Unknown() == EnumType::CUSTOM);
+  EXPECT_TRUE(EnumType::kB == EnumType(2));
+  EXPECT_TRUE(EnumType::kD == EnumType(4));
+  EXPECT_TRUE(EnumType::Unknown() == EnumType::kCustom);
 
-  EXPECT_FALSE(EnumType::B != EnumType(2));
-  EXPECT_FALSE(EnumType::D != EnumType(4));
-  EXPECT_FALSE(EnumType::Unknown() != EnumType::CUSTOM);
+  EXPECT_FALSE(EnumType::kB != EnumType(2));
+  EXPECT_FALSE(EnumType::kD != EnumType(4));
+  EXPECT_FALSE(EnumType::Unknown() != EnumType::kCustom);
 }
 
 TEST(Enum, Switch) {
@@ -50,25 +50,25 @@ TEST(Enum, Switch) {
   // enums in switch statements.
   auto switch_on_strict = [](StrictType value) -> uint32_t {
     switch (value) {
-      case StrictType::B:
+      case StrictType::kB:
         return 4000u;
-      case StrictType::D:
+      case StrictType::kD:
         return 5000u;
-      case StrictType::E:
+      case StrictType::kE:
         return 6000u;
     }
   };
-  EXPECT_EQ(6000u, switch_on_strict(StrictType::E));
+  EXPECT_EQ(6000u, switch_on_strict(StrictType::kE));
 
   auto switch_on_flexible = [](FlexibleType value) -> uint32_t {
     switch (value) {
-      case FlexibleType::B:
+      case FlexibleType::kB:
         return 4000u;
-      case FlexibleType::D:
+      case FlexibleType::kD:
         return 5000u;
       default:
         return 6000u;
     }
   };
-  EXPECT_EQ(6000u, switch_on_flexible(FlexibleType::E));
+  EXPECT_EQ(6000u, switch_on_flexible(FlexibleType::kE));
 }

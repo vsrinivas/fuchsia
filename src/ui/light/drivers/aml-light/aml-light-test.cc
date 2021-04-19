@@ -98,7 +98,7 @@ TEST_F(AmlLightTest, GetInfoTest1) {
   EXPECT_OK(result.status());
   EXPECT_FALSE(result->result.is_err());
   EXPECT_EQ(strcmp(result->result.response().info.name.begin(), "test"), 0);
-  EXPECT_EQ(result->result.response().info.capability, Capability::BRIGHTNESS);
+  EXPECT_EQ(result->result.response().info.capability, Capability::kBrightness);
 }
 
 TEST_F(AmlLightTest, GetInfoTest2) {
@@ -114,7 +114,7 @@ TEST_F(AmlLightTest, GetInfoTest2) {
   EXPECT_OK(result.status());
   EXPECT_FALSE(result->result.is_err());
   EXPECT_EQ(strcmp(result->result.response().info.name.begin(), "test"), 0);
-  EXPECT_EQ(result->result.response().info.capability, Capability::SIMPLE);
+  EXPECT_EQ(result->result.response().info.capability, Capability::kSimple);
 }
 
 TEST_F(AmlLightTest, SetValueTest1) {

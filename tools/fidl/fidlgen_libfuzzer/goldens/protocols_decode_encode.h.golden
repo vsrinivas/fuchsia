@@ -13,12 +13,12 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoder, 34>
     fidl_test_protocols_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderImpl<
             ::fidl_test_protocols::wire::
-                WithErrorSyntax_ResponseAsStruct_Response>,
+                WithErrorSyntaxResponseAsStructResponse>,
         ::fidl::fuzzing::DecoderEncoderImpl<
             ::fidl_test_protocols::wire::
-                WithErrorSyntax_ErrorAsPrimitive_Response>,
+                WithErrorSyntaxErrorAsPrimitiveResponse>,
         ::fidl::fuzzing::DecoderEncoderImpl<
-            ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>,
+            ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>,
         ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
             ::fidl_test_protocols::DiscoverableProtocol::Method>>,
         ::fidl::fuzzing::DecoderEncoderImpl<

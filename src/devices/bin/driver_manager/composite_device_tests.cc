@@ -746,12 +746,12 @@ TEST_F(CompositeTestCase, ResumeOrder) {
   comp_device->set_state(Device::State::kSuspended);
 
   fuchsia_hardware_power_statecontrol::wire::SystemPowerState state =
-      fuchsia_hardware_power_statecontrol::wire::SystemPowerState::FULLY_ON;
+      fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kFullyOn;
   ASSERT_NO_FATAL_FAILURES(DoResume(state));
 
   // First, the sys proxy driver, which is the parent of all of the devices
   ASSERT_NO_FATAL_FAILURES(
-      CheckResumeReceived(sys_proxy_controller_remote_, SystemPowerState::FULLY_ON, ZX_OK));
+      CheckResumeReceived(sys_proxy_controller_remote_, SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
 
   // Then platform devices
@@ -782,7 +782,7 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
     zx::channel remote;
     ASSERT_OK(zx::channel::create(0, &watcher, &remote));
     ASSERT_OK(devfs_watch(coordinator().root_device()->self, std::move(remote),
-                          fio::wire::WATCH_MASK_ADDED));
+                          fio::wire::kWatchMaskAdded));
   }
 
   size_t device_indexes[2];
@@ -811,11 +811,11 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
       kCompositeDevName, device_indexes, std::size(device_indexes), fragment_device_indexes,
       &composite_remote_coordinator, &composite_remote_controller));
 
-  uint8_t msg[fio::wire::MAX_FILENAME + 2];
+  uint8_t msg[fio::wire::kMaxFilename + 2];
   uint32_t msg_len = 0;
   ASSERT_OK(watcher.read(0, msg, nullptr, sizeof(msg), 0, &msg_len, nullptr));
   ASSERT_EQ(msg_len, 2 + strlen(kCompositeDevName));
-  ASSERT_EQ(msg[0], fio::wire::WATCH_EVENT_ADDED);
+  ASSERT_EQ(msg[0], fio::wire::kWatchEventAdded);
   ASSERT_EQ(msg[1], strlen(kCompositeDevName));
   ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(kCompositeDevName), msg + 2, msg[1]);
 }

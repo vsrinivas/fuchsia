@@ -23,7 +23,7 @@ struct Allocate<{{ .Natural.Name }}> {
     {{- $enumName := .Natural.Name }}
     {{- range $memberIdx, $member := .Members }}
       case {{ $memberIdx }}:
-        out = {{ $enumName }}::{{ $member.Name }};
+        out = {{ $enumName }}::{{ $member.Natural.Name }};
         break;
     {{- end }}
     }

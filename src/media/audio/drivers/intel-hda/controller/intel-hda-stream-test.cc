@@ -158,7 +158,7 @@ TEST(HdaStreamTest, GetStreamPropertiesDefaults) {
   EXPECT_EQ(result->properties.can_mute(), false);
   EXPECT_EQ(result->properties.can_agc(), false);
   EXPECT_EQ(result->properties.plug_detect_capabilities(),
-            audio_fidl::wire::PlugDetectCapabilities::HARDWIRED);
+            audio_fidl::wire::PlugDetectCapabilities::kHardwired);
   EXPECT_EQ(result->properties.clock_domain(), 0);
 
   codec->DeviceRelease();
@@ -295,7 +295,7 @@ TEST(HdaStreamTest, GetStreamProperties) {
   EXPECT_EQ(result->properties.can_mute(), true);
   EXPECT_EQ(result->properties.can_agc(), false);
   EXPECT_EQ(result->properties.plug_detect_capabilities(),
-            audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+            audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
   EXPECT_EQ(result->properties.clock_domain(), 0);
 
   codec->DeviceRelease();

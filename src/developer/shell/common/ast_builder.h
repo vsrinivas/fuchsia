@@ -112,59 +112,59 @@ class AstBuilder {
   }
 
   fuchsia_shell::wire::ShellType TypeBool() {
-    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::BOOL);
+    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::kBool);
   }
 
   fuchsia_shell::wire::ShellType TypeChar() {
-    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::CHAR);
+    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::kChar);
   }
 
   fuchsia_shell::wire::ShellType TypeString() {
-    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::STRING);
+    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::kString);
   }
 
   fuchsia_shell::wire::ShellType TypeInt8() {
-    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::INT8);
+    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::kInt8);
   }
 
   fuchsia_shell::wire::ShellType TypeUint8() {
-    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::UINT8);
+    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::kUint8);
   }
 
   fuchsia_shell::wire::ShellType TypeInt16() {
-    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::INT16);
+    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::kInt16);
   }
 
   fuchsia_shell::wire::ShellType TypeUint16() {
-    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::UINT16);
+    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::kUint16);
   }
 
   fuchsia_shell::wire::ShellType TypeInt32() {
-    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::INT32);
+    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::kInt32);
   }
 
   fuchsia_shell::wire::ShellType TypeUint32() {
-    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::UINT32);
+    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::kUint32);
   }
 
   fuchsia_shell::wire::ShellType TypeInt64() {
-    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::INT64);
+    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::kInt64);
   }
 
   fuchsia_shell::wire::ShellType TypeUint64() {
-    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::UINT64);
+    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::kUint64);
   }
 
   fuchsia_shell::wire::ShellType TypeInteger() {
-    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::INTEGER);
+    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::kInteger);
   }
 
   fuchsia_shell::wire::ShellType TypeFloat32() {
-    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::FLOAT32);
+    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::kFloat32);
   }
 
   fuchsia_shell::wire::ShellType TypeFloat64() {
-    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::FLOAT64);
+    return TypeBuiltin(fuchsia_shell::wire::BuiltinType::kFloat64);
   }
 
   fuchsia_shell::wire::ShellType TypeObject(AstBuilder::NodeId schema_node) {

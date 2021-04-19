@@ -37,7 +37,7 @@ class EchoClientApp {
   }
 
   fidl::WireResult<Echo::EchoStructWithError> EchoStructWithError(
-      wire::Struct value, wire::default_enum err, ::fidl::StringView forward_to_server,
+      wire::Struct value, wire::DefaultEnum err, ::fidl::StringView forward_to_server,
       wire::RespondWith result_variant) {
     return client_.EchoStructWithError(std::move(value), err, std::move(forward_to_server),
                                        result_variant);
@@ -61,7 +61,7 @@ class EchoClientApp {
   }
 
   fidl::WireResult<Echo::EchoArraysWithError> EchoArraysWithError(
-      wire::ArraysStruct value, wire::default_enum err, ::fidl::StringView forward_to_server,
+      wire::ArraysStruct value, wire::DefaultEnum err, ::fidl::StringView forward_to_server,
       wire::RespondWith result_variant) {
     return client_.EchoArraysWithError(std::move(value), err, std::move(forward_to_server),
                                        result_variant);
@@ -73,7 +73,7 @@ class EchoClientApp {
   }
 
   fidl::WireResult<Echo::EchoVectorsWithError> EchoVectorsWithError(
-      wire::VectorsStruct value, wire::default_enum err, ::fidl::StringView forward_to_server,
+      wire::VectorsStruct value, wire::DefaultEnum err, ::fidl::StringView forward_to_server,
       wire::RespondWith result_variant) {
     return client_.EchoVectorsWithError(std::move(value), err, std::move(forward_to_server),
                                         result_variant);
@@ -88,7 +88,7 @@ class EchoClientApp {
   }
 
   fidl::WireUnownedResult<Echo::EchoTableWithError> EchoTableWithError(
-      ::fidl::BufferSpan request_buffer, wire::AllTypesTable value, wire::default_enum err,
+      ::fidl::BufferSpan request_buffer, wire::AllTypesTable value, wire::DefaultEnum err,
       ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
       ::fidl::BufferSpan response_buffer) {
     return client_.EchoTableWithError(request_buffer, std::move(value), err,
@@ -102,7 +102,7 @@ class EchoClientApp {
   }
 
   fidl::WireResult<Echo::EchoXunionsWithError> EchoXunionsWithError(
-      ::fidl::VectorView<wire::AllTypesXunion> value, wire::default_enum err,
+      ::fidl::VectorView<wire::AllTypesXunion> value, wire::DefaultEnum err,
       ::fidl::StringView forward_to_server, wire::RespondWith result_variant) {
     return client_.EchoXunionsWithError(std::move(value), err, std::move(forward_to_server),
                                         result_variant);
@@ -152,11 +152,11 @@ class EchoConnection final : public fidl::WireInterface<Echo> {
     }
   }
 
-  void EchoStructWithError(wire::Struct value, wire::default_enum err,
+  void EchoStructWithError(wire::Struct value, wire::DefaultEnum err,
                            ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                            EchoStructWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
-      if (result_variant == wire::RespondWith::ERR) {
+      if (result_variant == wire::RespondWith::kErr) {
         completer.ReplyError(err);
       } else {
         completer.ReplySuccess(std::move(value));
@@ -223,11 +223,11 @@ class EchoConnection final : public fidl::WireInterface<Echo> {
     }
   }
 
-  void EchoArraysWithError(wire::ArraysStruct value, wire::default_enum err,
+  void EchoArraysWithError(wire::ArraysStruct value, wire::DefaultEnum err,
                            ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                            EchoArraysWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
-      if (result_variant == wire::RespondWith::ERR) {
+      if (result_variant == wire::RespondWith::kErr) {
         completer.ReplyError(err);
       } else {
         completer.ReplySuccess(std::move(value));
@@ -255,11 +255,11 @@ class EchoConnection final : public fidl::WireInterface<Echo> {
     }
   }
 
-  void EchoVectorsWithError(wire::VectorsStruct value, wire::default_enum err,
+  void EchoVectorsWithError(wire::VectorsStruct value, wire::DefaultEnum err,
                             ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                             EchoVectorsWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
-      if (result_variant == wire::RespondWith::ERR) {
+      if (result_variant == wire::RespondWith::kErr) {
         completer.ReplyError(err);
       } else {
         completer.ReplySuccess(std::move(value));
@@ -291,11 +291,11 @@ class EchoConnection final : public fidl::WireInterface<Echo> {
     }
   }
 
-  void EchoTableWithError(wire::AllTypesTable value, wire::default_enum err,
+  void EchoTableWithError(wire::AllTypesTable value, wire::DefaultEnum err,
                           ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                           EchoTableWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
-      if (result_variant == wire::RespondWith::ERR) {
+      if (result_variant == wire::RespondWith::kErr) {
         completer.ReplyError(err);
       } else {
         completer.ReplySuccess(std::move(value));
@@ -328,11 +328,11 @@ class EchoConnection final : public fidl::WireInterface<Echo> {
     }
   }
 
-  void EchoXunionsWithError(::fidl::VectorView<wire::AllTypesXunion> value, wire::default_enum err,
+  void EchoXunionsWithError(::fidl::VectorView<wire::AllTypesXunion> value, wire::DefaultEnum err,
                             ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
                             EchoXunionsWithErrorCompleter::Sync& completer) override {
     if (forward_to_server.empty()) {
-      if (result_variant == wire::RespondWith::ERR) {
+      if (result_variant == wire::RespondWith::kErr) {
         completer.ReplyError(err);
       } else {
         completer.ReplySuccess(std::move(value));

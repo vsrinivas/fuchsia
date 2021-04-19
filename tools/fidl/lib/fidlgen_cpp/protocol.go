@@ -225,10 +225,6 @@ func (Protocol) Kind() declKind {
 var _ Kinded = (*Protocol)(nil)
 var _ namespaced = (*Protocol)(nil)
 
-func (p Protocol) Name() string {
-	return p.Wire.Name() // TODO: not the wire name, maybe?
-}
-
 func (p Protocol) NaturalType() string {
 	return p.Natural.String()
 }
@@ -365,7 +361,7 @@ type methodInner struct {
 	responseTypeShape   fidlgen.TypeShape
 
 	Attributes
-	Name         string
+	nameVariants
 	Ordinal      uint64
 	HasRequest   bool
 	RequestArgs  []Parameter
@@ -378,13 +374,12 @@ type methodInner struct {
 // Method should be created using newMethod.
 type Method struct {
 	methodInner
-	NameInLowerSnakeCase string
-	OrdinalName          nameVariants
-	Request              message
-	Response             message
-	CallbackType         string
-	ResponseHandlerType  string
-	ResponderType        string
+	OrdinalName         nameVariants
+	Request             message
+	Response            message
+	CallbackType        *nameVariants
+	ResponseHandlerType string
+	ResponderType       string
 	// Protocol is a reference to the containing protocol, for the
 	// convenience of golang templates.
 	Protocol *Protocol
@@ -432,15 +427,16 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames) Met
 		wireResponseCodingTable = wireCodingTableBase.appendName("EventTable")
 	}
 
-	callbackType := ""
+	var callbackType *nameVariants = nil
 	if inner.HasResponse {
-		callbackType = changeIfReserved(fidlgen.Identifier(inner.Name + "Callback"))
+		callbackName := inner.appendName("Callback")
+		callbackType = &callbackName
 	}
-	ordinalName := fmt.Sprintf("k%s_%s_Ordinal", inner.protocolName.Natural.Name(), inner.Name)
+	ordinalName := fmt.Sprintf("k%s_%s_Ordinal",
+		inner.protocolName.Natural.Name(), inner.Natural.Name())
 
 	m := Method{
-		methodInner:          inner,
-		NameInLowerSnakeCase: fidlgen.ToSnakeCase(inner.Name),
+		methodInner: inner,
 		OrdinalName: nameVariants{
 			Natural: inner.protocolName.Natural.Namespace().append("internal").member(ordinalName),
 			Wire:    inner.protocolName.Wire.Namespace().member(ordinalName),
@@ -455,10 +451,12 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames) Met
 			HlCodingTable:   hlResponseCodingTable,
 			WireCodingTable: wireResponseCodingTable,
 		}, inner.ResponseArgs, wire, messageDirectionResponse),
-		CallbackType:        callbackType,
-		ResponseHandlerType: fmt.Sprintf("%s_%s_ResponseHandler", inner.protocolName.Natural.Name(), inner.Name),
-		ResponderType:       fmt.Sprintf("%s_%s_Responder", inner.protocolName.Natural.Name(), inner.Name),
-		Protocol:            nil,
+		CallbackType: callbackType,
+		ResponseHandlerType: fmt.Sprintf("%s_%s_ResponseHandler",
+			inner.protocolName.Natural.Name(), inner.Natural.Name()),
+		ResponderType: fmt.Sprintf("%s_%s_Responder",
+			inner.protocolName.Natural.Name(), inner.Natural.Name()),
+		Protocol: nil,
 	}
 	return m
 }
@@ -489,14 +487,14 @@ func (m *Method) CallbackWrapper() string {
 }
 
 type Parameter struct {
+	nameVariants
 	Type              Type
-	Name              string
 	Offset            int
 	HandleInformation *HandleInformation
 }
 
 func (p Parameter) NameAndType() (string, Type) {
-	return p.Name, p.Type
+	return p.Name(), p.Type
 }
 
 func allEventsStrict(methods []Method) fidlgen.Strictness {
@@ -518,7 +516,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 
 	methods := []Method{}
 	for _, v := range p.Methods {
-		name := changeIfReserved(v.Name)
+		name := methodNameContext.transform(v.Name)
 
 		var result *Result
 		if v.MethodResult != nil {
@@ -527,9 +525,10 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 			result = c.resultForUnion[v.Response[0].Type.Identifier]
 		}
 
-		methodMarker := protocolName.nest(name)
+		methodMarker := protocolName.nest(name.Wire.Name())
 
 		method := newMethod(methodInner{
+			nameVariants: name,
 			protocolName: protocolName,
 			// Using the raw identifier v.Name instead of the name after
 			// reserved words logic, since that's the behavior in fidlc.
@@ -537,9 +536,8 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 			Marker:              methodMarker,
 			requestTypeShape:    v.RequestTypeShapeV1,
 			responseTypeShape:   v.ResponseTypeShapeV1,
-			wireMethod:          newWireMethod(name, wireTypeNames, protocolName.Wire, methodMarker.Wire),
+			wireMethod:          newWireMethod(name.Wire.Name(), wireTypeNames, protocolName.Wire, methodMarker.Wire),
 			Attributes:          Attributes{v.Attributes},
-			Name:                name,
 			Ordinal:             v.Ordinal,
 			HasRequest:          v.HasRequest,
 			RequestArgs:         c.compileParameterArray(v.Request),
@@ -583,7 +581,7 @@ func (c *compiler) compileParameterArray(val []fidlgen.Parameter) []Parameter {
 	for _, v := range val {
 		params = append(params, Parameter{
 			Type:              c.compileType(v.Type),
-			Name:              changeIfReserved(v.Name),
+			nameVariants:      structMemberContext.transform(v.Name),
 			Offset:            v.FieldShapeV1.Offset,
 			HandleInformation: c.fieldHandleInformation(&v.Type),
 		})

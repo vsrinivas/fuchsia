@@ -74,7 +74,7 @@ TEST_F(GpioTest, TestFidlAll) {
   EXPECT_OK(result_write.status());
 
   gpio_impl_.ExpectConfigIn(ZX_OK, 0, 0);
-  auto result_in = client.ConfigIn(GpioFlags::PULL_DOWN);
+  auto result_in = client.ConfigIn(GpioFlags::kPullDown);
   EXPECT_OK(result_in.status());
 
   gpio_impl_.ExpectConfigOut(ZX_OK, 0, 5);

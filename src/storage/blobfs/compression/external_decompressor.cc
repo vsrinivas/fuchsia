@@ -170,16 +170,16 @@ CompressionAlgorithm ExternalDecompressorClient::CompressionAlgorithmFidlToLocal
     const fuchsia_blobfs_internal::wire::CompressionAlgorithm algorithm) {
   using Fidl = fuchsia_blobfs_internal::wire::CompressionAlgorithm;
   switch (algorithm) {
-    case Fidl::UNCOMPRESSED:
+    case Fidl::kUncompressed:
       return CompressionAlgorithm::UNCOMPRESSED;
-    case Fidl::LZ4:
+    case Fidl::kLz4:
       return CompressionAlgorithm::LZ4;
-    case Fidl::ZSTD:
+    case Fidl::kZstd:
       return CompressionAlgorithm::ZSTD;
-    case Fidl::ZSTD_SEEKABLE:
+    case Fidl::kZstdSeekable:
       return CompressionAlgorithm::ZSTD_SEEKABLE;
-    case Fidl::CHUNKED:
-    case Fidl::CHUNKED_PARTIAL:
+    case Fidl::kChunked:
+    case Fidl::kChunkedPartial:
       return CompressionAlgorithm::CHUNKED;
   }
 }
@@ -189,15 +189,15 @@ ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm
   using Fidl = fuchsia_blobfs_internal::wire::CompressionAlgorithm;
   switch (algorithm) {
     case CompressionAlgorithm::UNCOMPRESSED:
-      return Fidl::UNCOMPRESSED;
+      return Fidl::kUncompressed;
     case CompressionAlgorithm::LZ4:
-      return Fidl::LZ4;
+      return Fidl::kLz4;
     case CompressionAlgorithm::ZSTD:
-      return Fidl::ZSTD;
+      return Fidl::kZstd;
     case CompressionAlgorithm::ZSTD_SEEKABLE:
-      return Fidl::ZSTD_SEEKABLE;
+      return Fidl::kZstdSeekable;
     case CompressionAlgorithm::CHUNKED:
-      return Fidl::CHUNKED;
+      return Fidl::kChunked;
   }
 }
 
@@ -206,7 +206,7 @@ ExternalDecompressorClient::CompressionAlgorithmLocalToFidlForPartial(
     CompressionAlgorithm algorithm) {
   switch (algorithm) {
     case CompressionAlgorithm::CHUNKED:
-      return zx::ok(fuchsia_blobfs_internal::wire::CompressionAlgorithm::CHUNKED_PARTIAL);
+      return zx::ok(fuchsia_blobfs_internal::wire::CompressionAlgorithm::kChunkedPartial);
     case CompressionAlgorithm::UNCOMPRESSED:
     case CompressionAlgorithm::LZ4:
     case CompressionAlgorithm::ZSTD:

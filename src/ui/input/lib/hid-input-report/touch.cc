@@ -16,9 +16,9 @@
 namespace hid_input_report {
 
 ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
-  ContactConfig contacts[fuchsia_input_report::wire::TOUCH_MAX_CONTACTS];
+  ContactConfig contacts[fuchsia_input_report::wire::kTouchMaxContacts];
   size_t num_contacts = 0;
-  hid::Attributes buttons[fuchsia_input_report::wire::TOUCH_MAX_NUM_BUTTONS];
+  hid::Attributes buttons[fuchsia_input_report::wire::kTouchMaxNumButtons];
   uint8_t num_buttons = 0;
 
   // Traverse up the nested collections to the Application collection.
@@ -35,10 +35,10 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
 
   if (main_collection->usage ==
       hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchScreen)) {
-    touch_type_ = fuchsia_input_report::wire::TouchType::TOUCHSCREEN;
+    touch_type_ = fuchsia_input_report::wire::TouchType::kTouchscreen;
   } else if (main_collection->usage ==
              hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchPad)) {
-    touch_type_ = fuchsia_input_report::wire::TouchType::TOUCHPAD;
+    touch_type_ = fuchsia_input_report::wire::TouchType::kTouchpad;
   } else {
     return ParseResult::kNoCollection;
   }
@@ -50,7 +50,7 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
 
     // Process the global items.
     if (field.attr.usage.page == hid::usage::Page::kButton) {
-      if (num_buttons == fuchsia_input_report::wire::TOUCH_MAX_NUM_BUTTONS) {
+      if (num_buttons == fuchsia_input_report::wire::kTouchMaxNumButtons) {
         return ParseResult::kTooManyItems;
       }
       buttons[num_buttons] = field.attr;
@@ -73,7 +73,7 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
     if (num_contacts < 1) {
       return ParseResult::kNoCollection;
     }
-    if (num_contacts > fuchsia_input_report::wire::TOUCH_MAX_CONTACTS) {
+    if (num_contacts > fuchsia_input_report::wire::kTouchMaxContacts) {
       return ParseResult::kTooManyItems;
     }
     ContactConfig* contact = &contacts[num_contacts - 1];
@@ -249,7 +249,7 @@ ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyAl
   touch.set_contacts(allocator, std::move(input_contacts));
 
   // Parse Buttons.
-  std::array<uint8_t, fuchsia_input_report::wire::MOUSE_MAX_NUM_BUTTONS> buttons;
+  std::array<uint8_t, fuchsia_input_report::wire::kMouseMaxNumButtons> buttons;
   size_t buttons_size = 0;
   for (size_t i = 0; i < num_buttons_; i++) {
     double value_out;

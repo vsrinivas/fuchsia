@@ -16,51 +16,51 @@ VnodeConnectionOptions VnodeConnectionOptions::FromIoV1Flags(uint32_t fidl_flags
   VnodeConnectionOptions options;
 
   // Flags:
-  if (fidl_flags & fio::wire::OPEN_FLAG_CREATE) {
+  if (fidl_flags & fio::wire::kOpenFlagCreate) {
     options.flags.create = true;
   }
-  if (fidl_flags & fio::wire::OPEN_FLAG_CREATE_IF_ABSENT) {
+  if (fidl_flags & fio::wire::kOpenFlagCreateIfAbsent) {
     options.flags.fail_if_exists = true;
   }
-  if (fidl_flags & fio::wire::OPEN_FLAG_TRUNCATE) {
+  if (fidl_flags & fio::wire::kOpenFlagTruncate) {
     options.flags.truncate = true;
   }
-  if (fidl_flags & fio::wire::OPEN_FLAG_DIRECTORY) {
+  if (fidl_flags & fio::wire::kOpenFlagDirectory) {
     options.flags.directory = true;
   }
-  if (fidl_flags & fio::wire::OPEN_FLAG_APPEND) {
+  if (fidl_flags & fio::wire::kOpenFlagAppend) {
     options.flags.append = true;
   }
-  if (fidl_flags & fio::wire::OPEN_FLAG_NO_REMOTE) {
+  if (fidl_flags & fio::wire::kOpenFlagNoRemote) {
     options.flags.no_remote = true;
   }
-  if (fidl_flags & fio::wire::OPEN_FLAG_NODE_REFERENCE) {
+  if (fidl_flags & fio::wire::kOpenFlagNodeReference) {
     options.flags.node_reference = true;
   }
-  if (fidl_flags & fio::wire::OPEN_FLAG_DESCRIBE) {
+  if (fidl_flags & fio::wire::kOpenFlagDescribe) {
     options.flags.describe = true;
   }
-  if (fidl_flags & fio::wire::OPEN_FLAG_POSIX) {
+  if (fidl_flags & fio::wire::kOpenFlagPosix) {
     options.flags.posix = true;
   }
-  if (fidl_flags & fio::wire::OPEN_FLAG_NOT_DIRECTORY) {
+  if (fidl_flags & fio::wire::kOpenFlagNotDirectory) {
     options.flags.not_directory = true;
   }
-  if (fidl_flags & fio::wire::CLONE_FLAG_SAME_RIGHTS) {
+  if (fidl_flags & fio::wire::kCloneFlagSameRights) {
     options.flags.clone_same_rights = true;
   }
 
   // Rights (these are smushed into |fidl_flags| in fuchsia.io v1):
-  if (fidl_flags & fio::wire::OPEN_RIGHT_READABLE) {
+  if (fidl_flags & fio::wire::kOpenRightReadable) {
     options.rights.read = true;
   }
-  if (fidl_flags & fio::wire::OPEN_RIGHT_WRITABLE) {
+  if (fidl_flags & fio::wire::kOpenRightWritable) {
     options.rights.write = true;
   }
-  if (fidl_flags & fio::wire::OPEN_RIGHT_ADMIN) {
+  if (fidl_flags & fio::wire::kOpenRightAdmin) {
     options.rights.admin = true;
   }
-  if (fidl_flags & fio::wire::OPEN_RIGHT_EXECUTABLE) {
+  if (fidl_flags & fio::wire::kOpenRightExecutable) {
     options.rights.execute = true;
   }
 
@@ -72,51 +72,51 @@ uint32_t VnodeConnectionOptions::ToIoV1Flags() const {
 
   // Flags:
   if (flags.create) {
-    fidl_flags |= fio::wire::OPEN_FLAG_CREATE;
+    fidl_flags |= fio::wire::kOpenFlagCreate;
   }
   if (flags.fail_if_exists) {
-    fidl_flags |= fio::wire::OPEN_FLAG_CREATE_IF_ABSENT;
+    fidl_flags |= fio::wire::kOpenFlagCreateIfAbsent;
   }
   if (flags.truncate) {
-    fidl_flags |= fio::wire::OPEN_FLAG_TRUNCATE;
+    fidl_flags |= fio::wire::kOpenFlagTruncate;
   }
   if (flags.directory) {
-    fidl_flags |= fio::wire::OPEN_FLAG_DIRECTORY;
+    fidl_flags |= fio::wire::kOpenFlagDirectory;
   }
   if (flags.append) {
-    fidl_flags |= fio::wire::OPEN_FLAG_APPEND;
+    fidl_flags |= fio::wire::kOpenFlagAppend;
   }
   if (flags.no_remote) {
-    fidl_flags |= fio::wire::OPEN_FLAG_NO_REMOTE;
+    fidl_flags |= fio::wire::kOpenFlagNoRemote;
   }
   if (flags.node_reference) {
-    fidl_flags |= fio::wire::OPEN_FLAG_NODE_REFERENCE;
+    fidl_flags |= fio::wire::kOpenFlagNodeReference;
   }
   if (flags.describe) {
-    fidl_flags |= fio::wire::OPEN_FLAG_DESCRIBE;
+    fidl_flags |= fio::wire::kOpenFlagDescribe;
   }
   if (flags.posix) {
-    fidl_flags |= fio::wire::OPEN_FLAG_POSIX;
+    fidl_flags |= fio::wire::kOpenFlagPosix;
   }
   if (flags.not_directory) {
-    fidl_flags |= fio::wire::OPEN_FLAG_NOT_DIRECTORY;
+    fidl_flags |= fio::wire::kOpenFlagNotDirectory;
   }
   if (flags.clone_same_rights) {
-    fidl_flags |= fio::wire::CLONE_FLAG_SAME_RIGHTS;
+    fidl_flags |= fio::wire::kCloneFlagSameRights;
   }
 
   // Rights (these are smushed into |fidl_flags| in fuchsia.io v1):
   if (rights.read) {
-    fidl_flags |= fio::wire::OPEN_RIGHT_READABLE;
+    fidl_flags |= fio::wire::kOpenRightReadable;
   }
   if (rights.write) {
-    fidl_flags |= fio::wire::OPEN_RIGHT_WRITABLE;
+    fidl_flags |= fio::wire::kOpenRightWritable;
   }
   if (rights.admin) {
-    fidl_flags |= fio::wire::OPEN_RIGHT_ADMIN;
+    fidl_flags |= fio::wire::kOpenRightAdmin;
   }
   if (rights.execute) {
-    fidl_flags |= fio::wire::OPEN_RIGHT_EXECUTABLE;
+    fidl_flags |= fio::wire::kOpenRightExecutable;
   }
 
   return fidl_flags;

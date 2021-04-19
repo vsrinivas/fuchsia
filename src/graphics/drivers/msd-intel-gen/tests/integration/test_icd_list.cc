@@ -24,7 +24,7 @@ TEST(Intel, IcdList) {
   EXPECT_EQ(rsp->icd_list.count(), 2u);
   auto& icd_item = rsp->icd_list[0];
   EXPECT_TRUE(icd_item.has_flags());
-  EXPECT_TRUE(icd_item.flags() & fuchsia_gpu_magma::wire::IcdFlags::SUPPORTS_VULKAN);
+  EXPECT_TRUE(icd_item.flags() & fuchsia_gpu_magma::wire::IcdFlags::kSupportsVulkan);
   std::string res_string(icd_item.component_url().get());
   EXPECT_EQ(res_string.length(), icd_item.component_url().size());
   EXPECT_EQ(std::string("fuchsia-pkg://fuchsia.com/libvulkan_intel_gen_test#meta/vulkan.cm"),

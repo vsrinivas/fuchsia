@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
                       .GetClass();
     fuchsia_hardware_serial::wire::Class device_class = result->device_class;
     fdio_unsafe_release(fdio);
-    if (!result.ok() || device_class != fuchsia_hardware_serial::wire::Class::GENERIC) {
+    if (!result.ok() || device_class != fuchsia_hardware_serial::wire::Class::kGeneric) {
       close(fd);
       continue;
     } else {

@@ -395,7 +395,7 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
     return;
   }
 
-  if (req.sample_format == audio_fidl::wire::SampleFormat::PCM_FLOAT) {
+  if (req.sample_format == audio_fidl::wire::SampleFormat::kPcmFloat) {
     sample_format = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
     if (req.valid_bits_per_sample != 32 || req.bytes_per_sample != 4) {
       LOG(ERROR, "Unsupported format: Not 32 per sample/channel for float");
@@ -404,7 +404,7 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
     }
   }
 
-  if (req.sample_format == audio_fidl::wire::SampleFormat::PCM_UNSIGNED) {
+  if (req.sample_format == audio_fidl::wire::SampleFormat::kPcmUnsigned) {
     sample_format |= AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
   }
 
@@ -628,7 +628,7 @@ void UsbAudioStream::GetProperties(StreamChannel::GetPropertiesCompleter::Sync& 
   fidl::FidlAllocator allocator;
   audio_fidl::wire::StreamProperties stream_properties(allocator);
   stream_properties.set_unique_id(allocator);
-  for (size_t i = 0; i < audio_fidl::wire::UNIQUE_ID_SIZE; ++i) {
+  for (size_t i = 0; i < audio_fidl::wire::kUniqueIdSize; ++i) {
     stream_properties.unique_id().data_[i] = persistent_unique_id_.data[i];
   }
 
@@ -648,7 +648,8 @@ void UsbAudioStream::GetProperties(StreamChannel::GetPropertiesCompleter::Sync& 
       .set_product(allocator, std::move(product))
       .set_manufacturer(allocator, std::move(manufacturer))
       .set_clock_domain(allocator, clock_domain_)
-      .set_plug_detect_capabilities(allocator, audio_fidl::wire::PlugDetectCapabilities::HARDWIRED);
+      .set_plug_detect_capabilities(allocator,
+                                    audio_fidl::wire::PlugDetectCapabilities::kHardwired);
 
   completer.Reply(std::move(stream_properties));
 }
@@ -688,7 +689,7 @@ void UsbAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
       fbl::AutoLock req_lock(&this->lock_);
       this->ReleaseRingBufferLocked();
     }
-    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
   });
 
   // Compute the ring buffer size.  It needs to be at least as big

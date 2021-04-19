@@ -53,24 +53,24 @@ TEST(WatcherTest, Smoke) {
 
   Server server([](uint32_t mask, uint32_t options, zx::channel watcher,
                    fidl::WireInterface<fuchsia_io::Directory>::WatchCompleter::Sync& completer) {
-    uint8_t bytes[fuchsia_io::wire::MAX_BUF];
+    uint8_t bytes[fuchsia_io::wire::kMaxBuf];
     auto it = std::begin(bytes);
 
     {
       constexpr char name[] = "unsupported";
-      *it++ = fuchsia_io::wire::WATCH_EVENT_IDLE + 1;
+      *it++ = fuchsia_io::wire::kWatchEventIdle + 1;
       *it++ = sizeof(name);
       it = std::copy(std::cbegin(name), std::cend(name), it);
     }
     {
       constexpr char name[] = "valid";
-      *it++ = fuchsia_io::wire::WATCH_EVENT_ADDED;
+      *it++ = fuchsia_io::wire::kWatchEventAdded;
       *it++ = sizeof(name);
       it = std::copy(std::cbegin(name), std::cend(name), it);
     }
     {
       // Incomplete; event without name.
-      *it++ = fuchsia_io::wire::WATCH_EVENT_ADDED;
+      *it++ = fuchsia_io::wire::kWatchEventAdded;
       *it++ = 1;
     }
 

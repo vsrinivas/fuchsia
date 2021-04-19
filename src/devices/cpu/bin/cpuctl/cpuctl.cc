@@ -30,7 +30,7 @@
 
 #include "performance-domain.h"
 
-using fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES;
+using fuchsia_device::wire::kMaxDevicePerformanceStates;
 using ListCb = std::function<void(const char*)>;
 
 constexpr char kCpuDevicePath[] = "/dev/class/cpu-ctrl";
@@ -43,7 +43,7 @@ constexpr uint64_t kDefaultStressTestTimeoutMs =
     100;  // Milliseconds to wait before issuing another dvfs opp.
 
 void print_frequency(const cpuctrl::wire::CpuPerformanceStateInfo& info) {
-  if (info.frequency_hz == cpuctrl::wire::FREQUENCY_UNKNOWN) {
+  if (info.frequency_hz == cpuctrl::wire::kFrequencyUnknown) {
     std::cout << "(unknown)";
   } else {
     std::cout << info.frequency_hz << "hz";
@@ -51,7 +51,7 @@ void print_frequency(const cpuctrl::wire::CpuPerformanceStateInfo& info) {
 }
 
 void print_voltage(const cpuctrl::wire::CpuPerformanceStateInfo& info) {
-  if (info.voltage_uv == cpuctrl::wire::VOLTAGE_UNKNOWN) {
+  if (info.voltage_uv == cpuctrl::wire::kVoltageUnknown) {
     std::cout << "(unknown)";
   } else {
     std::cout << info.voltage_uv << "uv";
@@ -172,9 +172,9 @@ void describe(const char* domain_name) {
 
 void set_performance_state(const char* domain_name, const char* pstate) {
   long desired_state_l = parse_positive_long(pstate);
-  if (desired_state_l < 0 || desired_state_l > MAX_DEVICE_PERFORMANCE_STATES) {
+  if (desired_state_l < 0 || desired_state_l > kMaxDevicePerformanceStates) {
     fprintf(stderr, "Bad pstate '%s', must be a positive integer between 0 and %u\n", pstate,
-            MAX_DEVICE_PERFORMANCE_STATES);
+            kMaxDevicePerformanceStates);
     return;
   }
 

@@ -88,7 +88,7 @@ zx_status_t Astro::MaliInit() {
   auto encoded_metadata_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
   const pbus_metadata_t mali_metadata_list[] = {
       {
-          .type = fuchsia_hardware_gpu_amlogic::wire::MALI_METADATA,
+          .type = fuchsia_hardware_gpu_amlogic::wire::kMaliMetadata,
           .data_buffer = encoded_metadata_bytes.data(),
           .data_size = encoded_metadata_bytes.size(),
       },

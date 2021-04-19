@@ -29,7 +29,7 @@ class {{ .Name }} final {
 
   {{- range .Members }}
   /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "{{ .Name }}".
-  ::fidl::MemberConnector<{{ .ProtocolType }}> {{ .MethodName }}() const {
+  ::fidl::MemberConnector<{{ .ProtocolType }}> {{ .Name }}() const {
     return ::fidl::MemberConnector<{{ .ProtocolType }}>(service_.get(), "{{ .Name }}");
   }
   {{- end }}

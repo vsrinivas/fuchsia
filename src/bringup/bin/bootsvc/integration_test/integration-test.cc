@@ -108,21 +108,21 @@ TEST(BootsvcIntegrationTest, Namespace) {
   EXPECT_STR_EQ(ns->path[1], "/svc");
   free(ns);
 
-  // /boot should be RX and /svc should be RW. We use OPEN_FLAG_POSIX + fuchsia.io.Node.NodeGetFlags
+  // /boot should be RX and /svc should be RW. We use kOpenFlagPosix + fuchsia.io.Node.NodeGetFlags
   // to check that these are also the maximum rights supported.
   fbl::unique_fd fd;
   EXPECT_EQ(ZX_OK, fdio_open_fd("/boot",
-                                fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE |
-                                    fio::wire::OPEN_FLAG_POSIX,
+                                fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable |
+                                    fio::wire::kOpenFlagPosix,
                                 fd.reset_and_get_address()));
   EXPECT_EQ(fd_get_flags(std::move(fd)),
-            fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE);
+            fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable);
   EXPECT_EQ(ZX_OK, fdio_open_fd("/svc",
-                                fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE |
-                                    fio::wire::OPEN_FLAG_POSIX,
+                                fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
+                                    fio::wire::kOpenFlagPosix,
                                 fd.reset_and_get_address()));
   EXPECT_EQ(fd_get_flags(std::move(fd)),
-            fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE);
+            fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable);
 }
 
 // We simply check here whether files can be opened with OPEN_RIGHT_EXECUTABLE or not.
@@ -139,7 +139,7 @@ TEST(BootsvcIntegrationTest, BootfsExecutability) {
   for (const char* file : kExecutableFiles) {
     fbl::unique_fd fd;
     EXPECT_EQ(ZX_OK,
-              fdio_open_fd(file, fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE,
+              fdio_open_fd(file, fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
                            fd.reset_and_get_address()),
               "open %s exec", file);
 
@@ -157,10 +157,10 @@ TEST(BootsvcIntegrationTest, BootfsExecutability) {
   for (const char* file : kNonExecutableFiles) {
     fbl::unique_fd fd;
     EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
-              fdio_open_fd(file, fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE,
+              fdio_open_fd(file, fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
                            fd.reset_and_get_address()),
               "open %s exec", file);
-    EXPECT_EQ(ZX_OK, fdio_open_fd(file, fio::wire::OPEN_RIGHT_READABLE, fd.reset_and_get_address()),
+    EXPECT_EQ(ZX_OK, fdio_open_fd(file, fio::wire::kOpenRightReadable, fd.reset_and_get_address()),
               "open %s read-only", file);
 
     zx::vmo vmo;
@@ -181,7 +181,7 @@ TEST(BootsvcIntegrationTest, BootfsFileTimes) {
   struct stat s;
 
   ASSERT_EQ(ZX_OK,
-            fdio_open_fd(kTestPath, fio::wire::OPEN_RIGHT_READABLE, fd.reset_and_get_address()),
+            fdio_open_fd(kTestPath, fio::wire::kOpenRightReadable, fd.reset_and_get_address()),
             "open %s for file time check", kTestPath);
   ASSERT_EQ(0, fstat(fd.get(), &s), "get %s attributes", kTestPath);
   EXPECT_EQ(0, s.st_ctim.tv_sec);

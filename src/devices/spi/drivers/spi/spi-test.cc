@@ -305,7 +305,7 @@ TEST(SpiDevice, SpiFidlVmoTest) {
     fuchsia_mem::wire::Range vmo = {.offset = 0, .size = 4096};
     ASSERT_OK(cs0_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo.vmo));
     auto result = cs0_client->RegisterVmo_Sync(1, std::move(vmo),
-                                               SharedVmoRight::READ | SharedVmoRight::WRITE);
+                                               SharedVmoRight::kRead | SharedVmoRight::kWrite);
     ASSERT_TRUE(result.ok());
     EXPECT_TRUE(result->result.is_response());
   }
@@ -314,7 +314,7 @@ TEST(SpiDevice, SpiFidlVmoTest) {
     fuchsia_mem::wire::Range vmo = {.offset = 0, .size = 4096};
     ASSERT_OK(cs1_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo.vmo));
     auto result = cs1_client->RegisterVmo_Sync(2, std::move(vmo),
-                                               SharedVmoRight::READ | SharedVmoRight::WRITE);
+                                               SharedVmoRight::kRead | SharedVmoRight::kWrite);
     ASSERT_TRUE(result.ok());
     EXPECT_TRUE(result->result.is_response());
   }

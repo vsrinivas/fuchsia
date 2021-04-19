@@ -32,7 +32,7 @@ TestFidlClient::Display::Display(const fhd::wire::Info& info) {
   image_config_.height = modes_[0].vertical_resolution;
   image_config_.width = modes_[0].horizontal_resolution;
   image_config_.pixel_format = pixel_formats_[0];
-  image_config_.type = fhd::wire::TYPE_SIMPLE;
+  image_config_.type = fhd::wire::kTypeSimple;
 }
 
 uint64_t TestFidlClient::display_id() const { return displays_[0].id_; }
@@ -231,7 +231,7 @@ zx_status_t TestFidlClient::PresentImage() {
     return reply.status();
   }
   if (auto reply = dc_->CheckConfig(false);
-      !reply.ok() || reply->res != fhd::wire::ConfigResult::OK) {
+      !reply.ok() || reply->res != fhd::wire::ConfigResult::kOk) {
     return reply.ok() ? ZX_ERR_INVALID_ARGS : reply.status();
   }
   return dc_->ApplyConfig().status();
@@ -319,7 +319,7 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageCo
   sysmem_collection->SetName(10000u, "display-client-unittest");
   sysmem::wire::BufferCollectionConstraints constraints = {};
   constraints.min_buffer_count = 1;
-  constraints.usage.none = sysmem::wire::noneUsage;
+  constraints.usage.none = sysmem::wire::kNoneUsage;
   // We specify min_size_bytes 1 so that something is specifying a minimum size.  More typically the
   // display client would specify ImageFormatConstraints that implies a non-zero min_size_bytes.
   constraints.has_buffer_memory_constraints = true;
@@ -346,7 +346,7 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageCo
 
   auto import_result = dc_->ImportImage(image_config, display_collection_id, 0);
   if (!import_result.ok() || import_result->res != ZX_OK) {
-    *image_id = fhd::wire::INVALID_DISP_ID;
+    *image_id = fhd::wire::kInvalidDispId;
     zxlogf(ERROR, "Importing image failed (fidl=%d, res=%d)", import_result.status(),
            import_result->res);
     return import_result.ok() ? import_result->res : import_result.status();

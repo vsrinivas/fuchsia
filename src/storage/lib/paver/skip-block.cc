@@ -226,7 +226,7 @@ zx::status<> SkipBlockPartitionClient::WriteBytes(const zx::vmo& vmo, zx_off_t o
       .vmo_offset = 0,
       .offset = offset,
       .size = size,
-      .mode = skipblock::wire::WriteBytesMode::READ_MODIFY_ERASE_WRITE,
+      .mode = skipblock::wire::WriteBytesMode::kReadModifyEraseWrite,
   };
 
   auto result = partition_.WriteBytes(std::move(operation));

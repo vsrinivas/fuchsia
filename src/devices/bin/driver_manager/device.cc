@@ -820,9 +820,9 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
   std::string_view args(args_view.data(), args_view.size());
 
   bool invisible = static_cast<bool>(device_add_config &
-                                     fuchsia_device_manager::wire::AddDeviceConfig::INVISIBLE);
+                                     fuchsia_device_manager::wire::AddDeviceConfig::kInvisible);
   bool skip_autobind = static_cast<bool>(
-      device_add_config & fuchsia_device_manager::wire::AddDeviceConfig::SKIP_AUTOBIND);
+      device_add_config & fuchsia_device_manager::wire::AddDeviceConfig::kSkipAutobind);
 
   fbl::RefPtr<Device> device;
   zx_status_t status = parent->coordinator->AddDevice(
@@ -830,19 +830,19 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
       props.count(), name, protocol_id, driver_path, args, invisible, skip_autobind, has_init,
       kEnableAlwaysInit, std::move(inspect), std::move(client_remote), &device);
   if (device != nullptr &&
-      (device_add_config & fuchsia_device_manager::wire::AddDeviceConfig::ALLOW_MULTI_COMPOSITE)) {
+      (device_add_config & fuchsia_device_manager::wire::AddDeviceConfig::kAllowMultiComposite)) {
     device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   }
   uint64_t local_id = device != nullptr ? device->local_id() : 0;
-  fuchsia_device_manager::wire::Coordinator_AddDevice_Result response;
+  fuchsia_device_manager::wire::CoordinatorAddDeviceResult response;
   if (status != ZX_OK) {
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
   } else {
-    fuchsia_device_manager::wire::Coordinator_AddDevice_Response resp{.local_device_id = local_id};
+    fuchsia_device_manager::wire::CoordinatorAddDeviceResponse resp{.local_device_id = local_id};
     response.set_response(
-        fidl::ObjectView<
-            fuchsia_device_manager::wire::Coordinator_AddDevice_Response>::FromExternal(&resp));
+        fidl::ObjectView<fuchsia_device_manager::wire::CoordinatorAddDeviceResponse>::FromExternal(
+            &resp));
     completer.Reply(std::move(response));
   }
 }
@@ -857,15 +857,15 @@ void Device::PublishMetadata(::fidl::StringView device_path, uint32_t key,
   path[device_path.size()] = 0;
   zx_status_t status = dev->coordinator->PublishMetadata(dev, path, key, data.data(),
                                                          static_cast<uint32_t>(data.count()));
-  fuchsia_device_manager::wire::Coordinator_PublishMetadata_Result response;
+  fuchsia_device_manager::wire::CoordinatorPublishMetadataResult response;
   if (status != ZX_OK) {
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
   } else {
-    fuchsia_device_manager::wire::Coordinator_PublishMetadata_Response resp;
+    fuchsia_device_manager::wire::CoordinatorPublishMetadataResponse resp;
     response.set_response(
-        fidl::ObjectView<fuchsia_device_manager::wire::Coordinator_PublishMetadata_Response>::
-            FromExternal(&resp));
+        fidl::ObjectView<
+            fuchsia_device_manager::wire::CoordinatorPublishMetadataResponse>::FromExternal(&resp));
     completer.Reply(std::move(response));
   }
 }
@@ -888,7 +888,7 @@ void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& compl
 
 void Device::MakeVisible(MakeVisibleCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
-  fuchsia_device_manager::wire::Coordinator_MakeVisible_Result response;
+  fuchsia_device_manager::wire::CoordinatorMakeVisibleResult response;
   if (dev->coordinator->InSuspend()) {
     LOGF(ERROR, "'make-visible' is forbidden in suspend");
     zx_status_t status = ZX_ERR_BAD_STATE;
@@ -900,10 +900,10 @@ void Device::MakeVisible(MakeVisibleCompleter::Sync& completer) {
   // TODO(teisenbe): MakeVisible can return errors.  We should probably
   // act on it, but the existing code being migrated does not.
   dev->coordinator->MakeVisible(dev);
-  fuchsia_device_manager::wire::Coordinator_MakeVisible_Response resp;
+  fuchsia_device_manager::wire::CoordinatorMakeVisibleResponse resp;
   response.set_response(
-      fidl::ObjectView<
-          fuchsia_device_manager::wire::Coordinator_MakeVisible_Response>::FromExternal(&resp));
+      fidl::ObjectView<fuchsia_device_manager::wire::CoordinatorMakeVisibleResponse>::FromExternal(
+          &resp));
   completer.Reply(std::move(response));
 }
 
@@ -911,7 +911,7 @@ void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter
   auto dev = fbl::RefPtr(this);
   std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
 
-  fuchsia_device_manager::wire::Coordinator_BindDevice_Result response;
+  fuchsia_device_manager::wire::CoordinatorBindDeviceResult response;
   if (dev->coordinator->InSuspend()) {
     LOGF(ERROR, "'bind-device' is forbidden in suspend");
     zx_status_t status = ZX_ERR_BAD_STATE;
@@ -926,10 +926,10 @@ void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
   } else {
-    fuchsia_device_manager::wire::Coordinator_BindDevice_Response resp;
+    fuchsia_device_manager::wire::CoordinatorBindDeviceResponse resp;
     response.set_response(
-        fidl::ObjectView<
-            fuchsia_device_manager::wire::Coordinator_BindDevice_Response>::FromExternal(&resp));
+        fidl::ObjectView<fuchsia_device_manager::wire::CoordinatorBindDeviceResponse>::FromExternal(
+            &resp));
     completer.Reply(std::move(response));
   }
 }
@@ -938,17 +938,17 @@ void Device::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   char path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
   zx_status_t status;
-  fuchsia_device_manager::wire::Coordinator_GetTopologicalPath_Result response;
+  fuchsia_device_manager::wire::CoordinatorGetTopologicalPathResult response;
   if ((status = dev->coordinator->GetTopologicalPath(dev, path, sizeof(path))) != ZX_OK) {
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
     return;
   }
   auto path_view = ::fidl::StringView::FromExternal(path);
-  fuchsia_device_manager::wire::Coordinator_GetTopologicalPath_Response resp{
+  fuchsia_device_manager::wire::CoordinatorGetTopologicalPathResponse resp{
       .path = std::move(path_view)};
   response.set_response(
-      fidl::ObjectView<fuchsia_device_manager::wire::Coordinator_GetTopologicalPath_Response>::
+      fidl::ObjectView<fuchsia_device_manager::wire::CoordinatorGetTopologicalPathResponse>::
           FromExternal(&resp));
   completer.Reply(std::move(response));
 }
@@ -959,7 +959,7 @@ void Device::LoadFirmware(::fidl::StringView fw_path_view, LoadFirmwareCompleter
   char fw_path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
   memcpy(fw_path, fw_path_view.data(), fw_path_view.size());
   fw_path[fw_path_view.size()] = 0;
-  fuchsia_device_manager::wire::Coordinator_LoadFirmware_Result response;
+  fuchsia_device_manager::wire::CoordinatorLoadFirmwareResult response;
 
   zx::vmo vmo;
   uint64_t size = 0;
@@ -970,13 +970,13 @@ void Device::LoadFirmware(::fidl::StringView fw_path_view, LoadFirmwareCompleter
     return;
   }
 
-  fuchsia_device_manager::wire::Coordinator_LoadFirmware_Response resp{
+  fuchsia_device_manager::wire::CoordinatorLoadFirmwareResponse resp{
       .vmo = std::move(vmo),
       .size = size,
   };
   response.set_response(
-      fidl::ObjectView<
-          fuchsia_device_manager::wire::Coordinator_LoadFirmware_Response>::FromExternal(&resp));
+      fidl::ObjectView<fuchsia_device_manager::wire::CoordinatorLoadFirmwareResponse>::FromExternal(
+          &resp));
   completer.Reply(std::move(response));
 }
 
@@ -984,7 +984,7 @@ void Device::GetMetadata(uint32_t key, GetMetadataCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   uint8_t data[fuchsia_device_manager_METADATA_BYTES_MAX];
   size_t actual = 0;
-  fuchsia_device_manager::wire::Coordinator_GetMetadata_Result response;
+  fuchsia_device_manager::wire::CoordinatorGetMetadataResult response;
   zx_status_t status = dev->coordinator->GetMetadata(dev, key, data, sizeof(data), &actual);
   if (status != ZX_OK) {
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
@@ -992,27 +992,27 @@ void Device::GetMetadata(uint32_t key, GetMetadataCompleter::Sync& completer) {
     return;
   }
   auto data_view = ::fidl::VectorView<uint8_t>::FromExternal(data, actual);
-  fuchsia_device_manager::wire::Coordinator_GetMetadata_Response resp{.data = std::move(data_view)};
+  fuchsia_device_manager::wire::CoordinatorGetMetadataResponse resp{.data = std::move(data_view)};
   response.set_response(
-      fidl::ObjectView<
-          fuchsia_device_manager::wire::Coordinator_GetMetadata_Response>::FromExternal(&resp));
+      fidl::ObjectView<fuchsia_device_manager::wire::CoordinatorGetMetadataResponse>::FromExternal(
+          &resp));
   completer.Reply(std::move(response));
 }
 
 void Device::GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   size_t size;
-  fuchsia_device_manager::wire::Coordinator_GetMetadataSize_Result response;
+  fuchsia_device_manager::wire::CoordinatorGetMetadataSizeResult response;
   zx_status_t status = dev->coordinator->GetMetadataSize(dev, key, &size);
   if (status != ZX_OK) {
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
     return;
   }
-  fuchsia_device_manager::wire::Coordinator_GetMetadataSize_Response resp{.size = size};
+  fuchsia_device_manager::wire::CoordinatorGetMetadataSizeResponse resp{.size = size};
   response.set_response(
       fidl::ObjectView<
-          fuchsia_device_manager::wire::Coordinator_GetMetadataSize_Response>::FromExternal(&resp));
+          fuchsia_device_manager::wire::CoordinatorGetMetadataSizeResponse>::FromExternal(&resp));
   completer.Reply(std::move(response));
 }
 
@@ -1021,15 +1021,15 @@ void Device::AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data,
   auto dev = fbl::RefPtr(this);
   zx_status_t status =
       dev->coordinator->AddMetadata(dev, key, data.data(), static_cast<uint32_t>(data.count()));
-  fuchsia_device_manager::wire::Coordinator_AddMetadata_Result response;
+  fuchsia_device_manager::wire::CoordinatorAddMetadataResult response;
   if (status != ZX_OK) {
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
   } else {
-    fuchsia_device_manager::wire::Coordinator_AddMetadata_Response resp;
+    fuchsia_device_manager::wire::CoordinatorAddMetadataResponse resp;
     response.set_response(
         fidl::ObjectView<
-            fuchsia_device_manager::wire::Coordinator_AddMetadata_Response>::FromExternal(&resp));
+            fuchsia_device_manager::wire::CoordinatorAddMetadataResponse>::FromExternal(&resp));
     completer.Reply(std::move(response));
   }
 }
@@ -1045,14 +1045,14 @@ void Device::RunCompatibilityTests(int64_t hook_wait_time,
   real_parent->set_test_time(test_time);
   real_parent->set_test_reply_required(true);
   status = real_parent->DriverCompatibilityTest();
-  fuchsia_device_manager::wire::Coordinator_RunCompatibilityTests_Result response;
+  fuchsia_device_manager::wire::CoordinatorRunCompatibilityTestsResult response;
   if (status != ZX_OK) {
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
   } else {
-    fuchsia_device_manager::wire::Coordinator_RunCompatibilityTests_Response resp;
+    fuchsia_device_manager::wire::CoordinatorRunCompatibilityTestsResponse resp;
     response.set_response(
-        fidl::ObjectView<fuchsia_device_manager::wire::Coordinator_RunCompatibilityTests_Response>::
+        fidl::ObjectView<fuchsia_device_manager::wire::CoordinatorRunCompatibilityTestsResponse>::
             FromExternal(&resp));
     completer.Reply(std::move(response));
   }
@@ -1064,14 +1064,14 @@ void Device::AddCompositeDevice(::fidl::StringView name_view,
   auto dev = fbl::RefPtr(this);
   std::string_view name(name_view.data(), name_view.size());
   zx_status_t status = this->coordinator->AddCompositeDevice(dev, name, std::move(comp_desc));
-  fuchsia_device_manager::wire::Coordinator_AddCompositeDevice_Result response;
+  fuchsia_device_manager::wire::CoordinatorAddCompositeDeviceResult response;
   if (status != ZX_OK) {
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
   } else {
-    fuchsia_device_manager::wire::Coordinator_AddCompositeDevice_Response resp;
+    fuchsia_device_manager::wire::CoordinatorAddCompositeDeviceResponse resp;
     response.set_response(
-        fidl::ObjectView<fuchsia_device_manager::wire::Coordinator_AddCompositeDevice_Response>::
+        fidl::ObjectView<fuchsia_device_manager::wire::CoordinatorAddCompositeDeviceResponse>::
             FromExternal(&resp));
     completer.Reply(std::move(response));
   }

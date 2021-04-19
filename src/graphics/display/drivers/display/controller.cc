@@ -764,8 +764,8 @@ void Controller::SetVcMode(uint8_t vc_mode) {
 
 void Controller::HandleClientOwnershipChanges() {
   ClientProxy* new_active;
-  if (vc_mode_ == fidl_display::wire::VirtconMode::FORCED ||
-      (vc_mode_ == fidl_display::wire::VirtconMode::FALLBACK && primary_client_ == nullptr)) {
+  if (vc_mode_ == fidl_display::wire::VirtconMode::kForced ||
+      (vc_mode_ == fidl_display::wire::VirtconMode::kFallback && primary_client_ == nullptr)) {
     new_active = vc_client_;
   } else {
     new_active = primary_client_;
@@ -790,7 +790,7 @@ void Controller::OnClientDead(ClientProxy* client) {
   }
   if (client == vc_client_) {
     vc_client_ = nullptr;
-    vc_mode_ = fidl_display::wire::VirtconMode::INACTIVE;
+    vc_mode_ = fidl_display::wire::VirtconMode::kInactive;
   } else if (client == primary_client_) {
     primary_client_ = nullptr;
   } else {

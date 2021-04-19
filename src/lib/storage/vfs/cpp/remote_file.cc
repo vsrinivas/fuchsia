@@ -26,7 +26,7 @@ VnodeProtocolSet RemoteFile::GetProtocols() const { return VnodeProtocol::kFile;
 zx_status_t RemoteFile::GetAttributes(VnodeAttributes* attr) {
   *attr = VnodeAttributes();
   attr->mode = V_TYPE_FILE | V_IRUSR;
-  attr->inode = fio::wire::INO_UNKNOWN;
+  attr->inode = fio::wire::kInoUnknown;
   attr->link_count = 1;
   return ZX_OK;
 }

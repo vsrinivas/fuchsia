@@ -37,9 +37,9 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
   bool IsValid() {
     using fuchsia_sysmem::wire::CoherencyDomain;
     switch (settings_.buffer_settings.coherency_domain) {
-      case CoherencyDomain::RAM:
-      case CoherencyDomain::CPU:
-      case CoherencyDomain::INACCESSIBLE:
+      case CoherencyDomain::kRam:
+      case CoherencyDomain::kCpu:
+      case CoherencyDomain::kInaccessible:
         break;
 
       default:
@@ -66,13 +66,13 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
   uint32_t coherency_domain() const override {
     using fuchsia_sysmem::wire::CoherencyDomain;
     switch (settings_.buffer_settings.coherency_domain) {
-      case CoherencyDomain::RAM:
+      case CoherencyDomain::kRam:
         return MAGMA_COHERENCY_DOMAIN_RAM;
 
-      case CoherencyDomain::CPU:
+      case CoherencyDomain::kCpu:
         return MAGMA_COHERENCY_DOMAIN_CPU;
 
-      case CoherencyDomain::INACCESSIBLE:
+      case CoherencyDomain::kInaccessible:
         return MAGMA_COHERENCY_DOMAIN_INACCESSIBLE;
 
       default:
@@ -104,7 +104,7 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
       planes_out[i].bytes_per_row = 0;
     }
 
-    std::optional<fuchsia_sysmem::wire::ImageFormat_2> image_format =
+    std::optional<fuchsia_sysmem::wire::ImageFormat2> image_format =
         image_format::ConstraintsToFormat(settings_.image_format_constraints,
                                           magma::to_uint32(width), magma::to_uint32(height));
     if (!image_format) {
@@ -144,14 +144,14 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     constraints_.min_buffer_count = constraints->count;
     // Ignore input usage
     fuchsia_sysmem::wire::BufferUsage usage;
-    usage.vulkan = fuchsia_sysmem::wire::vulkanUsageTransientAttachment |
-                   fuchsia_sysmem::wire::vulkanUsageStencilAttachment |
-                   fuchsia_sysmem::wire::vulkanUsageInputAttachment |
-                   fuchsia_sysmem::wire::vulkanUsageColorAttachment |
-                   fuchsia_sysmem::wire::vulkanUsageTransferSrc |
-                   fuchsia_sysmem::wire::vulkanUsageTransferDst |
-                   fuchsia_sysmem::wire::vulkanUsageStorage |
-                   fuchsia_sysmem::wire::vulkanUsageSampled;
+    usage.vulkan = fuchsia_sysmem::wire::kVulkanUsageTransientAttachment |
+                   fuchsia_sysmem::wire::kVulkanUsageStencilAttachment |
+                   fuchsia_sysmem::wire::kVulkanUsageInputAttachment |
+                   fuchsia_sysmem::wire::kVulkanUsageColorAttachment |
+                   fuchsia_sysmem::wire::kVulkanUsageTransferSrc |
+                   fuchsia_sysmem::wire::kVulkanUsageTransferDst |
+                   fuchsia_sysmem::wire::kVulkanUsageStorage |
+                   fuchsia_sysmem::wire::kVulkanUsageSampled;
     constraints_.usage = usage;
     constraints_.has_buffer_memory_constraints = true;
     // No buffer constraints, except those passed directly through from the client. These two
@@ -192,27 +192,27 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     bool is_yuv = false;
     switch (format_constraints->image_format) {
       case MAGMA_FORMAT_R8G8B8A8:
-        constraints.pixel_format.type = PixelFormatType::R8G8B8A8;
+        constraints.pixel_format.type = PixelFormatType::kR8G8B8A8;
         break;
       case MAGMA_FORMAT_BGRA32:
-        constraints.pixel_format.type = PixelFormatType::BGRA32;
+        constraints.pixel_format.type = PixelFormatType::kBgra32;
         break;
       case MAGMA_FORMAT_NV12:
-        constraints.pixel_format.type = PixelFormatType::NV12;
+        constraints.pixel_format.type = PixelFormatType::kNv12;
         is_yuv = true;
         break;
       case MAGMA_FORMAT_I420:
-        constraints.pixel_format.type = PixelFormatType::I420;
+        constraints.pixel_format.type = PixelFormatType::kI420;
         is_yuv = true;
         break;
       case MAGMA_FORMAT_R8:
-        constraints.pixel_format.type = PixelFormatType::R8;
+        constraints.pixel_format.type = PixelFormatType::kR8;
         break;
       case MAGMA_FORMAT_L8:
-        constraints.pixel_format.type = PixelFormatType::L8;
+        constraints.pixel_format.type = PixelFormatType::kL8;
         break;
       case MAGMA_FORMAT_R8G8:
-        constraints.pixel_format.type = PixelFormatType::R8G8;
+        constraints.pixel_format.type = PixelFormatType::kR8G8;
         break;
       default:
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid format: %d",
@@ -223,21 +223,21 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
       // This is the full list of formats currently supported by
       // VkSamplerYcbcrModelConversion and VkSamplerYcbcrRange as of vulkan 1.1,
       // restricted to 8-bit-per-component formats.
-      constraints.color_space[color_space_count++].type = ColorSpaceType::REC601_NTSC;
-      constraints.color_space[color_space_count++].type = ColorSpaceType::REC601_NTSC_FULL_RANGE;
-      constraints.color_space[color_space_count++].type = ColorSpaceType::REC601_PAL;
-      constraints.color_space[color_space_count++].type = ColorSpaceType::REC601_PAL_FULL_RANGE;
-      constraints.color_space[color_space_count++].type = ColorSpaceType::REC709;
+      constraints.color_space[color_space_count++].type = ColorSpaceType::kRec601Ntsc;
+      constraints.color_space[color_space_count++].type = ColorSpaceType::kRec601NtscFullRange;
+      constraints.color_space[color_space_count++].type = ColorSpaceType::kRec601Pal;
+      constraints.color_space[color_space_count++].type = ColorSpaceType::kRec601PalFullRange;
+      constraints.color_space[color_space_count++].type = ColorSpaceType::kRec709;
       constraints.color_spaces_count = color_space_count;
     } else {
       uint32_t color_space_count = 0;
-      constraints.color_space[color_space_count++].type = ColorSpaceType::SRGB;
+      constraints.color_space[color_space_count++].type = ColorSpaceType::kSrgb;
       constraints.color_spaces_count = color_space_count;
     }
 
     constraints.pixel_format.has_format_modifier = true;
     if (!format_constraints->has_format_modifier) {
-      constraints.pixel_format.format_modifier.value = fuchsia_sysmem::wire::FORMAT_MODIFIER_LINEAR;
+      constraints.pixel_format.format_modifier.value = fuchsia_sysmem::wire::kFormatModifierLinear;
     } else {
       constraints.pixel_format.format_modifier.value = format_constraints->format_modifier;
     }
@@ -253,7 +253,7 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     if (index >= raw_image_constraints_.size()) {
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Format constraints must be set first");
     }
-    if (color_space_count > fuchsia_sysmem::wire::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES) {
+    if (color_space_count > fuchsia_sysmem::wire::kMaxCountImageFormatConstraintsColorSpaces) {
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Too many color spaces: %d", color_space_count);
     }
     auto& constraints = raw_image_constraints_[index];
@@ -466,19 +466,19 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
   magma_status_t AllocateBuffer(uint32_t flags, size_t size,
                                 std::unique_ptr<magma::PlatformBuffer>* buffer_out) override {
     fuchsia_sysmem::wire::BufferUsage usage;
-    usage.vulkan = fuchsia_sysmem::wire::vulkanUsageTransientAttachment |
-                   fuchsia_sysmem::wire::vulkanUsageStencilAttachment |
-                   fuchsia_sysmem::wire::vulkanUsageInputAttachment |
-                   fuchsia_sysmem::wire::vulkanUsageColorAttachment |
-                   fuchsia_sysmem::wire::vulkanUsageTransferSrc |
-                   fuchsia_sysmem::wire::vulkanUsageTransferDst |
-                   fuchsia_sysmem::wire::vulkanUsageStorage |
-                   fuchsia_sysmem::wire::vulkanUsageSampled;
+    usage.vulkan = fuchsia_sysmem::wire::kVulkanUsageTransientAttachment |
+                   fuchsia_sysmem::wire::kVulkanUsageStencilAttachment |
+                   fuchsia_sysmem::wire::kVulkanUsageInputAttachment |
+                   fuchsia_sysmem::wire::kVulkanUsageColorAttachment |
+                   fuchsia_sysmem::wire::kVulkanUsageTransferSrc |
+                   fuchsia_sysmem::wire::kVulkanUsageTransferDst |
+                   fuchsia_sysmem::wire::kVulkanUsageStorage |
+                   fuchsia_sysmem::wire::kVulkanUsageSampled;
     if (flags & MAGMA_SYSMEM_FLAG_PROTECTED) {
-      usage.video = fuchsia_sysmem::wire::videoUsageHwProtected;
+      usage.video = fuchsia_sysmem::wire::kVideoUsageHwProtected;
     }
     if (flags & MAGMA_SYSMEM_FLAG_DISPLAY) {
-      usage.display = fuchsia_sysmem::wire::displayUsageLayer;
+      usage.display = fuchsia_sysmem::wire::kDisplayUsageLayer;
     }
 
     fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
@@ -506,7 +506,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
       // directly.
       buffer_name += "ForClient";
     }
-    fuchsia_sysmem::wire::BufferCollectionInfo_2 info;
+    fuchsia_sysmem::wire::BufferCollectionInfo2 info;
     magma_status_t result = AllocateBufferCollection(constraints, buffer_name, &info);
     if (result != MAGMA_STATUS_OK)
       return DRET(result);
@@ -566,7 +566,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
  private:
   magma_status_t AllocateBufferCollection(
       const fuchsia_sysmem::wire::BufferCollectionConstraints& constraints, std::string name,
-      fuchsia_sysmem::wire::BufferCollectionInfo_2* info_out) {
+      fuchsia_sysmem::wire::BufferCollectionInfo2* info_out) {
     zx::channel h1;
     zx::channel h2;
     zx_status_t status = zx::channel::create(0, &h1, &h2);

@@ -43,9 +43,9 @@ zx_status_t RxBuffer::WriteData(const uint8_t* data, size_t len,
 
 void RxBuffer::FillReturn() {
   return_.total_length = 0;
-  return_.meta.info_type = static_cast<uint32_t>(netdev::wire::InfoType::NO_INFO);
+  return_.meta.info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
   return_.meta.flags = 0;
-  return_.meta.frame_type = static_cast<uint8_t>(netdev::wire::FrameType::ETHERNET);
+  return_.meta.frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet);
   return_.id = buffer_.id;
 }
 
@@ -57,7 +57,7 @@ FakeNetworkDeviceImpl::FakeNetworkDeviceImpl()
           .tx_depth = kTxDepth,
           .rx_depth = kRxDepth,
           .rx_threshold = kRxDepth / 2,
-          .device_class = static_cast<uint8_t>(netdev::wire::DeviceClass::ETHERNET),
+          .device_class = static_cast<uint8_t>(netdev::wire::DeviceClass::kEthernet),
           .rx_types_list = rx_types_.data(),
           .rx_types_count = 1,
           .tx_types_list = tx_types_.data(),
@@ -65,10 +65,10 @@ FakeNetworkDeviceImpl::FakeNetworkDeviceImpl()
           .max_buffer_length = ZX_PAGE_SIZE / 2,
           .buffer_alignment = ZX_PAGE_SIZE,
       }) {
-  rx_types_[0] = static_cast<uint8_t>(netdev::wire::FrameType::ETHERNET);
-  tx_types_[0].type = static_cast<uint8_t>(netdev::wire::FrameType::ETHERNET);
+  rx_types_[0] = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet);
+  tx_types_[0].type = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet);
   tx_types_[0].supported_flags = 0;
-  tx_types_[0].features = netdev::wire::FRAME_FEATURES_RAW;
+  tx_types_[0].features = netdev::wire::kFrameFeaturesRaw;
 
   ASSERT_OK(zx::event::create(0, &event_));
 }
@@ -83,7 +83,7 @@ FakeNetworkDeviceImpl::~FakeNetworkDeviceImpl() {
 zx_status_t FakeNetworkDeviceImpl::NetworkDeviceImplInit(
     const network_device_ifc_protocol_t* iface) {
   status_.mtu = 2048;
-  status_.flags = static_cast<uint32_t>(netdev::wire::StatusFlags::ONLINE);
+  status_.flags = static_cast<uint32_t>(netdev::wire::StatusFlags::kOnline);
   device_client_ = ddk::NetworkDeviceIfcProtocolClient(iface);
   return ZX_OK;
 }
@@ -186,7 +186,7 @@ bool FakeNetworkDeviceImpl::TriggerStop() {
 
 void FakeNetworkDeviceImpl::SetOnline(bool online) {
   status_t status = status_;
-  status.flags = static_cast<uint32_t>(online ? netdev::wire::StatusFlags::ONLINE
+  status.flags = static_cast<uint32_t>(online ? netdev::wire::StatusFlags::kOnline
                                               : netdev::wire::StatusFlags());
   SetStatus(status);
 }
@@ -218,7 +218,7 @@ zx_status_t TestSession::Open(fidl::WireSyncClient<netdev::Device>& netdevice, c
                               uint64_t buffer_size,
                               fidl::VectorView<netdev::wire::FrameType> frame_types) {
   netdev::wire::FrameType supported_frames[1];
-  supported_frames[0] = netdev::wire::FrameType::ETHERNET;
+  supported_frames[0] = netdev::wire::FrameType::kEthernet;
   netdev::wire::SessionInfo info{};
   if (frame_types.count() == 0) {
     // default to just ethernet
@@ -314,9 +314,9 @@ zx_status_t TestSession::WaitClosed(zx::time deadline) {
 
 buffer_descriptor_t* TestSession::ResetDescriptor(uint16_t index) {
   auto* desc = descriptor(index);
-  desc->frame_type = static_cast<uint8_t>(netdev::wire::FrameType::ETHERNET);
+  desc->frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet);
   desc->offset = canonical_offset(index);
-  desc->info_type = static_cast<uint32_t>(netdev::wire::InfoType::NO_INFO);
+  desc->info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
   desc->head_length = 0;
   desc->data_length = static_cast<uint32_t>(buffer_length_);
   desc->tail_length = 0;

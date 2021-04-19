@@ -100,13 +100,13 @@ TEST_F(Vs680ThermalTest, GetTemperature) {
 TEST_F(Vs680ThermalTest, OperatingPoints) {
   ThermalClient client(std::move(messenger_.local()));
 
-  auto get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+  auto get_result = client.GetDvfsOperatingPoint(PowerDomain::kBigClusterPowerDomain);
   EXPECT_OK(get_result->status);
   EXPECT_EQ(get_result->op_idx, 0);
 
   clock_.ExpectSetRate(ZX_OK, 1'800'000'000);
   power_.ExpectRequestVoltage(ZX_OK, 800'000, 800'000);
-  auto set_result = client.SetDvfsOperatingPoint(0, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+  auto set_result = client.SetDvfsOperatingPoint(0, PowerDomain::kBigClusterPowerDomain);
   EXPECT_OK(set_result->status);
 
   ASSERT_NO_FATAL_FAILURES(clock_.VerifyAndClear());

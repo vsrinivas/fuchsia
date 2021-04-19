@@ -45,32 +45,32 @@ class GpioLight : public GpioLightType,
                    SetRgbValueCompleter::Sync& completer);
 
   void GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync& completer) {
-    completer.ReplyError(fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
+    completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
   }
   void GetGroupCurrentSimpleValue(uint32_t group_id,
                                   GetGroupCurrentSimpleValueCompleter::Sync& completer) {
-    completer.ReplyError(fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
+    completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
   }
   void SetGroupSimpleValue(uint32_t group_id, ::fidl::VectorView<bool> values,
                            SetGroupSimpleValueCompleter::Sync& completer) {
-    completer.ReplyError(fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
+    completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
   }
   void GetGroupCurrentBrightnessValue(uint32_t group_id,
                                       GetGroupCurrentBrightnessValueCompleter::Sync& completer) {
-    completer.ReplyError(fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
+    completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
   }
   void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<double> values,
                                SetGroupBrightnessValueCompleter::Sync& completer) {
-    completer.ReplyError(fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
+    completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
   }
   void GetGroupCurrentRgbValue(uint32_t group_id,
                                GetGroupCurrentRgbValueCompleter::Sync& completer) {
-    completer.ReplyError(fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
+    completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
   }
   void SetGroupRgbValue(uint32_t group_id,
                         ::fidl::VectorView<fuchsia_hardware_light::wire::Rgb> values,
                         SetGroupRgbValueCompleter::Sync& completer) {
-    completer.ReplyError(fuchsia_hardware_light::wire::LightError::NOT_SUPPORTED);
+    completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
   }
 
  private:

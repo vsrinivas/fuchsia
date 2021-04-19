@@ -33,10 +33,10 @@ class Touch : public Device {
     std::optional<hid::Attributes> contact_width;
     std::optional<hid::Attributes> contact_height;
   };
-  ContactConfig contacts_[fuchsia_input_report::wire::TOUCH_MAX_CONTACTS] = {};
+  ContactConfig contacts_[fuchsia_input_report::wire::kTouchMaxContacts] = {};
   size_t num_contacts_ = 0;
 
-  hid::Attributes buttons_[fuchsia_input_report::wire::TOUCH_MAX_NUM_BUTTONS] = {};
+  hid::Attributes buttons_[fuchsia_input_report::wire::kTouchMaxNumButtons] = {};
   size_t num_buttons_ = 0;
 
   fuchsia_input_report::wire::TouchType touch_type_;

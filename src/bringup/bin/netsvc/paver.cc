@@ -213,7 +213,7 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
   }
 
   // Make sure to mark the configuration we are about to pave as no longer bootable.
-  if (boot_manager && configuration_ != fuchsia_paver::wire::Configuration::RECOVERY) {
+  if (boot_manager && configuration_ != fuchsia_paver::wire::Configuration::kRecovery) {
     auto result = boot_manager->SetConfigurationUnbootable(configuration_);
     auto status = result.ok() ? result->status : result.status();
     if (status != ZX_OK) {
@@ -238,9 +238,9 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
   }
   // Set configuration A/B as default.
   // We assume that verified boot metadata asset will only be written after the kernel asset.
-  if (!boot_manager || configuration_ == fuchsia_paver::wire::Configuration::RECOVERY ||
+  if (!boot_manager || configuration_ == fuchsia_paver::wire::Configuration::kRecovery ||
       command_ == Command::kFirmware ||
-      asset_ != fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA) {
+      asset_ != fuchsia_paver::wire::Asset::kVerifiedBootMetadata) {
     if (boot_manager) {
       auto res = boot_manager->Flush();
       auto status_sync = res.ok() ? res->status : res.status();
@@ -261,9 +261,9 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
     }
   }
   {
-    auto opposite = configuration_ == fuchsia_paver::wire::Configuration::A
-                        ? fuchsia_paver::wire::Configuration::B
-                        : fuchsia_paver::wire::Configuration::A;
+    auto opposite = configuration_ == fuchsia_paver::wire::Configuration::kA
+                        ? fuchsia_paver::wire::Configuration::kB
+                        : fuchsia_paver::wire::Configuration::kA;
 
     auto result = boot_manager->SetConfigurationUnbootable(opposite);
     auto status = result.ok() ? result->status : result.status();
@@ -543,10 +543,10 @@ tftp_status Paver::ProcessAsFirmwareImage(std::string_view host_filename) {
     const char* config_suffix;
     fuchsia_paver::wire::Configuration config;
   } matches[] = {
-      {NB_FIRMWARE_HOST_FILENAME_PREFIX, "", fuchsia_paver::wire::Configuration::A},
-      {NB_FIRMWAREA_HOST_FILENAME_PREFIX, "-A", fuchsia_paver::wire::Configuration::A},
-      {NB_FIRMWAREB_HOST_FILENAME_PREFIX, "-B", fuchsia_paver::wire::Configuration::B},
-      {NB_FIRMWARER_HOST_FILENAME_PREFIX, "-R", fuchsia_paver::wire::Configuration::RECOVERY},
+      {NB_FIRMWARE_HOST_FILENAME_PREFIX, "", fuchsia_paver::wire::Configuration::kA},
+      {NB_FIRMWAREA_HOST_FILENAME_PREFIX, "-A", fuchsia_paver::wire::Configuration::kA},
+      {NB_FIRMWAREB_HOST_FILENAME_PREFIX, "-B", fuchsia_paver::wire::Configuration::kB},
+      {NB_FIRMWARER_HOST_FILENAME_PREFIX, "-R", fuchsia_paver::wire::Configuration::kRecovery},
   };
 
   for (auto& match : matches) {
@@ -595,7 +595,7 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
     // until we don't use it anymore.
     printf("netsvc: Running BOOTLOADER Paver (firmware type '')\n");
     command_ = Command::kFirmware;
-    configuration_ = fuchsia_paver::wire::Configuration::A;
+    configuration_ = fuchsia_paver::wire::Configuration::kA;
     firmware_type_[0] = '\0';
   } else if (auto status = ProcessAsFirmwareImage(host_filename); status != TFTP_ERR_NOT_FOUND) {
     if (status != TFTP_NO_ERROR) {
@@ -604,33 +604,33 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
   } else if (host_filename == NB_ZIRCONA_HOST_FILENAME) {
     printf("netsvc: Running ZIRCON-A Paver\n");
     command_ = Command::kAsset;
-    configuration_ = fuchsia_paver::wire::Configuration::A;
-    asset_ = fuchsia_paver::wire::Asset::KERNEL;
+    configuration_ = fuchsia_paver::wire::Configuration::kA;
+    asset_ = fuchsia_paver::wire::Asset::kKernel;
   } else if (host_filename == NB_ZIRCONB_HOST_FILENAME) {
     printf("netsvc: Running ZIRCON-B Paver\n");
     command_ = Command::kAsset;
-    configuration_ = fuchsia_paver::wire::Configuration::B;
-    asset_ = fuchsia_paver::wire::Asset::KERNEL;
+    configuration_ = fuchsia_paver::wire::Configuration::kB;
+    asset_ = fuchsia_paver::wire::Asset::kKernel;
   } else if (host_filename == NB_ZIRCONR_HOST_FILENAME) {
     printf("netsvc: Running ZIRCON-R Paver\n");
     command_ = Command::kAsset;
-    configuration_ = fuchsia_paver::wire::Configuration::RECOVERY;
-    asset_ = fuchsia_paver::wire::Asset::KERNEL;
+    configuration_ = fuchsia_paver::wire::Configuration::kRecovery;
+    asset_ = fuchsia_paver::wire::Asset::kKernel;
   } else if (host_filename == NB_VBMETAA_HOST_FILENAME) {
     printf("netsvc: Running VBMETA-A Paver\n");
     command_ = Command::kAsset;
-    configuration_ = fuchsia_paver::wire::Configuration::A;
-    asset_ = fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA;
+    configuration_ = fuchsia_paver::wire::Configuration::kA;
+    asset_ = fuchsia_paver::wire::Asset::kVerifiedBootMetadata;
   } else if (host_filename == NB_VBMETAB_HOST_FILENAME) {
     printf("netsvc: Running VBMETA-B Paver\n");
     command_ = Command::kAsset;
-    configuration_ = fuchsia_paver::wire::Configuration::B;
-    asset_ = fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA;
+    configuration_ = fuchsia_paver::wire::Configuration::kB;
+    asset_ = fuchsia_paver::wire::Asset::kVerifiedBootMetadata;
   } else if (host_filename == NB_VBMETAR_HOST_FILENAME) {
     printf("netsvc: Running VBMETA-R Paver\n");
     command_ = Command::kAsset;
-    configuration_ = fuchsia_paver::wire::Configuration::RECOVERY;
-    asset_ = fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA;
+    configuration_ = fuchsia_paver::wire::Configuration::kRecovery;
+    asset_ = fuchsia_paver::wire::Asset::kVerifiedBootMetadata;
   } else if (host_filename == NB_SSHAUTH_HOST_FILENAME) {
     printf("netsvc: Installing SSH authorized_keys\n");
     command_ = Command::kDataFile;

@@ -8,7 +8,7 @@ namespace fidl_test = fidl_test_bitsstrictflexible;
 // [START contents]
 uint32_t use_bits(fidl_test::wire::Flags bits) {
   auto result = fidl_test::wire::Flags::TruncatingUnknown(7u);
-  if (bits & fidl_test::wire::Flags::OPTION_A) {
+  if (bits & fidl_test::wire::Flags::kOptionA) {
     result |= fidl_test::wire::Flags::kMask;
     printf("%d\n", uint32_t(result.unknown_bits()));
   }

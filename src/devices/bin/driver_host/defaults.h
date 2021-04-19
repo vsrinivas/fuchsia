@@ -14,7 +14,7 @@ extern const zx_protocol_device_t kDeviceDefaultOps;
 extern const device_power_state_info_t kDeviceDefaultPowerStates[2];
 extern const device_performance_state_info_t kDeviceDefaultPerfStates[1];
 extern const std::array<fuchsia_device::wire::SystemPowerStateInfo,
-                        fuchsia_hardware_power_statecontrol::wire::MAX_SYSTEM_POWER_STATES>
+                        fuchsia_hardware_power_statecontrol::wire::kMaxSystemPowerStates>
     kDeviceDefaultStateMapping;
 
 }  // namespace internal

@@ -131,8 +131,8 @@ TEST(Service, ServiceNodeIsNotDirectory) {
   loop.StartThread();
 
   auto open_result = fidl::WireCall<fio::Directory>(zx::unowned_channel(client_end))
-                         .Open(fio::wire::OPEN_FLAG_DESCRIBE | fio::wire::OPEN_FLAG_DIRECTORY |
-                                   fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE,
+                         .Open(fio::wire::kOpenFlagDescribe | fio::wire::kOpenFlagDirectory |
+                                   fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable,
                                0755, fidl::StringView("abc"), std::move(abc_server_end));
   EXPECT_EQ(open_result.status(), ZX_OK);
   class EventHandler : public fidl::WireSyncEventHandler<fio::Node> {
@@ -177,7 +177,7 @@ TEST(Service, OpeningServiceWithNodeReferenceFlag) {
   loop.StartThread();
 
   auto open_result = fidl::WireCall<fio::Directory>(zx::unowned_channel(client_end))
-                         .Open(fio::wire::OPEN_FLAG_NODE_REFERENCE, 0755, fidl::StringView("abc"),
+                         .Open(fio::wire::kOpenFlagNodeReference, 0755, fidl::StringView("abc"),
                                std::move(abc_server_end));
   EXPECT_EQ(open_result.status(), ZX_OK);
 

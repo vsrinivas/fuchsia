@@ -115,7 +115,7 @@ void SysmemSecureMemServer::SetPhysicalSecureHeaps(
     SetPhysicalSecureHeapsCompleter::Sync& completer) {
   ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
   // must out-live |complete|
-  fuchsia_sysmem::wire::SecureMem_SetPhysicalSecureHeaps_Result result;
+  fuchsia_sysmem::wire::SecureMemSetPhysicalSecureHeapsResult result;
   zx_status_t status = SetPhysicalSecureHeapsInternal(heaps);
   if (status != ZX_OK) {
     // Logging handled in `SetPhysicalSecureHeapsInternal`
@@ -123,10 +123,10 @@ void SysmemSecureMemServer::SetPhysicalSecureHeaps(
     completer.Reply(std::move(result));
     return;
   }
-  fuchsia_sysmem::wire::SecureMem_SetPhysicalSecureHeaps_Response response;
+  fuchsia_sysmem::wire::SecureMemSetPhysicalSecureHeapsResponse response;
   result.set_response(
-      fidl::ObjectView<fuchsia_sysmem::wire::SecureMem_SetPhysicalSecureHeaps_Response>::
-          FromExternal(&response));
+      fidl::ObjectView<fuchsia_sysmem::wire::SecureMemSetPhysicalSecureHeapsResponse>::FromExternal(
+          &response));
   completer.Reply(std::move(result));
 }
 
@@ -218,7 +218,7 @@ zx_status_t SysmemSecureMemServer::GetPhysicalSecureHeapsInternal(
   }
 
   heaps->heaps_count = 1;
-  heaps->heaps[0].heap = fuchsia_sysmem::wire::HeapType::AMLOGIC_SECURE_VDEC;
+  heaps->heaps[0].heap = fuchsia_sysmem::wire::HeapType::kAmlogicSecureVdec;
   heaps->heaps[0].physical_address = vdec_phys_base;
   heaps->heaps[0].size_bytes = static_cast<uint64_t>(vdec_size);
   return ZX_OK;
@@ -246,7 +246,7 @@ zx_status_t SysmemSecureMemServer::SetPhysicalSecureHeapsInternal(
     return ZX_ERR_INVALID_ARGS;
   }
   const fuchsia_sysmem::wire::PhysicalSecureHeap& heap = heaps.heaps[0];
-  if (heap.heap != fuchsia_sysmem::wire::HeapType::AMLOGIC_SECURE) {
+  if (heap.heap != fuchsia_sysmem::wire::HeapType::kAmlogicSecure) {
     LOG(ERROR, "heap != AMLOGIC_SECURE");
     return ZX_ERR_INVALID_ARGS;
   }

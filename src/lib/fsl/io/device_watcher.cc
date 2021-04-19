@@ -54,7 +54,7 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
   }
   fdio_cpp::FdioCaller caller{std::move(dir_fd)};
   uint32_t mask =
-      fio::wire::WATCH_MASK_ADDED | fio::wire::WATCH_MASK_EXISTING | fio::wire::WATCH_MASK_IDLE;
+      fio::wire::kWatchMaskAdded | fio::wire::kWatchMaskExisting | fio::wire::kWatchMaskIdle;
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(caller.borrow_channel()))
                     .Watch(mask, 0, zx::channel(server.release()));
   if (result.status() != ZX_OK || result->s != ZX_OK) {
@@ -78,7 +78,7 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wai
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     uint32_t size;
-    uint8_t buf[fio::wire::MAX_BUF];
+    uint8_t buf[fio::wire::kMaxBuf];
     zx_status_t status = dir_watch_.read(0, buf, nullptr, sizeof(buf), 0, &size, nullptr);
     FX_CHECK(status == ZX_OK) << "Failed to read from directory watch channel";
 
@@ -90,9 +90,9 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wai
       if (size < (namelen + 2u)) {
         break;
       }
-      if ((event == fio::wire::WATCH_EVENT_ADDED) || (event == fio::wire::WATCH_EVENT_EXISTING)) {
+      if ((event == fio::wire::kWatchEventAdded) || (event == fio::wire::kWatchEventExisting)) {
         exists_callback_(dir_fd_.get(), std::string(reinterpret_cast<char*>(msg), namelen));
-      } else if (event == fio::wire::WATCH_EVENT_IDLE) {
+      } else if (event == fio::wire::kWatchEventIdle) {
         idle_callback_();
         // Only call the idle callback once.  In case there is some captured
         // context, remove the function, or rather set it to an empty function,

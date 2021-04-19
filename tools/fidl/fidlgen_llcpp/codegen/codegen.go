@@ -40,7 +40,7 @@ func formatParams(params []cpp.Parameter, prefixIfNonempty string, format format
 	args := []string{}
 
 	for _, p := range params {
-		args = append(args, format(p.Type, p.Name))
+		args = append(args, format(p.Type, p.Name()))
 	}
 	if len(args) > 0 {
 		return prefixIfNonempty + strings.Join(args, ", ")

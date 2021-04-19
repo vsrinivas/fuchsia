@@ -104,13 +104,13 @@ mode_t MacInterface::ConvertMode(const netdev::wire::MacFilterMode& mode) const 
   using netdev::wire::MacFilterMode;
   mode_t check = 0;
   switch (mode) {
-    case MacFilterMode::PROMISCUOUS:
+    case MacFilterMode::kPromiscuous:
       check = MODE_PROMISCUOUS;
       break;
-    case MacFilterMode::MULTICAST_PROMISCUOUS:
+    case MacFilterMode::kMulticastPromiscuous:
       check = MODE_MULTICAST_PROMISCUOUS;
       break;
-    case MacFilterMode::MULTICAST_FILTER:
+    case MacFilterMode::kMulticastFilter:
       check = MODE_MULTICAST_FILTER;
       break;
   }
@@ -141,7 +141,7 @@ void MacInterface::Consolidate() {
       addresses.insert(client_addresses.begin(), client_addresses.end());
       if (addresses.size() > features_.multicast_filter_count) {
         // Try to go into multicast_promiscuous mode, if it's supported.
-        auto try_mode = ConvertMode(netdev::wire::MacFilterMode::MULTICAST_PROMISCUOUS);
+        auto try_mode = ConvertMode(netdev::wire::MacFilterMode::kMulticastPromiscuous);
         // If it's not supported (meaning that neither multicast promiscuous nor promiscuous is
         // supported, since ConvertMode will fall back to the more permissive mode), we have no
         // option but to truncate the address list.

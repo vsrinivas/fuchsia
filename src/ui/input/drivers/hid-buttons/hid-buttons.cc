@@ -34,28 +34,28 @@ namespace {
 uint32_t to_bit_mask(ButtonType type) { return 1 << static_cast<uint8_t>(type); }
 
 // Takes in a BUTTON_ID_ value and returns a bitmask of ButtonTypes that are associated with this
-// button id. Bit position corresponds to ButtonType e.g (1 << ButtonType::VOLUME_UP) is the bit
+// button id. Bit position corresponds to ButtonType e.g (1 << ButtonType::kVolumeUp) is the bit
 // for the volume_up button type.
 uint32_t ButtonIdToButtonTypeBitMask(uint8_t button_id) {
   switch (button_id) {
     case BUTTONS_ID_VOLUME_UP:
-      return to_bit_mask(ButtonType::VOLUME_UP);
+      return to_bit_mask(ButtonType::kVolumeUp);
     case BUTTONS_ID_VOLUME_DOWN:
-      return to_bit_mask(ButtonType::VOLUME_DOWN);
+      return to_bit_mask(ButtonType::kVolumeDown);
     case BUTTONS_ID_FDR:
-      return to_bit_mask(ButtonType::RESET);
+      return to_bit_mask(ButtonType::kReset);
     case BUTTONS_ID_MIC_MUTE:
-      return to_bit_mask(ButtonType::MUTE);
+      return to_bit_mask(ButtonType::kMute);
     case BUTTONS_ID_PLAY_PAUSE:
-      return to_bit_mask(ButtonType::PLAY_PAUSE);
+      return to_bit_mask(ButtonType::kPlayPause);
     case BUTTONS_ID_KEY_A:
-      return to_bit_mask(ButtonType::KEY_A);
+      return to_bit_mask(ButtonType::kKeyA);
     case BUTTONS_ID_KEY_M:
-      return to_bit_mask(ButtonType::KEY_M);
+      return to_bit_mask(ButtonType::kKeyM);
     case BUTTONS_ID_CAM_MUTE:
-      return to_bit_mask(ButtonType::CAM_MUTE);
+      return to_bit_mask(ButtonType::kCamMute);
     case BUTTONS_ID_MIC_AND_CAM_MUTE:
-      return to_bit_mask(ButtonType::CAM_MUTE) | to_bit_mask(ButtonType::MUTE);
+      return to_bit_mask(ButtonType::kCamMute) | to_bit_mask(ButtonType::kMute);
     default:
       return 0;
   }
@@ -94,7 +94,7 @@ void HidButtonsDevice::Notify(uint32_t button_index) {
     uint32_t types = ButtonIdToButtonTypeBitMask(buttons_[button_index].id);
     bool button_value = debounce_states_[button_index].value;
     // Go through each ButtonType and send notifications.
-    for (uint8_t raw_type = 0; raw_type < static_cast<uint8_t>(ButtonType::MAX); raw_type++) {
+    for (uint8_t raw_type = 0; raw_type < static_cast<uint8_t>(ButtonType::kMax); raw_type++) {
       if ((types & (1 << raw_type)) == 0) {
         continue;
       }
@@ -306,7 +306,7 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
                                    fbl::Array<buttons_button_config_t> buttons) {
   {
     fbl::AutoLock lock(&channels_lock_);
-    for (uint8_t raw_type = 0; raw_type < static_cast<uint8_t>(ButtonType::MAX); raw_type++) {
+    for (uint8_t raw_type = 0; raw_type < static_cast<uint8_t>(ButtonType::kMax); raw_type++) {
       ButtonType type = static_cast<ButtonType>(raw_type);
       registered_notifiers_[type] = std::set<ButtonsNotifyInterface*>();
     }
@@ -361,7 +361,7 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
 
     // Update the button_map_ array which maps ButtonTypes to the button.
     uint32_t types = ButtonIdToButtonTypeBitMask(buttons_[i].id);
-    for (uint8_t raw_type = 0; raw_type < static_cast<uint8_t>(ButtonType::MAX); raw_type++) {
+    for (uint8_t raw_type = 0; raw_type < static_cast<uint8_t>(ButtonType::kMax); raw_type++) {
       if ((types & (1 << raw_type)) == 0) {
         continue;
       }
@@ -570,7 +570,7 @@ bool HidButtonsDevice::GetState(ButtonType type) {
 zx_status_t HidButtonsDevice::RegisterNotify(uint8_t types, ButtonsNotifyInterface* notify) {
   fbl::AutoLock lock(&channels_lock_);
   // Go through each type in ButtonType and update our registration.
-  for (uint8_t raw_type = 0; raw_type < static_cast<uint8_t>(ButtonType::MAX); raw_type++) {
+  for (uint8_t raw_type = 0; raw_type < static_cast<uint8_t>(ButtonType::kMax); raw_type++) {
     ButtonType type = static_cast<ButtonType>(raw_type);
     auto& notify_set = registered_notifiers_[type];
     if ((types & (1 << raw_type)) == 0) {

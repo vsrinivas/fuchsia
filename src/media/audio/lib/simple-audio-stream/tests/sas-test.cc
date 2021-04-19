@@ -24,7 +24,7 @@ audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
   audio_fidl::wire::PcmFormat format;
   format.number_of_channels = 2;
   format.channels_to_use_bitmask = 0x03;
-  format.sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
+  format.sample_format = audio_fidl::wire::SampleFormat::kPcmSigned;
   format.frame_rate = 48000;
   format.bytes_per_sample = 2;
   format.valid_bits_per_sample = 16;
@@ -57,7 +57,7 @@ class MockSimpleAudio : public SimpleAudioStream {
   static constexpr uint32_t kTestFrameRate = 48000;
   static constexpr uint8_t kTestNumberOfChannels = 2;
   static constexpr uint32_t kTestFifoDepth = 16;
-  static constexpr uint32_t kTestClockDomain = audio_fidl::wire::CLOCK_DOMAIN_EXTERNAL;
+  static constexpr uint32_t kTestClockDomain = audio_fidl::wire::kClockDomainExternal;
   static constexpr uint32_t kTestPositionNotify = 4;
   static constexpr float kTestGain = 1.2345f;
 
@@ -392,7 +392,7 @@ TEST_F(SimpleAudioTest, Enumerate1) {
   auto& formats = supported_formats[0].pcm_supported_formats();
   ASSERT_EQ(1, formats.number_of_channels.count());
   ASSERT_EQ(1, formats.sample_formats.count());
-  ASSERT_EQ(audio_fidl::wire::SampleFormat::PCM_SIGNED, formats.sample_formats[0]);
+  ASSERT_EQ(audio_fidl::wire::SampleFormat::kPcmSigned, formats.sample_formats[0]);
   ASSERT_EQ(1, formats.frame_rates.count());
   ASSERT_EQ(48000, formats.frame_rates[0]);
   ASSERT_EQ(1, formats.bytes_per_sample.count());
@@ -452,7 +452,7 @@ TEST_F(SimpleAudioTest, Enumerate2) {
   ASSERT_EQ(3, formats1.number_of_channels[1]);
   ASSERT_EQ(4, formats1.number_of_channels[2]);
   ASSERT_EQ(1, formats1.sample_formats.count());
-  ASSERT_EQ(audio_fidl::wire::SampleFormat::PCM_SIGNED, formats1.sample_formats[0]);
+  ASSERT_EQ(audio_fidl::wire::SampleFormat::kPcmSigned, formats1.sample_formats[0]);
   ASSERT_EQ(5, formats1.frame_rates.count());
   std::set<uint32_t> rates1;
   for (auto& i : formats1.frame_rates) {
@@ -468,7 +468,7 @@ TEST_F(SimpleAudioTest, Enumerate2) {
   ASSERT_EQ(1, formats2.number_of_channels.count());
   ASSERT_EQ(1, formats2.number_of_channels[0]);
   ASSERT_EQ(1, formats2.sample_formats.count());
-  ASSERT_EQ(audio_fidl::wire::SampleFormat::PCM_FLOAT, formats2.sample_formats[0]);
+  ASSERT_EQ(audio_fidl::wire::SampleFormat::kPcmFloat, formats2.sample_formats[0]);
   ASSERT_EQ(1, formats2.frame_rates.count());
   std::set<uint32_t> rates2;
   for (auto& i : formats2.frame_rates) {
@@ -544,7 +544,7 @@ TEST_F(SimpleAudioTest, CreateRingBuffer2) {
   audio_fidl::wire::PcmFormat pcm_format;
   pcm_format.number_of_channels = 4;
   pcm_format.channels_to_use_bitmask = 0x0f;
-  pcm_format.sample_format = audio_fidl::wire::SampleFormat::PCM_UNSIGNED;
+  pcm_format.sample_format = audio_fidl::wire::SampleFormat::kPcmUnsigned;
   pcm_format.frame_rate = 44100;
   pcm_format.bytes_per_sample = 4;
   pcm_format.valid_bits_per_sample = 24;
@@ -579,7 +579,7 @@ TEST_F(SimpleAudioTest, SetBadFormat1) {
 
   // Define a pretty bad format.
   audio_fidl::wire::PcmFormat pcm_format;
-  pcm_format.sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
+  pcm_format.sample_format = audio_fidl::wire::SampleFormat::kPcmSigned;
 
   fidl::FidlAllocator allocator;
   audio_fidl::wire::Format format(allocator);
@@ -676,9 +676,9 @@ TEST_F(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   ASSERT_OK(prop2.status());
 
   ASSERT_EQ(prop1->properties.plug_detect_capabilities(),
-            audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+            audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
   ASSERT_EQ(prop2->properties.plug_detect_capabilities(),
-            audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+            audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
 
   auto state1 = fidl::WireCall<audio_fidl::StreamConfig>(ch1->channel).WatchPlugState();
   auto state2 = fidl::WireCall<audio_fidl::StreamConfig>(ch2->channel).WatchPlugState();
@@ -709,9 +709,9 @@ TEST_F(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
   ASSERT_OK(prop2.status());
 
   ASSERT_EQ(prop1->properties.plug_detect_capabilities(),
-            audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+            audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
   ASSERT_EQ(prop2->properties.plug_detect_capabilities(),
-            audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+            audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
 
   // Watch each channel for initial reply.
   auto state1 = fidl::WireCall<audio_fidl::StreamConfig>(ch1->channel).WatchPlugState();

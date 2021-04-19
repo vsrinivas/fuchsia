@@ -186,7 +186,7 @@ TEST(PtyTests, pty_test) {
   auto result2 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).ReadEvents();
   ASSERT_OK(result2.status());
   ASSERT_OK(result2->status);
-  ASSERT_EQ(result2->events, fpty::wire::EVENT_INTERRUPT);
+  ASSERT_EQ(result2->events, fpty::wire::kEventInterrupt);
 
   // should vanish once we read it
   auto result3 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).ReadEvents();
@@ -203,7 +203,7 @@ TEST(PtyTests, pty_test) {
   auto result4 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).ReadEvents();
   ASSERT_OK(result4.status());
   ASSERT_OK(result4->status);
-  ASSERT_EQ(result4->events, fpty::wire::EVENT_INTERRUPT);
+  ASSERT_EQ(result4->events, fpty::wire::kEventInterrupt);
 
   auto ws_result1 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).GetWindowSize();
   ASSERT_OK(ws_result1.status());
@@ -225,10 +225,10 @@ TEST(PtyTests, pty_test) {
 
   // verify that we don't get events for special chars in raw mode
   auto result6 =
-      fidl::WireCall(pc_io.borrow_as<fpty::Device>()).ClrSetFeature(0, fpty::wire::FEATURE_RAW);
+      fidl::WireCall(pc_io.borrow_as<fpty::Device>()).ClrSetFeature(0, fpty::wire::kFeatureRaw);
   ASSERT_OK(result6.status());
   ASSERT_OK(result6->status);
-  ASSERT_EQ(result6->features & fpty::wire::FEATURE_RAW, fpty::wire::FEATURE_RAW);
+  ASSERT_EQ(result6->features & fpty::wire::kFeatureRaw, fpty::wire::kFeatureRaw);
   ASSERT_EQ(write(ps.get(), "\x03", 1), 1, "%s", strerror(errno));
   ASSERT_EQ(read(pc.get(), tmp, 1), 1, "%s", strerror(errno));
   ASSERT_EQ(tmp[0], '\x03', "%s", strerror(errno));
@@ -279,7 +279,7 @@ TEST(PtyTests, pty_test) {
   auto result11 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).ReadEvents();
   ASSERT_OK(result11.status());
   ASSERT_OK(result11->status);
-  ASSERT_EQ(result11->events, fpty::wire::EVENT_HANGUP);
+  ASSERT_EQ(result11->events, fpty::wire::kEventHangup);
 
   // verify that server observes departure of last client
   pc_io.reset();

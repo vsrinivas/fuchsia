@@ -65,9 +65,9 @@ zx_status_t VnodeDir::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
   uint64_t ino_count = GetInoCounter();
   ZX_DEBUG_ASSERT(ino_count >= deleted_ino_count);
   info->used_nodes = ino_count - deleted_ino_count;
-  static_assert(kFsName.size() + 1 < fuchsia_io::wire::MAX_FS_NAME_BUFFER, "Memfs name too long");
+  static_assert(kFsName.size() + 1 < fuchsia_io::wire::kMaxFsNameBuffer, "Memfs name too long");
   info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
-                          fuchsia_io::wire::MAX_FS_NAME_BUFFER - 1)] = '\0';
+                          fuchsia_io::wire::kMaxFsNameBuffer - 1)] = '\0';
   return ZX_OK;
 }
 

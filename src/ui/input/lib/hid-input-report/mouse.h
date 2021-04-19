@@ -29,7 +29,7 @@ class Mouse : public Device {
   std::optional<hid::Attributes> position_x_;
   std::optional<hid::Attributes> position_y_;
   std::optional<hid::Attributes> scroll_v_;
-  std::array<hid::Attributes, fuchsia_input_report::wire::MOUSE_MAX_NUM_BUTTONS> buttons_;
+  std::array<hid::Attributes, fuchsia_input_report::wire::kMouseMaxNumButtons> buttons_;
   size_t num_buttons_ = 0;
 
   size_t report_size_ = 0;

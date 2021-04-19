@@ -15,7 +15,7 @@ namespace fio = fuchsia_io;
 TEST_F(NamespaceTest, HasHub) {
   ExpectExists("/hub/");
   ExpectPathSupportsStrictRights("/hub",
-                                 fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE);
+                                 fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable);
 }
 
 TEST_F(NamespaceTest, HubInDirHasExpectedContents) {

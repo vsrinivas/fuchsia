@@ -319,7 +319,7 @@ void SimpleAudioStream::CreateRingBuffer(
     return;
   }
 
-  if (pcm_format.sample_format == audio_fidl::wire::SampleFormat::PCM_FLOAT) {
+  if (pcm_format.sample_format == audio_fidl::wire::SampleFormat::kPcmFloat) {
     sample_format = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
     if (pcm_format.valid_bits_per_sample != 32 || pcm_format.bytes_per_sample != 4) {
       zxlogf(ERROR, "Unsupported format: Not 32 per sample/channel for float\n");
@@ -328,7 +328,7 @@ void SimpleAudioStream::CreateRingBuffer(
     }
   }
 
-  if (pcm_format.sample_format == audio_fidl::wire::SampleFormat::PCM_UNSIGNED) {
+  if (pcm_format.sample_format == audio_fidl::wire::SampleFormat::kPcmUnsigned) {
     sample_format |= AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
   }
 
@@ -389,9 +389,9 @@ void SimpleAudioStream::CreateRingBuffer(
   using FidlSampleFormat = audio_fidl::wire::SampleFormat;
   // clang-format off
   switch (pcm_format.sample_format) {
-    case FidlSampleFormat::PCM_SIGNED:   sample_format_.Set("PCM_signed");   break;
-    case FidlSampleFormat::PCM_UNSIGNED: sample_format_.Set("PCM_unsigned"); break;
-    case FidlSampleFormat::PCM_FLOAT:    sample_format_.Set("PCM_float");    break;
+    case FidlSampleFormat::kPcmSigned:   sample_format_.Set("PCM_signed");   break;
+    case FidlSampleFormat::kPcmUnsigned: sample_format_.Set("PCM_unsigned"); break;
+    case FidlSampleFormat::kPcmFloat:    sample_format_.Set("PCM_float");    break;
   }
   // clang-format on
 
@@ -525,7 +525,7 @@ void SimpleAudioStream::GetProperties(
   fidl::FidlAllocator allocator;
   audio_fidl::wire::StreamProperties stream_properties(allocator);
   stream_properties.set_unique_id(allocator);
-  for (size_t i = 0; i < audio_fidl::wire::UNIQUE_ID_SIZE; ++i) {
+  for (size_t i = 0; i < audio_fidl::wire::kUniqueIdSize; ++i) {
     stream_properties.unique_id().data_[i] = unique_id_.data[i];
   }
 
@@ -544,10 +544,10 @@ void SimpleAudioStream::GetProperties(
 
   if (pd_flags_ & AUDIO_PDNF_CAN_NOTIFY) {
     stream_properties.set_plug_detect_capabilities(
-        allocator, audio_fidl::wire::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+        allocator, audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
   } else if (pd_flags_ & AUDIO_PDNF_HARDWIRED) {
     stream_properties.set_plug_detect_capabilities(
-        allocator, audio_fidl::wire::PlugDetectCapabilities::HARDWIRED);
+        allocator, audio_fidl::wire::PlugDetectCapabilities::kHardwired);
   }
 
   completer.Reply(std::move(stream_properties));
@@ -640,7 +640,7 @@ void SimpleAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_r
   frames_requested_.Set(min_frames);
 
   if (rb_started_) {
-    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
     return;
   }
 
@@ -652,7 +652,7 @@ void SimpleAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_r
   auto status = GetBuffer(req, &num_ring_buffer_frames, &buffer);
   if (status != ZX_OK) {
     expected_notifications_per_ring_.store(0);
-    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
     return;
   }
 
@@ -662,7 +662,7 @@ void SimpleAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_r
   status = buffer.get_size(&size);
   if (status != ZX_OK) {
     expected_notifications_per_ring_.store(0);
-    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
     return;
   }
   ring_buffer_size_.Set(size);

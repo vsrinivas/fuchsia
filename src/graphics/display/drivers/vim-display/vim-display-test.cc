@@ -28,14 +28,14 @@ class MockBufferCollection : public mock_sysmem::MockBufferCollection {
     set_constraints_called_ = true;
   }
   void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& _completer) override {
-    sysmem::wire::BufferCollectionInfo_2 info;
+    sysmem::wire::BufferCollectionInfo2 info;
     info.settings.has_image_format_constraints = true;
     info.buffer_count = 1;
     ASSERT_OK(zx::vmo::create(4096, 0, &info.buffers[0].vmo));
     sysmem::wire::ImageFormatConstraints& constraints = info.settings.image_format_constraints;
-    constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
+    constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgra32;
     constraints.pixel_format.has_format_modifier = true;
-    constraints.pixel_format.format_modifier.value = sysmem::wire::FORMAT_MODIFIER_LINEAR;
+    constraints.pixel_format.format_modifier.value = sysmem::wire::kFormatModifierLinear;
     constraints.max_coded_width = 1000;
     constraints.max_bytes_per_row = 4000;
     constraints.bytes_per_row_divisor = 1;

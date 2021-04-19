@@ -83,7 +83,7 @@ void IntelDspStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   auto result = fidl::WireCall(ring_buffer_).GetVmo(min_frames, notifications_per_ring);
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on GetVmo res = %d", result.status());
-    completer.ReplyError(audio_fidl::wire::GetVmoError::INTERNAL_ERROR);
+    completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
   } else {
     auto& response = result->result.mutable_response();
     completer.ReplySuccess(response.num_frames, std::move(response.ring_buffer));

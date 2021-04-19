@@ -570,21 +570,21 @@ zx_status_t PlatformBus::Init() {
   zx::vmo vmo;
   uint32_t length;
 #if __x86_64__
-  interrupt_controller_type_ = fuchsia_sysinfo::wire::InterruptControllerType::APIC;
+  interrupt_controller_type_ = fuchsia_sysinfo::wire::InterruptControllerType::kApic;
 #else
   status = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, &vmo, &length);
   if (status != ZX_OK) {
     return status;
   }
   if (vmo.is_valid()) {
-    interrupt_controller_type_ = fuchsia_sysinfo::wire::InterruptControllerType::GIC_V2;
+    interrupt_controller_type_ = fuchsia_sysinfo::wire::InterruptControllerType::kGicV2;
   }
   status = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &vmo, &length);
   if (status != ZX_OK) {
     return status;
   }
   if (vmo.is_valid()) {
-    interrupt_controller_type_ = fuchsia_sysinfo::wire::InterruptControllerType::GIC_V3;
+    interrupt_controller_type_ = fuchsia_sysinfo::wire::InterruptControllerType::kGicV3;
   }
 #endif
 

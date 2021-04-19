@@ -420,7 +420,7 @@ TEST_F(SkipBlockTest, WriteBytesEraseWriteMode) {
   op.vmo = std::move(vmo);
   op.offset = 110 * kPageSize;
   op.size = 20 * kPageSize;
-  op.mode = nand::WriteBytesMode::ERASE_WRITE;
+  op.mode = nand::WriteBytesMode::kEraseWrite;
 
   bool bad_block_grown;
   ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
@@ -541,7 +541,7 @@ TEST_F(SkipBlockTest, WriteBytesSingleBlockNoOffset) {
   op.vmo = std::move(vmo);
   op.offset = kNandOffset;
   op.size = kSize;
-  op.mode = nand::WriteBytesMode::READ_MODIFY_ERASE_WRITE;
+  op.mode = nand::WriteBytesMode::kReadModifyEraseWrite;
 
   bool bad_block_grown;
   ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
@@ -572,7 +572,7 @@ TEST_F(SkipBlockTest, WriteBytesSingleBlockWithOffset) {
   op.vmo = std::move(vmo);
   op.offset = kNandOffset + kOffset;
   op.size = kSize;
-  op.mode = nand::WriteBytesMode::READ_MODIFY_ERASE_WRITE;
+  op.mode = nand::WriteBytesMode::kReadModifyEraseWrite;
 
   bool bad_block_grown;
   ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
@@ -610,7 +610,7 @@ TEST_F(SkipBlockTest, WriteBytesMultipleBlocks) {
   op.vmo = std::move(vmo);
   op.offset = kNandOffset + kOffset;
   op.size = kSize;
-  op.mode = nand::WriteBytesMode::READ_MODIFY_ERASE_WRITE;
+  op.mode = nand::WriteBytesMode::kReadModifyEraseWrite;
 
   bool bad_block_grown;
   ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
@@ -643,7 +643,7 @@ TEST_F(SkipBlockTest, WriteBytesAligned) {
   op.vmo = std::move(vmo);
   op.offset = kNandOffset;
   op.size = kSize;
-  op.mode = nand::WriteBytesMode::READ_MODIFY_ERASE_WRITE;
+  op.mode = nand::WriteBytesMode::kReadModifyEraseWrite;
 
   bool bad_block_grown;
   ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
@@ -670,7 +670,7 @@ TEST_F(SkipBlockTest, WriteBytesWithoutErase) {
   op.offset = kNandOffset;
   op.size = kSize;
   // The option doesn't have effect, but we still need to give a valid value.
-  op.mode = nand::WriteBytesMode::READ_MODIFY_ERASE_WRITE;
+  op.mode = nand::WriteBytesMode::kReadModifyEraseWrite;
 
   ASSERT_NO_FATAL_FAILURES(WriteBytesWithoutErase(std::move(op)));
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
@@ -733,7 +733,7 @@ TEST_F(SkipBlockTest, GrownMultipleBadBlocksWriteBytesWithoutEraseFollowedByWrit
     op.offset = kNandOffset;
     op.size = kSize;
     // The option doesn't have effect, but we still need to give a valid value.
-    op.mode = nand::WriteBytesMode::READ_MODIFY_ERASE_WRITE;
+    op.mode = nand::WriteBytesMode::kReadModifyEraseWrite;
     ASSERT_NO_FATAL_FAILURES(WriteBytesWithoutErase(std::move(op), ZX_ERR_IO));
   }
 
@@ -744,7 +744,7 @@ TEST_F(SkipBlockTest, GrownMultipleBadBlocksWriteBytesWithoutEraseFollowedByWrit
     op.offset = kBlockOffset * kBlockSize;
     op.size = kBlockSize;
     // The option doesn't have effect, but we still need to give a valid value.
-    op.mode = nand::WriteBytesMode::READ_MODIFY_ERASE_WRITE;
+    op.mode = nand::WriteBytesMode::kReadModifyEraseWrite;
     bool bad_block_grown;
     ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
     ASSERT_TRUE(bad_block_grown);

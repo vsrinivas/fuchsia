@@ -57,7 +57,7 @@ void Device::SetSnoopChannel(
     ::fidl::ClientEnd<::fidl_tel_snoop::Publisher> interface,
     fidl::WireInterface<fidl_tel_transport::Qmi>::SetSnoopChannelCompleter::Sync& completer) {
   zx_status_t set_snoop_res = SetSnoopChannelToDevice(std::move(interface));
-  fidl_tel_transport::wire::Qmi_SetSnoopChannel_Result result;
+  fidl_tel_transport::wire::QmiSetSnoopChannelResult result;
   if (set_snoop_res == ZX_OK) {
     completer.ReplySuccess();
   } else {

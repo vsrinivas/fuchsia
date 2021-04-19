@@ -54,7 +54,7 @@ namespace fprocess = fuchsia_process;
 // '#!' case with an arbitrary interpreter - but we use the fuchsia.process/Resolver limit rather
 // than define a separate arbitrary limit.
 #define FDIO_SPAWN_MAX_INTERPRETER_LINE_LEN \
-  (fprocess::wire::MAX_RESOLVE_NAME_SIZE + FDIO_RESOLVE_PREFIX_LEN)
+  (fprocess::wire::kMaxResolveNameSize + FDIO_RESOLVE_PREFIX_LEN)
 static_assert(FDIO_SPAWN_MAX_INTERPRETER_LINE_LEN < PAGE_SIZE,
               "max #! interpreter line length must be less than page size");
 
@@ -101,7 +101,7 @@ static void report_error(char* err_msg, const char* format, ...) {
 static zx_status_t load_path(const char* path, zx::vmo* out_vmo, char* err_msg) {
   fbl::unique_fd fd;
   zx_status_t status =
-      fdio_open_fd(path, fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE,
+      fdio_open_fd(path, fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
                    fd.reset_and_get_address());
   if (status != ZX_OK) {
     report_error(err_msg, "Could not open file");

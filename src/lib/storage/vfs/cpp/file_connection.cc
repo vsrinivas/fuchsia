@@ -137,13 +137,13 @@ void FileConnection::GetBuffer(uint32_t flags, GetBufferCompleter::Sync& complet
 
   if (options().flags.node_reference) {
     completer.Reply(ZX_ERR_BAD_HANDLE, nullptr);
-  } else if ((flags & fio::wire::VMO_FLAG_PRIVATE) && (flags & fio::wire::VMO_FLAG_EXACT)) {
+  } else if ((flags & fio::wire::kVmoFlagPrivate) && (flags & fio::wire::kVmoFlagExact)) {
     completer.Reply(ZX_ERR_INVALID_ARGS, nullptr);
-  } else if ((options().flags.append) && (flags & fio::wire::VMO_FLAG_WRITE)) {
+  } else if ((options().flags.append) && (flags & fio::wire::kVmoFlagWrite)) {
     completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
-  } else if (!options().rights.write && (flags & fio::wire::VMO_FLAG_WRITE)) {
+  } else if (!options().rights.write && (flags & fio::wire::kVmoFlagWrite)) {
     completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
-  } else if (!options().rights.execute && (flags & fio::wire::VMO_FLAG_EXEC)) {
+  } else if (!options().rights.execute && (flags & fio::wire::kVmoFlagExec)) {
     completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
   } else if (!options().rights.read) {
     completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);

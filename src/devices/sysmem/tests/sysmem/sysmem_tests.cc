@@ -49,7 +49,7 @@ using BufferCollectionConstraintsAuxBuffers =
     FidlStruct<fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers,
                fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers>;
 using BufferCollectionInfo =
-    FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2, fuchsia_sysmem::wire::BufferCollectionInfo_2>;
+    FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2, fuchsia_sysmem::wire::BufferCollectionInfo2>;
 
 namespace {
 
@@ -1077,7 +1077,7 @@ TEST(Sysmem, AttachLifetimeTracking) {
 
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
   constraints.usage.cpu =
-      fuchsia_sysmem::wire::cpuUsageReadOften | fuchsia_sysmem::wire::cpuUsageWriteOften;
+      fuchsia_sysmem::wire::kCpuUsageReadOften | fuchsia_sysmem::wire::kCpuUsageWriteOften;
   constraints.min_buffer_count_for_camping = kNumBuffers;
   constraints.has_buffer_memory_constraints = true;
   constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
@@ -1166,7 +1166,7 @@ TEST(Sysmem, AttachLifetimeTracking) {
                                              /*buffers_remaining=*/0);
   fuchsia_sysmem::wire::BufferCollectionConstraints attached_constraints;
   attached_constraints.usage.cpu =
-      fuchsia_sysmem::wire::cpuUsageReadOften | fuchsia_sysmem::wire::cpuUsageWriteOften;
+      fuchsia_sysmem::wire::kCpuUsageReadOften | fuchsia_sysmem::wire::kCpuUsageWriteOften;
   // We won't be able to logically allocate, because original allocation didn't make room for this
   // buffer.
   attached_constraints.min_buffer_count_for_camping = 1;
@@ -3834,7 +3834,7 @@ class EventSinkServer : public fidl::WireInterface<fuchsia_sysmem::BufferCollect
   }
 
   void OnBuffersAllocated(zx_status_t status,
-                          fuchsia_sysmem::wire::BufferCollectionInfo_2 buffer_collection_info,
+                          fuchsia_sysmem::wire::BufferCollectionInfo2 buffer_collection_info,
                           OnBuffersAllocatedCompleter::Sync& completer) override {
     EXPECT_TRUE(!status_);
     status_ = status;
@@ -3853,7 +3853,7 @@ class EventSinkServer : public fidl::WireInterface<fuchsia_sysmem::BufferCollect
     ZX_DEBUG_ASSERT(status_);
     return *status_;
   }
-  const fuchsia_sysmem::wire::BufferCollectionInfo_2& buffer_collection_info() {
+  const fuchsia_sysmem::wire::BufferCollectionInfo2& buffer_collection_info() {
     return buffer_collection_info_;
   }
 
@@ -3861,7 +3861,7 @@ class EventSinkServer : public fidl::WireInterface<fuchsia_sysmem::BufferCollect
   async::Loop& loop_;
   bool got_tokens_known_ = false;
   std::optional<zx_status_t> status_;
-  fuchsia_sysmem::wire::BufferCollectionInfo_2 buffer_collection_info_;
+  fuchsia_sysmem::wire::BufferCollectionInfo2 buffer_collection_info_;
 };
 
 TEST(Sysmem, EventSink) {

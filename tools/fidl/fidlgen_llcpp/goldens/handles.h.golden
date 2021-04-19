@@ -66,67 +66,67 @@
 namespace fidl_test_handles {
 namespace wire {
 
-enum class obj_type : uint32_t {
+enum class ObjType : uint32_t {
 
-  NONE = 0u,
+  kNone = 0u,
 
-  PROCESS = 1u,
+  kProcess = 1u,
 
-  THREAD = 2u,
+  kThread = 2u,
 
-  VMO = 3u,
+  kVmo = 3u,
 
-  CHANNEL = 4u,
+  kChannel = 4u,
 
-  EVENT = 5u,
+  kEvent = 5u,
 
-  PORT = 6u,
+  kPort = 6u,
 
-  INTERRUPT = 9u,
+  kInterrupt = 9u,
 
-  PCI_DEVICE = 11u,
+  kPciDevice = 11u,
 
-  LOG = 12u,
+  kLog = 12u,
 
-  SOCKET = 14u,
+  kSocket = 14u,
 
-  RESOURCE = 15u,
+  kResource = 15u,
 
-  EVENTPAIR = 16u,
+  kEventpair = 16u,
 
-  JOB = 17u,
+  kJob = 17u,
 
-  VMAR = 18u,
+  kVmar = 18u,
 
-  FIFO = 19u,
+  kFifo = 19u,
 
-  GUEST = 20u,
+  kGuest = 20u,
 
-  VCPU = 21u,
+  kVcpu = 21u,
 
-  TIMER = 22u,
+  kTimer = 22u,
 
-  IOMMU = 23u,
+  kIommu = 23u,
 
-  BTI = 24u,
+  kBti = 24u,
 
-  PROFILE = 25u,
+  kProfile = 25u,
 
-  PMT = 26u,
+  kPmt = 26u,
 
-  SUSPEND_TOKEN = 27u,
+  kSuspendToken = 27u,
 
-  PAGER = 28u,
+  kPager = 28u,
 
-  EXCEPTION = 29u,
+  kException = 29u,
 
-  CLOCK = 30u,
+  kClock = 30u,
 
-  STREAM = 31u,
+  kStream = 31u,
 
-  MSI_ALLOCATION = 32u,
+  kMsiAllocation = 32u,
 
-  MSI_INTERRUPT = 33u,
+  kMsiInterrupt = 33u,
 };
 
 struct Handles;
@@ -472,7 +472,7 @@ class ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_handles::wire::obj_type> : public std::true_type {
+struct IsFidlType<::fidl_test_handles::wire::ObjType> : public std::true_type {
 };
 
 #ifdef __Fuchsia__

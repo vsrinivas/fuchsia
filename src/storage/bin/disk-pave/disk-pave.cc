@@ -100,32 +100,32 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
     flags->cmd = Command::kBootloader;
   } else if (!strcmp(argv[0], "install-kernc")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = fuchsia_paver::wire::Configuration::A;
-    flags->asset = fuchsia_paver::wire::Asset::KERNEL;
+    flags->configuration = fuchsia_paver::wire::Configuration::kA;
+    flags->asset = fuchsia_paver::wire::Asset::kKernel;
   } else if (!strcmp(argv[0], "install-zircona")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = fuchsia_paver::wire::Configuration::A;
-    flags->asset = fuchsia_paver::wire::Asset::KERNEL;
+    flags->configuration = fuchsia_paver::wire::Configuration::kA;
+    flags->asset = fuchsia_paver::wire::Asset::kKernel;
   } else if (!strcmp(argv[0], "install-zirconb")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = fuchsia_paver::wire::Configuration::B;
-    flags->asset = fuchsia_paver::wire::Asset::KERNEL;
+    flags->configuration = fuchsia_paver::wire::Configuration::kB;
+    flags->asset = fuchsia_paver::wire::Asset::kKernel;
   } else if (!strcmp(argv[0], "install-zirconr")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = fuchsia_paver::wire::Configuration::RECOVERY;
-    flags->asset = fuchsia_paver::wire::Asset::KERNEL;
+    flags->configuration = fuchsia_paver::wire::Configuration::kRecovery;
+    flags->asset = fuchsia_paver::wire::Asset::kKernel;
   } else if (!strcmp(argv[0], "install-vbmetaa")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = fuchsia_paver::wire::Configuration::A;
-    flags->asset = fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA;
+    flags->configuration = fuchsia_paver::wire::Configuration::kA;
+    flags->asset = fuchsia_paver::wire::Asset::kVerifiedBootMetadata;
   } else if (!strcmp(argv[0], "install-vbmetab")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = fuchsia_paver::wire::Configuration::B;
-    flags->asset = fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA;
+    flags->configuration = fuchsia_paver::wire::Configuration::kB;
+    flags->asset = fuchsia_paver::wire::Asset::kVerifiedBootMetadata;
   } else if (!strcmp(argv[0], "install-vbmetar")) {
     flags->cmd = Command::kAsset;
-    flags->configuration = fuchsia_paver::wire::Configuration::RECOVERY;
-    flags->asset = fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA;
+    flags->configuration = fuchsia_paver::wire::Configuration::kRecovery;
+    flags->asset = fuchsia_paver::wire::Asset::kVerifiedBootMetadata;
   } else if (!strcmp(argv[0], "install-data-file")) {
     flags->cmd = Command::kDataFile;
   } else if (!strcmp(argv[0], "install-fvm")) {

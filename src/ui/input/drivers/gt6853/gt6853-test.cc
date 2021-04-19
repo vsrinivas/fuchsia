@@ -369,10 +369,10 @@ TEST_F(Gt6853Test, GetDescriptor) {
   ASSERT_EQ(response->descriptor.touch().input().contacts().count(), 10);
 
   EXPECT_EQ(response->descriptor.device_info().vendor_id,
-            static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::GOOGLE));
+            static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle));
   EXPECT_EQ(response->descriptor.device_info().product_id,
             static_cast<uint32_t>(
-                fuchsia_input_report::wire::VendorGoogleProductId::FOCALTECH_TOUCHSCREEN));
+                fuchsia_input_report::wire::VendorGoogleProductId::kFocaltechTouchscreen));
 
   for (size_t i = 0; i < 10; i++) {
     const auto& contact = response->descriptor.touch().input().contacts()[i];
@@ -381,18 +381,18 @@ TEST_F(Gt6853Test, GetDescriptor) {
 
     EXPECT_EQ(contact.position_x().range.min, 0);
     EXPECT_EQ(contact.position_x().range.max, 600);
-    EXPECT_EQ(contact.position_x().unit.type, fuchsia_input_report::wire::UnitType::NONE);
+    EXPECT_EQ(contact.position_x().unit.type, fuchsia_input_report::wire::UnitType::kNone);
     EXPECT_EQ(contact.position_x().unit.exponent, 0);
 
     EXPECT_EQ(contact.position_y().range.min, 0);
     EXPECT_EQ(contact.position_y().range.max, 1024);
-    EXPECT_EQ(contact.position_y().unit.type, fuchsia_input_report::wire::UnitType::NONE);
+    EXPECT_EQ(contact.position_y().unit.type, fuchsia_input_report::wire::UnitType::kNone);
     EXPECT_EQ(contact.position_y().unit.exponent, 0);
   }
 
   EXPECT_EQ(response->descriptor.touch().input().max_contacts(), 10);
   EXPECT_EQ(response->descriptor.touch().input().touch_type(),
-            fuchsia_input_report::wire::TouchType::TOUCHSCREEN);
+            fuchsia_input_report::wire::TouchType::kTouchscreen);
 }
 
 TEST_F(Gt6853Test, ReadReport) {

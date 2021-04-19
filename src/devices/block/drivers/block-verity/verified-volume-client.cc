@@ -143,9 +143,9 @@ zx_status_t VerifiedVolumeClient::OpenForAuthoring(const zx::duration& timeout,
                                                    fbl::unique_fd& mutable_block_fd_out) {
   // make FIDL call to open in authoring mode
   fuchsia_hardware_block_verified::wire::HashFunction hash_function =
-      fuchsia_hardware_block_verified::wire::HashFunction::SHA256;
+      fuchsia_hardware_block_verified::wire::HashFunction::kSha256;
   fuchsia_hardware_block_verified::wire::BlockSize block_size =
-      fuchsia_hardware_block_verified::wire::BlockSize::SIZE_4096;
+      fuchsia_hardware_block_verified::wire::BlockSize::kSize4096;
   fidl::FidlAllocator allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
   config.set_hash_function(
@@ -221,7 +221,7 @@ zx_status_t VerifiedVolumeClient::CloseAndGenerateSeal(
     fidl::Buffer<
         fidl::WireResponse<fuchsia_hardware_block_verified::DeviceManager::CloseAndGenerateSeal>>*
         seal_response_buffer,
-    fuchsia_hardware_block_verified::wire::DeviceManager_CloseAndGenerateSeal_Result* out) {
+    fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResult* out) {
   // We use the caller-provided buffer FIDL call style because the caller
   // needs to do something with the seal returned, so we need to keep the
   // response object alive so that the caller can interact with it after this
@@ -245,9 +245,9 @@ zx_status_t VerifiedVolumeClient::OpenForVerifiedRead(const digest::Digest& expe
                                                       fbl::unique_fd& verified_block_fd_out) {
   // make FIDL call to open in authoring mode
   fuchsia_hardware_block_verified::wire::HashFunction hash_function =
-      fuchsia_hardware_block_verified::wire::HashFunction::SHA256;
+      fuchsia_hardware_block_verified::wire::HashFunction::kSha256;
   fuchsia_hardware_block_verified::wire::BlockSize block_size =
-      fuchsia_hardware_block_verified::wire::BlockSize::SIZE_4096;
+      fuchsia_hardware_block_verified::wire::BlockSize::kSize4096;
   fidl::FidlAllocator allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
   config.set_hash_function(

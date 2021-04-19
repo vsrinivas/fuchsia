@@ -27,7 +27,7 @@ var _ namespaced = (*Bits)(nil)
 
 type BitsMember struct {
 	Attributes
-	Name  string
+	nameVariants
 	Value ConstantValue
 }
 
@@ -43,9 +43,9 @@ func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, BitsMember{
-			Attributes{v.Attributes},
-			changeIfReserved(v.Name),
-			c.compileConstant(v.Value, nil, val.Type),
+			Attributes:   Attributes{v.Attributes},
+			nameVariants: bitsMemberContext.transform(v.Name),
+			Value:        c.compileConstant(v.Value, nil, val.Type),
 		})
 	}
 	return r

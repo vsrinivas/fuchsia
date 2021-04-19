@@ -99,9 +99,9 @@ void BlockWatcher::Thread() {
       return;
     }
 
-    auto mask = fio::wire::WATCH_MASK_ALL;
+    auto mask = fio::wire::kWatchMaskAll;
     if (ignore_existing) {
-      mask &= ~fio::wire::WATCH_MASK_EXISTING;
+      mask &= ~fio::wire::kWatchMaskExisting;
     }
     auto result =
         fidl::WireCall<fio::Directory>(caller.channel()).Watch(mask, 0, std::move(server));
@@ -124,7 +124,7 @@ void BlockWatcher::Thread() {
     }
 
     // +1 for the NUL terminator at the end of the last name.
-    uint8_t buf[fio::wire::MAX_BUF + 1];
+    uint8_t buf[fio::wire::kMaxBuf + 1];
     fbl::Span buf_span(buf, std::size(buf) - 1);
 
     zx_signals_t signals;
@@ -243,8 +243,8 @@ zx_status_t BlockWatcher::Resume() {
 }
 
 bool BlockWatcher::Callback(int dirfd, int event, const char* name) {
-  if (event != fio::wire::WATCH_EVENT_ADDED && event != fio::wire::WATCH_EVENT_EXISTING &&
-      event != fio::wire::WATCH_EVENT_IDLE) {
+  if (event != fio::wire::kWatchEventAdded && event != fio::wire::kWatchEventExisting &&
+      event != fio::wire::kWatchEventIdle) {
     return false;
   }
 
@@ -252,7 +252,7 @@ bool BlockWatcher::Callback(int dirfd, int event, const char* name) {
   // Note that WATCH_EVENT_EXISTING is only received on the first run of the watcher,
   // so we don't need to worry about ignoring it on subsequent runs.
   std::lock_guard guard(lock_);
-  if (event == fio::wire::WATCH_EVENT_IDLE && pause_count_ > 0) {
+  if (event == fio::wire::kWatchEventIdle && pause_count_ > 0) {
     return true;
   }
   // If we lost the race and the watcher was paused sometime between
@@ -301,7 +301,7 @@ bool BlockWatcher::ProcessWatchMessages(fbl::Span<uint8_t> buf, int dirfd) {
       // Bail out early.
       return true;
     }
-    if (event == fio::wire::WATCH_EVENT_IDLE) {
+    if (event == fio::wire::kWatchEventIdle) {
       // WATCH_EVENT_IDLE - but the watcher is not paused. Finish processing this set of messages,
       // but return true once we're done to indicate that we should start checking for the pause
       // signal.

@@ -81,7 +81,7 @@ class BlockVerityTest : public zxtest::Test {
   }
 
   void CloseAndGenerateSeal(
-      fuchsia_hardware_block_verified::wire::DeviceManager_CloseAndGenerateSeal_Result* out) {
+      fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResult* out) {
     ASSERT_OK(vvc_->CloseAndGenerateSeal(&seal_response_buffer_, out));
   }
 
@@ -201,7 +201,7 @@ TEST_F(BlockVerityTest, BasicSeal) {
   OpenForAuthoring(mutable_block_fd);
 
   // Close and generate a seal over the all-zeroes data section.
-  fuchsia_hardware_block_verified::wire::DeviceManager_CloseAndGenerateSeal_Result result;
+  fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResult result;
   CloseAndGenerateSeal(&result);
   ASSERT_TRUE(result.is_response());
 
@@ -353,7 +353,7 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
   OpenForAuthoring(mutable_block_fd);
 
   // Close and generate a seal over the all-zeroes data section.
-  fuchsia_hardware_block_verified::wire::DeviceManager_CloseAndGenerateSeal_Result result;
+  fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResult result;
   CloseAndGenerateSeal(&result);
   ASSERT_TRUE(result.is_response());
 

@@ -145,7 +145,7 @@ void Client::ImportImage(fhd::wire::ImageConfig image_config, uint64_t collectio
       _completer.Reply(ZX_ERR_NO_MEMORY, 0);
       return;
     }
-    sysmem::wire::BufferCollectionInfo_2& info = res->buffer_collection_info;
+    sysmem::wire::BufferCollectionInfo2& info = res->buffer_collection_info;
 
     if (!info.settings.has_image_format_constraints || index >= info.buffer_count) {
       _completer.Reply(ZX_ERR_OUT_OF_RANGE, 0);
@@ -293,7 +293,7 @@ void Client::SetBufferCollectionConstraints(
 
     // Constraints to be used with zx_framebuffer_set_range.
     sysmem::wire::BufferCollectionConstraints constraints;
-    constraints.usage.display = sysmem::wire::displayUsageLayer;
+    constraints.usage.display = sysmem::wire::kDisplayUsageLayer;
     constraints.has_buffer_memory_constraints = true;
     sysmem::wire::BufferMemoryConstraints& buffer_constraints =
         constraints.buffer_memory_constraints;
@@ -307,14 +307,14 @@ void Client::SetBufferCollectionConstraints(
     switch (config.pixel_format) {
       case ZX_PIXEL_FORMAT_RGB_x888:
       case ZX_PIXEL_FORMAT_ARGB_8888:
-        image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::BGRA32;
+        image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgra32;
         image_constraints.pixel_format.has_format_modifier = true;
-        image_constraints.pixel_format.format_modifier.value = sysmem::wire::FORMAT_MODIFIER_LINEAR;
+        image_constraints.pixel_format.format_modifier.value = sysmem::wire::kFormatModifierLinear;
         break;
     }
 
     image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::SRGB;
+    image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::kSrgb;
     image_constraints.min_coded_width = 0;
     image_constraints.max_coded_width = 0xffffffff;
     image_constraints.min_coded_height = 0;
@@ -330,7 +330,7 @@ void Client::SetBufferCollectionConstraints(
     image_constraints.display_width_divisor = 1;
     image_constraints.display_height_divisor = 1;
 
-    if (image_constraints.pixel_format.type != sysmem::wire::PixelFormatType::INVALID) {
+    if (image_constraints.pixel_format.type != sysmem::wire::PixelFormatType::kInvalid) {
       _completer.Reply(it->second.kernel.SetConstraints(true, constraints).status());
       return;
     }
@@ -536,7 +536,7 @@ void Client::SetLayerPrimaryPosition(uint64_t layer_id, fhd::wire::Transform tra
     TearDown();
     return;
   }
-  if (transform > fhd::wire::Transform::ROT_90_REFLECT_Y) {
+  if (transform > fhd::wire::Transform::kRot90ReflectY) {
     zxlogf(ERROR, "Invalid transform %hhu", static_cast<uint8_t>(transform));
     TearDown();
     return;
@@ -555,7 +555,7 @@ void Client::SetLayerPrimaryAlpha(uint64_t layer_id, fhd::wire::AlphaMode mode, 
     return;
   }
 
-  if (mode > fhd::wire::AlphaMode::HW_MULTIPLY || (!isnan(val) && (val < 0 || val > 1))) {
+  if (mode > fhd::wire::AlphaMode::kHwMultiply || (!isnan(val) && (val < 0 || val > 1))) {
     zxlogf(ERROR, "Invalid args %hhu %f", static_cast<uint8_t>(mode), val);
     TearDown();
     return;
@@ -957,7 +957,7 @@ bool Client::CheckConfig(fhd::wire::ConfigResult* res,
   memset(layer_cfg_results, 0, layers_.size() * sizeof(uint32_t));
 
   if (res && ops) {
-    *res = fhd::wire::ConfigResult::OK;
+    *res = fhd::wire::ConfigResult::kOk;
     ops->clear();
   }
 
@@ -1044,7 +1044,7 @@ bool Client::CheckConfig(fhd::wire::ConfigResult* res,
 
   if (config_fail) {
     if (res) {
-      *res = fhd::wire::ConfigResult::INVALID_CONFIG;
+      *res = fhd::wire::ConfigResult::kInvalidConfig;
     }
     // If the config is invalid, there's no point in sending it to the impl driver.
     return false;
@@ -1057,8 +1057,8 @@ bool Client::CheckConfig(fhd::wire::ConfigResult* res,
   if (display_cfg_result != CONFIG_DISPLAY_OK) {
     if (res) {
       *res = display_cfg_result == CONFIG_DISPLAY_TOO_MANY
-                 ? fhd::wire::ConfigResult::TOO_MANY_DISPLAYS
-                 : fhd::wire::ConfigResult::UNSUPPORTED_DISPLAY_MODES;
+                 ? fhd::wire::ConfigResult::kTooManyDisplays
+                 : fhd::wire::ConfigResult::kUnsupportedDisplayModes;
     }
     return false;
   }
@@ -1078,7 +1078,7 @@ bool Client::CheckConfig(fhd::wire::ConfigResult* res,
   } else if (!(res && ops)) {
     return false;
   }
-  *res = fhd::wire::ConfigResult::UNSUPPORTED_CONFIG;
+  *res = fhd::wire::ConfigResult::kUnsupportedConfig;
 
   constexpr uint32_t kAllErrors = (CLIENT_GAMMA << 1) - 1;
 
@@ -1883,32 +1883,31 @@ constexpr auto banjo_CLIENT_GAMMA = CLIENT_GAMMA;
 #undef CLIENT_ALPHA
 #undef CLIENT_GAMMA
 
-static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_USE_PRIMARY)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::kClientUsePrimary)) ==
                   banjo_CLIENT_USE_PRIMARY,
               "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_MERGE_BASE)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::kClientMergeBase)) ==
                   banjo_CLIENT_MERGE_BASE,
               "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_MERGE_SRC)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::kClientMergeSrc)) ==
                   banjo_CLIENT_MERGE_SRC,
               "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_FRAME_SCALE)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::kClientFrameScale)) ==
                   banjo_CLIENT_FRAME_SCALE,
               "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_SRC_FRAME)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::kClientSrcFrame)) ==
                   banjo_CLIENT_SRC_FRAME,
               "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_TRANSFORM)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::kClientTransform)) ==
                   banjo_CLIENT_TRANSFORM,
               "Const mismatch");
-static_assert(
-    (1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_COLOR_CONVERSION)) ==
-        banjo_CLIENT_COLOR_CONVERSION,
-    "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_ALPHA)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::kClientColorConversion)) ==
+                  banjo_CLIENT_COLOR_CONVERSION,
+              "Const mismatch");
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::kClientAlpha)) ==
                   banjo_CLIENT_ALPHA,
               "Const mismatch");
-static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::CLIENT_GAMMA)) ==
+static_assert((1 << static_cast<int>(fhd::wire::ClientCompositionOpcode::kClientGamma)) ==
                   banjo_CLIENT_GAMMA,
               "Const mismatch");
 

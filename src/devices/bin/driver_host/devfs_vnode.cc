@@ -270,15 +270,15 @@ void DevfsVnode::GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync& completer
   // For now, the result is always a successful response because the device itself is not added
   // without power states validation. In future, we may add more checks for validation, and the
   // error result will be put to use.
-  fuchsia_device::wire::Controller_GetDevicePowerCaps_Response response{};
+  fuchsia_device::wire::ControllerGetDevicePowerCapsResponse response{};
   auto& states = dev_->GetPowerStates();
 
   ZX_DEBUG_ASSERT(states.size() == fuchsia_device_MAX_DEVICE_POWER_STATES);
   for (size_t i = 0; i < fuchsia_device_MAX_DEVICE_POWER_STATES; i++) {
     response.dpstates[i] = states[i];
   }
-  completer.Reply(fuchsia_device::wire::Controller_GetDevicePowerCaps_Result::WithResponse(
-      fidl::ObjectView<fuchsia_device::wire::Controller_GetDevicePowerCaps_Response>::FromExternal(
+  completer.Reply(fuchsia_device::wire::ControllerGetDevicePowerCapsResult::WithResponse(
+      fidl::ObjectView<fuchsia_device::wire::ControllerGetDevicePowerCapsResponse>::FromExternal(
           &response)));
 };
 
@@ -300,14 +300,14 @@ void DevfsVnode::ConfigureAutoSuspend(bool enable,
 
 void DevfsVnode::UpdatePowerStateMapping(
     ::fidl::Array<fuchsia_device::wire::SystemPowerStateInfo,
-                  statecontrol_fidl::wire::MAX_SYSTEM_POWER_STATES>
+                  statecontrol_fidl::wire::kMaxSystemPowerStates>
         mapping,
     UpdatePowerStateMappingCompleter::Sync& completer) {
   std::array<fuchsia_device::wire::SystemPowerStateInfo,
-             statecontrol_fidl::wire::MAX_SYSTEM_POWER_STATES>
+             statecontrol_fidl::wire::kMaxSystemPowerStates>
       states_mapping;
 
-  for (size_t i = 0; i < statecontrol_fidl::wire::MAX_SYSTEM_POWER_STATES; i++) {
+  for (size_t i = 0; i < statecontrol_fidl::wire::kMaxSystemPowerStates; i++) {
     states_mapping[i] = mapping[i];
   }
   zx_status_t status = dev_->SetSystemPowerStateMapping(states_mapping);
@@ -316,24 +316,24 @@ void DevfsVnode::UpdatePowerStateMapping(
     return;
   }
 
-  fuchsia_device::wire::Controller_UpdatePowerStateMapping_Response response;
-  completer.Reply(fuchsia_device::wire::Controller_UpdatePowerStateMapping_Result::WithResponse(
-      fidl::ObjectView<fuchsia_device::wire::Controller_UpdatePowerStateMapping_Response>::
+  fuchsia_device::wire::ControllerUpdatePowerStateMappingResponse response;
+  completer.Reply(fuchsia_device::wire::ControllerUpdatePowerStateMappingResult::WithResponse(
+      fidl::ObjectView<fuchsia_device::wire::ControllerUpdatePowerStateMappingResponse>::
           FromExternal(&response)));
 }
 
 void DevfsVnode::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync& completer) {
-  fuchsia_device::wire::Controller_GetPowerStateMapping_Response response;
+  fuchsia_device::wire::ControllerGetPowerStateMappingResponse response;
 
   auto& mapping = dev_->GetSystemPowerStateMapping();
-  ZX_DEBUG_ASSERT(mapping.size() == statecontrol_fidl::wire::MAX_SYSTEM_POWER_STATES);
+  ZX_DEBUG_ASSERT(mapping.size() == statecontrol_fidl::wire::kMaxSystemPowerStates);
 
-  for (size_t i = 0; i < statecontrol_fidl::wire::MAX_SYSTEM_POWER_STATES; i++) {
+  for (size_t i = 0; i < statecontrol_fidl::wire::kMaxSystemPowerStates; i++) {
     response.mapping[i] = mapping[i];
   }
-  completer.Reply(fuchsia_device::wire::Controller_GetPowerStateMapping_Result::WithResponse(
-      fidl::ObjectView<fuchsia_device::wire::Controller_GetPowerStateMapping_Response>::
-          FromExternal(&response)));
+  completer.Reply(fuchsia_device::wire::ControllerGetPowerStateMappingResult::WithResponse(
+      fidl::ObjectView<fuchsia_device::wire::ControllerGetPowerStateMappingResponse>::FromExternal(
+          &response)));
 };
 
 void DevfsVnode::Suspend(fuchsia_device::wire::DevicePowerState requested_state,

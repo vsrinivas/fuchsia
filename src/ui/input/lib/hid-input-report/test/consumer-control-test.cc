@@ -38,15 +38,15 @@ TEST(ConsumerControlTest, HidButtonsTest) {
   // Test the descriptor.
   EXPECT_EQ(descriptor.consumer_control().input().buttons().count(), 5U);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[0],
-            fuchsia_input_report::wire::ConsumerControlButton::VOLUME_UP);
+            fuchsia_input_report::wire::ConsumerControlButton::kVolumeUp);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[1],
-            fuchsia_input_report::wire::ConsumerControlButton::VOLUME_DOWN);
+            fuchsia_input_report::wire::ConsumerControlButton::kVolumeDown);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[2],
-            fuchsia_input_report::wire::ConsumerControlButton::REBOOT);
+            fuchsia_input_report::wire::ConsumerControlButton::kReboot);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[3],
-            fuchsia_input_report::wire::ConsumerControlButton::CAMERA_DISABLE);
+            fuchsia_input_report::wire::ConsumerControlButton::kCameraDisable);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[4],
-            fuchsia_input_report::wire::ConsumerControlButton::MIC_MUTE);
+            fuchsia_input_report::wire::ConsumerControlButton::kMicMute);
 
   // Test a report parses correctly.
   struct buttons_input_rpt report = {};
@@ -63,15 +63,15 @@ TEST(ConsumerControlTest, HidButtonsTest) {
 
   EXPECT_EQ(input_report.consumer_control().pressed_buttons().count(), 3U);
   EXPECT_EQ(input_report.consumer_control().pressed_buttons()[0],
-            fuchsia_input_report::wire::ConsumerControlButton::VOLUME_UP);
+            fuchsia_input_report::wire::ConsumerControlButton::kVolumeUp);
   EXPECT_EQ(input_report.consumer_control().pressed_buttons()[1],
-            fuchsia_input_report::wire::ConsumerControlButton::REBOOT);
+            fuchsia_input_report::wire::ConsumerControlButton::kReboot);
   EXPECT_EQ(input_report.consumer_control().pressed_buttons()[2],
-            fuchsia_input_report::wire::ConsumerControlButton::MIC_MUTE);
+            fuchsia_input_report::wire::ConsumerControlButton::kMicMute);
 }
 
 TEST(ConsumerControlTest, MaxButtonsTest) {
-  constexpr uint32_t kMaxButtons = fuchsia_input_report::wire::CONSUMER_CONTROL_MAX_NUM_BUTTONS;
+  constexpr uint32_t kMaxButtons = fuchsia_input_report::wire::kConsumerControlMaxNumButtons;
 
   hid::ReportDescriptor descriptor = {};
   descriptor.input_count = kMaxButtons;
@@ -90,7 +90,7 @@ TEST(ConsumerControlTest, MaxButtonsTest) {
 
 TEST(ConsumerControlTest, OverMaxButtonsTest) {
   constexpr uint32_t kOverMaxButtons =
-      1 + fuchsia_input_report::wire::CONSUMER_CONTROL_MAX_NUM_BUTTONS;
+      1 + fuchsia_input_report::wire::kConsumerControlMaxNumButtons;
 
   hid::ReportDescriptor descriptor = {};
   descriptor.input_count = kOverMaxButtons;

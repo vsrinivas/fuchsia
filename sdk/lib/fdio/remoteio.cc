@@ -21,15 +21,15 @@ namespace fdevice = fuchsia_device;
 
 static_assert(FDIO_CHUNK_SIZE >= PATH_MAX, "FDIO_CHUNK_SIZE must be large enough to contain paths");
 
-static_assert(fio::wire::VMO_FLAG_READ == ZX_VM_PERM_READ, "Vmar / Vmo flags should be aligned");
-static_assert(fio::wire::VMO_FLAG_WRITE == ZX_VM_PERM_WRITE, "Vmar / Vmo flags should be aligned");
-static_assert(fio::wire::VMO_FLAG_EXEC == ZX_VM_PERM_EXECUTE, "Vmar / Vmo flags should be aligned");
+static_assert(fio::wire::kVmoFlagRead == ZX_VM_PERM_READ, "Vmar / Vmo flags should be aligned");
+static_assert(fio::wire::kVmoFlagWrite == ZX_VM_PERM_WRITE, "Vmar / Vmo flags should be aligned");
+static_assert(fio::wire::kVmoFlagExec == ZX_VM_PERM_EXECUTE, "Vmar / Vmo flags should be aligned");
 
-static_assert(fio::wire::DEVICE_SIGNAL_READABLE == fdevice::wire::DEVICE_SIGNAL_READABLE);
-static_assert(fio::wire::DEVICE_SIGNAL_OOB == fdevice::wire::DEVICE_SIGNAL_OOB);
-static_assert(fio::wire::DEVICE_SIGNAL_WRITABLE == fdevice::wire::DEVICE_SIGNAL_WRITABLE);
-static_assert(fio::wire::DEVICE_SIGNAL_ERROR == fdevice::wire::DEVICE_SIGNAL_ERROR);
-static_assert(fio::wire::DEVICE_SIGNAL_HANGUP == fdevice::wire::DEVICE_SIGNAL_HANGUP);
+static_assert(fio::wire::kDeviceSignalReadable == fdevice::wire::kDeviceSignalReadable);
+static_assert(fio::wire::kDeviceSignalOob == fdevice::wire::kDeviceSignalOob);
+static_assert(fio::wire::kDeviceSignalWritable == fdevice::wire::kDeviceSignalWritable);
+static_assert(fio::wire::kDeviceSignalError == fdevice::wire::kDeviceSignalError);
+static_assert(fio::wire::kDeviceSignalHangup == fdevice::wire::kDeviceSignalHangup);
 
 zx_status_t fdio_validate_path(const char* path, size_t* out_length) {
   if (path == nullptr) {
@@ -88,7 +88,7 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
       case fio::wire::NodeInfo::Tag::kVmofile: {
         auto& file = info.mutable_vmofile();
         auto control = fidl::ClientEnd<fio::File>(node.TakeChannel());
-        auto result = fidl::WireCall(control.borrow()).Seek(0, fio::wire::SeekOrigin::START);
+        auto result = fidl::WireCall(control.borrow()).Seek(0, fio::wire::SeekOrigin::kStart);
         zx_status_t status = result.status();
         if (status != ZX_OK) {
           return zx::error(status);

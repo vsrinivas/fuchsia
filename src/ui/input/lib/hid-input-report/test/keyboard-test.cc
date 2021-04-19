@@ -129,11 +129,11 @@ TEST(KeyboardTest, BootKeyboard) {
 
   ASSERT_TRUE(input_report.has_keyboard());
 
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[0], fuchsia_input::wire::Key::LEFT_SHIFT);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[1], fuchsia_input::wire::Key::RIGHT_META);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[2], fuchsia_input::wire::Key::A);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[3], fuchsia_input::wire::Key::NON_US_BACKSLASH);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[4], fuchsia_input::wire::Key::UP);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[0], fuchsia_input::wire::Key::kLeftShift);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[1], fuchsia_input::wire::Key::kRightMeta);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[2], fuchsia_input::wire::Key::kA);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[3], fuchsia_input::wire::Key::kNonUsBackslash);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[4], fuchsia_input::wire::Key::kUp);
 }
 
 TEST(KeyboardTest, OutputDescriptor) {
@@ -157,13 +157,14 @@ TEST(KeyboardTest, OutputDescriptor) {
 
   ASSERT_EQ(descriptor.keyboard().output().leds().count(), 5);
   EXPECT_EQ(descriptor.keyboard().output().leds()[0],
-            fuchsia_input_report::wire::LedType::NUM_LOCK);
+            fuchsia_input_report::wire::LedType::kNumLock);
   EXPECT_EQ(descriptor.keyboard().output().leds()[1],
-            fuchsia_input_report::wire::LedType::CAPS_LOCK);
+            fuchsia_input_report::wire::LedType::kCapsLock);
   EXPECT_EQ(descriptor.keyboard().output().leds()[2],
-            fuchsia_input_report::wire::LedType::SCROLL_LOCK);
-  EXPECT_EQ(descriptor.keyboard().output().leds()[3], fuchsia_input_report::wire::LedType::COMPOSE);
-  EXPECT_EQ(descriptor.keyboard().output().leds()[4], fuchsia_input_report::wire::LedType::KANA);
+            fuchsia_input_report::wire::LedType::kScrollLock);
+  EXPECT_EQ(descriptor.keyboard().output().leds()[3],
+            fuchsia_input_report::wire::LedType::kCompose);
+  EXPECT_EQ(descriptor.keyboard().output().leds()[4], fuchsia_input_report::wire::LedType::kKana);
 }
 
 // This test double checks that we don't double count keys that are included twice.
@@ -199,8 +200,8 @@ TEST(KeyboardTest, BootKeyboardOutputReport) {
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
   fidl::FidlAllocator allocator;
   fidl::VectorView<fuchsia_input_report::wire::LedType> led_view(allocator, 2);
-  led_view[0] = fuchsia_input_report::wire::LedType::NUM_LOCK;
-  led_view[1] = fuchsia_input_report::wire::LedType::SCROLL_LOCK;
+  led_view[0] = fuchsia_input_report::wire::LedType::kNumLock;
+  led_view[1] = fuchsia_input_report::wire::LedType::kScrollLock;
   // Build the FIDL table.
   fuchsia_input_report::wire::KeyboardOutputReport fidl_keyboard(allocator);
   fidl_keyboard.set_enabled_leds(allocator, std::move(led_view));
@@ -248,11 +249,11 @@ TEST(KeyboardTest, FullKeysKeyboard) {
                                       report_allocator, input_report));
 
   ASSERT_EQ(input_report.keyboard().pressed_keys3().count(), 5U);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[0], fuchsia_input::wire::Key::LEFT_SHIFT);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[1], fuchsia_input::wire::Key::RIGHT_META);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[2], fuchsia_input::wire::Key::A);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[3], fuchsia_input::wire::Key::NON_US_BACKSLASH);
-  EXPECT_EQ(input_report.keyboard().pressed_keys3()[4], fuchsia_input::wire::Key::UP);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[0], fuchsia_input::wire::Key::kLeftShift);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[1], fuchsia_input::wire::Key::kRightMeta);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[2], fuchsia_input::wire::Key::kA);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[3], fuchsia_input::wire::Key::kNonUsBackslash);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[4], fuchsia_input::wire::Key::kUp);
 }
 
 TEST(KeyboardTest, DeviceType) {

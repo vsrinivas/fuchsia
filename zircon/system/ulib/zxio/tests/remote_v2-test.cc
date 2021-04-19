@@ -118,7 +118,7 @@ TEST_F(RemoteV2, GetAttributes) {
       fidl::FidlAllocator allocator;
       fio2::wire::NodeAttributes nodes_attributes(allocator);
       nodes_attributes.set_content_size(allocator, content_size)
-          .set_protocols(allocator, fio2::wire::NodeProtocols::FILE)
+          .set_protocols(allocator, fio2::wire::NodeProtocols::kFile)
           .set_id(allocator, id);
       completer.ReplySuccess(std::move(nodes_attributes));
     }
@@ -213,7 +213,7 @@ TEST_F(RemoteV2, WaitForReadable) {
   ASSERT_NO_FAILURES(StartServer<TestServerBase>());
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   ASSERT_OK(eventpair_on_server_.signal_peer(
-      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio2::wire::DeviceSignal::READABLE)));
+      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio2::wire::DeviceSignal::kReadable)));
   ASSERT_OK(zxio_wait_one(&remote_.io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_READABLE, observed);
 }
@@ -222,7 +222,7 @@ TEST_F(RemoteV2, WaitForWritable) {
   ASSERT_NO_FAILURES(StartServer<TestServerBase>());
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   ASSERT_OK(eventpair_on_server_.signal_peer(
-      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio2::wire::DeviceSignal::WRITABLE)));
+      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio2::wire::DeviceSignal::kWritable)));
   ASSERT_OK(zxio_wait_one(&remote_.io, ZXIO_SIGNAL_WRITABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_WRITABLE, observed);
 }

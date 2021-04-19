@@ -22,9 +22,9 @@ zx_status_t Bus::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 // everything is serialized.
 constexpr size_t kAllocatorSize =
     (PciFidl::wire::Device::PrimarySize + (PciFidl::wire::Device::MaxOutOfLine * 2)) *
-    PciFidl::wire::MAX_DEVICES;
+    PciFidl::wire::kMaxDevices;
 
-static_assert(PciFidl::wire::BASE_CONFIG_SIZE == PCI_BASE_CONFIG_SIZE);
+static_assert(PciFidl::wire::kBaseConfigSize == PCI_BASE_CONFIG_SIZE);
 
 void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
   fbl::AutoLock devices_lock(&devices_lock_);
@@ -35,9 +35,9 @@ void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
   fidl::VectorView<PciFidl::wire::Device> devices(allocator, dev_cnt);
   for (auto& device : devices_) {
     auto& cfg = device.config();
-    if (dev_idx >= PciFidl::wire::MAX_DEVICES) {
+    if (dev_idx >= PciFidl::wire::kMaxDevices) {
       zxlogf(DEBUG, "device %s exceeds fuchsia.hardware.pci Device limit of %u Devices.",
-             cfg->addr(), PciFidl::wire::MAX_DEVICES);
+             cfg->addr(), PciFidl::wire::kMaxDevices);
       break;
     }
     devices[dev_idx].bus_id = cfg->bdf().bus_id;
@@ -65,9 +65,9 @@ void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
     fidl::VectorView<PciFidl::wire::Capability> capabilities(allocator, cap_cnt);
     size_t cap_idx = 0;
     for (auto& cap : device.capabilities().list) {
-      if (cap_idx >= PciFidl::wire::MAX_CAPABILITIES) {
+      if (cap_idx >= PciFidl::wire::kMaxCapabilities) {
         zxlogf(DEBUG, "device %s exceeds fuchsia.hardware.pci Capability limit of %u Capabilities.",
-               cfg->addr(), PciFidl::wire::MAX_CAPABILITIES);
+               cfg->addr(), PciFidl::wire::kMaxCapabilities);
         break;
       }
       capabilities[cap_idx].id = cap.id();
@@ -79,11 +79,11 @@ void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
     fidl::VectorView<PciFidl::wire::ExtendedCapability> ext_capabilities(allocator, ext_cap_cnt);
     size_t ext_cap_idx = 0;
     for (auto& cap : device.capabilities().ext_list) {
-      if (ext_cap_idx >= PciFidl::wire::MAX_EXT_CAPABILITIES) {
+      if (ext_cap_idx >= PciFidl::wire::kMaxExtCapabilities) {
         zxlogf(DEBUG,
                "device %s exceeds fuchsia.hardware.pci Extended Capability limit of %u Extended "
                "Capabilities.",
-               cfg->addr(), PciFidl::wire::MAX_CAPABILITIES);
+               cfg->addr(), PciFidl::wire::kMaxCapabilities);
         break;
       }
       ext_capabilities[ext_cap_idx].id = cap.id();

@@ -741,8 +741,8 @@ fidl::ClientEnd<fuchsia_io::Directory> TestFilesystem::GetSvcDirectory() const {
     return zx::channel();
   }
   if (!fidl::WireCall(fs_outgoing)
-           .Open(fuchsia_io::wire::OPEN_FLAG_DIRECTORY | fuchsia_io::wire::OPEN_RIGHT_READABLE |
-                     fuchsia_io::wire::OPEN_RIGHT_WRITABLE,
+           .Open(fuchsia_io::wire::kOpenFlagDirectory | fuchsia_io::wire::kOpenRightReadable |
+                     fuchsia_io::wire::kOpenRightWritable,
                  0, "svc", std::move(server))
            .ok()) {
     std::cout << "warning: Open failed";

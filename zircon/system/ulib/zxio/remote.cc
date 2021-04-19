@@ -75,7 +75,7 @@ class DirentIteratorImpl {
     }
 
     // Check that the name length is within bounds.
-    if (entry->size > fio::wire::MAX_FILENAME) {
+    if (entry->size > fio::wire::kMaxFilename) {
       return ZX_ERR_INVALID_ARGS;
     }
 
@@ -137,7 +137,7 @@ class DirentIteratorImpl {
   }
 
   // The maximum buffer size that is supported by |fuchsia.io/Directory.ReadDirents|.
-  static constexpr size_t kBufferSize = fio::wire::MAX_BUF;
+  static constexpr size_t kBufferSize = fio::wire::kMaxBuf;
 
   // This large structure is heap-allocated once, to be reused by subsequent
   // ReadDirents calls.
@@ -152,7 +152,7 @@ class DirentIteratorImpl {
     // dirent segment from |response_buffer|, and populate |current_entry|
     // and |current_entry_name|.
     zxio_dirent_t current_entry;
-    char current_entry_name[fio::wire::MAX_FILENAME + 1] = {};
+    char current_entry_name[fio::wire::kMaxFilename + 1] = {};
   };
 
   zxio_remote_t* io_;
@@ -200,7 +200,7 @@ class Remote {
 };
 
 zxio_node_protocols_t ToZxioNodeProtocols(uint32_t mode) {
-  switch (mode & (S_IFMT | fuchsia_io::wire::MODE_TYPE_SERVICE)) {
+  switch (mode & (S_IFMT | fuchsia_io::wire::kModeTypeService)) {
     case S_IFDIR:
       return ZXIO_NODE_PROTOCOL_DIRECTORY;
     case S_IFCHR:
@@ -213,7 +213,7 @@ zxio_node_protocols_t ToZxioNodeProtocols(uint32_t mode) {
       return ZXIO_NODE_PROTOCOL_PIPE;
       // fuchsia::io has mode type service which breaks stat.
       // TODO(fxbug.dev/52930): return ZXIO_NODE_PROTOCOL_CONNECTOR instead.
-    case fuchsia_io::wire::MODE_TYPE_SERVICE:
+    case fuchsia_io::wire::kModeTypeService:
       return ZXIO_NODE_PROTOCOL_FILE;
     case S_IFLNK:
       // Symbolic links are not supported on Fuchsia.
@@ -365,7 +365,7 @@ fio::wire::NodeAttributes ToNodeAttributes(zxio_node_attributes_t attr,
                                            ToIo1ModePermissions to_io1) {
   return fio::wire::NodeAttributes{
       .mode = ToIo1ModeFileType(attr.protocols) | to_io1(attr.abilities),
-      .id = attr.has.id ? attr.id : fio::wire::INO_UNKNOWN,
+      .id = attr.has.id ? attr.id : fio::wire::kInoUnknown,
       .content_size = attr.content_size,
       .storage_size = attr.storage_size,
       .link_count = attr.link_count,
@@ -399,19 +399,19 @@ void zxio_remote_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t
 
   zx_signals_t zx_signals = ZX_SIGNAL_NONE;
   if (zxio_signals & ZXIO_SIGNAL_READABLE) {
-    zx_signals |= fio::wire::DEVICE_SIGNAL_READABLE;
+    zx_signals |= fio::wire::kDeviceSignalReadable;
   }
   if (zxio_signals & ZXIO_SIGNAL_OUT_OF_BAND) {
-    zx_signals |= fio::wire::DEVICE_SIGNAL_OOB;
+    zx_signals |= fio::wire::kDeviceSignalOob;
   }
   if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
-    zx_signals |= fio::wire::DEVICE_SIGNAL_WRITABLE;
+    zx_signals |= fio::wire::kDeviceSignalWritable;
   }
   if (zxio_signals & ZXIO_SIGNAL_ERROR) {
-    zx_signals |= fio::wire::DEVICE_SIGNAL_ERROR;
+    zx_signals |= fio::wire::kDeviceSignalError;
   }
   if (zxio_signals & ZXIO_SIGNAL_PEER_CLOSED) {
-    zx_signals |= fio::wire::DEVICE_SIGNAL_HANGUP;
+    zx_signals |= fio::wire::kDeviceSignalHangup;
   }
   if (zxio_signals & ZXIO_SIGNAL_READ_DISABLED) {
     zx_signals |= ZX_CHANNEL_PEER_CLOSED;
@@ -421,19 +421,19 @@ void zxio_remote_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t
 
 void zxio_remote_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio_signals) {
   zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
-  if (zx_signals & fio::wire::DEVICE_SIGNAL_READABLE) {
+  if (zx_signals & fio::wire::kDeviceSignalReadable) {
     zxio_signals |= ZXIO_SIGNAL_READABLE;
   }
-  if (zx_signals & fio::wire::DEVICE_SIGNAL_OOB) {
+  if (zx_signals & fio::wire::kDeviceSignalOob) {
     zxio_signals |= ZXIO_SIGNAL_OUT_OF_BAND;
   }
-  if (zx_signals & fio::wire::DEVICE_SIGNAL_WRITABLE) {
+  if (zx_signals & fio::wire::kDeviceSignalWritable) {
     zxio_signals |= ZXIO_SIGNAL_WRITABLE;
   }
-  if (zx_signals & fio::wire::DEVICE_SIGNAL_ERROR) {
+  if (zx_signals & fio::wire::kDeviceSignalError) {
     zxio_signals |= ZXIO_SIGNAL_ERROR;
   }
-  if (zx_signals & fio::wire::DEVICE_SIGNAL_HANGUP) {
+  if (zx_signals & fio::wire::kDeviceSignalHangup) {
     zxio_signals |= ZXIO_SIGNAL_PEER_CLOSED;
   }
   if (zx_signals & ZX_CHANNEL_PEER_CLOSED) {
@@ -468,11 +468,11 @@ zx_status_t zxio_common_attr_set(zx::unowned_channel control, ToIo1ModePermissio
   uint32_t flags = 0;
   zxio_node_attributes_t::zxio_node_attr_has_t remaining = attr->has;
   if (attr->has.creation_time) {
-    flags |= fio::wire::NODE_ATTRIBUTE_FLAG_CREATION_TIME;
+    flags |= fio::wire::kNodeAttributeFlagCreationTime;
     remaining.creation_time = false;
   }
   if (attr->has.modification_time) {
-    flags |= fio::wire::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME;
+    flags |= fio::wire::kNodeAttributeFlagModificationTime;
     remaining.modification_time = false;
   }
   zxio_node_attributes_t::zxio_node_attr_has_t all_absent = {};
@@ -503,7 +503,7 @@ static zx_status_t zxio_remote_do_vector(const Remote& rio, const zx_iovec_t* ve
                           auto buffer = static_cast<uint8_t*>(data);
                           size_t total = 0;
                           while (capacity > 0) {
-                            size_t chunk = std::min(capacity, fio::wire::MAX_BUF);
+                            size_t chunk = std::min(capacity, fio::wire::kMaxBuf);
                             size_t actual;
                             zx_status_t status = fn(rio.control(), buffer, chunk, &actual);
                             if (status != ZX_OK) {
@@ -945,20 +945,20 @@ void zxio_file_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* 
 
   zx_signals_t zx_signals = ZX_SIGNAL_NONE;
   if (zxio_signals & ZXIO_SIGNAL_READABLE) {
-    zx_signals |= fio::wire::FILE_SIGNAL_READABLE;
+    zx_signals |= fio::wire::kFileSignalReadable;
   }
   if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
-    zx_signals |= fio::wire::FILE_SIGNAL_WRITABLE;
+    zx_signals |= fio::wire::kFileSignalWritable;
   }
   *out_zx_signals = zx_signals;
 }
 
 void zxio_file_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio_signals) {
   zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
-  if (zx_signals & fio::wire::FILE_SIGNAL_READABLE) {
+  if (zx_signals & fio::wire::kFileSignalReadable) {
     zxio_signals |= ZXIO_SIGNAL_READABLE;
   }
-  if (zx_signals & fio::wire::FILE_SIGNAL_WRITABLE) {
+  if (zx_signals & fio::wire::kFileSignalWritable) {
     zxio_signals |= ZXIO_SIGNAL_WRITABLE;
   }
   *out_zxio_signals = zxio_signals;
@@ -1034,7 +1034,7 @@ zx_status_t zxio_raw_remote_clone(zx::unowned_channel source, zx_handle_t* out_h
   if (status != ZX_OK) {
     return status;
   }
-  uint32_t flags = fio::wire::CLONE_FLAG_SAME_RIGHTS;
+  uint32_t flags = fio::wire::kCloneFlagSameRights;
   auto result = fidl::WireCall<fio::Node>(std::move(source)).Clone(flags, std::move(remote));
   if (result.status() != ZX_OK) {
     return result.status();

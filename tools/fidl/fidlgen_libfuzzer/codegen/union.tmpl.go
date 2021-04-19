@@ -28,7 +28,7 @@ struct Allocate<{{ .Natural.Name }}> {
     switch (selector % {{ len .Members }}) {
       {{- range $memberIdx, $member := .Members }}
       case {{ $memberIdx }}: {
-        out.set_{{ $member.Name }}(Allocate<{{ $member.Type.Natural }}>{}(src, size));
+        out.set_{{ $member.Natural.Name }}(Allocate<{{ $member.Type.Natural }}>{}(src, size));
         break;
       }
       {{- end }}

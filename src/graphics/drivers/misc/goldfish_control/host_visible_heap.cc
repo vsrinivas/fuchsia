@@ -107,11 +107,11 @@ GetCreateColorBuffer2Params(fidl::AnyAllocator& allocator,
   const auto& pixel_format_type = image_constraints.pixel_format().type();
   ColorBufferFormatType color_buffer_format;
   switch (pixel_format_type) {
-    case PixelFormatType::BGRA32:
-      color_buffer_format = ColorBufferFormatType::BGRA;
+    case PixelFormatType::kBgra32:
+      color_buffer_format = ColorBufferFormatType::kBgra;
       break;
-    case PixelFormatType::R8G8B8A8:
-      color_buffer_format = ColorBufferFormatType::RGBA;
+    case PixelFormatType::kR8G8B8A8:
+      color_buffer_format = ColorBufferFormatType::kRgba;
       break;
     default:
       zxlogf(ERROR, "[%s][%s] pixel_format_type unsupported: type %u", __func__, kTag,
@@ -138,7 +138,7 @@ GetCreateColorBuffer2Params(fidl::AnyAllocator& allocator,
   CreateColorBuffer2Params buffer2_params(allocator);
   buffer2_params.set_width(allocator, width)
       .set_height(allocator, height)
-      .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE)
+      .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::kMemoryPropertyHostVisible)
       .set_physical_address(allocator, paddr)
       .set_format(allocator, color_buffer_format);
   return fit::ok(std::move(buffer2_params));
@@ -158,7 +158,7 @@ fuchsia_hardware_goldfish::wire::CreateBuffer2Params GetCreateBuffer2Params(
   uint64_t size_bytes = buffer_settings.size_bytes();
   CreateBuffer2Params buffer2_params(allocator);
   buffer2_params.set_size(allocator, size_bytes)
-      .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::MEMORY_PROPERTY_HOST_VISIBLE)
+      .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::kMemoryPropertyHostVisible)
       .set_physical_address(allocator, paddr);
   return buffer2_params;
 }

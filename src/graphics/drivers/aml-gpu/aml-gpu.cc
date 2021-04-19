@@ -318,11 +318,11 @@ zx_status_t AmlGpu::Bind() {
   // GPU is in unknown mode on Bind.
   current_protected_mode_property_ = root_.CreateInt("current_protected_mode", -1);
   size_t size;
-  zx_status_t status = DdkGetMetadataSize(fuchsia_hardware_gpu_amlogic::wire::MALI_METADATA, &size);
+  zx_status_t status = DdkGetMetadataSize(fuchsia_hardware_gpu_amlogic::wire::kMaliMetadata, &size);
   if (status == ZX_OK) {
     std::vector<uint8_t> raw_metadata(size);
     size_t actual;
-    status = DdkGetMetadata(fuchsia_hardware_gpu_amlogic::wire::MALI_METADATA, raw_metadata.data(),
+    status = DdkGetMetadata(fuchsia_hardware_gpu_amlogic::wire::kMaliMetadata, raw_metadata.data(),
                             size, &actual);
     if (status != ZX_OK) {
       GPU_ERROR("Failed to get metadata");

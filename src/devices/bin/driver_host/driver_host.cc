@@ -196,13 +196,13 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
   AddDeviceConfig add_device_config;
 
   if (child->flags() & DEV_FLAG_ALLOW_MULTI_COMPOSITE) {
-    add_device_config |= AddDeviceConfig::ALLOW_MULTI_COMPOSITE;
+    add_device_config |= AddDeviceConfig::kAllowMultiComposite;
   }
   if (add_invisible) {
-    add_device_config |= AddDeviceConfig::INVISIBLE;
+    add_device_config |= AddDeviceConfig::kInvisible;
   }
   if (child->flags() & DEV_FLAG_UNBINDABLE) {
-    add_device_config |= AddDeviceConfig::SKIP_AUTOBIND;
+    add_device_config |= AddDeviceConfig::kSkipAutobind;
   }
 
   zx_status_t status;
@@ -1102,11 +1102,11 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
   std::vector<fuchsia_device_manager::wire::DeviceFragment> compvec = {};
   for (size_t i = 0; i < comp_desc->fragments_count; i++) {
     ::fidl::Array<fuchsia_device_manager::wire::DeviceFragmentPart,
-                  fuchsia_device_manager::wire::DEVICE_FRAGMENT_PARTS_MAX>
+                  fuchsia_device_manager::wire::kDeviceFragmentPartsMax>
         parts{};
     for (uint32_t j = 0; j < comp_desc->fragments[i].parts_count; j++) {
       ::fidl::Array<fuchsia_device_manager::wire::BindInstruction,
-                    fuchsia_device_manager::wire::DEVICE_FRAGMENT_PART_INSTRUCTIONS_MAX>
+                    fuchsia_device_manager::wire::kDeviceFragmentPartInstructionsMax>
           bind_instructions{};
       for (uint32_t k = 0; k < comp_desc->fragments[i].parts[j].instruction_count; k++) {
         bind_instructions[k] = fuchsia_device_manager::wire::BindInstruction{

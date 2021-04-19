@@ -374,7 +374,7 @@ zx_status_t Device::Bind() {
   protected_memory_size = AlignUp(protected_memory_size, kMinProtectedAlignment);
   contiguous_memory_size = AlignUp(contiguous_memory_size, static_cast<int64_t>(ZX_PAGE_SIZE));
 
-  allocators_[fuchsia_sysmem2::wire::HeapType::SYSTEM_RAM] =
+  allocators_[fuchsia_sysmem2::wire::HeapType::kSystemRam] =
       std::make_unique<SystemRamMemoryAllocator>(this);
 
   status = pdev_.GetBti(0, &bti_);
@@ -430,8 +430,8 @@ zx_status_t Device::Bind() {
       DRIVER_ERROR("Failed to init allocator for amlogic protected memory: %d", status);
       return status;
     }
-    secure_allocators_[fuchsia_sysmem2::wire::HeapType::AMLOGIC_SECURE] = amlogic_allocator.get();
-    allocators_[fuchsia_sysmem2::wire::HeapType::AMLOGIC_SECURE] = std::move(amlogic_allocator);
+    secure_allocators_[fuchsia_sysmem2::wire::HeapType::kAmlogicSecure] = amlogic_allocator.get();
+    allocators_[fuchsia_sysmem2::wire::HeapType::kAmlogicSecure] = std::move(amlogic_allocator);
   }
 
   ddk::PBusProtocolClient pbus;
@@ -785,7 +785,7 @@ BufferCollectionToken* Device::FindTokenByServerChannelKoid(zx_koid_t token_serv
 }
 
 MemoryAllocator* Device::GetAllocator(const fuchsia_sysmem2::wire::BufferMemorySettings& settings) {
-  if (settings.heap() == fuchsia_sysmem2::wire::HeapType::SYSTEM_RAM &&
+  if (settings.heap() == fuchsia_sysmem2::wire::HeapType::kSystemRam &&
       settings.is_physically_contiguous()) {
     return contiguous_system_ram_allocator_.get();
   }

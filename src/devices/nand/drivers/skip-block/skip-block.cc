@@ -545,7 +545,7 @@ void SkipBlockDevice::WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sy
   const uint64_t last_block = fbl::round_up(op.offset + op.size, block_size) / block_size - 1;
   const uint64_t op_size = (last_block - first_block + 1) * block_size;
 
-  if (op.mode == WriteBytesMode::READ_MODIFY_ERASE_WRITE) {
+  if (op.mode == WriteBytesMode::kReadModifyEraseWrite) {
     zx::vmo vmo;
     if (op_size == op.size) {
       // No copies are necessary as offset and size are block aligned.
@@ -567,7 +567,7 @@ void SkipBlockDevice::WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sy
         .block_count = static_cast<uint32_t>(last_block - first_block + 1),
     };
     status = WriteLocked(std::move(rw_op), &bad_block_grown, {});
-  } else if (op.mode == WriteBytesMode::ERASE_WRITE) {
+  } else if (op.mode == WriteBytesMode::kEraseWrite) {
     // No partial read is necessary
     ReadWriteOperation rw_op = {
         .vmo = std::move(op.vmo),

@@ -100,12 +100,12 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreate) {
 
   fdio_cpp::FdioCaller caller(std::move(fd));
 
-  // Opening with OPEN_FLAG_CREATE should fail.
+  // Opening with kOpenFlagCreate should fail.
   zx::channel local, remote;
   ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
   auto result = fidl::WireCall<fio::Directory>(caller.channel())
-                    .Open(fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE |
-                              fio::wire::OPEN_FLAG_CREATE,
+                    .Open(fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
+                              fio::wire::kOpenFlagCreate,
                           0755, fidl::StringView("."), std::move(remote));
   ASSERT_EQ(result.status(), ZX_OK);
 
@@ -120,12 +120,12 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreateIfAbsent) {
   ASSERT_TRUE(fd);
   fdio_cpp::FdioCaller caller(std::move(fd));
 
-  // Opening with OPEN_FLAG_CREATE_IF_ABSENT should fail.
+  // Opening with kOpenFlagCreateIfAbsent should fail.
   zx::channel local, remote;
   ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
   auto result = fidl::WireCall<fio::Directory>(caller.channel())
-                    .Open(fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_WRITABLE |
-                              fio::wire::OPEN_FLAG_CREATE | fio::wire::OPEN_FLAG_CREATE_IF_ABSENT,
+                    .Open(fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
+                              fio::wire::kOpenFlagCreate | fio::wire::kOpenFlagCreateIfAbsent,
                           0755, fidl::StringView("."), std::move(remote));
   ASSERT_EQ(result.status(), ZX_OK);
 

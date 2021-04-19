@@ -94,7 +94,7 @@ TEST(SysinfoTest, GetInterruptControllerInfo) {
   ASSERT_TRUE(result.ok(), "Failed to get interrupt controller info");
   ASSERT_OK(result->status, "Failed to get interrupt controller info");
   ASSERT_NOT_NULL(result->info.get(), "interrupt controller type is unknown");
-  EXPECT_NE(result->info->type, InterruptControllerType::UNKNOWN,
+  EXPECT_NE(result->info->type, InterruptControllerType::kUnknown,
             "interrupt controller type is unknown");
 }
 

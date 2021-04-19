@@ -14,11 +14,11 @@ class Example_TestBase
                                ::fidl::CompleterBase& completer) = 0;
 
   using Interface = ::fidl::WireInterface<::fidl_test_error::Example>;
-  virtual void foo(
+  virtual void Foo(
       ::fidl::StringView s,
-      ::fidl::WireServer<::fidl_test_error::Example>::fooCompleter::Sync&
+      ::fidl::WireServer<::fidl_test_error::Example>::FooCompleter::Sync&
           completer) override {
-    NotImplemented_("foo", completer);
+    NotImplemented_("Foo", completer);
   }
 };
 }  // namespace testing

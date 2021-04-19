@@ -32,11 +32,11 @@ size_t HidDevice::GetReportSizeById(input_report_id_t id, ReportType type) {
     // one report, then always match that report.
     if ((parsed_hid_desc_->report[i].report_id == id) || (parsed_hid_desc_->rep_count == 1)) {
       switch (type) {
-        case ReportType::INPUT:
+        case ReportType::kInput:
           return parsed_hid_desc_->report[i].input_byte_sz;
-        case ReportType::OUTPUT:
+        case ReportType::kOutput:
           return parsed_hid_desc_->report[i].output_byte_sz;
-        case ReportType::FEATURE:
+        case ReportType::kFeature:
           return parsed_hid_desc_->report[i].feature_byte_sz;
       }
     }
@@ -48,11 +48,11 @@ size_t HidDevice::GetReportSizeById(input_report_id_t id, ReportType type) {
 BootProtocol HidDevice::GetBootProtocol() {
   if (info_.device_class == HID_DEVICE_CLASS_KBD ||
       info_.device_class == HID_DEVICE_CLASS_KBD_POINTER) {
-    return BootProtocol::KBD;
+    return BootProtocol::kKbd;
   } else if (info_.device_class == HID_DEVICE_CLASS_POINTER) {
-    return BootProtocol::MOUSE;
+    return BootProtocol::kMouse;
   }
-  return BootProtocol::NONE;
+  return BootProtocol::kNone;
 }
 
 void HidDevice::RemoveHidInstanceFromList(HidInstance* instance) {
@@ -208,7 +208,7 @@ void HidDevice::IoQueue(void* cookie, const uint8_t* buf, size_t len, zx_time_t 
     } else {
       // No reassembly is in progress.  Start by identifying this report's
       // size.
-      size_t rpt_sz = hid->GetReportSizeById(buf[0], ReportType::INPUT);
+      size_t rpt_sz = hid->GetReportSizeById(buf[0], ReportType::kInput);
 
       // If we don't recognize this report ID, we are in trouble.  Drop
       // the rest of this payload and hope that the next one gets us back

@@ -38,8 +38,8 @@ var _ namespaced = (*Table)(nil)
 
 type TableMember struct {
 	Attributes
+	nameVariants
 	Type               Type
-	Name               string
 	DefaultValue       ConstantValue
 	Ordinal            int
 	FieldPresenceIsSet string
@@ -53,7 +53,7 @@ type TableMember struct {
 }
 
 func (tm TableMember) NameAndType() (string, Type) {
-	return tm.Name, tm.Type
+	return tm.Name(), tm.Type
 }
 
 func (c *compiler) compileTableMember(val fidlgen.TableMember, index int) TableMember {
@@ -66,8 +66,8 @@ func (c *compiler) compileTableMember(val fidlgen.TableMember, index int) TableM
 
 	return TableMember{
 		Attributes:         Attributes{val.Attributes},
+		nameVariants:       tableMemberContext.transform(val.Name),
 		Type:               t,
-		Name:               changeIfReserved(val.Name),
 		DefaultValue:       defaultValue,
 		Ordinal:            val.Ordinal,
 		FieldPresenceIsSet: fmt.Sprintf("field_presence_.IsSet<%d>()", val.Ordinal-1),

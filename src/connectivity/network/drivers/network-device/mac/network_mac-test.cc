@@ -121,7 +121,7 @@ TEST_F(MacDeviceTest, SetBadMode) {
               zx_status_get_string(open_result.error()));
   auto client = open_result.take_value();
 
-  auto result = client.SetMode(netdev::wire::MacFilterMode::PROMISCUOUS);
+  auto result = client.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
   ASSERT_TRUE(result.ok());
   ASSERT_EQ(result.value().status, ZX_ERR_NOT_SUPPORTED);
 }
@@ -133,7 +133,7 @@ TEST_F(MacDeviceTest, SetPromiscuous) {
               zx_status_get_string(open_result.error()));
   auto client = open_result.take_value();
 
-  auto result = client.SetMode(netdev::wire::MacFilterMode::PROMISCUOUS);
+  auto result = client.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
   ASSERT_TRUE(result.ok());
   ASSERT_EQ(result.value().status, ZX_OK);
   ASSERT_OK(impl_.WaitConfigurationChanged());
@@ -148,7 +148,7 @@ TEST_F(MacDeviceTest, SetMulticastPromiscuous) {
               zx_status_get_string(open_result.error()));
   auto client = open_result.take_value();
 
-  auto result = client.SetMode(netdev::wire::MacFilterMode::MULTICAST_PROMISCUOUS);
+  auto result = client.SetMode(netdev::wire::MacFilterMode::kMulticastPromiscuous);
   ASSERT_TRUE(result.ok());
   ASSERT_OK(result.value().status);
   ASSERT_OK(impl_.WaitConfigurationChanged());
@@ -243,7 +243,7 @@ TEST_F(MacDeviceTest, MostPermissiveClientWins) {
     ASSERT_EQ(impl_.addresses().size(), 1ul);
   }
   {
-    auto result = cli2.SetMode(netdev::wire::MacFilterMode::PROMISCUOUS);
+    auto result = cli2.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
     ASSERT_TRUE(result.ok());
     ASSERT_OK(result.value().status);
     ASSERT_OK(impl_.WaitConfigurationChanged());
@@ -266,7 +266,7 @@ TEST_F(MacDeviceTest, FallsBackToDefaultMode) {
               zx_status_get_string(open_result.error()));
   auto client = open_result.take_value();
 
-  auto result = client.SetMode(netdev::wire::MacFilterMode::PROMISCUOUS);
+  auto result = client.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
   ASSERT_TRUE(result.ok());
   ASSERT_OK(result.value().status);
   ASSERT_OK(impl_.WaitConfigurationChanged());

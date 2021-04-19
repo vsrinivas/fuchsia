@@ -113,47 +113,47 @@ class Union {
     return ordinal_ == ::fidl_test_union::wire::Union::Ordinal::Invalid;
   }
 
-  bool is_Primitive() const {
+  bool is_primitive() const {
     return ordinal_ == ::fidl_test_union::wire::Union::Ordinal::kPrimitive;
   }
 
   static Union WithPrimitive(::fidl::ObjectView<int32_t> val) {
     Union result;
-    result.set_Primitive(val);
+    result.set_primitive(val);
     return result;
   }
 
   template <typename... Args>
   static Union WithPrimitive(::fidl::AnyAllocator& allocator, Args&&... args) {
     Union result;
-    result.set_Primitive(
+    result.set_primitive(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_Primitive(::fidl::ObjectView<int32_t> elem) {
+  void set_primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::Union::Ordinal::kPrimitive;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
-  void set_Primitive(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_primitive(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_union::wire::Union::Ordinal::kPrimitive;
-    set_Primitive(
+    set_primitive(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
-  int32_t& mutable_Primitive() {
+  int32_t& mutable_primitive() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::Union::Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data.get());
   }
-  const int32_t& Primitive() const {
+  const int32_t& primitive() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::Union::Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data.get());
   }
 
-  bool is_StringNeedsConstructor() const {
+  bool is_string_needs_constructor() const {
     return ordinal_ ==
            ::fidl_test_union::wire::Union::Ordinal::kStringNeedsConstructor;
   }
@@ -161,7 +161,7 @@ class Union {
   static Union WithStringNeedsConstructor(
       ::fidl::ObjectView<::fidl::StringView> val) {
     Union result;
-    result.set_StringNeedsConstructor(val);
+    result.set_string_needs_constructor(val);
     return result;
   }
 
@@ -169,37 +169,38 @@ class Union {
   static Union WithStringNeedsConstructor(::fidl::AnyAllocator& allocator,
                                           Args&&... args) {
     Union result;
-    result.set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView>(
+    result.set_string_needs_constructor(::fidl::ObjectView<::fidl::StringView>(
         allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView> elem) {
+  void set_string_needs_constructor(
+      ::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = ::fidl_test_union::wire::Union::Ordinal::kStringNeedsConstructor;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
-  void set_StringNeedsConstructor(::fidl::AnyAllocator& allocator,
-                                  Args&&... args) {
+  void set_string_needs_constructor(::fidl::AnyAllocator& allocator,
+                                    Args&&... args) {
     ordinal_ = ::fidl_test_union::wire::Union::Ordinal::kStringNeedsConstructor;
-    set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView>(
+    set_string_needs_constructor(::fidl::ObjectView<::fidl::StringView>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl::StringView& mutable_StringNeedsConstructor() {
+  ::fidl::StringView& mutable_string_needs_constructor() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::Union::Ordinal::kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
-  const ::fidl::StringView& StringNeedsConstructor() const {
+  const ::fidl::StringView& string_needs_constructor() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::Union::Ordinal::kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
 
-  bool is_VectorStringAlsoNeedsConstructor() const {
+  bool is_vector_string_also_needs_constructor() const {
     return ordinal_ == ::fidl_test_union::wire::Union::Ordinal::
                            kVectorStringAlsoNeedsConstructor;
   }
@@ -207,7 +208,7 @@ class Union {
   static Union WithVectorStringAlsoNeedsConstructor(
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> val) {
     Union result;
-    result.set_VectorStringAlsoNeedsConstructor(val);
+    result.set_vector_string_also_needs_constructor(val);
     return result;
   }
 
@@ -215,13 +216,13 @@ class Union {
   static Union WithVectorStringAlsoNeedsConstructor(
       ::fidl::AnyAllocator& allocator, Args&&... args) {
     Union result;
-    result.set_VectorStringAlsoNeedsConstructor(
+    result.set_vector_string_also_needs_constructor(
         ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>>(
             allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_VectorStringAlsoNeedsConstructor(
+  void set_vector_string_also_needs_constructor(
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> elem) {
     ordinal_ = ::fidl_test_union::wire::Union::Ordinal::
         kVectorStringAlsoNeedsConstructor;
@@ -230,24 +231,24 @@ class Union {
   }
 
   template <typename... Args>
-  void set_VectorStringAlsoNeedsConstructor(::fidl::AnyAllocator& allocator,
-                                            Args&&... args) {
+  void set_vector_string_also_needs_constructor(::fidl::AnyAllocator& allocator,
+                                                Args&&... args) {
     ordinal_ = ::fidl_test_union::wire::Union::Ordinal::
         kVectorStringAlsoNeedsConstructor;
-    set_VectorStringAlsoNeedsConstructor(
+    set_vector_string_also_needs_constructor(
         ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>>(
             allocator, std::forward<Args>(args)...));
   }
 
   ::fidl::VectorView<::fidl::StringView>&
-  mutable_VectorStringAlsoNeedsConstructor() {
+  mutable_vector_string_also_needs_constructor() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::Union::Ordinal::
                               kVectorStringAlsoNeedsConstructor);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
         envelope_.data.get());
   }
   const ::fidl::VectorView<::fidl::StringView>&
-  VectorStringAlsoNeedsConstructor() const {
+  vector_string_also_needs_constructor() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::Union::Ordinal::
                               kVectorStringAlsoNeedsConstructor);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
@@ -301,14 +302,14 @@ class StrictUnion {
     return ordinal_ == ::fidl_test_union::wire::StrictUnion::Ordinal::Invalid;
   }
 
-  bool is_Primitive() const {
+  bool is_primitive() const {
     return ordinal_ ==
            ::fidl_test_union::wire::StrictUnion::Ordinal::kPrimitive;
   }
 
   static StrictUnion WithPrimitive(::fidl::ObjectView<int32_t> val) {
     StrictUnion result;
-    result.set_Primitive(val);
+    result.set_primitive(val);
     return result;
   }
 
@@ -316,36 +317,36 @@ class StrictUnion {
   static StrictUnion WithPrimitive(::fidl::AnyAllocator& allocator,
                                    Args&&... args) {
     StrictUnion result;
-    result.set_Primitive(
+    result.set_primitive(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_Primitive(::fidl::ObjectView<int32_t> elem) {
+  void set_primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::StrictUnion::Ordinal::kPrimitive;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
-  void set_Primitive(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_primitive(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_union::wire::StrictUnion::Ordinal::kPrimitive;
-    set_Primitive(
+    set_primitive(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
-  int32_t& mutable_Primitive() {
+  int32_t& mutable_primitive() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictUnion::Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data.get());
   }
-  const int32_t& Primitive() const {
+  const int32_t& primitive() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictUnion::Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data.get());
   }
 
-  bool is_StringNeedsConstructor() const {
+  bool is_string_needs_constructor() const {
     return ordinal_ == ::fidl_test_union::wire::StrictUnion::Ordinal::
                            kStringNeedsConstructor;
   }
@@ -353,7 +354,7 @@ class StrictUnion {
   static StrictUnion WithStringNeedsConstructor(
       ::fidl::ObjectView<::fidl::StringView> val) {
     StrictUnion result;
-    result.set_StringNeedsConstructor(val);
+    result.set_string_needs_constructor(val);
     return result;
   }
 
@@ -361,12 +362,13 @@ class StrictUnion {
   static StrictUnion WithStringNeedsConstructor(::fidl::AnyAllocator& allocator,
                                                 Args&&... args) {
     StrictUnion result;
-    result.set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView>(
+    result.set_string_needs_constructor(::fidl::ObjectView<::fidl::StringView>(
         allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView> elem) {
+  void set_string_needs_constructor(
+      ::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ =
         ::fidl_test_union::wire::StrictUnion::Ordinal::kStringNeedsConstructor;
     envelope_.data =
@@ -374,28 +376,28 @@ class StrictUnion {
   }
 
   template <typename... Args>
-  void set_StringNeedsConstructor(::fidl::AnyAllocator& allocator,
-                                  Args&&... args) {
+  void set_string_needs_constructor(::fidl::AnyAllocator& allocator,
+                                    Args&&... args) {
     ordinal_ =
         ::fidl_test_union::wire::StrictUnion::Ordinal::kStringNeedsConstructor;
-    set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView>(
+    set_string_needs_constructor(::fidl::ObjectView<::fidl::StringView>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl::StringView& mutable_StringNeedsConstructor() {
+  ::fidl::StringView& mutable_string_needs_constructor() {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_union::wire::StrictUnion::Ordinal::kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
-  const ::fidl::StringView& StringNeedsConstructor() const {
+  const ::fidl::StringView& string_needs_constructor() const {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_union::wire::StrictUnion::Ordinal::kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
 
-  bool is_VectorStringAlsoNeedsConstructor() const {
+  bool is_vector_string_also_needs_constructor() const {
     return ordinal_ == ::fidl_test_union::wire::StrictUnion::Ordinal::
                            kVectorStringAlsoNeedsConstructor;
   }
@@ -403,7 +405,7 @@ class StrictUnion {
   static StrictUnion WithVectorStringAlsoNeedsConstructor(
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> val) {
     StrictUnion result;
-    result.set_VectorStringAlsoNeedsConstructor(val);
+    result.set_vector_string_also_needs_constructor(val);
     return result;
   }
 
@@ -411,13 +413,13 @@ class StrictUnion {
   static StrictUnion WithVectorStringAlsoNeedsConstructor(
       ::fidl::AnyAllocator& allocator, Args&&... args) {
     StrictUnion result;
-    result.set_VectorStringAlsoNeedsConstructor(
+    result.set_vector_string_also_needs_constructor(
         ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>>(
             allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_VectorStringAlsoNeedsConstructor(
+  void set_vector_string_also_needs_constructor(
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> elem) {
     ordinal_ = ::fidl_test_union::wire::StrictUnion::Ordinal::
         kVectorStringAlsoNeedsConstructor;
@@ -426,24 +428,24 @@ class StrictUnion {
   }
 
   template <typename... Args>
-  void set_VectorStringAlsoNeedsConstructor(::fidl::AnyAllocator& allocator,
-                                            Args&&... args) {
+  void set_vector_string_also_needs_constructor(::fidl::AnyAllocator& allocator,
+                                                Args&&... args) {
     ordinal_ = ::fidl_test_union::wire::StrictUnion::Ordinal::
         kVectorStringAlsoNeedsConstructor;
-    set_VectorStringAlsoNeedsConstructor(
+    set_vector_string_also_needs_constructor(
         ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>>(
             allocator, std::forward<Args>(args)...));
   }
 
   ::fidl::VectorView<::fidl::StringView>&
-  mutable_VectorStringAlsoNeedsConstructor() {
+  mutable_vector_string_also_needs_constructor() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::StrictUnion::Ordinal::
                               kVectorStringAlsoNeedsConstructor);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
         envelope_.data.get());
   }
   const ::fidl::VectorView<::fidl::StringView>&
-  VectorStringAlsoNeedsConstructor() const {
+  vector_string_also_needs_constructor() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::StrictUnion::Ordinal::
                               kVectorStringAlsoNeedsConstructor);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
@@ -1881,14 +1883,14 @@ class FlexibleUnion {
     return ordinal_ == ::fidl_test_union::wire::FlexibleUnion::Ordinal::Invalid;
   }
 
-  bool is_Primitive() const {
+  bool is_primitive() const {
     return ordinal_ ==
            ::fidl_test_union::wire::FlexibleUnion::Ordinal::kPrimitive;
   }
 
   static FlexibleUnion WithPrimitive(::fidl::ObjectView<int32_t> val) {
     FlexibleUnion result;
-    result.set_Primitive(val);
+    result.set_primitive(val);
     return result;
   }
 
@@ -1896,36 +1898,36 @@ class FlexibleUnion {
   static FlexibleUnion WithPrimitive(::fidl::AnyAllocator& allocator,
                                      Args&&... args) {
     FlexibleUnion result;
-    result.set_Primitive(
+    result.set_primitive(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_Primitive(::fidl::ObjectView<int32_t> elem) {
+  void set_primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::FlexibleUnion::Ordinal::kPrimitive;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
-  void set_Primitive(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_primitive(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_union::wire::FlexibleUnion::Ordinal::kPrimitive;
-    set_Primitive(
+    set_primitive(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
-  int32_t& mutable_Primitive() {
+  int32_t& mutable_primitive() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::FlexibleUnion::Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data.get());
   }
-  const int32_t& Primitive() const {
+  const int32_t& primitive() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::FlexibleUnion::Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data.get());
   }
 
-  bool is_StringNeedsConstructor() const {
+  bool is_string_needs_constructor() const {
     return ordinal_ == ::fidl_test_union::wire::FlexibleUnion::Ordinal::
                            kStringNeedsConstructor;
   }
@@ -1933,7 +1935,7 @@ class FlexibleUnion {
   static FlexibleUnion WithStringNeedsConstructor(
       ::fidl::ObjectView<::fidl::StringView> val) {
     FlexibleUnion result;
-    result.set_StringNeedsConstructor(val);
+    result.set_string_needs_constructor(val);
     return result;
   }
 
@@ -1941,12 +1943,13 @@ class FlexibleUnion {
   static FlexibleUnion WithStringNeedsConstructor(
       ::fidl::AnyAllocator& allocator, Args&&... args) {
     FlexibleUnion result;
-    result.set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView>(
+    result.set_string_needs_constructor(::fidl::ObjectView<::fidl::StringView>(
         allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView> elem) {
+  void set_string_needs_constructor(
+      ::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = ::fidl_test_union::wire::FlexibleUnion::Ordinal::
         kStringNeedsConstructor;
     envelope_.data =
@@ -1954,26 +1957,26 @@ class FlexibleUnion {
   }
 
   template <typename... Args>
-  void set_StringNeedsConstructor(::fidl::AnyAllocator& allocator,
-                                  Args&&... args) {
+  void set_string_needs_constructor(::fidl::AnyAllocator& allocator,
+                                    Args&&... args) {
     ordinal_ = ::fidl_test_union::wire::FlexibleUnion::Ordinal::
         kStringNeedsConstructor;
-    set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView>(
+    set_string_needs_constructor(::fidl::ObjectView<::fidl::StringView>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl::StringView& mutable_StringNeedsConstructor() {
+  ::fidl::StringView& mutable_string_needs_constructor() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::FlexibleUnion::Ordinal::
                               kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
-  const ::fidl::StringView& StringNeedsConstructor() const {
+  const ::fidl::StringView& string_needs_constructor() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::FlexibleUnion::Ordinal::
                               kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
 
-  bool is_VectorStringAlsoNeedsConstructor() const {
+  bool is_vector_string_also_needs_constructor() const {
     return ordinal_ == ::fidl_test_union::wire::FlexibleUnion::Ordinal::
                            kVectorStringAlsoNeedsConstructor;
   }
@@ -1981,7 +1984,7 @@ class FlexibleUnion {
   static FlexibleUnion WithVectorStringAlsoNeedsConstructor(
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> val) {
     FlexibleUnion result;
-    result.set_VectorStringAlsoNeedsConstructor(val);
+    result.set_vector_string_also_needs_constructor(val);
     return result;
   }
 
@@ -1989,13 +1992,13 @@ class FlexibleUnion {
   static FlexibleUnion WithVectorStringAlsoNeedsConstructor(
       ::fidl::AnyAllocator& allocator, Args&&... args) {
     FlexibleUnion result;
-    result.set_VectorStringAlsoNeedsConstructor(
+    result.set_vector_string_also_needs_constructor(
         ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>>(
             allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_VectorStringAlsoNeedsConstructor(
+  void set_vector_string_also_needs_constructor(
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> elem) {
     ordinal_ = ::fidl_test_union::wire::FlexibleUnion::Ordinal::
         kVectorStringAlsoNeedsConstructor;
@@ -2004,24 +2007,24 @@ class FlexibleUnion {
   }
 
   template <typename... Args>
-  void set_VectorStringAlsoNeedsConstructor(::fidl::AnyAllocator& allocator,
-                                            Args&&... args) {
+  void set_vector_string_also_needs_constructor(::fidl::AnyAllocator& allocator,
+                                                Args&&... args) {
     ordinal_ = ::fidl_test_union::wire::FlexibleUnion::Ordinal::
         kVectorStringAlsoNeedsConstructor;
-    set_VectorStringAlsoNeedsConstructor(
+    set_vector_string_also_needs_constructor(
         ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>>(
             allocator, std::forward<Args>(args)...));
   }
 
   ::fidl::VectorView<::fidl::StringView>&
-  mutable_VectorStringAlsoNeedsConstructor() {
+  mutable_vector_string_also_needs_constructor() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::FlexibleUnion::Ordinal::
                               kVectorStringAlsoNeedsConstructor);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
         envelope_.data.get());
   }
   const ::fidl::VectorView<::fidl::StringView>&
-  VectorStringAlsoNeedsConstructor() const {
+  vector_string_also_needs_constructor() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::FlexibleUnion::Ordinal::
                               kVectorStringAlsoNeedsConstructor);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
@@ -2411,14 +2414,14 @@ class ExplicitUnion {
     return ordinal_ == ::fidl_test_union::wire::ExplicitUnion::Ordinal::Invalid;
   }
 
-  bool is_Primitive() const {
+  bool is_primitive() const {
     return ordinal_ ==
            ::fidl_test_union::wire::ExplicitUnion::Ordinal::kPrimitive;
   }
 
   static ExplicitUnion WithPrimitive(::fidl::ObjectView<int32_t> val) {
     ExplicitUnion result;
-    result.set_Primitive(val);
+    result.set_primitive(val);
     return result;
   }
 
@@ -2426,36 +2429,36 @@ class ExplicitUnion {
   static ExplicitUnion WithPrimitive(::fidl::AnyAllocator& allocator,
                                      Args&&... args) {
     ExplicitUnion result;
-    result.set_Primitive(
+    result.set_primitive(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_Primitive(::fidl::ObjectView<int32_t> elem) {
+  void set_primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitUnion::Ordinal::kPrimitive;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
-  void set_Primitive(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_primitive(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_union::wire::ExplicitUnion::Ordinal::kPrimitive;
-    set_Primitive(
+    set_primitive(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
-  int32_t& mutable_Primitive() {
+  int32_t& mutable_primitive() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ExplicitUnion::Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data.get());
   }
-  const int32_t& Primitive() const {
+  const int32_t& primitive() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ExplicitUnion::Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data.get());
   }
 
-  bool is_StringNeedsConstructor() const {
+  bool is_string_needs_constructor() const {
     return ordinal_ == ::fidl_test_union::wire::ExplicitUnion::Ordinal::
                            kStringNeedsConstructor;
   }
@@ -2463,7 +2466,7 @@ class ExplicitUnion {
   static ExplicitUnion WithStringNeedsConstructor(
       ::fidl::ObjectView<::fidl::StringView> val) {
     ExplicitUnion result;
-    result.set_StringNeedsConstructor(val);
+    result.set_string_needs_constructor(val);
     return result;
   }
 
@@ -2471,12 +2474,13 @@ class ExplicitUnion {
   static ExplicitUnion WithStringNeedsConstructor(
       ::fidl::AnyAllocator& allocator, Args&&... args) {
     ExplicitUnion result;
-    result.set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView>(
+    result.set_string_needs_constructor(::fidl::ObjectView<::fidl::StringView>(
         allocator, std::forward<Args>(args)...));
     return result;
   }
 
-  void set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView> elem) {
+  void set_string_needs_constructor(
+      ::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitUnion::Ordinal::
         kStringNeedsConstructor;
     envelope_.data =
@@ -2484,20 +2488,20 @@ class ExplicitUnion {
   }
 
   template <typename... Args>
-  void set_StringNeedsConstructor(::fidl::AnyAllocator& allocator,
-                                  Args&&... args) {
+  void set_string_needs_constructor(::fidl::AnyAllocator& allocator,
+                                    Args&&... args) {
     ordinal_ = ::fidl_test_union::wire::ExplicitUnion::Ordinal::
         kStringNeedsConstructor;
-    set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView>(
+    set_string_needs_constructor(::fidl::ObjectView<::fidl::StringView>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl::StringView& mutable_StringNeedsConstructor() {
+  ::fidl::StringView& mutable_string_needs_constructor() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::ExplicitUnion::Ordinal::
                               kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
-  const ::fidl::StringView& StringNeedsConstructor() const {
+  const ::fidl::StringView& string_needs_constructor() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::ExplicitUnion::Ordinal::
                               kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data.get());

@@ -41,8 +41,8 @@ var _ namespaced = (*Struct)(nil)
 
 type StructMember struct {
 	Attributes
+	nameVariants
 	Type              Type
-	Name              string
 	DefaultValue      ConstantValue
 	Offset            int
 	HandleInformation *HandleInformation
@@ -50,15 +50,15 @@ type StructMember struct {
 
 func (m StructMember) AsParameter() Parameter {
 	return Parameter{
+		nameVariants:      m.nameVariants,
 		Type:              m.Type,
-		Name:              m.Name,
 		Offset:            m.Offset,
 		HandleInformation: m.HandleInformation,
 	}
 }
 
 func (sm StructMember) NameAndType() (string, Type) {
-	return sm.Name, sm.Type
+	return sm.Name(), sm.Type
 }
 
 func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
@@ -71,8 +71,8 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 
 	return StructMember{
 		Attributes:        Attributes{val.Attributes},
+		nameVariants:      structMemberContext.transform(val.Name),
 		Type:              t,
-		Name:              changeIfReserved(val.Name),
 		DefaultValue:      defaultValue,
 		Offset:            val.FieldShapeV1.Offset,
 		HandleInformation: c.fieldHandleInformation(&val.Type),

@@ -166,7 +166,7 @@ class FakeLoggerService : public fidl::WireInterface<fuchsia_cobalt::Logger> {
   const InMemoryLogger& storage() const { return storage_; }
 
  private:
-  Status log_return_status_ = Status::OK;
+  Status log_return_status_ = Status::kOk;
   uint32_t* event_code_count_tracker_ = nullptr;
   InMemoryLogger storage_;
 };
@@ -181,7 +181,7 @@ struct CreateLoggerValidationArgs {
   uint32_t project_id;
 
   // Return status for the fidl call.
-  Status return_status = Status::OK;
+  Status return_status = Status::kOk;
 
   // Used for validating the args and validation on the main thread.
   fbl::Mutex result_lock_;
@@ -219,7 +219,7 @@ class LoggerServiceFixture : public zxtest::Test {
     service_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
 
     checker_.project_id = kProjectId;
-    checker_.return_status = Status::OK;
+    checker_.return_status = Status::kOk;
 
     BindLoggerToLoggerFactoryService(&logger_factory_impl_, &logger_impl_, &checker_,
                                      service_loop_->dispatcher());
@@ -321,7 +321,7 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsFalseWhenFactoryServiceReturnsError)
   info.event_codes = {1, 2, 3, 4, 5};
   info.metric_dimensions = MetricOptions::kMaxEventCodes;
 
-  checker_.return_status = Status::INTERNAL_ERROR;
+  checker_.return_status = Status::kInternalError;
 
   for (uint32_t i = 0; i < kBucketCount; ++i) {
     buckets.push_back({.index = i, .count = 2 * i});
@@ -345,7 +345,7 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsFalseWhenLoggerServiceReturnsError) 
   info.event_codes = {1, 2, 3, 4, 5};
   info.metric_dimensions = MetricOptions::kMaxEventCodes;
 
-  SetLoggerLogReturnStatus(Status::INTERNAL_ERROR);
+  SetLoggerLogReturnStatus(Status::kInternalError);
 
   for (uint32_t i = 0; i < kBucketCount; ++i) {
     buckets.push_back({.index = i, .count = 2 * i});
@@ -419,7 +419,7 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsFalseWhenFactoryServiceReturnsError) {
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
   info.metric_dimensions = MetricOptions::kMaxEventCodes;
-  checker_.return_status = Status::INTERNAL_ERROR;
+  checker_.return_status = Status::kInternalError;
 
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
@@ -437,7 +437,7 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsFalseWhenLoggerServiceReturnsError) {
   info.event_codes = {1, 2, 3, 4, 5};
   info.metric_dimensions = MetricOptions::kMaxEventCodes;
 
-  SetLoggerLogReturnStatus(Status::INTERNAL_ERROR);
+  SetLoggerLogReturnStatus(Status::kInternalError);
 
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 

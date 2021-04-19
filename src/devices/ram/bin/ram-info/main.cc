@@ -29,7 +29,7 @@ static void PrintUsage(const char* cmd) {
 
 int main(int argc, char* argv[]) {
   bool use_csv = false;
-  std::optional<std::array<uint64_t, ram_metrics::wire::MAX_COUNT_CHANNELS>> channels = {};
+  std::optional<std::array<uint64_t, ram_metrics::wire::kMaxCountChannels>> channels = {};
   std::optional<uint64_t> cycles_to_measure = {};
 
   for (int i = 1; i < argc; i++) {

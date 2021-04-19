@@ -13,12 +13,12 @@
 
 // clang-format off
 using fuchsia_gpu_magma::wire::QueryId;
-static_assert(static_cast<uint32_t>(QueryId::VENDOR_ID) == MAGMA_QUERY_VENDOR_ID, "mismatch");
-static_assert(static_cast<uint32_t>(QueryId::DEVICE_ID) == MAGMA_QUERY_DEVICE_ID, "mismatch");
-static_assert(static_cast<uint32_t>(QueryId::IS_TEST_RESTART_SUPPORTED) == MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, "mismatch");
-static_assert(static_cast<uint32_t>(QueryId::IS_TOTAL_TIME_SUPPORTED) == MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED, "mismatch");
-static_assert(static_cast<uint32_t>(QueryId::MINIMUM_MAPPABLE_ADDRESS) == MAGMA_QUERY_MINIMUM_MAPPABLE_ADDRESS, "mismatch");
-static_assert(static_cast<uint32_t>(QueryId::MAXIMUM_INFLIGHT_PARAMS) == MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, "mismatch");
+static_assert(static_cast<uint32_t>(QueryId::kVendorId) == MAGMA_QUERY_VENDOR_ID, "mismatch");
+static_assert(static_cast<uint32_t>(QueryId::kDeviceId) == MAGMA_QUERY_DEVICE_ID, "mismatch");
+static_assert(static_cast<uint32_t>(QueryId::kIsTestRestartSupported) == MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, "mismatch");
+static_assert(static_cast<uint32_t>(QueryId::kIsTotalTimeSupported) == MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED, "mismatch");
+static_assert(static_cast<uint32_t>(QueryId::kMinimumMappableAddress) == MAGMA_QUERY_MINIMUM_MAPPABLE_ADDRESS, "mismatch");
+static_assert(static_cast<uint32_t>(QueryId::kMaximumInflightParams) == MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, "mismatch");
 // clang-format on
 
 namespace {
@@ -646,8 +646,8 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
       uint64_t command_bytes = 0;
       uint32_t num_semaphores = 0;
       int buffers_to_send =
-          FitCommands(fuchsia_gpu_magma::wire::MAX_IMMEDIATE_COMMANDS_DATA_SIZE, num_buffers,
-                      buffers, buffers_sent, &command_bytes, &num_semaphores);
+          FitCommands(fuchsia_gpu_magma::wire::kMaxImmediateCommandsDataSize, num_buffers, buffers,
+                      buffers_sent, &command_bytes, &num_semaphores);
 
       // TODO(fxbug.dev/13144): Figure out how to move command and semaphore bytes across the FIDL
       //               interface without copying.
@@ -724,10 +724,10 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     fuchsia_gpu_magma::wire::BufferOp op;
     switch (options) {
       case MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES:
-        op = fuchsia_gpu_magma::wire::BufferOp::DEPOPULATE_TABLES;
+        op = fuchsia_gpu_magma::wire::BufferOp::kDepopulateTables;
         break;
       case MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES:
-        op = fuchsia_gpu_magma::wire::BufferOp::POPULATE_TABLES;
+        op = fuchsia_gpu_magma::wire::BufferOp::kPopulateTables;
         break;
       default:
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid buffer op %d", options);

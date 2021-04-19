@@ -143,7 +143,7 @@ struct CoordinatorConfig {
   zx::duration resume_timeout = kDefaultResumeTimeout;
   // System will be transitioned to this system power state during
   // component shutdown.
-  SystemPowerState default_shutdown_system_state = SystemPowerState::REBOOT;
+  SystemPowerState default_shutdown_system_state = SystemPowerState::kReboot;
   // Something to clone a handle from the environment to pass to a Devhost.
   FsProvider* fs_provider = nullptr;
   // The path prefix to find binaries, drivers, etc. Typically this is "/boot/", but in test

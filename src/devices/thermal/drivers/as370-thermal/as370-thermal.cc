@@ -107,7 +107,7 @@ void As370Thermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
 }
 
 void As370Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::Sync& completer) {
-  if (power_domain != PowerDomain::BIG_CLUSTER_POWER_DOMAIN) {
+  if (power_domain != PowerDomain::kBigClusterPowerDomain) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
   } else {
     OperatingPoint dvfs_info_copy = device_info_.opps[static_cast<uint32_t>(power_domain)];
@@ -157,7 +157,7 @@ void As370Thermal::SetTripCelsius(uint32_t id, float temp,
 
 void As370Thermal::GetDvfsOperatingPoint(PowerDomain power_domain,
                                          GetDvfsOperatingPointCompleter::Sync& completer) {
-  if (power_domain != PowerDomain::BIG_CLUSTER_POWER_DOMAIN) {
+  if (power_domain != PowerDomain::kBigClusterPowerDomain) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
   } else {
     completer.Reply(ZX_OK, operating_point_);
@@ -166,7 +166,7 @@ void As370Thermal::GetDvfsOperatingPoint(PowerDomain power_domain,
 
 void As370Thermal::SetDvfsOperatingPoint(uint16_t op_idx, PowerDomain power_domain,
                                          SetDvfsOperatingPointCompleter::Sync& completer) {
-  if (power_domain != PowerDomain::BIG_CLUSTER_POWER_DOMAIN) {
+  if (power_domain != PowerDomain::kBigClusterPowerDomain) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   } else if (op_idx >= device_info_.opps[static_cast<uint32_t>(power_domain)].count) {
     completer.Reply(ZX_ERR_INVALID_ARGS);
@@ -187,7 +187,7 @@ zx_status_t As370Thermal::Init() {
   PvtCtrl::Get().FromValue(0).set_power_down(1).WriteTo(&mmio_);
 
   const OperatingPoint& operating_points =
-      device_info_.opps[static_cast<uint32_t>(PowerDomain::BIG_CLUSTER_POWER_DOMAIN)];
+      device_info_.opps[static_cast<uint32_t>(PowerDomain::kBigClusterPowerDomain)];
   const auto max_operating_point = static_cast<uint16_t>(operating_points.count - 1);
 
   zx_status_t status = cpu_power_.RegisterPowerDomain(
@@ -202,7 +202,7 @@ zx_status_t As370Thermal::Init() {
 
 zx_status_t As370Thermal::SetOperatingPoint(uint16_t op_idx) {
   const auto& opps =
-      device_info_.opps[static_cast<uint32_t>(PowerDomain::BIG_CLUSTER_POWER_DOMAIN)].opp;
+      device_info_.opps[static_cast<uint32_t>(PowerDomain::kBigClusterPowerDomain)].opp;
 
   zx_status_t status;
   uint32_t actual_voltage = 0;

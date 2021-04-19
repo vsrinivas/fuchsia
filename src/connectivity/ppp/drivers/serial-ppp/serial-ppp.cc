@@ -32,14 +32,14 @@ constexpr uint64_t kExitKey = 3;
 constexpr uint64_t kWaitSocketReadableKey = 4;
 constexpr uint64_t kWaitSocketWritableKey = 5;
 
-static constexpr uint8_t kRxFrameTypes[] = {static_cast<uint8_t>(netdev::wire::FrameType::IPV4),
-                                            static_cast<uint8_t>(netdev::wire::FrameType::IPV6)};
+static constexpr uint8_t kRxFrameTypes[] = {static_cast<uint8_t>(netdev::wire::FrameType::kIpv4),
+                                            static_cast<uint8_t>(netdev::wire::FrameType::kIpv6)};
 static constexpr tx_support_t kTxFrameSupport[] = {
-    {.type = static_cast<uint8_t>(netdev::wire::FrameType::IPV4),
-     .features = netdev::wire::FRAME_FEATURES_RAW,
+    {.type = static_cast<uint8_t>(netdev::wire::FrameType::kIpv4),
+     .features = netdev::wire::kFrameFeaturesRaw,
      .supported_flags = 0},
-    {.type = static_cast<uint8_t>(netdev::wire::FrameType::IPV4),
-     .features = netdev::wire::FRAME_FEATURES_RAW,
+    {.type = static_cast<uint8_t>(netdev::wire::FrameType::kIpv4),
+     .features = netdev::wire::kFrameFeaturesRaw,
      .supported_flags = 0}};
 
 SerialPpp::SerialPpp(zx_device_t* parent) : SerialPpp(parent, parent) {}
@@ -171,10 +171,10 @@ void SerialPpp::WorkerLoop() {
         }
         Protocol protocol;
         switch (netdev::wire::FrameType(buffer.type)) {
-          case netdev::wire::FrameType::IPV4:
+          case netdev::wire::FrameType::kIpv4:
             protocol = Protocol::Ipv4;
             break;
-          case netdev::wire::FrameType::IPV6:
+          case netdev::wire::FrameType::kIpv6:
             protocol = Protocol::Ipv6;
             break;
           default:
@@ -256,10 +256,10 @@ bool SerialPpp::ConsumeSerial(bool fetch_from_socket) {
     netdev::wire::FrameType frame_type;
     switch (frame.protocol) {
       case Protocol::Ipv4:
-        frame_type = netdev::wire::FrameType::IPV4;
+        frame_type = netdev::wire::FrameType::kIpv4;
         break;
       case Protocol::Ipv6:
-        frame_type = netdev::wire::FrameType::IPV6;
+        frame_type = netdev::wire::FrameType::kIpv6;
         break;
       default: {
         // Ignore all other protocols.
@@ -366,7 +366,7 @@ void SerialPpp::NetworkDeviceImplStart(network_device_impl_start_callback callba
     thread_ = std::thread([&] { WorkerLoop(); });
   }
   status_t new_status = {.mtu = kDefaultMtu,
-                         .flags = static_cast<uint32_t>(netdev::wire::StatusFlags::ONLINE)};
+                         .flags = static_cast<uint32_t>(netdev::wire::StatusFlags::kOnline)};
   netdevice_protocol_.StatusChanged(&new_status);
 }
 
@@ -394,7 +394,7 @@ void SerialPpp::NetworkDeviceImplGetInfo(device_info_t* out_info) {
       .tx_depth = kFifoDepth,
       .rx_depth = kFifoDepth,
       .rx_threshold = kFifoDepth / 2,
-      .device_class = static_cast<uint8_t>(netdev::wire::DeviceClass::PPP),
+      .device_class = static_cast<uint8_t>(netdev::wire::DeviceClass::kPpp),
       .rx_types_list = kRxFrameTypes,
       .rx_types_count = sizeof(kRxFrameTypes) / sizeof(uint8_t),
       .tx_types_list = kTxFrameSupport,
@@ -408,7 +408,7 @@ void SerialPpp::NetworkDeviceImplGetInfo(device_info_t* out_info) {
 void SerialPpp::NetworkDeviceImplGetStatus(status_t* out_status) {
   *out_status = status_t{
       .mtu = kDefaultMtu,
-      .flags = serial_.is_valid() ? static_cast<uint32_t>(netdev::wire::StatusFlags::ONLINE) : 0};
+      .flags = serial_.is_valid() ? static_cast<uint32_t>(netdev::wire::StatusFlags::kOnline) : 0};
 }
 
 void SerialPpp::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf_count) {

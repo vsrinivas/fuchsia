@@ -72,7 +72,7 @@ zx_status_t ConnectListener(fidl::ClientEnd<fuchsia_logger::LogListenerSafe> lis
   fuchsia_logger::wire::LogFilterOptions options{
       .filter_by_pid = false,
       .filter_by_tid = false,
-      .min_severity = fuchsia_logger::wire::LogLevelFilter::TRACE,
+      .min_severity = fuchsia_logger::wire::LogLevelFilter::kTrace,
       .tags = fidl::VectorView<fidl::StringView>::FromExternal(tags),
   };
   auto result = log.ListenSafe(

@@ -42,10 +42,10 @@ int socket(int domain, int type, int protocol) {
   fsocket::wire::Domain sock_domain;
   switch (domain) {
     case AF_INET:
-      sock_domain = fsocket::wire::Domain::IPV4;
+      sock_domain = fsocket::wire::Domain::kIpv4;
       break;
     case AF_INET6:
-      sock_domain = fsocket::wire::Domain::IPV6;
+      sock_domain = fsocket::wire::Domain::kIpv6;
       break;
     case AF_PACKET:
       return ERRNO(EPERM);
@@ -60,7 +60,7 @@ int socket(int domain, int type, int protocol) {
         case IPPROTO_IP:
         case IPPROTO_TCP: {
           auto result =
-              provider->StreamSocket(sock_domain, fsocket::wire::StreamSocketProtocol::TCP);
+              provider->StreamSocket(sock_domain, fsocket::wire::StreamSocketProtocol::kTcp);
           if (result.status() != ZX_OK) {
             return ERROR(result.status());
           }
@@ -78,19 +78,19 @@ int socket(int domain, int type, int protocol) {
       switch (protocol) {
         case IPPROTO_IP:
         case IPPROTO_UDP:
-          proto = fsocket::wire::DatagramSocketProtocol::UDP;
+          proto = fsocket::wire::DatagramSocketProtocol::kUdp;
           break;
         case IPPROTO_ICMP:
-          if (sock_domain != fsocket::wire::Domain::IPV4) {
+          if (sock_domain != fsocket::wire::Domain::kIpv4) {
             return ERRNO(EPROTONOSUPPORT);
           }
-          proto = fsocket::wire::DatagramSocketProtocol::ICMP_ECHO;
+          proto = fsocket::wire::DatagramSocketProtocol::kIcmpEcho;
           break;
         case IPPROTO_ICMPV6:
-          if (sock_domain != fsocket::wire::Domain::IPV6) {
+          if (sock_domain != fsocket::wire::Domain::kIpv6) {
             return ERRNO(EPROTONOSUPPORT);
           }
-          proto = fsocket::wire::DatagramSocketProtocol::ICMP_ECHO;
+          proto = fsocket::wire::DatagramSocketProtocol::kIcmpEcho;
           break;
         default:
           return ERRNO(EPROTONOSUPPORT);
@@ -337,9 +337,9 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
     errno = fdio_status_to_errno(fidl_result.status());
     return EAI_SYSTEM;
   }
-  const fnet::wire::NameLookup_LookupIp2_Result& wire_result = fidl_result.value().result;
+  const fnet::wire::NameLookupLookupIp2Result& wire_result = fidl_result.value().result;
   switch (wire_result.which()) {
-    case fnet::wire::NameLookup_LookupIp2_Result::Tag::kResponse: {
+    case fnet::wire::NameLookupLookupIp2Result::Tag::kResponse: {
       int count = 0;
       const fnet::wire::LookupResult& result = wire_result.response().result;
       if (result.has_addresses()) {
@@ -369,15 +369,15 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
 
       return count;
     }
-    case fnet::wire::NameLookup_LookupIp2_Result::Tag::kErr:
+    case fnet::wire::NameLookupLookupIp2Result::Tag::kErr:
       switch (wire_result.err()) {
-        case fnet::wire::LookupError::NOT_FOUND:
+        case fnet::wire::LookupError::kNotFound:
           return EAI_NONAME;
-        case fnet::wire::LookupError::TRANSIENT:
+        case fnet::wire::LookupError::kTransient:
           return EAI_AGAIN;
-        case fnet::wire::LookupError::INVALID_ARGS:
+        case fnet::wire::LookupError::kInvalidArgs:
           return EAI_FAIL;
-        case fnet::wire::LookupError::INTERNAL_ERROR:
+        case fnet::wire::LookupError::kInternalError:
           errno = EIO;
           return EAI_SYSTEM;
       }

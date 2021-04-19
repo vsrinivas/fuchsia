@@ -33,7 +33,7 @@ func naturalNamespace(library fidlgen.LibraryIdentifier) namespace {
 
 func formatLibrary(library fidlgen.LibraryIdentifier, sep string, identifierTransform identifierTransform) string {
 	name := strings.Join(libraryParts(library, identifierTransform), sep)
-	return changeIfReserved(fidlgen.Identifier(name))
+	return changeIfReserved(name, nsComponentContext)
 }
 
 func unifiedNamespace(library fidlgen.LibraryIdentifier) namespace {

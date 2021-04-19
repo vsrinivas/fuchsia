@@ -117,7 +117,7 @@ class PlatformBus : public PlatformBusType,
       __TA_GUARDED(bootloader_info_lock_);
 
   fuchsia_sysinfo::wire::InterruptControllerType interrupt_controller_type_ =
-      fuchsia_sysinfo::wire::InterruptControllerType::UNKNOWN;
+      fuchsia_sysinfo::wire::InterruptControllerType::kUnknown;
 
   // Protocols that are optionally provided by the board driver.
   std::optional<ddk::ClockImplProtocolClient> clock_;

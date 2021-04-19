@@ -48,9 +48,9 @@ class BitsType final {
   // Constructs an instance of |BitsType| from an underlying primitive value,
   // preserving any bit member not defined in the FIDL schema.
   explicit constexpr BitsType(uint32_t value) : value_(value) {}
-  const static BitsType A;
-  const static BitsType B;
-  const static BitsType C;
+  const static BitsType kA;
+  const static BitsType kB;
+  const static BitsType kC;
   const static BitsType kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
@@ -90,11 +90,11 @@ class BitsType final {
  private:
   uint32_t value_ = 0;
 };
-constexpr const ::fidl_test_bitsconstants::wire::BitsType BitsType::A =
+constexpr const ::fidl_test_bitsconstants::wire::BitsType BitsType::kA =
     ::fidl_test_bitsconstants::wire::BitsType(1u);
-constexpr const ::fidl_test_bitsconstants::wire::BitsType BitsType::B =
+constexpr const ::fidl_test_bitsconstants::wire::BitsType BitsType::kB =
     ::fidl_test_bitsconstants::wire::BitsType(128u);
-constexpr const ::fidl_test_bitsconstants::wire::BitsType BitsType::C =
+constexpr const ::fidl_test_bitsconstants::wire::BitsType BitsType::kC =
     ::fidl_test_bitsconstants::wire::BitsType(2u);
 constexpr const ::fidl_test_bitsconstants::wire::BitsType BitsType::kMask =
     ::fidl_test_bitsconstants::wire::BitsType(131u);
@@ -138,14 +138,14 @@ constexpr inline void BitsType::operator^=(
   this->value_ ^= other.value_;
 }
 
-constexpr ::fidl_test_bitsconstants::wire::BitsType Const3 =
+constexpr ::fidl_test_bitsconstants::wire::BitsType kConst3 =
     static_cast<::fidl_test_bitsconstants::wire::BitsType>(131);
 
-constexpr ::fidl_test_bitsconstants::wire::BitsType Const2 =
+constexpr ::fidl_test_bitsconstants::wire::BitsType kConst2 =
     static_cast<::fidl_test_bitsconstants::wire::BitsType>(129);
 
-constexpr ::fidl_test_bitsconstants::wire::BitsType Const1 =
-    ::fidl_test_bitsconstants::wire::BitsType::A;
+constexpr ::fidl_test_bitsconstants::wire::BitsType kConst1 =
+    ::fidl_test_bitsconstants::wire::BitsType::kA;
 
 }  // namespace wire
 }  // namespace fidl_test_bitsconstants

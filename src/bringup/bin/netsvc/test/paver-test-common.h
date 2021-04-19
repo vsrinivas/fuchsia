@@ -125,7 +125,7 @@ class FakePaver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver>,
   void QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kQueryCurrentConfiguration);
-    completer.ReplySuccess(fuchsia_paver::wire::Configuration::A);
+    completer.ReplySuccess(fuchsia_paver::wire::Configuration::kA);
   }
 
   void FindSysconfig(zx::channel sysconfig, FindSysconfigCompleter::Sync& _completer) override {}
@@ -133,14 +133,14 @@ class FakePaver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver>,
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kQueryActiveConfiguration);
-    completer.ReplySuccess(fuchsia_paver::wire::Configuration::A);
+    completer.ReplySuccess(fuchsia_paver::wire::Configuration::kA);
   }
 
   void QueryConfigurationStatus(fuchsia_paver::wire::Configuration configuration,
                                 QueryConfigurationStatusCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kQueryConfigurationStatus);
-    completer.ReplySuccess(fuchsia_paver::wire::ConfigurationStatus::HEALTHY);
+    completer.ReplySuccess(fuchsia_paver::wire::ConfigurationStatus::kHealthy);
   }
 
   void SetConfigurationActive(fuchsia_paver::wire::Configuration configuration,
@@ -149,19 +149,19 @@ class FakePaver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver>,
     AppendCommand(Command::kSetConfigurationActive);
     zx_status_t status;
     switch (configuration) {
-      case fuchsia_paver::wire::Configuration::A:
+      case fuchsia_paver::wire::Configuration::kA:
         abr_data_.slot_a.active = true;
         abr_data_.slot_a.unbootable = false;
         status = ZX_OK;
         break;
 
-      case fuchsia_paver::wire::Configuration::B:
+      case fuchsia_paver::wire::Configuration::kB:
         abr_data_.slot_b.active = true;
         abr_data_.slot_b.unbootable = false;
         status = ZX_OK;
         break;
 
-      case fuchsia_paver::wire::Configuration::RECOVERY:
+      case fuchsia_paver::wire::Configuration::kRecovery:
         status = ZX_ERR_INVALID_ARGS;
         break;
     }
@@ -174,17 +174,17 @@ class FakePaver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver>,
     AppendCommand(Command::kSetConfigurationUnbootable);
     zx_status_t status;
     switch (configuration) {
-      case fuchsia_paver::wire::Configuration::A:
+      case fuchsia_paver::wire::Configuration::kA:
         abr_data_.slot_a.unbootable = true;
         status = ZX_OK;
         break;
 
-      case fuchsia_paver::wire::Configuration::B:
+      case fuchsia_paver::wire::Configuration::kB:
         abr_data_.slot_b.unbootable = true;
         status = ZX_OK;
         break;
 
-      case fuchsia_paver::wire::Configuration::RECOVERY:
+      case fuchsia_paver::wire::Configuration::kRecovery:
         status = ZX_ERR_INVALID_ARGS;
         break;
     }

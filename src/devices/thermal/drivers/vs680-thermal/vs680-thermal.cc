@@ -25,7 +25,7 @@ using fuchsia_hardware_thermal::wire::OperatingPointEntry;
 
 constexpr OperatingPoint kOperatingPoints = {
     .opp =
-        fidl::Array<OperatingPointEntry, fuchsia_hardware_thermal::wire::MAX_DVFS_OPPS>{
+        fidl::Array<OperatingPointEntry, fuchsia_hardware_thermal::wire::kMaxDvfsOpps>{
             // TODO(bradenkell): This is the initial CPU frequency coming out of the bootloader. Add
             //                   the other operating points when we have more information.
             OperatingPointEntry{.freq_hz = 1'800'000'000, .volt_uv = 800'000},
@@ -144,7 +144,7 @@ void Vs680Thermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
 }
 
 void Vs680Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::Sync& completer) {
-  if (power_domain == PowerDomain::BIG_CLUSTER_POWER_DOMAIN) {
+  if (power_domain == PowerDomain::kBigClusterPowerDomain) {
     OperatingPoint operating_points_copy = kOperatingPoints;
     completer.Reply(ZX_OK, fidl::ObjectView<OperatingPoint>::FromExternal(&operating_points_copy));
   } else {
@@ -173,7 +173,7 @@ void Vs680Thermal::SetTripCelsius(uint32_t id, float temp,
 
 void Vs680Thermal::GetDvfsOperatingPoint(PowerDomain power_domain,
                                          GetDvfsOperatingPointCompleter::Sync& completer) {
-  if (power_domain == PowerDomain::BIG_CLUSTER_POWER_DOMAIN) {
+  if (power_domain == PowerDomain::kBigClusterPowerDomain) {
     completer.Reply(ZX_OK, operating_point_);
   } else {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
@@ -182,7 +182,7 @@ void Vs680Thermal::GetDvfsOperatingPoint(PowerDomain power_domain,
 
 void Vs680Thermal::SetDvfsOperatingPoint(uint16_t op_idx, PowerDomain power_domain,
                                          SetDvfsOperatingPointCompleter::Sync& completer) {
-  if (power_domain == PowerDomain::BIG_CLUSTER_POWER_DOMAIN) {
+  if (power_domain == PowerDomain::kBigClusterPowerDomain) {
     completer.Reply(SetOperatingPoint(op_idx));
   } else {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);

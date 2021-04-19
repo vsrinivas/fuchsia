@@ -40,9 +40,9 @@ namespace wire {
 
 enum class MyStrictEnum : uint32_t {
 
-  FOO = 1u,
+  kFoo = 1u,
 
-  BAR = 2u,
+  kBar = 2u,
 };
 
 class MyFlexibleEnumWithCustomUnknown final {
@@ -70,23 +70,23 @@ class MyFlexibleEnumWithCustomUnknown final {
     return MyFlexibleEnumWithCustomUnknown(0x3);
   }
 
-  static const MyFlexibleEnumWithCustomUnknown FOO;
+  static const MyFlexibleEnumWithCustomUnknown kFoo;
 
-  static const MyFlexibleEnumWithCustomUnknown BAR;
+  static const MyFlexibleEnumWithCustomUnknown kBar;
 
-  static const MyFlexibleEnumWithCustomUnknown CUSTOM_UNKNOWN;
+  static const MyFlexibleEnumWithCustomUnknown kCustomUnknown;
 
  private:
   uint32_t value_;
 };
 constexpr const ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown
-    MyFlexibleEnumWithCustomUnknown::FOO =
+    MyFlexibleEnumWithCustomUnknown::kFoo =
         ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown(1u);
 constexpr const ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown
-    MyFlexibleEnumWithCustomUnknown::BAR =
+    MyFlexibleEnumWithCustomUnknown::kBar =
         ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown(2u);
 constexpr const ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown
-    MyFlexibleEnumWithCustomUnknown::CUSTOM_UNKNOWN =
+    MyFlexibleEnumWithCustomUnknown::kCustomUnknown =
         ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown(3u);
 
 class MyFlexibleEnum final {
@@ -112,16 +112,16 @@ class MyFlexibleEnum final {
     return MyFlexibleEnum(0xffffffff);
   }
 
-  static const MyFlexibleEnum FOO;
+  static const MyFlexibleEnum kFoo;
 
-  static const MyFlexibleEnum BAR;
+  static const MyFlexibleEnum kBar;
 
  private:
   uint32_t value_;
 };
-constexpr const ::fidl_test_enum::wire::MyFlexibleEnum MyFlexibleEnum::FOO =
+constexpr const ::fidl_test_enum::wire::MyFlexibleEnum MyFlexibleEnum::kFoo =
     ::fidl_test_enum::wire::MyFlexibleEnum(1u);
-constexpr const ::fidl_test_enum::wire::MyFlexibleEnum MyFlexibleEnum::BAR =
+constexpr const ::fidl_test_enum::wire::MyFlexibleEnum MyFlexibleEnum::kBar =
     ::fidl_test_enum::wire::MyFlexibleEnum(2u);
 
 }  // namespace wire

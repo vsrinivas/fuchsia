@@ -729,7 +729,7 @@ TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient) {
     fbl::AutoLock lock(vc_client.mtx());
     EXPECT_EQ(ZX_OK, vc_client.dc_
                          ->SetVirtconMode(static_cast<uint8_t>(
-                             fuchsia_hardware_display::wire::VirtconMode::FALLBACK))
+                             fuchsia_hardware_display::wire::VirtconMode::kFallback))
                          .status());
   }
   ASSERT_TRUE(vc_client.Bind(dispatcher()));

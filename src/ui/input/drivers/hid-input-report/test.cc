@@ -355,17 +355,17 @@ TEST_F(HidDevTest, SensorTest) {
   ASSERT_EQ(4, sensor_desc.values().count());
 
   ASSERT_EQ(sensor_desc.values()[0].type,
-            fuchsia_input_report::wire::SensorType::LIGHT_ILLUMINANCE);
-  ASSERT_EQ(sensor_desc.values()[0].axis.unit.type, fuchsia_input_report::wire::UnitType::NONE);
+            fuchsia_input_report::wire::SensorType::kLightIlluminance);
+  ASSERT_EQ(sensor_desc.values()[0].axis.unit.type, fuchsia_input_report::wire::UnitType::kNone);
 
-  ASSERT_EQ(sensor_desc.values()[1].type, fuchsia_input_report::wire::SensorType::LIGHT_RED);
-  ASSERT_EQ(sensor_desc.values()[1].axis.unit.type, fuchsia_input_report::wire::UnitType::NONE);
+  ASSERT_EQ(sensor_desc.values()[1].type, fuchsia_input_report::wire::SensorType::kLightRed);
+  ASSERT_EQ(sensor_desc.values()[1].axis.unit.type, fuchsia_input_report::wire::UnitType::kNone);
 
-  ASSERT_EQ(sensor_desc.values()[2].type, fuchsia_input_report::wire::SensorType::LIGHT_BLUE);
-  ASSERT_EQ(sensor_desc.values()[2].axis.unit.type, fuchsia_input_report::wire::UnitType::NONE);
+  ASSERT_EQ(sensor_desc.values()[2].type, fuchsia_input_report::wire::SensorType::kLightBlue);
+  ASSERT_EQ(sensor_desc.values()[2].axis.unit.type, fuchsia_input_report::wire::UnitType::kNone);
 
-  ASSERT_EQ(sensor_desc.values()[3].type, fuchsia_input_report::wire::SensorType::LIGHT_GREEN);
-  ASSERT_EQ(sensor_desc.values()[3].axis.unit.type, fuchsia_input_report::wire::UnitType::NONE);
+  ASSERT_EQ(sensor_desc.values()[3].type, fuchsia_input_report::wire::SensorType::kLightGreen);
+  ASSERT_EQ(sensor_desc.values()[3].axis.unit.type, fuchsia_input_report::wire::UnitType::kNone);
 
   // Get an InputReportsReader.
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
@@ -493,7 +493,7 @@ TEST_F(HidDevTest, GetTouchPadDescTest) {
   ASSERT_TRUE(result->descriptor.touch().has_input());
   fuchsia_input_report::wire::TouchInputDescriptor& touch = result->descriptor.touch().input();
 
-  ASSERT_EQ(fuchsia_input_report::wire::TouchType::TOUCHPAD, touch.touch_type());
+  ASSERT_EQ(fuchsia_input_report::wire::TouchType::kTouchpad, touch.touch_type());
 }
 
 TEST_F(HidDevTest, KeyboardTest) {
@@ -541,9 +541,9 @@ TEST_F(HidDevTest, KeyboardTest) {
   const auto& report = reports[0];
   const auto& keyboard = report.keyboard();
   ASSERT_EQ(3, keyboard.pressed_keys3().count());
-  EXPECT_EQ(fuchsia_input::wire::Key::A, keyboard.pressed_keys3()[0]);
-  EXPECT_EQ(fuchsia_input::wire::Key::UP, keyboard.pressed_keys3()[1]);
-  EXPECT_EQ(fuchsia_input::wire::Key::B, keyboard.pressed_keys3()[2]);
+  EXPECT_EQ(fuchsia_input::wire::Key::kA, keyboard.pressed_keys3()[0]);
+  EXPECT_EQ(fuchsia_input::wire::Key::kUp, keyboard.pressed_keys3()[1]);
+  EXPECT_EQ(fuchsia_input::wire::Key::kB, keyboard.pressed_keys3()[2]);
 }
 
 TEST_F(HidDevTest, KeyboardOutputReportTest) {
@@ -558,8 +558,8 @@ TEST_F(HidDevTest, KeyboardOutputReportTest) {
   // Make an output report.
   fidl::FidlAllocator allocator;
   fidl::VectorView<fuchsia_input_report::wire::LedType> led_view(allocator, 2);
-  led_view[0] = fuchsia_input_report::wire::LedType::NUM_LOCK;
-  led_view[1] = fuchsia_input_report::wire::LedType::SCROLL_LOCK;
+  led_view[0] = fuchsia_input_report::wire::LedType::kNumLock;
+  led_view[1] = fuchsia_input_report::wire::LedType::kScrollLock;
   fuchsia_input_report::wire::KeyboardOutputReport fidl_keyboard(allocator);
   fidl_keyboard.set_enabled_leds(allocator, std::move(led_view));
 
@@ -615,15 +615,15 @@ TEST_F(HidDevTest, ConsumerControlTest) {
   ASSERT_EQ(5, consumer_control_desc.buttons().count());
 
   ASSERT_EQ(consumer_control_desc.buttons()[0],
-            fuchsia_input_report::wire::ConsumerControlButton::VOLUME_UP);
+            fuchsia_input_report::wire::ConsumerControlButton::kVolumeUp);
   ASSERT_EQ(consumer_control_desc.buttons()[1],
-            fuchsia_input_report::wire::ConsumerControlButton::VOLUME_DOWN);
+            fuchsia_input_report::wire::ConsumerControlButton::kVolumeDown);
   ASSERT_EQ(consumer_control_desc.buttons()[2],
-            fuchsia_input_report::wire::ConsumerControlButton::REBOOT);
+            fuchsia_input_report::wire::ConsumerControlButton::kReboot);
   ASSERT_EQ(consumer_control_desc.buttons()[3],
-            fuchsia_input_report::wire::ConsumerControlButton::CAMERA_DISABLE);
+            fuchsia_input_report::wire::ConsumerControlButton::kCameraDisable);
   ASSERT_EQ(consumer_control_desc.buttons()[4],
-            fuchsia_input_report::wire::ConsumerControlButton::MIC_MUTE);
+            fuchsia_input_report::wire::ConsumerControlButton::kMicMute);
 
   // Get an InputReportsReader.
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
@@ -674,11 +674,11 @@ TEST_F(HidDevTest, ConsumerControlTest) {
     EXPECT_EQ(3, report.pressed_buttons().count());
 
     EXPECT_EQ(report.pressed_buttons()[0],
-              fuchsia_input_report::wire::ConsumerControlButton::VOLUME_UP);
+              fuchsia_input_report::wire::ConsumerControlButton::kVolumeUp);
     EXPECT_EQ(report.pressed_buttons()[1],
-              fuchsia_input_report::wire::ConsumerControlButton::REBOOT);
+              fuchsia_input_report::wire::ConsumerControlButton::kReboot);
     EXPECT_EQ(report.pressed_buttons()[2],
-              fuchsia_input_report::wire::ConsumerControlButton::MIC_MUTE);
+              fuchsia_input_report::wire::ConsumerControlButton::kMicMute);
   }
 }
 

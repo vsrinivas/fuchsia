@@ -40,11 +40,11 @@
 namespace fidl_test_typealiases {
 namespace wire {
 
-enum class obj_type : uint32_t {
+enum class ObjType : uint32_t {
 
-  NONE = 0u,
+  kNone = 0u,
 
-  CHANNEL = 4u,
+  kChannel = 4u,
 };
 
 struct ExampleOfUseOfAliases;
@@ -185,7 +185,7 @@ struct ExampleOfUseOfAliases {
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_typealiases::wire::obj_type>
+struct IsFidlType<::fidl_test_typealiases::wire::ObjType>
     : public std::true_type {};
 
 #ifdef __Fuchsia__

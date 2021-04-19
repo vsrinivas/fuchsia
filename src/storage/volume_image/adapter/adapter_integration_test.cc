@@ -240,7 +240,7 @@ void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {
       ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(channel), &block_device), ZX_OK);
       std::array<uint64_t, 2> slice_start = {0, 2};
       using VsliceRange = fuchsia_hardware_block_volume_VsliceRange;
-      std::array<VsliceRange, fuchsia_hardware_block_volume::wire::MAX_SLICE_REQUESTS>
+      std::array<VsliceRange, fuchsia_hardware_block_volume::wire::kMaxSliceRequests>
 
           ranges = {};
       uint64_t range_count;
@@ -266,7 +266,7 @@ void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {
       ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(channel), &block_device), ZX_OK);
       std::array<uint64_t, 2> slice_start = {0, 4};
       using VsliceRange = fuchsia_hardware_block_volume_VsliceRange;
-      std::array<VsliceRange, fuchsia_hardware_block_volume::wire::MAX_SLICE_REQUESTS>
+      std::array<VsliceRange, fuchsia_hardware_block_volume::wire::kMaxSliceRequests>
 
           ranges = {};
       uint64_t range_count;

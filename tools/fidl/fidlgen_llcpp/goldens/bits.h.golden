@@ -48,8 +48,8 @@ class StrictBits final {
   // Constructs an instance of |StrictBits| from an underlying primitive value,
   // preserving any bit member not defined in the FIDL schema.
   explicit constexpr StrictBits(uint64_t value) : value_(value) {}
-  const static StrictBits SMALLEST;
-  const static StrictBits BIGGEST;
+  const static StrictBits kSmallest;
+  const static StrictBits kBiggest;
   const static StrictBits kMask;
 
   explicit constexpr inline operator uint64_t() const { return value_; }
@@ -89,9 +89,9 @@ class StrictBits final {
  private:
   uint64_t value_ = 0;
 };
-constexpr const ::fidl_test_bits::wire::StrictBits StrictBits::SMALLEST =
+constexpr const ::fidl_test_bits::wire::StrictBits StrictBits::kSmallest =
     ::fidl_test_bits::wire::StrictBits(1u);
-constexpr const ::fidl_test_bits::wire::StrictBits StrictBits::BIGGEST =
+constexpr const ::fidl_test_bits::wire::StrictBits StrictBits::kBiggest =
     ::fidl_test_bits::wire::StrictBits(9223372036854775808u);
 constexpr const ::fidl_test_bits::wire::StrictBits StrictBits::kMask =
     ::fidl_test_bits::wire::StrictBits(9223372036854775809u);
@@ -146,9 +146,9 @@ class MyBits final {
   // Constructs an instance of |MyBits| from an underlying primitive value,
   // preserving any bit member not defined in the FIDL schema.
   explicit constexpr MyBits(uint32_t value) : value_(value) {}
-  const static MyBits MY_FIRST_BIT;
-  const static MyBits MY_OTHER_BIT;
-  const static MyBits MASK;
+  const static MyBits kMyFirstBit;
+  const static MyBits kMyOtherBit;
+  const static MyBits kMask_;
   const static MyBits kMask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
@@ -188,11 +188,11 @@ class MyBits final {
  private:
   uint32_t value_ = 0;
 };
-constexpr const ::fidl_test_bits::wire::MyBits MyBits::MY_FIRST_BIT =
+constexpr const ::fidl_test_bits::wire::MyBits MyBits::kMyFirstBit =
     ::fidl_test_bits::wire::MyBits(1u);
-constexpr const ::fidl_test_bits::wire::MyBits MyBits::MY_OTHER_BIT =
+constexpr const ::fidl_test_bits::wire::MyBits MyBits::kMyOtherBit =
     ::fidl_test_bits::wire::MyBits(2u);
-constexpr const ::fidl_test_bits::wire::MyBits MyBits::MASK =
+constexpr const ::fidl_test_bits::wire::MyBits MyBits::kMask_ =
     ::fidl_test_bits::wire::MyBits(4u);
 constexpr const ::fidl_test_bits::wire::MyBits MyBits::kMask =
     ::fidl_test_bits::wire::MyBits(7u);
@@ -245,8 +245,8 @@ class FlexibleBits final {
   // Constructs an instance of |FlexibleBits| from an underlying primitive
   // value, preserving any bit member not defined in the FIDL schema.
   explicit constexpr FlexibleBits(uint64_t value) : value_(value) {}
-  const static FlexibleBits SMALLEST;
-  const static FlexibleBits BIGGEST;
+  const static FlexibleBits kSmallest;
+  const static FlexibleBits kBiggest;
   const static FlexibleBits kMask;
 
   explicit constexpr inline operator uint64_t() const { return value_; }
@@ -293,9 +293,9 @@ class FlexibleBits final {
  private:
   uint64_t value_ = 0;
 };
-constexpr const ::fidl_test_bits::wire::FlexibleBits FlexibleBits::SMALLEST =
+constexpr const ::fidl_test_bits::wire::FlexibleBits FlexibleBits::kSmallest =
     ::fidl_test_bits::wire::FlexibleBits(1u);
-constexpr const ::fidl_test_bits::wire::FlexibleBits FlexibleBits::BIGGEST =
+constexpr const ::fidl_test_bits::wire::FlexibleBits FlexibleBits::kBiggest =
     ::fidl_test_bits::wire::FlexibleBits(9223372036854775808u);
 constexpr const ::fidl_test_bits::wire::FlexibleBits FlexibleBits::kMask =
     ::fidl_test_bits::wire::FlexibleBits(9223372036854775809u);

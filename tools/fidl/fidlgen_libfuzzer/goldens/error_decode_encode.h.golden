@@ -12,11 +12,11 @@ namespace fuzzing {
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoder, 3>
     fidl_test_error_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderImpl<
-            ::fidl_test_error::wire::Example_foo_Response>,
+            ::fidl_test_error::wire::ExampleFooResponse>,
         ::fidl::fuzzing::DecoderEncoderImpl<
-            ::fidl::WireRequest<::fidl_test_error::Example::foo>>,
+            ::fidl::WireRequest<::fidl_test_error::Example::Foo>>,
         ::fidl::fuzzing::DecoderEncoderImpl<
-            ::fidl::WireResponse<::fidl_test_error::Example::foo>>,
+            ::fidl::WireResponse<::fidl_test_error::Example::Foo>>,
 };
 
 }  // namespace fuzzing

@@ -58,7 +58,7 @@ class Control : public ControlType,
                           CreateColorBuffer2Completer::Sync& completer) override;
 
   using CreateBuffer2Result =
-      fit::result<fuchsia_hardware_goldfish::wire::ControlDevice_CreateBuffer2_Result, zx_status_t>;
+      fit::result<fuchsia_hardware_goldfish::wire::ControlDeviceCreateBuffer2Result, zx_status_t>;
 
   CreateBuffer2Result CreateBuffer2(
       fidl::AnyAllocator& allocator, zx::vmo vmo,

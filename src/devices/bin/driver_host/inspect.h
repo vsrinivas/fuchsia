@@ -226,7 +226,7 @@ class DeviceInspect {
 
   using SystemPowerStateMapping =
       std::array<fuchsia_device::wire::SystemPowerStateInfo,
-                 fuchsia_hardware_power_statecontrol::wire::MAX_SYSTEM_POWER_STATES>;
+                 fuchsia_hardware_power_statecontrol::wire::kMaxSystemPowerStates>;
 
   void set_system_power_state_mapping(const SystemPowerStateMapping& mapping);
 
@@ -279,18 +279,18 @@ class DeviceInspect {
 
   inspect::Node& GetCallStatsNode();
 
-  std::array<std::optional<DevicePowerStates>, fuchsia_device::wire::MAX_DEVICE_POWER_STATES>
+  std::array<std::optional<DevicePowerStates>, fuchsia_device::wire::kMaxDevicePowerStates>
       power_states_{};
   inspect::Node power_states_node_;
 
   std::array<std::optional<DevicePerformanceStates>,
-             fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES>
+             fuchsia_device::wire::kMaxDevicePerformanceStates>
       performance_states_{};
   inspect::Node performance_states_node_;
   inspect::UintProperty current_performance_state_;
 
   std::array<std::optional<DeviceSystemPowerStateMapping>,
-             fuchsia_hardware_power_statecontrol::wire::MAX_SYSTEM_POWER_STATES>
+             fuchsia_hardware_power_statecontrol::wire::kMaxSystemPowerStates>
       system_power_states_mapping_{};
   inspect::Node system_power_states_node_;
 };

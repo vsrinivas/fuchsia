@@ -38,25 +38,25 @@
 
 namespace fidl_test_error {
 namespace wire {
-struct Example_foo_Response;
+struct ExampleFooResponse;
 
-class Example_foo_Result;
+class ExampleFooResult;
 }  // namespace wire
 class Example;
 namespace wire {
 
 extern "C" const fidl_type_t fidl_test_error_Example_foo_ResultTable;
 
-class Example_foo_Result {
+class ExampleFooResult {
  public:
-  Example_foo_Result()
-      : ordinal_(::fidl_test_error::wire::Example_foo_Result::Ordinal::Invalid),
+  ExampleFooResult()
+      : ordinal_(::fidl_test_error::wire::ExampleFooResult::Ordinal::Invalid),
         envelope_{} {}
 
-  Example_foo_Result(const Example_foo_Result&) = default;
-  Example_foo_Result& operator=(const Example_foo_Result&) = default;
-  Example_foo_Result(Example_foo_Result&&) = default;
-  Example_foo_Result& operator=(Example_foo_Result&&) = default;
+  ExampleFooResult(const ExampleFooResult&) = default;
+  ExampleFooResult& operator=(const ExampleFooResult&) = default;
+  ExampleFooResult(ExampleFooResult&&) = default;
+  ExampleFooResult& operator=(ExampleFooResult&&) = default;
 
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
@@ -65,105 +65,104 @@ class Example_foo_Result {
 
   bool has_invalid_tag() const {
     return ordinal_ ==
-           ::fidl_test_error::wire::Example_foo_Result::Ordinal::Invalid;
+           ::fidl_test_error::wire::ExampleFooResult::Ordinal::Invalid;
   }
 
   bool is_response() const {
     return ordinal_ ==
-           ::fidl_test_error::wire::Example_foo_Result::Ordinal::kResponse;
+           ::fidl_test_error::wire::ExampleFooResult::Ordinal::kResponse;
   }
 
-  static Example_foo_Result WithResponse(
-      ::fidl::ObjectView<::fidl_test_error::wire::Example_foo_Response> val) {
-    Example_foo_Result result;
+  static ExampleFooResult WithResponse(
+      ::fidl::ObjectView<::fidl_test_error::wire::ExampleFooResponse> val) {
+    ExampleFooResult result;
     result.set_response(val);
     return result;
   }
 
   template <typename... Args>
-  static Example_foo_Result WithResponse(::fidl::AnyAllocator& allocator,
-                                         Args&&... args) {
-    Example_foo_Result result;
+  static ExampleFooResult WithResponse(::fidl::AnyAllocator& allocator,
+                                       Args&&... args) {
+    ExampleFooResult result;
     result.set_response(
-        ::fidl::ObjectView<::fidl_test_error::wire::Example_foo_Response>(
+        ::fidl::ObjectView<::fidl_test_error::wire::ExampleFooResponse>(
             allocator, std::forward<Args>(args)...));
     return result;
   }
 
   void set_response(
-      ::fidl::ObjectView<::fidl_test_error::wire::Example_foo_Response> elem) {
-    ordinal_ = ::fidl_test_error::wire::Example_foo_Result::Ordinal::kResponse;
+      ::fidl::ObjectView<::fidl_test_error::wire::ExampleFooResponse> elem) {
+    ordinal_ = ::fidl_test_error::wire::ExampleFooResult::Ordinal::kResponse;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
   void set_response(::fidl::AnyAllocator& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_error::wire::Example_foo_Result::Ordinal::kResponse;
+    ordinal_ = ::fidl_test_error::wire::ExampleFooResult::Ordinal::kResponse;
     set_response(
-        ::fidl::ObjectView<::fidl_test_error::wire::Example_foo_Response>(
+        ::fidl::ObjectView<::fidl_test_error::wire::ExampleFooResponse>(
             allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl_test_error::wire::Example_foo_Response& mutable_response() {
+  ::fidl_test_error::wire::ExampleFooResponse& mutable_response() {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_error::wire::Example_foo_Result::Ordinal::kResponse);
-    return *static_cast<::fidl_test_error::wire::Example_foo_Response*>(
+              ::fidl_test_error::wire::ExampleFooResult::Ordinal::kResponse);
+    return *static_cast<::fidl_test_error::wire::ExampleFooResponse*>(
         envelope_.data.get());
   }
-  const ::fidl_test_error::wire::Example_foo_Response& response() const {
+  const ::fidl_test_error::wire::ExampleFooResponse& response() const {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_error::wire::Example_foo_Result::Ordinal::kResponse);
-    return *static_cast<::fidl_test_error::wire::Example_foo_Response*>(
+              ::fidl_test_error::wire::ExampleFooResult::Ordinal::kResponse);
+    return *static_cast<::fidl_test_error::wire::ExampleFooResponse*>(
         envelope_.data.get());
   }
 
   bool is_err() const {
-    return ordinal_ ==
-           ::fidl_test_error::wire::Example_foo_Result::Ordinal::kErr;
+    return ordinal_ == ::fidl_test_error::wire::ExampleFooResult::Ordinal::kErr;
   }
 
-  static Example_foo_Result WithErr(::fidl::ObjectView<uint32_t> val) {
-    Example_foo_Result result;
+  static ExampleFooResult WithErr(::fidl::ObjectView<uint32_t> val) {
+    ExampleFooResult result;
     result.set_err(val);
     return result;
   }
 
   template <typename... Args>
-  static Example_foo_Result WithErr(::fidl::AnyAllocator& allocator,
-                                    Args&&... args) {
-    Example_foo_Result result;
+  static ExampleFooResult WithErr(::fidl::AnyAllocator& allocator,
+                                  Args&&... args) {
+    ExampleFooResult result;
     result.set_err(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
 
   void set_err(::fidl::ObjectView<uint32_t> elem) {
-    ordinal_ = ::fidl_test_error::wire::Example_foo_Result::Ordinal::kErr;
+    ordinal_ = ::fidl_test_error::wire::ExampleFooResult::Ordinal::kErr;
     envelope_.data =
         ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
   }
 
   template <typename... Args>
   void set_err(::fidl::AnyAllocator& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_error::wire::Example_foo_Result::Ordinal::kErr;
+    ordinal_ = ::fidl_test_error::wire::ExampleFooResult::Ordinal::kErr;
     set_err(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_err() {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_error::wire::Example_foo_Result::Ordinal::kErr);
+              ::fidl_test_error::wire::ExampleFooResult::Ordinal::kErr);
     return *static_cast<uint32_t*>(envelope_.data.get());
   }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_error::wire::Example_foo_Result::Ordinal::kErr);
+              ::fidl_test_error::wire::ExampleFooResult::Ordinal::kErr);
     return *static_cast<uint32_t*>(envelope_.data.get());
   }
-  ::fidl_test_error::wire::Example_foo_Result::Tag which() const {
+  ::fidl_test_error::wire::ExampleFooResult::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::fidl_test_error::wire::Example_foo_Result::Tag>(
+    return static_cast<::fidl_test_error::wire::ExampleFooResult::Tag>(
         ordinal_);
   }
 
@@ -182,14 +181,14 @@ class Example_foo_Result {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_error::wire::Example_foo_Result::Ordinal ordinal_;
+  ::fidl_test_error::wire::ExampleFooResult::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_error_Example_foo_ResponseTable;
 
-struct Example_foo_Response {
+struct ExampleFooResponse {
   static constexpr const fidl_type_t* Type =
       &fidl_test_error_Example_foo_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -202,19 +201,19 @@ struct Example_foo_Response {
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Example_foo_Response* value)
+                          ExampleFooResponse* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
               .iovec_capacity = ::fidl::internal::IovecBufferSize,
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Example_foo_Response)) {
+      if (backing_buffer_size < sizeof(ExampleFooResponse)) {
         ::fidl::internal::OutgoingMessageResultSetter::SetResult(
             message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
         return;
       }
-      message_.Encode<Example_foo_Response>(value);
+      message_.Encode<ExampleFooResponse>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -237,7 +236,7 @@ struct Example_foo_Response {
 
   class OwnedEncodedMessage final {
    public:
-    explicit OwnedEncodedMessage(Example_foo_Response* value)
+    explicit OwnedEncodedMessage(ExampleFooResponse* value)
         : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -267,20 +266,20 @@ struct Example_foo_Response {
                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
-      Decode<struct Example_foo_Response>();
+      Decode<struct ExampleFooResponse>();
     }
     DecodedMessage(fidl_incoming_msg_t* msg)
         : ::fidl::internal::IncomingMessage(msg) {
-      Decode<struct Example_foo_Response>();
+      Decode<struct ExampleFooResponse>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
     DecodedMessage* operator=(DecodedMessage&&) = delete;
 
-    struct Example_foo_Response* PrimaryObject() {
+    struct ExampleFooResponse* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Example_foo_Response*>(bytes());
+      return reinterpret_cast<struct ExampleFooResponse*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
@@ -299,8 +298,8 @@ class Example final {
   Example() = delete;
 
  public:
-  class foo final {
-    foo() = delete;
+  class Foo final {
+    Foo() = delete;
   };
 };
 }  // namespace fidl_test_error
@@ -337,7 +336,7 @@ struct ::fidl::internal::WireServerDispatcher<::fidl_test_error::Example>
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::fidl_test_error::Example::foo> final {
+struct ::fidl::WireRequest<::fidl_test_error::Example::Foo> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl::StringView s;
@@ -357,7 +356,7 @@ struct ::fidl::WireRequest<::fidl_test_error::Example::foo> final {
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;
-  using ResponseType = ::fidl::WireResponse<::fidl_test_error::Example::foo>;
+  using ResponseType = ::fidl::WireResponse<::fidl_test_error::Example::Foo>;
 
   class UnownedEncodedMessage final {
    public:
@@ -484,11 +483,11 @@ struct ::fidl::WireRequest<::fidl_test_error::Example::foo> final {
   void _InitHeader(zx_txid_t _txid);
 };
 template <>
-struct ::fidl::WireResponse<::fidl_test_error::Example::foo> final {
+struct ::fidl::WireResponse<::fidl_test_error::Example::Foo> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::fidl_test_error::wire::Example_foo_Result result;
-  explicit WireResponse(::fidl_test_error::wire::Example_foo_Result result)
+  ::fidl_test_error::wire::ExampleFooResult result;
+  explicit WireResponse(::fidl_test_error::wire::ExampleFooResult result)
       : result(result) {
     _InitHeader();
   }
@@ -508,7 +507,7 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::foo> final {
    public:
     UnownedEncodedMessage(uint8_t* _backing_buffer,
                           uint32_t _backing_buffer_size,
-                          ::fidl_test_error::wire::Example_foo_Result result)
+                          ::fidl_test_error::wire::ExampleFooResult result)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
               .iovec_capacity = ::fidl::internal::IovecBufferSize,
@@ -521,7 +520,7 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::foo> final {
             message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
         return;
       }
-      message_.Encode<::fidl::WireResponse<::fidl_test_error::Example::foo>>(
+      message_.Encode<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
           &_response);
     }
     UnownedEncodedMessage(uint8_t* _backing_buffer,
@@ -537,7 +536,7 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::foo> final {
             message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
         return;
       }
-      message_.Encode<::fidl::WireResponse<::fidl_test_error::Example::foo>>(
+      message_.Encode<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
           response);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -567,10 +566,10 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::foo> final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(
-        ::fidl_test_error::wire::Example_foo_Result result)
+        ::fidl_test_error::wire::ExampleFooResult result)
         : message_(backing_buffer_.data(), backing_buffer_.size(), result) {}
     explicit OwnedEncodedMessage(
-        ::fidl::WireResponse<::fidl_test_error::Example::foo>* response)
+        ::fidl::WireResponse<::fidl_test_error::Example::Foo>* response)
         : message_(backing_buffer_.data(), backing_buffer_.size(), response) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -606,11 +605,11 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::foo> final {
                    uint32_t handle_actual = 0)
         : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                             handle_actual) {
-      Decode<::fidl::WireResponse<::fidl_test_error::Example::foo>>();
+      Decode<::fidl::WireResponse<::fidl_test_error::Example::Foo>>();
     }
     DecodedMessage(fidl_incoming_msg_t* msg)
         : ::fidl::internal::IncomingMessage(msg) {
-      Decode<::fidl::WireResponse<::fidl_test_error::Example::foo>>();
+      Decode<::fidl::WireResponse<::fidl_test_error::Example::Foo>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -620,7 +619,7 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::foo> final {
     WireResponse* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<
-          ::fidl::WireResponse<::fidl_test_error::Example::foo>*>(bytes());
+          ::fidl::WireResponse<::fidl_test_error::Example::Foo>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
@@ -633,7 +632,7 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::foo> final {
   void _InitHeader();
 };
 template <>
-class ::fidl::WireResult<::fidl_test_error::Example::foo> final
+class ::fidl::WireResult<::fidl_test_error::Example::Foo> final
     : public ::fidl::Result {
  public:
   explicit WireResult(
@@ -648,37 +647,37 @@ class ::fidl::WireResult<::fidl_test_error::Example::foo> final
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
 
-  ::fidl::WireResponse<::fidl_test_error::Example::foo>* Unwrap() {
+  ::fidl::WireResponse<::fidl_test_error::Example::Foo>* Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<
-        ::fidl::WireResponse<::fidl_test_error::Example::foo>*>(bytes_.data());
+        ::fidl::WireResponse<::fidl_test_error::Example::Foo>*>(bytes_.data());
   }
-  const ::fidl::WireResponse<::fidl_test_error::Example::foo>* Unwrap() const {
+  const ::fidl::WireResponse<::fidl_test_error::Example::Foo>* Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<
-        const ::fidl::WireResponse<::fidl_test_error::Example::foo>*>(
+        const ::fidl::WireResponse<::fidl_test_error::Example::Foo>*>(
         bytes_.data());
   }
 
-  ::fidl::WireResponse<::fidl_test_error::Example::foo>& value() {
+  ::fidl::WireResponse<::fidl_test_error::Example::Foo>& value() {
     return *Unwrap();
   }
-  const ::fidl::WireResponse<::fidl_test_error::Example::foo>& value() const {
+  const ::fidl::WireResponse<::fidl_test_error::Example::Foo>& value() const {
     return *Unwrap();
   }
 
-  ::fidl::WireResponse<::fidl_test_error::Example::foo>* operator->() {
+  ::fidl::WireResponse<::fidl_test_error::Example::Foo>* operator->() {
     return &value();
   }
-  const ::fidl::WireResponse<::fidl_test_error::Example::foo>* operator->()
+  const ::fidl::WireResponse<::fidl_test_error::Example::Foo>* operator->()
       const {
     return &value();
   }
 
-  ::fidl::WireResponse<::fidl_test_error::Example::foo>& operator*() {
+  ::fidl::WireResponse<::fidl_test_error::Example::Foo>& operator*() {
     return value();
   }
-  const ::fidl::WireResponse<::fidl_test_error::Example::foo>& operator*()
+  const ::fidl::WireResponse<::fidl_test_error::Example::Foo>& operator*()
       const {
     return value();
   }
@@ -687,7 +686,7 @@ class ::fidl::WireResult<::fidl_test_error::Example::foo> final
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::fidl_test_error::Example::foo> final
+class ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> final
     : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
@@ -703,36 +702,36 @@ class ::fidl::WireUnownedResult<::fidl_test_error::Example::foo> final
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 
-  ::fidl::WireResponse<::fidl_test_error::Example::foo>* Unwrap() {
+  ::fidl::WireResponse<::fidl_test_error::Example::Foo>* Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<
-        ::fidl::WireResponse<::fidl_test_error::Example::foo>*>(bytes_);
+        ::fidl::WireResponse<::fidl_test_error::Example::Foo>*>(bytes_);
   }
-  const ::fidl::WireResponse<::fidl_test_error::Example::foo>* Unwrap() const {
+  const ::fidl::WireResponse<::fidl_test_error::Example::Foo>* Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<
-        const ::fidl::WireResponse<::fidl_test_error::Example::foo>*>(bytes_);
+        const ::fidl::WireResponse<::fidl_test_error::Example::Foo>*>(bytes_);
   }
 
-  ::fidl::WireResponse<::fidl_test_error::Example::foo>& value() {
+  ::fidl::WireResponse<::fidl_test_error::Example::Foo>& value() {
     return *Unwrap();
   }
-  const ::fidl::WireResponse<::fidl_test_error::Example::foo>& value() const {
+  const ::fidl::WireResponse<::fidl_test_error::Example::Foo>& value() const {
     return *Unwrap();
   }
 
-  ::fidl::WireResponse<::fidl_test_error::Example::foo>* operator->() {
+  ::fidl::WireResponse<::fidl_test_error::Example::Foo>* operator->() {
     return &value();
   }
-  const ::fidl::WireResponse<::fidl_test_error::Example::foo>* operator->()
+  const ::fidl::WireResponse<::fidl_test_error::Example::Foo>* operator->()
       const {
     return &value();
   }
 
-  ::fidl::WireResponse<::fidl_test_error::Example::foo>& operator*() {
+  ::fidl::WireResponse<::fidl_test_error::Example::Foo>& operator*() {
     return value();
   }
-  const ::fidl::WireResponse<::fidl_test_error::Example::foo>& operator*()
+  const ::fidl::WireResponse<::fidl_test_error::Example::Foo>& operator*()
       const {
     return value();
   }
@@ -753,34 +752,34 @@ class ::fidl::internal::WireCaller<::fidl_test_error::Example> final {
 
   // Allocates 48 bytes of response buffer on the stack. Request is
   // heap-allocated.
-  static ::fidl::WireResult<::fidl_test_error::Example::foo> foo(
+  static ::fidl::WireResult<::fidl_test_error::Example::Foo> Foo(
       ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client_end,
       ::fidl::StringView s) {
-    return ::fidl::WireResult<::fidl_test_error::Example::foo>(_client_end, s);
+    return ::fidl::WireResult<::fidl_test_error::Example::Foo>(_client_end, s);
   }
   // Allocates 48 bytes of response buffer on the stack. Request is
   // heap-allocated.
-  ::fidl::WireResult<::fidl_test_error::Example::foo> foo(
+  ::fidl::WireResult<::fidl_test_error::Example::Foo> Foo(
       ::fidl::StringView s) && {
-    return ::fidl::WireResult<::fidl_test_error::Example::foo>(client_end_, s);
+    return ::fidl::WireResult<::fidl_test_error::Example::Foo>(client_end_, s);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  static ::fidl::WireUnownedResult<::fidl_test_error::Example::foo> foo(
+  static ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> Foo(
       ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client_end,
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer) {
-    return ::fidl::WireUnownedResult<::fidl_test_error::Example::foo>(
+    return ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>(
         _client_end, _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::WireUnownedResult<::fidl_test_error::Example::foo> foo(
+  ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> Foo(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer) && {
-    return ::fidl::WireUnownedResult<::fidl_test_error::Example::foo>(
+    return ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>(
         client_end_, _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
@@ -851,18 +850,18 @@ class ::fidl::WireSyncClient<::fidl_test_error::Example> final {
 
   // Allocates 48 bytes of response buffer on the stack. Request is
   // heap-allocated.
-  ::fidl::WireResult<::fidl_test_error::Example::foo> foo(
+  ::fidl::WireResult<::fidl_test_error::Example::Foo> Foo(
       ::fidl::StringView s) {
-    return ::fidl::WireResult<::fidl_test_error::Example::foo>(
+    return ::fidl::WireResult<::fidl_test_error::Example::Foo>(
         this->client_end(), s);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::WireUnownedResult<::fidl_test_error::Example::foo> foo(
+  ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> Foo(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer) {
-    return ::fidl::WireUnownedResult<::fidl_test_error::Example::foo>(
+    return ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
@@ -884,7 +883,7 @@ class ::fidl::WireServer<::fidl_test_error::Example>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_error::Example;
 
-  class fooCompleterBase : public ::fidl::CompleterBase {
+  class FooCompleterBase : public ::fidl::CompleterBase {
    public:
     // In the following methods, the return value indicates internal errors
     // during the reply, such as encoding or writing to the transport. Note that
@@ -896,31 +895,31 @@ class ::fidl::WireServer<::fidl_test_error::Example>
     //
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
-    ::fidl::Result Reply(::fidl_test_error::wire::Example_foo_Result result);
+    ::fidl::Result Reply(::fidl_test_error::wire::ExampleFooResult result);
     ::fidl::Result ReplySuccess(int64_t y);
     ::fidl::Result ReplyError(uint32_t error);
     ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer,
-                         ::fidl_test_error::wire::Example_foo_Result result);
+                         ::fidl_test_error::wire::ExampleFooResult result);
     ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int64_t y);
 
    protected:
     using ::fidl::CompleterBase::CompleterBase;
   };
-  using fooCompleter = ::fidl::Completer<fooCompleterBase>;
-  class fooRequestView {
+  using FooCompleter = ::fidl::Completer<FooCompleterBase>;
+  class FooRequestView {
    public:
-    fooRequestView(
-        ::fidl::WireRequest<::fidl_test_error::Example::foo>* request)
+    FooRequestView(
+        ::fidl::WireRequest<::fidl_test_error::Example::Foo>* request)
         : request_(request) {}
-    ::fidl::WireRequest<::fidl_test_error::Example::foo>* operator->() const {
+    ::fidl::WireRequest<::fidl_test_error::Example::Foo>* operator->() const {
       return request_;
     }
 
    private:
-    ::fidl::WireRequest<::fidl_test_error::Example::foo>* request_;
+    ::fidl::WireRequest<::fidl_test_error::Example::Foo>* request_;
   };
 
-  virtual void foo(fooRequestView request, fooCompleter::Sync& _completer) = 0;
+  virtual void Foo(FooRequestView request, FooCompleter::Sync& _completer) = 0;
 
  private:
   ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
@@ -941,12 +940,12 @@ class ::fidl::WireInterface<::fidl_test_error::Example>
   // defined.
   using _EnclosingProtocol = ::fidl_test_error::Example;
 
-  using fooCompleterBase =
-      ::fidl::WireServer<::fidl_test_error::Example>::fooCompleterBase;
+  using FooCompleterBase =
+      ::fidl::WireServer<::fidl_test_error::Example>::FooCompleterBase;
 
-  using fooCompleter =
-      ::fidl::WireServer<::fidl_test_error::Example>::fooCompleter;
-  virtual void foo(::fidl::StringView s, fooCompleter::Sync& _completer) = 0;
+  using FooCompleter =
+      ::fidl::WireServer<::fidl_test_error::Example>::FooCompleter;
+  virtual void Foo(::fidl::StringView s, FooCompleter::Sync& _completer) = 0;
 
  private:
   ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
@@ -956,60 +955,60 @@ class ::fidl::WireInterface<::fidl_test_error::Example>
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_error::wire::Example_foo_Response>
+struct IsFidlType<::fidl_test_error::wire::ExampleFooResponse>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_error::wire::Example_foo_Response>
+struct IsStruct<::fidl_test_error::wire::ExampleFooResponse>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_error::wire::Example_foo_Response>);
-static_assert(offsetof(::fidl_test_error::wire::Example_foo_Response, y) == 0);
-static_assert(sizeof(::fidl_test_error::wire::Example_foo_Response) ==
-              ::fidl_test_error::wire::Example_foo_Response::PrimarySize);
+    std::is_standard_layout_v<::fidl_test_error::wire::ExampleFooResponse>);
+static_assert(offsetof(::fidl_test_error::wire::ExampleFooResponse, y) == 0);
+static_assert(sizeof(::fidl_test_error::wire::ExampleFooResponse) ==
+              ::fidl_test_error::wire::ExampleFooResponse::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_error::wire::Example_foo_Result>
+struct IsFidlType<::fidl_test_error::wire::ExampleFooResult>
     : public std::true_type {};
 template <>
-struct IsUnion<::fidl_test_error::wire::Example_foo_Result>
+struct IsUnion<::fidl_test_error::wire::ExampleFooResult>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_error::wire::Example_foo_Result>);
+    std::is_standard_layout_v<::fidl_test_error::wire::ExampleFooResult>);
 
 template <>
-struct IsFidlType<::fidl::WireRequest<::fidl_test_error::Example::foo>>
+struct IsFidlType<::fidl::WireRequest<::fidl_test_error::Example::Foo>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireRequest<::fidl_test_error::Example::foo>>
+struct IsFidlMessage<::fidl::WireRequest<::fidl_test_error::Example::Foo>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl::WireRequest<::fidl_test_error::Example::foo>) ==
-    ::fidl::WireRequest<::fidl_test_error::Example::foo>::PrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::fidl_test_error::Example::foo>,
+    sizeof(::fidl::WireRequest<::fidl_test_error::Example::Foo>) ==
+    ::fidl::WireRequest<::fidl_test_error::Example::Foo>::PrimarySize);
+static_assert(offsetof(::fidl::WireRequest<::fidl_test_error::Example::Foo>,
                        s) == 16);
 
 template <>
-struct IsFidlType<::fidl::WireResponse<::fidl_test_error::Example::foo>>
+struct IsFidlType<::fidl::WireResponse<::fidl_test_error::Example::Foo>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireResponse<::fidl_test_error::Example::foo>>
+struct IsFidlMessage<::fidl::WireResponse<::fidl_test_error::Example::Foo>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl::WireResponse<::fidl_test_error::Example::foo>) ==
-    ::fidl::WireResponse<::fidl_test_error::Example::foo>::PrimarySize);
-static_assert(offsetof(::fidl::WireResponse<::fidl_test_error::Example::foo>,
+    sizeof(::fidl::WireResponse<::fidl_test_error::Example::Foo>) ==
+    ::fidl::WireResponse<::fidl_test_error::Example::Foo>::PrimarySize);
+static_assert(offsetof(::fidl::WireResponse<::fidl_test_error::Example::Foo>,
                        result) == 16);
 }  // namespace fidl
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::WireResponseContext<::fidl_test_error::Example::foo>
+class ::fidl::WireResponseContext<::fidl_test_error::Example::Foo>
     : public ::fidl::internal::ResponseContext {
  public:
   WireResponseContext();
 
   virtual void OnReply(
-      ::fidl::WireResponse<::fidl_test_error::Example::foo>* message) = 0;
+      ::fidl::WireResponse<::fidl_test_error::Example::Foo>* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
@@ -1022,32 +1021,32 @@ template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_error::Example> final
     : private ::fidl::internal::ClientBase {
  public:
-  // Asynchronous variant of |Example.foo()|.
+  // Asynchronous variant of |Example.Foo()|.
   // The request and callback are allocated on the heap.
-  ::fidl::Result foo(
+  ::fidl::Result Foo(
       ::fidl::StringView s,
       ::fit::callback<
-          void(::fidl::WireResponse<::fidl_test_error::Example::foo>* response)>
+          void(::fidl::WireResponse<::fidl_test_error::Example::Foo>* response)>
           _cb);
 
-  // Asynchronous variant of |Example.foo()|.
+  // Asynchronous variant of |Example.Foo()|.
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
-  ::fidl::Result foo(
+  ::fidl::Result Foo(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-      ::fidl::WireResponseContext<::fidl_test_error::Example::foo>* _context);
+      ::fidl::WireResponseContext<::fidl_test_error::Example::Foo>* _context);
 
-  // Synchronous variant of |Example.foo()|.
+  // Synchronous variant of |Example.Foo()|.
   // Allocates 48 bytes of response buffer on the stack. Request is
   // heap-allocated.
-  ::fidl::WireResult<::fidl_test_error::Example::foo> foo_Sync(
+  ::fidl::WireResult<::fidl_test_error::Example::Foo> Foo_Sync(
       ::fidl::StringView s);
 
-  // Synchronous variant of |Example.foo()|.
+  // Synchronous variant of |Example.Foo()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::WireUnownedResult<::fidl_test_error::Example::foo> foo_Sync(
+  ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> Foo_Sync(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer);
 

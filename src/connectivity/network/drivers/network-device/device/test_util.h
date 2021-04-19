@@ -147,8 +147,8 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
 
  private:
   std::array<zx::vmo, MAX_VMOS> vmos_;
-  std::array<uint8_t, netdev::wire::MAX_FRAME_TYPES> rx_types_;
-  std::array<tx_support_t, netdev::wire::MAX_FRAME_TYPES> tx_types_;
+  std::array<uint8_t, netdev::wire::kMaxFrameTypes> rx_types_;
+  std::array<tx_support_t, netdev::wire::kMaxFrameTypes> tx_types_;
   device_info_t info_{};
   status_t status_{};
   ddk::NetworkDeviceIfcProtocolClient device_client_;
@@ -170,7 +170,7 @@ class TestSession {
   TestSession() = default;
 
   zx_status_t Open(fidl::WireSyncClient<netdev::Device>& netdevice, const char* name,
-                   netdev::wire::SessionFlags flags = netdev::wire::SessionFlags::PRIMARY,
+                   netdev::wire::SessionFlags flags = netdev::wire::SessionFlags::kPrimary,
                    uint16_t num_descriptors = kDefaultDescriptorCount,
                    uint64_t buffer_size = kDefaultBufferLength,
                    fidl::VectorView<netdev::wire::FrameType> frame_types =

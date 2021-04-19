@@ -54,7 +54,7 @@ class Keyboard {
  private:
   // The callback for when key-repeat is triggered.
   void TimerCallback(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status);
-  void InputCallback(fuchsia_input_report::wire::InputReportsReader_ReadInputReports_Result result);
+  void InputCallback(fuchsia_input_report::wire::InputReportsReaderReadInputReportsResult result);
 
   // This is the callback if reader_client_ is unbound. This tries to reconnect and
   // will delete Keyboard if reconnecting fails.
@@ -79,7 +79,7 @@ class Keyboard {
   bool repeat_enabled_ = true;
   bool is_repeating_ = false;
   uint8_t repeating_keycode_;
-  std::array<fuchsia_input::wire::Key, fuchsia_input_report::wire::KEYBOARD_MAX_PRESSED_KEYS>
+  std::array<fuchsia_input::wire::Key, fuchsia_input_report::wire::kKeyboardMaxPressedKeys>
       last_pressed_keys_;
   size_t last_pressed_keys_size_ = 0;
 };

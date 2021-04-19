@@ -82,8 +82,8 @@ zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
 
 zx::status<PackageResolver::FetchDriverVmoResult> PackageResolver::LoadDriverPackage(
     fidl::WireSyncClient<fio::Directory>* package_dir) {
-  const uint32_t kFileRights = fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE;
-  const uint32_t kDriverVmoFlags = fio::wire::VMO_FLAG_READ | fio::wire::VMO_FLAG_EXEC;
+  const uint32_t kFileRights = fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable;
+  const uint32_t kDriverVmoFlags = fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec;
   constexpr char kLibDir[] = "lib";
 
   // Open the lib directory.
@@ -134,7 +134,7 @@ zx::status<PackageResolver::FetchDriverVmoResult> PackageResolver::LoadDriverPac
 
 zx::status<std::string> PackageResolver::GetDriverLibname(
     fidl::WireSyncClient<fio::Directory>* lib_dir) {
-  auto dirent_result = lib_dir->ReadDirents(fio::wire::MAX_BUF);
+  auto dirent_result = lib_dir->ReadDirents(fio::wire::kMaxBuf);
   if (!dirent_result.ok() || dirent_result.status() != ZX_OK) {
     return zx::error(dirent_result.status());
   }

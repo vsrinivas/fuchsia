@@ -110,16 +110,16 @@ void NoHardwareGpu::QueryReturnsBuffer(uint64_t query_id,
     case no_hardware_testing::kDummyQueryId: {
       auto buffer = magma::PlatformBuffer::Create(4096, "query-buffer");
       if (!buffer) {
-        _completer.ReplyError(FidlStatus::MEMORY_ERROR);
+        _completer.ReplyError(FidlStatus::kMemoryError);
         return;
       }
       if (!buffer->Write(&no_hardware_testing::kDummyQueryResult, 0,
                          sizeof(no_hardware_testing::kDummyQueryResult))) {
-        _completer.ReplyError(FidlStatus::INTERNAL_ERROR);
+        _completer.ReplyError(FidlStatus::kInternalError);
         return;
       }
       if (!buffer->duplicate_handle(&result)) {
-        _completer.ReplyError(FidlStatus::INTERNAL_ERROR);
+        _completer.ReplyError(FidlStatus::kInternalError);
         return;
       }
       break;

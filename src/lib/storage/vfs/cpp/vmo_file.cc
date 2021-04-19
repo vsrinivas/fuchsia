@@ -59,7 +59,7 @@ zx_status_t VmoFile::GetAttributes(VnodeAttributes* attr) {
   if (writable_) {
     attr->mode |= V_IWUSR;
   }
-  attr->inode = fio::wire::INO_UNKNOWN;
+  attr->inode = fio::wire::kInoUnknown;
   attr->content_size = length_;
   attr->storage_size = fbl::round_up(attr->content_size, kVmoFileBlksize);
   attr->link_count = 1;

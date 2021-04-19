@@ -89,19 +89,19 @@ void AtDevice::ReplyCtrlMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uint
     zxlogf(INFO, "at-fake-driver: resp %u %u %u %u with len %u", resp[0], resp[1], resp[2], resp[3],
            resp_size);
     sent_fake_at_msg(GetCtrlChannel(), resp, resp_size);
-    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::FROM_MODEM);
+    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::kFromModem);
 
   } else if (0 == memcmp(req, kAtCmdReqAtCgmi.c_str(), kAtCmdReqAtCgmi.size())) {
     resp_size = std::min(kAtCmdRespManuId.size(), static_cast<std::size_t>(resp_size));
     memcpy(resp, kAtCmdRespManuId.c_str(), resp_size);
     sent_fake_at_msg(GetCtrlChannel(), resp, resp_size);
-    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::FROM_MODEM);
+    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::kFromModem);
 
   } else if (0 == memcmp(req, kInvalidUnicodeRequest.c_str(), kInvalidUnicodeRequest.size())) {
     resp_size = std::min(kInvalidUnicodeResponseSize, static_cast<std::size_t>(resp_size));
     memcpy(resp, kInvalidUnicodeResponse, resp_size);
     sent_fake_at_msg(GetCtrlChannel(), resp, resp_size);
-    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::FROM_MODEM);
+    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::kFromModem);
 
   } else if (req_size >= kRaceDetectionPrefixSize &&
              0 == memcmp(req, kRaceDetectionRequestPrefix.c_str(), kRaceDetectionPrefixSize)) {
@@ -110,14 +110,14 @@ void AtDevice::ReplyCtrlMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uint
     memcpy(resp + kRaceDetectionPrefixSize, req + kRaceDetectionPrefixSize,
            req_size - kRaceDetectionPrefixSize);
     sent_fake_at_msg(GetCtrlChannel(), resp, resp_size);
-    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::FROM_MODEM);
+    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::kFromModem);
 
   } else {
     zxlogf(ERROR, "at-fake-driver: unexpected at msg received");
     resp_size = std::min(kAtCmdRespErr.size(), static_cast<std::size_t>(resp_size));
     memcpy(resp, kAtCmdRespErr.c_str(), resp_size);
     sent_fake_at_msg(GetCtrlChannel(), resp, resp_size);
-    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::FROM_MODEM);
+    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::wire::Direction::kFromModem);
   }
 }
 
@@ -150,7 +150,7 @@ static int at_fake_transport_thread(void* cookie) {
             return status;
           }
           device_ptr->SnoopCtrlMsg(req_buf, kTelCtrlPlanePktMax,
-                                   fidl_tel_snoop::wire::Direction::TO_MODEM);
+                                   fidl_tel_snoop::wire::Direction::kToModem);
           // TODO (jiamingw): parse AT msg, form reply and write back to channel.
           device_ptr->ReplyCtrlMsg(req_buf, req_len, resp_buf, kTelCtrlPlanePktMax);
           status = device_ptr->SetAsyncWait();

@@ -318,12 +318,12 @@ struct zx_device
   };
 
   using DevicePowerStates = std::array<fuchsia_device::wire::DevicePowerStateInfo,
-                                       fuchsia_device::wire::MAX_DEVICE_POWER_STATES>;
+                                       fuchsia_device::wire::kMaxDevicePowerStates>;
   using SystemPowerStateMapping =
       std::array<fuchsia_device::wire::SystemPowerStateInfo,
-                 fuchsia_hardware_power_statecontrol::wire::MAX_SYSTEM_POWER_STATES>;
+                 fuchsia_hardware_power_statecontrol::wire::kMaxSystemPowerStates>;
   using PerformanceStates = std::array<fuchsia_device::wire::DevicePerformanceStateInfo,
-                                       fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES>;
+                                       fuchsia_device::wire::kMaxDevicePerformanceStates>;
 
   bool has_composite() const;
   void set_composite(fbl::RefPtr<CompositeDevice> composite, bool fragment = true);
@@ -458,7 +458,7 @@ struct zx_device
   PerformanceStates performance_states_;
   DevicePowerStates power_states_;
   SystemPowerStateMapping system_power_states_mapping_;
-  uint32_t current_performance_state_ = fuchsia_device::wire::DEVICE_PERFORMANCE_STATE_P0;
+  uint32_t current_performance_state_ = fuchsia_device::wire::kDevicePerformanceStateP0;
   bool auto_suspend_configured_ = false;
 
   DriverHostContext* const driver_host_context_;

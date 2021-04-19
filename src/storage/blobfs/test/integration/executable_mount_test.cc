@@ -71,7 +71,7 @@ TEST_F(ExecutableMountTest, CanLoadBlobsExecutable) {
   // Open the new blob again but with READABLE | EXECUTABLE rights, then confirm that we can get the
   // blob contents as a normal and executable VMO.
   ASSERT_EQ(fdio_open_fd_at(root_fd(), info->path,
-                            fio::wire::OPEN_RIGHT_READABLE | fio::wire::OPEN_RIGHT_EXECUTABLE,
+                            fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
                             fd.reset_and_get_address()),
             ZX_OK);
   ASSERT_TRUE(fd.is_valid());

@@ -63,7 +63,7 @@ class VirtualLayer {
         return layers_[i].id;
       }
     }
-    return fuchsia_hardware_display::wire::INVALID_DISP_ID;
+    return fuchsia_hardware_display::wire::kInvalidDispId;
   }
 
   // Gets the ID of the image on the given display.
@@ -155,7 +155,7 @@ class PrimaryLayer : public VirtualLayer {
         return layers_[i].import_info[alt_image_].id;
       }
     }
-    return fuchsia_hardware_display::wire::INVALID_DISP_ID;
+    return fuchsia_hardware_display::wire::kInvalidDispId;
   }
 
  private:
@@ -175,7 +175,7 @@ class PrimaryLayer : public VirtualLayer {
   fuchsia_hardware_display::wire::Frame src_frame_ = {};
   fuchsia_hardware_display::wire::Frame dest_frame_ = {};
   typedef fuchsia_hardware_display::wire::Transform Transform;
-  Transform rotation_ = Transform::IDENTITY;
+  Transform rotation_ = Transform::kIdentity;
   bool layer_flipping_ = false;
   bool pan_src_ = false;
   bool pan_dest_ = false;
@@ -184,7 +184,7 @@ class PrimaryLayer : public VirtualLayer {
   bool alpha_enable_ = false;
   float alpha_val_ = 0.f;
   bool scaling_ = false;
-  uint64_t modifier_ = fuchsia_sysmem::wire::FORMAT_MODIFIER_LINEAR;
+  uint64_t modifier_ = fuchsia_sysmem::wire::kFormatModifierLinear;
   bool mirrors_ = false;
 
   bool alt_image_ = false;
@@ -212,7 +212,7 @@ class CursorLayer : public VirtualLayer {
         return layers_[i].import_info[0].id;
       }
     }
-    return fuchsia_hardware_display::wire::INVALID_DISP_ID;
+    return fuchsia_hardware_display::wire::kInvalidDispId;
   }
 
  private:
@@ -236,7 +236,7 @@ class ColorLayer : public VirtualLayer {
   void* GetCurrentImageBuf() override { return nullptr; }
   size_t GetCurrentImageSize() override { return 0; }
   uint64_t image_id(uint64_t display_id) const override {
-    return fuchsia_hardware_display::wire::INVALID_DISP_ID;
+    return fuchsia_hardware_display::wire::kInvalidDispId;
   }
   virtual bool is_done() const override { return true; }
 };

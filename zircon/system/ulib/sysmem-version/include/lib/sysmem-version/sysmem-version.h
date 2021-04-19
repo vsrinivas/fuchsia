@@ -82,7 +82,7 @@ V2CopyFromV1BufferCollectionConstraints(
     const fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers* aux_buffers_v1);
 
 [[nodiscard]] fit::result<fuchsia_sysmem2::wire::ImageFormat> V2CopyFromV1ImageFormat(
-    fidl::AnyAllocator& allocator, const fuchsia_sysmem::wire::ImageFormat_2& v1);
+    fidl::AnyAllocator& allocator, const fuchsia_sysmem::wire::ImageFormat2& v1);
 [[nodiscard]] fit::result<fuchsia_sysmem2::wire::ImageFormat> V2CopyFromV1ImageFormat(
     fidl::AnyAllocator& allocator, const fuchsia_sysmem_ImageFormat_2& v1);
 
@@ -97,7 +97,7 @@ V2CopyFromV1SingleBufferSettings(fidl::AnyAllocator& allocator,
     fidl::AnyAllocator& allocator, fuchsia_sysmem::wire::VmoBuffer&& to_move_v1);
 [[nodiscard]] fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo>
 V2MoveFromV1BufferCollectionInfo(fidl::AnyAllocator& allocator,
-                                 fuchsia_sysmem::wire::BufferCollectionInfo_2&& to_move_v1);
+                                 fuchsia_sysmem::wire::BufferCollectionInfo2&& to_move_v1);
 
 ///////////////////////
 // V1 Copy/Move from V2
@@ -120,7 +120,7 @@ V1CopyFromV2BufferMemoryConstraints(const fuchsia_sysmem2::wire::BufferMemoryCon
     const fuchsia_sysmem2::wire::ColorSpace& v2);
 [[nodiscard]] fit::result<fuchsia_sysmem::wire::ImageFormatConstraints>
 V1CopyFromV2ImageFormatConstraints(const fuchsia_sysmem2::wire::ImageFormatConstraints& v2);
-[[nodiscard]] fit::result<fuchsia_sysmem::wire::ImageFormat_2> V1CopyFromV2ImageFormat(
+[[nodiscard]] fit::result<fuchsia_sysmem::wire::ImageFormat2> V1CopyFromV2ImageFormat(
     fuchsia_sysmem2::wire::ImageFormat& v2);
 [[nodiscard]] fit::result<fuchsia_sysmem::wire::SingleBufferSettings>
 V1CopyFromV2SingleBufferSettings(const fuchsia_sysmem2::wire::SingleBufferSettings& v2);
@@ -128,9 +128,9 @@ V1CopyFromV2SingleBufferSettings(const fuchsia_sysmem2::wire::SingleBufferSettin
     fuchsia_sysmem2::wire::VmoBuffer&& to_move_v2);
 [[nodiscard]] fuchsia_sysmem::wire::VmoBuffer V1AuxBuffersMoveFromV2VmoBuffer(
     fuchsia_sysmem2::wire::VmoBuffer&& to_move_v2);
-[[nodiscard]] fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2>
+[[nodiscard]] fit::result<fuchsia_sysmem::wire::BufferCollectionInfo2>
 V1MoveFromV2BufferCollectionInfo(fuchsia_sysmem2::wire::BufferCollectionInfo&& to_move_v2);
-[[nodiscard]] fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2>
+[[nodiscard]] fit::result<fuchsia_sysmem::wire::BufferCollectionInfo2>
 V1AuxBuffersMoveFromV2BufferCollectionInfo(
     fuchsia_sysmem2::wire::BufferCollectionInfo&& to_move_v2);
 

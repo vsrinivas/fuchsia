@@ -202,8 +202,8 @@ std::shared_ptr<loader::LoaderServiceBase> SetUpLoaderService(const async::Loop&
   fbl::unique_fd root_fd;
   if (zx_status_t status =
           fdio_open_fd("/",
-                       fio::wire::OPEN_FLAG_DIRECTORY | fio::wire::OPEN_RIGHT_READABLE |
-                           fio::wire::OPEN_RIGHT_EXECUTABLE,
+                       fio::wire::kOpenFlagDirectory | fio::wire::kOpenRightReadable |
+                           fio::wire::kOpenRightExecutable,
                        root_fd.reset_and_get_address());
       status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to open namespace root: " << zx_status_get_string(status);

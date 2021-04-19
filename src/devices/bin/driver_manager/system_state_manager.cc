@@ -39,7 +39,7 @@ zx_status_t SystemStateManager::Create(async_dispatcher_t* dispatcher, Coordinat
 void SystemStateManager::SetTerminationSystemState(
     statecontrol_fidl::wire::SystemPowerState state,
     SetTerminationSystemStateCompleter::Sync& completer) {
-  if (state == statecontrol_fidl::wire::SystemPowerState::FULLY_ON) {
+  if (state == statecontrol_fidl::wire::SystemPowerState::kFullyOn) {
     LOGF(INFO, "Invalid termination state");
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;

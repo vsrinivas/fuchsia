@@ -33,8 +33,8 @@ zx_status_t fdio_watch_directory(int dirfd, watchdir_func_t cb, zx_time_t deadli
     return endpoints.status_value();
   }
 
-  auto result = fidl::WireCall(directory).Watch(fio::wire::WATCH_MASK_ALL, 0,
-                                                endpoints->client.TakeChannel());
+  auto result =
+      fidl::WireCall(directory).Watch(fio::wire::kWatchMaskAll, 0, endpoints->client.TakeChannel());
   if (zx_status_t status = result.status(); status != ZX_OK) {
     return status;
   }
@@ -43,7 +43,7 @@ zx_status_t fdio_watch_directory(int dirfd, watchdir_func_t cb, zx_time_t deadli
   }
 
   for (;;) {
-    uint8_t bytes[fio::wire::MAX_BUF + 1];  // Extra byte for temporary null terminator.
+    uint8_t bytes[fio::wire::kMaxBuf + 1];  // Extra byte for temporary null terminator.
     uint32_t num_bytes;
     zx_status_t status = endpoints->server.channel().read_etc(0, &bytes, nullptr, sizeof(bytes), 0,
                                                               &num_bytes, nullptr);
@@ -76,14 +76,14 @@ zx_status_t fdio_watch_directory(int dirfd, watchdir_func_t cb, zx_time_t deadli
       it += len;
 
       switch (event) {
-        case fio::wire::WATCH_EVENT_ADDED:
-        case fio::wire::WATCH_EVENT_EXISTING:
+        case fio::wire::kWatchEventAdded:
+        case fio::wire::kWatchEventExisting:
           event = WATCH_EVENT_ADD_FILE;
           break;
-        case fio::wire::WATCH_EVENT_REMOVED:
+        case fio::wire::kWatchEventRemoved:
           event = WATCH_EVENT_REMOVE_FILE;
           break;
-        case fio::wire::WATCH_EVENT_IDLE:
+        case fio::wire::kWatchEventIdle:
           event = WATCH_EVENT_WAITING;
           break;
         default:

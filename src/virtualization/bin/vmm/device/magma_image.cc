@@ -33,13 +33,13 @@ static uint32_t to_uint32(uint64_t value) {
 
 static uint64_t SysmemModifierToDrmModifier(uint64_t modifier) {
   switch (modifier) {
-    case fuchsia_sysmem::wire::FORMAT_MODIFIER_LINEAR:
+    case fuchsia_sysmem::wire::kFormatModifierLinear:
       return DRM_FORMAT_MOD_LINEAR;
-    case fuchsia_sysmem::wire::FORMAT_MODIFIER_INTEL_I915_X_TILED:
+    case fuchsia_sysmem::wire::kFormatModifierIntelI915XTiled:
       return I915_FORMAT_MOD_X_TILED;
-    case fuchsia_sysmem::wire::FORMAT_MODIFIER_INTEL_I915_Y_TILED:
+    case fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled:
       return I915_FORMAT_MOD_Y_TILED;
-    case fuchsia_sysmem::wire::FORMAT_MODIFIER_INTEL_I915_YF_TILED:
+    case fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiled:
       return I915_FORMAT_MOD_Yf_TILED;
   }
   return DRM_FORMAT_MOD_INVALID;
@@ -365,7 +365,7 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
   {
     fuchsia_sysmem::wire::BufferCollectionConstraints constraints{
         .usage.cpu =
-            fuchsia_sysmem::wire::cpuUsageReadOften | fuchsia_sysmem::wire::cpuUsageWriteOften,
+            fuchsia_sysmem::wire::kCpuUsageReadOften | fuchsia_sysmem::wire::kCpuUsageWriteOften,
         .min_buffer_count = 1,
         .has_buffer_memory_constraints = true,
         .buffer_memory_constraints.cpu_domain_supported = true,
@@ -382,7 +382,7 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
       image_constraints.max_coded_height = image_create_info->extent.height;
       image_constraints.min_bytes_per_row = 0;  // Rely on Vulkan to specify
       image_constraints.color_spaces_count = 1;
-      image_constraints.color_space[0].type = fuchsia_sysmem::wire::ColorSpaceType::SRGB;
+      image_constraints.color_space[0].type = fuchsia_sysmem::wire::ColorSpaceType::kSrgb;
       image_constraints.pixel_format.type = format;
       image_constraints.pixel_format.has_format_modifier = true;
       image_constraints.pixel_format.format_modifier.value = modifiers[index];
@@ -430,7 +430,7 @@ zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx
     return response->status;
   }
 
-  fuchsia_sysmem::wire::BufferCollectionInfo_2& collection_info = response->buffer_collection_info;
+  fuchsia_sysmem::wire::BufferCollectionInfo2& collection_info = response->buffer_collection_info;
 
   if (collection_info.buffer_count != 1) {
     LOG_VERBOSE("Incorrect buffer collection count: %d", collection_info.buffer_count);
@@ -447,7 +447,7 @@ zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx
     return ZX_ERR_INTERNAL;
   }
 
-  std::optional<fuchsia_sysmem::wire::ImageFormat_2> image_format =
+  std::optional<fuchsia_sysmem::wire::ImageFormat2> image_format =
       image_format::ConstraintsToFormat(collection_info.settings.image_format_constraints, width,
                                         height);
   if (!image_format) {
@@ -520,28 +520,28 @@ static fuchsia_sysmem::wire::PixelFormatType DrmFormatToSysmemFormat(uint32_t dr
   switch (drm_format) {
     case DRM_FORMAT_ARGB8888:
     case DRM_FORMAT_XRGB8888:
-      return fuchsia_sysmem::wire::PixelFormatType::BGRA32;
+      return fuchsia_sysmem::wire::PixelFormatType::kBgra32;
     case DRM_FORMAT_ABGR8888:
     case DRM_FORMAT_XBGR8888:
-      return fuchsia_sysmem::wire::PixelFormatType::R8G8B8A8;
+      return fuchsia_sysmem::wire::PixelFormatType::kR8G8B8A8;
   }
   LOG_VERBOSE("Unhandle DRM format: 0x%x", drm_format);
-  return fuchsia_sysmem::wire::PixelFormatType::INVALID;
+  return fuchsia_sysmem::wire::PixelFormatType::kInvalid;
 }
 
 static uint64_t DrmModifierToSysmemModifier(uint64_t modifier) {
   switch (modifier) {
     case DRM_FORMAT_MOD_LINEAR:
-      return fuchsia_sysmem::wire::FORMAT_MODIFIER_LINEAR;
+      return fuchsia_sysmem::wire::kFormatModifierLinear;
     case I915_FORMAT_MOD_X_TILED:
-      return fuchsia_sysmem::wire::FORMAT_MODIFIER_INTEL_I915_X_TILED;
+      return fuchsia_sysmem::wire::kFormatModifierIntelI915XTiled;
     case I915_FORMAT_MOD_Y_TILED:
-      return fuchsia_sysmem::wire::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+      return fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled;
     case I915_FORMAT_MOD_Yf_TILED:
-      return fuchsia_sysmem::wire::FORMAT_MODIFIER_INTEL_I915_YF_TILED;
+      return fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiled;
   }
   LOG_VERBOSE("Unhandle DRM modifier: 0x%x", modifier);
-  return fuchsia_sysmem::wire::FORMAT_MODIFIER_INVALID;
+  return fuchsia_sysmem::wire::kFormatModifierInvalid;
 }
 
 }  // namespace
@@ -568,7 +568,7 @@ magma_status_t CreateDrmImage(uint32_t physical_device_index,
   }
 
   auto sysmem_format = DrmFormatToSysmemFormat(create_info->drm_format);
-  if (sysmem_format == fuchsia_sysmem::wire::PixelFormatType::INVALID) {
+  if (sysmem_format == fuchsia_sysmem::wire::PixelFormatType::kInvalid) {
     LOG_VERBOSE("Invalid format: 0x%lx", create_info->drm_format);
     return MAGMA_STATUS_INVALID_ARGS;
   }
@@ -585,7 +585,7 @@ magma_status_t CreateDrmImage(uint32_t physical_device_index,
       }
 
       uint64_t modifier = DrmModifierToSysmemModifier(create_info->drm_format_modifiers[i]);
-      if (modifier == fuchsia_sysmem::wire::FORMAT_MODIFIER_INVALID) {
+      if (modifier == fuchsia_sysmem::wire::kFormatModifierInvalid) {
         LOG_VERBOSE("Invalid modifier: 0x%lx", create_info->drm_format_modifiers[i]);
         return MAGMA_STATUS_INVALID_ARGS;
       }

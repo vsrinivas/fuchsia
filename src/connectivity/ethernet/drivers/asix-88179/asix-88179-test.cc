@@ -106,7 +106,7 @@ class UsbAx88179Test : public zxtest::Test {
     fzl::VmoMapper mapper;
     ASSERT_OK(mapper.CreateAndMap(optimal_vmo_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                                   nullptr, &vmo));
-    auto set_io_buffer_result = ethernet_client_.SetIOBuffer(std::move(vmo));
+    auto set_io_buffer_result = ethernet_client_.SetIoBuffer(std::move(vmo));
     ASSERT_OK(set_io_buffer_result.status());
 
     rx_fifo_ = std::move(fifos->rx);
@@ -145,9 +145,9 @@ class UsbAx88179Test : public zxtest::Test {
     // order, confirm that we get to online eventually.
     for (int tries = 0; tries < 2; ++tries) {
       zx_signals_t pending;
-      ASSERT_OK(rx_fifo_.wait_one(ethernet::wire::SIGNAL_STATUS, zx::time::infinite(), &pending));
-      ASSERT_EQ((pending & ethernet::wire::SIGNAL_STATUS), ethernet::wire::SIGNAL_STATUS);
-      if (GetDeviceStatus() & ethernet::wire::DeviceStatus::ONLINE) {
+      ASSERT_OK(rx_fifo_.wait_one(ethernet::wire::kSignalStatus, zx::time::infinite(), &pending));
+      ASSERT_EQ((pending & ethernet::wire::kSignalStatus), ethernet::wire::kSignalStatus);
+      if (GetDeviceStatus() & ethernet::wire::DeviceStatus::kOnline) {
         return;
       }
     }
@@ -170,7 +170,7 @@ TEST_F(UsbAx88179Test, OfflineByDefault) {
 
   ASSERT_NO_FATAL_FAILURES(StartDevice());
 
-  ASSERT_FALSE(GetDeviceStatus() & ethernet::wire::DeviceStatus::ONLINE);
+  ASSERT_FALSE(GetDeviceStatus() & ethernet::wire::DeviceStatus::kOnline);
 }
 
 TEST_F(UsbAx88179Test, SetOnlineAfterStart) {

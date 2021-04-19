@@ -56,7 +56,7 @@ void InputReportsReader::SendReportsToWaitingRead() {
   }
 
   std::array<fuchsia_input_report::wire::InputReport,
-             fuchsia_input_report::wire::MAX_DEVICE_REPORT_COUNT>
+             fuchsia_input_report::wire::kMaxDeviceReportCount>
       reports;
   size_t num_reports = 0;
 

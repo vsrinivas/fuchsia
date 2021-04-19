@@ -191,25 +191,25 @@ void Ft8201Device::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
 
   constexpr fuchsia_input_report::wire::Axis kAxisX = {
       .range = {.min = 0, .max = kMaxContactX},
-      .unit = {.type = fuchsia_input_report::wire::UnitType::NONE, .exponent = 0},
+      .unit = {.type = fuchsia_input_report::wire::UnitType::kNone, .exponent = 0},
   };
 
   constexpr fuchsia_input_report::wire::Axis kAxisY = {
       .range = {.min = 0, .max = kMaxContactY},
-      .unit = {.type = fuchsia_input_report::wire::UnitType::NONE, .exponent = 0},
+      .unit = {.type = fuchsia_input_report::wire::UnitType::kNone, .exponent = 0},
   };
 
   constexpr fuchsia_input_report::wire::Axis kAxisPressure = {
       .range = {.min = 0, .max = kMaxContactPressure},
-      .unit = {.type = fuchsia_input_report::wire::UnitType::NONE, .exponent = 0},
+      .unit = {.type = fuchsia_input_report::wire::UnitType::kNone, .exponent = 0},
   };
 
   fidl::FidlAllocator<kDescriptorBufferSize> allocator;
 
   fuchsia_input_report::wire::DeviceInfo device_info;
-  device_info.vendor_id = static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::GOOGLE);
+  device_info.vendor_id = static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle);
   device_info.product_id = static_cast<uint32_t>(
-      fuchsia_input_report::wire::VendorGoogleProductId::FOCALTECH_TOUCHSCREEN);
+      fuchsia_input_report::wire::VendorGoogleProductId::kFocaltechTouchscreen);
 
   fidl::VectorView<fuchsia_input_report::wire::ContactInputDescriptor> touch_input_contacts(
       allocator, kNumContacts);
@@ -224,7 +224,7 @@ void Ft8201Device::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   touch_input_descriptor.set_contacts(allocator, std::move(touch_input_contacts));
   touch_input_descriptor.set_max_contacts(allocator, kNumContacts);
   touch_input_descriptor.set_touch_type(allocator,
-                                        fuchsia_input_report::wire::TouchType::TOUCHSCREEN);
+                                        fuchsia_input_report::wire::TouchType::kTouchscreen);
 
   fuchsia_input_report::wire::TouchDescriptor touch_descriptor(allocator);
   touch_descriptor.set_input(allocator, std::move(touch_input_descriptor));

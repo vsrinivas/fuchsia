@@ -64,24 +64,24 @@ inline constexpr Arch GetCurrentArch() {
 
 Partition PartitionType(Configuration configuration, Asset asset) {
   switch (asset) {
-    case Asset::KERNEL: {
+    case Asset::kKernel: {
       switch (configuration) {
-        case Configuration::A:
+        case Configuration::kA:
           return Partition::kZirconA;
-        case Configuration::B:
+        case Configuration::kB:
           return Partition::kZirconB;
-        case Configuration::RECOVERY:
+        case Configuration::kRecovery:
           return Partition::kZirconR;
       };
       break;
     }
-    case Asset::VERIFIED_BOOT_METADATA: {
+    case Asset::kVerifiedBootMetadata: {
       switch (configuration) {
-        case Configuration::A:
+        case Configuration::kA:
           return Partition::kVbMetaA;
-        case Configuration::B:
+        case Configuration::kB:
           return Partition::kVbMetaB;
-        case Configuration::RECOVERY:
+        case Configuration::kRecovery:
           return Partition::kVbMetaR;
       };
       break;
@@ -424,11 +424,11 @@ zx::channel OpenServiceRoot() {
 std::optional<Configuration> SlotIndexToConfiguration(AbrSlotIndex slot_index) {
   switch (slot_index) {
     case kAbrSlotIndexA:
-      return Configuration::A;
+      return Configuration::kA;
     case kAbrSlotIndexB:
-      return Configuration::B;
+      return Configuration::kB;
     case kAbrSlotIndexR:
-      return Configuration::RECOVERY;
+      return Configuration::kRecovery;
   }
   ERROR("Unknown Abr slot index %d\n", static_cast<int>(slot_index));
   return std::nullopt;
@@ -436,11 +436,11 @@ std::optional<Configuration> SlotIndexToConfiguration(AbrSlotIndex slot_index) {
 
 std::optional<AbrSlotIndex> ConfigurationToSlotIndex(Configuration config) {
   switch (config) {
-    case Configuration::A:
+    case Configuration::kA:
       return kAbrSlotIndexA;
-    case Configuration::B:
+    case Configuration::kB:
       return kAbrSlotIndexB;
-    case Configuration::RECOVERY:
+    case Configuration::kRecovery:
       return kAbrSlotIndexR;
   }
   ERROR("Unknown configuration %d\n", static_cast<int>(config));
@@ -583,13 +583,13 @@ std::variant<zx_status_t, bool> DataSinkImpl::WriteFirmware(Configuration config
   // Currently all our supported firmware lives in Partition::kBootloaderA/B/R.
   Partition part_type;
   switch (configuration) {
-    case Configuration::A:
+    case Configuration::kA:
       part_type = Partition::kBootloaderA;
       break;
-    case Configuration::B:
+    case Configuration::kB:
       part_type = Partition::kBootloaderB;
       break;
-    case Configuration::RECOVERY:
+    case Configuration::kRecovery:
       part_type = Partition::kBootloaderR;
       break;
   }
@@ -918,11 +918,11 @@ void BootManager::QueryConfigurationStatus(Configuration configuration,
   const AbrSlotInfo& slot = status.value();
 
   if (!slot.is_bootable) {
-    completer.ReplySuccess(ConfigurationStatus::UNBOOTABLE);
+    completer.ReplySuccess(ConfigurationStatus::kUnbootable);
   } else if (slot.is_marked_successful == 0) {
-    completer.ReplySuccess(ConfigurationStatus::PENDING);
+    completer.ReplySuccess(ConfigurationStatus::kPending);
   } else {
-    completer.ReplySuccess(ConfigurationStatus::HEALTHY);
+    completer.ReplySuccess(ConfigurationStatus::kHealthy);
   }
 }
 

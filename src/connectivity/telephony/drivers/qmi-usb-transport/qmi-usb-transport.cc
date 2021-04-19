@@ -489,7 +489,7 @@ void Device::UsbCdcIntHander(uint16_t packet_size) {
            zx_status_get_string(status));
   }
   if (snoop_client_end_) {
-    SnoopQmiMsgSend(buffer, sizeof(buffer), telephony_snoop::wire::Direction::FROM_MODEM);
+    SnoopQmiMsgSend(buffer, sizeof(buffer), telephony_snoop::wire::Direction::kFromModem);
   }
   return;
 }
@@ -568,7 +568,7 @@ int Device::EventLoop(void) {
         return status;
       }
       if (snoop_client_end_) {
-        SnoopQmiMsgSend(buffer, sizeof(buffer), telephony_snoop::wire::Direction::TO_MODEM);
+        SnoopQmiMsgSend(buffer, sizeof(buffer), telephony_snoop::wire::Direction::kToModem);
       }
     } else if (packet.key == INTERRUPT_MSG) {
       if (txn->response.status == ZX_OK) {

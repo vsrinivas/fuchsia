@@ -8,11 +8,11 @@ namespace fidl_test = fidl_test_enummemberadd;
 // [START contents]
 fidl_test::wire::Color writer(std::string s) {
   if (s == "red") {
-    return fidl_test::wire::Color::RED;
+    return fidl_test::wire::Color::kRed;
   } else if (s == "blue") {
-    return fidl_test::wire::Color::BLUE;
+    return fidl_test::wire::Color::kBlue;
   } else if (s == "yellow") {
-    return fidl_test::wire::Color::YELLOW;
+    return fidl_test::wire::Color::kYellow;
   } else {
     return fidl_test::wire::Color::Unknown();
   }
@@ -20,11 +20,11 @@ fidl_test::wire::Color writer(std::string s) {
 
 std::string reader(fidl_test::wire::Color color) {
   switch (color) {
-    case fidl_test::wire::Color::RED:
+    case fidl_test::wire::Color::kRed:
       return "red";
-    case fidl_test::wire::Color::BLUE:
+    case fidl_test::wire::Color::kBlue:
       return "blue";
-    case fidl_test::wire::Color::YELLOW:
+    case fidl_test::wire::Color::kYellow:
       return "yellow";
     default:
       return "<unknown>";

@@ -21,8 +21,8 @@ bool StatusEquals(const status_t& a, const status_t& b) {
 StatusWatcher::StatusWatcher(uint32_t max_queue) : max_queue_(max_queue) {
   if (max_queue_ == 0) {
     max_queue_ = 1;
-  } else if (max_queue_ > netdev::wire::MAX_STATUS_BUFFER) {
-    max_queue_ = netdev::wire::MAX_STATUS_BUFFER;
+  } else if (max_queue_ > netdev::wire::kMaxStatusBuffer) {
+    max_queue_ = netdev::wire::kMaxStatusBuffer;
   }
 }
 

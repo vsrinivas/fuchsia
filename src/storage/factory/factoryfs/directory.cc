@@ -86,10 +86,9 @@ zx_status_t Directory::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
   info->used_bytes = Info().data_blocks * kFactoryfsBlockSize;
   info->total_nodes = Info().directory_entries;
   info->used_nodes = Info().directory_entries;
-  static_assert(kFsName.size() + 1 < fuchsia_io::wire::MAX_FS_NAME_BUFFER,
-                "Factoryfs name too long");
+  static_assert(kFsName.size() + 1 < fuchsia_io::wire::kMaxFsNameBuffer, "Factoryfs name too long");
   info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
-                          fuchsia_io::wire::MAX_FS_NAME_BUFFER - 1)] = '\0';
+                          fuchsia_io::wire::kMaxFsNameBuffer - 1)] = '\0';
   return ZX_OK;
 }
 
@@ -104,7 +103,7 @@ const factoryfs::Superblock& Directory::Info() const { return factoryfs_.Info();
 zx_status_t Directory::GetAttributes(fs::VnodeAttributes* attributes) {
   *attributes = fs::VnodeAttributes();
   attributes->mode = (V_TYPE_DIR | V_IRUSR);
-  attributes->inode = fuchsia_io::wire::INO_UNKNOWN;
+  attributes->inode = fuchsia_io::wire::kInoUnknown;
   attributes->content_size = Info().directory_ent_blocks * kFactoryfsBlockSize;
   attributes->storage_size = Info().directory_ent_blocks * kFactoryfsBlockSize;
   attributes->link_count = 1;

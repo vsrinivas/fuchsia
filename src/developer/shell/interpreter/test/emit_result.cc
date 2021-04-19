@@ -29,7 +29,7 @@
     shell().ExecuteExecutionContext(context->id);                                              \
     Finish(kExecute);                                                                          \
                                                                                                \
-    ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());                   \
+    ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());                  \
                                                                                                \
     CHECK_RESULT(0, result);                                                                   \
   }
@@ -61,7 +61,7 @@ TEST_F(InterpreterTest, EmitResultString) {
   shell().ExecuteExecutionContext(context->id);
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 
   CHECK_RESULT(0, "\"good morning\"");
 }
@@ -89,7 +89,7 @@ TEST_F(InterpreterTest, EmitObject) {
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 
   CHECK_RESULT(0, "{}");
   CHECK_RESULT(1, "{alpha: uint64(100), beta: string(\"hello\")}");
@@ -114,7 +114,7 @@ TEST_F(InterpreterTest, EmitMultipleResults) {
   shell().ExecuteExecutionContext(context->id);
   Finish(kExecute);
 
-  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
 
   CHECK_RESULT(0, "-1750");
   CHECK_RESULT(1, "4250");

@@ -190,8 +190,8 @@ void BarrierAfterFlush() {
 bool IsSecureHeap(const fuchsia_sysmem2::wire::HeapType heap_type) {
   // TODO(fxbug.dev/37452): Generalize this by finding if the heap_type maps to secure
   // MemoryAllocator.
-  return heap_type == fuchsia_sysmem2::wire::HeapType::AMLOGIC_SECURE ||
-         heap_type == fuchsia_sysmem2::wire::HeapType::AMLOGIC_SECURE_VDEC;
+  return heap_type == fuchsia_sysmem2::wire::HeapType::kAmlogicSecure ||
+         heap_type == fuchsia_sysmem2::wire::HeapType::kAmlogicSecureVdec;
 }
 
 bool IsPotentiallyIncludedInInitialAllocation(const NodeProperties& node) {
@@ -1022,7 +1022,7 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
   auto existing_constraints =
       fuchsia_sysmem2::wire::BufferCollectionConstraints(table_set_.allocator());
   auto usage = fuchsia_sysmem2::wire::BufferUsage(table_set_.allocator());
-  usage.set_none(table_set_.allocator(), fuchsia_sysmem2::wire::NONE_USAGE);
+  usage.set_none(table_set_.allocator(), fuchsia_sysmem2::wire::kNoneUsage);
   existing_constraints.set_usage(table_set_.allocator(), std::move(usage));
   ZX_DEBUG_ASSERT(!existing_constraints.has_min_buffer_count_for_camping());
   ZX_DEBUG_ASSERT(!existing_constraints.has_min_buffer_count_for_dedicated_slack());
@@ -1052,13 +1052,13 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
     buffer_memory_constraints.set_secure_required(table_set_.allocator(), true);
   }
   switch (existing.settings().buffer_settings().coherency_domain()) {
-    case fuchsia_sysmem2::wire::CoherencyDomain::CPU:
+    case fuchsia_sysmem2::wire::CoherencyDomain::kCpu:
       buffer_memory_constraints.set_cpu_domain_supported(table_set_.allocator(), true);
       break;
-    case fuchsia_sysmem2::wire::CoherencyDomain::RAM:
+    case fuchsia_sysmem2::wire::CoherencyDomain::kRam:
       buffer_memory_constraints.set_ram_domain_supported(table_set_.allocator(), true);
       break;
-    case fuchsia_sysmem2::wire::CoherencyDomain::INACCESSIBLE:
+    case fuchsia_sysmem2::wire::CoherencyDomain::kInaccessible:
       buffer_memory_constraints.set_inaccessible_domain_supported(table_set_.allocator(), true);
       break;
     default:
@@ -1525,8 +1525,8 @@ static bool IsSecurePermitted(const fuchsia_sysmem2::wire::BufferMemoryConstrain
   // TODO(fxbug.dev/37452): Generalize this by finding if there's a heap that maps to secure
   // MemoryAllocator in the permitted heaps.
   return constraints.inaccessible_domain_supported() &&
-         (IsHeapPermitted(constraints, fuchsia_sysmem2::wire::HeapType::AMLOGIC_SECURE) ||
-          IsHeapPermitted(constraints, fuchsia_sysmem2::wire::HeapType::AMLOGIC_SECURE_VDEC));
+         (IsHeapPermitted(constraints, fuchsia_sysmem2::wire::HeapType::kAmlogicSecure) ||
+          IsHeapPermitted(constraints, fuchsia_sysmem2::wire::HeapType::kAmlogicSecureVdec));
 }
 
 static bool IsCpuAccessSupported(
@@ -1594,7 +1594,7 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
     // Completely empty constraints are permitted, so convert to NONE_USAGE to avoid triggering the
     // check applied to non-empty constraints where at least one usage bit must be set (NONE_USAGE
     // counts for that check, and doesn't constrain anything).
-    FIELD_DEFAULT(constraints.usage(), none, fuchsia_sysmem2::wire::NONE_USAGE);
+    FIELD_DEFAULT(constraints.usage(), none, fuchsia_sysmem2::wire::kNoneUsage);
   }
   FIELD_DEFAULT_ZERO(constraints, min_buffer_count_for_camping);
   FIELD_DEFAULT_ZERO(constraints, min_buffer_count_for_dedicated_slack);
@@ -1740,7 +1740,7 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
   FIELD_DEFAULT_MAX(constraints, required_min_bytes_per_row);
   FIELD_DEFAULT_ZERO(constraints, required_max_bytes_per_row);
 
-  if (constraints.pixel_format().type() == fuchsia_sysmem2::wire::PixelFormatType::INVALID) {
+  if (constraints.pixel_format().type() == fuchsia_sysmem2::wire::PixelFormatType::kInvalid) {
     LogError(FROM_HERE, "PixelFormatType INVALID not allowed");
     return false;
   }
@@ -1814,7 +1814,7 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
                                                         constraints.pixel_format())) {
       auto colorspace_type = constraints.color_spaces()[i].has_type()
                                  ? constraints.color_spaces()[i].type()
-                                 : fuchsia_sysmem2::wire::ColorSpaceType::INVALID;
+                                 : fuchsia_sysmem2::wire::ColorSpaceType::kInvalid;
       LogError(FROM_HERE,
                "!ImageFormatIsSupportedColorSpaceForPixelFormat() "
                "color_space.type: %u "
@@ -2230,16 +2230,16 @@ static fit::result<fuchsia_sysmem2::wire::HeapType, zx_status_t> GetHeap(
     //
     // checked previously
     ZX_DEBUG_ASSERT(!constraints.secure_required() || IsSecurePermitted(constraints));
-    if (IsHeapPermitted(constraints, fuchsia_sysmem2::wire::HeapType::AMLOGIC_SECURE)) {
-      return fit::ok(fuchsia_sysmem2::wire::HeapType::AMLOGIC_SECURE);
+    if (IsHeapPermitted(constraints, fuchsia_sysmem2::wire::HeapType::kAmlogicSecure)) {
+      return fit::ok(fuchsia_sysmem2::wire::HeapType::kAmlogicSecure);
     } else {
       ZX_DEBUG_ASSERT(
-          IsHeapPermitted(constraints, fuchsia_sysmem2::wire::HeapType::AMLOGIC_SECURE_VDEC));
-      return fit::ok(fuchsia_sysmem2::wire::HeapType::AMLOGIC_SECURE_VDEC);
+          IsHeapPermitted(constraints, fuchsia_sysmem2::wire::HeapType::kAmlogicSecureVdec));
+      return fit::ok(fuchsia_sysmem2::wire::HeapType::kAmlogicSecureVdec);
     }
   }
-  if (IsHeapPermitted(constraints, fuchsia_sysmem2::wire::HeapType::SYSTEM_RAM)) {
-    return fit::ok(fuchsia_sysmem2::wire::HeapType::SYSTEM_RAM);
+  if (IsHeapPermitted(constraints, fuchsia_sysmem2::wire::HeapType::kSystemRam)) {
+    return fit::ok(fuchsia_sysmem2::wire::HeapType::kSystemRam);
   }
 
   for (size_t i = 0; i < constraints.heap_permitted().count(); ++i) {
@@ -2274,18 +2274,18 @@ static fit::result<fuchsia_sysmem2::wire::CoherencyDomain> GetCoherencyDomain(
       // RAM coherency domain.
       //
       // TODO - base on the system in use.
-      return fit::ok(fuchsia_sysmem2::wire::CoherencyDomain::RAM);
+      return fit::ok(fuchsia_sysmem2::wire::CoherencyDomain::kRam);
     }
   }
 
   if (heap_properties.coherency_domain_support().cpu_supported() &&
       constraints.buffer_memory_constraints().cpu_domain_supported()) {
-    return fit::ok(CoherencyDomain::CPU);
+    return fit::ok(CoherencyDomain::kCpu);
   }
 
   if (heap_properties.coherency_domain_support().ram_supported() &&
       constraints.buffer_memory_constraints().ram_domain_supported()) {
-    return fit::ok(CoherencyDomain::RAM);
+    return fit::ok(CoherencyDomain::kRam);
   }
 
   if (heap_properties.coherency_domain_support().inaccessible_supported() &&
@@ -2293,7 +2293,7 @@ static fit::result<fuchsia_sysmem2::wire::CoherencyDomain> GetCoherencyDomain(
     // Intentionally permit treating as Inaccessible if we reach here, even
     // if the heap permits CPU access.  Only domain in common among
     // participants is Inaccessible.
-    return fit::ok(fuchsia_sysmem2::wire::CoherencyDomain::INACCESSIBLE);
+    return fit::ok(fuchsia_sysmem2::wire::CoherencyDomain::kInaccessible);
   }
 
   return fit::error();
@@ -2321,10 +2321,10 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
              min_buffer_count, max_buffer_count);
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
-  if (min_buffer_count > fuchsia_sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS) {
+  if (min_buffer_count > fuchsia_sysmem::wire::kMaxCountBufferCollectionInfoBuffers) {
     LogError(FROM_HERE,
              "aggregate min_buffer_count (%d) > MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS (%d)",
-             min_buffer_count, fuchsia_sysmem::wire::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS);
+             min_buffer_count, fuchsia_sysmem::wire::kMaxCountBufferCollectionInfoBuffers);
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -2625,9 +2625,9 @@ LogicalBufferCollection::Allocate(
     aux_buffer_settings.set_is_physically_contiguous(table_set_.allocator(), false);
     aux_buffer_settings.set_is_secure(table_set_.allocator(), false);
     aux_buffer_settings.set_coherency_domain(table_set_.allocator(),
-                                             fuchsia_sysmem2::wire::CoherencyDomain::CPU);
+                                             fuchsia_sysmem2::wire::CoherencyDomain::kCpu);
     aux_buffer_settings.set_heap(table_set_.allocator(),
-                                 fuchsia_sysmem2::wire::HeapType::SYSTEM_RAM);
+                                 fuchsia_sysmem2::wire::HeapType::kSystemRam);
     maybe_aux_allocator = parent_device_->GetAllocator(aux_buffer_settings);
     ZX_DEBUG_ASSERT(maybe_aux_allocator);
   }

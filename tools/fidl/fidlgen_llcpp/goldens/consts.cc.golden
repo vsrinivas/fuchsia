@@ -4,4 +4,4 @@
 
 #include <memory>
 
-const char* ::fidl_test_consts::wire::USERNAME = "\"squeenze\"";
+const char* ::fidl_test_consts::wire::kUsername = "\"squeenze\"";
