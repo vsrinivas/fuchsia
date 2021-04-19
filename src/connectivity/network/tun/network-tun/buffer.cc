@@ -29,10 +29,7 @@ zx_status_t VmoStore::RegisterVmo(uint8_t id, zx::vmo vmo) {
   return store_.RegisterWithKey(id, std::move(vmo));
 }
 
-zx_status_t VmoStore::UnregisterVmo(uint8_t id) {
-  auto result = store_.Unregister(id);
-  return result.is_error() ? result.error() : ZX_OK;
-}
+zx_status_t VmoStore::UnregisterVmo(uint8_t id) { return store_.Unregister(id).status_value(); }
 
 zx_status_t VmoStore::Copy(VmoStore* src_store, uint8_t src_id, size_t src_offset,
                            VmoStore* dst_store, uint8_t dst_id, size_t dst_offset, size_t len) {

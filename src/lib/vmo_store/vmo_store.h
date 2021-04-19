@@ -5,8 +5,8 @@
 #ifndef SRC_LIB_VMO_STORE_VMO_STORE_H_
 #define SRC_LIB_VMO_STORE_VMO_STORE_H_
 
-#include <lib/fit/result.h>
 #include <lib/stdcompat/optional.h>
+#include <lib/zx/status.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -102,7 +102,7 @@ class VmoStoreBase {
 //
 //   // Now let's register, retrieve, and unregister a `zx::vmo` obtained through `GetVmo()`.
 //   // The second argument to `Register` is our user metadata.
-//   fit::result<size_t, zx_status_t> result = store.Register(GetVmo(), "my first VMO");
+//   zx::status<size_t> result = store.Register(GetVmo(), "my first VMO");
 //   size_t key = result.take_value();
 //   auto * my_registered_vmo = store.GetVmo(key);
 //
@@ -134,20 +134,20 @@ class VmoStore : public VmoStoreBase<Backing> {
 
   // Registers a VMO with this store, returning the key used to access that VMO on success.
   template <typename... MetaArgs>
-  fit::result<Key, zx_status_t> Register(zx::vmo vmo, MetaArgs... vmo_args) {
+  zx::status<Key> Register(zx::vmo vmo, MetaArgs... vmo_args) {
     return Register(StoredVmo(std::move(vmo), std::forward<MetaArgs>(vmo_args)...));
   }
 
-  fit::result<Key, zx_status_t> Register(StoredVmo vmo) {
+  zx::status<Key> Register(StoredVmo vmo) {
     zx_status_t status = PrepareStore(&vmo);
     if (status != ZX_OK) {
-      return fit::error(status);
+      return zx::error(status);
     }
     auto key = this->impl_.Push(std::move(vmo));
     if (!key.has_value()) {
-      return fit::error(ZX_ERR_NO_RESOURCES);
+      return zx::error(ZX_ERR_NO_RESOURCES);
     }
-    return fit::ok(std::move(*key));
+    return zx::ok(std::move(*key));
   }
 
   // Registers a VMO with this store using the provided `key`.
@@ -169,12 +169,12 @@ class VmoStore : public VmoStoreBase<Backing> {
   // All the mapping and pinning handles will be dropped, and the VMO will be
   // returned to the caller.
   // Returns `ZX_ERR_NOT_FOUND` if `key` does not point to a registered VMO.
-  fit::result<zx::vmo, zx_status_t> Unregister(Key key) {
+  zx::status<zx::vmo> Unregister(Key key) {
     cpp17::optional<StoredVmo> vmo = this->impl_.Extract(key);
     if (vmo) {
-      return fit::ok(std::move(vmo->take_vmo()));
+      return zx::ok(std::move(vmo->take_vmo()));
     }
-    return fit::error(ZX_ERR_NOT_FOUND);
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
 
   // Gets an _unowned_ pointer to the `StoredVmo` referenced by `key`.

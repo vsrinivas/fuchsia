@@ -193,10 +193,10 @@ zx_status_t AmlSpi::SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_id, 
 
   auto result = chips_[chip_select].registered_vmos.Unregister(vmo_id);
   if (result.is_error()) {
-    return result.error();
+    return result.status_value();
   }
 
-  *out_vmo = result.take_value();
+  *out_vmo = std::move(result.value());
   return ZX_OK;
 }
 

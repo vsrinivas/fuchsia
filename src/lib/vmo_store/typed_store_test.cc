@@ -15,9 +15,6 @@
 namespace vmo_store {
 namespace testing {
 
-#define ASSERT_RESULT(result) \
-  ASSERT_TRUE(result.is_ok()) << "Unexpected error result: " << zx_status_get_string(result.error())
-
 namespace {
 
 // Move-only metadata class proving that StoredVmo can store move-only values.
@@ -164,13 +161,13 @@ TYPED_TEST(TypedStorageTest, BasicStoreOperations) {
   auto vmo = TestFixture::MakeStoredVmo(1);
   auto vmo1 = vmo.vmo();
   auto result = store.Register(std::move(vmo));
-  ASSERT_RESULT(result);
-  auto k1 = result.take_value();
+  ASSERT_OK(result.status_value());
+  auto k1 = result.value();
   vmo = TestFixture::MakeStoredVmo(2);
   auto vmo2 = vmo.vmo();
   result = store.Register(std::move(vmo));
-  ASSERT_RESULT(result);
-  auto k2 = result.take_value();
+  ASSERT_OK(result.status_value());
+  auto k2 = result.value();
   ASSERT_NE(k1, k2);
   auto k3 = MakeKey<typename TestFixture::VmoStore::Key>(TestFixture::kStorageCapacity / 2);
   vmo = TestFixture::MakeStoredVmo(3);
@@ -200,14 +197,13 @@ TYPED_TEST(TypedStorageTest, BasicStoreOperations) {
   // Unregister k3 and check that we can't get it anymore nor erase it again.
   {
     auto status = store.Unregister(k3);
-    ASSERT_TRUE(status.is_ok()) << zx_status_get_string(status.error());
+    ASSERT_OK(status.status_value());
     ASSERT_EQ(status.value().get(), vmo3->get());
   }
 
   {
     auto status = store.Unregister(k3);
-    ASSERT_TRUE(status.is_error());
-    ASSERT_STATUS(status.error(), ZX_ERR_NOT_FOUND);
+    ASSERT_STATUS(status.status_value(), ZX_ERR_NOT_FOUND);
   }
 
   ASSERT_EQ(store.GetVmo(k3), nullptr);
@@ -221,7 +217,7 @@ TYPED_TEST(TypedStorageTest, BasicStoreOperations) {
   auto error_result =
       store.Register(MakeStoredVmoHelper<typename TestFixture::VmoStore::Meta>(zx::vmo(), 0));
   ASSERT_TRUE(error_result.is_error()) << "Unexpected key result " << error_result.value();
-  ASSERT_STATUS(error_result.error(), ZX_ERR_BAD_HANDLE);
+  ASSERT_STATUS(error_result.status_value(), ZX_ERR_BAD_HANDLE);
   ASSERT_STATUS(store.RegisterWithKey(
                     k1, MakeStoredVmoHelper<typename TestFixture::VmoStore::Meta>(zx::vmo(), 0)),
                 ZX_ERR_BAD_HANDLE);

@@ -30,18 +30,13 @@ class MapPinTest : public ::testing::Test {
         ::vmo_store::PinOptions{GetBti(), ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, true}};
   }
 
-  static zx_status_t CreateAndRegister(VmoStore* store, size_t* key, size_t vmo_size = kVmoSize) {
+  static zx::status<size_t> CreateAndRegister(VmoStore& store, size_t vmo_size = kVmoSize) {
     zx::vmo vmo;
     zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo);
     if (status != ZX_OK) {
-      return status;
+      return zx::error(status);
     }
-    auto result = store->Register(std::move(vmo));
-    if (result.is_error()) {
-      return result.error();
-    }
-    *key = result.take_value();
-    return ZX_OK;
+    return store.Register(std::move(vmo));
   }
 
   zx::unowned_bti GetBti() {
@@ -58,8 +53,9 @@ class MapPinTest : public ::testing::Test {
 
 TEST_F(MapPinTest, Map) {
   VmoStore store(DefaultMapOptions());
-  size_t key;
-  ASSERT_OK(CreateAndRegister(&store, &key));
+  zx::status result = CreateAndRegister(store);
+  ASSERT_OK(result.status_value());
+  size_t key = result.value();
   auto* stored = store.GetVmo(key);
   ASSERT_NE(stored, nullptr);
   // Check mapped data.
@@ -77,8 +73,9 @@ TEST_F(MapPinTest, VmarManagerMap) {
   auto options = DefaultMapOptions();
   options.map->vmar = vmar;
   VmoStore store(std::move(options));
-  size_t key;
-  ASSERT_OK(CreateAndRegister(&store, &key));
+  zx::status result = CreateAndRegister(store);
+  ASSERT_OK(result.status_value());
+  size_t key = result.value();
   // Assert that the mapped data is within the range of the vmar.
   auto data = store.GetVmo(key)->data();
   ASSERT_GE(static_cast<void*>(data.data()), vmar->start());
@@ -88,8 +85,9 @@ TEST_F(MapPinTest, VmarManagerMap) {
 
 TEST_F(MapPinTest, Pin) {
   VmoStore store(DefaultPinOptions());
-  size_t key;
-  ASSERT_OK(CreateAndRegister(&store, &key));
+  zx::status result = CreateAndRegister(store);
+  ASSERT_OK(result.status_value());
+  size_t key = result.value();
   auto* vmo = store.GetVmo(key);
   const auto& pinned = vmo->pinned_vmo();
   ASSERT_EQ(pinned.region_count(), kVmoPages);
@@ -132,9 +130,10 @@ TEST_F(MapPinTest, PinSingleRegion) {
   // Turn off indexing. If we pin a single region it should still work.
   options.pin->index = false;
   VmoStore store(std::move(options));
-  size_t key;
   // Create and register a VMO with a single page.
-  ASSERT_OK(CreateAndRegister(&store, &key, ZX_PAGE_SIZE));
+  zx::status result = CreateAndRegister(store, ZX_PAGE_SIZE);
+  ASSERT_OK(result.status_value());
+  size_t key = result.value();
   auto* vmo = store.GetVmo(key);
   const auto& pinned = vmo->pinned_vmo();
   ASSERT_EQ(pinned.region_count(), 1u);
@@ -170,7 +169,9 @@ TEST_F(MapPinTest, PinSingleRegion) {
 
   // Register another larger vmo and verify that we can't get the pinned regions when indexing is
   // turned off.
-  ASSERT_OK(CreateAndRegister(&store, &key));
+  result = CreateAndRegister(store);
+  ASSERT_OK(result.status_value());
+  key = result.value();
   vmo = store.GetVmo(key);
   ASSERT_STATUS(vmo->GetPinnedRegions(0, kVmoSize, regions, 1, &region_count), ZX_ERR_BAD_STATE);
   ASSERT_EQ(region_count, 0u);
@@ -178,8 +179,9 @@ TEST_F(MapPinTest, PinSingleRegion) {
 
 TEST_F(MapPinTest, NoMapOrPin) {
   VmoStore store(Options{cpp17::nullopt, cpp17::nullopt});
-  size_t key;
-  ASSERT_OK(CreateAndRegister(&store, &key));
+  zx::status result = CreateAndRegister(store);
+  ASSERT_OK(result.status_value());
+  size_t key = result.value();
   auto* vmo = store.GetVmo(key);
   ASSERT_EQ(vmo->pinned_vmo().region_count(), 0u);
   ASSERT_EQ(vmo->data().size(), 0u);

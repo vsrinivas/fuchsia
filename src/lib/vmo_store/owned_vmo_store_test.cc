@@ -33,7 +33,7 @@ TEST_F(OwnershipTest, FailedRegistrationDoesNotIncreaseCount) {
   Agent agent(&store_);
   auto result = agent.Register(zx::vmo());
   ASSERT_TRUE(result.is_error()) << "Result has unexpected key: " << result.value();
-  ASSERT_STATUS(result.error(), ZX_ERR_BAD_HANDLE);
+  ASSERT_STATUS(result.status_value(), ZX_ERR_BAD_HANDLE);
 
   ASSERT_EQ(store_.count(), 0u);
 }
@@ -67,22 +67,22 @@ TEST_F(OwnershipTest, TwoAgentsRegisterWithKey) {
   {
     auto status = agent1.Unregister(kKey2);
     ASSERT_TRUE(status.is_error());
-    ASSERT_STATUS(status.error(), ZX_ERR_ACCESS_DENIED);
+    ASSERT_STATUS(status.status_value(), ZX_ERR_ACCESS_DENIED);
   }
   {
     auto status = agent2.Unregister(kKey1);
     ASSERT_TRUE(status.is_error());
-    ASSERT_STATUS(status.error(), ZX_ERR_ACCESS_DENIED);
+    ASSERT_STATUS(status.status_value(), ZX_ERR_ACCESS_DENIED);
   }
 
   {
     auto status = agent1.Unregister(kKey1);
-    ASSERT_TRUE(status.is_ok()) << zx_status_get_string(status.error());
+    ASSERT_TRUE(status.is_ok()) << zx_status_get_string(status.status_value());
     ASSERT_EQ(status.value().get(), vmo1);
   }
   {
     auto status = agent2.Unregister(kKey2);
-    ASSERT_TRUE(status.is_ok()) << zx_status_get_string(status.error());
+    ASSERT_TRUE(status.is_ok()) << zx_status_get_string(status.status_value());
     ASSERT_EQ(status.value().get(), vmo2);
   }
 
@@ -95,15 +95,15 @@ TEST_F(OwnershipTest, TwoAgentsRegister) {
   auto agent2 = store_.CreateRegistrationAgent();
   auto result1 = agent1.Register(CreateVmo());
   ASSERT_TRUE(result1.is_ok()) << "Failed to register VMO: "
-                               << zx_status_get_string(result1.error());
+                               << zx_status_get_string(result1.status_value());
   auto result2 = agent2.Register(CreateVmo());
   ASSERT_TRUE(result2.is_ok()) << "Failed to register VMO: "
-                               << zx_status_get_string(result2.error());
+                               << zx_status_get_string(result2.status_value());
 
   ASSERT_EQ(store_.count(), 2u);
 
-  auto k1 = result1.take_value();
-  auto k2 = result2.take_value();
+  auto k1 = result1.value();
+  auto k2 = result2.value();
   ASSERT_NE(k1, k2);
   // Each agent can get their own VMOs.
   ASSERT_NE(agent1.GetVmo(k1), nullptr);
@@ -116,23 +116,23 @@ TEST_F(OwnershipTest, TwoAgentsRegister) {
   {
     auto status = agent1.Unregister(k2);
     ASSERT_TRUE(status.is_error());
-    ASSERT_STATUS(status.error(), ZX_ERR_ACCESS_DENIED);
+    ASSERT_STATUS(status.status_value(), ZX_ERR_ACCESS_DENIED);
   }
 
   {
     auto status = agent2.Unregister(k1);
     ASSERT_TRUE(status.is_error());
-    ASSERT_STATUS(status.error(), ZX_ERR_ACCESS_DENIED);
+    ASSERT_STATUS(status.status_value(), ZX_ERR_ACCESS_DENIED);
   }
 
   {
     auto status = agent1.Unregister(k1);
-    ASSERT_TRUE(status.is_ok()) << zx_status_get_string(status.error());
+    ASSERT_TRUE(status.is_ok()) << zx_status_get_string(status.status_value());
   }
 
   {
     auto status = agent2.Unregister(k2);
-    ASSERT_TRUE(status.is_ok()) << zx_status_get_string(status.error());
+    ASSERT_TRUE(status.is_ok()) << zx_status_get_string(status.status_value());
   }
 
   ASSERT_EQ(store_.count(), 0u);

@@ -37,7 +37,7 @@ namespace vmo_store {
 //
 //   // Now let's register, retrieve, and unregister a `zx::vmo` obtained through `GetVmo()`.
 //   // The second argument to `Register` is our user metadata.
-//   fit::result<size_t, zx_status_t> result = agent.Register(GetVmo(), "my first VMO");
+//   zx::status result = agent.Register(GetVmo(), "my first VMO");
 //   size_t key = result.take_value();
 //   auto * my_registered_vmo = agent.GetVmo(key);
 //
@@ -100,7 +100,7 @@ class OwnedVmoStore : public VmoStoreBase<VmoStore<Backing>> {
     // Same as `VmoStore::Register`, but the registered VMO is only accessible through this
     // `RegistrationAgent`.
     template <typename... MetaArgs>
-    fit::result<typename VmoStore::Key, zx_status_t> Register(zx::vmo vmo, MetaArgs... vmo_args) {
+    zx::status<typename VmoStore::Key> Register(zx::vmo vmo, MetaArgs... vmo_args) {
       auto result =
           store_->Register(CreateStore(std::move(vmo), std::forward<MetaArgs>(vmo_args)...));
       if (result.is_ok()) {
@@ -123,10 +123,10 @@ class OwnedVmoStore : public VmoStoreBase<VmoStore<Backing>> {
 
     // Same as `VmoStore::Unregister`, but unregistration fails with `ZX_ERR_ACCESS_DENIED` if the
     // VMO was not initially registered by this `RegistrationAgent`.
-    fit::result<zx::vmo, zx_status_t> Unregister(typename VmoStore::Key key) {
+    zx::status<zx::vmo> Unregister(typename VmoStore::Key key) {
       auto* vmo = store_->GetVmo(key);
       if (vmo && GetOwner(*vmo) != this) {
-        return fit::error(ZX_ERR_ACCESS_DENIED);
+        return zx::error(ZX_ERR_ACCESS_DENIED);
       }
       auto result = store_->Unregister(std::move(key));
       if (result.is_ok()) {

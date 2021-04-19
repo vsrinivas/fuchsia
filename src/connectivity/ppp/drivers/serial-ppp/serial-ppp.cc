@@ -497,10 +497,9 @@ void SerialPpp::NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo) {
 }
 
 void SerialPpp::NetworkDeviceImplReleaseVmo(uint8_t vmo_id) {
-  auto result = vmos_.Unregister(vmo_id);
+  zx::status result = vmos_.Unregister(vmo_id);
   if (result.is_error()) {
-    zxlogf(WARNING, "failed to unregister VMO %d: %s", vmo_id,
-           zx_status_get_string(result.error()));
+    zxlogf(WARNING, "failed to unregister VMO %d: %s", vmo_id, result.status_string());
   }
 }
 
