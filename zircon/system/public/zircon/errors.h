@@ -5,13 +5,7 @@
 #ifndef SYSROOT_ZIRCON_ERRORS_H_
 #define SYSROOT_ZIRCON_ERRORS_H_
 
-// Zircon statuses are signed 32 bit integers. The space of values is
-// divided as follows:
-// - The zero value is for the OK status.
-// - Negative values are defined by the system, in this file.
-// - Positive values are reserved for protocol-specific error values,
-//   and will never be defined by the system.
-
+// ZX_OK: Indicates an operation was successful.
 #define ZX_OK (0)
 
 // ======= Internal failures =======
