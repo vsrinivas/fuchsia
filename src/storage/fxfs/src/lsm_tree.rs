@@ -17,7 +17,7 @@ use {
     },
     types::{
         IntoLayerRefs, Item, ItemRef, Key, Layer, LayerIterator, LayerWriter, MutableLayer,
-        OrdLowerBound, Value,
+        NextKey, OrdLowerBound, Value,
     },
 };
 
@@ -37,7 +37,7 @@ pub struct LSMTree<K, V> {
     merge_fn: merge::MergeFn<K, V>,
 }
 
-impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
+impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
     /// Creates a new empty tree.
     pub fn new(merge_fn: merge::MergeFn<K, V>) -> Self {
         LSMTree {
@@ -175,8 +175,7 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
     /// Searches for an exact match for the given key.
     pub async fn find(&self, search_key: &K) -> Result<Option<Item<K, V>>, Error>
     where
-        K: Clone,
-        V: Clone,
+        K: Eq,
     {
         let layer_set = self.layer_set();
         let mut merger = layer_set.merger();
@@ -213,11 +212,7 @@ pub struct LayerSet<K, V> {
     merge_fn: merge::MergeFn<K, V>,
 }
 
-impl<
-        K: std::fmt::Debug + Ord + OrdLowerBound + Unpin + 'static,
-        V: std::fmt::Debug + Unpin + 'static,
-    > LayerSet<K, V>
-{
+impl<K: Key + NextKey + OrdLowerBound, V: Value> LayerSet<K, V> {
     pub fn add_layer(&mut self, layer: Arc<dyn Layer<K, V>>) {
         self.layers.push(layer);
     }
@@ -234,7 +229,7 @@ mod tests {
         crate::{
             lsm_tree::{
                 merge::{MergeLayerIterator, MergeResult},
-                types::{Item, ItemRef, LayerIterator, OrdLowerBound},
+                types::{Item, ItemRef, LayerIterator, NextKey, OrdLowerBound, OrdUpperBound},
             },
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
@@ -245,15 +240,11 @@ mod tests {
     #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
     struct TestKey(std::ops::Range<u64>);
 
-    impl Ord for TestKey {
-        fn cmp(&self, other: &TestKey) -> std::cmp::Ordering {
-            self.0.end.cmp(&other.0.end)
-        }
-    }
+    impl NextKey for TestKey {}
 
-    impl PartialOrd for TestKey {
-        fn partial_cmp(&self, other: &TestKey) -> Option<std::cmp::Ordering> {
-            Some(self.cmp(other))
+    impl OrdUpperBound for TestKey {
+        fn cmp_upper_bound(&self, other: &TestKey) -> std::cmp::Ordering {
+            self.0.end.cmp(&other.0.end)
         }
     }
 

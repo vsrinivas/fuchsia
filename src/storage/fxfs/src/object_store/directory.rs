@@ -171,8 +171,7 @@ impl Directory {
         &self,
         merger: &'a mut Merger<'b, ObjectKey, ObjectValue>,
     ) -> Result<DirectoryIterator<'a, 'b>, Error> {
-        let key = ObjectKey::child(self.object_id, "");
-        let mut iter = merger.seek(Bound::Included(&key)).await?;
+        let mut iter = merger.seek(Bound::Included(&ObjectKey::child(self.object_id, ""))).await?;
         // Skip deleted entries.
         // TODO(csuter): Remove this once we've developed a filtering iterator.
         loop {
@@ -181,7 +180,7 @@ impl Directory {
                     if *object_id == self.object_id => {}
                 _ => break,
             }
-            iter.advance_with_hint(&key).await?;
+            iter.advance().await?;
         }
         Ok(DirectoryIterator { object_id: self.object_id, iter })
     }
@@ -205,12 +204,7 @@ impl DirectoryIterator<'_, '_> {
 
     pub async fn advance(&mut self) -> Result<(), Error> {
         loop {
-            // TODO(csuter): The choice of key for this call is actually irrelevant, since the first
-            // seek call should have loaded all layer iterators, and the hint provided to
-            // |advance_with_hint| only serves to abort early if the lower layers need to be
-            // loaded. Consider replacing the above |seek| with a variant that would let us simply
-            // |advance|.
-            self.iter.advance_with_hint(&ObjectKey::child(0, "")).await?;
+            self.iter.advance().await?;
             // Skip deleted entries.
             match self.iter.get() {
                 Some(ItemRef { key: ObjectKey { object_id, .. }, value: ObjectValue::None })

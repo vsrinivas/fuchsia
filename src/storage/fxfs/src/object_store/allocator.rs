@@ -9,7 +9,8 @@ use {
         lsm_tree::{
             skip_list_layer::SkipListLayer,
             types::{
-                BoxedLayerIterator, Item, ItemRef, LayerIterator, MutableLayer, OrdLowerBound,
+                BoxedLayerIterator, Item, ItemRef, LayerIterator, MutableLayer, NextKey,
+                OrdLowerBound, OrdUpperBound,
             },
             LSMTree,
         },
@@ -80,21 +81,32 @@ impl AllocatorKey {
     }
 }
 
-impl Ord for AllocatorKey {
-    fn cmp(&self, other: &AllocatorKey) -> std::cmp::Ordering {
-        self.device_range.end.cmp(&other.device_range.end)
-    }
-}
+impl NextKey for AllocatorKey {}
 
-impl PartialOrd for AllocatorKey {
-    fn partial_cmp(&self, other: &AllocatorKey) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
+impl OrdUpperBound for AllocatorKey {
+    fn cmp_upper_bound(&self, other: &AllocatorKey) -> std::cmp::Ordering {
+        self.device_range.end.cmp(&other.device_range.end)
     }
 }
 
 impl OrdLowerBound for AllocatorKey {
     fn cmp_lower_bound(&self, other: &AllocatorKey) -> std::cmp::Ordering {
         self.device_range.start.cmp(&other.device_range.start)
+    }
+}
+
+impl Ord for AllocatorKey {
+    fn cmp(&self, other: &AllocatorKey) -> std::cmp::Ordering {
+        self.device_range
+            .start
+            .cmp(&other.device_range.start)
+            .then(self.device_range.end.cmp(&other.device_range.end))
+    }
+}
+
+impl PartialOrd for AllocatorKey {
+    fn partial_cmp(&self, other: &AllocatorKey) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 

@@ -14,6 +14,7 @@ use {
     byteorder::{ByteOrder, LittleEndian, ReadBytesExt},
     serde::Serialize,
     std::{
+        cmp::Ordering,
         ops::{Bound, Drop},
         sync::Arc,
         vec::Vec,
@@ -121,31 +122,31 @@ impl SimplePersistentLayer {
 #[async_trait]
 impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
     async fn seek<'a>(&'a self, bound: Bound<&K>) -> Result<BoxedLayerIterator<'a, K, V>, Error> {
-        let key;
-        match bound {
+        let (key, excluded) = match bound {
             Bound::Unbounded => {
                 let mut iterator = Iterator::new(self, 0);
                 iterator.advance().await?;
                 return Ok(Box::new(iterator));
             }
-            Bound::Included(k) => {
-                key = k;
-            }
-            Bound::Excluded(_) => panic!("Excluded bound not supported"),
-        }
+            Bound::Included(k) => (k, false),
+            Bound::Excluded(k) => (k, true),
+        };
         let mut left_offset = 0;
         let mut right_offset = round_up(self.size, self.block_size);
         let mut left = Iterator::new(self, left_offset);
         left.advance().await?;
         match left.get() {
-            None => {
-                return Ok(Box::new(left));
-            }
-            Some(item) => {
-                if item.key >= key {
+            None => return Ok(Box::new(left)),
+            Some(item) => match item.key.cmp_upper_bound(key) {
+                Ordering::Greater => return Ok(Box::new(left)),
+                Ordering::Equal => {
+                    if excluded {
+                        left.advance().await?;
+                    }
                     return Ok(Box::new(left));
                 }
-            }
+                Ordering::Less => {}
+            },
         }
         while right_offset - left_offset > self.block_size as u64 {
             // Pick a block midway.
@@ -153,11 +154,19 @@ impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
                 round_down(left_offset + (right_offset - left_offset) / 2, self.block_size);
             let mut iterator = Iterator::new(self, mid_offset);
             iterator.advance().await?;
-            if iterator.get().unwrap().key >= key {
-                right_offset = mid_offset;
-            } else {
-                left_offset = mid_offset;
-                left = iterator;
+            let item: ItemRef<'_, K, V> = iterator.get().unwrap();
+            match item.key.cmp_upper_bound(key) {
+                Ordering::Greater => right_offset = mid_offset,
+                Ordering::Equal => {
+                    if excluded {
+                        iterator.advance().await?;
+                    }
+                    return Ok(Box::new(iterator));
+                }
+                Ordering::Less => {
+                    left_offset = mid_offset;
+                    left = iterator;
+                }
             }
         }
         // At this point, we know that left_key < key and right_key >= key, so we have to iterate
@@ -165,15 +174,19 @@ impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
         loop {
             left.advance().await?;
             match left.get() {
-                None => break,
-                Some(item) => {
-                    if item.key >= key {
-                        break;
+                None => return Ok(Box::new(left)),
+                Some(item) => match item.key.cmp_upper_bound(key) {
+                    Ordering::Greater => return Ok(Box::new(left)),
+                    Ordering::Equal => {
+                        if excluded {
+                            left.advance().await?;
+                        }
+                        return Ok(Box::new(left));
                     }
-                }
+                    Ordering::Less => {}
+                },
             }
         }
-        Ok(Box::new(left))
     }
 }
 
@@ -257,12 +270,14 @@ mod tests {
     use {
         super::{SimplePersistentLayer, SimplePersistentLayerWriter},
         crate::{
-            lsm_tree::types::{Item, ItemRef, Layer, LayerWriter},
+            lsm_tree::types::{DefaultOrdUpperBound, Item, ItemRef, Layer, LayerWriter},
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         fuchsia_async as fasync,
         std::{ops::Bound, sync::Arc},
     };
+
+    impl DefaultOrdUpperBound for i32 {}
 
     #[fasync::run_singlethreaded(test)]
     async fn test_iterate_after_write() {
@@ -383,5 +398,43 @@ mod tests {
             iterator.advance().await.expect("failed to advance");
         }
         assert!(iterator.get().is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_seek_bound_excluded() {
+        const BLOCK_SIZE: u32 = 512;
+        const ITEM_COUNT: i32 = 10000;
+
+        let mut handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
+        {
+            let mut writer = SimplePersistentLayerWriter::new(&mut handle, BLOCK_SIZE);
+            for i in 0..ITEM_COUNT {
+                writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
+            }
+            writer.flush().await.expect("flush failed");
+        }
+        let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
+
+        for i in 0..ITEM_COUNT {
+            let mut iterator = layer.seek(Bound::Excluded(&i)).await.expect("failed to seek");
+            let i_plus_one = i + 1;
+            if i_plus_one < ITEM_COUNT {
+                let ItemRef { key, value } = iterator.get().expect("missing item");
+
+                assert_eq!((key, value), (&i_plus_one, &i_plus_one));
+
+                // Check that we can advance to the next item.
+                iterator.advance().await.expect("failed to advance");
+                let i_plus_two = i + 2;
+                if i_plus_two < ITEM_COUNT {
+                    let ItemRef { key, value } = iterator.get().expect("missing item");
+                    assert_eq!((key, value), (&i_plus_two, &i_plus_two));
+                } else {
+                    assert!(iterator.get().is_none());
+                }
+            } else {
+                assert!(iterator.get().is_none());
+            }
+        }
     }
 }

@@ -14,49 +14,49 @@ use {
 // OrdLowerBound.
 // TODO: Use trait_alias when available.
 pub trait Key:
-    std::cmp::Ord
-    + std::fmt::Debug
-    + Clone
+    Clone
+    + OrdUpperBound
     + Send
     + Sync
-    + std::marker::Unpin
     + serde::de::DeserializeOwned
     + serde::Serialize
+    + std::fmt::Debug
+    + std::marker::Unpin
     + 'static
 {
 }
 impl<K> Key for K where
-    K: std::cmp::Ord
-        + std::fmt::Debug
+    K: OrdUpperBound
         + Clone
         + Send
         + Sync
-        + std::marker::Unpin
         + serde::de::DeserializeOwned
         + serde::Serialize
+        + std::fmt::Debug
+        + std::marker::Unpin
         + 'static
 {
 }
 
 pub trait Value:
-    std::fmt::Debug
-    + Clone
+    Clone
     + Send
     + Sync
     + serde::de::DeserializeOwned
     + serde::Serialize
+    + std::fmt::Debug
     + std::marker::Unpin
     + 'static
 {
 }
 impl<V> Value for V where
-    V: std::fmt::Debug
-        + Clone
+    V: Clone
         + Send
         + Sync
-        + std::marker::Unpin
         + serde::de::DeserializeOwned
         + serde::Serialize
+        + std::fmt::Debug
+        + std::marker::Unpin
         + 'static
 {
 }
@@ -106,24 +106,71 @@ impl<'a, K, V> From<&'a Item<K, V>> for ItemRef<'a, K, V> {
 }
 
 /// The find functions will return items with keys that are greater-than or equal to the search key,
-/// so for keys that are like extents, the keys should sort (via std::cmp::Ord) using the end of
-/// their ranges, and you should set the search key accordingly.
+/// so for keys that are like extents, the keys should sort (via OrdUpperBound) using the end
+/// of their ranges, and you should set the search key accordingly.
 ///
 /// For example, let's say the tree holds extents 100..200, 200..250 and you want to perform a read
-/// for range 150..250, you should search for 0..151 which will first return the extent 100..200 (and
-/// then the iterator can be advanced to 200..250 after). When merging, keys can overlap, so consider
-/// the case where we want to merge an extent with range 100..300 with an existing extent of
-/// 200..250. In that case, we want to treat the extent with range 100..300 as lower than the key
-/// 200..250 because we'll likely want to split the extents (e.g. perhaps we want 100..200, 200..250,
-/// 250..300), so for merging, we need to use a different comparison function and we deal with that
-/// using the OrdLowerBound trait.
+/// for range 150..250, you should search for 0..151 which will first return the extent 100..200
+/// (and then the iterator can be advanced to 200..250 after). When merging, keys can overlap, so
+/// consider the case where we want to merge an extent with range 100..300 with an existing extent
+/// of 200..250. In that case, we want to treat the extent with range 100..300 as lower than the key
+/// 200..250 because we'll likely want to split the extents (e.g. perhaps we want 100..200,
+/// 200..250, 250..300), so for merging, we need to use a different comparison function and we deal
+/// with that using the OrdLowerBound trait.
 ///
-/// If your keys don't have overlapping ranges that need to be merged, then this can be the same as
-/// std::cmp::Ord.
-pub trait OrdLowerBound: Ord {
+/// If your keys don't have overlapping ranges that need to be merged, then these can be the same as
+/// std::cmp::Ord (use the DefaultOrdUpperBound and DefaultOrdLowerBound traits).
+
+pub trait OrdUpperBound {
+    fn cmp_upper_bound(&self, other: &Self) -> std::cmp::Ordering;
+}
+
+pub trait DefaultOrdUpperBound: OrdUpperBound + Ord {}
+
+impl<T: DefaultOrdUpperBound> OrdUpperBound for T {
+    fn cmp_upper_bound(&self, other: &Self) -> std::cmp::Ordering {
+        // Default to using cmp.
+        self.cmp(other)
+    }
+}
+
+pub trait OrdLowerBound {
+    fn cmp_lower_bound(&self, other: &Self) -> std::cmp::Ordering;
+}
+
+pub trait DefaultOrdLowerBound: OrdLowerBound + Ord {}
+
+impl<T: DefaultOrdLowerBound> OrdLowerBound for T {
     fn cmp_lower_bound(&self, other: &Self) -> std::cmp::Ordering {
         // Default to using cmp.
         self.cmp(other)
+    }
+}
+
+/// The NextKey trait allows for an optimisation which allows the merger to avoid querying a layer
+/// if it knows it has found the next possible key.  Consider the following example showing two
+/// layers with range based keys.
+///
+///      +----------+------------+
+///  0   |  0..100  |  100..200  |
+///      +----------+------------+
+///  1              |  100..200  |
+///                 +------------+
+///
+/// If you search and find the 0..100 key, then only layer 0 will be touched.  If you then want to
+/// advance to the 100..200 record, you can find it in layer 0 but unless you know that it
+/// immediately follows the 0..100 key i.e. that there is no possible key, K, such that 0..100 < K <
+/// 100..200, the merger has to consult all other layers to check.  next_key should return a key, N,
+/// such that if the merger encounters a key that is <= N (using OrdLowerBound), it can stop
+/// touching more layers.  The key N should also be the the key to search for in other layers if the
+/// merger needs to do so.  In the example above, it should be a key that is > 0..100 and 99..100,
+/// but <= 100..200 (using OrdUpperBound).  In practice, what this means is that for range based
+/// keys, OrdUpperBound should use the end of the range, OrdLowerBound should use the start of the
+/// range, and next_key should return end..end + 1.  This is purely an optimisation; the default
+/// will be correct but not performant.
+pub trait NextKey: Clone {
+    fn next_key(&self) -> Option<Self> {
+        None
     }
 }
 

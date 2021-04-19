@@ -31,8 +31,8 @@ use {
         object_store::{
             filesystem::{Filesystem, Mutations},
             record::{
-                ExtentKey, ExtentValue, ObjectItem, ObjectKey, ObjectKeyData, ObjectKind,
-                ObjectValue, DEFAULT_DATA_ATTRIBUTE_ID,
+                ExtentKey, ExtentValue, ObjectItem, ObjectKey, ObjectKind, ObjectValue,
+                DEFAULT_DATA_ATTRIBUTE_ID,
             },
             transaction::{
                 AssociatedObject, LockKey, Mutation, ObjectStoreMutation, Operation, Transaction,
@@ -342,7 +342,7 @@ impl ObjectStore {
                 }
                 if let Some((
                     _,
-                    attr_id,
+                    _,
                     ExtentKey { range },
                     ExtentValue { device_offset: Some(device_offset) },
                 )) = item.into()
@@ -353,18 +353,8 @@ impl ObjectStore {
                             *device_offset..*device_offset + (range.end - range.start),
                         )
                         .await;
-                    let end = range.end;
-                    iter.advance_with_hint(&ObjectKey::extent(oid, attr_id, end..end + 1)).await?;
-                } else if let ObjectKey { data: ObjectKeyData::Attribute(attr_id, _), .. } =
-                    item.key
-                {
-                    let attr_id = *attr_id;
-                    iter.advance_with_hint(&ObjectKey::extent(oid, attr_id, 0..1)).await?;
-                } else {
-                    // We expect either attribute records or extent records.
-                    return Err(anyhow!(FxfsError::Inconsistent)
-                        .context(format!("Unexpected item {:?}", item)));
                 }
+                iter.advance().await?;
             }
             transaction.add(
                 self.store_object_id,
@@ -615,10 +605,7 @@ impl StoreObjectHandle {
                 break;
             }
             offset += to_do as u64;
-            iter.advance_with_hint(
-                &ObjectKey::extent(self.object_id, self.attribute_id, offset..end).search_key(),
-            )
-            .await?;
+            iter.advance().await?;
         }
         Ok(())
     }
@@ -701,12 +688,7 @@ impl StoreObjectHandle {
                     break;
                 }
             }
-            let next = ObjectKey::extent(
-                self.object_id,
-                self.attribute_id,
-                extent_key.range.end..extent_key.range.end + 1,
-            );
-            iter.advance_with_hint(&next).await.unwrap();
+            iter.advance().await?;
         }
         Ok(deallocated)
     }
@@ -859,9 +841,7 @@ impl ObjectHandle for StoreObjectHandle {
                 start_align = 0;
             }
 
-            let next_offset = if let ExtentValue { device_offset: Some(device_offset) } =
-                extent_value
-            {
+            if let ExtentValue { device_offset: Some(device_offset) } = extent_value {
                 let mut device_offset =
                     device_offset + (offset - start_align as u64 - extent_key.range.start);
 
@@ -906,21 +886,12 @@ impl ObjectHandle for StoreObjectHandle {
                     buf = buf.subslice_mut(0..0);
                     break;
                 }
-                offset
             } else if extent_key.range.end >= offset + buf.len() as u64 {
                 // Deleted extent covers remainder, so we're done.
                 break;
-            } else {
-                // Skip past deleted extents.
-                extent_key.range.end
-            };
+            }
 
-            iter.advance_with_hint(&ObjectKey::extent(
-                self.object_id,
-                self.attribute_id,
-                next_offset..next_offset + 1,
-            ))
-            .await?;
+            iter.advance().await?;
         }
         buf.as_mut_slice().fill(0);
         Ok(to_do)
@@ -1030,12 +1001,7 @@ impl ObjectHandle for StoreObjectHandle {
                             if file_range.start >= file_range.end {
                                 break 'outer;
                             }
-                            iter.advance_with_hint(&ObjectKey::with_extent_key(
-                                self.object_id,
-                                self.attribute_id,
-                                ExtentKey::new(file_range.clone()).search_key(),
-                            ))
-                            .await?;
+                            iter.advance().await?;
                             continue;
                         } else {
                             // There's nothing allocated between file_range.start and the beginning
@@ -1048,14 +1014,7 @@ impl ObjectHandle for StoreObjectHandle {
                             && attribute_id == self.attribute_id
                             && extent_key.range.end < file_range.end =>
                     {
-                        // The current extent is sparse, so skip to the next extent.
-                        let next_extent_hint = extent_key.range.end..file_range.end;
-                        iter.advance_with_hint(&ObjectKey::with_extent_key(
-                            self.object_id,
-                            self.attribute_id,
-                            ExtentKey::new(next_extent_hint).search_key(),
-                        ))
-                        .await?;
+                        iter.advance().await?;
                     }
                     _ => {
                         // We can just preallocate the rest.

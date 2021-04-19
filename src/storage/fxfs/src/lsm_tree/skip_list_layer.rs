@@ -10,7 +10,7 @@ use {
         merge::{self, MergeFn},
         types::{
             BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, LayerIteratorMut,
-            MutableLayer, OrdLowerBound, Value,
+            MutableLayer, OrdLowerBound, OrdUpperBound, Value,
         },
     },
     anyhow::Error,
@@ -18,10 +18,10 @@ use {
     futures::future::poll_fn,
     std::{
         cell::UnsafeCell,
-        cmp::min,
+        cmp::{min, Ordering},
         ops::Bound,
         sync::{
-            atomic::{AtomicPtr, AtomicU32, Ordering},
+            atomic::{self, AtomicPtr, AtomicU32},
             Arc,
         },
         task::{Poll, Waker},
@@ -48,12 +48,12 @@ impl<K, V> PointerList<K, V> {
 
     // Extracts the pointer at the given index.
     fn get_mut<'a>(&self, index: usize) -> Option<&'a mut SkipListNode<K, V>> {
-        unsafe { self.0[index].load(Ordering::SeqCst).as_mut() }
+        unsafe { self.0[index].load(atomic::Ordering::SeqCst).as_mut() }
     }
 
     // Same as previous, but returns an immutable reference.
     fn get<'a>(&self, index: usize) -> Option<&'a SkipListNode<K, V>> {
-        unsafe { self.0[index].load(Ordering::SeqCst).as_ref() }
+        unsafe { self.0[index].load(atomic::Ordering::SeqCst).as_ref() }
     }
 
     // Sets the pointer at the given index.
@@ -71,12 +71,12 @@ impl<K, V> PointerList<K, V> {
                     }
                 }
             },
-            Ordering::SeqCst,
+            atomic::Ordering::SeqCst,
         );
     }
 
     fn get_ptr(&self, index: usize) -> *mut SkipListNode<K, V> {
-        self.0[index].load(Ordering::SeqCst)
+        self.0[index].load(atomic::Ordering::SeqCst)
     }
 }
 
@@ -133,13 +133,13 @@ impl<K, V> SkipListLayer<K, V> {
     }
 
     fn alloc_node(&self, item: Item<K, V>, pointer_count: usize) -> Box<SkipListNode<K, V>> {
-        self.allocated.fetch_add(1, Ordering::Relaxed);
+        self.allocated.fetch_add(1, atomic::Ordering::Relaxed);
         Box::new(SkipListNode { item, pointers: PointerList::new(pointer_count) })
     }
 
     // Frees and then returns the next node in the chain.
     fn free_node(&self, node: &mut SkipListNode<K, V>) -> Option<&mut SkipListNode<K, V>> {
-        self.allocated.fetch_sub(1, Ordering::Relaxed);
+        self.allocated.fetch_sub(1, atomic::Ordering::Relaxed);
         unsafe { Box::from_raw(node).pointers.get_mut(0) }
     }
 }
@@ -167,7 +167,7 @@ impl<K, V> Drop for SkipListLayer<K, V> {
         while let Some(node) = next {
             next = self.free_node(node);
         }
-        assert_eq!(self.allocated.load(Ordering::Relaxed), 0);
+        assert_eq!(self.allocated.load(atomic::Ordering::Relaxed), 0);
     }
 }
 
@@ -182,7 +182,7 @@ impl<K: Key, V: Value> Layer<K, V> for SkipListLayer<K, V> {
 }
 
 #[async_trait]
-impl<K: Key + OrdLowerBound, V: Value> MutableLayer<K, V> for SkipListLayer<K, V> {
+impl<K: Eq + Key + OrdLowerBound, V: Value> MutableLayer<K, V> for SkipListLayer<K, V> {
     fn as_layer(self: Arc<Self>) -> Arc<dyn Layer<K, V>> {
         self
     }
@@ -229,7 +229,7 @@ struct SkipListLayerIter<'a, K, V> {
     node: Option<&'a SkipListNode<K, V>>,
 }
 
-impl<'a, K: Ord, V> SkipListLayerIter<'a, K, V> {
+impl<'a, K: OrdUpperBound, V> SkipListLayerIter<'a, K, V> {
     fn new(skip_list: &'a SkipListLayer<K, V>, bound: Bound<&K>) -> Self {
         let epoch = {
             let mut read_counts = skip_list.read_counts.lock().unwrap();
@@ -251,8 +251,10 @@ impl<'a, K: Ord, V> SkipListLayerIter<'a, K, V> {
             while let Some(node) = last_pointers.get(index) {
                 // Keep iterating along this level until we encounter a key that's >= our
                 // search key.
-                if &node.item.key > key || (included && &node.item.key == key) {
-                    break;
+                match &node.item.key.cmp_upper_bound(key) {
+                    Ordering::Equal if included => break,
+                    Ordering::Greater => break,
+                    _ => {}
                 }
                 last_pointers = &node.pointers;
             }
@@ -320,7 +322,7 @@ struct SkipListLayerIterMut<'a, K, V> {
     write_guard: futures::lock::MutexGuard<'a, ()>,
 }
 
-impl<K: Ord, V> SkipListLayerIterMut<'_, K, V> {
+impl<K: OrdUpperBound, V> SkipListLayerIterMut<'_, K, V> {
     async fn new<'a>(
         skip_list: &'a SkipListLayer<K, V>,
         bound: std::ops::Bound<&K>,
@@ -354,8 +356,9 @@ impl<K: Ord, V> SkipListLayerIterMut<'_, K, V> {
                     while let Some(node) = pointers[index].get(index) {
                         // Keep iterating along this level until we encounter a key that's >= our
                         // search key.
-                        if &(node.item.key) >= key {
-                            break;
+                        match &(node.item.key).cmp_upper_bound(key) {
+                            Ordering::Equal | Ordering::Greater => break,
+                            Ordering::Less => {}
                         }
                         pointers[index] = &node.pointers;
                     }
@@ -545,7 +548,8 @@ mod tests {
                 MergeLayerIterator, MergeResult,
             },
             types::{
-                Item, ItemRef, Layer, LayerIterator, LayerIteratorMut, MutableLayer, OrdLowerBound,
+                DefaultOrdLowerBound, DefaultOrdUpperBound, Item, ItemRef, Layer, LayerIterator,
+                LayerIteratorMut, MutableLayer,
             },
         },
         fuchsia_async as fasync,
@@ -558,7 +562,8 @@ mod tests {
     )]
     struct TestKey(i32);
 
-    impl OrdLowerBound for TestKey {}
+    impl DefaultOrdLowerBound for TestKey {}
+    impl DefaultOrdUpperBound for TestKey {}
 
     #[fasync::run_singlethreaded(test)]
     async fn test_iteration() {

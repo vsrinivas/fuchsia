@@ -4,7 +4,7 @@
 
 use {
     crate::lsm_tree::types::{
-        Item, ItemRef, Key, Layer, LayerIterator, LayerIteratorMut, OrdLowerBound, Value,
+        Item, ItemRef, Key, Layer, LayerIterator, LayerIteratorMut, NextKey, OrdLowerBound, Value,
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -277,9 +277,7 @@ pub struct Merger<'a, K, V> {
     merge_fn: MergeFn<K, V>,
 }
 
-impl<'a, K: Debug + Ord + OrdLowerBound + Unpin + 'static, V: Debug + Unpin + 'static>
-    Merger<'a, K, V>
-{
+impl<'a, K: Key + NextKey + OrdLowerBound, V: Value> Merger<'a, K, V> {
     pub(super) fn new(layers: &[&'a dyn Layer<K, V>], merge_fn: MergeFn<K, V>) -> Merger<'a, K, V> {
         Merger {
             iterators: layers
@@ -294,9 +292,7 @@ impl<'a, K: Debug + Ord + OrdLowerBound + Unpin + 'static, V: Debug + Unpin + 's
     /// Seek searches for |bound|.  If |bound| is Bound::Unbounded, the iterator is positioned on
     /// the first item.  If |bound| is Bound::Included(key), the iterator is positioned on an item
     /// such that item.key >= key.  In the latter case, a full merge might not occur; only the
-    /// layers that need to be consulted to satisfy the query will occur, and afterwards,
-    /// advance_with_hint must be used rather advance if there's a need to move on to the next
-    /// element.
+    /// layers that need to be consulted to satisfy the query will occur.
     pub async fn seek(&mut self, bound: Bound<&K>) -> Result<MergerIterator<'_, 'a, K, V>, Error> {
         let pending_iterators = self.iterators.iter_mut().rev().collect();
         let mut merger_iter = MergerIterator {
@@ -304,7 +300,6 @@ impl<'a, K: Debug + Ord + OrdLowerBound + Unpin + 'static, V: Debug + Unpin + 's
             pending_iterators,
             heap: BinaryHeap::new(),
             item: CurrentItem::None,
-            must_use_advance_with_hint: false,
         };
         merger_iter.seek(bound).await?;
         Ok(merger_iter)
@@ -324,87 +319,49 @@ pub struct MergerIterator<'a, 'b, K, V> {
 
     // The current item.
     item: CurrentItem<'a, 'b, K, V>,
-
-    // If seek(Bound::Included(_)) is used, then advance_with_hint should be used rather than
-    // advance, since that will be more performant.  For now, we assert that this is the case so
-    // that users don't unintentionally use advance.
-    must_use_advance_with_hint: bool,
 }
 
-impl<
-        'a,
-        'b,
-        K: Debug + std::marker::Unpin + OrdLowerBound + 'static,
-        V: Debug + std::marker::Unpin + 'static,
-    > MergerIterator<'a, 'b, K, V>
-{
+impl<'a, 'b, K: Key + NextKey + OrdLowerBound, V: Value> MergerIterator<'a, 'b, K, V> {
     async fn seek(&mut self, bound: Bound<&K>) -> Result<(), Error> {
         match bound {
-            Bound::Unbounded => {
-                // Push all the iterators on.
-                for iter in self.pending_iterators.drain(..) {
-                    iter.iter = RawIterator::Const(
-                        iter.layer.as_ref().unwrap().seek(std::ops::Bound::Unbounded).await?,
-                    );
-                    iter.set_item_from_iter();
-                    if iter.is_some() {
-                        self.heap.push(iter);
-                    }
-                }
-                self.advance_impl().await
-            }
-            Bound::Included(key) => {
-                self.must_use_advance_with_hint = true;
-                self.advance_with_hint(key).await
-            }
+            Bound::Unbounded => self.advance_impl(None, Bound::Unbounded).await,
+            Bound::Included(key) => self.advance_impl(Some(key), bound).await,
             Bound::Excluded(_) => panic!("Excluded bounds not supported!"),
         }
     }
 
-    /// Advances the iterator to the next item, but will stop querying iterators when a key is
-    /// encountered that is <= |hint|, so it will not necessarily perform a merge with all base
-    /// layers.  This function exists to allow more efficient point and range queries; if only the
-    /// top layer needs to be consulted, you will not pay the price of seeking in lower layers.  If
-    /// new iterators need to be consulted, a search is done using std::cmp::Ord, so the hint should
-    /// be set accordingly i.e. if your keys are range based and you want to search for a key that
-    /// covers, say, 100..200, the hint should be ?..101 so that you find a key that is, say,
-    /// 50..101.  Calling advance after calling advance_with_hint is undefined.
-    pub async fn advance_with_hint(&mut self, hint: &K) -> Result<(), Error> {
-        // Push the iterator for the current item (if we have one) onto the heap.
+    // Merges items from an array of layers using the provided merge function. The merge function is
+    // repeatedly provided the lowest and the second lowest element, if one exists. In cases where
+    // the two lowest elements compare equal, the element with the lowest layer (i.e. whichever
+    // comes first in the layers array) will come first.  If next_key is set, the merger will stop
+    // querying more layers as soon as a key is encountered that equals or precedes it.  If next_key
+    // is None, then all layers are queried.  next_key_bound is the bound to search for if another
+    // layer does need to be consulted.  See the comment for the NextKey trait.
+    async fn advance_impl(
+        &mut self,
+        next_key: Option<&K>,
+        next_key_bound: Bound<&K>,
+    ) -> Result<(), Error> {
         if let Some(iterator) = self.item.take_iterator() {
             iterator.advance().await?;
             if iterator.is_some() {
                 self.heap.push(iterator);
             }
         }
-        // If the lower bound of the next item is > hint, add more iterators.
         while !self.pending_iterators.is_empty()
             && (self.heap.is_empty()
-                || self.heap.peek().unwrap().key().cmp_lower_bound(&hint) == Ordering::Greater)
+                || next_key.is_none()
+                || self.heap.peek().unwrap().key().cmp_lower_bound(next_key.as_ref().unwrap())
+                    == Ordering::Greater)
         {
             let iter = self.pending_iterators.pop().unwrap();
-            iter.iter = RawIterator::Const(
-                iter.layer.as_ref().unwrap().seek(std::ops::Bound::Included(hint)).await?,
-            );
+            // eprintln!("searching for {:?}", next_key_bound);
+            iter.iter =
+                RawIterator::Const(iter.layer.as_ref().unwrap().seek(next_key_bound).await?);
             iter.set_item_from_iter();
             if iter.is_some() {
+                // eprintln!("found {:?}", iter.item());
                 self.heap.push(iter);
-            }
-        }
-        // Call advance to do the merge.
-        self.advance_impl().await
-    }
-
-    // Merges items from an array of layers using the provided merge function. The merge function
-    // is repeatedly provided the lowest and the second lowest element, if one exists. In cases
-    // where the two lowest elements compare equal, the element with the lowest layer
-    // (i.e. whichever comes first in the layers array) will come first.
-    async fn advance_impl(&mut self) -> Result<(), Error> {
-        // Push the iterator for the current item (if we have one) onto the heap.
-        if let Some(iterator) = self.item.take_iterator() {
-            iterator.advance().await?;
-            if iterator.is_some() {
-                self.heap.push(iterator);
             }
         }
         while !self.heap.is_empty() {
@@ -460,12 +417,28 @@ impl<
 }
 
 #[async_trait]
-impl<'a, K: Key + OrdLowerBound, V: Value> LayerIterator<K, V> for MergerIterator<'a, '_, K, V> {
-    // This method should only be used with seek(Bound::Unbounded); use advance_with_hint with
-    // seek(Bound::Included(_)).
+impl<'a, K: Key + NextKey + OrdLowerBound, V: Value> LayerIterator<K, V>
+    for MergerIterator<'a, '_, K, V>
+{
     async fn advance(&mut self) -> Result<(), Error> {
-        assert!(!self.must_use_advance_with_hint);
-        self.advance_impl().await
+        let current_key;
+        let mut next_key = None;
+        let mut next_key_bound = Bound::Unbounded;
+        if !self.pending_iterators.is_empty() {
+            if let Some(ItemRef { key, .. }) = self.get() {
+                next_key = key.next_key();
+                match next_key {
+                    None => {
+                        // If there is no next key, we must now query all layers and the key we
+                        // search for is the immediate successor of the current key.
+                        current_key = Some(key.clone());
+                        next_key_bound = Bound::Excluded(current_key.as_ref().unwrap());
+                    }
+                    Some(ref key) => next_key_bound = Bound::Included(key),
+                }
+            }
+        }
+        self.advance_impl(next_key.as_ref(), next_key_bound).await
     }
 
     fn get(&self) -> Option<ItemRef<'_, K, V>> {
@@ -593,26 +566,27 @@ mod tests {
         crate::lsm_tree::{
             skip_list_layer::SkipListLayer,
             types::{
-                IntoLayerRefs, Item, ItemRef, Layer, LayerIterator, MutableLayer, OrdLowerBound,
+                IntoLayerRefs, Item, ItemRef, Key, Layer, LayerIterator, MutableLayer, NextKey,
+                OrdLowerBound, OrdUpperBound,
             },
         },
         fuchsia_async as fasync,
         rand::Rng,
-        std::ops::Bound,
+        std::ops::{Bound, Range},
     };
 
     #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
-    struct TestKey(std::ops::Range<u64>);
+    struct TestKey(Range<u64>);
 
-    impl Ord for TestKey {
-        fn cmp(&self, other: &TestKey) -> std::cmp::Ordering {
-            self.0.end.cmp(&other.0.end)
+    impl NextKey for TestKey {
+        fn next_key(&self) -> Option<Self> {
+            Some(TestKey(self.0.end..self.0.end + 1))
         }
     }
 
-    impl PartialOrd for TestKey {
-        fn partial_cmp(&self, other: &TestKey) -> Option<std::cmp::Ordering> {
-            Some(self.cmp(other))
+    impl OrdUpperBound for TestKey {
+        fn cmp_upper_bound(&self, other: &TestKey) -> std::cmp::Ordering {
+            self.0.end.cmp(&other.0.end)
         }
     }
 
@@ -1082,40 +1056,110 @@ mod tests {
         assert_eq!((key, value), (&items[0].key, &items[0].value));
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_advance_with_hint() {
-        let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
-        let items =
-            [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2), Item::new(TestKey(3..3), 3)];
-        skip_lists[0].insert(items[0].clone()).await;
-        skip_lists[0].insert(items[1].clone()).await;
-        skip_lists[1].insert(items[2].clone()).await;
+    // Checks that merging the given layers produces |expected| sequence of items starting from
+    // |start|.
+    async fn test_advance<K: Eq + Key + NextKey + OrdLowerBound>(
+        layers: &[&[(K, i64)]],
+        start: Bound<&K>,
+        expected: &[(K, i64)],
+    ) {
+        let mut skip_lists = Vec::new();
+        for &layer in layers {
+            let skip_list = SkipListLayer::new(100);
+            for (k, v) in layer {
+                skip_list.insert(Item::new(k.clone(), *v)).await;
+            }
+            skip_lists.push(skip_list);
+        }
         let mut merger =
             Merger::new(&skip_lists.into_layer_refs(), |_left, _right| MergeResult::EmitLeft);
-        let mut iter = merger.seek(Bound::Included(&items[0].key)).await.expect("seek failed");
-        // This should still find the 2..2 key.
-        iter.advance_with_hint(&items[2].key).await.expect("advance_with_hint failed");
-        let ItemRef { key, value } = iter.get().expect("missing item");
-        assert_eq!((key, value), (&items[1].key, &items[1].value));
-        iter.advance_with_hint(&items[2].key).await.expect("advance_with_hint failed");
-        let ItemRef { key, value } = iter.get().expect("missing item");
-        assert_eq!((key, value), (&items[2].key, &items[2].value));
-        iter.advance_with_hint(&TestKey(4..4)).await.expect("advance_with_hint failed");
+        let mut iter = merger.seek(start).await.expect("seek failed");
+        for (k, v) in expected {
+            let ItemRef { key, value } = iter.get().expect("get failed");
+            assert_eq!((key, value), (k, v));
+            iter.advance().await.expect("advance failed");
+        }
         assert!(iter.get().is_none());
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_advance_with_hint_no_more() {
-        let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
-        let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
-        skip_lists[0].insert(items[0].clone()).await;
-        skip_lists[1].insert(items[1].clone()).await;
-        let mut merger =
-            Merger::new(&skip_lists.into_layer_refs(), |_left, _right| MergeResult::EmitLeft);
-        let mut iter = merger.seek(Bound::Included(&items[0].key)).await.expect("seek failed");
-        // This should skip over the 2..2 key.
-        iter.advance_with_hint(&TestKey(100..100)).await.expect("advance_with_hint failed");
-        assert!(iter.get().is_none());
+    async fn test_seek_skips_replaced_items() {
+        // The 1..2 and the 2..3 items are overwritten and merging them should be skipped.
+        test_advance(
+            &[
+                &[(TestKey(1..2), 1), (TestKey(2..3), 2)],
+                &[(TestKey(1..2), 3), (TestKey(2..3), 4), (TestKey(3..4), 5)],
+            ],
+            Bound::Included(&TestKey(1..2)),
+            &[(TestKey(1..2), 1), (TestKey(2..3), 2), (TestKey(3..4), 5)],
+        )
+        .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_advance_skips_replaced_items_at_end() {
+        // Like the last test, the 1..2 item is overwritten and seeking for it should skip the merge
+        // but this time, the keys are at the end.
+        test_advance(
+            &[&[(TestKey(1..2), 1)], &[(TestKey(1..2), 2)]],
+            Bound::Included(&TestKey(1..2)),
+            &[(TestKey(1..2), 1)],
+        )
+        .await;
+    }
+
+    #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+    struct TestKeyWithDefaultNextKey(Range<u64>);
+
+    impl NextKey for TestKeyWithDefaultNextKey {}
+
+    impl OrdUpperBound for TestKeyWithDefaultNextKey {
+        fn cmp_upper_bound(&self, other: &TestKeyWithDefaultNextKey) -> std::cmp::Ordering {
+            self.0.end.cmp(&other.0.end)
+        }
+    }
+
+    impl OrdLowerBound for TestKeyWithDefaultNextKey {
+        fn cmp_lower_bound(&self, other: &Self) -> std::cmp::Ordering {
+            self.0.start.cmp(&other.0.start)
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_seek_skips_replaced_items_with_default_next_key() {
+        // This differs from the earlier test because with a default next key implementation, the
+        // overwritten 2..3 key will get merged because the merger is unable to know whether the
+        // 2..3 is the immediate successor to 1..2.
+        test_advance(
+            &[
+                &[(TestKeyWithDefaultNextKey(1..2), 1), (TestKeyWithDefaultNextKey(2..3), 2)],
+                &[
+                    (TestKeyWithDefaultNextKey(1..2), 3),
+                    (TestKeyWithDefaultNextKey(2..3), 4),
+                    (TestKeyWithDefaultNextKey(3..4), 5),
+                ],
+            ],
+            Bound::Included(&TestKeyWithDefaultNextKey(1..2)),
+            &[
+                (TestKeyWithDefaultNextKey(1..2), 1),
+                (TestKeyWithDefaultNextKey(2..3), 2),
+                (TestKeyWithDefaultNextKey(2..3), 4), // <-- This is the difference.
+                (TestKeyWithDefaultNextKey(3..4), 5),
+            ],
+        )
+        .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_advance_skips_replaced_items_at_end_with_default_next_key() {
+        // Like the last test, the 1..2 item is overwritten and seeking for it should skip the merge
+        // but this time, the keys are at the end.
+        test_advance(
+            &[&[(TestKeyWithDefaultNextKey(1..2), 1)], &[(TestKeyWithDefaultNextKey(1..2), 2)]],
+            Bound::Included(&TestKeyWithDefaultNextKey(1..2)),
+            &[(TestKeyWithDefaultNextKey(1..2), 1)],
+        )
+        .await;
     }
 
     #[fasync::run_singlethreaded(test)]
