@@ -9,6 +9,20 @@ kernel_cmdline("serial-legacy") {
   deps = [ "//build/validate:non_production_tag" ]
 }
 
+kernel_cmdline("pmm-checker") {
+  args = [
+    # Enable PMM checker to detect certain kinds of buffer overrun and
+    # use-after-free bugs.
+    "kernel.pmm-checker.enable=true",
+
+    # Use a small fill size to minimize performance impact.  In practice,
+    # corruption tends to happen at the start of a page so filling/checking only
+    # the first 16 bytes provides decent coverage without sacrificing
+    # performance.
+    "kernel.pmm-checker.fill-size=16",
+  ]
+}
+
 kernel_cmdline("toulouse") {
   args = [
     # Fuchsia does not have a deterministic ordering for bringing up PCI devices, so the
@@ -74,6 +88,7 @@ kernel_cmdline("c18") {
 }
 
 kernel_cmdline("vim3") {
+  deps = [ ":pmm-checker" ]
   args = [
     # Prefer using the built-in NIC to the CDC-ether interface.
     "netsvc.interface=/dev/dwmac/dwmac/Designware-MAC/ethernet",
