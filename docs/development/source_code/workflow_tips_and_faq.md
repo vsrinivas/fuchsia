@@ -23,7 +23,7 @@ you having to do this manually from the web UI.
 
 By default Git uses two-way diffs when presenting conflicts. It does not
 display what the original text was before the conflict, which makes it [hard to
-solves some conflicts](https://stackoverflow.com/questions/4129049/why-is-a-3-way-merge-advantageous-over-a-2-way-merge).
+solve some conflicts](https://stackoverflow.com/questions/4129049/why-is-a-3-way-merge-advantageous-over-a-2-way-merge).
 
 You can configure Git to show the original text by enabling three-way diffs:
 
