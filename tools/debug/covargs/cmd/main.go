@@ -27,13 +27,16 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 const (
-	shardSize         = 1000
-	symbolCacheSize   = 100
-	cloudFetchTimeout = 5 * time.Second
+	shardSize              = 1000
+	symbolCacheSize        = 100
+	cloudFetchMaxAttempts  = 2
+	cloudFetchRetryBackoff = 500 * time.Millisecond
+	cloudFetchTimeout      = 8 * time.Second
 )
 
 var (
@@ -284,8 +287,12 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 				defer wg.Done()
 				s <- struct{}{}
 				defer func() { <-s }()
-				file, err := repo.GetBuildObject(module)
-				if err != nil {
+				var file symbolize.FileCloser
+				if err := retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(cloudFetchRetryBackoff), cloudFetchMaxAttempts), func() error {
+					var err error
+					file, err = repo.GetBuildObject(module)
+					return err
+				}, nil); err != nil {
 					logger.Warningf(ctx, "module with build id %s not found\n", module)
 					return
 				}
