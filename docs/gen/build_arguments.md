@@ -3305,7 +3305,7 @@ Platform portability header for spinel.
 From [//third_party/openthread/src/lib/spinel/BUILD.gn:32](https://fuchsia.googlesource.com/third_party/openthread/+/0f2a62532b7748c63924aac5416978a03326c00b/src/lib/spinel/BUILD.gn#32)
 
 ### start_oobe
-Whether or not to launch setup workflow on startup.
+Whether or not to launch OOBE workflow on startup.
 
 **Current value (from the default):** `false`
 
