@@ -205,7 +205,7 @@ where
             .take_obj_front::<Body<HwAddr, ProtoAddr>>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for body"))?;
         // Consume any padding bytes added by the previous layer.
-        buffer.take_rest_front();
+        let _: B = buffer.take_rest_front();
 
         if header.htype.get() != <HwAddr as HType>::HTYPE.into()
             || header.ptype.get() != <ProtoAddr as PType>::PTYPE.into()

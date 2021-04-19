@@ -9,55 +9,7 @@ rustc_library("packet-formats") {
   name = "packet_formats"
   version = "0.1.0"
   edition = "2018"
-
-  configs -= [ "//build/config/rust:no_features" ]
-  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
-
-  deps = [
-    # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
-    "//garnet/lib/rust/never",
-    "//src/connectivity/lib/internet-checksum",
-    "//src/connectivity/lib/net-types",
-    "//src/connectivity/network/netstack3/core/fakestd",
-    "//src/lib/network/packet",
-    "//src/lib/zerocopy",
-    "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:thiserror",
-  ]
-
-  sources = [
-    "src/arp.rs",
-    "src/error.rs",
-    "src/ethernet.rs",
-    "src/icmp/common.rs",
-    "src/icmp/icmpv4.rs",
-    "src/icmp/icmpv6.rs",
-    "src/icmp/macros.rs",
-    "src/icmp/mld.rs",
-    "src/icmp/mod.rs",
-    "src/icmp/ndp.rs",
-    "src/igmp/messages.rs",
-    "src/igmp/mod.rs",
-    "src/igmp/types.rs",
-    "src/ip.rs",
-    "src/ipv4.rs",
-    "src/ipv6/ext_hdrs.rs",
-    "src/ipv6/mod.rs",
-    "src/lib.rs",
-    "src/macros.rs",
-    "src/tcp.rs",
-    "src/testdata.rs",
-    "src/testutil.rs",
-    "src/udp.rs",
-    "src/utils.rs",
-  ]
-}
-
-rustc_test("packet-formats-lib-test") {
-  version = "0.1.0"
-  edition = "2018"
-  name = "packet_formats_lib_test"
+  with_unit_tests = true
 
   configs -= [ "//build/config/rust:no_features" ]
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
@@ -103,14 +55,18 @@ rustc_test("packet-formats-lib-test") {
     "src/udp.rs",
     "src/utils.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("packet-formats-test") {
-  deps = [ ":packet-formats-lib-test" ]
-  manifest = "meta/packet_formats_lib_test.cmx"
+  deps = [ ":packet-formats_test" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":packet-formats-test" ]
+  deps = [
+    ":packet-formats-test",
+    ":packet-formats_test($host_toolchain)",
+  ]
 }

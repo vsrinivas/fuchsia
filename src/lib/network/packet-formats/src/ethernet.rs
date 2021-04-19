@@ -450,25 +450,26 @@ mod tests {
         // Test that EthernetFrame::serialize properly zeroes memory before
         // serializing the header.
         let mut buf_0 = [0; ETHERNET_MIN_FRAME_LEN];
-
-        Buf::new(&mut buf_0[..], ETHERNET_HDR_LEN_NO_TAG..)
+        let _: Buf<&mut [u8]> = Buf::new(&mut buf_0[..], ETHERNET_HDR_LEN_NO_TAG..)
             .encapsulate(EthernetFrameBuilder::new(
                 DEFAULT_SRC_MAC,
                 DEFAULT_DST_MAC,
                 EtherType::Arp,
             ))
             .serialize_vec_outer()
-            .unwrap();
+            .unwrap()
+            .unwrap_a();
         let mut buf_1 = [0; ETHERNET_MIN_FRAME_LEN];
         (&mut buf_1[..ETHERNET_HDR_LEN_NO_TAG]).copy_from_slice(&[0xFF; ETHERNET_HDR_LEN_NO_TAG]);
-        Buf::new(&mut buf_1[..], ETHERNET_HDR_LEN_NO_TAG..)
+        let _: Buf<&mut [u8]> = Buf::new(&mut buf_1[..], ETHERNET_HDR_LEN_NO_TAG..)
             .encapsulate(EthernetFrameBuilder::new(
                 DEFAULT_SRC_MAC,
                 DEFAULT_DST_MAC,
                 EtherType::Arp,
             ))
             .serialize_vec_outer()
-            .unwrap();
+            .unwrap()
+            .unwrap_a();
         assert_eq!(&buf_0[..], &buf_1[..]);
     }
 

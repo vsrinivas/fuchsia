@@ -459,7 +459,7 @@ impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>>
         if !M::Body::EXPECTS_BODY && !message_body.is_empty() {
             return debug_err!(Err(ParseError::Format), "unexpected message body");
         }
-        M::code_from_u8(header.prefix.code).ok_or_else(debug_err_fn!(
+        let _: M::Code = M::code_from_u8(header.prefix.code).ok_or_else(debug_err_fn!(
             ParseError::Format,
             "unrecognized code: {}",
             header.prefix.code

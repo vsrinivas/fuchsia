@@ -255,7 +255,7 @@ where
                 // Discard any padding left by the previous layer. The unwrap is safe
                 // and the subtraction is always valid because body_len is guaranteed
                 // to not exceed buffer.len()
-                buffer.take_back(buffer_len - body_len).unwrap();
+                let _: B = buffer.take_back(buffer_len - body_len).unwrap();
                 MaybeParsed::Complete(buffer.into_rest())
             } else {
                 // buffer does not contain all the body bytes
@@ -265,7 +265,7 @@ where
             // body_len can't be calculated because it's less than the header
             // length, consider all the rest of the buffer padding and return
             // an incomplete empty body.
-            buffer.take_rest_back();
+            let _: B = buffer.take_rest_back();
             MaybeParsed::Incomplete(buffer.into_rest())
         };
 
@@ -537,7 +537,7 @@ mod tests {
         // Test that UdpPacket::serialize properly zeroes memory before serializing
         // the header.
         let mut buf_0 = [0; HEADER_BYTES];
-        Buf::new(&mut buf_0[..], HEADER_BYTES..)
+        let _: Buf<&mut [u8]> = Buf::new(&mut buf_0[..], HEADER_BYTES..)
             .encapsulate(UdpPacketBuilder::new(
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4,
@@ -545,9 +545,10 @@ mod tests {
                 NonZeroU16::new(2).unwrap(),
             ))
             .serialize_vec_outer()
-            .unwrap();
+            .unwrap()
+            .unwrap_a();
         let mut buf_1 = [0xFF; HEADER_BYTES];
-        Buf::new(&mut buf_1[..], HEADER_BYTES..)
+        let _: Buf<&mut [u8]> = Buf::new(&mut buf_1[..], HEADER_BYTES..)
             .encapsulate(UdpPacketBuilder::new(
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4,
@@ -555,7 +556,8 @@ mod tests {
                 NonZeroU16::new(2).unwrap(),
             ))
             .serialize_vec_outer()
-            .unwrap();
+            .unwrap()
+            .unwrap_a();
         assert_eq!(buf_0, buf_1);
     }
 
@@ -768,7 +770,7 @@ mod tests {
 
         b.iter(|| {
             let buf = bytes;
-            black_box(
+            let _: UdpPacket<_> = black_box(
                 black_box(buf)
                     .parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(
                         IPV4_PACKET.metadata.src_ip,
@@ -795,7 +797,7 @@ mod tests {
         buf[header_len..].copy_from_slice(&UDP_PACKET.bytes[UDP_PACKET.body_range]);
 
         b.iter(|| {
-            black_box(
+            let _: Buf<_> = black_box(
                 black_box(Buf::new(&mut buf[..], header_len..total_len).encapsulate(builder))
                     .serialize_no_alloc_outer(),
             )

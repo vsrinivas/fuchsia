@@ -243,7 +243,8 @@ impl Ipv6ExtensionHeaderImpl {
             // data so that that `data` will be at the front of the next header when this
             // function returns.
             let expected_len = (hdr_ext_len as usize) * 8 + 4;
-            data.take_front(expected_len)
+            let _: &[u8] = data
+                .take_front(expected_len)
                 .ok_or(Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
 
             // Update context
@@ -433,7 +434,8 @@ impl<'a> RecordsRawImpl<'a> for Ipv6ExtensionHeaderImpl {
                         .ok_or(Ipv6ExtensionHeaderParsingError::BufferExhausted)?
                 }
             };
-            data.take_front(skip).ok_or(Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
+            let _: &[u8] =
+                data.take_front(skip).ok_or(Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
             context.next_header = next;
             Ok(true)
         }
@@ -1221,8 +1223,11 @@ mod tests {
             1, 8, 0, 0, 0, 0, 0, 0,       // Pad10 (but missing 2 bytes)
         ];
         let mut context = ExtensionHeaderOptionContext::new();
-        Records::<_, HopByHopOptionsImpl>::parse_with_mut_context(&buffer[..], &mut context)
-            .expect_err("Parsed successfully when we were short 2 by bytes");
+        assert_eq!(
+            Records::<_, HopByHopOptionsImpl>::parse_with_mut_context(&buffer[..], &mut context)
+                .expect_err("Parsed successfully when we were short 2 bytes"),
+            ExtensionHeaderOptionParsingError::BufferExhausted
+        );
         assert_eq!(context.bytes_parsed, 3);
         assert_eq!(context.options_parsed, 2);
 
@@ -1344,8 +1349,11 @@ mod tests {
             1, 8, 0, 0, 0, 0, 0, 0,       // Pad10 (but missing 2 bytes)
         ];
         let mut context = ExtensionHeaderOptionContext::new();
-        Records::<_, DestinationOptionsImpl>::parse_with_mut_context(&buffer[..], &mut context)
-            .expect_err("Parsed successfully when we were short 2 by bytes");
+        assert_eq!(
+            Records::<_, DestinationOptionsImpl>::parse_with_mut_context(&buffer[..], &mut context)
+                .expect_err("Parsed successfully when we were short 2 bytes"),
+            ExtensionHeaderOptionParsingError::BufferExhausted
+        );
         assert_eq!(context.bytes_parsed, 3);
         assert_eq!(context.options_parsed, 2);
 

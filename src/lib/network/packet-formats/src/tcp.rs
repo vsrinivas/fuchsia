@@ -835,15 +835,17 @@ mod tests {
         // Test that TcpSegmentBuilder::serialize properly zeroes memory before
         // serializing the header.
         let mut buf_0 = [0; HDR_PREFIX_LEN];
-        Buf::new(&mut buf_0[..], HDR_PREFIX_LEN..)
+        let _: Buf<&mut [u8]> = Buf::new(&mut buf_0[..], HDR_PREFIX_LEN..)
             .encapsulate(new_builder(TEST_SRC_IPV4, TEST_DST_IPV4))
             .serialize_vec_outer()
-            .unwrap();
+            .unwrap()
+            .unwrap_a();
         let mut buf_1 = [0xFF; HDR_PREFIX_LEN];
-        Buf::new(&mut buf_1[..], HDR_PREFIX_LEN..)
+        let _: Buf<&mut [u8]> = Buf::new(&mut buf_1[..], HDR_PREFIX_LEN..)
             .encapsulate(new_builder(TEST_SRC_IPV4, TEST_DST_IPV4))
             .serialize_vec_outer()
-            .unwrap();
+            .unwrap()
+            .unwrap_a();
         assert_eq!(&buf_0[..], &buf_1[..]);
     }
 
@@ -854,10 +856,11 @@ mod tests {
     fn test_serialize_panic_segment_too_long_ipv4() {
         // Test that a segment length which overflows u16 is rejected because it
         // can't fit in the length field in the IPv4 pseudo-header.
-        Buf::new(&mut [0; (1 << 16) - HDR_PREFIX_LEN][..], ..)
+        let _: Buf<&mut [u8]> = Buf::new(&mut [0; (1 << 16) - HDR_PREFIX_LEN][..], ..)
             .encapsulate(new_builder(TEST_SRC_IPV4, TEST_DST_IPV4))
             .serialize_vec_outer()
-            .unwrap();
+            .unwrap()
+            .unwrap_a();
     }
 
     #[test]
@@ -866,10 +869,11 @@ mod tests {
     fn test_serialize_panic_segment_too_long_ipv6() {
         // Test that a segment length which overflows u32 is rejected because it
         // can't fit in the length field in the IPv4 pseudo-header.
-        Buf::new(&mut [0; (1 << 32) - HDR_PREFIX_LEN][..], ..)
+        let _: Buf<&mut [u8]> = Buf::new(&mut [0; (1 << 32) - HDR_PREFIX_LEN][..], ..)
             .encapsulate(new_builder(TEST_SRC_IPV6, TEST_DST_IPV6))
             .serialize_vec_outer()
-            .unwrap();
+            .unwrap()
+            .unwrap_a();
     }
 
     #[test]
@@ -931,7 +935,7 @@ mod tests {
 
         b.iter(|| {
             let buf = bytes;
-            black_box(
+            let _: TcpSegment<_> = black_box(
                 black_box(buf)
                     .parse_with::<_, TcpSegment<_>>(TcpParseArgs::new(
                         IPV4_PACKET.metadata.src_ip,
@@ -963,7 +967,7 @@ mod tests {
         buf[header_len..].copy_from_slice(&TCP_SEGMENT.bytes[TCP_SEGMENT.body_range]);
 
         b.iter(|| {
-            black_box(
+            let _: Buf<_> = black_box(
                 black_box(Buf::new(&mut buf[..], header_len..total_len).encapsulate(builder))
                     .serialize_no_alloc_outer(),
             )

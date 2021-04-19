@@ -10,7 +10,7 @@ use core::time::Duration;
 use super::IgmpMaxRespCode;
 
 /// IGMP-specific errors.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum IgmpError {
     /// Error converting to IGMP v3 floating point format.
     FloatFormatError,
@@ -28,7 +28,7 @@ impl From<core::num::TryFromIntError> for IgmpError {
 /// Provides conversions to and from `Duration` for parsing and
 /// and serializing in the correct format, following that the underlying `u8`
 /// is the maximum response time in tenths of seconds.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct IgmpResponseTimeV2(u8);
 
 impl IgmpMaxRespCode for IgmpResponseTimeV2 {
@@ -62,7 +62,7 @@ impl From<IgmpResponseTimeV2> for Duration {
 ///
 /// Provides conversions to and from `Duration` for parsing and
 /// and serializing in the correct format.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct IgmpResponseTimeV3(u8);
 
 impl IgmpMaxRespCode for IgmpResponseTimeV3 {
@@ -165,8 +165,12 @@ mod tests {
 
         // test that anything larger than max u8 tenths of seconds will cause
         // try_from to fail:
-        IgmpResponseTimeV2::try_from(Duration::from_millis((u64::from(std::u8::MAX) + 1) * 100))
-            .expect_err("Can't parse durations larger than max u8 tenths");
+        assert_eq!(
+            IgmpResponseTimeV2::try_from(Duration::from_millis(
+                (u64::from(std::u8::MAX) + 1) * 100,
+            )),
+            Err(IgmpError::FloatFormatError)
+        );
     }
 
     #[test]
@@ -185,9 +189,11 @@ mod tests {
 
         // test that anything larger than max u8 tenths of seconds will cause
         // try_from to fail:
-        IgmpResponseTimeV3::try_from(Duration::from_millis(
-            (FLOATING_POINT_MAX_VALUE as u64 + 1) * 100,
-        ))
-        .expect_err("Can't parse durations larger than max u8 tenths");
+        assert_eq!(
+            IgmpResponseTimeV3::try_from(Duration::from_millis(
+                (FLOATING_POINT_MAX_VALUE as u64 + 1) * 100,
+            )),
+            Err(IgmpError::FloatFormatError)
+        );
     }
 }

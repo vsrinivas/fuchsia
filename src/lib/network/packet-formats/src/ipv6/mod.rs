@@ -607,7 +607,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6PacketRaw<B> {
         if buffer.len() > pl_len {
             // get rid of any extra padding that may be at the end of the buffer
             // unwrapping is safe because of the check above.
-            buffer.take_back(buffer.len() - pl_len).unwrap();
+            let _: B = buffer.take_back(buffer.len() - pl_len).unwrap();
         }
 
         let mut extension_hdr_context = Ipv6ExtensionHeaderParsingContext::new(fixed_hdr.next_hdr);
@@ -1350,15 +1350,17 @@ mod tests {
         // Test that Ipv6PacketBuilder::serialize properly zeroes memory before
         // serializing the header.
         let mut buf_0 = [0; IPV6_FIXED_HDR_LEN];
-        Buf::new(&mut buf_0[..], IPV6_FIXED_HDR_LEN..)
+        let _: Buf<&mut [u8]> = Buf::new(&mut buf_0[..], IPV6_FIXED_HDR_LEN..)
             .encapsulate(new_builder())
             .serialize_vec_outer()
-            .unwrap();
+            .unwrap()
+            .unwrap_a();
         let mut buf_1 = [0xFF; IPV6_FIXED_HDR_LEN];
-        Buf::new(&mut buf_1[..], IPV6_FIXED_HDR_LEN..)
+        let _: Buf<&mut [u8]> = Buf::new(&mut buf_1[..], IPV6_FIXED_HDR_LEN..)
             .encapsulate(new_builder())
             .serialize_vec_outer()
-            .unwrap();
+            .unwrap()
+            .unwrap_a();
         assert_eq!(&buf_0[..], &buf_1[..]);
     }
 
@@ -1367,10 +1369,11 @@ mod tests {
     fn test_serialize_panic_packet_length() {
         // Test that a packet whose payload is longer than 2^16 - 1 bytes is
         // rejected.
-        Buf::new(&mut [0; 1 << 16][..], ..)
+        let _: Buf<&mut [u8]> = Buf::new(&mut [0; 1 << 16][..], ..)
             .encapsulate(new_builder())
             .serialize_vec_outer()
-            .unwrap();
+            .unwrap()
+            .unwrap_a();
     }
 
     #[test]
@@ -1378,7 +1381,7 @@ mod tests {
     fn test_copy_header_bytes_for_fragment_without_ext_hdrs() {
         let mut buf = &fixed_hdr_to_bytes(new_fixed_hdr())[..];
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
-        packet.copy_header_bytes_for_fragment();
+        let _: Vec<_> = packet.copy_header_bytes_for_fragment();
     }
 
     #[test]
@@ -1407,7 +1410,7 @@ mod tests {
         buf[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &buf[..];
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
-        packet.copy_header_bytes_for_fragment();
+        let _: Vec<_> = packet.copy_header_bytes_for_fragment();
     }
 
     #[test]
@@ -1444,7 +1447,7 @@ mod tests {
         buf[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &buf[..];
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
-        packet.copy_header_bytes_for_fragment();
+        let _: Vec<_> = packet.copy_header_bytes_for_fragment();
     }
 
     #[test]

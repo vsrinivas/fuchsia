@@ -422,7 +422,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4PacketRaw<B> {
         if buffer.len() > body_len {
             // Discard the padding left by the previous layer. This unwrap is
             // safe because of the check against total_len.
-            buffer.take_back(buffer.len() - body_len).unwrap();
+            let _: B = buffer.take_back(buffer.len() - body_len).unwrap();
         }
 
         let body = MaybeParsed::new_with_min_len(buffer.into_rest(), body_len);
@@ -999,7 +999,8 @@ mod tests {
             ))
             .serialize_vec_outer()
             .unwrap();
-        buffer.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
+        let _: EthernetFrame<_> =
+            buffer.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         // Test that the Ethernet body is the minimum length, which far exceeds
         // the IPv4 packet header size of 20 bytes (without options).
         assert_eq!(buffer.len(), 46);
@@ -1083,15 +1084,17 @@ mod tests {
         // Test that Ipv4PacketBuilder::serialize properly zeroes memory before
         // serializing the header.
         let mut buf_0 = [0; IPV4_MIN_HDR_LEN];
-        Buf::new(&mut buf_0[..], IPV4_MIN_HDR_LEN..)
+        let _: Buf<&mut [u8]> = Buf::new(&mut buf_0[..], IPV4_MIN_HDR_LEN..)
             .encapsulate(new_builder())
             .serialize_vec_outer()
-            .unwrap();
+            .unwrap()
+            .unwrap_a();
         let mut buf_1 = [0xFF; IPV4_MIN_HDR_LEN];
-        Buf::new(&mut buf_1[..], IPV4_MIN_HDR_LEN..)
+        let _: Buf<&mut [u8]> = Buf::new(&mut buf_1[..], IPV4_MIN_HDR_LEN..)
             .encapsulate(new_builder())
             .serialize_vec_outer()
-            .unwrap();
+            .unwrap()
+            .unwrap_a();
         assert_eq!(buf_0, buf_1);
     }
 
@@ -1099,10 +1102,11 @@ mod tests {
     #[should_panic(expected = "(Mtu, Nested { inner: Buf { buf:")]
     fn test_serialize_panic_packet_length() {
         // Test that a packet which is longer than 2^16 - 1 bytes is rejected.
-        Buf::new(&mut [0; (1 << 16) - IPV4_MIN_HDR_LEN][..], ..)
+        let _: Buf<&mut [u8]> = Buf::new(&mut [0; (1 << 16) - IPV4_MIN_HDR_LEN][..], ..)
             .encapsulate(new_builder())
             .serialize_vec_outer()
-            .unwrap();
+            .unwrap()
+            .unwrap_a();
     }
 
     #[test]

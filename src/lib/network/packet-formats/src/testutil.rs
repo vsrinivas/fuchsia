@@ -343,7 +343,7 @@ mod crateonly {
         impl Bencher for TestBencher {
             fn iter<T, F: FnMut() -> T>(&mut self, mut inner: F) {
                 super::set_logger_for_test();
-                inner();
+                let _: T = inner();
             }
         }
 
