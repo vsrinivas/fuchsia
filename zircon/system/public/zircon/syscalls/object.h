@@ -22,7 +22,7 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_HANDLE_BASIC                ((zx_object_info_topic_t)  2u) // zx_info_handle_basic_t[1]
 #define ZX_INFO_PROCESS_V1                  __ZX_INFO_TOPIC(3u, 0u)        // zx_info_process_v1_t[1]
 #define ZX_INFO_PROCESS_V2                  __ZX_INFO_TOPIC(3u, 1u)        // zx_info_process_v2_t[1]
-#define ZX_INFO_PROCESS ZX_INFO_PROCESS_V1
+#define ZX_INFO_PROCESS ZX_INFO_PROCESS_V2
 #define ZX_INFO_PROCESS_THREADS             ((zx_object_info_topic_t)  4u) // zx_koid_t[n]
 #define ZX_INFO_VMAR                        ((zx_object_info_topic_t)  7u) // zx_info_vmar_t[1]
 #define ZX_INFO_JOB_CHILDREN                ((zx_object_info_topic_t)  8u) // zx_koid_t[n]
@@ -155,10 +155,6 @@ typedef struct zx_info_process_v1 {
     uint8_t padding1[5];
 } zx_info_process_v1_t;
 
-// TODO(fxbug.dev/30751): Aliased to the deprecated struct at this point in the
-// transition.
-typedef zx_info_process_v1_t zx_info_process_t;
-
 typedef uint32_t zx_info_process_flags_t;
 
 // Whether the process has started. `zx_process_info_t::start_time` is only
@@ -188,6 +184,9 @@ typedef struct zx_info_process_v2 {
 
     uint8_t padding1[4];
 } zx_info_process_v2_t;
+
+// TODO(fxbug.dev/30751): Rename `zx_info_process_v2_t` to `zx_info_process_t`.
+typedef zx_info_process_v2_t zx_info_process_t;
 
 typedef struct zx_info_job {
     // The job's return code; only valid if |exited| is true.
