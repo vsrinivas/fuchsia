@@ -26,8 +26,7 @@ pub(crate) const OEM_FILE_ERROR_MSG: &str =
 To include SSH keys as well:
 
     $ ffx target flash
-    --oem-stage add-staged-bootloader-file ssh.authorized_keys,
-    ~/fuchsia/.ssh/authorized_keys
+    --ssh-key ~/fuchsia/.ssh/authorized_keys
     ~/fuchsia/out/default/flash.json
      fuchsia",
     note = "Flashes an image to a target device using the fastboot protocol.
@@ -58,12 +57,23 @@ pub struct FlashCommand {
 
     #[argh(option, description = "oem staged file - can be supplied multiple times")]
     pub oem_stage: Vec<OemFile>,
+
+    #[argh(
+        option,
+        description = "path to ssh key - will default to the `ssh.pub` \
+           key in ffx config"
+    )]
+    pub ssh_key: Option<String>,
 }
 
 #[derive(Default, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct OemFile(String, String);
 
 impl OemFile {
+    pub fn new(command: String, path: String) -> Self {
+        Self(command, path)
+    }
+
     pub fn command(&self) -> &str {
         self.0.as_str()
     }

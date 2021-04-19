@@ -5,8 +5,9 @@
 use {
     crate::manifest::{Flash, FlashManifest},
     anyhow::{Context, Result},
+    ffx_config::file,
     ffx_core::{ffx_bail, ffx_plugin},
-    ffx_flash_args::FlashCommand,
+    ffx_flash_args::{FlashCommand, OemFile},
     fidl_fuchsia_developer_bridge::FastbootProxy,
     std::fs::File,
     std::io::{stdout, BufReader, Read, Write},
@@ -15,11 +16,44 @@ use {
 
 mod manifest;
 
+const SSH_OEM_COMMAND: &str = "add-staged-bootloader-file ssh.authorized_keys";
+
 #[ffx_plugin()]
-pub async fn flash(fastboot_proxy: FastbootProxy, cmd: FlashCommand) -> Result<()> {
+pub async fn flash(
+    fastboot_proxy: FastbootProxy,
+    // TODO(fxb/74841): remove allow attribute
+    #[allow(unused_mut)] mut cmd: FlashCommand,
+) -> Result<()> {
     let path = Path::new(&cmd.manifest);
     if !path.is_file() {
-        ffx_bail!("File does not exist: {}", cmd.manifest);
+        ffx_bail!("Manifest \"{}\" is not a file.", cmd.manifest);
+    }
+    match cmd.ssh_key.as_ref() {
+        Some(ssh) => {
+            let ssh_file = Path::new(ssh);
+            if !ssh_file.is_file() {
+                ffx_bail!("SSH key \"{}\" is not a file.", ssh);
+            }
+            if cmd.oem_stage.iter().find(|f| f.command() == SSH_OEM_COMMAND).is_some() {
+                ffx_bail!("Both the SSH key and the SSH OEM Stage flags were set. Only use one.");
+            }
+            cmd.oem_stage.push(OemFile::new(SSH_OEM_COMMAND.to_string(), ssh.to_string()));
+        }
+        None => {
+            if cmd.oem_stage.iter().find(|f| f.command() == SSH_OEM_COMMAND).is_none() {
+                let key: Option<String> = file("ssh.pub").await?;
+                match key {
+                    Some(k) => {
+                        println!("No `--ssh-key` flag, using {}", k);
+                        cmd.oem_stage.push(OemFile::new(SSH_OEM_COMMAND.to_string(), k));
+                    }
+                    None => ffx_bail!(
+                        "Warning: flashing without a SSH key is not advised. \n\
+                              Use the `--ssh-key` to pass a ssh key."
+                    ),
+                }
+            }
+        }
     }
     let mut writer = Box::new(stdout());
     let reader = File::open(path).context("opening file for read").map(BufReader::new)?;
@@ -104,6 +138,68 @@ mod test {
         .is_err())
     }
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_nonexistent_ssh_file_throws_err() {
+        let tmp_file = NamedTempFile::new().expect("tmp access failed");
+        let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
+        assert!(flash(
+            setup().1,
+            FlashCommand {
+                manifest: tmp_file_name,
+                ssh_key: Some("ssh_does_not_exist".to_string()),
+                ..Default::default()
+            }
+        )
+        .await
+        .is_err())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_using_and_oem_stage_and_not_ssh_param_does_not_throw_err() {
+        let manifest_file = NamedTempFile::new().expect("tmp access failed");
+        let manifest_path = manifest_file.path().to_string_lossy().to_string();
+        let ssh_file = NamedTempFile::new().expect("tmp access failed");
+        let ssh_path = ssh_file.path().to_string_lossy().to_string();
+        let mut oem_stage = Vec::new();
+        oem_stage.push(OemFile::new(SSH_OEM_COMMAND.to_string(), ssh_path));
+        assert!(flash(
+            setup().1,
+            FlashCommand { manifest: manifest_path, oem_stage, ..Default::default() }
+        )
+        .await
+        .is_err())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_using_both_ssh_and_oem_stage_param_throws_err() {
+        let manifest_file = NamedTempFile::new().expect("tmp access failed");
+        let manifest_path = manifest_file.path().to_string_lossy().to_string();
+        let ssh_file = NamedTempFile::new().expect("tmp access failed");
+        let ssh_path = ssh_file.path().to_string_lossy().to_string();
+        let mut oem_stage = Vec::new();
+        oem_stage.push(OemFile::new(SSH_OEM_COMMAND.to_string(), ssh_path.clone()));
+        assert!(flash(
+            setup().1,
+            FlashCommand {
+                manifest: manifest_path,
+                ssh_key: Some(ssh_path),
+                oem_stage,
+                ..Default::default()
+            }
+        )
+        .await
+        .is_err())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_not_using_ssh_switch_and_no_config_throws_an_err() {
+        let manifest_file = NamedTempFile::new().expect("tmp access failed");
+        let manifest_path = manifest_file.path().to_string_lossy().to_string();
+        assert!(flash(setup().1, FlashCommand { manifest: manifest_path, ..Default::default() })
+            .await
+            .is_err())
+    }
+
     ////////////////////////////////////////////////////////////////////////////////
     // V1 tests
 
@@ -130,6 +226,46 @@ mod test {
             },
             {
                 "name": "product",
+                "bootloader_partitions": [
+                    ["test1", "path1"],
+                    ["test2", "path2"]
+                ],
+                "partitions": [
+                    ["test10", "path10"],
+                    ["test20", "path20"],
+                    ["test30", "path30"]
+                ],
+                "oem_files": [
+                    ["test1", "path1"],
+                    ["test2", "path2"]
+                ]
+            }
+        ]
+    }"#;
+
+    const V1_MANIFEST_FUCHSIA: &'static str = r#"{
+        "version": 1,
+        "manifest": [
+            {
+                "name": "zedboot",
+                "bootloader_partitions": [
+                    ["test1", "path1"],
+                    ["test2", "path2"]
+                ],
+                "partitions": [
+                    ["test1", "path1"],
+                    ["test2", "path2"],
+                    ["test3", "path3"],
+                    ["test4", "path4"],
+                    ["test5", "path5"]
+                ],
+                "oem_files": [
+                    ["test1", "path1"],
+                    ["test2", "path2"]
+                ]
+            },
+            {
+                "name": "fuchsia",
                 "bootloader_partitions": [
                     ["test1", "path1"],
                     ["test2", "path2"]
@@ -203,6 +339,22 @@ mod test {
         .await
         .is_err());
         Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_no_product_should_succeed_if_multiple_products_and_fuchsia() -> Result<()> {
+        let mut output = String::new();
+        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let manifest_contents = V1_MANIFEST_FUCHSIA.to_string();
+        let tmp_file = NamedTempFile::new().expect("tmp access failed");
+        let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
+        flash_impl(
+            writer,
+            manifest_contents.as_bytes(),
+            setup().1,
+            FlashCommand { manifest: tmp_file_name, ..Default::default() },
+        )
+        .await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

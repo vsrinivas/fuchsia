@@ -24,6 +24,7 @@ use {
 
 pub(crate) const UNKNOWN_VERSION: &str = "Unknown flash manifest version";
 pub(crate) const MISSING_PRODUCT: &str = "Manifest does not contain product";
+pub(crate) const DEFAULT_PRODUCT: &str = "fuchsia";
 pub(crate) const MULTIPLE_PRODUCT: &str =
     "Multiple products found in manifest. Please specify a product";
 
@@ -295,21 +296,22 @@ impl Flash for FlashManifestV1 {
             .canonicalize()
             .context("Getting absolute path of flashing manifest")?;
         let product = match cmd.product {
-            Some(p) => {
-                if let Some(res) = self.0.iter().find(|product| product.name == p) {
-                    res
-                } else {
-                    ffx_bail!("{} {}", MISSING_PRODUCT, p);
-                }
-            }
+            Some(p) => match self.0.iter().find(|product| product.name == p) {
+                Some(res) => res,
+                None => ffx_bail!("{} {}", MISSING_PRODUCT, p),
+            },
             None => {
                 if self.0.len() == 1 {
                     &self.0[0]
                 } else {
-                    ffx_bail!("{}", MULTIPLE_PRODUCT);
+                    match self.0.iter().find(|product| product.name == DEFAULT_PRODUCT) {
+                        Some(res) => res,
+                        None => ffx_bail!("{}", MULTIPLE_PRODUCT),
+                    }
                 }
             }
         };
+
         for partition in &product.bootloader_partitions {
             flash_partition(writer, &path, partition.name(), partition.file(), &fastboot_proxy)
                 .await?;
