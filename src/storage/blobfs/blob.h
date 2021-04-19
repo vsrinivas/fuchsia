@@ -344,7 +344,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   //
   // This value is only used when !IsPagerBacked().
   zx::vmo unpaged_backing_data_ FS_TA_GUARDED(mutex_);
-  fzl::VmoMapper unpaged_backing_data_mapper_ FS_TA_GUARDED(mutex_);
 
 #if !defined(ENABLE_BLOBFS_NEW_PAGER)
   // The vmo registered with the pager. This will be valid for blobs that support paging (readable

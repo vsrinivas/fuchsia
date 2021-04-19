@@ -481,6 +481,7 @@ zx_status_t Blob::Commit() {
 
   std::variant<std::monostate, DecompressBlobDataProducer, SimpleBlobDataProducer> data;
   BlobDataProducer* data_ptr = nullptr;
+  fzl::VmoMapper data_mapping;
 
   if (compress) {
     // The data comes from the compression buffer.
@@ -501,8 +502,14 @@ zx_status_t Blob::Commit() {
   } else {
     // The data comes from the data buffer.
     ZX_ASSERT(unpaged_backing_data_.is_valid());
-    data_ptr = &data.emplace<SimpleBlobDataProducer>(fbl::Span(
-        static_cast<const uint8_t*>(unpaged_backing_data_mapper_.start()), inode_.blob_size));
+    uint64_t block_aligned_size = fbl::round_up(inode_.blob_size, kBlobfsBlockSize);
+    if (zx_status_t status = data_mapping.Map(unpaged_backing_data_, 0, block_aligned_size);
+        status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to map blob VMO: " << zx_status_get_string(status);
+      return status;
+    }
+    data_ptr = &data.emplace<SimpleBlobDataProducer>(
+        fbl::Span(static_cast<const uint8_t*>(data_mapping.start()), inode_.blob_size));
   }
 
   SimpleBlobDataProducer merkle(fbl::Span(write_info_->merkle_tree(), merkle_size));
@@ -545,7 +552,7 @@ zx_status_t Blob::Commit() {
 
   // Discard things we don't need any more. This has to be after the Flush call above to ensure
   // all data has been copied from these buffers.
-  unpaged_backing_data_mapper_.Unmap();
+  data_mapping.Unmap();
   unpaged_backing_data_.reset();
   FreePagedVmo();
   write_info_->compressor.reset();
@@ -899,9 +906,8 @@ zx_status_t Blob::LoadUnpagedVmosFromDisk() {
     return load_result.error_value();
 
   unpaged_backing_data_ = std::move(load_result->data_vmo);
-  unpaged_backing_data_mapper_ = std::move(load_result->data_mapper);
-
   merkle_mapping_ = std::move(load_result->merkle);
+
   return ZX_OK;
 }
 
@@ -933,9 +939,9 @@ zx_status_t Blob::PrepareDataVmoForWriting() {
     return ZX_OK;
 
   uint64_t block_aligned_size = fbl::round_up(inode_.blob_size, kBlobfsBlockSize);
-  if (zx_status_t status = unpaged_backing_data_mapper_.CreateAndMap(
-          block_aligned_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &unpaged_backing_data_);
+  if (zx_status_t status = zx::vmo::create(block_aligned_size, 0, &unpaged_backing_data_);
       status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to create data vmo: " << zx_status_get_string(status);
     return status;
   }
 
@@ -1009,7 +1015,6 @@ void Blob::ActivateLowMemory() {
 
   FreePagedVmo();
 
-  unpaged_backing_data_mapper_.Unmap();
   unpaged_backing_data_.reset();
   merkle_mapping_.Reset();
 }
