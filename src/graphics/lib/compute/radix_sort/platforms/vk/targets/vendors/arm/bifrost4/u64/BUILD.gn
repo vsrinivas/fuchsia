@@ -1,0 +1,16 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/radix_sort/platforms/vk/" +
+       "targets/gn/radix_sort_vk_target.gni")
+
+#
+# Target: ARM / Bifrost4 / 64-bit keys
+#
+radix_sort_vk_target_u64_loadable("arm_bifrost4_u64") {
+  # skip_spirv_opt = true
+}
+radix_sort_vk_target_u64_linkable("arm_bifrost4_u64_rodata") {
+  # skip_spirv_opt = true
+}

@@ -1,0 +1,288 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/zircon/c_utils.gni")
+import("//src/graphics/lib/compute/gn/glsl_shader_rules.gni")
+
+#
+# Generates a SPIR-V target archive by performing the following steps:
+#
+#   1. Compile the target archive data.
+#   2. Dump the data .rodata sections to a binary.
+#   3. Compile all compute shaders.
+#   4. Archive the data binaries followed by the SPIR-V modules.
+#
+# There are two templates that produce different outputs and target
+# types but have identical inputs.
+#
+#   1. A run-time loadable target archive binary file:
+#
+#        target_archive_loadable(target_name)
+#
+#   2. A compile-time linkable target archive:
+#
+#        target_archive_linkable(target_name)
+#
+# Upon completion, the root of $target_gen_dir contains all outputs.
+#
+# Multiple subdirectories in the $target_gen_dir contain the compute
+# shaders and successive stages of processed SPIR-V modules.
+#
+# The following variables can be defined by the invoker:
+#
+#   - "target_archive_name" : Name of the target archive
+#   - "data_sources"        : C sources defining static data
+#   - "data_include_dirs"   : C include dirs
+#   - "shader_sources"      : GLSL shader sources (e.g. `.comp`)
+#   - "shader_inputs"       : GLSL source dependencies
+#   - "shader_include_dirs" : GLSL include dirs
+#   - "defines"             : Defines passed to both C and GLSL sources
+#   - "gen_debug_shaders"   : generate debug shaders
+#   - "skip_spirv_opt"      : skip the `spirv-opt` pass
+#
+# The archive is built by appending the C sources data in the original
+# order, followed by the SPIR-V modules produced from the GLSL shader
+# sources.
+#
+# TODO: Only one data source is supported at this time.  A new script
+# or a `toolchain_utils_action_foreach` would be required.
+#
+
+#
+# Common target archive template
+#
+template("target_archive_common") {
+  #
+  # The data binaries and SPIR-V modules archived.
+  #
+  _target_archive_name = "${target_gen_dir}/${invoker.target_archive_name}"
+  _target_archive_file_ar = _target_archive_name + ".ar"
+  _target_archive_file_h = _target_archive_name + ".h"
+  _target_archive_file_S = _target_archive_name + ".S"
+
+  #
+  # Only one data source is supported at this time.
+  #
+  _data_sources = []
+  if (defined(invoker.data_sources)) {
+    _data_sources = filter_include(invoker.data_sources, [ "*.c" ])
+  }
+
+  _data_objects = []
+  foreach(_data_source, _data_sources) {
+    _data_objects += [ _target_archive_name + "/obj/" +
+                       get_path_info(_data_source, "name") + ".o" ]
+  }
+
+  _data_binaries = []
+  foreach(_data_source, _data_sources) {
+    _data_binaries += [ _target_archive_name + "/bin/" +
+                        get_path_info(_data_source, "name") + ".bin" ]
+  }
+
+  #
+  # Action: Compile the header structure.
+  #
+  # Expects a single `.c` file.
+  #
+  _data_to_object = target_name + "_data_to_object"
+
+  toolchain_utils_action(_data_to_object) {
+    # clang
+    utils = [ "cc" ]
+
+    # input dependencies
+    inputs = invoker.data_sources
+
+    # NOTE: only one data source is supported
+    outputs = [ _data_objects[0] ]
+
+    # common args
+    args = [ "--compile" ]
+
+    # single `.c` file
+    args += [ rebase_path(_data_sources[0]) ]
+
+    # NOTE: only a single `.o` file is supported
+    args += [
+      "-o",
+      rebase_path(outputs[0]),
+    ]
+
+    # includes
+    if (defined(invoker.data_include_dirs)) {
+      foreach(_include_dir, invoker.data_include_dirs) {
+        args += [
+          "-I",
+          rebase_path(_include_dir),
+        ]
+      }
+    }
+
+    # defines
+    if (defined(invoker.defines)) {
+      foreach(_define, invoker.defines) {
+        args += [
+          "-D",
+          _define,
+        ]
+      }
+    }
+  }
+
+  #
+  # Action: Dump the .rodata section of the compiled header structure.
+  #
+  _object_to_binary = target_name + "_object_to_binary"
+
+  toolchain_utils_action(_object_to_binary) {
+    utils = [ "objcopy" ]
+    deps = [ ":${_data_to_object}" ]
+    inputs = get_target_outputs(":${_data_to_object}")
+    outputs = [ _data_binaries[0] ]
+    args = [
+      rebase_path(inputs[0]),
+      "/dev/null",
+      "--dump-section=.rodata=" + rebase_path(outputs[0]),
+    ]
+  }
+
+  #
+  # Compile the .comp shaders to SPIR-V modules and perform multiple
+  # post-processing passes.
+  #
+  _spirv_modules = target_name + "_spirv_modules"
+
+  graphics_compute_compile_glsl_shader_foreach(_spirv_modules) {
+    output_dir = _target_archive_name
+    args = [
+      "--target-env",
+      "vulkan1.2",
+    ]
+    if (defined(invoker.shader_sources)) {
+      sources = invoker.shader_sources
+    }
+    if (defined(invoker.shader_inputs)) {
+      inputs = invoker.shader_inputs
+    }
+    if (defined(invoker.shader_include_dirs)) {
+      include_dirs = invoker.shader_include_dirs
+    }
+    forward_variables_from(invoker,
+                           [
+                             "defines",
+                             "gen_debug_shaders",
+                             "skip_spirv_opt",
+                           ])
+  }
+
+  #
+  # Build a target archive from the target binary and SPIR-V modules.
+  #
+  compiled_action(target_name) {
+    tool = "//src/graphics/lib/compute/tools/target_archive"
+    outputs = [
+      _target_archive_file_ar,
+      _target_archive_file_h,
+      _target_archive_file_S,
+    ]
+    sources = get_target_outputs(":${_object_to_binary}") +
+              get_target_outputs(":${_spirv_modules}")
+    args = [ invoker.target_archive_name ] +
+           rebase_path([ _target_archive_name ], root_build_dir) +
+           rebase_path(sources, root_build_dir)
+    deps = [
+      ":${_object_to_binary}",
+      ":${_spirv_modules}",
+    ]
+  }
+}
+
+#
+# Create a loadable target archive
+#
+template("target_archive_loadable") {
+  #
+  # Create the target archive
+  #
+  _internal = target_name + "_internal"
+
+  target_archive_common(_internal) {
+    target_archive_name = invoker.target_name
+    forward_variables_from(invoker,
+                           [
+                             "data_sources",
+                             "data_include_dirs",
+                             "shader_sources",
+                             "shader_inputs",
+                             "shader_include_dirs",
+                             "defines",
+                             "gen_debug_shaders",
+                             "skip_spirv_opt",
+                           ])
+  }
+
+  #
+  # GN target is either a GN group or Fuchsia resource
+  #
+  if (is_fuchsia) {
+    resource(target_name) {
+      sources = filter_include(get_target_outputs(":${_internal}"), [ "*.ar" ])
+      outputs = [ "data/targets/{{source_file_part}}" ]
+      deps = [ ":${_internal}" ]
+    }
+  } else {
+    group(target_name) {
+      deps = [ ":${_internal}" ]
+    }
+  }
+}
+
+#
+# Create a linkable target archive.
+#
+template("target_archive_linkable") {
+  #
+  # Create the target archive
+  #
+  _internal = target_name + "_internal"
+
+  target_archive_common(_internal) {
+    target_archive_name = invoker.target_name
+    forward_variables_from(invoker,
+                           [
+                             "data_sources",
+                             "data_include_dirs",
+                             "shader_sources",
+                             "shader_inputs",
+                             "shader_include_dirs",
+                             "defines",
+                             "gen_debug_shaders",
+                             "skip_spirv_opt",
+                           ])
+  }
+
+  _config = target_name + "_config"
+
+  config(_config) {
+    include_dirs = [
+      target_gen_dir,
+      "//src/graphics/lib/compute/tools/target_archive/include",
+    ]
+  }
+
+  source_set(target_name) {
+    public_configs = [ ":${_config}" ]
+    public = filter_include(get_target_outputs(":${_internal}"), [ "*.h" ])
+    sources = filter_include(
+            get_target_outputs(":${_internal}"),
+            [
+              "*.S",
+              "*.h",
+              "//src/graphics/lib/compute/tools/target_archive/include/target_archive/target_archive.h",
+            ])
+    deps = [ ":${_internal}" ]
+  }
+}

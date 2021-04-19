@@ -1,0 +1,32 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+
+config("target_archive_config") {
+  include_dirs = [ "include" ]
+}
+
+source_set("target_archive_headers") {
+  public = [ "include/target_archive/target_archive.h" ]
+  public_configs = [ ":target_archive_config" ]
+}
+
+source_set("target_archive_sources") {
+  public_deps = [ ":target_archive_headers" ]
+  sources = [
+    "include/target_archive/target_archive.h",
+    "target_archive.c",
+  ]
+}
+
+#
+# Concatenates one or more binaries prefixed by a table containing the
+# number of binaries and the offset and size of each binary.
+#
+if (is_host) {
+  executable("target_archive") {
+    deps = [ ":target_archive_sources" ]
+    # output_name = "target-archive"
+  }
+}

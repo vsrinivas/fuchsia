@@ -1,0 +1,67 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+#
+# Vulkan Radix Sort library
+#
+config("config") {
+  include_dirs = [ "include" ]
+}
+
+config("config_debug_utils") {
+  defines = [ "RADIX_SORT_VK_ENABLE_DEBUG_UTILS" ]
+}
+
+config("config_timestamps") {
+  defines = [ "RADIX_SORT_VK_ENABLE_EXTENSIONS" ]
+}
+
+source_set("vk") {
+  public_configs = [ ":config" ]
+  public = [ "include/radix_sort/platforms/vk/radix_sort_vk.h" ]
+  sources = [
+    "include/radix_sort/platforms/vk/radix_sort_vk.h",
+    "radix_sort_vk.c",
+    "shaders/push.h",
+    "targets/radix_sort_vk_target.h",
+    "targets/radix_sort_vk_target_requirements.c",
+    "targets/radix_sort_vk_target_requirements.h",
+  ]
+  deps = [
+    "${graphics_compute_dir}/common",
+    "${graphics_compute_dir}/common/vk",
+    "${graphics_compute_dir}/tools/target_archive:target_archive_headers",
+    graphics_compute_vulkan_loader_target,
+  ]
+}
+
+#
+# NOTE(allanmac): Is there a better way to express the same source set
+# with extra configs?
+#
+source_set("vk_tests") {
+  public_configs = [
+    ":config",
+    ":config_debug_utils",
+    ":config_timestamps",
+  ]
+  public = [ "include/radix_sort/platforms/vk/radix_sort_vk.h" ]
+  sources = [
+    "include/radix_sort/platforms/vk/radix_sort_vk.h",
+    "radix_sort_vk.c",
+    "shaders/push.h",
+    "targets/radix_sort_vk_target.h",
+    "targets/radix_sort_vk_target_requirements.c",
+    "targets/radix_sort_vk_target_requirements.h",
+  ]
+  deps = [
+    "${graphics_compute_dir}/common",
+    "${graphics_compute_dir}/common/vk",
+    "${graphics_compute_dir}/tools/target_archive:target_archive_headers",
+    graphics_compute_vulkan_loader_target,
+  ]
+  friend = [ "tests" ]
+}

@@ -1,0 +1,14 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/radix_sort/platforms/vk/" +
+       "targets/gn/radix_sort_vk_target.gni")
+
+#
+# Target: NVIDIA / sm70 / 32-bit keys
+#
+radix_sort_vk_target_u32_loadable("nvidia_sm70_u32") {
+}
+radix_sort_vk_target_u32_linkable("nvidia_sm70_u32_rodata") {
+}
