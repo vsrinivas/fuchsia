@@ -477,15 +477,24 @@ async fn execute_steps(
                 step_handler,
                 _t,
                 {
-                    successful_targets.insert(target.nodename.as_ref().unwrap()).to_string();
+                    successful_targets.insert(
+                        target
+                            .nodename
+                            .as_ref()
+                            .map(|s| s.as_str())
+                            .unwrap_or("UNKNOWN")
+                            .to_string(),
+                    );
                 }
             );
             break;
         }
     }
 
-    let (successes, failures): (Vec<_>, Vec<_>) =
-        targets.iter().map(|t| t.nodename.as_ref().unwrap()).partition_map(|n| {
+    let (successes, failures): (Vec<_>, Vec<_>) = targets
+        .iter()
+        .map(|t| t.nodename.as_ref().map(|s| s.as_str()).unwrap_or("UNKNOWN").to_string())
+        .partition_map(|n| {
             if successful_targets.contains(&n) {
                 Either::Left(n.to_string())
             } else {
@@ -855,13 +864,17 @@ mod test {
         });
     }
 
-    fn setup_responsive_daemon_server_with_targets(waiter: Shared<Receiver<()>>) -> DaemonProxy {
+    fn setup_responsive_daemon_server_with_targets(
+        has_nodename: bool,
+        waiter: Shared<Receiver<()>>,
+    ) -> DaemonProxy {
         spawn_local_stream_handler(move |req| {
             let waiter = waiter.clone();
             async move {
+                let nodename = if has_nodename { Some(NODENAME.to_string()) } else { None };
                 match req {
                     DaemonRequest::GetRemoteControl { remote, target, responder } => {
-                        let target = target.expect("target cannot be none");
+                        let target = target.unwrap_or(String::from(NODENAME));
                         if target == NODENAME {
                             serve_responsive_rcs(remote);
                         } else if target == UNRESPONSIVE_NODENAME {
@@ -882,7 +895,7 @@ mod test {
                             responder
                                 .send(
                                     &mut vec![Target {
-                                        nodename: Some(NODENAME.to_string()),
+                                        nodename: nodename,
                                         addresses: Some(vec![]),
                                         age_ms: Some(0),
                                         rcs_state: Some(RemoteControlState::Unknown),
@@ -898,7 +911,7 @@ mod test {
                                 .send(
                                     &mut vec![
                                         Target {
-                                            nodename: Some(NODENAME.to_string()),
+                                            nodename: nodename,
                                             addresses: Some(vec![]),
                                             age_ms: Some(0),
                                             rcs_state: Some(RemoteControlState::Unknown),
@@ -1232,7 +1245,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(setup_responsive_daemon_server_with_targets(rx.shared()))],
+            vec![Ok(setup_responsive_daemon_server_with_targets(true, rx.shared()))],
         );
         let mut handler = FakeStepHandler::new();
         doctor(
@@ -1292,7 +1305,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(setup_responsive_daemon_server_with_targets(rx.shared()))],
+            vec![Ok(setup_responsive_daemon_server_with_targets(true, rx.shared()))],
         );
         let mut handler = FakeStepHandler::new();
         doctor(
@@ -1344,7 +1357,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(setup_responsive_daemon_server_with_targets(rx.shared()))],
+            vec![Ok(setup_responsive_daemon_server_with_targets(true, rx.shared()))],
         );
 
         let mut handler = FakeStepHandler::new();
@@ -1467,5 +1480,65 @@ mod test {
             .await;
         fake.assert_no_leftover_calls().await;
         r.assert_generate_called();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_finds_target_with_missing_nodename() {
+        let (tx, rx) = oneshot::channel::<()>();
+
+        let fake = FakeDaemonManager::new(
+            vec![true],
+            vec![],
+            vec![],
+            vec![Ok(setup_responsive_daemon_server_with_targets(false, rx.shared()))],
+        );
+        let mut handler = FakeStepHandler::new();
+        doctor(
+            &mut handler,
+            &fake,
+            "",
+            1,
+            DEFAULT_RETRY_DELAY,
+            false,
+            version_str(),
+            record_params_no_record(),
+        )
+        .await
+        .unwrap();
+        tx.send(()).unwrap();
+
+        handler
+            .assert_matches_steps(vec![
+                TestStepEntry::output_step(StepType::Started(version_str())),
+                TestStepEntry::step(StepType::DaemonRunning),
+                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
+                TestStepEntry::step(StepType::ConnectingToDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::step(StepType::ListingTargets(String::default())),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::CheckingTarget(None)),
+                TestStepEntry::step(StepType::ConnectingToRcs),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithRcs),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::CheckingTarget(Some(
+                    UNRESPONSIVE_NODENAME.to_string(),
+                ))),
+                TestStepEntry::step(StepType::ConnectingToRcs),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithRcs),
+                TestStepEntry::result(StepResult::Timeout),
+                TestStepEntry::output_step(StepType::TargetSummary(
+                    vec!["UNKNOWN".to_string()],
+                    vec![UNRESPONSIVE_NODENAME.to_string()],
+                )),
+                TestStepEntry::output_step(StepType::RcsTerminalFailure),
+            ])
+            .await;
+
+        fake.assert_no_leftover_calls().await;
     }
 }
