@@ -165,6 +165,9 @@ static_library("symbols") {
   ]
 
   deps = [ "//src/lib/elflib" ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 static_library("test_support") {
@@ -292,6 +295,9 @@ source_set("tests") {
       ":test_so",
     ]
   }
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("perf_tests") {

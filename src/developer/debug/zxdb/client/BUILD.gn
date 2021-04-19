@@ -159,6 +159,9 @@ static_library("client") {
     "//third_party/crashpad/util",
     "//third_party/rapidjson",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("test_support") {
@@ -188,6 +191,9 @@ source_set("test_support") {
     "//src/developer/debug/zxdb/symbols:test_support",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 if (is_host) {
@@ -282,4 +288,7 @@ source_set("tests") {
     "//src/developer/debug/zxdb/symbols:test_support",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -103,6 +103,9 @@ static_library("expr") {
     "//src/lib/fxl",
     "//third_party/double-conversion",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("test_support") {
@@ -118,6 +121,9 @@ source_set("test_support") {
     ":expr",
     "//src/developer/debug/zxdb/symbols:test_support",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("tests") {
@@ -180,6 +186,9 @@ source_set("tests") {
     "//src/lib/llvm:LLVMBinaryFormat",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuzzer("expr_parser_fuzzer") {

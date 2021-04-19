@@ -135,6 +135,9 @@ executable("client_operation_test") {
 
   # TODO(fxbug.dev/68325): Fix UB within GRPC and re-enable ubsan.
   exclude_toolchain_tags = [ "ubsan" ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("server_operation_test") {
@@ -153,6 +156,9 @@ executable("server_operation_test") {
 
   # TODO(fxbug.dev/68325): Fix UB within GRPC and re-enable ubsan.
   exclude_toolchain_tags = [ "ubsan" ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("guest_interaction_tests") {
