@@ -16,10 +16,7 @@
     ],
     use: [
         {
-            protocol: [
-                "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.cobalt.LoggerFactory",
-            ],
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
             from: "parent",
         },
     ],
