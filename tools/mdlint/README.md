@@ -118,8 +118,9 @@ list includes:
 
 ### Defining a new rule
 
-Each rule should be defined in its own file named `example_rule.go`. The
-convention is to follow the pattern:
+Each rule should be defined in its own file named `example_rule.go`.
+Rules should include a description, which by convention is placed in
+the test file. The convention is to follow the pattern:
 
 ```go
 package rules
@@ -154,6 +155,8 @@ Rules should be tested using sample Markdown documents, with the help of the
 provided testing utilities:
 
 ```go
+// Description of the rule, with details of the checks provided.
+
 func TestExampleRule_firstCase(t *testing.T) {
 	ruleTestCase{
 		files: map[string]string{
