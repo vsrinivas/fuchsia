@@ -94,7 +94,7 @@ where
 }
 
 /// How this environment extends its parent's.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum EnvironmentExtends {
     /// This environment extends the environment of its parent's.
     Realm,
@@ -114,6 +114,7 @@ impl From<fsys::EnvironmentExtends> for EnvironmentExtends {
 /// The set of runners available in a realm's environment.
 ///
 /// [`RunnerRegistration`]: fidl_fuchsia_sys2::RunnerRegistration
+#[derive(Clone)]
 pub struct RunnerRegistry {
     runners: HashMap<CapabilityName, RunnerRegistration>,
 }
