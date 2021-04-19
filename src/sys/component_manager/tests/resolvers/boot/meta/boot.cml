@@ -34,7 +34,7 @@
             ],
             resolvers: [
                 {
-                    resolver: "boot",
+                    resolver: "boot_resolver",
                     from: "parent",
                     scheme: "fuchsia-boot",
                 },

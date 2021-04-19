@@ -128,7 +128,7 @@ impl Resolver for FuchsiaBootResolver {
 
 #[async_trait]
 impl BuiltinCapability for FuchsiaBootResolver {
-    const NAME: &'static str = "boot";
+    const NAME: &'static str = "boot_resolver";
     type Marker = fsys::ComponentResolverMarker;
 
     async fn serve(
