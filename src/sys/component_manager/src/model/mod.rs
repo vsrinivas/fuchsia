@@ -34,4 +34,3 @@ mod dir_tree;
 mod exposed_dir;
 #[cfg(test)]
 mod tests;
-mod walk_state;

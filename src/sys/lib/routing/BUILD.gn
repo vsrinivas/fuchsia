@@ -52,6 +52,7 @@ rustc_library("routing") {
     "src/filter.rs",
     "src/lib.rs",
     "src/mode_set.rs",
+    "src/path.rs",
     "src/policy.rs",
     "src/rights.rs",
     "src/router.rs",

@@ -19,11 +19,11 @@ use {
             events::registry::EventSubscription,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             rights,
-            routing::{self, RouteRequest, RouteSource, RoutingError},
+            routing::{RouteRequest, RouteSource, RoutingError},
             testing::{routing_test_helpers::*, test_helpers::*},
         },
     },
-    ::routing::error::ComponentInstanceError,
+    ::routing::{error::ComponentInstanceError, route_capability},
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::*,
@@ -2624,7 +2624,7 @@ async fn use_with_destroyed_parent() {
 
     // Now attempt to route the service from "c". Should fail because "b" does not exist so we
     // cannot follow it.
-    let err = routing::route_capability(RouteRequest::UseProtocol(use_protocol_decl), &realm_c)
+    let err = route_capability(RouteRequest::UseProtocol(use_protocol_decl), &realm_c)
         .await
         .expect_err("routing unexpectedly succeeded");
     assert_matches!(
@@ -4410,7 +4410,7 @@ async fn route_protocol_from_expose() {
     let root_instance = test.model.look_up(&AbsoluteMoniker::root()).await.expect("root instance");
     let expected_source_moniker = AbsoluteMoniker::parse_string_without_instances("/b").unwrap();
     assert_matches!(
-    routing::route_capability(RouteRequest::ExposeProtocol(expose_decl), &root_instance).await,
+    route_capability(RouteRequest::ExposeProtocol(expose_decl), &root_instance).await,
         Ok(RouteSource::Protocol(
             CapabilitySource::Component {
                 capability: ComponentCapability::Protocol(protocol_decl),
@@ -4909,7 +4909,7 @@ async fn use_service_from_parent() {
     let test = RoutingTestBuilder::new("a", components).build().await;
     let b_component = test.model.look_up(&vec!["b:0"].into()).await.expect("b instance");
     let a_component = test.model.look_up(&AbsoluteMoniker::root()).await.expect("root instance");
-    let source = routing::route_capability(RouteRequest::UseService(use_decl), &b_component)
+    let source = route_capability(RouteRequest::UseService(use_decl), &b_component)
         .await
         .expect("failed to route service");
     match source {
@@ -4977,7 +4977,7 @@ async fn route_service_from_sibling() {
     let test = RoutingTestBuilder::new("a", components).build().await;
     let b_component = test.model.look_up(&vec!["b:0"].into()).await.expect("b instance");
     let c_component = test.model.look_up(&vec!["c:0"].into()).await.expect("c instance");
-    let source = routing::route_capability(RouteRequest::UseService(use_decl), &b_component)
+    let source = route_capability(RouteRequest::UseService(use_decl), &b_component)
         .await
         .expect("failed to route service");
 
@@ -5023,7 +5023,7 @@ async fn route_service_from_parent_collection() {
     let test = RoutingTestBuilder::new("a", components).build().await;
     let b_component = test.model.look_up(&vec!["b:0"].into()).await.expect("b instance");
     let a_component = test.model.look_up(&AbsoluteMoniker::root()).await.expect("root instance");
-    let source = routing::route_capability(RouteRequest::UseService(use_decl), &b_component)
+    let source = route_capability(RouteRequest::UseService(use_decl), &b_component)
         .await
         .expect("failed to route service");
     match source {
@@ -5130,7 +5130,7 @@ async fn list_service_instances_from_collection() {
 
     let client_component =
         test.model.look_up(&vec!["client:0"].into()).await.expect("client instance");
-    let source = routing::route_capability(RouteRequest::UseService(use_decl), &client_component)
+    let source = route_capability(RouteRequest::UseService(use_decl), &client_component)
         .await
         .expect("failed to route service");
     let capability_provider = match source {

@@ -191,8 +191,6 @@ template("component_manager") {
     "src/model/testing/routing_test_helpers.rs",
     "src/model/testing/test_helpers.rs",
     "src/model/testing/test_hook.rs",
-    "src/model/walk_state.rs",
-    "src/path.rs",
     "src/root_stop_notifier.rs",
     "src/startup.rs",
     "src/work_scheduler/delegate.rs",

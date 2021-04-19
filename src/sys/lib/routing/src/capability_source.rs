@@ -21,7 +21,11 @@ use {
         UseSource, UseStorageDecl,
     },
     from_enum::FromEnum,
-    std::{fmt, sync::Weak},
+    std::{
+        fmt,
+        path::PathBuf,
+        sync::{Arc, Weak},
+    },
     thiserror::Error,
 };
 
@@ -192,6 +196,39 @@ impl<C: ComponentInstanceInterface> Clone for CapabilitySourceInterface<C> {
                 capability_provider: capability_provider.clone(),
                 component: component.clone(),
             },
+        }
+    }
+}
+
+/// Information returned by the route_storage_capability function on the source of a storage
+/// capability.
+#[derive(Debug)]
+pub struct StorageCapabilitySource<C: ComponentInstanceInterface> {
+    /// The component that's providing the backing directory capability for this storage
+    /// capability. If None, then the backing directory comes from component_manager's namespace.
+    pub storage_provider: Option<Arc<C>>,
+
+    /// The path to the backing directory in the providing component's outgoing directory (or
+    /// component_manager's namespace).
+    pub backing_directory_path: CapabilityPath,
+
+    /// The subdirectory inside of the backing directory capability to use, if any
+    pub backing_directory_subdir: Option<PathBuf>,
+
+    /// The subdirectory inside of the backing directory's sub-directory to use, if any. The
+    /// difference between this and backing_directory_subdir is that backing_directory_subdir is
+    /// appended to backing_directory_path first, and component_manager will create this subdir if
+    /// it doesn't exist but won't create backing_directory_subdir.
+    pub storage_subdir: Option<PathBuf>,
+}
+
+impl<C: ComponentInstanceInterface> Clone for StorageCapabilitySource<C> {
+    fn clone(&self) -> Self {
+        Self {
+            storage_provider: self.storage_provider.clone(),
+            backing_directory_path: self.backing_directory_path.clone(),
+            backing_directory_subdir: self.backing_directory_subdir.clone(),
+            storage_subdir: self.storage_subdir.clone(),
         }
     }
 }

@@ -21,11 +21,14 @@ use {
         OPEN_RIGHT_WRITABLE,
     },
     moniker::{AbsoluteMoniker, RelativeMoniker},
-    std::{path::PathBuf, sync::Arc},
+    std::path::PathBuf,
     thiserror::Error,
 };
 
 const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
+
+pub type StorageCapabilitySource =
+    ::routing::capability_source::StorageCapabilitySource<ComponentInstance>;
 
 /// Errors related to isolated storage.
 #[derive(Debug, Error, Clone)]
@@ -112,28 +115,6 @@ impl StorageError {
     ) -> Self {
         Self::InvalidStoragePath { relative_moniker, instance_id }
     }
-}
-
-/// Information returned by the route_storage_capability function on the source of a storage
-/// capability.
-#[derive(Clone, Debug)]
-pub struct StorageCapabilitySource {
-    /// The component that's providing the backing directory capability for this storage
-    /// capability. If None, then the backing directory comes from component_manager's namespace.
-    pub storage_provider: Option<Arc<ComponentInstance>>,
-
-    /// The path to the backing directory in the providing component's outgoing directory (or
-    /// component_manager's namespace).
-    pub backing_directory_path: CapabilityPath,
-
-    /// The subdirectory inside of the backing directory capability to use, if any
-    pub backing_directory_subdir: Option<PathBuf>,
-
-    /// The subdirectory inside of the backing directory's sub-directory to use, if any. The
-    /// difference between this and backing_directory_subdir is that backing_directory_subdir is
-    /// appended to backing_directory_path first, and component_manager will create this subdir if
-    /// it doesn't exist but won't create backing_directory_subdir.
-    pub storage_subdir: Option<PathBuf>,
 }
 
 /// Open the isolated storage sub-directory for the given component, creating it if necessary.
@@ -412,7 +393,10 @@ mod tests {
         component_id_index, fidl_fuchsia_io2 as fio2,
         matches::assert_matches,
         rand::{self, distributions::Alphanumeric, Rng},
-        std::convert::{TryFrom, TryInto},
+        std::{
+            convert::{TryFrom, TryInto},
+            sync::Arc,
+        },
     };
 
     #[fuchsia::test]

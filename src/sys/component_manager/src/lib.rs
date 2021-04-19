@@ -13,7 +13,6 @@ pub mod config;
 pub mod elf_runner;
 pub mod klog;
 pub mod model;
-pub mod path;
 pub mod startup;
 
 pub(crate) mod capability_ready_notifier;

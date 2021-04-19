@@ -142,6 +142,6 @@ impl<C: ComponentInstanceInterface> WeakExtendedInstanceInterface<C> {
 }
 
 /// A special instance identified with the top of the tree, i.e. component manager's instance.
-pub trait TopInstanceInterface: Sized {
+pub trait TopInstanceInterface: Sized + std::fmt::Debug {
     fn namespace_capabilities(&self) -> &NamespaceCapabilities;
 }

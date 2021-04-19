@@ -23,7 +23,6 @@ use {
 pub type EnvironmentExtends = ::routing::environment::EnvironmentExtends;
 pub type RunnerRegistry = ::routing::environment::RunnerRegistry;
 pub type DebugRegistry = ::routing::environment::DebugRegistry;
-pub type DebugRegistration = ::routing::environment::DebugRegistration;
 
 /// A realm's environment, populated from a component's [`EnvironmentDecl`].
 /// An environment defines intrinsic behaviors of a component's realm. Components
@@ -182,7 +181,7 @@ mod tests {
                 },
             },
         },
-        ::routing::error::ComponentInstanceError,
+        ::routing::{environment::DebugRegistration, error::ComponentInstanceError},
         cm_rust::{CapabilityName, RegistrationSource, RunnerRegistration},
         maplit::hashmap,
         matches::assert_matches,
