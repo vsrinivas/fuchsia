@@ -60,7 +60,7 @@ class VectorView {
   }
 
   // These methods are the only way to reference data which is not managed by a FidlAllocator.
-  // Their usage is dicouraged. The lifetime of the referenced vector must be longer than the
+  // Their usage is discouraged. The lifetime of the referenced vector must be longer than the
   // lifetime of the created VectorView.
   //
   // For example:
