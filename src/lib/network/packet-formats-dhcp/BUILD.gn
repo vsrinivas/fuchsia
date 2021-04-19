@@ -26,6 +26,8 @@ rustc_library("packet-formats-dhcp") {
     "src/lib.rs",
     "src/v6.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("packet-formats-dhcp-test") {
@@ -34,5 +36,8 @@ fuchsia_unittest_package("packet-formats-dhcp-test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":packet-formats-dhcp-test" ]
+  deps = [
+    ":packet-formats-dhcp-test",
+    ":packet-formats-dhcp_test($host_toolchain)",
+  ]
 }

@@ -201,7 +201,6 @@ config("allow_unused_results") {
     "//src/lib/mpmc/*",
     "//src/lib/mundane/*",
     "//src/lib/network/ethernet/*",
-    "//src/lib/network/packet-formats-dhcp/*",
     "//src/lib/network/packet-formats/*",
     "//src/lib/network/packet/*",
     "//src/lib/process_builder/*",
