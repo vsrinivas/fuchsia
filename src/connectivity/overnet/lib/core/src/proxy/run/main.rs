@@ -270,15 +270,12 @@ async fn stream_to_handle<Hdl: 'static + Proxyable>(
                 }
             }
             Frame::BeginTransfer(new_destination_node, transfer_key) => {
-                if let Err(e) = finish_proxy_loop.and_then_follow(
+                return finish_proxy_loop.and_then_follow(
                     initiate_transfer,
                     new_destination_node,
                     transfer_key,
                     stream,
-                ) {
-                    panic!("{:?}", e);
-                }
-                return Ok(());
+                ).context("finish_proxy_loop")
             }
             Frame::EndTransfer => bail!("Received EndTransfer on a regular stream"),
             Frame::AckTransfer => bail!("Received AckTransfer before sending a BeginTransfer"),
