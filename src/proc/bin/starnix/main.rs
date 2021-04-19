@@ -13,9 +13,8 @@ use {
     fuchsia_component::client as fclient,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{
-        self as zx, sys::zx_exception_info_t, sys::zx_thread_state_general_regs_t,
-        sys::ZX_EXCEPTION_STATE_HANDLED, sys::ZX_EXCEPTION_STATE_TRY_NEXT,
-        sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
+        self as zx, sys::zx_exception_info_t, sys::ZX_EXCEPTION_STATE_HANDLED,
+        sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
     },
     futures::{StreamExt, TryStreamExt},
     io_util::directory,
@@ -59,11 +58,7 @@ async fn run_process(process: Arc<ProcessContext>) -> Result<(), Error> {
             continue;
         }
 
-        let mut ctx = ThreadContext {
-            handle: exception.get_thread()?,
-            process: Arc::clone(&process),
-            registers: zx_thread_state_general_regs_t::default(),
-        };
+        let mut ctx = ThreadContext::new(exception.get_thread()?, Arc::clone(&process));
 
         let report = ctx.handle.get_exception_report()?;
 

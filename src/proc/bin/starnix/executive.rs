@@ -5,7 +5,7 @@
 use {
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, HandleBased, Status},
-    parking_lot::RwLock,
+    parking_lot::{Mutex, RwLock},
     std::sync::Arc,
 };
 
@@ -125,6 +125,7 @@ pub struct SecurityContext {
 }
 
 pub struct ProcessContext {
+    pub process_id: pid_t,
     pub handle: zx::Process,
     pub exceptions: fasync::Channel,
     pub security: SecurityContext,
@@ -150,7 +151,23 @@ impl ProcessContext {
 }
 
 pub struct ThreadContext {
+    pub thread_id: pid_t,
     pub handle: zx::Thread,
     pub process: Arc<ProcessContext>,
     pub registers: zx_thread_state_general_regs_t,
+    pub set_child_tid: Mutex<UserAddress>,
+    pub clear_child_tid: Mutex<UserAddress>,
+}
+
+impl ThreadContext {
+    pub fn new(handle: zx::Thread, process: Arc<ProcessContext>) -> ThreadContext {
+        ThreadContext {
+            thread_id: 7, // TODO: Assign from a thread map.
+            handle: handle,
+            process: process,
+            registers: zx_thread_state_general_regs_t::default(),
+            set_child_tid: Mutex::new(UserAddress::default()),
+            clear_child_tid: Mutex::new(UserAddress::default()),
+        }
+    }
 }

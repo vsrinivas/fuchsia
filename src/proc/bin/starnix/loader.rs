@@ -151,6 +151,7 @@ pub async fn load_executable(
 
     let exceptions = fasync::Channel::from_channel(process.create_exception_channel()?)?;
     let process = ProcessContext {
+        process_id: 3, // TODO: Assign from a process map.
         handle: process,
         exceptions,
         mm: MemoryManager::new(root_vmar),

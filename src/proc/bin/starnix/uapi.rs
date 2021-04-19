@@ -16,12 +16,13 @@ use {
 use linux_uapi::x86_64 as uapi;
 pub use uapi::*;
 
-pub type uid_t = uapi::__kernel_uid_t;
-pub type gid_t = uapi::__kernel_gid_t;
 pub type dev_t = uapi::__kernel_old_dev_t;
+pub type gid_t = uapi::__kernel_gid_t;
 pub type ino_t = uapi::__kernel_ino_t;
 pub type mode_t = uapi::__kernel_mode_t;
 pub type off_t = uapi::__kernel_off_t;
+pub type pid_t = uapi::__kernel_pid_t;
+pub type uid_t = uapi::__kernel_uid_t;
 
 pub struct Errno(u32);
 

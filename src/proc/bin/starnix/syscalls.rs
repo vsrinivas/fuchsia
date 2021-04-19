@@ -269,6 +269,14 @@ pub fn sys_arch_prctl(
     }
 }
 
+pub fn sys_set_tid_address(
+    ctx: &ThreadContext,
+    tidptr: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    *ctx.clear_child_tid.lock() = tidptr;
+    Ok(ctx.thread_id.into())
+}
+
 pub fn sys_exit_group(ctx: &ThreadContext, error_code: i32) -> Result<SyscallResult, Errno> {
     info!("exit_group: error_code={}", error_code);
     // TODO: Set the error_code on the process.
