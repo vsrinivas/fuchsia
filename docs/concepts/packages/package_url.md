@@ -25,7 +25,7 @@ resource, depending on which parts are included.
 **Required**
 
 ```
-{{ '<strong>' }}fuchsia-pkg://{{ '</strong>' }}fuchsia-pkg://<repository>[/<package-name>[?hash=<package-hash>][#<resource-path>]]
+{{ '<strong>' }}fuchsia-pkg://{{ '</strong>' }}<repository>[/<package-name>[?hash=<package-hash>][#<resource-path>]]
 ```
 
 The scheme of a Fuchsia package are the case-insensitive characters, `fuchsia-pkg://`.
@@ -70,7 +70,7 @@ at runtime.
 **Required**
 
 ```
-fuchsia-pkg://fuchsia-pkg://{{ '<strong>' }}<repository>{{ '</strong>' }}/<package-name>?hash=<package-hash>#<resource-path>
+fuchsia-pkg://{{ '<strong>' }}<repository>{{ '</strong>' }}/<package-name>?hash=<package-hash>#<resource-path>
 ```
 
 #### Examples
@@ -105,7 +105,7 @@ if they have the same name.
 **Required**
 
 ```
-fuchsia-pkg://fuchsia-pkg://<repository>/{{ '<strong>' }}<package-name>{{ '</strong>' }}?hash=<package-hash>#<resource-path>
+fuchsia-pkg://<repository>/{{ '<strong>' }}<package-name>{{ '</strong>' }}?hash=<package-hash>#<resource-path>
 ```
 
 There must be a single `/` character between the repository and [package name](#package-name).
@@ -136,7 +136,7 @@ of the following latin-1 characters: digits (`0` to `9`) and lower-case letters
 **Optional**
 
 ```
-fuchsia-pkg://fuchsia-pkg://<repository>/<package-name>{{ '<strong>' }}?hash=<package-hash>{{ '</strong>' }}#<resource-path>
+fuchsia-pkg://<repository>/<package-name>{{ '<strong>' }}?hash=<package-hash>{{ '</strong>' }}#<resource-path>
 ```
 
 Only valid if a package name is specified.
@@ -175,7 +175,7 @@ For example, `hello/unicode/%F0%9F%98%81` decodes to `hello/unicode/😁`.
 Only valid if a package was specified.
 
 ```
-fuchsia-pkg://fuchsia-pkg://<repository>/<package-name>?hash=<package-hash>{{ '<strong>' }}#<resource-path>{{ '</strong>' }}
+fuchsia-pkg://<repository>/<package-name>?hash=<package-hash>{{ '<strong>' }}#<resource-path>{{ '</strong>' }}
 ```
 
 #### Examples
