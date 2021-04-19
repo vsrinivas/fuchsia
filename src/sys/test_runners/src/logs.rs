@@ -174,7 +174,7 @@ impl SocketLogWriter {
 mod tests {
     use {
         super::*,
-        anyhow::{anyhow, format_err, Context, Error},
+        anyhow::{format_err, Context, Error},
         fuchsia_async::{self as fasync, futures::try_join},
         fuchsia_zircon as zx,
         matches::assert_matches,
@@ -264,9 +264,7 @@ mod tests {
 
                 // Temporarily convert fasync::Socket back to zx::Socket so that
                 // we can use non-blocking `read` call.
-                let rx = rx
-                    .into_zx_socket()
-                    .map_err(|_original_socket| anyhow!("Failed to convert to zx::Socket"))?;
+                let rx = rx.into_zx_socket();
                 let mut buffer = vec![0u8; SOCKET_BUFFER_SIZE];
                 let maybe_bytes_read = rx.read(&mut buffer);
                 assert_eq!(maybe_bytes_read, Err(zx::Status::SHOULD_WAIT));

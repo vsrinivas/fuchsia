@@ -45,8 +45,8 @@ impl Socket {
     }
 
     /// Convert AsyncSocket back into a regular socket
-    pub fn into_zx_socket(self) -> Result<super::Socket, Socket> {
-        Ok(self.socket)
+    pub fn into_zx_socket(self) -> super::Socket {
+        self.socket
     }
 
     /// Polls for the next data on the socket, appending it to the end of |out| if it has arrived.

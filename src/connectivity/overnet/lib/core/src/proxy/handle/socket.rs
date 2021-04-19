@@ -4,7 +4,7 @@
 
 use super::{IntoProxied, Message, Proxyable, RouterHolder, Serializer, IO};
 use crate::peer::{MessageStats, PeerConnRef};
-use anyhow::{format_err, Error};
+use anyhow::Error;
 use fidl::{AsyncSocket, HandleBased};
 use fuchsia_zircon_status as zx_status;
 use futures::io::{AsyncRead, AsyncWrite};
@@ -34,12 +34,7 @@ impl Proxyable for Socket {
     }
 
     fn into_fidl_handle(self) -> Result<fidl::Handle, Error> {
-        Ok(self
-            .socket
-            .into_inner()
-            .into_zx_socket()
-            .map_err(|_| format_err!("Failed to extract Socket from AsyncSocket"))?
-            .into_handle())
+        Ok(self.socket.into_inner().into_zx_socket().into_handle())
     }
 }
 

@@ -58,7 +58,7 @@ impl SocketPacketReceiver {
 
 /// An I/O object representing a `Socket`.
 pub struct Socket {
-    handle: Arc<zx::Socket>,
+    handle: zx::Socket,
     receiver: ReceiverRegistration<SocketPacketReceiver>,
 }
 
@@ -77,20 +77,6 @@ impl AsHandleRef for Socket {
 impl Socket {
     /// Create a new `Socket` from a previously-created zx::Socket.
     pub fn from_socket(handle: zx::Socket) -> Result<Self, zx::Status> {
-        Self::from_socket_arc_unchecked(Arc::new(handle))
-    }
-}
-
-impl Socket {
-    /// If there is a single instance of this socket, return the underlying object.
-    /// Otherwise, return an error containing the socket.
-    pub fn into_zx_socket(self) -> Result<zx::Socket, Socket> {
-        let receiver = self.receiver;
-        Arc::try_unwrap(self.handle).map_err(move |handle| Self { handle, receiver })
-    }
-
-    /// Creates a new `Socket` from a previously-created `zx::Socket`.
-    fn from_socket_arc_unchecked(handle: Arc<zx::Socket>) -> Result<Self, zx::Status> {
         let ehandle = EHandle::local();
 
         // Optimistically assume that the handle is readable and writable.
@@ -111,6 +97,11 @@ impl Socket {
         socket.schedule_packet(Signals::SOCKET_PEER_CLOSED)?;
 
         Ok(socket)
+    }
+
+    /// Return the underlying Zircon object.
+    pub fn into_zx_socket(self) -> zx::Socket {
+        self.handle
     }
 
     /// Tests if the resource currently has either the provided `signal`

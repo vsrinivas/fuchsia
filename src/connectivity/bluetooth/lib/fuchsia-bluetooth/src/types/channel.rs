@@ -213,7 +213,7 @@ impl TryFrom<Channel> for bredr::Channel {
     type Error = anyhow::Error;
 
     fn try_from(channel: Channel) -> Result<Self, Self::Error> {
-        let socket = channel.socket.into_zx_socket().map_err(|_| format_err!("socket in use"))?;
+        let socket = channel.socket.into_zx_socket();
         let ext_direction = channel
             .audio_direction_ext
             .map(|proxy| {
