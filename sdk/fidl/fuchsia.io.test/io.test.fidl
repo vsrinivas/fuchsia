@@ -107,19 +107,6 @@ protocol Io1Harness {
                  uint32 flags,
                  request<fuchsia.io.Directory> directory_request);
 
-    /// Serves a directory with a single vmofile inside.
-    ///
-    /// + `name` the name of the vmofile in the root directory.
-    /// + `flags` the flags the served directory connection has.
-    /// + `directory_request` the server end of the root directory connection.
-    ///
-    /// TODO(fxbug.dev/33880): Add suppport for VMO files to GetDirectory and
-    /// then delete this method.
-    GetDirectoryWithVmoFile(fuchsia.mem.Range file,
-                            string name,
-                            uint32 flags,
-                            request<fuchsia.io.Directory> directory_request);
-
     /// Serves a directory that holds a child `remote_directory` with name
     /// `dir_name`. The `directory_request` connection to the root directory
     /// has rights defined by `flags`.

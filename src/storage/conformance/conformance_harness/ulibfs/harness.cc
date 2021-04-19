@@ -66,23 +66,6 @@ class UlibfsHarness : public fuchsia::io::test::Io1Harness {
     callback(std::move(config));
   }
 
-  void GetDirectoryWithVmoFile(
-      fuchsia::mem::Range file, std::string filename, uint32_t flags,
-      fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
-    fbl::RefPtr<fs::PseudoDir> root{fbl::MakeRefCounted<fs::PseudoDir>()};
-    root->AddEntry(filename, fbl::MakeRefCounted<fs::VmoFile>(file.vmo, file.offset, file.size));
-    fs::VnodeConnectionOptions options = fs::VnodeConnectionOptions::FromIoV1Flags(flags);
-    options = fs::VnodeConnectionOptions::FilterForNewConnection(options);
-    zx_status_t status = vfs_->Serve(std::move(root), directory_request.TakeChannel(), options);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Serving directory with vmo file failed: " << zx_status_get_string(status);
-      return;
-    }
-    FX_LOGS(INFO) << "Serving directory with vmo file";
-    // Stash the vmo here, because |fs::VmoFile| only borrows a reference to it.
-    test_vmos_.emplace_back(std::move(file.vmo));
-  }
-
   void GetDirectoryWithRemoteDirectory(
       fidl::InterfaceHandle<fuchsia::io::Directory> remote_directory, std::string dirname,
       uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {

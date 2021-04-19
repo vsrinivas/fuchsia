@@ -80,12 +80,6 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
     callback(std::move(config));
   }
 
-  void GetDirectoryWithVmoFile(
-      fuchsia::mem::Range file, std::string filename, uint32_t flags,
-      fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
-    ZX_PANIC("Method not supported");
-  }
-
   void GetDirectoryWithRemoteDirectory(
       fidl::InterfaceHandle<fuchsia::io::Directory> remote_directory, std::string dirname,
       uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {

@@ -124,17 +124,6 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                 }
                 (dir, flags, directory_request)
             }
-            Io1HarnessRequest::GetDirectoryWithVmoFile {
-                file,
-                name,
-                flags,
-                directory_request,
-                control_handle: _,
-            } => {
-                let dir = simple();
-                dir.add_entry(name, new_vmo_file(&file)?)?;
-                (dir, flags, directory_request)
-            }
             // TODO(fxbug.dev/33880): Implement GetDirectoryWithRemoteDirectory.
             _ => {
                 return Err(anyhow!("Unsupported request type: {:?}.", request));
