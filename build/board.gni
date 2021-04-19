@@ -10,6 +10,10 @@ declare_args() {
   # board definition rather than the product definition.
   board_package_labels = []
 
+  # A list of package labels to include in the recovery package set. Used by the
+  # board definition rather than the product definition.
+  board_recovery_package_labels = []
+
   # A list of binary labels to include in the ZBI.
   board_bootfs_labels = []
 
