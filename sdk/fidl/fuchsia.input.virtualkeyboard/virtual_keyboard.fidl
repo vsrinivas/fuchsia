@@ -22,6 +22,19 @@ flexible enum TextType {
     PHONE = 2;
 };
 
+/// Describes reasons that the virtual keyboard might be added to, or
+/// removed from, the interface rendered to the user.
+flexible enum VisibilityChangeReason {
+    /// Visibility changed due to a programmatic request. E.g., the GUI
+    /// component's call to `WatchTypeAndVisibility()` returned a new
+    /// value for `is_visible`.
+    PROGRAMMATIC = 1;
+
+    /// Visibility changed due to the user's interaction with the GUI
+    /// compoment. E.g., the user tapped the dismiss button.
+    USER_INTERACTION = 2;
+};
+
 /// Provides the ability to acquire a `Controller`.
 ///
 /// This protocol exists to bind `Controller`s to `View`s (via `ViewRef`s).
@@ -79,10 +92,12 @@ protocol ControllerCreator {
 /// * Consumed by application runtimes. For example, Flutter, Chromium.
 ///
 /// # Related protocols
-/// This protocol does not provide access to the output of the virtual
-/// keyboard. For that, see one of the following protocols:
-/// * `fuchsia.ui.input3.Keyboard` (for keystrokes)
-/// * `fuchsia.ui.input.InputMethodEditor` (for text editing)
+/// * This protocol does not provide access to the output of the virtual
+///   keyboard. For that, see one of the following protocols:
+///   * `fuchsia.ui.input3.Keyboard` (for keystrokes)
+///   * `fuchsia.ui.input.InputMethodEditor` (for text editing)
+/// * This protocol is tended for the consumer/user of a virtual keyboard.
+///   The implementer/owner of the keyboard should use `Manager` below.
 ///
 /// # Note for implementers
 /// Calls to this protocol's methods would, ideally, only be allowed when the
@@ -149,4 +164,34 @@ protocol Controller {
     ///      does not guarantee that the keyboard is visible on screen)
     ///    * `false` otherwise
     WatchVisibility() -> (bool is_visible);
+};
+
+/// Enables the virtual keyboard UI to synchronize state with the platform.
+///
+/// # Roles
+/// This protocol will typically be:
+/// * Implemented by platform components which control UI policy.
+///   For example, Root Presenter, or the Workstation Session.
+/// * Consumed by components which provide a GUI affordance for text input.
+[Discoverable]
+protocol Manager {
+    /// Waits for a change in intended `text_type` or visibility, then
+    /// reports the new value. In response to a status change, the caller
+    /// should set the requested type and visibility, then call `Notify`
+    /// to inform the platform of the change.
+    ///
+    /// The first call immediately returns the currently intended
+    /// `text_type` and visibility.
+    ///
+    /// In the event that `text_type` is not supported, the caller should
+    /// implement a fallback that provides as many of the necessary keys
+    /// as possible.
+    WatchTypeAndVisibility() -> (TextType text_type, bool is_visible);
+
+    /// Informs the callee that the visibility of the virtual keyboard has
+    /// changed, and what triggered the change.
+    ///
+    /// The caller _should_ wait for a result before invoking invoking this
+    /// method again, to avoid overloading the callee.
+    Notify(bool is_visible, VisibilityChangeReason reason) -> ();
 };
