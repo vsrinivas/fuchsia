@@ -51,8 +51,8 @@ resource table DriverStartArgs {
 /// Protocol through which a driver's lifecycle can be managed.
 ///
 /// Closing the protocol's channel is used to signal:
-///   1. To the driver manager that the driver has stopped.
-///   2. To the driver that it should stop.
+///   1. To the driver runner that the driver has stopped.
+///   2. To the driver host that the driver should stop.
 protocol Driver {
 };
 
