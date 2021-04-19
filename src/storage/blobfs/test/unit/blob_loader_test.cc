@@ -158,17 +158,13 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     EXPECT_EQ(digest.Parse(info.path), ZX_OK);
     EXPECT_EQ(setup_.blobfs()->Cache().Lookup(digest, &node), ZX_OK);
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(node));
-    auto algorithm_or = AlgorithmForInode(vnode->GetNode());
+    auto algorithm_or = AlgorithmForInode(*setup_.blobfs()->GetNode(vnode->Ino()).value());
     EXPECT_TRUE(algorithm_or.is_ok());
     return algorithm_or.value();
   }
 
   // Used to access protected Blob members because this class is a friend.
   const fzl::OwnedVmoMapper& GetBlobMerkleMapper(const Blob* blob) { return blob->merkle_mapping_; }
-  bool IsBlobPagerBacked(const Blob& blob) const {
-    std::lock_guard lock(blob.mutex_);
-    return blob.IsPagerBacked();
-  }
 
   void CheckMerkleTreeContents(const fzl::OwnedVmoMapper& merkle, const BlobInfo& info) {
     std::unique_ptr<MerkleTreeInfo> merkle_tree = CreateMerkleTree(
@@ -229,7 +225,7 @@ TEST_P(BlobLoaderPagedTest, SmallBlob) {
   // don't need to be compressed.
 
   auto blob = LookupBlob(*info);
-  EXPECT_TRUE(IsBlobPagerBacked(*blob));
+  EXPECT_TRUE(blob->IsPagerBacked());
 
   std::vector<uint8_t> data = LoadPagedBlobData(blob.get());
   ASSERT_TRUE(info->DataEquals(&data[0], data.size()));
@@ -279,7 +275,7 @@ TEST_P(BlobLoaderPagedTest, LargeBlob) {
   ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
 
   auto blob = LookupBlob(*info);
-  EXPECT_TRUE(IsBlobPagerBacked(*blob));
+  EXPECT_TRUE(blob->IsPagerBacked());
 
   std::vector<uint8_t> data = LoadPagedBlobData(blob.get());
   ASSERT_TRUE(info->DataEquals(&data[0], data.size()));
@@ -294,7 +290,7 @@ TEST_P(BlobLoaderPagedTest, LargeBlobWithNonAlignedLength) {
   ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
 
   auto blob = LookupBlob(*info);
-  EXPECT_TRUE(IsBlobPagerBacked(*blob));
+  EXPECT_TRUE(blob->IsPagerBacked());
 
   std::vector<uint8_t> data = LoadPagedBlobData(blob.get());
   ASSERT_TRUE(info->DataEquals(&data[0], data.size()));

@@ -107,21 +107,21 @@ struct Blob::WriteInfo {
   }
 };
 
+bool SupportsPaging(CompressionAlgorithm algorithm) {
+  return algorithm == CompressionAlgorithm::UNCOMPRESSED ||
+         algorithm == CompressionAlgorithm::CHUNKED;
+}
+
 bool SupportsPaging(const Inode& inode) {
   zx::status<CompressionAlgorithm> status = AlgorithmForInode(inode);
-  if (status.is_ok() && (status.value() == CompressionAlgorithm::UNCOMPRESSED ||
-                         status.value() == CompressionAlgorithm::CHUNKED)) {
-    return true;
-  }
-  return false;
+  return status.is_ok() && SupportsPaging(status.value());
 }
 
 zx_status_t Blob::VerifyNullBlob() const {
-  ZX_ASSERT(inode_.blob_size == 0);
+  ZX_ASSERT(blob_size_ == 0);
   std::unique_ptr<BlobVerifier> verifier;
-  if (zx_status_t status =
-          BlobVerifier::CreateWithoutTree(digest(), blobfs_->Metrics(), inode_.blob_size,
-                                          &blobfs_->blob_corruption_notifier(), &verifier);
+  if (zx_status_t status = BlobVerifier::CreateWithoutTree(
+          digest(), blobfs_->Metrics(), 0, &blobfs_->blob_corruption_notifier(), &verifier);
       status != ZX_OK) {
     return status;
   }
@@ -130,8 +130,8 @@ zx_status_t Blob::VerifyNullBlob() const {
 
 uint64_t Blob::SizeData() const {
   std::lock_guard lock(mutex_);
-  if (state() == BlobState::kReadable) {
-    return inode_.blob_size;
+  if (state() == BlobState::kReadablePaged || state() == BlobState::kReadableLegacy) {
+    return blob_size_;
   }
   return 0;
 }
@@ -144,30 +144,32 @@ Blob::Blob(Blobfs* bs, const digest::Digest& digest)
 Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
     : CacheNode(bs->vfs(), digest::Digest(inode.merkle_root_hash)),
       blobfs_(bs),
-      state_(BlobState::kReadable),
+      state_(SupportsPaging(inode) ? BlobState::kReadablePaged : BlobState::kReadableLegacy),
       syncing_state_(SyncingState::kDone),
       map_index_(node_index),
       clone_watcher_(this),
-      inode_(inode) {
+      blob_size_(inode.blob_size),
+      block_count_(inode.block_count) {
   write_info_ = std::make_unique<WriteInfo>();
 }
 
 zx_status_t Blob::WriteNullBlob() {
-  ZX_DEBUG_ASSERT(inode_.blob_size == 0);
-  ZX_DEBUG_ASSERT(inode_.block_count == 0);
+  ZX_DEBUG_ASSERT(blob_size_ == 0);
+  ZX_DEBUG_ASSERT(block_count_ == 0);
 
   if (zx_status_t status = VerifyNullBlob(); status != ZX_OK) {
     return status;
   }
 
   BlobTransaction transaction;
-  if (zx_status_t status = WriteMetadata(transaction); status != ZX_OK) {
+  if (zx_status_t status = WriteMetadata(transaction, CompressionAlgorithm::UNCOMPRESSED);
+      status != ZX_OK) {
     return status;
   }
   transaction.Commit(*blobfs_->journal(), {},
                      [blob = fbl::RefPtr(this)]() { blob->CompleteSync(); });
 
-  return MarkReadable();
+  return MarkReadable(CompressionAlgorithm::UNCOMPRESSED);
 }
 
 zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
@@ -190,8 +192,7 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  memset(inode_.merkle_root_hash, 0, sizeof(inode_.merkle_root_hash));
-  inode_.blob_size = size_data;
+  blob_size_ = size_data;
 
   // Reserve a node for blob's inode. We might need more nodes for extents later.
   zx_status_t status = blobfs_->GetAllocator()->ReserveNodes(1, &write_info_->node_indices);
@@ -204,14 +205,14 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
   // write into the data vmo.
   if (compress) {
     write_info_->compressor =
-        BlobCompressor::Create(blobfs_->write_compression_settings(), inode_.blob_size);
+        BlobCompressor::Create(blobfs_->write_compression_settings(), blob_size_);
     if (!write_info_->compressor) {
       // TODO(fxbug.dev/70356)Make BlobCompressor::Create return the actual error instead.
       // Replace ZX_ERR_INTERNAL with the correct error once fxbug.dev/70356 is fixed.
       FX_LOGS(ERROR) << "Failed to initialize compressor: " << ZX_ERR_INTERNAL;
       return ZX_ERR_INTERNAL;
     }
-  } else if (inode_.blob_size != 0) {
+  } else if (blob_size_ != 0) {
     if ((status = PrepareDataVmoForWriting()) != ZX_OK) {
       return status;
     }
@@ -219,7 +220,7 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
 
   write_info_->merkle_tree_creator.SetUseCompactFormat(
       ShouldUseCompactMerkleTreeFormat(GetBlobLayoutFormat(blobfs_->Info())));
-  if ((status = write_info_->merkle_tree_creator.SetDataLength(inode_.blob_size)) != ZX_OK) {
+  if ((status = write_info_->merkle_tree_creator.SetDataLength(blob_size_)) != ZX_OK) {
     return status;
   }
   const size_t tree_len = write_info_->merkle_tree_creator.GetTreeLength();
@@ -235,7 +236,7 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
   set_state(BlobState::kDataWrite);
 
   // Special case for the null blob: We skip the write phase.
-  return inode_.blob_size == 0 ? WriteNullBlob() : ZX_OK;
+  return blob_size_ == 0 ? WriteNullBlob() : ZX_OK;
 }
 
 void Blob::SetOldBlob(Blob& blob) {
@@ -249,16 +250,12 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
 
   fs::Ticker ticker(blobfs_->Metrics()->Collecting());
 
-  // Initialize the inode with known fields. The block count may change if the
-  // blob is compressible.
-  inode_.block_count = block_count;
-
   fbl::Vector<ReservedExtent> extents;
   fbl::Vector<ReservedNode> nodes;
 
   // Reserve space for the blob.
   const uint64_t reserved_blocks = blobfs_->GetAllocator()->ReservedBlockCount();
-  zx_status_t status = blobfs_->GetAllocator()->ReserveBlocks(inode_.block_count, &extents);
+  zx_status_t status = blobfs_->GetAllocator()->ReserveBlocks(block_count, &extents);
   if (status == ZX_ERR_NO_SPACE && reserved_blocks > 0) {
     // It's possible that a blob has just been unlinked but has yet to be flushed through the
     // journal, and the blocks are still reserved, so if that looks likely, force a flush and then
@@ -266,7 +263,7 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
     sync_completion_t sync;
     blobfs_->Sync([&](zx_status_t) { sync_completion_signal(&sync); });
     sync_completion_wait(&sync, ZX_TIME_INFINITE);
-    status = blobfs_->GetAllocator()->ReserveBlocks(inode_.block_count, &extents);
+    status = blobfs_->GetAllocator()->ReserveBlocks(block_count, &extents);
   }
   if (status != ZX_OK) {
     return status;
@@ -291,7 +288,8 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
   while (!nodes.is_empty()) {
     write_info_->node_indices.push_back(nodes.erase(0));
   }
-  blobfs_->Metrics()->UpdateAllocation(inode_.blob_size, ticker.End());
+  block_count_ = block_count;
+  blobfs_->Metrics()->UpdateAllocation(blob_size_, ticker.End());
   return ZX_OK;
 }
 
@@ -301,18 +299,12 @@ bool Blob::IsDataLoaded() const {
   return paged_vmo().is_valid() || unpaged_backing_data_.is_valid();
 }
 
-bool Blob::IsPagerBacked() const {
-  return SupportsPaging(inode_) && state() == BlobState::kReadable;
-}
-
-zx_status_t Blob::WriteMetadata(BlobTransaction& transaction) {
+zx_status_t Blob::WriteMetadata(BlobTransaction& transaction,
+                                CompressionAlgorithm compression_algorithm) {
   TRACE_DURATION("blobfs", "Blobfs::WriteMetadata");
   assert(state() == BlobState::kDataWrite);
 
-  // Update the on-disk hash.
-  digest().CopyTo(inode_.merkle_root_hash);
-
-  if (inode_.block_count) {
+  if (block_count_) {
     // We utilize the NodePopulator class to take our reserved blocks and nodes and fill the
     // persistent map with an allocated inode / container.
 
@@ -324,25 +316,8 @@ zx_status_t Blob::WriteMetadata(BlobTransaction& transaction) {
 
     // If |on_extent| is invoked on an extent, it was necessary to represent this blob. Persist
     // the allocation of these blocks back to durable storage.
-    //
-    // Additionally, because of the compression feature of blobfs, it is possible we reserved
-    // more extents than this blob ended up using. Decrement |remaining_blocks| to track if we
-    // should exit early.
-    size_t remaining_blocks = inode_.block_count;
-    auto on_extent = [this, &transaction, &remaining_blocks](ReservedExtent& extent) {
-      ZX_DEBUG_ASSERT(remaining_blocks > 0);
-      if (remaining_blocks >= extent.extent().Length()) {
-        // Consume the entire extent.
-        remaining_blocks -= extent.extent().Length();
-      } else {
-        // Consume only part of the extent; we're done iterating.
-        extent.SplitAt(static_cast<BlockCountType>(remaining_blocks));
-        remaining_blocks = 0;
-      }
+    auto on_extent = [this, &transaction](ReservedExtent& extent) {
       blobfs_->PersistBlocks(extent, transaction);
-      if (remaining_blocks == 0) {
-        return NodePopulator::IterationCommand::Stop;
-      }
       return NodePopulator::IterationCommand::Continue;
     };
 
@@ -351,20 +326,16 @@ zx_status_t Blob::WriteMetadata(BlobTransaction& transaction) {
       return mapped_inode_or_error.status_value();
     }
     InodePtr mapped_inode = std::move(mapped_inode_or_error).value();
-    *mapped_inode = inode_;
+    *mapped_inode = Inode{
+        .blob_size = blob_size_,
+        .block_count = block_count_,
+    };
+    digest().CopyTo(mapped_inode->merkle_root_hash);
     NodePopulator populator(blobfs_->GetAllocator(), std::move(write_info_->extents),
                             std::move(write_info_->node_indices));
-    ZX_ASSERT(populator.Walk(on_node, on_extent) == ZX_OK);
-
-    // Ensure all non-allocation flags are propagated to the inode.
-    const uint16_t non_allocation_flags = kBlobFlagMaskAnyCompression;
-    {
-      const uint16_t compression_flags = inode_.header.flags & kBlobFlagMaskAnyCompression;
-      // Kernighan's algorithm for bit counting, returns 0 when zero or one bits are set.
-      ZX_DEBUG_ASSERT((compression_flags & (compression_flags - 1)) == 0);
-    }
-    mapped_inode->header.flags &= ~non_allocation_flags;  // Clear any existing flags first.
-    mapped_inode->header.flags |= (inode_.header.flags & non_allocation_flags);
+    zx_status_t status = populator.Walk(on_node, on_extent);
+    ZX_ASSERT(status == ZX_OK);
+    SetCompressionAlgorithm(&*mapped_inode, compression_algorithm);
   } else {
     // Special case: Empty node.
     ZX_DEBUG_ASSERT(write_info_->node_indices.size() == 1);
@@ -373,7 +344,8 @@ zx_status_t Blob::WriteMetadata(BlobTransaction& transaction) {
       return mapped_inode_or_error.status_value();
     }
     InodePtr mapped_inode = std::move(mapped_inode_or_error).value();
-    *mapped_inode = inode_;
+    *mapped_inode = Inode{};
+    digest().CopyTo(mapped_inode->merkle_root_hash);
     blobfs_->GetAllocator()->MarkInodeAllocated(std::move(write_info_->node_indices[0]));
     blobfs_->PersistNode(map_index_, transaction);
   }
@@ -395,7 +367,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     return ZX_ERR_BAD_STATE;
   }
 
-  const size_t to_write = std::min(len, inode_.blob_size - write_info_->bytes_written);
+  const size_t to_write = std::min(len, blob_size_ - write_info_->bytes_written);
   const size_t offset = write_info_->bytes_written;
 
   *actual = to_write;
@@ -421,7 +393,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
   }
 
   // More data to write.
-  if (write_info_->bytes_written < inode_.blob_size) {
+  if (write_info_->bytes_written < blob_size_) {
     return ZX_OK;
   }
 
@@ -457,16 +429,16 @@ zx_status_t Blob::Commit() {
     // decompression API to support streaming.
     if (write_info_->compressor->algorithm() == CompressionAlgorithm::CHUNKED &&
         fbl::round_up(write_info_->compressor->Size() + merkle_size, kBlobfsBlockSize) >=
-            fbl::round_up(inode_.blob_size + merkle_size, kBlobfsBlockSize)) {
+            fbl::round_up(blob_size_ + merkle_size, kBlobfsBlockSize)) {
       compress = false;
     }
   }
 
   fs::Duration generation_time;
 
-  const uint64_t data_size = compress ? write_info_->compressor->Size() : inode_.blob_size;
-  auto blob_layout = BlobLayout::CreateFromSizes(GetBlobLayoutFormat(blobfs_->Info()),
-                                                 inode_.blob_size, data_size, GetBlockSize());
+  const uint64_t data_size = compress ? write_info_->compressor->Size() : blob_size_;
+  auto blob_layout = BlobLayout::CreateFromSizes(GetBlobLayoutFormat(blobfs_->Info()), blob_size_,
+                                                 data_size, GetBlockSize());
   if (blob_layout.is_error()) {
     FX_LOGS(ERROR) << "Failed to create blob layout: " << blob_layout.status_string();
     return blob_layout.status_value();
@@ -482,18 +454,18 @@ zx_status_t Blob::Commit() {
   std::variant<std::monostate, DecompressBlobDataProducer, SimpleBlobDataProducer> data;
   BlobDataProducer* data_ptr = nullptr;
   fzl::VmoMapper data_mapping;
+  CompressionAlgorithm compression_algorithm = CompressionAlgorithm::UNCOMPRESSED;
 
   if (compress) {
     // The data comes from the compression buffer.
     data_ptr = &data.emplace<SimpleBlobDataProducer>(
         fbl::Span(static_cast<const uint8_t*>(write_info_->compressor->Data()),
                   write_info_->compressor->Size()));
-    SetCompressionAlgorithm(&inode_, write_info_->compressor->algorithm());
+    compression_algorithm = write_info_->compressor->algorithm();
   } else if (write_info_->compressor) {
     // In this case, we've decided against compressing because there are no savings, so we have to
     // decompress.
-    if (auto producer_or =
-            DecompressBlobDataProducer::Create(*write_info_->compressor, inode_.blob_size);
+    if (auto producer_or = DecompressBlobDataProducer::Create(*write_info_->compressor, blob_size_);
         producer_or.is_error()) {
       return producer_or.error_value();
     } else {
@@ -502,14 +474,14 @@ zx_status_t Blob::Commit() {
   } else {
     // The data comes from the data buffer.
     ZX_ASSERT(unpaged_backing_data_.is_valid());
-    uint64_t block_aligned_size = fbl::round_up(inode_.blob_size, kBlobfsBlockSize);
+    uint64_t block_aligned_size = fbl::round_up(blob_size_, kBlobfsBlockSize);
     if (zx_status_t status = data_mapping.Map(unpaged_backing_data_, 0, block_aligned_size);
         status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to map blob VMO: " << zx_status_get_string(status);
       return status;
     }
     data_ptr = &data.emplace<SimpleBlobDataProducer>(
-        fbl::Span(static_cast<const uint8_t*>(data_mapping.start()), inode_.blob_size));
+        fbl::Span(static_cast<const uint8_t*>(data_mapping.start()), blob_size_));
   }
 
   SimpleBlobDataProducer merkle(fbl::Span(write_info_->merkle_tree(), merkle_size));
@@ -560,7 +532,7 @@ zx_status_t Blob::Commit() {
   // Wrap all pending writes with a strong reference to this Blob, so that it stays
   // alive while there are writes in progress acting on it.
   BlobTransaction transaction;
-  if (zx_status_t status = WriteMetadata(transaction); status != ZX_OK) {
+  if (zx_status_t status = WriteMetadata(transaction, compression_algorithm); status != ZX_OK) {
     return status;
   }
   if (write_info_->old_blob) {
@@ -581,9 +553,9 @@ zx_status_t Blob::Commit() {
     return data_status;
   }
 
-  blobfs_->Metrics()->UpdateClientWrite(inode_.block_count * kBlobfsBlockSize, merkle_size,
-                                        ticker.End(), generation_time);
-  return MarkReadable();
+  blobfs_->Metrics()->UpdateClientWrite(block_count_ * kBlobfsBlockSize, merkle_size, ticker.End(),
+                                        generation_time);
+  return MarkReadable(compression_algorithm);
 }
 
 zx_status_t Blob::WriteData(uint32_t block_count, BlobDataProducer& producer,
@@ -623,7 +595,7 @@ zx_status_t Blob::WriteData(uint32_t block_count, BlobDataProducer& producer,
       });
 }
 
-zx_status_t Blob::MarkReadable() {
+zx_status_t Blob::MarkReadable(CompressionAlgorithm compression_algorithm) {
   if (readable_event_.is_valid()) {
     zx_status_t status = readable_event_.signal(0u, ZX_USER_SIGNAL_0);
     if (status != ZX_OK) {
@@ -631,7 +603,8 @@ zx_status_t Blob::MarkReadable() {
       return status;
     }
   }
-  set_state(BlobState::kReadable);
+  set_state(SupportsPaging(compression_algorithm) ? BlobState::kReadablePaged
+                                                  : BlobState::kReadableLegacy);
   { syncing_state_ = SyncingState::kSyncing; }
   write_info_.reset();
   return ZX_OK;
@@ -645,7 +618,7 @@ zx_status_t Blob::GetReadableEvent(zx::event* out) {
     status = zx::event::create(0, &readable_event_);
     if (status != ZX_OK) {
       return status;
-    } else if (state() == BlobState::kReadable) {
+    } else if (state() == BlobState::kReadablePaged || state() == BlobState::kReadableLegacy) {
       readable_event_.signal(0u, ZX_USER_SIGNAL_0);
     }
   }
@@ -662,10 +635,10 @@ zx_status_t Blob::GetReadableEvent(zx::event* out) {
 zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size) {
   TRACE_DURATION("blobfs", "Blobfs::CloneVmo", "rights", rights);
 
-  if (state() != BlobState::kReadable) {
+  if (!IsReadable()) {
     return ZX_ERR_BAD_STATE;
   }
-  if (inode_.blob_size == 0) {
+  if (blob_size_ == 0) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -675,7 +648,7 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
   }
 
   zx::vmo clone;
-  status = paged_vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, inode_.blob_size, &clone);
+  status = paged_vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, blob_size_, &clone);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create child VMO: " << zx_status_get_string(status);
     return status;
@@ -701,7 +674,7 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
     return status;
   }
   *out_vmo = std::move(clone);
-  *out_size = inode_.blob_size;
+  *out_size = blob_size_;
 
   if (clone_watcher_.object() == ZX_HANDLE_INVALID) {
     clone_watcher_.set_object(paged_vmo().get());
@@ -788,27 +761,27 @@ zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actua
   // outside the lock.
   std::lock_guard lock(mutex_);
 
-  if (state() != BlobState::kReadable) {
+  if (!IsReadable()) {
     return ZX_ERR_BAD_STATE;
   }
 
   if (zx_status_t status = LoadVmosFromDisk(); status != ZX_OK)
     return status;
 
-  if (inode_.blob_size == 0) {
+  if (blob_size_ == 0) {
     *actual = 0;
     return ZX_OK;
   }
-  if (off >= inode_.blob_size) {
+  if (off >= blob_size_) {
     *actual = 0;
     return ZX_OK;
   }
-  if (len > (inode_.blob_size - off)) {
-    len = inode_.blob_size - off;
+  if (len > (blob_size_ - off)) {
+    len = blob_size_ - off;
   }
   ZX_DEBUG_ASSERT(IsDataLoaded());
 
-  if (IsPagerBacked()) {
+  if (state_ == BlobState::kReadablePaged) {
     // Send pager-backed vmo reads through the pager. This will potentially page-in the data by
     // reentering us from the kernel on the pager thread.
     //
@@ -915,13 +888,13 @@ zx_status_t Blob::LoadVmosFromDisk() {
   if (IsDataLoaded())
     return ZX_OK;
 
-  if (inode_.blob_size == 0) {
+  if (blob_size_ == 0) {
     // Null blobs don't need any loading, just verification that they're correct.
     return VerifyNullBlob();
   }
 
   zx_status_t status;
-  if (IsPagerBacked()) {
+  if (state_ == BlobState::kReadablePaged) {
     status = LoadPagedVmosFromDisk();
   } else {
     status = LoadUnpagedVmosFromDisk();
@@ -938,7 +911,7 @@ zx_status_t Blob::PrepareDataVmoForWriting() {
   if (IsDataLoaded())
     return ZX_OK;
 
-  uint64_t block_aligned_size = fbl::round_up(inode_.blob_size, kBlobfsBlockSize);
+  uint64_t block_aligned_size = fbl::round_up(blob_size_, kBlobfsBlockSize);
   if (zx_status_t status = zx::vmo::create(block_aligned_size, 0, &unpaged_backing_data_);
       status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create data vmo: " << zx_status_get_string(status);
@@ -957,11 +930,11 @@ zx_status_t Blob::QueueUnlink() {
 }
 
 zx_status_t Blob::CommitDataBuffer() {
-  if (inode_.blob_size == 0) {
+  if (blob_size_ == 0) {
     // It's the null blob, so just verify.
     return VerifyNullBlob();
   }
-  return paged_vmo().op_range(ZX_VMO_OP_COMMIT, 0, inode_.blob_size, nullptr, 0);
+  return paged_vmo().op_range(ZX_VMO_OP_COMMIT, 0, blob_size_, nullptr, 0);
 }
 
 zx_status_t Blob::Verify() {
@@ -975,7 +948,7 @@ zx_status_t Blob::Verify() {
   // be verified as they are read in (or for the null bob we just verify immediately).
   // If the commit operation fails due to a verification failure, we do propagate the error back via
   // the return status.
-  if (IsPagerBacked()) {
+  if (state_ == BlobState::kReadablePaged) {
     return CommitDataBuffer();
   }
   return ZX_OK;
@@ -994,7 +967,8 @@ bool Blob::ShouldCache() const {
   std::lock_guard lock(mutex_);
   switch (state()) {
     // All "Valid", cacheable states, where the blob still exists on storage.
-    case BlobState::kReadable:
+    case BlobState::kReadablePaged:
+    case BlobState::kReadableLegacy:
       return true;
     default:
       return false;
@@ -1071,7 +1045,7 @@ zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* 
     ZX_DEBUG_ASSERT(write_info_ != nullptr);
     *out_actual = write_info_->bytes_written;
   } else {
-    *out_actual = inode_.blob_size;
+    *out_actual = blob_size_;
   }
   return status;
 }
@@ -1088,7 +1062,7 @@ zx_status_t Blob::GetAttributes(fs::VnodeAttributes* a) {
   a->mode = V_TYPE_FILE | V_IRUSR;
   a->inode = map_index_;
   a->content_size = content_size;
-  a->storage_size = inode_.block_count * kBlobfsBlockSize;
+  a->storage_size = block_count_ * kBlobfsBlockSize;
   a->link_count = 1;
   a->creation_time = 0;
   a->modification_time = 0;
@@ -1285,7 +1259,7 @@ zx_status_t Blob::TryPurge() {
 zx_status_t Blob::Purge() {
   ZX_DEBUG_ASSERT(Purgeable());
 
-  if (state() == BlobState::kReadable) {
+  if (IsReadable()) {
     // A readable blob should only be purged if it has been unlinked.
     ZX_ASSERT(deletable_);
     BlobTransaction transaction;
@@ -1302,9 +1276,9 @@ uint32_t Blob::GetBlockSize() const { return blobfs_->Info().block_size; }
 void Blob::SetPagedVmoName(bool active) {
   fbl::StringBuffer<ZX_MAX_NAME_LEN> name;
   if (active) {
-    FormatBlobDataVmoName(inode_, &name);
+    FormatBlobDataVmoName(digest(), &name);
   } else {
-    FormatInactiveBlobDataVmoName(inode_, &name);
+    FormatInactiveBlobDataVmoName(digest(), &name);
   }
   // Ignore failures, the name is for informational purposes only.
   paged_vmo().set_property(ZX_PROP_NAME, name.data(), name.size());

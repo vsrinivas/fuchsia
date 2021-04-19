@@ -214,7 +214,7 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
   std::unique_ptr<BlobVerifier> verifier;
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> merkle_vmo_name;
-  FormatBlobMerkleVmoName(inode, &merkle_vmo_name);
+  FormatBlobMerkleVmoName(digest::Digest(inode.merkle_root_hash), &merkle_vmo_name);
 
   zx_status_t status;
   if ((status = merkle_mapper.CreateAndMap(blob_layout.MerkleTreeBlockAlignedSize(),

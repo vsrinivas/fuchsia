@@ -918,8 +918,7 @@ zx_status_t Blobfs::InitializeVnodes() {
     // quickly verify or deny the presence of a blob during blob lookup and creation.
     zx_status_t status = Cache().Add(vnode);
     if (status != ZX_OK) {
-      Digest digest(vnode->GetNode().merkle_root_hash);
-      FX_LOGS(ERROR) << "CORRUPTED FILESYSTEM: Duplicate node: " << digest.ToString() << " @ index "
+      FX_LOGS(ERROR) << "CORRUPTED FILESYSTEM: Duplicate node: " << vnode->digest() << " @ index "
                      << node_index - 1;
       return status;
     }
@@ -1123,7 +1122,6 @@ zx_status_t Blobfs::MigrateToRev3() {
       len -= todo;
       offset += todo;
     }
-    ZX_ASSERT(SupportsPaging(new_blob->GetNode()));
     ++migrated;
   }
   FX_LOGS(INFO) << "Migrated " << migrated << " blob(s)";

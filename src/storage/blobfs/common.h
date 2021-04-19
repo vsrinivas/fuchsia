@@ -91,9 +91,10 @@ BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info);
 // Fills |out| with the VMO names for the blob at |node|.
 // Name collisions are possible, but rare; the name is based on a prefix of the merkle root
 // hash of |node|.
-void FormatBlobDataVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
-void FormatInactiveBlobDataVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
-void FormatBlobMerkleVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
+void FormatBlobDataVmoName(const digest::Digest& digest, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
+void FormatInactiveBlobDataVmoName(const digest::Digest& digest,
+                                   fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
+void FormatBlobMerkleVmoName(const digest::Digest& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
 
 std::ostream& operator<<(std::ostream& stream, const Superblock& info);
 

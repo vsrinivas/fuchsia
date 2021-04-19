@@ -228,7 +228,7 @@ TEST_P(BlobTestWithOldMinorVersion, ReadWriteAllCompressionFormats) {
     if (pass == 1) {
       // Check that it got migrated.
       auto blob = fbl::RefPtr<Blob>::Downcast(file);
-      EXPECT_TRUE(SupportsPaging(blob->GetNode()));
+      EXPECT_TRUE(blob->IsPagerBacked());
       EXPECT_GE(blobfs()->Info().oldest_minor_version, kBlobfsMinorVersionNoOldCompressionFormats);
     } else {
       // Don't hold onto the file past the lifetime of the blobfs that it came from.
@@ -488,6 +488,50 @@ TEST_P(BlobTest, VmoNameActiveWhileVmoClonesExist) {
   EXPECT_FALSE(active) << "Name did not become inactive after deadline";
 }
 
+TEST_P(BlobTest, GetAttributes) {
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
+  uint64_t inode, block_count;
+
+  auto check_attributes = [&](const fs::VnodeAttributes& attributes) {
+    ASSERT_EQ(attributes.mode, unsigned{V_TYPE_FILE | V_IRUSR});
+    ASSERT_EQ(attributes.inode, inode);
+    ASSERT_EQ(attributes.content_size, 64u);
+    ASSERT_EQ(attributes.storage_size, block_count * kBlobfsBlockSize);
+    ASSERT_EQ(attributes.link_count, 1u);
+    ASSERT_EQ(attributes.creation_time, 0u);
+    ASSERT_EQ(attributes.modification_time, 0u);
+  };
+
+  {
+    auto root = OpenRoot();
+
+    fbl::RefPtr<fs::Vnode> file;
+    ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
+    ASSERT_EQ(file->Truncate(info->size_data), ZX_OK);
+
+    size_t out_actual;
+    ASSERT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
+    ASSERT_EQ(out_actual, info->size_data);
+
+    auto blob = fbl::RefPtr<Blob>::Downcast(file);
+    inode = blob->Ino();
+    block_count = blobfs()->GetNode(inode)->block_count;
+
+    fs::VnodeAttributes attributes;
+    ASSERT_EQ(file->GetAttributes(&attributes), ZX_OK);
+    check_attributes(attributes);
+  }
+
+  Remount();
+
+  auto root = OpenRoot();
+  fbl::RefPtr<fs::Vnode> file;
+  ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
+  fs::VnodeAttributes attributes;
+  ASSERT_EQ(file->GetAttributes(&attributes), ZX_OK);
+  check_attributes(attributes);
+}
+
 using BlobMigrationTest = BlobTestWithOldMinorVersion;
 
 TEST_P(BlobMigrationTest, MigrateLargeBlobSucceeds) {
@@ -519,7 +563,7 @@ TEST_P(BlobMigrationTest, MigrateLargeBlobSucceeds) {
     EXPECT_EQ(memcmp(data.get(), info->data.get(), info->size_data), 0);
 
     auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
-    EXPECT_TRUE(SupportsPaging(blob->GetNode()));
+    EXPECT_TRUE(blob->IsPagerBacked());
     EXPECT_GE(blobfs()->Info().oldest_minor_version, kBlobfsMinorVersionNoOldCompressionFormats);
   }
 
