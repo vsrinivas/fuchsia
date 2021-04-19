@@ -173,6 +173,16 @@ shared Starnix address space lets the starnix runner examine the
 a new entry in the file descriptor table for the current process that refers
 to the same file object as file descriptor 7 for process 14.
 
+## Starnix manager
+
+The *starnix manager* is a Fuchsia component that provides scaffolding for
+developing starnix. For example, starnix manager provides a `playground`
+collection that developers can use to run and interact with basic components,
+such as `hello_starnix` and `sh`.
+
+As starnix matures, we might remove starnix manager entirely or replace it
+with a dedicated developer component.
+
 ## Starnix runner
 
 The *starnix runner* is a Fuchsia component framework (CFv2) runner that can
@@ -184,6 +194,14 @@ To run a Linux binary, the starnix runner creates a new
 [child process](#child-process) and loads the binary into the process. If
 that process calls `fork()`, starnix will create another child process to
 back the newly forked process.
+
+## Starnix test runner
+
+The *starnix test runner* is a [test runner](/src/sys/test_runners/README.md)
+that adapts [Linux binaries](#linux-binary) to the `fuchsia.test.Suite`
+interface, making it possible to run Linux binaries as Fuchsia tests. The
+*starnix test runner* uses a dedicated instance of the
+[starnix runner](#starnix-runner) in order to make these tests hermetic.
 
 ## System call
 
