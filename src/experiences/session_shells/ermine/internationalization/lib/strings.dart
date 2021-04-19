@@ -365,4 +365,50 @@ class Strings {
         desc: 'The description displayed in the alert dialog handling '
             'ProposeElementError.REJECTED',
       );
+
+  static String get fuchsiaWelcome => Intl.message(
+        'Welcome to Fuchsia',
+        name: 'fuchsiaWelcome',
+        desc:
+            'A welcome to Fuchsia message shown during the setup of a newly installed system',
+      );
+
+  static String get oobeChannelTitle => Intl.message(
+        'Select an OTA channel',
+        name: 'oobeChannelTitle',
+        desc: 'The title displayed for OTA channel selection in the OOBE',
+      );
+
+  static String get oobeChannelDesc => Intl.message(
+        'Fuchsia will get updates from the channel of your choice. It will not get updated if you skip this step.',
+        name: 'oobeChannelDesc',
+        desc:
+            'The description displayed for selecting an OTA channel in the OOBE',
+      );
+
+  static String get dataSharingTitle => Intl.message(
+        'Send Usage & Diagnostics Data to Google',
+        name: 'dataSharingTitle',
+        desc:
+            'The title displayed for choosing whether to consent to send usage and diagnostics data to Google in the OOBE',
+      );
+
+  static String get dataSharingDesc => Intl.message(
+        'We will use the information you give to us to help address technical issues and to improve our services, subject to our privacy policy. You can change this set-up at anytime later in Settings.',
+        name: 'dataSharingDesc',
+        desc:
+            'The description of what is being agreed to when choosing to send usage and diagnostics data to Google in the OOBE',
+      );
+
+  static String get oobeSshKeysTitle => Intl.message(
+        'Add Your SSH Key',
+        name: 'oobeSshKeysTitle',
+        desc: 'The title displayed for adding an SSH key in the OOBE',
+      );
+
+  static String get oobeSshKeysDesc => Intl.message(
+        'Register your SSH key either by pulling from your Gitbub account or by adding manually.',
+        name: 'oobeSshKeysDesc',
+        desc: 'The description displayed of adding an SSH key in the OOBE',
+      );
 }

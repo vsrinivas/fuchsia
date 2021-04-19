@@ -72,4 +72,40 @@ class ErmineStyle {
 
   /// Recents panel width.
   static const double kRecentsBarWidth = kRecentsItemWidth;
+
+  /// Oobe header top margin.
+  static const double kOobeHeaderTopMargin = 160;
+
+  /// Oobe header bottom margin.
+  static const double kOobeHeaderBottomMargin = 16;
+
+  /// Oobe header logo size.
+  static const double kOobeLogoSize = 28;
+
+  /// Oobe header padding between logo and text.
+  static const double kOobeHeaderElementsPadding = 8;
+
+  /// Oobe title width.
+  static const double kOobeTitleWidth = 856;
+
+  /// Oobe padding between title and description.
+  static const double kOobeTitleDescriptionPadding = 24;
+
+  /// Oobe description width.
+  static const double kOobeDescriptionWidth = 616;
+
+  /// Oobe body vertical margins.
+  static const double kOobeBodyVerticalMargins = 72;
+
+  /// Oobe body horizontal margins.
+  static const double kOobeBodyHorizontalMargins = 150;
+
+  /// Oobe button margins.
+  static const double kOobeButtonMargin = 8;
+
+  /// Oobe footer square size.
+  static const double kOobeFooterSquareSize = 12;
+
+  /// Oobe footer margin.
+  static const double kOobeFooterMargin = 56;
 }

@@ -314,9 +314,9 @@ class AppModel {
 
   /// Exit OOBE and go to overview.
   void exitOobe() {
-    // Set dynamic config file to false so that setup does not launch on next
+    // Set dynamic config file to false so that OOBE does not launch on next
     // boot.
-    final configData = {'launch_startup_setup': false};
+    final configData = {'launch_oobe': false};
     final configString = json.encode(configData);
     File(dynamicConfigPath).writeAsStringSync(configString);
 

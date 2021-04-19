@@ -12,7 +12,7 @@ import("//build/testing/flutter_driver.gni")
 import("//src/lib/icu/tools/static_icu_data.gni")
 
 declare_args() {
-  # Whether or not to launch setup workflow on startup.
+  # Whether or not to launch OOBE workflow on startup.
   start_oobe = false
 }
 
@@ -52,6 +52,7 @@ flutter_app("ermine") {
     "src/models/cluster_model.dart",
     "src/models/ermine_shell.dart",
     "src/models/ermine_story.dart",
+    "src/models/oobe_model.dart",
     "src/models/status_model.dart",
     "src/models/topbar_model.dart",
     "src/utils/crash.dart",
@@ -68,6 +69,11 @@ flutter_app("ermine") {
     "src/widgets/ask/ask_container.dart",
     "src/widgets/ask/ask_suggestion_list.dart",
     "src/widgets/ask/ask_text_field.dart",
+    "src/widgets/oobe/channel.dart",
+    "src/widgets/oobe/data_sharing.dart",
+    "src/widgets/oobe/oobe_buttons.dart",
+    "src/widgets/oobe/oobe_header.dart",
+    "src/widgets/oobe/ssh_keys.dart",
     "src/widgets/status/detail_status_entry.dart",
     "src/widgets/status/spec_builder.dart",
     "src/widgets/status/status.dart",
@@ -219,6 +225,7 @@ flutter_test("ermine_unittests") {
     "crash_test.dart",
     "ermine_story_test.dart",
     "ermine_test.dart",
+    "oobe_model_test.dart",
     "overview_widget_test.dart",
     "recents_widget_test.dart",
     "status_model_test.dart",
