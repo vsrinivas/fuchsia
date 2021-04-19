@@ -27,5 +27,6 @@ ffx_plugin("ffx_flash") {
     "src/lib.rs",
     "src/manifest/mod.rs",
     "src/manifest/v1.rs",
+    "src/manifest/v2.rs",
   ]
 }

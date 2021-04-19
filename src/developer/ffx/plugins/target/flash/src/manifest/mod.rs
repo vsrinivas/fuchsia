@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    crate::manifest::v1::FlashManifest as FlashManifestV1,
-    anyhow::{anyhow, bail, Context, Result},
+    crate::manifest::{v1::FlashManifest as FlashManifestV1, v2::FlashManifest as FlashManifestV2},
+    anyhow::{anyhow, bail, Context, Error, Result},
     async_trait::async_trait,
     chrono::{DateTime, Duration, Utc},
     ffx_core::ffx_bail,
     ffx_flash_args::FlashCommand,
-    fidl::endpoints::{create_endpoints, ServerEnd},
+    fidl::{
+        endpoints::{create_endpoints, ServerEnd},
+        Error as FidlError,
+    },
     fidl_fuchsia_developer_bridge::{
         FastbootProxy, UploadProgressListenerMarker, UploadProgressListenerRequest,
     },
@@ -23,9 +26,11 @@ use {
 };
 
 pub(crate) mod v1;
+pub(crate) mod v2;
 
 pub(crate) const UNKNOWN_VERSION: &str = "Unknown flash manifest version";
 const LARGE_FILE: &str = "large file, please wait... ";
+const REVISION_VAR: &str = "hw-revision";
 
 #[async_trait]
 pub(crate) trait Flash {
@@ -47,6 +52,7 @@ pub(crate) struct ManifestFile {
 
 pub(crate) enum FlashManifest {
     V1(FlashManifestV1),
+    V2(FlashManifestV2),
 }
 
 impl FlashManifest {
@@ -61,6 +67,7 @@ impl FlashManifest {
         };
         match manifest.version {
             1 => Ok(Self::V1(from_value(manifest.manifest.clone())?)),
+            2 => Ok(Self::V2(from_value(manifest.manifest.clone())?)),
             _ => ffx_bail!("{}", UNKNOWN_VERSION),
         }
     }
@@ -79,8 +86,17 @@ impl Flash for FlashManifest {
     {
         match self {
             Self::V1(v) => v.flash(writer, fastboot_proxy, cmd).await,
+            Self::V2(v) => v.flash(writer, fastboot_proxy, cmd).await,
         }
     }
+}
+
+pub(crate) fn map_fidl_error(e: FidlError) -> Error {
+    log::error!("FIDL Communication error: {}", e);
+    anyhow!(
+        "There was an error communcation with the daemon. Try running\n\
+        `ffx doctor` for further diagnositcs."
+    )
 }
 
 pub(crate) fn done_time<W: Write + Send>(
@@ -203,7 +219,7 @@ pub(crate) async fn stage_file<W: Write + Send>(
     let file_to_upload = get_file(path, file).context("reconciling file for upload")?;
     writeln!(writer, "Preparing to stage {}", file_to_upload)?;
     try_join!(
-        fastboot_proxy.stage(&file_to_upload, prog_client).map_err(|e| anyhow!(e)),
+        fastboot_proxy.stage(&file_to_upload, prog_client).map_err(map_fidl_error),
         handle_upload_progress_for_staging(writer, prog_server),
     )
     .and_then(|(stage, _)| {
@@ -238,7 +254,7 @@ pub(crate) async fn flash_partition<W: Write + Send>(
     let file_to_upload = get_file(path, file).context("reconciling file for upload")?;
     writeln!(writer, "Preparing to upload {}", file_to_upload)?;
     try_join!(
-        fastboot_proxy.flash(name, &file_to_upload, prog_client).map_err(|e| anyhow!(e)),
+        fastboot_proxy.flash(name, &file_to_upload, prog_client).map_err(map_fidl_error),
         handle_upload_progress_for_flashing(name, writer, prog_server),
     )
     .and_then(|(flash, prog)| {
@@ -255,6 +271,25 @@ pub(crate) async fn flash_partition<W: Write + Send>(
             anyhow!("There was an error flashing \"{}\" - {}: {:?}", name, file_to_upload, e)
         })
     })
+}
+
+pub(crate) async fn verify_hardware(
+    revision: &String,
+    fastboot_proxy: &FastbootProxy,
+) -> Result<()> {
+    let rev = fastboot_proxy
+        .get_var(REVISION_VAR)
+        .await
+        .map_err(map_fidl_error)?
+        .map_err(|e| anyhow!("Communication error with the device: {:?}", e))?;
+    if let Some(r) = rev.split("-").next() {
+        if r != *revision {
+            ffx_bail!("Hardware mismatch! Trying to flash images built for {}", revision);
+        }
+    } else {
+        ffx_bail!("Could not verify hardware revision of target device");
+    }
+    Ok(())
 }
 
 ////////////////////////////////////////////////////////////////////////////////

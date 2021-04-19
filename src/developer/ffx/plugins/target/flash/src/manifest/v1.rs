@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::manifest::{done_time, flash_partition, stage_file, Flash},
+    crate::manifest::{done_time, flash_partition, map_fidl_error, stage_file, Flash},
     anyhow::{anyhow, bail, Context as _, Result},
     async_trait::async_trait,
     chrono::Utc,
@@ -88,9 +88,7 @@ impl Flash for FlashManifest {
             let mut stream = reboot_server.into_stream()?;
             let start_time = Utc::now();
             try_join!(
-                fastboot_proxy
-                    .reboot_bootloader(reboot_client)
-                    .map_err(|e| anyhow!("fidl error when rebooting to bootloader: {:?}", e)),
+                fastboot_proxy.reboot_bootloader(reboot_client).map_err(map_fidl_error),
                 async move {
                     if let Some(RebootListenerRequest::OnReboot { control_handle: _ }) =
                         stream.try_next().await?

@@ -30,6 +30,7 @@ protocol RebootListener {
 
 [Discoverable]
 protocol Fastboot {
+    GetVar(string:64 name) -> (string:64 value) error FastbootError;
     Flash(string:64 partition_name, string:256 path, UploadProgressListener listener) -> () error FastbootError;
     Erase(string:64 partition_name) -> () error FastbootError;
     Reboot() -> () error FastbootError;

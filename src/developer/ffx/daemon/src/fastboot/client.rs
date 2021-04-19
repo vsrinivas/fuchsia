@@ -4,7 +4,7 @@
 
 use {
     crate::fastboot::{
-        continue_boot, erase, flash, oem, reboot, reboot_bootloader, set_active, stage,
+        continue_boot, erase, flash, get_var, oem, reboot, reboot_bootloader, set_active, stage,
         UploadProgressListener,
     },
     crate::target::{Target, TargetEvent},
@@ -72,6 +72,15 @@ impl<T: AsyncRead + AsyncWrite + Unpin + Send> FastbootImpl<T> {
         log::debug!("fastboot - received req: {:?}", req);
         let usb = self.usb().await?;
         match req {
+            FastbootRequest::GetVar { name, responder } => match get_var(usb, &name).await {
+                Ok(value) => responder.send(&mut Ok(value))?,
+                Err(e) => {
+                    log::error!("Error getting variable '{}': {:?}", name, e);
+                    responder
+                        .send(&mut Err(FastbootError::ProtocolError))
+                        .context("sending error response")?;
+                }
+            },
             FastbootRequest::Flash { partition_name, path, listener, responder } => {
                 let upload_listener = UploadProgressListener::new(listener)?;
                 match flash(usb, &path, &partition_name, &upload_listener).await {

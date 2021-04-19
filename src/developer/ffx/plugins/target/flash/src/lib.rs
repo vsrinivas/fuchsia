@@ -91,6 +91,9 @@ mod test {
         (
             state.clone(),
             setup_fake_fastboot_proxy(move |req| match req {
+                FastbootRequest::GetVar { responder, .. } => {
+                    responder.send(&mut Ok("test-b4".to_string())).unwrap();
+                }
                 FastbootRequest::Flash { listener, responder, .. } => {
                     listener.into_proxy().unwrap().on_finished().unwrap();
                     responder.send(&mut Ok(())).unwrap();

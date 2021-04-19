@@ -202,6 +202,19 @@ pub fn open_interface_with_serial(serial: &String) -> Result<Interface> {
     open_interface(|info: &InterfaceInfo| -> bool { extract_serial_number(info) == *serial })
 }
 
+pub async fn get_var<T: AsyncRead + AsyncWrite + Unpin>(
+    interface: &mut T,
+    name: &String,
+) -> Result<String> {
+    send(Command::GetVar(ClientVariable::Oem(name.to_string())), interface).await.and_then(|r| {
+        match r {
+            Reply::Okay(v) => Ok(v),
+            Reply::Fail(s) => bail!("Failed to get {}: {}", name, s),
+            _ => bail!("Unexpected reply from fastboot deviced for get_var"),
+        }
+    })
+}
+
 pub async fn stage<T: AsyncRead + AsyncWrite + Unpin>(
     interface: &mut T,
     file: &String,
