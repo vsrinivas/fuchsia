@@ -837,7 +837,7 @@
 
 #define SPN_VK_GLSL_DECL_KERNEL_SEGMENT_TTCK()                          \
   SPN_VK_GLSL_DS_BLOCK_POOL(0,noaccess,noaccess,noaccess,noaccess);     \
-  SPN_VK_GLSL_DS_TTCKS(1,readonly,readwrite);                           \
+  SPN_VK_GLSL_DS_TTCKS(1,readwrite,readwrite);                          \
   SPN_VK_GLSL_PUSH(SPN_VK_GLSL_PUSH_KERNEL_SEGMENT_TTCK());
 
 #define SPN_VK_HOST_DECL_KERNEL_SEGMENT_TTCK()                                             \
