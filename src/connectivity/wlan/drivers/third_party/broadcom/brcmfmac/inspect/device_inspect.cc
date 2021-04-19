@@ -45,6 +45,12 @@ zx_status_t DeviceInspect::Create(async_dispatcher_t* dispatcher,
     return status;
   }
 
+  inspect->sdio_max_tx_seq_err_ = inspect->root_.CreateUint("sdio_max_tx_seq_err", 0);
+  if ((status = inspect->sdio_max_tx_seq_err_24hrs_.Init(
+           &inspect->root_, 24, "sdio_max_tx_seq_err_24hrs", 0)) != ZX_OK) {
+    return status;
+  }
+
   DeviceConnMetrics& conn_metrics_ = inspect->conn_metrics_;
   conn_metrics_.root = inspect->root_.CreateChild("connection-metrics");
   conn_metrics_.success = conn_metrics_.root.CreateUint("success", 0);
@@ -76,6 +82,7 @@ zx_status_t DeviceInspect::Create(async_dispatcher_t* dispatcher,
         inspect->tx_qfull_24hrs_.SlideWindow();
         inspect->fw_recovered_24hrs_.SlideWindow();
         inspect->rx_freeze_24hrs_.SlideWindow();
+        inspect->sdio_max_tx_seq_err_24hrs_.SlideWindow();
         inspect->conn_metrics_.success_24hrs.SlideWindow();
         inspect->conn_metrics_.no_network_fail_24hrs.SlideWindow();
         inspect->conn_metrics_.auth_fail_24hrs.SlideWindow();
@@ -120,4 +127,8 @@ void DeviceInspect::LogRxFreeze() {
   rx_freeze_24hrs_.Add(1);
 }
 
+void DeviceInspect::LogSdioMaxTxSeqErr() {
+  sdio_max_tx_seq_err_.Add(1);
+  sdio_max_tx_seq_err_24hrs_.Add(1);
+}
 }  // namespace wlan::brcmfmac

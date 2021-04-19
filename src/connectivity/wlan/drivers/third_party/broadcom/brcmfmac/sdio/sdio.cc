@@ -17,6 +17,7 @@
 #include "sdio.h"
 
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/align.h>
@@ -28,7 +29,6 @@
 #include <atomic>
 #include <limits>
 
-#include <lib/ddk/metadata.h>
 #include <wifi/wifi-config.h>
 
 #ifndef _ALL_SOURCE
@@ -1195,6 +1195,7 @@ static zx_status_t brcmf_sdio_hdparse(struct brcmf_sdio* bus, uint8_t* header,
   if ((uint8_t)(tx_seq_max - bus->tx_seq) > 0x40) {
     BRCMF_ERR("tx_seq_max is %d, bus->tx_seq is %d: max tx seq number error", tx_seq_max,
               bus->tx_seq);
+    bus->sdiodev->drvr->device->GetInspect()->LogSdioMaxTxSeqErr();
     tx_seq_max = bus->tx_seq + 2;
   }
   bus->tx_max = tx_seq_max;
@@ -3203,16 +3204,16 @@ void brcmf_sdio_log_stats(struct brcmf_bus* bus_if) {
   struct brcmf_sdio* bus = sdiodev->bus;
 
   zxlogf(INFO,
-      "SDIO bus stats: FC: %x FC_ChangeCnt: %u TxSeq: %u TxMax: %u TxCtlCnt: %lu TxCtlErr: %lu,"
-      " RxCtlCnt: %lu, RxCtlErr: %lu, Intrs: %u, HdrRead: %u, PktReads: %u, PktWrites: %u",
-      bus->flowcontrol, bus->sdcnt.fc_rcvd, bus->tx_seq, bus->tx_max, bus->sdcnt.tx_ctlpkts,
-      bus->sdcnt.tx_ctlerrs, bus->sdcnt.rx_ctlpkts, bus->sdcnt.rx_ctlerrs, bus->sdcnt.intrcount,
-      bus->sdcnt.f2rxhdrs, bus->sdcnt.f2rxdata, bus->sdcnt.f2txdata);
+         "SDIO bus stats: FC: %x FC_ChangeCnt: %u TxSeq: %u TxMax: %u TxCtlCnt: %lu TxCtlErr: %lu,"
+         " RxCtlCnt: %lu, RxCtlErr: %lu, Intrs: %u, HdrRead: %u, PktReads: %u, PktWrites: %u",
+         bus->flowcontrol, bus->sdcnt.fc_rcvd, bus->tx_seq, bus->tx_max, bus->sdcnt.tx_ctlpkts,
+         bus->sdcnt.tx_ctlerrs, bus->sdcnt.rx_ctlpkts, bus->sdcnt.rx_ctlerrs, bus->sdcnt.intrcount,
+         bus->sdcnt.f2rxhdrs, bus->sdcnt.f2rxdata, bus->sdcnt.f2txdata);
   zxlogf(INFO,
-      "SDIO txq stats: EnqueueCnt: %u QFullCnt: %u QLen: %u PerPrecLen [0]: %u [1]: %u [2]: %u "
-      "[3]: %u",
-      pktq_enq_cnt(&bus->txq), bus->sdcnt.tx_qfull, pktq_len(&bus->txq), pktq_plen(&bus->txq, 0),
-      pktq_plen(&bus->txq, 1), pktq_plen(&bus->txq, 2), pktq_plen(&bus->txq, 3));
+         "SDIO txq stats: EnqueueCnt: %u QFullCnt: %u QLen: %u PerPrecLen [0]: %u [1]: %u [2]: %u "
+         "[3]: %u",
+         pktq_enq_cnt(&bus->txq), bus->sdcnt.tx_qfull, pktq_len(&bus->txq), pktq_plen(&bus->txq, 0),
+         pktq_plen(&bus->txq, 1), pktq_plen(&bus->txq, 2), pktq_plen(&bus->txq, 3));
 }
 
 int brcmf_sdio_oob_irqhandler(void* cookie) {
