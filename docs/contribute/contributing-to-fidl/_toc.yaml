@@ -8,6 +8,8 @@
 toc:
 - title: "Overview"
   path: /docs/contribute/contributing-to-fidl
+- title: "Cultural tenets"
+  path: /docs/contribute/contributing-to-fidl/cultural_tenets.md
 - title: "FIDL Tests & GN"
   path: /docs/contribute/contributing-to-fidl/fidl-tests-and-gn.md
 - title: "Project checklists"
