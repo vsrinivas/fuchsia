@@ -51,9 +51,7 @@
             yes: [
                 "too_many_disconnects",
             ],
-            no: [
-                "too_many_scan_failures",
-            ],
+            no: [],
             now: "Hours(48)",
             values: {
                 // A day's worth of nanoseconds is 8.64e13, these numbers are within the last day.
@@ -64,14 +62,12 @@
                     12e13,
                     13e13,
                 ],
-                scan_failures: [],
             },
         },
         not_enough_recent_disconnects: {
             yes: [],
             no: [
                 "too_many_disconnects",
-                "too_many_scan_failures",
             ],
             now: "Hours(48)",
             values: {
@@ -82,19 +78,15 @@
                     12e13,
                     13e13,
                 ],
-                scan_failures: [],
             },
         },
         too_many_scan_failures: {
             yes: [
                 "too_many_scan_failures",
             ],
-            no: [
-                "too_many_disconnects",
-            ],
+            no: [],
             now: "Hours(48)",
             values: {
-                disconnects: [],
                 scan_failures: [
                     9e13,
                     10e13,
@@ -106,12 +98,10 @@
         not_enough_recent_scan_failures: {
             yes: [],
             no: [
-                "too_many_disconnects",
                 "too_many_scan_failures",
             ],
             now: "Hours(48)",
             values: {
-                disconnects: [],
                 scan_failures: [
                     8e13,
                     10e13,
