@@ -8,6 +8,8 @@ source_set("engine") {
     "display_compositor.h",
     "engine_types.cc",
     "engine_types.h",
+    "release_fence_manager.cc",
+    "release_fence_manager.h",
   ]
 
   public_deps = [
@@ -15,5 +17,6 @@ source_set("engine") {
     "//src/ui/scenic/lib/display:display",
     "//src/ui/scenic/lib/flatland",
     "//src/ui/scenic/lib/flatland/renderer",
+    "//src/ui/scenic/lib/scheduling:frame_scheduler_interface",
   ]
 }

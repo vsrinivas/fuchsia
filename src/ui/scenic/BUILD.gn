@@ -118,7 +118,7 @@ test_package("scenic_tests") {
       log_settings = {
         max_severity = "ERROR"
       }
-      name = "flatland_display_compositor_unittests"
+      name = "flatland_engine_unittests"
     },
     {
       name = "flatland_renderer_unittests"

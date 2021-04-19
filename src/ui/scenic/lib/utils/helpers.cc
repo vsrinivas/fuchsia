@@ -41,9 +41,19 @@ zx::event CopyEvent(const zx::event& event) {
   return event_copy;
 }
 
-bool IsEventSignalled(const zx::event& fence, zx_signals_t signal) {
+std::vector<zx::event> CopyEventArray(const std::vector<zx::event>& events) {
+  std::vector<zx::event> result;
+  const size_t count = events.size();
+  result.reserve(count);
+  for (size_t i = 0; i < count; i++) {
+    result.push_back(CopyEvent(events[i]));
+  }
+  return result;
+}
+
+bool IsEventSignalled(const zx::event& event, zx_signals_t signal) {
   zx_signals_t pending = 0u;
-  fence.wait_one(signal, zx::time(), &pending);
+  event.wait_one(signal, zx::time(), &pending);
   return (pending & signal) != 0u;
 }
 
@@ -55,6 +65,7 @@ zx::event CreateEvent() {
 
 std::vector<zx::event> CreateEventArray(size_t n) {
   std::vector<zx::event> events;
+  events.reserve(n);
   for (size_t i = 0; i < n; i++) {
     events.push_back(CreateEvent());
   }

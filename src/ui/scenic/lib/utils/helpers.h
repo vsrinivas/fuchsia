@@ -32,6 +32,9 @@ std::vector<zx_koid_t> ExtractKoids(const std::vector<zx::event>& events);
 // Copy a zx::event.
 zx::event CopyEvent(const zx::event& event);
 
+// Copy a std::vector of events.
+std::vector<zx::event> CopyEventArray(const std::vector<zx::event>& events);
+
 // Synchronously checks whether the event has signalled any of the bits in |signal|.
 bool IsEventSignalled(const zx::event& event, zx_signals_t signal);
 
