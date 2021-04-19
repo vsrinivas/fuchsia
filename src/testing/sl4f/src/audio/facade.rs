@@ -4,7 +4,6 @@
 
 use anyhow::Error;
 use base64;
-use byteorder::{LittleEndian, WriteBytesExt};
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_virtualaudio::*;
 use fuchsia_async as fasync;
@@ -15,6 +14,7 @@ use futures::lock::Mutex;
 use futures::{select, StreamExt, TryFutureExt, TryStreamExt};
 use parking_lot::RwLock;
 use serde_json::{to_value, Value};
+use std::convert::{TryFrom, TryInto};
 use std::io::Write;
 use std::sync::Arc;
 
@@ -32,7 +32,7 @@ const ASF_RANGE_FLAG_FPS_CONTINUOUS: u16 = 1 << 0;
 // If this changes, so too must the astro audio_core_config.
 const AUDIO_OUTPUT_ID: [u8; 16] = [0x01; 16];
 
-fn get_sample_size(format: u32) -> Result<usize, Error> {
+fn get_sample_size(format: u32) -> Result<u32, Error> {
     Ok(match format {
         // These are the currently implemented formats.
         AUDIO_SAMPLE_FORMAT_8BIT => 1,
@@ -93,10 +93,10 @@ impl OutputWorker {
         _external_delay: i64,
     ) -> Result<(), Error> {
         let sample_size = get_sample_size(sample_format)?;
-        self.frame_size = num_channels as u64 * sample_size as u64;
+        self.frame_size = u64::from(num_channels) * u64::from(sample_size);
 
-        let frames_per_millisecond = frames_per_second as u64 / 1000;
-        self.frames_per_notification = 50 * frames_per_millisecond;
+        let frames_per_millisecond = u64::from(frames_per_second / 1000);
+        self.frames_per_notification = frames_per_millisecond * 50;
 
         fx_log_info!(
             "AudioFacade::OutputWorker: configuring with {:?} fps, {:?} bpf",
@@ -117,16 +117,17 @@ impl OutputWorker {
 
         // Ignore AudioCore's notification cadence (_notifications_per_ring); set up our own.
         let target_notifications_per_ring =
-            num_ring_buffer_frames as u64 / self.frames_per_notification;
+            u64::from(num_ring_buffer_frames) / self.frames_per_notification;
+        let target_notifications_per_ring = target_notifications_per_ring.try_into()?;
 
-        va_output.set_notification_frequency(target_notifications_per_ring as u32)?;
+        va_output.set_notification_frequency(target_notifications_per_ring)?;
         fx_log_info!(
             "AudioFacade::OutputWorker: created buffer with {:?} frames, {:?} notifications",
             num_ring_buffer_frames,
             target_notifications_per_ring
         );
 
-        self.work_space = num_ring_buffer_frames as u64 * self.frame_size;
+        self.work_space = u64::from(num_ring_buffer_frames) * self.frame_size;
 
         // Start reading from the beginning.
         self.next_read = 0;
@@ -151,25 +152,28 @@ impl OutputWorker {
                 self.next_read_end
             );
 
-            if (self.next_read_end as u64) < self.next_read {
+            if self.next_read_end < self.next_read {
                 // Wrap-around case, read through the end.
-                let mut data = vec![0u8; (self.work_space - self.next_read) as usize];
-                let overwrite1 = vec![1u8; (self.work_space - self.next_read) as usize];
+                let len = (self.work_space - self.next_read).try_into()?;
+                let mut data = vec![0u8; len];
+                let overwrite1 = vec![1u8; len];
                 vmo.read(&mut data, self.next_read)?;
                 vmo.write(&overwrite1, self.next_read)?;
                 self.extracted_data.append(&mut data);
 
                 // Read remaining data.
-                let mut data = vec![0u8; self.next_read_end as usize];
-                let overwrite2 = vec![1u8; self.next_read_end as usize];
+                let next_read_end = self.next_read_end.try_into()?;
+                let mut data = vec![0u8; next_read_end];
+                let overwrite2 = vec![1u8; next_read_end];
                 vmo.read(&mut data, 0)?;
                 vmo.write(&overwrite2, 0)?;
 
                 self.extracted_data.append(&mut data);
             } else {
                 // Normal case, just read all the bytes.
-                let mut data = vec![0u8; (self.next_read_end - self.next_read) as usize];
-                let overwrite = vec![1u8; (self.next_read_end - self.next_read) as usize];
+                let len = (self.next_read_end - self.next_read).try_into()?;
+                let mut data = vec![0u8; len];
+                let overwrite = vec![1u8; len];
                 vmo.read(&mut data, self.next_read)?;
                 vmo.write(&overwrite, self.next_read)?;
 
@@ -179,7 +183,7 @@ impl OutputWorker {
         // We always stay 1 notification behind, since audio_core writes audio data into
         // our shared buffer based on these same notifications. This avoids audio glitches.
         self.next_read = self.next_read_end;
-        self.next_read_end = ring_position as u64;
+        self.next_read_end = ring_position.into();
         Ok(())
     }
 
@@ -345,7 +349,7 @@ impl VirtualOutput {
 
         let sample_format = get_zircon_sample_format(self.sample_format);
         va_output.add_format_range(
-            sample_format as u32,
+            sample_format,
             self.frames_per_second,
             self.frames_per_second,
             self.channels,
@@ -381,25 +385,24 @@ impl VirtualOutput {
 
         // 8 Bytes
         self.extracted_data.write("RIFF".as_bytes())?;
-        self.extracted_data.write_u32::<LittleEndian>(len as u32 + 8 + 28 + 8)?;
+        self.extracted_data.write(&u32::to_le_bytes(len + 8 + 28 + 8))?;
 
         // 28 bytes
         self.extracted_data.write("WAVE".as_bytes())?; // wave_four_cc uint32
         self.extracted_data.write("fmt ".as_bytes())?; // fmt_four_cc uint32
-        self.extracted_data.write_u32::<LittleEndian>(16u32)?; // fmt_chunk_len
-        self.extracted_data.write_u16::<LittleEndian>(1u16)?; // format
-        self.extracted_data.write_u16::<LittleEndian>(self.channels as u16)?;
-        self.extracted_data.write_u32::<LittleEndian>(self.frames_per_second)?;
-        self.extracted_data.write_u32::<LittleEndian>(
-            bytes_per_sample as u32 * self.channels as u32 * self.frames_per_second,
-        )?; // avg_byte_rate
+        self.extracted_data.write(&u32::to_le_bytes(16))?; // fmt_chunk_len
+        self.extracted_data.write(&u16::to_le_bytes(1))?; // format
+        self.extracted_data.write(&u16::to_le_bytes(self.channels.into()))?;
+        self.extracted_data.write(&u32::to_le_bytes(self.frames_per_second))?;
+        let channels: u32 = self.channels.into();
         self.extracted_data
-            .write_u16::<LittleEndian>(bytes_per_sample as u16 * self.channels as u16)?;
-        self.extracted_data.write_u16::<LittleEndian>((bytes_per_sample * 8) as u16)?;
+            .write(&u32::to_le_bytes(bytes_per_sample * channels * self.frames_per_second))?; // avg_byte_rate
+        self.extracted_data.write(&u16::to_le_bytes((bytes_per_sample * channels).try_into()?))?;
+        self.extracted_data.write(&u16::to_le_bytes((bytes_per_sample * 8).try_into()?))?;
 
         // 8 bytes
         self.extracted_data.write("data".as_bytes())?;
-        self.extracted_data.write_u32::<LittleEndian>(len as u32)?;
+        self.extracted_data.write(&u32::to_le_bytes(len))?;
 
         Ok(())
     }
@@ -441,14 +444,15 @@ impl InputWorker {
         let vmo = if let Some(vmo) = &self.vmo { vmo } else { return Ok(()) };
         let start = self.write_pointer % self.work_space;
         let end = (self.write_pointer + data.len()) % self.work_space;
+        let start_u64 = start.try_into()?;
 
         // Write in two chunks if we've wrapped around.
         if end < start {
             let split = self.work_space - start;
-            vmo.write(&data[0..split], start as u64)?;
+            vmo.write(&data[0..split], start_u64)?;
             vmo.write(&data[split..], 0)?;
         } else {
-            vmo.write(&data, start as u64)?;
+            vmo.write(&data, start_u64)?;
         }
         Ok(())
     }
@@ -480,9 +484,9 @@ impl InputWorker {
         _external_delay: i64,
     ) -> Result<(), Error> {
         let sample_size = get_sample_size(sample_format)?;
-        self.frame_size = num_channels as usize * sample_size as usize;
+        self.frame_size = usize::try_from(num_channels)? * usize::try_from(sample_size)?;
 
-        let frames_per_millisecond = frames_per_second as usize / 1000;
+        let frames_per_millisecond = frames_per_second / 1000;
 
         fx_log_info!(
             "AudioFacade::InputWorker: configuring with {:?} fps, {:?} bpf",
@@ -510,26 +514,27 @@ impl InputWorker {
         // The sum of 250ms + 50ms must fit within the ring buffer. We currently use a 1s
         // ring buffer: see VirtualInput.start_input.
         //
-        self.target_frames = 250 * frames_per_millisecond;
-        self.frames_per_notification = 50 * frames_per_millisecond;
+        self.target_frames = (250 * frames_per_millisecond).try_into()?;
+        self.frames_per_notification = (50 * frames_per_millisecond).try_into()?;
         Ok(())
     }
 
     fn on_buffer_created(
         &mut self,
         ring_buffer: zx::Vmo,
-        num_ring_buffer_frames: usize,
+        num_ring_buffer_frames: u32,
         _notifications_per_ring: u32,
     ) -> Result<(), Error> {
         let va_input = self.va_input.as_mut().ok_or(format_err!("va_input not initialized"))?;
 
         // Ignore AudioCore's notification cadence (_notifications_per_ring); set up our own.
-        let target_notifications_per_ring = num_ring_buffer_frames / self.frames_per_notification;
+        let target_notifications_per_ring =
+            num_ring_buffer_frames / u32::try_from(self.frames_per_notification)?;
 
-        va_input.set_notification_frequency(target_notifications_per_ring as u32)?;
+        va_input.set_notification_frequency(target_notifications_per_ring)?;
 
         // The buffer starts zeroed and our write pointer starts target_frames in the future.
-        self.work_space = num_ring_buffer_frames * self.frame_size;
+        self.work_space = usize::try_from(num_ring_buffer_frames)? * self.frame_size;
         self.write_pointer = self.target_frames * self.frame_size;
         self.last_ring_offset = 0;
         self.vmo = Some(ring_buffer);
@@ -543,13 +548,10 @@ impl InputWorker {
         Ok(())
     }
 
-    fn on_position_notify(
-        &mut self,
-        _monotonic_time: i64,
-        ring_offset: usize,
-    ) -> Result<(), Error> {
+    fn on_position_notify(&mut self, _monotonic_time: i64, ring_offset: u32) -> Result<(), Error> {
+        let ring_offset = ring_offset.try_into()?;
         if ring_offset < self.last_ring_offset {
-            self.ring_pointer += (self.work_space - self.last_ring_offset) + ring_offset;
+            self.ring_pointer += self.work_space - self.last_ring_offset + ring_offset;
         } else {
             self.ring_pointer += ring_offset - self.last_ring_offset;
         };
@@ -616,7 +618,7 @@ impl InputWorker {
                         },
                         Some(InputEvent::OnBufferCreated { ring_buffer, num_ring_buffer_frames,
                                                            notifications_per_ring }) => {
-                            self.on_buffer_created(ring_buffer, num_ring_buffer_frames as usize,
+                            self.on_buffer_created(ring_buffer, num_ring_buffer_frames,
                                                    notifications_per_ring)?;
                         },
                         Some(InputEvent::OnStart { start_time }) => {
@@ -671,7 +673,7 @@ impl InputWorker {
 
                             last_timestamp = monotonic_zx_time;
                             last_event_time = now;
-                            self.on_position_notify(monotonic_time, ring_position as usize)?;
+                            self.on_position_notify(monotonic_time, ring_position)?;
                         },
                         Some(evt) => {
                             fx_log_info!("AudioFacade::InputWorker: Got unknown InputEvent {:?}", evt);
@@ -717,7 +719,7 @@ impl VirtualInput {
 
         let sample_format = get_zircon_sample_format(self.sample_format);
         va_input.add_format_range(
-            sample_format as u32,
+            sample_format,
             self.frames_per_second,
             self.frames_per_second,
             self.channels,
@@ -887,8 +889,9 @@ impl AudioFacade {
                 .next()
                 .await
                 .ok_or_else(|| format_err!("StopOutputSave failed, could not retrieve data."))?;
+            let len = saved_audio.len().try_into()?;
 
-            write.write_header(saved_audio.len() as u32)?;
+            write.write_header(len)?;
 
             write.extracted_data.append(&mut saved_audio);
             *(capturing) = false;
@@ -916,7 +919,7 @@ impl AudioFacade {
 
         let mut wave_data_vec = base64::decode(data)?;
         let sample_index = args["index"].as_u64().ok_or(format_err!("index not a number"))?;
-        let sample_index = sample_index as usize;
+        let sample_index = sample_index.try_into()?;
 
         // TODO(perley): check wave format for correct bits per sample and float/int.
         let byte_cnt = wave_data_vec.len();
@@ -938,7 +941,7 @@ impl AudioFacade {
         self.ensure_initialized().await?;
         {
             let sample_index = args["index"].as_u64().ok_or(format_err!("index not a number"))?;
-            let sample_index = sample_index as usize;
+            let sample_index = sample_index.try_into()?;
 
             if !self.audio_input.read().have_data {
                 return Err(format_err!("StartInputInjection failed, no Audio data to inject."));
