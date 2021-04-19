@@ -416,10 +416,11 @@ impl {{ $protocol.Name }}Event {
 #[deprecated(note = "Use {{ $protocol.Name }}RequestStream / Responder instead")]
 pub struct {{ $protocol.Name }}ServerSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
-	#[allow(unused)]
+	#[allow(dead_code)]
 	channel: &'a fidl::Channel,
 }
 
+#[allow(deprecated)]
 impl <'a> {{ $protocol.Name }}ServerSender<'a> {
 	pub fn new(channel: &'a fidl::Channel) -> Self {
 		Self { channel }
@@ -618,6 +619,7 @@ pub enum {{ $protocol.Name }}RequestMessage {
 	{{- end }}
 }
 
+#[allow(deprecated)]
 impl {{ $protocol.Name }}RequestMessage {
 	pub fn decode(bytes: &[u8], _handles: &mut [fidl::HandleInfo]) -> Result<{{ $protocol.Name }}RequestMessage, fidl::Error> {
 		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;

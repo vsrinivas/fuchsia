@@ -3477,9 +3477,11 @@ macro_rules! fidl_xunion {
                         $name::$member_name(_) => $member_ordinal,
                     )*
                     $(
+                        #[allow(deprecated)]
                         $name::$value_unknown_name { ordinal, .. } => ordinal,
                     )?
                     $(
+                        #[allow(deprecated)]
                         $name::$resource_unknown_name { ordinal, .. } => ordinal,
                     )?
                 }
@@ -3510,6 +3512,7 @@ macro_rules! fidl_xunion {
                         },
                     )*
                     $(
+                        #[allow(deprecated)]
                         $name::$resource_unknown_name { ordinal: _, data } => {
                             // Throw the raw data from the unrecognized variant
                             // back onto the wire. This will allow correct proxies even in
@@ -3518,6 +3521,7 @@ macro_rules! fidl_xunion {
                         },
                     )?
                     $(
+                        #[allow(deprecated)]
                         $name::$value_unknown_name { ordinal: _, bytes } => {
                             // Throw the raw data from the unrecognized variant
                             // back onto the wire. This will allow correct proxies even in
@@ -3537,12 +3541,14 @@ macro_rules! fidl_xunion {
                     return $name::$member_name(<$member_ty>::new_empty());
                 )*
                 $(
+                    #[allow(deprecated)]
                     $name::$resource_unknown_name {
                         ordinal: 0,
                         data: $crate::encoding::UnknownData { bytes: vec![], handles: vec![] }
                     }
                 )?
                 $(
+                    #[allow(deprecated)]
                     $name::$value_unknown_name { ordinal: 0, bytes: vec![] }
                 )?
             }
@@ -3558,6 +3564,7 @@ macro_rules! fidl_xunion {
                         $member_ordinal => decoder.inline_size_of::<$member_ty>(),
                     )*
                     $(
+                        #[allow(deprecated)]
                         _ => {
                             stringify!($resource_unknown_name); // placeholder use for expansion
                             // Flexible xunion: unknown payloads are considered
@@ -3566,6 +3573,7 @@ macro_rules! fidl_xunion {
                         }
                     )?
                     $(
+                        #[allow(deprecated)]
                         _ => {
                             // Disallow unknown handles in non-resource types.
                             if (num_handles > 0) {
@@ -3616,12 +3624,14 @@ macro_rules! fidl_xunion {
                                 }
                             )*
                             $(
+                                #[allow(deprecated)]
                                 ordinal => {
                                     let data = $crate::encoding::decode_unknown_data_contents(decoder, offset, num_bytes, num_handles)?;
                                     *self = $name::$resource_unknown_name { ordinal, data };
                                 }
                             )?
                             $(
+                                #[allow(deprecated)]
                                 ordinal => {
                                     let bytes = decoder.buffer()[offset.. offset+(num_bytes as usize)].to_vec();
                                     *self = $name::$value_unknown_name { ordinal, bytes };
