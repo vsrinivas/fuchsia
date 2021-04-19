@@ -25,7 +25,7 @@ public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
-  class Frame;
+  class Frame_;
 
 {{- range .Members }}
 {{ "" }}
@@ -65,11 +65,11 @@ public:
 
   {{ .Name }}() = default;
   explicit {{ .Name }}(::fidl::AnyAllocator& allocator)
-      : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
   // This constructor allows a user controlled allocation (not using a FidlAllocator).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or for another table.
-  explicit {{ .Name }}(::fidl::ObjectView<Frame>&& frame)
+  explicit {{ .Name }}(::fidl::ObjectView<Frame_>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~{{ .Name }}() = default;
   {{ .Name }}(const {{ .Name }}& other) noexcept = default;
@@ -86,9 +86,9 @@ public:
 
   void Allocate(::fidl::AnyAllocator& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
+    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
   }
-  void Init(::fidl::ObjectView<Frame>&& frame_ptr) {
+  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -196,23 +196,23 @@ public:
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  // Frames are managed automatically by the FidlAllocator class.
+  // Frame_s are managed automatically by the FidlAllocator class.
   // The only direct usage is when performance is key and a frame needs to be allocated outside a
   // FidlAllocator.
   // Once created, a frame can only be used for one single table.
-  class Frame final {
+  class Frame_ final {
   public:
-    Frame() = default;
-    // In its intended usage, Frame will be referenced by an ObjectView. If the ObjectView is
+    Frame_() = default;
+    // In its intended usage, Frame_ will be referenced by an ObjectView. If the ObjectView is
     // assigned before a move or copy, then it will reference the old invalid object. Because this
     // is unsafe, copies are disallowed and moves are only allowed by friend classes that operate
     // safely.
-    Frame(const Frame&) = delete;
-    Frame& operator=(const Frame&) = delete;
+    Frame_(const Frame_&) = delete;
+    Frame_& operator=(const Frame_&) = delete;
 
   private:
-    Frame(Frame&&) noexcept = default;
-    Frame& operator=(Frame&&) noexcept = default;
+    Frame_(Frame_&&) noexcept = default;
+    Frame_& operator=(Frame_&&) noexcept = default;
 
     {{- range $index, $item := .FrameItems }}
       {{- if $item }}
@@ -227,7 +227,7 @@ public:
 
  private:
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<Frame> frame_ptr_;
+  ::fidl::ObjectView<Frame_> frame_ptr_;
 };
 
 {{- if .IsResourceType }}

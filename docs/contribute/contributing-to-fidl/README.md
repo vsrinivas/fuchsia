@@ -653,13 +653,12 @@ fx test --e2e fidl_microbenchmarks_test
 
 ### All regen commands
 
-| Name                  | Regen commands                                                        | Input                                              |  Output
-|-----------------------|-----------------------------------------------------------------------|----------------------------------------------------|------------
-| fidlc goldens         | fx regen-goldens fidlc                                                | tools/fidl/fidlc/testdata                         | tools/fidl/fidlc/goldens
-| fidlgen goldens       | fx regen-goldens $TOOL                                                | tools/fidl/fidlc/testdata                         | tools/fidl/$TOOL/goldens
-| fidldoc goldens       | fx regen-goldens fidldoc                                              | tools/fidl/fidlc/testdata                         | tools/fidl/fidldoc/goldens
-| dangerous identifiers | fx exec $FUCHSIA_DIR/src/tests/fidl/dangerous_identifiers/generate.sh | src/tests/fidl/dangerous_identifiers/generate/*.py | src/tests/fidl/dangerous_identifiers/{cpp, fidl}
-| third party go        | fx exec $FUCHSIA_DIR/third_party/go/regen-fidl                        |                                                    |
+| Name            | Regen commands                                 | Input                     |  Output
+|-----------------|------------------------------------------------|---------------------------|------------
+| fidlc goldens   | fx regen-goldens fidlc                         | tools/fidl/fidlc/testdata | tools/fidl/fidlc/goldens
+| fidlgen goldens | fx regen-goldens $TOOL                         | tools/fidl/fidlc/testdata | tools/fidl/$TOOL/goldens
+| fidldoc goldens | fx regen-goldens fidldoc                       | tools/fidl/fidlc/testdata | tools/fidl/fidldoc/goldens
+| third party go  | fx exec $FUCHSIA_DIR/third_party/go/regen-fidl |                           |
 
 ### Compiling with `ninja`
 

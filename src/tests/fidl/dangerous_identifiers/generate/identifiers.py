@@ -110,6 +110,7 @@ IDENTIFIERS = [
     Identifier('float'),
     Identifier('fn', RUST_KEYWORD),
     Identifier('for', RUST_KEYWORD),
+    Identifier('frame'),
     Identifier('friend'),
     Identifier('func'),
     Identifier('future'),
