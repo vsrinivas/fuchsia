@@ -290,7 +290,7 @@ impl TestCallManager {
     ///     `remote`: The number associated with the remote party. This can be any string formatted
     ///     number (e.g. +1-555-555-5555).
     ///     `fidl_state`: The state to assign to the newly created call.
-    async fn new_call(&self, remote: &str, fidl_state: FidlCallState) -> Result<CallId, Error> {
+    pub async fn new_call(&self, remote: &str, fidl_state: FidlCallState) -> Result<CallId, Error> {
         let mut inner = self.inner.lock().await;
         let call_id = inner.next_call_id;
         inner.next_call_id += 1;

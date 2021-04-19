@@ -6,7 +6,7 @@ use crate::server::Facade;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
-use fidl_fuchsia_bluetooth_hfp::{NetworkInformation, SignalStrength};
+use fidl_fuchsia_bluetooth_hfp::{CallState, NetworkInformation, SignalStrength};
 use fidl_fuchsia_bluetooth_le::ScanFilter;
 use fidl_fuchsia_bluetooth_sys::{LeSecurityMode, Settings};
 use parking_lot::RwLock;
@@ -775,6 +775,21 @@ impl Facade for HfpFacade {
             }
             "ListCalls" => {
                 let result = self.list_calls().await?;
+                Ok(to_value(result)?)
+            }
+            "NewCall" => {
+                let remote = parse_arg!(args, as_str, "remote")?;
+                let state = parse_arg!(args, as_str, "state")?.to_lowercase();
+                let state = match &*state {
+                    "ringing" => CallState::IncomingRinging,
+                    "waiting" => CallState::IncomingWaiting,
+                    "dialing" => CallState::OutgoingDialing,
+                    "alerting" => CallState::OutgoingAlerting,
+                    "active" => CallState::OngoingActive,
+                    "held" => CallState::OngoingHeld,
+                    _ => bail!("Invalid state argument: {}", state),
+                };
+                let result = self.new_call(&remote, state).await?;
                 Ok(to_value(result)?)
             }
             "IncomingCall" => {
