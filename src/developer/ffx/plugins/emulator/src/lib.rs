@@ -11,6 +11,7 @@ use {
 
 mod cipd;
 mod graphic_utils;
+mod images;
 mod portpicker;
 mod types;
 pub mod vdl_files;

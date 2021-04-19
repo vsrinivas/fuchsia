@@ -102,9 +102,9 @@ impl VDLFiles {
                 self.ssh_files.auth_key.display(),
                 self.provision_zbi()?.display(),
                 self.image_files.kernel.display(),
-                self.image_files.fvm.display(),
+                self.image_files.fvm.as_ref().unwrap_or(&PathBuf::new()).display(),
                 self.image_files.build_args.display(),
-                self.image_files.amber_files.display(),
+                self.image_files.amber_files.as_ref().unwrap_or(&PathBuf::new()).display(),
             ));
         } else {
             return Ok(format!(
