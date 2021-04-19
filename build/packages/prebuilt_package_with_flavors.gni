@@ -94,6 +94,8 @@ declare_args() {
 #        //build/validate:non_production_tag
 #      debug_archive (optional)
 #        Path to archive containing a .build-id directory for this flavor
+#      deps (optional)
+#        Extra dependencies specific to this flavor.
 #
 #  package_name (optional)
 #    Name of the prebuilt package, defaults to template's target name
@@ -182,6 +184,15 @@ template("prebuilt_package_with_flavors") {
 
       # Mark as not safe for production use.
       deps += [ "//build/validate:non_production_tag" ]
+    }
+
+    if (defined(flavor_to_use.deps)) {
+      if (!defined(deps)) {
+        deps = []
+      }
+
+      # Add flavor-specific dependencies.
+      deps += flavor_to_use.deps
     }
 
     # Set up the metadata to track which flavor is being used.
