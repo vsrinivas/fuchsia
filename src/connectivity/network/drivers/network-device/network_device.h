@@ -9,7 +9,6 @@
 #include <fuchsia/hardware/network/mac/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/driver.h>
-#include <lib/stdcompat/optional.h>
 
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
@@ -45,7 +44,7 @@ class NetworkDevice : public DeviceType,
                         GetMacAddressingCompleter::Sync& _completer) override;
 
  private:
-  cpp17::optional<thrd_t> loop_thread_;
+  std::optional<thrd_t> loop_thread_;
   async::Loop loop_;
   std::unique_ptr<NetworkDeviceInterface> device_;
   std::unique_ptr<MacAddrDeviceInterface> mac_;

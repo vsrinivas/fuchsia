@@ -16,12 +16,10 @@ ddk_source_split("mac") {
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.network.mac",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
-    "//sdk/lib/stdcompat",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fidl-utils",
-    "//zircon/system/ulib/fzl",
   ]
 }
 

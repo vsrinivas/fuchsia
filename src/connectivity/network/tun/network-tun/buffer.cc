@@ -10,13 +10,12 @@
 namespace network {
 namespace tun {
 
-zx_status_t VmoStore::GetMappedVmo(uint8_t id, fbl::Span<uint8_t>* out_span) {
+zx::status<fbl::Span<uint8_t>> VmoStore::GetMappedVmo(uint8_t id) {
   auto* stored_vmo = store_.GetVmo(id);
   if (!stored_vmo) {
-    return ZX_ERR_NOT_FOUND;
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
-  *out_span = stored_vmo->data();
-  return ZX_OK;
+  return zx::ok(stored_vmo->data());
 }
 
 zx_status_t VmoStore::RegisterVmo(uint8_t id, zx::vmo vmo) {
@@ -33,22 +32,21 @@ zx_status_t VmoStore::UnregisterVmo(uint8_t id) { return store_.Unregister(id).s
 
 zx_status_t VmoStore::Copy(VmoStore* src_store, uint8_t src_id, size_t src_offset,
                            VmoStore* dst_store, uint8_t dst_id, size_t dst_offset, size_t len) {
-  fbl::Span<uint8_t> src, dst;
-  zx_status_t status = src_store->GetMappedVmo(src_id, &src);
-  if (status != ZX_OK) {
-    return status;
+  zx::status src = src_store->GetMappedVmo(src_id);
+  if (src.is_error()) {
+    return src.error_value();
   }
-  status = dst_store->GetMappedVmo(dst_id, &dst);
-  if (status != ZX_OK) {
-    return status;
+  zx::status dst = dst_store->GetMappedVmo(dst_id);
+  if (dst.is_error()) {
+    return dst.error_value();
   }
-  if (src_offset + len > src.size()) {
+  if (src_offset + len > src->size()) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  if (dst_offset + len > dst.size()) {
+  if (dst_offset + len > dst->size()) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  std::copy_n(src.begin() + src_offset, len, dst.begin() + dst_offset);
+  std::copy_n(src->begin() + src_offset, len, dst->begin() + dst_offset);
   return ZX_OK;
 }
 
@@ -68,9 +66,10 @@ Buffer::Buffer(const tx_buffer_t* tx, bool get_meta, VmoStore* vmo_store)
   ZX_ASSERT(tx->data.parts_count <= MAX_BUFFER_PARTS);
   std::copy_n(tx->data.parts_list, parts_count_, parts_.begin());
   if (get_meta) {
-    meta_ = fuchsia::net::tun::FrameMetadata::New();
-    meta_->flags = tx->meta.flags;
-    meta_->info_type = static_cast<fuchsia::hardware::network::InfoType>(tx->meta.info_type);
+    meta_ = {
+        .info_type = static_cast<fuchsia::hardware::network::InfoType>(tx->meta.info_type),
+        .flags = tx->meta.flags,
+    };
     if (meta_->info_type != fuchsia::hardware::network::InfoType::NO_INFO) {
       FX_LOGF(WARNING, "tun", "Unrecognized InfoType %d", tx->meta.info_type);
     }

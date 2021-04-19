@@ -172,26 +172,26 @@ class SimpleClient {
     return SendDescriptors(&rx_, descs, reset, count);
   }
 
-  zx_status_t FetchDescriptors(zx::fifo* fifo, uint16_t* out, size_t* count, bool wait) {
+  zx_status_t FetchDescriptors(zx::fifo& fifo, uint16_t* out, size_t* count, bool wait) {
     size_t c = 1;
     if (!count) {
       count = &c;
     }
     if (wait) {
-      auto status = fifo->wait_one(ZX_FIFO_READABLE, zx::deadline_after(kTimeout), nullptr);
+      auto status = fifo.wait_one(ZX_FIFO_READABLE, zx::deadline_after(kTimeout), nullptr);
       if (status != ZX_OK) {
         return status;
       }
     }
-    return fifo->read(sizeof(uint16_t), out, *count, count);
+    return fifo.read(sizeof(uint16_t), out, *count, count);
   }
 
   zx_status_t FetchTx(uint16_t* out, size_t* count = nullptr, bool wait = true) {
-    return FetchDescriptors(&tx_, out, count, wait);
+    return FetchDescriptors(tx_, out, count, wait);
   }
 
   zx_status_t FetchRx(uint16_t* out, size_t* count = nullptr, bool wait = true) {
-    return FetchDescriptors(&rx_, out, count, wait);
+    return FetchDescriptors(rx_, out, count, wait);
   }
 
   zx_status_t WaitOnline() {

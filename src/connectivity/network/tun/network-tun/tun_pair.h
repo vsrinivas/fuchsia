@@ -28,10 +28,8 @@ class TunPair : public fbl::DoublyLinkedListable<std::unique_ptr<TunPair>>,
  public:
   // Creates a new `TunPair` with `config`.
   // `teardown` is called when all the bound client channels are closed.
-  // On success, the new device is stored in `out`.
-  static zx_status_t Create(fit::callback<void(TunPair*)> teardown,
-                            fuchsia::net::tun::DevicePairConfig config,
-                            std::unique_ptr<TunPair>* out);
+  static zx::status<std::unique_ptr<TunPair>> Create(fit::callback<void(TunPair*)> teardown,
+                                                     fuchsia::net::tun::DevicePairConfig config);
   ~TunPair() override;
 
   // fuchsia.net.tun.DevicePair implementation:

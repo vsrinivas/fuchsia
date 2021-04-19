@@ -101,7 +101,7 @@ void StatusWatcher::WatchStatus(WatchStatusCompleter::Sync& completer) {
 
 void StatusWatcher::PushStatus(const status_t& status) {
   fbl::AutoLock lock(&lock_);
-  cpp17::optional<status_t> tail;
+  std::optional<status_t> tail;
   if (queue_.empty()) {
     tail = last_observed_;
   } else {

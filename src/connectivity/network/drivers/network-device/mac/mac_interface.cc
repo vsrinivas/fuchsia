@@ -12,14 +12,9 @@
 
 namespace network {
 
-zx_status_t MacAddrDeviceInterface::Create(ddk::MacAddrImplProtocolClient parent,
-                                           std::unique_ptr<MacAddrDeviceInterface>* out) {
-  std::unique_ptr<internal::MacInterface> mac;
-  zx_status_t status = internal::MacInterface::Create(parent, &mac);
-  if (status == ZX_OK) {
-    *out = std::move(mac);
-  }
-  return status;
+zx::status<std::unique_ptr<MacAddrDeviceInterface>> MacAddrDeviceInterface::Create(
+    ddk::MacAddrImplProtocolClient parent) {
+  return internal::MacInterface::Create(parent);
 }
 
 namespace internal {
@@ -39,19 +34,19 @@ MacInterface::~MacInterface() {
                 clients_.size_slow());
 }
 
-zx_status_t MacInterface::Create(ddk::MacAddrImplProtocolClient parent,
-                                 std::unique_ptr<MacInterface>* out) {
+zx::status<std::unique_ptr<MacInterface>> MacInterface::Create(
+    ddk::MacAddrImplProtocolClient parent) {
   fbl::AllocChecker ac;
   std::unique_ptr<MacInterface> mac(new (&ac) MacInterface(parent));
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   mac->impl_.GetFeatures(&mac->features_);
   if ((mac->features_.supported_modes & ~kSupportedModesMask) != 0) {
     LOGF_ERROR("mac-addr-device:Init: Invalid supported modes bitmask: %08X",
                mac->features_.supported_modes);
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
   if (mac->features_.supported_modes & MODE_MULTICAST_FILTER) {
     mac->default_mode_ = MODE_MULTICAST_FILTER;
@@ -63,7 +58,7 @@ zx_status_t MacInterface::Create(ddk::MacAddrImplProtocolClient parent,
     // No supported modes.
     LOGF_ERROR("mac-addr-device:Init: Invalid supported modes bitmask: %08X",
                mac->features_.supported_modes);
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
   // Limit multicast filter count to protocol definition.
   if (mac->features_.multicast_filter_count > MAX_MAC_FILTER) {
@@ -73,8 +68,7 @@ zx_status_t MacInterface::Create(ddk::MacAddrImplProtocolClient parent,
   // Set the default mode to the parent on initialization.
   mac->impl_.SetMode(mac->default_mode_, nullptr, 0);
 
-  *out = std::move(mac);
-  return ZX_OK;
+  return zx::ok(std::move(mac));
 }
 
 zx_status_t MacInterface::Bind(async_dispatcher_t* dispatcher,

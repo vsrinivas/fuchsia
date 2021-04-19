@@ -4,7 +4,6 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
-#include <lib/stdcompat/optional.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
 
@@ -104,7 +103,11 @@ class NetworkDeviceTest : public zxtest::Test {
     if (device_) {
       return ZX_ERR_INTERNAL;
     }
-    return impl_.CreateChild(dispatcher(), &device_);
+    zx::status device = impl_.CreateChild(dispatcher());
+    if (device.is_ok()) {
+      device_ = std::move(device.value());
+    }
+    return device.status_value();
   }
 
   zx_status_t OpenSession(TestSession* session,
@@ -946,8 +949,8 @@ TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
   // String view only contains "hello".
   fidl::StringView name = fidl::StringView::FromExternal(name_str, 5u);
 
-  netdev::wire::DeviceOpenSessionResponse rsp;
-  ASSERT_OK(dev->OpenSession(std::move(name), std::move(info), &rsp));
+  zx::status response = dev->OpenSession(std::move(name), std::move(info));
+  ASSERT_OK(response.status_value());
 
   const auto& session = dev->sessions_unsafe().front();
 
@@ -1050,7 +1053,7 @@ TEST_F(NetworkDeviceTest, RxQueueIdlesOnPausedSession) {
 
   struct {
     fbl::Mutex lock;
-    cpp17::optional<uint64_t> key __TA_GUARDED(lock);
+    std::optional<uint64_t> key __TA_GUARDED(lock);
   } observed_key;
 
   sync_completion_t completion;

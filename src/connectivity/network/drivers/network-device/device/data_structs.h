@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_DATA_STRUCTS_H_
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_DATA_STRUCTS_H_
 
+#include <lib/zx/status.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
@@ -23,21 +24,20 @@ class RingQueue {
   // Creates a new queue with the given capacity and stores it in `out`.
   // Returns an error if the provided capacity is invalid, or it failed to allocate the required
   // memory.
-  static zx_status_t Create(uint32_t capacity, std::unique_ptr<RingQueue<T>>* out) {
+  static zx::status<std::unique_ptr<RingQueue<T>>> Create(uint32_t capacity) {
     if (capacity == 0) {
-      return ZX_ERR_INVALID_ARGS;
+      return zx::error(ZX_ERR_INVALID_ARGS);
     }
     fbl::AllocChecker ac;
     std::unique_ptr<T[]> data(new (&ac) T[capacity]);
     if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
+      return zx::error(ZX_ERR_NO_MEMORY);
     }
     std::unique_ptr<RingQueue<T>> queue(new (&ac) RingQueue(std::move(data), capacity));
     if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
+      return zx::error(ZX_ERR_NO_MEMORY);
     }
-    *out = std::move(queue);
-    return ZX_OK;
+    return zx::ok(std::move(queue));
   }
 
   // Pushes a new value onto the queue.
@@ -89,21 +89,20 @@ class IndexedSlab {
   // Creates a new slab with the given capacity and stores it in `out`.
   // Returns an error if the provided capacity is invalid, or it failed to allocate the required
   // memory.
-  static zx_status_t Create(uint32_t capacity, std::unique_ptr<IndexedSlab<T>>* out) {
+  static zx::status<std::unique_ptr<IndexedSlab<T>>> Create(uint32_t capacity) {
     if (capacity == 0) {
-      return ZX_ERR_INVALID_ARGS;
+      return zx::error(ZX_ERR_INVALID_ARGS);
     }
     fbl::AllocChecker ac;
     std::unique_ptr<Holder[]> data(new (&ac) Holder[capacity]);
     if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
+      return zx::error(ZX_ERR_NO_MEMORY);
     }
     std::unique_ptr<IndexedSlab<T>> slab(new (&ac) IndexedSlab(std::move(data), capacity));
     if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
+      return zx::error(ZX_ERR_NO_MEMORY);
     }
-    *out = std::move(slab);
-    return ZX_OK;
+    return zx::ok(std::move(slab));
   }
 
   // Pushes a new entry into the slab, returning a key to retrieve it.

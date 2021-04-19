@@ -43,15 +43,14 @@ class VmoStore {
   // Returns an error if the specified region is invalid or `id` is not registered.
   template <class T>
   zx_status_t Read(uint8_t id, size_t offset, size_t len, T data) {
-    fbl::Span<uint8_t> vmo_data;
-    zx_status_t status = GetMappedVmo(id, &vmo_data);
-    if (status != ZX_OK) {
-      return status;
+    zx::status vmo_data = GetMappedVmo(id);
+    if (vmo_data.is_error()) {
+      return vmo_data.status_value();
     }
-    if (offset + len > vmo_data.size()) {
+    if (offset + len > vmo_data->size()) {
       return ZX_ERR_OUT_OF_RANGE;
     }
-    std::copy_n(vmo_data.begin() + offset, len, data);
+    std::copy_n(vmo_data->begin() + offset, len, data);
     return ZX_OK;
   }
 
@@ -60,15 +59,14 @@ class VmoStore {
   // Returns an error if the specified region is invalid or `id` is not registered.
   template <class T>
   zx_status_t Write(uint8_t id, size_t offset, size_t len, T data) {
-    fbl::Span<uint8_t> vmo_data;
-    zx_status_t status = GetMappedVmo(id, &vmo_data);
-    if (status != ZX_OK) {
-      return status;
+    zx::status vmo_data = GetMappedVmo(id);
+    if (vmo_data.is_error()) {
+      return vmo_data.status_value();
     }
-    if (offset + len > vmo_data.size()) {
+    if (offset + len > vmo_data->size()) {
       return ZX_ERR_OUT_OF_RANGE;
     }
-    std::copy_n(data, len, vmo_data.begin() + offset);
+    std::copy_n(data, len, vmo_data->begin() + offset);
     return ZX_OK;
   }
 
@@ -95,7 +93,7 @@ class VmoStore {
   Buffer MakeRxSpaceBuffer(const rx_space_buffer_t* space);
 
  private:
-  zx_status_t GetMappedVmo(uint8_t id, fbl::Span<uint8_t>* out_span);
+  zx::status<fbl::Span<uint8_t>> GetMappedVmo(uint8_t id);
   vmo_store::VmoStore<vmo_store::SlabStorage<uint8_t>> store_;
 };
 
@@ -106,6 +104,9 @@ class VmoStore {
 // inbound data) buffer.
 class Buffer {
  public:
+  Buffer(Buffer&&) = default;
+  Buffer(const Buffer&) = delete;
+
   // Reads this buffer's data into `vec`.
   // Used to serve `fuchsia.net.tun/Device.ReadFrame`.
   // Returns an error if this buffer's definition does not map to valid data (see `VmoStore::Write`
@@ -124,8 +125,8 @@ class Buffer {
 
   inline uint32_t id() const { return id_; }
 
-  inline std::unique_ptr<fuchsia::net::tun::FrameMetadata> TakeMetadata() {
-    return std::move(meta_);
+  inline std::optional<fuchsia::net::tun::FrameMetadata> TakeMetadata() {
+    return std::exchange(meta_, std::nullopt);
   }
 
  protected:
@@ -142,7 +143,7 @@ class Buffer {
   const uint8_t vmo_id_;
   std::array<buffer_region_t, MAX_BUFFER_PARTS> parts_{};
   const size_t parts_count_{};
-  std::unique_ptr<fuchsia::net::tun::FrameMetadata> meta_;
+  std::optional<fuchsia::net::tun::FrameMetadata> meta_;
   const cpp17::optional<fuchsia::hardware::network::FrameType> frame_type_;
 };
 

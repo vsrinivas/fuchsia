@@ -10,7 +10,6 @@
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/stdcompat/optional.h>
 #include <lib/zx/event.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
@@ -51,12 +50,10 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // All control plane calls are operated on the provided `dispatcher`, and a dedicated thread will
   // be spawned to handle data fast path operations (tx data plane).
   //
-  // The resulting session is stored in `out_session`, and the created FIFO objects used for the
-  // data path are stored in `out_fifos` upon successful creation.
-  static zx_status_t Create(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo info,
-                            fidl::StringView name, DeviceInterface* parent,
-                            fidl::ServerEnd<netdev::Session> control,
-                            std::unique_ptr<Session>* out_session, netdev::wire::Fifos* out_fifos);
+  // Returns the session and its data path FIFOs.
+  static zx::status<std::pair<std::unique_ptr<Session>, netdev::wire::Fifos>> Create(
+      async_dispatcher_t* dispatcher, netdev::wire::SessionInfo info, fidl::StringView name,
+      DeviceInterface* parent, fidl::ServerEnd<netdev::Session> control);
   bool IsPrimary() const;
   bool IsListen() const;
   bool IsPaused() const;
@@ -119,7 +116,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
  private:
   Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo* info, fidl::StringView name,
           DeviceInterface* parent);
-  zx_status_t Init(netdev::wire::Fifos* out);
+  zx::status<netdev::wire::Fifos> Init();
   void Bind(fidl::ServerEnd<netdev::Session> channel);
   void StopTxThread();
   void OnUnbind(fidl::UnbindInfo::Reason reason, fidl::ServerEnd<netdev::Session> channel);
@@ -147,11 +144,11 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // Set by Session::Create.
   DataVmoStore::StoredVmo* data_vmo_ = nullptr;
   zx::port tx_port_;
-  cpp17::optional<fidl::ServerBindingRef<netdev::Session>> binding_;
+  std::optional<fidl::ServerBindingRef<netdev::Session>> binding_;
   // The control channel is only set by the session teardown process if an epitaph must be sent when
   // all the buffers are properly reclaimed. It is set to the channel that was previously bound in
   // the `binding_` Server.
-  cpp17::optional<fidl::ServerEnd<netdev::Session>> control_channel_;
+  std::optional<fidl::ServerEnd<netdev::Session>> control_channel_;
   zx::vmo vmo_descriptors_;
   fzl::VmoMapper descriptors_;
   fbl::RefPtr<RefCountedFifo> fifo_rx_;
@@ -164,7 +161,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   uint32_t frame_type_count_;
   // Pointer to parent network device, not owned.
   DeviceInterface* parent_;
-  cpp17::optional<thrd_t> thread_;
+  std::optional<thrd_t> thread_;
   std::unique_ptr<uint16_t[]> rx_return_queue_;
   size_t rx_return_queue_count_ = 0;
   std::unique_ptr<uint16_t[]> rx_avail_queue_;

@@ -55,8 +55,9 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
   // `dispatcher`.
   // If `online` is true, the device starts with its virtual link in the online status.
   // On success, the adapter is stored in `out`.
-  static zx_status_t Create(async_dispatcher_t* dispatcher, DeviceAdapterParent* parent,
-                            bool online, std::unique_ptr<DeviceAdapter>* out);
+  static zx::status<std::unique_ptr<DeviceAdapter>> Create(async_dispatcher_t* dispatcher,
+                                                           DeviceAdapterParent* parent,
+                                                           bool online);
 
   // Binds `req` to this adapter's `NetworkDeviceInterface`.
   zx_status_t Bind(fidl::ServerEnd<netdev::Device> req);
@@ -97,12 +98,12 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
   bool TryGetTxBuffer(fit::callback<void(Buffer*, size_t)> callback);
   // Attempts to write `data` and `meta` into an available rx buffer and return it to the
   // `NetworkDeviceInterface`.
-  // The number of remaining available buffers is stored in `out_avail`.
+  // Returns the number of remaining available buffers.
   // Returns `ZX_ERR_BAD_STATE` if the device is offline, or `ZX_ERR_SHOULD_WAIT` if there are no
   // buffers available to write `data` into
-  zx_status_t WriteRxFrame(fuchsia::hardware::network::FrameType frame_type,
-                           const std::vector<uint8_t>& data,
-                           const fuchsia::net::tun::FrameMetadata* meta, size_t* out_avail);
+  zx::status<size_t> WriteRxFrame(fuchsia::hardware::network::FrameType frame_type,
+                                  const std::vector<uint8_t>& data,
+                                  const std::optional<fuchsia::net::tun::FrameMetadata>& meta);
   // Copies all pending tx buffers from `this` consuming any available rx buffers from `other`.
   // If `return_failed_buffers` is `true`, all buffers from `this` that couldn't be immediately
   // copied into available buffers from `other` will be returned to applications in a failure state,
@@ -114,7 +115,7 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
 
   // Enqueues a single fulfilled rx frame.
   void EnqueueRx(fuchsia::hardware::network::FrameType frame_type, uint32_t buffer_id,
-                 uint32_t total_len, const fuchsia::net::tun::FrameMetadata* meta)
+                 uint32_t total_len, const std::optional<fuchsia::net::tun::FrameMetadata>& meta)
       __TA_REQUIRES(rx_lock_);
   // Commits all pending rx buffers, returning them to the `NetworkDeviceInterface`.
   void CommitRx() __TA_REQUIRES(rx_lock_);

@@ -6,7 +6,6 @@
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_RX_QUEUE_H_
 
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
-#include <lib/stdcompat/optional.h>
 #include <lib/zx/port.h>
 
 #include <fbl/alloc_checker.h>
@@ -28,7 +27,7 @@ class RxQueue {
   static constexpr uint64_t kFifoWatchKey = 3;
   static constexpr uint64_t kQuitWatchKey = 4;
 
-  static zx_status_t Create(DeviceInterface* parent, std::unique_ptr<RxQueue>* out);
+  static zx::status<std::unique_ptr<RxQueue>> Create(DeviceInterface* parent);
   ~RxQueue();
 
   // Reclaims all buffers currently held by the device.
@@ -100,7 +99,7 @@ class RxQueue {
   std::unique_ptr<BufferParts[]> buffer_parts_;
 
   zx::port rx_watch_port_;
-  cpp17::optional<thrd_t> rx_watch_thread_{};
+  std::optional<thrd_t> rx_watch_thread_{};
   std::atomic<bool> running_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(RxQueue);

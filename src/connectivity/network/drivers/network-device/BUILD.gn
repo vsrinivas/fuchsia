@@ -22,7 +22,6 @@ source_set("src") {
     ":network-device_bind",
     "device:device_ddk",
     "mac:mac_ddk",
-    "//sdk/lib/stdcompat",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

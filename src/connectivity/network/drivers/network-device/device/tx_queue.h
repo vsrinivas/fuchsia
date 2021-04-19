@@ -24,7 +24,7 @@ class TxQueue {
  public:
   class SessionTransaction;
 
-  static zx_status_t Create(DeviceInterface* parent, std::unique_ptr<TxQueue>* out);
+  static zx::status<std::unique_ptr<TxQueue>> Create(DeviceInterface* parent);
   ~TxQueue() = default;
 
   // Reclaims all tx buffers currently held by the device implementation.

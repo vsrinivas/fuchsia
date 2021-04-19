@@ -22,8 +22,9 @@ using RingQueue = network::internal::RingQueue<uint64_t>;
 
 TEST(DataStructsTest, RingQueue) {
   constexpr uint32_t kCapacity = 16;
-  std::unique_ptr<RingQueue> queue;
-  ASSERT_OK(RingQueue::Create(kCapacity, &queue));
+  zx::status queue_creation = RingQueue::Create(kCapacity);
+  ASSERT_OK(queue_creation.status_value());
+  std::unique_ptr queue = std::move(queue_creation.value());
   ASSERT_EQ(queue->count(), 0);
   queue->Push(1);
   queue->Push(2);
@@ -38,8 +39,9 @@ TEST(DataStructsTest, RingQueue) {
 
 TEST(DataStructsTest, RingQueueOverCapacity) {
   constexpr uint32_t kCapacity = 2;
-  std::unique_ptr<RingQueue> queue;
-  ASSERT_OK(RingQueue::Create(kCapacity, &queue));
+  zx::status queue_creation = RingQueue::Create(kCapacity);
+  ASSERT_OK(queue_creation.status_value());
+  std::unique_ptr queue = std::move(queue_creation.value());
   queue->Push(1);
   queue->Push(2);
   ASSERT_DEATH([&queue]() { queue->Push(3); });
@@ -47,8 +49,9 @@ TEST(DataStructsTest, RingQueueOverCapacity) {
 
 TEST(DataStructsTest, IndexedSlab) {
   constexpr uint32_t kCapacity = 16;
-  std::unique_ptr<IndexedSlab> slab;
-  ASSERT_OK(IndexedSlab::Create(kCapacity, &slab));
+  zx::status slab_creation = IndexedSlab::Create(kCapacity);
+  ASSERT_OK(slab_creation.status_value());
+  std::unique_ptr slab = std::move(slab_creation.value());
   ASSERT_EQ(slab->available(), kCapacity);
   auto a = slab->Push(1);
   auto b = slab->Push(2);
@@ -65,8 +68,9 @@ TEST(DataStructsTest, IndexedSlab) {
 
 TEST(DataStructsTest, IndexedSlabOverCapacity) {
   constexpr uint32_t kCapacity = 2;
-  std::unique_ptr<IndexedSlab> slab;
-  ASSERT_OK(IndexedSlab::Create(kCapacity, &slab));
+  zx::status slab_creation = IndexedSlab::Create(kCapacity);
+  ASSERT_OK(slab_creation.status_value());
+  std::unique_ptr slab = std::move(slab_creation.value());
   slab->Push(1);
   slab->Push(2);
   ASSERT_DEATH([&slab]() { slab->Push(3); });
@@ -74,8 +78,9 @@ TEST(DataStructsTest, IndexedSlabOverCapacity) {
 
 TEST(DataStructsTest, IndexedSlabDoubleFree) {
   constexpr uint32_t kCapacity = 2;
-  std::unique_ptr<IndexedSlab> slab;
-  ASSERT_OK(IndexedSlab::Create(kCapacity, &slab));
+  zx::status slab_creation = IndexedSlab::Create(kCapacity);
+  ASSERT_OK(slab_creation.status_value());
+  std::unique_ptr slab = std::move(slab_creation.value());
   slab->Push(1);
   uint32_t b = slab->Push(2);
   slab->Free(b);
@@ -83,7 +88,7 @@ TEST(DataStructsTest, IndexedSlabDoubleFree) {
   ASSERT_DEATH(([b, &slab]() { slab->Free(b); }));
 }
 
-void VerifyIterator(IndexedSlab* slab, const std::vector<uint64_t>& expect) {
+void VerifyIterator(IndexedSlab& slab, const std::vector<uint64_t>& expect) {
   std::stringstream context_stream;
   for (auto e = expect.begin(); e != expect.end(); e++) {
     if (e != expect.begin()) {
@@ -92,34 +97,35 @@ void VerifyIterator(IndexedSlab* slab, const std::vector<uint64_t>& expect) {
     context_stream << *e;
   }
   auto context = context_stream.str();
-  auto i = slab->begin();
+  auto i = slab.begin();
   for (auto& e : expect) {
-    ASSERT_EQ(slab->Get(*i), e, ": %s", context.c_str());
+    ASSERT_EQ(slab.Get(*i), e, ": %s", context.c_str());
     ++i;
   }
-  ASSERT_EQ(i, slab->end(), ": %s", context.c_str());
+  ASSERT_EQ(i, slab.end(), ": %s", context.c_str());
 }
 
 TEST(DataStructsTest, IndexedSlabIterator) {
   constexpr uint32_t kCapacity = 4;
-  std::unique_ptr<IndexedSlab> slab;
-  ASSERT_OK(IndexedSlab::Create(kCapacity, &slab));
+  zx::status slab_creation = IndexedSlab::Create(kCapacity);
+  ASSERT_OK(slab_creation.status_value());
+  std::unique_ptr slab = std::move(slab_creation.value());
   // If we're empty, the iterator should be empty:
   ASSERT_EQ(slab->begin(), slab->end());
   auto i1 = slab->Push(1);
 
-  VerifyIterator(slab.get(), {1});
+  VerifyIterator(*slab, {1});
   auto i2 = slab->Push(2);
   auto i3 = slab->Push(3);
   slab->Push(4);
-  VerifyIterator(slab.get(), {1, 2, 3, 4});
+  VerifyIterator(*slab, {1, 2, 3, 4});
   slab->Free(i2);
   slab->Free(i3);
-  VerifyIterator(slab.get(), {1, 4});
+  VerifyIterator(*slab, {1, 4});
   slab->Push(2);
-  VerifyIterator(slab.get(), {1, 2, 4});
+  VerifyIterator(*slab, {1, 2, 4});
   slab->Free(i1);
-  VerifyIterator(slab.get(), {2, 4});
+  VerifyIterator(*slab, {2, 4});
 }
 
 }  // namespace testing

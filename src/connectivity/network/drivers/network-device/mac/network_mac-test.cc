@@ -40,7 +40,11 @@ class MacDeviceTest : public zxtest::Test {
     if (device_) {
       return ZX_ERR_INTERNAL;
     }
-    return impl_.CreateChild(&device_);
+    zx::status device = impl_.CreateChild();
+    if (device.is_ok()) {
+      device_ = std::move(device.value());
+    }
+    return device.status_value();
   }
 
   fit::result<fidl::WireSyncClient<netdev::MacAddressing>, zx_status_t> OpenInstance() {

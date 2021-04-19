@@ -17,9 +17,9 @@ FakeMacDeviceImpl::FakeMacDeviceImpl() {
   ZX_ASSERT(zx::event::create(0, &event_) == ZX_OK);
 }
 
-zx_status_t FakeMacDeviceImpl::CreateChild(std::unique_ptr<MacAddrDeviceInterface>* out) {
+zx::status<std::unique_ptr<MacAddrDeviceInterface>> FakeMacDeviceImpl::CreateChild() {
   auto protocol = proto();
-  return MacAddrDeviceInterface::Create(ddk::MacAddrImplProtocolClient(&protocol), out);
+  return MacAddrDeviceInterface::Create(ddk::MacAddrImplProtocolClient(&protocol));
 }
 
 void FakeMacDeviceImpl::MacAddrImplGetAddress(uint8_t* out_mac) { memcpy(out_mac, mac_, MAC_SIZE); }

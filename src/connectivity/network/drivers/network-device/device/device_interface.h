@@ -8,7 +8,6 @@
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-#include <lib/stdcompat/optional.h>
 
 #include "data_structs.h"
 #include "definitions.h"
@@ -28,9 +27,9 @@ class DeviceInterface : public fidl::WireInterface<netdev::Device>,
                         public ddk::NetworkDeviceIfcProtocol<DeviceInterface>,
                         public ::network::NetworkDeviceInterface {
  public:
-  static zx_status_t Create(async_dispatcher_t* dispatcher,
-                            ddk::NetworkDeviceImplProtocolClient parent, const char* parent_name,
-                            std::unique_ptr<DeviceInterface>* out);
+  static zx::status<std::unique_ptr<DeviceInterface>> Create(
+      async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent,
+      const char* parent_name);
   ~DeviceInterface() override;
 
   // Public NetworkDevice API.
@@ -95,11 +94,10 @@ class DeviceInterface : public fidl::WireInterface<netdev::Device>,
   // Destroys all dead sessions that report they can be destroyed through `Session::CanDestroy`.
   void PruneDeadSessions();
 
-  // Registers `vmo` as a data vmo that will be shared with the device implementation. On success,
-  // `out_id` contains the generated identifier and `out_stored_vmo` contains an unowned pointer to
-  // the `StoredVmo` holder.
-  zx_status_t RegisterDataVmo(zx::vmo vmo, uint8_t* out_id,
-                              DataVmoStore::StoredVmo** out_stored_vmo);
+  // Registers `vmo` as a data vmo that will be shared with the device implementation.
+  //
+  // Returns the generated identifier and an unowned pointer to the vmo holder.
+  zx::status<std::pair<uint8_t, DataVmoStore::StoredVmo*>> RegisterDataVmo(zx::vmo vmo);
 
   // Fidl protocol implementation.
   void GetInfo(GetInfoCompleter::Sync& completer) override;
@@ -110,8 +108,8 @@ class DeviceInterface : public fidl::WireInterface<netdev::Device>,
                         GetStatusWatcherCompleter::Sync& completer) override;
 
   // Serves the OpenSession FIDL handle method synchronously.
-  zx_status_t OpenSession(fidl::StringView name, netdev::wire::SessionInfo session_info,
-                          netdev::wire::DeviceOpenSessionResponse* rsp);
+  zx::status<netdev::wire::DeviceOpenSessionResponse> OpenSession(
+      fidl::StringView name, netdev::wire::SessionInfo session_info);
 
  private:
   // Helper class to keep track of clients bound to DeviceInterface.
@@ -122,7 +120,7 @@ class DeviceInterface : public fidl::WireInterface<netdev::Device>,
 
    private:
     Binding() = default;
-    cpp17::optional<fidl::ServerBindingRef<netdev::Device>> binding_;
+    std::optional<fidl::ServerBindingRef<netdev::Device>> binding_;
   };
   using BindingList = fbl::DoublyLinkedList<std::unique_ptr<Binding>>;
 
@@ -135,7 +133,7 @@ class DeviceInterface : public fidl::WireInterface<netdev::Device>,
         vmo_store_(vmo_store::Options{
             vmo_store::MapOptions{ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
                                   nullptr},
-            cpp17::nullopt}) {}
+            std::nullopt}) {}
   zx_status_t Init(const char* parent_name);
 
   // Starts the data path with the device implementation.

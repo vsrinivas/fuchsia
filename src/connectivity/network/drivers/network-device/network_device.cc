@@ -25,16 +25,15 @@ NetworkDevice::~NetworkDevice() {
 
 zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
-  auto netdev = fbl::make_unique_checked<NetworkDevice>(&ac, parent);
-
+  std::unique_ptr netdev = fbl::make_unique_checked<NetworkDevice>(&ac, parent);
   if (!ac.check()) {
     zxlogf(ERROR, "network-device: No memory");
     return ZX_ERR_NO_MEMORY;
   }
 
   thrd_t thread;
-  zx_status_t status;
-  if ((status = netdev->loop_.StartThread("network-device-handler", &thread)) != ZX_OK) {
+  if (zx_status_t status = netdev->loop_.StartThread("network-device-handler", &thread);
+      status != ZX_OK) {
     zxlogf(ERROR, "network-device: Failed to create handler thread");
     return status;
   }
@@ -46,27 +45,29 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  if ((status = NetworkDeviceInterface::Create(netdev->loop_.dispatcher(), netdevice_impl,
-                                               device_get_name(parent), &netdev->device_)) !=
-      ZX_OK) {
-    zxlogf(ERROR, "network-device: Failed to create inner device %s", zx_status_get_string(status));
-    return status;
+  zx::status device = NetworkDeviceInterface::Create(netdev->loop_.dispatcher(), netdevice_impl,
+                                                     device_get_name(parent));
+  if (device.is_error()) {
+    zxlogf(ERROR, "network-device: Failed to create inner device %s", device.status_string());
+    return device.status_value();
   }
+  netdev->device_ = std::move(device.value());
 
   // If our parent supports the MacAddrImpl protocol, create the handler for it.
   ddk::MacAddrImplProtocolClient mac_impl(parent);
   if (mac_impl.is_valid()) {
-    if ((status = MacAddrDeviceInterface::Create(mac_impl, &netdev->mac_)) != ZX_OK) {
-      zxlogf(ERROR, "network-device: Failed to create inner mac device: %s",
-             zx_status_get_string(status));
-      return status;
+    zx::status mac = MacAddrDeviceInterface::Create(mac_impl);
+    if (mac.is_error()) {
+      zxlogf(ERROR, "network-device: Failed to create inner mac device: %s", mac.status_string());
+      return mac.status_value();
     }
+    netdev->mac_ = std::move(mac.value());
   }
 
-  if ((status = netdev->DdkAdd(
-           ddk::DeviceAddArgs("network-device").set_proto_id(ZX_PROTOCOL_NETWORK_DEVICE))) !=
-      ZX_OK) {
-    zxlogf(ERROR, "network-device: Failed to bind %d", status);
+  if (zx_status_t status = netdev->DdkAdd(
+          ddk::DeviceAddArgs("network-device").set_proto_id(ZX_PROTOCOL_NETWORK_DEVICE));
+      status != ZX_OK) {
+    zxlogf(ERROR, "network-device: Failed to bind %s", zx_status_get_string(status));
     return status;
   }
 

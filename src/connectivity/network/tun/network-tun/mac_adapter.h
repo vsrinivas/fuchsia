@@ -40,8 +40,9 @@ class MacAdapter : public ddk::MacAddrImplProtocol<MacAdapter>, public MacAddrDe
   // if `promisc_only` is true, the only filtering mode reported to the interface will be
   // `MODE_PROMISCUOUS`.
   // On success, the adapter is stored in `out`.
-  static zx_status_t Create(MacAdapterParent* parent, fuchsia::net::MacAddress mac,
-                            bool promisc_only, std::unique_ptr<MacAdapter>* out);
+  static zx::status<std::unique_ptr<MacAdapter>> Create(MacAdapterParent* parent,
+                                                        fuchsia::net::MacAddress mac,
+                                                        bool promisc_only);
   // Binds the request channel to the MacAddrDeviceInterface. Requests will be served over the
   // provided `dispatcher`.
   zx_status_t Bind(async_dispatcher_t* dispatcher,

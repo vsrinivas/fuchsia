@@ -12,15 +12,10 @@
 
 namespace network {
 
-zx_status_t NetworkDeviceInterface::Create(async_dispatcher_t* dispatcher,
-                                           ddk::NetworkDeviceImplProtocolClient parent,
-                                           const char* parent_name,
-                                           std::unique_ptr<NetworkDeviceInterface>* out) {
-  std::unique_ptr<internal::DeviceInterface> interface;
-  zx_status_t status =
-      internal::DeviceInterface::Create(dispatcher, parent, parent_name, &interface);
-  *out = std::move(interface);
-  return status;
+zx::status<std::unique_ptr<NetworkDeviceInterface>> NetworkDeviceInterface::Create(
+    async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent,
+    const char* parent_name) {
+  return internal::DeviceInterface::Create(dispatcher, parent, parent_name);
 }
 
 namespace internal {
@@ -37,20 +32,19 @@ uint16_t TransformFifoDepth(uint16_t device_depth) {
   return std::min(kMaxFifoDepth, static_cast<uint16_t>(device_depth << 1));
 }
 
-zx_status_t DeviceInterface::Create(async_dispatcher_t* dispatcher,
-                                    ddk::NetworkDeviceImplProtocolClient parent,
-                                    const char* parent_name,
-                                    std::unique_ptr<DeviceInterface>* out) {
+zx::status<std::unique_ptr<DeviceInterface>> DeviceInterface::Create(
+    async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent,
+    const char* parent_name) {
   fbl::AllocChecker ac;
   std::unique_ptr<DeviceInterface> device(new (&ac) DeviceInterface(dispatcher, parent));
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   zx_status_t status = device->Init(parent_name);
-  if (status == ZX_OK) {
-    *out = std::move(device);
+  if (status != ZX_OK) {
+    return zx::error(status);
   }
-  return status;
+  return zx::ok(std::move(device));
 }
 
 DeviceInterface::~DeviceInterface() {
@@ -125,18 +119,23 @@ zx_status_t DeviceInterface::Init(const char* parent_name) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t status;
-  if ((status = TxQueue::Create(this, &tx_queue_)) != ZX_OK) {
+  zx::status tx_queue = TxQueue::Create(this);
+  if (tx_queue.is_error()) {
     LOGF_ERROR("network-device: bind: device failed to start Tx Queue: %s",
-               zx_status_get_string(status));
-    return status;
+               tx_queue.status_string());
+    return tx_queue.status_value();
   }
+  tx_queue_ = std::move(tx_queue.value());
 
-  if ((status = RxQueue::Create(this, &rx_queue_)) != ZX_OK) {
+  zx::status rx_queue = RxQueue::Create(this);
+  if (rx_queue.is_error()) {
     LOGF_ERROR("network-device: bind: device failed to start Rx Queue: %s",
-               zx_status_get_string(status));
-    return status;
+               rx_queue.status_string());
+    return rx_queue.status_value();
   }
+  rx_queue_ = std::move(rx_queue.value());
+
+  zx_status_t status;
   {
     fbl::AutoLock lock(&vmos_lock_);
     if ((status = vmo_store_.Reserve(MAX_VMOS)) != ZX_OK) {
@@ -259,16 +258,13 @@ void DeviceInterface::GetStatus(GetStatusCompleter::Sync& completer) {
 void DeviceInterface::OpenSession(::fidl::StringView session_name,
                                   netdev::wire::SessionInfo session_info,
                                   OpenSessionCompleter::Sync& completer) {
-  netdev::wire::DeviceOpenSessionResponse rsp;
-  zx_status_t status = OpenSession(std::move(session_name), std::move(session_info), &rsp);
-  netdev::wire::DeviceOpenSessionResult result;
-  if (status != ZX_OK) {
-    result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+  zx::status response = OpenSession(std::move(session_name), std::move(session_info));
+  if (response.is_error()) {
+    completer.ReplyError(response.error_value());
   } else {
-    result.set_response(
-        fidl::ObjectView<netdev::wire::DeviceOpenSessionResponse>::FromExternal(&rsp));
+    auto& [session, fifos] = response.value();
+    completer.ReplySuccess(std::move(session), std::move(fifos));
   }
-  completer.Reply(std::move(result));
 }
 
 void DeviceInterface::GetStatusWatcher(fidl::ServerEnd<netdev::StatusWatcher> watcher,
@@ -314,29 +310,27 @@ void DeviceInterface::GetStatusWatcher(fidl::ServerEnd<netdev::StatusWatcher> wa
   watchers_.push_back(std::move(n_watcher));
 }
 
-zx_status_t DeviceInterface::OpenSession(fidl::StringView name,
-                                         netdev::wire::SessionInfo session_info,
-                                         netdev::wire::DeviceOpenSessionResponse* rsp) {
+zx::status<netdev::wire::DeviceOpenSessionResponse> DeviceInterface::OpenSession(
+    fidl::StringView name, netdev::wire::SessionInfo session_info) {
   {
     fbl::AutoLock teardown_lock(&teardown_lock_);
     // We're currently tearing down and can't open any new sessions.
     if (teardown_state_ != TeardownState::RUNNING) {
-      return ZX_ERR_UNAVAILABLE;
+      return zx::error(ZX_ERR_UNAVAILABLE);
     }
   }
   fbl::AutoLock lock(&sessions_lock_);
 
-  auto endpoints = fidl::CreateEndpoints<netdev::Session>();
-  if (!endpoints.is_ok()) {
-    return endpoints.status_value();
+  zx::status endpoints = fidl::CreateEndpoints<netdev::Session>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
   }
-  rsp->session = std::move(endpoints->client);
-  zx_status_t status;
-  std::unique_ptr<Session> session;
-  if ((status = Session::Create(dispatcher_, std::move(session_info), std::move(name), this,
-                                std::move(endpoints->server), &session, &rsp->fifos)) != ZX_OK) {
-    return status;
+  zx::status session_creation = Session::Create(
+      dispatcher_, std::move(session_info), std::move(name), this, std::move(endpoints->server));
+  if (session_creation.is_error()) {
+    return session_creation.take_error();
   }
+  auto& [session, fifos] = session_creation.value();
 
   if (session->ShouldTakeOverPrimary(primary_session_.get())) {
     // Set this new session as the primary session.
@@ -349,7 +343,10 @@ zx_status_t DeviceInterface::OpenSession(fidl::StringView name,
     sessions_.push_back(std::move(session));
   }
 
-  return ZX_OK;
+  return zx::ok(netdev::wire::DeviceOpenSessionResponse{
+      .session = std::move(endpoints->client),
+      .fifos = std::move(fifos),
+  });
 }
 
 uint16_t DeviceInterface::rx_fifo_depth() const {
@@ -791,30 +788,29 @@ void DeviceInterface::PruneDeadSessions() {
   }
 }
 
-zx_status_t DeviceInterface::RegisterDataVmo(zx::vmo vmo, uint8_t* out_id,
-                                             DataVmoStore::StoredVmo** out_stored_vmo) {
+zx::status<std::pair<uint8_t, DataVmoStore::StoredVmo*>> DeviceInterface::RegisterDataVmo(
+    zx::vmo vmo) {
+  fbl::AutoLock lock_vmos(&vmos_lock_);
+  if (vmo_store_.is_full()) {
+    return zx::error(ZX_ERR_NO_RESOURCES);
+  }
+  // Duplicate the VMO to share with device implementation.
   zx::vmo device_vmo;
-  {
-    fbl::AutoLock lock_vmos(&vmos_lock_);
-    if (vmo_store_.is_full()) {
-      return ZX_ERR_NO_RESOURCES;
-    }
-    // Duplicate the VMO to share with device implementation.
-    zx_status_t status;
-    if ((status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &device_vmo)) != ZX_OK) {
-      return status;
-    }
-
-    zx::status result = vmo_store_.Register(std::move(vmo));
-    if (result.is_error()) {
-      return result.error_value();
-    }
-    *out_id = result.value();
-    *out_stored_vmo = vmo_store_.GetVmo(*out_id);
+  if (zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &device_vmo); status != ZX_OK) {
+    return zx::error(status);
   }
 
-  device_.PrepareVmo(*out_id, std::move(device_vmo));
-  return ZX_OK;
+  zx::status registration = vmo_store_.Register(std::move(vmo));
+  if (registration.is_error()) {
+    return registration.take_error();
+  }
+  uint8_t id = registration.value();
+  DataVmoStore::StoredVmo* stored_vmo = vmo_store_.GetVmo(id);
+
+  lock_vmos.release();
+  device_.PrepareVmo(id, std::move(device_vmo));
+
+  return zx::ok(std::make_pair(id, stored_vmo));
 }
 
 void DeviceInterface::CommitAllSessions() {

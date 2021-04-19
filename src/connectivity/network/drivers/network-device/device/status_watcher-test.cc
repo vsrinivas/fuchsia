@@ -61,9 +61,9 @@ class WatchClient {
     thread_.join();
   }
 
-  cpp17::optional<ObservedStatus> PopObserved() {
+  std::optional<ObservedStatus> PopObserved() {
     fbl::AutoLock lock(&lock_);
-    cpp17::optional<ObservedStatus> ret;
+    std::optional<ObservedStatus> ret;
     if (!observed_status_.empty()) {
       ret = observed_status_.front();
       observed_status_.pop();

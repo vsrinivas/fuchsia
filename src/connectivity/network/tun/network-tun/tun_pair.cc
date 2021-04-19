@@ -22,55 +22,56 @@ TunPair::TunPair(fit::callback<void(TunPair*)> teardown, fuchsia::net::tun::Devi
   binding_.set_error_handler([this](zx_status_t /*unused*/) { Teardown(); });
 }
 
-zx_status_t TunPair::Create(fit::callback<void(TunPair*)> teardown,
-                            fuchsia::net::tun::DevicePairConfig config,
-                            std::unique_ptr<TunPair>* out) {
+zx::status<std::unique_ptr<TunPair>> TunPair::Create(fit::callback<void(TunPair*)> teardown,
+                                                     fuchsia::net::tun::DevicePairConfig config) {
   if (!TryConsolidateDevicePairConfig(&config)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  std::unique_ptr<TunPair> tun(new TunPair(std::move(teardown), std::move(config)));
-
-  zx_status_t status =
-      DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), false, &tun->left_);
-  if (status != ZX_OK) {
-    FX_LOGF(ERROR, "tun", "TunDevice::Init device init left failed with %s",
-            zx_status_get_string(status));
-    return status;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  status = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), false, &tun->right_);
-  if (status != ZX_OK) {
-    FX_LOGF(ERROR, "tun", "TunDevice::Init device init right failed with %s",
-            zx_status_get_string(status));
-    return status;
+  fbl::AllocChecker ac;
+  std::unique_ptr<TunPair> tun(new (&ac) TunPair(std::move(teardown), std::move(config)));
+  if (!ac.check()) {
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
+
+  zx::status left = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), false);
+  if (left.is_error()) {
+    FX_LOGF(ERROR, "tun", "TunDevice::Init device init left failed with %s", left.status_string());
+    return left.take_error();
+  }
+  tun->left_ = std::move(left.value());
+
+  zx::status right = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), false);
+  if (right.is_error()) {
+    FX_LOGF(ERROR, "tun", "TunDevice::Init device init right failed with %s", right.status_value());
+    return right.take_error();
+  }
+  tun->right_ = std::move(right.value());
 
   if (tun->config_.has_mac_left()) {
-    status = MacAdapter::Create(tun.get(), tun->config_.mac_left(), true, &tun->mac_left_);
-    if (status != ZX_OK) {
-      FX_LOGF(ERROR, "tun", "TunDevice::Init mac init left failed with %s",
-              zx_status_get_string(status));
-      return status;
+    zx::status mac = MacAdapter::Create(tun.get(), tun->config_.mac_left(), true);
+    if (mac.is_error()) {
+      FX_LOGF(ERROR, "tun", "TunDevice::Init mac init left failed with %s", mac.status_string());
+      return mac.take_error();
     }
+    tun->mac_left_ = std::move(mac.value());
   }
   if (tun->config_.has_mac_right()) {
-    status = MacAdapter::Create(tun.get(), tun->config_.mac_right(), true, &tun->mac_right_);
-    if (status != ZX_OK) {
-      FX_LOGF(ERROR, "tun", "TunDevice::Init mac init right failed with %s",
-              zx_status_get_string(status));
-      return status;
+    zx::status mac = MacAdapter::Create(tun.get(), tun->config_.mac_right(), true);
+    if (mac.is_error()) {
+      FX_LOGF(ERROR, "tun", "TunDevice::Init mac init right failed with %s", mac.status_string());
+      return mac.take_error();
     }
+    tun->mac_right_ = std::move(mac.value());
   }
 
   thrd_t thread;
-  status = tun->loop_.StartThread("tun-device-pair", &thread);
-  if (status != ZX_OK) {
-    return status;
+  if (zx_status_t status = tun->loop_.StartThread("tun-device-pair", &thread); status != ZX_OK) {
+    return zx::error(status);
   }
   tun->loop_thread_ = thread;
 
-  *out = std::move(tun);
-  return ZX_OK;
+  return zx::ok(std::move(tun));
 }
 
 // Helper function to perform synchronous teardown of all adapters in a TunPair.

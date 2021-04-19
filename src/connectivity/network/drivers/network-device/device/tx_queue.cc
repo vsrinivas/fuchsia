@@ -43,42 +43,45 @@ TxQueue::SessionTransaction::SessionTransaction(TxQueue* parent, Session* sessio
   available_ = queue_->parent_->IsDataPlaneOpen() ? queue_->in_flight_->available() : 0;
 }
 
-zx_status_t TxQueue::Create(DeviceInterface* parent, std::unique_ptr<TxQueue>* out) {
+zx::status<std::unique_ptr<TxQueue>> TxQueue::Create(DeviceInterface* parent) {
   // The Tx queue capacity is based on the underlying device's tx queue capacity.
   auto capacity = parent->info().tx_depth;
 
   fbl::AllocChecker ac;
   std::unique_ptr<TxQueue> queue(new (&ac) TxQueue(parent));
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   fbl::AutoLock lock(&queue->lock_);
   fbl::AutoLock buffer_lock(&queue->buffers_lock_);
 
-  zx_status_t status;
-  if ((status = RingQueue<uint32_t>::Create(capacity, &queue->return_queue_)) != ZX_OK) {
-    return status;
+  zx::status return_queue = RingQueue<uint32_t>::Create(capacity);
+  if (return_queue.is_error()) {
+    return return_queue.take_error();
   }
-  if ((status = IndexedSlab<InFlightBuffer>::Create(capacity, &queue->in_flight_)) != ZX_OK) {
-    return status;
+  queue->return_queue_ = std::move(return_queue.value());
+
+  zx::status in_flight = IndexedSlab<InFlightBuffer>::Create(capacity);
+  if (in_flight.is_error()) {
+    return in_flight.take_error();
   }
+  queue->in_flight_ = std::move(in_flight.value());
 
   queue->tx_buffers_.reset(new (&ac) tx_buffer_t[capacity]);
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   queue->buffer_parts_.reset(new (&ac) BufferParts[capacity]);
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   for (uint32_t i = 0; i < capacity; i++) {
     queue->tx_buffers_[i].data.parts_list = queue->buffer_parts_[i].data();
   }
 
-  *out = std::move(queue);
-  return ZX_OK;
+  return zx::ok(std::move(queue));
 }
 
 uint32_t TxQueue::Enqueue(Session* session, uint16_t descriptor) {

@@ -17,43 +17,49 @@ RxQueue::~RxQueue() {
   ZX_ASSERT_MSG(!running_, "RxQueue destroyed without disposing of port and thread first.");
 }
 
-zx_status_t RxQueue::Create(DeviceInterface* parent, std::unique_ptr<RxQueue>* out) {
+zx::status<std::unique_ptr<RxQueue>> RxQueue::Create(DeviceInterface* parent) {
   fbl::AllocChecker ac;
   std::unique_ptr<RxQueue> queue(new (&ac) RxQueue(parent));
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   fbl::AutoLock lock(&queue->lock_);
   // The RxQueue's capacity is the device's FIFO rx depth as opposed to the hardware's queue depth
   // so we can (possibly) reduce the amount of reads on the rx fifo during rx interrupts.
   auto capacity = parent->rx_fifo_depth();
-  zx_status_t status;
-  if ((status = IndexedSlab<InFlightBuffer>::Create(capacity, &queue->in_flight_)) != ZX_OK) {
-    return status;
+
+  zx::status available_queue = RingQueue<uint32_t>::Create(capacity);
+  if (available_queue.is_error()) {
+    return available_queue.take_error();
   }
-  if ((status = RingQueue<uint32_t>::Create(capacity, &queue->available_queue_)) != ZX_OK) {
-    return status;
+  queue->available_queue_ = std::move(available_queue.value());
+
+  zx::status in_flight = IndexedSlab<InFlightBuffer>::Create(capacity);
+  if (in_flight.is_error()) {
+    return in_flight.take_error();
   }
+  queue->in_flight_ = std::move(in_flight.value());
 
   auto device_depth = parent->info().rx_depth;
 
   queue->space_buffers_.reset(new (&ac) rx_space_buffer_t[device_depth]);
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   queue->buffer_parts_.reset(new (&ac) BufferParts[device_depth]);
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   for (uint32_t i = 0; i < device_depth; i++) {
     queue->space_buffers_[i].data.parts_list = queue->buffer_parts_[i].data();
   }
 
+  zx_status_t status;
   if ((status = zx::port::create(0, &queue->rx_watch_port_)) != ZX_OK) {
     LOGF_ERROR("network-device: failed to create rx watch port: %s", zx_status_get_string(status));
-    return status;
+    return zx::error(status);
   }
 
   thrd_t watch_thread;
@@ -61,12 +67,11 @@ zx_status_t RxQueue::Create(DeviceInterface* parent, std::unique_ptr<RxQueue>* o
           &watch_thread, [](void* ctx) { return reinterpret_cast<RxQueue*>(ctx)->WatchThread(); },
           reinterpret_cast<void*>(queue.get()), "netdevice:rx_watch") != thrd_success) {
     LOG_ERROR("network-device: rx queue failed to create thread");
-    return ZX_ERR_INTERNAL;
+    return zx::error(ZX_ERR_INTERNAL);
   }
   queue->rx_watch_thread_ = watch_thread;
   queue->running_ = true;
-  *out = std::move(queue);
-  return ZX_OK;
+  return zx::ok(std::move(queue));
 }
 
 void RxQueue::TriggerRxWatch() {

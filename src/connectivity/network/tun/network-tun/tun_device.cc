@@ -41,47 +41,49 @@ TunDevice::TunDevice(fit::callback<void(TunDevice*)> teardown,
   binding_.set_error_handler([this](zx_status_t /*unused*/) { Teardown(); });
 }
 
-zx_status_t TunDevice::Create(fit::callback<void(TunDevice*)> teardown,
-                              fuchsia::net::tun::DeviceConfig config,
-                              std::unique_ptr<TunDevice>* out) {
+zx::status<std::unique_ptr<TunDevice>> TunDevice::Create(fit::callback<void(TunDevice*)> teardown,
+                                                         fuchsia::net::tun::DeviceConfig config) {
   if (!TryConsolidateDeviceConfig(&config)) {
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  std::unique_ptr<TunDevice> tun(new TunDevice(std::move(teardown), std::move(config)));
-  zx_status_t status = zx::eventpair::create(0, &tun->signals_peer_, &tun->signals_self_);
-  if (status != ZX_OK) {
+  fbl::AllocChecker ac;
+  std::unique_ptr<TunDevice> tun(new (&ac) TunDevice(std::move(teardown), std::move(config)));
+  if (!ac.check()) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+
+  if (zx_status_t status = zx::eventpair::create(0, &tun->signals_peer_, &tun->signals_self_);
+      status != ZX_OK) {
     FX_LOGF(ERROR, "tun", "TunDevice::Init failed to create eventpair %s",
             zx_status_get_string(status));
-    return status;
+    return zx::error(status);
   }
 
-  status = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), tun->config_.online(),
-                                 &tun->device_);
-  if (status != ZX_OK) {
-    FX_LOGF(ERROR, "tun", "TunDevice::Init device init failed with %s",
-            zx_status_get_string(status));
-    return status;
+  zx::status device =
+      DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), tun->config_.online());
+  if (device.is_error()) {
+    FX_LOGF(ERROR, "tun", "TunDevice::Init device init failed with %s", device.status_string());
+    return device.take_error();
   }
+  tun->device_ = std::move(device.value());
 
   if (tun->config_.has_mac()) {
-    status = MacAdapter::Create(tun.get(), tun->config_.mac(), false, &tun->mac_);
-    if (status != ZX_OK) {
-      FX_LOGF(ERROR, "tun", "TunDevice::Init mac init failed with %s",
-              zx_status_get_string(status));
-      return status;
+    zx::status mac = MacAdapter::Create(tun.get(), tun->config_.mac(), false);
+    if (mac.is_error()) {
+      FX_LOGF(ERROR, "tun", "TunDevice::Init mac init failed with %s", mac.status_string());
+      return mac.take_error();
     }
+    tun->mac_ = std::move(mac.value());
   }
 
   thrd_t thread;
-  status = tun->loop_.StartThread("tun-device", &thread);
-  if (status != ZX_OK) {
-    return status;
+  if (zx_status_t status = tun->loop_.StartThread("tun-device", &thread); status != ZX_OK) {
+    return zx::error(status);
   }
   tun->loop_thread_ = thread;
 
-  *out = std::move(tun);
-  return ZX_OK;
+  return zx::ok(std::move(tun));
 }
 
 TunDevice::~TunDevice() {
@@ -112,18 +114,20 @@ void TunDevice::Teardown() {
 
 void TunDevice::RunWriteFrame() {
   while (!pending_write_frame_.empty()) {
-    size_t avail = 0;
     auto& pending = pending_write_frame_.front();
-    auto result = device_->WriteRxFrame(
-        pending.frame.frame_type(), pending.frame.data(),
-        pending.frame.has_meta() ? pending.frame.mutable_meta() : nullptr, &avail);
-    if (result == ZX_ERR_SHOULD_WAIT && IsBlocking()) {
-      return;
+    std::optional<fuchsia::net::tun::FrameMetadata> meta;
+    if (pending.frame.has_meta()) {
+      meta = std::move(pending.frame.meta());
     }
-    if (result != ZX_OK) {
-      pending.callback(fit::error(result));
+    zx::status avail =
+        device_->WriteRxFrame(pending.frame.frame_type(), pending.frame.data(), meta);
+    if (avail.is_error()) {
+      if (avail.status_value() == ZX_ERR_SHOULD_WAIT && IsBlocking()) {
+        return;
+      }
+      pending.callback(fit::error(avail.status_value()));
     } else {
-      if (avail == 0) {
+      if (avail.value() == 0) {
         // Clear the writable signal if no more buffers are available afterwards.
         signals_self_.signal_peer(static_cast<uint32_t>(fuchsia::net::tun::Signals::WRITABLE), 0);
       }

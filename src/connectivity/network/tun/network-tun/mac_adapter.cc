@@ -11,16 +11,24 @@
 namespace network {
 namespace tun {
 
-zx_status_t MacAdapter::Create(MacAdapterParent* parent, fuchsia::net::MacAddress mac,
-                               bool promisc_only, std::unique_ptr<MacAdapter>* out) {
-  std::unique_ptr<MacAdapter> adapter(new MacAdapter(parent, mac, promisc_only));
-  mac_addr_impl_protocol_t proto = {&adapter->mac_addr_impl_protocol_ops_, adapter.get()};
-  zx_status_t status =
-      MacAddrDeviceInterface::Create(ddk::MacAddrImplProtocolClient(&proto), &adapter->device_);
-  if (status == ZX_OK) {
-    *out = std::move(adapter);
+zx::status<std::unique_ptr<MacAdapter>> MacAdapter::Create(MacAdapterParent* parent,
+                                                           fuchsia::net::MacAddress mac,
+                                                           bool promisc_only) {
+  fbl::AllocChecker ac;
+  std::unique_ptr<MacAdapter> adapter(new (&ac) MacAdapter(parent, mac, promisc_only));
+  if (!ac.check()) {
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
-  return status;
+  mac_addr_impl_protocol_t proto = {
+      .ops = &adapter->mac_addr_impl_protocol_ops_,
+      .ctx = adapter.get(),
+  };
+  zx::status device = MacAddrDeviceInterface::Create(ddk::MacAddrImplProtocolClient(&proto));
+  if (device.is_error()) {
+    return device.take_error();
+  }
+  adapter->device_ = std::move(device.value());
+  return zx::ok(std::move(adapter));
 }
 
 zx_status_t MacAdapter::Bind(async_dispatcher_t* dispatcher,

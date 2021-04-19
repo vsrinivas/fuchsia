@@ -8,7 +8,6 @@
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/llcpp/server.h>
-#include <lib/stdcompat/optional.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 
@@ -56,10 +55,10 @@ class StatusWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<StatusWat
 
   fbl::Mutex lock_;
   uint32_t max_queue_;
-  cpp17::optional<status_t> last_observed_ __TA_GUARDED(lock_);
+  std::optional<status_t> last_observed_ __TA_GUARDED(lock_);
   std::queue<status_t> queue_ __TA_GUARDED(lock_);
-  cpp17::optional<WatchStatusCompleter::Async> pending_txn_ __TA_GUARDED(lock_);
-  cpp17::optional<fidl::ServerBindingRef<netdev::StatusWatcher>> binding_ __TA_GUARDED(lock_);
+  std::optional<WatchStatusCompleter::Async> pending_txn_ __TA_GUARDED(lock_);
+  std::optional<fidl::ServerBindingRef<netdev::StatusWatcher>> binding_ __TA_GUARDED(lock_);
   fit::callback<void(StatusWatcher*)> closed_cb_;
 };
 

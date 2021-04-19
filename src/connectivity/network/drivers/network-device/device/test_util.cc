@@ -196,21 +196,20 @@ void FakeNetworkDeviceImpl::SetStatus(const status_t& status) {
   device_client_.StatusChanged(&status_);
 }
 
-zx_status_t FakeNetworkDeviceImpl::CreateChild(async_dispatcher_t* dispatcher,
-                                               std::unique_ptr<NetworkDeviceInterface>* out) {
+zx::status<std::unique_ptr<NetworkDeviceInterface>> FakeNetworkDeviceImpl::CreateChild(
+    async_dispatcher_t* dispatcher) {
   auto protocol = proto();
-
-  std::unique_ptr<internal::DeviceInterface> device;
-  zx_status_t status = internal::DeviceInterface::Create(
-      dispatcher, ddk::NetworkDeviceImplProtocolClient(&protocol), "FakeImpl", &device);
-
-  if (status == ZX_OK) {
-    device->evt_session_started = [this](const char* session) {
-      event_.signal(0, kEventSessionStarted);
-    };
-    *out = std::move(device);
+  zx::status device = internal::DeviceInterface::Create(
+      dispatcher, ddk::NetworkDeviceImplProtocolClient(&protocol), "FakeImpl");
+  if (device.is_error()) {
+    return device.take_error();
   }
-  return status;
+
+  auto& value = device.value();
+  value->evt_session_started = [this](const char* session) {
+    event_.signal(0, kEventSessionStarted);
+  };
+  return zx::ok(std::move(value));
 }
 
 zx_status_t TestSession::Open(fidl::WireSyncClient<netdev::Device>& netdevice, const char* name,

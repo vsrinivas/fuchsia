@@ -9,7 +9,6 @@
 #include <fuchsia/hardware/network/mac/cpp/banjo.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/llcpp/server.h>
-#include <lib/stdcompat/optional.h>
 
 #include <unordered_set>
 
@@ -38,8 +37,7 @@ class MacClientInstance;
 // fuchsia.hardware.network.MacAddressing (FIDL).
 class MacInterface : public ::network::MacAddrDeviceInterface {
  public:
-  static zx_status_t Create(ddk::MacAddrImplProtocolClient parent,
-                            std::unique_ptr<MacInterface>* out);
+  static zx::status<std::unique_ptr<MacInterface>> Create(ddk::MacAddrImplProtocolClient parent);
 
   ~MacInterface() override;
 
@@ -136,7 +134,7 @@ class MacClientInstance : public fidl::WireInterface<netdev::MacAddressing>,
   // Pointer to parent MacInterface, not owned.
   MacInterface* const parent_;
   ClientState state_ __TA_GUARDED(parent_->lock_);
-  cpp17::optional<fidl::ServerBindingRef<netdev::MacAddressing>> binding_;
+  std::optional<fidl::ServerBindingRef<netdev::MacAddressing>> binding_;
 };
 
 }  // namespace internal

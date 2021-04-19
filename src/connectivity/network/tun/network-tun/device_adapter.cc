@@ -14,18 +14,26 @@ namespace tun {
 
 constexpr uint16_t kFifoDepth = 128;
 
-zx_status_t DeviceAdapter::Create(async_dispatcher_t* dispatcher, DeviceAdapterParent* parent,
-                                  bool online, std::unique_ptr<DeviceAdapter>* out) {
-  std::unique_ptr<DeviceAdapter> adapter(new DeviceAdapter(parent, online));
-  network_device_impl_protocol_t proto = {&adapter->network_device_impl_protocol_ops_,
-                                          adapter.get()};
-
-  zx_status_t status = NetworkDeviceInterface::Create(
-      dispatcher, ddk::NetworkDeviceImplProtocolClient(&proto), "network-tun", &adapter->device_);
-  if (status == ZX_OK) {
-    *out = std::move(adapter);
+zx::status<std::unique_ptr<DeviceAdapter>> DeviceAdapter::Create(async_dispatcher_t* dispatcher,
+                                                                 DeviceAdapterParent* parent,
+                                                                 bool online) {
+  fbl::AllocChecker ac;
+  std::unique_ptr<DeviceAdapter> adapter(new (&ac) DeviceAdapter(parent, online));
+  if (!ac.check()) {
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
-  return status;
+  network_device_impl_protocol_t proto = {
+      .ops = &adapter->network_device_impl_protocol_ops_,
+      .ctx = adapter.get(),
+  };
+
+  zx::status device = NetworkDeviceInterface::Create(
+      dispatcher, ddk::NetworkDeviceImplProtocolClient(&proto), "network-tun");
+  if (device.is_error()) {
+    return device.take_error();
+  }
+  adapter->device_ = std::move(device.value());
+  return zx::ok(std::move(adapter));
 }
 
 zx_status_t DeviceAdapter::Bind(fidl::ServerEnd<netdev::Device> req) {
@@ -186,29 +194,27 @@ bool DeviceAdapter::TryGetTxBuffer(fit::callback<void(Buffer*, size_t)> callback
   return true;
 }
 
-zx_status_t DeviceAdapter::WriteRxFrame(fuchsia::hardware::network::FrameType frame_type,
-                                        const std::vector<uint8_t>& data,
-                                        const fuchsia::net::tun::FrameMetadata* meta,
-                                        size_t* out_avail) {
+zx::status<size_t> DeviceAdapter::WriteRxFrame(
+    fuchsia::hardware::network::FrameType frame_type, const std::vector<uint8_t>& data,
+    const std::optional<fuchsia::net::tun::FrameMetadata>& meta) {
   {
     // can't write if device is offline
     fbl::AutoLock lock(&state_lock_);
     if (!online_) {
-      return ZX_ERR_BAD_STATE;
+      return zx::error(ZX_ERR_BAD_STATE);
     }
   }
-  uint32_t id;
 
   fbl::AutoLock lock(&rx_lock_);
   if (rx_buffers_.empty()) {
-    return ZX_ERR_SHOULD_WAIT;
+    return zx::error(ZX_ERR_SHOULD_WAIT);
   }
   auto& buff = rx_buffers_.front();
-  auto status = buff.Write(data);
-  if (status != ZX_OK) {
-    return status;
+  if (zx_status_t status = buff.Write(data); status != ZX_OK) {
+    return zx::error(status);
   }
-  id = buff.id();
+
+  uint32_t id = buff.id();
   rx_buffers_.pop();
 
   // NB: cast is only safe as long as MAX_MTU in FIDL is less than uint32 max. Guard that with a
@@ -217,8 +223,7 @@ zx_status_t DeviceAdapter::WriteRxFrame(fuchsia::hardware::network::FrameType fr
   EnqueueRx(frame_type, id, static_cast<uint32_t>(data.size()), meta);
   CommitRx();
 
-  *out_avail = rx_buffers_.size();
-  return ZX_OK;
+  return zx::ok(rx_buffers_.size());
 }
 
 void DeviceAdapter::CopyTo(DeviceAdapter* other, bool return_failed_buffers) {
@@ -244,15 +249,14 @@ void DeviceAdapter::CopyTo(DeviceAdapter* other, bool return_failed_buffers) {
         EnqueueTx(tx_buff.id(), status);
       } else {
         // enqueue the data to be returned in other, and enqueue the complete tx in self.
-        auto meta = tx_buff.TakeMetadata();
-        if (meta) {
+        std::optional meta = tx_buff.TakeMetadata();
+        if (meta.has_value()) {
           meta->flags = 0;
         }
         // NB: cast is only safe as long as MAX_MTU in FIDL is less than uint32 max. Guard that with
         // a static assertion.
         static_assert(fuchsia::net::tun::MAX_MTU <= std::numeric_limits<uint32_t>::max());
-        other->EnqueueRx(tx_buff.frame_type(), rx_buff.id(), static_cast<uint32_t>(actual),
-                         meta.get());
+        other->EnqueueRx(tx_buff.frame_type(), rx_buff.id(), static_cast<uint32_t>(actual), meta);
         EnqueueTx(tx_buff.id(), ZX_OK);
 
         other->rx_buffers_.pop();
@@ -275,7 +279,8 @@ void DeviceAdapter::TeardownSync() {
 }
 
 void DeviceAdapter::EnqueueRx(fuchsia::hardware::network::FrameType frame_type, uint32_t buffer_id,
-                              uint32_t total_len, const fuchsia::net::tun::FrameMetadata* meta) {
+                              uint32_t total_len,
+                              const std::optional<fuchsia::net::tun::FrameMetadata>& meta) {
   auto& ret = return_rx_list_.emplace_back();
   ret.id = buffer_id;
   ret.meta.frame_type = static_cast<uint8_t>(frame_type);

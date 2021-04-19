@@ -50,46 +50,44 @@ bool Session::ShouldTakeOverPrimary(const Session* current_primary) const {
   return descriptor_count_ > current_primary->descriptor_count_;
 }
 
-zx_status_t Session::Create(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo info,
-                            fidl::StringView name, DeviceInterface* parent,
-                            fidl::ServerEnd<netdev::Session> control,
-                            std::unique_ptr<Session>* out_session, netdev::wire::Fifos* out_fifos) {
-  fbl::AllocChecker checker;
-
+zx::status<std::pair<std::unique_ptr<Session>, netdev::wire::Fifos>> Session::Create(
+    async_dispatcher_t* dispatcher, netdev::wire::SessionInfo info, fidl::StringView name,
+    DeviceInterface* parent, fidl::ServerEnd<netdev::Session> control) {
   for (const auto& rx_request : info.rx_frames) {
     if (!parent->IsValidRxFrameType(static_cast<uint8_t>(rx_request))) {
-      return ZX_ERR_INVALID_ARGS;
+      return zx::error(ZX_ERR_INVALID_ARGS);
     }
   }
 
   if (info.descriptor_version != NETWORK_DEVICE_DESCRIPTOR_VERSION) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  std::unique_ptr<Session> session(new (&checker)
-                                       Session(dispatcher, &info, std::move(name), parent));
-  if (!checker.check()) {
+  fbl::AllocChecker ac;
+  std::unique_ptr<Session> session(new (&ac) Session(dispatcher, &info, std::move(name), parent));
+  if (!ac.check()) {
     LOGF_ERROR("network-device: Failed to allocate session");
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
-  zx_status_t status;
-  if ((status = session->Init(out_fifos)) != ZX_OK) {
+  zx::status fifos = session->Init();
+  if (fifos.is_error()) {
     LOGF_ERROR("network-device: Failed to init session %s: %s", session->name(),
-               zx_status_get_string(status));
-    out_session->reset(nullptr);
-    return status;
+               fifos.status_string());
+    return fifos.take_error();
   }
 
   session->Bind(std::move(control));
 
-  if ((status = parent->RegisterDataVmo(std::move(info.data), &session->vmo_id_,
-                                        &session->data_vmo_)) != ZX_OK) {
-    return status;
+  zx::status registration = parent->RegisterDataVmo(std::move(info.data));
+  if (registration.is_error()) {
+    return registration.take_error();
   }
+  auto& [id, vmo] = registration.value();
+  session->vmo_id_ = id;
+  session->data_vmo_ = vmo;
 
-  *out_session = std::move(session);
-  return ZX_OK;
+  return zx::ok(std::make_pair(std::move(session), std::move(fifos.value())));
 }
 
 Session::Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo* info,
@@ -126,51 +124,55 @@ Session::~Session() {
   LOGF_TRACE("network-device(%s): Session destroyed", name());
 }
 
-zx_status_t Session::Init(netdev::wire::Fifos* out) {
+zx::status<netdev::wire::Fifos> Session::Init() {
   // Map the data and descriptors VMO:
 
-  zx_status_t status;
-  if ((status = descriptors_.Map(vmo_descriptors_, 0, descriptor_count_ * descriptor_length_,
-                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
-                                 nullptr)) != ZX_OK) {
+  if (zx_status_t status = descriptors_.Map(
+          vmo_descriptors_, 0, descriptor_count_ * descriptor_length_,
+          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE, nullptr);
+      status != ZX_OK) {
     LOGF_ERROR("network-device(%s): failed to map data VMO: %s", name(),
                zx_status_get_string(status));
-    return status;
+    return zx::error(status);
   }
 
   // create the FIFOs
   fbl::AllocChecker ac;
-  auto* rx_fifo = new (&ac) RefCountedFifo;
+  fifo_rx_ = fbl::MakeRefCountedChecked<RefCountedFifo>(&ac);
   if (!ac.check()) {
-    LOGF_ERROR("network-device(%s): failed to allocate ", name());
-    return ZX_ERR_NO_MEMORY;
+    LOGF_ERROR("network-device(%s): failed to allocate", name());
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
-  if (zx::fifo::create(parent_->rx_fifo_depth(), sizeof(uint16_t), 0, &out->rx, &rx_fifo->fifo) !=
-          ZX_OK ||
-      zx::fifo::create(parent_->tx_fifo_depth(), sizeof(uint16_t), 0, &out->tx, &fifo_tx_) !=
-          ZX_OK) {
-    LOGF_ERROR("network-device(%s): failed to create FIFOS", name());
-    return ZX_ERR_NO_RESOURCES;
+  netdev::wire::Fifos fifos;
+  if (zx_status_t status = zx::fifo::create(parent_->rx_fifo_depth(), sizeof(uint16_t), 0,
+                                            &fifos.rx, &fifo_rx_->fifo);
+      status != ZX_OK) {
+    LOGF_ERROR("network-device(%s): failed to create rx FIFO", name());
+    return zx::error(status);
   }
-  if (zx::port::create(0, &tx_port_) != ZX_OK) {
+  if (zx_status_t status =
+          zx::fifo::create(parent_->tx_fifo_depth(), sizeof(uint16_t), 0, &fifos.tx, &fifo_tx_);
+      status != ZX_OK) {
+    LOGF_ERROR("network-device(%s): failed to create tx FIFO", name());
+    return zx::error(status);
+  }
+  if (zx_status_t status = zx::port::create(0, &tx_port_); status != ZX_OK) {
     LOGF_ERROR("network-device(%s): failed to create tx port", name());
-    return ZX_ERR_NO_RESOURCES;
+    return zx::error(status);
   }
-
-  fifo_rx_ = fbl::AdoptRef(rx_fifo);
 
   rx_return_queue_.reset(new (&ac) uint16_t[parent_->rx_fifo_depth()]);
   if (!ac.check()) {
     LOGF_ERROR("network-device(%s): failed to create return queue", name());
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   rx_return_queue_count_ = 0;
 
   rx_avail_queue_.reset(new (&ac) uint16_t[parent_->rx_fifo_depth()]);
   if (!ac.check()) {
     LOGF_ERROR("network-device(%s): failed to create return queue", name());
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   rx_avail_queue_count_ = 0;
 
@@ -179,7 +181,7 @@ zx_status_t Session::Init(netdev::wire::Fifos* out) {
           &thread, [](void* ctx) { return reinterpret_cast<Session*>(ctx)->Thread(); },
           reinterpret_cast<void*>(this), "netdevice:session") != thrd_success) {
     LOGF_ERROR("network-device(%s): session failed to create thread", name());
-    return ZX_ERR_INTERNAL;
+    return zx::error(ZX_ERR_INTERNAL);
   }
   thread_ = thread;
 
@@ -189,7 +191,8 @@ zx_status_t Session::Init(netdev::wire::Fifos* out) {
       " descriptor_length: %ld,"
       " flags: %08X",
       name(), descriptor_count_, descriptor_length_, static_cast<uint16_t>(flags_));
-  return ZX_OK;
+
+  return zx::ok(std::move(fifos));
 }
 
 void Session::Bind(fidl::ServerEnd<netdev::Session> channel) {
