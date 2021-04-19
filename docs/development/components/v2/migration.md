@@ -1136,6 +1136,37 @@ Note: There is no v2 equivalent of using `run` to invoke a shell binary
 **as a component**. If you require this feature for your component,
 reach out to [component-framework-dev][cf-dev-list].
 
+### Lifecycle
+
+If your component is a client of the `fuchsia.process.lifecycle.Lifecycle`
+protocol, then follow the instructions in this section to migrate lifecycle
+access.
+
+1. Remove your component's entry in the `appmgr` [allowlist][cs-appmgr-allowlist]:
+
+```cpp
+// Remove this entry.
+lifecycle_allowlist.insert(component::Moniker{
+    .url = "fuchsia-pkg://fuchsia.com/my_package#meta/my_component.cmx", .realm_path = {"app", "sys"}});
+```
+
+1. When [migrating your component manifest](#create-component-manifest), add the lifecycle stop event:
+
+```json5
+// my_component.cml
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/my_binary",
+        {{ '<strong>' }}lifecycle: { stop_event: "notify" },{{ '</strong>' }}
+    },
+    ...
+}
+```
+
 ## Converting CMX features {:#cmx-features}
 
 This section provides guidance on migrating additional CMX [`sandbox`][cmx-services]
@@ -1665,13 +1696,24 @@ In your test driver, consume the events routed by the test root:
 }
 ```
 
+### Build Info {#build-info}
 
+When migrating the `build-info` feature, consider moving from using a v1,
+read-only config directory, to the `fuchsia.buildinfo.Provider` [protocol][build-info-fidl].
+This protocol is the preferred method of retrieving build information. To use
+this protocol, add it [while declaring required services](#required-services).
+
+If migrating to using the protocol is not possible, then an alternative method
+is to use the `build-info` directory capability. To use this directory,
+follow the instructions for [migrating directory features](#directory-features),
+using the directory capability `build-info` and path `/config/build-info`.
 
 [archive-cpp]: /sdk/lib/inspect/contrib/cpp
 [archive-fidl]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ArchiveAccessor
 [archive-rust]: /src/lib/diagnostics/reader/rust
 [archive-dart]: /sdk/dart/fuchsia_inspect/lib/src/reader
 [archivist]: /docs/reference/diagnostics/inspect/tree.md#archivist
+[build-info-fidl]: https://fuchsia.dev/reference/fidl/fuchsia.buildinfo#Provider
 [build-migration]: /docs/development/components/build.md#legacy-package-migration
 [cf-dev-list]: https://groups.google.com/a/fuchsia.dev/g/component-framework-dev
 [cmx-services]: /docs/concepts/components/v1/component_manifests.md#sandbox
@@ -1681,6 +1723,7 @@ In your test driver, consume the events routed by the test root:
 [components-topology]: /docs/concepts/components/v2/topology.md
 [components-migration-status]: /docs/concepts/components/v2/migration.md
 [cs-appmgr-cml]: /src/sys/appmgr/meta/appmgr.cml
+[cs-appmgr-allowlist]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/appmgr/main.cc;l=125;drc=ddf6d10ce8cf63268e21620638ea02e9b2b7cd20
 [cs-core-cml]: /src/sys/core/meta/core.cml
 [debug-log]: /docs/development/diagnostics/logs/recording.md#debuglog_handles
 [debug-log-cpp]: /src/sys/lib/stdout-to-debuglog/cpp
