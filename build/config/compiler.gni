@@ -66,7 +66,7 @@ assert(_debuginfo_valid + [ debuginfo ] - [ debuginfo ] != _debuginfo_valid,
 
 declare_args() {
   # Explicitly specify DWARF version used.
-  dwarf_version = 4
+  dwarf_version = 5
 }
 
 assert(dwarf_version >= 2 && dwarf_version <= 5,
