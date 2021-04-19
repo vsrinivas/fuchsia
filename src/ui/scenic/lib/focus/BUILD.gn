@@ -1,0 +1,15 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("focus") {
+  sources = [
+    "focus_manager.cc",
+    "focus_manager.h",
+  ]
+  deps = [ "//src/lib/fxl" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.focus",
+    "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
+  ]
+}

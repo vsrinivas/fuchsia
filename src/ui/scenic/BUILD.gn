@@ -36,6 +36,7 @@ group("tests") {
   public_deps = [
     ":fuzzers",
     ":scenic_tests",
+    "lib/focus/tests",
     "lib/gfx/tests",
     "lib/gfx/tests:mock_pose_buffer_provider",
     "lib/gfx/tests/rotated_square_test",
