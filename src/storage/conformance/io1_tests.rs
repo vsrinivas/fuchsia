@@ -783,6 +783,37 @@ async fn rename_with_insufficient_rights() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn rename_with_slash_in_path_fails() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_rename.unwrap_or_default() {
+        return;
+    }
+    let contents = "abcdef".as_bytes();
+
+    for dir_flags in harness.writable_flag_combos() {
+        let root = root_directory(vec![
+            directory("src", vec![file("old.txt", contents.to_vec())]),
+            directory("dest", vec![]),
+        ]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
+        let dest_dir = open_rw_dir(&test_dir, "dest").await;
+
+        // Including a slash in the src or dest path should fail.
+        let status = test_dir
+            .rename("src/old.txt", get_token(&dest_dir).await, "new.txt")
+            .await
+            .expect("rename failed");
+        assert_eq!(Status::from_raw(status), Status::INVALID_ARGS);
+        let status = src_dir
+            .rename("old.txt", get_token(&dest_dir).await, "nested/new.txt")
+            .await
+            .expect("rename failed");
+        assert_eq!(Status::from_raw(status), Status::INVALID_ARGS);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn link_with_sufficient_rights() {
     let harness = TestHarness::new().await;
     if harness.config.no_link.unwrap_or_default() {
