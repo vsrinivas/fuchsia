@@ -12,6 +12,7 @@
 #include <linux/auxvec.h>
 #include <linux/mman.h>
 #include <linux/sched.h>
+#include <linux/time.h>
 #include <linux/uio.h>
 
 #endif  // SRC_PROC_LIB_LINUX_UAPI_WRAPPER_H_

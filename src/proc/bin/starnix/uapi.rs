@@ -222,6 +222,8 @@ impl Errno {
 pub struct UserAddress(u64);
 
 impl UserAddress {
+    const NULL_PTR: u64 = 0;
+
     pub fn ptr(&self) -> zx_vaddr_t {
         self.0 as zx_vaddr_t
     }
@@ -229,11 +231,15 @@ impl UserAddress {
     pub fn round_up(&self, increment: u64) -> UserAddress {
         UserAddress((self.0 + (increment - 1)) & !(increment - 1))
     }
+
+    pub fn is_null(&self) -> bool {
+        self.0 == UserAddress::NULL_PTR
+    }
 }
 
 impl Default for UserAddress {
     fn default() -> UserAddress {
-        UserAddress(0)
+        UserAddress(UserAddress::NULL_PTR)
     }
 }
 
@@ -326,6 +332,13 @@ pub struct utsname_t {
 pub struct timespec_t {
     pub tv_sec: i64,
     pub tv_nsec: i64,
+}
+
+#[derive(Debug, Default, Eq, PartialEq, Hash, Copy, Clone, AsBytes)]
+#[repr(C)]
+pub struct timeval_t {
+    pub tv_sec: i64,
+    pub tv_usec: i64,
 }
 
 #[derive(Debug, Default, Eq, PartialEq, Hash, Copy, Clone, AsBytes)]

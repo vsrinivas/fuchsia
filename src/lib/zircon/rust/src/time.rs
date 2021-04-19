@@ -298,6 +298,7 @@ impl Time {
         }
     }
 
+    /// Returns the number of nanoseconds since the epoch contained by this `Time`.
     pub const fn into_nanos(self) -> i64 {
         self.0
     }

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_runtime::utc_time;
 use fuchsia_zircon::{self as zx, AsHandleRef, Task};
-use log::info;
+use log::{info, warn};
 use std::convert::TryInto;
 use std::ffi::CStr;
 use zerocopy::AsBytes;
@@ -285,6 +286,41 @@ pub fn sys_getrandom(
     let size = zx::cprng_draw(&mut buf).map_err(impossible_error)?;
     ctx.process.write_memory(buf_addr, &buf[0..size])?;
     Ok(size.into())
+}
+
+const NANOS_PER_SECOND: i64 = 1000 * 1000 * 1000;
+
+pub fn sys_clock_gettime(
+    ctx: &ThreadContext,
+    which_clock: u32,
+    tp_addr: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    match which_clock {
+        CLOCK_REALTIME => {
+            let now = utc_time().into_nanos();
+            let tv = timespec_t { tv_sec: now / NANOS_PER_SECOND, tv_nsec: now % NANOS_PER_SECOND };
+            ctx.process.write_memory(tp_addr, tv.as_bytes()).map(|_| SUCCESS)
+        }
+        _ => Err(EINVAL),
+    }
+}
+
+pub fn sys_gettimeofday(
+    ctx: &ThreadContext,
+    tv_addr: UserAddress,
+    tz_addr: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    let process = &ctx.process;
+    if !tv_addr.is_null() {
+        let now = utc_time().into_nanos();
+        let tv =
+            timeval_t { tv_sec: now / NANOS_PER_SECOND, tv_usec: (now % NANOS_PER_SECOND) / 1000 };
+        process.write_memory(tv_addr, tv.as_bytes())?;
+    }
+    if !tz_addr.is_null() {
+        warn!("NOT_IMPLEMENTED: gettimeofday does not implement tz argument");
+    }
+    return Ok(SUCCESS);
 }
 
 pub fn sys_unknown(_ctx: &ThreadContext, syscall_number: u64) -> Result<SyscallResult, Errno> {

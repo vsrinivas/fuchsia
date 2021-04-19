@@ -91,5 +91,7 @@ pub fn dispatch_syscall(
         arch_prctl[2],
         exit_group[1],
         getrandom[3],
+        clock_gettime[2],
+        gettimeofday[2],
     }
 }
