@@ -2,6 +2,11 @@
 {% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
+
+Note: Formerly known as [FTP](../deprecated-ftp-process.md)-039.
+
+_"You're Go-ing to love it"_
+
 ## Rejection rationale
 
 When this proposal was drafted, and socialized, there was a strong consensus to
@@ -15,10 +20,6 @@ Eventually, this proposal was obsoleted by
 both conditions sought.
 
 ## Summary
-
-_You're Go-ing to love it_
-
-Note: Formerly known as [FTP](../deprecated-ftp-process.md)-039.
 
 We propose to:
 

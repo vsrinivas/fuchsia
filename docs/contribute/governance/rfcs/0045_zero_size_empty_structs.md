@@ -3,9 +3,9 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-## Rejection rationale
-
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-045.
+
+## Rejection rationale
 
 This RFC has been rejected by its author due to higher-priority work, and
 low impact.

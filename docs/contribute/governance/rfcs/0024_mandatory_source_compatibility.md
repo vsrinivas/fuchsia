@@ -3,9 +3,9 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-## Summary
-
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-024.
+
+## Summary
 
 Establish a source-compatibility standard for FIDL language bindings, as
 well as a process for evolving that standard.

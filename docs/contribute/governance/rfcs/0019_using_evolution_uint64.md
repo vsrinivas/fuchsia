@@ -3,9 +3,9 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-## Summary
-
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-002.
+
+## Summary
 
 Add a mechanism to give more descriptive names to primitive types.
 Remove status as a built-in feature of the language.  Introduce a zx

@@ -3,11 +3,11 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-## Summary
-
-_A Chance to Write Self Documenting APIs_
-
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-054.
+
+_"A Chance to write self documenting APIs"_
+
+## Summary
 
 We can already apply attributes to various elements of FIDL but not to parameters. This is a proposal to extend the grammar to accept parameter attributes.
 

@@ -3,11 +3,11 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-## Summary
-
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-020.
 
-_*"60% of the time, it's the answer to an interview question"*_
+_"60% of the time, it's the answer to an interview question"_
+
+## Summary
 
 We propose removing the programmer's ability to manually
 specify the ordinal for interface methods [[1]](#Footnote1).

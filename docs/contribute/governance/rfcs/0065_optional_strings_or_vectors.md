@@ -3,9 +3,9 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-## Rejection rationale
-
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-016.
+
+## Rejection rationale
 
 * FTP-016 is rejected, i.e. we're keeping optional strings and vectors for now:
     * We want to revisit optionality more holistically, rather than doing a
@@ -23,8 +23,6 @@ Note: Formerly known as [FTP](../deprecated-ftp-process.md)-016.
         * `VectorPtr` -> `std::vector<T>` or `fit::optional<std::vector<T>>`
 
 ## Summary
-
-_""?_
 
 Remove optional strings and optional vectors from the FIDL language.
 

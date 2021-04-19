@@ -3,11 +3,11 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-## Summary {#summary}
-
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-008.
 
-_Here lies your server._
+_"Here lies your server"_
+
+## Summary {#summary}
 
 The goal of this proposal is to allow a server to send a message prior to
 closing a connection that provides an indication of why the connection is being

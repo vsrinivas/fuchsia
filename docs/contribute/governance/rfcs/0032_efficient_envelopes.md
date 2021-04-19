@@ -3,9 +3,11 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-## Rejection rationale
-
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-032.
+
+_"Turning Envelopes into Postcards"_
+
+## Rejection rationale
 
 In February 21, 2019, this RFC was initially accepted. The FIDL team worked to
 stabilize the wire format for most of 2019, culminating in an all-hands-on-deck
@@ -36,8 +38,6 @@ change would have no material impact.
 It's time to face the truth, this ain't going to happen. Rejected.
 
 ## Summary
-
-_Turning Envelopes into Postcards_
 
 This FTP proposes a more compact encoding for [envelopes][[1]](#Footnote1).
 

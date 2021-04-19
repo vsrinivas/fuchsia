@@ -4,6 +4,8 @@
 
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
+Note: Formerly known as [FTP](../deprecated-ftp-process.md)-031.
+
 ## Rejection rationale
 
 This proposal was rejected due to its poor interaction with service discovery,
@@ -96,8 +98,6 @@ transactional header could be understood by the client, while the payload
 discarded.
 
 ## Summary
-
-Note: Formerly known as [FTP](../deprecated-ftp-process.md)-031.
 
 We propose:
 

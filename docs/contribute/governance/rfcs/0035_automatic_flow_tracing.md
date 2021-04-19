@@ -3,9 +3,9 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-## Rejection rationale
-
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-035.
+
+## Rejection rationale
 
 Messages without responses (be it events, or fire-and-forget calls) have a
 transaction id set to 0, and therefore could not be distinguished using the

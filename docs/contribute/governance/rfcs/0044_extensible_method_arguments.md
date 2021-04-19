@@ -3,13 +3,13 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
+Note: Formerly known as [FTP](../deprecated-ftp-process.md)-044.
+
 ## Rejection rationale
 
 Obsoleted by [RFC-0050](/docs/contribute/governance/rfcs/0050_syntax_revamp.md).
 
 ## Summary
-
-Note: Formerly known as [FTP](../deprecated-ftp-process.md)-044.
 
 We encourage FIDL library authors to use tables rather than structs when
 extensibility is required however method arguments are encoded as structs. This

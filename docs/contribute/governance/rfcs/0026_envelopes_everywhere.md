@@ -3,6 +3,8 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
+Note: Formerly known as [FTP](../deprecated-ftp-process.md)-026.
+
 ## Rejection rationale
 
 Given the amount of feedback and comments on this RFC, we've decided to

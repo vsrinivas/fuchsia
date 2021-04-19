@@ -3,11 +3,11 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-## Summary
-
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-015.
 
-_Catering to Hawaii and Alaska_
+_"Catering to Hawaii and Alaska"_
+
+## Summary
 
 To provide more ways to express payloads whose shape may need to evolve
 over time, we propose to **replace unions as they exist today with

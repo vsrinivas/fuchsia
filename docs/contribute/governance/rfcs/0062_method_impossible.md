@@ -3,9 +3,9 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-## Rejection rationale
-
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-005.
+
+## Rejection rationale
 
 This FTP was rejected because having a hard limit was felt to be too
 heavy-handed.

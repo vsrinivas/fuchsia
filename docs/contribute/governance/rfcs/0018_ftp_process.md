@@ -3,9 +3,9 @@
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-## Summary
-
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-001.
+
+## Summary
 
 The FIDL Tuning Proposal (FTP) process is designed to provide a
 uniform and recorded path for making changes to the [FIDL] language,
