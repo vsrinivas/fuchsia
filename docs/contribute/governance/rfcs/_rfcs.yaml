@@ -1132,3 +1132,16 @@
   reviewers: ['mkember@google.com', 'pascallouis@google.com', 'surajmalhotra@google.com', 'yifeit@google.com']
   submitted: '2021-03-09'
   reviewed: '2021-04-14'
+
+- name: 'RFC-0089'
+  title: 'Core realm variations'
+  short_description: 'Generate custom core component realms per product configurations.'
+  authors: ['dgonyeo@google.com']
+  file: '0089_core_realm_variations.md'
+  area: ['Components']
+  issue: ['74801']
+  gerrit_change_id: ['495678']
+  status: 'Accepted'
+  reviewers: ['aaronwood@google.com', 'geb@google.com', 'jsankey@google.com', 'shayba@google.com', 'thatguy@google.com']
+  submitted: '2021-03-04'
+  reviewed: '2021-04-19'

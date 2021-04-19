@@ -187,3 +187,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0086_rfc_0050_attributes.md
 - title: "RFC-0087: Updates to FTP-050: FIDL Method Parameter Syntax"
   path: /docs/contribute/governance/rfcs/0087_fidl_method_syntax.md
+- title: "RFC-0089: Core realm variations"
+  path: /docs/contribute/governance/rfcs/0089_core_realm_variations.md
