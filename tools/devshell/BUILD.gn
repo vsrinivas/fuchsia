@@ -31,6 +31,11 @@ if (!is_host) {
 
       # For 'fx create'.
       "//tools/create",
+
+      # For compiled dart commands.
+      "//scripts/fxtest:fxtest",
+      "//scripts/status:status",
+      "//tools/blobstats:blobstats",
     ]
   }
 }

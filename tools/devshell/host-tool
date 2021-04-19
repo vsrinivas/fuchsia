@@ -8,7 +8,7 @@
 
 ## usage: fx host-tool [--no-build] TOOLNAME [TOOL_ARGS...]
 ##
-## This looks for a tool named TOOLNAME in tool-paths.json and executes it
+## This looks for a tool named TOOLNAME in tool_paths.json and executes it
 ## with the provided TOOL_ARGS.
 ##    --no-build       does not attempt to build the tool if it does not exist
 ##    --check-firewall print a warning if the tool isn't included in firewall

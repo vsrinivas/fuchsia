@@ -100,6 +100,7 @@
 ## will execute all descendent tests.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/dart_utils.sh || exit $?
 fx-config-read
 
 # Device discovery and building missing symbolizer are slow operations that
@@ -140,25 +141,13 @@ if ! $skip_slow_setup; then
   export FUCHSIA_TEST_OUTDIR="${FUCHSIA_OUT_DIR}/test_out/$(date +'%F-%H:%M:%S')"
 fi
 
-# Merge our package config with the one in third_party/dart-pkg/pub
-fx-command-run merge-package-config \
-  --first "$FUCHSIA_DIR/third_party/dart-pkg/pub/package_config.json" \
-  --second "${FUCHSIA_DIR}/scripts/fxtest/package_config.json" \
-  --out "${FUCHSIA_BUILD_DIR}/fx_test.package_config.json"
-
-_args=(
-  "${PREBUILT_DART_DIR}/bin/dart"
-  "--enable-experiment=non-nullable"
-  "--no-sound-null-safety"
-  "--packages=${FUCHSIA_BUILD_DIR}/fx_test.package_config.json"
-  "${FUCHSIA_DIR}/scripts/fxtest/bin/main.dart"
-)
+args=()
 
 # TODO(fxbug.dev/53267): Using tput colors is more reliable than letting Dart do its
 # own terminal detection. Remove once Dart can do its own detection more
 # robustly.
 if [[ ! -t 1 ]] || ! tput colors >/dev/null 2>&1; then
-  _args+=("--simple")
+  args+=("--simple")
 fi
 
-exec "${_args[@]}" "$@"
+run-dart-tool fxtest "${args[@]}" "$@"

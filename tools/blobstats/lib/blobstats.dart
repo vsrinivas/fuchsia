@@ -43,7 +43,7 @@ class BlobStats {
 
       var stat = file.statSync();
       if (stat.type == FileSystemEntityType.notFound) {
-        print('$entryPath does not exist');
+        print('$entryPath does not exist [Make sure the build is up to date]');
         continue;
       }
       var blob = blobsByHash[hash];
