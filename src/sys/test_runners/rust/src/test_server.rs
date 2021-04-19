@@ -8,7 +8,7 @@ use {
     ftest::{Invocation, RunListenerProxy},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
-        future::{abortable, AbortHandle, FutureExt as _},
+        future::{abortable, join, AbortHandle, FutureExt as _},
         lock::Mutex,
         prelude::*,
     },
@@ -30,6 +30,7 @@ use {
         launch,
         logs::{LogStreamReader, LoggerStream, SocketLogWriter},
     },
+    zx::Task,
 };
 
 type EnumeratedTestNames = Arc<HashSet<String>>;
@@ -344,15 +345,27 @@ impl TestServer {
 
         // run test.
         // Load bearing to hold job guard.
-        let (process, _job, stdlogger) =
+        let (process, job, stdlogger) =
             launch_component_process::<RunTestError>(&test_component, args, test_invoke).await?;
 
-        let () = stdlogger.buffer_and_drain(test_logger).await?;
+        let test_exit_task = async {
+            // Wait for the test process to exit
+            fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
+                .await
+                .map_err(KernelError::ProcessExit)
+                .unwrap();
 
-        fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
-            .await
-            .map_err(KernelError::ProcessExit)
-            .unwrap();
+            // Kill the job because the test process has exited.
+            // This will kill any stray processes left in the job.
+            job.take().kill().unwrap();
+        };
+
+        let logger_task = stdlogger.buffer_and_drain(test_logger);
+
+        // Wait for test to exit and for the stdlogger to buffer and drain
+        let (logger_result, ()) = join(logger_task, test_exit_task).await;
+        logger_result?;
+
         let process_info = process.info().map_err(RunTestError::ProcessInfo)?;
 
         match process_info.return_code {
