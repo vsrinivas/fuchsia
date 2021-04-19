@@ -18,7 +18,13 @@ shift 1
 declare -r TOOL="${1}"
 shift 1
 
-echo "#!/bin/bash" > $OUTFILE
-echo "" >> $OUTFILE
-echo "${TOOL} $@" '$@' >> $OUTFILE
-chmod a+x $OUTFILE
+declare -a TOOL_ARGS
+for arg in "$@"
+do
+  TOOL_ARGS+=("'${arg}'")
+done
+
+echo "#!/bin/bash" > "$OUTFILE"
+echo "" >> "$OUTFILE"
+echo "${TOOL} ${TOOL_ARGS[*]}" '"$@"' >> "$OUTFILE"
+chmod a+x "$OUTFILE"
