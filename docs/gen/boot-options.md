@@ -340,7 +340,7 @@ If set, disables all speculative execution information leak mitigations.
 If unset, the per-mitigation defaults will be used.
 
 ### kernel.arm64.event-stream.enable=\<bool>
-**Default:** `false`
+**Default:** `true`
 
 When enabled, each ARM cpu will enable an event stream generator, which per-cpu
 sets the hidden event flag at a particular rate. This has the effect of kicking

@@ -15,7 +15,7 @@ If set, disables all speculative execution information leak mitigations.
 If unset, the per-mitigation defaults will be used.
 )""")
 
-DEFINE_OPTION("kernel.arm64.event-stream.enable", bool, arm64_event_stream_enabled, {false}, R"""(
+DEFINE_OPTION("kernel.arm64.event-stream.enable", bool, arm64_event_stream_enabled, {true}, R"""(
 When enabled, each ARM cpu will enable an event stream generator, which per-cpu
 sets the hidden event flag at a particular rate. This has the effect of kicking
 cpus out of any WFE states they may be sitting in.
