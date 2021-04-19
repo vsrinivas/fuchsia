@@ -6,6 +6,8 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:ermine_driver/ermine_driver.dart';
+import 'package:fidl_fuchsia_input/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_input3/fidl_async.dart' hide KeyEvent;
 import 'package:flutter_driver/flutter_driver.dart';
 import 'package:gcloud_lib/gcloud_lib.dart';
 import 'package:sl4f/sl4f.dart';
@@ -17,7 +19,15 @@ const _timeoutTenSec = Duration(seconds: 10);
 const _sampleViewRect = Rectangle(100, 200, 100, 100);
 const testserverUrl =
     'fuchsia-pkg://fuchsia.com/ermine_testserver#meta/ermine_testserver.cmx';
-const skipTests = [false, true, true, true, true];
+
+// Flags to enable/disable each test in order of
+// 0: Web pages & history navigation test
+// 1: Video test
+// 2: Tab control test
+// 3: Text input field test
+// 4: Audio test
+// 5: Keyboard shortcut test.
+const skipTests = [false, true, true, true, true, true];
 
 void main() {
   Sl4f sl4f;
@@ -25,6 +35,9 @@ void main() {
   WebDriverConnector webDriverConnector;
   Input input;
 
+  // TODO(fxb/69334): Get rid of the space in the hint text.
+  const newTabHintText = '     SEARCH';
+  const indexUrl = 'http://127.0.0.1:8080/index.html';
   final newTabFinder = find.text('NEW TAB');
   final indexTabFinder = find.text('Localhost');
   final nextTabFinder = find.text('Next Page');
@@ -148,6 +161,30 @@ void main() {
         action, () => browser.waitForAbsent(finder, timeout: _timeoutOneSec));
   }
 
+  Future<void> _invokeShortcut(List<Key> keys) async {
+    const pressDuration = 100;
+    final releaseDuration = pressDuration * keys.length + 100;
+    var pressDurations = [
+      for (var i = 0; i < keys.length; i++) pressDuration + (i * 100)
+    ];
+    var releaseDurations = [
+      for (var i = 0; i < keys.length; i++) releaseDuration + (i * 100)
+    ];
+
+    await input.keyEvents([
+      for (var i = 0; i < keys.length; i++)
+        KeyEvent(keys[i], Duration(milliseconds: pressDurations[i]),
+            KeyEventType.pressed),
+      // Releases the key in reverse order.
+      for (var i = 0; i < keys.length; i++)
+        KeyEvent(keys[keys.length - i - 1],
+            Duration(milliseconds: releaseDurations[i]), KeyEventType.released)
+    ]);
+
+    await ermine.driver
+        .waitUntilNoTransientCallbacks(timeout: Duration(seconds: 2));
+  }
+
   // TODO(fxb/68689): Transition pointer interactions to Sl4f.Input once it is
   // ready.
   test('Should be able to do page and history navigation.', () async {
@@ -155,7 +192,7 @@ void main() {
     browser = await ermine.launchAndWaitForSimpleBrowser();
 
     // Access to the website.
-    await input.text('http://127.0.0.1:8080/index.html');
+    await input.text(indexUrl);
     await input.keyPress(kEnterKey);
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await browser.waitFor(indexTabFinder, timeout: _timeoutTenSec);
@@ -165,7 +202,7 @@ void main() {
 
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(indexTabFinder), isNotNull);
-    print('Opened http://127.0.0.1:8080/index.html');
+    print('Opened $indexUrl');
 
     final nextLink = await _waitForWebElement(webdriver, By.linkText('Next'));
     expect(nextLink, isNotNull);
@@ -310,9 +347,6 @@ void main() {
     browser = await ermine.launchAndWaitForSimpleBrowser();
 
     /// Tab Switching Test
-
-    // TODO(fxb/69334): Get rid of the space in the hint text.
-    const newTabHintText = '     SEARCH';
     const redUrl = 'http://127.0.0.1:8080/red.html';
     const greenUrl = 'http://127.0.0.1:8080/green.html';
     const blueUrl = 'http://127.0.0.1:8080/blue.html';
@@ -516,4 +550,130 @@ void main() {
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     print('Closed the browser');
   }, skip: skipTests[4]);
+
+  test('Should be able to control the browser with keyboard shortcuts',
+      () async {
+    FlutterDriver browser;
+    browser = await ermine.launchAndWaitForSimpleBrowser();
+
+    // Opens index.html
+    await input.text(indexUrl);
+    await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
+    await browser.waitFor(indexTabFinder, timeout: _timeoutTenSec);
+
+    final webdriver =
+        (await webDriverConnector.webDriversForHost('127.0.0.1')).single;
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(indexTabFinder), isNotNull);
+    print('Opened $indexUrl');
+
+    // Clicks the + buttons
+    var digitLink = await _waitForWebElement(webdriver, By.id('target'));
+    final addButton = await _waitForWebElement(webdriver, By.id('increase'));
+    expect(digitLink.text, '0');
+    addButton.click();
+    await ermine.waitFor(() async {
+      return digitLink.text == '1';
+    });
+    addButton.click();
+    await ermine.waitFor(() async {
+      return digitLink.text == '2';
+    });
+    print('Clicked the + button next to the digit three times');
+
+    // Shortcut for refresh (Ctrl + r)
+    await _invokeShortcut([Key.leftCtrl, Key.r]);
+    digitLink = await _waitForWebElement(webdriver, By.id('target'));
+    await ermine.waitFor(() async {
+      return digitLink.text == '0';
+    });
+    print('Refreshed the page');
+
+    // Clicks the 'Next' link
+    final nextLink = await _waitForWebElement(webdriver, By.linkText('Next'));
+    expect(nextLink, isNotNull);
+    expect(
+        await _repeatActionWaitingForAbsent(
+            browser, nextLink.click, indexTabFinder),
+        isTrue,
+        reason: 'Failed to click the Next link.');
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(nextTabFinder), isNotNull);
+    print('Clicked the next.html link');
+
+    // Shortcut for backward (Alt + ←)
+    expect(
+        await _repeatActionWaitingForAbsent(
+            browser,
+            () async => await _invokeShortcut([Key.leftAlt, Key.left]),
+            nextTabFinder),
+        isTrue,
+        reason: 'Failed to invoke the shortcut for navigating back.');
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(indexTabFinder), isNotNull);
+    print('Navigated back to index.html');
+
+    // Shortcut for forward (Alt + →)
+    expect(
+        await _repeatActionWaitingForAbsent(
+            browser,
+            () async => await _invokeShortcut([Key.leftAlt, Key.right]),
+            nextTabFinder),
+        isTrue,
+        reason: 'Failed to invoke the shortcut for navigating forward.');
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(indexTabFinder), isNotNull);
+    print('Navigated forward to next.html');
+
+    // Shortcut for opening a new tab (Ctrl + t)
+    await _invokeShortcut([Key.leftCtrl, Key.t]);
+    await browser.waitFor(find.text(newTabHintText), timeout: _timeoutTenSec);
+
+    // Opens blue.html
+    const blueUrl = 'http://127.0.0.1:8080/blue.html';
+    const nextUrl = 'http://127.0.0.1:8080/next.html';
+    await input.text(blueUrl);
+    await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
+    await browser.waitFor(blueTabFinder, timeout: _timeoutTenSec);
+    print('Opened blue.html');
+
+    // Shortcut for selecting the next tab (Ctrl + Tab) x 2
+    await _invokeShortcut([Key.leftCtrl, Key.tab]);
+    await browser.waitFor(find.text(newTabHintText));
+    expect(await browser.getText(find.text(newTabHintText)), isNotNull);
+    print('The new tab is now selected');
+
+    await _invokeShortcut([Key.leftCtrl, Key.tab]);
+    await browser.waitFor(find.text(nextUrl));
+    expect(await browser.getText(find.text(nextUrl)), isNotNull);
+    print('The next tab is now selected');
+
+    // Shortcut for selecting the previous tab (Ctrl + Shift +Tab) x 2
+    await _invokeShortcut([Key.leftCtrl, Key.leftShift, Key.tab]);
+    await browser.waitFor(find.text(newTabHintText));
+    expect(await browser.getText(find.text(newTabHintText)), isNotNull);
+    print('The new tab is now selected');
+
+    await _invokeShortcut([Key.leftCtrl, Key.leftShift, Key.tab]);
+    await browser.waitFor(find.text(blueUrl));
+    expect(await browser.getText(find.text(blueUrl)), isNotNull);
+    print('The blue tab is now selected');
+
+    // Shortcut for closing a current tab (Ctrl + w)
+    await _invokeShortcut([Key.leftCtrl, Key.w]);
+    await browser.waitForAbsent(blueTabFinder);
+    print('Closed the blue tab');
+
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(find.text(nextUrl)), isNotNull);
+    print('The index tab is focused');
+
+    await browser.close();
+    await ermine.driver.requestData('close');
+    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
+    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
+    print('Closed the browser');
+  }, skip: skipTests[5]);
 }
