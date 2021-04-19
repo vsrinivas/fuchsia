@@ -874,6 +874,90 @@ async fn link_with_insufficient_rights() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn unlink_file_with_sufficient_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_link.unwrap_or_default() {
+        return;
+    }
+    let contents = "abcdef".as_bytes();
+
+    for dir_flags in harness.writable_flag_combos() {
+        let root =
+            root_directory(vec![directory("src", vec![file("file.txt", contents.to_vec())])]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
+
+        // Unlink should work.
+        let status = src_dir.unlink("file.txt").await.expect("unlink failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+
+        // Check file is gone.
+        assert_file_not_found(&test_dir, "src/file.txt").await;
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn unlink_file_with_insufficient_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_link.unwrap_or_default() {
+        return;
+    }
+    let contents = "abcdef".as_bytes();
+
+    for dir_flags in harness.non_writable_flag_combos() {
+        let root =
+            root_directory(vec![directory("src", vec![file("file.txt", contents.to_vec())])]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
+
+        // Unlink should fail.
+        let status = src_dir.unlink("file.txt").await.expect("unlink failed");
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+
+        // Check file still exists.
+        assert_eq!(read_file(&test_dir, "src/file.txt").await, contents);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn unlink_directory_with_sufficient_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_link.unwrap_or_default() {
+        return;
+    }
+
+    for dir_flags in harness.writable_flag_combos() {
+        let root = root_directory(vec![directory("src", vec![])]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        // Re-open dir with flags being tested.
+        let dir = open_dir_with_flags(&test_dir, dir_flags, ".").await;
+
+        // Unlink should work.
+        let status = dir.unlink("src").await.expect("unlink failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn unlink_directory_with_insufficient_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_link.unwrap_or_default() {
+        return;
+    }
+
+    for dir_flags in harness.non_writable_flag_combos() {
+        let root = root_directory(vec![directory("src", vec![])]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        // Re-open dir with flags being tested.
+        let dir = open_dir_with_flags(&test_dir, dir_flags, ".").await;
+
+        // Unlink should fail.
+        let status = dir.unlink("src").await.expect("unlink failed");
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn clone_file_with_same_or_fewer_rights() {
     let harness = TestHarness::new().await;
 
