@@ -192,7 +192,11 @@ class DatastoreTest : public UnitTestFixture {
  private:
   async::Executor executor_;
   std::unique_ptr<cobalt::Logger> cobalt_;
+
+ protected:
   std::unique_ptr<Datastore> datastore_;
+
+ private:
   std::unique_ptr<InspectNodeManager> inspect_node_manager_;
   std::unique_ptr<InspectDataBudget> inspect_data_budget_;
 
@@ -501,6 +505,22 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogIsEmpty) {
               ElementsAreArray(
                   {Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kMissingValue))}));
 
+  ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
+}
+
+TEST_F(DatastoreTest, GetAttachments_DropPreviousSyslog) {
+  const std::string previous_log_contents = "LAST SYSTEM LOG";
+  WriteFile(kPreviousLogsFilePath, previous_log_contents);
+  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
+
+  datastore_->DropStaticAttachment(kAttachmentLogSystemPrevious, Error::kCustom);
+
+  ::fit::result<Attachments> attachments = GetAttachments();
+  ASSERT_TRUE(attachments.is_ok());
+
+  EXPECT_THAT(
+      GetStaticAttachments(),
+      ElementsAreArray({Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kCustom))}));
   ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
 }
 

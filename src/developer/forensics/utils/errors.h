@@ -26,6 +26,8 @@ enum class Error {
   kBadValue,
   kFileReadFailure,
   kFileWriteFailure,
+  // Custom errors code that can be interpreted in different ways by different components.
+  kCustom,
 };
 
 template <typename T>
@@ -76,6 +78,8 @@ inline std::string ToString(Error error) {
       return "Error::kFileReadFailure";
     case Error::kFileWriteFailure:
       return "Error::kFileWriteFailure";
+    case Error::kCustom:
+      return "Error::kCustom";
   }
 }
 

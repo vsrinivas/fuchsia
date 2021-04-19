@@ -202,6 +202,14 @@ bool Datastore::TrySetNonPlatformAnnotations(const Annotations& non_platform_ann
   }
 }
 
+void Datastore::DropStaticAttachment(const AttachmentKey& key, const Error error) {
+  if (static_attachments_.find(key) == static_attachments_.end()) {
+    return;
+  }
+
+  static_attachments_.insert_or_assign(key, AttachmentValue(error));
+}
+
 fit::Timeout Datastore::MakeCobaltTimeout(cobalt::TimedOutData data, const zx::duration timeout) {
   return fit::Timeout(timeout,
                       /*action=*/[cobalt = cobalt_, data] { cobalt->LogOccurrence(data); });

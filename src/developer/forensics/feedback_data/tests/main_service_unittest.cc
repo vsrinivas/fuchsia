@@ -24,6 +24,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/timekeeper/async_test_clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -31,8 +32,11 @@ namespace {
 
 using fuchsia::feedback::ComponentDataRegisterSyncPtr;
 using fuchsia::feedback::DataProviderControllerSyncPtr;
+using fuchsia::feedback::DataProviderPtr;
 using fuchsia::feedback::DataProviderSyncPtr;
 using fuchsia::feedback::DeviceIdProviderSyncPtr;
+using fuchsia::feedback::GetSnapshotParameters;
+using fuchsia::feedback::Snapshot;
 using inspect::testing::ChildrenMatch;
 using inspect::testing::NameMatches;
 using inspect::testing::NodeMatches;
@@ -57,7 +61,7 @@ const std::vector<std::string> kCurrentLogFilePaths = {
 
 class MainServiceTest : public UnitTestFixture {
  public:
-  void SetUp() {
+  MainServiceTest() : clock_(dispatcher()) {
     FX_CHECK(files::CreateDirectory(kCurrentLogsDir));
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     RunLoopUntilIdle();
@@ -72,8 +76,8 @@ class MainServiceTest : public UnitTestFixture {
 
  protected:
   void CreateMainService(const bool is_first_instance) {
-    main_service_ =
-        MainService::TryCreate(dispatcher(), services(), &InspectRoot(), is_first_instance);
+    main_service_ = MainService::TryCreate(dispatcher(), services(), &InspectRoot(), &clock_,
+                                           is_first_instance);
   }
 
   void WriteFile(const std::string& filepath, const std::string& content) {
@@ -86,6 +90,7 @@ class MainServiceTest : public UnitTestFixture {
     return content;
   }
 
+  timekeeper::AsyncTestClock clock_;
   std::unique_ptr<MainService> main_service_;
 };
 
@@ -114,6 +119,25 @@ TEST_F(MainServiceTest, MovesPreviousBootLogs) {
                   MatchesCobaltEvent(cobalt::EventType::kCount,
                                      cobalt_registry::kPreviousBootLogCompressionRatioMetricId),
               }));
+}
+
+TEST_F(MainServiceTest, DeletesUsedPreviousBootLogsAfterOneHours) {
+  std::string previous_log_contents = "";
+  for (const auto& filepath : kCurrentLogFilePaths) {
+    auto encoder = system_log_recorder::ProductionEncoder();
+    const std::string str = Format(BuildLogMessage(FX_LOG_INFO, "Log for file: " + filepath));
+    previous_log_contents = previous_log_contents + str;
+    WriteFile(filepath, encoder.Encode(str));
+  }
+
+  CreateMainService(/*is_first_instance=*/true);
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(files::IsDirectory(kCurrentLogsDir));
+  EXPECT_EQ(previous_log_contents, ReadFile(kPreviousLogsFilePath));
+
+  RunLoopFor(zx::hour(1));
+  EXPECT_FALSE(files::IsFile(kPreviousLogsFilePath));
 }
 
 TEST_F(MainServiceTest, NoMovesPreviousBootLogsAfterFirstInstance) {

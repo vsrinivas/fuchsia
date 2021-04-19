@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/feedback_data/main_service.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/fdio/spawn.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/processargs.h>
@@ -55,6 +56,7 @@ void CreatePreviousLogsFile(cobalt::Logger* cobalt) {
 std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatcher,
                                                     std::shared_ptr<sys::ServiceDirectory> services,
                                                     inspect::Node* root_node,
+                                                    timekeeper::Clock* clock,
                                                     const bool is_first_instance) {
   auto cobalt = std::make_unique<cobalt::Logger>(dispatcher, services);
 
@@ -92,29 +94,46 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
   }
 
   return std::unique_ptr<MainService>(
-      new MainService(dispatcher, std::move(services), std::move(cobalt), root_node, config,
+      new MainService(dispatcher, std::move(services), std::move(cobalt), root_node, clock, config,
                       boot_id_file, build_version_file, is_first_instance));
 }
 
 MainService::MainService(async_dispatcher_t* dispatcher,
                          std::shared_ptr<sys::ServiceDirectory> services,
                          std::unique_ptr<cobalt::Logger> cobalt, inspect::Node* root_node,
-                         Config config, PreviousBootFile boot_id_file,
+                         timekeeper::Clock* clock, Config config, PreviousBootFile boot_id_file,
                          PreviousBootFile build_version_file, const bool is_first_instance)
     : dispatcher_(dispatcher),
       inspect_manager_(root_node),
       cobalt_(std::move(cobalt)),
-      clock_(),
+      clock_(clock),
       inspect_data_budget_(kUserBuildFlagPath, inspect_manager_.GetNodeManager(), cobalt_.get()),
       device_id_manager_(dispatcher_, kDeviceIdPath),
       datastore_(dispatcher_, services, cobalt_.get(), config.annotation_allowlist,
                  config.attachment_allowlist, boot_id_file, build_version_file,
                  &inspect_data_budget_),
-      data_provider_(dispatcher_, services, &clock_, is_first_instance, config.annotation_allowlist,
+      data_provider_(dispatcher_, services, clock_, is_first_instance, config.annotation_allowlist,
                      config.attachment_allowlist, cobalt_.get(), &datastore_,
                      &inspect_data_budget_),
       data_provider_controller_(),
-      data_register_(&datastore_, kDataRegisterPath) {}
+      data_register_(&datastore_, kDataRegisterPath) {
+  // Return early if there's not previous boot log to delete. This is safe because the file is
+  // always moved before the constructor is called.
+  if (!std::filesystem::exists(kPreviousLogsFilePath)) {
+    return;
+  }
+
+  async::PostDelayedTask(
+      dispatcher_,
+      [this] {
+        FX_LOGS(INFO) << "Deleting previous boot logs after 1 hour of device uptime";
+
+        datastore_.DropStaticAttachment(kAttachmentLogSystemPrevious, Error::kCustom);
+        files::DeletePath(kPreviousLogsFilePath, /*recusive=*/true);
+      },
+      // The previous boot logs are deleted after 1 hour of device uptime, not component uptime.
+      std::max(zx::sec(0), zx::hour(1) - zx::nsec(clock_->Now().get())));
+}
 
 void MainService::SpawnSystemLogRecorder() {
   zx::channel controller_client, controller_server;

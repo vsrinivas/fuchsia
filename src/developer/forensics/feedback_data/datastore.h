@@ -62,6 +62,8 @@ class Datastore {
 
   bool IsMissingNonPlatformAnnotations() const { return is_missing_non_platform_annotations_; }
 
+  void DropStaticAttachment(const AttachmentKey& key, Error error);
+
  private:
   ::fit::promise<Attachment> BuildAttachment(const AttachmentKey& key, zx::duration timeout);
   ::fit::promise<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key,
@@ -72,10 +74,10 @@ class Datastore {
   const std::shared_ptr<sys::ServiceDirectory> services_;
   cobalt::Logger* cobalt_;
   const AnnotationKeys annotation_allowlist_;
-  const AttachmentKeys attachment_allowlist_;
+  AttachmentKeys attachment_allowlist_;
 
   const Annotations static_annotations_;
-  const Attachments static_attachments_;
+  Attachments static_attachments_;
 
   std::vector<std::unique_ptr<AnnotationProvider>> reusable_annotation_providers_;
 

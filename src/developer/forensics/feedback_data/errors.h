@@ -33,6 +33,8 @@ inline std::string ToReason(const Error error) {
       return "file read failure";
     case Error::kFileWriteFailure:
       return "file write failure";
+    case Error::kCustom:
+      return "became irrelevant after 1 hr of uptime";
     case Error::kDefault:
       FX_LOGS(FATAL) << "Error::kDefault does not have a reason";
     case Error::kNotSet:

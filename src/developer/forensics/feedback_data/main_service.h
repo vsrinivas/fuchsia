@@ -25,7 +25,7 @@
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/previous_boot_file.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/timekeeper/system_clock.h"
+#include "src/lib/timekeeper/clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -40,7 +40,8 @@ class MainService {
   // cannot be instantiated.
   static std::unique_ptr<MainService> TryCreate(async_dispatcher_t* dispatcher,
                                                 std::shared_ptr<sys::ServiceDirectory> services,
-                                                inspect::Node* root_node, bool is_first_instance);
+                                                inspect::Node* root_node, timekeeper::Clock* clock,
+                                                bool is_first_instance);
 
   void SpawnSystemLogRecorder();
   void Stop(::fit::deferred_callback respond_to_stop);
@@ -61,14 +62,14 @@ class MainService {
 
  private:
   MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-              std::unique_ptr<cobalt::Logger> cobalt, inspect::Node* root_node, Config config,
-              PreviousBootFile boot_id_file, PreviousBootFile build_version_file,
-              bool is_first_instance);
+              std::unique_ptr<cobalt::Logger> cobalt, inspect::Node* root_node,
+              timekeeper::Clock* clock, Config config, PreviousBootFile boot_id_file,
+              PreviousBootFile build_version_file, bool is_first_instance);
 
   async_dispatcher_t* dispatcher_;
   InspectManager inspect_manager_;
   std::unique_ptr<cobalt::Logger> cobalt_;
-  timekeeper::SystemClock clock_;
+  timekeeper::Clock* clock_;
   InspectDataBudget inspect_data_budget_;
 
   DeviceIdManager device_id_manager_;
