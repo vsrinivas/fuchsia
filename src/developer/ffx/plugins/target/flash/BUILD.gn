@@ -25,6 +25,7 @@ ffx_plugin("ffx_flash") {
   sources = [
     "src/args.rs",
     "src/lib.rs",
-    "src/manifest.rs",
+    "src/manifest/mod.rs",
+    "src/manifest/v1.rs",
   ]
 }
