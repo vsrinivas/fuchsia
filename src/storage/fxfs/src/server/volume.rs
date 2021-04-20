@@ -29,9 +29,12 @@ struct NodeCache(HashMap<u64, Weak<dyn FxNode>>);
 
 impl NodeCache {
     fn add(&mut self, object_id: u64, node: Weak<dyn FxNode>) {
-        // This is a programming error, so panic here.
-        assert!(!self.0.contains_key(&object_id), "Duplicate node for {}", object_id);
         self.0.insert(object_id, node);
+    }
+
+    fn remove(&mut self, object_id: u64) {
+        // This is a programming error, so panic here.
+        assert!(self.0.remove(&object_id).is_some(), "No node found for {}", object_id);
     }
 
     fn get(&mut self, object_id: u64) -> Result<Arc<dyn FxNode>, Error> {
@@ -58,26 +61,34 @@ pub struct FxVolume {
     // we then go update in place.
     nodes: futures::lock::Mutex<NodeCache>,
     store: Arc<ObjectStore>,
-    _graveyard: Directory,
+    graveyard: Directory,
 }
 
 impl FxVolume {
-    pub fn store(&self) -> &ObjectStore {
+    pub fn store(&self) -> &Arc<ObjectStore> {
         &self.store
+    }
+
+    pub fn graveyard(&self) -> &Directory {
+        &self.graveyard
     }
 
     pub async fn add_node(&self, object_id: u64, node: Weak<dyn FxNode>) {
         self.nodes.lock().await.add(object_id, node)
     }
 
-    pub async fn open_node(&self, object_id: u64) -> Result<Arc<dyn FxNode>, Error> {
+    pub async fn remove_node(&self, object_id: u64) {
+        self.nodes.lock().await.remove(object_id)
+    }
+
+    pub async fn get_node(&self, object_id: u64) -> Result<Arc<dyn FxNode>, Error> {
         self.nodes.lock().await.get(object_id)
     }
 
-    /// Attempts to open a node in the node cache. If the node wasn't present in the cache, loads
-    /// the object from the object store, installing the returned node into the cache and returns
-    /// the newly created FxNode backed by the loaded object.
-    pub async fn open_or_load_node(
+    /// Attempts to get a node from the node cache. If the node wasn't present in the cache, loads
+    /// the object from the object store, installing the returned node into the cache and returns the
+    /// newly created FxNode backed by the loaded object.
+    pub async fn get_or_load_node(
         self: &Arc<Self>,
         object_id: u64,
         object_descriptor: ObjectDescriptor,
@@ -132,7 +143,7 @@ impl FxVolumeAndRoot {
         let volume = Arc::new(FxVolume {
             nodes: futures::lock::Mutex::new(NodeCache(HashMap::new())),
             store,
-            _graveyard: graveyard,
+            graveyard,
         });
         let root: Arc<dyn FxNode> = Arc::new(FxDirectory::new(volume.clone(), root_directory));
         volume.add_node(root_object_id, Arc::downgrade(&root)).await;

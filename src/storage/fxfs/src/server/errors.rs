@@ -15,6 +15,8 @@ impl From<FxfsError> for Status {
             FxfsError::NotFound => Status::NOT_FOUND,
             FxfsError::NotEmpty => Status::NOT_EMPTY,
             FxfsError::ReadOnlyFilesystem => Status::ACCESS_DENIED,
+            FxfsError::NoSpace => Status::NO_SPACE,
+            FxfsError::Deleted => Status::ACCESS_DENIED,
         }
     }
 }

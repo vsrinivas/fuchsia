@@ -13,9 +13,7 @@ use {
     futures::TryFutureExt,
     std::sync::Arc,
     vfs::{
-        directory::{entry::DirectoryEntry, entry_container::Directory},
-        execution_scope::ExecutionScope,
-        path::Path,
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
         registry::token_registry,
     },
 };
@@ -86,9 +84,6 @@ impl FxfsServer {
         // resurrected), but before we finish, we must wait for all VFS connections to be closed.
         scope.wait().await;
 
-        self.volume.root().close().unwrap_or_else(|e| log::error!("Failed to close root: {:?}", e));
-
-        // Make sure that fxfs has been cleanly shut down.
         self.fs.close().await.unwrap_or_else(|e| log::error!("Failed to shutdown fxfs: {:?}", e));
 
         Ok(())

@@ -13,7 +13,13 @@ use {
     fidl_fuchsia_io::{self as fio, NodeAttributes, NodeMarker},
     fidl_fuchsia_mem::Buffer,
     fuchsia_zircon::Status,
-    std::{any::Any, sync::Arc},
+    std::{
+        any::Any,
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
+    },
     vfs::{
         common::send_on_open_with_error,
         directory::entry::{DirectoryEntry, EntryInfo},
@@ -29,11 +35,15 @@ use {
 /// FxFile represents an open connection to a file.
 pub struct FxFile {
     handle: StoreObjectHandle,
+    open_count: AtomicUsize,
 }
 
 impl FxFile {
     pub fn new(handle: StoreObjectHandle) -> Self {
-        Self { handle }
+        Self { handle, open_count: AtomicUsize::new(0) }
+    }
+    pub fn open_count(&self) -> usize {
+        self.open_count.load(Ordering::Relaxed)
     }
 }
 
@@ -84,6 +94,7 @@ impl DirectoryEntry for FxFile {
 #[async_trait]
 impl File for FxFile {
     async fn open(&self, _flags: u32) -> Result<(), Status> {
+        self.open_count.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
 
@@ -136,6 +147,7 @@ impl File for FxFile {
     }
 
     async fn close(&self) -> Result<(), Status> {
+        assert!(self.open_count.fetch_sub(1, Ordering::Relaxed) > 0);
         Ok(())
     }
 

@@ -229,15 +229,11 @@ impl MutableConnection {
             return responder(Status::BAD_PATH);
         }
 
-        // We do not support traversal for the `Unlink` operation for now.  It is non-trivial, as
-        // we need to go from node to node and we do not store their type information.  One
-        // solution is to add `unlink` to `DirectoryEntry`, similar to `open`.  But, unlike `open`
-        // it requires the operation to stay on the stack, even when we are hitting a mount point,
-        // as we need to return status over the same connection.  C++ verison of "memfs" does not
-        // do traversal, so we are not supporting it here either.  At least for now.
-        //
-        // Sean (smklein@) and Yifei (yifeit@) both agree that it should be removed from the
-        // io.fidl spec.
+        // TODO(fxbug.dev/74544): Support traversal for Unlink.
+        // It is non-trivial, as we need to go from node to node and we do not store their type
+        // information. One solution is to add `unlink` to `DirectoryEntry`, similar to `open`. But,
+        // unlike `open` it requires the operation to stay on the stack, even when we are hitting a
+        // mount point, as we need to return status over the same connection.
         if !path.is_single_component() {
             return responder(Status::BAD_PATH);
         }

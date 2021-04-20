@@ -6,6 +6,7 @@ pub mod merge;
 
 use {
     crate::{
+        errors::FxfsError,
         lsm_tree::{
             skip_list_layer::SkipListLayer,
             types::{
@@ -21,7 +22,7 @@ use {
             HandleOptions,
         },
     },
-    anyhow::{ensure, Error},
+    anyhow::{bail, ensure, Error},
     async_trait::async_trait,
     bincode::{deserialize_from, serialize_into},
     merge::merge,
@@ -43,6 +44,9 @@ pub trait Allocator: Send + Sync {
 
     /// Tries to allocate enough space for |object_range| in the specified object and returns the
     /// device ranges allocated.
+    /// TODO(csuter): We need to think about how to deal with fragmentation e.g. returning an array
+    /// of allocations, or returning a partial allocation request for situations where that makes
+    /// sense.
     async fn allocate(
         &self,
         transaction: &mut Transaction<'_>,
@@ -129,6 +133,7 @@ const MAX_ALLOCATOR_INFO_SERIALIZED_SIZE: usize = 131072;
 pub struct SimpleAllocator {
     filesystem: Weak<dyn Filesystem>,
     block_size: u32,
+    device_size: usize,
     object_id: u64,
     empty: bool,
     tree: LSMTree<AllocatorKey, AllocatorValue>,
@@ -153,6 +158,7 @@ impl SimpleAllocator {
         SimpleAllocator {
             filesystem: Arc::downgrade(&filesystem),
             block_size: filesystem.device().block_size(),
+            device_size: filesystem.device().size(),
             object_id,
             empty,
             tree: LSMTree::new(merge),
@@ -238,10 +244,11 @@ impl Allocator for SimpleAllocator {
             let mut iter = merger.seek(Bound::Unbounded).await?;
             let mut last_offset = 0;
             loop {
-                let next = iter.get();
-                match next {
+                if last_offset + len >= self.device_size as u64 {
+                    bail!(FxfsError::NoSpace);
+                }
+                match iter.get() {
                     None => {
-                        // TODO(csuter): Don't assume infinite device size.
                         break last_offset..last_offset + len;
                     }
                     Some(ItemRef { key: AllocatorKey { device_range, .. }, .. }) => {

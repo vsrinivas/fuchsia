@@ -12,7 +12,7 @@ use {
     fuchsia_zircon::Status,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Path {
     is_dir: bool,
     inner: String,

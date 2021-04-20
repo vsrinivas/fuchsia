@@ -59,7 +59,13 @@ impl Device for FakeDevice {
         assert_eq!(offset % self.allocator.block_size(), 0);
         let data = self.data.lock().unwrap();
         let size = buffer.len();
-        assert!(offset + size <= data.len());
+        assert!(
+            offset + size <= data.len(),
+            "offset: {} len: {} data.len: {}",
+            offset,
+            size,
+            data.len()
+        );
         buffer.as_mut_slice().copy_from_slice(&data[offset..offset + size]);
         Ok(())
     }
@@ -69,8 +75,15 @@ impl Device for FakeDevice {
         let offset = offset as usize;
         assert_eq!(offset % self.allocator.block_size(), 0);
         let mut data = self.data.lock().unwrap();
-        assert!(offset + buffer.len() <= data.len());
-        data[offset..offset + buffer.len()].copy_from_slice(buffer.as_slice());
+        let size = buffer.len();
+        assert!(
+            offset + size <= data.len(),
+            "offset: {} len: {} data.len: {}",
+            offset,
+            size,
+            data.len()
+        );
+        data[offset..offset + size].copy_from_slice(buffer.as_slice());
         Ok(())
     }
 

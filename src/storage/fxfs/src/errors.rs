@@ -22,6 +22,10 @@ pub enum FxfsError {
     NotEmpty,
     #[error("Read only filesystem")]
     ReadOnlyFilesystem,
+    #[error("No space")]
+    NoSpace,
+    #[error("Deleted")]
+    Deleted,
 }
 
 impl FxfsError {

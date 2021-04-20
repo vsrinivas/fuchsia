@@ -5,10 +5,11 @@
 use {
     crate::{
         errors::FxfsError,
-        object_handle::ObjectHandle,
         object_store::{
             self,
+            directory::{self, ObjectDescriptor},
             transaction::{LockKey, Transaction},
+            INVALID_OBJECT_ID,
         },
         server::{errors::map_to_status, file::FxFile, node::FxNode, volume::FxVolume},
     },
@@ -22,7 +23,13 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
-    std::{any::Any, sync::Arc},
+    std::{
+        any::Any,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
+    },
     vfs::{
         common::send_on_open_with_error,
         directory::{
@@ -42,11 +49,20 @@ use {
 pub struct FxDirectory {
     volume: Arc<FxVolume>,
     directory: object_store::Directory,
+    is_deleted: AtomicBool,
 }
 
 impl FxDirectory {
-    pub(crate) fn new(volume: Arc<FxVolume>, directory: object_store::Directory) -> Self {
-        Self { volume, directory }
+    pub(super) fn new(volume: Arc<FxVolume>, directory: object_store::Directory) -> Self {
+        Self { volume, directory, is_deleted: AtomicBool::new(false) }
+    }
+
+    fn ensure_writable(&self) -> Result<(), Error> {
+        if self.is_deleted.load(Ordering::Relaxed) {
+            bail!(FxfsError::Deleted)
+        } else {
+            Ok(())
+        }
     }
 
     async fn lookup(
@@ -55,92 +71,148 @@ impl FxDirectory {
         mode: u32,
         mut path: Path,
     ) -> Result<Arc<dyn FxNode>, Error> {
-        // TODO(csuter): There are races to fix here where a direectory or file could be removed
-        // whilst a lookup is taking place. The transaction locks only protect against multiple
-        // writers, but the readers don't have any locks, so there needs to be checks that nodes
-        // still exist at some point.
-        let fs = self.volume.store().filesystem();
+        let store = self.volume.store();
+        let fs = store.filesystem();
         let mut current_node = self.clone() as Arc<dyn FxNode>;
         while !path.is_empty() {
             let last_segment = path.is_single_component();
             let current_dir =
                 current_node.into_any().downcast::<FxDirectory>().map_err(|_| FxfsError::NotDir)?;
             let name = path.next().unwrap();
+
             // Create the transaction here if we might need to create the object so that we have a
             // lock in place.
-            let store = self.volume.store();
-            let transaction_or_guard = if last_segment && flags & OPEN_FLAG_CREATE != 0 {
-                Left(
-                    fs.clone()
-                        .new_transaction(&[LockKey::object(
-                            store.store_object_id(),
-                            current_dir.directory.object_id(),
-                        )])
-                        .await?,
-                )
+            let keys =
+                [LockKey::object(store.store_object_id(), current_dir.directory.object_id())];
+            let mut transaction_or_guard = if last_segment && flags & OPEN_FLAG_CREATE != 0 {
+                Left(fs.clone().new_transaction(&keys).await?)
             } else {
                 // When child objects are created, the object is created along with the directory
                 // entry in the same transaction, and so we need to hold a read lock over the lookup
                 // and open calls.
-
-                // TODO(csuter): I think that this cannot be tested easily at the moment because it
-                // would only result in open_or_load_node returning NotFound, which is what we would
-                // want to return anyway.  When we add unlink support, we might be able to use this
-                // same lock to guard against the race mentioned above.
-                Right(
-                    fs.read_lock(&[LockKey::object(
-                        store.store_object_id(),
-                        current_dir.directory.object_id(),
-                    )])
-                    .await,
-                )
+                Right(fs.read_lock(&keys).await)
             };
-            match current_dir.directory.lookup(name).await {
+
+            let creating = transaction_or_guard.is_left();
+            current_node = match current_dir.directory.lookup(name).await {
                 Ok((object_id, object_descriptor)) => {
-                    if last_segment
-                        && flags & OPEN_FLAG_CREATE != 0
-                        && flags & OPEN_FLAG_CREATE_IF_ABSENT != 0
-                    {
+                    if creating && flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 {
                         bail!(FxfsError::AlreadyExists);
                     }
-                    current_node =
-                        self.volume.open_or_load_node(object_id, object_descriptor).await?;
+                    self.volume.get_or_load_node(object_id, object_descriptor).await?
                 }
                 Err(e) if FxfsError::NotFound.matches(&e) => {
-                    if let Left(transaction) = transaction_or_guard {
-                        return self.create_child(transaction, &current_dir, name, mode).await;
+                    if creating {
+                        current_dir
+                            .create_child(transaction_or_guard.as_mut().left().unwrap(), name, mode)
+                            .await?
                     } else {
-                        return Err(e);
+                        bail!(e)
                     }
                 }
-                Err(e) => return Err(e),
+                Err(e) => bail!(e),
             };
+
+            if let Left(transaction) = transaction_or_guard {
+                transaction.commit().await;
+                self.volume.add_node(current_node.object_id(), Arc::downgrade(&current_node)).await;
+            }
         }
         Ok(current_node)
     }
 
     async fn create_child(
         self: &Arc<Self>,
-        mut transaction: Transaction<'_>,
-        dir: &Arc<FxDirectory>,
+        transaction: &mut Transaction<'_>,
         name: &str,
         mode: u32,
     ) -> Result<Arc<dyn FxNode>, Error> {
-        let (object_id, node) = if mode & MODE_TYPE_DIRECTORY != 0 {
-            let dir = dir.directory.create_child_dir(&mut transaction, name).await?;
-            let object_id = dir.object_id();
-            let node = Arc::new(FxDirectory { volume: self.volume.clone(), directory: dir })
-                as Arc<dyn FxNode>;
-            (object_id, node)
+        self.ensure_writable()?;
+        if mode & MODE_TYPE_DIRECTORY != 0 {
+            let dir = self.directory.create_child_dir(transaction, name).await?;
+            Ok(Arc::new(FxDirectory::new(self.volume.clone(), dir)) as Arc<dyn FxNode>)
         } else {
-            let handle = dir.directory.create_child_file(&mut transaction, name).await?;
-            let object_id = handle.object_id();
-            let node = Arc::new(FxFile::new(handle)) as Arc<dyn FxNode>;
-            (object_id, node)
+            let handle = self.directory.create_child_file(transaction, name).await?;
+            Ok(Arc::new(FxFile::new(handle)) as Arc<dyn FxNode>)
+        }
+    }
+
+    async fn unlink_inner(self: &Arc<Self>, name: &str) -> Result<(), Error> {
+        // Acquire a transaction with the appropriate locks.
+        // We always need to lock |self|, but we only need to lock the child if it's a directory,
+        // to prevent entries being added to the directory.
+        // Since we don't know the child object ID until we've looked up the child, we need to loop
+        // until we have acquired a lock on a child whose ID is the same as it was in the last
+        // iteration (or the child is a file, at which point it doesn't matter).
+        //
+        // Note that the returned transaction may lock more objects than is necessary (for example,
+        // if the child "foo" was first a directory, then was renamed to "bar" and a file "foo" was
+        // created, we might acquire a lock on both the parent and "bar").
+        let store = self.volume.store();
+        let mut child_object_id = INVALID_OBJECT_ID;
+        let (mut transaction, object_descriptor) = loop {
+            let lock_keys = if child_object_id == INVALID_OBJECT_ID {
+                vec![LockKey::object(store.store_object_id(), self.object_id())]
+            } else {
+                vec![
+                    LockKey::object(store.store_object_id(), self.object_id()),
+                    LockKey::object(store.store_object_id(), child_object_id),
+                ]
+            };
+            let fs = store.filesystem().clone();
+            let transaction = fs.new_transaction(&lock_keys).await?;
+
+            let (object_id, object_descriptor) = self.directory.lookup(name).await?;
+            match object_descriptor {
+                ObjectDescriptor::File => {
+                    child_object_id = object_id;
+                    break (transaction, object_descriptor);
+                }
+                ObjectDescriptor::Directory => {
+                    if object_id == child_object_id {
+                        break (transaction, object_descriptor);
+                    }
+                    child_object_id = object_id;
+                }
+                ObjectDescriptor::Volume(_) => bail!(FxfsError::Inconsistent),
+            }
         };
-        self.volume.store().filesystem().commit_transaction(transaction).await;
-        self.volume.add_node(object_id, Arc::downgrade(&node)).await;
-        Ok(node)
+
+        // TODO(jfsulliv): We can immediately delete files if they have no open references, but
+        // we need appropriate locking in place to be able to check the file's open count.
+        if let ObjectDescriptor::File = object_descriptor {
+            directory::move_child(
+                &mut transaction,
+                &self.directory,
+                &name,
+                self.volume.graveyard(),
+                &format!("{}", child_object_id),
+            )
+            .await?;
+        } else {
+            // TODO(jfsulliv): This load is only necessary to avoid races if the directory node
+            // isn't cached. We can replace this unnecessary load with a cache placeholder when that
+            // is implemented.
+            let node = self.volume.get_or_load_node(child_object_id, object_descriptor).await?;
+            let dir =
+                node.into_any().downcast::<FxDirectory>().map_err(|_| FxfsError::Inconsistent)?;
+            dir.is_deleted.store(true, Ordering::Relaxed);
+            self.directory.remove_child(&mut transaction, &name).await?;
+        }
+        transaction.commit().await;
+
+        Ok(())
+    }
+
+    // TODO(jfsulliv): Change the VFS to send in &Arc<Self> so we don't need this.
+    async fn as_strong(&self) -> Arc<Self> {
+        self.volume
+            .get_or_load_node(self.object_id(), ObjectDescriptor::Directory)
+            .await
+            .expect("open_or_load_node on self failed")
+            .into_any()
+            .downcast::<FxDirectory>()
+            .unwrap()
     }
 }
 
@@ -160,9 +232,13 @@ impl MutableDirectory for FxDirectory {
         Err(Status::NOT_SUPPORTED)
     }
 
-    async fn unlink(&self, _path: Path) -> Result<(), Status> {
-        log::error!("unlink not implemented");
-        Err(Status::NOT_SUPPORTED)
+    async fn unlink(&self, path: Path) -> Result<(), Status> {
+        if !path.is_single_component() {
+            // The VFS is supposed to handle traversal. Per fxbug.dev/74544, it does not, but that
+            // ought to be fixed in the VFS rather than here.
+            return Err(Status::BAD_PATH);
+        }
+        self.as_strong().await.unlink_inner(path.peek().unwrap()).await.map_err(map_to_status)
     }
 
     async fn set_attrs(&self, _flags: u32, _attrs: NodeAttributes) -> Result<(), Status> {
@@ -211,7 +287,7 @@ impl DirectoryEntry for FxDirectory {
                     } else if let Ok(file) = node.into_any().downcast::<FxFile>() {
                         file.clone().open(cloned_scope, flags, mode, Path::empty(), server_end);
                     } else {
-                        panic!("Unknown node type")
+                        unreachable!();
                     }
                 }
             };
@@ -262,7 +338,6 @@ impl Directory for FxDirectory {
     }
 
     fn close(&self) -> Result<(), Status> {
-        // TODO(jfsulliv): Implement
         Ok(())
     }
 }
@@ -282,14 +357,16 @@ mod tests {
         anyhow::Error,
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_io::{
-            DirectoryMarker, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_CREATE,
+            DirectoryMarker, SeekOrigin, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_CREATE,
             OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE,
             OPEN_RIGHT_WRITABLE,
         },
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
+        io_util::{read_file_bytes, write_file_bytes},
         matches::assert_matches,
-        std::sync::Arc,
+        rand::Rng,
+        std::{sync::Arc, time::Duration},
         vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path},
     };
 
@@ -490,7 +567,7 @@ mod tests {
             ServerEnd::new(dir_server_end.into_channel()),
         );
 
-        let subdir_proxy = open_dir_validating(
+        open_dir_validating(
             &dir_proxy,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
@@ -500,15 +577,14 @@ mod tests {
         .expect("Create dir failed");
 
         open_dir_validating(
-            &subdir_proxy,
+            &dir_proxy,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE,
             MODE_TYPE_DIRECTORY,
-            "bar",
+            "foo/bar",
         )
         .await
         .expect("Create nested dir failed");
 
-        // Also make sure we can follow the path.
         open_dir_validating(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_DIRECTORY, "foo/bar")
             .await
             .expect("Open nested dir failed");
@@ -559,6 +635,397 @@ mod tests {
                 service_name: "(anonymous) File",
             })
         );
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    #[ignore] // TODO(jfsulliv): Re-enable when we don't defer deleting files with 0 references.
+    async fn test_unlink_file_with_no_refs_immediately_freed() -> Result<(), Error> {
+        let device = Arc::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let root_volume = root_volume(&filesystem).await?;
+        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let dir = vol.root().clone();
+
+        let (dir_proxy, dir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+
+        dir.open(
+            ExecutionScope::new(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(dir_server_end.into_channel()),
+        );
+
+        {
+            let file_proxy = open_file_validating(
+                &dir_proxy,
+                OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                MODE_TYPE_FILE,
+                "foo",
+            )
+            .await
+            .expect("Create file failed");
+
+            // Fill up the file with a lot of data, so we can verify that the extents are freed.
+            let buf = vec![0xaa as u8; 512];
+            loop {
+                match write_file_bytes(&file_proxy, buf.as_slice()).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        if let Some(status) = e.root_cause().downcast_ref::<Status>() {
+                            if status == &Status::NO_SPACE {
+                                break;
+                            }
+                        }
+                        return Err(e);
+                    }
+                }
+            }
+
+            file_proxy.close().await?;
+        }
+
+        dir_proxy.unlink("foo").await.expect("unlink failed");
+
+        assert_eq!(
+            open_file_validating(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
+                .await
+                .expect_err("Open succeeded")
+                .root_cause()
+                .downcast_ref::<Status>()
+                .expect("No status"),
+            &Status::NOT_FOUND,
+        );
+
+        // Create another file so we can verify that the extents were actually freed.
+        let file_proxy = open_file_validating(
+            &dir_proxy,
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_FILE,
+            "bar",
+        )
+        .await
+        .expect("Create file failed");
+        let buf = vec![0xaa as u8; 8192];
+        write_file_bytes(&file_proxy, buf.as_slice()).await.expect("Failed to write new file");
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unlink_file() -> Result<(), Error> {
+        let device = Arc::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let root_volume = root_volume(&filesystem).await?;
+        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let dir = vol.root().clone();
+
+        let (dir_proxy, dir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+
+        dir.open(
+            ExecutionScope::new(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(dir_server_end.into_channel()),
+        );
+
+        let file_proxy = open_file_validating(
+            &dir_proxy,
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_FILE,
+            "foo",
+        )
+        .await
+        .expect("Create file failed");
+        file_proxy.close().await.expect("close failed");
+
+        Status::ok(dir_proxy.unlink("foo").await.expect("FIDL call failed"))
+            .expect("unlink failed");
+
+        assert_eq!(
+            open_file_validating(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
+                .await
+                .expect_err("Open succeeded")
+                .root_cause()
+                .downcast_ref::<Status>()
+                .expect("No status"),
+            &Status::NOT_FOUND,
+        );
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unlink_file_with_active_references() -> Result<(), Error> {
+        let device = Arc::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let root_volume = root_volume(&filesystem).await?;
+        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let dir = vol.root().clone();
+
+        let (dir_proxy, dir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+
+        dir.open(
+            ExecutionScope::new(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(dir_server_end.into_channel()),
+        );
+
+        let file_proxy = open_file_validating(
+            &dir_proxy,
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_FILE,
+            "foo",
+        )
+        .await
+        .expect("Create file failed");
+
+        let buf = vec![0xaa as u8; 512];
+        write_file_bytes(&file_proxy, buf.as_slice()).await.expect("write failed");
+
+        Status::ok(dir_proxy.unlink("foo").await.expect("FIDL call failed"))
+            .expect("unlink failed");
+
+        // The child should immediately appear unlinked...
+        assert_eq!(
+            open_file_validating(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
+                .await
+                .expect_err("Open succeeded")
+                .root_cause()
+                .downcast_ref::<Status>()
+                .expect("No status"),
+            &Status::NOT_FOUND,
+        );
+
+        // But its contents should still be readable from the other handle.
+        file_proxy.seek(0, SeekOrigin::Start).await.expect("seek failed");
+        let rbuf = read_file_bytes(&file_proxy).await.expect("read failed");
+        assert_eq!(rbuf, buf);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unlink_dir_with_children_fails() -> Result<(), Error> {
+        let device = Arc::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let root_volume = root_volume(&filesystem).await?;
+        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let dir = vol.root().clone();
+
+        let (dir_proxy, dir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+
+        dir.open(
+            ExecutionScope::new(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(dir_server_end.into_channel()),
+        );
+
+        let subdir_proxy = open_dir_validating(
+            &dir_proxy,
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            "foo",
+        )
+        .await
+        .expect("Create directory failed");
+        open_file_validating(
+            &subdir_proxy,
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE,
+            MODE_TYPE_FILE,
+            "bar",
+        )
+        .await
+        .expect("Create file failed");
+
+        assert_eq!(
+            Status::from_raw(dir_proxy.unlink("foo").await.expect("FIDL call failed")),
+            Status::NOT_EMPTY
+        );
+
+        Status::ok(subdir_proxy.unlink("bar").await.expect("FIDL call failed"))
+            .expect("unlink failed");
+        Status::ok(dir_proxy.unlink("foo").await.expect("FIDL call failed"))
+            .expect("unlink failed");
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unlink_dir_makes_directory_immutable() -> Result<(), Error> {
+        let device = Arc::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let root_volume = root_volume(&filesystem).await?;
+        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let dir = vol.root().clone();
+
+        let (dir_proxy, dir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+
+        dir.open(
+            ExecutionScope::new(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(dir_server_end.into_channel()),
+        );
+
+        let subdir_proxy = open_dir_validating(
+            &dir_proxy,
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            "foo",
+        )
+        .await
+        .expect("Create directory failed");
+
+        Status::ok(dir_proxy.unlink("foo").await.expect("FIDL call failed"))
+            .expect("unlink failed");
+
+        assert_eq!(
+            open_file_validating(
+                &subdir_proxy,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE,
+                MODE_TYPE_FILE,
+                "bar"
+            )
+            .await
+            .expect_err("Create file succeeded")
+            .root_cause()
+            .downcast_ref::<Status>()
+            .expect("No status"),
+            &Status::ACCESS_DENIED,
+        );
+
+        Ok(())
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_unlink_directory_with_children_race() -> Result<(), Error> {
+        let device = Arc::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let root_volume = root_volume(&filesystem).await?;
+        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let dir = vol.root().clone();
+
+        let (dir_proxy, dir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+
+        dir.open(
+            ExecutionScope::new(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(dir_server_end.into_channel()),
+        );
+
+        const PARENT: &str = "foo";
+        const CHILD: &str = "bar";
+        const GRANDCHILD: &str = "baz";
+        open_dir_validating(
+            &dir_proxy,
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            PARENT,
+        )
+        .await
+        .expect("Create dir failed");
+
+        let open_parent = || async {
+            open_dir_validating(
+                &dir_proxy,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                MODE_TYPE_DIRECTORY,
+                PARENT,
+            )
+            .await
+            .expect("open dir failed")
+        };
+        let parent = open_parent().await;
+
+        // Each iteration proceeds as follows:
+        //  - Initialize a directory foo/bar/. (This might still be around from the previous
+        //    iteration, which is fine.)
+        //  - In one thread, try to unlink foo/bar/.
+        //  - In another thread, try to add a file foo/bar/baz.
+        for _ in 0..100 {
+            open_dir_validating(
+                &parent,
+                OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                MODE_TYPE_DIRECTORY,
+                CHILD,
+            )
+            .await
+            .expect("Create dir failed");
+
+            let parent = open_parent().await;
+            let deleter = fasync::Task::spawn(async move {
+                let wait_time = rand::thread_rng().gen_range(0, 5);
+                fasync::Timer::new(Duration::from_millis(wait_time)).await;
+                match Status::from_raw(parent.unlink(CHILD).await.expect("FIDL call failed")) {
+                    Status::OK => {}
+                    Status::NOT_EMPTY => {}
+                    s => panic!("Unexpected status from unlink: {:?}", s),
+                };
+            });
+
+            let parent = open_parent().await;
+            let writer = fasync::Task::spawn(async move {
+                let child_or = open_dir_validating(
+                    &parent,
+                    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    MODE_TYPE_DIRECTORY,
+                    CHILD,
+                )
+                .await;
+                if let Err(e) = &child_or {
+                    // The directory was already deleted.
+                    assert_eq!(
+                        e.root_cause().downcast_ref::<Status>().expect("No status"),
+                        &Status::NOT_FOUND
+                    );
+                    return;
+                }
+                let child = child_or.unwrap();
+                match open_file_validating(
+                    &child,
+                    OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE,
+                    MODE_TYPE_FILE,
+                    GRANDCHILD,
+                )
+                .await
+                {
+                    Ok(grandchild) => {
+                        // We added the child before the directory was deleted; go ahead and
+                        // clean up.
+                        grandchild.close().await.expect("close failed");
+                        Status::ok(child.unlink(GRANDCHILD).await.expect("FIDL call failed"))
+                            .expect("unlink failed");
+                    }
+                    Err(e) => {
+                        // The directory started to be deleted before we created a child.
+                        // Make sure we get the right error.
+                        assert_eq!(
+                            e.root_cause().downcast_ref::<Status>().expect("No status"),
+                            &Status::ACCESS_DENIED,
+                        );
+                    }
+                };
+            });
+            writer.await;
+            deleter.await;
+        }
 
         Ok(())
     }
