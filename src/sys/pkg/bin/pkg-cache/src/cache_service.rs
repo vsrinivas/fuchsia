@@ -158,61 +158,20 @@ async fn get<'a>(
             Status::UNAVAILABLE
         })?;
 
-        match pkgfs_versions.open_package(&meta_far_blob.blob_id.into()).await {
-            Ok(pkg) => Ok(pkg),
-            Err(err @ pkgfs::versions::OpenError::NotFound) => {
-                // FIXME(http://fxbug.dev/74213) Remove this when possible
-                // We just fetched the package, so it should be visible in pkgfs.  Log loudly that
-                // this is unexpected, but try again after 1 second to help narrow down the source
-                // of the flake here the next time it happens.
-                fx_log_err!(
-                    "BAD_STATE: error opening package after fetching it {}: {:#}",
-                    meta_far_blob.blob_id,
-                    anyhow!(err)
-                );
-                cobalt_sender.log_event_count(
-                    metrics::PKG_CACHE_OPEN_METRIC_ID,
-                    metrics::PkgCacheOpenMetricDimensionResult::Io,
-                    0,
-                    1,
-                );
-
-                let () = fuchsia_async::Timer::new(std::time::Duration::from_secs(1)).await;
-
-                match pkgfs_versions.open_package(&meta_far_blob.blob_id.into()).await {
-                    Ok(pkg) => {
-                        fx_log_err!(
-                            "BAD_STATE: attempt 2 of opening package succeeded {}",
-                            meta_far_blob.blob_id,
-                        );
-
-                        Ok(pkg)
-                    }
-                    Err(err) => {
-                        fx_log_err!(
-                            "BAD_STATE: error opening package after fetching it (attempt 2) {}: {:#}",
-                            meta_far_blob.blob_id,
-                            anyhow!(err)
-                        );
-                        Err(Status::INTERNAL)
-                    }
-                }
-            }
-            Err(err) => {
-                fx_log_err!(
-                    "error opening package after fetching it {}: {:#}",
-                    meta_far_blob.blob_id,
-                    anyhow!(err)
-                );
-                cobalt_sender.log_event_count(
-                    metrics::PKG_CACHE_OPEN_METRIC_ID,
-                    metrics::PkgCacheOpenMetricDimensionResult::Io,
-                    0,
-                    1,
-                );
-                Err(Status::INTERNAL)
-            }
-        }?
+        pkgfs_versions.open_package(&meta_far_blob.blob_id.into()).await.map_err(|err| {
+            fx_log_err!(
+                "error opening package after fetching it {}: {:#}",
+                meta_far_blob.blob_id,
+                anyhow!(err)
+            );
+            cobalt_sender.log_event_count(
+                metrics::PKG_CACHE_OPEN_METRIC_ID,
+                metrics::PkgCacheOpenMetricDimensionResult::Io,
+                0,
+                1,
+            );
+            Status::INTERNAL
+        })?
     };
 
     if let Some(dir_request) = dir_request {
@@ -391,55 +350,6 @@ async fn serve_needed_blobs(
         Ok(())
     }
     .await;
-
-    // Sanity check consistency with pkgfs needs.
-    // FIXME(http://fxbug.dev/74213) Remove this when possible
-    if res.is_ok() {
-        let needs = pkgfs_needs.list_needs(meta_far_info.blob_id.into());
-        futures::pin_mut!(needs);
-        match needs.try_next().await {
-            Ok(None) => {
-                // All good.  Other cases should be unreachable.
-            }
-            Ok(Some(needs)) => {
-                let mut needs = needs.into_iter().collect::<Vec<_>>();
-                needs.sort_unstable();
-
-                fx_log_err!(
-                    "BAD_STATE: pkgfs needs more blobs, but all were provided: {:#?}",
-                    needs
-                );
-
-                for need in needs {
-                    // open each blob for write.  If the blob already exists, this should fulfill
-                    // it in pkgfs as well, unblocking this package fetch.  Though, the open that
-                    // happened during the package fetch should have already done that.
-                    match open_blob(pkgfs_install, need, BlobKind::Data).await {
-                        Ok(OpenBlobSuccess::AlreadyExists) => {
-                            fx_log_err!(
-                                "BAD_STATE: already written blob needed opened again to commit"
-                            );
-                        }
-                        Ok(OpenBlobSuccess::Needed(_)) => {
-                            fx_log_err!("BAD_STATE: already written blob needs written again");
-                        }
-                        Err(e) => {
-                            fx_log_err!(
-                                "BAD_STATE: error opening already written blob for write: {:#}",
-                                anyhow!(e)
-                            );
-                        }
-                    }
-                }
-            }
-            Err(e) => {
-                fx_log_err!(
-                    "BAD_STATE: failed to verify pkgfs needs no more blobs: {:#}",
-                    anyhow!(e)
-                );
-            }
-        };
-    }
 
     if res.is_ok() {
         dynamic_index.lock().complete_install(meta_far_info.blob_id.into())?;
@@ -1674,11 +1584,6 @@ mod serve_needed_blobs_tests {
                     .await
                     .fail_open_with_not_found()
                     .await;
-                pkgfs_needs
-                    .expect_enumerate_needs([0; 32].into())
-                    .await
-                    .fail_open_with_not_found()
-                    .await;
             },
             async {
                 let (missing_blobs_iter, missing_blobs_iter_server_end) =
@@ -1887,8 +1792,6 @@ mod serve_needed_blobs_tests {
         )
         .await;
 
-        pkgfs_needs.expect_enumerate_needs([1; 32].into()).await.fail_open_with_not_found().await;
-
         assert_matches!(task.await, Ok(()));
         assert_matches!(
             proxy.take_event_stream().next().await,
@@ -2000,8 +1903,6 @@ mod serve_needed_blobs_tests {
         )
         .await;
 
-        pkgfs_needs.expect_enumerate_needs([0; 32].into()).await.fail_open_with_not_found().await;
-
         assert_matches!(task.await, Ok(()));
         assert_matches!(
             proxy.take_event_stream().next().await,
@@ -2050,8 +1951,6 @@ mod serve_needed_blobs_tests {
             },
         )
         .await;
-
-        pkgfs_needs.expect_enumerate_needs([0; 32].into()).await.fail_open_with_not_found().await;
 
         assert_matches!(task.await, Ok(()));
         assert_matches!(
@@ -2173,8 +2072,6 @@ mod serve_needed_blobs_tests {
             },
         )
         .await;
-
-        pkgfs_needs.expect_enumerate_needs([0; 32].into()).await.fail_open_with_not_found().await;
 
         // That was the only data blob, so the operation is now done.
         assert_matches!(task.await, Ok(()));
@@ -2406,7 +2303,6 @@ mod get_handler_tests {
             vec![].into_iter(),
         )
         .await;
-        pkgfs_needs.expect_enumerate_needs([0; 32].into()).await.fail_open_with_not_found().await;
         assert_matches!(
             proxy.take_event_stream().next().await.unwrap(),
             Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })
