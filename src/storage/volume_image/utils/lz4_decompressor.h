@@ -23,12 +23,19 @@ namespace storage::volume_image {
 // This class is move construcable only.
 class Lz4Decompressor final : public Decompressor {
  public:
+  // Default size for the decompression buffer exposed to the decompression handler.
+  static constexpr uint64_t kDecompressionBufferSize = static_cast<uint64_t>(64 * (1u << 10));
+
   // Returns a |Lz4Decompressor| on success.
   //
   // On failure, returns a string describing the error.
-  static fit::result<Lz4Decompressor, std::string> Create(const CompressionOptions& options);
+  static fit::result<Lz4Decompressor, std::string> Create(
+      const CompressionOptions& options,
+      uint64_t decompression_buffer_size = kDecompressionBufferSize);
 
-  Lz4Decompressor() = default;
+  explicit Lz4Decompressor(uint64_t decompression_buffer_size = kDecompressionBufferSize) {
+    decompression_buffer_.resize(decompression_buffer_size, 0);
+  }
   Lz4Decompressor(const Lz4Decompressor&) = delete;
   Lz4Decompressor(Lz4Decompressor&&) noexcept = default;
   Lz4Decompressor& operator=(const Lz4Decompressor&) = delete;

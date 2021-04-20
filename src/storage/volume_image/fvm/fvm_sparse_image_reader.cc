@@ -95,11 +95,13 @@ class DecompressionHelper {
   }
 
  private:
-  static constexpr size_t kBufferSize = 1048576;
+  static constexpr size_t kBufferSize = 64 * (1u << 10);
 
   const Reader& base_reader_;
-  Lz4Decompressor decompressor_;
-  // TODO: Consider using deques for this.
+  Lz4Decompressor decompressor_ = Lz4Decompressor(kBufferSize);
+
+  // TODO: Consider using deques for this. Or just keeping track of the decompressed length in a
+  // fixed size buffer to avoid vector resizing operations.
   std::vector<uint8_t> compressed_buffer_;
   std::vector<uint8_t> decompressed_buffer_;
   uint64_t compressed_offset_;

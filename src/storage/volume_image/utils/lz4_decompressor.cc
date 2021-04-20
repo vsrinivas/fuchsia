@@ -7,6 +7,7 @@
 #include <lib/fit/result.h>
 
 #include <cstddef>
+#include <iostream>
 
 #include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/utils/lz4_result.h"
@@ -20,13 +21,12 @@ constexpr LZ4F_decompressOptions_t kDefaultOptions = {};
 }  // namespace
 
 fit::result<Lz4Decompressor, std::string> Lz4Decompressor::Create(
-    const CompressionOptions &options) {
+    const CompressionOptions &options, uint64_t decompression_buffer_size) {
   if (options.schema != CompressionSchema::kLz4) {
     return fit::error("Lz4Compressor requires" + EnumAsString(CompressionSchema::kLz4) +
                       ". Provided: " + EnumAsString(options.schema) + ".");
   }
-
-  return fit::ok(Lz4Decompressor());
+  return fit::ok(Lz4Decompressor(decompression_buffer_size));
 }
 
 Lz4Decompressor::~Lz4Decompressor() {

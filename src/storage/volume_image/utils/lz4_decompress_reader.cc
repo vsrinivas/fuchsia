@@ -8,7 +8,6 @@
 #include <string.h>
 
 #include <cstdint>
-#include <iostream>
 #include <memory>
 
 #include "src/storage/volume_image/utils/lz4_decompressor.h"
@@ -23,9 +22,8 @@ fit::result<void, std::string> Lz4DecompressReader::Initialize(uint64_t max_buff
   context_.compressed_data.resize(max_buffer_size, 0);
   context_.compressed_offset = offset_;
 
-  context_.decompressor = std::make_unique<Lz4Decompressor>();
+  context_.decompressor = std::make_unique<Lz4Decompressor>(max_buffer_size);
   context_.hint = std::nullopt;
-  context_.decompressor->ProvideSizeHint(max_buffer_size);
 
   return context_.decompressor->Prepare(
       [this](auto decompressed_data) { return this->DecompressionHandler(decompressed_data); });
