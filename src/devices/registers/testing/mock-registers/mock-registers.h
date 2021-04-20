@@ -20,7 +20,10 @@ class MockRegisters : public fidl::WireInterface<fuchsia_hardware_registers::Dev
   ~MockRegisters() {}
 
   // Manage the Fake FIDL Message Loop
-  void Init(zx::channel remote) { fidl::BindServer(dispatcher_, std::move(remote), this); }
+  void Init(zx::channel remote) {
+    fidl::BindServer(dispatcher_,
+                     fidl::ServerEnd<fuchsia_hardware_registers::Device>(std::move(remote)), this);
+  }
 
   template <typename T>
   void ExpectRead(uint64_t offset, T mask, T value) {
