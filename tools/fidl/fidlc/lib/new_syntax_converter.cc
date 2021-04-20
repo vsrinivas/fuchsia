@@ -285,6 +285,18 @@ void ConvertingTreeVisitor::OnResourceProperty(
   TreeVisitor::OnResourceProperty(element);
 }
 
+void ConvertingTreeVisitor::OnServiceMember(const std::unique_ptr<raw::ServiceMember>& element) {
+  if (element->attributes != nullptr) {
+    ConvertingTreeVisitor::OnAttributeList(element->attributes);
+  }
+
+  const auto& type_ctor = std::get<std::unique_ptr<raw::TypeConstructorOld>>(element->type_ctor);
+  std::unique_ptr<Conversion> conv =
+      std::make_unique<NameAndTypeConversion>(element->identifier, type_ctor);
+  Converting converting(this, std::move(conv), type_ctor->start_, element->identifier->end_);
+  TreeVisitor::OnServiceMember(element);
+}
+
 void ConvertingTreeVisitor::OnStructDeclaration(
     const std::unique_ptr<raw::StructDeclaration>& element) {
   if (element->attributes != nullptr) {

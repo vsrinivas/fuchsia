@@ -44,7 +44,6 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const&) override;
   // void OnResourceDeclaration(std::unique_ptr<fidl::raw::ResourceDeclaration> const&) override;
   // void OnServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> const&) override;
-  // void OnServiceMember(std::unique_ptr<raw::ServiceMember> const&) override;
   // void OnSourceElementStart(const raw::SourceElement&) override;
   // void OnSourceElementEnd(const raw::SourceElement&) override;
 
@@ -125,6 +124,9 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
 
   // Resource Property.
   void OnResourceProperty(std::unique_ptr<fidl::raw::ResourceProperty> const& element) override;
+
+  // Services.
+  void OnServiceMember(std::unique_ptr<raw::ServiceMember> const& element) override;
 
   // Structs.
   void OnStructDeclaration(std::unique_ptr<raw::StructDeclaration> const& element) override;

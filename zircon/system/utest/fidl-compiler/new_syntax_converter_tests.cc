@@ -110,6 +110,12 @@ protocol P2 {
 protocol P3 {
   [Transitional] M3();
 };
+
+[NoDoc]
+service X {
+  [NoDoc]
+  P1 p;
+};
 )FIDL";
 
   std::string new_version = R"FIDL(
@@ -147,6 +153,12 @@ protocol P2 {
 @transport("Syscall")
 protocol P3 {
   @transitional M3();
+};
+
+@no_doc
+service X {
+  @no_doc
+  p client_end:P1;
 };
 )FIDL";
 
@@ -195,6 +207,12 @@ protocol P2 {
 protocol P3 {
   [Transitional2] M3();
 };
+
+[NoDoc2]
+service X {
+  [NoDoc2]
+  P1 p;
+};
 )FIDL";
 
   std::string new_version = R"FIDL(
@@ -231,6 +249,12 @@ protocol P2 {
 @transport2("Syscall")
 protocol P3 {
   @transitional2 M3();
+};
+
+@no_doc2
+service X {
+  @no_doc2
+  p client_end:P1;
 };
 )FIDL";
 
@@ -291,6 +315,14 @@ protocol P3 {
   /// For M3
 [Transitional] M3();
 };
+
+/// For X
+[NoDoc]
+service X {
+  /// For P1
+[NoDoc]
+  P1 p;
+};
 )FIDL";
 
   std::string new_version = R"FIDL(
@@ -340,6 +372,14 @@ protocol P3 {
   /// For M3
 @transitional M3();
 };
+
+/// For X
+@no_doc
+service X {
+  /// For P1
+@no_doc
+  p client_end:P1;
+};
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
@@ -363,6 +403,12 @@ resource struct S {};
 protocol P {
   [Internal, Selector = "Bar", Transitional] M();
 };
+
+[Doc = "X", NoDoc]
+service X {
+  [Doc = "P", NoDoc]
+  P p;
+};
 )FIDL";
 
   std::string new_version = R"FIDL(
@@ -380,6 +426,12 @@ type S = resource struct {};
 @discoverable @for_deprecated_c_bindings @transport("Syscall")
 protocol P {
   @internal @selector("Bar") @transitional M();
+};
+
+@doc("X") @no_doc
+service X {
+  @doc("P") @no_doc
+  p client_end:P;
 };
 )FIDL";
 
@@ -404,6 +456,12 @@ resource struct S {};
 protocol P {
   [Internal2, Selector2 = "Bar", Transitional2] M();
 };
+
+[Doc2 = "X", NoDoc2]
+service X {
+  [Doc2 = "P", NoDoc2]
+  P p;
+};
 )FIDL";
 
   std::string new_version = R"FIDL(
@@ -421,6 +479,12 @@ type S = resource struct {};
 @discoverable2 @for_deprecated_c_bindings2 @transport2("Syscall")
 protocol P {
   @internal2 @selector2("Bar") @transitional2 M();
+};
+
+@doc2("X") @no_doc2
+service X {
+  @doc2("P") @no_doc2
+  p client_end:P;
 };
 )FIDL";
 
@@ -450,6 +514,14 @@ protocol P {
   /// For M
 [Internal, Selector = "Bar", Transitional] M();
 };
+
+/// For X
+[Foo = "X", NoDoc]
+service X {
+  /// For P
+[Foo = "P", NoDoc]
+  P p;
+};
 )FIDL";
 
   std::string new_version = R"FIDL(
@@ -472,6 +544,14 @@ type S = resource struct {};
 protocol P {
   /// For M
 @internal @selector("Bar") @transitional M();
+};
+
+/// For X
+@foo("X") @no_doc
+service X {
+  /// For P
+@foo("P") @no_doc
+  p client_end:P;
 };
 )FIDL";
 
@@ -1012,6 +1092,48 @@ resource_definition handle : uint32 {
     properties {
         subtype obj_type;
     };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, ServiceEmpty) {
+  std::string old_version = R"FIDL(
+library example;
+
+service S {};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+service S {};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, ServiceWithMember) {
+  std::string old_version = R"FIDL(
+library example;
+
+protocol P {};
+
+service S {
+  P p;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+protocol P {};
+
+service S {
+  p client_end:P;
 };
 )FIDL";
 
