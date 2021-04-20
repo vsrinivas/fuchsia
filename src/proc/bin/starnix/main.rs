@@ -5,6 +5,7 @@
 use {
     anyhow::{anyhow, format_err, Context, Error},
     fidl::endpoints::{self, ClientEnd, ServerEnd},
+    fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_component_runner::{
         self as fcrunner, ComponentControllerMarker, ComponentStartInfo,
     },
@@ -43,8 +44,23 @@ fn as_exception_info(buffer: &zx::MessageBuf) -> zx_exception_info_t {
     unsafe { mem::transmute(tmp) }
 }
 
-async fn run_process(process: Arc<ProcessContext>) -> Result<(), Error> {
-    let exceptions = &process.exceptions;
+/// Runs the process associated with `process_context`.
+///
+/// The process in `process_context.handle` is expected to already have been started. This function
+/// listens to the exception channel for the process (`exceptions`) and handles each exception
+/// by:
+///   - verifying that the exception represents a `ZX_EXCP_POLICY_CODE_BAD_SYSCALL`
+///   - reading the thread's registers
+///   - executing the appropriate syscall
+///   - setting the thread's registers to their post-syscall values
+///   - setting the exception state to `ZX_EXCEPTION_STATE_HANDLED`
+///
+/// Once this function has completed, the process' exit code (if one is available) can be read from
+/// `process_context.exit_code`.
+async fn run_process(
+    process_context: Arc<ProcessContext>,
+    exceptions: fasync::Channel,
+) -> Result<(), Error> {
     let mut buffer = zx::MessageBuf::new();
     while exceptions.recv_msg(&mut buffer).await.is_ok() {
         let info = as_exception_info(&buffer);
@@ -58,7 +74,7 @@ async fn run_process(process: Arc<ProcessContext>) -> Result<(), Error> {
             continue;
         }
 
-        let mut ctx = ThreadContext::new(exception.get_thread()?, Arc::clone(&process));
+        let mut ctx = ThreadContext::new(exception.get_thread()?, process_context.clone());
 
         let report = ctx.handle.get_exception_report()?;
 
@@ -95,7 +111,7 @@ async fn run_process(process: Arc<ProcessContext>) -> Result<(), Error> {
 
 async fn start_component(
     start_info: ComponentStartInfo,
-    _controller: ServerEnd<ComponentControllerMarker>,
+    controller: ServerEnd<ComponentControllerMarker>,
 ) -> Result<(), Error> {
     info!(
         "start_component: {}",
@@ -146,8 +162,23 @@ async fn start_component(
         environ: vec![],
     };
 
-    run_process(Arc::new(load_executable(&job, executable_vmo, ldsvc_client, &params).await?))
-        .await?;
+    let (process_context, exceptions) =
+        load_executable(&job, executable_vmo, ldsvc_client, &params).await?;
+    let process_context = Arc::new(process_context);
+    run_process(process_context.clone(), exceptions).await?;
+
+    // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
+    // communicate the exit code. The component manager could interpret certain epitaphs as starnix
+    // being unstable, and chose to terminate starnix as a result.
+    // Errors when closing the controller with an epitaph are disregarded, since there are
+    // legitimate reasons for this to fail (like the client having closed the channel).
+    let _ = match process_context.exit_code.lock().unwrap_or(1) {
+        0 => controller.close_with_epitaph(zx::Status::OK),
+        _ => controller.close_with_epitaph(zx::Status::from_raw(
+            fcomponent::Error::InstanceDied.into_primitive() as i32,
+        )),
+    };
+
     Ok(())
 }
 

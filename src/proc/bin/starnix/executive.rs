@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, HandleBased, Status},
     parking_lot::{Mutex, RwLock},
     std::sync::Arc,
@@ -127,9 +126,11 @@ pub struct SecurityContext {
 pub struct ProcessContext {
     pub process_id: pid_t,
     pub handle: zx::Process,
-    pub exceptions: fasync::Channel,
     pub security: SecurityContext,
     pub mm: MemoryManager,
+
+    /// The exit code reported by the process, if the process has exited.
+    pub exit_code: Mutex<Option<i32>>,
 }
 
 impl ProcessContext {
@@ -152,8 +153,17 @@ impl ProcessContext {
 
 pub struct ThreadContext {
     pub thread_id: pid_t,
+
+    /// A handle to the underlying Zircon thread object.
     pub handle: zx::Thread,
+
+    /// A reference to the process the thread is running in. The process context is wrapped in an
+    /// `Arc` since multiple threads share the same process context.
     pub process: Arc<ProcessContext>,
+
+    /// A copy of the registers associated with the Zircon thread. Up-to-date values can be read
+    /// from `self.handle.read_state_general_regs()`. To write these values back to the thread, call
+    /// `self.handle.write_state_general_regs(self.registers)`.
     pub registers: zx_thread_state_general_regs_t,
     pub set_child_tid: Mutex<UserAddress>,
     pub clear_child_tid: Mutex<UserAddress>,

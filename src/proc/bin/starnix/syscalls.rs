@@ -190,8 +190,9 @@ pub fn sys_getpid(_ctx: &ThreadContext) -> Result<SyscallResult, Errno> {
 
 pub fn sys_exit(ctx: &ThreadContext, error_code: i32) -> Result<SyscallResult, Errno> {
     info!("exit: error_code={}", error_code);
-    // TODO: Set the error_code on the process.
     ctx.process.handle.kill().map_err(Errno::from_status)?;
+    let mut exit_code = ctx.process.exit_code.lock();
+    *exit_code = Some(error_code);
     Ok(SUCCESS)
 }
 
@@ -279,8 +280,9 @@ pub fn sys_set_tid_address(
 
 pub fn sys_exit_group(ctx: &ThreadContext, error_code: i32) -> Result<SyscallResult, Errno> {
     info!("exit_group: error_code={}", error_code);
-    // TODO: Set the error_code on the process.
     ctx.process.handle.kill().map_err(Errno::from_status)?;
+    let mut exit_code = ctx.process.exit_code.lock();
+    *exit_code = Some(error_code);
     Ok(SUCCESS)
 }
 

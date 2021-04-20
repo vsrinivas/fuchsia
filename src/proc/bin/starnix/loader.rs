@@ -7,6 +7,7 @@ use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_ldsvc as fldsvc;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, AsHandleRef, Status, Task};
+use parking_lot::Mutex;
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
 
@@ -115,7 +116,7 @@ pub async fn load_executable(
     executable: zx::Vmo,
     loader_service: ClientEnd<fldsvc::LoaderMarker>,
     params: &ProcessParameters,
-) -> Result<ProcessContext, Error> {
+) -> Result<(ProcessContext, fasync::Channel), Error> {
     let loader_service = loader_service.into_proxy()?;
 
     job.set_name(&params.name)?;
@@ -153,9 +154,9 @@ pub async fn load_executable(
     let process = ProcessContext {
         process_id: 3, // TODO: Assign from a process map.
         handle: process,
-        exceptions,
         mm: MemoryManager::new(root_vmar),
         security: SecurityContext { uid: 3, gid: 3, euid: 3, egid: 3 },
+        exit_code: Mutex::new(None),
     };
 
     let auxv = vec![
@@ -173,7 +174,7 @@ pub async fn load_executable(
     let main_thread = process.handle.create_thread("initial-thread".as_bytes())?;
     process.handle.start(&main_thread, entry, stack, zx::Handle::invalid(), 0)?;
 
-    Ok(process)
+    Ok((process, exceptions))
 }
 
 #[cfg(test)]
