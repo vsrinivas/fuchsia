@@ -53,21 +53,22 @@ depending on your build configuration.
 
 To download the Fuchsia source, do the following:
 
-1.  Go to the directory where you want to create your `fuchsia` directory, for
-    example:
+1.  Select a directory for downloading the Fuchsia source code, for example:
+
+    Note: While you can set up Fuchsia in any directory, this guide uses the
+    home directory.
 
     ```posix-terminal
     cd ~
     ```
-
-    Note: All examples and instructions in `fuchsia.dev` use `~/fuchsia` as the
-    root directory of the Fuchsia project.
 
 1.  Run the bootstrap script:
 
     ```posix-terminal
     curl -s "https://fuchsia.googlesource.com/fuchsia/+/HEAD/scripts/bootstrap?format=TEXT" | base64 --decode | bash
     ```
+    This script creates a `fuchsia` directory to download the source code.
+    Downloading Fuchsia source can take up to 60 minutes.
 
     If you see the `Invalid authentication credentials` error during the
     bootstrapping process, see [Authentication error](#authentication-error) for
@@ -99,24 +100,26 @@ Fuchsia recommends updating your shell script to perform the following actions
 
 ### Update your shell script {#update-your-shell-script}
 
-Update your shell script to automatically set up Fuchsia environment variables
+Update your shell script to add Fuchsia's environment variables
 in your terminal.
 
 Note: If you don't wish to update your environment variables, see
 [Work on Fuchsia without updating your PATH](#work-on-fuchsia-without-updating-your-path).
 
-The following steps use a `bash` terminal as an example. If you are using `zsh` replace
-`~/.bashrc` with `~/.zshrc` in the following example.
 
 Do the following:
 
-1.  Use a text editor to open your `~/.bashrc` file, for example:
+1.  Use a text editor to open your `~/.bash_profile` file, for example:
+
+    Note: This guide uses a `bash` terminal as an example. If you are
+    using `zsh`, replace `~/.bash_profile` with `~/.zprofile` in the
+    following steps:
 
     ```posix-terminal
-    nano ~/.bashrc
+    nano ~/.bash_profile
     ```
 
-1.  Add the following lines your `~/.bashrc` file:
+1.  Add the following lines to your `~/.bash_profile` file:
 
     Note: If your Fuchsia source code is not located in the `~/fuchsia`
     directory, replace `~/fuchsia` with your Fuchsia directory.
@@ -131,11 +134,11 @@ Do the following:
 1.  To update your environment variables, run the following command:
 
     ```posix-terminal
-    source ~/.bashrc
+    source ~/.bash_profile
     ```
 
-1.  Verify that you can run the following commands from any directory
-    without error:
+1.  Verify that you can run the following commands inside your
+    `fuchsia` directory without error:
 
     ```posix-terminal
     jiri help
