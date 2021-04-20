@@ -5,6 +5,7 @@
         conn_auth_fail_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy/connection-metrics:auth_fail_24hrs",
         conn_other_fail_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy/connection-metrics:other_fail_24hrs",
         rx_freeze_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy:rx_freeze_24hrs",
+        sdio_max_tx_seq_err_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy:sdio_max_tx_seq_err_24hrs",
     },
     act: {
         excessive_tx_qfull: {
@@ -36,6 +37,12 @@
             trigger: "rx_freeze_24hrs >= 1",
             repeat: "Hours(24)",
             signature: "occurrence-rx-freeze",
+        },
+        excessive_sdio_max_tx_seq_err: {
+            type: "Snapshot",
+            trigger: "sdio_max_tx_seq_err_24hrs >= 5",
+            repeat: "Hours(24)",
+            signature: "excessive-sdio-max-tx-seq-err",
         },
     },
     test: {
@@ -127,6 +134,24 @@
             ],
             values: {
                 rx_freeze_24hrs: 0,
+            },
+        },
+        excessive_sdio_max_tx_seq_err: {
+            yes: [
+                "excessive_sdio_max_tx_seq_err",
+            ],
+            no: [],
+            values: {
+                sdio_max_tx_seq_err_24hrs: 5,
+            },
+        },
+        acceptable_sdio_max_tx_seq_err: {
+            yes: [],
+            no: [
+                "excessive_sdio_max_tx_seq_err",
+            ],
+            values: {
+                sdio_max_tx_seq_err_24hrs: 4,
             },
         },
     },
