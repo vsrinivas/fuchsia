@@ -101,9 +101,11 @@ zx::status<BlobLoader::UnpagedLoadResult> BlobLoader::LoadBlob(
   // In either case it is preferable to ASSERT than to return an error here, since the first case
   // should happen only during development and in the second case there may be more corruption and
   // we want to unmount the filesystem before any more damage is done.
-  ZX_ASSERT(inode->header.IsInode() && inode->header.IsAllocated());
-  ZX_ASSERT(inode->blob_size > 0);
-
+  ZX_ASSERT_MSG(inode->header.IsInode() && inode->header.IsAllocated(),
+                "LoadBlob failed. Inode->header.IsInode():%u inode->header.IsAllocated():%u",
+                inode->header.IsInode(), inode->header.IsAllocated());
+  ZX_ASSERT_MSG(inode->blob_size > 0, "Inode blob size should be greater than zero: %ld",
+                inode->blob_size);
   TRACE_DURATION("blobfs", "BlobLoader::LoadBlob", "blob_size", inode->blob_size);
 
   auto blob_layout = BlobLayout::CreateFromInode(GetBlobLayoutFormat(txn_manager_->Info()),
@@ -164,9 +166,11 @@ zx::status<BlobLoader::PagedLoadResult> BlobLoader::LoadBlobPaged(
   // In either case it is preferable to ASSERT than to return an error here, since the first case
   // should happen only during development and in the second case there may be more corruption and
   // we want to unmount the filesystem before any more damage is done.
-  ZX_ASSERT(inode->header.IsInode() && inode->header.IsAllocated());
-  ZX_ASSERT(inode->blob_size > 0);
-
+  ZX_ASSERT_MSG(inode->header.IsInode() && inode->header.IsAllocated(),
+                "LoadBlobPaged failed as inode->header.IsInode():%u inode->header.IsAllocated():%u",
+                inode->header.IsInode(), inode->header.IsAllocated());
+  ZX_ASSERT_MSG(inode->blob_size > 0, "Inode blob size should be greater than zero: %lu",
+                inode->blob_size);
   TRACE_DURATION("blobfs", "BlobLoader::LoadBlobPaged", "blob_size", inode->blob_size);
 
   // Create and save the layout.

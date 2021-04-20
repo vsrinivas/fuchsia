@@ -70,7 +70,7 @@ struct Blob::WriteInfo {
   // We leave room in the merkle tree buffer to add padding before the merkle tree which might be
   // required with the compact blob layout.
   uint8_t* merkle_tree() const {
-    ZX_ASSERT(merkle_tree_buffer);
+    ZX_ASSERT_MSG(merkle_tree_buffer, "Merkle tree buffer should not be nullptr");
     return merkle_tree_buffer.get() + kPreMerkleTreePadding;
   }
 
@@ -118,7 +118,7 @@ bool SupportsPaging(const Inode& inode) {
 }
 
 zx_status_t Blob::VerifyNullBlob() const {
-  ZX_ASSERT(blob_size_ == 0);
+  ZX_ASSERT_MSG(blob_size_ == 0, "Inode blob size is not zero :%lu", blob_size_);
   std::unique_ptr<BlobVerifier> verifier;
   if (zx_status_t status = BlobVerifier::CreateWithoutTree(
           digest(), blobfs_->Metrics(), 0, &blobfs_->blob_corruption_notifier(), &verifier);
@@ -246,7 +246,7 @@ void Blob::SetOldBlob(Blob& blob) {
 
 zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
   TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "block_count", block_count);
-  ZX_ASSERT(block_count != 0);
+  ZX_ASSERT_MSG(block_count != 0, "Block count should not be zero.");
 
   fs::Ticker ticker(blobfs_->Metrics()->Collecting());
 
@@ -334,7 +334,8 @@ zx_status_t Blob::WriteMetadata(BlobTransaction& transaction,
     NodePopulator populator(blobfs_->GetAllocator(), std::move(write_info_->extents),
                             std::move(write_info_->node_indices));
     zx_status_t status = populator.Walk(on_node, on_extent);
-    ZX_ASSERT(status == ZX_OK);
+    ZX_ASSERT_MSG(status == ZX_OK, "populator.Walk failed with error: %s",
+                  zx_status_get_string(status));
     SetCompressionAlgorithm(&*mapped_inode, compression_algorithm);
   } else {
     // Special case: Empty node.
@@ -497,7 +498,9 @@ zx_status_t Blob::Commit() {
       case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
         // Write the merkle data first followed by the data.  The merkle data should be a multiple
         // of the block size so we don't need any padding.
-        ZX_ASSERT(merkle.GetRemainingBytes() % kBlobfsBlockSize == 0);
+        ZX_ASSERT_MSG(merkle.GetRemainingBytes() % kBlobfsBlockSize == 0,
+                      "Merkle data size :%lu not a multiple of blobfs block size %u",
+                      merkle.GetRemainingBytes(), kBlobfsBlockSize);
         return MergeBlobDataProducer(merkle, *data_ptr, /*padding=*/0);
       case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
         // Write the data followed by the merkle tree.  There might be some padding between the
@@ -542,10 +545,15 @@ zx_status_t Blob::Commit() {
     return status;
   }
   if (write_info_->old_blob) {
-    ZX_ASSERT(blobfs_->FreeInode(write_info_->old_blob->Ino(), transaction) == ZX_OK);
+    zx_status_t status = blobfs_->FreeInode(write_info_->old_blob->Ino(), transaction);
+    ZX_ASSERT_MSG(status == ZX_OK, "FreeInode failed with error: %s", zx_status_get_string(status));
     auto& cache = Cache();
-    ZX_ASSERT(cache.Evict(write_info_->old_blob) == ZX_OK);
-    ZX_ASSERT(cache.Add(fbl::RefPtr(this)) == ZX_OK);
+    status = cache.Evict(write_info_->old_blob);
+    ZX_ASSERT_MSG(status == ZX_OK, "Failed to evict old blob with error: %s",
+                  zx_status_get_string(status));
+    status = cache.Add(fbl::RefPtr(this));
+    ZX_ASSERT_MSG(status == ZX_OK, "Failed to add blob to cache with error: %s",
+                  zx_status_get_string(status));
   }
   transaction.Commit(*blobfs_->journal(), std::move(write_all_data),
                      [self = fbl::RefPtr(this)]() {});
@@ -580,7 +588,7 @@ zx_status_t Blob::WriteData(uint32_t block_count, BlobDataProducer& producer,
           auto data = producer.Consume(block_count * kBlobfsBlockSize);
           if (data.is_error())
             return data.error_value();
-          ZX_ASSERT(!data->empty());
+          ZX_ASSERT_MSG(!data->empty(), "Data span for writing should not be empty.");
           storage::UnbufferedOperation op = {.data = data->data(),
                                              .op = {
                                                  .type = storage::OperationType::kWrite,
@@ -812,7 +820,7 @@ zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actua
 
 // New pager implementation.
 zx_status_t Blob::LoadPagedVmosFromDisk() {
-  ZX_ASSERT(!IsDataLoaded());
+  ZX_ASSERT_MSG(!IsDataLoaded(), "Data VMO is not loaded.");
 
   // If there is an overriden cache policy for pager-backed blobs, apply it now. Otherwise the
   // system-wide default will be used.
@@ -841,7 +849,7 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
 
 // Old pager.
 zx_status_t Blob::LoadPagedVmosFromDisk() {
-  ZX_ASSERT(!IsDataLoaded());
+  ZX_ASSERT_MSG(!IsDataLoaded(), "Data VMO is not loaded.");
 
   // If there is an overriden cache policy for pager-backed blobs, apply it now. Otherwise the
   // system-wide default will be used.
@@ -877,7 +885,7 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
 #endif
 
 zx_status_t Blob::LoadUnpagedVmosFromDisk() {
-  ZX_ASSERT(!IsDataLoaded());
+  ZX_ASSERT_MSG(!IsDataLoaded(), "Data VMO is not loaded.");
 
   zx::status<BlobLoader::UnpagedLoadResult> load_result =
       blobfs_->loader().LoadBlob(map_index_, &blobfs_->blob_corruption_notifier());
@@ -985,7 +993,7 @@ void Blob::ActivateLowMemory() {
   std::lock_guard lock(mutex_);
 
   // We shouldn't be putting the blob into a low-memory state while it is still mapped.
-  ZX_ASSERT(!has_clones());
+  ZX_ASSERT_MSG(!has_clones(), "Cannot put blob in low memory state as its mapped via clones.");
 
 #if !defined(ENABLE_BLOBFS_NEW_PAGER)
   // This must happen before freeing the vmo for the PageWatcher's pager synchronization code in
@@ -1267,12 +1275,16 @@ zx_status_t Blob::Purge() {
 
   if (IsReadable()) {
     // A readable blob should only be purged if it has been unlinked.
-    ZX_ASSERT(deletable_);
+    ZX_ASSERT_MSG(deletable_, "Should not purge blob which is not unlinked.");
     BlobTransaction transaction;
-    ZX_ASSERT(blobfs_->FreeInode(map_index_, transaction) == ZX_OK);
+    zx_status_t status = blobfs_->FreeInode(map_index_, transaction);
+    ZX_ASSERT_MSG(status == ZX_OK, "FreeInode for map_index_:%u failed with error: %s", map_index_,
+                  zx_status_get_string(status));
     transaction.Commit(*blobfs_->journal());
   }
-  ZX_ASSERT(Cache().Evict(fbl::RefPtr(this)) == ZX_OK);
+  zx_status_t status = Cache().Evict(fbl::RefPtr(this));
+  ZX_ASSERT_MSG(status == ZX_OK, "Cache eviction for blob failed with error: %s",
+                zx_status_get_string(status));
   set_state(BlobState::kPurged);
   return ZX_OK;
 }

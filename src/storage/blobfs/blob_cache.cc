@@ -197,8 +197,10 @@ zx_status_t BlobCache::EvictUnsafe(CacheNode* vnode, bool from_recycle) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  ZX_ASSERT(open_hash_.erase(*vnode) != nullptr);
+  ZX_ASSERT_MSG(open_hash_.erase(*vnode) != nullptr, "Vnode not present in the open hashmap.");
   ZX_ASSERT(closed_hash_.find(vnode->digest()).CopyPointer() == nullptr);
+  ZX_ASSERT_MSG((closed_hash_.find(vnode->digest()).CopyPointer()) == nullptr,
+                "Vnode present in closed hashmap.");
 
   // If we successfully evicted the node from a container, we may have been invoked
   // from fbl_recycle. In this case, a caller to |Lookup| may be blocked waiting until
@@ -227,9 +229,9 @@ void BlobCache::Downgrade(CacheNode* raw_vnode) {
     return;
   }
 
-  ZX_ASSERT(open_hash_.erase(*raw_vnode) != nullptr);
+  ZX_ASSERT_MSG(open_hash_.erase(*raw_vnode) != nullptr, "Vnode present in open hash.");
   release_cvar_.Broadcast();
-  ZX_ASSERT(closed_hash_.insert_or_find(vnode.get()));
+  ZX_ASSERT_MSG(closed_hash_.insert_or_find(vnode.get()), "Vnode absent in closed hashmap.");
 
   CachePolicy policy = vnode->overriden_cache_policy().value_or(cache_policy_);
   // While in the closed cache, the blob may either be destroyed or in an

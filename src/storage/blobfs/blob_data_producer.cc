@@ -23,7 +23,8 @@ zx::status<fbl::Span<const uint8_t>> SimpleBlobDataProducer::Consume(uint64_t ma
 MergeBlobDataProducer::MergeBlobDataProducer(BlobDataProducer& first, BlobDataProducer& second,
                                              size_t padding)
     : first_(first), second_(second), padding_(padding) {
-  ZX_ASSERT(padding_ < kBlobfsBlockSize);
+  ZX_ASSERT_MSG(padding_ < kBlobfsBlockSize, "Padding size:%lu more than blobfs block size: %u",
+                padding_, kBlobfsBlockSize);
 }
 
 uint64_t MergeBlobDataProducer::GetRemainingBytes() const {
@@ -133,8 +134,13 @@ zx_status_t DecompressBlobDataProducer::Decompress() {
   if (mapping_or.is_error()) {
     return mapping_or.error_value();
   }
-  ZX_ASSERT(mapping_or.value().decompressed_offset == decompressed_offset_);
-  ZX_ASSERT(mapping_or.value().decompressed_length == decompressed_length);
+  ZX_ASSERT_MSG(
+      mapping_or.value().decompressed_offset == decompressed_offset_,
+      "mapping_or.value().decompressed_offset :%lu not equal to decompressed_offset_ :%lu",
+      mapping_or.value().decompressed_offset, decompressed_offset_);
+  ZX_ASSERT_MSG(mapping_or.value().decompressed_length == decompressed_length,
+                "mapping_or.value().decompressed_length :%lu not equal to decompressed_length: %lu",
+                mapping_or.value().decompressed_length, decompressed_length);
   if (zx_status_t status = decompressor_->DecompressRange(
           buffer_.get(), &decompressed_length,
           compressed_data_start_ + mapping_or.value().compressed_offset,
@@ -142,7 +148,9 @@ zx_status_t DecompressBlobDataProducer::Decompress() {
       status != ZX_OK) {
     return status;
   }
-  ZX_ASSERT(mapping_or.value().decompressed_length == decompressed_length);
+  ZX_ASSERT_MSG(mapping_or.value().decompressed_length == decompressed_length,
+                "mapping_or.value().decompressed_length :%lu not equal to decompressed_length:%lu",
+                mapping_or.value().decompressed_length, decompressed_length);
   buffer_avail_ = decompressed_length;
   buffer_offset_ = 0;
   decompressed_remaining_ -= decompressed_length;
