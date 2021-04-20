@@ -68,7 +68,8 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
   // Iterate through all relative block ranges and acquire absolute blocks for each of them.
   while (true) {
     blk_t expected_blocks = allocation_state_.GetTotalPending();
-    ZX_ASSERT(expected_blocks <= max_blocks);
+    ZX_ASSERT_MSG(expected_blocks <= max_blocks, "Pending blocks:%u more than max blocks:%u",
+                  expected_blocks, max_blocks);
 
     if (expected_blocks == 0) {
       if (GetInode()->size != allocation_state_.GetNodeSize()) {
@@ -78,19 +79,26 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
 
       // Since we may have pending reservations from an expected update, reset the allocation
       // state. This may happen if the same block range is allocated and de-allocated (e.g.
-      // written and truncated) before the state is resolved.
-      ZX_ASSERT(allocation_state_.GetNodeSize() == GetInode()->size);
+      // written and truncated), before the state is resolved.
+      blk_t alloc_node_size = allocation_state_.GetNodeSize();
+      ZX_ASSERT_MSG(alloc_node_size == GetInode()->size,
+                    "Allocation nodesize:%u does not match actual node size:%u", alloc_node_size,
+                    GetInode()->size);
       allocation_state_.Reset(allocation_state_.GetNodeSize());
       ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
       break;
     }
 
     blk_t bno_start, bno_count;
-    ZX_ASSERT(allocation_state_.GetNextRange(&bno_start, &bno_count) == ZX_OK);
-    ZX_ASSERT(bno_count <= max_blocks);
+    ZX_ASSERT_MSG(allocation_state_.GetNextRange(&bno_start, &bno_count) == ZX_OK,
+                  "Failed to get allocation range.");
+    ZX_ASSERT_MSG(bno_count <= max_blocks, "Block count:%u more than max block count:%u", bno_count,
+                  max_blocks);
 
     // Since we reserved enough space ahead of time, this should not fail.
-    ZX_ASSERT(BlocksSwap(transaction.get(), bno_start, bno_count, &allocated_blocks[0]) == ZX_OK);
+    ZX_ASSERT_MSG(
+        BlocksSwap(transaction.get(), bno_start, bno_count, &allocated_blocks[0]) == ZX_OK,
+        "Failed to reserve blocks.");
 
     // Enqueue each data block one at a time, as they may not be contiguous on disk.
     UnownedVmoBuffer buffer(vmo());
@@ -107,7 +115,9 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
     // Since we are updating the file in "chunks", only update the on-disk inode size
     // with the portion we've written so far.
     blk_t last_byte = (bno_start + bno_count) * Vfs()->BlockSize();
-    ZX_ASSERT(last_byte <= fbl::round_up(allocation_state_.GetNodeSize(), Vfs()->BlockSize()));
+    ZX_ASSERT_MSG(last_byte <= fbl::round_up(allocation_state_.GetNodeSize(), Vfs()->BlockSize()),
+                  "Offset :%u to be updated is beyond the allowed nodesize :%lu", last_byte,
+                  fbl::round_up(allocation_state_.GetNodeSize(), Vfs()->BlockSize()));
 
     if (last_byte > GetInode()->size && last_byte < allocation_state_.GetNodeSize()) {
       // If we have written past the end of the recorded size but have not yet reached the
@@ -137,7 +147,8 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
       FX_LOGS(ERROR) << "   bitoff:" << modified_blocks->bitoff
                      << " bitlen:" << modified_blocks->bitlen;
     }
-    ZX_ASSERT(allocation_state_.GetTotalPending() == 0);
+    ZX_ASSERT_MSG(allocation_state_.GetTotalPending() == 0, "Pending allocations are non-zero:%u",
+                  allocation_state_.GetTotalPending());
   }
 
   InodeSync(transaction.get(), DirtyCacheEnabled() ? kMxFsSyncDefault : kMxFsSyncMtime);
@@ -314,7 +325,8 @@ zx::status<std::unique_ptr<Transaction>> File::GetTransaction(uint32_t reserve_b
     std::lock_guard lock(mutex_);
     cached_transaction = std::move(cached_transaction_);
     if (!DirtyCacheEnabled()) {
-      ZX_ASSERT(cached_transaction == nullptr);
+      ZX_ASSERT_MSG(cached_transaction == nullptr,
+                    "Cached transaction is enabled on non-dirty cache configuration.");
     }
   }
   zx_status_t status;
@@ -441,7 +453,7 @@ zx_status_t File::Truncate(size_t len) {
   // Ensure our inode is consistent with that metadata.
   UpdateModificationTime();
   auto result = FlushTransaction(std::move(transaction), true);
-  ZX_ASSERT(result.is_ok());
+  ZX_ASSERT_MSG(result.is_ok(), "Failed to force sync inode: %u", result.status_value());
   return ZX_OK;
 }
 
