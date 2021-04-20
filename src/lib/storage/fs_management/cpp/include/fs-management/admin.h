@@ -93,12 +93,6 @@ zx_status_t fsck(const char* device_path, disk_format_t df, const fsck_options_t
 zx_status_t fs_init(zx_handle_t device_handle, disk_format_t df, const init_options_t* options,
                     zx_handle_t* out_export_root);
 
-// Register the filesystem outgoing directory with the fshost registry service. This optional step
-// allows filesystem services to be accessed by sufficiently priviledged processes.
-//
-// |export_root| is never consumed.
-zx_status_t fs_register(zx_handle_t export_root);
-
 // Get a connection to the root of the filesystem, given a filesystem outgoing directory.
 //
 // |export_root| is never consumed.

@@ -25,8 +25,6 @@ typedef struct mount_options {
   // An optional cache eviction policy specifier for the filesystem to use for in-memory data (if
   // the filesystem supports it).
   const char* cache_eviction_policy;
-  // If true will register with /svc/fuchsia.fshost.Registry.
-  bool register_fs;
   // If set, run fsck after every transaction.
   bool fsck_after_every_transaction;
   // If set, attach the filesystem with O_ADMIN, which will allow the use of the DirectoryAdmin

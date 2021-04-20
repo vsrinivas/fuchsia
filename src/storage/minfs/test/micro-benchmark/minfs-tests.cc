@@ -193,11 +193,7 @@ class MinfsMicroBenchmarkFixture : public fs_test::BaseFilesystemTest {
   void TearDown() override { UnmountAndCompareBlockMetrics(); }
 
  private:
-  mount_options_t GetMountOptions() {
-    mount_options_t options = default_mount_options;
-    options.register_fs = false;
-    return options;
-  }
+  mount_options_t GetMountOptions() { return default_mount_options; }
 
   // Creates a filesystem and mounts it. Clears block metrics after creating the
   // filesystem but before mounting it.

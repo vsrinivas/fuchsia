@@ -148,14 +148,6 @@ TEST_F(OutgoingDirectoryBlobfs, OutgoingDirectoryReadOnlyDataRootIsValidBlobfs) 
   CheckDataRoot();
 }
 
-// TODO(http://fxbug.dev/60818): Re-enable the test
-TEST_F(OutgoingDirectoryBlobfs, DISABLED_RegisterOutgoingDirectoryWithFSHostRegistry) {
-  StartFilesystem(&default_init_options);
-  zx::unowned_channel export_root;
-  GetExportRoot(&export_root);
-  ASSERT_OK(fs_register(export_root->get()));
-}
-
 TEST_F(OutgoingDirectoryMinfs, OutgoingDirectoryReadWriteDataRootIsValidMinfs) {
   StartFilesystem(&default_init_options);
   CheckDataRoot();

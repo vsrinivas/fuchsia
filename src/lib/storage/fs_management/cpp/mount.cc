@@ -112,11 +112,6 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
     return status;
   }
 
-  // register the export root with the fshost registry
-  if (options->register_fs && ((status = fs_register(export_root->get())) != ZX_OK)) {
-    return status;
-  }
-
   // Extract the handle to the root of the filesystem from the export root. The POSIX flag will
   // cause the writable and executable rights to be inherited (if present).
   uint32_t flags = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosix;
@@ -141,7 +136,6 @@ const mount_options_t default_mount_options = {
     .create_mountpoint = false,
     .write_compression_algorithm = nullptr,
     .cache_eviction_policy = nullptr,
-    .register_fs = true,
     .fsck_after_every_transaction = false,
     .admin = true,
     .outgoing_directory = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID},

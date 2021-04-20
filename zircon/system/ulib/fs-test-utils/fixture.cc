@@ -242,7 +242,6 @@ zx_status_t Fixture::Mount() {
   mount_options_t mount_options = default_mount_options;
   mount_options.create_mountpoint = true;
   mount_options.wait_until_ready = true;
-  mount_options.register_fs = false;
   if (options_.write_compression_algorithm) {
     mount_options.write_compression_algorithm = options_.write_compression_algorithm;
   }

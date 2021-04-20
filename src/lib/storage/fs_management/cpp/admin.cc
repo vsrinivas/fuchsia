@@ -4,7 +4,6 @@
 
 #include "admin.h"
 
-#include <fuchsia/fshost/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/vfs.h>
@@ -23,7 +22,6 @@
 #include "src/lib/storage/vfs/cpp/vfs.h"
 
 namespace fio = fuchsia_io;
-namespace fshost = fuchsia_fshost;
 
 namespace fs_management {
 namespace {
@@ -174,43 +172,6 @@ zx_status_t fs_init(zx_handle_t device_handle, disk_format_t df, const init_opti
   if (status != ZX_OK)
     return status;
   *out_export_root = client.release();
-  return ZX_OK;
-}
-
-__EXPORT
-zx_status_t fs_register(zx_handle_t export_root) {
-  zx_status_t status;
-
-  zx::channel export_client, export_server;
-  if ((status = zx::channel::create(0, &export_client, &export_server)) != ZX_OK) {
-    return status;
-  }
-
-  auto clone_resp = fidl::WireCall<fio::Node>(zx::unowned_channel(export_root))
-                        .Clone(fio::wire::kCloneFlagSameRights, std::move(export_server));
-  if (!clone_resp.ok()) {
-    return clone_resp.status();
-  }
-
-  zx::channel registry_client_chan, registry_server;
-  if ((status = zx::channel::create(0, &registry_client_chan, &registry_server)) != ZX_OK) {
-    return status;
-  }
-
-  if ((status = fdio_service_connect(fidl::DiscoverableProtocolDefaultPath<fshost::Registry>,
-                                     registry_server.release())) != ZX_OK) {
-    return status;
-  }
-
-  fidl::WireSyncClient<fshost::Registry> registry_client(std::move(registry_client_chan));
-  auto register_resp = registry_client.RegisterFilesystem(std::move(export_client));
-  if (!register_resp.ok()) {
-    return register_resp.status();
-  }
-  if (register_resp.value().s != ZX_OK) {
-    return register_resp.value().s;
-  }
-
   return ZX_OK;
 }
 

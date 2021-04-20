@@ -44,7 +44,6 @@ namespace fio = fuchsia_io;
 const mount_options_t& test_mount_options() {
   static mount_options_t* options = []() {
     mount_options_t* options = new mount_options_t(default_mount_options);
-    options->register_fs = false;
     return options;
   }();
   return *options;

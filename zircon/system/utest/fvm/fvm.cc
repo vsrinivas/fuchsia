@@ -111,7 +111,6 @@ class FvmTest : public zxtest::Test {
     ASSERT_OK(fdio_ns_bind_fd(name_space, kTestDevPath, devmgr_.devfs_root().get()));
 
     ASSERT_EQ(mkdir(kMountPath, 0666), 0);
-    mounting_options_.register_fs = false;
   }
 
   const fbl::unique_fd& devfs_root() const { return devmgr_.devfs_root(); }

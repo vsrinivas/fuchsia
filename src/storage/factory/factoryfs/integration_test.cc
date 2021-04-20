@@ -59,10 +59,8 @@ TEST(FactoryFs, ExportedFilesystemIsMountable) {
 
   fd.reset(open(ram_disk_path.c_str(), O_RDONLY));
   ASSERT_TRUE(fd) << errno;
-  mount_options_t options = default_mount_options;
-  options.register_fs = false;
-  status =
-      mount(fd.release(), factoryfs_c_str, DISK_FORMAT_FACTORYFS, &options, launch_stdio_async);
+  status = mount(fd.release(), factoryfs_c_str, DISK_FORMAT_FACTORYFS, &default_mount_options,
+                 launch_stdio_async);
   EXPECT_EQ(status, ZX_OK);
 
   // And check contents of factoryfs.

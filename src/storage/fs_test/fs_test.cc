@@ -254,7 +254,6 @@ zx::status<> FsMount(const std::string& device_path, const std::string& mount_pa
   }
 
   mount_options_t options = mount_options;
-  options.register_fs = false;
   options.bind_to_namespace = true;
   if (outgoing_directory) {
     zx::channel server;
