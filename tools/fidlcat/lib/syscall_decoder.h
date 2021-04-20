@@ -25,6 +25,7 @@
 #include "tools/fidlcat/lib/comparator.h"
 #include "tools/fidlcat/lib/decoder.h"
 #include "tools/fidlcat/lib/event.h"
+#include "tools/fidlcat/lib/syscall_decoder_interface.h"
 #include "tools/fidlcat/lib/type_decoder.h"
 
 namespace fidlcat {
@@ -34,14 +35,6 @@ class Syscall;
 class SyscallDecoder;
 class SyscallDecoderDispatcher;
 class SyscallDisplayDispatcher;
-
-// Stage for argument retrieving.
-enum class Stage {
-  // Retrieve arguments at the syscall entry.
-  kEntry,
-  // Retrieve arguments at the syscall exit.
-  kExit
-};
 
 class SyscallUse {
  public:
@@ -121,32 +114,19 @@ class SyscallDecoderBuffer {
 // The decoding starts when SyscallDecoder::Decode is called. Then all the
 // decoding steps are executed one after the other (see the comments for Decode
 // and the following methods).
-class SyscallDecoder {
+class SyscallDecoder : public SyscallDecoderInterface {
  public:
   SyscallDecoder(SyscallDecoderDispatcher* dispatcher, InterceptingThreadObserver* thread_observer,
                  zxdb::Thread* thread, const Syscall* syscall, std::unique_ptr<SyscallUse> use,
                  int64_t timestamp);
 
-  SyscallDecoderDispatcher* dispatcher() const { return dispatcher_; }
   zxdb::Thread* get_thread() const { return weak_thread_.get(); }
-  debug_ipc::Arch arch() const { return arch_; }
   const Syscall* syscall() const { return syscall_; }
-  Thread* fidlcat_thread() const { return fidlcat_thread_; }
   int64_t timestamp() const { return timestamp_; }
   const std::vector<zxdb::Location>& caller_locations() const { return caller_locations_; }
   uint64_t return_address() const { return return_address_; }
   uint64_t syscall_return_value() const { return syscall_return_value_; }
   int pending_request_count() const { return pending_request_count_; }
-  const fidl_codec::semantic::MethodSemantic* semantic() const { return semantic_; }
-  void set_semantic(const fidl_codec::semantic::MethodSemantic* semantic) { semantic_ = semantic; }
-  const fidl_codec::StructValue* decoded_request() const { return decoded_request_; }
-  void set_decoded_request(const fidl_codec::StructValue* decoded_request) {
-    decoded_request_ = decoded_request;
-  }
-  const fidl_codec::StructValue* decoded_response() const { return decoded_response_; }
-  void set_decoded_response(const fidl_codec::StructValue* decoded_response) {
-    decoded_response_ = decoded_response;
-  }
 
   // True if the decoder has been aborted. That means that the process for this decoder
   // terminated but we have still some pending requests.
@@ -162,15 +142,15 @@ class SyscallDecoder {
   void LoadMemory(uint64_t address, size_t size, std::vector<uint8_t>* destination);
 
   // Loads the value for a buffer, a struct or an output argument.
-  void LoadArgument(Stage stage, int argument_index, size_t size);
+  void LoadArgument(Stage stage, int argument_index, size_t size) override;
 
   // True if the argument is loaded correctly.
-  bool ArgumentLoaded(Stage stage, int argument_index, size_t size) const {
+  bool ArgumentLoaded(Stage stage, int argument_index, size_t size) const override {
     return decoded_arguments_[argument_index].loaded_values(stage).size() == size;
   }
 
   // Returns the value of an argument for basic types.
-  uint64_t ArgumentValue(int argument_index) const {
+  uint64_t ArgumentValue(int argument_index) const override {
     if (static_cast<size_t>(argument_index) >= decoded_arguments_.size()) {
       return 0;
     }
@@ -179,7 +159,7 @@ class SyscallDecoder {
 
   // Returns a pointer on the argument content for buffers, structs or
   // output arguments.
-  uint8_t* ArgumentContent(Stage stage, int argument_index) {
+  uint8_t* ArgumentContent(Stage stage, int argument_index) override {
     if (static_cast<size_t>(argument_index) >= decoded_arguments_.size()) {
       return nullptr;
     }
@@ -191,16 +171,16 @@ class SyscallDecoder {
   }
 
   // Loads a buffer.
-  void LoadBuffer(Stage stage, uint64_t address, size_t size);
+  void LoadBuffer(Stage stage, uint64_t address, size_t size) override;
 
   // True if the buffer is loaded correctly.
-  bool BufferLoaded(Stage stage, uint64_t address, size_t size) {
+  bool BufferLoaded(Stage stage, uint64_t address, size_t size) override {
     return (address == 0) ? true
                           : buffers_[std::make_pair(stage, address)].loaded_values().size() == size;
   }
 
   // Returns a pointer on the loaded buffer.
-  uint8_t* BufferContent(Stage stage, uint64_t address) {
+  uint8_t* BufferContent(Stage stage, uint64_t address) override {
     return (address == 0) ? nullptr
                           : buffers_[std::make_pair(stage, address)].loaded_values().data();
   }
@@ -256,12 +236,9 @@ class SyscallDecoder {
   void Destroy();
 
  private:
-  SyscallDecoderDispatcher* const dispatcher_;
   InterceptingThreadObserver* const thread_observer_;
   const fxl::WeakPtr<zxdb::Thread> weak_thread_;
-  const debug_ipc::Arch arch_;
   const Syscall* const syscall_;
-  Thread* fidlcat_thread_;
   std::unique_ptr<SyscallUse> use_;
   const int64_t timestamp_;
   std::vector<zxdb::Location> caller_locations_;
@@ -274,9 +251,6 @@ class SyscallDecoder {
   bool input_arguments_loaded_ = false;
   bool aborted_ = false;
   DecoderError error_;
-  const fidl_codec::semantic::MethodSemantic* semantic_ = nullptr;
-  const fidl_codec::StructValue* decoded_request_ = nullptr;
-  const fidl_codec::StructValue* decoded_response_ = nullptr;
   // Keeps a reference on the events.
   std::shared_ptr<InvokedEvent> invoked_event_;
   std::shared_ptr<OutputEvent> output_event_;

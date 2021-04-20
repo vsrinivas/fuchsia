@@ -136,12 +136,12 @@ std::unique_ptr<fidl_codec::Type> AccessBase::ComputeType() const {
 
 std::unique_ptr<fidl_codec::Type> SyscallInputOutputBase::ComputeType() const { return nullptr; }
 
-std::unique_ptr<fidl_codec::Value> SyscallInputOutputBase::GenerateValue(SyscallDecoder* decoder,
-                                                                         Stage stage) const {
+std::unique_ptr<fidl_codec::Value> SyscallInputOutputBase::GenerateValue(
+    SyscallDecoderInterface* decoder, Stage stage) const {
   return std::make_unique<fidl_codec::InvalidValue>();
 }
 
-void SyscallInputOutputStringBuffer::DisplayOutline(SyscallDecoder* decoder, Stage stage,
+void SyscallInputOutputStringBuffer::DisplayOutline(SyscallDecoderInterface* decoder, Stage stage,
                                                     fidl_codec::PrettyPrinter& printer) const {
   printer << name();
   printer << ": " << fidl_codec::Green << "string" << fidl_codec::ResetColor << " = ";
@@ -170,7 +170,7 @@ void SyscallInputOutputStringBuffer::DisplayOutline(SyscallDecoder* decoder, Sta
 }
 
 const char* SyscallInputOutputFixedSizeString::DisplayInline(
-    SyscallDecoder* decoder, Stage stage, const char* separator,
+    SyscallDecoderInterface* decoder, Stage stage, const char* separator,
     fidl_codec::PrettyPrinter& printer) const {
   printer << separator;
   printer << name() << ": " << fidl_codec::Green << "string" << fidl_codec::ResetColor << " = ";
@@ -184,8 +184,8 @@ std::unique_ptr<fidl_codec::Type> SyscallFidlMessageHandle::ComputeType() const 
   return std::make_unique<fidl_codec::FidlMessageType>();
 }
 
-std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandle::GenerateValue(SyscallDecoder* decoder,
-                                                                           Stage stage) const {
+std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandle::GenerateValue(
+    SyscallDecoderInterface* decoder, Stage stage) const {
   zx_handle_t handle_value = handle()->Value(decoder, stage);
   const uint8_t* bytes_value = bytes()->Content(decoder, stage);
   uint32_t num_bytes_value = num_bytes()->Value(decoder, stage);
@@ -230,7 +230,7 @@ std::unique_ptr<fidl_codec::Type> SyscallFidlMessageHandleInfo::ComputeType() co
 }
 
 std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandleInfo::GenerateValue(
-    SyscallDecoder* decoder, Stage stage) const {
+    SyscallDecoderInterface* decoder, Stage stage) const {
   zx_handle_t handle_value = handle()->Value(decoder, stage);
   const uint8_t* bytes_value = bytes()->Content(decoder, stage);
   uint32_t num_bytes_value = num_bytes()->Value(decoder, stage);
@@ -275,7 +275,7 @@ std::unique_ptr<fidl_codec::Type> SyscallFidlMessageHandleDisposition::ComputeTy
 }
 
 std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandleDisposition::GenerateValue(
-    SyscallDecoder* decoder, Stage stage) const {
+    SyscallDecoderInterface* decoder, Stage stage) const {
   zx_handle_t handle_value = handle()->Value(decoder, stage);
   const uint8_t* bytes_value = bytes()->Content(decoder, stage);
   uint32_t num_bytes_value = num_bytes()->Value(decoder, stage);

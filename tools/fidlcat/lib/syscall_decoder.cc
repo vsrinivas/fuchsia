@@ -71,14 +71,13 @@ SyscallDecoder::SyscallDecoder(SyscallDecoderDispatcher* dispatcher,
                                InterceptingThreadObserver* thread_observer, zxdb::Thread* thread,
                                const Syscall* syscall, std::unique_ptr<SyscallUse> use,
                                int64_t timestamp)
-    : dispatcher_(dispatcher),
+    : SyscallDecoderInterface(dispatcher, thread),
       thread_observer_(thread_observer),
       weak_thread_(thread->GetWeakPtr()),
-      arch_(thread->session()->arch()),
       syscall_(syscall),
       use_(std::move(use)),
       timestamp_(timestamp) {
-  fidlcat_thread_ = dispatcher_->SearchThread(thread->GetKoid());
+  fidlcat_thread_ = dispatcher->SearchThread(thread->GetKoid());
   if (fidlcat_thread_ == nullptr) {
     Process* fidlcat_process = dispatcher_->SearchProcess(thread->GetProcess()->GetKoid());
     if (fidlcat_process == nullptr) {

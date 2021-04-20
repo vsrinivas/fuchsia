@@ -468,27 +468,33 @@ class SyscallArgumentBaseTyped : public SyscallArgumentBase {
       : SyscallArgumentBase(index, syscall_type) {}
 
   // Ensures that the argument data will be in memory.
-  virtual void Load(SyscallDecoder* /*decoder*/, Stage /*stage*/) const {}
+  virtual void Load(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const {}
 
   // True if the argument data is available.
-  virtual bool Loaded(SyscallDecoder* /*decoder*/, Stage /*stage*/) const { return false; }
+  virtual bool Loaded(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const { return false; }
 
   // True if the argument data is valid (not a null pointer).
-  virtual bool ValueValid(SyscallDecoder* /*decoder*/, Stage /*stage*/) const { return false; }
+  virtual bool ValueValid(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const {
+    return false;
+  }
 
   // The data for the argument.
-  virtual Type Value(SyscallDecoder* /*decoder*/, Stage /*stage*/) const { return Type(); }
+  virtual Type Value(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const { return Type(); }
 
   // For buffers, ensures that the buffer will be in memory.
-  virtual void LoadArray(SyscallDecoder* /*decoder*/, Stage /*stage*/, size_t /*size*/) const {}
+  virtual void LoadArray(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/,
+                         size_t /*size*/) const {}
 
   // For buffers, true if the buffer is available.
-  virtual bool ArrayLoaded(SyscallDecoder* /*decoder*/, Stage /*stage*/, size_t /*size*/) const {
+  virtual bool ArrayLoaded(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/,
+                           size_t /*size*/) const {
     return false;
   }
 
   // For buffers, get a pointer on the buffer data.
-  virtual Type* Content(SyscallDecoder* /*decoder*/, Stage /*stage*/) const { return nullptr; }
+  virtual Type* Content(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const {
+    return nullptr;
+  }
 };
 
 // Defines an basic type argument for a system call.
@@ -502,11 +508,13 @@ class SyscallArgument : public SyscallArgumentBaseTyped<Type> {
   // Redefine index within the class to avoid a compiler error.
   int index() const { return SyscallArgumentBase::index(); }
 
-  bool Loaded(SyscallDecoder* /*decoder*/, Stage /*stage*/) const override { return true; }
+  bool Loaded(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const override { return true; }
 
-  bool ValueValid(SyscallDecoder* /*decoder*/, Stage /*stage*/) const override { return true; }
+  bool ValueValid(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const override {
+    return true;
+  }
 
-  Type Value(SyscallDecoder* decoder, Stage /*stage*/) const override {
+  Type Value(SyscallDecoderInterface* decoder, Stage /*stage*/) const override {
     return Type(decoder->ArgumentValue(index()));
   }
 };
@@ -523,19 +531,19 @@ class SyscallPointerArgument : public SyscallArgumentBaseTyped<Type> {
 
   int index() const { return SyscallArgumentBase::index(); }
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override {
+  void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     decoder->LoadArgument(stage, index(), sizeof(Type));
   }
 
-  bool Loaded(SyscallDecoder* decoder, Stage stage) const override {
+  bool Loaded(SyscallDecoderInterface* decoder, Stage stage) const override {
     return decoder->ArgumentLoaded(stage, index(), sizeof(Type));
   }
 
-  bool ValueValid(SyscallDecoder* decoder, Stage stage) const override {
+  bool ValueValid(SyscallDecoderInterface* decoder, Stage stage) const override {
     return decoder->ArgumentContent(stage, index()) != nullptr;
   }
 
-  Type Value(SyscallDecoder* decoder, Stage stage) const override {
+  Type Value(SyscallDecoderInterface* decoder, Stage stage) const override {
     uint8_t* content = decoder->ArgumentContent(stage, index());
     if (content == nullptr) {
       return Type();
@@ -543,15 +551,15 @@ class SyscallPointerArgument : public SyscallArgumentBaseTyped<Type> {
     return *reinterpret_cast<Type*>(content);
   }
 
-  void LoadArray(SyscallDecoder* decoder, Stage stage, size_t size) const override {
+  void LoadArray(SyscallDecoderInterface* decoder, Stage stage, size_t size) const override {
     decoder->LoadArgument(stage, index(), size);
   }
 
-  bool ArrayLoaded(SyscallDecoder* decoder, Stage stage, size_t size) const override {
+  bool ArrayLoaded(SyscallDecoderInterface* decoder, Stage stage, size_t size) const override {
     return decoder->ArgumentLoaded(stage, index(), size);
   }
 
-  Type* Content(SyscallDecoder* decoder, Stage stage) const override {
+  Type* Content(SyscallDecoderInterface* decoder, Stage stage) const override {
     return reinterpret_cast<Type*>(decoder->ArgumentContent(stage, index()));
   }
 };
@@ -571,13 +579,13 @@ class AccessBase {
   std::unique_ptr<fidl_codec::Type> ComputeType() const;
 
   // For buffers, ensures that the buffer will be in memory.
-  virtual void LoadArray(SyscallDecoder* decoder, Stage stage, size_t size) = 0;
+  virtual void LoadArray(SyscallDecoderInterface* decoder, Stage stage, size_t size) = 0;
 
   // For buffers, true if the buffer is available.
-  virtual bool ArrayLoaded(SyscallDecoder* decoder, Stage stage, size_t size) const = 0;
+  virtual bool ArrayLoaded(SyscallDecoderInterface* decoder, Stage stage, size_t size) const = 0;
 
   // For buffers, get a pointer on the buffer data.
-  virtual const uint8_t* Uint8Content(SyscallDecoder* decoder, Stage stage) const = 0;
+  virtual const uint8_t* Uint8Content(SyscallDecoderInterface* decoder, Stage stage) const = 0;
 };
 
 // Use to access data for an input or an output.
@@ -587,29 +595,30 @@ class Access : public AccessBase {
   Access() = default;
 
   // Ensures that the data will be in memory.
-  virtual void Load(SyscallDecoder* decoder, Stage stage) const = 0;
+  virtual void Load(SyscallDecoderInterface* decoder, Stage stage) const = 0;
 
   // True if the data is available.
-  virtual bool Loaded(SyscallDecoder* decoder, Stage stage) const = 0;
+  virtual bool Loaded(SyscallDecoderInterface* decoder, Stage stage) const = 0;
 
   // True if the data is valid (not a null pointer).
-  virtual bool ValueValid(SyscallDecoder* decoder, Stage stage) const = 0;
+  virtual bool ValueValid(SyscallDecoderInterface* decoder, Stage stage) const = 0;
 
   // The data.
-  virtual Type Value(SyscallDecoder* decoder, Stage stage) const = 0;
+  virtual Type Value(SyscallDecoderInterface* decoder, Stage stage) const = 0;
 
   // For buffers, get a pointer on the buffer data.
-  virtual const Type* Content(SyscallDecoder* decoder, Stage stage) const = 0;
+  virtual const Type* Content(SyscallDecoderInterface* decoder, Stage stage) const = 0;
 
-  const uint8_t* Uint8Content(SyscallDecoder* decoder, Stage stage) const override {
+  const uint8_t* Uint8Content(SyscallDecoderInterface* decoder, Stage stage) const override {
     return reinterpret_cast<const uint8_t*>(Content(decoder, stage));
   }
 
   // Generates the fidl codec value for this access.
-  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder, Stage stage) const;
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
+                                                   Stage stage) const;
 
   // Display the data on a stream (with name and type).
-  void Display(SyscallDecoder* decoder, Stage stage, std::string_view name,
+  void Display(SyscallDecoderInterface* decoder, Stage stage, std::string_view name,
                fidl_codec::PrettyPrinter& printer) const;
 };
 
@@ -628,31 +637,31 @@ class ArgumentAccess : public Access<Type> {
 
   SyscallType GetSyscallType() const override { return argument_->syscall_type(); }
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override {
+  void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     argument_->Load(decoder, stage);
   }
 
-  bool Loaded(SyscallDecoder* decoder, Stage stage) const override {
+  bool Loaded(SyscallDecoderInterface* decoder, Stage stage) const override {
     return argument_->Loaded(decoder, stage);
   }
 
-  bool ValueValid(SyscallDecoder* decoder, Stage stage) const override {
+  bool ValueValid(SyscallDecoderInterface* decoder, Stage stage) const override {
     return argument_->ValueValid(decoder, stage);
   }
 
-  Type Value(SyscallDecoder* decoder, Stage stage) const override {
+  Type Value(SyscallDecoderInterface* decoder, Stage stage) const override {
     return argument_->Value(decoder, stage);
   }
 
-  void LoadArray(SyscallDecoder* decoder, Stage stage, size_t size) override {
+  void LoadArray(SyscallDecoderInterface* decoder, Stage stage, size_t size) override {
     argument_->LoadArray(decoder, stage, size);
   }
 
-  bool ArrayLoaded(SyscallDecoder* decoder, Stage stage, size_t size) const override {
+  bool ArrayLoaded(SyscallDecoderInterface* decoder, Stage stage, size_t size) const override {
     return argument_->ArrayLoaded(decoder, stage, size);
   }
 
-  const Type* Content(SyscallDecoder* decoder, Stage stage) const override {
+  const Type* Content(SyscallDecoderInterface* decoder, Stage stage) const override {
     return argument_->Content(decoder, stage);
   }
 
@@ -670,29 +679,30 @@ class FieldAccess : public Access<Type> {
 
   SyscallType GetSyscallType() const override { return syscall_type_; }
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override {
+  void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     argument_->LoadArray(decoder, stage, sizeof(ClassType));
   }
 
-  bool Loaded(SyscallDecoder* decoder, Stage stage) const override {
+  bool Loaded(SyscallDecoderInterface* decoder, Stage stage) const override {
     return argument_->ArrayLoaded(decoder, stage, sizeof(ClassType));
   }
 
-  bool ValueValid(SyscallDecoder* decoder, Stage stage) const override {
+  bool ValueValid(SyscallDecoderInterface* decoder, Stage stage) const override {
     return argument_->Content(decoder, stage) != nullptr;
   }
 
-  Type Value(SyscallDecoder* decoder, Stage stage) const override {
+  Type Value(SyscallDecoderInterface* decoder, Stage stage) const override {
     return get_(argument_->Content(decoder, stage));
   }
 
-  void LoadArray(SyscallDecoder* /*decoder*/, Stage /*stage*/, size_t /*size*/) override {}
+  void LoadArray(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/, size_t /*size*/) override {}
 
-  bool ArrayLoaded(SyscallDecoder* /*decoder*/, Stage /*stage*/, size_t /*size*/) const override {
+  bool ArrayLoaded(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/,
+                   size_t /*size*/) const override {
     return false;
   }
 
-  const Type* Content(SyscallDecoder* /*decoder*/, Stage /*stage*/) const override {
+  const Type* Content(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const override {
     return nullptr;
   }
 
@@ -712,15 +722,19 @@ class PointerFieldAccess : public Access<Type> {
 
   SyscallType GetSyscallType() const override { return syscall_type_; }
 
-  void Load(SyscallDecoder* /*decoder*/, Stage /*stage*/) const override {}
+  void Load(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const override {}
 
-  bool Loaded(SyscallDecoder* /*decoder*/, Stage /*stage*/) const override { return false; }
+  bool Loaded(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const override {
+    return false;
+  }
 
-  bool ValueValid(SyscallDecoder* /*decoder*/, Stage /*stage*/) const override { return false; }
+  bool ValueValid(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const override {
+    return false;
+  }
 
-  Type Value(SyscallDecoder* /*decoder*/, Stage /*stage*/) const override { return {}; }
+  Type Value(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const override { return {}; }
 
-  void LoadArray(SyscallDecoder* decoder, Stage stage, size_t size) override {
+  void LoadArray(SyscallDecoderInterface* decoder, Stage stage, size_t size) override {
     argument_->LoadArray(decoder, stage, sizeof(ClassType));
     ClassType* object = argument_->Content(decoder, stage);
     if (object != nullptr) {
@@ -728,13 +742,13 @@ class PointerFieldAccess : public Access<Type> {
     }
   }
 
-  bool ArrayLoaded(SyscallDecoder* decoder, Stage stage, size_t size) const override {
+  bool ArrayLoaded(SyscallDecoderInterface* decoder, Stage stage, size_t size) const override {
     ClassType* object = argument_->Content(decoder, stage);
     return (object == nullptr) ||
            decoder->BufferLoaded(stage, reinterpret_cast<uint64_t>(get_(object)), size);
   }
 
-  const Type* Content(SyscallDecoder* decoder, Stage stage) const override {
+  const Type* Content(SyscallDecoderInterface* decoder, Stage stage) const override {
     ClassType* object = argument_->Content(decoder, stage);
     return reinterpret_cast<const Type*>(
         decoder->BufferContent(stage, reinterpret_cast<uint64_t>(get_(object))));
@@ -753,13 +767,13 @@ class SyscallInputOutputConditionBase {
   virtual ~SyscallInputOutputConditionBase() = default;
 
   // Ensures that the data will be in memory.
-  virtual void Load(SyscallDecoder* decoder, Stage stage) const = 0;
+  virtual void Load(SyscallDecoderInterface* decoder, Stage stage) const = 0;
 
   // True if the data is valid (not a null pointer).
-  virtual bool ValueValid(SyscallDecoder* decoder, Stage stage) const = 0;
+  virtual bool ValueValid(SyscallDecoderInterface* decoder, Stage stage) const = 0;
 
   // True if the condition is satisfied.
-  virtual bool True(SyscallDecoder* decoder, Stage stage) const = 0;
+  virtual bool True(SyscallDecoderInterface* decoder, Stage stage) const = 0;
 };
 
 // Condition that a syscall argument must meet.
@@ -769,13 +783,15 @@ class SyscallInputOutputCondition : public SyscallInputOutputConditionBase {
   SyscallInputOutputCondition(std::unique_ptr<Access<Type>> access, Type value)
       : access_(std::move(access)), value_(value) {}
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override { access_->Load(decoder, stage); }
+  void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
+    access_->Load(decoder, stage);
+  }
 
-  bool ValueValid(SyscallDecoder* decoder, Stage stage) const override {
+  bool ValueValid(SyscallDecoderInterface* decoder, Stage stage) const override {
     return access_->ValueValid(decoder, stage);
   }
 
-  bool True(SyscallDecoder* decoder, Stage stage) const override {
+  bool True(SyscallDecoderInterface* decoder, Stage stage) const override {
     return access_->Value(decoder, stage) == value_;
   }
 
@@ -791,11 +807,13 @@ class SyscallInputOutputArchCondition : public SyscallInputOutputConditionBase {
  public:
   explicit SyscallInputOutputArchCondition(debug_ipc::Arch arch) : arch_(arch) {}
 
-  void Load(SyscallDecoder* /*decoder*/, Stage /*stage*/) const override {}
+  void Load(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const override {}
 
-  bool ValueValid(SyscallDecoder* /*decoder*/, Stage /*stage*/) const override { return true; }
+  bool ValueValid(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const override {
+    return true;
+  }
 
-  bool True(SyscallDecoder* decoder, Stage /*stage*/) const override {
+  bool True(SyscallDecoderInterface* decoder, Stage /*stage*/) const override {
     return decoder->arch() == arch_;
   }
 
@@ -849,29 +867,29 @@ class SyscallInputOutputBase {
   }
 
   // Ensures that all the data needed to display the input/output is available.
-  virtual void Load(SyscallDecoder* decoder, Stage stage) const {
+  virtual void Load(SyscallDecoderInterface* decoder, Stage stage) const {
     for (const auto& condition : conditions_) {
       condition->Load(decoder, stage);
     }
   }
 
   // Generates the fidl codec value for this input/output.
-  virtual std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+  virtual std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                            Stage stage) const;
 
   // Displays small inputs or outputs.
-  virtual const char* DisplayInline(SyscallDecoder* /*decoder*/, Stage /*stage*/,
+  virtual const char* DisplayInline(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/,
                                     const char* separator,
                                     fidl_codec::PrettyPrinter& /*printer*/) const {
     return separator;
   }
 
   // Displays large (multi lines) inputs or outputs.
-  virtual void DisplayOutline(SyscallDecoder* /*decoder*/, Stage /*stage*/,
+  virtual void DisplayOutline(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/,
                               fidl_codec::PrettyPrinter& /*printer*/) const {}
 
   // True if all the conditions are met.
-  bool ConditionsAreTrue(SyscallDecoder* decoder, Stage stage) {
+  bool ConditionsAreTrue(SyscallDecoderInterface* decoder, Stage stage) {
     for (const auto& condition : conditions_) {
       if (!condition->True(decoder, stage)) {
         return false;
@@ -902,17 +920,17 @@ class SyscallInputOutput : public SyscallInputOutputBase {
 
   std::unique_ptr<fidl_codec::Type> ComputeType() const override { return access_->ComputeType(); }
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override {
+  void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     access_->Load(decoder, stage);
   }
 
-  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                    Stage stage) const override {
     return access_->GenerateValue(decoder, stage);
   }
 
-  const char* DisplayInline(SyscallDecoder* decoder, Stage stage, const char* separator,
+  const char* DisplayInline(SyscallDecoderInterface* decoder, Stage stage, const char* separator,
                             fidl_codec::PrettyPrinter& printer) const override {
     printer << separator;
     access_->Display(decoder, stage, name(), printer);
@@ -934,13 +952,13 @@ class SyscallInputOutputActualAndRequested : public SyscallInputOutputBase {
         actual_(std::move(actual)),
         asked_(std::move(asked)) {}
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override {
+  void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     actual_->Load(decoder, stage);
     asked_->Load(decoder, stage);
   }
 
-  const char* DisplayInline(SyscallDecoder* decoder, Stage stage, const char* separator,
+  const char* DisplayInline(SyscallDecoderInterface* decoder, Stage stage, const char* separator,
                             fidl_codec::PrettyPrinter& printer) const override;
 
  private:
@@ -965,15 +983,15 @@ class SyscallInputOutputIndirect : public SyscallInputOutputBase {
     return SyscallTypeToFidlCodecType(syscall_type_);
   }
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override {
+  void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     buffer_->LoadArray(decoder, stage, sizeof(Type));
   }
 
-  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                    Stage stage) const override;
 
-  const char* DisplayInline(SyscallDecoder* decoder, Stage stage, const char* separator,
+  const char* DisplayInline(SyscallDecoderInterface* decoder, Stage stage, const char* separator,
                             fidl_codec::PrettyPrinter& printer) const override;
 
  private:
@@ -1005,12 +1023,12 @@ class SyscallInputOutputBuffer : public SyscallInputOutputBase {
     return std::make_unique<fidl_codec::VectorType>(std::move(elem_type));
   }
 
-  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                    Stage stage) const override;
 
   bool InlineValue() const override { return false; }
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override {
+  void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     elem_size_->Load(decoder, stage);
     if (elem_count_ != nullptr) {
@@ -1029,7 +1047,7 @@ class SyscallInputOutputBuffer : public SyscallInputOutputBase {
     }
   }
 
-  void DisplayOutline(SyscallDecoder* decoder, Stage stage,
+  void DisplayOutline(SyscallDecoderInterface* decoder, Stage stage,
                       fidl_codec::PrettyPrinter& printer) const override;
 
  private:
@@ -1060,7 +1078,7 @@ class SyscallInputOutputStringBuffer : public SyscallInputOutputBase {
 
   bool InlineValue() const override { return false; }
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override {
+  void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     count_->Load(decoder, stage);
 
@@ -1082,7 +1100,7 @@ class SyscallInputOutputStringBuffer : public SyscallInputOutputBase {
     }
   }
 
-  void DisplayOutline(SyscallDecoder* decoder, Stage stage,
+  void DisplayOutline(SyscallDecoderInterface* decoder, Stage stage,
                       fidl_codec::PrettyPrinter& printer) const override;
 
  private:
@@ -1109,7 +1127,7 @@ class SyscallInputOutputString : public SyscallInputOutputBase {
     return std::make_unique<fidl_codec::StringType>();
   }
 
-  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                    Stage stage) const override {
     const char* string = reinterpret_cast<const char*>(string_->Content(decoder, stage));
     size_t string_size = string_size_->Value(decoder, stage);
@@ -1121,7 +1139,7 @@ class SyscallInputOutputString : public SyscallInputOutputBase {
     }
   }
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override {
+  void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     string_size_->Load(decoder, stage);
 
@@ -1133,7 +1151,7 @@ class SyscallInputOutputString : public SyscallInputOutputBase {
     }
   }
 
-  const char* DisplayInline(SyscallDecoder* decoder, Stage stage, const char* separator,
+  const char* DisplayInline(SyscallDecoderInterface* decoder, Stage stage, const char* separator,
                             fidl_codec::PrettyPrinter& printer) const override;
 
  private:
@@ -1150,12 +1168,12 @@ class SyscallInputOutputFixedSizeString : public SyscallInputOutputBase {
         string_(std::move(string)),
         string_size_(string_size) {}
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override {
+  void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     string_->LoadArray(decoder, stage, string_size_);
   }
 
-  const char* DisplayInline(SyscallDecoder* decoder, Stage stage, const char* separator,
+  const char* DisplayInline(SyscallDecoderInterface* decoder, Stage stage, const char* separator,
                             fidl_codec::PrettyPrinter& printer) const override;
 
  private:
@@ -1180,7 +1198,7 @@ class SyscallInputOutputObject : public SyscallInputOutputBase {
     return class_definition_->ComputeType();
   }
 
-  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                    Stage stage) const override {
     const auto object = reinterpret_cast<const ClassType*>(buffer_->Uint8Content(decoder, stage));
     return class_definition_->GenerateValue(object, decoder->arch());
@@ -1188,7 +1206,7 @@ class SyscallInputOutputObject : public SyscallInputOutputBase {
 
   bool InlineValue() const override { return false; }
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override {
+  void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     if (buffer_size_ != nullptr) {
       buffer_size_->Load(decoder, stage);
@@ -1201,7 +1219,7 @@ class SyscallInputOutputObject : public SyscallInputOutputBase {
     }
   }
 
-  void DisplayOutline(SyscallDecoder* decoder, Stage stage,
+  void DisplayOutline(SyscallDecoderInterface* decoder, Stage stage,
                       fidl_codec::PrettyPrinter& printer) const override;
 
  private:
@@ -1228,7 +1246,7 @@ class SyscallInputOutputObjectArray : public SyscallInputOutputBase {
 
   bool InlineValue() const override { return false; }
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override {
+  void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     buffer_size_->Load(decoder, stage);
 
@@ -1240,7 +1258,7 @@ class SyscallInputOutputObjectArray : public SyscallInputOutputBase {
     }
   }
 
-  void DisplayOutline(SyscallDecoder* decoder, Stage stage,
+  void DisplayOutline(SyscallDecoderInterface* decoder, Stage stage,
                       fidl_codec::PrettyPrinter& printer) const override;
 
  private:
@@ -1277,7 +1295,7 @@ class SyscallFidlMessage : public SyscallInputOutputBase {
   const Access<HandleType>* handles() const { return handles_.get(); }
   const Access<uint32_t>* num_handles() const { return num_handles_.get(); }
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override {
+  void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     handle_->Load(decoder, stage);
     num_bytes_->Load(decoder, stage);
@@ -1324,7 +1342,7 @@ class SyscallFidlMessageHandle : public SyscallFidlMessage<zx_handle_t> {
 
   std::unique_ptr<fidl_codec::Type> ComputeType() const override;
 
-  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                    Stage stage) const override;
 };
 
@@ -1345,7 +1363,7 @@ class SyscallFidlMessageHandleInfo : public SyscallFidlMessage<zx_handle_info_t>
 
   std::unique_ptr<fidl_codec::Type> ComputeType() const override;
 
-  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                    Stage stage) const override;
 };
 
@@ -1366,7 +1384,7 @@ class SyscallFidlMessageHandleDisposition : public SyscallFidlMessage<zx_handle_
 
   std::unique_ptr<fidl_codec::Type> ComputeType() const override;
 
-  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                    Stage stage) const override;
 };
 
@@ -2783,7 +2801,7 @@ std::unique_ptr<fidl_codec::Value> DynamicArrayClassField<ClassType, Type>::Gene
 }
 
 template <typename Type>
-std::unique_ptr<fidl_codec::Value> Access<Type>::GenerateValue(SyscallDecoder* decoder,
+std::unique_ptr<fidl_codec::Value> Access<Type>::GenerateValue(SyscallDecoderInterface* decoder,
                                                                Stage stage) const {
   if (ValueValid(decoder, stage)) {
     if (GetSyscallType() == SyscallType::kHandle) {
@@ -2795,7 +2813,7 @@ std::unique_ptr<fidl_codec::Value> Access<Type>::GenerateValue(SyscallDecoder* d
 }
 
 template <typename Type>
-void Access<Type>::Display(SyscallDecoder* decoder, Stage stage, std::string_view name,
+void Access<Type>::Display(SyscallDecoderInterface* decoder, Stage stage, std::string_view name,
                            fidl_codec::PrettyPrinter& printer) const {
   printer << name;
   DisplayType(GetSyscallType(), printer);
@@ -2808,7 +2826,7 @@ void Access<Type>::Display(SyscallDecoder* decoder, Stage stage, std::string_vie
 
 template <typename Type>
 const char* SyscallInputOutputActualAndRequested<Type>::DisplayInline(
-    SyscallDecoder* decoder, Stage stage, const char* separator,
+    SyscallDecoderInterface* decoder, Stage stage, const char* separator,
     fidl_codec::PrettyPrinter& printer) const {
   printer << separator;
   actual_->Display(decoder, stage, name(), printer);
@@ -2823,7 +2841,7 @@ const char* SyscallInputOutputActualAndRequested<Type>::DisplayInline(
 
 template <typename Type, typename FromType>
 const char* SyscallInputOutputIndirect<Type, FromType>::DisplayInline(
-    SyscallDecoder* decoder, Stage stage, const char* separator,
+    SyscallDecoderInterface* decoder, Stage stage, const char* separator,
     fidl_codec::PrettyPrinter& printer) const {
   printer << separator << name();
   DisplayType(syscall_type_, printer);
@@ -2838,14 +2856,14 @@ const char* SyscallInputOutputIndirect<Type, FromType>::DisplayInline(
 
 template <typename Type, typename FromType>
 std::unique_ptr<fidl_codec::Value> SyscallInputOutputIndirect<Type, FromType>::GenerateValue(
-    SyscallDecoder* decoder, Stage stage) const {
+    SyscallDecoderInterface* decoder, Stage stage) const {
   const FromType* buffer = buffer_->Content(decoder, stage);
   return fidlcat::GenerateValue<Type>(*reinterpret_cast<const Type*>(buffer));
 }
 
 template <typename Type, typename FromType, typename SizeType>
 void SyscallInputOutputBuffer<Type, FromType, SizeType>::DisplayOutline(
-    SyscallDecoder* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
+    SyscallDecoderInterface* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
   fidl_codec::Indent indent(printer);
   printer << name();
   DisplayType(syscall_type_, printer);
@@ -2873,7 +2891,7 @@ void SyscallInputOutputBuffer<Type, FromType, SizeType>::DisplayOutline(
 
 template <>
 inline void SyscallInputOutputBuffer<uint8_t, uint8_t, size_t>::DisplayOutline(
-    SyscallDecoder* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
+    SyscallDecoderInterface* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
   fidl_codec::Indent indent(printer);
   printer << name();
   DisplayType(syscall_type_, printer);
@@ -2930,7 +2948,7 @@ inline void SyscallInputOutputBuffer<uint8_t, uint8_t, size_t>::DisplayOutline(
 
 template <typename Type, typename FromType, typename SizeType>
 std::unique_ptr<fidl_codec::Value>
-SyscallInputOutputBuffer<Type, FromType, SizeType>::GenerateValue(SyscallDecoder* decoder,
+SyscallInputOutputBuffer<Type, FromType, SizeType>::GenerateValue(SyscallDecoderInterface* decoder,
                                                                   Stage stage) const {
   const FromType* buffer = buffer_->Content(decoder, stage);
   if (buffer == nullptr) {
@@ -2955,7 +2973,7 @@ SyscallInputOutputBuffer<Type, FromType, SizeType>::GenerateValue(SyscallDecoder
 
 template <typename FromType>
 const char* SyscallInputOutputString<FromType>::DisplayInline(
-    SyscallDecoder* decoder, Stage stage, const char* separator,
+    SyscallDecoderInterface* decoder, Stage stage, const char* separator,
     fidl_codec::PrettyPrinter& printer) const {
   printer << separator;
   printer << name() << ": " << fidl_codec::Green << "string" << fidl_codec::ResetColor << " = ";
@@ -2967,7 +2985,7 @@ const char* SyscallInputOutputString<FromType>::DisplayInline(
 
 template <typename ClassType, typename SizeType>
 void SyscallInputOutputObject<ClassType, SizeType>::DisplayOutline(
-    SyscallDecoder* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
+    SyscallDecoderInterface* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
   fidl_codec::Indent indent(printer);
   printer << name() << ": " << fidl_codec::Green << class_definition_->name()
           << fidl_codec::ResetColor << " = ";
@@ -2982,7 +3000,7 @@ void SyscallInputOutputObject<ClassType, SizeType>::DisplayOutline(
 
 template <typename ClassType, typename SizeType>
 void SyscallInputOutputObjectArray<ClassType, SizeType>::DisplayOutline(
-    SyscallDecoder* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
+    SyscallDecoderInterface* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
   fidl_codec::Indent indent(printer);
   printer << name() << ": vector<" << fidl_codec::Green << class_definition_->name()
           << fidl_codec::ResetColor << "> = ";

@@ -23,6 +23,7 @@ if (is_host) {
       "statistics.h",
       "syscall_decoder.h",
       "syscall_decoder_dispatcher.h",
+      "syscall_decoder_interface.h",
       "top.h",
       "type_decoder.h",
     ]
