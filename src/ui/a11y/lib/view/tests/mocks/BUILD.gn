@@ -8,11 +8,14 @@ source_set("mocks") {
   sources = [
     "mock_view_semantics.cc",
     "mock_view_semantics.h",
+    "scenic_mocks.cc",
+    "scenic_mocks.h",
   ]
 
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
     "//src/ui/a11y/lib/view",
   ]

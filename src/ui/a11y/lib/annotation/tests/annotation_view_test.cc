@@ -18,59 +18,9 @@
 #include <gtest/gtest.h>
 
 #include "src/ui/a11y/lib/util/util.h"
+#include "src/ui/a11y/lib/view/tests/mocks/scenic_mocks.h"
 
-namespace a11y {
-namespace {
-
-static constexpr fuchsia::ui::gfx::ViewProperties kViewProperties = {
-    .bounding_box = {.min = {.x = 10, .y = 5, .z = -100}, .max = {.x = 100, .y = 50, .z = 0}}};
-
-struct ViewAttributes {
-  uint32_t id;
-  std::set<uint32_t> children;
-  bool operator==(const ViewAttributes& rhs) const {
-    return this->id == rhs.id && this->children == rhs.children;
-  }
-};
-
-struct EntityNodeAttributes {
-  uint32_t id;
-  uint32_t parent_id;
-  std::array<float, 3> scale_vector;
-  std::array<float, 3> translation_vector;
-  std::set<uint32_t> children;
-  bool operator==(const EntityNodeAttributes& rhs) const {
-    return this->id == rhs.id && this->parent_id == rhs.parent_id &&
-           this->scale_vector == rhs.scale_vector &&
-           this->translation_vector == rhs.translation_vector && this->children == rhs.children;
-  }
-};
-
-struct RectangleNodeAttributes {
-  uint32_t id;
-  uint32_t parent_id;
-  uint32_t rectangle_id;
-  uint32_t material_id;
-  bool operator==(const RectangleNodeAttributes& rhs) const {
-    return this->id == rhs.id && this->parent_id == rhs.parent_id &&
-           this->rectangle_id == rhs.rectangle_id && this->material_id == rhs.material_id;
-  }
-};
-
-struct RectangleAttributes {
-  uint32_t id;
-  uint32_t parent_id;
-  float width;
-  float height;
-  float elevation;
-  float center_x;
-  float center_y;
-  bool operator==(const RectangleAttributes& rhs) const {
-    return this->id == rhs.id && this->parent_id == rhs.parent_id && this->width == rhs.width &&
-           this->height == rhs.height && this->elevation == rhs.elevation &&
-           this->center_x == rhs.center_x && this->center_y == rhs.center_y;
-  }
-};
+namespace accessibility_test {
 
 class MockAnnotationRegistry : public fuchsia::ui::annotation::Registry {
  public:
@@ -99,258 +49,6 @@ class MockAnnotationRegistry : public fuchsia::ui::annotation::Registry {
   bool create_annotation_view_holder_called_;
 };
 
-class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
- public:
-  MockSession() : binding_(this) {}
-  ~MockSession() override = default;
-
-  void NotImplemented_(const std::string& name) override {}
-
-  void Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) override {
-    cmd_queue_.insert(cmd_queue_.end(), std::make_move_iterator(cmds.begin()),
-                      std::make_move_iterator(cmds.end()));
-  }
-
-  void ApplyCreateResourceCommand(const fuchsia::ui::gfx::CreateResourceCmd& command) {
-    const uint32_t id = command.id;
-    switch (command.resource.Which()) {
-      case fuchsia::ui::gfx::ResourceArgs::Tag::kView3:
-        views_[id].id = id;
-        break;
-
-      case fuchsia::ui::gfx::ResourceArgs::Tag::kEntityNode:
-        entity_nodes_[id].id = id;
-        break;
-
-      case fuchsia::ui::gfx::ResourceArgs::Tag::kShapeNode:
-        rectangle_nodes_[id].id = id;
-        break;
-
-      case fuchsia::ui::gfx::ResourceArgs::Tag::kMaterial:
-        materials_.emplace(id);
-        break;
-
-      case fuchsia::ui::gfx::ResourceArgs::Tag::kRectangle:
-        EXPECT_GE(id, 8u);
-        rectangles_[id].id = id;
-        rectangles_[id].width = command.resource.rectangle().width.vector1();
-        rectangles_[id].height = command.resource.rectangle().height.vector1();
-        break;
-
-      default:
-        break;
-    }
-  }
-
-  void ApplyAddChildCommand(const fuchsia::ui::gfx::AddChildCmd& command) {
-    const uint32_t parent_id = command.node_id;
-    const uint32_t child_id = command.child_id;
-
-    // Update parent's children. Only views and entity nodes will have children. Also, resource ids
-    // are unique globally across all resource types, so only one of views_ and entity_nodes_ will
-    // contain parent_id as a key.
-    if (views_.find(parent_id) != views_.end()) {
-      views_[parent_id].children.insert(child_id);
-    } else if (entity_nodes_.find(parent_id) != entity_nodes_.end()) {
-      entity_nodes_[parent_id].children.insert(child_id);
-    }
-
-    // Update child's parent. Only entity nodes and shape nodes will have parents.
-    if (entity_nodes_.find(child_id) != entity_nodes_.end()) {
-      entity_nodes_[child_id].parent_id = parent_id;
-    } else if (rectangle_nodes_.find(child_id) != rectangle_nodes_.end()) {
-      rectangle_nodes_[child_id].parent_id = parent_id;
-    }
-  }
-
-  void ApplySetMaterialCommand(const fuchsia::ui::gfx::SetMaterialCmd& command) {
-    rectangle_nodes_[command.node_id].material_id = command.material_id;
-  }
-
-  void ApplySetShapeCommand(const fuchsia::ui::gfx::SetShapeCmd& command) {
-    const uint32_t node_id = command.node_id;
-    const uint32_t rectangle_id = command.shape_id;
-
-    rectangle_nodes_[node_id].rectangle_id = rectangle_id;
-    rectangles_[rectangle_id].parent_id = node_id;
-  }
-
-  void ApplySetTranslationCommand(const fuchsia::ui::gfx::SetTranslationCmd& command) {
-    if (command.id == AnnotationView::kFocusHighlightContentNodeId) {
-      entity_nodes_[command.id].translation_vector[0] = command.value.value.x;
-      entity_nodes_[command.id].translation_vector[1] = command.value.value.y;
-      entity_nodes_[command.id].translation_vector[2] = command.value.value.z;
-    } else {
-      const uint32_t parent_id = command.id;
-      const uint32_t rectangle_id = rectangle_nodes_[parent_id].rectangle_id;
-      const auto& translation = command.value.value;
-      rectangles_[rectangle_id].center_x = translation.x;
-      rectangles_[rectangle_id].center_y = translation.y;
-      rectangles_[rectangle_id].elevation = translation.z;
-    }
-  }
-
-  void ApplySetScaleCommand(const fuchsia::ui::gfx::SetScaleCmd& command) {
-    if (entity_nodes_.find(command.id) != entity_nodes_.end()) {
-      entity_nodes_[command.id].scale_vector[0] = command.value.value.x;
-      entity_nodes_[command.id].scale_vector[1] = command.value.value.y;
-      entity_nodes_[command.id].scale_vector[2] = command.value.value.z;
-    }
-  }
-
-  void ApplyDetachCommand(const fuchsia::ui::gfx::DetachCmd& command) {
-    const uint32_t id = command.id;
-
-    // The annotation view only ever detaches the content entity node from the view node.
-    auto& entity_node = entity_nodes_[id];
-
-    if (entity_node.parent_id != 0) {
-      views_[entity_node.parent_id].children.erase(id);
-    }
-
-    entity_node.parent_id = 0u;
-  }
-
-  void Present(uint64_t presentation_time, ::std::vector<::zx::event> acquire_fences,
-               ::std::vector<::zx::event> release_fences, PresentCallback callback) override {
-    EXPECT_FALSE(cmd_queue_.empty());
-
-    for (const auto& command : cmd_queue_) {
-      if (command.Which() != fuchsia::ui::scenic::Command::Tag::kGfx) {
-        continue;
-      }
-
-      const auto& gfx_command = command.gfx();
-
-      switch (gfx_command.Which()) {
-        case fuchsia::ui::gfx::Command::Tag::kCreateResource:
-          ApplyCreateResourceCommand(gfx_command.create_resource());
-          break;
-
-        case fuchsia::ui::gfx::Command::Tag::kAddChild:
-          ApplyAddChildCommand(gfx_command.add_child());
-          break;
-
-        case fuchsia::ui::gfx::Command::Tag::kSetMaterial:
-          ApplySetMaterialCommand(gfx_command.set_material());
-          break;
-
-        case fuchsia::ui::gfx::Command::Tag::kSetShape:
-          ApplySetShapeCommand(gfx_command.set_shape());
-          break;
-
-        case fuchsia::ui::gfx::Command::Tag::kSetTranslation:
-          ApplySetTranslationCommand(gfx_command.set_translation());
-          break;
-
-        case fuchsia::ui::gfx::Command::Tag::kSetScale:
-          ApplySetScaleCommand(gfx_command.set_scale());
-          break;
-
-        case fuchsia::ui::gfx::Command::Tag::kDetach:
-          ApplyDetachCommand(gfx_command.detach());
-          break;
-
-        default:
-          break;
-      }
-    }
-
-    callback(fuchsia::images::PresentationInfo());
-  }
-
-  void SendGfxEvent(fuchsia::ui::gfx::Event event) {
-    fuchsia::ui::scenic::Event scenic_event;
-    scenic_event.set_gfx(std::move(event));
-
-    std::vector<fuchsia::ui::scenic::Event> events;
-    events.emplace_back(std::move(scenic_event));
-
-    listener_->OnScenicEvent(std::move(events));
-  }
-
-  void SendViewPropertiesChangedEvent() {
-    fuchsia::ui::gfx::ViewPropertiesChangedEvent view_properties_changed_event = {
-        .view_id = 1u,
-        .properties = kViewProperties,
-    };
-    fuchsia::ui::gfx::Event event;
-    event.set_view_properties_changed(view_properties_changed_event);
-
-    SendGfxEvent(std::move(event));
-  }
-
-  void SendViewDetachedFromSceneEvent() {
-    fuchsia::ui::gfx::ViewDetachedFromSceneEvent view_detached_from_scene_event = {.view_id = 1u};
-    fuchsia::ui::gfx::Event event;
-    event.set_view_detached_from_scene(view_detached_from_scene_event);
-
-    SendGfxEvent(std::move(event));
-  }
-
-  void SendViewAttachedToSceneEvent() {
-    fuchsia::ui::gfx::ViewAttachedToSceneEvent view_attached_to_scene_event = {.view_id = 1u};
-    fuchsia::ui::gfx::Event event;
-    event.set_view_attached_to_scene(view_attached_to_scene_event);
-
-    SendGfxEvent(std::move(event));
-  }
-
-  void Bind(fidl::InterfaceRequest<::fuchsia::ui::scenic::Session> request,
-            ::fuchsia::ui::scenic::SessionListenerPtr listener) {
-    binding_.Bind(std::move(request));
-    listener_ = std::move(listener);
-  }
-
-  const std::set<uint32_t>& materials() { return materials_; }
-  const std::unordered_map<uint32_t, ViewAttributes>& views() { return views_; }
-  const std::unordered_map<uint32_t, EntityNodeAttributes>& entity_nodes() { return entity_nodes_; }
-  const std::unordered_map<uint32_t, RectangleNodeAttributes>& rectangle_nodes() {
-    return rectangle_nodes_;
-  }
-  const std::unordered_map<uint32_t, RectangleAttributes>& rectangles() { return rectangles_; }
-
- private:
-  fidl::Binding<fuchsia::ui::scenic::Session> binding_;
-  fuchsia::ui::scenic::SessionListenerPtr listener_;
-  std::vector<fuchsia::ui::scenic::Command> cmd_queue_;
-
-  std::set<uint32_t> materials_;
-  std::unordered_map<uint32_t, ViewAttributes> views_;
-  std::unordered_map<uint32_t, EntityNodeAttributes> entity_nodes_;
-  std::unordered_map<uint32_t, RectangleNodeAttributes> rectangle_nodes_;
-  std::unordered_map<uint32_t, RectangleAttributes> rectangles_;
-};
-
-class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
- public:
-  explicit FakeScenic(MockSession* mock_session) : mock_session_(mock_session) {}
-  ~FakeScenic() override = default;
-
-  void NotImplemented_(const std::string& name) override {}
-
-  void CreateSession(
-      fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
-      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override {
-    mock_session_->Bind(std::move(session), listener.Bind());
-    create_session_called_ = true;
-  }
-
-  fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler(
-      async_dispatcher_t* dispatcher = nullptr) {
-    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
-      bindings_.AddBinding(this, std::move(request), dispatcher);
-    };
-  }
-
-  bool create_session_called() { return create_session_called_; }
-
- private:
-  fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
-  MockSession* mock_session_;
-  bool create_session_called_;
-};
-
 class AnnotationViewTest : public gtest::TestLoopFixture {
  public:
   AnnotationViewTest() = default;
@@ -360,10 +58,10 @@ class AnnotationViewTest : public gtest::TestLoopFixture {
     gtest::TestLoopFixture::SetUp();
 
     mock_session_ = std::make_unique<MockSession>();
-    fake_scenic_ = std::make_unique<FakeScenic>(mock_session_.get());
+    mock_scenic_ = std::make_unique<MockScenic>(mock_session_.get());
     mock_annotation_registry_ = std::make_unique<MockAnnotationRegistry>();
 
-    context_provider_.service_directory_provider()->AddService(fake_scenic_->GetHandler());
+    context_provider_.service_directory_provider()->AddService(mock_scenic_->GetHandler());
     context_provider_.service_directory_provider()->AddService(
         mock_annotation_registry_->GetHandler());
 
@@ -371,7 +69,7 @@ class AnnotationViewTest : public gtest::TestLoopFixture {
     view_attached_ = false;
     view_detached_ = false;
 
-    annotation_view_factory_ = std::make_unique<AnnotationViewFactory>();
+    annotation_view_factory_ = std::make_unique<a11y::AnnotationViewFactory>();
 
     annotation_view_ = annotation_view_factory_->CreateAndInitAnnotationView(
         CreateOrphanViewRef(), context_provider_.context(),
@@ -413,10 +111,11 @@ class AnnotationViewTest : public gtest::TestLoopFixture {
     EXPECT_EQ(rectangles.at(expected.id), expected);
   }
 
-  void ExpectHighlightEdge(uint32_t id, uint32_t parent_id, float width, float height,
-                           float center_x, float center_y, float elevation,
-                           uint32_t content_node_id = AnnotationView::kFocusHighlightContentNodeId,
-                           uint32_t material_id = AnnotationView::kFocusHighlightMaterialId) {
+  void ExpectHighlightEdge(
+      uint32_t id, uint32_t parent_id, float width, float height, float center_x, float center_y,
+      float elevation,
+      uint32_t content_node_id = a11y::AnnotationView::kFocusHighlightContentNodeId,
+      uint32_t material_id = a11y::AnnotationView::kFocusHighlightMaterialId) {
     // Check properties for rectangle shape.
     RectangleAttributes rectangle;
     rectangle.id = id;
@@ -435,11 +134,11 @@ class AnnotationViewTest : public gtest::TestLoopFixture {
  protected:
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<MockSession> mock_session_;
-  std::unique_ptr<FakeScenic> fake_scenic_;
+  std::unique_ptr<MockScenic> mock_scenic_;
   std::unique_ptr<MockAnnotationRegistry> mock_annotation_registry_;
   zx::eventpair eventpair_peer_;
-  std::unique_ptr<AnnotationViewFactory> annotation_view_factory_;
-  std::unique_ptr<AnnotationViewInterface> annotation_view_;
+  std::unique_ptr<a11y::AnnotationViewFactory> annotation_view_factory_;
+  std::unique_ptr<a11y::AnnotationViewInterface> annotation_view_;
   bool properties_changed_;
   bool view_attached_;
   bool view_detached_;
@@ -449,35 +148,35 @@ TEST_F(AnnotationViewTest, TestInit) {
   EXPECT_TRUE(mock_annotation_registry_->create_annotation_view_holder_called());
 
   // Verify that annotation view was created.
-  ExpectView({AnnotationView::kAnnotationViewId, {}});
+  ExpectView({a11y::AnnotationView::kAnnotationViewId, /* view_ref = */ {}, /* children = */ {}});
 
   // Verify that top-level content node (used to attach/detach annotations from view) was created.
-  ExpectEntityNode({AnnotationView::kFocusHighlightContentNodeId,
+  ExpectEntityNode({a11y::AnnotationView::kFocusHighlightContentNodeId,
                     0u,
                     {}, /* scale vector */
                     {}, /* translation vector */
-                    {AnnotationView::kFocusHighlightLeftEdgeNodeId,
-                     AnnotationView::kFocusHighlightRightEdgeNodeId,
-                     AnnotationView::kFocusHighlightTopEdgeNodeId,
-                     AnnotationView::kFocusHighlightBottomEdgeNodeId}});
+                    {a11y::AnnotationView::kFocusHighlightLeftEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightRightEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightTopEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightBottomEdgeNodeId}});
 
   // Verify that drawing material was created.
-  ExpectMaterial(AnnotationView::kFocusHighlightMaterialId);
+  ExpectMaterial(a11y::AnnotationView::kFocusHighlightMaterialId);
 
   // Verify that four shape nodes that will hold respective edge rectangles are created and added as
   // children of top-level content node. Also verify material of each.
-  ExpectRectangleNode({AnnotationView::kFocusHighlightLeftEdgeNodeId,
-                       AnnotationView::kFocusHighlightContentNodeId, 0,
-                       AnnotationView::kFocusHighlightMaterialId});
-  ExpectRectangleNode({AnnotationView::kFocusHighlightRightEdgeNodeId,
-                       AnnotationView::kFocusHighlightContentNodeId, 0,
-                       AnnotationView::kFocusHighlightMaterialId});
-  ExpectRectangleNode({AnnotationView::kFocusHighlightTopEdgeNodeId,
-                       AnnotationView::kFocusHighlightContentNodeId, 0,
-                       AnnotationView::kFocusHighlightMaterialId});
-  ExpectRectangleNode({AnnotationView::kFocusHighlightBottomEdgeNodeId,
-                       AnnotationView::kFocusHighlightContentNodeId, 0,
-                       AnnotationView::kFocusHighlightMaterialId});
+  ExpectRectangleNode({a11y::AnnotationView::kFocusHighlightLeftEdgeNodeId,
+                       a11y::AnnotationView::kFocusHighlightContentNodeId, 0,
+                       a11y::AnnotationView::kFocusHighlightMaterialId});
+  ExpectRectangleNode({a11y::AnnotationView::kFocusHighlightRightEdgeNodeId,
+                       a11y::AnnotationView::kFocusHighlightContentNodeId, 0,
+                       a11y::AnnotationView::kFocusHighlightMaterialId});
+  ExpectRectangleNode({a11y::AnnotationView::kFocusHighlightTopEdgeNodeId,
+                       a11y::AnnotationView::kFocusHighlightContentNodeId, 0,
+                       a11y::AnnotationView::kFocusHighlightMaterialId});
+  ExpectRectangleNode({a11y::AnnotationView::kFocusHighlightBottomEdgeNodeId,
+                       a11y::AnnotationView::kFocusHighlightContentNodeId, 0,
+                       a11y::AnnotationView::kFocusHighlightMaterialId});
 }
 
 TEST_F(AnnotationViewTest, TestDrawFocusHighlight) {
@@ -497,38 +196,40 @@ TEST_F(AnnotationViewTest, TestDrawFocusHighlight) {
   // bounding box is 0.
   constexpr float kHighlightElevation = 0.0f;
 
-  ExpectHighlightEdge(
-      14u, AnnotationView::kFocusHighlightLeftEdgeNodeId, AnnotationView::kHighlightEdgeThickness,
-      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness, bounding_box.min.x,
-      (bounding_box.min.y + bounding_box.max.y) / 2, kHighlightElevation);
+  ExpectHighlightEdge(14u, a11y::AnnotationView::kFocusHighlightLeftEdgeNodeId,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.y + a11y::AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.min.x, (bounding_box.min.y + bounding_box.max.y) / 2,
+                      kHighlightElevation);
 
-  ExpectHighlightEdge(
-      15u, AnnotationView::kFocusHighlightRightEdgeNodeId, AnnotationView::kHighlightEdgeThickness,
-      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness, bounding_box.max.x,
-      (bounding_box.min.y + bounding_box.max.y) / 2.f, kHighlightElevation);
+  ExpectHighlightEdge(15u, a11y::AnnotationView::kFocusHighlightRightEdgeNodeId,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.y + a11y::AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.x, (bounding_box.min.y + bounding_box.max.y) / 2.f,
+                      kHighlightElevation);
 
-  ExpectHighlightEdge(16u, AnnotationView::kFocusHighlightTopEdgeNodeId,
-                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
-                      AnnotationView::kHighlightEdgeThickness,
+  ExpectHighlightEdge(16u, a11y::AnnotationView::kFocusHighlightTopEdgeNodeId,
+                      bounding_box.max.x + a11y::AnnotationView::kHighlightEdgeThickness,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
                       (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.max.y,
                       kHighlightElevation);
 
-  ExpectHighlightEdge(17u, AnnotationView::kFocusHighlightBottomEdgeNodeId,
-                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
-                      AnnotationView::kHighlightEdgeThickness,
+  ExpectHighlightEdge(17u, a11y::AnnotationView::kFocusHighlightBottomEdgeNodeId,
+                      bounding_box.max.x + a11y::AnnotationView::kHighlightEdgeThickness,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
                       (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.min.y,
                       kHighlightElevation);
 
   // Verify that top-level content node (used to attach/detach annotations from view) was attached
   // to view.
-  ExpectEntityNode({AnnotationView::kFocusHighlightContentNodeId,
-                    AnnotationView::kAnnotationViewId,
+  ExpectEntityNode({a11y::AnnotationView::kFocusHighlightContentNodeId,
+                    a11y::AnnotationView::kAnnotationViewId,
                     {1, 1, 1}, /* scale vector */
                     {0, 0, 0}, /* translation vector */
-                    {AnnotationView::kFocusHighlightLeftEdgeNodeId,
-                     AnnotationView::kFocusHighlightRightEdgeNodeId,
-                     AnnotationView::kFocusHighlightTopEdgeNodeId,
-                     AnnotationView::kFocusHighlightBottomEdgeNodeId}});
+                    {a11y::AnnotationView::kFocusHighlightLeftEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightRightEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightTopEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightBottomEdgeNodeId}});
 }
 
 TEST_F(AnnotationViewTest, TestDrawFocusHighlightAndClearMagnificationHighlight) {
@@ -553,38 +254,40 @@ TEST_F(AnnotationViewTest, TestDrawFocusHighlightAndClearMagnificationHighlight)
   // bounding box is 0.
   constexpr float kHighlightElevation = 0.0f;
 
-  ExpectHighlightEdge(
-      14u, AnnotationView::kFocusHighlightLeftEdgeNodeId, AnnotationView::kHighlightEdgeThickness,
-      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness, bounding_box.min.x,
-      (bounding_box.min.y + bounding_box.max.y) / 2, kHighlightElevation);
+  ExpectHighlightEdge(14u, a11y::AnnotationView::kFocusHighlightLeftEdgeNodeId,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.y + a11y::AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.min.x, (bounding_box.min.y + bounding_box.max.y) / 2,
+                      kHighlightElevation);
 
-  ExpectHighlightEdge(
-      15u, AnnotationView::kFocusHighlightRightEdgeNodeId, AnnotationView::kHighlightEdgeThickness,
-      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness, bounding_box.max.x,
-      (bounding_box.min.y + bounding_box.max.y) / 2.f, kHighlightElevation);
+  ExpectHighlightEdge(15u, a11y::AnnotationView::kFocusHighlightRightEdgeNodeId,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.y + a11y::AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.x, (bounding_box.min.y + bounding_box.max.y) / 2.f,
+                      kHighlightElevation);
 
-  ExpectHighlightEdge(16u, AnnotationView::kFocusHighlightTopEdgeNodeId,
-                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
-                      AnnotationView::kHighlightEdgeThickness,
+  ExpectHighlightEdge(16u, a11y::AnnotationView::kFocusHighlightTopEdgeNodeId,
+                      bounding_box.max.x + a11y::AnnotationView::kHighlightEdgeThickness,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
                       (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.max.y,
                       kHighlightElevation);
 
-  ExpectHighlightEdge(17u, AnnotationView::kFocusHighlightBottomEdgeNodeId,
-                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
-                      AnnotationView::kHighlightEdgeThickness,
+  ExpectHighlightEdge(17u, a11y::AnnotationView::kFocusHighlightBottomEdgeNodeId,
+                      bounding_box.max.x + a11y::AnnotationView::kHighlightEdgeThickness,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
                       (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.min.y,
                       kHighlightElevation);
 
   // Verify that top-level content node (used to attach/detach annotations from view) was attached
   // to view.
-  ExpectEntityNode({AnnotationView::kFocusHighlightContentNodeId,
-                    AnnotationView::kAnnotationViewId,
+  ExpectEntityNode({a11y::AnnotationView::kFocusHighlightContentNodeId,
+                    a11y::AnnotationView::kAnnotationViewId,
                     {1, 1, 1}, /* scale vector */
                     {0, 0, 0}, /* translation vector */
-                    {AnnotationView::kFocusHighlightLeftEdgeNodeId,
-                     AnnotationView::kFocusHighlightRightEdgeNodeId,
-                     AnnotationView::kFocusHighlightTopEdgeNodeId,
-                     AnnotationView::kFocusHighlightBottomEdgeNodeId}});
+                    {a11y::AnnotationView::kFocusHighlightLeftEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightRightEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightTopEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightBottomEdgeNodeId}});
 }
 
 TEST_F(AnnotationViewTest, TestDrawMagnificationHighlight) {
@@ -604,44 +307,48 @@ TEST_F(AnnotationViewTest, TestDrawMagnificationHighlight) {
   // bounding box is 0.
   constexpr float kHighlightElevation = 0.0f;
 
-  ExpectHighlightEdge(14u, AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
-                      AnnotationView::kHighlightEdgeThickness,
-                      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness,
+  ExpectHighlightEdge(14u, a11y::AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.y + a11y::AnnotationView::kHighlightEdgeThickness,
                       bounding_box.min.x, (bounding_box.min.y + bounding_box.max.y) / 2,
-                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
-                      AnnotationView::kMagnificationHighlightMaterialId);
+                      kHighlightElevation,
+                      a11y::AnnotationView::kMagnificationHighlightContentNodeId,
+                      a11y::AnnotationView::kMagnificationHighlightMaterialId);
 
-  ExpectHighlightEdge(15u, AnnotationView::kMagnificationHighlightRightEdgeNodeId,
-                      AnnotationView::kHighlightEdgeThickness,
-                      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness,
+  ExpectHighlightEdge(15u, a11y::AnnotationView::kMagnificationHighlightRightEdgeNodeId,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.y + a11y::AnnotationView::kHighlightEdgeThickness,
                       bounding_box.max.x, (bounding_box.min.y + bounding_box.max.y) / 2.f,
-                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
-                      AnnotationView::kMagnificationHighlightMaterialId);
+                      kHighlightElevation,
+                      a11y::AnnotationView::kMagnificationHighlightContentNodeId,
+                      a11y::AnnotationView::kMagnificationHighlightMaterialId);
 
-  ExpectHighlightEdge(16u, AnnotationView::kMagnificationHighlightTopEdgeNodeId,
-                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
-                      AnnotationView::kHighlightEdgeThickness,
+  ExpectHighlightEdge(16u, a11y::AnnotationView::kMagnificationHighlightTopEdgeNodeId,
+                      bounding_box.max.x + a11y::AnnotationView::kHighlightEdgeThickness,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
                       (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.max.y,
-                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
-                      AnnotationView::kMagnificationHighlightMaterialId);
+                      kHighlightElevation,
+                      a11y::AnnotationView::kMagnificationHighlightContentNodeId,
+                      a11y::AnnotationView::kMagnificationHighlightMaterialId);
 
-  ExpectHighlightEdge(17u, AnnotationView::kMagnificationHighlightBottomEdgeNodeId,
-                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
-                      AnnotationView::kHighlightEdgeThickness,
+  ExpectHighlightEdge(17u, a11y::AnnotationView::kMagnificationHighlightBottomEdgeNodeId,
+                      bounding_box.max.x + a11y::AnnotationView::kHighlightEdgeThickness,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
                       (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.min.y,
-                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
-                      AnnotationView::kMagnificationHighlightMaterialId);
+                      kHighlightElevation,
+                      a11y::AnnotationView::kMagnificationHighlightContentNodeId,
+                      a11y::AnnotationView::kMagnificationHighlightMaterialId);
 
   // Verify that top-level content node (used to attach/detach annotations from view) was attached
   // to view.
-  ExpectEntityNode({AnnotationView::kMagnificationHighlightContentNodeId,
-                    AnnotationView::kAnnotationViewId,
+  ExpectEntityNode({a11y::AnnotationView::kMagnificationHighlightContentNodeId,
+                    a11y::AnnotationView::kAnnotationViewId,
                     {1, 1, 1}, /* scale vector */
                     {0, 0, 0}, /* translation vector */
-                    {AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
-                     AnnotationView::kMagnificationHighlightRightEdgeNodeId,
-                     AnnotationView::kMagnificationHighlightTopEdgeNodeId,
-                     AnnotationView::kMagnificationHighlightBottomEdgeNodeId}});
+                    {a11y::AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
+                     a11y::AnnotationView::kMagnificationHighlightRightEdgeNodeId,
+                     a11y::AnnotationView::kMagnificationHighlightTopEdgeNodeId,
+                     a11y::AnnotationView::kMagnificationHighlightBottomEdgeNodeId}});
 }
 
 TEST_F(AnnotationViewTest, TestDrawMagnificationHighlightAndClearFocusHighlight) {
@@ -667,44 +374,48 @@ TEST_F(AnnotationViewTest, TestDrawMagnificationHighlightAndClearFocusHighlight)
   // bounding box is 0.
   constexpr float kHighlightElevation = 0.0f;
 
-  ExpectHighlightEdge(14u, AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
-                      AnnotationView::kHighlightEdgeThickness,
-                      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness,
+  ExpectHighlightEdge(14u, a11y::AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.y + a11y::AnnotationView::kHighlightEdgeThickness,
                       bounding_box.min.x, (bounding_box.min.y + bounding_box.max.y) / 2,
-                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
-                      AnnotationView::kMagnificationHighlightMaterialId);
+                      kHighlightElevation,
+                      a11y::AnnotationView::kMagnificationHighlightContentNodeId,
+                      a11y::AnnotationView::kMagnificationHighlightMaterialId);
 
-  ExpectHighlightEdge(15u, AnnotationView::kMagnificationHighlightRightEdgeNodeId,
-                      AnnotationView::kHighlightEdgeThickness,
-                      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness,
+  ExpectHighlightEdge(15u, a11y::AnnotationView::kMagnificationHighlightRightEdgeNodeId,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.y + a11y::AnnotationView::kHighlightEdgeThickness,
                       bounding_box.max.x, (bounding_box.min.y + bounding_box.max.y) / 2.f,
-                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
-                      AnnotationView::kMagnificationHighlightMaterialId);
+                      kHighlightElevation,
+                      a11y::AnnotationView::kMagnificationHighlightContentNodeId,
+                      a11y::AnnotationView::kMagnificationHighlightMaterialId);
 
-  ExpectHighlightEdge(16u, AnnotationView::kMagnificationHighlightTopEdgeNodeId,
-                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
-                      AnnotationView::kHighlightEdgeThickness,
+  ExpectHighlightEdge(16u, a11y::AnnotationView::kMagnificationHighlightTopEdgeNodeId,
+                      bounding_box.max.x + a11y::AnnotationView::kHighlightEdgeThickness,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
                       (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.max.y,
-                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
-                      AnnotationView::kMagnificationHighlightMaterialId);
+                      kHighlightElevation,
+                      a11y::AnnotationView::kMagnificationHighlightContentNodeId,
+                      a11y::AnnotationView::kMagnificationHighlightMaterialId);
 
-  ExpectHighlightEdge(17u, AnnotationView::kMagnificationHighlightBottomEdgeNodeId,
-                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
-                      AnnotationView::kHighlightEdgeThickness,
+  ExpectHighlightEdge(17u, a11y::AnnotationView::kMagnificationHighlightBottomEdgeNodeId,
+                      bounding_box.max.x + a11y::AnnotationView::kHighlightEdgeThickness,
+                      a11y::AnnotationView::kHighlightEdgeThickness,
                       (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.min.y,
-                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
-                      AnnotationView::kMagnificationHighlightMaterialId);
+                      kHighlightElevation,
+                      a11y::AnnotationView::kMagnificationHighlightContentNodeId,
+                      a11y::AnnotationView::kMagnificationHighlightMaterialId);
 
   // Verify that top-level content node (used to attach/detach annotations from view) was attached
   // to view.
-  ExpectEntityNode({AnnotationView::kMagnificationHighlightContentNodeId,
-                    AnnotationView::kAnnotationViewId,
+  ExpectEntityNode({a11y::AnnotationView::kMagnificationHighlightContentNodeId,
+                    a11y::AnnotationView::kAnnotationViewId,
                     {1, 1, 1}, /* scale vector */
                     {0, 0, 0}, /* translation vector */
-                    {AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
-                     AnnotationView::kMagnificationHighlightRightEdgeNodeId,
-                     AnnotationView::kMagnificationHighlightTopEdgeNodeId,
-                     AnnotationView::kMagnificationHighlightBottomEdgeNodeId}});
+                    {a11y::AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
+                     a11y::AnnotationView::kMagnificationHighlightRightEdgeNodeId,
+                     a11y::AnnotationView::kMagnificationHighlightTopEdgeNodeId,
+                     a11y::AnnotationView::kMagnificationHighlightBottomEdgeNodeId}});
 }
 
 TEST_F(AnnotationViewTest, TestClearFocusHighlights) {
@@ -717,14 +428,14 @@ TEST_F(AnnotationViewTest, TestClearFocusHighlights) {
 
   // Verify that top-level content node (used to attach/detach annotations from view) was attached
   // to view.
-  ExpectEntityNode({AnnotationView::kFocusHighlightContentNodeId,
-                    AnnotationView::kAnnotationViewId,
+  ExpectEntityNode({a11y::AnnotationView::kFocusHighlightContentNodeId,
+                    a11y::AnnotationView::kAnnotationViewId,
                     {1, 1, 1}, /* scale vector */
                     {0, 0, 0}, /* translation vector */
-                    {AnnotationView::kFocusHighlightLeftEdgeNodeId,
-                     AnnotationView::kFocusHighlightRightEdgeNodeId,
-                     AnnotationView::kFocusHighlightTopEdgeNodeId,
-                     AnnotationView::kFocusHighlightBottomEdgeNodeId}});
+                    {a11y::AnnotationView::kFocusHighlightLeftEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightRightEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightTopEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightBottomEdgeNodeId}});
 
   annotation_view_->ClearFocusHighlights();
 
@@ -732,14 +443,14 @@ TEST_F(AnnotationViewTest, TestClearFocusHighlights) {
 
   // Verify that top-level content node (used to attach/detach annotations from view) was detached
   // from view.
-  ExpectEntityNode({AnnotationView::kFocusHighlightContentNodeId,
+  ExpectEntityNode({a11y::AnnotationView::kFocusHighlightContentNodeId,
                     0u,
                     {1, 1, 1}, /* scale vector */
                     {0, 0, 0}, /* translation vector */
-                    {AnnotationView::kFocusHighlightLeftEdgeNodeId,
-                     AnnotationView::kFocusHighlightRightEdgeNodeId,
-                     AnnotationView::kFocusHighlightTopEdgeNodeId,
-                     AnnotationView::kFocusHighlightBottomEdgeNodeId}});
+                    {a11y::AnnotationView::kFocusHighlightLeftEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightRightEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightTopEdgeNodeId,
+                     a11y::AnnotationView::kFocusHighlightBottomEdgeNodeId}});
 }
 
 TEST_F(AnnotationViewTest, TestClearMagnificationHighlights) {
@@ -752,14 +463,14 @@ TEST_F(AnnotationViewTest, TestClearMagnificationHighlights) {
 
   // Verify that top-level content node (used to attach/detach annotations from view) was attached
   // to view.
-  ExpectEntityNode({AnnotationView::kMagnificationHighlightContentNodeId,
-                    AnnotationView::kAnnotationViewId,
+  ExpectEntityNode({a11y::AnnotationView::kMagnificationHighlightContentNodeId,
+                    a11y::AnnotationView::kAnnotationViewId,
                     {1, 1, 1}, /* scale vector */
                     {0, 0, 0}, /* translation vector */
-                    {AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
-                     AnnotationView::kMagnificationHighlightRightEdgeNodeId,
-                     AnnotationView::kMagnificationHighlightTopEdgeNodeId,
-                     AnnotationView::kMagnificationHighlightBottomEdgeNodeId}});
+                    {a11y::AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
+                     a11y::AnnotationView::kMagnificationHighlightRightEdgeNodeId,
+                     a11y::AnnotationView::kMagnificationHighlightTopEdgeNodeId,
+                     a11y::AnnotationView::kMagnificationHighlightBottomEdgeNodeId}});
 
   annotation_view_->ClearMagnificationHighlights();
 
@@ -767,14 +478,14 @@ TEST_F(AnnotationViewTest, TestClearMagnificationHighlights) {
 
   // Verify that top-level content node (used to attach/detach annotations from view) was detached
   // from view.
-  ExpectEntityNode({AnnotationView::kMagnificationHighlightContentNodeId,
+  ExpectEntityNode({a11y::AnnotationView::kMagnificationHighlightContentNodeId,
                     0u,
                     {1, 1, 1}, /* scale vector */
                     {0, 0, 0}, /* translation vector */
-                    {AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
-                     AnnotationView::kMagnificationHighlightRightEdgeNodeId,
-                     AnnotationView::kMagnificationHighlightTopEdgeNodeId,
-                     AnnotationView::kMagnificationHighlightBottomEdgeNodeId}});
+                    {a11y::AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
+                     a11y::AnnotationView::kMagnificationHighlightRightEdgeNodeId,
+                     a11y::AnnotationView::kMagnificationHighlightTopEdgeNodeId,
+                     a11y::AnnotationView::kMagnificationHighlightBottomEdgeNodeId}});
 }
 
 TEST_F(AnnotationViewTest, TestViewPropertiesChangedEvent) {
@@ -833,5 +544,4 @@ TEST_F(AnnotationViewTest, TestViewDetachAndReattachEvents) {
   EXPECT_TRUE(view_attached_);
 }
 
-}  // namespace
-}  // namespace a11y
+}  // namespace accessibility_test
