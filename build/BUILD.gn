@@ -124,7 +124,7 @@ group("non_hermetic_deps") {
   # refactors, such as moving a legacy target to a different directory.
 
   # To regenerate:
-  # { fx gn refs $(fx get-build-dir) '//build:non_hermetic_deps'; fx gn refs $(fx get-build-dir) '//build:non_hermetic_deps(//build/toolchain:host_x64)' } | sed 's|\(.*\):.*|"\1/*",|' | sort | uniq
+  # { fx gn refs $(fx get-build-dir) '//build:non_hermetic_deps'; fx gn refs $(fx get-build-dir) '//build:non_hermetic_deps(//build/toolchain:host_x64)' } | sed -e 's|(//build/toolchain:host_x64)||' -e 's|\(.*\):.*|"\1/*",|' | sort | uniq
   #
   # TODO(shayba): populate the allowlist below once top root causes are fixed.
   # Otherwise there will be too much pressure to extend the allowlist.
