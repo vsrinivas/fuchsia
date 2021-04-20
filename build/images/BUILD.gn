@@ -1771,21 +1771,24 @@ action("flash_script") {
     image_paths = [ "IMAGE_FLASH_SH=netboot.sh" ]
     flash_manifest = [
       {
-        version = 1
-        manifest = [
-          {
-            name = "recovery"
-            bootloader_partitions = bootloader_parts
-            partitions = recovery_parts
-            oem_files = []
-          },
-          {
-            name = "fuchsia"
-            bootloader_partitions = bootloader_parts
-            partitions = parts
-            oem_files = []
-          },
-        ]
+        version = 2
+        manifest = {
+          hw_revision = "${board_name}"
+          products = [
+            {
+              name = "recovery"
+              bootloader_partitions = bootloader_parts
+              partitions = recovery_parts
+              oem_files = []
+            },
+            {
+              name = "fuchsia"
+              bootloader_partitions = bootloader_parts
+              partitions = parts
+              oem_files = []
+            },
+          ]
+        }
       },
     ]
   }
@@ -1954,21 +1957,24 @@ generated_file("fastboot_manifest_archive") {
   deps = [ ":flash_script_archive" ]
   contents = [
     {
-      version = 1
-      manifest = [
-        {
-          name = "recovery"
-          bootloader_partitions = archive_bootloader_parts
-          partitions = archive_recovery_parts
-          oem_files = []
-        },
-        {
-          name = "fuchsia"
-          bootloader_partitions = archive_bootloader_parts
-          partitions = archive_parts
-          oem_files = []
-        },
-      ]
+      version = 2
+      manifest = {
+        hw_revision = "${board_name}"
+        products = [
+          {
+            name = "recovery"
+            bootloader_partitions = archive_bootloader_parts
+            partitions = archive_recovery_parts
+            oem_files = []
+          },
+          {
+            name = "fuchsia"
+            bootloader_partitions = archive_bootloader_parts
+            partitions = archive_parts
+            oem_files = []
+          },
+        ]
+      }
     },
   ]
 
