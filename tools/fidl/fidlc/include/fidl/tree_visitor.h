@@ -122,10 +122,6 @@ class TreeVisitor {
     element->Accept(this);
   }
 
-  virtual void OnTypeConstructorNew(std::unique_ptr<TypeConstructorNew> const& element) {
-    element->Accept(this);
-  }
-
   virtual void OnAliasDeclaration(std::unique_ptr<AliasDeclaration> const& element) {
     element->Accept(this);
   }
@@ -183,6 +179,104 @@ class TreeVisitor {
   virtual void OnUnionDeclaration(std::unique_ptr<UnionDeclaration> const& element) {
     element->Accept(this);
   }
+
+  // TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
+  // --- start new syntax ---
+  virtual void OnLayoutParameter(std::unique_ptr<LayoutParameter> const& element) {
+    LayoutParameter::Kind kind = element->kind;
+    switch (kind) {
+      case LayoutParameter::Kind::kAmbiguous: {
+        DISPATCH_TO(AmbiguousLayoutParameter, LayoutParameter, element);
+        break;
+      }
+      case LayoutParameter::Kind::kLiteral: {
+        DISPATCH_TO(LiteralLayoutParameter, LayoutParameter, element);
+        break;
+      }
+      case LayoutParameter::Kind::kType: {
+        DISPATCH_TO(TypeLayoutParameter, LayoutParameter, element);
+        break;
+      }
+    }
+  }
+
+  virtual void OnLayoutParameterList(std::unique_ptr<LayoutParameterList> const& element) {
+    element->Accept(this);
+  }
+
+  virtual void OnAmbiguousLayoutParameter(
+      std::unique_ptr<AmbiguousLayoutParameter> const& element) {
+    element->Accept(this);
+  }
+  virtual void OnLiteralLayoutParameter(std::unique_ptr<LiteralLayoutParameter> const& element) {
+    element->Accept(this);
+  }
+  virtual void OnTypeLayoutParameter(std::unique_ptr<TypeLayoutParameter> const& element) {
+    element->Accept(this);
+  }
+
+  virtual void OnLayoutMember(std::unique_ptr<LayoutMember> const& element) {
+    LayoutMember::Kind kind = element->kind;
+    switch (kind) {
+      case LayoutMember::Kind::kOrdinaled: {
+        DISPATCH_TO(OrdinaledLayoutMember, LayoutMember, element);
+        break;
+      }
+      case LayoutMember::Kind::kStruct: {
+        DISPATCH_TO(StructLayoutMember, LayoutMember, element);
+        break;
+      }
+      case LayoutMember::Kind::kValue: {
+        DISPATCH_TO(ValueLayoutMember, LayoutMember, element);
+        break;
+      }
+    }
+  }
+
+  virtual void OnOrdinaledLayoutMember(std::unique_ptr<OrdinaledLayoutMember> const& element) {
+    element->Accept(this);
+  }
+  virtual void OnStructLayoutMember(std::unique_ptr<StructLayoutMember> const& element) {
+    element->Accept(this);
+  }
+  virtual void OnValueLayoutMember(std::unique_ptr<ValueLayoutMember> const& element) {
+    element->Accept(this);
+  }
+
+  virtual void OnLayout(std::unique_ptr<Layout> const& element) { element->Accept(this); }
+
+  virtual void OnLayoutReference(std::unique_ptr<LayoutReference> const& element) {
+    LayoutReference::Kind kind = element->kind;
+    switch (kind) {
+      case LayoutReference::Kind::kInline: {
+        DISPATCH_TO(InlineLayoutReference, LayoutReference, element);
+        break;
+      }
+      case LayoutReference::Kind::kNamed: {
+        DISPATCH_TO(NamedLayoutReference, LayoutReference, element);
+        break;
+      }
+    }
+  }
+
+  virtual void OnInlineLayoutReference(std::unique_ptr<InlineLayoutReference> const& element) {
+    element->Accept(this);
+  }
+  virtual void OnNamedLayoutReference(std::unique_ptr<NamedLayoutReference> const& element) {
+    element->Accept(this);
+  }
+
+  virtual void OnTypeConstraints(std::unique_ptr<TypeConstraints> const& element) {
+    element->Accept(this);
+  }
+
+  virtual void OnTypeConstructorNew(std::unique_ptr<TypeConstructorNew> const& element) {
+    element->Accept(this);
+  }
+
+  virtual void OnTypeDecl(std::unique_ptr<TypeDecl> const& element) { element->Accept(this); }
+  // --- end new syntax ---
+
   virtual void OnFile(std::unique_ptr<File> const& element) { element->Accept(this); }
   virtual void OnPrimitiveSubtype(types::PrimitiveSubtype subtype) {}
   virtual void OnNullability(types::Nullability nullability) {}

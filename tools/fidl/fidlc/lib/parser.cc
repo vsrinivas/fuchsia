@@ -1728,11 +1728,11 @@ std::unique_ptr<raw::LayoutParameter> Parser::ParseLayoutParameter() {
 }
 
 std::unique_ptr<raw::LayoutParameterList> Parser::MaybeParseLayoutParameterList() {
+  ASTScope scope(this);
   if (!MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
     return nullptr;
   }
 
-  ASTScope scope(this);
   std::vector<std::unique_ptr<raw::LayoutParameter>> params;
   for (;;) {
     params.emplace_back(ParseLayoutParameter());
@@ -1746,7 +1746,7 @@ std::unique_ptr<raw::LayoutParameterList> Parser::MaybeParseLayoutParameterList(
   return std::make_unique<raw::LayoutParameterList>(scope.GetSourceElement(), std::move(params));
 }
 
-std::unique_ptr<raw::TypeConstraints> Parser::ParseConstraints() {
+std::unique_ptr<raw::TypeConstraints> Parser::ParseTypeConstraints() {
   ASTScope scope(this);
   bool bracketed = false;
   std::vector<std::unique_ptr<raw::Constant>> constraints;
@@ -1779,22 +1779,28 @@ std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::LayoutMember::
   // TODO(fxbug.dev/65978): Parse attributes.
 
   std::unique_ptr<raw::Ordinal64> ordinal = nullptr;
+  std::unique_ptr<raw::Identifier> identifier = nullptr;
   if (kind == raw::LayoutMember::Kind::kOrdinaled) {
     ordinal = ParseOrdinal64();
     if (!Ok())
       return Fail();
 
-    if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kReserved))) {
-      if (!Ok())
-        return Fail();
+    bool identifier_is_reserved = Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kReserved);
+    identifier = ParseIdentifier();
+    if (!Ok())
+      return Fail();
+
+    if (identifier_is_reserved && Peek().kind() == Token::Kind::kSemicolon) {
       return std::make_unique<raw::OrdinaledLayoutMember>(scope.GetSourceElement(),
                                                           std::move(ordinal));
     }
   }
 
-  auto identifier = ParseIdentifier();
-  if (!Ok())
-    return Fail();
+  if (identifier == nullptr) {
+    identifier = ParseIdentifier();
+    if (!Ok())
+      return Fail();
+  }
 
   std::unique_ptr<raw::TypeConstructorNew> layout = nullptr;
   if (kind != raw::LayoutMember::Kind::kValue) {
@@ -2034,7 +2040,7 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
   std::unique_ptr<raw::TypeConstraints> constraints;
   MaybeConsumeToken(OfKind(Token::Kind::kColon));
   if (previous_token_.kind() == Token::Kind::kColon) {
-    constraints = ParseConstraints();
+    constraints = ParseTypeConstraints();
     if (!Ok())
       return Fail();
   }

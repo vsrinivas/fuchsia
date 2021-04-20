@@ -865,6 +865,8 @@ class Layout final : public SourceElement {
         resourceness(resourceness),
         subtype_ctor(std::move(subtype_ctor)) {}
 
+  void Accept(TreeVisitor* visitor) const;
+
   Kind kind;
   std::vector<std::unique_ptr<raw::LayoutMember>> members;
   std::optional<types::Strictness> strictness;

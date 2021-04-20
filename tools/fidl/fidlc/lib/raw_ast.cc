@@ -90,10 +90,6 @@ void TypeConstructorOld::Accept(TreeVisitor* visitor) const {
   visitor->OnNullability(nullability);
 }
 
-void TypeConstructorNew::Accept(TreeVisitor* visitor) const {
-  // TODO(fxbug.dev/73108): add the rest of the nodes
-}
-
 void Using::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {
@@ -348,6 +344,103 @@ void UnionDeclaration::Accept(TreeVisitor* visitor) const {
   }
 }
 
+// TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
+// --- start new syntax ---
+void AmbiguousLayoutParameter::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  visitor->OnCompoundIdentifier(identifier);
+}
+
+void LiteralLayoutParameter::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  visitor->OnLiteralConstant(literal);
+}
+
+void TypeLayoutParameter::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  visitor->OnTypeConstructorNew(type_ctor);
+}
+
+void LayoutParameterList::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  for (auto& item : items) {
+    visitor->OnLayoutParameter(item);
+  }
+}
+
+void OrdinaledLayoutMember::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  // TODO(fxbug.dev/68792): Parse attributes.
+
+  visitor->OnOrdinal64(*ordinal);
+  if (type_ctor != nullptr) {
+    visitor->OnTypeConstructorNew(type_ctor);
+  }
+}
+
+void StructLayoutMember::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  // TODO(fxbug.dev/68792): Parse attributes.
+
+  visitor->OnTypeConstructorNew(type_ctor);
+  if (default_value != nullptr) {
+    visitor->OnConstant(default_value);
+  }
+}
+
+void ValueLayoutMember::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  // TODO(fxbug.dev/68792): Parse attributes.
+
+  visitor->OnConstant(value);
+}
+
+void Layout::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  // TODO(fxbug.dev/68792): Parse attributes. Interestingly, we'll only want to
+  //  do that in cases where the layout is defined inline on a layout member.
+
+  if (subtype_ctor != nullptr) {
+    visitor->OnTypeConstructorNew(subtype_ctor);
+  }
+  for (auto& member : members) {
+    visitor->OnLayoutMember(member);
+  }
+}
+
+void InlineLayoutReference::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  visitor->OnLayout(layout);
+}
+
+void NamedLayoutReference::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  visitor->OnCompoundIdentifier(identifier);
+}
+
+void TypeConstraints::Accept(TreeVisitor* visitor) const {
+  for (auto& item : items) {
+    visitor->OnConstant(item);
+  }
+}
+
+void TypeConstructorNew::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  visitor->OnLayoutReference(layout_ref);
+  if (parameters != nullptr) {
+    visitor->OnLayoutParameterList(parameters);
+  }
+  if (constraints != nullptr) {
+    visitor->OnTypeConstraints(constraints);
+  }
+}
+
+void TypeDecl::Accept(TreeVisitor* visitor) const {
+  visitor->OnIdentifier(identifier);
+  visitor->OnTypeConstructorNew(type_ctor);
+}
+// --- end new syntax ---
+
 void File::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {
@@ -380,6 +473,9 @@ void File::Accept(TreeVisitor* visitor) const {
   }
   for (auto& i : table_declaration_list) {
     visitor->OnTableDeclaration(i);
+  }
+  for (auto& i : type_decls) {
+    visitor->OnTypeDecl(i);
   }
   for (auto& i : union_declaration_list) {
     visitor->OnUnionDeclaration(i);

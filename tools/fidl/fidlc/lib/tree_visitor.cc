@@ -28,6 +28,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
   auto service_decls_it = element->service_declaration_list.begin();
   auto struct_decls_it = element->struct_declaration_list.begin();
   auto table_decls_it = element->table_declaration_list.begin();
+  auto type_decls_it = element->type_decls.begin();
   auto union_decls_it = element->union_declaration_list.begin();
   auto using_decls_it = element->using_list.begin();
 
@@ -41,6 +42,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
     service_t,
     struct_t,
     table_t,
+    type_decl_t,
     union_t,
     using_t,
   };
@@ -86,6 +88,9 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
     }
     if (table_decls_it != element->table_declaration_list.end()) {
       m[(*table_decls_it)->start_.previous_end().data().data()] = table_t;
+    }
+    if (type_decls_it != element->type_decls.end()) {
+      m[(*type_decls_it)->start_.previous_end().data().data()] = type_decl_t;
     }
     if (union_decls_it != element->union_declaration_list.end()) {
       m[(*union_decls_it)->start_.previous_end().data().data()] = union_t;
@@ -133,6 +138,10 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
       case table_t:
         OnTableDeclaration(*table_decls_it);
         ++table_decls_it;
+        break;
+      case type_decl_t:
+        OnTypeDecl(*type_decls_it);
+        ++type_decls_it;
         break;
       case union_t:
         OnUnionDeclaration(*union_decls_it);

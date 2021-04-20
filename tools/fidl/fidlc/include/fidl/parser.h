@@ -337,21 +337,21 @@ class Parser {
   std::unique_ptr<raw::File> ParseFile();
 
   // TODO(fxbug.dev/70247): Consolidate the ParseFoo methods.
-  // --- new syntax ---
-
+  // --- start new syntax ---
   std::unique_ptr<raw::LayoutParameter> ParseLayoutParameter();
   std::unique_ptr<raw::LayoutParameterList> MaybeParseLayoutParameterList();
-  std::unique_ptr<raw::TypeConstraints> ParseConstraints();
   std::unique_ptr<raw::LayoutMember> ParseLayoutMember(raw::LayoutMember::Kind);
   std::unique_ptr<raw::Layout> ParseLayout(ASTScope&, const Modifiers&,
                                            std::unique_ptr<raw::CompoundIdentifier>,
                                            std::unique_ptr<raw::TypeConstructorNew>);
+  std::unique_ptr<raw::TypeConstraints> ParseTypeConstraints();
   std::unique_ptr<raw::TypeConstructorNew> ParseTypeConstructorNew();
   raw::TypeConstructor ParseTypeConstructor();
   std::unique_ptr<raw::TypeDecl> ParseTypeDecl(ASTScope&);
   std::unique_ptr<raw::File> ParseFileNewSyntax(
       ASTScope&, std::unique_ptr<raw::AttributeList> library_attributes,
       std::unique_ptr<raw::CompoundIdentifier> library_name);
+  // --- end new syntax ---
 
   enum class RecoverResult {
     Failure,

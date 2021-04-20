@@ -34,41 +34,54 @@
 
 namespace {
 
-#define FOR_ENUM_VARIANTS(DO) \
-  DO(Identifier)              \
-  DO(CompoundIdentifier)      \
-  DO(StringLiteral)           \
-  DO(NumericLiteral)          \
-  DO(TrueLiteral)             \
-  DO(FalseLiteral)            \
-  DO(Ordinal64)               \
-  DO(IdentifierConstant)      \
-  DO(LiteralConstant)         \
-  DO(BinaryOperatorConstant)  \
-  DO(Attribute)               \
-  DO(AttributeList)           \
-  DO(TypeConstructor)         \
-  DO(Using)                   \
-  DO(ConstDeclaration)        \
-  DO(BitsMember)              \
-  DO(BitsDeclaration)         \
-  DO(EnumMember)              \
-  DO(EnumDeclaration)         \
-  DO(Parameter)               \
-  DO(ParameterList)           \
-  DO(ProtocolMethod)          \
-  DO(ComposeProtocol)         \
-  DO(ProtocolDeclaration)     \
-  DO(ResourceDeclaration)     \
-  DO(ResourceProperty)        \
-  DO(ServiceMember)           \
-  DO(ServiceDeclaration)      \
-  DO(StructMember)            \
-  DO(StructDeclaration)       \
-  DO(TableMember)             \
-  DO(TableDeclaration)        \
-  DO(UnionMember)             \
-  DO(UnionDeclaration)
+#define FOR_ENUM_VARIANTS(DO)  \
+  DO(Identifier)               \
+  DO(CompoundIdentifier)       \
+  DO(StringLiteral)            \
+  DO(NumericLiteral)           \
+  DO(TrueLiteral)              \
+  DO(FalseLiteral)             \
+  DO(Ordinal64)                \
+  DO(IdentifierConstant)       \
+  DO(LiteralConstant)          \
+  DO(BinaryOperatorConstant)   \
+  DO(Attribute)                \
+  DO(AttributeList)            \
+  DO(TypeConstructor)          \
+  DO(Using)                    \
+  DO(ConstDeclaration)         \
+  DO(BitsMember)               \
+  DO(BitsDeclaration)          \
+  DO(EnumMember)               \
+  DO(EnumDeclaration)          \
+  DO(Parameter)                \
+  DO(ParameterList)            \
+  DO(ProtocolMethod)           \
+  DO(ComposeProtocol)          \
+  DO(ProtocolDeclaration)      \
+  DO(ResourceDeclaration)      \
+  DO(ResourceProperty)         \
+  DO(ServiceMember)            \
+  DO(ServiceDeclaration)       \
+  DO(StructMember)             \
+  DO(StructDeclaration)        \
+  DO(TableMember)              \
+  DO(TableDeclaration)         \
+  DO(UnionMember)              \
+  DO(UnionDeclaration)         \
+  DO(AmbiguousLayoutParameter) \
+  DO(LiteralLayoutParameter)   \
+  DO(TypeLayoutParameter)      \
+  DO(LayoutParameterList)      \
+  DO(OrdinaledLayoutMember)    \
+  DO(StructLayoutMember)       \
+  DO(ValueLayoutMember)        \
+  DO(Layout)                   \
+  DO(InlineLayoutReference)    \
+  DO(NamedLayoutReference)     \
+  DO(TypeConstraints)          \
+  DO(TypeConstructorNew)       \
+  DO(TypeDecl)
 
 #define MAKE_ENUM_VARIANT(VAR) VAR,
 enum ElementType { FOR_ENUM_VARIANTS(MAKE_ENUM_VARIANT) };
@@ -232,6 +245,70 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
     TreeVisitor::OnUnionDeclaration(element);
   }
 
+  // TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
+  // --- start new syntax ---
+  void OnAmbiguousLayoutParameter(
+      std::unique_ptr<fidl::raw::AmbiguousLayoutParameter> const& element) override {
+    CheckSpanOfType(ElementType::AmbiguousLayoutParameter, *element);
+    TreeVisitor::OnAmbiguousLayoutParameter(element);
+  }
+  void OnLiteralLayoutParameter(
+      std::unique_ptr<fidl::raw::LiteralLayoutParameter> const& element) override {
+    CheckSpanOfType(ElementType::LiteralLayoutParameter, *element);
+    TreeVisitor::OnLiteralLayoutParameter(element);
+  }
+  void OnTypeLayoutParameter(
+      std::unique_ptr<fidl::raw::TypeLayoutParameter> const& element) override {
+    CheckSpanOfType(ElementType::TypeLayoutParameter, *element);
+    TreeVisitor::OnTypeLayoutParameter(element);
+  }
+  void OnLayoutParameterList(
+      std::unique_ptr<fidl::raw::LayoutParameterList> const& element) override {
+    CheckSpanOfType(ElementType::LayoutParameterList, *element);
+    TreeVisitor::OnLayoutParameterList(element);
+  }
+  void OnOrdinaledLayoutMember(
+      std::unique_ptr<fidl::raw::OrdinaledLayoutMember> const& element) override {
+    CheckSpanOfType(ElementType::OrdinaledLayoutMember, *element);
+    TreeVisitor::OnOrdinaledLayoutMember(element);
+  }
+  void OnStructLayoutMember(
+      std::unique_ptr<fidl::raw::StructLayoutMember> const& element) override {
+    CheckSpanOfType(ElementType::StructLayoutMember, *element);
+    TreeVisitor::OnStructLayoutMember(element);
+  }
+  void OnValueLayoutMember(std::unique_ptr<fidl::raw::ValueLayoutMember> const& element) override {
+    CheckSpanOfType(ElementType::ValueLayoutMember, *element);
+    TreeVisitor::OnValueLayoutMember(element);
+  }
+  void OnLayout(std::unique_ptr<fidl::raw::Layout> const& element) override {
+    CheckSpanOfType(ElementType::Layout, *element);
+    TreeVisitor::OnLayout(element);
+  }
+  void OnInlineLayoutReference(
+      std::unique_ptr<fidl::raw::InlineLayoutReference> const& element) override {
+    CheckSpanOfType(ElementType::InlineLayoutReference, *element);
+    TreeVisitor::OnInlineLayoutReference(element);
+  }
+  void OnNamedLayoutReference(
+      std::unique_ptr<fidl::raw::NamedLayoutReference> const& element) override {
+    CheckSpanOfType(ElementType::NamedLayoutReference, *element);
+    TreeVisitor::OnNamedLayoutReference(element);
+  }
+  void OnTypeConstraints(std::unique_ptr<fidl::raw::TypeConstraints> const& element) override {
+    CheckSpanOfType(ElementType::TypeConstraints, *element);
+    TreeVisitor::OnTypeConstraints(element);
+  }
+  void OnTypeConstructorNew(
+      std::unique_ptr<fidl::raw::TypeConstructorNew> const& element) override {
+    CheckSpanOfType(ElementType::TypeConstructorNew, *element);
+    TreeVisitor::OnTypeConstructorNew(element);
+  }
+  void OnTypeDecl(std::unique_ptr<fidl::raw::TypeDecl> const& element) override {
+    CheckSpanOfType(ElementType::TypeDecl, *element);
+    TreeVisitor::OnTypeDecl(element);
+  }
+
  private:
   // Called on every node of the AST that we visit. We collect spans of the
   // ElementType we are looking for as we traverse the tree, and store them in a
@@ -247,21 +324,24 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
   std::multiset<std::string> spans_;
 };
 
-std::string remove_markers(const std::string& source) {
+std::string replace_markers(const std::string& source, std::string_view left_replace,
+                            std::string_view right_replace) {
   std::string result(source);
 
-  const auto remove_all = [&](std::string_view pattern) {
+  const auto replace_all = [&](std::string_view pattern, std::string_view replace_with) {
     std::string::size_type i = result.find(pattern);
     while (i != std::string::npos) {
-      result.erase(i, pattern.length());
-      i = result.find(pattern, i);
+      result.replace(i, pattern.length(), replace_with);
+      i = result.find(pattern, i + replace_with.length());
     }
   };
 
-  remove_all(kMarkerLeft);
-  remove_all(kMarkerRight);
+  replace_all(kMarkerLeft, left_replace);
+  replace_all(kMarkerRight, right_replace);
   return result;
 }
+
+std::string remove_markers(const std::string& source) { return replace_markers(source, "", ""); }
 
 // Extracts marked source spans from a given source string.
 // If source spans are incorrectly marked (missing or extra markers), returns an
@@ -504,23 +584,183 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
      }},
 };
 
+// TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
+// --- start new syntax ---
+const std::vector<TestCase> new_syntax_test_cases = {
+    {ElementType::AmbiguousLayoutParameter,
+     {
+         R"FIDL(library x; type a = bool; const b uint8 = 4; type y = array<«a»,«b»>;)FIDL",
+     }},
+    {ElementType::LiteralLayoutParameter,
+     {
+         R"FIDL(library x; type y = array<uint8,«4»>;)FIDL",
+         R"FIDL(library x; type y = vector<array<uint8,«4»>>;)FIDL",
+     }},
+    {ElementType::TypeLayoutParameter,
+     {
+         R"FIDL(library x; type y = array<uint8,4>;)FIDL",
+         R"FIDL(library x; type y = vector<«array<uint8,4>»>;)FIDL",
+     }},
+    {ElementType::LayoutParameterList,
+     {
+         R"FIDL(library x; type y = array«<uint8,4>»;)FIDL",
+         R"FIDL(library x; type y = vector«<array«<uint8,4>»>»;)FIDL",
+     }},
+    {ElementType::OrdinaledLayoutMember,
+     {
+         R"FIDL(library x;
+          type T = table {
+            «1: intval int64»;
+            «2: reserved»;
+            «3: floatval float64»;
+            «4: stringval string:100»;
+            «5: inner union {
+              «1: boolval bool»;
+              «2: reserved»;
+            }:optional»;
+          };
+         )FIDL",
+     }},
+    {ElementType::StructLayoutMember,
+     {
+         R"FIDL(library x;
+          type S = struct {
+            «intval int64»;
+            «boolval bool = false»;
+            «stringval string:100»;
+            «inner struct {
+              «floatval float64»;
+              «uintval uint8 = 7»;
+            }»;
+          };
+         )FIDL",
+     }},
+    {ElementType::ValueLayoutMember,
+     {
+         R"FIDL(library x;
+          type E = enum {
+            «A = 1»;
+            «B = 2»;
+          };
+         )FIDL",
+     }},
+    {ElementType::Layout,
+     {
+         R"FIDL(library x;
+          type B = «bits {
+            A = 1;
+          }»;
+          type S = «struct {
+            intval int64;
+          }»;
+          type U = «union {
+            1: intval int64;
+          }»:optional;
+         )FIDL",
+     }},
+    {ElementType::InlineLayoutReference,
+     {
+         R"FIDL(library x;
+          type S = «struct {
+            intval int64;
+            boolval bool = false;
+            stringval string:MAX_STRING_SIZE;
+            inner «union {
+              1: floatval float64;
+            }»:optional;
+          }»;
+         )FIDL",
+     }},
+    {ElementType::NamedLayoutReference,
+     {
+         R"FIDL(library x;
+          type S = struct {
+            intval «int64»;
+            boolval «bool» = false;
+            inner struct {
+              floatval «float64»;
+              uintval «uint8» = 7;
+              vecval «vector»<«vector»<Foo>>;
+              arrval «array»<uint8,4>;
+            };
+          };
+         )FIDL",
+     }},
+    {ElementType::TypeConstraints,
+     {
+         R"FIDL(library x; type y = array<uint8,4>;)FIDL",
+         R"FIDL(library x; type y = vector<vector<uint8>:«16»>:«<16,optional>»;)FIDL",
+         R"FIDL(library x; type y = union { 1: foo bool; }:«optional»;)FIDL",
+         R"FIDL(library x; using zx; type y = zx.handle:«optional»;)FIDL",
+         R"FIDL(library x; using zx; type y = zx.handle:«<VMO,zx.READ,optional>»;)FIDL",
+     }},
+    {ElementType::TypeConstructorNew,
+     {
+         R"FIDL(library x; type y = «array<uint8,4>»;)FIDL",
+         R"FIDL(library x; type y = «vector<«array<Foo,4>»>»;)FIDL",
+         R"FIDL(library x;
+          type e = «enum : «uint32» {
+            A = 1;
+          }»;
+         )FIDL",
+         R"FIDL(library x;
+          type S = «struct {
+            intval «int64»;
+            boolval «bool» = false;
+            inner «struct {
+              floatval «float64»;
+              uintval «uint8» = 7;
+              vecval «vector<«vector<Foo>»>»;
+              arrval «array<uint8,4>»;
+            }»;
+          }»;
+         )FIDL",
+     }},
+    {ElementType::TypeDecl,
+     {
+         R"FIDL(library x;
+          «type E = enum : int8 {
+            A = 1;
+          }»;
+          «type S = struct {
+            intval int64;
+          }»;
+          «type U = union {
+            1: intval int64;
+          }:optional»;
+         )FIDL",
+     }},
+};
+// --- end new syntax ---
+
 constexpr std::string_view kPassedMsg = "\x1B[32mPassed\033[0m";
 constexpr std::string_view kFailedMsg = "\x1B[31mFailed\033[0m";
 constexpr std::string_view kErrorMsg = "\x1B[31mERROR:\033[0m";
 
-TEST(SpanTests, parse_test) {
-  std::cerr << '\n';
+void RunParseTests(const std::vector<TestCase>& cases, const std::string& insert_left_padding,
+                   const std::string& insert_right_padding, fidl::utils::Syntax syntax) {
+  std::cerr << '\n'
+            << std::left << '\t' << "\x1B[34mWhere left padding = \"" << insert_left_padding
+            << "\" and right padding = \"" << insert_right_padding << "\":\033[0m\n";
 
   bool all_passed = true;
-  for (const auto& test_case : test_cases) {
+  for (const auto& test_case : cases) {
     std::cerr << std::left << '\t' << std::setw(48) << element_type_str(test_case.type);
     std::vector<std::string> errors;
 
-    for (const auto& marked_source : test_case.marked_sources) {
+    for (const auto& unpadded_source : test_case.marked_sources) {
+      // Insert the specified left/right padding.
+      auto marked_source =
+          replace_markers(unpadded_source, insert_left_padding + kMarkerLeft.data(),
+                          kMarkerRight.data() + insert_right_padding);
+
       // Parse the source with markers removed
       fidl::ExperimentalFlags experimental_flags;
+      if (syntax == fidl::utils::Syntax::kNew) {
+        experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+      }
       experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
-      TestLibrary library(remove_markers(marked_source), std::move(experimental_flags));
+      TestLibrary library(remove_markers(marked_source), experimental_flags);
       std::unique_ptr<fidl::raw::File> ast;
       if (!library.Parse(&ast)) {
         errors.push_back("failed to parse");
@@ -580,6 +820,20 @@ TEST(SpanTests, parse_test) {
   // Assert after all tests are over so that we can get output for each test
   // case even if one of them fails.
   ASSERT_TRUE(all_passed, "At least one test case failed");
+}
+
+TEST(SpanTests, ParseTest) {
+  RunParseTests(new_syntax_test_cases, "", "", fidl::utils::Syntax::kNew);
+  RunParseTests(new_syntax_test_cases, " ", "", fidl::utils::Syntax::kNew);
+  RunParseTests(new_syntax_test_cases, "", " ", fidl::utils::Syntax::kNew);
+  RunParseTests(new_syntax_test_cases, " ", " ", fidl::utils::Syntax::kNew);
+}
+
+TEST(SpanTests, ParseTestOld) {
+  RunParseTests(test_cases, "", "", fidl::utils::Syntax::kOld);
+  RunParseTests(test_cases, " ", "", fidl::utils::Syntax::kOld);
+  RunParseTests(test_cases, "", " ", fidl::utils::Syntax::kOld);
+  RunParseTests(test_cases, " ", " ", fidl::utils::Syntax::kOld);
 }
 
 }  // namespace

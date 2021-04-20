@@ -217,6 +217,7 @@ table Foo {
     2: bool library;
     3: uint32 uint32;
     4: struct member;
+    5: bool reserved;
 };
 )FIDL");
   ASSERT_COMPILED_AND_CONVERT(library);

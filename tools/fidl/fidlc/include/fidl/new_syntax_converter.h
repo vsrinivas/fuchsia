@@ -48,6 +48,57 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // void OnSourceElementStart(const raw::SourceElement&) override;
   // void OnSourceElementEnd(const raw::SourceElement&) override;
 
+  // These "On*" methods should only be called on files written in the new
+  // syntax, so immediately assert and error any time we enter one.
+  void OnAmbiguousLayoutParameter(
+      std::unique_ptr<raw::AmbiguousLayoutParameter> const& element) override {
+    AbortUnimplemented();
+  }
+  void OnInlineLayoutReference(
+      std::unique_ptr<raw::InlineLayoutReference> const& element) override {
+    AbortUnimplemented();
+  }
+  void OnLayout(std::unique_ptr<raw::Layout> const& element) override { AbortUnimplemented(); }
+  void OnLayoutMember(std::unique_ptr<raw::LayoutMember> const& element) override {
+    AbortUnimplemented();
+  }
+  void OnLayoutParameter(std::unique_ptr<raw::LayoutParameter> const& element) override {
+    AbortUnimplemented();
+  }
+  void OnLayoutParameterList(std::unique_ptr<raw::LayoutParameterList> const& element) override {
+    AbortUnimplemented();
+  }
+  void OnLayoutReference(std::unique_ptr<raw::LayoutReference> const& element) override {
+    AbortUnimplemented();
+  }
+  void OnLiteralLayoutParameter(
+      std::unique_ptr<raw::LiteralLayoutParameter> const& element) override {
+    AbortUnimplemented();
+  }
+  void OnNamedLayoutReference(std::unique_ptr<raw::NamedLayoutReference> const& element) override {
+    AbortUnimplemented();
+  }
+  void OnOrdinaledLayoutMember(
+      std::unique_ptr<raw::OrdinaledLayoutMember> const& element) override {
+    AbortUnimplemented();
+  }
+  void OnStructLayoutMember(std::unique_ptr<raw::StructLayoutMember> const& element) override {
+    AbortUnimplemented();
+  }
+  void OnTypeConstraints(std::unique_ptr<raw::TypeConstraints> const& element) override {
+    AbortUnimplemented();
+  }
+  void OnTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> const& element) override {
+    AbortUnimplemented();
+  }
+  void OnTypeDecl(std::unique_ptr<raw::TypeDecl> const& element) override { AbortUnimplemented(); }
+  void OnTypeLayoutParameter(std::unique_ptr<raw::TypeLayoutParameter> const& element) override {
+    AbortUnimplemented();
+  }
+  void OnValueLayoutMember(std::unique_ptr<raw::ValueLayoutMember> const& element) override {
+    AbortUnimplemented();
+  }
+
   // The remaining "On*" methods are loosely organized by keyword.  All of them
   // must be overwritten by the implementation.
 
@@ -179,6 +230,12 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // will look very different depending on which built-ins those identifiers
   // resolve to.
   std::optional<UnderlyingType> resolve(const std::unique_ptr<raw::TypeConstructorOld>& type_ctor);
+
+  void static AbortUnimplemented() {
+    assert(
+        false &&
+        "input files to fidlconv must not contain any raw AST nodes exclusive to the new syntax");
+  }
 };
 
 class Converting {
