@@ -32,9 +32,6 @@ executable("unittest_bin") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("audio-libtimeline-unittests") {

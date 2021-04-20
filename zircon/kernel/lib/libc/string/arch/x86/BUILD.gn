@@ -97,8 +97,5 @@ if (toolchain.environment == "kernel") {
       "//third_party/googletest:gtest",
       "//zircon/kernel/lib/arch/testing",
     ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 }

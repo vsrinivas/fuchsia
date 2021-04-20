@@ -44,9 +44,6 @@ group("stdcompat-test-deps") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 # This target will be forced to compile using stdcompat provided polyfills and no inline variables.

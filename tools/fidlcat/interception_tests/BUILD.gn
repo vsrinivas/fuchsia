@@ -66,8 +66,5 @@ if (is_host) {
       "//zircon/public/lib/fidl_base",
       "//zircon/system/public",
     ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 }
