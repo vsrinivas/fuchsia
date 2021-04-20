@@ -266,23 +266,22 @@ zx_status_t Sherlock::AudioInit() {
   }
 
   // TDM pin configuration.
-  constexpr uint64_t ua_strength_level1 = 2500;
-
   gpio_impl_.SetAltFunction(T931_GPIOZ(7), T931_GPIOZ_7_TDMC_SCLK_FN);
-  gpio_impl_.SetDriveStrength(T931_GPIOZ(7), ua_strength_level1, nullptr);
-
   gpio_impl_.SetAltFunction(T931_GPIOZ(6), T931_GPIOZ_6_TDMC_FS_FN);
-  gpio_impl_.SetDriveStrength(T931_GPIOZ(6), ua_strength_level1, nullptr);
-
   gpio_impl_.SetAltFunction(T931_GPIOZ(2), T931_GPIOZ_2_TDMC_D0_FN);
+  constexpr uint64_t ua = 3000;
+  gpio_impl_.SetDriveStrength(T931_GPIOZ(7), ua, nullptr);
+  gpio_impl_.SetDriveStrength(T931_GPIOZ(6), ua, nullptr);
+  gpio_impl_.SetDriveStrength(T931_GPIOZ(2), ua, nullptr);
   if (is_sherlock) {
     gpio_impl_.SetAltFunction(T931_GPIOZ(3), T931_GPIOZ_3_TDMC_D1_FN);
+    gpio_impl_.SetDriveStrength(T931_GPIOZ(3), ua, nullptr);
   } else {
     gpio_impl_.SetAltFunction(T931_GPIOZ(3), 0);
   }
 
   gpio_impl_.SetAltFunction(T931_GPIOAO(9), T931_GPIOAO_9_MCLK_FN);
-  gpio_impl_.SetDriveStrength(T931_GPIOAO(9), ua_strength_level1, nullptr);
+  gpio_impl_.SetDriveStrength(T931_GPIOAO(9), ua, nullptr);
 
 #ifdef ENABLE_BT
   // PCM pin assignments.
@@ -290,9 +289,9 @@ zx_status_t Sherlock::AudioInit() {
   gpio_impl_.SetAltFunction(S905D2_GPIOX(9), S905D2_GPIOX_8_TDMA_D0_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOX(10), S905D2_GPIOX_10_TDMA_FS_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOX(11), S905D2_GPIOX_11_TDMA_SCLK_FN);
-  gpio_impl_.SetDriveStrength(T931_GPIOX(9), ua_strength_level1, nullptr);
-  gpio_impl_.SetDriveStrength(T931_GPIOX(10), ua_strength_level1, nullptr);
-  gpio_impl_.SetDriveStrength(T931_GPIOX(11), ua_strength_level1, nullptr);
+  gpio_impl_.SetDriveStrength(T931_GPIOX(9), ua, nullptr);
+  gpio_impl_.SetDriveStrength(T931_GPIOX(10), ua, nullptr);
+  gpio_impl_.SetDriveStrength(T931_GPIOX(11), ua, nullptr);
 #endif
 
   // PDM pin assignments.

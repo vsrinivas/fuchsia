@@ -170,7 +170,7 @@ zx_status_t Nelson::AudioInit() {
   gpio_impl_.SetAltFunction(S905D3_GPIOA(2), S905D3_GPIOA_2_TDMB_FS_FN);
   gpio_impl_.SetAltFunction(S905D3_GPIOA(3), S905D3_GPIOA_3_TDMB_D0_FN);
   gpio_impl_.SetAltFunction(S905D3_GPIOA(6), S905D3_GPIOA_6_TDMB_DIN3_FN);
-  constexpr uint64_t ua = 2500;
+  constexpr uint64_t ua = 3000;
   gpio_impl_.SetDriveStrength(S905D3_GPIOA(1), ua, nullptr);
   gpio_impl_.SetDriveStrength(S905D3_GPIOA(2), ua, nullptr);
   gpio_impl_.SetDriveStrength(S905D3_GPIOA(3), ua, nullptr);
