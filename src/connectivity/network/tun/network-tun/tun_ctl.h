@@ -5,8 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_TUN_CTL_H_
 #define SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_TUN_CTL_H_
 
-#include <fuchsia/net/tun/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
+#include <fuchsia/net/tun/llcpp/fidl.h>
 
 #include "tun_device.h"
 #include "tun_pair.h"
@@ -18,23 +17,20 @@ namespace tun {
 //
 // `TunCtl` is created with a `dispatcher`, over which it serves the `fuchsia.net.tun.Control`
 // protocol. It retains lists of created `TunDevice`s and `TunPair`s.
-class TunCtl : public fuchsia::net::tun::Control {
+class TunCtl : public fidl::WireInterface<fuchsia_net_tun::Control> {
  public:
   TunCtl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
-  void Connect(fidl::InterfaceRequest<fuchsia::net::tun::Control> req) {
-    bindings_set_.AddBinding(this, std::move(req), dispatcher_);
+  void Connect(fidl::ServerEnd<fuchsia_net_tun::Control> req) {
+    fidl::BindServer(dispatcher_, std::move(req), this);
   }
 
-  fidl::InterfaceRequestHandler<fuchsia::net::tun::Control> GetHandler() {
-    return
-        [this](fidl::InterfaceRequest<fuchsia::net::tun::Control> req) { Connect(std::move(req)); };
-  }
-
-  void CreateDevice(fuchsia::net::tun::DeviceConfig config,
-                    fidl::InterfaceRequest<fuchsia::net::tun::Device> device) override;
-  void CreatePair(fuchsia::net::tun::DevicePairConfig config,
-                  fidl::InterfaceRequest<fuchsia::net::tun::DevicePair> device_pair) override;
+  void CreateDevice(fuchsia_net_tun::wire::DeviceConfig config,
+                    fidl::ServerEnd<fuchsia_net_tun::Device> device,
+                    CreateDeviceCompleter::Sync& completer) override;
+  void CreatePair(fuchsia_net_tun::wire::DevicePairConfig config,
+                  fidl::ServerEnd<fuchsia_net_tun::DevicePair> device_pair,
+                  CreatePairCompleter::Sync& completer) override;
 
   // Schedules `shutdown_callback` to be called once all devices and device pairs are torn down and
   // destroyed.
@@ -47,7 +43,6 @@ class TunCtl : public fuchsia::net::tun::Control {
   void TryFireShutdownCallback();
   async_dispatcher_t* dispatcher_;
   fit::callback<void()> shutdown_callback_;
-  fidl::BindingSet<fuchsia::net::tun::Control> bindings_set_;
   fbl::DoublyLinkedList<std::unique_ptr<TunDevice>> devices_;
   fbl::DoublyLinkedList<std::unique_ptr<TunPair>> device_pairs_;
 };

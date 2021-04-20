@@ -4,10 +4,11 @@
 
 #include "device_adapter.h"
 
-#include <lib/fidl-async/cpp/bind.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
 #include <zircon/status.h>
+
+#include <fbl/auto_lock.h>
 
 namespace network {
 namespace tun {
@@ -84,8 +85,9 @@ void DeviceAdapter::NetworkDeviceImplGetInfo(device_info_t* out_info) { *out_inf
 void DeviceAdapter::NetworkDeviceImplGetStatus(status_t* out_status) {
   fbl::AutoLock lock(&state_lock_);
   *out_status = {
-      parent_->config().mtu(),                                                              // mtu
-      online_ ? static_cast<uint32_t>(fuchsia::hardware::network::StatusFlags::ONLINE) : 0  // flags
+      .mtu = parent_->config().mtu,
+      .flags =
+          online_ ? static_cast<uint32_t>(fuchsia_hardware_network::wire::StatusFlags::kOnline) : 0,
   };
 }
 
@@ -106,7 +108,7 @@ void DeviceAdapter::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t
     }
     fbl::AutoLock lock(&tx_lock_);
     while (buf_count--) {
-      tx_buffers_.emplace(vmos_.MakeTxBuffer(buf_list, parent_->config().report_metadata()));
+      tx_buffers_.emplace(vmos_.MakeTxBuffer(buf_list, parent_->config().report_metadata));
       buf_list++;
     }
   }
@@ -152,9 +154,9 @@ void DeviceAdapter::SetOnline(bool online) {
     }
     FX_VLOGF(1, "tun", "DeviceAdapter: SetOnline: %d", online);
     online_ = online;
-    new_status.mtu = parent_->config().mtu();
+    new_status.mtu = parent_->config().mtu;
     new_status.flags =
-        online_ ? static_cast<uint32_t>(fuchsia::hardware::network::StatusFlags::ONLINE) : 0;
+        online_ ? static_cast<uint32_t>(fuchsia_hardware_network::wire::StatusFlags::kOnline) : 0;
 
     if (!online_) {
       // if going offline, discard all pending tx buffers
@@ -195,8 +197,8 @@ bool DeviceAdapter::TryGetTxBuffer(fit::callback<void(Buffer*, size_t)> callback
 }
 
 zx::status<size_t> DeviceAdapter::WriteRxFrame(
-    fuchsia::hardware::network::FrameType frame_type, const std::vector<uint8_t>& data,
-    const std::optional<fuchsia::net::tun::FrameMetadata>& meta) {
+    fuchsia_hardware_network::wire::FrameType frame_type, const uint8_t* data, size_t count,
+    const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta) {
   {
     // can't write if device is offline
     fbl::AutoLock lock(&state_lock_);
@@ -210,7 +212,7 @@ zx::status<size_t> DeviceAdapter::WriteRxFrame(
     return zx::error(ZX_ERR_SHOULD_WAIT);
   }
   auto& buff = rx_buffers_.front();
-  if (zx_status_t status = buff.Write(data); status != ZX_OK) {
+  if (zx_status_t status = buff.Write(data, count); status != ZX_OK) {
     return zx::error(status);
   }
 
@@ -219,11 +221,23 @@ zx::status<size_t> DeviceAdapter::WriteRxFrame(
 
   // NB: cast is only safe as long as MAX_MTU in FIDL is less than uint32 max. Guard that with a
   // static assertion.
-  static_assert(fuchsia::net::tun::MAX_MTU <= std::numeric_limits<uint32_t>::max());
-  EnqueueRx(frame_type, id, static_cast<uint32_t>(data.size()), meta);
+  static_assert(fuchsia_net_tun::wire::kMaxMtu <= std::numeric_limits<uint32_t>::max());
+  EnqueueRx(frame_type, id, static_cast<uint32_t>(count), meta);
   CommitRx();
 
   return zx::ok(rx_buffers_.size());
+}
+
+zx::status<size_t> DeviceAdapter::WriteRxFrame(
+    fuchsia_hardware_network::wire::FrameType frame_type, const fidl::VectorView<uint8_t>& data,
+    const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta) {
+  return WriteRxFrame(frame_type, data.data(), data.count(), meta);
+}
+
+zx::status<size_t> DeviceAdapter::WriteRxFrame(
+    fuchsia_hardware_network::wire::FrameType frame_type, const std::vector<uint8_t>& data,
+    const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta) {
+  return WriteRxFrame(frame_type, data.data(), data.size(), meta);
 }
 
 void DeviceAdapter::CopyTo(DeviceAdapter* other, bool return_failed_buffers) {
@@ -242,7 +256,7 @@ void DeviceAdapter::CopyTo(DeviceAdapter* other, bool return_failed_buffers) {
     } else {
       auto& rx_buff = other->rx_buffers_.front();
       size_t actual;
-      auto status = rx_buff.CopyFrom(&tx_buff, &actual);
+      zx_status_t status = rx_buff.CopyFrom(&tx_buff, &actual);
       if (status != ZX_OK) {
         FX_LOGF(ERROR, "tun", "DeviceAdapter:CopyTo: Failed to copy buffer: %s",
                 zx_status_get_string(status));
@@ -255,7 +269,7 @@ void DeviceAdapter::CopyTo(DeviceAdapter* other, bool return_failed_buffers) {
         }
         // NB: cast is only safe as long as MAX_MTU in FIDL is less than uint32 max. Guard that with
         // a static assertion.
-        static_assert(fuchsia::net::tun::MAX_MTU <= std::numeric_limits<uint32_t>::max());
+        static_assert(fuchsia_net_tun::wire::kMaxMtu <= std::numeric_limits<uint32_t>::max());
         other->EnqueueRx(tx_buff.frame_type(), rx_buff.id(), static_cast<uint32_t>(actual), meta);
         EnqueueTx(tx_buff.id(), ZX_OK);
 
@@ -278,22 +292,22 @@ void DeviceAdapter::TeardownSync() {
   sync_completion_wait_deadline(&completion, ZX_TIME_INFINITE);
 }
 
-void DeviceAdapter::EnqueueRx(fuchsia::hardware::network::FrameType frame_type, uint32_t buffer_id,
-                              uint32_t total_len,
-                              const std::optional<fuchsia::net::tun::FrameMetadata>& meta) {
+void DeviceAdapter::EnqueueRx(fuchsia_hardware_network::wire::FrameType frame_type,
+                              uint32_t buffer_id, uint32_t total_len,
+                              const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta) {
   auto& ret = return_rx_list_.emplace_back();
   ret.id = buffer_id;
-  ret.meta.frame_type = static_cast<uint8_t>(frame_type);
+  ret.meta.frame_type = static_cast<uint32_t>(frame_type);
   ret.total_length = total_len;
   if (meta) {
     ret.meta.flags = meta->flags;
     ret.meta.info_type = static_cast<uint32_t>(meta->info_type);
-    if (meta->info_type != fuchsia::hardware::network::InfoType::NO_INFO) {
+    if (meta->info_type != fuchsia_hardware_network::wire::InfoType::kNoInfo) {
       FX_LOGF(WARNING, "tun", "Unrecognized info type %d", ret.meta.info_type);
     }
   } else {
     ret.meta.flags = 0;
-    ret.meta.info_type = static_cast<uint32_t>(fuchsia::hardware::network::InfoType::NO_INFO);
+    ret.meta.info_type = static_cast<uint32_t>(fuchsia_hardware_network::wire::InfoType::kNoInfo);
   }
 }
 
@@ -325,25 +339,26 @@ DeviceAdapter::DeviceAdapter(DeviceAdapterParent* parent, bool online)
           .tx_depth = kFifoDepth,
           .rx_depth = kFifoDepth,
           .rx_threshold = kFifoDepth / 2,
-          .device_class = static_cast<uint8_t>(fuchsia::hardware::network::DeviceClass::UNKNOWN),
+          .device_class =
+              static_cast<uint8_t>(fuchsia_hardware_network::wire::DeviceClass::kUnknown),
           .rx_types_list = rx_types_.data(),
-          .rx_types_count = parent->config().rx_types().size(),
+          .rx_types_count = parent->config().rx_types.size(),
           .tx_types_list = tx_types_.data(),
-          .tx_types_count = parent->config().tx_types().size(),
-          .max_buffer_length = fuchsia::net::tun::MAX_MTU,
+          .tx_types_count = parent->config().tx_types.size(),
+          .max_buffer_length = fuchsia_net_tun::wire::kMaxMtu,
           .buffer_alignment = 1,
-          .min_rx_buffer_length = parent->config().mtu(),
-          .min_tx_buffer_length = parent->config().min_tx_buffer_length(),
+          .min_rx_buffer_length = parent->config().mtu,
+          .min_tx_buffer_length = parent->config().min_tx_buffer_length,
       }) {
   // Initialize rx_types_ and tx_types_ lists from parent config.
-  for (size_t i = 0; i < parent_->config().rx_types().size(); i++) {
-    rx_types_[i] = static_cast<uint8_t>(parent_->config().rx_types()[i]);
+  for (size_t i = 0; i < parent_->config().rx_types.size(); i++) {
+    rx_types_[i] = static_cast<uint8_t>(parent_->config().rx_types[i]);
   }
-  for (size_t i = 0; i < parent_->config().tx_types().size(); i++) {
-    tx_types_[i].features = parent_->config().tx_types()[i].features;
-    tx_types_[i].type = static_cast<uint8_t>(parent_->config().tx_types()[i].type);
+  for (size_t i = 0; i < parent_->config().tx_types.size(); i++) {
+    tx_types_[i].features = parent_->config().tx_types[i].features;
+    tx_types_[i].type = static_cast<uint8_t>(parent_->config().tx_types[i].type);
     tx_types_[i].supported_flags =
-        static_cast<uint32_t>(parent_->config().tx_types()[i].supported_flags);
+        static_cast<uint32_t>(parent_->config().tx_types[i].supported_flags);
   }
 }
 

@@ -5,17 +5,15 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_DEVICE_ADAPTER_H_
 #define SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_DEVICE_ADAPTER_H_
 
-#include <fuchsia/hardware/network/cpp/fidl.h>
-#include <lib/fidl-async/cpp/bind.h>
-#include <lib/fzl/vmo-mapper.h>
+#include <fuchsia/hardware/network/llcpp/fidl.h>
 
 #include <array>
 #include <queue>
 
-#include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
 #include "buffer.h"
+#include "config.h"
 #include "src/connectivity/network/drivers/network-device/device/public/network_device.h"
 
 namespace network {
@@ -30,7 +28,7 @@ class DeviceAdapter;
 class DeviceAdapterParent {
  public:
   // Gets the DeviceAdapter's configuration.
-  virtual const fuchsia::net::tun::BaseConfig& config() const = 0;
+  virtual const BaseConfig& config() const = 0;
   // Called when the device's `has_session` state changes.
   virtual void OnHasSessionsChanged(DeviceAdapter* device) = 0;
   // Called when transmit buffers become available.
@@ -101,9 +99,15 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
   // Returns the number of remaining available buffers.
   // Returns `ZX_ERR_BAD_STATE` if the device is offline, or `ZX_ERR_SHOULD_WAIT` if there are no
   // buffers available to write `data` into
-  zx::status<size_t> WriteRxFrame(fuchsia::hardware::network::FrameType frame_type,
+  zx::status<size_t> WriteRxFrame(fuchsia_hardware_network::wire::FrameType frame_type,
+                                  const uint8_t* data, size_t count,
+                                  const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta);
+  zx::status<size_t> WriteRxFrame(fuchsia_hardware_network::wire::FrameType frame_type,
+                                  const fidl::VectorView<uint8_t>& data,
+                                  const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta);
+  zx::status<size_t> WriteRxFrame(fuchsia_hardware_network::wire::FrameType frame_type,
                                   const std::vector<uint8_t>& data,
-                                  const std::optional<fuchsia::net::tun::FrameMetadata>& meta);
+                                  const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta);
   // Copies all pending tx buffers from `this` consuming any available rx buffers from `other`.
   // If `return_failed_buffers` is `true`, all buffers from `this` that couldn't be immediately
   // copied into available buffers from `other` will be returned to applications in a failure state,
@@ -114,8 +118,9 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
   DeviceAdapter(DeviceAdapterParent* parent, bool online);
 
   // Enqueues a single fulfilled rx frame.
-  void EnqueueRx(fuchsia::hardware::network::FrameType frame_type, uint32_t buffer_id,
-                 uint32_t total_len, const std::optional<fuchsia::net::tun::FrameMetadata>& meta)
+  void EnqueueRx(fuchsia_hardware_network::wire::FrameType frame_type, uint32_t buffer_id,
+                 uint32_t total_len,
+                 const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta)
       __TA_REQUIRES(rx_lock_);
   // Commits all pending rx buffers, returning them to the `NetworkDeviceInterface`.
   void CommitRx() __TA_REQUIRES(rx_lock_);
@@ -140,8 +145,8 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
   // complexity and also we lose the benefit of being able to operate on rx and tx frames without
   // shared locks between them.
   VmoStore vmos_;
-  std::array<uint8_t, fuchsia::hardware::network::MAX_FRAME_TYPES> rx_types_{};
-  std::array<tx_support_t, fuchsia::hardware::network::MAX_FRAME_TYPES> tx_types_{};
+  std::array<uint8_t, fuchsia_hardware_network::wire::kMaxFrameTypes> rx_types_{};
+  std::array<tx_support_t, fuchsia_hardware_network::wire::kMaxFrameTypes> tx_types_{};
   std::queue<Buffer> tx_buffers_ __TA_GUARDED(tx_lock_);
   std::queue<Buffer> rx_buffers_ __TA_GUARDED(rx_lock_);
   std::vector<rx_buffer_t> return_rx_list_ __TA_GUARDED(rx_lock_);

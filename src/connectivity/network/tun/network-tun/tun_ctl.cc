@@ -13,8 +13,9 @@
 namespace network {
 namespace tun {
 
-void TunCtl::CreateDevice(fuchsia::net::tun::DeviceConfig config,
-                          fidl::InterfaceRequest<fuchsia::net::tun::Device> device) {
+void TunCtl::CreateDevice(fuchsia_net_tun::wire::DeviceConfig config,
+                          fidl::ServerEnd<fuchsia_net_tun::Device> device,
+                          CreateDeviceCompleter::Sync& completer) {
   zx::status tun_device = TunDevice::Create(
       [this](TunDevice* dev) {
         async::PostTask(dispatcher_, [this, dev]() {
@@ -35,8 +36,9 @@ void TunCtl::CreateDevice(fuchsia::net::tun::DeviceConfig config,
   FX_LOG(INFO, "tun", "TunCtl: Created TunDevice");
 }
 
-void TunCtl::CreatePair(fuchsia::net::tun::DevicePairConfig config,
-                        fidl::InterfaceRequest<fuchsia::net::tun::DevicePair> device_pair) {
+void TunCtl::CreatePair(fuchsia_net_tun::wire::DevicePairConfig config,
+                        fidl::ServerEnd<fuchsia_net_tun::DevicePair> device_pair,
+                        CreatePairCompleter::Sync& completer) {
   zx::status tun_pair = TunPair::Create(
       [this](TunPair* pair) {
         async::PostTask(dispatcher_, [this, pair]() {

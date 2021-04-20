@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/net/tun/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
-#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 #include <zircon/device/network.h>
 #include <zircon/status.h>
 
@@ -275,7 +277,7 @@ class TunTest : public gtest::RealLoopFixture {
 
   fuchsia::net::tun::ControlSyncPtr Connect() {
     fuchsia::net::tun::ControlSyncPtr ret;
-    tun_ctl_.Connect(ret.NewRequest());
+    tun_ctl_.Connect(fidl::ServerEnd<fuchsia_net_tun::Control>(ret.NewRequest().TakeChannel()));
     return ret;
   }
 

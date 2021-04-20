@@ -12,7 +12,7 @@ namespace network {
 namespace tun {
 
 zx::status<std::unique_ptr<MacAdapter>> MacAdapter::Create(MacAdapterParent* parent,
-                                                           fuchsia::net::MacAddress mac,
+                                                           fuchsia_net::wire::MacAddress mac,
                                                            bool promisc_only) {
   fbl::AllocChecker ac;
   std::unique_ptr<MacAdapter> adapter(new (&ac) MacAdapter(parent, mac, promisc_only));
@@ -55,7 +55,7 @@ void MacAdapter::MacAddrImplGetFeatures(features_t* out_features) {
     out_features->multicast_filter_count = 0;
     out_features->supported_modes = MODE_MULTICAST_PROMISCUOUS;
   } else {
-    out_features->multicast_filter_count = fuchsia::net::tun::MAX_MULTICAST_FILTERS;
+    out_features->multicast_filter_count = fuchsia_net_tun::wire::kMaxMulticastFilters;
     out_features->supported_modes =
         MODE_PROMISCUOUS | MODE_MULTICAST_FILTER | MODE_MULTICAST_PROMISCUOUS;
   }
@@ -64,35 +64,34 @@ void MacAdapter::MacAddrImplGetFeatures(features_t* out_features) {
 void MacAdapter::MacAddrImplSetMode(mode_t mode, const uint8_t* multicast_macs_list,
                                     size_t multicast_macs_count) {
   fbl::AutoLock lock(&state_lock_);
-  fuchsia::hardware::network::MacFilterMode filter_mode;
+  fuchsia_hardware_network::wire::MacFilterMode filter_mode;
   switch (mode) {
     case MODE_PROMISCUOUS:
-      filter_mode = fuchsia::hardware::network::MacFilterMode::PROMISCUOUS;
+      filter_mode = fuchsia_hardware_network::wire::MacFilterMode::kPromiscuous;
       break;
     case MODE_MULTICAST_PROMISCUOUS:
-      filter_mode = fuchsia::hardware::network::MacFilterMode::MULTICAST_PROMISCUOUS;
+      filter_mode = fuchsia_hardware_network::wire::MacFilterMode::kMulticastPromiscuous;
       break;
     case MODE_MULTICAST_FILTER:
-      filter_mode = fuchsia::hardware::network::MacFilterMode::MULTICAST_FILTER;
+      filter_mode = fuchsia_hardware_network::wire::MacFilterMode::kMulticastFilter;
       break;
     default:
       ZX_ASSERT_MSG(false, "Unexpected filter mode %d", mode);
   }
-  mac_state_.set_mode(filter_mode);
-  std::vector<fuchsia::net::MacAddress> filters;
-  filters.reserve(multicast_macs_count);
+  mac_state_.mode = filter_mode;
+  mac_state_.multicast_filters.clear();
+  mac_state_.multicast_filters.reserve(multicast_macs_count);
   while (multicast_macs_count--) {
-    auto& n = filters.emplace_back();
+    auto& n = mac_state_.multicast_filters.emplace_back();
     std::copy_n(multicast_macs_list, n.octets.size(), n.octets.begin());
     multicast_macs_list += n.octets.size();
   }
-  mac_state_.set_multicast_filters(std::move(filters));
   parent_->OnMacStateChanged(this);
 }
 
-void MacAdapter::CloneMacState(fuchsia::net::tun::MacState* out) {
+MacState MacAdapter::GetMacState() {
   fbl::AutoLock lock(&state_lock_);
-  mac_state_.Clone(out);
+  return mac_state_;
 }
 
 }  // namespace tun

@@ -5,19 +5,17 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_TUN_DEVICE_H_
 #define SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_TUN_DEVICE_H_
 
-#include <fuchsia/net/tun/cpp/fidl.h>
+#include <fuchsia/net/tun/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/stdcompat/optional.h>
 
 #include <queue>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 
-#include "buffer.h"
 #include "device_adapter.h"
 #include "mac_adapter.h"
+#include "state.h"
 
 namespace network {
 namespace tun {
@@ -27,29 +25,33 @@ namespace tun {
 // `TunDevice` uses `DeviceAdapter` and `MacAdapter` to fulfill the `fuchsia.net.tun.Device`
 // protocol. All FIDL requests are served over its own internally held `async::Loop`.
 class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
-                  public fuchsia::net::tun::Device,
+                  public fidl::WireInterface<fuchsia_net_tun::Device>,
                   public DeviceAdapterParent,
                   public MacAdapterParent {
  public:
-  static constexpr size_t kMaxPendingOps = fuchsia::net::tun::MAX_PENDING_OPERATIONS;
+  static constexpr size_t kMaxPendingOps = fuchsia_net_tun::wire::kMaxPendingOperations;
 
   // Creates a new `TunDevice` with `config`.
   // `teardown` is called when all the bound client channels are closed.
   static zx::status<std::unique_ptr<TunDevice>> Create(fit::callback<void(TunDevice*)> teardown,
-                                                       fuchsia::net::tun::DeviceConfig config);
+                                                       fuchsia_net_tun::wire::DeviceConfig config);
   ~TunDevice() override;
 
   // fuchsia.net.tun.Device implementation:
-  void WriteFrame(fuchsia::net::tun::Frame frame, WriteFrameCallback callback) override;
-  void ReadFrame(ReadFrameCallback callback) override;
-  void GetState(GetStateCallback callback) override;
-  void WatchState(WatchStateCallback callback) override;
-  void SetOnline(bool online, SetOnlineCallback callback) override;
-  void ConnectProtocols(fuchsia::net::tun::Protocols protos) override;
-  void GetSignals(GetSignalsCallback callback) override;
+  void WriteFrame(fuchsia_net_tun::wire::Frame frame,
+                  WriteFrameCompleter::Sync& completer) override;
+  void ReadFrame(ReadFrameCompleter::Sync& completer) override;
+  void GetState(GetStateCompleter::Sync& completer) override;
+  void WatchState(WatchStateCompleter::Sync& completer) override;
+  void SetOnline(bool online, SetOnlineCompleter::Sync& completer) override;
+  void ConnectProtocols(fuchsia_net_tun::wire::Protocols protos,
+                        ConnectProtocolsCompleter::Sync& completer) override;
+  void GetSignals(GetSignalsCompleter::Sync& completer) override;
+
+  InternalState State() const;
 
   // DeviceAdapterParent implementation:
-  const fuchsia::net::tun::BaseConfig& config() const override { return config_.base(); };
+  const BaseConfig& config() const override { return config_; };
   void OnHasSessionsChanged(DeviceAdapter* device) override;
   void OnTxAvail(DeviceAdapter* device) override;
   void OnRxAvail(DeviceAdapter* device) override;
@@ -60,43 +62,60 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
   // Requests are served over this device's owned loop.
   // NOTE: at this moment only one binding is supported, if the device is already bound the previous
   // channel is closed.
-  void Bind(fidl::InterfaceRequest<fuchsia::net::tun::Device> req);
+  void Bind(fidl::ServerEnd<fuchsia_net_tun::Device> req);
 
  private:
-  TunDevice(fit::callback<void(TunDevice*)> teardown, fuchsia::net::tun::DeviceConfig config);
-  // Fulfills pending WriteFrame requests.
-  void RunWriteFrame();
+  TunDevice(fit::callback<void(TunDevice*)> teardown, DeviceConfig config);
+  // Completes a single WriteFrame request. Returns true iff a reply was sent on the completer.
+  template <typename F, typename C>
+  bool WriteWith(F fn, C& completer);
+  // Fulfills pending WriteFrame requests. Returns true iff all pending requests were processed.
+  bool RunWriteFrame();
   // Fulfills pending ReadFrame requests.
   void RunReadFrame();
   // Fulfills pending WatchState requests.
   void RunStateChange();
   // Calls the teardown callback.
   void Teardown();
-  bool IsBlocking() { return static_cast<bool>(config_.blocking()); }
+  bool IsBlocking() const { return config_.blocking; }
+
+  fit::callback<void(TunDevice*)> teardown_callback_;
+  const DeviceConfig config_;
 
   async::Loop loop_;
-  fit::callback<void(TunDevice*)> teardown_callback_;
-  cpp17::optional<thrd_t> loop_thread_;
-  fuchsia::net::tun::DeviceConfig config_;
-  fidl::Binding<fuchsia::net::tun::Device> binding_;
+  std::optional<thrd_t> loop_thread_;
+  std::optional<fidl::ServerBindingRef<fuchsia_net_tun::Device>> binding_;
   std::unique_ptr<DeviceAdapter> device_;
   std::unique_ptr<MacAdapter> mac_;
 
   // Helper struct to store pending write requests.
   struct PendingWriteRequest {
-    // The frame contained in the request.
-    fuchsia::net::tun::Frame frame;
-    // The callback to complete the FIDL transaction.
-    WriteFrameCallback callback;
+    // Owned fields of fuchsia_net_tun::wire::Frame.
+    fuchsia_hardware_network::wire::FrameType frame_type;
+    std::vector<uint8_t> data;
+    // FrameMetadata::info is a fidl::VectorView, so we should really be copying it. At the time of
+    // writing, it isn't used.
+    std::optional<fuchsia_net_tun::wire::FrameMetadata> meta;
 
-    PendingWriteRequest(fuchsia::net::tun::Frame frame, WriteFrameCallback callback)
-        : frame(std::move(frame)), callback(std::move(callback)) {}
+    // The FIDL transaction completer.
+    WriteFrameCompleter::Async completer;
+
+    PendingWriteRequest(const fuchsia_net_tun::wire::Frame& frame,
+                        WriteFrameCompleter::Async completer)
+        : completer(std::move(completer)) {
+      frame_type = frame.frame_type();
+      std::copy(std::begin(frame.data()), std::end(frame.data()), std::back_inserter(data));
+      if (frame.has_meta()) {
+        meta = frame.meta();
+      }
+    }
   };
 
-  std::queue<ReadFrameCallback> pending_read_frame_;
+  std::queue<ReadFrameCompleter::Async> pending_read_frame_;
   std::queue<PendingWriteRequest> pending_write_frame_;
-  WatchStateCallback pending_watch_state_;
-  cpp17::optional<fuchsia::net::tun::InternalState> last_state_;
+  std::optional<WatchStateCompleter::Async> pending_watch_state_;
+
+  std::optional<InternalState> last_state_;
 
   zx::eventpair signals_self_;
   zx::eventpair signals_peer_;

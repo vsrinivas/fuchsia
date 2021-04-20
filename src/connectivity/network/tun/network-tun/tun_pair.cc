@@ -7,29 +7,27 @@
 #include <lib/async-loop/default.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
-#include <zircon/status.h>
 
-#include "util.h"
+#include <fbl/auto_lock.h>
 
 namespace network {
 namespace tun {
 
-TunPair::TunPair(fit::callback<void(TunPair*)> teardown, fuchsia::net::tun::DevicePairConfig config)
+TunPair::TunPair(fit::callback<void(TunPair*)> teardown, DevicePairConfig config)
     : teardown_callback_(std::move(teardown)),
       config_(std::move(config)),
-      loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-      binding_(this) {
-  binding_.set_error_handler([this](zx_status_t /*unused*/) { Teardown(); });
-}
+      loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
-zx::status<std::unique_ptr<TunPair>> TunPair::Create(fit::callback<void(TunPair*)> teardown,
-                                                     fuchsia::net::tun::DevicePairConfig config) {
-  if (!TryConsolidateDevicePairConfig(&config)) {
+zx::status<std::unique_ptr<TunPair>> TunPair::Create(
+    fit::callback<void(TunPair*)> teardown, fuchsia_net_tun::wire::DevicePairConfig config) {
+  std::optional validated_config = DevicePairConfig::Create(config);
+  if (!validated_config.has_value()) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
   fbl::AllocChecker ac;
-  std::unique_ptr<TunPair> tun(new (&ac) TunPair(std::move(teardown), std::move(config)));
+  std::unique_ptr<TunPair> tun(
+      new (&ac) TunPair(std::move(teardown), std::move(validated_config.value())));
   if (!ac.check()) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
@@ -48,16 +46,16 @@ zx::status<std::unique_ptr<TunPair>> TunPair::Create(fit::callback<void(TunPair*
   }
   tun->right_ = std::move(right.value());
 
-  if (tun->config_.has_mac_left()) {
-    zx::status mac = MacAdapter::Create(tun.get(), tun->config_.mac_left(), true);
+  if (tun->config_.mac_left.has_value()) {
+    zx::status mac = MacAdapter::Create(tun.get(), tun->config_.mac_left.value(), true);
     if (mac.is_error()) {
       FX_LOGF(ERROR, "tun", "TunDevice::Init mac init left failed with %s", mac.status_string());
       return mac.take_error();
     }
     tun->mac_left_ = std::move(mac.value());
   }
-  if (tun->config_.has_mac_right()) {
-    zx::status mac = MacAdapter::Create(tun.get(), tun->config_.mac_right(), true);
+  if (tun->config_.mac_right.has_value()) {
+    zx::status mac = MacAdapter::Create(tun.get(), tun->config_.mac_right.value(), true);
     if (mac.is_error()) {
       FX_LOGF(ERROR, "tun", "TunDevice::Init mac init right failed with %s", mac.status_string());
       return mac.take_error();
@@ -114,28 +112,31 @@ void TunPair::Teardown() {
   }
 }
 
-void TunPair::Bind(fidl::InterfaceRequest<fuchsia::net::tun::DevicePair> req) {
-  binding_.Bind(std::move(req), loop_.dispatcher());
+void TunPair::Bind(fidl::ServerEnd<fuchsia_net_tun::DevicePair> req) {
+  binding_ =
+      fidl::BindServer(loop_.dispatcher(), std::move(req), this,
+                       [](TunPair* impl, fidl::UnbindInfo,
+                          fidl::ServerEnd<fuchsia_net_tun::DevicePair>) { impl->Teardown(); });
 }
 
-void TunPair::ConnectProtocols(fuchsia::net::tun::DevicePairEnds requests) {
+void TunPair::ConnectProtocols(fuchsia_net_tun::wire::DevicePairEnds requests,
+                               ConnectProtocolsCompleter::Sync& completer) {
   if (requests.has_left()) {
-    ConnectProtocols(left_, mac_left_, std::move(*requests.mutable_left()));
+    ConnectProtocols(left_, mac_left_, std::move(requests.left()));
   }
   if (requests.has_right()) {
-    ConnectProtocols(right_, mac_right_, std::move(*requests.mutable_right()));
+    ConnectProtocols(right_, mac_right_, std::move(requests.right()));
   }
 }
 
 void TunPair::ConnectProtocols(const std::unique_ptr<DeviceAdapter>& device,
                                const std::unique_ptr<MacAdapter>& mac,
-                               fuchsia::net::tun::Protocols protos) {
+                               fuchsia_net_tun::wire::Protocols protos) {
   if (device && protos.has_network_device()) {
-    device->Bind(fidl::ServerEnd<netdev::Device>(protos.mutable_network_device()->TakeChannel()));
+    device->Bind(std::move(protos.network_device()));
   }
   if (mac && protos.has_mac_addressing()) {
-    mac->Bind(loop_.dispatcher(), fidl::ServerEnd<netdev::MacAddressing>(
-                                      protos.mutable_mac_addressing()->TakeChannel()));
+    mac->Bind(loop_.dispatcher(), std::move(protos.mac_addressing()));
   }
 }
 
@@ -152,10 +153,10 @@ void TunPair::OnTxAvail(DeviceAdapter* device) {
   // Device is the transmitter, fallible is read for the end that matches device.
   if (device == left_.get()) {
     target = right_.get();
-    fallible = config_.fallible_transmit_left();
+    fallible = config_.fallible_transmit_left;
   } else {
     target = left_.get();
-    fallible = config_.fallible_transmit_right();
+    fallible = config_.fallible_transmit_right;
   }
   device->CopyTo(target, fallible);
 }
@@ -166,10 +167,10 @@ void TunPair::OnRxAvail(DeviceAdapter* device) {
   // Device is the receiver, fallible is read for the source end.
   if (device == left_.get()) {
     source = right_.get();
-    fallible = config_.fallible_transmit_right();
+    fallible = config_.fallible_transmit_right;
   } else {
     source = left_.get();
-    fallible = config_.fallible_transmit_left();
+    fallible = config_.fallible_transmit_left;
   }
   source->CopyTo(device, fallible);
 }

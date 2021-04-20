@@ -10,38 +10,35 @@ source_set("src") {
   sources = [
     "buffer.cc",
     "buffer.h",
+    "config.cc",
+    "config.h",
     "device_adapter.cc",
     "device_adapter.h",
     "mac_adapter.cc",
     "mac_adapter.h",
+    "state.cc",
+    "state.h",
     "tun_ctl.cc",
     "tun_ctl.h",
     "tun_device.cc",
     "tun_device.h",
     "tun_pair.cc",
     "tun_pair.h",
-    "util.cc",
-    "util.h",
   ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.network.device",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
-    "//sdk/fidl/fuchsia.net.tun",
+    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun_llcpp",
     "//sdk/lib/fit",
-    "//sdk/lib/stdcompat",
-    "//sdk/lib/sys/cpp",
     "//src/connectivity/network/drivers/network-device/device",
     "//src/connectivity/network/drivers/network-device/mac",
-    "//src/lib/fxl",
     "//src/lib/vmo_store",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/svc",
     "//zircon/system/ulib/syslog",
   ]
 }
@@ -71,9 +68,12 @@ executable("network_tun_unittest") {
 
   deps = [
     ":src",
+    "//sdk/fidl/fuchsia.net.tun",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/lib/testing/predicates",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/fzl",
   ]
 }
 

@@ -61,16 +61,16 @@ Buffer::Buffer(const tx_buffer_t* tx, bool get_meta, VmoStore* vmo_store)
       vmo_store_(vmo_store),
       vmo_id_(tx->data.vmo_id),
       parts_count_(tx->data.parts_count),
-      frame_type_(static_cast<fuchsia::hardware::network::FrameType>(tx->meta.frame_type)) {
+      frame_type_(static_cast<fuchsia_hardware_network::wire::FrameType>(tx->meta.frame_type)) {
   // Enforce the banjo contract.
   ZX_ASSERT(tx->data.parts_count <= MAX_BUFFER_PARTS);
   std::copy_n(tx->data.parts_list, parts_count_, parts_.begin());
   if (get_meta) {
     meta_ = {
-        .info_type = static_cast<fuchsia::hardware::network::InfoType>(tx->meta.info_type),
+        .info_type = static_cast<fuchsia_hardware_network::wire::InfoType>(tx->meta.info_type),
         .flags = tx->meta.flags,
     };
-    if (meta_->info_type != fuchsia::hardware::network::InfoType::NO_INFO) {
+    if (meta_->info_type != fuchsia_hardware_network::wire::InfoType::kNoInfo) {
       FX_LOGF(WARNING, "tun", "Unrecognized InfoType %d", tx->meta.info_type);
     }
   }
@@ -86,12 +86,12 @@ Buffer::Buffer(const rx_space_buffer_t* space, VmoStore* vmo_store)
   std::copy_n(space->data.parts_list, parts_count_, parts_.begin());
 }
 
-zx_status_t Buffer::Read(std::vector<uint8_t>* vec) {
+zx_status_t Buffer::Read(std::vector<uint8_t>& vec) {
   size_t total = 0;
-  auto inserter = std::back_inserter(*vec);
-  for (size_t i = 0; i < parts_count_; i++) {
-    auto len = parts_[i].length;
-    zx_status_t status = vmo_store_->Read(vmo_id_, parts_[i].offset, len, inserter);
+  auto inserter = std::back_inserter(vec);
+  for (const buffer_region_t& part : fbl::Span(parts_.data(), parts_count_)) {
+    size_t len = part.length;
+    zx_status_t status = vmo_store_->Read(vmo_id_, part.offset, len, inserter);
     if (status != ZX_OK) {
       return status;
     }
@@ -100,24 +100,31 @@ zx_status_t Buffer::Read(std::vector<uint8_t>* vec) {
   return ZX_OK;
 }
 
-zx_status_t Buffer::Write(const std::vector<uint8_t>& data) {
-  auto len = data.size();
-  size_t offset = 0;
-  size_t idx = 0;
-  while (len && idx < parts_count_) {
-    auto wr = len > parts_[idx].length ? parts_[idx].length : len;
-    auto status = vmo_store_->Write(vmo_id_, parts_[idx].offset, wr, &data[offset]);
+zx_status_t Buffer::Write(const uint8_t* data, size_t count) {
+  for (const buffer_region_t& part : fbl::Span(parts_.data(), parts_count_)) {
+    if (count == 0) {
+      break;
+    }
+    size_t len = std::min(count, part.length);
+    zx_status_t status = vmo_store_->Write(vmo_id_, part.offset, len, data);
     if (status != ZX_OK) {
       return status;
     }
-    len -= wr;
-    offset += wr;
-    idx++;
+    data += len;
+    count -= len;
   }
-  if (len != 0) {
-    return ZX_ERR_OUT_OF_RANGE;
+  if (count == 0) {
+    return ZX_OK;
   }
-  return ZX_OK;
+  return ZX_ERR_OUT_OF_RANGE;
+}
+
+zx_status_t Buffer::Write(const fidl::VectorView<uint8_t>& data) {
+  return Write(data.data(), data.count());
+}
+
+zx_status_t Buffer::Write(const std::vector<uint8_t>& data) {
+  return Write(data.data(), data.size());
 }
 
 zx_status_t Buffer::CopyFrom(Buffer* other, size_t* total) {

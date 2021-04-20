@@ -4,9 +4,9 @@
 
 #include "buffer.h"
 
-#include <lib/fzl/vmo-mapper.h>
-
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/predicates/status.h"
 
 namespace network {
 namespace tun {
@@ -18,15 +18,15 @@ constexpr uint8_t kVmoId = 0x06;
 class BufferTest : public ::testing::Test {
   void SetUp() override {
     zx::vmo vmo;
-    ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
-    ASSERT_EQ(vmos_.RegisterVmo(kVmoId, std::move(vmo)), ZX_OK);
+    ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+    ASSERT_OK(vmos_.RegisterVmo(kVmoId, std::move(vmo)));
   }
 
  public:
   void MintVmo(size_t offset, size_t len) {
     uint8_t val = 0;
     while (len--) {
-      ASSERT_EQ(vmos_.Write(kVmoId, offset, 1, &val), ZX_OK);
+      ASSERT_OK(vmos_.Write(kVmoId, offset, 1, &val));
       offset++;
       val++;
     }
@@ -37,7 +37,7 @@ class BufferTest : public ::testing::Test {
   std::vector<uint8_t> ReadVmo(const buffer_region_t& region) {
     std::vector<uint8_t> ret;
     ret.reserve(region.length);
-    EXPECT_EQ(vmos_.Read(kVmoId, region.offset, region.length, std::back_inserter(ret)), ZX_OK);
+    EXPECT_OK(vmos_.Read(kVmoId, region.offset, region.length, std::back_inserter(ret)));
     return ret;
   }
 
@@ -60,18 +60,18 @@ TEST_F(BufferTest, TestBufferBuildTx) {
   tx.data.parts_list = regions;
   tx.head_length = 0;
   tx.tail_length = 0;
-  tx.meta.frame_type = static_cast<uint8_t>(fuchsia::hardware::network::FrameType::ETHERNET);
-  tx.meta.info_type = static_cast<uint32_t>(fuchsia::hardware::network::InfoType::NO_INFO);
-  tx.meta.flags = static_cast<uint32_t>(fuchsia::hardware::network::TxFlags::TX_ACCEL_0);
+  tx.meta.frame_type = static_cast<uint8_t>(fuchsia_hardware_network::wire::FrameType::kEthernet);
+  tx.meta.info_type = static_cast<uint32_t>(fuchsia_hardware_network::wire::InfoType::kNoInfo);
+  tx.meta.flags = static_cast<uint32_t>(fuchsia_hardware_network::wire::TxFlags::kTxAccel0);
   auto b = vmos_.MakeTxBuffer(&tx, true);
   EXPECT_EQ(b.id(), tx.id);
-  EXPECT_EQ(b.frame_type(), fuchsia::hardware::network::FrameType::ETHERNET);
+  EXPECT_EQ(b.frame_type(), fuchsia_hardware_network::wire::FrameType::kEthernet);
   auto meta = b.TakeMetadata();
-  EXPECT_EQ(meta->info_type, fuchsia::hardware::network::InfoType::NO_INFO);
+  EXPECT_EQ(meta->info_type, fuchsia_hardware_network::wire::InfoType::kNoInfo);
   EXPECT_TRUE(meta->info.empty());
-  EXPECT_EQ(meta->flags, static_cast<uint32_t>(fuchsia::hardware::network::TxFlags::TX_ACCEL_0));
+  EXPECT_EQ(meta->flags, static_cast<uint32_t>(fuchsia_hardware_network::wire::TxFlags::kTxAccel0));
   std::vector<uint8_t> data;
-  ASSERT_EQ(b.Read(&data), ZX_OK);
+  ASSERT_OK(b.Read(data));
   EXPECT_EQ(data, std::vector<uint8_t>({0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x01, 0x02}));
 }
 
@@ -92,7 +92,7 @@ TEST_F(BufferTest, TestBufferBuildRx) {
 
   EXPECT_EQ(b.id(), space.id);
   std::vector<uint8_t> wr_data({0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0x00, 0x01, 0x02});
-  ASSERT_EQ(b.Write(wr_data), ZX_OK);
+  ASSERT_OK(b.Write(wr_data));
   EXPECT_EQ(ReadVmo(parts[0]), std::vector<uint8_t>({0xAA, 0xBB, 0xCC, 0xDD, 0xEE}));
   EXPECT_EQ(ReadVmo(parts[1]), std::vector<uint8_t>({0x00, 0x01, 0x02}));
 }
@@ -134,7 +134,7 @@ TEST_F(BufferTest, CopyBuffer) {
   auto b_rx = vmos_.MakeRxSpaceBuffer(&space);
 
   size_t total;
-  ASSERT_EQ(b_rx.CopyFrom(&b_tx, &total), ZX_OK);
+  ASSERT_OK(b_rx.CopyFrom(&b_tx, &total));
   EXPECT_EQ(total, 10ul);
 
   EXPECT_EQ(ReadVmo(rx_parts[0]), std::vector<uint8_t>({0x00, 0x01, 0x02}));
@@ -188,13 +188,13 @@ TEST_F(BufferTest, ReadFailure) {
     // A buffer that doesn't fit its VMO is invalid.
     parts.offset = kVmoSize;
     auto b = vmos_.MakeTxBuffer(&tx_buffer, false);
-    ASSERT_EQ(b.Read(&data), ZX_ERR_OUT_OF_RANGE);
+    ASSERT_EQ(b.Read(data), ZX_ERR_OUT_OF_RANGE);
   }
   {
     // A buffer with an invalid vmo_id is invalid.
     tx_buffer.data.vmo_id = kVmoId + 1;
     auto b = vmos_.MakeTxBuffer(&tx_buffer, false);
-    ASSERT_EQ(b.Read(&data), ZX_ERR_NOT_FOUND);
+    ASSERT_EQ(b.Read(data), ZX_ERR_NOT_FOUND);
   }
 }
 

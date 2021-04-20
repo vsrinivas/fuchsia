@@ -6,9 +6,7 @@
 #define SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_BUFFER_H_
 
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
-#include <fuchsia/net/tun/cpp/fidl.h>
-#include <lib/fzl/vmo-mapper.h>
-#include <lib/stdcompat/optional.h>
+#include <fuchsia/net/tun/llcpp/fidl.h>
 
 #include <array>
 
@@ -34,7 +32,7 @@ class VmoStore {
       : store_(vmo_store::Options{
             vmo_store::MapOptions{ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
                                   nullptr},
-            cpp17::nullopt}) {}
+            std::nullopt}) {}
 
   ~VmoStore() = default;
 
@@ -111,21 +109,25 @@ class Buffer {
   // Used to serve `fuchsia.net.tun/Device.ReadFrame`.
   // Returns an error if this buffer's definition does not map to valid data (see `VmoStore::Write`
   // for specific error codes).
-  zx_status_t Read(std::vector<uint8_t>* vec);
+  zx_status_t Read(std::vector<uint8_t>& vec);
   // Writes `data` into this buffer.
   // If this `data` does not fit in this buffer, `ZX_ERR_OUT_OF_RANGE` is returned.
   // Returns an error if this buffer's definition does not map to valid data (see `VmoStore::Write`
   // for specific error codes).
   // Used to serve `fuchsia.net.tun/Device.WriteFrame`.
+  zx_status_t Write(const uint8_t* data, size_t count);
+  zx_status_t Write(const fidl::VectorView<uint8_t>& data);
   zx_status_t Write(const std::vector<uint8_t>& data);
   // Copies data from `other` into this buffer, returning the number of bytes written in `total`.
   zx_status_t CopyFrom(Buffer* other, size_t* total);
 
-  inline fuchsia::hardware::network::FrameType frame_type() const { return frame_type_.value(); }
+  inline fuchsia_hardware_network::wire::FrameType frame_type() const {
+    return frame_type_.value();
+  }
 
   inline uint32_t id() const { return id_; }
 
-  inline std::optional<fuchsia::net::tun::FrameMetadata> TakeMetadata() {
+  inline std::optional<fuchsia_net_tun::wire::FrameMetadata> TakeMetadata() {
     return std::exchange(meta_, std::nullopt);
   }
 
@@ -143,8 +145,8 @@ class Buffer {
   const uint8_t vmo_id_;
   std::array<buffer_region_t, MAX_BUFFER_PARTS> parts_{};
   const size_t parts_count_{};
-  std::optional<fuchsia::net::tun::FrameMetadata> meta_;
-  const cpp17::optional<fuchsia::hardware::network::FrameType> frame_type_;
+  std::optional<fuchsia_net_tun::wire::FrameMetadata> meta_;
+  const std::optional<fuchsia_hardware_network::wire::FrameType> frame_type_;
 };
 
 }  // namespace tun

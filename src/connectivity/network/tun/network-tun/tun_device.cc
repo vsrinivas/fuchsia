@@ -11,44 +11,50 @@
 
 #include <fbl/auto_lock.h>
 
-#include "util.h"
+#include "buffer.h"
 
 namespace network {
 namespace tun {
 
 namespace {
+template <typename F>
+void WithWireState(F fn, InternalState& state) {
+  fidl::FidlAllocator alloc;
 
-bool MacListEquals(const std::vector<fuchsia::net::MacAddress>& l,
-                   const std::vector<fuchsia::net::MacAddress>& r) {
-  auto li = l.begin();
-  auto ri = r.begin();
-  for (; li != l.end() && ri != r.end(); li++, ri++) {
-    if (memcmp(li->octets.data(), ri->octets.data(), MAC_SIZE) != 0) {
-      return false;
-    }
+  fuchsia_net_tun::wire::InternalState wire_state;
+  wire_state.Allocate(alloc);
+  wire_state.set_has_session(alloc, state.has_session);
+
+  if (state.mac.has_value()) {
+    MacState& mac = state.mac.value();
+    fuchsia_net_tun::wire::MacState wire_mac;
+    wire_mac.Allocate(alloc);
+    wire_mac.set_mode(alloc, mac.mode);
+    fidl::VectorView multicast_filters =
+        fidl::VectorView<fuchsia_net::wire::MacAddress>::FromExternal(mac.multicast_filters);
+    wire_mac.set_multicast_filters(alloc, multicast_filters);
+    wire_state.set_mac(alloc, wire_mac);
   }
-  return li == l.end() && ri == r.end();
-}
 
+  fn(std::move(wire_state));
+}
 }  // namespace
 
-TunDevice::TunDevice(fit::callback<void(TunDevice*)> teardown,
-                     fuchsia::net::tun::DeviceConfig config)
-    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-      teardown_callback_(std::move(teardown)),
+TunDevice::TunDevice(fit::callback<void(TunDevice*)> teardown, DeviceConfig config)
+    : teardown_callback_(std::move(teardown)),
       config_(std::move(config)),
-      binding_(this) {
-  binding_.set_error_handler([this](zx_status_t /*unused*/) { Teardown(); });
-}
+      loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
-zx::status<std::unique_ptr<TunDevice>> TunDevice::Create(fit::callback<void(TunDevice*)> teardown,
-                                                         fuchsia::net::tun::DeviceConfig config) {
-  if (!TryConsolidateDeviceConfig(&config)) {
+zx::status<std::unique_ptr<TunDevice>> TunDevice::Create(
+    fit::callback<void(TunDevice*)> teardown, fuchsia_net_tun::wire::DeviceConfig config) {
+  std::optional validated_config = DeviceConfig::Create(config);
+  if (!validated_config.has_value()) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
   fbl::AllocChecker ac;
-  std::unique_ptr<TunDevice> tun(new (&ac) TunDevice(std::move(teardown), std::move(config)));
+  std::unique_ptr<TunDevice> tun(
+      new (&ac) TunDevice(std::move(teardown), std::move(validated_config.value())));
   if (!ac.check()) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
@@ -61,15 +67,15 @@ zx::status<std::unique_ptr<TunDevice>> TunDevice::Create(fit::callback<void(TunD
   }
 
   zx::status device =
-      DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), tun->config_.online());
+      DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), tun->config_.online);
   if (device.is_error()) {
     FX_LOGF(ERROR, "tun", "TunDevice::Init device init failed with %s", device.status_string());
     return device.take_error();
   }
   tun->device_ = std::move(device.value());
 
-  if (tun->config_.has_mac()) {
-    zx::status mac = MacAdapter::Create(tun.get(), tun->config_.mac(), false);
+  if (tun->config_.mac.has_value()) {
+    zx::status mac = MacAdapter::Create(tun.get(), tun->config_.mac.value(), false);
     if (mac.is_error()) {
       FX_LOGF(ERROR, "tun", "TunDevice::Init mac init failed with %s", mac.status_string());
       return mac.take_error();
@@ -102,8 +108,10 @@ TunDevice::~TunDevice() {
   FX_VLOG(1, "tun", "TunDevice destroyed");
 }
 
-void TunDevice::Bind(fidl::InterfaceRequest<fuchsia::net::tun::Device> req) {
-  binding_.Bind(std::move(req), loop_.dispatcher());
+void TunDevice::Bind(fidl::ServerEnd<fuchsia_net_tun::Device> req) {
+  binding_ = fidl::BindServer(loop_.dispatcher(), std::move(req), this,
+                              [](TunDevice* impl, fidl::UnbindInfo,
+                                 fidl::ServerEnd<fuchsia_net_tun::Device>) { impl->Teardown(); });
 }
 
 void TunDevice::Teardown() {
@@ -112,55 +120,69 @@ void TunDevice::Teardown() {
   }
 }
 
-void TunDevice::RunWriteFrame() {
-  while (!pending_write_frame_.empty()) {
-    auto& pending = pending_write_frame_.front();
-    std::optional<fuchsia::net::tun::FrameMetadata> meta;
-    if (pending.frame.has_meta()) {
-      meta = std::move(pending.frame.meta());
-    }
-    zx::status avail =
-        device_->WriteRxFrame(pending.frame.frame_type(), pending.frame.data(), meta);
-    if (avail.is_error()) {
-      if (avail.status_value() == ZX_ERR_SHOULD_WAIT && IsBlocking()) {
-        return;
-      }
-      pending.callback(fit::error(avail.status_value()));
-    } else {
+template <typename F, typename C>
+bool TunDevice::WriteWith(F fn, C& completer) {
+  zx::status avail = fn();
+  switch (zx_status_t status = avail.status_value(); status) {
+    case ZX_OK:
       if (avail.value() == 0) {
         // Clear the writable signal if no more buffers are available afterwards.
-        signals_self_.signal_peer(static_cast<uint32_t>(fuchsia::net::tun::Signals::WRITABLE), 0);
+        signals_self_.signal_peer(uint32_t(fuchsia_net_tun::wire::Signals::kWritable), 0);
       }
-      pending.callback(fit::ok());
+      completer.ReplySuccess();
+      return true;
+    case ZX_ERR_SHOULD_WAIT:
+      if (IsBlocking()) {
+        return false;
+      }
+      __FALLTHROUGH;
+    default:
+      completer.ReplyError(status);
+      return true;
+  }
+}
+
+bool TunDevice::RunWriteFrame() {
+  while (!pending_write_frame_.empty()) {
+    auto& pending = pending_write_frame_.front();
+    bool handled = WriteWith(
+        [this, &pending]() {
+          return device_->WriteRxFrame(pending.frame_type, pending.data, pending.meta);
+        },
+        pending.completer);
+    if (!handled) {
+      return false;
     }
     pending_write_frame_.pop();
   }
+  return true;
 }
 
 void TunDevice::RunReadFrame() {
   while (!pending_read_frame_.empty()) {
     auto success = device_->TryGetTxBuffer([this](Buffer* buff, size_t avail) {
       std::vector<uint8_t> data;
-      zx_status_t status = buff->Read(&data);
+      zx_status_t status = buff->Read(data);
       if (status != ZX_OK) {
         FX_LOGF(ERROR, "tun", "Failed to read from tx buffer: %s", zx_status_get_string(status));
       } else if (data.empty()) {
         FX_LOG(WARNING, "tun", "Ignoring empty tx buffer");
       } else {
-        auto& callback = pending_read_frame_.front();
-        fuchsia::net::tun::Device_ReadFrame_Response rsp;
-
-        rsp.frame.set_data(std::move(data));
-        rsp.frame.set_frame_type(buff->frame_type());
-        auto meta = buff->TakeMetadata();
-        if (meta) {
-          rsp.frame.set_meta(std::move(*meta));
+        fidl::FidlAllocator alloc;
+        fuchsia_net_tun::wire::Frame frame;
+        frame.Allocate(alloc);
+        fidl::VectorView data_view = fidl::VectorView<uint8_t>::FromExternal(data);
+        frame.set_data(alloc, data_view);
+        frame.set_frame_type(alloc, buff->frame_type());
+        std::optional meta = buff->TakeMetadata();
+        if (meta.has_value()) {
+          frame.set_meta(alloc, meta.value());
         }
-        callback(fuchsia::net::tun::Device_ReadFrame_Result::WithResponse(std::move(rsp)));
+        pending_read_frame_.front().ReplySuccess(std::move(frame));
         pending_read_frame_.pop();
         if (avail == 0) {
-          // clear SIGNAL_READABLE if we don't have any more tx buffers.
-          signals_self_.signal_peer(static_cast<uint32_t>(fuchsia::net::tun::Signals::READABLE), 0);
+          // clear Signals::READABLE if we don't have any more tx buffers.
+          signals_self_.signal_peer(uint32_t(fuchsia_net_tun::wire::Signals::kReadable), 0);
         }
       }
     });
@@ -168,120 +190,135 @@ void TunDevice::RunReadFrame() {
       if (IsBlocking()) {
         return;
       }
-      auto& callback = pending_read_frame_.front();
-      callback(fuchsia::net::tun::Device_ReadFrame_Result::WithErr(ZX_ERR_SHOULD_WAIT));
+      pending_read_frame_.front().ReplyError(ZX_ERR_SHOULD_WAIT);
       pending_read_frame_.pop();
     }
   }
 }
 
-void TunDevice::RunStateChange() {
-  if (!pending_watch_state_) {
-    return;
+InternalState TunDevice::State() const {
+  InternalState state = {
+      .has_session = device_->HasSession(),
+  };
+  if (mac_) {
+    state.mac = mac_->GetMacState();
   }
-  fuchsia::net::tun::InternalState state;
-  state.set_has_session(device_->HasSession());
-  {
-    if (mac_) {
-      fuchsia::net::tun::MacState mac_state;
-      mac_->CloneMacState(&mac_state);
-      state.set_mac(std::move(mac_state));
-    }
-  }
-
-  if (last_state_.has_value()) {
-    auto& last = last_state_.value();
-    // only continue if any changes actually occurred compared to the last observed state
-    if (last.has_session() == state.has_session() &&
-        (!last.has_mac() ||
-         (last.mac().mode() == state.mac().mode() &&
-          MacListEquals(last.mac().multicast_filters(), state.mac().multicast_filters())))) {
-      return;
-    }
-  }
-
-  fuchsia::net::tun::InternalState clone;
-  state.Clone(&clone);
-  // store the last informed state through WatchState
-  last_state_ = std::move(clone);
-  pending_watch_state_(std::move(state));
-  pending_watch_state_ = nullptr;
+  return state;
 }
 
-void TunDevice::WriteFrame(fuchsia::net::tun::Frame frame,
-                           fuchsia::net::tun::Device::WriteFrameCallback callback) {
+void TunDevice::RunStateChange() {
+  if (!pending_watch_state_.has_value()) {
+    return;
+  }
+
+  InternalState state = State();
+  // only continue if any changes actually occurred compared to the last observed state
+  if (last_state_.has_value() && last_state_.value() == state) {
+    return;
+  }
+
+  WatchStateCompleter::Async completer = std::exchange(pending_watch_state_, std::nullopt).value();
+
+  WithWireState(
+      [&completer](fuchsia_net_tun::wire::InternalState state) {
+        completer.Reply(std::move(state));
+      },
+      state);
+
+  // store the last informed state through WatchState
+  last_state_ = std::move(state);
+}
+
+void TunDevice::WriteFrame(fuchsia_net_tun::wire::Frame frame,
+                           WriteFrameCompleter::Sync& completer) {
   if (pending_write_frame_.size() >= kMaxPendingOps) {
-    callback(fit::error(ZX_ERR_NO_RESOURCES));
+    completer.ReplyError(ZX_ERR_NO_RESOURCES);
     return;
   }
   if (!(frame.has_frame_type() && frame.has_data() && !frame.data().empty())) {
-    callback(fit::error(ZX_ERR_INVALID_ARGS));
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
-  pending_write_frame_.emplace(std::move(frame), std::move(callback));
-  RunWriteFrame();
+  bool ready = RunWriteFrame();
+  if (ready) {
+    std::optional<fuchsia_net_tun::wire::FrameMetadata> meta;
+    if (frame.has_meta()) {
+      meta = frame.meta();
+    }
+    bool handled = WriteWith(
+        [this, &frame, &meta]() {
+          return device_->WriteRxFrame(frame.frame_type(), frame.data(), meta);
+        },
+        completer);
+    if (handled) {
+      return;
+    }
+  }
+  pending_write_frame_.emplace(frame, completer.ToAsync());
 }
 
-void TunDevice::ReadFrame(fuchsia::net::tun::Device::ReadFrameCallback callback) {
+void TunDevice::ReadFrame(ReadFrameCompleter::Sync& completer) {
   if (pending_read_frame_.size() >= kMaxPendingOps) {
-    callback(fit::error(ZX_ERR_NO_RESOURCES));
+    completer.ReplyError(ZX_ERR_NO_RESOURCES);
     return;
   }
-  pending_read_frame_.push(std::move(callback));
+  pending_read_frame_.push(completer.ToAsync());
   RunReadFrame();
 }
 
-void TunDevice::GetSignals(fuchsia::net::tun::Device::GetSignalsCallback callback) {
+void TunDevice::GetSignals(GetSignalsCompleter::Sync& completer) {
   zx::eventpair dup;
   signals_peer_.duplicate(ZX_RIGHTS_BASIC, &dup);
-  callback(std::move(dup));
+  completer.Reply(std::move(dup));
 }
 
-void TunDevice::GetState(fuchsia::net::tun::Device::GetStateCallback callback) {
-  fuchsia::net::tun::InternalState state;
-  state.set_has_session(device_->HasSession());
-  if (mac_) {
-    fuchsia::net::tun::MacState mac_state;
-    mac_->CloneMacState(&mac_state);
-    state.set_mac(std::move(mac_state));
-  }
-  callback(std::move(state));
+void TunDevice::GetState(GetStateCompleter::Sync& completer) {
+  InternalState state = State();
+  WithWireState(
+      [&completer](fuchsia_net_tun::wire::InternalState state) {
+        completer.Reply(std::move(state));
+      },
+      state);
 }
 
-void TunDevice::WatchState(fuchsia::net::tun::Device::WatchStateCallback callback) {
+void TunDevice::WatchState(WatchStateCompleter::Sync& completer) {
   if (pending_watch_state_) {
     // this is a programming error, we enforce that clients don't do this by closing their channel.
-    binding_.Close(ZX_ERR_INTERNAL);
+    binding_.value().Close(ZX_ERR_INTERNAL);
     Teardown();
     return;
   }
-  pending_watch_state_ = std::move(callback);
+  pending_watch_state_ = completer.ToAsync();
   RunStateChange();
 }
 
-void TunDevice::SetOnline(bool online, fuchsia::net::tun::Device::SetOnlineCallback callback) {
+void TunDevice::SetOnline(bool online, SetOnlineCompleter::Sync& completer) {
   device_->SetOnline(online);
   if (!online) {
     // if we just went offline, we need to complete all pending writes.
     RunWriteFrame();
   }
-  callback();
+  completer.Reply();
 }
 
-void TunDevice::ConnectProtocols(fuchsia::net::tun::Protocols protos) {
-  if (device_ && protos.has_network_device()) {
-    auto status = device_->Bind(
-        fidl::ServerEnd<netdev::Device>(protos.mutable_network_device()->TakeChannel()));
-    if (status != ZX_OK) {
-      FX_LOGF(ERROR, "tun", "Failed to bind to network device: %s", zx_status_get_string(status));
+void TunDevice::ConnectProtocols(fuchsia_net_tun::wire::Protocols protos,
+                                 ConnectProtocolsCompleter::Sync& completer) {
+  if (protos.has_network_device()) {
+    fidl::ServerEnd device = std::move(protos.network_device());
+    if (device_) {
+      zx_status_t status = device_->Bind(std::move(device));
+      if (status != ZX_OK) {
+        FX_LOGF(ERROR, "tun", "Failed to bind to network device: %s", zx_status_get_string(status));
+      }
     }
   }
-  if (mac_ && protos.has_mac_addressing()) {
-    auto status = mac_->Bind(
-        loop_.dispatcher(),
-        fidl::ServerEnd<netdev::MacAddressing>(protos.mutable_mac_addressing()->TakeChannel()));
-    if (status != ZX_OK) {
-      FX_LOGF(ERROR, "tun", "Failed to bind to mac addressing: %s", zx_status_get_string(status));
+  if (protos.has_mac_addressing()) {
+    fidl::ServerEnd mac = std::move(protos.mac_addressing());
+    if (mac_) {
+      zx_status_t status = mac_->Bind(loop_.dispatcher(), std::move(mac));
+      if (status != ZX_OK) {
+        FX_LOGF(ERROR, "tun", "Failed to bind to mac addressing: %s", zx_status_get_string(status));
+      }
     }
   }
 }
@@ -291,12 +328,12 @@ void TunDevice::OnHasSessionsChanged(DeviceAdapter* device) {
 }
 
 void TunDevice::OnTxAvail(DeviceAdapter* device) {
-  signals_self_.signal_peer(0, static_cast<uint32_t>(fuchsia::net::tun::Signals::READABLE));
+  signals_self_.signal_peer(0, uint32_t(fuchsia_net_tun::wire::Signals::kReadable));
   async::PostTask(loop_.dispatcher(), [this]() { RunReadFrame(); });
 }
 
 void TunDevice::OnRxAvail(DeviceAdapter* device) {
-  signals_self_.signal_peer(0, static_cast<uint32_t>(fuchsia::net::tun::Signals::WRITABLE));
+  signals_self_.signal_peer(0, uint32_t(fuchsia_net_tun::wire::Signals::kWritable));
   async::PostTask(loop_.dispatcher(), [this]() { RunWriteFrame(); });
 }
 

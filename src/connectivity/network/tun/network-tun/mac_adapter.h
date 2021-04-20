@@ -5,13 +5,13 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_MAC_ADAPTER_H_
 #define SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_MAC_ADAPTER_H_
 
-#include <fuchsia/net/cpp/fidl.h>
-#include <fuchsia/net/tun/cpp/fidl.h>
-#include <lib/fidl-async/cpp/bind.h>
+#include <fuchsia/net/llcpp/fidl.h>
+#include <fuchsia/net/tun/llcpp/fidl.h>
 
 #include <fbl/mutex.h>
 
 #include "src/connectivity/network/drivers/network-device/mac/public/network_mac.h"
+#include "state.h"
 
 namespace network {
 namespace tun {
@@ -41,7 +41,7 @@ class MacAdapter : public ddk::MacAddrImplProtocol<MacAdapter>, public MacAddrDe
   // `MODE_PROMISCUOUS`.
   // On success, the adapter is stored in `out`.
   static zx::status<std::unique_ptr<MacAdapter>> Create(MacAdapterParent* parent,
-                                                        fuchsia::net::MacAddress mac,
+                                                        fuchsia_net::wire::MacAddress mac,
                                                         bool promisc_only);
   // Binds the request channel to the MacAddrDeviceInterface. Requests will be served over the
   // provided `dispatcher`.
@@ -56,7 +56,7 @@ class MacAdapter : public ddk::MacAddrImplProtocol<MacAdapter>, public MacAddrDe
   // Same as `Teardown`, but blocks until teardown is complete.
   void TeardownSync();
 
-  const fuchsia::net::MacAddress& mac() { return mac_; }
+  const fuchsia_net::wire::MacAddress& mac() { return mac_; }
 
   // MacAddrImpl protocol:
   void MacAddrImplGetAddress(uint8_t out_mac[MAC_SIZE]);
@@ -64,19 +64,18 @@ class MacAdapter : public ddk::MacAddrImplProtocol<MacAdapter>, public MacAddrDe
   void MacAddrImplSetMode(mode_t mode, const uint8_t* multicast_macs_list,
                           size_t multicast_macs_count);
 
-  // Clones the internal mac state into `out`.
-  void CloneMacState(fuchsia::net::tun::MacState* out);
+  MacState GetMacState();
 
  private:
-  MacAdapter(MacAdapterParent* parent, fuchsia::net::MacAddress mac, bool promisc_only)
+  MacAdapter(MacAdapterParent* parent, fuchsia_net::wire::MacAddress mac, bool promisc_only)
       : parent_(parent), mac_(mac), promisc_only_(promisc_only) {}
 
   fbl::Mutex state_lock_;
   std::unique_ptr<MacAddrDeviceInterface> device_;
   MacAdapterParent* const parent_;  // pointer to parent, not owned.
-  fuchsia::net::MacAddress mac_;
+  fuchsia_net::wire::MacAddress mac_;
   const bool promisc_only_;
-  fuchsia::net::tun::MacState mac_state_ __TA_GUARDED(state_lock_);
+  MacState mac_state_ __TA_GUARDED(state_lock_);
 };
 
 }  // namespace tun

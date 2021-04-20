@@ -6,8 +6,6 @@
 #define SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_TUN_PAIR_H_
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/stdcompat/optional.h>
 
 #include <fbl/intrusive_double_list.h>
 
@@ -22,21 +20,22 @@ namespace tun {
 // `TunPair` uses `DeviceAdapter` and `MacAdapter` to fulfill the `fuchsia.net.tun.DevicePair`
 // protocol. All FIDL requests are served over its own internally held AsyncLoop.
 class TunPair : public fbl::DoublyLinkedListable<std::unique_ptr<TunPair>>,
-                public fuchsia::net::tun::DevicePair,
+                public fidl::WireInterface<fuchsia_net_tun::DevicePair>,
                 public DeviceAdapterParent,
                 public MacAdapterParent {
  public:
   // Creates a new `TunPair` with `config`.
   // `teardown` is called when all the bound client channels are closed.
-  static zx::status<std::unique_ptr<TunPair>> Create(fit::callback<void(TunPair*)> teardown,
-                                                     fuchsia::net::tun::DevicePairConfig config);
+  static zx::status<std::unique_ptr<TunPair>> Create(
+      fit::callback<void(TunPair*)> teardown, fuchsia_net_tun::wire::DevicePairConfig config);
   ~TunPair() override;
 
   // fuchsia.net.tun.DevicePair implementation:
-  void ConnectProtocols(fuchsia::net::tun::DevicePairEnds requests) override;
+  void ConnectProtocols(fuchsia_net_tun::wire::DevicePairEnds requests,
+                        ConnectProtocolsCompleter::Sync& completer) override;
 
   // DeviceAdapterParent implementation:
-  const fuchsia::net::tun::BaseConfig& config() const override { return config_.base(); };
+  const BaseConfig& config() const override { return config_; };
   void OnHasSessionsChanged(DeviceAdapter* device) override;
   void OnTxAvail(DeviceAdapter* device) override;
   void OnRxAvail(DeviceAdapter* device) override;
@@ -48,21 +47,22 @@ class TunPair : public fbl::DoublyLinkedListable<std::unique_ptr<TunPair>>,
   // Requests are served over this device's owned loop.
   // NOTE: at this moment only one binding is supported, if the device is already bound the previous
   // channel is closed.
-  void Bind(fidl::InterfaceRequest<fuchsia::net::tun::DevicePair> req);
+  void Bind(fidl::ServerEnd<fuchsia_net_tun::DevicePair> req);
 
  private:
-  TunPair(fit::callback<void(TunPair*)> teardown, fuchsia::net::tun::DevicePairConfig config);
+  TunPair(fit::callback<void(TunPair*)> teardown, DevicePairConfig config);
   void ConnectProtocols(const std::unique_ptr<DeviceAdapter>& device,
                         const std::unique_ptr<MacAdapter>& mac,
-                        fuchsia::net::tun::Protocols protos);
+                        fuchsia_net_tun::wire::Protocols protos);
   void Teardown();
 
-  fbl::Mutex power_lock_;
   fit::callback<void(TunPair*)> teardown_callback_;
-  fuchsia::net::tun::DevicePairConfig config_;
+  const DevicePairConfig config_;
+
+  fbl::Mutex power_lock_;
   async::Loop loop_;
-  cpp17::optional<thrd_t> loop_thread_;
-  fidl::Binding<fuchsia::net::tun::DevicePair> binding_;
+  std::optional<thrd_t> loop_thread_;
+  std::optional<fidl::ServerBindingRef<fuchsia_net_tun::DevicePair>> binding_;
   std::unique_ptr<DeviceAdapter> left_;
   std::unique_ptr<DeviceAdapter> right_;
   std::unique_ptr<MacAdapter> mac_left_;
