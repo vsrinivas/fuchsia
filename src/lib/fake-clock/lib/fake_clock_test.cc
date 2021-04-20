@@ -68,14 +68,6 @@ TEST_F(FakeClockTest, nanosleep) {
   ASSERT_TRUE(done);
 }
 
-TEST_F(FakeClockTest, clock_get) {
-  Advance(zx::sec(90));
-  auto t1 = GetTime();
-  zx_time_t t2;
-  ASSERT_OK(zx_clock_get(ZX_CLOCK_MONOTONIC, &t2));
-  ASSERT_EQ(t2, t1.get());
-}
-
 TEST_F(FakeClockTest, object_wait_one_timeout) {
   zx_status_t status;
   zx_signals_t signals;
