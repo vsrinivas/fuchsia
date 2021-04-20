@@ -272,8 +272,8 @@ void NetworkDeviceClient::ResetRxDescriptor(buffer_descriptor_t* descriptor) {
 void NetworkDeviceClient::ResetTxDescriptor(buffer_descriptor_t* descriptor) {
   descriptor->chain_length = 0;
   descriptor->nxt = 0xFFFF;
-  descriptor->tail_length = device_info_.min_tx_buffer_head;
-  descriptor->head_length = device_info_.min_tx_buffer_tail;
+  descriptor->tail_length = device_info_.min_tx_buffer_tail;
+  descriptor->head_length = device_info_.min_tx_buffer_head;
   descriptor->info_type = static_cast<uint32_t>(netdev::InfoType::NO_INFO);
   descriptor->data_length = session_config_.buffer_length - device_info_.min_tx_buffer_head -
                             device_info_.min_tx_buffer_tail;
