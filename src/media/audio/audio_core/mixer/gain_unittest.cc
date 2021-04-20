@@ -97,15 +97,18 @@ class GainBase : public testing::Test {
   virtual void SetOtherGainWithRamp(float gain_db, zx::duration duration,
                                     fuchsia::media::audio::RampType ramp_type =
                                         fuchsia::media::audio::RampType::SCALE_LINEAR) = 0;
+  virtual float GetPartialGainDb() = 0;
+  virtual float GetOtherPartialGainDb() = 0;
+
   virtual void CompleteRamp() = 0;
 
   // Used by SourceGainTest and DestGainTest
-  void TestUnityGain(float source_gain_db, float dest_gain_db);
+  void TestUnityGain(float first_gain_db, float second_gain_db);
   void UnityChecks();
   void GainCachingChecks();
-  void VerifyMinGain(float source_gain_db, float dest_gain_db);
+  void VerifyMinGain(float first_gain_db, float second_gain_db);
   void MinGainChecks();
-  void VerifyMaxGain(float source_gain_db, float dest_gain_db);
+  void VerifyMaxGain(float first_gain_db, float second_gain_db);
   void MaxGainChecks();
   void SourceMuteChecks();
 
@@ -159,6 +162,9 @@ class SourceGainControl : public GainBase {
                                 fuchsia::media::audio::RampType::SCALE_LINEAR) override {
     gain_.SetDestGainWithRamp(gain_db, duration, ramp_type);
   }
+  float GetPartialGainDb() override { return gain_.GetSourceGainDb(); }
+  float GetOtherPartialGainDb() override { return gain_.GetDestGainDb(); }
+
   void CompleteRamp() override { gain_.CompleteSourceRamp(); }
 };
 class DestGainControl : public GainBase {
@@ -175,6 +181,9 @@ class DestGainControl : public GainBase {
                                 fuchsia::media::audio::RampType::SCALE_LINEAR) override {
     gain_.SetSourceGainWithRamp(gain_db, duration, ramp_type);
   }
+  float GetPartialGainDb() override { return gain_.GetDestGainDb(); }
+  float GetOtherPartialGainDb() override { return gain_.GetSourceGainDb(); }
+
   void CompleteRamp() override { gain_.CompleteDestRamp(); }
 };
 
@@ -201,10 +210,11 @@ TEST_F(GainTest, Defaults) {
   EXPECT_FALSE(gain_.IsRamping());
 }
 
-void GainBase::TestUnityGain(float source_gain_db, float dest_gain_db) {
-  SetGain(source_gain_db);
-  SetOtherGain(dest_gain_db);
+void GainBase::TestUnityGain(float first_gain_db, float second_gain_db) {
+  SetGain(first_gain_db);
+  SetOtherGain(second_gain_db);
   EXPECT_FLOAT_EQ(Gain::kUnityScale, gain_.GetGainScale());
+  EXPECT_FLOAT_EQ(Gain::kUnityGainDb, GetPartialGainDb() + GetOtherPartialGainDb());
 
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_TRUE(gain_.IsUnity());
@@ -239,11 +249,17 @@ void GainBase::GainCachingChecks() {
   SetOtherGain(-3.0f);
   amplitude_scale = gain_.GetGainScale();
   EXPECT_FLOAT_EQ(Gain::kUnityScale, amplitude_scale);
+  EXPECT_GT(GetPartialGainDb(), Gain::kUnityGainDb);
+  EXPECT_LT(GetOtherPartialGainDb(), Gain::kUnityGainDb);
 
-  // If Render gain is cached val of +3, then combo should be Unity.
-  SetOtherGain(-3.0f);
+  SetOtherGain(-1.0f);
+  EXPECT_EQ(GetOtherPartialGainDb(), -1.0f);
+
+  // If Render gain is cached val of +3, then combo should be greater than Unity.
   amplitude_scale = gain_.GetGainScale();
-  EXPECT_FLOAT_EQ(Gain::kUnityScale, amplitude_scale);
+  EXPECT_GT(amplitude_scale, Gain::kUnityScale);
+  // And now the previous SetOtherGain call has been incorporated into the cache.
+  EXPECT_EQ(GetOtherPartialGainDb(), -1.0f);
 
   // Try another Output gain; with cached +3 this should equate to -6dB.
   SetOtherGain(-9.0f);
@@ -258,11 +274,16 @@ void GainBase::GainCachingChecks() {
 TEST_F(SourceGainTest, GainCaching) { GainCachingChecks(); }
 TEST_F(DestGainTest, GainCaching) { GainCachingChecks(); }
 
-void GainBase::VerifyMinGain(float source_gain_db, float dest_gain_db) {
-  SetGain(source_gain_db);
-  SetOtherGain(dest_gain_db);
+void GainBase::VerifyMinGain(float first_gain_db, float second_gain_db) {
+  SetGain(first_gain_db);
+  SetOtherGain(second_gain_db);
 
   EXPECT_FLOAT_EQ(Gain::kMuteScale, gain_.GetGainScale());
+
+  EXPECT_FLOAT_EQ(GetPartialGainDb(),
+                  std::clamp(first_gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
+  EXPECT_FLOAT_EQ(GetOtherPartialGainDb(),
+                  std::clamp(second_gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsSilent());
@@ -295,12 +316,17 @@ void GainBase::MinGainChecks() {
 TEST_F(SourceGainTest, GainIsLimitedToMin) { MinGainChecks(); }
 TEST_F(DestGainTest, GainIsLimitedToMin) { MinGainChecks(); }
 
-void GainBase::VerifyMaxGain(float source_gain_db, float dest_gain_db) {
-  SetGain(source_gain_db);
-  SetOtherGain(dest_gain_db);
+void GainBase::VerifyMaxGain(float first_gain_db, float second_gain_db) {
+  SetGain(first_gain_db);
+  SetOtherGain(second_gain_db);
 
   EXPECT_FLOAT_EQ(Gain::kMaxScale, gain_.GetGainScale());
   EXPECT_FLOAT_EQ(Gain::kMaxGainDb, gain_.GetGainDb());
+
+  EXPECT_FLOAT_EQ(GetPartialGainDb(),
+                  std::clamp(first_gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
+  EXPECT_FLOAT_EQ(GetOtherPartialGainDb(),
+                  std::clamp(second_gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());

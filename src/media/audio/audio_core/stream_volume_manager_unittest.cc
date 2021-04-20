@@ -14,7 +14,6 @@ namespace {
 
 class MockStreamVolume : public StreamVolume {
  public:
-  bool GetStreamMute() const override { return mute_; }
   fuchsia::media::Usage GetStreamUsage() const override { return fidl::Clone(usage_); }
   bool RespectsPolicyAdjustments() const override { return respects_policy_adjustments_; }
   void RealizeVolume(VolumeCommand volume_command) override {
@@ -119,18 +118,6 @@ TEST_F(StreamVolumeManagerTest, UsageChangesUpdateRegisteredStreams) {
       -10.0);
 
   EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, -10.0);
-}
-
-TEST_F(StreamVolumeManagerTest, StreamMuteIsConsidered) {
-  mock_.mute_ = true;
-  mock_.usage_ =
-      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
-
-  manager_.AddStream(&mock_);
-  manager_.SetUsageGain(
-      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT), 0.0);
-
-  EXPECT_EQ(mock_.volume_command_.gain_db_adjustment, fuchsia::media::audio::MUTED_GAIN_DB);
 }
 
 TEST_F(StreamVolumeManagerTest, StreamsCanBeRemoved) {

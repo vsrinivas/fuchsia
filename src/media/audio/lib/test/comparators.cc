@@ -45,7 +45,7 @@ std::string CompareAudioBuffersShowContext(AudioBufferSlice<SampleFormat> got_sl
     for (auto chan = 0; chan < got_slice.format().channels(); ++chan) {
       // Translate to the equivalent offset in want_slice.buf.
       int64_t want_frame = frame + want_slice.start_frame() - got_slice.start_frame();
-      if (!want_slice.empty() && want_frame < want_slice.buf()->NumFrames()) {
+      if (!want_slice.empty() && want_frame < want_slice.buf()->NumFrames() && want_frame >= 0) {
         out << SampleFormatTraits<SampleFormat>::ToString(
             want_slice.buf()->SampleAt(want_frame, chan));
       } else {

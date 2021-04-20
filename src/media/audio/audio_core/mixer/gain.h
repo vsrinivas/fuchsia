@@ -84,6 +84,49 @@ class Gain {
   // is the Destination. During capture, the input device is the Source, and the
   // capturer stream is the Destination (emitted via API to app clients).
   //
+  // Retrieve the overall gain-scale, recalculating from respective pieces if needed.
+  AScale GetGainScale();
+
+  void GetScaleArray(AScale* scale_arr, int64_t num_frames, const TimelineRate& rate);
+
+  // Calculate the gain-scale, then convert it to decibels-full-scale.
+  float GetGainDb() { return ScaleToDb(GetGainScale()); }
+
+  // Return the partial components of a stream's gain_db, including mute effects. Note that this
+  // uses the latest source or dest gain_db values that have been set, but it does not automatically
+  // recalculate gain-scales, as these are not needed in order to return this DB value.
+  float GetSourceGainDb() const {
+    return source_mute_ ? kMinGainDb : std::clamp(target_source_gain_db_, kMinGainDb, kMaxGainDb);
+  }
+  float GetDestGainDb() const { return std::clamp(target_dest_gain_db_, kMinGainDb, kMaxGainDb); }
+
+  // These functions determine which performance-optimized templatized functions we use for a Mix.
+  // Thus they include knowledge about the foreseeable future (e.g. ramping).
+  //
+  // IsSilent:      Muted OR (current gain is silent AND not ramping toward >kMinGainDb).
+  // IsUnity:       Current gain == kUnityGainDb AND not ramping.
+  // IsRamping:     Remaining ramp duration > 0 AND not muted.
+  //
+  bool IsSilent() {
+    // Not only currently silent, but also either
+    return IsSilentNow() &&
+           // ... source gain causes silence (is below mute point), regardless of dest gain, or
+           ((target_source_gain_db_ <= kMinGainDb && source_ramp_duration_.get() == 0) ||
+            // .. dest gain causes silence (is below mute point), regardless of source gain, or
+            (target_dest_gain_db_ <= kMinGainDb && dest_ramp_duration_.get() == 0) ||
+            ((source_ramp_duration_.get() == 0 || start_source_gain_db_ >= end_source_gain_db_) &&
+             // ... all stages that are ramping must be downward.
+             (dest_ramp_duration_.get() == 0 || start_dest_gain_db_ >= end_dest_gain_db_)));
+  }
+
+  bool IsUnity() {
+    return !IsMute() && !IsRamping() && (target_source_gain_db_ + target_dest_gain_db_ == 0.0f);
+  }
+
+  bool IsRamping() {
+    return !IsMute() && (source_ramp_duration_.get() > 0 || dest_ramp_duration_.get() > 0);
+  }
+
   // These SetGain calls set the source's or destination's contribution to a
   // link's overall software gain control. For stream gain, we allow values in
   // the range [-inf, 24.0]. Callers must guarantee single-threaded semantics
@@ -158,54 +201,25 @@ class Gain {
     }
   }
 
-  float GetGainDb() { return ScaleToDb(GetGainScale()); }
-
-  // Calculate the stream's gain-scale, from cached source and dest values.
-  AScale GetGainScale();
-
-  void GetScaleArray(AScale* scale_arr, int64_t num_frames, const TimelineRate& rate);
-
   // Advance the state of any gain ramp by the specified number of frames.
   void Advance(int64_t num_frames, const TimelineRate& rate);
-
-  // These functions determine which performance-optimized templatized functions we use for a Mix.
-  // Thus they include knowledge about the foreseeable future (e.g. ramping).
-  //
-  // IsSilent:      Muted OR (current gain is silent AND not ramping toward >kMinGainDb).
-  // IsUnity:       Current gain == kUnityGainDb AND not ramping.
-  // IsRamping:     Remaining ramp duration > 0 AND not muted.
-  //
-  bool IsSilent() {
-    // Not only currently silent, but also either
-    return IsSilentNow() &&
-           // ... source gain causes silence (is below mute point), regardless of dest gain, or
-           ((target_source_gain_db_ <= kMinGainDb && source_ramp_duration_.get() == 0) ||
-            // .. dest gain causes silence (is below mute point), regardless of source gain, or
-            (target_dest_gain_db_ <= kMinGainDb && dest_ramp_duration_.get() == 0) ||
-            ((source_ramp_duration_.get() == 0 || start_source_gain_db_ >= end_source_gain_db_) &&
-             // ... all stages that are ramping must be downward.
-             (dest_ramp_duration_.get() == 0 || start_dest_gain_db_ >= end_dest_gain_db_)));
-  }
-
-  bool IsUnity() {
-    return !IsMute() && !IsRamping() && (target_source_gain_db_ + target_dest_gain_db_ == 0.0f);
-  }
-
-  bool IsRamping() {
-    return !IsMute() && (source_ramp_duration_.get() > 0 || dest_ramp_duration_.get() > 0);
-  }
 
  private:
   // Internal functions for querying the current state of the Gain object
   //
   // Object is muted and will remain silent, regardless of gain or ramp values
   bool IsMute() const { return source_mute_; }
+
   // CURRENT gain <= kMinGainDb, including mute effects.
   bool IsSilentNow() const {
     return IsMute() || (target_source_gain_db_ <= kMinGainDb) ||
            (target_dest_gain_db_ <= kMinGainDb) ||
            (target_source_gain_db_ + target_dest_gain_db_ <= kMinGainDb);
   }
+
+  // Recalculate the stream's gain-scale, from respective source and dest values that may have
+  // changed since the last time this was called.
+  void RecalculateGainScale();
 
   float target_source_gain_db_ = kUnityGainDb;
   float target_dest_gain_db_ = kUnityGainDb;

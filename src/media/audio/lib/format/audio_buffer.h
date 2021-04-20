@@ -9,6 +9,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <string.h>
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
 
@@ -85,8 +86,8 @@ class AudioBuffer {
   // For debugging, display a given range of frames in aligned columns. Column width is a power-of-2
   // based on sample width and number of channels. For row 0, display space until the first frame.
   void Display(int64_t start_frame, int64_t end_frame, std::string tag = "") const {
-    start_frame = std::min(start_frame, NumFrames());
-    end_frame = std::min(end_frame, NumFrames());
+    start_frame = std::clamp(start_frame, 0l, NumFrames());
+    end_frame = std::clamp(end_frame, start_frame, NumFrames());
 
     if (tag.size()) {
       printf("%s\n", tag.c_str());

@@ -7,9 +7,11 @@
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "fuchsia/media/audio/cpp/fidl.h"
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/stream_usage.h"
+#include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/lib/clock/utils.h"
 
 namespace media::audio {
@@ -27,7 +29,9 @@ AudioRenderer::~AudioRenderer() {
 }
 
 void AudioRenderer::OnLinkAdded() {
+  // With a link, our Mixer and Gain objects have been created, so we can set initial gain levels.
   context().volume_manager().NotifyStreamChanged(this);
+
   BaseRenderer::OnLinkAdded();
 }
 
@@ -45,8 +49,6 @@ void AudioRenderer::ReportStop() {
   BaseRenderer::ReportStop();
   context().audio_admin().UpdateRendererState(usage_, false, this);
 }
-
-bool AudioRenderer::GetStreamMute() const { return mute_; }
 
 void AudioRenderer::SetUsage(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioRenderer::SetUsage");
@@ -118,8 +120,6 @@ void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
   // Once we route the renderer, we accept the default reference clock if one hasn't yet been set.
   reference_clock_is_set_ = true;
 
-  context().volume_manager().NotifyStreamChanged(this);
-
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
   // have to be revalidated as we move into the operational phase of our life.
   InvalidateConfiguration();
@@ -137,56 +137,93 @@ fuchsia::media::Usage AudioRenderer::GetStreamUsage() const {
   return fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage_));
 }
 
+// Set a change to the usage volume+gain_adjustment
 void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
-  context().link_matrix().ForEachDestLink(*this, [this,
-                                                  volume_command](LinkMatrix::LinkHandle link) {
-    FX_CHECK(link.mix_domain) << "Renderer dest link should have a defined mix_domain";
-    float gain_db = link.loudness_transform->Evaluate<3>({
-        VolumeValue{volume_command.volume},
-        GainDbFsValue{volume_command.gain_db_adjustment},
-        GainDbFsValue{stream_gain_db_},
-    });
+  context().link_matrix().ForEachDestLink(
+      *this, [this, volume_command](LinkMatrix::LinkHandle link) {
+        FX_CHECK(link.mix_domain) << "Renderer dest link should have a defined mix_domain";
+        float gain_db = link.loudness_transform->Evaluate<2>({
+            VolumeValue{volume_command.volume},
+            GainDbFsValue{volume_command.gain_db_adjustment},
+        });
 
-    std::stringstream stream;
-    stream << static_cast<const void*>(this) << " (link " << static_cast<const void*>(&link) << ") "
-           << StreamUsage::WithRenderUsage(usage_).ToString() << " Gain(" << gain_db << "db) = "
-           << "Vol(" << volume_command.volume << ") + GainAdjustment("
-           << volume_command.gain_db_adjustment << "db) + StreamGain(" << stream_gain_db_ << "db)";
-    std::string log_string = stream.str();
+        // TODO(fxbug.dev/51049) Swap this logging for inspect or other real-time gain observation
+        FX_LOGS(INFO) << static_cast<const void*>(this) << " (mixer "
+                      << static_cast<const void*>(link.mixer.get()) << ") "
+                      << StreamUsage::WithRenderUsage(usage_).ToString() << " dest_gain("
+                      << (volume_command.ramp.has_value() ? "ramping to " : "") << gain_db
+                      << "db) = Vol(" << volume_command.volume << ") + GainAdjustment("
+                      << volume_command.gain_db_adjustment << "db)";
 
-    // log_string is only included for log-display of loudness changes
-    link.mix_domain->PostTask([link, volume_command, gain_db, log_string]() {
-      auto& gain = link.mixer->bookkeeping().gain;
-      // If not currently ramping, then exit early if asked to change to our current gain value --
-      // or if asked to RAMP to our current gain value.
-      if (!gain.IsRamping() && gain.GetGainDb() == gain_db) {
-        return;
-      }
-      if (volume_command.ramp.has_value()) {
-        // Stop any in-progress ramping; use this ramp instead
-        gain.SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
-                                   volume_command.ramp->ramp_type);
-      } else {
-        // Stop any in-progress ramping; snap to this new gain_db
-        gain.SetSourceGain(gain_db);
-      }
+        link.mix_domain->PostTask([link, volume_command, gain_db, reporter = &reporter()]() {
+          auto& gain = link.mixer->bookkeeping().gain;
 
-      // TODO(fxbug.dev/51049) Logging should be removed upon creation of inspect tool or
-      // other real-time method for gain observation
-      FX_LOGS(INFO) << log_string;
-    });
-    reporter().SetFinalGain(gain_db);
-  });
+          // Stop any in-progress ramping; use this new ramp or gain_db instead
+          if (volume_command.ramp.has_value()) {
+            gain.SetDestGainWithRamp(gain_db, volume_command.ramp->duration,
+                                     volume_command.ramp->ramp_type);
+          } else {
+            gain.SetDestGain(gain_db);
+          }
+
+          reporter->SetFinalGain(link.mixer->bookkeeping().gain.GetGainDb());
+        });
+      });
+}
+
+constexpr bool kLogSetGainMuteRamp = true;
+void AudioRenderer::PostStreamGainMute(StreamGainCommand gain_command) {
+  context().link_matrix().ForEachDestLink(
+      *this, [this, gain_command](LinkMatrix::LinkHandle link) mutable {
+        FX_CHECK(link.mix_domain) << "Renderer dest link should have a defined mix_domain";
+
+        if constexpr (kLogSetGainMuteRamp) {
+          // TODO(fxbug.dev/51049) Swap this logging for inspect or other real-time gain observation
+          std::stringstream stream;
+          stream << static_cast<const void*>(this) << " (mixer "
+                 << static_cast<const void*>(link.mixer.get()) << ") stream (source) Gain: ";
+          std::string log_string = stream.str();
+          if (gain_command.mute.has_value()) {
+            FX_LOGS(INFO) << log_string << "setting mute to "
+                          << (gain_command.mute.value() ? "TRUE" : "FALSE");
+          }
+          if (gain_command.gain_db.has_value()) {
+            FX_LOGS(INFO) << log_string << "setting gain to " << gain_command.gain_db.value()
+                          << " db";
+          }
+          if (gain_command.ramp.has_value()) {
+            FX_LOGS(INFO) << log_string << "ramping gain to " << gain_command.ramp->end_gain_db
+                          << " db, over " << gain_command.ramp->duration.to_usecs() << " usec";
+          }
+        }
+
+        auto& gain = link.mixer->bookkeeping().gain;
+        link.mix_domain->PostTask([&gain, gain_command, reporter = &reporter()]() mutable {
+          if (gain_command.mute.has_value()) {
+            gain.SetSourceMute(gain_command.mute.value());
+          }
+          if (gain_command.gain_db.has_value()) {
+            gain.SetSourceGain(gain_command.gain_db.value());
+          }
+          if (gain_command.ramp.has_value()) {
+            gain.SetSourceGainWithRamp(gain_command.ramp->end_gain_db, gain_command.ramp->duration,
+                                       gain_command.ramp->ramp_type);
+          }
+
+          // Potentially post this as a delayed task instead, if there is a ramp....
+          auto final_gain_db = gain.GetGainDb();
+          reporter->SetFinalGain(final_gain_db);
+        });
+      });
 }
 
 // Set the stream gain, in each Renderer -> Output audio path. The Gain object contains multiple
-// stages. In playback, renderer gain is pre-mix and hence is "source" gain; the Output device (or
-// master) gain is "dest" gain.
+// stages. In playback, renderer gain is pre-mix and hence is "source" gain; the usage gain (or
+// output gain, if the mixer topology is single-tier) is "dest" gain.
 void AudioRenderer::SetGain(float gain_db) {
   TRACE_DURATION("audio", "AudioRenderer::SetGain");
-  FX_LOGS(DEBUG) << " (" << gain_db << " dB)";
 
-  // Before setting stream_gain_db_, we should always perform this range check.
+  // Before setting stream_gain_db_, always perform this range check.
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
     FX_LOGS(WARNING) << "SetGain(" << gain_db << " dB) out of range.";
@@ -194,25 +231,19 @@ void AudioRenderer::SetGain(float gain_db) {
     return;
   }
 
-  if (stream_gain_db_ == gain_db) {
-    return;
-  }
+  FX_LOGS(DEBUG) << __FUNCTION__ << "(" << gain_db << " dB)";
+  PostStreamGainMute({gain_db, std::nullopt, std::nullopt});
 
   stream_gain_db_ = gain_db;
   reporter().SetGain(gain_db);
-
-  context().volume_manager().NotifyStreamChanged(this);
-
   NotifyGainMuteChanged();
 }
 
-// Set a stream gain ramp, in each Renderer -> Output audio path. Renderer gain is pre-mix and hence
-// is the Source component in the Gain object.
+// Set a stream gain ramp, in each Renderer -> Output audio path. Renderer gain is pre-mix and
+// hence is the Source component in the Gain object.
 void AudioRenderer::SetGainWithRamp(float gain_db, int64_t duration_ns,
                                     fuchsia::media::audio::RampType ramp_type) {
   TRACE_DURATION("audio", "AudioRenderer::SetGainWithRamp");
-  zx::duration duration = zx::nsec(duration_ns);
-  FX_LOGS(DEBUG) << " (" << gain_db << " dB, " << duration.to_usecs() << " usec)";
 
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
@@ -221,10 +252,12 @@ void AudioRenderer::SetGainWithRamp(float gain_db, int64_t duration_ns,
     return;
   }
 
+  zx::duration duration = zx::nsec(duration_ns);
+  FX_LOGS(DEBUG) << __FUNCTION__ << "(" << gain_db << " dB, " << duration.to_usecs() << " usec)";
+  PostStreamGainMute({std::nullopt, GainRamp{gain_db, duration, ramp_type}, std::nullopt});
+
+  stream_gain_db_ = gain_db;
   reporter().SetGainWithRamp(gain_db, duration, ramp_type);
-
-  context().volume_manager().NotifyStreamChanged(this, Ramp{duration, ramp_type});
-
   // TODO(mpuryear): implement GainControl notifications for gain ramps.
 }
 
@@ -234,15 +267,15 @@ void AudioRenderer::SetGainWithRamp(float gain_db, int64_t duration_ns,
 void AudioRenderer::SetMute(bool mute) {
   TRACE_DURATION("audio", "AudioRenderer::SetMute");
   // Only do the work if the request represents a change in state.
+  FX_LOGS(DEBUG) << " (mute: " << mute << ")";
   if (mute_ == mute) {
     return;
   }
-  FX_LOGS(DEBUG) << " (mute: " << mute << ")";
 
-  reporter().SetMute(mute);
+  PostStreamGainMute({std::nullopt, std::nullopt, mute});
+
   mute_ = mute;
-
-  context().volume_manager().NotifyStreamChanged(this);
+  reporter().SetMute(mute);
   NotifyGainMuteChanged();
 }
 
@@ -256,6 +289,7 @@ void AudioRenderer::NotifyGainMuteChanged() {
   }
 }
 
+// Implementation of the GainControl FIDL interface. Just forward to AudioRenderer
 void AudioRenderer::GainControlBinding::SetGain(float gain_db) {
   TRACE_DURATION("audio", "AudioRenderer::SetGain");
   owner_->SetGain(gain_db);

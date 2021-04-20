@@ -158,10 +158,7 @@ void StreamVolumeManager::UpdateStream(StreamVolume* stream, std::optional<Ramp>
                               : usage_gain_settings_.GetUnadjustedUsageGain(fidl::Clone(usage));
   const auto usage_volume = usage_volume_settings_.GetUsageVolume(std::move(usage));
 
-  const auto gain_adjustment =
-      stream->GetStreamMute() ? fuchsia::media::audio::MUTED_GAIN_DB : usage_gain;
-
-  stream->RealizeVolume(VolumeCommand{usage_volume, gain_adjustment, ramp});
+  stream->RealizeVolume(VolumeCommand{usage_volume, usage_gain, ramp});
 }
 
 }  // namespace media::audio

@@ -51,7 +51,6 @@ class UsageGainReporterImpl : public fuchsia::media::UsageGainReporter {
    private:
     // |media::audio::StreamVolume|
     fuchsia::media::Usage GetStreamUsage() const final { return fidl::Clone(usage_); }
-    bool GetStreamMute() const final { return false; }
     void RealizeVolume(VolumeCommand volume_command) final;
 
     UsageGainReporterImpl& parent_;

@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 
 #include <mutex>
+#include <optional>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/base_renderer.h"
@@ -15,6 +16,24 @@
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 
 namespace media::audio {
+
+// Smoothly change gain from its current value to end_gain_db, over the specified duration.
+struct GainRamp {
+  // The target gain for this ramp, in decibels.
+  float end_gain_db;
+  zx::duration duration;
+  fuchsia::media::audio::RampType ramp_type;
+};
+
+// A command to realize gain changes on connected links.
+struct StreamGainCommand {
+  // Gain to be set immediately, in decibels.
+  std::optional<float> gain_db;
+  // A ramp with which to apply a subsequent gain change, after setting the 'gain_db' above.
+  std::optional<GainRamp> ramp;
+  // Independent of gain_db or ramping, is this stream muted.
+  std::optional<bool> mute;
+};
 
 class AudioRenderer : public BaseRenderer,
                       public fuchsia::media::audio::GainControl,
@@ -51,7 +70,6 @@ class AudioRenderer : public BaseRenderer,
   void Shutdown() final;
 
   // |media::audio::StreamVolume|
-  bool GetStreamMute() const final;
   fuchsia::media::Usage GetStreamUsage() const final;
   void RealizeVolume(VolumeCommand volume_command) final;
 
@@ -62,8 +80,10 @@ class AudioRenderer : public BaseRenderer,
   void SetMute(bool muted) final;
   void NotifyGainMuteChanged();
   // TODO(mpuryear): Notify on SetGainWithRamp.
-  // TODO(mpuryear): consider EnableGainChangeEvents(bool), like MinLeadTime.
 
+  void PostStreamGainMute(StreamGainCommand gain_command);
+
+  float stream_gain_db_ = 0.0f;
   bool mute_ = false;
   std::optional<Format> format_;
 
