@@ -12,7 +12,7 @@ with the help of our developer community.
 
 ## Fuchsia architecture is inclusive by design
 
-### Developers can use their runtime and language of choice
+### Developers can use their runtime and language of choice {#bring-your-own-runtime}
 
 **[Fuchsia Interface Definition Language (FIDL)](/docs/concepts/fidl/overview.md)
 allows diverse clients and services to interoperate**
@@ -24,6 +24,8 @@ Software from different runtimes can integrate together to form a cohesive
 experience. Fuchsia simplifies the development model,
 making nearly all user space software a component,
 from system services to end-user applications.
+
+This principle is also known as Bring Your Own Runtime (BYOR).
 
 ### Fuchsia is designed to support a wide range of hardware
 
