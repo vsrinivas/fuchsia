@@ -352,7 +352,8 @@ zx_status_t Blob::WriteMetadata(BlobTransaction& transaction,
   return ZX_OK;
 }
 
-zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
+zx_status_t Blob::WriteInternal(const void* data, size_t len,
+                                std::optional<size_t> requested_offset, size_t* actual) {
   TRACE_DURATION("blobfs", "Blobfs::WriteInternal", "data", data, "len", len);
 
   *actual = 0;
@@ -369,6 +370,11 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
 
   const size_t to_write = std::min(len, blob_size_ - write_info_->bytes_written);
   const size_t offset = write_info_->bytes_written;
+  if (requested_offset && *requested_offset != offset) {
+    FX_LOGS(ERROR) << "only append is currently supported (requested_offset: " << *requested_offset
+                   << ", expected: " << offset << ")";
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   *actual = to_write;
   write_info_->bytes_written += to_write;
@@ -381,14 +387,14 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     // In the uncompressed case, the backing vmo should have been set up to write into already.
     ZX_ASSERT(unpaged_backing_data_.is_valid());
     if (zx_status_t status = unpaged_backing_data_.write(data, offset, to_write); status != ZX_OK) {
-      FX_LOGS(ERROR) << "blob: VMO write failed: " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "VMO write failed: " << zx_status_get_string(status);
       return status;
     }
   }
 
   if (zx_status_t status = write_info_->merkle_tree_creator.Append(data, to_write);
       status != ZX_OK) {
-    FX_LOGS(ERROR) << "blob: MerkleTreeCreator::Append failed: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "MerkleTreeCreator::Append failed: " << zx_status_get_string(status);
     return status;
   }
 
@@ -1032,7 +1038,7 @@ zx_status_t Blob::Write(const void* data, size_t len, size_t offset, size_t* out
 
   std::lock_guard lock(mutex_);
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kWrite);
-  return WriteInternal(data, len, out_actual);
+  return WriteInternal(data, len, {offset}, out_actual);
 }
 
 zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
@@ -1040,12 +1046,12 @@ zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* 
 
   std::lock_guard lock(mutex_);
 
-  zx_status_t status = WriteInternal(data, len, out_actual);
+  zx_status_t status = WriteInternal(data, len, std::nullopt, out_actual);
   if (state() == BlobState::kDataWrite) {
     ZX_DEBUG_ASSERT(write_info_ != nullptr);
-    *out_actual = write_info_->bytes_written;
+    *out_end = write_info_->bytes_written;
   } else {
-    *out_actual = blob_size_;
+    *out_end = blob_size_;
   }
   return status;
 }

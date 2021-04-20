@@ -532,6 +532,43 @@ TEST_P(BlobTest, GetAttributes) {
   check_attributes(attributes);
 }
 
+TEST_P(BlobTest, AppendSetsOutEndCorrectly) {
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
+  auto root = OpenRoot();
+
+  fbl::RefPtr<fs::Vnode> file;
+  ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
+  ASSERT_EQ(file->Truncate(info->size_data), ZX_OK);
+
+  size_t out_end;
+  size_t out_actual;
+  ASSERT_EQ(file->Append(info->data.get(), 32, &out_end, &out_actual), ZX_OK);
+  ASSERT_EQ(out_end, 32u);
+  ASSERT_EQ(out_actual, 32u);
+
+  ASSERT_EQ(file->Append(info->data.get() + 32, 32, &out_end, &out_actual), ZX_OK);
+  ASSERT_EQ(out_end, 64u);
+  ASSERT_EQ(out_actual, 32u);
+}
+
+TEST_P(BlobTest, WritesToArbitraryOffsetsFails) {
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
+  auto root = OpenRoot();
+
+  fbl::RefPtr<fs::Vnode> file;
+  ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
+  ASSERT_EQ(file->Truncate(info->size_data), ZX_OK);
+
+  size_t out_actual;
+  ASSERT_EQ(file->Write(info->data.get(), 10, 10, &out_actual), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(file->Write(info->data.get(), 10, 0, &out_actual), ZX_OK);
+  ASSERT_EQ(out_actual, 10u);
+  ASSERT_EQ(file->Write(info->data.get() + 10, info->size_data - 10, 20, &out_actual),
+            ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(file->Write(info->data.get() + 10, info->size_data - 10, 10, &out_actual), ZX_OK);
+  ASSERT_EQ(out_actual, info->size_data - 10);
+}
+
 using BlobMigrationTest = BlobTestWithOldMinorVersion;
 
 TEST_P(BlobMigrationTest, MigrateLargeBlobSucceeds) {

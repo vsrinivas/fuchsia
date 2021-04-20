@@ -251,7 +251,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // Writes to either the Merkle Tree or the Data section,
   // depending on the state.
-  zx_status_t WriteInternal(const void* data, size_t len, size_t* actual) __TA_REQUIRES(mutex_);
+  zx_status_t WriteInternal(const void* data, size_t len, std::optional<size_t> offset,
+                            size_t* actual) __TA_REQUIRES(mutex_);
 
   // Reads from a blob.
   // Requires: kBlobStateReadable

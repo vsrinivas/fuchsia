@@ -932,23 +932,6 @@ TEST_P(BlobfsIntegrationTest, WaitForRead) {
   ASSERT_NO_FATAL_FAILURE(VerifyContents(fd.get(), info->data.get(), info->size_data));
 }
 
-// Tests that seeks during writing are ignored.
-TEST_P(BlobfsIntegrationTest, WriteSeekIgnored) {
-  // srand(zxtest::Runner::GetInstance()->random_seed());
-  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 17);
-  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
-  ASSERT_TRUE(fd) << "Failed to create blob";
-  ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
-
-  off_t seek_pos = (rand() % info->size_data);
-  ASSERT_EQ(seek_pos, lseek(fd.get(), seek_pos, SEEK_SET));
-  ASSERT_EQ(write(fd.get(), info->data.get(), info->size_data),
-            static_cast<ssize_t>(info->size_data));
-
-  // Double check that attempting to seek early didn't cause problems...
-  ASSERT_NO_FATAL_FAILURE(VerifyContents(fd.get(), info->data.get(), info->size_data));
-}
-
 void UnlinkAndRecreate(const char* path, fbl::unique_fd* fd) {
   ASSERT_EQ(0, unlink(path));
   fd->reset();  // Make sure the file is gone.
