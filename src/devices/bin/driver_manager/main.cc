@@ -11,6 +11,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
 #include <lib/zx/resource.h>
@@ -296,38 +297,17 @@ int main(int argc, char** argv) {
     LOGF(INFO, "Starting DriverRunner with root driver URL: %s",
          driver_manager_args.driver_runner_root_driver_url.data());
 
-    const auto realm_path =
-        fbl::StringPrintf("/svc/%s", fidl::DiscoverableProtocolName<fuchsia_sys2::Realm>);
-    auto endpoints = fidl::CreateEndpoints<fuchsia_sys2::Realm>();
-    if (endpoints.is_error()) {
-      return endpoints.status_value();
-    }
-    status = fdio_service_connect(realm_path.data(), endpoints->server.TakeChannel().release());
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to connect to '%s': %s", realm_path.data(), zx_status_get_string(status));
-      return status;
-    }
-    // TODO(fxbug.dev/33183): Replace this with a driver_index component.
-    driver_index.emplace(loop.dispatcher(),
-                         [](auto args) -> zx::status<FakeDriverIndex::MatchResult> {
-                           std::string_view name(args.name().data(), args.name().size());
-                           if (name == "board") {
-                             return zx::ok(FakeDriverIndex::MatchResult{
-                                 .url = "fuchsia-boot:///#meta/x64.cm",
-                                 .matched_args = std::move(args),
-                             });
-                           } else {
-                             return zx::error(ZX_ERR_NOT_FOUND);
-                           }
-                         });
-    auto driver_index_client = driver_index->Connect();
-    if (driver_index_client.is_error()) {
-      LOGF(INFO, "Failed to conect to DriverIndex: %s",
-           zx_status_get_string(driver_index_client.status_value()));
-      return driver_index_client.status_value();
+    auto realm_result = service::Connect<fuchsia_sys2::Realm>();
+    if (realm_result.is_error()) {
+      return realm_result.error_value();
     }
 
-    driver_runner.emplace(std::move(endpoints->client), std::move(driver_index_client.value()),
+    auto driver_index_result = service::Connect<fuchsia_driver_framework::DriverIndex>();
+    if (driver_index_result.is_error()) {
+      return driver_index_result.error_value();
+    }
+
+    driver_runner.emplace(std::move(realm_result.value()), std::move(driver_index_result.value()),
                           &inspect_manager.inspector(), loop.dispatcher());
     auto publish = driver_runner->PublishComponentRunner(outgoing.svc_dir());
     if (publish.is_error()) {

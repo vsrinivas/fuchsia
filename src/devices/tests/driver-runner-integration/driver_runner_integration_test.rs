@@ -50,12 +50,15 @@ async fn test() {
         .all_of(
             vec![
                 EventMatcher::ok().r#type(events::Started::TYPE).moniker(r"/driver_manager:\d+"),
+                EventMatcher::ok().r#type(events::Started::TYPE).moniker(r"/driver_index:\d+"),
                 EventMatcher::ok().r#type(events::Started::TYPE).moniker(r"/boot-drivers:root:\d+"),
                 EventMatcher::ok()
                     .r#type(events::Started::TYPE)
                     .moniker(r"/driver_hosts:driver_host-0:\d+"),
             ],
-            sequence::Ordering::Ordered,
+            // This has to be unordered because driver_index is started lazily and it can start
+            // either before or after the root driver.
+            sequence::Ordering::Unordered,
         )
         .subscribe_and_expect(&mut event_source)
         .await

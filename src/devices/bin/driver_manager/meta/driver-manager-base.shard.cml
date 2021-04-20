@@ -45,6 +45,7 @@
                 "fuchsia.boot.Items",
                 "fuchsia.boot.RootResource",
                 "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.driver.framework.DriverIndex",
                 "fuchsia.fshost.Admin",
                 "fuchsia.fshost.Loader",
                 "fuchsia.kernel.RootJob",

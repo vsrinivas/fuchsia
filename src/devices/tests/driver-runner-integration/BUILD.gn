@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test.gni")
@@ -46,6 +47,12 @@ fuchsia_component("driver-manager-component") {
   deps = [ "//src/devices/bin/driver_manager:driver_manager" ]
 }
 
+bind_index_metadata("driver_bind_manifest") {
+  testonly = true
+  deps = []
+  outputs = [ "config/driver-index.json" ]
+}
+
 fuchsia_test_package("driver-runner-integration-test") {
   # TODO(fxb/72501): Ideally this test shouldn't produce error logs.
   test_specs = {
@@ -57,6 +64,8 @@ fuchsia_test_package("driver-runner-integration-test") {
   deps = [
     ":driver-manager-component",
     ":driver-runner-integration-root",
+    ":driver_bind_manifest",
+    "//src/devices/bin/driver-index:component",
     "//src/devices/bin/driver_host2",
     "//src/devices/misc/drivers/packaged:component",
   ]

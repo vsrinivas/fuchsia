@@ -113,6 +113,7 @@ source_set("lib") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/inspector",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/svc",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below

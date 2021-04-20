@@ -9,6 +9,10 @@
             startup: "eager",
             environment: "#driver_manager-env",
         },
+        {
+            name: "driver_index",
+            url: "fuchsia-pkg://fuchsia.com/driver-runner-integration-test#meta/driver-index.cm",
+        },
     ],
     collections: [
         {
@@ -48,11 +52,17 @@
             to: "#driver_manager",
         },
         {
+            protocol: "fuchsia.driver.framework.DriverIndex",
+            from: "#driver_index",
+            to: "#driver_manager",
+        },
+        {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [
                 "#boot-drivers",
                 "#driver_hosts",
+                "#driver_index",
                 "#pkg-drivers",
             ],
         },

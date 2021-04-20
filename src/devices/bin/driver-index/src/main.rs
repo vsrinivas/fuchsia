@@ -26,7 +26,6 @@ struct JsonDriver {
 }
 
 impl JsonDriver {
-    #[allow(dead_code)]
     fn to_driver(self) -> std::io::Result<Driver> {
         let bytes = std::fs::read(&self.bind_file)?;
         Driver::create(self.driver_url, bytes).map_err(encode_err_to_stdio_err)
@@ -71,6 +70,11 @@ struct Indexer {
 }
 
 impl Indexer {
+    fn new(drivers: Vec<JsonDriver>) -> Result<Indexer, anyhow::Error> {
+        let drivers: Result<Vec<_>, _> = drivers.into_iter().map(|d| d.to_driver()).collect();
+        Ok(Indexer { drivers: drivers? })
+    }
+
     #[allow(dead_code)]
     fn add_driver(&mut self, driver: Driver) {
         self.drivers.push(driver);
@@ -142,7 +146,9 @@ async fn run_index_server(
 async fn main() -> Result<(), anyhow::Error> {
     let mut service_fs = ServiceFs::new_local();
 
-    let index = Rc::new(Indexer { drivers: Vec::<Driver>::new() });
+    let data = std::fs::read_to_string("/pkg/config/driver-index.json")?;
+    let drivers: Vec<JsonDriver> = serde_json::from_str(&data)?;
+    let index = Rc::new(Indexer::new(drivers)?);
 
     service_fs.dir("svc").add_fidl_service(IncomingRequest::DriverIndexProtocol);
 
