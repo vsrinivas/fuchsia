@@ -38,17 +38,21 @@ class BindCompilerTest : public testing::Test {
         devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "test/test", &root_fd);
     ASSERT_EQ(status, ZX_OK);
 
-    fidl::WireSyncClient<fuchsia_device_test::RootDevice> root_device{zx::channel{}};
+    auto root_device_endpoints = fidl::CreateEndpoints<fuchsia_device_test::RootDevice>();
+    ASSERT_EQ(root_device_endpoints.status_value(), ZX_OK);
+
+    auto root_device = fidl::BindSyncClient(std::move(root_device_endpoints->client));
     status = fdio_get_service_handle(root_fd.release(),
                                      root_device.mutable_channel()->reset_and_get_address());
     ASSERT_EQ(status, ZX_OK);
 
-    zx::channel remote;
-    ASSERT_EQ(zx::channel::create(0, &device_channel_, &remote), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_device::Controller>();
+    ASSERT_EQ(endpoints.status_value(), ZX_OK);
 
     // Create the root test device in /dev/test/test, and get its relative path from /dev.
-    auto result =
-        root_device.CreateDevice(fidl::StringView::FromExternal(kDriverLibname), std::move(remote));
+    auto result = root_device.CreateDevice(fidl::StringView::FromExternal(kDriverLibname),
+                                           endpoints->server.TakeChannel());
+
     ASSERT_EQ(result.status(), ZX_OK);
     ASSERT_EQ(result->status, ZX_OK);
 
@@ -60,8 +64,7 @@ class BindCompilerTest : public testing::Test {
     // Bind the test driver to the new device.
     driver_libpath_ = kDriverTestDir + "/" + kDriverLibname;
     auto response =
-        fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(device_channel_.get()))
-            .Bind(::fidl::StringView::FromExternal(driver_libpath_));
+        fidl::WireCall(endpoints->client).Bind(::fidl::StringView::FromExternal(driver_libpath_));
     status = response.status();
     if (status == ZX_OK) {
       if (response->result.is_err()) {
@@ -71,24 +74,19 @@ class BindCompilerTest : public testing::Test {
     ASSERT_EQ(status, ZX_OK);
 
     // Connect to the BindDebugger service.
-    zx::channel local;
-    ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
+    auto bind_endpoints = fidl::CreateEndpoints<fuchsia::device::manager::BindDebugger>();
+    ASSERT_EQ(bind_endpoints.status_value(), ZX_OK);
 
     std::string svc_name =
         fxl::StringPrintf("svc/%s", fuchsia::device::manager::BindDebugger::Name_);
     sys::ServiceDirectory svc_dir(devmgr_.TakeSvcRootDir().TakeChannel());
-    status = svc_dir.Connect(svc_name, std::move(remote));
+    status = svc_dir.Connect(svc_name, bind_endpoints->server.TakeChannel());
     ASSERT_EQ(status, ZX_OK);
 
-    bind_debugger_.Bind(std::move(local));
-  }
-
-  void TearDown() override {
-    fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{device_channel_}).Destroy();
+    bind_debugger_.Bind(bind_endpoints->client.TakeChannel());
   }
 
   IsolatedDevmgr devmgr_;
-  zx::channel device_channel_;
   fuchsia::device::manager::BindDebuggerSyncPtr bind_debugger_;
   std::string driver_libpath_;
   std::string relative_device_path_;
