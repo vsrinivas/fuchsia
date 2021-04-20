@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("view_ref_installed") {
+  sources = [
+    "view_ref_installed_impl.cc",
+    "view_ref_installed_impl.h",
+  ]
+  deps = [ "//src/ui/scenic/lib/utils" ]
+  public_deps = [
+    ":view_tree_snapshot",
+    "//sdk/lib/sys/cpp",
+  ]
+}
+
 source_set("view_tree_snapshot") {
   sources = [
     "snapshot_types.cc",
