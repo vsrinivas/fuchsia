@@ -26,17 +26,17 @@ class FuchsiaView extends StatefulWidget {
   /// Defaults to true.
   final bool focusable;
 
-  /// View insets passed to the child view.
+  /// View occlusion hint passed to the child view.
   ///
   /// Defaults to [Rect.zero].
-  final Rect viewInsets;
+  final Rect viewOcclusionHint;
 
   /// Creates a widget that is replaced by content from another process.
   FuchsiaView({
     required this.controller,
     this.hitTestable = true,
     this.focusable = true,
-    this.viewInsets = Rect.zero,
+    this.viewOcclusionHint = Rect.zero,
   }) : super(key: GlobalObjectKey(controller));
 
   @override
@@ -60,7 +60,7 @@ class _FuchsiaViewState extends State<FuchsiaView> {
 
     if (widget.focusable != oldWidget.focusable ||
         widget.hitTestable != oldWidget.hitTestable ||
-        widget.viewInsets != oldWidget.viewInsets) {
+        widget.viewOcclusionHint != oldWidget.viewOcclusionHint) {
       _needsUpdate = true;
       _updateView();
     }
@@ -68,8 +68,8 @@ class _FuchsiaViewState extends State<FuchsiaView> {
 
   // Updates the view attributes on the underlying platform view.
   //
-  // Called when view's [focusable], [hitTestable] or [viewInsets] have changed
-  // or when the underlying platform view is connected.
+  // Called when view's [focusable], [hitTestable] or [viewOcclusionHint] have
+  // changed or when the underlying platform view is connected.
   void _updateView() {
     if (_needsUpdate == false || !widget.controller.connected) {
       return;
@@ -78,7 +78,7 @@ class _FuchsiaViewState extends State<FuchsiaView> {
     widget.controller.update(
         focusable: widget.focusable,
         hitTestable: widget.hitTestable,
-        viewInsets: widget.viewInsets);
+        viewOcclusionHint: widget.viewOcclusionHint);
     _needsUpdate = false;
   }
 
@@ -90,7 +90,7 @@ class _FuchsiaViewState extends State<FuchsiaView> {
         ..connect(
           hitTestable: widget.hitTestable,
           focusable: widget.focusable,
-          viewInsets: widget.viewInsets,
+          viewOcclusionHint: widget.viewOcclusionHint,
         ).then((_) {
           params.onPlatformViewCreated(widget.controller.viewId);
         }),

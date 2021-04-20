@@ -4,6 +4,8 @@
 
 // ignore_for_file: avoid_as, dead_code, null_check_always_fails
 
+import 'dart:ui';
+
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,15 +29,15 @@ void main() {
     );
 
     await connection.connect();
-    verify(connection.platformViewChannel.invokeMethod('View.create', {
-      'viewId': 42,
-      'hitTestable': true,
-      'focusable': true,
-      'viewInsetsLTRB': [0, 0, 0, 0],
-    }));
+    verify(connection.fuchsiaViewsService.createView(
+      42,
+      hitTestable: true,
+      focusable: true,
+      viewOcclusionHint: Rect.zero,
+    ));
 
     final methodCallback =
-        verify(connection.platformViewChannel.setMethodCallHandler(captureAny))
+        verify(connection.fuchsiaViewsService.register(42, captureAny))
             .captured
             .single;
     expect(methodCallback, isNotNull);
@@ -122,7 +124,7 @@ ViewHolderToken _mockViewHolderToken() {
 }
 
 class TestFuchsiaViewConnection extends FuchsiaViewConnection {
-  final _platformMethodChannel = MockMethodChannel();
+  final _fuchsiaViewsService = MockFuchsiaViewsService();
   final _pointerInjector = MockPointerInjector();
 
   TestFuchsiaViewConnection(
@@ -142,13 +144,13 @@ class TestFuchsiaViewConnection extends FuchsiaViewConnection {
         );
 
   @override
-  MethodChannel get platformViewChannel => _platformMethodChannel;
+  FuchsiaViewsService get fuchsiaViewsService => _fuchsiaViewsService;
 
   @override
   PointerInjector get pointerInjector => _pointerInjector;
 }
 
-class MockMethodChannel extends Mock implements MethodChannel {}
+class MockFuchsiaViewsService extends Mock implements FuchsiaViewsService {}
 
 class MockViewHolderToken extends Mock implements ViewHolderToken {
   @override

@@ -6,3 +6,4 @@
 export 'src/fuchsia_view.dart';
 export 'src/fuchsia_view_connection.dart';
 export 'src/fuchsia_view_controller.dart';
+export 'src/fuchsia_views_service.dart';

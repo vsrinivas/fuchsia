@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/gestures.dart';
@@ -25,26 +26,26 @@ void main() {
     );
 
     await controller.connect();
-    verify(controller.platformViewChannel.invokeMethod('View.create', {
-      'viewId': 42,
-      'hitTestable': true,
-      'focusable': true,
-      'viewInsetsLTRB': [0, 0, 0, 0],
-    }));
+    verify(controller.fuchsiaViewsService.createView(
+      42,
+      hitTestable: true,
+      focusable: true,
+      viewOcclusionHint: Rect.zero,
+    ));
 
     await controller.update(
         focusable: false,
         hitTestable: false,
-        viewInsets: Rect.fromLTRB(10, 10, 20, 30));
-    verify(controller.platformViewChannel.invokeMethod('View.update', {
-      'viewId': 42,
-      'hitTestable': false,
-      'focusable': false,
-      'viewInsetsLTRB': [10, 10, 20, 30],
-    }));
+        viewOcclusionHint: Rect.fromLTRB(10, 10, 20, 30));
+    verify(controller.fuchsiaViewsService.updateView(
+      42,
+      hitTestable: false,
+      focusable: false,
+      viewOcclusionHint: Rect.fromLTRB(10, 10, 20, 30),
+    ));
 
     final methodCallback =
-        verify(controller.platformViewChannel.setMethodCallHandler(captureAny))
+        verify(controller.fuchsiaViewsService.register(42, captureAny))
             .captured
             .single;
     expect(methodCallback, isNotNull);
@@ -59,24 +60,19 @@ void main() {
 
     disconnectedCalled = false;
     await controller.disconnect();
-    verify(controller.platformViewChannel.invokeMethod('View.dispose', {
-      'viewId': 42,
-    }));
+    verify(controller.fuchsiaViewsService.destroyView(42));
     expect(disconnectedCalled, isTrue);
   });
 
   test('FuchsiaViewController requestFocus', () async {
     final controller = TestFuchsiaViewController(viewId: 42);
-    when(controller.platformViewChannel.invokeMethod('View.requestFocus', any))
+    when(controller.fuchsiaViewsService.requestFocus(42))
         .thenAnswer((_) => Future.value(0));
     await controller.requestFocus(42);
-    verify(controller.platformViewChannel.invokeMethod('View.requestFocus', {
-      'viewRef': 42,
-    }));
+    verify(controller.fuchsiaViewsService.requestFocus(42));
 
     // test requestFocus fails to set focus.
-    when(controller.platformViewChannel.invokeMethod('View.requestFocus', any))
-        .thenAnswer((_) => Future.value(-1));
+    when(controller.fuchsiaViewsService.requestFocus(42)).thenThrow(OSError());
     expect(controller.requestFocus(42), throwsA(isException));
   });
 
@@ -94,7 +90,7 @@ void main() {
 }
 
 class TestFuchsiaViewController extends FuchsiaViewController {
-  final _platformMethodChannel = MockMethodChannel();
+  final _fuchsiaViewsService = MockFuchsiaViewsService();
 
   TestFuchsiaViewController({
     required int viewId,
@@ -111,7 +107,7 @@ class TestFuchsiaViewController extends FuchsiaViewController {
         );
 
   @override
-  MethodChannel get platformViewChannel => _platformMethodChannel;
+  FuchsiaViewsService get fuchsiaViewsService => _fuchsiaViewsService;
 }
 
-class MockMethodChannel extends Mock implements MethodChannel {}
+class MockFuchsiaViewsService extends Mock implements FuchsiaViewsService {}

@@ -5,13 +5,13 @@
 // ignore_for_file: avoid_as, unnecessary_null_comparison
 
 import 'dart:async';
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:meta/meta.dart';
+
+import 'fuchsia_views_service.dart';
 
 /// Defines a callback to receive view connected and disconnected event.
 typedef FuchsiaViewConnectionCallback = void Function(
@@ -44,15 +44,9 @@ class FuchsiaViewController implements PlatformViewController {
   /// Callback when pointer events are dispatched on top of child view.
   final FuchsiaPointerEventsCallback? onPointerEvent;
 
-  // The platform view channel used to communicate with flutter engine.
-  final _platformViewChannel = MethodChannel(
-    'flutter/platform_views',
-    JSONMethodCodec(),
-  );
-
-  /// The [MethodChannel] used to communicate with Flutter Embedder.
+  /// Returns the [FuchsiaViewsService] used to communicated with the embedder.
   @visibleForTesting
-  MethodChannel get platformViewChannel => _platformViewChannel;
+  FuchsiaViewsService get fuchsiaViewsService => FuchsiaViewsService.instance;
 
   // The [Completer] that is completed when the platform view is connected.
   var _whenConnected = Completer();
@@ -79,12 +73,12 @@ class FuchsiaViewController implements PlatformViewController {
   Future<void> connect({
     bool hitTestable = true,
     bool focusable = true,
-    Rect viewInsets = Rect.zero,
+    Rect viewOcclusionHint = Rect.zero,
   }) async {
     if (_whenConnected.isCompleted) return;
 
     // Setup callbacks for receiving view events.
-    platformViewChannel.setMethodCallHandler((call) async {
+    fuchsiaViewsService.register(viewId, (call) async {
       switch (call.method) {
         case 'View.viewConnected':
           _whenConnected.complete();
@@ -103,18 +97,12 @@ class FuchsiaViewController implements PlatformViewController {
     });
 
     // Now send a create message to the platform view.
-    final Map<String, dynamic> args = <String, dynamic>{
-      'viewId': viewId,
-      'hitTestable': hitTestable,
-      'focusable': focusable,
-      'viewInsetsLTRB': <double>[
-        viewInsets.left,
-        viewInsets.top,
-        viewInsets.right,
-        viewInsets.bottom
-      ],
-    };
-    return platformViewChannel.invokeMethod('View.create', args);
+    return fuchsiaViewsService.createView(
+      viewId,
+      hitTestable: hitTestable,
+      focusable: focusable,
+      viewOcclusionHint: viewOcclusionHint,
+    );
   }
 
   /// Disconnects the view from the [ViewHolderToken].
@@ -124,51 +112,32 @@ class FuchsiaViewController implements PlatformViewController {
   /// are closed by first exiting their component, in which case the callback
   /// [onViewDisconnect] is invoked.
   Future<void> disconnect() async {
-    final Map<String, dynamic> args = <String, dynamic>{
-      'viewId': viewId,
-    };
-    await platformViewChannel.invokeMethod('View.dispose', args);
+    fuchsiaViewsService.deregister(viewId);
+    await fuchsiaViewsService.destroyView(viewId);
     onViewDisconnected?.call(this);
   }
 
   /// Updates properties on the platform view given it's [viewId].
   ///
   /// Called by [FuchsiaView] when the [focusable] or [hitTestable] or
-  /// [viewInsets] properties are changed.
+  /// [viewOcclusionHint] properties are changed.
   Future<void> update({
     bool focusable = true,
     bool hitTestable = true,
-    Rect viewInsets = Rect.zero,
+    Rect viewOcclusionHint = Rect.zero,
   }) async {
-    final args = <String, dynamic>{
-      'viewId': viewId,
-      'hitTestable': hitTestable,
-      'focusable': focusable,
-      'viewInsetsLTRB': <double>[
-        viewInsets.left,
-        viewInsets.top,
-        viewInsets.right,
-        viewInsets.bottom
-      ],
-    };
-    return platformViewChannel.invokeMethod('View.update', args);
+    return fuchsiaViewsService.updateView(
+      viewId,
+      hitTestable: hitTestable,
+      focusable: focusable,
+      viewOcclusionHint: viewOcclusionHint,
+    );
   }
 
   /// Requests that focus be transferred to the remote Scene represented by
   /// this connection.
   Future<void> requestFocus(int viewRef) async {
-    final args = <String, dynamic>{
-      'viewRef': viewRef,
-    };
-    final result =
-        await platformViewChannel.invokeMethod('View.requestFocus', args);
-    // Throw OSError if result is non-zero.
-    if (result != 0) {
-      throw OSError(
-        'Failed to request focus for view: $viewRef with $result',
-        result,
-      );
-    }
+    return fuchsiaViewsService.requestFocus(viewRef);
   }
 
   /// Dispose the underlying platform view controller.

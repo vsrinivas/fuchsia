@@ -25,6 +25,7 @@ dart_library("fuchsia_scenic_flutter") {
     "src/fuchsia_view.dart",
     "src/fuchsia_view_connection.dart",
     "src/fuchsia_view_controller.dart",
+    "src/fuchsia_views_service.dart",
     "src/pointer_injector.dart",
   ]
 
@@ -48,6 +49,7 @@ flutter_test("fuchsia_scenic_flutter_unittests") {
     "fuchsia_view_connection_test.dart",
     "fuchsia_view_controller_test.dart",
     "fuchsia_view_test.dart",
+    "fuchsia_views_service_test.dart",
     "pointer_injector_test.dart",
   ]
 
