@@ -361,7 +361,7 @@ fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlspi_cs_map_t* map, zx_device_t
     snprintf(fragment_name, 32, "gpio-cs-%d", index);
     chips[i].gpio = ddk::GpioProtocolClient(device, fragment_name);
     if (!chips[i].gpio.is_valid()) {
-      zxlogf(ERROR, "%s: failed to acquire gpio for SS%d", __func__, i);
+      zxlogf(ERROR, "Failed to get GPIO fragment %u", i);
       return fbl::Array<ChipInfo>();
     }
   }
@@ -372,14 +372,14 @@ fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlspi_cs_map_t* map, zx_device_t
 zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
   auto pdev = ddk::PDev::FromFragment(device);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available", __func__);
+    zxlogf(ERROR, "Failed to get platform device fragment");
     return ZX_ERR_NO_RESOURCES;
   }
 
   pdev_device_info_t info;
   zx_status_t status = pdev.GetDeviceInfo(&info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_get_device_info failed", __func__);
+    zxlogf(ERROR, "Failed to get device info: %d", status);
     return status;
   }
 
@@ -388,14 +388,14 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
   status = device_get_metadata(device, DEVICE_METADATA_AMLSPI_CS_MAPPING, &gpio_map,
                                sizeof gpio_map, &actual);
   if ((status != ZX_OK) || (actual != sizeof gpio_map)) {
-    zxlogf(ERROR, "%s: failed to read GPIO/chip select map", __func__);
+    zxlogf(ERROR, "Failed to read GPIO/chip select map");
     return status;
   }
 
   std::optional<ddk::MmioBuffer> mmio;
   status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_map_&mmio__buffer failed %d", __func__, status);
+    zxlogf(ERROR, "Failed to map MMIO: %d", status);
     return status;
   }
 
@@ -406,7 +406,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     fidl::ClientEnd<fuchsia_hardware_registers::Device> reset_client;
     status = zx::channel::create(0, &reset_server, &reset_client.channel());
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: failed to create reset register channel", __func__);
+      zxlogf(ERROR, "Failed to create reset register channel: %d", status);
       return status;
     }
 
@@ -433,17 +433,17 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
   }
 
   char devname[32];
-  sprintf(devname, "aml-spi-%d", gpio_map.bus_id);
+  sprintf(devname, "aml-spi-%u", gpio_map.bus_id);
 
   status = spi->DdkAdd(devname);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkDeviceAdd failed for %s", __func__, devname);
+    zxlogf(ERROR, "DdkAdd failed for SPI%u: %d", gpio_map.bus_id, status);
     return status;
   }
 
   status = spi->DdkAddMetadata(DEVICE_METADATA_PRIVATE, &gpio_map.bus_id, sizeof gpio_map.bus_id);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAddMetadata failed for %s", __func__, devname);
+    zxlogf(ERROR, "DdkAddMetadata failed for SPI%u: %d", gpio_map.bus_id, status);
     return status;
   }
 
