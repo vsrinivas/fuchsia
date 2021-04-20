@@ -21,13 +21,14 @@ import (
 )
 
 type DeviceConfig struct {
-	sshKeyFile       string
-	deviceFinderPath string
-	deviceName       string
-	deviceHostname   string
-	sshPrivateKey    ssh.Signer
-	SerialSocketPath string
-	connectTimeout   time.Duration
+	sshKeyFile               string
+	deviceFinderPath         string
+	deviceName               string
+	deviceHostname           string
+	sshPrivateKey            ssh.Signer
+	SerialSocketPath         string
+	connectTimeout           time.Duration
+	WorkaroundBrokenTimeSkip bool
 }
 
 func NewDeviceConfig(fs *flag.FlagSet) *DeviceConfig {
@@ -41,6 +42,8 @@ func NewDeviceConfig(fs *flag.FlagSet) *DeviceConfig {
 	fs.StringVar(&c.deviceFinderPath, "device-finder-path", filepath.Join(testDataPath, "device-finder"), "device-finder tool path")
 	fs.StringVar(&c.SerialSocketPath, "device-serial", os.Getenv(constants.SerialSocketEnvKey), "device serial path")
 	fs.DurationVar(&c.connectTimeout, "device-connect-timeout", 5*time.Second, "device connection timeout (default 5 seconds)")
+	fs.BoolVar(&c.WorkaroundBrokenTimeSkip, "workaround-broken-time-skip", false,
+		"whether to sleep for 15 seconds after pave and then reconnect, to work around a known networking bug, fxbug.dev/74861")
 
 	return c
 }
