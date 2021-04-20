@@ -165,6 +165,8 @@ pub struct ThreadContext {
     /// from `self.handle.read_state_general_regs()`. To write these values back to the thread, call
     /// `self.handle.write_state_general_regs(self.registers)`.
     pub registers: zx_thread_state_general_regs_t,
+
+    // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
     pub set_child_tid: Mutex<UserAddress>,
     pub clear_child_tid: Mutex<UserAddress>,
 }
