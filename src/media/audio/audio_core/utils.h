@@ -124,6 +124,24 @@ class ThreadCpuTimer {
     return zx::duration(end_.queue_time) - zx::duration(start_.queue_time);
   }
 
+  // Reports how long the current thread spent handling page faults. See ZX_INFO_TASK_RUNTIME.
+  // Cannot be called while the timer is running; the timer must be stopped.
+  zx::duration page_faults() const {
+    if (start_status_ != ZX_OK || end_status_ != ZX_OK) {
+      return zx::duration::infinite_past();
+    }
+    return zx::duration(end_.page_fault_time) - zx::duration(start_.page_fault_time);
+  }
+
+  // Reports how long the current thread spent blocked on kernel locks. See ZX_INFO_TASK_RUNTIME.
+  // Cannot be called while the timer is running; the timer must be stopped.
+  zx::duration lock_contention() const {
+    if (start_status_ != ZX_OK || end_status_ != ZX_OK) {
+      return zx::duration::infinite_past();
+    }
+    return zx::duration(end_.lock_contention_time) - zx::duration(start_.lock_contention_time);
+  }
+
  private:
   zx::unowned_thread thread_;
   zx_info_task_runtime_t start_;

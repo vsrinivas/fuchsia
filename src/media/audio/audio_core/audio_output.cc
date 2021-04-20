@@ -145,7 +145,9 @@ void AudioOutput::Process() {
           << "PIPELINE UNDERFLOW: Mixer ran for " << std::setprecision(4)
           << static_cast<double>(dt.to_nsecs()) / ZX_MSEC(1) << " ms, overran goal of "
           << static_cast<double>(MixDeadline().to_nsecs()) / ZX_MSEC(1) << " ms; thread spent "
-          << cpu_timer_.cpu().get() << " ns on CPU, " << cpu_timer_.queue().get() << " ns queued; "
+          << cpu_timer_.cpu().get() << " ns on CPU, " << cpu_timer_.queue().get() << " ns queued, "
+          << cpu_timer_.page_faults().get() << " ns handling page faults, "
+          << cpu_timer_.lock_contention().get() << " ns waiting on kernel locks; "
           << "produced " << frames_mixed << " frames, advanced " << frames_advanced
           << " frames, made " << read_lock_calls << " ReadLock calls, "
           << read_lock_calls_returned_nullopt << " ReadLock calls returned nullopt";
