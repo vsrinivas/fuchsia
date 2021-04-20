@@ -11,6 +11,8 @@
 #include <Weave/DeviceLayer/internal/DeviceNetworkInfo.h>
 #include <Weave/DeviceLayer/PlatformManager.h>
 #include <Weave/DeviceLayer/ThreadStackManager.h>
+#include <Weave/Support/TraitEventUtils.h>
+#include <nest/trait/network/TelemetryNetworkWpanTrait.h>
 // clang-format on
 
 #include "thread_stack_manager_delegate_impl.h"
@@ -26,11 +28,15 @@ using fuchsia::lowpan::Credential;
 using fuchsia::lowpan::Identity;
 using fuchsia::lowpan::ProvisioningParams;
 using fuchsia::lowpan::Role;
+using fuchsia::lowpan::device::AllCounters;
+using fuchsia::lowpan::device::Counters;
+using fuchsia::lowpan::device::CountersSyncPtr;
 using fuchsia::lowpan::device::DeviceExtraSyncPtr;
 using fuchsia::lowpan::device::DeviceState;
 using fuchsia::lowpan::device::DeviceSyncPtr;
 using fuchsia::lowpan::device::Lookup_LookupDevice_Result;
 using fuchsia::lowpan::device::LookupSyncPtr;
+using fuchsia::lowpan::device::MacCounters;
 using fuchsia::lowpan::device::Protocols;
 using fuchsia::lowpan::thread::LegacyJoiningSyncPtr;
 using fuchsia::net::IpAddress;
@@ -44,6 +50,8 @@ using nl::Weave::DeviceLayer::Internal::DeviceNetworkInfo;
 using nl::Weave::Profiles::NetworkProvisioning::kNetworkType_Thread;
 
 using ThreadDeviceType = ConnectivityManager::ThreadDeviceType;
+
+namespace TelemetryNetworkWpanTrait = Schema::Nest::Trait::Network::TelemetryNetworkWpanTrait;
 
 constexpr uint16_t kMinThreadChannel = 11;
 constexpr uint16_t kMaxThreadChannel = 26;
@@ -483,7 +491,137 @@ ThreadDeviceType ThreadStackManagerDelegateImpl::GetThreadDeviceType() {
 bool ThreadStackManagerDelegateImpl::HaveMeshConnectivity() { return IsThreadAttached(); }
 
 WEAVE_ERROR ThreadStackManagerDelegateImpl::GetAndLogThreadStatsCounters() {
-  return WEAVE_ERROR_NOT_IMPLEMENTED;  // TODO(fxbug.dev/55888)
+  nl::Weave::Profiles::DataManagement_Current::event_id_t event_id;
+  TelemetryNetworkWpanTrait::NetworkWpanStatsEvent counter_event = {};
+  zx_status_t status;
+
+  // Get LoWPAN protocols.
+  CountersSyncPtr counters;
+  DeviceExtraSyncPtr device_extra;
+  status = GetProtocols(std::move(
+      Protocols().set_counters(counters.NewRequest()).set_device_extra(device_extra.NewRequest())));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Get MAC counters.
+  AllCounters all_counters;
+  status = counters->Get(&all_counters);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // MAC TX counters.
+  if (all_counters.has_mac_tx()) {
+    const MacCounters& mac_tx = all_counters.mac_tx();
+
+    counter_event.phyTx = mac_tx.total();
+    counter_event.macUnicastTx = mac_tx.unicast();
+    counter_event.macBroadcastTx = mac_tx.broadcast();
+    counter_event.macTxAckReq = mac_tx.ack_requested();
+    counter_event.macTxNoAckReq = mac_tx.no_ack_requested();
+    counter_event.macTxAcked = mac_tx.acked();
+    counter_event.macTxData = mac_tx.data();
+    counter_event.macTxDataPoll = mac_tx.data_poll();
+    counter_event.macTxBeacon = mac_tx.beacon();
+    counter_event.macTxBeaconReq = mac_tx.beacon_request();
+    counter_event.macTxOtherPkt = mac_tx.other();
+    counter_event.macTxRetry = mac_tx.retries();
+
+    counter_event.macTxFailCca = mac_tx.err_cca();
+  }
+
+  // MAC RX counters.
+  if (all_counters.has_mac_rx()) {
+    const MacCounters& mac_rx = all_counters.mac_rx();
+
+    counter_event.phyRx = mac_rx.total();
+    counter_event.macUnicastRx = mac_rx.unicast();
+    counter_event.macBroadcastRx = mac_rx.broadcast();
+    counter_event.macRxData = mac_rx.data();
+    counter_event.macRxDataPoll = mac_rx.data_poll();
+    counter_event.macRxBeacon = mac_rx.beacon();
+    counter_event.macRxBeaconReq = mac_rx.beacon_request();
+    counter_event.macRxOtherPkt = mac_rx.other();
+    counter_event.macRxFilterWhitelist = mac_rx.address_filtered();
+    counter_event.macRxFilterDestAddr = mac_rx.dest_addr_filtered();
+
+    // Rx Error Counters
+    counter_event.macRxFailDecrypt = mac_rx.err_sec();
+    counter_event.macRxFailNoFrame = mac_rx.err_no_frame();
+    counter_event.macRxFailUnknownNeighbor = mac_rx.err_unknown_neighbor();
+    counter_event.macRxFailInvalidSrcAddr = mac_rx.err_invalid_src_addr();
+    counter_event.macRxFailFcs = mac_rx.err_fcs();
+    counter_event.macRxFailOther = mac_rx.err_other();
+  }
+
+  // Thread channel.
+  Identity identity;
+  status = device_extra->WatchIdentity(&identity);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (identity.has_channel()) {
+    counter_event.channel = identity.channel();
+  }
+
+  // Node type.
+  DeviceState device_state;
+  status = GetDeviceState(&device_state);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  switch (device_state.role()) {
+    case Role::LEADER:
+      counter_event.nodeType |= TelemetryNetworkWpanTrait::NODE_TYPE_LEADER;
+      // Fallthrough intentional, leaders are also routers.
+    case Role::ROUTER:
+    case Role::SLEEPY_ROUTER:
+    case Role::COORDINATOR:
+      counter_event.nodeType |= TelemetryNetworkWpanTrait::NODE_TYPE_ROUTER;
+      break;
+    default:
+      counter_event.nodeType = 0;
+      break;
+  }
+
+  FX_LOGS(DEBUG) << "Rx Counters:\n"
+                 << "  PHY Rx Total:            " << counter_event.phyRx << "\n"
+                 << "  MAC Rx Unicast:          " << counter_event.macUnicastRx << "\n"
+                 << "  MAC Rx Broadcast:        " << counter_event.macBroadcastRx << "\n"
+                 << "  MAC Rx Data:             " << counter_event.macRxData << "\n"
+                 << "  MAC Rx Data Polls:       " << counter_event.macRxDataPoll << "\n"
+                 << "  MAC Rx Beacons:          " << counter_event.macRxBeacon << "\n"
+                 << "  MAC Rx Beacon Reqs:      " << counter_event.macRxBeaconReq << "\n"
+                 << "  MAC Rx Other:            " << counter_event.macRxOtherPkt << "\n"
+                 << "  MAC Rx Filtered List:    " << counter_event.macRxFilterWhitelist << "\n"
+                 << "  MAC Rx Filtered Addr:    " << counter_event.macRxFilterDestAddr << "\n"
+                 << "\n"
+                 << "Tx Counters:\n"
+                 << "  PHY Tx Total:            " << counter_event.phyTx << "\n"
+                 << "  MAC Tx Unicast:          " << counter_event.macUnicastTx << "\n"
+                 << "  MAC Tx Broadcast:        " << counter_event.macBroadcastTx << "\n"
+                 << "  MAC Tx Data:             " << counter_event.macTxData << "\n"
+                 << "  MAC Tx Data Polls:       " << counter_event.macTxDataPoll << "\n"
+                 << "  MAC Tx Beacons:          " << counter_event.macTxBeacon << "\n"
+                 << "  MAC Tx Beacon Reqs:      " << counter_event.macTxBeaconReq << "\n"
+                 << "  MAC Tx Other:            " << counter_event.macTxOtherPkt << "\n"
+                 << "  MAC Tx Retry:            " << counter_event.macTxRetry << "\n"
+                 << "  MAC Tx CCA Fail:         " << counter_event.macTxFailCca << "\n"
+                 << "\n"
+                 << "Failure Counters:\n"
+                 << "  MAC Rx Decrypt Fail:     " << counter_event.macRxFailDecrypt << "\n"
+                 << "  MAC Rx No Frame:         " << counter_event.macRxFailNoFrame << "\n"
+                 << "  MAC Rx Unkwn Neighbor:   " << counter_event.macRxFailUnknownNeighbor << "\n"
+                 << "  MAC Rx Invalid Src Addr: " << counter_event.macRxFailInvalidSrcAddr << "\n"
+                 << "  MAC Rx FCS Fail:         " << counter_event.macRxFailFcs << "\n"
+                 << "  MAC Rx Other Fail:       " << counter_event.macRxFailOther << "\n";
+
+  event_id = nl::LogEvent(&counter_event);
+  FX_LOGS(DEBUG) << "Thread telemetry stats event ID: " << event_id << ".";
+
+  return status;
 }
 
 WEAVE_ERROR ThreadStackManagerDelegateImpl::GetAndLogThreadTopologyMinimal() {

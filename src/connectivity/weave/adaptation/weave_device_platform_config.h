@@ -13,6 +13,9 @@
 // Enable Trait Manager.
 #define WEAVE_DEVICE_CONFIG_ENABLE_TRAIT_MANAGER 1
 
+// Enable Thread Telemetry.
+#define WEAVE_DEVICE_CONFIG_ENABLE_THREAD_TELEMETRY 1
+
 // Enable Tunnel Telemetry.
 #define WEAVE_DEVICE_CONFIG_ENABLE_TUNNEL_TELEMETRY 1
 
