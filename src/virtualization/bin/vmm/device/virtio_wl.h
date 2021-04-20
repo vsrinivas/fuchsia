@@ -13,6 +13,7 @@
 
 #include <deque>
 #include <unordered_map>
+#include <vector>
 
 #include <virtio/virtio_ids.h>
 #include <virtio/wl.h>
@@ -32,6 +33,7 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
                  public fuchsia::virtualization::hardware::VirtioWaylandImporter {
  public:
   using VirtioImage = fuchsia::virtualization::hardware::VirtioImage;
+  using VirtioImageInfo = std::vector<uint8_t>;
 
   class Vfd {
    public:
@@ -81,7 +83,7 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
     virtual zx_status_t Duplicate(zx::handle* handle) { return ZX_ERR_NOT_SUPPORTED; }
 
     // Creates a duplicate VirtioImage.
-    virtual std::unique_ptr<VirtioWl::VirtioImage> DuplicateImage() { return nullptr; }
+    virtual std::unique_ptr<VirtioWl::VirtioImage> ExportImage() { return nullptr; }
   };
 
   explicit VirtioWl(sys::ComponentContext* context);
@@ -162,8 +164,9 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
     VirtioChain payload;
 
     // Images may be imported from and exported to VirtioMagma.
-    // The image contains the VMO handle and other opaque parameters.
-    std::unique_ptr<VirtioImage> image;
+    // The image may contain a token for Scenic import and opaque info data.
+    zx::eventpair token;
+    VirtioImageInfo image_info;
   };
   std::deque<PendingVfd> pending_vfds_;
 
