@@ -12,7 +12,6 @@ use omaha_client::{
     },
     request_builder::RequestParams,
 };
-use serde_json::Value;
 use thiserror::Error;
 
 #[derive(Debug, PartialEq)]
@@ -109,18 +108,15 @@ impl Plan for FuchsiaInstallPlan {
         if !rest.is_empty() {
             warn!("Only 1 package is supported, found {}", manifest.packages.package.len());
         }
-        let urgent_update = match app.extra_attributes.get("urgent_update") {
-            Some(Value::Bool(value)) => value,
-            Some(_) => &false,
-            None => &false,
-        };
+
+        let urgent_update = update_check.urgent_update.unwrap_or(false);
 
         let full_url = url.codebase.clone() + &package.name;
         match PkgUrl::parse(&full_url) {
             Ok(url) => Ok(FuchsiaInstallPlan {
                 url,
                 install_source: request_params.source.clone(),
-                urgent_update: *urgent_update,
+                urgent_update,
             }),
             Err(err) => {
                 error!("Failed to parse {} to PkgUrl: {}", full_url, err);
@@ -138,7 +134,6 @@ impl Plan for FuchsiaInstallPlan {
 mod tests {
     use super::*;
     use omaha_client::protocol::response::{App, Manifest, Package, Packages, UpdateCheck};
-    use serde_json::json;
 
     const TEST_URL_BASE: &str = "fuchsia-pkg://fuchsia.com/";
     const TEST_PACKAGE_NAME: &str = "update/0";
@@ -306,6 +301,7 @@ mod tests {
     fn test_urgent_update_attribute_true() {
         let request_params = RequestParams::default();
         let mut update_check = UpdateCheck::ok(vec![TEST_URL_BASE.to_string()]);
+        update_check.urgent_update = Some(true);
         update_check.manifest = Some(Manifest {
             packages: Packages {
                 package: vec![Package {
@@ -316,11 +312,7 @@ mod tests {
             ..Manifest::default()
         });
         let response = Response {
-            apps: vec![App {
-                update_check: Some(update_check),
-                extra_attributes: json!({"urgent_update": true}).as_object().unwrap().to_owned(),
-                ..App::default()
-            }],
+            apps: vec![App { update_check: Some(update_check), ..App::default() }],
             ..Response::default()
         };
 
@@ -333,6 +325,7 @@ mod tests {
     fn test_urgent_update_attribute_false() {
         let request_params = RequestParams::default();
         let mut update_check = UpdateCheck::ok(vec![TEST_URL_BASE.to_string()]);
+        update_check.urgent_update = Some(false);
         update_check.manifest = Some(Manifest {
             packages: Packages {
                 package: vec![Package {
@@ -343,41 +336,7 @@ mod tests {
             ..Manifest::default()
         });
         let response = Response {
-            apps: vec![App {
-                update_check: Some(update_check),
-                extra_attributes: json!({"urgent_update": false}).as_object().unwrap().to_owned(),
-                ..App::default()
-            }],
-            ..Response::default()
-        };
-
-        let install_plan = FuchsiaInstallPlan::try_create_from(&request_params, &response).unwrap();
-
-        assert_eq!(install_plan.urgent_update, false);
-    }
-
-    #[test]
-    fn test_urgent_update_attribute_false_when_json_malformed() {
-        let request_params = RequestParams::default();
-        let mut update_check = UpdateCheck::ok(vec![TEST_URL_BASE.to_string()]);
-        update_check.manifest = Some(Manifest {
-            packages: Packages {
-                package: vec![Package {
-                    name: TEST_PACKAGE_NAME.to_string(),
-                    ..Package::default()
-                }],
-            },
-            ..Manifest::default()
-        });
-        let response = Response {
-            apps: vec![App {
-                update_check: Some(update_check),
-                extra_attributes: json!({"urgent_update": "garbage value"})
-                    .as_object()
-                    .unwrap()
-                    .to_owned(),
-                ..App::default()
-            }],
+            apps: vec![App { update_check: Some(update_check), ..App::default() }],
             ..Response::default()
         };
 

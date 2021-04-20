@@ -119,6 +119,10 @@ pub struct UpdateCheck {
 
     /// The manifest about the update.
     pub manifest: Option<Manifest>,
+
+    /// Whether an urgent update is specified. A capability that is optionally sent
+    /// on top of the Omaha V3 spec.
+    pub urgent_update: Option<bool>,
 }
 
 impl UpdateCheck {
