@@ -292,7 +292,7 @@ From //boards/arm64.gni:19
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:14
+From //build/board.gni:18
 
 **Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy", "//src/storage/fshost:gpt_all"]`
 
@@ -300,7 +300,7 @@ From //boards/x64.gni:19
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:14
+From //build/board.gni:18
 
 ### board_extra_vbmeta_images
 Board level extra vbmeta images to be combined into the top-level vbmeta
@@ -365,7 +365,7 @@ From //boards/arm64.gni:23
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:25
+From //build/board.gni:29
 
 **Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy"]`
 
@@ -373,7 +373,15 @@ From //boards/x64.gni:13
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:25
+From //build/board.gni:29
+
+### board_recovery_package_labels
+A list of package labels to include in the recovery package set. Used by the
+board definition rather than the product definition.
+
+**Current value (from the default):** `[]`
+
+From //build/board.gni:15
 
 ### board_system_image_deps
 A list of binary labels to include in the system_image package.
@@ -384,7 +392,7 @@ From //boards/arm64.gni:25
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:28
+From //build/board.gni:32
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/media/audio/bundles:virtual_audio_driver"]`
 
@@ -392,7 +400,7 @@ From //boards/common/x64-common.gni:62
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:28
+From //build/board.gni:32
 
 ### board_tools
 List of paths to board-specific tools to include in the build output.
@@ -418,7 +426,7 @@ From //boards/arm64.gni:21
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:22
+From //build/board.gni:26
 
 **Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy"]`
 
@@ -426,7 +434,7 @@ From //boards/x64.gni:14
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:22
+From //build/board.gni:26
 
 ### board_zedboot_cmdline_args
 List of kernel command line arguments to bake into the zedboot image that are
@@ -435,7 +443,7 @@ required by this board. See also zedboot_cmdline_args in
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:19
+From //build/board.gni:23
 
 ### bootfs_only
 Put the "system image" package in the BOOTFS.  Hence what would
@@ -745,19 +753,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/db9863a2177a2b3d329bc31fb307302b80b00dd0/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/66eb800996ec4f20048959efb0ecfb6bc67a2e7a/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/db9863a2177a2b3d329bc31fb307302b80b00dd0/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/66eb800996ec4f20048959efb0ecfb6bc67a2e7a/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/db9863a2177a2b3d329bc31fb307302b80b00dd0/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/66eb800996ec4f20048959efb0ecfb6bc67a2e7a/util/net/tls.gni#30)
 
 ### current_cpu
 
@@ -918,7 +926,7 @@ From //zircon/kernel/params.gni:64
 ### dwarf_version
 Explicitly specify DWARF version used.
 
-**Current value (from the default):** `4`
+**Current value (from the default):** `5`
 
 From //build/config/compiler.gni:69
 
@@ -2150,13 +2158,13 @@ From //build/images/fvm.gni:64
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/db9863a2177a2b3d329bc31fb307302b80b00dd0/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/66eb800996ec4f20048959efb0ecfb6bc67a2e7a/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/db9863a2177a2b3d329bc31fb307302b80b00dd0/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/66eb800996ec4f20048959efb0ecfb6bc67a2e7a/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
