@@ -1121,7 +1121,7 @@
   reviewed: '2021-04-07'
 
 - name: 'RFC-0087'
-  title: 'Updates to RFC-050: FIDL Method Parameter Syntax'
+  title: 'Updates to RFC-0050: FIDL Method Parameter Syntax'
   short_description: 'Modify the syntax for specifying request and response parameters by explicitly defining the top level type.'
   authors: ['fcz@google.com']
   file: '0087_fidl_method_syntax.md'
@@ -1132,6 +1132,19 @@
   reviewers: ['mkember@google.com', 'pascallouis@google.com', 'surajmalhotra@google.com', 'yifeit@google.com']
   submitted: '2021-03-09'
   reviewed: '2021-04-14'
+
+- name: 'RFC-0088'
+  title: 'Updates to RFC-0050: FIDL Bits, Enum, and Constraints Syntax'
+  short_description: 'Specify two incremental improvements to the new FIDL syntax defined by FTP-050.'
+  authors: ['azaslavsky@google.com']
+  file: '0088_rfc_0050_bits_enums_constraints.md'
+  area: ['FIDL']
+  issue: ['70528']
+  gerrit_change_id: ['488205']
+  status: 'Rejected'
+  reviewers: ['pascallouis@google.com']
+  submitted: '2021-02-18'
+  reviewed: '2021-04-07'
 
 - name: 'RFC-0089'
   title: 'Core realm variations'
