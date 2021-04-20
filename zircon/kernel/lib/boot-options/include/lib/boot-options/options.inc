@@ -351,6 +351,13 @@ bytes.
 The maximum value can be increased by defining `ENTROPY_COLLECTOR_TEST_MAXLEN` as such value.
 )""")
 
+DEFINE_OPTION("kernel.force-watchdog-disabled", bool, force_watchdog_disabled, {false}, R"""(
+When set, the system will attempt to disable any hardware watchdog timer armed
+and passed by the bootloader as soon as it possibly can in the boot sequence,
+presuming that the bootloader provides enough information to know how to disable
+the WDT at all.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

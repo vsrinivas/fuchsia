@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <platform.h>
 #include <reg.h>
@@ -198,8 +198,7 @@ void GenericWatchdog32::InitEarly(const void* driver_data, uint32_t length) {
   // stuff like set timers.  In addition, if the cmd-line flag was passed to
   // force disable the watchdog, do so if possible just after we have pet it.
   PetLocked();
-  if (gCmdline.GetBool(kernel_option::kForceWatchdogDisabled, false) && is_enabled_ &&
-      cfg_.disable_action.addr) {
+  if (gBootOptions->force_watchdog_disabled && is_enabled_ && cfg_.disable_action.addr) {
     TakeAction(cfg_.disable_action);
     is_enabled_ = false;
   }
@@ -236,13 +235,15 @@ void GenericWatchdog32::Init(const void*, uint32_t) {
           is_enabled_ ? "yes" : "no");
 
   // If the force disable cmd line flag was passed, report that here.
-  if (gCmdline.GetBool(kernel_option::kForceWatchdogDisabled, false)) {
+  if (gBootOptions->force_watchdog_disabled) {
     if (cfg_.disable_action.addr) {
       dprintf(INFO, "WDT: %s was set, watchdog was force-disabled\n",
-              kernel_option::kForceWatchdogDisabled);
+              kForceWatchdogDisabledName.data());
     } else {
-      dprintf(INFO, "WDT: %s was set, but the watchdog cannot be disabled.  It is currently %s.\n",
-              kernel_option::kForceWatchdogDisabled, is_enabled_ ? "enabled" : "disabled");
+      dprintf(INFO,
+              "WDT: %s was set, but the watchdog cannot be disabled.  It is "
+              "currently %s.\n",
+              kForceWatchdogDisabledName.data(), is_enabled_ ? "enabled" : "disabled");
     }
   }
 

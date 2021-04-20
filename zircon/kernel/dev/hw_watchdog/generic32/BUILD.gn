@@ -8,6 +8,6 @@ source_set("generic32") {
   sources = [ "hw_watchdog.cc" ]
   deps = [
     "//zircon/kernel/dev/pdev",
-    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/boot-options",
   ]
 }

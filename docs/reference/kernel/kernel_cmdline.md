@@ -269,13 +269,6 @@ line, CPRNG panics. Defaults to false.
 
 Provides entropy to be mixed into the kernel's CPRNG.
 
-## kernel.force-watchdog-disabled=\<bool>
-
-If this option is set (disabled by default), the system will attempt to disable
-any hardware watchdog timer armed and passed by the bootloader as soon as it
-possibly can in the boot sequence, presuming that the bootloader provides enough
-information to know how to disable the WDT at all.
-
 ## kernel.halt-on-panic=\<bool>
 
 If this option is set (disabled by default), the system will halt on

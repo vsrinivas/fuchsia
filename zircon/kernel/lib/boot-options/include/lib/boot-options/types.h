@@ -50,4 +50,8 @@ enum class OomBehavior { kReboot, kJobKill };
 // See kernel.entropy-test.len.
 constexpr uint64_t kMaxEntropyLength = 1u << 20;
 
+// List of command lines argument names that are explicitly referenced in code.
+// TODO(fxb/74740): remove all usages of this.
+constexpr std::string_view kForceWatchdogDisabledName = "kernel.force-watchdog-disabled";
+
 #endif  // ZIRCON_KERNEL_LIB_BOOT_OPTIONS_INCLUDE_LIB_BOOT_OPTIONS_TYPES_H_
