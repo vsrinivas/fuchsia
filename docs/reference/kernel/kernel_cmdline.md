@@ -269,20 +269,6 @@ line, CPRNG panics. Defaults to false.
 
 Provides entropy to be mixed into the kernel's CPRNG.
 
-## kernel.entropy-test.len=\<len>
-
-When running an entropy collector quality test, collect the provided number of
-bytes. Defaults to the maximum value `ENTROPY_COLLECTOR_TEST_MAXLEN`.
-
-The default value for the compile-time constant `ENTROPY_COLLECTOR_TEST_MAXLEN`
-is 1MiB.
-
-## kernel.entropy-test.src=\<source>
-
-When running an entropy collector quality test, use the provided entropy source.
-Currently recognized sources: `hw_rng`, `jitterentropy`. This option is ignored
-unless the kernel was built with `ENABLE_ENTROPY_COLLECTOR_TEST=1`.
-
 ## kernel.force-watchdog-disabled=\<bool>
 
 If this option is set (disabled by default), the system will attempt to disable

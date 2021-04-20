@@ -345,6 +345,23 @@ will work normally.
 
 When `true`, both will work normally.
 
+### kernel.entropy-test.src=\<string>
+
+Can be one of two values:
+- `hw_rng`
+- `jitterentropy`
+
+When running an entropy collector quality test, use the provided entropy source.
+This option is ignored unless the kernel was built with `ENABLE_ENTROPY_COLLECTOR_TEST=1`.
+
+### kernel.entropy-test.len=\<uint64_t>
+**Default:** `0x100000`
+
+When running an entropy collector quality test, collect the provided number of
+bytes.
+
+The maximum value can be increased by defining `ENTROPY_COLLECTOR_TEST_MAXLEN` as such value.
+
 
 ## Options available only on arm64 machines
 

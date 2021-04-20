@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/crypto/entropy/collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
 #include <lib/crypto/entropy/jitterentropy_collector.h>
@@ -24,18 +24,22 @@ namespace entropy {
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
 
-#ifndef ENTROPY_COLLECTOR_TEST_MAXLEN
-#define ENTROPY_COLLECTOR_TEST_MAXLEN (1024u * 1024u)
+constexpr uint64_t GetMaxEntropyLength() {
+#ifdef ENTROPY_COLLECTOR_TEST_MAXLEN
+  return ENTROPY_COLLECTOR_TEST_MAXLEN;
+#else
+  return kMaxEntropyLength;
 #endif
+}
 
 namespace {
 
-uint8_t entropy_buf[ENTROPY_COLLECTOR_TEST_MAXLEN];
+uint8_t entropy_buf[GetMaxEntropyLength()];
 size_t entropy_len;
 
 }  // namespace
 
-fbl::RefPtr<VmObject> entropy_vmo;
+fbl::RefPtr<VmObjectPaged> entropy_vmo;
 size_t entropy_vmo_content_size;
 bool entropy_was_lost = false;
 
@@ -45,16 +49,13 @@ static void SetupEntropyVmo(uint level) {
     entropy_was_lost = true;
     return;
   }
-  if (entropy_vmo->Write(entropy_buf, 0, entropy_len, &entropy_vmo_content_size) != ZX_OK) {
+  if (entropy_vmo->Write(entropy_buf, 0, entropy_len) != ZX_OK) {
     printf("entropy-boot-test: Failed to write to entropy_vmo (data lost)\n");
     entropy_was_lost = true;
     return;
   }
-  if (entropy_vmo_content_size < entropy_len) {
-    printf("entropy-boot-test: partial write to entropy_vmo (data lost)\n");
-    entropy_was_lost = true;
-    return;
-  }
+  entropy_vmo_content_size = entropy_len;
+
   constexpr const char* name = "debug/entropy.bin";
   if (entropy_vmo->set_name(name, strlen(name)) != ZX_OK) {
     // The name is needed because devmgr uses it to add the VMO as a file in
@@ -67,7 +68,7 @@ static void SetupEntropyVmo(uint level) {
 
 // Run the entropy collector test.
 void EarlyBootTest() {
-  const char* src_name = gCmdline.GetString(kernel_option::kEntropyTestSrc);
+  const char* src_name = gBootOptions->entropy_test_src.data();
   if (!src_name) {
     src_name = "";
   }
@@ -98,7 +99,7 @@ void EarlyBootTest() {
     return;
   }
 
-  entropy_len = gCmdline.GetUInt64(kernel_option::kEntropyTestLen, sizeof(entropy_buf));
+  entropy_len = gBootOptions->entropy_test_len;
   if (entropy_len > sizeof(entropy_buf)) {
     entropy_len = sizeof(entropy_buf);
     printf(
@@ -130,5 +131,5 @@ void EarlyBootTest() {}
 }  // namespace crypto
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
-LK_INIT_HOOK(setup_entropy_vmo, crypto::entropy::SetupEntropyVmo, LK_INIT_LEVEL_VM + 1);
+LK_INIT_HOOK(setup_entropy_vmo, crypto::entropy::SetupEntropyVmo, LK_INIT_LEVEL_VM + 1)
 #endif

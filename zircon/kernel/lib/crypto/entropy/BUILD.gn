@@ -15,7 +15,6 @@ source_set("entropy") {
   deps = [
     "//zircon/kernel/dev/hw_rng",
     "//zircon/kernel/lib/boot-options",
-    "//zircon/kernel/lib/cmdline",
     "//zircon/kernel/lib/crypto:headers",
     "//zircon/kernel/lib/fbl",
     "//zircon/kernel/lib/init",

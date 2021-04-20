@@ -8,7 +8,7 @@
 #define ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_ENTROPY_QUALITY_TEST_H_
 
 #include <fbl/ref_ptr.h>
-#include <vm/vm_object.h>
+#include <vm/vm_object_paged.h>
 
 namespace crypto {
 
@@ -18,7 +18,7 @@ namespace entropy {
 
 // These fields are read in kernel/lib/userabi/userboot.cc, in order to pass
 // the VmObject on to bootsvc (where it's added to the filesystem).
-extern fbl::RefPtr<VmObject> entropy_vmo;
+extern fbl::RefPtr<VmObjectPaged> entropy_vmo;
 extern size_t entropy_vmo_content_size;
 extern bool entropy_was_lost;
 #endif

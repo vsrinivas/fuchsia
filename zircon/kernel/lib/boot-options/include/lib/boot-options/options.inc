@@ -335,6 +335,22 @@ will work normally.
 When `true`, both will work normally.
 )""")
 
+DEFINE_OPTION("kernel.entropy-test.src", SmallString, entropy_test_src, {""}, R"""(
+Can be one of two values:
+- `hw_rng`
+- `jitterentropy`
+
+When running an entropy collector quality test, use the provided entropy source.
+This option is ignored unless the kernel was built with `ENABLE_ENTROPY_COLLECTOR_TEST=1`.
+)""")
+
+DEFINE_OPTION("kernel.entropy-test.len", uint64_t, entropy_test_len, {kMaxEntropyLength}, R"""(
+When running an entropy collector quality test, collect the provided number of
+bytes.
+
+The maximum value can be increased by defining `ENTROPY_COLLECTOR_TEST_MAXLEN` as such value.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

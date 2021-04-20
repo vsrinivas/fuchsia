@@ -124,8 +124,6 @@ extern Cmdline gCmdline;
 
 // TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
-static constexpr const char kEntropyTestLen[] = "kernel.entropy-test.len";
-static constexpr const char kEntropyTestSrc[] = "kernel.entropy-test.src";
 static constexpr const char kForceWatchdogDisabled[] = "kernel.force-watchdog-disabled";
 static constexpr const char kGfxConsoleEarly[] = "gfxconsole.early";
 static constexpr const char kGfxConsoleFont[] = "gfxconsole.font";
