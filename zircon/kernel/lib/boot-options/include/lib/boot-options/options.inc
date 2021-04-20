@@ -24,11 +24,13 @@ the randomization. Higher entropy results in a sparser address space and uses
 more memory for page tables. Valid values range from 0-36.
 )""")
 
-DEFINE_OPTION("kernel.cprng-reseed-require.hw-rng", bool, cprng_reseed_require_hw_rng, {false}, R"""(
+DEFINE_OPTION("kernel.cprng-reseed-require.hw-rng", bool, cprng_reseed_require_hw_rng, {false},
+              R"""(
 When enabled and if HW RNG fails at reseeding, CPRNG panics.
 )""")
 
-DEFINE_OPTION("kernel.cprng-reseed-require.jitterentropy", bool, cprng_reseed_require_jitterentropy, {false}, R"""(
+DEFINE_OPTION("kernel.cprng-reseed-require.jitterentropy", bool, cprng_reseed_require_jitterentropy,
+              {false}, R"""(
 When enabled and if jitterentropy fails at reseeding, CPRNG panics.
 )""")
 
@@ -36,7 +38,8 @@ DEFINE_OPTION("kernel.cprng-seed-require.hw-rng", bool, cprng_seed_require_hw_rn
 When enabled and if HW RNG fails at initial seeding, CPRNG panics.
 )""")
 
-DEFINE_OPTION("kernel.cprng-seed-require.jitterentropy", bool, cprng_seed_require_jitterentropy, {false}, R"""(
+DEFINE_OPTION("kernel.cprng-seed-require.jitterentropy", bool, cprng_seed_require_jitterentropy,
+              {false}, R"""(
 When enabled and if jitterentrop fails initial seeding, CPRNG panics.
 )""")
 
@@ -98,7 +101,8 @@ processing inside of jitterentropy is somewhat redundant.
 // TODO(maniscalco): Set a default threshold that is high enough that it won't erronously trigger
 // under qemu.  Alternatively, set an aggressive default threshold in code and override in
 // virtualized environments and scripts that start qemu.
-DEFINE_OPTION("kernel.lockup-detector.critical-section-threshold-ms", uint64_t, lockup_detector_critical_section_threshold_ms, {3000}, R"""(
+DEFINE_OPTION("kernel.lockup-detector.critical-section-threshold-ms", uint64_t,
+              lockup_detector_critical_section_threshold_ms, {3000}, R"""(
 When a CPU remains in a designated critical section for longer than
 this threshold, a KERNEL OOPS will be emitted.
 
@@ -111,7 +115,8 @@ When kernel.lockup-detector.heartbeat-period-ms is 0, critical section lockup
 detection is disabled.
 )""")
 
-DEFINE_OPTION("kernel.lockup-detector.critical-section-fatal-threshold-ms", uint64_t, lockup_detector_critical_section_fatal_threshold_ms, {10000}, R"""(
+DEFINE_OPTION("kernel.lockup-detector.critical-section-fatal-threshold-ms", uint64_t,
+              lockup_detector_critical_section_fatal_threshold_ms, {10000}, R"""(
 When a CPU remains in a designated critical section for longer than this
 threshold, a crashlog will be generated and the system will reboot, indicating a
 reboot reason of `SOFTWARE_WATCHDOG` as it does.
@@ -125,7 +130,8 @@ When kernel.lockup-detector.heartbeat-period-ms is 0, critical section lockup
 detection is disabled.
 )""")
 
-DEFINE_OPTION("kernel.lockup-detector.heartbeat-period-ms", uint64_t, lockup_detector_heartbeat_period_ms, {1000}, R"""(
+DEFINE_OPTION("kernel.lockup-detector.heartbeat-period-ms", uint64_t,
+              lockup_detector_heartbeat_period_ms, {1000}, R"""(
 How frequently a secondary CPU should emit a heartbeat via kernel timer.  This
 value should be large enough to not impact system performance, but should be
 smaller than the heartbeat age threshold.  1000 is a reasonable value.
@@ -135,7 +141,8 @@ See also [lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
 When 0, heartbeat detection is disabled.
 )""")
 
-DEFINE_OPTION("kernel.lockup-detector.heartbeat-age-threshold-ms", uint64_t, lockup_detector_heartbeat_age_threshold_ms, {3000}, R"""(
+DEFINE_OPTION("kernel.lockup-detector.heartbeat-age-threshold-ms", uint64_t,
+              lockup_detector_heartbeat_age_threshold_ms, {3000}, R"""(
 The maximum age of a secondary CPU's last heartbeat before it is considered to
 be locked up.  This value should be larger than the heartbeat peroid, but small
 enough so as to not miss short-lived lockup events.  3000 is a reasonable value.
@@ -145,8 +152,8 @@ See also [lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
 When 0, heartbeat detection is disabled.
 )""")
 
-
-DEFINE_OPTION("kernel.lockup-detector.heartbeat-age-fatal-threshold-ms", uint64_t, lockup_detector_age_fatal_threshold_ms, {10000}, R"""(
+DEFINE_OPTION("kernel.lockup-detector.heartbeat-age-fatal-threshold-ms", uint64_t,
+              lockup_detector_age_fatal_threshold_ms, {10000}, R"""(
 The maximum age of a CPU's last heartbeat before it is considered to be locked
 up, triggering generation of a crashlog indicating a reboot reason of
 `SOFTWARE_WATCHDOG` followed by a reboot.
@@ -253,20 +260,23 @@ syscall, even if the hardware cycle counter registers are accessible from
 user-mode.
 )""")
 
-DEFINE_OPTION("vdso.clock_get_monotonic_force_syscall", bool, vdso_clock_get_monotonic_force_syscall, {false}, R"""(
+DEFINE_OPTION("vdso.clock_get_monotonic_force_syscall", bool,
+              vdso_clock_get_monotonic_force_syscall, {false}, R"""(
 If this option is set, the `zx_clock_get_monotonic` vDSO call will be forced to
 be a true syscall, instead of simply performing a transformation of the tick
 counter in user-mode.
 )""")
 
-DEFINE_OPTION("kernel.userpager.overtime_wait_seconds", uint64_t, userpager_overtime_wait_seconds, {20}, R"""(
+DEFINE_OPTION("kernel.userpager.overtime_wait_seconds", uint64_t, userpager_overtime_wait_seconds,
+              {20}, R"""(
 This option configures how long a user pager fault may block before being
 considered overtime and printing an information message to the debuglog and
 continuing to wait. A value of 0 indicates a wait is never considered to be
 overtime.
 )""")
 
-DEFINE_OPTION("kernel.userpager.overtime_timeout_seconds", uint64_t, userpager_overtime_timeout_seconds, {300}, R"""(
+DEFINE_OPTION("kernel.userpager.overtime_timeout_seconds", uint64_t,
+              userpager_overtime_timeout_seconds, {300}, R"""(
 This option configures how long a user pager fault may block before being
 aborted. For a hardware page fault, the faulting thread will terminate with a
 fatal page fault exception. For a software page fault triggered by a syscall,
@@ -308,6 +318,21 @@ When disabled, certain debugging-related syscalls will fail with
 - `zx_process_write_memory()`
 - `zx_system_mexec()`
 - `zx_system_mexec_payload_get()
+)""")
+
+DEFINE_OPTION("kernel.enable-serial-syscalls", SmallString, enable_serial_syscalls, {"false"}, R"""(
+Can be one of three values:
+- `false`
+- `true`
+- `output-only`
+
+When `false`, both `zx_debug_read()` and `zx_debug_write()` will fail with
+`ZX_ERR_NOT_SUPPORTED`.
+
+When `output-only`, `zx_debug_read()` will fail with `ZX_ERR_NOT_SUPPORTED`, but `zx_debug_write()`
+will work normally.
+
+When `true`, both will work normally.
 )""")
 
 // Machine-specific options are included here for all the kernel places.

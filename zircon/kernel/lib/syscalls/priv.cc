@@ -7,7 +7,6 @@
 #include "priv.h"
 
 #include <lib/boot-options/boot-options.h>
-#include <lib/cmdline.h>
 
 bool DebuggingSyscallsEnabled() {
   static const bool enabled = gBootOptions->enable_debugging_syscalls;
@@ -15,9 +14,7 @@ bool DebuggingSyscallsEnabled() {
 }
 
 SerialState SerialSyscallsEnabled() {
-  static const char* serial = []() {
-    return gCmdline.GetString(kernel_option::kEnableSerialSysaclls);
-  }();
+  static const char* serial = gBootOptions->enable_serial_syscalls.data();
 
   if (serial == nullptr) {
     return SerialState::kDisabled;

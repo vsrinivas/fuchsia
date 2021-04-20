@@ -265,21 +265,6 @@ to false.
 When enabled and if you do not provide entropy input from the kernel command
 line, CPRNG panics. Defaults to false.
 
-## kernel.enable-serial-syscalls=\<string>
-
-Can be one of three values:
-- `false`
-- `true`
-- `output-only`
-
-When `false` (the default), both `zx_debug_read()` and `zx_debug_write()` will fail with
-`ZX_ERR_NOT_SUPPORTED`.
-
-When `output-only`, `zx_debug_read()` will fail with `ZX_ERR_NOT_SUPPORTED`, but `zx_debug_write()`
-will work normally.
-
-When `true`, both will work normally.
-
 ## kernel.entropy-mixin=\<hex>
 
 Provides entropy to be mixed into the kernel's CPRNG.
