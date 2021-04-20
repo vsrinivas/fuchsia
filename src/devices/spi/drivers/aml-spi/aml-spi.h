@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/registers/llcpp/fidl.h>
 #include <fuchsia/hardware/spiimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/status.h>
+
+#include <optional>
 
 #include <ddktl/device.h>
 #include <fbl/array.h>
@@ -59,11 +62,20 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
     SpiVmoStore registered_vmos;
   };
 
-  AmlSpi(zx_device_t* device, ddk::MmioBuffer mmio, fbl::Array<ChipInfo> chips)
-      : DeviceType(device), mmio_(std::move(mmio)), chips_(std::move(chips)) {}
+  AmlSpi(zx_device_t* device, ddk::MmioBuffer mmio,
+         std::optional<fidl::WireSyncClient<fuchsia_hardware_registers::Device>> reset,
+         uint32_t reset_mask, fbl::Array<ChipInfo> chips)
+      : DeviceType(device),
+        mmio_(std::move(mmio)),
+        reset_(std::move(reset)),
+        reset_mask_(reset_mask),
+        chips_(std::move(chips)) {}
 
   static fbl::Array<ChipInfo> InitChips(amlspi_cs_map_t* map, zx_device_t* device);
   void DumpState();
+
+  void Exchange8(const uint8_t* txdata, uint8_t* out_rxdata, size_t size);
+  void Exchange64(const uint8_t* txdata, uint8_t* out_rxdata, size_t size);
 
   // Checks size against the registered VMO size and returns a Span with offset applied. Returns a
   // Span with data set to nullptr if vmo_id wasn't found. Returns a Span with size set to zero if
@@ -72,7 +84,10 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
                                             uint64_t size, uint32_t right);
 
   ddk::MmioBuffer mmio_;
+  std::optional<fidl::WireSyncClient<fuchsia_hardware_registers::Device>> reset_;
+  const uint32_t reset_mask_;
   fbl::Array<ChipInfo> chips_;
+  bool need_reset_ = false;
 };
 
 }  // namespace spi

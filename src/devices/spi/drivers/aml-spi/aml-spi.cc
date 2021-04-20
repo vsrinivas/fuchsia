@@ -4,6 +4,8 @@
 
 #include "aml-spi.h"
 
+#include <endian.h>
+#include <fuchsia/hardware/registers/cpp/banjo.h>
 #include <fuchsia/hardware/spiimpl/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -24,7 +26,12 @@
 
 namespace spi {
 
-static constexpr size_t kBurstMax = 16;
+constexpr size_t kBurstMaxBytes = 16;
+constexpr size_t kBurstMaxDoubleWords = 16;
+
+constexpr size_t kReset6RegisterOffset = 0x1c;
+constexpr uint32_t kSpi0ResetMask = 1 << 1;
+constexpr uint32_t kSpi1ResetMask = 1 << 6;
 
 void AmlSpi::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
@@ -74,47 +81,28 @@ zx::status<fbl::Span<uint8_t>> AmlSpi::GetVmoSpan(uint32_t chip_select, uint32_t
   return zx::ok(vmo_info->data().subspan(vmo_info->meta().offset + offset));
 }
 
-zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t txdata_size,
-                                    uint8_t* out_rxdata, size_t rxdata_size,
-                                    size_t* out_rxdata_actual) {
-  if (cs >= SpiImplGetChipSelectCount()) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (txdata_size && rxdata_size && (txdata_size != rxdata_size)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  size_t exchange_size = txdata_size ? txdata_size : rxdata_size;
-
+void AmlSpi::Exchange8(const uint8_t* txdata, uint8_t* out_rxdata, size_t size) {
   // transfer settings
   auto conreg = ConReg::Get()
                     .FromValue(0)
                     .set_en(1)
                     .set_mode(ConReg::kModeMaster)
-                    .set_bits_per_word(8 - 1)
+                    .set_bits_per_word(CHAR_BIT - 1)
                     .WriteTo(&mmio_);
 
-  // reset both fifos
-  auto testreg = TestReg::Get().FromValue(0).set_fiforst(3).WriteTo(&mmio_);
-  do {
-    testreg.ReadFrom(&mmio_);
-  } while ((testreg.rxcnt() != 0) || (testreg.txcnt() != 0));
+  while (size > 0) {
+    // Burst size in words (with one byte per word).
+    const uint32_t burst_size = std::min(kBurstMaxBytes, size);
 
-  const uint8_t* tx = txdata;
-  uint8_t* rx = out_rxdata;
-
-  chips_[cs].gpio.Write(0);
-
-  while (exchange_size) {
-    uint32_t burst_size = (uint32_t)std::min(kBurstMax, exchange_size);
-
-    // fill FIFO
-    for (uint32_t i = 0; i < burst_size; i++) {
-      if (tx) {
-        mmio_.Write32(*tx++, AML_SPI_TXDATA);
-      } else {
-        mmio_.Write32(0xff, AML_SPI_TXDATA);
+    // fill fifo
+    if (txdata) {
+      for (uint32_t i = 0; i < burst_size; i++) {
+        mmio_.Write32(txdata[i], AML_SPI_TXDATA);
+      }
+      txdata += burst_size;
+    } else {
+      for (uint32_t i = 0; i < burst_size; i++) {
+        mmio_.Write32(UINT8_MAX, AML_SPI_TXDATA);
       }
     }
 
@@ -128,23 +116,133 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
     } while (!statreg.tc());
 
     // read
-    if (rx) {
+    if (out_rxdata) {
       for (uint32_t i = 0; i < burst_size; i++) {
-        *rx++ = static_cast<uint8_t>(mmio_.Read32(AML_SPI_RXDATA));
+        out_rxdata[i] = static_cast<uint8_t>(mmio_.Read32(AML_SPI_RXDATA));
       }
+      out_rxdata += burst_size;
     } else {
       for (uint32_t i = 0; i < burst_size; i++) {
         mmio_.Read32(AML_SPI_RXDATA);
       }
     }
 
-    exchange_size -= burst_size;
+    size -= burst_size;
+  }
+}
+
+void AmlSpi::Exchange64(const uint8_t* txdata, uint8_t* out_rxdata, size_t size) {
+  constexpr size_t kBytesPerWord = sizeof(uint64_t);
+  constexpr size_t kMaxBytesPerBurst = kBytesPerWord * kBurstMaxDoubleWords;
+
+  auto conreg = ConReg::Get()
+                    .FromValue(0)
+                    .set_en(1)
+                    .set_mode(ConReg::kModeMaster)
+                    .set_bits_per_word((kBytesPerWord * CHAR_BIT) - 1)
+                    .WriteTo(&mmio_);
+
+  while (size >= kBytesPerWord) {
+    // Burst size in 64-bit words.
+    const uint32_t burst_size_words = std::min(kMaxBytesPerBurst, size) / kBytesPerWord;
+
+    if (txdata) {
+      const uint64_t* tx = reinterpret_cast<const uint64_t*>(txdata);
+      for (uint32_t i = 0; i < burst_size_words; i++) {
+        uint64_t value;
+        memcpy(&value, &tx[i], sizeof(value));
+        value = be64toh(value);
+        // The controller interprets each FIFO entry as a number when they are actually just
+        // bytes. To make sure the bytes come out in the intended order, treat them as big-endian,
+        // and convert to little-endian for the controller.
+        mmio_.Write32(value >> 32, AML_SPI_TXDATA);
+        mmio_.Write32(value & UINT32_MAX, AML_SPI_TXDATA);
+      }
+      txdata += burst_size_words * kBytesPerWord;
+    } else {
+      for (uint32_t i = 0; i < burst_size_words; i++) {
+        mmio_.Write32(UINT32_MAX, AML_SPI_TXDATA);
+        mmio_.Write32(UINT32_MAX, AML_SPI_TXDATA);
+      }
+    }
+
+    auto statreg = StatReg::Get().FromValue(0).set_tc(1).WriteTo(&mmio_);
+    conreg.set_burst_length(burst_size_words - 1).set_xch(1).WriteTo(&mmio_);
+
+    do {
+      statreg.ReadFrom(&mmio_);
+    } while (!statreg.tc());
+
+    if (out_rxdata) {
+      uint64_t* const rx = reinterpret_cast<uint64_t*>(out_rxdata);
+      for (uint32_t i = 0; i < burst_size_words; i++) {
+        uint64_t value = mmio_.Read32(AML_SPI_RXDATA);
+        value = (value << 32) | mmio_.Read32(AML_SPI_RXDATA);
+        value = be64toh(value);
+        memcpy(&rx[i], &value, sizeof(value));
+      }
+      out_rxdata += burst_size_words * kBytesPerWord;
+    } else {
+      for (uint32_t i = 0; i < burst_size_words; i++) {
+        mmio_.Read32(AML_SPI_RXDATA);
+        mmio_.Read32(AML_SPI_RXDATA);
+      }
+    }
+
+    size -= burst_size_words * kBytesPerWord;
+  }
+
+  Exchange8(txdata, out_rxdata, size);
+}
+
+zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t txdata_size,
+                                    uint8_t* out_rxdata, size_t rxdata_size,
+                                    size_t* out_rxdata_actual) {
+  if (cs >= SpiImplGetChipSelectCount()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (txdata_size && rxdata_size && (txdata_size != rxdata_size)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  const size_t exchange_size = txdata_size ? txdata_size : rxdata_size;
+
+  // There seems to be a hardware issue where transferring an odd number of bytes corrupts the TX
+  // FIFO, but only for subsequent transfers that use 64-bit words. Resetting the IP avoids the
+  // problem.
+  if (need_reset_ && reset_ && exchange_size >= sizeof(uint64_t)) {
+    reset_->WriteRegister32(kReset6RegisterOffset, reset_mask_, reset_mask_);
+    need_reset_ = false;
+  } else {
+    // reset both fifos
+    auto testreg = TestReg::Get().FromValue(0).set_fiforst(3).WriteTo(&mmio_);
+    do {
+      testreg.ReadFrom(&mmio_);
+    } while ((testreg.rxcnt() != 0) || (testreg.txcnt() != 0));
+
+    // Resetting seems to leave an extra word in the RX FIFO, so do an extra read just in case.
+    mmio_.Read32(AML_SPI_RXDATA);
+    mmio_.Read32(AML_SPI_RXDATA);
+  }
+
+  chips_[cs].gpio.Write(0);
+
+  // Only use 64-bit words if we will be able to reset the controller.
+  if (reset_) {
+    Exchange64(txdata, out_rxdata, exchange_size);
+  } else {
+    Exchange8(txdata, out_rxdata, exchange_size);
   }
 
   chips_[cs].gpio.Write(1);
 
-  if (rx && out_rxdata_actual) {
+  if (out_rxdata && out_rxdata_actual) {
     *out_rxdata_actual = rxdata_size;
+  }
+
+  if (exchange_size % 2 == 1) {
+    need_reset_ = true;
   }
 
   return ZX_OK;
@@ -301,6 +399,21 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     return status;
   }
 
+  std::optional<fidl::WireSyncClient<fuchsia_hardware_registers::Device>> reset_fidl_client;
+  ddk::RegistersProtocolClient reset(device, "reset");
+  if (reset.is_valid()) {
+    zx::channel reset_server;
+    fidl::ClientEnd<fuchsia_hardware_registers::Device> reset_client;
+    status = zx::channel::create(0, &reset_server, &reset_client.channel());
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: failed to create reset register channel", __func__);
+      return status;
+    }
+
+    reset.Connect(std::move(reset_server));
+    reset_fidl_client.emplace(std::move(reset_client));
+  }
+
   fbl::Array<ChipInfo> chips = InitChips(&gpio_map, device);
   if (!chips) {
     return ZX_ERR_NO_RESOURCES;
@@ -309,8 +422,12 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     return ZX_OK;
   }
 
+  const uint32_t reset_mask =
+      gpio_map.bus_id == 0 ? kSpi0ResetMask : (gpio_map.bus_id == 1 ? kSpi1ResetMask : 0);
+
   fbl::AllocChecker ac;
-  std::unique_ptr<AmlSpi> spi(new (&ac) AmlSpi(device, *std::move(mmio), std::move(chips)));
+  std::unique_ptr<AmlSpi> spi(new (&ac) AmlSpi(
+      device, *std::move(mmio), std::move(reset_fidl_client), reset_mask, std::move(chips)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

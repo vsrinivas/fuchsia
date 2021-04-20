@@ -111,16 +111,6 @@ zx_status_t Sherlock::RegistersInit() {
                                    },
                                });
 
-  register_entries[aml_registers::REGISTER_SPICC0_RESET] =
-      registers::BuildMetadata(allocator, aml_registers::REGISTER_SPICC0_RESET, RESET_MMIO,
-                               std::vector<registers::MaskEntryBuilder<uint32_t>>{
-                                   {
-                                       .mask = aml_registers::SPICC0_RESET_MASK,
-                                       .mmio_offset = T931_RESET6_REGISTER,
-                                       .reg_count = 1,
-                                   },
-                               });
-
 #ifdef FACTORY_BUILD
   mmio_entries[USB_FACTORY_MMIO] = registers::BuildMetadata(allocator, USB_FACTORY_MMIO);
 
