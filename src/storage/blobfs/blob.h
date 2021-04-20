@@ -193,7 +193,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
 #if defined(ENABLE_BLOBFS_NEW_PAGER)
   // PagedVnode protected overrides:
-  void OnNoClones() override __TA_REQUIRES(mutex_);
+  void OnNoPagedVmoClones() override __TA_REQUIRES(mutex_);
 #endif
 
   // blobfs::CacheNode implementation:
@@ -272,12 +272,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Initializes the data VMO for writing.  Idempotent.
   zx_status_t PrepareDataVmoForWriting() __TA_REQUIRES(mutex_);
 
-  // Commits all the data pages of the blob into memory, i.e. reads them from disk.
-  zx_status_t CommitDataBuffer() __TA_REQUIRES(mutex_);
-
   // Verifies the integrity of the null blob (i.e. that its name is correct). Can only be called on
   // the null blob and will assert otherwise.
-  zx_status_t VerifyNullBlob() const __TA_REQUIRES(mutex_);
+  zx_status_t VerifyNullBlob() const __TA_REQUIRES_SHARED(mutex_);
 
   // Called by the Vnode once the last write has completed, updating the
   // on-disk metadata.
@@ -312,7 +309,16 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   //
   // This is used only in the new pager. In the old pager, this state is kept in
   // PageWatcher::is_corrupt_.
-  bool is_corrupt_ __TA_GUARDED(mutex_) = false;
+  //
+  // This value is specifically atomic and not guarded by the mutex. First, it's not critical that
+  // this value be synchronized in any particular way if there are multiple simultaneous readers
+  // and one notices the blob is corrupt.
+  //
+  // Second, this is the only variable written on the read path and avoiding the lock here prevents
+  // needing to hold an exclusive lock on the read path. While noticing a corrupt blob is not
+  // performance-sensitive, the fidl read path calls recursively into the paging read path and an
+  // exclusive lock would deadlock.
+  std::atomic<bool> is_corrupt_ = false;  // Not __TA_GUARDED, see above.
 
   // In the old pager this is kepd in the PageWatcher.
   pager::UserPagerInfo pager_info_ __TA_GUARDED(mutex_);

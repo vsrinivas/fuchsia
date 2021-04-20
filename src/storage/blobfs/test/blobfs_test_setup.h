@@ -37,6 +37,9 @@ class BlobfsTestSetup {
   // called or the BlobCache destructor will assert that there are live blobs.
   zx_status_t Remount(const MountOptions& options = MountOptions());
 
+  // Returns ownership of the created Blobfs. It must not outlive the device in this class.
+  std::unique_ptr<Blobfs> TakeBlobfs() { return std::move(blobfs_); }
+
  private:
   async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
 

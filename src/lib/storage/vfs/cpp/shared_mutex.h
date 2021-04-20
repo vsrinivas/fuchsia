@@ -45,6 +45,10 @@ class __TA_SCOPED_CAPABILITY SharedLock {
   // This is probably a compiler bug.
   ~SharedLock() __TA_RELEASE() {}
 
+  void lock() __TA_ACQUIRE_SHARED() { lock_.lock(); }
+  // Same comment about __TA_RELEASE vs. __TA_RELEASE_SHARED as in the destructor.
+  void unlock() __TA_RELEASE() { lock_.unlock(); }
+
  private:
   std::shared_lock<SharedMutex> lock_;
 };

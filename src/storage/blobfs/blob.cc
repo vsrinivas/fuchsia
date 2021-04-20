@@ -619,7 +619,7 @@ zx_status_t Blob::MarkReadable(CompressionAlgorithm compression_algorithm) {
   }
   set_state(SupportsPaging(compression_algorithm) ? BlobState::kReadablePaged
                                                   : BlobState::kReadableLegacy);
-  { syncing_state_ = SyncingState::kSyncing; }
+  syncing_state_ = SyncingState::kSyncing;
   write_info_.reset();
   return ZX_OK;
 }
@@ -769,18 +769,29 @@ void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
 zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
   TRACE_DURATION("blobfs", "Blobfs::ReadInternal", "len", len, "off", off);
 
-  // TODO(fxbug.dev/74088) allow multiple reads at a time as long as the blob is completely
-  // loaded. This may involve moving the lock to LoadVmosFromDisk and auditing the inode_ and
-  // paged_vmo_ usage in the code below to see if we can guarantee it won't change out from under us
-  // outside the lock.
-  std::lock_guard lock(mutex_);
+  // The common case is that the blob is already loaded. To allow multiple readers, it's important
+  // to avoid taking an exclusive lock unless necessary.
+  fs::SharedLock lock(mutex_);
 
-  if (!IsReadable()) {
+  if (!IsReadable())
     return ZX_ERR_BAD_STATE;
-  }
 
-  if (zx_status_t status = LoadVmosFromDisk(); status != ZX_OK)
-    return status;
+  if (!IsDataLoaded()) {
+    // Release the shared lock and load the data from within an exclusive lock. LoadVmosFromDisk()
+    // can be called multiple times so the race condition caused by this unlocking will be benign.
+    lock.unlock();
+    {
+      // Load the VMO data from within the lock.
+      std::lock_guard exclusive_lock(mutex_);
+      if (zx_status_t status = LoadVmosFromDisk(); status != ZX_OK)
+        return status;
+    }
+    lock.lock();
+
+    // The readable state should never change (from the value we checked at the top of this
+    // function) by attempting to load from disk, that only happens when we try to write.
+    ZX_DEBUG_ASSERT(IsReadable());
+  }
 
   if (blob_size_ == 0) {
     *actual = 0;
@@ -798,10 +809,6 @@ zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actua
   if (state_ == BlobState::kReadablePaged) {
     // Send pager-backed vmo reads through the pager. This will potentially page-in the data by
     // reentering us from the kernel on the pager thread.
-    //
-    // TODO(fxbug.dev/51111) In the new pager I think this will reenter blobfs with the lock held
-    // and deadlock. This is avoided in the old pager because the paging system never acquires the
-    // Blob's lock.
     ZX_DEBUG_ASSERT(paged_vmo().is_valid());
     if (zx_status_t status = paged_vmo().read(data, off, len); status != ZX_OK)
       return status;
@@ -835,7 +842,8 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
     return load_result.error_value();
 
   // Make the vmo.
-  if (auto status = EnsureCreateVmo(load_result->layout->FileBlockAlignedSize()); status.is_error())
+  if (auto status = EnsureCreatePagedVmo(load_result->layout->FileBlockAlignedSize());
+      status.is_error())
     return status.error_value();
 
   // Commit the other load information.
@@ -943,33 +951,53 @@ zx_status_t Blob::QueueUnlink() {
   return TryPurge();
 }
 
-zx_status_t Blob::CommitDataBuffer() {
-  if (blob_size_ == 0) {
-    // It's the null blob, so just verify.
-    return VerifyNullBlob();
-  }
-  return paged_vmo().op_range(ZX_VMO_OP_COMMIT, 0, blob_size_, nullptr, 0);
-}
-
 zx_status_t Blob::Verify() {
-  std::lock_guard lock(mutex_);
-  if (auto status = LoadVmosFromDisk(); status != ZX_OK) {
-    return status;
+  {
+    std::lock_guard lock(mutex_);
+    if (auto status = LoadVmosFromDisk(); status != ZX_OK) {
+      return status;
+    }
+
+    if (state_ != BlobState::kReadablePaged) {
+      // Blobs that are not pager-backed are already verified when they are loaded so failures will
+      // have been reported above.
+      return ZX_OK;
+    }
   }
 
-  // Blobs that are not pager-backed are already verified when they are loaded.
-  // For pager-backed blobs, commit the entire blob in memory. This will cause all of the pages to
-  // be verified as they are read in (or for the null bob we just verify immediately).
-  // If the commit operation fails due to a verification failure, we do propagate the error back via
-  // the return status.
-  if (state_ == BlobState::kReadablePaged) {
-    return CommitDataBuffer();
+  // For non-pager-backed blobs, commit the entire blob in memory. This will cause all of the pages
+  // to be verified as they are read in (or for the null bob we just verify immediately). If the
+  // commit operation fails due to a verification failure, we do propagate the error back via the
+  // return status.
+  //
+  // This is a read-only operation on the blob so can be done with the shared lock. Since it will
+  // reenter the Blob object on the pager thread to satisfy this request, it actually MUST be done
+  // with only the shared lock or the reentrance on the pager thread will deadlock us.
+  {
+    fs::SharedLock lock(mutex_);
+
+    // There is a race condition if somehow this blob was unloaded in between the above exclusive
+    // lock and the shared lock in this block. Currently this is not possible because there is only
+    // one thread processing fidl messages and paging events on the pager threads can't unload the
+    // blob.
+    //
+    // But in the future certain changes might make this theoretically possible (though very
+    // difficult to imagine in practice). If this were to happen, we would prefer to err on the side
+    // of reporting a blob valid rather than mistakenly reporting errors that might cause a valid
+    // blob to be deleted.
+    if (state_ != BlobState::kReadablePaged)
+      return ZX_OK;
+
+    if (blob_size_ == 0) {
+      // It's the null blob, so just verify.
+      return VerifyNullBlob();
+    }
+    return paged_vmo().op_range(ZX_VMO_OP_COMMIT, 0, blob_size_, nullptr, 0);
   }
-  return ZX_OK;
 }
 
 #if defined(ENABLE_BLOBFS_NEW_PAGER)
-void Blob::OnNoClones() {
+void Blob::OnNoPagedVmoClones() {
   // Do nothing. The default implementation will free the VMO but we always need to keep it
   // around and registered with the pager because FIDL reads go through VMO read code path.
 }
@@ -1173,7 +1201,11 @@ void Blob::Sync(SyncCallback on_complete) {
 void Blob::VmoRead(uint64_t offset, uint64_t length) {
   TRACE_DURATION("blobfs", "Blob::VmoRead", "offset", offset, "length", length);
 
-  std::lock_guard lock(mutex_);
+  // It's important that this function use only a shared read lock. This is for performance (to
+  // allow multiple page requests to be run in parallel) and to prevent deadlock with the non-paged
+  // Read() path. The non-paged path is implemented by reading from the vmo which will recursively
+  // call into this code and taking an exclusive lock would deadlock.
+  fs::SharedLock lock(mutex_);
 
   ZX_DEBUG_ASSERT(IsDataLoaded());
 
@@ -1187,10 +1219,10 @@ void Blob::VmoRead(uint64_t offset, uint64_t length) {
     return;
   }
 
-  auto page_supplier = PageSupplier(
-      [&paged_vfs, dest_vmo = paged_vmo()](uint64_t offset, uint64_t length, const zx::vmo& aux_vmo,
-                                           uint64_t aux_offset) {
-        return paged_vfs.SupplyPages(dest_vmo, offset, length, aux_vmo, aux_offset);
+  auto page_supplier = pager::UserPager::PageSupplier(
+      [paged_vfs = paged_vfs(), dest_vmo = &paged_vmo()](
+          uint64_t offset, uint64_t length, const zx::vmo& aux_vmo, uint64_t aux_offset) {
+        return paged_vfs->SupplyPages(*dest_vmo, offset, length, aux_vmo, aux_offset);
       });
   pager::PagerErrorStatus pager_error_status =
       blobfs_->pager()->TransferPages(std::move(page_supplier), offset, length, pager_info_);

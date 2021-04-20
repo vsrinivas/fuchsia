@@ -15,6 +15,7 @@
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
+#include "src/storage/blobfs/test/blobfs_test_setup.h"
 #include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
@@ -35,30 +36,28 @@ class TestBlobfs : public Blobfs {
 class BlobfsCheckerTest : public testing::Test {
  public:
   void SetUp() override {
-    auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
-    ASSERT_TRUE(device);
-    ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
-    loop_.StartThread();
-
-    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device));
-    ASSERT_TRUE(blobfs_or.is_ok());
-    fs_ = std::move(blobfs_or.value());
-
+    ASSERT_EQ(ZX_OK, setup_.CreateFormatMount(kNumBlocks, kBlockSize));
     srand(testing::UnitTest::GetInstance()->random_seed());
+  }
+
+  void TearDown() override {
+    // Some blobs can create vmos. The blobs will assert if the vmo is still attached on shutdown,
+    // and running the loop ensures that any notifications are delivered.
+    setup_.loop().RunUntilIdle();
   }
 
   // UpdateSuperblock writes the provided superblock to the block device and
   // forces blobfs to reload immediately.
   zx_status_t UpdateSuperblock(Superblock& superblock) {
     size_t superblock_size = kBlobfsBlockSize * SuperblockBlocks(superblock);
-    DeviceBlockWrite(fs_->Device(), &superblock, superblock_size, kSuperblockOffset);
-    return static_cast<TestBlobfs*>(fs_.get())->Reload();
+    DeviceBlockWrite(blobfs()->Device(), &superblock, superblock_size, kSuperblockOffset);
+    return static_cast<TestBlobfs*>(blobfs())->Reload();
   }
 
   // Sync waits for blobfs to sync with the underlying block device.
   zx_status_t Sync() {
     sync_completion_t completion;
-    fs_->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+    blobfs()->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
     return sync_completion_wait(&completion, zx::duration::infinite().get());
   }
 
@@ -82,7 +81,8 @@ class BlobfsCheckerTest : public testing::Test {
     if (block_out) {
       auto blob = fbl::RefPtr<Blob>::Downcast(file);
       // Get the block that contains the blob.
-      *block_out = fs_->GetNode(blob->Ino())->extents[0].Start() + DataStartBlock(fs_->Info());
+      *block_out =
+          blobfs()->GetNode(blob->Ino())->extents[0].Start() + DataStartBlock(blobfs()->Info());
     }
     if (size_out) {
       *size_out = info->size_data;
@@ -98,7 +98,7 @@ class BlobfsCheckerTest : public testing::Test {
     AddRandomBlob(node, 1024, &block, &size);
 
     // Unmount.
-    std::unique_ptr<block_client::BlockDevice> device = Blobfs::Destroy(std::move(fs_));
+    std::unique_ptr<block_client::BlockDevice> device = setup_.Unmount();
 
     // Read the block that contains the blob.
     storage::VmoBuffer buffer;
@@ -124,207 +124,139 @@ class BlobfsCheckerTest : public testing::Test {
     ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
     // Remount.
-    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device));
-    ASSERT_TRUE(blobfs_or.is_ok());
-    fs_ = std::move(blobfs_or.value());
+    ASSERT_EQ(ZX_OK, setup_.Mount(std::move(device)));
   }
 
-  std::unique_ptr<Blobfs> get_fs_unique() { return std::move(fs_); }
-  Blobfs* get_fs() { return fs_.get(); }
+  Blobfs* blobfs() { return setup_.blobfs(); }
+  std::unique_ptr<Blobfs> TakeBlobfs() { return setup_.TakeBlobfs(); }
 
  protected:
-  bool enable_paging = false;
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
-
- private:
-  std::unique_ptr<Blobfs> fs_;
+  BlobfsTestSetup setup_;
 };
 
-class BlobfsCheckerPagedTest : public BlobfsCheckerTest {
- public:
-  void SetUp() override {
-    enable_paging = true;
-    BlobfsCheckerTest::SetUp();
-  }
-};
-
-void RunTestEmpty(BlobfsCheckerTest* t) {
-  BlobfsChecker checker(t->get_fs_unique());
+TEST_F(BlobfsCheckerTest, TestEmpty) {
+  BlobfsChecker checker(TakeBlobfs());
   EXPECT_TRUE(checker.Check());
 }
 
-TEST_F(BlobfsCheckerTest, TestEmpty) { RunTestEmpty(this); }
-
-TEST_F(BlobfsCheckerPagedTest, TestEmpty) { RunTestEmpty(this); }
-
-void RunTestNonEmpty(BlobfsCheckerTest* t) {
+TEST_F(BlobfsCheckerTest, TestNonEmpty) {
   fbl::RefPtr<fs::Vnode> root;
-  ASSERT_EQ(t->get_fs()->OpenRootNode(&root), ZX_OK);
+  ASSERT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
   for (unsigned i = 0; i < 3; i++) {
-    t->AddRandomBlob(*root);
+    AddRandomBlob(*root);
   }
-  EXPECT_EQ(t->Sync(), ZX_OK);
+  EXPECT_EQ(Sync(), ZX_OK);
 
-  BlobfsChecker checker(t->get_fs_unique());
+  BlobfsChecker checker(TakeBlobfs());
   EXPECT_TRUE(checker.Check());
 }
 
-TEST_F(BlobfsCheckerTest, TestNonEmpty) { RunTestNonEmpty(this); }
-
-TEST_F(BlobfsCheckerPagedTest, TestNonEmpty) { RunTestNonEmpty(this); }
-
-void RunTestInodeWithUnallocatedBlock(BlobfsCheckerTest* t) {
+TEST_F(BlobfsCheckerTest, TestInodeWithUnallocatedBlock) {
   fbl::RefPtr<fs::Vnode> root;
-  ASSERT_EQ(t->get_fs()->OpenRootNode(&root), ZX_OK);
+  ASSERT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
   for (unsigned i = 0; i < 3; i++) {
-    t->AddRandomBlob(*root);
+    AddRandomBlob(*root);
   }
-  EXPECT_EQ(t->Sync(), ZX_OK);
+  EXPECT_EQ(Sync(), ZX_OK);
 
   Extent e(1, 1);
-  t->get_fs()->GetAllocator()->FreeBlocks(e);
+  blobfs()->GetAllocator()->FreeBlocks(e);
 
-  BlobfsChecker checker(t->get_fs_unique());
+  BlobfsChecker checker(TakeBlobfs());
   EXPECT_FALSE(checker.Check());
-}
-
-TEST_F(BlobfsCheckerTest, TestInodeWithUnallocatedBlock) { RunTestInodeWithUnallocatedBlock(this); }
-
-TEST_F(BlobfsCheckerPagedTest, TestInodeWithUnallocatedBlock) {
-  RunTestInodeWithUnallocatedBlock(this);
 }
 
 // TODO(https://bugs.fuchsia.dev/45924): determine why running this test on an
 // empty blobfs fails on ASAN QEMU bot.
-void RunTestAllocatedBlockCountTooHigh(BlobfsCheckerTest* t) {
-  fbl::RefPtr<fs::Vnode> root;
-  ASSERT_EQ(t->get_fs()->OpenRootNode(&root), ZX_OK);
-  t->AddRandomBlob(*root);
-  EXPECT_EQ(t->Sync(), ZX_OK);
-
-  Superblock superblock = t->get_fs()->Info();
-  superblock.alloc_block_count++;
-  ASSERT_EQ(t->UpdateSuperblock(superblock), ZX_OK);
-
-  BlobfsChecker checker(t->get_fs_unique());
-  EXPECT_FALSE(checker.Check());
-}
-
 TEST_F(BlobfsCheckerTest, TestAllocatedBlockCountTooHigh) {
-  RunTestAllocatedBlockCountTooHigh(this);
-}
-
-TEST_F(BlobfsCheckerPagedTest, TestAllocatedBlockCountTooHigh) {
-  RunTestAllocatedBlockCountTooHigh(this);
-}
-
-void RunTestAllocatedBlockCountTooLow(BlobfsCheckerTest* t) {
   fbl::RefPtr<fs::Vnode> root;
-  ASSERT_EQ(t->get_fs()->OpenRootNode(&root), ZX_OK);
-  for (unsigned i = 0; i < 3; i++) {
-    t->AddRandomBlob(*root);
-  }
-  EXPECT_EQ(t->Sync(), ZX_OK);
+  ASSERT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
+  AddRandomBlob(*root);
+  EXPECT_EQ(Sync(), ZX_OK);
 
-  Superblock superblock = t->get_fs()->Info();
-  superblock.alloc_block_count = 2;
-  t->UpdateSuperblock(superblock);
+  Superblock superblock = blobfs()->Info();
+  superblock.alloc_block_count++;
+  ASSERT_EQ(UpdateSuperblock(superblock), ZX_OK);
 
-  BlobfsChecker checker(t->get_fs_unique());
+  BlobfsChecker checker(TakeBlobfs());
   EXPECT_FALSE(checker.Check());
 }
 
-TEST_F(BlobfsCheckerTest, TestAllocatedBlockCountTooLow) { RunTestAllocatedBlockCountTooLow(this); }
+TEST_F(BlobfsCheckerTest, TestAllocatedBlockCountTooLow) {
+  fbl::RefPtr<fs::Vnode> root;
+  ASSERT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
+  for (unsigned i = 0; i < 3; i++) {
+    AddRandomBlob(*root);
+  }
+  EXPECT_EQ(Sync(), ZX_OK);
 
-TEST_F(BlobfsCheckerPagedTest, TestAllocatedBlockCountTooLow) {
-  RunTestAllocatedBlockCountTooLow(this);
-}
+  Superblock superblock = blobfs()->Info();
+  superblock.alloc_block_count = 2;
+  UpdateSuperblock(superblock);
 
-void RunTestFewerThanMinimumBlocksAllocated(BlobfsCheckerTest* t) {
-  Extent e(0, 1);
-  t->get_fs()->GetAllocator()->FreeBlocks(e);
-  BlobfsChecker checker(t->get_fs_unique());
+  BlobfsChecker checker(TakeBlobfs());
   EXPECT_FALSE(checker.Check());
 }
 
 TEST_F(BlobfsCheckerTest, TestFewerThanMinimumBlocksAllocated) {
-  RunTestFewerThanMinimumBlocksAllocated(this);
-}
-
-TEST_F(BlobfsCheckerPagedTest, TestFewerThanMinimumBlocksAllocated) {
-  RunTestFewerThanMinimumBlocksAllocated(this);
-}
-
-void RunTestAllocatedInodeCountTooHigh(BlobfsCheckerTest* t) {
-  fbl::RefPtr<fs::Vnode> root;
-  ASSERT_EQ(t->get_fs()->OpenRootNode(&root), ZX_OK);
-  t->AddRandomBlob(*root);
-  EXPECT_EQ(t->Sync(), ZX_OK);
-
-  Superblock superblock = t->get_fs()->Info();
-  superblock.alloc_inode_count++;
-  t->UpdateSuperblock(superblock);
-
-  BlobfsChecker checker(t->get_fs_unique());
+  Extent e(0, 1);
+  blobfs()->GetAllocator()->FreeBlocks(e);
+  BlobfsChecker checker(TakeBlobfs());
   EXPECT_FALSE(checker.Check());
 }
 
 TEST_F(BlobfsCheckerTest, TestAllocatedInodeCountTooHigh) {
-  RunTestAllocatedInodeCountTooHigh(this);
-}
-
-TEST_F(BlobfsCheckerPagedTest, TestAllocatedInodeCountTooHigh) {
-  RunTestAllocatedInodeCountTooHigh(this);
-}
-
-void RunTestAllocatedInodeCountTooLow(BlobfsCheckerTest* t) {
   fbl::RefPtr<fs::Vnode> root;
-  ASSERT_EQ(t->get_fs()->OpenRootNode(&root), ZX_OK);
-  for (unsigned i = 0; i < 3; i++) {
-    t->AddRandomBlob(*root);
-  }
-  EXPECT_EQ(t->Sync(), ZX_OK);
+  ASSERT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
+  AddRandomBlob(*root);
+  EXPECT_EQ(Sync(), ZX_OK);
 
-  Superblock superblock = t->get_fs()->Info();
-  superblock.alloc_inode_count = 2;
-  t->UpdateSuperblock(superblock);
+  Superblock superblock = blobfs()->Info();
+  superblock.alloc_inode_count++;
+  UpdateSuperblock(superblock);
 
-  BlobfsChecker checker(t->get_fs_unique());
+  BlobfsChecker checker(TakeBlobfs());
   EXPECT_FALSE(checker.Check());
 }
 
-TEST_F(BlobfsCheckerTest, TestAllocatedInodeCountTooLow) { RunTestAllocatedInodeCountTooLow(this); }
+TEST_F(BlobfsCheckerTest, TestAllocatedInodeCountTooLow) {
+  fbl::RefPtr<fs::Vnode> root;
+  ASSERT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
+  for (unsigned i = 0; i < 3; i++) {
+    AddRandomBlob(*root);
+  }
+  EXPECT_EQ(Sync(), ZX_OK);
 
-TEST_F(BlobfsCheckerPagedTest, TestAllocatedInodeCountTooLow) {
-  RunTestAllocatedInodeCountTooLow(this);
+  Superblock superblock = blobfs()->Info();
+  superblock.alloc_inode_count = 2;
+  UpdateSuperblock(superblock);
+
+  BlobfsChecker checker(TakeBlobfs());
+  EXPECT_FALSE(checker.Check());
 }
 
-void RunTestCorruptBlobs(BlobfsCheckerTest* t) {
+TEST_F(BlobfsCheckerTest, TestCorruptBlobs) {
   fbl::RefPtr<fs::Vnode> root;
   for (unsigned i = 0; i < 5; i++) {
     // Need to get the root node inside the loop because adding a corrupt blob causes us to change
     // the Blobfs instance. The only feasible way right now to corrupt a blob *after* it has been
     // written out involves unmounting and then remounting the file system.
-    ASSERT_EQ(t->get_fs()->OpenRootNode(&root), ZX_OK);
+    ASSERT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
     if (i % 2 == 0) {
-      t->AddRandomBlob(*root);
+      AddRandomBlob(*root);
     } else {
-      t->AddCorruptBlob(*root);
+      AddCorruptBlob(*root);
     }
   }
-  EXPECT_EQ(t->Sync(), ZX_OK);
+  EXPECT_EQ(Sync(), ZX_OK);
 
-  BlobfsChecker checker(t->get_fs_unique());
+  BlobfsChecker checker(TakeBlobfs());
   EXPECT_FALSE(checker.Check());
 }
 
-TEST_F(BlobfsCheckerTest, TestCorruptBlobs) { RunTestCorruptBlobs(this); }
-
-TEST_F(BlobfsCheckerPagedTest, TestCorruptBlobs) { RunTestCorruptBlobs(this); }
-
 TEST_F(BlobfsCheckerTest, BadPreviousNode) {
   fbl::RefPtr<fs::Vnode> root;
-  ASSERT_EQ(get_fs()->OpenRootNode(&root), ZX_OK);
+  ASSERT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
 
   // We need to create a blob that uses an extent container, so to do that, we fragment the free
   // space by creating some blobs and then deleting every other one.
@@ -352,14 +284,14 @@ TEST_F(BlobfsCheckerTest, BadPreviousNode) {
   auto blob = fbl::RefPtr<Blob>::Downcast(file);
 
   const uint32_t inode = blob->Ino();
-  auto node = get_fs()->GetNode(inode);
+  auto node = blobfs()->GetNode(inode);
 
   const uint32_t first_extent_container = node->header.next_node;
 
   // Check that it did actually use an extent container.
   ASSERT_NE(node->header.next_node, 0u);
 
-  const uint64_t node_map_start_block = NodeMapStartBlock(get_fs()->Info());
+  const uint64_t node_map_start_block = NodeMapStartBlock(blobfs()->Info());
   const uint64_t first_extent_container_block =
       node_map_start_block + first_extent_container / kBlobfsInodesPerBlock;
 
@@ -369,7 +301,7 @@ TEST_F(BlobfsCheckerTest, BadPreviousNode) {
   root.reset();
 
   // Unmount.
-  auto device = Blobfs::Destroy(get_fs_unique());
+  auto device = setup_.Unmount();
 
   {
     storage::VmoBuffer buffer;
@@ -395,9 +327,8 @@ TEST_F(BlobfsCheckerTest, BadPreviousNode) {
     ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
   }
 
-  auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device));
-  ASSERT_TRUE(blobfs_or.is_ok());
-  BlobfsChecker checker(std::move(blobfs_or).value());
+  ASSERT_EQ(ZX_OK, setup_.Mount(std::move(device)));
+  BlobfsChecker checker(TakeBlobfs());
 
   // Fsck should fail.
   EXPECT_FALSE(checker.Check());
