@@ -11,6 +11,8 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_neighbor as fnet_neighbor;
 use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::fidl_subnet;
 use net_types::ip::{Ipv4, Ipv6};
@@ -280,14 +282,15 @@ where
         .fuse();
     futures::pin_mut!(echo_reply_stream);
 
-    // Verify through the inspect data that the reachability states are as expected.
     // TODO(fxbug.dev/65585) Get reachability monitor's reachability state over FIDL rather than
-    // the inspect data.
+    // the inspect data. Watching for updates to inspect data is currently not supported, so poll
+    // every 100ms (sufficiently frequent to not increase the time it takes for the test to
+    // complete and not too frequent to encounter the "InconsistentSnapshot" inspect get error).
     const INSPECT_COMPONENT: &str = "reachability.cmx";
     const INSPECT_TREE_SELECTOR: &str = "root/system";
-    let inspect_data_stream = futures::stream::try_unfold((), |()| {
-        get_inspect_data(&env, INSPECT_COMPONENT, INSPECT_TREE_SELECTOR, "")
-            .and_then(|data| {
+    let inspect_data_stream = fasync::Interval::new(zx::Duration::from_millis(100))
+        .then(|()| {
+            get_inspect_data(&env, INSPECT_COMPONENT, INSPECT_TREE_SELECTOR, "").and_then(|data| {
                 futures::future::ready(
                     data.children
                         .get(0)
@@ -303,9 +306,8 @@ where
                         }),
                 )
             })
-            .map_ok(|states| Some((states, ())))
-    })
-    .fuse();
+        })
+        .fuse();
     let mut reachability_monitor_wait_fut = reachability.wait().fuse();
     futures::pin_mut!(inspect_data_stream);
 
