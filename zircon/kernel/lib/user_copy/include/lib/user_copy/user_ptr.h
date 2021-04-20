@@ -38,12 +38,9 @@ class user_ptr {
 
   explicit user_ptr(T* p) : ptr_(p) {}
 
-  user_ptr(const user_ptr& other) : ptr_(other.ptr_) {}
-
-  user_ptr& operator=(const user_ptr& other) {
-    ptr_ = other.ptr_;
-    return *this;
-  }
+  // Allow copy.
+  user_ptr(const user_ptr& other) = default;
+  user_ptr& operator=(const user_ptr& other) = default;
 
   enum { is_out = ((Policy & kOut) == kOut) };
 
