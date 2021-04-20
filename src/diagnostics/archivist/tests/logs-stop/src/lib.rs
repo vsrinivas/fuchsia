@@ -28,7 +28,7 @@ async fn embedding_stop_api_for_log_listener() {
     let (env_proxy, mut logging_component) = fs
         .add_proxy_service_to::<LogSinkMarker, _>(dir_req)
         .launch_component_in_nested_environment(
-            "fuchsia-pkg://fuchsia.com/test-logs-stop#meta/logging-component.cmx".to_owned(),
+            "fuchsia-pkg://fuchsia.com/test-logs-stop#meta/logging_component.cmx".to_owned(),
             None,
             "stop_test_env",
         )
@@ -89,7 +89,7 @@ async fn embedding_stop_api_works_for_batch_iterator() {
     let (env_proxy, mut logging_component) = fs
         .add_proxy_service_to::<LogSinkMarker, _>(dir_req)
         .launch_component_in_nested_environment(
-            "fuchsia-pkg://fuchsia.com/test-logs-stop#meta/logging-component.cmx".to_owned(),
+            "fuchsia-pkg://fuchsia.com/test-logs-stop#meta/logging_component.cmx".to_owned(),
             None,
             "stop_accessor_test_env",
         )

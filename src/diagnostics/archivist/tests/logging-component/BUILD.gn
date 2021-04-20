@@ -19,6 +19,7 @@ rustc_binary("bin") {
 }
 
 fuchsia_component("logging-component") {
+  component_name = "logging_component"
   testonly = true
   manifest = "logging_component.cmx"
   deps = [ ":bin" ]

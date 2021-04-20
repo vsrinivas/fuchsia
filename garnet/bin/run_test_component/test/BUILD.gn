@@ -2,20 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//build/test.gni")
+import("//src/sys/component_index/component_index.gni")
 
 group("test") {
   testonly = true
   deps = [
     ":max_severity",
-    ":run_test_component_test",
+    ":run_test_component_test-package",
   ]
 }
 
-executable("bin") {
-  testonly = true
+test("bin") {
   output_name = "run_test_component_test"
 
   sources = [ "run_test_component_test.cc" ]
@@ -39,9 +40,16 @@ executable("bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
+fuchsia_test_component("run_test_component_test-component") {
+  component_name = "run_test_component_test"
+  deps = [ ":bin" ]
+  manifest = "meta/run_test_component_test.cmx"
+}
+
+# NOTE: This is not a test, and must be installed under bin/
+# so use executable() instead of test() below.
 executable("coverage_component") {
   testonly = true
-
   sources = [ "coverage_component.cc" ]
 
   deps = [
@@ -51,6 +59,13 @@ executable("coverage_component") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+fuchsia_component("coverage_component-component") {
+  testonly = true
+  component_name = "coverage_component"
+  deps = [ ":coverage_component" ]
+  manifest = "meta/coverage_component.cmx"
 }
 
 rustc_binary("component_to_test_standard_out") {
@@ -66,6 +81,12 @@ rustc_binary("component_to_test_standard_out") {
   sources = [ "component_to_test_standard_out.rs" ]
 }
 
+fuchsia_component("component_to_test_standard_out-component") {
+  component_name = "component_to_test_standard_out"
+  deps = [ ":component_to_test_standard_out" ]
+  manifest = "meta/component_to_test_standard_out.cmx"
+}
+
 rustc_binary("error_logging_component") {
   name = "error_logging_component"
   source_root = "./error_logging_component.rs"
@@ -79,59 +100,35 @@ rustc_binary("error_logging_component") {
   sources = [ "error_logging_component.rs" ]
 }
 
-test_package("run_test_component_test") {
+fuchsia_component("error_logging_component-component") {
+  component_name = "error_logging_component"
+  deps = [ ":error_logging_component" ]
+  manifest = "meta/error_logging_component.cmx"
+}
+
+fuchsia_component("logging_component_with_config-component") {
+  component_name = "logging_component_with_config"
+  manifest = "//src/diagnostics/archivist/tests/logging-component/logging_component.cmx"
+  deps = [ "//src/diagnostics/archivist/tests/logging-component:bin" ]
+}
+
+fuchsia_component("logging_component-component") {
+  component_name = "logging_component"
+  manifest = "//src/diagnostics/archivist/tests/logging-component/logging_component.cmx"
+  deps = [ "//src/diagnostics/archivist/tests/logging-component:bin" ]
+}
+
+fuchsia_test_package("run_test_component_test-package") {
+  package_name = "run_test_component_test"
+  test_components = [ ":run_test_component_test-component" ]
+
   deps = [
-    ":bin",
-    ":component_to_test_standard_out",
-    ":coverage_component",
-    ":error_logging_component",
-    "//src/diagnostics/archivist/tests/logging-component:bin",
-  ]
-
-  binaries = [
-    {
-      name = "coverage_component"
-    },
-    {
-      name = "logging_component"
-    },
-    {
-      name = "component_to_test_standard_out"
-    },
-    {
-      name = "error_logging_component"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/coverage_component.cmx")
-      dest = "coverage_component.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/diagnostics/archivist/tests/logging-component/logging_component.cmx")
-      dest = "logging_component.cmx"
-    },
-    {
-      path = rebase_path("meta/component_to_test_standard_out.cmx")
-      dest = "component_to_test_standard_out.cmx"
-    },
-    {
-      path = rebase_path("meta/error_logging_component.cmx")
-      dest = "error_logging_component.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/diagnostics/archivist/tests/logging-component/logging_component.cmx")
-      dest = "logging_component_with_config.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "run_test_component_test"
-    },
+    # These components are needed at runtime, but are not tests.
+    ":component_to_test_standard_out-component",
+    ":coverage_component-component",
+    ":error_logging_component-component",
+    ":logging_component-component",
+    ":logging_component_with_config-component",
   ]
 }
 

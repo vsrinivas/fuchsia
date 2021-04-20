@@ -227,24 +227,6 @@ TEST(RunTest, ParseArgs) {
     EXPECT_TRUE(result.error);
   }
 
-  {
-    std::vector<std::string> expected_urls = {
-        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/coverage_component.cmx",
-        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component.cmx",
-        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/component_to_test_standard_out.cmx",
-        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/error_logging_component.cmx",
-        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component_with_config.cmx",
-        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cmx"};
-    std::vector<const char*> argv = {kBinName, "run_test_component"};
-    auto argc = argv.size();
-    auto result = ParseArgs(env_services, argc, argv.data());
-    EXPECT_FALSE(result.error) << result.error_msg;
-    EXPECT_EQ(expected_urls.size(), result.matching_urls.size());
-    EXPECT_THAT(result.matching_urls, ::testing::UnorderedElementsAreArray(expected_urls));
-    EXPECT_EQ("", result.realm_label);
-    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
-  }
-
   // check that for time being we can pass tets args without using option delimiter(--).
   {
     std::vector<const char*> argv = {kBinName, component_url, "myarg1", "myarg2"};
