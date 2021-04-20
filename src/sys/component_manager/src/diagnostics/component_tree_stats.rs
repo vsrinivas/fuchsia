@@ -216,12 +216,10 @@ impl ComponentTreeStats<DiagnosticsTask> {
                 self.track_ready(ExtendedMoniker::ComponentManager, DiagnosticsTask::Job(job))
                     .await;
             }
-            Err(err) => {
-                warn!(
-                    "Failed to duplicate component manager job. Not tracking its own stats: {:?}",
-                    err
-                )
-            }
+            Err(err) => warn!(
+                "Failed to duplicate component manager job. Not tracking its own stats: {:?}",
+                err
+            ),
         }
     }
 
@@ -386,8 +384,16 @@ mod tests {
                 TaskInfo::try_from(FakeTask::new(
                     1,
                     vec![
-                        zx::TaskRuntimeInfo { cpu_time: 2, queue_time: 4 },
-                        zx::TaskRuntimeInfo { cpu_time: 6, queue_time: 8 },
+                        zx::TaskRuntimeInfo {
+                            cpu_time: 2,
+                            queue_time: 4,
+                            ..zx::TaskRuntimeInfo::default()
+                        },
+                        zx::TaskRuntimeInfo {
+                            cpu_time: 6,
+                            queue_time: 8,
+                            ..zx::TaskRuntimeInfo::default()
+                        },
                     ],
                 ))
                 .unwrap(),
@@ -399,8 +405,16 @@ mod tests {
                 TaskInfo::try_from(FakeTask::new(
                     2,
                     vec![
-                        zx::TaskRuntimeInfo { cpu_time: 1, queue_time: 3 },
-                        zx::TaskRuntimeInfo { cpu_time: 5, queue_time: 7 },
+                        zx::TaskRuntimeInfo {
+                            cpu_time: 1,
+                            queue_time: 3,
+                            ..zx::TaskRuntimeInfo::default()
+                        },
+                        zx::TaskRuntimeInfo {
+                            cpu_time: 5,
+                            queue_time: 7,
+                            ..zx::TaskRuntimeInfo::default()
+                        },
                     ],
                 ))
                 .unwrap(),
@@ -433,8 +447,16 @@ mod tests {
                 TaskInfo::try_from(FakeTask::new(
                     1,
                     vec![
-                        zx::TaskRuntimeInfo { cpu_time: 2, queue_time: 4 },
-                        zx::TaskRuntimeInfo { cpu_time: 6, queue_time: 8 },
+                        zx::TaskRuntimeInfo {
+                            cpu_time: 2,
+                            queue_time: 4,
+                            ..zx::TaskRuntimeInfo::default()
+                        },
+                        zx::TaskRuntimeInfo {
+                            cpu_time: 6,
+                            queue_time: 8,
+                            ..zx::TaskRuntimeInfo::default()
+                        },
                     ],
                 ))
                 .unwrap(),
@@ -446,8 +468,16 @@ mod tests {
                 TaskInfo::try_from(FakeTask::new(
                     2,
                     vec![
-                        zx::TaskRuntimeInfo { cpu_time: 1, queue_time: 3 },
-                        zx::TaskRuntimeInfo { cpu_time: 5, queue_time: 7 },
+                        zx::TaskRuntimeInfo {
+                            cpu_time: 1,
+                            queue_time: 3,
+                            ..zx::TaskRuntimeInfo::default()
+                        },
+                        zx::TaskRuntimeInfo {
+                            cpu_time: 5,
+                            queue_time: 7,
+                            ..zx::TaskRuntimeInfo::default()
+                        },
                     ],
                 ))
                 .unwrap(),

@@ -19,9 +19,9 @@ sys::zx_info_task_runtime_t!(TaskRuntimeInfo);
 
 impl From<sys::zx_info_task_runtime_t> for TaskRuntimeInfo {
     fn from(
-        sys::zx_info_task_runtime_t { cpu_time, queue_time }: sys::zx_info_task_runtime_t,
+        sys::zx_info_task_runtime_t { cpu_time, queue_time, page_fault_time, lock_contention_time }: sys::zx_info_task_runtime_t,
     ) -> TaskRuntimeInfo {
-        TaskRuntimeInfo { cpu_time, queue_time }
+        TaskRuntimeInfo { cpu_time, queue_time, page_fault_time, lock_contention_time }
     }
 }
 
