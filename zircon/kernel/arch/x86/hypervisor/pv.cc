@@ -65,19 +65,10 @@ void calculate_scale_factor(uint64_t tsc_freq, uint32_t* mul, int8_t* shift) {
 
 }  // namespace
 
-extern ktl::atomic<int64_t> utc_offset;
-namespace {
-DECLARE_SINGLETON_MUTEX(UpdateBootTimeLock);
-}  // namespace
-
 zx_status_t pv_clock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas,
                                       zx_vaddr_t guest_paddr) {
-  // KVM doesn't provide any protection against concurrent wall time requests from different
-  // VCPUs, but documentation doesn't mention that it cannot happen and moreover it properly
-  // protects per VCPU system time. Therefore to be on the safer side we use one global mutex
-  // for protection.
-  static uint32_t version TA_GUARDED(UpdateBootTimeLock::Get());
-
+  // Zircon does not maintain a UTC or local time to set a meaningful boot time
+  // hence the value is fixed at zero.
   hypervisor::GuestPtr guest_ptr;
   zx_status_t status = gpas->CreateGuestPtr(guest_paddr, sizeof(pv_clock_boot_time),
                                             "pv_clock-boot-time-guest-mapping", &guest_ptr);
@@ -87,18 +78,6 @@ zx_status_t pv_clock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpa
   auto boot_time = guest_ptr.as<pv_clock_boot_time>();
   ZX_DEBUG_ASSERT(boot_time != nullptr);
   memset(boot_time, 0, sizeof(*boot_time));
-
-  Guard<Mutex> guard(UpdateBootTimeLock::Get());
-  zx_time_t time = utc_offset.load();
-  // See the comment for pv_clock_boot_time structure in arch/x86/pv.h
-  fbl::atomic_ref<uint32_t> guest_version(boot_time->version);
-  guest_version.store(version + 1, fbl::memory_order_relaxed);
-  ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
-  boot_time->seconds = static_cast<uint32_t>(time / ZX_SEC(1));
-  boot_time->nseconds = static_cast<uint32_t>(time % ZX_SEC(1));
-  ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
-  guest_version.store(version + 2, fbl::memory_order_relaxed);
-  version += 2;
   return ZX_OK;
 }
 
@@ -158,7 +137,9 @@ zx_status_t pv_clock_populate_offset(hypervisor::GuestPhysicalAddressSpace* gpas
   auto offset = guest_ptr.as<PvClockOffset>();
   ZX_DEBUG_ASSERT(offset != nullptr);
   memset(offset, 0, sizeof(*offset));
-  zx_time_t time = utc_offset.load() + current_time();
+  // Zircon does not maintain a UTC or local time. We populate offset using the
+  // only time available - time since the device was powered on.
+  zx_time_t time = current_time();
   uint64_t tsc = _rdtsc();
   offset->sec = time / ZX_SEC(1);
   offset->nsec = time % ZX_SEC(1);
