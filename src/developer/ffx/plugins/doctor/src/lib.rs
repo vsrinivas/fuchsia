@@ -111,7 +111,7 @@ impl std::fmt::Display for StepType {
         let s = match self {
             StepType::Started(version_str) => {
                 let welcome_str = format!(
-                    "Welcome to ffx doctor. Frontend version: {}",
+                    "\nWelcome to ffx doctor. Frontend version: {}\n",
                     version_str.as_ref().unwrap_or(&"Unknown".to_string())
                 );
                 format!("{}{}\n{}{}", style::Bold, welcome_str, DAEMON_CHECK_INTRO, style::Reset)
