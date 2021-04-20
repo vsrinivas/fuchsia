@@ -29,6 +29,8 @@ toc:
     path: /fidl.test.error
   - title: fidl.test.escaping
     path: /fidl.test.escaping
+  - title: fidl.test.experimentalmaybefromtypealias
+    path: /fidl.test.experimentalmaybefromtypealias
   - title: fidl.test.foreigntypeinresponseusedthroughcompose
     path: /fidl.test.foreigntypeinresponseusedthroughcompose
   - title: fidl.test.handles

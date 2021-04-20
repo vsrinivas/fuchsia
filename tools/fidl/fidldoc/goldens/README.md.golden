@@ -60,6 +60,10 @@
     <td></td>
 </tr>
 <tr>
+    <td><a href="fidl.test.experimentalmaybefromtypealias/index">fidl.test.experimentalmaybefromtypealias</a></td>
+    <td></td>
+</tr>
+<tr>
     <td><a href="fidl.test.foreigntypeinresponseusedthroughcompose/index">fidl.test.foreigntypeinresponseusedthroughcompose</a></td>
     <td></td>
 </tr>

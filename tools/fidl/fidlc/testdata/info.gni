@@ -203,6 +203,17 @@ fidl_testdata_info = [
     ]
   },
   {
+    name = "experimental_maybe_from_type_alias"
+    target = "//tools/fidl/fidlc/testdata/type_aliases:fidl.test.experimentalmaybefromtypealias"
+    denylist = [
+      # TODO(fxbug.dev/62533): Fix many issues.
+      "fidlgen_hlcpp",
+      "fidlgen_cpp",
+      "fidlgen_libfuzzer",
+      "fidlgen_llcpp",
+    ]
+  },
+  {
     name = "foreign_type_in_response_used_through_compose"
     target = "//tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose:fidl.test.foreigntypeinresponseusedthroughcompose"
     host_build_denylist = [

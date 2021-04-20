@@ -24,6 +24,8 @@ error.json.golden
 error.tables.c.golden
 escaping.json.golden
 escaping.tables.c.golden
+experimental_maybe_from_type_alias.json.golden
+experimental_maybe_from_type_alias.tables.c.golden
 foreign_type_in_response_used_through_compose.json.golden
 foreign_type_in_response_used_through_compose.tables.c.golden
 handles.json.golden

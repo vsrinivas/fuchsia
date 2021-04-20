@@ -18,6 +18,7 @@ standalone_libraries = [
   "enum.test.fidl",
   "error.test.fidl",
   "escaping.test.fidl",
+  "experimental_maybe_from_type_alias.test.fidl",
   "handles.test.fidl",
   "handles_in_types.test.fidl",
   "inheritance.test.fidl",
