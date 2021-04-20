@@ -1212,7 +1212,7 @@ func (s *StatCounter) Decrement() {
 }
 
 // Value returns the current value of the counter.
-func (s *StatCounter) Value() uint64 {
+func (s *StatCounter) Value(name ...string) uint64 {
 	return atomic.LoadUint64(&s.count)
 }
 
@@ -1732,6 +1732,10 @@ type TCPStats struct {
 
 	// ChecksumErrors is the number of segments dropped due to bad checksums.
 	ChecksumErrors *StatCounter
+
+	// FailedPortReservations is the number of times TCP failed to reserve
+	// a port.
+	FailedPortReservations *StatCounter
 }
 
 // UDPStats collects UDP-specific stats.

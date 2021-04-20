@@ -120,7 +120,7 @@ func (dir *inspectDirectory) ForEach(fn func(string, component.Node)) {
 // statCounter enables *tcpip.StatCounters and other types in this
 // package to be accessed via the same interface.
 type statCounter interface {
-	Value() uint64
+	Value(...string) uint64
 }
 
 var _ statCounter = (*tcpip.StatCounter)(nil)
@@ -745,8 +745,6 @@ type socketInfoInspectImpl struct {
 func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
 	var common stack.TransportEndpointInfo
 	switch t := impl.info.(type) {
-	case *tcp.EndpointInfo:
-		common = t.TransportEndpointInfo
 	case *stack.TransportEndpointInfo:
 		common = *t
 	default:
