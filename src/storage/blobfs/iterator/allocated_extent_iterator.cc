@@ -145,6 +145,9 @@ zx_status_t AllocatedExtentIterator::NextContainer() {
   }
   extent_node_ = status.value();
   local_index_ = 0;
+  if (extent_node_->previous_node != node_index_) {
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
   node_index_ = node_index;
 
   return ZX_OK;

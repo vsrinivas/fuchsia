@@ -52,7 +52,8 @@ bool BlobfsChecker::TraverseInodeBitmap() {
     if (inode->header.IsAllocated()) {
       alloc_inodes_++;
       if (inode->header.IsExtentContainer()) {
-        // Extent containers need no validation since we're going to validate the data of all blobs.
+        // Extent containers are effectively validated as we traverse all the extents of a blob
+        // below.
         continue;
       }
 

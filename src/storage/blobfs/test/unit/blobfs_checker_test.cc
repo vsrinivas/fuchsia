@@ -62,15 +62,16 @@ class BlobfsCheckerTest : public testing::Test {
     return sync_completion_wait(&completion, zx::duration::infinite().get());
   }
 
-  // AddRandomBlob creates and writes a random blob to the file system as a child
-  // of the provided Vnode. Optionally returns the block the blob starts at if block_out is
-  // provided, and the size of the blob if size_out is provided.
-  void AddRandomBlob(fs::Vnode* node, uint64_t* block_out = nullptr, uint64_t* size_out = nullptr) {
-    std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 1024);
+  // AddRandomBlob creates and writes a random blob to the file system as a child of the provided
+  // Vnode. Optionally returns the block the blob starts at if block_out is provided, the size of
+  // the blob if size_out is provided, and the name (i.e. the digest) if name_out is provided.
+  void AddRandomBlob(fs::Vnode& node, size_t size = 1024, uint64_t* block_out = nullptr,
+                     uint64_t* size_out = nullptr, std::string* name_out = nullptr) {
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", size);
     memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
     fbl::RefPtr<fs::Vnode> file;
-    ASSERT_EQ(node->Create(info->path, 0, &file), ZX_OK);
+    ASSERT_EQ(node.Create(info->path, 0, &file), ZX_OK);
 
     size_t actual;
     EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
@@ -86,12 +87,15 @@ class BlobfsCheckerTest : public testing::Test {
     if (size_out) {
       *size_out = info->size_data;
     }
+    if (name_out) {
+      *name_out = info->path;
+    }
   }
 
   // Creates and writes a corrupt blob to the file system as a child of the provided Vnode.
-  void AddCorruptBlob(fs::Vnode* node) {
+  void AddCorruptBlob(fs::Vnode& node) {
     uint64_t block, size;
-    AddRandomBlob(node, &block, &size);
+    AddRandomBlob(node, 1024, &block, &size);
 
     // Unmount.
     std::unique_ptr<block_client::BlockDevice> device = Blobfs::Destroy(std::move(fs_));
@@ -130,9 +134,9 @@ class BlobfsCheckerTest : public testing::Test {
 
  protected:
   bool enable_paging = false;
+  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 
  private:
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<Blobfs> fs_;
 };
 
@@ -156,9 +160,8 @@ TEST_F(BlobfsCheckerPagedTest, TestEmpty) { RunTestEmpty(this); }
 void RunTestNonEmpty(BlobfsCheckerTest* t) {
   fbl::RefPtr<fs::Vnode> root;
   ASSERT_EQ(t->get_fs()->OpenRootNode(&root), ZX_OK);
-  fs::Vnode* root_node = root.get();
   for (unsigned i = 0; i < 3; i++) {
-    t->AddRandomBlob(root_node);
+    t->AddRandomBlob(*root);
   }
   EXPECT_EQ(t->Sync(), ZX_OK);
 
@@ -173,9 +176,8 @@ TEST_F(BlobfsCheckerPagedTest, TestNonEmpty) { RunTestNonEmpty(this); }
 void RunTestInodeWithUnallocatedBlock(BlobfsCheckerTest* t) {
   fbl::RefPtr<fs::Vnode> root;
   ASSERT_EQ(t->get_fs()->OpenRootNode(&root), ZX_OK);
-  fs::Vnode* root_node = root.get();
   for (unsigned i = 0; i < 3; i++) {
-    t->AddRandomBlob(root_node);
+    t->AddRandomBlob(*root);
   }
   EXPECT_EQ(t->Sync(), ZX_OK);
 
@@ -197,7 +199,7 @@ TEST_F(BlobfsCheckerPagedTest, TestInodeWithUnallocatedBlock) {
 void RunTestAllocatedBlockCountTooHigh(BlobfsCheckerTest* t) {
   fbl::RefPtr<fs::Vnode> root;
   ASSERT_EQ(t->get_fs()->OpenRootNode(&root), ZX_OK);
-  t->AddRandomBlob(root.get());
+  t->AddRandomBlob(*root);
   EXPECT_EQ(t->Sync(), ZX_OK);
 
   Superblock superblock = t->get_fs()->Info();
@@ -219,9 +221,8 @@ TEST_F(BlobfsCheckerPagedTest, TestAllocatedBlockCountTooHigh) {
 void RunTestAllocatedBlockCountTooLow(BlobfsCheckerTest* t) {
   fbl::RefPtr<fs::Vnode> root;
   ASSERT_EQ(t->get_fs()->OpenRootNode(&root), ZX_OK);
-  fs::Vnode* root_node = root.get();
   for (unsigned i = 0; i < 3; i++) {
-    t->AddRandomBlob(root_node);
+    t->AddRandomBlob(*root);
   }
   EXPECT_EQ(t->Sync(), ZX_OK);
 
@@ -257,7 +258,7 @@ TEST_F(BlobfsCheckerPagedTest, TestFewerThanMinimumBlocksAllocated) {
 void RunTestAllocatedInodeCountTooHigh(BlobfsCheckerTest* t) {
   fbl::RefPtr<fs::Vnode> root;
   ASSERT_EQ(t->get_fs()->OpenRootNode(&root), ZX_OK);
-  t->AddRandomBlob(root.get());
+  t->AddRandomBlob(*root);
   EXPECT_EQ(t->Sync(), ZX_OK);
 
   Superblock superblock = t->get_fs()->Info();
@@ -279,9 +280,8 @@ TEST_F(BlobfsCheckerPagedTest, TestAllocatedInodeCountTooHigh) {
 void RunTestAllocatedInodeCountTooLow(BlobfsCheckerTest* t) {
   fbl::RefPtr<fs::Vnode> root;
   ASSERT_EQ(t->get_fs()->OpenRootNode(&root), ZX_OK);
-  fs::Vnode* root_node = root.get();
   for (unsigned i = 0; i < 3; i++) {
-    t->AddRandomBlob(root_node);
+    t->AddRandomBlob(*root);
   }
   EXPECT_EQ(t->Sync(), ZX_OK);
 
@@ -306,11 +306,10 @@ void RunTestCorruptBlobs(BlobfsCheckerTest* t) {
     // the Blobfs instance. The only feasible way right now to corrupt a blob *after* it has been
     // written out involves unmounting and then remounting the file system.
     ASSERT_EQ(t->get_fs()->OpenRootNode(&root), ZX_OK);
-    fs::Vnode* root_node = root.get();
     if (i % 2 == 0) {
-      t->AddRandomBlob(root_node);
+      t->AddRandomBlob(*root);
     } else {
-      t->AddCorruptBlob(root_node);
+      t->AddCorruptBlob(*root);
     }
   }
   EXPECT_EQ(t->Sync(), ZX_OK);
@@ -322,6 +321,87 @@ void RunTestCorruptBlobs(BlobfsCheckerTest* t) {
 TEST_F(BlobfsCheckerTest, TestCorruptBlobs) { RunTestCorruptBlobs(this); }
 
 TEST_F(BlobfsCheckerPagedTest, TestCorruptBlobs) { RunTestCorruptBlobs(this); }
+
+TEST_F(BlobfsCheckerTest, BadPreviousNode) {
+  fbl::RefPtr<fs::Vnode> root;
+  ASSERT_EQ(get_fs()->OpenRootNode(&root), ZX_OK);
+
+  // We need to create a blob that uses an extent container, so to do that, we fragment the free
+  // space by creating some blobs and then deleting every other one.
+  std::vector<std::string> names;
+  for (int i = 0; i < 16; ++i) {
+    std::string name;
+    AddRandomBlob(*root, 1024, nullptr, nullptr, &name);
+    names.push_back(name);
+  }
+  for (int i = 0; i < 16; i += 2) {
+    ASSERT_EQ(root->Unlink(names[i], false), ZX_OK);
+  }
+
+  // Sync now because the blocks are reserved until the journal is flushed.
+  sync_completion_t sync;
+  root->Sync([&](zx_status_t status) { sync_completion_signal(&sync); });
+  sync_completion_wait(&sync, ZX_TIME_INFINITE);
+
+  // This should end up creating a blob that uses 9 extents.
+  std::string name;
+  AddRandomBlob(*root, 8 * 8192, nullptr, nullptr, &name);
+
+  fbl::RefPtr<fs::Vnode> file;
+  ASSERT_EQ(root->Lookup(name, &file), ZX_OK);
+  auto blob = fbl::RefPtr<Blob>::Downcast(file);
+
+  const uint32_t inode = blob->Ino();
+  auto node = get_fs()->GetNode(inode);
+
+  const uint32_t first_extent_container = node->header.next_node;
+
+  // Check that it did actually use an extent container.
+  ASSERT_NE(node->header.next_node, 0u);
+
+  const uint64_t node_map_start_block = NodeMapStartBlock(get_fs()->Info());
+  const uint64_t first_extent_container_block =
+      node_map_start_block + first_extent_container / kBlobfsInodesPerBlock;
+
+  node.value().reset();
+  blob.reset();
+  file.reset();
+  root.reset();
+
+  // Unmount.
+  auto device = Blobfs::Destroy(get_fs_unique());
+
+  {
+    storage::VmoBuffer buffer;
+    ASSERT_EQ(buffer.Initialize(device.get(), 1, kBlobfsBlockSize, "test_buffer"), ZX_OK);
+    block_fifo_request_t request{
+        .opcode = BLOCKIO_READ,
+        .vmoid = buffer.vmoid(),
+        .length = kBlobfsBlockSize / kBlockSize,
+        .vmo_offset = 0,
+        .dev_offset = first_extent_container_block * kBlobfsBlockSize / kBlockSize,
+    };
+    ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
+
+    ExtentContainer& container = reinterpret_cast<ExtentContainer*>(
+        buffer.Data(0))[first_extent_container % kBlobfsInodesPerBlock];
+    ASSERT_EQ(container.previous_node, inode);
+
+    // Corrupt the previous node.
+    container.previous_node = inode + 1;
+
+    // Write the change back.
+    request.opcode = BLOCKIO_WRITE;
+    ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
+  }
+
+  auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device));
+  ASSERT_TRUE(blobfs_or.is_ok());
+  BlobfsChecker checker(std::move(blobfs_or).value());
+
+  // Fsck should fail.
+  EXPECT_FALSE(checker.Check());
+}
 
 }  // namespace
 }  // namespace blobfs
