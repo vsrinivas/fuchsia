@@ -338,32 +338,50 @@ class Strings {
         name: 'logout',
         desc: 'The label for logout button.',
       );
+
   static String get disconnect => Intl.message(
         'Disconnect',
         name: 'disconnect',
         desc: 'The label for "disconnect" button.',
       );
+
   static String get channel => Intl.message(
         'Channel',
         name: 'channel',
         desc: 'The short name for the "channel" label',
       );
+
   static String get proposeElementErrorTitle => Intl.message(
         'An error occurred while launching',
         name: 'proposeElementErrorTitle',
-        desc: 'The title displayed in the error alert dialog',
+        desc: 'The title displayed in the propose element error alert dialog',
       );
+
   static String get proposeElementErrorNotFoundDesc => Intl.message(
         'The component URL could not be resolved.',
         name: 'proposeElementErrorNotFoundDescription',
         desc: 'The description displayed in the alert dialog handling '
             'ProposeElementError.NOT_FOUND',
       );
+
   static String get proposeElementErrorRejectedDesc => Intl.message(
         'The element spec may have been malformed.',
         name: 'proposeElementErrorRejectedDescription',
         desc: 'The description displayed in the alert dialog handling '
             'ProposeElementError.REJECTED',
+      );
+
+  static String get presentViewErrorTitle => Intl.message(
+        'An error occurred opening the view.',
+        name: 'presentViewErrorTitle',
+        desc: 'The title displayed in the present view error alert dialog',
+      );
+
+  static String get presentViewErrorDesc => Intl.message(
+        'The provided ViewSpec is malformed.',
+        name: 'presentViewErrorDescription',
+        desc: 'The description displayed in the alert dialog handling '
+            'ViewControllerEpitaph.INVALID_VIEW_SPEC',
       );
 
   static String get fuchsiaWelcome => Intl.message(

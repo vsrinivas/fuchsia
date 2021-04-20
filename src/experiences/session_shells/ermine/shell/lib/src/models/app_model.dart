@@ -178,6 +178,7 @@ class AppModel {
     _presenterService = PresenterService(
       onPresent: clustersModel.presentStory,
       onDismiss: clustersModel.dismissStory,
+      onError: _onAlert,
     );
     outgoing
       ..addPublicService(_presenterService.bind, PresenterService.serviceName)

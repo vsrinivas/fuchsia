@@ -9,6 +9,7 @@ import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fidl/fidl.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
+import 'package:internationalization/strings.dart';
 
 import 'suggestion.dart';
 
@@ -27,6 +28,8 @@ typedef PresentViewCallback = void Function(
 /// the shell.
 typedef DismissViewCallback = void Function(ViewControllerImpl);
 
+typedef AlertCallback = void Function(String, [String, String]);
+
 /// A service which implements the fuchsia.session.GraphicalPresenter protocol.
 class PresenterService extends fidl.GraphicalPresenter {
   static const String serviceName = fidl.GraphicalPresenter.$serviceName;
@@ -34,8 +37,9 @@ class PresenterService extends fidl.GraphicalPresenter {
   final List<fidl.GraphicalPresenterBinding> _bindings = [];
   final PresentViewCallback onPresent;
   final DismissViewCallback onDismiss;
+  final AlertCallback onError;
 
-  PresenterService({this.onPresent, this.onDismiss});
+  PresenterService({this.onPresent, this.onDismiss, this.onError});
 
   /// Binds the request to this model.
   void bind(InterfaceRequest<fidl.GraphicalPresenter> request) {
@@ -84,6 +88,13 @@ class PresenterService extends fidl.GraphicalPresenter {
         nameAnnotation?.value?.text,
       );
     } else {
+      final name = nameAnnotation?.value?.text;
+      final url = nameAnnotation?.value?.text;
+      final title = Strings.presentViewErrorTitle;
+      final header = name ?? url ?? 'Unknown Element';
+      final description = 'ViewControllerEpitaph.INVALID_VIEW_SPEC:\n'
+          '${Strings.presentViewErrorDesc}';
+      onError?.call(title, header, description);
       viewController.close(fidl.ViewControllerEpitaph.invalidViewSpec);
     }
   }
