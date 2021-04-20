@@ -33,7 +33,6 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.device.NameProvider",
                 "fuchsia.logger.LogSink",
-                "fuchsia.posix.socket.Provider",
                 "fuchsia.stash.SecureStore",
             ],
         },

@@ -13,7 +13,6 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.device.NameProvider",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.stash.SecureStore"
         ]
     }
