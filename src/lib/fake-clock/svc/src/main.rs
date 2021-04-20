@@ -10,7 +10,7 @@ use fidl_fuchsia_testing::{
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon::{self as zx, AsHandleRef, DurationNum, Peered};
-use futures::{channel::oneshot, stream::StreamExt, FutureExt};
+use futures::{stream::StreamExt, FutureExt};
 use log::{debug, warn};
 
 use std::collections::{BinaryHeap, HashMap};
@@ -73,7 +73,7 @@ impl RegisteredEvent {
 /// for production instances.
 struct FakeClock<T> {
     time: zx::Time,
-    free_running: Option<(oneshot::Sender<()>, oneshot::Receiver<()>)>,
+    free_running: Option<fasync::Task<()>>,
     pending_events: BinaryHeap<PendingEvent>,
     registered_events: HashMap<zx::Koid, RegisteredEvent>,
     observer: T,
@@ -238,46 +238,22 @@ fn start_free_running<T: FakeClockObserver>(
     real_increment: zx::Duration,
     increment: Increment,
 ) {
-    let (mut signal, finished) = {
-        let mut mc = mock_clock.lock().unwrap();
-        assert!(mc.free_running.is_none());
-        let (sender, signal) = oneshot::channel();
-        let (finished, end_signal) = oneshot::channel();
-        mc.free_running = Some((sender, end_signal));
-        (signal.into_stream(), finished)
-    };
-    let mock_clock = Arc::clone(mock_clock);
-    fasync::Task::local(async move {
+    let mock_clock_clone = Arc::clone(mock_clock);
+    mock_clock.lock().unwrap().free_running = Some(fasync::Task::local(async move {
         let mut itv = fasync::Interval::new(real_increment);
         debug!("free running mock clock {:?} {:?}", real_increment, increment);
         loop {
-            if futures::select! {
-                _ = itv.next() => {
-                    mock_clock.lock().unwrap().increment(&increment);
-                    false
-                },
-                _ = signal.next() => {
-                    true
-                }
-            } {
-                break;
-            }
+            itv.next().await;
+            mock_clock_clone.lock().unwrap().increment(&increment);
         }
-        finished.send(()).unwrap();
-    })
-    .detach();
+    }));
 }
 
-async fn stop_free_running<T: FakeClockObserver>(mock_clock: &FakeClockHandle<T>) {
-    let free_running = {
-        // Limit the lifetime of the MutexGuard to avoid holding it across the await.
-        let mut mc = mock_clock.lock().unwrap();
-        mc.free_running.take()
-    };
-    if let Some((s, r)) = free_running {
-        s.send(()).unwrap();
-        let () = r.into_stream().next().await.unwrap().unwrap();
-    }
+fn stop_free_running<T: FakeClockObserver>(mock_clock: &FakeClockHandle<T>) {
+    let mut mc = mock_clock.lock().unwrap();
+    let free_run_task = mc.free_running.take();
+    // Dropping the task ensures it will not be polled anymore.
+    drop(free_run_task);
 }
 
 fn check_valid_increment(increment: &Increment) -> bool {
@@ -307,7 +283,7 @@ async fn handle_control_events<T: FakeClockObserver>(
                 }
             }
             FakeClockControlRequest::Pause { responder } => {
-                stop_free_running(&mock_clock).await;
+                stop_free_running(&mock_clock);
                 let _ = responder.send();
             }
             FakeClockControlRequest::ResumeWithIncrements { real, increment, responder } => {
@@ -315,7 +291,7 @@ async fn handle_control_events<T: FakeClockObserver>(
                     let _ = responder.send(&mut Err(zx::Status::INVALID_ARGS.into_raw()));
                 } else {
                     // stop free running if we are
-                    stop_free_running(&mock_clock).await;
+                    stop_free_running(&mock_clock);
                     start_free_running(&mock_clock, real.nanos(), increment);
                     let _ = responder.send(&mut Ok(()));
                 }
@@ -513,7 +489,7 @@ mod tests {
             Increment::Determined(DEFAULT_INCREMENTS_MS.millis().into_nanos()),
         );
         let _ = fasync::OnSignals::new(&event, zx::Signals::EVENT_SIGNALED).await.unwrap();
-        stop_free_running(&clock_handle).await;
+        stop_free_running(&clock_handle);
 
         // after free running has ended, timer must not be updating anymore:
         let bef = clock_handle.lock().unwrap().time;
