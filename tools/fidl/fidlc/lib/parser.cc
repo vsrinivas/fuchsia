@@ -1940,6 +1940,69 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
       modifiers.resourceness.value_or(types::Resourceness::kValue), std::move(subtype_ctor));
 }
 
+// The colon character is ambiguous. Consider the following two examples:
+//
+//   type A = enum : foo { BAR = 1; };
+//   type B = enum : foo;
+//
+// When the parser encounters the colon in each case, it has no idea whether the
+// value immediately after it should be interpreted as the wrapped type in an
+// inline layout of kind enum, or otherwise as the only constraint on a named
+// layout called "enum."
+//
+// To resolve this confusion, we parse the token after the colon as a constant,
+// then check to see if the token after that is a left curly brace. If it is, we
+// assume that this is in fact the inline layout case ("type A"). If it is not,
+// we assume that it is a named layout with constraints ("type B"). If a parse
+// failure occurs, std::monostate is returned.
+raw::ConstraintOrSubtype Parser::ParseTokenAfterColon() {
+  ASTScope scope(this);
+  std::unique_ptr<raw::TypeConstructorNew> type_ctor;
+  std::unique_ptr<raw::TypeConstraints> constraints;
+  ConsumeToken(OfKind(Token::Kind::kColon));
+  if (!Ok()) {
+    Fail();
+    return std::monostate();
+  }
+
+  // If the token after the colon is the opener to a constraints list, we know
+  // for sure that the identifier before the colon must be a
+  // NamedLayoutReference, so none of the other checks in this case are
+  // required.
+  if (Peek().kind() == Token::Kind::kLeftAngle) {
+    return constraints;
+  }
+
+  std::unique_ptr<raw::Constant> constraint_or_subtype = ParseConstant();
+  if (!Ok()) {
+    Fail();
+    return std::monostate();
+  }
+
+  // If the token after the constant is not an open brace, this was actually a
+  // one-entry constraints block the whole time, so it should be parsed as such.
+  if (Peek().kind() != Token::Kind::kLeftCurly) {
+    std::vector<std::unique_ptr<raw::Constant>> components;
+    components.emplace_back(std::move(constraint_or_subtype));
+    return std::make_unique<raw::TypeConstraints>(scope.GetSourceElement(), std::move(components));
+  }
+
+  // The token we just parsed as a constant is in fact a layout subtype. Coerce
+  // it into that class.
+  if (constraint_or_subtype->kind != raw::Constant::Kind::kIdentifier) {
+    Fail(ErrInvalidWrappedType);
+    return std::monostate();
+  }
+
+  auto subtype_element =
+      raw::SourceElement(constraint_or_subtype->start_, constraint_or_subtype->end_);
+  auto subtype_constant = static_cast<raw::IdentifierConstant*>(constraint_or_subtype.get());
+  auto subtype_ref = std::make_unique<raw::NamedLayoutReference>(
+      subtype_element, std::move(subtype_constant->identifier));
+  return std::make_unique<raw::TypeConstructorNew>(subtype_element, std::move(subtype_ref),
+                                                   /*parameters=*/nullptr, /*constraints=*/nullptr);
+}
+
 // [ name | { ... } ][ < ... > ][ : ... ]
 std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
   ASTScope scope(this);
@@ -1949,6 +2012,8 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
     return Fail();
 
   std::unique_ptr<raw::LayoutReference> layout_ref;
+  std::unique_ptr<raw::LayoutParameterList> parameters;
+  std::unique_ptr<raw::TypeConstraints> constraints;
   switch (Peek().kind()) {
     case Token::Kind::kLeftCurly: {
       auto layout = ParseLayout(scope, modifiers, std::move(identifier), /*subtype_ctor=*/nullptr);
@@ -1957,70 +2022,28 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
       break;
     }
     case Token::Kind::kColon: {
-      // The colon case is ambiguous. Consider the following two examples:
-      //
-      //   type A = enum : foo { BAR = 1; };
-      //   type B = enum : foo;
-      //
-      // When the parser encounters the colon in each case, it has no idea
-      // whether the value immediately after it should be interpreted as the
-      // wrapped type in an inline layout of kind enum, or otherwise as the only
-      // constraint on a named layout called "enum."
-      //
-      // To resolve this confusion, we parse the token after the colon as a
-      // constant, then check to see if the token after that is a left curly
-      // brace. If it is, we assume that this is in fact the inline layout case
-      // ("type A"). If it is not, we assume that it is a named layout with
-      // constraints ("type B").
-      ASTScope after_colon_scope(this);
-      ConsumeToken(OfKind(Token::Kind::kColon));
-      if (!Ok())
-        return Fail();
+      std::unique_ptr<raw::Layout> layout;
+      layout_ref = std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
+                                                               std::move(identifier));
+      raw::ConstraintOrSubtype after_colon = ParseTokenAfterColon();
+      std::visit(fidl::utils::matchers{
+                     [&](std::unique_ptr<raw::TypeConstraints>& constraint) -> void {
+                       constraints = std::move(constraint);
+                     },
+                     [&](std::unique_ptr<raw::TypeConstructorNew>& type_ctor) -> void {
+                       auto named_ref = static_cast<raw::NamedLayoutReference*>(layout_ref.get());
+                       auto layout = ParseLayout(scope, modifiers, std::move(named_ref->identifier),
+                                                 std::move(type_ctor));
+                       layout_ref = std::make_unique<raw::InlineLayoutReference>(
+                           scope.GetSourceElement(), std::move(layout));
+                     },
+                     [&](std::monostate _) -> void { assert(!Ok()); },
+                 },
+                 after_colon);
 
-      // If the token after the colon is the opener to a constraints list, we
-      // know for sure that the identifier before the colon must be a
-      // NamedLayoutReference, so none of the other checks in this case are
-      // required.
-      if (Peek().kind() == Token::Kind::kLeftAngle) {
-        layout_ref = std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
-                                                                 std::move(identifier));
-        break;
+      if (!Ok()) {
+        return nullptr;
       }
-
-      std::unique_ptr<raw::Constant> constraint_or_subtype = ParseConstant();
-      if (!Ok())
-        return Fail();
-
-      // If the token after the constant is not an open brace, this was actually
-      // a one-entry constraints block the whole time, so it should be parsed as
-      // such.
-      if (Peek().kind() != Token::Kind::kLeftCurly) {
-        layout_ref = std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
-                                                                 std::move(identifier));
-        std::vector<std::unique_ptr<raw::Constant>> components;
-        components.emplace_back(std::move(constraint_or_subtype));
-        auto constraints = std::make_unique<raw::TypeConstraints>(
-            after_colon_scope.GetSourceElement(), std::move(components));
-        return std::make_unique<raw::TypeConstructorNew>(
-            scope.GetSourceElement(), std::move(layout_ref), nullptr, std::move(constraints));
-      }
-
-      // The token we just parsed as a constant is in fact a layout subtype.
-      // Coerce it into that class, then build the layout_ref.
-      if (constraint_or_subtype->kind != raw::Constant::Kind::kIdentifier) {
-        return Fail(ErrInvalidWrappedType);
-      }
-
-      auto subtype_element =
-          raw::SourceElement(constraint_or_subtype->start_, constraint_or_subtype->end_);
-      auto subtype_constant = static_cast<raw::IdentifierConstant*>(constraint_or_subtype.get());
-      auto subtype_ref = std::make_unique<raw::NamedLayoutReference>(
-          subtype_element, std::move(subtype_constant->identifier));
-      auto subtype_ctor = std::make_unique<raw::TypeConstructorNew>(
-          subtype_element, std::move(subtype_ref), /*parameters=*/nullptr, /*constraints=*/nullptr);
-      auto layout = ParseLayout(scope, modifiers, std::move(identifier), std::move(subtype_ctor));
-      layout_ref =
-          std::make_unique<raw::InlineLayoutReference>(scope.GetSourceElement(), std::move(layout));
       break;
     }
     default: {
@@ -2030,14 +2053,12 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
     }
   }
 
-  std::unique_ptr<raw::LayoutParameterList> parameters;
   if (previous_token_.kind() != Token::Kind::kColon) {
     parameters = MaybeParseLayoutParameterList();
     if (!Ok())
       return Fail();
   }
 
-  std::unique_ptr<raw::TypeConstraints> constraints;
   MaybeConsumeToken(OfKind(Token::Kind::kColon));
   if (previous_token_.kind() == Token::Kind::kColon) {
     constraints = ParseTypeConstraints();
@@ -2045,6 +2066,8 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
       return Fail();
   }
 
+  assert(layout_ref != nullptr &&
+         "ParseTypeConstructorNew must always produce a non-null layout_ref");
   return std::make_unique<raw::TypeConstructorNew>(scope.GetSourceElement(), std::move(layout_ref),
                                                    std::move(parameters), std::move(constraints));
 }

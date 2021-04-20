@@ -677,6 +677,7 @@ const std::vector<TestCase> new_syntax_test_cases = {
           type S = struct {
             intval «int64»;
             boolval «bool» = false;
+            stringval «string»:MAX_STRING_SIZE;
             inner struct {
               floatval «float64»;
               uintval «uint8» = 7;
@@ -698,6 +699,8 @@ const std::vector<TestCase> new_syntax_test_cases = {
      {
          R"FIDL(library x; type y = «array<uint8,4>»;)FIDL",
          R"FIDL(library x; type y = «vector<«array<Foo,4>»>»;)FIDL",
+         R"FIDL(library x; type y = «string:100»;)FIDL",
+         R"FIDL(library x; type y = «string:<100,optional>»;)FIDL",
          R"FIDL(library x;
           type e = «enum : «uint32» {
             A = 1;
@@ -707,6 +710,7 @@ const std::vector<TestCase> new_syntax_test_cases = {
           type S = «struct {
             intval «int64»;
             boolval «bool» = false;
+            stringval «string:MAX_STRING_SIZE»;
             inner «struct {
               floatval «float64»;
               uintval «uint8» = 7;

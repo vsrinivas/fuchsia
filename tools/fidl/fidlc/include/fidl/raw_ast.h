@@ -303,6 +303,10 @@ class LayoutReference;
 class LayoutParameterList;
 class TypeConstraints;
 
+// The monostate variant is used to represent a parse failure.
+using ConstraintOrSubtype = std::variant<std::unique_ptr<TypeConstraints>,
+                                         std::unique_ptr<TypeConstructorNew>, std::monostate>;
+
 class TypeConstructorNew final : public SourceElement {
  public:
   TypeConstructorNew(SourceElement const& element, std::unique_ptr<LayoutReference> layout_ref,

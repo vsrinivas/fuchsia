@@ -345,6 +345,7 @@ class Parser {
                                            std::unique_ptr<raw::CompoundIdentifier>,
                                            std::unique_ptr<raw::TypeConstructorNew>);
   std::unique_ptr<raw::TypeConstraints> ParseTypeConstraints();
+  raw::ConstraintOrSubtype ParseTokenAfterColon();
   std::unique_ptr<raw::TypeConstructorNew> ParseTypeConstructorNew();
   raw::TypeConstructor ParseTypeConstructor();
   std::unique_ptr<raw::TypeDecl> ParseTypeDecl(ASTScope&);
