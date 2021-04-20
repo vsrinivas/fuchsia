@@ -6,6 +6,9 @@ pub use core_macros::{ffx_command, ffx_plugin};
 
 use {
     anyhow::Result,
+    async_trait::async_trait,
+    fidl_fuchsia_developer_bridge::{DaemonProxy, FastbootProxy},
+    fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     futures::stream::{FuturesUnordered, StreamExt, TryStream},
     futures::{future::FusedFuture, Future},
     pin_project::pin_project,
@@ -18,6 +21,14 @@ use {
 pub mod metrics;
 
 pub use ffx_build_version::build_info;
+
+#[async_trait]
+pub trait Injector {
+    async fn daemon_factory(&self) -> Result<DaemonProxy>;
+    async fn remote_factory(&self) -> Result<RemoteControlProxy>;
+    async fn fastboot_factory(&self) -> Result<FastbootProxy>;
+    async fn is_experiment(&self, key: &str) -> bool;
+}
 
 // Error type for wrapping errors known to an `ffx` command and whose occurrence should
 // not a priori be considered a bug in ffx.
