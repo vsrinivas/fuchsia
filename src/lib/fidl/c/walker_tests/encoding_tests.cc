@@ -21,6 +21,69 @@
 #include "fidl_coded_types.h"
 #include "fidl_structs.h"
 
+namespace {
+
+// TODO(fxb/74599) Migrate usages to fidl::internal::EncodeIovecEtc.
+zx_status_t fidl_linearize_and_encode_etc(const fidl_type_t* type, void* value, uint8_t* bytes,
+                                          uint32_t num_bytes, zx_handle_disposition_t* handles,
+                                          uint32_t num_handles, uint32_t* out_actual_bytes,
+                                          uint32_t* out_actual_handles,
+                                          const char** out_error_msg) {
+  auto iovecs = std::make_unique<zx_channel_iovec_t[]>(ZX_CHANNEL_MAX_MSG_IOVECS);
+  auto backing_buffer = std::make_unique<uint8_t[]>(num_bytes);
+  uint32_t actual_iovecs = 0;
+  zx_status_t status = fidl::internal::EncodeIovecEtc(
+      type, value, iovecs.get(), ZX_CHANNEL_MAX_MSG_IOVECS, handles, num_handles,
+      backing_buffer.get(), num_bytes, &actual_iovecs, out_actual_handles, out_error_msg);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (out_actual_bytes == nullptr) {
+    *out_error_msg = "Cannot encode with null out_actual_bytes";
+    FidlHandleDispositionCloseMany(handles, *out_actual_handles);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  *out_actual_bytes = 0;
+  for (uint32_t i = 0; i < actual_iovecs; i++) {
+    zx_channel_iovec_t& iovec = iovecs[i];
+    if (*out_actual_bytes + iovec.capacity > num_bytes) {
+      *out_error_msg = "pointed offset exceeds buffer size";
+      FidlHandleDispositionCloseMany(handles, *out_actual_handles);
+      return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(bytes + *out_actual_bytes, iovec.buffer, iovec.capacity);
+    *out_actual_bytes += iovec.capacity;
+  }
+
+  return ZX_OK;
+}
+
+// TODO(fxb/74599) Migrate usages to fidl::internal::EncodeIovecEtc.
+zx_status_t fidl_linearize_and_encode(const fidl_type_t* type, void* value, uint8_t* bytes,
+                                      uint32_t num_bytes, zx_handle_t* handles,
+                                      uint32_t num_handles, uint32_t* out_actual_bytes,
+                                      uint32_t* out_actual_handles, const char** out_error_msg) {
+  std::unique_ptr<zx_handle_disposition_t[]> handle_dispositions;
+  if (handles != nullptr) {
+    handle_dispositions = std::make_unique<zx_handle_disposition_t[]>(num_handles);
+  }
+  zx_status_t status = fidl_linearize_and_encode_etc(
+      type, value, bytes, num_bytes, handle_dispositions.get(), num_handles, out_actual_bytes,
+      out_actual_handles, out_error_msg);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (handles != nullptr) {
+    for (uint32_t i = 0; i < num_handles; i++) {
+      handles[i] = handle_dispositions[i].handle;
+    }
+  }
+  return ZX_OK;
+}
+
+}  // namespace
+
 namespace fidl {
 namespace {
 
@@ -1029,11 +1092,10 @@ void encode_absent_nonnullable_bounded_string_error() {
   auto status =
       encode_helper<mode>(&bounded_32_nonnullable_string_message_type, &message, buf,
                           ArrayCount(buf), nullptr, 0, &actual_bytes, &actual_handles, &error);
-  auto& result = *reinterpret_cast<bounded_32_nonnullable_string_message_layout*>(buf);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
-  EXPECT_EQ(reinterpret_cast<uint64_t>(result.inline_struct.string.data), FIDL_ALLOC_ABSENT);
+  EXPECT_EQ(reinterpret_cast<uint64_t>(message.inline_struct.string.data), FIDL_ALLOC_ABSENT);
 }
 
 template <Mode mode>

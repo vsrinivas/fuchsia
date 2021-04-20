@@ -43,60 +43,6 @@ bool ComparePayload(const T* actual, size_t actual_size, const T* expected, size
   return pass;
 }
 
-// Verifies that |value| encodes to |expected_bytes| and |expected_handles|.
-// Note: This is destructive to |value| - a new value must be created with each call.
-inline bool LinearizeAndEncodeSuccess(const fidl_type* type, void* value,
-                                      const std::vector<uint8_t>& expected_bytes,
-                                      const std::vector<zx_handle_t>& expected_handles) {
-  alignas(FIDL_ALIGNMENT) uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_bytes, actual_handles;
-  const char* error_msg = nullptr;
-  zx_status_t status = fidl_linearize_and_encode(type, value, bytes, ZX_CHANNEL_MAX_MSG_BYTES,
-                                                 handles, ZX_CHANNEL_MAX_MSG_HANDLES, &actual_bytes,
-                                                 &actual_handles, &error_msg);
-  if (status != ZX_OK) {
-    std::cout << "Encoding failed (" << zx_status_get_string(status) << "): " << error_msg
-              << std::endl;
-    return false;
-  }
-  if (error_msg != nullptr) {
-    std::cout << "error message unexpectedly non-null when status is ZX_OK: " << error_msg
-              << std::endl;
-    return false;
-  }
-
-  bool bytes_match =
-      ComparePayload(bytes, actual_bytes, expected_bytes.data(), expected_bytes.size());
-  bool handles_match =
-      ComparePayload(handles, actual_handles, expected_handles.data(), expected_handles.size());
-  return bytes_match && handles_match;
-}
-
-// Verifies that |value| fails to encode and results in |expected_error_code|.
-// Note: This is destructive to |value| - a new value must be created with each call.
-inline bool LinearizeAndEncodeFailure(const fidl_type* type, void* value,
-                                      zx_status_t expected_error_code) {
-  alignas(FIDL_ALIGNMENT) uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_bytes, actual_handles;
-  const char* error_msg = nullptr;
-  zx_status_t status = fidl_linearize_and_encode(type, value, bytes, ZX_CHANNEL_MAX_MSG_BYTES,
-                                                 handles, ZX_CHANNEL_MAX_MSG_HANDLES, &actual_bytes,
-                                                 &actual_handles, &error_msg);
-  if (status == ZX_OK) {
-    std::cout << "Encoding unexpectedly succeeded" << std::endl;
-    return false;
-  }
-  if (status != expected_error_code) {
-    std::cout << "Encoding failed with error code " << zx_status_get_string(status) << " ("
-              << error_msg << "), but expected error code "
-              << zx_status_get_string(expected_error_code) << std::endl;
-    return false;
-  }
-  return true;
-}
-
 // Verifies that |bytes| and |handles| successfully decodes.
 // TODO(fxbug.dev/67276) Check deep equality of decoded value.
 inline bool DecodeSuccess(const fidl_type* type, std::vector<uint8_t> bytes,

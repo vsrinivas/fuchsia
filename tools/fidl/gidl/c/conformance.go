@@ -33,49 +33,6 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 #include "sdk/cts/tests/pkg/fidl/cpp/test/handle_util.h"
 #endif
 
-{{ range .EncodeSuccessCases }}
-{{- if .FuchsiaOnly }}
-#ifdef __Fuchsia__
-{{- end }}
-TEST(C_Conformance, {{ .Name }}_LinearizeAndEncode) {
-	{{- if .HandleDefs }}
-	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
-	{{- end }}
-	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
-	{{ .ValueBuild }}
-	const std::vector<uint8_t> expected_bytes = {{ .Bytes }};
-	const std::vector<zx_handle_t> expected_handles = {{ .Handles }};
-	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(c_conformance_utils::LinearizeAndEncodeSuccess(decltype(obj)::Type, &obj, expected_bytes, expected_handles));
-}
-{{- if .FuchsiaOnly }}
-#endif  // __Fuchsia__
-{{- end }}
-{{ end }}
-
-{{ range .EncodeFailureCases }}
-{{- if .FuchsiaOnly }}
-#ifdef __Fuchsia__
-{{- end }}
-TEST(C_Conformance, {{ .Name }}_LinearizeAndEncode_Failure) {
-	{{- if .HandleDefs }}
-	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
-	{{- end }}
-	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
-	{{ .ValueBuild }}
-	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(c_conformance_utils::LinearizeAndEncodeFailure(decltype(obj)::Type, &obj, {{ .ErrorCode }}));
-	{{- if .HandleDefs }}
-	for (zx_handle_t handle : handle_defs) {
-		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
-	}
-	{{- end }}
-}
-{{- if .FuchsiaOnly }}
-#endif  // __Fuchsia__
-{{- end }}
-{{ end }}
-
 {{ range .DecodeSuccessCases }}
 {{- if .FuchsiaOnly }}
 #ifdef __Fuchsia__
@@ -120,25 +77,13 @@ TEST(C_Conformance, {{ .Name }}_Decode_Failure) {
 `))
 
 type conformanceTmplInput struct {
-	EncodeSuccessCases []encodeSuccessCase
 	DecodeSuccessCases []decodeSuccessCase
-	EncodeFailureCases []encodeFailureCase
 	DecodeFailureCases []decodeFailureCase
-}
-
-type encodeSuccessCase struct {
-	Name, HandleDefs, ValueBuild, ValueVar, Bytes, Handles string
-	FuchsiaOnly                                            bool
 }
 
 type decodeSuccessCase struct {
 	Name, HandleDefs, ValueBuild, ValueVar, Bytes, Handles string
 	FuchsiaOnly                                            bool
-}
-
-type encodeFailureCase struct {
-	Name, HandleDefs, ValueBuild, ValueVar, ErrorCode string
-	FuchsiaOnly                                       bool
 }
 
 type decodeFailureCase struct {
@@ -149,15 +94,7 @@ type decodeFailureCase struct {
 // Generate generates C tests.
 func GenerateConformanceTests(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
-	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, schema)
-	if err != nil {
-		return nil, err
-	}
 	decodeSuccessCases, err := decodeSuccessCases(gidl.DecodeSuccess, schema)
-	if err != nil {
-		return nil, err
-	}
-	encodeFailureCases, err := encodeFailureCases(gidl.EncodeFailure, schema)
 	if err != nil {
 		return nil, err
 	}
@@ -167,43 +104,10 @@ func GenerateConformanceTests(gidl gidlir.All, fidl fidlgen.Root, config gidlcon
 	}
 	var buf bytes.Buffer
 	err = conformanceTmpl.Execute(&buf, conformanceTmplInput{
-		EncodeSuccessCases: encodeSuccessCases,
 		DecodeSuccessCases: decodeSuccessCases,
-		EncodeFailureCases: encodeFailureCases,
 		DecodeFailureCases: decodeFailureCases,
 	})
 	return buf.Bytes(), err
-}
-
-func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlmixer.Schema) ([]encodeSuccessCase, error) {
-	var encodeSuccessCases []encodeSuccessCase
-	for _, encodeSuccess := range gidlEncodeSuccesses {
-		decl, err := schema.ExtractDeclarationEncodeSuccess(encodeSuccess.Value, encodeSuccess.HandleDefs)
-		if err != nil {
-			return nil, fmt.Errorf("encode success %s: %s", encodeSuccess.Name, err)
-		}
-		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
-			continue
-		}
-		handleDefs := libhlcpp.BuildHandleDefs(encodeSuccess.HandleDefs)
-		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", encodeSuccess.Value, decl, libllcpp.HandleReprRaw)
-		fuchsiaOnly := decl.IsResourceType() || len(encodeSuccess.HandleDefs) > 0
-		for _, encoding := range encodeSuccess.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
-				continue
-			}
-			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
-				Name:        testCaseName(encodeSuccess.Name, encoding.WireFormat),
-				HandleDefs:  handleDefs,
-				ValueBuild:  valueBuild,
-				ValueVar:    valueVar,
-				Bytes:       libhlcpp.BuildBytes(encoding.Bytes),
-				Handles:     libhlcpp.BuildRawHandles(gidlir.GetHandlesFromHandleDispositions(encoding.HandleDispositions)),
-				FuchsiaOnly: fuchsiaOnly,
-			})
-		}
-	}
-	return encodeSuccessCases, nil
 }
 
 func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlmixer.Schema) ([]decodeSuccessCase, error) {
@@ -235,34 +139,6 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		}
 	}
 	return decodeSuccessCases, nil
-}
-
-func encodeFailureCases(gidlEncodeFailurees []gidlir.EncodeFailure, schema gidlmixer.Schema) ([]encodeFailureCase, error) {
-	var encodeFailureCases []encodeFailureCase
-	for _, encodeFailure := range gidlEncodeFailurees {
-		decl, err := schema.ExtractDeclarationUnsafe(encodeFailure.Value)
-		if err != nil {
-			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
-		}
-		handleDefs := libhlcpp.BuildHandleDefs(encodeFailure.HandleDefs)
-		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", encodeFailure.Value, decl, libllcpp.HandleReprRaw)
-		errorCode := libllcpp.LlcppErrorCode(encodeFailure.Err)
-		fuchsiaOnly := decl.IsResourceType() || len(encodeFailure.HandleDefs) > 0
-		for _, wireFormat := range encodeFailure.WireFormats {
-			if !wireFormatSupported(wireFormat) {
-				continue
-			}
-			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
-				Name:        encodeFailure.Name,
-				HandleDefs:  handleDefs,
-				ValueBuild:  valueBuild,
-				ValueVar:    valueVar,
-				ErrorCode:   errorCode,
-				FuchsiaOnly: fuchsiaOnly,
-			})
-		}
-	}
-	return encodeFailureCases, nil
 }
 
 func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlmixer.Schema) ([]decodeFailureCase, error) {

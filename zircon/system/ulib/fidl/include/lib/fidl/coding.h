@@ -28,39 +28,6 @@ zx_status_t fidl_encode_etc(const fidl_type_t* type, void* bytes, uint32_t num_b
 zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_byte_t* msg,
                             uint32_t* out_actual_handles, const char** out_error_msg);
 
-// fidl_linearize_and_encode converts an object and its children to a FIDL wire-format
-// compatible byte array.
-//
-// As part of this,
-// - Objects are "linearized", meaning they are laid out as a contiguous block in FIDL-wire format
-// order. The object is walked by following pointers in depth-first order and each encountered
-// block is copied in order encountered.
-// - Pointers in the output buffer are replaced with FIDL_ALLOC_PRESENT or FIDL_ALLOC_ABSENT
-// markers.
-// - Handles in the output buffer are replaced with FIDL_HANDLE_PRESENT or FIDL_HANDLE_ABSENT
-// markers.
-// - Input handles are consumed and the values in the input object are replaced with
-// ZX_HANDLE_INVALID.
-// - Padding is zeroed in between struct fields and in between out of line values.
-// - The buffer is validated to match the requirements of the FIDL wire format.
-//
-// On success, handles in the original object will be moved to the |out_handles| array.
-// On failure, handles in the original object will be closed.
-zx_status_t fidl_linearize_and_encode(const fidl_type_t* type, void* value, uint8_t* bytes,
-                                      uint32_t num_bytes, zx_handle_t* handles,
-                                      uint32_t num_handles, uint32_t* out_actual_bytes,
-                                      uint32_t* out_actual_handles, const char** out_error_msg);
-// fidl_linearize_and_encode_etc is identical to fidl_linearize_and_encode but outputs
-// zx_handle_disposition_t instead of zx_handle_t that can be used as input into
-// zx_channel_write_etc and zx_channel_call_etc.
-zx_status_t fidl_linearize_and_encode_etc(const fidl_type_t* type, void* value, uint8_t* bytes,
-                                          uint32_t num_bytes, zx_handle_disposition_t* out_handles,
-                                          uint32_t num_handles, uint32_t* out_actual_bytes,
-                                          uint32_t* out_actual_handles, const char** out_error_msg);
-zx_status_t fidl_linearize_and_encode_msg(const fidl_type_t* type, void* value,
-                                          fidl_outgoing_msg_t* msg, uint32_t* out_actual_bytes,
-                                          uint32_t* out_actual_handles, const char** out_error_msg);
-
 // See
 // https://fuchsia.dev/fuchsia-src/development/languages/fidl/tutorials/tutorial-c#fidl_encode-fidl_encode_msg
 zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,

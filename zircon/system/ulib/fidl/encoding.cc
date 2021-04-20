@@ -349,104 +349,6 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
 };
 
 template <typename HandleType>
-zx_status_t fidl_linearize_and_encode_impl(const fidl_type_t* type, void* value, uint8_t* out_bytes,
-                                           uint32_t num_bytes, HandleType* out_handles,
-                                           uint32_t num_handles, uint32_t* out_num_actual_bytes,
-                                           uint32_t* out_num_actual_handles,
-                                           const char** out_error_msg,
-                                           void (*close_handles)(const HandleType*, uint32_t)) {
-  auto set_error = [&out_error_msg](const char* msg) {
-    if (out_error_msg)
-      *out_error_msg = msg;
-  };
-  if (unlikely(value == nullptr)) {
-    set_error("Cannot encode null value");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(out_bytes == nullptr)) {
-    set_error("Cannot encode to null byte array");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(!FidlIsAligned(reinterpret_cast<uint8_t*>(value)))) {
-    set_error("Value must be aligned to FIDL_ALIGNMENT");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(!FidlIsAligned(out_bytes))) {
-    set_error("Bytes must be aligned to FIDL_ALIGNMENT");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(num_bytes % FIDL_ALIGNMENT != 0)) {
-    set_error("num_bytes must be aligned to FIDL_ALIGNMENT");
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  zx_status_t status;
-  uint32_t next_out_of_line;
-  if (unlikely((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line,
-                                                       out_error_msg)) != ZX_OK)) {
-    return status;
-  }
-
-  // Zero region between primary object and next out of line object.
-  size_t primary_size;
-  if (unlikely((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK)) {
-    return status;
-  }
-
-  // Zero the last 8 bytes so padding will be zero after memcpy.
-  *reinterpret_cast<uint64_t*>(
-      __builtin_assume_aligned(&out_bytes[next_out_of_line - FIDL_ALIGNMENT], FIDL_ALIGNMENT)) = 0;
-
-  // Copy the primary object
-  memcpy(out_bytes, value, primary_size);
-
-  BufferEncodeArgs args = {
-      .bytes = static_cast<uint8_t*>(out_bytes),
-      .num_bytes = num_bytes,
-      .num_handles = num_handles,
-      .next_out_of_line = next_out_of_line,
-      .out_error_msg = out_error_msg,
-  };
-  if (out_handles != nullptr) {
-    args.handles = out_handles;
-  }
-  FidlEncoder<Mode::LinearizeAndEncode> encoder(args);
-  fidl::Walk(encoder, type, {.source_object = value, .dest = out_bytes});
-
-  auto drop_all_handles = [&]() {
-    if (out_num_actual_handles) {
-      *out_num_actual_handles = 0;
-    }
-    close_handles(out_handles, encoder.num_out_handles());
-  };
-
-  if (likely(encoder.status() == ZX_OK)) {
-    if (unlikely(out_num_actual_bytes == nullptr)) {
-      set_error("Cannot encode with null out_actual_bytes");
-      drop_all_handles();
-      return ZX_ERR_INVALID_ARGS;
-    }
-    if (unlikely(out_num_actual_handles == nullptr)) {
-      set_error("Cannot encode with null out_actual_handles");
-      drop_all_handles();
-      return ZX_ERR_INVALID_ARGS;
-    }
-    *out_num_actual_bytes = encoder.num_out_bytes();
-    *out_num_actual_handles = encoder.num_out_handles();
-  } else {
-    drop_all_handles();
-  }
-
-  if (unlikely(out_handles == nullptr && num_handles != 0)) {
-    set_error("Cannot provide non-zero handle count and null handle pointer");
-    // When |handles| is nullptr, handles are closed as part of traversal.
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  return encoder.status();
-}
-
-template <typename HandleType>
 zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                              HandleType* handles, uint32_t max_handles,
                              uint32_t* out_actual_handles, const char** out_error_msg,
@@ -514,6 +416,7 @@ zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     *out_actual_handles = encoder.num_out_handles();
   } else {
     drop_all_handles();
+    return ZX_ERR_INVALID_ARGS;
   }
 
   if (unlikely(handles == nullptr && max_handles != 0)) {
@@ -559,34 +462,6 @@ zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_byte_t* m
                          out_actual_handles, out_error_msg);
 }
 
-zx_status_t fidl_linearize_and_encode(const fidl_type_t* type, void* value, uint8_t* out_bytes,
-                                      uint32_t num_bytes, zx_handle_t* out_handles,
-                                      uint32_t num_handles, uint32_t* out_num_actual_bytes,
-                                      uint32_t* out_num_actual_handles,
-                                      const char** out_error_msg) {
-  return fidl_linearize_and_encode_impl(type, value, out_bytes, num_bytes, out_handles, num_handles,
-                                        out_num_actual_bytes, out_num_actual_handles, out_error_msg,
-                                        close_handles_op);
-}
-zx_status_t fidl_linearize_and_encode_etc(const fidl_type_t* type, void* value, uint8_t* out_bytes,
-                                          uint32_t num_bytes, zx_handle_disposition_t* out_handles,
-                                          uint32_t num_handles, uint32_t* out_num_actual_bytes,
-                                          uint32_t* out_num_actual_handles,
-                                          const char** out_error_msg) {
-  return fidl_linearize_and_encode_impl(type, value, out_bytes, num_bytes, out_handles, num_handles,
-                                        out_num_actual_bytes, out_num_actual_handles, out_error_msg,
-                                        close_handle_dispositions_op);
-}
-zx_status_t fidl_linearize_and_encode_msg(const fidl_type_t* type, void* value,
-                                          fidl_outgoing_msg_t* msg, uint32_t* out_num_actual_bytes,
-                                          uint32_t* out_num_actual_handles,
-                                          const char** out_error_msg) {
-  return fidl_linearize_and_encode_etc(type, value, reinterpret_cast<uint8_t*>(msg->byte.bytes),
-                                       msg->byte.num_bytes, msg->byte.handles,
-                                       msg->byte.num_handles, out_num_actual_bytes,
-                                       out_num_actual_handles, out_error_msg);
-}
-
 namespace fidl {
 namespace internal {
 
@@ -595,19 +470,94 @@ zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iove
                            uint32_t num_handle_dispositions, uint8_t* backing_buffer,
                            uint32_t num_backing_buffer, uint32_t* out_actual_iovec,
                            uint32_t* out_actual_handles, const char** out_error_msg) {
-  uint32_t actual_bytes;
-  zx_status_t status = fidl_linearize_and_encode_etc(
-      type, value, backing_buffer, num_backing_buffer, handle_dispositions, num_handle_dispositions,
-      &actual_bytes, out_actual_handles, out_error_msg);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (num_iovecs < 1) {
-    *out_error_msg = "iovec array is smaller than required";
+  auto set_error = [&out_error_msg](const char* msg) {
+    if (out_error_msg)
+      *out_error_msg = msg;
+  };
+  // TODO(fxbug.dev/66977) Change these to debug asserts after tests expecting these are removed.
+  // This is only used in one place and the runtime checks add unnecessary overhead.
+  if (unlikely(value == nullptr)) {
+    set_error("Cannot encode null value");
     return ZX_ERR_INVALID_ARGS;
   }
-  iovecs[0] = zx_channel_iovec_t{.buffer = backing_buffer, .capacity = actual_bytes, .reserved = 0};
+  if (unlikely(backing_buffer == nullptr)) {
+    set_error("Cannot encode to null byte array");
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (unlikely(!FidlIsAligned(reinterpret_cast<uint8_t*>(value)))) {
+    set_error("value must be aligned to FIDL_ALIGNMENT");
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (unlikely(!FidlIsAligned(backing_buffer))) {
+    set_error("backing_buffer must be aligned to FIDL_ALIGNMENT");
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (unlikely(num_backing_buffer % FIDL_ALIGNMENT != 0)) {
+    set_error("num_bytes must be aligned to FIDL_ALIGNMENT");
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (unlikely(out_actual_iovec == nullptr)) {
+    set_error("Cannot encode with null out_actual_iovec");
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (num_iovecs < 1) {
+    set_error("iovecs must contain at least one iovec");
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (unlikely(out_actual_handles == nullptr)) {
+    set_error("Cannot encode with null out_actual_handles");
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (unlikely(handle_dispositions == nullptr && num_handle_dispositions != 0)) {
+    set_error("Cannot provide non-zero handle count and null handle pointer");
+    // When |handles| is nullptr, handles are closed as part of traversal.
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  zx_status_t status;
+  uint32_t next_out_of_line;
+  if (unlikely((status = fidl::StartingOutOfLineOffset(type, num_backing_buffer, &next_out_of_line,
+                                                       out_error_msg)) != ZX_OK)) {
+    return status;
+  }
+
+  // Zero region between primary object and next out of line object.
+  size_t primary_size;
+  if (unlikely((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK)) {
+    return status;
+  }
+
+  // Zero the last 8 bytes so padding will be zero after memcpy.
+  *reinterpret_cast<uint64_t*>(__builtin_assume_aligned(
+      &backing_buffer[next_out_of_line - FIDL_ALIGNMENT], FIDL_ALIGNMENT)) = 0;
+
+  // Copy the primary object
+  memcpy(backing_buffer, value, primary_size);
+
+  BufferEncodeArgs args = {
+      .bytes = static_cast<uint8_t*>(backing_buffer),
+      .num_bytes = num_backing_buffer,
+      .num_handles = num_handle_dispositions,
+      .next_out_of_line = next_out_of_line,
+      .out_error_msg = out_error_msg,
+  };
+  if (handle_dispositions != nullptr) {
+    args.handles = handle_dispositions;
+  }
+  FidlEncoder<Mode::LinearizeAndEncode> encoder(args);
+  fidl::Walk(encoder, type, {.source_object = value, .dest = backing_buffer});
+  if (unlikely(encoder.status() != ZX_OK)) {
+    *out_actual_handles = 0;
+    FidlHandleDispositionCloseMany(handle_dispositions, encoder.num_out_handles());
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  iovecs[0] = zx_channel_iovec_t{
+    .buffer = backing_buffer,
+    .capacity = encoder.num_out_bytes(),
+  };
   *out_actual_iovec = 1;
+  *out_actual_handles = encoder.num_out_handles();
   return ZX_OK;
 }
 
