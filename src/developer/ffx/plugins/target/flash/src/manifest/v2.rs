@@ -46,7 +46,7 @@ mod test {
     use tempfile::NamedTempFile;
 
     const MANIFEST: &'static str = r#"{
-        "hw_revision": "test",
+        "hw_revision": "rev_test",
         "products": [
             {
                 "name": "zedboot",
@@ -64,7 +64,7 @@ mod test {
     }"#;
 
     const MISMATCH_MANIFEST: &'static str = r#"{
-        "hw_revision": "not_test",
+        "hw_revision": "mismatch",
         "products": [
             {
                 "name": "zedboot",
@@ -86,7 +86,8 @@ mod test {
         let v: FlashManifest = from_str(MANIFEST)?;
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
-        let (_, proxy) = setup();
+        let (state, proxy) = setup();
+        state.lock().unwrap().variables.push("rev_test-b4".to_string());
         let mut writer = Vec::<u8>::new();
         v.flash(&mut writer, proxy, FlashCommand { manifest: tmp_file_name, ..Default::default() })
             .await

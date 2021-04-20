@@ -84,6 +84,7 @@ mod test {
     pub(crate) struct FakeServiceCommands {
         pub(crate) staged_files: Vec<String>,
         pub(crate) oem_commands: Vec<String>,
+        pub(crate) variables: Vec<String>,
     }
 
     pub(crate) fn setup() -> (Arc<Mutex<FakeServiceCommands>>, FastbootProxy) {
@@ -92,7 +93,9 @@ mod test {
             state.clone(),
             setup_fake_fastboot_proxy(move |req| match req {
                 FastbootRequest::GetVar { responder, .. } => {
-                    responder.send(&mut Ok("test-b4".to_string())).unwrap();
+                    let mut state = state.lock().unwrap();
+                    let var = state.variables.pop().unwrap_or("test".to_string());
+                    responder.send(&mut Ok(var)).unwrap();
                 }
                 FastbootRequest::Flash { listener, responder, .. } => {
                     listener.into_proxy().unwrap().on_finished().unwrap();

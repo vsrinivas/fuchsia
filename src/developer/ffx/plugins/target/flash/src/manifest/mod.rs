@@ -292,6 +292,19 @@ pub(crate) async fn verify_hardware(
     Ok(())
 }
 
+pub(crate) async fn verify_variable_value(
+    var: &str,
+    value: &str,
+    fastboot_proxy: &FastbootProxy,
+) -> Result<bool> {
+    fastboot_proxy
+        .get_var(var)
+        .await
+        .map_err(map_fidl_error)?
+        .map_err(|e| anyhow!("Communication error with the device: {:?}", e))
+        .map(|res| res == value)
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // tests
 

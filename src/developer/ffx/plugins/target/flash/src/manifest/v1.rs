@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::manifest::{done_time, flash_partition, map_fidl_error, stage_file, Flash},
+    crate::manifest::{
+        done_time, flash_partition, map_fidl_error, stage_file, verify_variable_value, Flash,
+    },
     anyhow::{anyhow, bail, Context as _, Result},
     async_trait::async_trait,
     chrono::Utc,
@@ -31,7 +33,12 @@ pub(crate) struct Product {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) struct Partition(String, String);
+pub(crate) struct Partition(
+    String,
+    String,
+    #[serde(default)] Option<String>,
+    #[serde(default)] Option<String>,
+);
 
 impl Partition {
     pub(crate) fn name(&self) -> &str {
@@ -40,6 +47,14 @@ impl Partition {
 
     pub(crate) fn file(&self) -> &str {
         self.1.as_str()
+    }
+
+    pub(crate) fn variable(&self) -> Option<&str> {
+        self.2.as_ref().map(|s| s.as_str())
+    }
+
+    pub(crate) fn variable_value(&self) -> Option<&str> {
+        self.3.as_ref().map(|s| s.as_str())
     }
 }
 
@@ -76,11 +91,7 @@ impl Flash for FlashManifest {
                 }
             }
         };
-
-        for partition in &product.bootloader_partitions {
-            flash_partition(writer, &path, partition.name(), partition.file(), &fastboot_proxy)
-                .await?;
-        }
+        flash_partitions(writer, &path, &product.bootloader_partitions, &fastboot_proxy).await?;
         if product.bootloader_partitions.len() > 0 {
             write!(writer, "Rebooting to bootloader... ")?;
             writer.flush()?;
@@ -106,10 +117,7 @@ impl Flash for FlashManifest {
                 reboot.map_err(|e| anyhow!("failed booting to bootloader: {:?}", e))
             })?;
         }
-        for partition in &product.partitions {
-            flash_partition(writer, &path, partition.name(), partition.file(), &fastboot_proxy)
-                .await?;
-        }
+        flash_partitions(writer, &path, &product.partitions, &fastboot_proxy).await?;
         for oem_file in &product.oem_files {
             stage_file(writer, &path, oem_file.file(), &fastboot_proxy).await?;
             writeln!(writer, "Sending command \"{}\"", oem_file.command())?;
@@ -133,6 +141,35 @@ impl Flash for FlashManifest {
         writeln!(writer, "Continuing to boot - this could take awhile")?;
         Ok(())
     }
+}
+
+pub(crate) async fn flash_partitions<W: Write + Send>(
+    writer: &mut W,
+    path: &Path,
+    partitions: &Vec<Partition>,
+    fastboot_proxy: &FastbootProxy,
+) -> Result<()> {
+    for partition in partitions {
+        match (partition.variable(), partition.variable_value()) {
+            (Some(var), Some(value)) => {
+                if verify_variable_value(var, value, fastboot_proxy).await? {
+                    flash_partition(
+                        writer,
+                        &path,
+                        partition.name(),
+                        partition.file(),
+                        fastboot_proxy,
+                    )
+                    .await?;
+                }
+            }
+            _ => {
+                flash_partition(writer, &path, partition.name(), partition.file(), fastboot_proxy)
+                    .await?
+            }
+        }
+    }
+    Ok(())
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -188,6 +225,19 @@ mod test {
                 ["test20", "path20"],
                 ["test30", "path30"]
             ],
+            "oem_files": []
+        }
+    ]"#;
+
+    const CONDITIONAL_MANIFEST: &'static str = r#"[
+        {
+            "name": "zedboot",
+            "bootloader_partitions": [
+                ["btest1", "bpath1", "var1", "value1"],
+                ["btest2", "bpath2", "var2", "value2"],
+                ["btest3", "bpath3", "var3", "value3"]
+            ],
+            "partitions": [],
             "oem_files": []
         }
     ]"#;
@@ -337,6 +387,41 @@ mod test {
         assert_eq!(1, state.staged_files.len());
         assert_eq!(1, state.oem_commands.len());
         assert_eq!(test_oem_cmd, state.oem_commands[0]);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_should_upload_conditional_partitions_that_match() -> Result<()> {
+        let v: FlashManifest = from_str(CONDITIONAL_MANIFEST)?;
+        let tmp_file = NamedTempFile::new().expect("tmp access failed");
+        let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
+        let (state, proxy) = setup();
+        {
+            let mut state = state.lock().unwrap();
+            state.variables.push("not_value3".to_string());
+            state.variables.push("value2".to_string());
+            state.variables.push("not_value1".to_string());
+        }
+        let mut writer = Vec::<u8>::new();
+        v.flash(
+            &mut writer,
+            proxy,
+            FlashCommand {
+                manifest: tmp_file_name,
+                product: Some("zedboot".to_string()),
+                ..Default::default()
+            },
+        )
+        .await?;
+        let output = String::from_utf8(writer).expect("utf-8 string");
+        for (i, partition) in v.0[0].bootloader_partitions.iter().enumerate() {
+            let name_listing = Regex::new(&partition.name()).expect("test regex");
+            let path_listing = Regex::new(&partition.file()).expect("test regex");
+            let expected = if i == 1 { 1 } else { 0 };
+            assert_eq!(name_listing.find_iter(&output).count(), expected);
+            println!("{}", partition.file());
+            assert_eq!(path_listing.find_iter(&output).count(), expected);
+        }
         Ok(())
     }
 }
