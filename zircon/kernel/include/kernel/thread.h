@@ -830,33 +830,59 @@ struct Thread {
   using List = fbl::DoublyLinkedListCustomTraits<Thread*, ThreadListTrait>;
 
   // Stats for a thread's runtime.
-  struct RuntimeStats {
-    TaskRuntimeStats runtime;
+  class RuntimeStats {
+   public:
+    struct SchedulerStats {
+      thread_state state = thread_state::THREAD_INITIAL;  // last state
+      zx_time_t state_time = 0;                           // when the thread entered state
+      zx_duration_t cpu_time = 0;                         // time spent on CPU
+      zx_duration_t queue_time = 0;                       // time spent ready to start running
+    };
 
-    // The last state the thread entered.
-    thread_state state = thread_state::THREAD_INITIAL;
+    const SchedulerStats& GetSchedulerStats() const { return sched_; }
 
-    // The time at which the thread last entered the state.
-    zx_time_t state_time = 0;
-
-    // Update this runtime stat with newer content.
+    // Update scheduler stats with newer content.
     //
     // Adds to CPU and queue time, but sets the given state directly.
-    void Update(const RuntimeStats& other) {
-      runtime.Add(other.runtime);
-      state = other.state;
-      state_time = other.state_time;
+    void UpdateSchedulerStats(const SchedulerStats& other) {
+      sched_.cpu_time = zx_duration_add_duration(sched_.cpu_time, other.cpu_time);
+      sched_.queue_time = zx_duration_add_duration(sched_.queue_time, other.queue_time);
+      sched_.state = other.state;
+      sched_.state_time = other.state_time;
+    }
+
+    // Add time spent handling page faults.
+    // Safe for concurrent use.
+    void AddPageFaultTicks(zx_ticks_t ticks) {
+      // Ignore overflow: it will take hundreds of years to overflow, and even if it
+      // does overflow, this is primarily used to compute relative (rather than absolute)
+      // values, which still works after overflow.
+      page_fault_ticks_.fetch_add(ticks);
+    }
+
+    // Add time spent contented on locks.
+    // Safe for concurrent use.
+    void AddLockContentionTicks(zx_ticks_t ticks) {
+      // Ignore overflow: it will take hundreds of years to overflow, and even if it
+      // does overflow, this is primarily used to compute relative (rather than absolute)
+      // values, which still works after overflow.
+      lock_contention_ticks_.fetch_add(ticks);
     }
 
     // Get the current TaskRuntimeStats, including the current scheduler state.
     TaskRuntimeStats TotalRuntime() const {
-      TaskRuntimeStats ret = runtime;
-      if (state == thread_state::THREAD_RUNNING) {
+      TaskRuntimeStats ret = {
+          .cpu_time = sched_.cpu_time,
+          .queue_time = sched_.queue_time,
+          .page_fault_ticks = page_fault_ticks_.load(),
+          .lock_contention_ticks = lock_contention_ticks_.load(),
+      };
+      if (sched_.state == thread_state::THREAD_RUNNING) {
         ret.cpu_time = zx_duration_add_duration(
-            ret.cpu_time, zx_duration_sub_duration(current_time(), state_time));
-      } else if (state == thread_state::THREAD_READY) {
+            ret.cpu_time, zx_duration_sub_duration(current_time(), sched_.state_time));
+      } else if (sched_.state == thread_state::THREAD_READY) {
         ret.queue_time = zx_duration_add_duration(
-            ret.queue_time, zx_duration_sub_duration(current_time(), state_time));
+            ret.queue_time, zx_duration_sub_duration(current_time(), sched_.state_time));
       }
       return ret;
     }
@@ -869,9 +895,14 @@ struct Thread {
       TaskRuntimeStats runtime = TotalRuntime();
       runtime.AccumulateRuntimeTo(info);
     }
+
+   private:
+    SchedulerStats sched_;
+    RelaxedAtomic<zx_ticks_t> page_fault_ticks_{0};
+    RelaxedAtomic<zx_ticks_t> lock_contention_ticks_{0};
   };
 
-  void UpdateRuntimeStats(const RuntimeStats& stats) TA_REQ(thread_lock);
+  void UpdateSchedulerStats(const RuntimeStats::SchedulerStats& stats) TA_REQ(thread_lock);
 
   // Print the backtrace of the thread, if possible.
   zx_status_t PrintBacktrace();

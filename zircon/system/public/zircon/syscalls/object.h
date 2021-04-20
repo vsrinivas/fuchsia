@@ -50,7 +50,8 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_HANDLE_TABLE                ((zx_object_info_topic_t) 27u) // zx_info_handle_extended_t[n]
 #define ZX_INFO_MSI                         ((zx_object_info_topic_t) 28u) // zx_info_msi_t[1]
 #define ZX_INFO_GUEST_STATS                 ((zx_object_info_topic_t) 29u) // zx_info_guest_stats_t[1]
-#define ZX_INFO_TASK_RUNTIME                ((zx_object_info_topic_t) 30u) // zx_info_task_runtime_t[1]
+#define ZX_INFO_TASK_RUNTIME_V1             __ZX_INFO_TOPIC(30u, 0)        // zx_info_task_runtime_t[1]
+#define ZX_INFO_TASK_RUNTIME                __ZX_INFO_TOPIC(30u, 1)        // zx_info_task_runtime_t[1]
 #define ZX_INFO_KMEM_STATS_EXTENDED         ((zx_object_info_topic_t) 31u) // zx_info_kmem_stats_extended_t[1]
 
 // Return codes set when a task is killed.
@@ -602,7 +603,28 @@ typedef struct zx_info_task_runtime {
     // * Jobs include the queue time for all of their processes (including processes that previously
     // exited).
     zx_duration_t queue_time;
+
+    // The total amount of time this task and its children spent handling page faults.
+    // * Threads include only their own page fault handling time.
+    // * Processes include the page fault time for all of their threads (including threads that
+    // previously exited).
+    // * Jobs include the page fault time for all of their processes (including processes that
+    // previously exited).
+    zx_duration_t page_fault_time;
+
+    // The total amount of time this task and its children spent waiting on contended kernel locks.
+    // * Threads include only their own wait time.
+    // * Processes include the wait time for all of their threads (including threads that
+    // previously exited).
+    // * Jobs include the wait time for all of their processes (including processes that
+    // previously exited).
+    zx_duration_t lock_contention_time;
 } zx_info_task_runtime_t;
+
+typedef struct zx_info_task_runtime_v1 {
+    zx_duration_t cpu_time;
+    zx_duration_t queue_time;
+} zx_info_task_runtime_v1_t;
 
 
 // kernel statistics per cpu

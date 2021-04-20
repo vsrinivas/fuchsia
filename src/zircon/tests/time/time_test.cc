@@ -168,6 +168,58 @@ TEST(TimeTest, DurationFrom) {
   static_assert(zx_duration_from_timespec({123, 456}) == 123000000456);
 }
 
+TEST(TimeTest, TicksAddTicks) {
+  EXPECT_EQ(0, zx_ticks_add_ticks(0, 0));
+
+  EXPECT_EQ(918741562, zx_ticks_add_ticks(918729180, 12382));
+
+  EXPECT_EQ(ZX_TIME_INFINITE_PAST, zx_ticks_add_ticks(ZX_TIME_INFINITE_PAST, 0));
+  EXPECT_EQ(ZX_TIME_INFINITE_PAST, zx_ticks_add_ticks(ZX_TIME_INFINITE_PAST, -1));
+  EXPECT_EQ(ZX_TIME_INFINITE_PAST, zx_ticks_add_ticks(ZX_TIME_INFINITE_PAST, -3298901));
+  EXPECT_EQ(ZX_TIME_INFINITE_PAST,
+            zx_ticks_add_ticks(ZX_TIME_INFINITE_PAST, ZX_TIME_INFINITE_PAST));
+
+  EXPECT_EQ(ZX_TIME_INFINITE, zx_ticks_add_ticks(ZX_TIME_INFINITE, 0));
+  EXPECT_EQ(ZX_TIME_INFINITE, zx_ticks_add_ticks(ZX_TIME_INFINITE, 1));
+  EXPECT_EQ(ZX_TIME_INFINITE, zx_ticks_add_ticks(ZX_TIME_INFINITE, 3298901));
+  EXPECT_EQ(ZX_TIME_INFINITE, zx_ticks_add_ticks(ZX_TIME_INFINITE, ZX_TIME_INFINITE));
+  EXPECT_EQ(ZX_TIME_INFINITE, zx_ticks_add_ticks(ZX_TIME_INFINITE, INT64_MAX));
+}
+
+TEST(TimeTest, TicksSubTicks) {
+  EXPECT_EQ(918716798, zx_ticks_sub_ticks(918729180, 12382));
+
+  EXPECT_EQ(-1, zx_ticks_sub_ticks(1, 2));
+  EXPECT_EQ(-1, zx_ticks_sub_ticks(0, 1));
+
+  EXPECT_EQ(0, zx_ticks_sub_ticks(0, 0));
+  EXPECT_EQ(0, zx_ticks_sub_ticks(3980, 3980));
+  EXPECT_EQ(0, zx_ticks_sub_ticks(ZX_TIME_INFINITE_PAST, ZX_TIME_INFINITE_PAST));
+  EXPECT_EQ(0, zx_ticks_sub_ticks(ZX_TIME_INFINITE, ZX_TIME_INFINITE));
+
+  EXPECT_EQ(ZX_TIME_INFINITE_PAST, zx_ticks_sub_ticks(ZX_TIME_INFINITE_PAST, 0));
+  EXPECT_EQ(ZX_TIME_INFINITE_PAST, zx_ticks_sub_ticks(ZX_TIME_INFINITE_PAST, 1));
+  EXPECT_EQ(ZX_TIME_INFINITE_PAST, zx_ticks_sub_ticks(ZX_TIME_INFINITE_PAST, ZX_TIME_INFINITE));
+  EXPECT_EQ(ZX_TIME_INFINITE_PAST, zx_ticks_sub_ticks(INT64_MIN, INT64_MAX));
+
+  EXPECT_EQ((ZX_TIME_INFINITE - 1), zx_ticks_sub_ticks(ZX_TIME_INFINITE, 1));
+
+  EXPECT_EQ(ZX_TIME_INFINITE, zx_ticks_sub_ticks(0, ZX_TIME_INFINITE_PAST));
+}
+
+TEST(TimeTest, TicksMulInt64) {
+  EXPECT_EQ(0, zx_ticks_mul_int64(0, 0));
+  EXPECT_EQ(39284291, zx_ticks_mul_int64(39284291, 1));
+  EXPECT_EQ(220499082795, zx_ticks_mul_int64(23451, 9402545));
+  EXPECT_EQ(-39284291, zx_ticks_mul_int64(39284291, -1));
+  EXPECT_EQ(-220499082795, zx_ticks_mul_int64(23451, -9402545));
+  EXPECT_EQ(220499082795, zx_ticks_mul_int64(-23451, -9402545));
+
+  EXPECT_EQ(ZX_TIME_INFINITE, zx_ticks_mul_int64(ZX_TIME_INFINITE, 2));
+  EXPECT_EQ(ZX_TIME_INFINITE, zx_ticks_mul_int64(ZX_TIME_INFINITE_PAST, -2));
+  EXPECT_EQ(ZX_TIME_INFINITE_PAST, zx_ticks_mul_int64(ZX_TIME_INFINITE_PAST, 2));
+}
+
 // See that we can use the conversion macros as constexpr initializers.
 static constexpr const zx_duration_t durations[] = {
     ZX_NSEC(1), ZX_USEC(1), ZX_MSEC(1), ZX_SEC(1), ZX_MIN(1), ZX_HOUR(1),

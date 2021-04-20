@@ -348,9 +348,9 @@ void ProcessDispatcher::RemoveThread(ThreadDispatcher* t) {
       became_dead = true;
     }
 
-    Thread::RuntimeStats child_runtime;
+    TaskRuntimeStats child_runtime;
     if (t->GetRuntimeStats(&child_runtime) == ZX_OK) {
-      aggregated_runtime_stats_.Add(child_runtime.TotalRuntime());
+      aggregated_runtime_stats_.Add(child_runtime);
     }
   }
 

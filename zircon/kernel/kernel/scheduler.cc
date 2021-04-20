@@ -922,9 +922,9 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
   const SchedDuration total_runtime_ns = now - start_of_current_time_slice_ns_;
   const SchedDuration actual_runtime_ns = now - current_state->last_started_running_;
   current_state->last_started_running_ = now;
-  current_thread->UpdateRuntimeStats({.runtime = {.cpu_time = actual_runtime_ns.raw_value()},
-                                      .state = current_thread->state(),
-                                      .state_time = now.raw_value()});
+  current_thread->UpdateSchedulerStats({.state = current_thread->state(),
+                                        .state_time = now.raw_value(),
+                                        .cpu_time = actual_runtime_ns.raw_value()});
 
   // Update the runtime accounting for the thread that just ran.
   current_state->runtime_ns_ += actual_runtime_ns;
@@ -1091,9 +1091,9 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     const SchedDuration queue_time_ns = now - next_state->last_started_running_;
     UpdateCounters(queue_time_ns);
 
-    next_thread->UpdateRuntimeStats({.runtime = {.queue_time = queue_time_ns.raw_value()},
-                                     .state = next_thread->state(),
-                                     .state_time = now.raw_value()});
+    next_thread->UpdateSchedulerStats({.state = next_thread->state(),
+                                       .state_time = now.raw_value(),
+                                       .queue_time = queue_time_ns.raw_value()});
 
     next_state->last_started_running_ = now;
     start_of_current_time_slice_ns_ = now;

@@ -139,6 +139,42 @@ __CONSTEXPR static inline zx_duration_t zx_duration_from_hour(int64_t n) {
   return zx_duration_mul_int64(3600000000000, n);
 }
 
+__CONSTEXPR static inline zx_ticks_t zx_ticks_add_ticks(zx_ticks_t ticks1, zx_ticks_t ticks2) {
+  zx_ticks_t x = 0;
+  if (unlikely(add_overflow(ticks1, ticks2, &x))) {
+    if (x >= 0) {
+      return ZX_TIME_INFINITE_PAST;
+    } else {
+      return ZX_TIME_INFINITE;
+    }
+  }
+  return x;
+}
+
+__CONSTEXPR static inline zx_ticks_t zx_ticks_sub_ticks(zx_ticks_t ticks1, zx_ticks_t ticks2) {
+  zx_ticks_t x = 0;
+  if (unlikely(sub_overflow(ticks1, ticks2, &x))) {
+    if (x >= 0) {
+      return ZX_TIME_INFINITE_PAST;
+    } else {
+      return ZX_TIME_INFINITE;
+    }
+  }
+  return x;
+}
+
+__CONSTEXPR static inline zx_ticks_t zx_ticks_mul_int64(zx_ticks_t ticks, int64_t multiplier) {
+  zx_ticks_t x = 0;
+  if (unlikely(mul_overflow(ticks, multiplier, &x))) {
+    if ((ticks > 0 && multiplier > 0) || (ticks < 0 && multiplier < 0)) {
+      return ZX_TIME_INFINITE;
+    } else {
+      return ZX_TIME_INFINITE_PAST;
+    }
+  }
+  return x;
+}
+
 #if __has_include(<time.h>)
 
 __CONSTEXPR static inline zx_duration_t zx_duration_from_timespec(struct timespec ts) {

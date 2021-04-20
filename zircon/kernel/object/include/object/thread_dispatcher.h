@@ -155,11 +155,11 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   zx_status_t GetStatsForUserspace(zx_info_thread_stats_t* info) TA_EXCL(get_lock());
 
   // Fetch a consistent snapshot of the runtime stats.
-  zx_status_t GetRuntimeStats(Thread::RuntimeStats* out) const;
+  zx_status_t GetRuntimeStats(TaskRuntimeStats* out) const;
 
   // Aggregate the runtime stats for this thread into the given struct.
   zx_status_t AccumulateRuntimeTo(zx_info_task_runtime_t* info) const {
-    Thread::RuntimeStats out;
+    TaskRuntimeStats out;
     zx_status_t err = GetRuntimeStats(&out);
     if (err != ZX_OK) {
       return err;
@@ -208,19 +208,28 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // callback from kernel when thread is resuming
   void Resuming();
 
-  // Provide an update to this thread's runtime stats.
+  // Provide an update to this thread's scheduler-related runtime stats.
   //
   // WARNING: This method must not be called concurrently by two separate threads.
   // For now, this method is protected by the thread_lock, but in the future this may change.
-  void UpdateRuntimeStats(const Thread::RuntimeStats& update) TA_REQ(thread_lock) {
+  void UpdateSchedulerStats(const Thread::RuntimeStats::SchedulerStats& update)
+      TA_REQ(thread_lock) {
     uint64_t before = stats_generation_count_.fetch_add(1, ktl::memory_order_acq_rel);
-    runtime_stats_.Update(update);
+    runtime_stats_.UpdateSchedulerStats(update);
     uint64_t after = stats_generation_count_.fetch_add(1, ktl::memory_order_acq_rel);
     // Ensure no concurrent write was happening at the start and that no concurrent writes happened
     // during this operation.
     DEBUG_ASSERT((before % 2) == 0);
     DEBUG_ASSERT(after == before + 1);
   }
+
+  // Update time spent handling page faults.
+  // Safe for concurrent use.
+  void AddPageFaultTicks(zx_ticks_t ticks) { runtime_stats_.AddPageFaultTicks(ticks); }
+
+  // Update time spent contended on locks.
+  // Safe for concurrent use.
+  void AddLockContentionTicks(zx_ticks_t ticks) { runtime_stats_.AddLockContentionTicks(ticks); }
 
  private:
   ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags);

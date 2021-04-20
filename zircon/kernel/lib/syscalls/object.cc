@@ -402,6 +402,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
+    case ZX_INFO_TASK_RUNTIME_V1:
     case ZX_INFO_TASK_RUNTIME: {
       fbl::RefPtr<Dispatcher> dispatcher;
       auto err = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &dispatcher);
@@ -428,6 +429,14 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
         }
       } else {
         return ZX_ERR_WRONG_TYPE;
+      }
+
+      if (topic == ZX_INFO_TASK_RUNTIME_V1) {
+        zx_info_task_runtime_v1_t info_v1 = {
+            .cpu_time = info.cpu_time,
+            .queue_time = info.queue_time,
+        };
+        return single_record_result(_buffer, buffer_size, _actual, _avail, info_v1);
       }
 
       return single_record_result(_buffer, buffer_size, _actual, _avail, info);

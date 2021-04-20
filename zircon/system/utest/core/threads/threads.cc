@@ -400,7 +400,8 @@ TEST(Threads, GetLastScheduledCpu) {
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 }
 
-TEST(Threads, GetInfoRuntime) {
+template <typename InfoT>
+static void TestThreadsGetInfoRuntime(const uint32_t topic) {
   zx::event event;
   ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
 
@@ -411,10 +412,14 @@ TEST(Threads, GetInfoRuntime) {
   starter.CreateThread(&thread, thread_h.reset_and_get_address());
 
   // Ensure runtime is 0 prior to thread starting.
-  zx_info_task_runtime_t info;
-  ASSERT_EQ(thread_h.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr), ZX_OK);
+  InfoT info;
+  size_t actual = 0;
+  size_t avail = 0;
+  ASSERT_EQ(thread_h.get_info(topic, &info, sizeof(info), &actual, &avail), ZX_OK);
   ASSERT_EQ(info.cpu_time, 0);
   ASSERT_EQ(info.queue_time, 0);
+  EXPECT_EQ(actual, 1);
+  EXPECT_EQ(avail, 1);
 
   // Start the thread.
   ASSERT_TRUE(starter.StartThread(threads_test_run_fn, &event));
@@ -423,7 +428,7 @@ TEST(Threads, GetInfoRuntime) {
   ASSERT_EQ(event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), /*pending=*/nullptr), ZX_OK);
 
   // Ensure the last-reported thread looks reasonable.
-  ASSERT_EQ(thread_h.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr), ZX_OK);
+  ASSERT_EQ(thread_h.get_info(topic, &info, sizeof(info), nullptr, nullptr), ZX_OK);
   ASSERT_GT(info.cpu_time, 0);
   ASSERT_GT(info.queue_time, 0);
 
@@ -432,7 +437,7 @@ TEST(Threads, GetInfoRuntime) {
   ASSERT_EQ(thread_h.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr), ZX_OK);
 
   // Ensure the runtime can still be read after the task exits.
-  ASSERT_EQ(thread_h.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr), ZX_OK);
+  ASSERT_EQ(thread_h.get_info(topic, &info, sizeof(info), nullptr, nullptr), ZX_OK);
   ASSERT_GT(info.cpu_time, 0);
   ASSERT_GT(info.queue_time, 0);
 
@@ -441,8 +446,16 @@ TEST(Threads, GetInfoRuntime) {
   ASSERT_OK(thread_h.get_info(ZX_INFO_HANDLE_BASIC, &basic, sizeof(basic), nullptr, nullptr));
   zx::thread thread_dup;
   ASSERT_OK(thread_h.duplicate(basic.rights & ~ZX_RIGHT_INSPECT, &thread_dup));
-  ASSERT_EQ(thread_dup.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr),
+  ASSERT_EQ(thread_dup.get_info(topic, &info, sizeof(info), nullptr, nullptr),
             ZX_ERR_ACCESS_DENIED);
+}
+
+TEST(Threads, GetInfoRuntime) {
+  TestThreadsGetInfoRuntime<zx_info_task_runtime_t>(ZX_INFO_TASK_RUNTIME);
+}
+
+TEST(Threads, GetInfoRuntimeV1) {
+  TestThreadsGetInfoRuntime<zx_info_task_runtime_v1_t>(ZX_INFO_TASK_RUNTIME_V1);
 }
 
 TEST(Threads, GetAffinity) {

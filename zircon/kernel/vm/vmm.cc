@@ -7,6 +7,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/affine/ratio.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
 #include <lib/zircon-internal/macros.h>
@@ -17,6 +18,7 @@
 
 #include <fbl/null_lock.h>
 #include <kernel/mutex.h>
+#include <kernel/task_runtime_timers.h>
 #include <kernel/thread_lock.h>
 #include <object/diagnostics.h>
 #include <vm/fault.h>
@@ -41,6 +43,8 @@ void vmm_context_switch(VmAspace* oldspace, VmAspace* newaspace) {
 }
 
 zx_status_t vmm_accessed_fault_handler(vaddr_t addr) {
+  PageFaultTimer timer(Thread::Current::Get(), current_ticks());
+
   // Forward fault to the current aspace.
   VmAspace* aspace = VmAspace::vaddr_to_aspace(addr);
   if (!aspace) {
@@ -62,8 +66,10 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
   // hardware fault, mark it as such
   flags |= VMM_PF_FLAG_HW_FAULT;
 
+  Thread* current_thread = Thread::Current::Get();
+  PageFaultTimer timer(current_thread, current_ticks());
+
   if (TRACE_PAGE_FAULT || LOCAL_TRACE) {
-    Thread* current_thread = Thread::Current::Get();
     char flagstr[5];
     vmm_pf_flags_to_string(flags, flagstr);
     TRACEF("thread %s va %#" PRIxPTR ", flags 0x%x (%s)\n", current_thread->name(), addr, flags,

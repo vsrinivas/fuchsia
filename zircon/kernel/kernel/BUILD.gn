@@ -19,6 +19,7 @@ source_set("kernel") {
     "percpu.cc",
     "scheduler.cc",
     "semaphore.cc",
+    "task_runtime_stats.cc",
     "thread.cc",
     "timer.cc",
     "wait.cc",

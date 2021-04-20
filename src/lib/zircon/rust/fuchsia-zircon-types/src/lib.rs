@@ -944,7 +944,8 @@ multiconst!(zx_object_info_topic_t, [
     ZX_INFO_HANDLE_TABLE               = 27; // zx_info_handle_extended_t[n]
     ZX_INFO_MSI                        = 28; // zx_info_msi_t[1]
     ZX_INFO_GUEST_STATS                = 29; // zx_info_guest_stats_t[1]
-    ZX_INFO_TASK_RUNTIME               = 30; // zx_info_task_runtime_t[1]
+    // TODO(fxbug.dev/67477): upgrade to V1
+    ZX_INFO_TASK_RUNTIME               = info_topic(30, 0); // zx_info_task_runtime_t[1]
     ZX_INFO_KMEM_STATS_EXTENDED        = 31; // zx_info_kmem_stats_extended_t[1]
 ]);
 

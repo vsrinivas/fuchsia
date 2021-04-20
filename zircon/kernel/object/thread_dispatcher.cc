@@ -564,7 +564,7 @@ zx_status_t ThreadDispatcher::GetStatsForUserspace(zx_info_thread_stats_t* info)
   return ZX_OK;
 }
 
-zx_status_t ThreadDispatcher::GetRuntimeStats(Thread::RuntimeStats* out) const {
+zx_status_t ThreadDispatcher::GetRuntimeStats(TaskRuntimeStats* out) const {
   canary_.Assert();
 
   *out = {};
@@ -583,7 +583,7 @@ zx_status_t ThreadDispatcher::GetRuntimeStats(Thread::RuntimeStats* out) const {
       // Loop until no write is happening concurrently.
     }
 
-    *out = runtime_stats_;
+    *out = runtime_stats_.TotalRuntime();
 
     uint64_t end_count = stats_generation_count_.load(ktl::memory_order_acquire);
     if (start_count == end_count) {

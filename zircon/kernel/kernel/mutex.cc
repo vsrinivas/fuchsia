@@ -31,6 +31,7 @@
 #include <zircon/types.h>
 
 #include <kernel/scheduler.h>
+#include <kernel/task_runtime_timers.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <ktl/type_traits.h>
@@ -151,13 +152,16 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
                                               Thread* current_thread) {
   const uintptr_t new_mutex_state = reinterpret_cast<uintptr_t>(current_thread);
 
+  // Remember the last call to current_ticks.
+  zx_ticks_t now_ticks = current_ticks();
+
   // Spin on the mutex until it is either released, contested, or
   // the max spin time is reached.
   //
   // TODO(fxbug.dev/34646): Optimize cache pressure of spinners and default spin max.
   const affine::Ratio time_to_ticks = platform_get_ticks_to_time_ratio().Inverse();
   const zx_ticks_t spin_until_ticks =
-      affine::utils::ClampAdd(current_ticks(), time_to_ticks.Scale(spin_max_duration));
+      affine::utils::ClampAdd(now_ticks, time_to_ticks.Scale(spin_max_duration));
   do {
     uintptr_t old_mutex_state = STATE_FREE;
     // Attempt to acquire the mutex by swapping out "STATE_FREE" for our current thread.
@@ -181,12 +185,15 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
 
     // Give the arch a chance to relax the CPU.
     arch::Yield();
-  } while (current_ticks() < spin_until_ticks);
+    now_ticks = current_ticks();
+  } while (now_ticks < spin_until_ticks);
 
   if ((LK_DEBUGLEVEL > 0) && unlikely(this->IsHeld())) {
     panic("Mutex::Acquire: thread %p (%s) tried to acquire mutex %p it already owns.\n",
           current_thread, current_thread->name(), this);
   }
+
+  ContentionTimer timer(current_thread, now_ticks);
 
   {
     // we contended with someone else, will probably need to block

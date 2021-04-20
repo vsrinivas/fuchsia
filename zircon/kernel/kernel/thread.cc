@@ -1647,8 +1647,8 @@ zx_status_t Thread::PrintBacktrace() {
   return thread_print_backtrace(this, fp);
 }
 
-void Thread::UpdateRuntimeStats(const RuntimeStats& stats) {
+void Thread::UpdateSchedulerStats(const RuntimeStats::SchedulerStats& stats) {
   if (user_thread_) {
-    user_thread_->UpdateRuntimeStats(stats);
+    user_thread_->UpdateSchedulerStats(stats);
   }
 }

@@ -700,14 +700,19 @@ TEST(JobTest, MaxHeightSmoke) {
   free(handles);
 }
 
-TEST(JobTest, GetRuntimeTest) {
+template <typename InfoT>
+static void TestJobGetInfoRuntime(const uint32_t topic) {
   zx::job job_child;
   ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job_child));
 
-  zx_info_task_runtime_t info;
-  ASSERT_OK(job_child.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr));
+  InfoT info;
+  size_t actual = 0;
+  size_t avail = 0;
+  ASSERT_OK(job_child.get_info(topic, &info, sizeof(info), &actual, &avail));
   EXPECT_EQ(info.cpu_time, 0);
   EXPECT_EQ(info.queue_time, 0);
+  EXPECT_EQ(actual, 1);
+  EXPECT_EQ(avail, 1);
 
   zx::event event;
   ASSERT_OK(zx::event::create(0, &event));
@@ -719,7 +724,7 @@ TEST(JobTest, GetRuntimeTest) {
 
   ASSERT_OK(thread.wait_one(ZX_THREAD_RUNNING, zx::time::infinite(), nullptr));
 
-  ASSERT_OK(job_child.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_OK(job_child.get_info(topic, &info, sizeof(info), nullptr, nullptr));
   EXPECT_GT(info.cpu_time, 0);
   EXPECT_GT(info.queue_time, 0);
 
@@ -728,12 +733,12 @@ TEST(JobTest, GetRuntimeTest) {
   ASSERT_OK(job_child.kill());
   ASSERT_OK(job_child.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
 
-  ASSERT_OK(job_child.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_OK(job_child.get_info(topic, &info, sizeof(info), nullptr, nullptr));
   EXPECT_GT(info.cpu_time, 0);
   EXPECT_GT(info.queue_time, 0);
 
   zx_info_task_runtime_t info2;
-  ASSERT_OK(job_child.get_info(ZX_INFO_TASK_RUNTIME, &info2, sizeof(info2), nullptr, nullptr));
+  ASSERT_OK(job_child.get_info(topic, &info2, sizeof(info2), nullptr, nullptr));
   EXPECT_EQ(info.cpu_time, info2.cpu_time);
   EXPECT_EQ(info.queue_time, info2.queue_time);
 
@@ -742,8 +747,16 @@ TEST(JobTest, GetRuntimeTest) {
   ASSERT_OK(job_child.get_info(ZX_INFO_HANDLE_BASIC, &basic, sizeof(basic), nullptr, nullptr));
   zx::job job_child_dup;
   ASSERT_OK(job_child.duplicate(basic.rights & ~ZX_RIGHT_INSPECT, &job_child_dup));
-  EXPECT_EQ(job_child_dup.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr),
+  EXPECT_EQ(job_child_dup.get_info(topic, &info, sizeof(info), nullptr, nullptr),
             ZX_ERR_ACCESS_DENIED);
+}
+
+TEST(JobTest, GetInfoRuntime) {
+  TestJobGetInfoRuntime<zx_info_task_runtime_t>(ZX_INFO_TASK_RUNTIME);
+}
+
+TEST(JobTest, GetInfoRuntimeV1) {
+  TestJobGetInfoRuntime<zx_info_task_runtime_v1_t>(ZX_INFO_TASK_RUNTIME_V1);
 }
 
 }  // namespace

@@ -9,6 +9,7 @@
 #include <lib/zircon-internal/macros.h>
 
 #include <kernel/auto_preempt_disabler.h>
+#include <kernel/task_runtime_timers.h>
 #include <kernel/thread_lock.h>
 #include <ktl/limits.h>
 
@@ -109,6 +110,8 @@ ResourceOwnership BrwLock<PI>::Wake() {
 
 template <BrwLockEnablePi PI>
 void BrwLock<PI>::ContendedReadAcquire() {
+  ContentionTimer timer(Thread::Current::Get(), current_ticks());
+
   // In the case where we wake other threads up we need them to not run until we're finished
   // holding the thread_lock, so disable local rescheduling.
   AutoPreemptDisabler preempt_disable;
@@ -143,6 +146,8 @@ void BrwLock<PI>::ContendedReadAcquire() {
 
 template <BrwLockEnablePi PI>
 void BrwLock<PI>::ContendedWriteAcquire() {
+  ContentionTimer timer(Thread::Current::Get(), current_ticks());
+
   // In the case where we wake other threads up we need them to not run until we're finished
   // holding the thread_lock, so disable local rescheduling.
   AutoPreemptDisabler preempt_disable;
@@ -240,6 +245,8 @@ void BrwLock<PI>::ReleaseWakeup() {
 
 template <BrwLockEnablePi PI>
 void BrwLock<PI>::ContendedReadUpgrade() {
+  ContentionTimer timer(Thread::Current::Get(), current_ticks());
+
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
 
   // Convert our reading into waiting

@@ -717,17 +717,22 @@ TEST(ProcessTest, SuspendWithDyingThread) {
   ASSERT_NO_FAILURES(test_process.StopProcess());
 }
 
-TEST(ProcessTest, GetTaskRuntime) {
+template <typename InfoT>
+static void TestProcessGetInfoRuntime(const uint32_t topic) {
   TestProcess test_process;
   ASSERT_NO_FAILURES(test_process.CreateProcess());
   ASSERT_NO_FAILURES(test_process.CreateThread());
 
   // Get info before the threads start running.
-  zx_info_task_runtime_t info;
-  ASSERT_OK(zx_object_get_info(test_process.process(), ZX_INFO_TASK_RUNTIME, &info, sizeof(info),
-                               nullptr, nullptr));
+  InfoT info;
+  size_t actual = 0;
+  size_t avail = 0;
+  ASSERT_OK(
+      zx_object_get_info(test_process.process(), topic, &info, sizeof(info), &actual, &avail));
   ASSERT_EQ(info.cpu_time, 0);
   ASSERT_EQ(info.queue_time, 0);
+  EXPECT_EQ(actual, 1);
+  EXPECT_EQ(avail, 1);
 
   ASSERT_NO_FAILURES(test_process.StartProcess());
 
@@ -736,8 +741,8 @@ TEST(ProcessTest, GetTaskRuntime) {
   // We are occasionally fast enough reading the thread info to see it before it gets scheduled.
   // Loop until we see the values we are looking for.
   while (info.cpu_time == 0 || info.queue_time == 0) {
-    ASSERT_OK(zx_object_get_info(test_process.process(), ZX_INFO_TASK_RUNTIME, &info, sizeof(info),
-                                 nullptr, nullptr));
+    ASSERT_OK(
+        zx_object_get_info(test_process.process(), topic, &info, sizeof(info), nullptr, nullptr));
   }
 
   EXPECT_GT(info.cpu_time, 0);
@@ -748,18 +753,26 @@ TEST(ProcessTest, GetTaskRuntime) {
       zx_object_wait_one(test_process.process(), ZX_TASK_TERMINATED, ZX_TIME_INFINITE, nullptr));
 
   // Read info after process death, ensure it does not change.
-  ASSERT_OK(zx_object_get_info(test_process.process(), ZX_INFO_TASK_RUNTIME, &info, sizeof(info),
-                               nullptr, nullptr));
+  ASSERT_OK(
+      zx_object_get_info(test_process.process(), topic, &info, sizeof(info), nullptr, nullptr));
   EXPECT_GT(info.cpu_time, 0);
   EXPECT_GT(info.queue_time, 0);
 
   zx_info_task_runtime_t info2;
-  ASSERT_OK(zx_object_get_info(test_process.process(), ZX_INFO_TASK_RUNTIME, &info2, sizeof(info2),
-                               nullptr, nullptr));
+  ASSERT_OK(
+      zx_object_get_info(test_process.process(), topic, &info2, sizeof(info2), nullptr, nullptr));
   EXPECT_EQ(info.cpu_time, info2.cpu_time);
   EXPECT_EQ(info.queue_time, info2.queue_time);
 
   ASSERT_NO_FAILURES(test_process.StopProcess());
+}
+
+TEST(ProcessTest, GetInfoRuntime) {
+  TestProcessGetInfoRuntime<zx_info_task_runtime_t>(ZX_INFO_TASK_RUNTIME);
+}
+
+TEST(ProcessTest, GetInfoRuntimeV1) {
+  TestProcessGetInfoRuntime<zx_info_task_runtime_v1_t>(ZX_INFO_TASK_RUNTIME_V1);
 }
 
 // A stress test designed to create a race where one thread is creating a process while another

@@ -93,11 +93,11 @@ typedef struct zx_info_handle_count {
 } zx_info_handle_count_t;
 ```
 
-The *handle_count* should only be used as a debugging aid. Do not use it
-to check that an untrusted processes cannot modify a kernel object. Due to
-asynchronous nature of the system scheduler, there might be a time window
-during which it is possible for an object to be modified by a previous handle
-owner even as the last handle is transferred from one process to another.
+The *handle_count* should only be used as a debugging aid. Do not use it to
+check that an untrusted processes cannot modify a kernel object. Due to
+asynchronous nature of the system scheduler, there might be a time window during
+which it is possible for an object to be modified by a previous handle owner
+even as the last handle is transferred from one process to another.
 
 ### ZX_INFO_PROCESS_HANDLE_STATS
 
@@ -118,8 +118,9 @@ typedef struct zx_info_process_handle_stats {
 
 *buffer* type: `zx_info_handle_extended_t[n]`
 
-Returns an array of `zx_info_handle_extended_t` one for each handle in the Process at
-the moment of the call. The kernel ensures that the handles returned are consistent.
+Returns an array of `zx_info_handle_extended_t` one for each handle in the
+Process at the moment of the call. The kernel ensures that the handles returned
+are consistent.
 
 ```
 typedef struct zx_info_handle_extended {
@@ -156,8 +157,8 @@ typedef struct zx_info_handle_extended {
 ```
 
 Note that a process might have live references to objects for which the process
-does not have a handle to. For example, running threads for which all handles have
-been closed.
+does not have a handle to. For example, running threads for which all handles
+have been closed.
 
 ### ZX_INFO_JOB
 
@@ -242,12 +243,11 @@ typedef struct zx_info_process_v2 {
 Returns an array of `zx_koid_t`, one for each running thread in the Process at
 that moment in time.
 
-N.B. Getting the list of threads is inherently racy.
-This can be somewhat mitigated by first suspending all the threads,
-but note that an external thread can create new threads.
-*actual* will contain the number of threads returned in *buffer*.
-*avail* will contain the total number of threads of the process at
-the time the list of threads was obtained, it could be larger than *actual*.
+N.B. Getting the list of threads is inherently racy. This can be somewhat
+mitigated by first suspending all the threads, but note that an external thread
+can create new threads. *actual* will contain the number of threads returned in
+*buffer*. *avail* will contain the total number of threads of the process at the
+time the list of threads was obtained, it could be larger than *actual*.
 
 ### ZX_INFO_THREAD
 
@@ -276,8 +276,8 @@ typedef struct zx_info_thread {
 } zx_info_thread_t;
 ```
 
-The values in this struct are mainly for informational and debugging
-purposes at the moment.
+The values in this struct are mainly for informational and debugging purposes at
+the moment.
 
 The various **ZX_THREAD_STATE_** values are defined by
 
@@ -285,27 +285,35 @@ The various **ZX_THREAD_STATE_** values are defined by
 #include <zircon/syscalls/object.h>
 ```
 
-*   **ZX_THREAD_STATE_NEW**: The thread has been created but it has not started running yet.
+*   **ZX_THREAD_STATE_NEW**: The thread has been created but it has not started
+    running yet.
 *   **ZX_THREAD_STATE_RUNNING**: The thread is running user code normally.
 *   **ZX_THREAD_STATE_SUSPENDED**: Stopped due to [`zx_task_suspend()`].
-*   **ZX_THREAD_STATE_BLOCKED**: In a syscall or handling an exception.
-    This value is never returned by itself.
-	See **ZX_THREAD_STATE_BLOCKED_\*** below.
+*   **ZX_THREAD_STATE_BLOCKED**: In a syscall or handling an exception. This
+    value is never returned by itself. See **ZX_THREAD_STATE_BLOCKED_\*** below.
 *   **ZX_THREAD_STATE_DYING**: The thread is in the process of being terminated,
     but it has not been stopped yet.
 *   **ZX_THREAD_STATE_DEAD**: The thread has stopped running.
 
-When a thread is stopped inside a blocking syscall, or stopped in an
-exception, the value returned in **state** is one of the following:
+When a thread is stopped inside a blocking syscall, or stopped in an exception,
+the value returned in **state** is one of the following:
 
-*   **ZX_THREAD_STATE_BLOCKED_EXCEPTION**: The thread is stopped in an exception.
-*   **ZX_THREAD_STATE_BLOCKED_SLEEPING**: The thread is stopped in [`zx_nanosleep()`].
-*   **ZX_THREAD_STATE_BLOCKED_FUTEX**: The thread is stopped in [`zx_futex_wait()`].
-*   **ZX_THREAD_STATE_BLOCKED_PORT**: The thread is stopped in [`zx_port_wait()`].
-*   **ZX_THREAD_STATE_BLOCKED_CHANNEL**: The thread is stopped in [`zx_channel_call()`].
-*   **ZX_THREAD_STATE_BLOCKED_WAIT_ONE**: The thread is stopped in [`zx_object_wait_one()`].
-*   **ZX_THREAD_STATE_BLOCKED_WAIT_MANY**: The thread is stopped in [`zx_object_wait_many()`].
-*   **ZX_THREAD_STATE_BLOCKED_INTERRUPT**: The thread is stopped in [`zx_interrupt_wait()`].
+*   **ZX_THREAD_STATE_BLOCKED_EXCEPTION**: The thread is stopped in an
+    exception.
+*   **ZX_THREAD_STATE_BLOCKED_SLEEPING**: The thread is stopped in
+    [`zx_nanosleep()`].
+*   **ZX_THREAD_STATE_BLOCKED_FUTEX**: The thread is stopped in
+    [`zx_futex_wait()`].
+*   **ZX_THREAD_STATE_BLOCKED_PORT**: The thread is stopped in
+    [`zx_port_wait()`].
+*   **ZX_THREAD_STATE_BLOCKED_CHANNEL**: The thread is stopped in
+    [`zx_channel_call()`].
+*   **ZX_THREAD_STATE_BLOCKED_WAIT_ONE**: The thread is stopped in
+    [`zx_object_wait_one()`].
+*   **ZX_THREAD_STATE_BLOCKED_WAIT_MANY**: The thread is stopped in
+    [`zx_object_wait_many()`].
+*   **ZX_THREAD_STATE_BLOCKED_INTERRUPT**: The thread is stopped in
+    [`zx_interrupt_wait()`].
 
 The various **ZX_EXCEPTION_CHANNEL_TYPE_** values are defined by
 
@@ -334,8 +342,8 @@ If the thread is currently in an exception and is waiting for an exception
 response, then this returns the exception report as a single
 `zx_exception_report_t`, with status **ZX_OK**.
 
-Returns **ZX_ERR_BAD_STATE** if the thread is not in an exception and waiting for
-an exception response.
+Returns **ZX_ERR_BAD_STATE** if the thread is not in an exception and waiting
+for an exception response.
 
 ### ZX_INFO_THREAD_STATS {#zx-info-thread-stats}
 
@@ -362,7 +370,8 @@ Returns **ZX_ERR_BAD_STATE** if the thread has exited.
 
 ### ZX_INFO_CPU_STATS
 
-Note: many values of this topic are being retired in favor of a different mechanism.
+Note: many values of this topic are being retired in favor of a different
+mechanism.
 
 *handle* type: **Resource** (Specifically, the root resource)
 
@@ -413,8 +422,8 @@ typedef struct zx_info_vmar {
 } zx_info_vmar_t;
 ```
 
-This returns a single `zx_info_vmar_t` that describes the range of address
-space that the VMAR occupies.
+This returns a single `zx_info_vmar_t` that describes the range of address space
+that the VMAR occupies.
 
 ### ZX_INFO_VMO
 
@@ -471,8 +480,8 @@ typedef struct zx_info_vmo {
 } zx_info_vmo_t;
 ```
 
-This returns a single `zx_info_vmo_t` that describes various attributes of
-the VMO.
+This returns a single `zx_info_vmo_t` that describes various attributes of the
+VMO.
 
 ### ZX_INFO_SOCKET
 
@@ -632,14 +641,31 @@ typedef struct zx_info_task_runtime {
     // * Jobs include the queue time for all of their processes (including processes that previously
     // exited).
     zx_duration_t queue_time;
+
+    // The total amount of time this task and its children spent handling page faults.
+    // * Threads include only their own page fault handling time.
+    // * Processes include the page fault time for all of their threads (including threads that
+    // previously exited).
+    // * Jobs include the page fault time for all of their processes (including processes that
+    // previously exited).
+    zx_duration_t page_fault_time;
+
+    // The total amount of time this task and its children spent waiting on contended kernel locks.
+    // * Threads include only their own wait time.
+    // * Processes include the wait time for all of their threads (including threads that
+    // previously exited).
+    // * Jobs include the wait time for all of their processes (including processes that
+    // previously exited).
+    zx_duration_t lock_contention_time;
 } zx_info_task_runtime_t;
 ```
 
-The run time of a task does not include the time spent suspended or
-blocked waiting on events or I/O. These stats may be used to:
+The run time of a task does not include the time spent suspended or blocked
+waiting on events or I/O. These stats may be used to:
 
-1. Estimate how much CPU time a task has used.
-2. Estimate how much latency (queue time) a task is experiencing due to other tasks.
+1.  Estimate how much CPU time a task has used.
+2.  Estimate how much latency a task is experiencing due to other tasks (queue
+    time), page fault handlers, and kernel lock contention.
 
 ### ZX_INFO_PROCESS_MAPS
 
@@ -691,8 +717,8 @@ The *depth* field of each entry describes its relationship to the nodes that
 come before it. Depth 0 is the root Aspace, depth 1 is the root VMAR, and all
 other entries have depth 2 or greater.
 
-To get a full picture of how a process uses its VMOs and how a VMO is used
-by various processes, you may need to combine this information with
+To get a full picture of how a process uses its VMOs and how a VMO is used by
+various processes, you may need to combine this information with
 ZX_INFO_PROCESS_VMOS.
 
 See the `vmaps` command-line tool for an example user of this topic, and to dump
@@ -719,8 +745,8 @@ concurrently with this call. VMOs can change as the target process runs, which
 may result in the same VMO having different values each time it appears. The
 caller must resolve any duplicate values.
 
-To get a full picture of how a process uses its VMOs and how a VMO is used
-by various processes, you may need to combine this information with
+To get a full picture of how a process uses its VMOs and how a VMO is used by
+various processes, you may need to combine this information with
 ZX_INFO_PROCESS_MAPS.
 
 ```
@@ -831,8 +857,8 @@ typedef struct zx_info_kmem_stats {
 
 *buffer* type: `zx_info_kmem_stats_extended_t[1]`
 
-Returns information about kernel memory usage - includes information returned
-by the ZX_INFO_KMEM_STATS topic, plus some additional information that is more
+Returns information about kernel memory usage - includes information returned by
+the ZX_INFO_KMEM_STATS topic, plus some additional information that is more
 expensive to collect.
 
 ```
@@ -955,54 +981,75 @@ typedef struct zx_info_bti {
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-If *topic* is **ZX_INFO_PROCESS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_PROCESS**, *handle* must be of type
+**ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_JOB**, *handle* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_JOB**, *handle* must be of type **ZX_OBJ_TYPE_JOB** and
+have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_PROCESS_THREADS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_ENUMERATE**.
+If *topic* is **ZX_INFO_PROCESS_THREADS**, *handle* must be of type
+**ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_ENUMERATE**.
 
-If *topic* is **ZX_INFO_JOB_CHILDREN**, *handle* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_ENUMERATE**.
+If *topic* is **ZX_INFO_JOB_CHILDREN**, *handle* must be of type
+**ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_ENUMERATE**.
 
-If *topic* is **ZX_INFO_JOB_PROCESSES**, *handle* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_ENUMERATE**.
+If *topic* is **ZX_INFO_JOB_PROCESSES**, *handle* must be of type
+**ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_ENUMERATE**.
 
-If *topic* is **ZX_INFO_THREAD**, *handle* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_THREAD**, *handle* must be of type
+**ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_THREAD_EXCEPTION_REPORT**, *handle* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_THREAD_EXCEPTION_REPORT**, *handle* must be of type
+**ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_THREAD_STATS**, *handle* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_THREAD_STATS**, *handle* must be of type
+**ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_TASK_STATS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_TASK_STATS**, *handle* must be of type
+**ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_PROCESS_MAPS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_PROCESS_MAPS**, *handle* must be of type
+**ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_PROCESS_VMOS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_PROCESS_VMOS**, *handle* must be of type
+**ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
 
 If *topic* is **ZX_INFO_VMO**, *handle* must be of type **ZX_OBJ_TYPE_VMO**.
 
-If *topic* is **ZX_INFO_VMAR**, *handle* must be of type **ZX_OBJ_TYPE_VMAR** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_VMAR**, *handle* must be of type **ZX_OBJ_TYPE_VMAR**
+and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_CPU_STATS**, *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
+If *topic* is **ZX_INFO_CPU_STATS**, *handle* must have resource kind
+**ZX_RSRC_KIND_ROOT**.
 
-If *topic* is **ZX_INFO_KMEM_STATS**, *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
+If *topic* is **ZX_INFO_KMEM_STATS**, *handle* must have resource kind
+**ZX_RSRC_KIND_ROOT**.
 
-If *topic* is **ZX_INFO_RESOURCE**, *handle* must be of type **ZX_OBJ_TYPE_RESOURCE** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_RESOURCE**, *handle* must be of type
+**ZX_OBJ_TYPE_RESOURCE** and have **ZX_RIGHT_INSPECT**.
 
 If *topic* is **ZX_INFO_HANDLE_COUNT**, *handle* must have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_BTI**, *handle* must be of type **ZX_OBJ_TYPE_BTI** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_BTI**, *handle* must be of type **ZX_OBJ_TYPE_BTI** and
+have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_PROCESS_HANDLE_STATS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_PROCESS_HANDLE_STATS**, *handle* must be of type
+**ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_SOCKET**, *handle* must be of type **ZX_OBJ_TYPE_SOCKET** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_SOCKET**, *handle* must be of type
+**ZX_OBJ_TYPE_SOCKET** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_MSI**, *handle* must be of type **ZX_OBJ_TYPE_MSI** and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_MSI**, *handle* must be of type **ZX_OBJ_TYPE_MSI** and
+have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_TASK_RUNTIME**, *handle* must be of type **ZX_OBJ_TYPE_THREAD**, **ZX_OBJ_TYPE_PROCESS**, or **ZX_OBJ_TYPE_JOB**, and have **ZX_RIGHT_INSPECT**.
+If *topic* is **ZX_INFO_TASK_RUNTIME**, *handle* must be of type
+**ZX_OBJ_TYPE_THREAD**, **ZX_OBJ_TYPE_PROCESS**, or **ZX_OBJ_TYPE_JOB**, and
+have **ZX_RIGHT_INSPECT**.
 
 ## RETURN VALUE
 
-`zx_object_get_info()` returns **ZX_OK** on success. In the event of
-failure, a negative error value is returned.
+`zx_object_get_info()` returns **ZX_OK** on success. In the event of failure, a
+negative error value is returned.
 
 ## ERRORS
 
@@ -1015,12 +1062,12 @@ operation.
 
 **ZX_ERR_INVALID_ARGS** *buffer*, *actual*, or *avail* are invalid pointers.
 
-**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
-There is no good way for userspace to handle this (unlikely) error.
-In a future build this error will no longer occur.
+**ZX_ERR_NO_MEMORY** Failure due to lack of memory. There is no good way for
+userspace to handle this (unlikely) error. In a future build this error will no
+longer occur.
 
-**ZX_ERR_BUFFER_TOO_SMALL** The *topic* returns a fixed number of records, but the
-provided buffer is not large enough for these records.
+**ZX_ERR_BUFFER_TOO_SMALL** The *topic* returns a fixed number of records, but
+the provided buffer is not large enough for these records.
 
 **ZX_ERR_NOT_SUPPORTED** *topic* does not exist.
 
@@ -1062,10 +1109,10 @@ void examine_threads(zx_handle_t proc) {
 
 ## SEE ALSO
 
- - [`zx_handle_close()`]
- - [`zx_handle_duplicate()`]
- - [`zx_handle_replace()`]
- - [`zx_object_get_child()`]
+-   [`zx_handle_close()`]
+-   [`zx_handle_duplicate()`]
+-   [`zx_handle_replace()`]
+-   [`zx_object_get_child()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
