@@ -7,13 +7,12 @@
 
 #include <lib/fit/promise.h>
 #include <lib/fit/single_threaded_executor.h>
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <memory>
 #include <mutex>
 #include <thread>
-
-#include "src/lib/storage/vfs/cpp/locking.h"
 
 namespace fs {
 
@@ -51,8 +50,8 @@ class BackgroundExecutor final : public fit::executor {
 
   // An "always scheduled" suspended task, which is resumed during destruction to finish running all
   // tasks and then exit.
-  fit::suspended_task terminate_ FS_TA_GUARDED(lock_);
-  bool should_terminate_ FS_TA_GUARDED(lock_) = false;
+  fit::suspended_task terminate_ __TA_GUARDED(lock_);
+  bool should_terminate_ __TA_GUARDED(lock_) = false;
 };
 
 }  // namespace fs

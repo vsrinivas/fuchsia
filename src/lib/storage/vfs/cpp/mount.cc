@@ -100,7 +100,7 @@ zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, std::string_view name, MountC
              vn, name,
              fs::VnodeConnectionOptions::ReadOnly().set_create().set_directory().set_no_remote(),
              fs::Rights::ReadWrite(), S_IFDIR)
-      .visit([&](auto&& result) FS_TA_REQUIRES(vfs_lock_) {
+      .visit([&](auto&& result) __TA_REQUIRES(vfs_lock_) {
         using T = std::decay_t<decltype(result)>;
         using OpenResult = fs::Vfs::OpenResult;
         if constexpr (std::is_same_v<T, OpenResult::Error>) {

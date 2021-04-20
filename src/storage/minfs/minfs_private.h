@@ -20,6 +20,7 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
+#include <zircon/compiler.h>
 
 #include "src/lib/storage/vfs/cpp/journal/journal.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
@@ -38,7 +39,6 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/storage/vfs/cpp/inspectable.h"
-#include "src/lib/storage/vfs/cpp/locking.h"
 #include "src/lib/storage/vfs/cpp/ticker.h"
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
@@ -218,9 +218,9 @@ class Minfs :
                                      uint32_t type);
 
   // Insert, lookup, and remove vnode from hash map.
-  void VnodeInsert(VnodeMinfs* vn) FS_TA_EXCLUDES(hash_lock_);
-  fbl::RefPtr<VnodeMinfs> VnodeLookup(uint32_t ino) FS_TA_EXCLUDES(hash_lock_);
-  void VnodeRelease(VnodeMinfs* vn) FS_TA_EXCLUDES(hash_lock_);
+  void VnodeInsert(VnodeMinfs* vn) __TA_EXCLUDES(hash_lock_);
+  fbl::RefPtr<VnodeMinfs> VnodeLookup(uint32_t ino) __TA_EXCLUDES(hash_lock_);
+  void VnodeRelease(VnodeMinfs* vn) __TA_EXCLUDES(hash_lock_);
 
   // Allocate a new data block.
   void BlockNew(PendingWork* transaction, blk_t* out_bno) const;
@@ -341,10 +341,10 @@ class Minfs :
 
   // Adds |dirty_bytes| number of bytes to metrics. Also marks whether those
   // bytes needs allocation or not.
-  zx::status<> AddDirtyBytes(uint64_t dirty_bytes, bool allocated) FS_TA_EXCLUDES(hash_lock_);
+  zx::status<> AddDirtyBytes(uint64_t dirty_bytes, bool allocated) __TA_EXCLUDES(hash_lock_);
 
   // Subtracts |dirty_bytes| number of bytes to from dirty bytes metrics.
-  void SubtractDirtyBytes(uint64_t dirty_bytes, bool allocated) FS_TA_EXCLUDES(hash_lock_);
+  void SubtractDirtyBytes(uint64_t dirty_bytes, bool allocated) __TA_EXCLUDES(hash_lock_);
 
 #ifdef __Fuchsia__
   // Acquire a copy of the collected metrics.
@@ -436,14 +436,14 @@ class Minfs :
 #endif
 
   // Internal version of VnodeLookup which may also return unlinked vnodes.
-  fbl::RefPtr<VnodeMinfs> VnodeLookupInternal(uint32_t ino) FS_TA_EXCLUDES(hash_lock_);
+  fbl::RefPtr<VnodeMinfs> VnodeLookupInternal(uint32_t ino) __TA_EXCLUDES(hash_lock_);
 
   // Returns a vector of vnodes having one or more blocks that needs to be
   // flushed.
   std::vector<fbl::RefPtr<VnodeMinfs>> GetDirtyVnodes();
 
   // Check if filesystem is readonly.
-  bool IsReadonly() FS_TA_EXCLUDES(vfs_lock_);
+  bool IsReadonly() __TA_EXCLUDES(vfs_lock_);
 
   // Find a free inode, allocate it in the inode bitmap, and write it back to disk
   void InoNew(Transaction* transaction, const Inode* inode, ino_t* out_ino);
@@ -483,7 +483,7 @@ class Minfs :
 #endif
   // Vnodes exist in the hash table as long as one or more reference exists;
   // when the Vnode is deleted, it is immediately removed from the map.
-  HashTable vnode_hash_ FS_TA_GUARDED(hash_lock_){};
+  HashTable vnode_hash_ __TA_GUARDED(hash_lock_){};
 
 #ifdef __Fuchsia__
   fbl::Closure on_unmount_{};

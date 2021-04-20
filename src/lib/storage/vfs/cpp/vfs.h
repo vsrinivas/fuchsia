@@ -20,7 +20,6 @@
 #include <set>
 #include <string_view>
 
-#include "src/lib/storage/vfs/cpp/locking.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
@@ -94,11 +93,11 @@ class Vfs {
   // The return value will suggest the next action to take. Refer to the variants in |OpenResult|
   // for more information.
   OpenResult Open(fbl::RefPtr<Vnode> vn, std::string_view path, VnodeConnectionOptions options,
-                  Rights parent_rights, uint32_t mode) FS_TA_EXCLUDES(vfs_lock_);
-  zx_status_t Unlink(fbl::RefPtr<Vnode> vn, std::string_view path) FS_TA_EXCLUDES(vfs_lock_);
+                  Rights parent_rights, uint32_t mode) __TA_EXCLUDES(vfs_lock_);
+  zx_status_t Unlink(fbl::RefPtr<Vnode> vn, std::string_view path) __TA_EXCLUDES(vfs_lock_);
 
   // Sets whether this file system is read-only.
-  void SetReadonly(bool value) FS_TA_EXCLUDES(vfs_lock_);
+  void SetReadonly(bool value) __TA_EXCLUDES(vfs_lock_);
 
 #ifdef __Fuchsia__
   using ShutdownCallback = fit::callback<void(zx_status_t status)>;
@@ -114,17 +113,17 @@ class Vfs {
   // connections, which, upon reading new port packets, should ignore them and close immediately.
   virtual bool IsTerminating() const = 0;
 
-  void TokenDiscard(zx::event ios_token) FS_TA_EXCLUDES(vfs_lock_);
+  void TokenDiscard(zx::event ios_token) __TA_EXCLUDES(vfs_lock_);
   zx_status_t VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token, zx::event* out)
-      FS_TA_EXCLUDES(vfs_lock_);
+      __TA_EXCLUDES(vfs_lock_);
   zx_status_t Link(zx::event token, fbl::RefPtr<Vnode> oldparent, std::string_view oldStr,
-                   std::string_view newStr) FS_TA_EXCLUDES(vfs_lock_);
+                   std::string_view newStr) __TA_EXCLUDES(vfs_lock_);
   zx_status_t Rename(zx::event token, fbl::RefPtr<Vnode> oldparent, std::string_view oldStr,
-                     std::string_view newStr) FS_TA_EXCLUDES(vfs_lock_);
+                     std::string_view newStr) __TA_EXCLUDES(vfs_lock_);
   // Calls readdir on the Vnode while holding the vfs_lock, preventing path modification operations
   // for the duration of the operation.
   zx_status_t Readdir(Vnode* vn, VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual)
-      FS_TA_EXCLUDES(vfs_lock_);
+      __TA_EXCLUDES(vfs_lock_);
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
@@ -134,16 +133,16 @@ class Vfs {
   // protocols and the client requested more than one of them, it would use |Vnode::Negotiate| to
   // tie-break and obtain the resulting protocol.
   zx_status_t Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<fuchsia_io::Node> server_end,
-                    VnodeConnectionOptions options) FS_TA_EXCLUDES(vfs_lock_);
+                    VnodeConnectionOptions options) __TA_EXCLUDES(vfs_lock_);
 
   // Begins serving VFS messages over the specified channel. This version takes an |options|
   // that have been validated.
   zx_status_t Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<fuchsia_io::Node> server_end,
-                    Vnode::ValidatedOptions options) FS_TA_EXCLUDES(vfs_lock_);
+                    Vnode::ValidatedOptions options) __TA_EXCLUDES(vfs_lock_);
 
   // Called by a VFS connection when it is closed remotely. The VFS is now responsible for
   // destroying the connection.
-  void OnConnectionClosedRemotely(internal::Connection* connection) FS_TA_EXCLUDES(vfs_lock_);
+  void OnConnectionClosedRemotely(internal::Connection* connection) __TA_EXCLUDES(vfs_lock_);
 
   // Serves a Vnode over the specified channel (used for creating new filesystems); the Vnode must
   // be a directory.
@@ -162,25 +161,25 @@ class Vfs {
                                            CloseAllConnectionsForVnodeCallback callback) = 0;
 
   // Pins a handle to a remote filesystem onto a vnode, if possible.
-  zx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) FS_TA_EXCLUDES(vfs_lock_);
+  zx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_EXCLUDES(vfs_lock_);
 
   // Create and mount a directory with a provided name
   zx_status_t MountMkdir(fbl::RefPtr<Vnode> vn, std::string_view name, MountChannel h,
-                         uint32_t flags) FS_TA_EXCLUDES(vfs_lock_);
+                         uint32_t flags) __TA_EXCLUDES(vfs_lock_);
 
   // Unpin a handle to a remote filesystem from a vnode, if one exists.
   zx_status_t UninstallRemote(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fuchsia_io::Directory>* h)
-      FS_TA_EXCLUDES(vfs_lock_);
+      __TA_EXCLUDES(vfs_lock_);
 
   // Forwards an open request to a remote handle. If the remote handle is closed (handing off
   // returns ZX_ERR_PEER_CLOSED), it is automatically unmounted.
   zx_status_t ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd<fuchsia_io::Node> channel,
                                 std::string_view path, VnodeConnectionOptions options,
-                                uint32_t mode) FS_TA_EXCLUDES(vfs_lock_);
+                                uint32_t mode) __TA_EXCLUDES(vfs_lock_);
 
   // Unpins all remote filesystems in the current filesystem, and waits for the response of each one
   // with the provided deadline.
-  zx_status_t UninstallAll(zx::time deadline) FS_TA_EXCLUDES(vfs_lock_);
+  zx_status_t UninstallAll(zx::time deadline) __TA_EXCLUDES(vfs_lock_);
 
   // Shuts down a remote filesystem, by sending a |fuchsia.io/DirectoryAdmin.Unmount| request to the
   // filesystem serving |handle| and awaits a response. |deadline| is the deadline for waiting for
@@ -188,7 +187,7 @@ class Vfs {
   static zx_status_t UnmountHandle(fidl::ClientEnd<fuchsia_io::DirectoryAdmin> handle,
                                    zx::time deadline);
 
-  bool IsTokenAssociatedWithVnode(zx::event token) FS_TA_EXCLUDES(vfs_lock_);
+  bool IsTokenAssociatedWithVnode(zx::event token) __TA_EXCLUDES(vfs_lock_);
 #endif
 
   // The VFS tracks all live Vnodes associated with it.
@@ -197,11 +196,11 @@ class Vfs {
 
  protected:
   // Whether this file system is read-only.
-  bool ReadonlyLocked() const FS_TA_REQUIRES(vfs_lock_) { return readonly_; }
+  bool ReadonlyLocked() const __TA_REQUIRES(vfs_lock_) { return readonly_; }
 
   // Derived classes may want to unregister vnodes differently than this one. This function removes
   // the vnode from the live node map.
-  void UnregisterVnodeLocked(Vnode* vnode) FS_TA_REQUIRES(vfs_lock_);
+  void UnregisterVnodeLocked(Vnode* vnode) __TA_REQUIRES(vfs_lock_);
 
   // A lock which should be used to protect lookup and walk operations
   mutable std::mutex vfs_lock_;
@@ -215,11 +214,11 @@ class Vfs {
   // |out| is the vnode at which we stopped searching.
   // |pathout| is the remainder of the path to search.
   zx_status_t Walk(fbl::RefPtr<Vnode> vn, std::string_view path, fbl::RefPtr<Vnode>* out,
-                   std::string_view* pathout) FS_TA_REQUIRES(vfs_lock_);
+                   std::string_view* pathout) __TA_REQUIRES(vfs_lock_);
 
   OpenResult OpenLocked(fbl::RefPtr<Vnode> vn, std::string_view path,
                         VnodeConnectionOptions options, Rights parent_rights, uint32_t mode)
-      FS_TA_REQUIRES(vfs_lock_);
+      __TA_REQUIRES(vfs_lock_);
 
   // Attempt to create an entry with name |name| within the |vndir| directory.
   //
@@ -232,20 +231,20 @@ class Vfs {
   zx_status_t EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view name,
                            fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
                            uint32_t mode, Rights parent_rights, bool* did_create)
-      FS_TA_REQUIRES(vfs_lock_);
+      __TA_REQUIRES(vfs_lock_);
 
   bool readonly_ = false;
 
   // The live Vnodes associated with this Vfs. Nodes (un)register using [Un]RegisterVnode(). This
   // /list is cleared by ShutdownLiveNodes().
-  std::set<Vnode*> live_nodes_ FS_TA_GUARDED(vfs_lock_);
+  std::set<Vnode*> live_nodes_ __TA_GUARDED(vfs_lock_);
 
 #ifdef __Fuchsia__
-  zx_status_t TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) FS_TA_REQUIRES(vfs_lock_);
-  zx_status_t InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) FS_TA_REQUIRES(vfs_lock_);
+  zx_status_t TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) __TA_REQUIRES(vfs_lock_);
+  zx_status_t InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_REQUIRES(vfs_lock_);
   zx_status_t UninstallRemoteLocked(fbl::RefPtr<Vnode> vn,
                                     fidl::ClientEnd<fuchsia_io::Directory>* h)
-      FS_TA_REQUIRES(vfs_lock_);
+      __TA_REQUIRES(vfs_lock_);
 
   fbl::HashTable<zx_koid_t, std::unique_ptr<VnodeToken>> vnode_tokens_;
 
@@ -267,7 +266,7 @@ class Vfs {
   // The mount list is a global static variable, but it only uses constexpr constructors during
   // initialization. As a consequence, the .init_array section of the compiled vfs-mount object file
   // is empty; "remote_list" is a member of the bss section.
-  MountNode::ListType remote_list_ FS_TA_GUARDED(vfs_lock_){};
+  MountNode::ListType remote_list_ __TA_GUARDED(vfs_lock_){};
 
   async_dispatcher_t* dispatcher_ = nullptr;
 

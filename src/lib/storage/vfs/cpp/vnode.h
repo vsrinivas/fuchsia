@@ -28,7 +28,6 @@
 #include <fbl/ref_counted_internal.h>
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/storage/vfs/cpp/locking.h"
 #include "src/lib/storage/vfs/cpp/ref_counted.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
@@ -143,14 +142,14 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // vnode is not |Open()|ed further for the purpose of creating this connection. Furthermore, the
   // redirected vnode must support the same set of protocols as the original vnode.
   zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect)
-      FS_TA_EXCLUDES(mutex_);
+      __TA_EXCLUDES(mutex_);
 
   // Same as |Open|, but calls |ValidateOptions| on |options| automatically. Errors from
   // |ValidateOptions| are propagated via the return value. This is convenient when serving a
   // connection with the validated options is unnecessary e.g. when used from a non-Fuchsia
   // operating system.
   zx_status_t OpenValidating(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect)
-      FS_TA_EXCLUDES(mutex_);
+      __TA_EXCLUDES(mutex_);
 
   // METHODS FOR OPENED NODES
   //
@@ -226,8 +225,8 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // Closes the vnode. Will be called once for each successful Open().
   //
   // Vnode implementations should override CloseNode() which this function calls after some
-  // bookeeping.
-  zx_status_t Close() FS_TA_EXCLUDES(mutex_);
+  // bookkeeping.
+  zx_status_t Close() __TA_EXCLUDES(mutex_);
 
   // Read data from the vnode at offset.
   //
@@ -355,12 +354,12 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 #endif  // __Fuchsia__
 
   // Invoked by internal Connections to account transactions
-  void RegisterInflightTransaction() FS_TA_EXCLUDES(mutex_);
-  void UnregisterInflightTransaction() FS_TA_EXCLUDES(mutex_);
+  void RegisterInflightTransaction() __TA_EXCLUDES(mutex_);
+  void UnregisterInflightTransaction() __TA_EXCLUDES(mutex_);
 
   // Number of FIDL messages issued on this vnode that have been dispatched, but for which a reply
   // has not been made.
-  size_t GetInflightTransactions() const FS_TA_EXCLUDES(mutex_);
+  size_t GetInflightTransactions() const __TA_EXCLUDES(mutex_);
 
  protected:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
@@ -374,10 +373,10 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   //
   // See Open() above for documentation.
   virtual zx_status_t OpenNode(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect)
-      FS_TA_EXCLUDES(mutex_) {
+      __TA_EXCLUDES(mutex_) {
     return ZX_OK;
   }
-  virtual zx_status_t CloseNode() FS_TA_EXCLUDES(mutex_) { return ZX_OK; }
+  virtual zx_status_t CloseNode() __TA_EXCLUDES(mutex_) { return ZX_OK; }
 
   // The associated Vfs pointer is optional. Subclasses should require this if they need to access
   // the Vfs, but can leave null if not. See vfs() getter for more.
@@ -394,15 +393,15 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   //
   // Additionally, this will be null when the Vfs is destroyed (since Vnodes are reference-counted
   // they can outlive the Vfs). Uses should always be inside the mutex_.
-  Vfs* vfs() FS_TA_REQUIRES(mutex_) { return vfs_; }
+  Vfs* vfs() __TA_REQUIRES(mutex_) { return vfs_; }
 
   // Returns the number of open connections, not counting node_reference connections. See Open().
-  size_t open_count() const FS_TA_REQUIRES(mutex_) { return open_count_; }
+  size_t open_count() const __TA_REQUIRES(mutex_) { return open_count_; }
 
  private:
-  Vfs* vfs_ FS_TA_GUARDED(mutex_) = nullptr;  // Possibly null, see getter above.
-  size_t inflight_transactions_ FS_TA_GUARDED(mutex_) = 0;
-  size_t open_count_ FS_TA_GUARDED(mutex_) = 0;
+  Vfs* vfs_ __TA_GUARDED(mutex_) = nullptr;  // Possibly null, see getter above.
+  size_t inflight_transactions_ __TA_GUARDED(mutex_) = 0;
+  size_t open_count_ __TA_GUARDED(mutex_) = 0;
 };
 
 // Opens a vnode by reference.

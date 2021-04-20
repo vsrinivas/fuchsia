@@ -31,7 +31,6 @@
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/storage/vfs/cpp/locking.h"
 #include "src/lib/storage/vfs/cpp/ticker.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"

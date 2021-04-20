@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <zircon/assert.h>
+#include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/time.h>
 
@@ -24,8 +25,6 @@
 #include <thread>
 
 #include <inspector/inspector.h>
-
-#include "src/lib/storage/vfs/cpp/locking.h"
 
 namespace fs_watchdog {
 
@@ -89,14 +88,14 @@ class Watchdog : public WatchdogInterface {
   // When watchdog is enabled, we do not want IO paths to get impacted.
   // map is not the ideal, as it allocates and frees entries, but is convenient.
   // We should have a pool of objects or the likes eventually.
-  std::map<OperationTrackerId, OperationTracker*> healthy_operations_ FS_TA_GUARDED(lock_);
+  std::map<OperationTrackerId, OperationTracker*> healthy_operations_ __TA_GUARDED(lock_);
 
   // Map that contains all in-flight timed-out operations.
-  std::map<OperationTrackerId, OperationTracker*> timed_out_operations_ FS_TA_GUARDED(lock_);
+  std::map<OperationTrackerId, OperationTracker*> timed_out_operations_ __TA_GUARDED(lock_);
 
   // Set to true when watchdog thread is spun-up and is set to false when the
   // thread is torn-down.
-  bool running_ FS_TA_GUARDED(lock_) = false;
+  bool running_ __TA_GUARDED(lock_) = false;
 
   // User's tag for the log messages.
   std::string log_tag_;

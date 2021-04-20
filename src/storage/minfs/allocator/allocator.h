@@ -142,21 +142,21 @@ class Allocator {
                             std::unique_ptr<Allocator>* out);
 
   // Return the number of total available elements, after taking reservations into account.
-  size_t GetAvailable() const FS_TA_EXCLUDES(lock_);
+  size_t GetAvailable() const __TA_EXCLUDES(lock_);
 
   // Returns the number of reserved blocks.
-  size_t GetReserved() const FS_TA_EXCLUDES(lock_);
+  size_t GetReserved() const __TA_EXCLUDES(lock_);
 
   // Free an item from the allocator.
-  void Free(AllocatorReservation* reservation, size_t index) FS_TA_EXCLUDES(lock_);
+  void Free(AllocatorReservation* reservation, size_t index) __TA_EXCLUDES(lock_);
 
 #ifdef __Fuchsia__
   // Extract a vector of all currently allocated regions in the filesystem.
-  fbl::Vector<BlockRegion> GetAllocatedRegions() const FS_TA_EXCLUDES(lock_);
+  fbl::Vector<BlockRegion> GetAllocatedRegions() const __TA_EXCLUDES(lock_);
 #endif
 
   // Returns |true| if |index| is allocated. Returns |false| otherwise.
-  bool CheckAllocated(size_t index) const FS_TA_EXCLUDES(lock_);
+  bool CheckAllocated(size_t index) const __TA_EXCLUDES(lock_);
 
   // AllocatorReservation Methods:
   //
@@ -164,18 +164,18 @@ class Allocator {
   // idiom. They are public, but require an empty |AllocatorReservationKey|.
 
   // Allocate a single element and return its newly allocated index.
-  size_t Allocate(AllocatorReservationKey, AllocatorReservation* reservation) FS_TA_EXCLUDES(lock_);
+  size_t Allocate(AllocatorReservationKey, AllocatorReservation* reservation) __TA_EXCLUDES(lock_);
 
   // Reserve |count| elements. This is required in order to later allocate them.
   // Outputs a |reservation| which contains reservation details.
   zx_status_t Reserve(AllocatorReservationKey, PendingWork* transaction, size_t count)
-      FS_TA_EXCLUDES(lock_);
+      __TA_EXCLUDES(lock_);
 
   // Unreserve |count| elements. This may be called in the event of failure, or if we
   // over-reserved initially.
   //
   // PRECONDITION: AllocatorReservation must have |reserved| > 0.
-  void Unreserve(AllocatorReservationKey, size_t count) FS_TA_EXCLUDES(lock_);
+  void Unreserve(AllocatorReservationKey, size_t count) __TA_EXCLUDES(lock_);
 
   // Allocate / de-allocate elements from the given reservation. This persists the results of any
   // pending allocations/deallocations.
@@ -184,7 +184,7 @@ class Allocator {
   // allocations_ and deallocations_ bitmaps are guaranteed to belong to only one Vnode. This method
   // should only be called in the same thread as the block swaps -- i.e. we should never be
   // resolving blocks for more than one vnode at a time.
-  void Commit(PendingWork* transaction, AllocatorReservation* reservation) FS_TA_EXCLUDES(lock_);
+  void Commit(PendingWork* transaction, AllocatorReservation* reservation) __TA_EXCLUDES(lock_);
 
  private:
   friend class PendingChange;  // For AddPendingChange & RemovePendingChange.
@@ -192,24 +192,24 @@ class Allocator {
   Allocator(std::unique_ptr<AllocatorStorage> storage)
       : reserved_(0), first_free_(0), storage_(std::move(storage)) {}
 
-  zx_status_t LoadStorage(fs::BufferedOperationsBuilder* builder) FS_TA_EXCLUDES(lock_);
+  zx_status_t LoadStorage(fs::BufferedOperationsBuilder* builder) __TA_EXCLUDES(lock_);
 
   // See |GetAvailable()|.
-  size_t GetAvailableLocked() const FS_TA_REQUIRES(lock_);
+  size_t GetAvailableLocked() const __TA_REQUIRES(lock_);
 
   // Grows the map to |new_size|, returning the current size as |old_size|.
-  zx_status_t GrowMapLocked(size_t new_size, size_t* old_size) FS_TA_REQUIRES(lock_);
+  zx_status_t GrowMapLocked(size_t new_size, size_t* old_size) __TA_REQUIRES(lock_);
 
   // Acquire direct access to the underlying map storage.
-  WriteData GetMapDataLocked() FS_TA_REQUIRES(lock_);
+  WriteData GetMapDataLocked() __TA_REQUIRES(lock_);
 
   // Find and return a free element. This should only be called when reserved_ > 0, ensuring that at
   // least one free element must exist. This currently assumes that first_free_ is accurately set.
-  size_t FindLocked() const FS_TA_REQUIRES(lock_);
+  size_t FindLocked() const __TA_REQUIRES(lock_);
 
   // Find the next unreserved element starting from |start|. Like FindLocked, this should only be
   // called when reserved_ > 0.
-  size_t FindNextUnreserved(size_t start) const FS_TA_REQUIRES(lock_);
+  size_t FindNextUnreserved(size_t start) const __TA_REQUIRES(lock_);
 
   // Adds & removes |change| from the vector of pending changes.
   void AddPendingChange(PendingChange* change);
@@ -226,17 +226,17 @@ class Allocator {
   // copy-on-write data blocks. These will be committed asynchronously via the WorkQueue thread.
   // This means that at the time of reservation if |reserved_| > 0, all reserved blocks must
   // belong to vnodes which are already enqueued in the WorkQueue thread.
-  size_t reserved_ FS_TA_GUARDED(lock_);
+  size_t reserved_ __TA_GUARDED(lock_);
 
   // Index of the first free element in the map.
-  size_t first_free_ FS_TA_GUARDED(lock_);
+  size_t first_free_ __TA_GUARDED(lock_);
 
   // Represents the Allocator's backing storage.
   std::unique_ptr<AllocatorStorage> storage_;
   // A bitmap interface into |storage_|.
-  RawBitmap map_ FS_TA_GUARDED(lock_);
+  RawBitmap map_ __TA_GUARDED(lock_);
 
-  std::vector<PendingChange*> pending_changes_ FS_TA_GUARDED(lock_);
+  std::vector<PendingChange*> pending_changes_ __TA_GUARDED(lock_);
 };
 
 }  // namespace minfs

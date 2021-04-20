@@ -6,8 +6,8 @@
 #define SRC_LIB_STORAGE_VFS_CPP_PAGED_VNODE_H_
 
 #include <lib/async/cpp/wait.h>
+#include <zircon/compiler.h>
 
-#include "src/lib/storage/vfs/cpp/locking.h"
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
@@ -51,7 +51,7 @@ class PagedVnode : public Vnode {
   // This will be null if the Vfs has shut down. Since Vnodes are refcounted, it's possible for them
   // to outlive their associated Vfs. Always null check before using. If there is no Vfs associated
   // with this object, all operations are expected to fail.
-  PagedVfs* paged_vfs() FS_TA_REQUIRES(mutex_) {
+  PagedVfs* paged_vfs() __TA_REQUIRES(mutex_) {
     // Since we were constructed with a PagedVfs, we know it's safe to up-cast back to that.
     return static_cast<PagedVfs*>(vfs());
   }
@@ -71,10 +71,10 @@ class PagedVnode : public Vnode {
   // must NOT be held during the read process. The caller's memory management structure must then
   // guarantee that everything remain valid across this unlocked period (the vnode could be closed
   // on another thread) or it must be able to handle the ensuing race conditions.
-  const zx::vmo& paged_vmo() const FS_TA_REQUIRES(mutex_) { return paged_vmo_info_.vmo; }
+  const zx::vmo& paged_vmo() const __TA_REQUIRES(mutex_) { return paged_vmo_info_.vmo; }
 
   // Returns true if there are clones of the VMO alive that have been given out.
-  bool has_clones() const FS_TA_REQUIRES(mutex_) { return has_clones_; }
+  bool has_clones() const __TA_REQUIRES(mutex_) { return has_clones_; }
 
   // Populates the paged_vmo() if necessary. Does nothing if it already exists. Access the created
   // vmo with this class' paged_vmo() getter.
@@ -84,39 +84,39 @@ class PagedVnode : public Vnode {
   // count drops to 0 to clean up the VMO. This means that if the caller doesn't create a clone the
   // VMO will leak if it's registered as handling paging requests on the Vfs (which will keep this
   // object alive).
-  zx::status<> EnsureCreatePagedVmo(uint64_t size) FS_TA_REQUIRES(mutex_);
+  zx::status<> EnsureCreatePagedVmo(uint64_t size) __TA_REQUIRES(mutex_);
 
   // Releases the vmo_ and unregisters for paging notifications from the PagedVfs.
-  void FreePagedVmo() FS_TA_REQUIRES(mutex_);
+  void FreePagedVmo() __TA_REQUIRES(mutex_);
 
   // Implementors of this class can override this function to response to the event that there
   // are no more clones of the vmo_. The default implementation calls FreePagedVmo().
-  virtual void OnNoPagedVmoClones() FS_TA_REQUIRES(mutex_);
+  virtual void OnNoPagedVmoClones() __TA_REQUIRES(mutex_);
 
  private:
   // Callback handler for the "no clones" message. Due to kernel message delivery race conditions
   // there might actually be clones. This checks and calls OnNoPagedVmoClones() when needed.
   void OnNoPagedVmoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                  zx_status_t status, const zx_packet_signal_t* signal)
-      FS_TA_EXCLUDES(mutex_);
+      __TA_EXCLUDES(mutex_);
 
   // Starts the clone_watcher_ to observe the case of no vmo_ clones. The WaitMethod is called only
   // once per "watch" call so this needs to be re-called after triggering.
   //
   // The vmo_ and paged_vfs() must exist.
-  void WatchForZeroVmoClones() FS_TA_REQUIRES(mutex_);
+  void WatchForZeroVmoClones() __TA_REQUIRES(mutex_);
 
   // The root VMO that paging happens out of for this vnode. VMOs that map the data into user
   // processes will be children of this VMO.
-  PagedVfs::VmoCreateInfo paged_vmo_info_ FS_TA_GUARDED(mutex_);
+  PagedVfs::VmoCreateInfo paged_vmo_info_ __TA_GUARDED(mutex_);
 
   // Set when there are clones of the vmo_.
-  bool has_clones_ FS_TA_GUARDED(mutex_) = false;
+  bool has_clones_ __TA_GUARDED(mutex_) = false;
 
   // Watches any clones of "paged_vmo()" provided to clients. Observes the ZX_VMO_ZERO_CHILDREN
   // signal. See WatchForZeroChildren().
   async::WaitMethod<PagedVnode, &PagedVnode::OnNoPagedVmoClonesMessage> clone_watcher_
-      FS_TA_GUARDED(mutex_);
+      __TA_GUARDED(mutex_);
 };
 
 }  // namespace fs

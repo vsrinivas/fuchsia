@@ -52,7 +52,7 @@ class Runner : public VfsType {
   explicit Runner(async::Loop* loop);
 
   // Check if filesystem is readonly.
-  bool IsReadonly() FS_TA_EXCLUDES(vfs_lock_);
+  bool IsReadonly() __TA_EXCLUDES(vfs_lock_);
 
   async::Loop* loop_;
   std::unique_ptr<Blobfs> blobfs_;

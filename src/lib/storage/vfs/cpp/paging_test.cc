@@ -135,7 +135,7 @@ class PagingTestFile : public PagedVnode {
   }
 
  protected:
-  void OnNoPagedVmoClones() override FS_TA_REQUIRES(mutex_) {
+  void OnNoPagedVmoClones() override __TA_REQUIRES(mutex_) {
     PagedVnode::OnNoPagedVmoClones();  // Do normal behavior of releasing the VMO.
     shared_->SignalVmoPresenceChanged(false);
   }

@@ -60,7 +60,7 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   fs::VnodeProtocolSet GetProtocols() const final;
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual)
-      FS_TA_EXCLUDES(mutex_) final;
+      __TA_EXCLUDES(mutex_) final;
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
   zx_status_t Truncate(size_t len) final;
 
@@ -95,7 +95,7 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   zx::status<> CheckAndFlush(bool is_truncate, size_t length, size_t offset);
 
   // Flush all the pending writes.
-  zx::status<> FlushCachedWrites() FS_TA_EXCLUDES(mutex_) final;
+  zx::status<> FlushCachedWrites() __TA_EXCLUDES(mutex_) final;
 
   // Drops all cached writes.
   void DropCachedWrites() final;
@@ -103,7 +103,7 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   // Flushes(sends the transaction to journaling layer to be written to journal and disk) or caches
   // current transaction.
   zx::status<> FlushTransaction(std::unique_ptr<Transaction> transaction, bool force_flush = false)
-      FS_TA_EXCLUDES(mutex_);
+      __TA_EXCLUDES(mutex_);
 
   // Sends the transaction to journaling layer to be written to journal and disk.
   zx::status<> ForceFlushTransaction(std::unique_ptr<Transaction> transaction);
@@ -126,7 +126,7 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   PendingAllocationData allocation_state_;
 #endif
 
-  std::unique_ptr<CachedBlockTransaction> cached_transaction_ FS_TA_GUARDED(mutex_);
+  std::unique_ptr<CachedBlockTransaction> cached_transaction_ __TA_GUARDED(mutex_);
 };
 
 }  // namespace minfs

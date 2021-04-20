@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -9,7 +10,6 @@
 #include <memory>
 #include <utility>
 
-#include <lib/syslog/cpp/macros.h>
 #include <bitmap/raw-bitmap.h>
 
 #include "src/storage/minfs/allocator/allocator.h"
@@ -46,7 +46,7 @@ size_t PendingChange::GetNextUnreserved(size_t start) const {
 // Static.
 zx_status_t Allocator::Create(fs::BufferedOperationsBuilder* builder,
                               std::unique_ptr<AllocatorStorage> storage,
-                              std::unique_ptr<Allocator>* out) FS_TA_NO_THREAD_SAFETY_ANALYSIS {
+                              std::unique_ptr<Allocator>* out) __TA_NO_THREAD_SAFETY_ANALYSIS {
   // Ignore thread-safety analysis on the |allocator| object; no one has an
   // external reference to it yet.
   zx_status_t status;
@@ -196,7 +196,7 @@ zx_status_t Allocator::Reserve(AllocatorReservationKey, PendingWork* transaction
   if (GetAvailableLocked() < count) {
     // If we do not have enough free elements, attempt to extend the partition.
     auto grow_map =
-        ([this](size_t pool_size, size_t* old_pool_size) FS_TA_NO_THREAD_SAFETY_ANALYSIS {
+        ([this](size_t pool_size, size_t* old_pool_size) __TA_NO_THREAD_SAFETY_ANALYSIS {
           return this->GrowMapLocked(pool_size, old_pool_size);
         });
 
