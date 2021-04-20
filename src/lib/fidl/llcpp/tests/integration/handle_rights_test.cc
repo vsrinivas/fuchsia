@@ -73,7 +73,7 @@ class HandleRightsServer : public fidl::WireInterface<test::HandleRights> {
 
 class HandleRightsTest : public ::testing::Test {
  protected:
-  virtual void SetUp() {
+  void SetUp() override {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
     ASSERT_EQ(loop_->StartThread("test_llcpp_handle_rights_server"), ZX_OK);
 
@@ -90,7 +90,7 @@ class HandleRightsTest : public ::testing::Test {
   }
 
   fidl::Client<test::HandleRights> AsyncClient(
-      std::shared_ptr<test::HandleRights::AsyncEventHandler> handler) {
+      std::shared_ptr<fidl::WireAsyncEventHandler<test::HandleRights>> handler) {
     EXPECT_TRUE(client_end_.is_valid());
     return fidl::Client<test::HandleRights>(std::move(client_end_), loop_->dispatcher(),
                                             std::move(handler));
