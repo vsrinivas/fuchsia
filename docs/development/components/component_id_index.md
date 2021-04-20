@@ -114,7 +114,7 @@ a product's configuration.
 
 The first step is to determine the component instance's moniker, which is its
 URL and realm path. You can find the the realm path of a component on a
-particular product's eng build by checking `fx shell cs tree` and collecting
+particular product's eng build by checking `ffx component list` and collecting
 "(realm)" labels under appmgr leading up to the component.
 
 Then, append an entry to the `instances` list with the component's moniker.
@@ -127,10 +127,10 @@ In this example, component `fuchsia-pkg://example.com/my_other_package#meta/my_o
 is added to the index.
 
 To determine the component instance's realm_path, you can look at the output of
-`fx shell cs tree`:
+`ffx component list`:
 
 ```shell
-$ fx shell cs tree
+$ ffx component list
 <root>
   .
   .
