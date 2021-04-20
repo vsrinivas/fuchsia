@@ -130,7 +130,6 @@ group("tests") {
                   "//src/modular/bundles:tools",
                   "//src/modular/bundles:integration_testing",
                   "//src/fonts",
-                  "//topaz/bin/dart_fidl_json/test:dart_fidl_json_test($host_toolchain)",
 
                   "//sdk/dart/fuchsia_inspect:tests",
 

@@ -99,7 +99,6 @@ Path | Contents
 [/tools/fidl/scripts] | Mostly one-off scripts for e.g. performing migrations that are kept for future reference.
 [/garnet/public/lib/fostr] | `fidlmerge` based tool to generate formatting code in C++.
 [/garnet/public/build/fostr] | Build templates for the `fostr` formatting library.
-[/topaz/bin/dart_fidl_json] | `fidlmerge` based tool to generate code to serialize FIDL to JSON in Dart.
 [/src/lib/fidl_codec] | Library for encoding/decoding FIDL messages (used by `fidlcat`).
 
 Note: The FIDL team does not necessarily
@@ -824,5 +823,4 @@ fidl fmt --library my_library.fidl -i
 [/tools/fidl/scripts]: /tools/fidl/scripts
 [/garnet/public/lib/fostr]: /garnet/public/lib/fostr
 [/garnet/public/build/fostr]: /garnet/public/build/fostr
-[/topaz/bin/dart_fidl_json]: /topaz/bin/dart_fidl_json
 [/src/lib/fidl_codec]: /src/lib/fidl_codec

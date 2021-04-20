@@ -386,11 +386,6 @@ could print the string `"Mode.Read | Mode.Write"` rather than the raw value
 Similar user-friendly printing can be implemented for each of the generated FIDL
 types.
 
-Another example of alternative output would be serializing FIDL values to JSON.
-Users SHOULD have the option to opt-in or out to this functionality in order to
-follow the principle of "only pay for what you use". An example of this is
-`dart_fidl_json`, which is implemented using `fidlmerge`.
-
 ### Message memory allocation
 
 Bindings MAY provide the option for users to provide their own memory to use
