@@ -145,7 +145,7 @@ zx_status_t Vnode::Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redire
   if (zx_status_t status = OpenNode(options, out_redirect); status != ZX_OK) {
     // Roll back the open count since we won't get a close for it.
     std::lock_guard lock(mutex_);
-    open_count_++;
+    open_count_--;
     return status;
   }
 
@@ -256,7 +256,7 @@ void Vnode::UnregisterInflightTransaction() {
 }
 
 size_t Vnode::GetInflightTransactions() const {
-  std::lock_guard lock(mutex_);
+  SharedLock lock(mutex_);
   return inflight_transactions_;
 }
 

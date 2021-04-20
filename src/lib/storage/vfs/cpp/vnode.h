@@ -17,7 +17,6 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <mutex>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -29,6 +28,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/storage/vfs/cpp/ref_counted.h"
+#include "src/lib/storage/vfs/cpp/shared_mutex.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 #ifdef __Fuchsia__
@@ -382,8 +382,9 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // the Vfs, but can leave null if not. See vfs() getter for more.
   explicit Vnode(Vfs* vfs = nullptr);
 
-  // Mutex for the data of this vnode.
-  mutable std::mutex mutex_;
+  // Mutex for the data of this vnode. This is a shared mutex to support derived classes
+  // implementing multiple simultaneous readers if desired.
+  mutable SharedMutex mutex_;
 
   // The Vfs associated with this node, if any.
   //
@@ -393,10 +394,10 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   //
   // Additionally, this will be null when the Vfs is destroyed (since Vnodes are reference-counted
   // they can outlive the Vfs). Uses should always be inside the mutex_.
-  Vfs* vfs() __TA_REQUIRES(mutex_) { return vfs_; }
+  Vfs* vfs() __TA_REQUIRES_SHARED(mutex_) { return vfs_; }
 
   // Returns the number of open connections, not counting node_reference connections. See Open().
-  size_t open_count() const __TA_REQUIRES(mutex_) { return open_count_; }
+  size_t open_count() const __TA_REQUIRES_SHARED(mutex_) { return open_count_; }
 
  private:
   Vfs* vfs_ __TA_GUARDED(mutex_) = nullptr;  // Possibly null, see getter above.

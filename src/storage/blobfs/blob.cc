@@ -704,7 +704,7 @@ void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                           const zx_packet_signal_t* signal) {
   fbl::RefPtr<Blob> local_clone_ref;
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard lock(mutex_);
     if (IsDataLoaded()) {
       zx_info_vmo_t info;
       zx_status_t info_status =
@@ -749,7 +749,7 @@ void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
   local_clone_ref = nullptr;
 
   // This might have been the last reference to a deleted blob, so try purging it.
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard lock(mutex_);
   if (zx_status_t status = TryPurge(); status != ZX_OK) {
     FX_LOGS(WARNING) << "Purging blob " << digest() << " failed: " << zx_status_get_string(status);
   }
@@ -982,7 +982,7 @@ bool Blob::ShouldCache() const {
 }
 
 void Blob::ActivateLowMemory() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard lock(mutex_);
 
   // We shouldn't be putting the blob into a low-memory state while it is still mapped.
   ZX_ASSERT(!has_clones());
@@ -1165,7 +1165,7 @@ void Blob::Sync(SyncCallback on_complete) {
 void Blob::VmoRead(uint64_t offset, uint64_t length) {
   TRACE_DURATION("blobfs", "Blob::VmoRead", "offset", offset, "length", length);
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard lock(mutex_);
 
   ZX_DEBUG_ASSERT(IsDataLoaded());
 

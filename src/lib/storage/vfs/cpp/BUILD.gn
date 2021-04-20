@@ -11,6 +11,7 @@ static_library("cpp") {
 
   public = [
     "debug.h",
+    "shared_mutex.h",
     "vfs.h",
     "vfs_types.h",
     "vnode.h",

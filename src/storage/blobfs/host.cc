@@ -193,7 +193,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
   // After we've pre-calculated all necessary information, actually add the
   // blob to the filesystem itself.
   static std::mutex add_blob_mutex_;
-  std::lock_guard<std::mutex> lock(add_blob_mutex_);
+  std::lock_guard lock(add_blob_mutex_);
   std::unique_ptr<InodeBlock> inode_block;
   zx_status_t status;
   if ((status = bs->NewBlob(info.digest, &inode_block)) != ZX_OK) {

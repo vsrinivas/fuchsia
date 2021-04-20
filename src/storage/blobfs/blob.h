@@ -177,12 +177,12 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blob);
 
   // Returns whether there are any external references to the blob.
-  bool HasReferences() const __TA_REQUIRES(mutex_);
+  bool HasReferences() const __TA_REQUIRES_SHARED(mutex_);
 
   // Identifies if we can safely remove all on-disk and in-memory storage used by this blob.
   // Note that this *must* be called on the main dispatch thread; otherwise the underlying state of
   // the blob could change after (or during) the call, and the blob might not really be purgeable.
-  bool Purgeable() const __TA_REQUIRES(mutex_) {
+  bool Purgeable() const __TA_REQUIRES_SHARED(mutex_) {
     return !HasReferences() && (deletable_ || !IsReadable());
   }
 
@@ -202,8 +202,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   void ActivateLowMemory() final __TA_EXCLUDES(mutex_);
 
   void set_state(BlobState new_state) __TA_REQUIRES(mutex_) { state_ = new_state; };
-  BlobState state() const __TA_REQUIRES(mutex_) { return state_; }
-  bool IsReadable() const __TA_REQUIRES(mutex_) {
+  BlobState state() const __TA_REQUIRES_SHARED(mutex_) { return state_; }
+  bool IsReadable() const __TA_REQUIRES_SHARED(mutex_) {
     return state_ == BlobState::kReadablePaged || state_ == BlobState::kReadableLegacy;
   }
 
@@ -285,7 +285,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
                             CompressionAlgorithm compression_algorithm) __TA_REQUIRES(mutex_);
 
   // Returns whether the data or merkle tree bytes are mapped and resident in memory.
-  bool IsDataLoaded() const __TA_REQUIRES(mutex_);
+  bool IsDataLoaded() const __TA_REQUIRES_SHARED(mutex_);
 
   // Commits the blob to persistent storage.
   zx_status_t Commit() __TA_REQUIRES(mutex_);
@@ -359,7 +359,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   //
   // In the new pager, these members are in the PagedVmo base class.
   zx::vmo paged_vmo_ __TA_GUARDED(mutex_);
-  const zx::vmo& paged_vmo() const __TA_REQUIRES(mutex_) { return paged_vmo_; }
+  const zx::vmo& paged_vmo() const __TA_REQUIRES_SHARED(mutex_) { return paged_vmo_; }
   void FreePagedVmo() __TA_REQUIRES(mutex_) { paged_vmo_.reset(); }
 #endif
 

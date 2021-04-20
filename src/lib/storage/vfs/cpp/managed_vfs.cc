@@ -29,7 +29,7 @@ void ManagedVfs::Shutdown(ShutdownCallback handler) {
   ZX_DEBUG_ASSERT(handler);
   zx_status_t status =
       async::PostTask(dispatcher(), [this, closure = std::move(handler)]() mutable {
-        std::lock_guard<std::mutex> lock(lock_);
+        std::lock_guard lock(lock_);
         ZX_DEBUG_ASSERT(!shutdown_handler_);
         shutdown_handler_ = std::move(closure);
         is_shutting_down_.store(true);
@@ -59,7 +59,7 @@ void ManagedVfs::CloseAllConnectionsForVnode(const Vnode& node,
             callback();
           }
         });  // Must go before |lock|.
-    std::lock_guard<std::mutex> lock(lock_);
+    std::lock_guard lock(lock_);
     for (auto& connection : connections_) {
       if (connection.vnode().get() == &node) {
         connection.AsyncTeardown();
@@ -82,7 +82,7 @@ void ManagedVfs::OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_st
   // will in turn delete the lock object itself.
   ShutdownCallback handler;
   {
-    std::lock_guard<std::mutex> lock(lock_);
+    std::lock_guard lock(lock_);
     ZX_ASSERT_MSG(IsTerminated(), "Failed to complete VFS shutdown: dispatcher status = %d\n",
                   status);
     ZX_DEBUG_ASSERT(shutdown_handler_);
@@ -95,7 +95,7 @@ void ManagedVfs::OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_st
 
 zx_status_t ManagedVfs::RegisterConnection(std::unique_ptr<internal::Connection> connection,
                                            zx::channel channel) {
-  std::lock_guard<std::mutex> lock(lock_);
+  std::lock_guard lock(lock_);
   ZX_DEBUG_ASSERT(!is_shutting_down_.load());
   connections_.push_back(std::move(connection));
   zx_status_t status = connections_.back().StartDispatching(std::move(channel));
@@ -108,7 +108,7 @@ zx_status_t ManagedVfs::RegisterConnection(std::unique_ptr<internal::Connection>
 
 void ManagedVfs::UnregisterConnection(internal::Connection* connection) {
   std::shared_ptr<fit::deferred_action<fit::callback<void()>>> closer;  // Must go before lock.
-  std::lock_guard<std::mutex> lock(lock_);
+  std::lock_guard lock(lock_);
 
   auto iter = closing_connections_.find(connection);
   if (iter != closing_connections_.end()) {

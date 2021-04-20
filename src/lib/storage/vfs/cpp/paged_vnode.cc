@@ -55,7 +55,7 @@ void PagedVnode::OnNoPagedVmoClones() {
 
 void PagedVnode::OnNoPagedVmoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                            zx_status_t status, const zx_packet_signal_t* signal) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard lock(mutex_);
 
   ZX_DEBUG_ASSERT(has_clones_);
 

@@ -113,7 +113,7 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, Serve
 }
 
 bool Runner::IsReadonly() {
-  std::lock_guard<std::mutex> lock(vfs_lock_);
+  std::lock_guard lock(vfs_lock_);
   return ReadonlyLocked();
 }
 

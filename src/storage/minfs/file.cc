@@ -311,7 +311,7 @@ zx::status<std::unique_ptr<Transaction>> File::GetTransaction(uint32_t reserve_b
   std::unique_ptr<Transaction> transaction;
   std::unique_ptr<CachedBlockTransaction> cached_transaction;
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard lock(mutex_);
     cached_transaction = std::move(cached_transaction_);
     if (!DirtyCacheEnabled()) {
       ZX_ASSERT(cached_transaction == nullptr);

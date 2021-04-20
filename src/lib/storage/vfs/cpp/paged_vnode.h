@@ -51,7 +51,7 @@ class PagedVnode : public Vnode {
   // This will be null if the Vfs has shut down. Since Vnodes are refcounted, it's possible for them
   // to outlive their associated Vfs. Always null check before using. If there is no Vfs associated
   // with this object, all operations are expected to fail.
-  PagedVfs* paged_vfs() __TA_REQUIRES(mutex_) {
+  PagedVfs* paged_vfs() __TA_REQUIRES_SHARED(mutex_) {
     // Since we were constructed with a PagedVfs, we know it's safe to up-cast back to that.
     return static_cast<PagedVfs*>(vfs());
   }
@@ -71,10 +71,10 @@ class PagedVnode : public Vnode {
   // must NOT be held during the read process. The caller's memory management structure must then
   // guarantee that everything remain valid across this unlocked period (the vnode could be closed
   // on another thread) or it must be able to handle the ensuing race conditions.
-  const zx::vmo& paged_vmo() const __TA_REQUIRES(mutex_) { return paged_vmo_info_.vmo; }
+  const zx::vmo& paged_vmo() const __TA_REQUIRES_SHARED(mutex_) { return paged_vmo_info_.vmo; }
 
   // Returns true if there are clones of the VMO alive that have been given out.
-  bool has_clones() const __TA_REQUIRES(mutex_) { return has_clones_; }
+  bool has_clones() const __TA_REQUIRES_SHARED(mutex_) { return has_clones_; }
 
   // Populates the paged_vmo() if necessary. Does nothing if it already exists. Access the created
   // vmo with this class' paged_vmo() getter.

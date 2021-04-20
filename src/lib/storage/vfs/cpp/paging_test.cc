@@ -35,7 +35,7 @@ class SharedFileState {
   // Called by the PagedVnode when the VMO is mapped or unmapped.
   void SignalVmoPresenceChanged(bool present) {
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard lock(mutex_);
 
       vmo_present_changed_ = true;
       vmo_present_ = present;
@@ -46,7 +46,7 @@ class SharedFileState {
 
   // Returns the current state of the mapped flag.
   bool GetVmoPresent() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard lock(mutex_);
     return vmo_present_;
   }
 
@@ -78,13 +78,13 @@ class PagingTestFile : public PagedVnode {
 
   // Public locked version of PagedVnode::has_clones().
   bool HasClones() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard lock(mutex_);
     return has_clones();
   }
 
   // PagedVnode implementation:
   void VmoRead(uint64_t offset, uint64_t length) override {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard lock(mutex_);
 
     if (vmo_read_status_ != ZX_OK) {
       // We're supposed to report errors.
@@ -116,7 +116,7 @@ class PagingTestFile : public PagedVnode {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) override {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard lock(mutex_);
 
     // We need to signal after the VMO was mapped that it changed.
     bool becoming_mapped = !paged_vmo();

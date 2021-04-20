@@ -996,7 +996,7 @@ void Minfs::BlockNew(PendingWork* transaction, blk_t* out_bno) const {
 }
 
 bool Minfs::IsReadonly() {
-  std::lock_guard<std::mutex> lock(vfs_lock_);
+  std::lock_guard lock(vfs_lock_);
   return ReadonlyLocked();
 }
 

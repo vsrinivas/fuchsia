@@ -11,7 +11,7 @@ namespace fs {
 BackgroundExecutor::~BackgroundExecutor() {
   if (thrd_.joinable()) {
     {
-      std::lock_guard<std::mutex> lock(lock_);
+      std::lock_guard lock(lock_);
       // If the "always running" task had suspended, this completes it.
       terminate_.reset();
       // If the "always running" task has not suspened, this advises it to shut itself down.
@@ -28,7 +28,7 @@ BackgroundExecutor::BackgroundExecutor() {
   // Once the termination task is resumed, all pending tasks will be completed, and the runner
   // thread will exit.
   auto work = fit::make_promise([this](fit::context& context) mutable -> fit::result<> {
-    std::lock_guard<std::mutex> lock(lock_);
+    std::lock_guard lock(lock_);
     if (should_terminate_) {
       // In this case, the BackgroundExecutor terminated before the runner started processing this
       // unit of work. That's a quick shutdown!

@@ -34,7 +34,7 @@ zx_status_t PseudoDir::GetAttributes(VnodeAttributes* attr) {
 }
 
 zx_status_t PseudoDir::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard lock(mutex_);
 
   auto it = entries_by_name_.find(name);
   if (it != entries_by_name_.end()) {
@@ -64,7 +64,7 @@ zx_status_t PseudoDir::Readdir(VdirCookie* cookie, void* data, size_t len, size_
     cookie->n = kDotId;
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard lock(mutex_);
 
   for (auto it = entries_by_id_.lower_bound(cookie->n); it != entries_by_id_.end(); ++it) {
     if (cookie->n >= it->id()) {
@@ -101,7 +101,7 @@ zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard lock(mutex_);
 
   if (entries_by_name_.find(name) != entries_by_name_.end()) {
     return ZX_ERR_ALREADY_EXISTS;
@@ -115,7 +115,7 @@ zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
 }
 
 zx_status_t PseudoDir::RemoveEntry(std::string_view name) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard lock(mutex_);
 
   auto it = entries_by_name_.find(name);
   if (it != entries_by_name_.end()) {
@@ -129,7 +129,7 @@ zx_status_t PseudoDir::RemoveEntry(std::string_view name) {
 }
 
 zx_status_t PseudoDir::RemoveEntry(std::string_view name, fs::Vnode* vn) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard lock(mutex_);
 
   auto it = entries_by_name_.find(name);
   if (it != entries_by_name_.end() && it->node().get() == vn) {
@@ -143,7 +143,7 @@ zx_status_t PseudoDir::RemoveEntry(std::string_view name, fs::Vnode* vn) {
 }
 
 void PseudoDir::RemoveAllEntries() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard lock(mutex_);
 
   for (auto& entry : entries_by_name_) {
     Notify(entry.name(), fio::wire::kWatchEventRemoved);
@@ -153,7 +153,7 @@ void PseudoDir::RemoveAllEntries() {
 }
 
 bool PseudoDir::IsEmpty() const {
-  std::lock_guard<std::mutex> lock(mutex_);
+  SharedLock lock(mutex_);
   return entries_by_name_.is_empty();
 }
 

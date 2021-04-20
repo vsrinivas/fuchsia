@@ -27,7 +27,7 @@ PagedVfs::~PagedVfs() {
   // live node set from within one lock, avoiding the reentrant unregisteration.
   std::map<uint64_t, fbl::RefPtr<PagedVnode>> local_nodes;
   {
-    std::lock_guard<std::mutex> lock(vfs_lock_);
+    std::lock_guard lock(vfs_lock_);
 
     local_nodes = std::move(paged_nodes_);
     for (auto& [id, node] : local_nodes)
@@ -69,7 +69,7 @@ zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(fbl::RefPtr<Pag
   // Register this node with a unique ID to associated it with pager requests.
   VmoCreateInfo create_info;
   {
-    std::lock_guard<std::mutex> lock(vfs_lock_);
+    std::lock_guard lock(vfs_lock_);
 
     create_info.id = next_node_id_;
     ++next_node_id_;
@@ -82,7 +82,7 @@ zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(fbl::RefPtr<Pag
           pager_.create_vmo(0, pager_pool_->port(), create_info.id, size, &create_info.vmo);
       status != ZX_OK) {
     // On error we need to undo the owning reference from above.
-    std::lock_guard<std::mutex> lock(vfs_lock_);
+    std::lock_guard lock(vfs_lock_);
     paged_nodes_.erase(create_info.id);
     return zx::error(status);
   }
@@ -91,7 +91,7 @@ zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(fbl::RefPtr<Pag
 }
 
 void PagedVfs::UnregisterPagedVmo(uint64_t paged_vmo_id) {
-  std::lock_guard<std::mutex> lock(vfs_lock_);
+  std::lock_guard lock(vfs_lock_);
 
   auto found = paged_nodes_.find(paged_vmo_id);
   if (found == paged_nodes_.end()) {
@@ -107,7 +107,7 @@ void PagedVfs::PagerVmoRead(uint64_t node_id, uint64_t offset, uint64_t length) 
   fbl::RefPtr<PagedVnode> node;
 
   {
-    std::lock_guard<std::mutex> lock(vfs_lock_);
+    std::lock_guard lock(vfs_lock_);
 
     auto found = paged_nodes_.find(node_id);
     if (found == paged_nodes_.end())
@@ -121,7 +121,7 @@ void PagedVfs::PagerVmoRead(uint64_t node_id, uint64_t offset, uint64_t length) 
 }
 
 size_t PagedVfs::GetRegisteredPagedVmoCount() const {
-  std::lock_guard<std::mutex> lock(vfs_lock_);
+  std::lock_guard lock(vfs_lock_);
   return paged_nodes_.size();
 }
 

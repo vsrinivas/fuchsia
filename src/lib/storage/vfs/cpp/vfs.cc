@@ -102,7 +102,7 @@ Vfs::~Vfs() {
   {
     // This lock should not be necessary since the destructor should be single-threaded but is good
     // for completeness.
-    std::lock_guard<std::mutex> lock(vfs_lock_);
+    std::lock_guard lock(vfs_lock_);
     nodes_to_notify.reserve(live_nodes_.size());
     for (auto& node_ptr : live_nodes_)
       nodes_to_notify.push_back(fbl::RefPtr<Vnode>(node_ptr));
@@ -127,7 +127,7 @@ void Vfs::SetDispatcher(async_dispatcher_t* dispatcher) {
 
 Vfs::OpenResult Vfs::Open(fbl::RefPtr<Vnode> vndir, std::string_view path,
                           VnodeConnectionOptions options, Rights parent_rights, uint32_t mode) {
-  std::lock_guard<std::mutex> lock(vfs_lock_);
+  std::lock_guard lock(vfs_lock_);
   return OpenLocked(std::move(vndir), path, options, parent_rights, mode);
 }
 
@@ -272,7 +272,7 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view path) {
   }
 
   {
-    std::lock_guard<std::mutex> lock(vfs_lock_);
+    std::lock_guard lock(vfs_lock_);
     if (ReadonlyLocked()) {
       r = ZX_ERR_ACCESS_DENIED;
     } else {
@@ -314,7 +314,7 @@ uint32_t ToStreamOptions(const VnodeConnectionOptions& options) {
 }  // namespace
 
 void Vfs::TokenDiscard(zx::event ios_token) {
-  std::lock_guard<std::mutex> lock(vfs_lock_);
+  std::lock_guard lock(vfs_lock_);
   if (ios_token) {
     // The token is cleared here to prevent the following race condition:
     // 1) Open
@@ -332,7 +332,7 @@ void Vfs::TokenDiscard(zx::event ios_token) {
 zx_status_t Vfs::VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token, zx::event* out) {
   zx_status_t r;
 
-  std::lock_guard<std::mutex> lock(vfs_lock_);
+  std::lock_guard lock(vfs_lock_);
   if (ios_token->is_valid()) {
     // Token has already been set for this iostate
     if ((r = ios_token->duplicate(TOKEN_RIGHTS, out) != ZX_OK)) {
@@ -356,7 +356,7 @@ zx_status_t Vfs::VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token, zx::e
 }
 
 bool Vfs::IsTokenAssociatedWithVnode(zx::event token) {
-  std::lock_guard<std::mutex> lock(vfs_lock_);
+  std::lock_guard lock(vfs_lock_);
   return TokenToVnode(std::move(token), nullptr) == ZX_OK;
 }
 
@@ -395,7 +395,7 @@ zx_status_t Vfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent, std::stri
 
   fbl::RefPtr<fs::Vnode> newparent;
   {
-    std::lock_guard<std::mutex> lock(vfs_lock_);
+    std::lock_guard lock(vfs_lock_);
     if (ReadonlyLocked()) {
       return ZX_ERR_ACCESS_DENIED;
     }
@@ -415,13 +415,13 @@ zx_status_t Vfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent, std::stri
 
 zx_status_t Vfs::Readdir(Vnode* vn, VdirCookie* cookie, void* dirents, size_t len,
                          size_t* out_actual) {
-  std::lock_guard<std::mutex> lock(vfs_lock_);
+  std::lock_guard lock(vfs_lock_);
   return vn->Readdir(cookie, dirents, len, out_actual);
 }
 
 zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, std::string_view oldStr,
                       std::string_view newStr) {
-  std::lock_guard<std::mutex> lock(vfs_lock_);
+  std::lock_guard lock(vfs_lock_);
   fbl::RefPtr<fs::Vnode> newparent;
   zx_status_t r;
   if ((r = TokenToVnode(std::move(token), &newparent)) != ZX_OK) {
@@ -585,7 +585,7 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
 #endif  // ifdef __Fuchsia__
 
 void Vfs::RegisterVnode(Vnode* vnode) {
-  std::lock_guard<std::mutex> lock(vfs_lock_);
+  std::lock_guard lock(vfs_lock_);
 
   // Should not be registered twice.
   ZX_DEBUG_ASSERT(live_nodes_.find(vnode) == live_nodes_.end());
@@ -593,7 +593,7 @@ void Vfs::RegisterVnode(Vnode* vnode) {
 }
 
 void Vfs::UnregisterVnode(Vnode* vnode) {
-  std::lock_guard<std::mutex> lock(vfs_lock_);
+  std::lock_guard lock(vfs_lock_);
   UnregisterVnodeLocked(vnode);
 }
 
@@ -604,7 +604,7 @@ void Vfs::UnregisterVnodeLocked(Vnode* vnode) {
 }
 
 void Vfs::SetReadonly(bool value) {
-  std::lock_guard<std::mutex> lock(vfs_lock_);
+  std::lock_guard lock(vfs_lock_);
   readonly_ = value;
 }
 
