@@ -14,4 +14,4 @@ launched program is provided with the bootfs mounted at `/boot` and the loader
 service. `bootsvc.on_next_process_exit` controls whether bootsvc reboots or
 shuts down the device when the process it starts exits.  The kernel command
 line arguments are provided to it via `envp`.  See the documentation in
-`[bringup/bin/bootsvc](/src/bringup/bin/bootsvc/)` for more details.
+[//src/bringup/bin/bootsvc](/src/bringup/bin/bootsvc/) for more details.

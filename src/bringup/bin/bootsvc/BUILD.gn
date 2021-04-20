@@ -13,7 +13,7 @@ group("bootsvc") {
   ]
 }
 
-# There are also integration tests under intergration_test/, but they are not component tests so
+# There are also integration tests under integration_test/, but they are not component tests so
 # they aren't included in the same way.
 group("tests") {
   testonly = true
