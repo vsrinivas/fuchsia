@@ -131,6 +131,18 @@ func TestRunNinja(t *testing.T) {
             `,
 		},
 		{
+			name: "fatal error",
+			fail: true,
+			stdout: `
+				ninja: Entering directory /foo
+				[1/1] ACTION //foo
+				ninja: fatal: cannot create file foo
+            `,
+			expectedFailureMessage: `
+				ninja: fatal: cannot create file foo
+            `,
+		},
+		{
 			name: "unrecognized failure",
 			fail: true,
 			stdout: `

@@ -24,8 +24,11 @@ var (
 
 	// errorRegex matches a single-line error message that Ninja prints at the
 	// end of its output if it encounters an error that prevents it from even
-	// starting the build (e.g. multiple rules generating the same target file).
-	errorRegex = regexp.MustCompile(`^\s*ninja: error: .+`)
+	// starting the build (e.g. multiple rules generating the same target file),
+	// or a fatal error in the middle of the build (e.g. OS error). These error
+	// strings are defined here:
+	// https://github.com/ninja-build/ninja/blob/master/src/util.cc
+	errorRegex = regexp.MustCompile(`^\s*ninja: (error|fatal): .+`)
 
 	// failureStartRegex matches the first line of a failure message, e.g.
 	// "FAILED: foo.o"
