@@ -49,8 +49,8 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
 
   // These "On*" methods should only be called on files written in the new
   // syntax, so immediately assert and error any time we enter one.
-  void OnAmbiguousLayoutParameter(
-      std::unique_ptr<raw::AmbiguousLayoutParameter> const& element) override {
+  void OnIdentifierLayoutParameter(
+      std::unique_ptr<raw::IdentifierLayoutParameter> const& element) override {
     AbortUnimplemented();
   }
   void OnInlineLayoutReference(

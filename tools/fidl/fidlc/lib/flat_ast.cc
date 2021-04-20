@@ -2174,8 +2174,8 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
             return false;
           break;
         }
-        case raw::LayoutParameter::Kind::kAmbiguous: {
-          auto type_param = static_cast<raw::AmbiguousLayoutParameter*>(param.get());
+        case raw::LayoutParameter::Kind::kIdentifier: {
+          auto type_param = static_cast<raw::IdentifierLayoutParameter*>(param.get());
           auto inner_name = Name::CreateSourced(this, type_param->identifier->span());
           type_ctor->maybe_arg_type_ctor = std::make_unique<TypeConstructor>(
               inner_name,
@@ -2194,8 +2194,8 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
     if (builtin == "array" && params->items.size() >= 2) {
       param = std::move(params->items[1]);
       switch (param->kind) {
-        case raw::LayoutParameter::Kind::kAmbiguous: {
-          auto type_param = static_cast<raw::AmbiguousLayoutParameter*>(param.get());
+        case raw::LayoutParameter::Kind::kIdentifier: {
+          auto type_param = static_cast<raw::IdentifierLayoutParameter*>(param.get());
           type_ctor->maybe_size = std::make_unique<Constant>(Constant::Kind::kIdentifier,
                                                              type_param->identifier->span());
           break;

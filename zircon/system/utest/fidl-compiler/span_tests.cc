@@ -69,7 +69,7 @@ namespace {
   DO(TableDeclaration)         \
   DO(UnionMember)              \
   DO(UnionDeclaration)         \
-  DO(AmbiguousLayoutParameter) \
+  DO(IdentifierLayoutParameter) \
   DO(LiteralLayoutParameter)   \
   DO(TypeLayoutParameter)      \
   DO(LayoutParameterList)      \
@@ -247,10 +247,10 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
 
   // TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
   // --- start new syntax ---
-  void OnAmbiguousLayoutParameter(
-      std::unique_ptr<fidl::raw::AmbiguousLayoutParameter> const& element) override {
-    CheckSpanOfType(ElementType::AmbiguousLayoutParameter, *element);
-    TreeVisitor::OnAmbiguousLayoutParameter(element);
+  void OnIdentifierLayoutParameter(
+      std::unique_ptr<fidl::raw::IdentifierLayoutParameter> const& element) override {
+    CheckSpanOfType(ElementType::IdentifierLayoutParameter, *element);
+    TreeVisitor::OnIdentifierLayoutParameter(element);
   }
   void OnLiteralLayoutParameter(
       std::unique_ptr<fidl::raw::LiteralLayoutParameter> const& element) override {
@@ -587,7 +587,7 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
 // TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
 // --- start new syntax ---
 const std::vector<TestCase> new_syntax_test_cases = {
-    {ElementType::AmbiguousLayoutParameter,
+    {ElementType::IdentifierLayoutParameter,
      {
          R"FIDL(library x; type a = bool; const b uint8 = 4; type y = array<«a»,«b»>;)FIDL",
      }},

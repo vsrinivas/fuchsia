@@ -920,7 +920,7 @@ class NamedLayoutReference final : public LayoutReference {
 class LayoutParameter : public SourceElement {
  public:
   enum Kind {
-    kAmbiguous,
+    kIdentifier,
     kLiteral,
     kType,
   };
@@ -954,11 +954,11 @@ class TypeLayoutParameter final : public LayoutParameter {
   std::unique_ptr<TypeConstructorNew> type_ctor;
 };
 
-class AmbiguousLayoutParameter final : public LayoutParameter {
+class IdentifierLayoutParameter final : public LayoutParameter {
  public:
-  explicit AmbiguousLayoutParameter(SourceElement const& element,
+  explicit IdentifierLayoutParameter(SourceElement const& element,
                                     std::unique_ptr<CompoundIdentifier> identifier)
-      : LayoutParameter(element, Kind::kAmbiguous), identifier(std::move(identifier)) {}
+      : LayoutParameter(element, Kind::kIdentifier), identifier(std::move(identifier)) {}
 
   void Accept(TreeVisitor* visitor) const;
 

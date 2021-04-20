@@ -1718,7 +1718,7 @@ std::unique_ptr<raw::LayoutParameter> Parser::ParseLayoutParameter() {
     if (type_ctor->layout_ref->kind == raw::LayoutReference::Kind::kNamed &&
         type_ctor->parameters == nullptr && type_ctor->constraints == nullptr) {
       auto named_ref = static_cast<raw::NamedLayoutReference*>(type_ctor->layout_ref.get());
-      return std::make_unique<raw::AmbiguousLayoutParameter>(scope.GetSourceElement(),
+      return std::make_unique<raw::IdentifierLayoutParameter>(scope.GetSourceElement(),
                                                              std::move(named_ref->identifier));
     }
     return std::make_unique<raw::TypeLayoutParameter>(scope.GetSourceElement(),

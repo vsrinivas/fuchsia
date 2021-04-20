@@ -185,8 +185,8 @@ class TreeVisitor {
   virtual void OnLayoutParameter(std::unique_ptr<LayoutParameter> const& element) {
     LayoutParameter::Kind kind = element->kind;
     switch (kind) {
-      case LayoutParameter::Kind::kAmbiguous: {
-        DISPATCH_TO(AmbiguousLayoutParameter, LayoutParameter, element);
+      case LayoutParameter::Kind::kIdentifier: {
+        DISPATCH_TO(IdentifierLayoutParameter, LayoutParameter, element);
         break;
       }
       case LayoutParameter::Kind::kLiteral: {
@@ -204,8 +204,8 @@ class TreeVisitor {
     element->Accept(this);
   }
 
-  virtual void OnAmbiguousLayoutParameter(
-      std::unique_ptr<AmbiguousLayoutParameter> const& element) {
+  virtual void OnIdentifierLayoutParameter(
+      std::unique_ptr<IdentifierLayoutParameter> const& element) {
     element->Accept(this);
   }
   virtual void OnLiteralLayoutParameter(std::unique_ptr<LiteralLayoutParameter> const& element) {

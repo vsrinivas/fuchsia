@@ -346,7 +346,7 @@ void UnionDeclaration::Accept(TreeVisitor* visitor) const {
 
 // TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
 // --- start new syntax ---
-void AmbiguousLayoutParameter::Accept(TreeVisitor* visitor) const {
+void IdentifierLayoutParameter::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   visitor->OnCompoundIdentifier(identifier);
 }
