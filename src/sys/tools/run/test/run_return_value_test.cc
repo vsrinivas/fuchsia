@@ -57,9 +57,8 @@ void test_case(const char* url, const char* value, bool daemonize) {
   }
 
   // Verify `run` return code
-  zx_info_process_v2_t proc_info;
-  status =
-      zx_object_get_info(process, ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), NULL, NULL);
+  zx_info_process_t proc_info;
+  status = zx_object_get_info(process, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
   ASSERT_EQ(ZX_OK, status);
   if (daemonize) {
     // If we run daemonize, the return code for run is going to be 0.

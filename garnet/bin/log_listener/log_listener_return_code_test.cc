@@ -25,9 +25,8 @@ TEST(LogListenerReturnCode, ReturnNonzeroOnBadArgs) {
   // Verify return code
   status = zx_object_wait_one(process, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, NULL);
   ASSERT_EQ(ZX_OK, status);
-  zx_info_process_v2_t proc_info;
-  status =
-      zx_object_get_info(process, ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), NULL, NULL);
+  zx_info_process_t proc_info;
+  status = zx_object_get_info(process, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
   ASSERT_EQ(ZX_OK, status);
   ASSERT_NE(0, proc_info.return_code);
 }

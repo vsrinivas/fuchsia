@@ -69,8 +69,8 @@ TEST(Run, Daemonize) {
             zx_object_wait_one(run_process.get(), ZX_TASK_TERMINATED, ZX_TIME_INFINITE, nullptr));
 
   // Check that it succeeded.
-  zx_info_process_v2_t proc_info;
-  EXPECT_EQ(ZX_OK, zx_object_get_info(run_process.get(), ZX_INFO_PROCESS_V2, &proc_info,
+  zx_info_process_t proc_info;
+  EXPECT_EQ(ZX_OK, zx_object_get_info(run_process.get(), ZX_INFO_PROCESS, &proc_info,
                                       sizeof(proc_info), nullptr, nullptr));
 
   EXPECT_EQ(0, proc_info.return_code);

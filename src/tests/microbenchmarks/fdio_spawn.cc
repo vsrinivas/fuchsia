@@ -29,8 +29,8 @@ bool SpawnTest(perftest::RepeatState* state) {
     ASSERT_OK(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC, kPath, kArgv,
                          process.reset_and_get_address()));
     ASSERT_OK(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
-    zx_info_process_v2_t info;
-    ASSERT_OK(process.get_info(ZX_INFO_PROCESS_V2, &info, sizeof(info), nullptr, nullptr));
+    zx_info_process_t info;
+    ASSERT_OK(process.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr));
     ZX_ASSERT(info.flags & ZX_INFO_PROCESS_FLAG_EXITED);
     ZX_ASSERT(info.return_code == 0);
   }

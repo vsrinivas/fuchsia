@@ -105,8 +105,8 @@ int do_spawn(int argc, char** argv) {
     return -102;
 
   size_t actual, avail;
-  zx_info_process_v2_t proc_info;
-  status = subprocess.get_info(ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), &actual, &avail);
+  zx_info_process_t proc_info;
+  status = subprocess.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), &actual, &avail);
   if (status != ZX_OK)
     return -103;
   if (actual != 1)

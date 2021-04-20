@@ -35,8 +35,8 @@ TEST(ArgsTest, NetsvcNodenamePrintsAndExits) {
             "%s", err_msg);
 
   ASSERT_OK(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
-  zx_info_process_v2_t proc_info;
-  ASSERT_OK(process.get_info(ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr, nullptr));
+  zx_info_process_t proc_info;
+  ASSERT_OK(process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
   ASSERT_EQ(proc_info.return_code, 0);
 }
 

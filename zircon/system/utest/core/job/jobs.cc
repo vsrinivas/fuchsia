@@ -320,8 +320,8 @@ TEST(JobTest, KillTest) {
   EXPECT_TRUE(job_info.exited);
   EXPECT_EQ(job_info.return_code, ZX_TASK_RETCODE_SYSCALL_KILL);
 
-  zx_info_process_v2_t proc_info;
-  ASSERT_OK(zx_object_get_info(process, ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr,
+  zx_info_process_t proc_info;
+  ASSERT_OK(zx_object_get_info(process, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr,
                                nullptr));
   EXPECT_TRUE(proc_info.flags & ZX_INFO_PROCESS_FLAG_EXITED);
   EXPECT_EQ(proc_info.return_code, ZX_TASK_RETCODE_SYSCALL_KILL);
@@ -497,9 +497,9 @@ TEST(JobTest, ManyCriticalProcessesKillOneJob) {
   ASSERT_OK(job.get_info(ZX_INFO_JOB, &job_info, sizeof(job_info), nullptr, nullptr));
   EXPECT_EQ(job_info.return_code, ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL);
 
-  zx_info_process_v2_t process_info;
+  zx_info_process_t process_info;
   ASSERT_OK(
-      process2.get_info(ZX_INFO_PROCESS_V2, &process_info, sizeof(process_info), nullptr, nullptr));
+      process2.get_info(ZX_INFO_PROCESS, &process_info, sizeof(process_info), nullptr, nullptr));
   EXPECT_EQ(process_info.return_code, ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL);
 }
 

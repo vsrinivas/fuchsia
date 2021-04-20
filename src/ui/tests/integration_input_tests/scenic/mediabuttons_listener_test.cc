@@ -97,8 +97,8 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
     FX_CHECK(status == ZX_OK) << "zx_object_wait_one: " << zx_status_get_string(status);
 
     // Check termination status.
-    zx_info_process_v2_t info;
-    status = zx_object_get_info(proc, ZX_INFO_PROCESS_V2, &info, sizeof(info), nullptr, nullptr);
+    zx_info_process_t info;
+    status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
     FX_CHECK(status == ZX_OK) << "zx_object_get_info: " << zx_status_get_string(status);
     FX_CHECK(info.return_code == 0) << "info.return_code: " << info.return_code;
   }

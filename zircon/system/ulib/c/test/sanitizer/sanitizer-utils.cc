@@ -310,8 +310,8 @@ TEST(SanitizerUtilsTest, ProcessExitHook) {
   ASSERT_OK(child.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), &signals));
   ASSERT_TRUE(signals & ZX_PROCESS_TERMINATED);
 
-  zx_info_process_v2_t info;
-  ASSERT_OK(child.get_info(ZX_INFO_PROCESS_V2, &info, sizeof(info), nullptr, nullptr));
+  zx_info_process_t info;
+  ASSERT_OK(child.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr));
 
   EXPECT_EQ(info.return_code, kHookStatus);
 }

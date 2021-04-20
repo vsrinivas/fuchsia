@@ -43,8 +43,8 @@ bool WaitForExit(const zx::process& process, int64_t* exit_code) {
     return false;
   }
 
-  zx_info_process_v2_t proc_info;
-  status = process.get_info(ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr, nullptr);
+  zx_info_process_t proc_info;
+  status = process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
   if (status != ZX_OK) {
     printf("zx_object_get_info failed, status: %d\n", status);
     return false;

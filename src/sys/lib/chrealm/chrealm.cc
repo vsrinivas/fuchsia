@@ -46,8 +46,8 @@ zx_status_t RunBinaryInRealm(const std::string& realm_path, const char** argv, i
     *error = "Could not wait for command";
     return status;
   }
-  zx_info_process_v2_t info;
-  status = zx_object_get_info(proc, ZX_INFO_PROCESS_V2, &info, sizeof(info), nullptr, nullptr);
+  zx_info_process_t info;
+  status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     *error = "Could not get result of command";
     return status;

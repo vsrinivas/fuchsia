@@ -130,8 +130,8 @@ zx_status_t Spawn(ProcessAction proc_action, uint32_t flags, const char** argv, 
       return status;
     }
 
-    zx_info_process_v2_t info;
-    status = proc.get_info(ZX_INFO_PROCESS_V2, &info, sizeof(info), nullptr, nullptr);
+    zx_info_process_t info;
+    status = proc.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
     if (status != ZX_OK) {
       fprintf(stderr, "spawn: Failed to get process info\n");
       return status;

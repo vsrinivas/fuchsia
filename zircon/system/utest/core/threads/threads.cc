@@ -1833,8 +1833,8 @@ TEST(Threads, X86AcFlagUserCopy) {
 
   // See that it has terminated.
   ASSERT_EQ(process.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr), ZX_OK);
-  zx_info_process_v2_t proc_info{};
-  ASSERT_EQ(process.get_info(ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr, nullptr),
+  zx_info_process_t proc_info{};
+  ASSERT_EQ(process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr),
             ZX_OK);
   ASSERT_EQ(proc_info.return_code, ZX_TASK_RETCODE_EXCEPTION_KILL);
 #endif

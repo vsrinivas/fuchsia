@@ -363,9 +363,9 @@ void ComponentControllerImpl::Kill() {
 
 bool ComponentControllerImpl::SendReturnCodeIfTerminated() {
   // Get process info.
-  zx_info_process_v2_t process_info;
+  zx_info_process_t process_info;
   zx_status_t result =
-      process_.get_info(ZX_INFO_PROCESS_V2, &process_info, sizeof(process_info), NULL, NULL);
+      process_.get_info(ZX_INFO_PROCESS, &process_info, sizeof(process_info), NULL, NULL);
   FX_DCHECK(result == ZX_OK);
 
   if (process_info.flags & ZX_INFO_PROCESS_FLAG_EXITED) {

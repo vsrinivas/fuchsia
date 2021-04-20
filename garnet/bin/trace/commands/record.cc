@@ -456,9 +456,9 @@ void RecordCommand::OnSpawnedAppExit(async_dispatcher_t* dispatcher, async::Wait
   }
 
   if (signal->observed & ZX_PROCESS_TERMINATED) {
-    zx_info_process_v2_t proc_info;
+    zx_info_process_t proc_info;
     [[maybe_unused]] zx_status_t info_status =
-        spawned_app_.get_info(ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr, nullptr);
+        spawned_app_.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
     FX_DCHECK(info_status == ZX_OK);
 
     out() << "Application exited with return code " << proc_info.return_code << std::endl;

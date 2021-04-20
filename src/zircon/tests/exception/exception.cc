@@ -756,8 +756,8 @@ TEST(ExceptionTest, CreateExceptionChannelInvalidArgs) {
 TEST(ExceptionTest, ProcessDebuggerAttached) {
   TestLoop loop;
 
-  zx_info_process_v2_t info;
-  ASSERT_OK(loop.process().get_info(ZX_INFO_PROCESS_V2, &info, sizeof(info), nullptr, nullptr));
+  zx_info_process_t info;
+  ASSERT_OK(loop.process().get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr));
   EXPECT_FALSE(info.flags & ZX_INFO_PROCESS_FLAG_DEBUGGER_ATTACHED);
 
   {
@@ -765,11 +765,11 @@ TEST(ExceptionTest, ProcessDebuggerAttached) {
     ASSERT_OK(
         loop.process().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &exception_channel));
 
-    ASSERT_OK(loop.process().get_info(ZX_INFO_PROCESS_V2, &info, sizeof(info), nullptr, nullptr));
+    ASSERT_OK(loop.process().get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr));
     EXPECT_TRUE(info.flags & ZX_INFO_PROCESS_FLAG_DEBUGGER_ATTACHED);
   }
 
-  ASSERT_OK(loop.process().get_info(ZX_INFO_PROCESS_V2, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_OK(loop.process().get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr));
   EXPECT_FALSE(info.flags & ZX_INFO_PROCESS_FLAG_DEBUGGER_ATTACHED);
 }
 

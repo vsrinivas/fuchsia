@@ -292,8 +292,8 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
   }
 
   // Read the return code.
-  zx_info_process_v2_t proc_info;
-  status = process.get_info(ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), nullptr, nullptr);
+  zx_info_process_t proc_info;
+  status = process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
 
   if (status != ZX_OK) {
     fprintf(stderr, "FAILURE: Failed to get process return code %s: %d\n", test_name, status);
