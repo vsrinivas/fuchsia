@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/net/tun/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sync/completion.h>
@@ -12,6 +11,7 @@
 #include <zircon/status.h>
 
 #include <fbl/span.h>
+#include <gmock/gmock.h>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/lib/testing/predicates/status.h"
@@ -36,19 +36,24 @@ class SimpleClient {
 
   SimpleClient() = default;
 
-  fuchsia::net::tun::Protocols NewRequest() {
-    fuchsia::net::tun::Protocols protos;
-    protos.set_network_device(device_.NewRequest());
-    return protos;
+  zx::status<fuchsia_net_tun::wire::Protocols> NewRequest() {
+    zx::status server_end = fidl::CreateEndpoints(&device_.client_end());
+    if (server_end.is_error()) {
+      return server_end.take_error();
+    }
+    fuchsia_net_tun::wire::Protocols protos(alloc_);
+    protos.set_network_device(alloc_, std::move(server_end.value()));
+    return zx::ok(protos);
   }
 
   zx_status_t OpenSession() {
-    fuchsia::hardware::network::Info device_info;
-    zx_status_t status = device_->GetInfo(&device_info);
-    if (status != ZX_OK) {
-      return status;
+    fidl::WireResult info_result = device().GetInfo();
+    if (!info_result.ok()) {
+      return info_result.status();
     }
-    auto total_buffers = device_info.tx_depth + device_info.rx_depth;
+    fuchsia_hardware_network::wire::Info device_info = info_result.value().info;
+    uint16_t total_buffers = device_info.tx_depth + device_info.rx_depth;
+    zx_status_t status;
     if ((status = data_.CreateAndMap(total_buffers * kBufferSize,
                                      ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, nullptr, &data_vmo_)) !=
         ZX_OK) {
@@ -62,12 +67,17 @@ class SimpleClient {
     descriptor_count_ = total_buffers;
     rx_depth_ = device_info.rx_depth;
     tx_depth_ = device_info.tx_depth;
-    fuchsia::hardware::network::SessionInfo session_info;
-    session_info.options = fuchsia::hardware::network::SessionFlags::PRIMARY;
-    session_info.descriptor_count = descriptor_count_;
-    session_info.descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION;
-    session_info.descriptor_length = sizeof(buffer_descriptor_t) / sizeof(uint64_t);
-    session_info.rx_frames.push_back(fuchsia::hardware::network::FrameType::ETHERNET);
+    fuchsia_hardware_network::wire::FrameType rx_frames[] = {
+        fuchsia_hardware_network::wire::FrameType::kEthernet,
+    };
+    fuchsia_hardware_network::wire::SessionInfo session_info = {
+        .descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION,
+        .descriptor_length = sizeof(buffer_descriptor_t) / sizeof(uint64_t),
+        .descriptor_count = descriptor_count_,
+        .options = fuchsia_hardware_network::wire::SessionFlags::kPrimary,
+        .rx_frames = fidl::VectorView<fuchsia_hardware_network::wire::FrameType>::FromExternal(
+            rx_frames, std::size(rx_frames)),
+    };
 
     if ((status = data_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &session_info.data)) != ZX_OK) {
       return status;
@@ -77,18 +87,22 @@ class SimpleClient {
       return status;
     }
 
-    fuchsia::hardware::network::Device_OpenSession_Result open_session_result;
-    status = device_->OpenSession("tun-test", std::move(session_info), &open_session_result);
-    if (status != ZX_OK) {
-      return status;
+    fidl::WireResult session_result = device().OpenSession("tun-test", std::move(session_info));
+    if (!session_result.ok()) {
+      return session_result.status();
     }
-    if (open_session_result.is_err()) {
-      return open_session_result.err();
+    fuchsia_hardware_network::wire::DeviceOpenSessionResult& result = session_result.value().result;
+    switch (result.which()) {
+      case fuchsia_hardware_network::wire::DeviceOpenSessionResult::Tag::kErr:
+        return result.err();
+      case fuchsia_hardware_network::wire::DeviceOpenSessionResult::Tag::kResponse:
+        fuchsia_hardware_network::wire::DeviceOpenSessionResponse& response =
+            result.mutable_response();
+        session_ = fidl::BindSyncClient(std::move(response.session));
+        rx_ = std::move(response.fifos.rx);
+        tx_ = std::move(response.fifos.tx);
+        return ZX_OK;
     }
-    session_ = open_session_result.response().session.BindSync();
-    rx_ = std::move(open_session_result.response().fifos.rx);
-    tx_ = std::move(open_session_result.response().fifos.tx);
-    return ZX_OK;
   }
 
   buffer_descriptor_t* descriptor(uint16_t index) {
@@ -128,9 +142,9 @@ class SimpleClient {
     }
   }
 
-  static void ValidateData(const std::vector<uint8_t>& data, uint16_t didx) {
-    ASSERT_EQ(data.size(), kBufferSize);
-    for (uint32_t i = 0; i < data.size(); i++) {
+  static void ValidateData(const fidl::VectorView<uint8_t>& data, uint16_t didx) {
+    ASSERT_EQ(data.count(), kBufferSize);
+    for (uint32_t i = 0; i < data.count(); i++) {
       ASSERT_EQ(data[i], static_cast<uint8_t>(i + didx)) << "Data mismatch at position " << i;
     }
   }
@@ -138,10 +152,10 @@ class SimpleClient {
   buffer_descriptor_t* ResetDescriptor(uint16_t index) {
     auto* desc = descriptor(index);
     *desc = {
-        .frame_type = static_cast<uint8_t>(fuchsia::hardware::network::FrameType::ETHERNET),
+        .frame_type = static_cast<uint8_t>(fuchsia_hardware_network::wire::FrameType::kEthernet),
         .chain_length = 0,
         .nxt = 0,
-        .info_type = static_cast<uint32_t>(fuchsia::hardware::network::InfoType::NO_INFO),
+        .info_type = static_cast<uint32_t>(fuchsia_hardware_network::wire::InfoType::kNoInfo),
         .offset = static_cast<uint64_t>(index) * kBufferSize,
         .head_length = 0,
         .tail_length = 0,
@@ -197,27 +211,30 @@ class SimpleClient {
   }
 
   zx_status_t WaitOnline() {
-    fuchsia::hardware::network::StatusWatcherSyncPtr watcher;
-    zx_status_t status = device_->GetStatusWatcher(watcher.NewRequest(), 5);
-    if (status != ZX_OK) {
-      return status;
+    zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::StatusWatcher>();
+    if (endpoints.is_error()) {
+      return endpoints.status_value();
+    }
+    fidl::WireResult watcher_result = device().GetStatusWatcher(std::move(endpoints->server), 5);
+    if (!watcher_result.ok()) {
+      return watcher_result.status();
     }
     bool online = false;
     while (!online) {
-      fuchsia::hardware::network::Status device_status;
-      status = watcher->WatchStatus(&device_status);
-      if (status != ZX_OK) {
-        return status;
+      fidl::WireResult watch_result = fidl::WireCall(endpoints->client).WatchStatus();
+      if (!watch_result.ok()) {
+        return watch_result.status();
       }
-      online = static_cast<bool>(device_status.flags() &
-                                 fuchsia::hardware::network::StatusFlags::ONLINE);
+      fuchsia_hardware_network::wire::Status status = watch_result.value().device_status;
+      online = status.has_flags() &&
+               status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline;
     }
     return ZX_OK;
   }
 
-  fuchsia::hardware::network::SessionSyncPtr& session() { return session_; }
+  fidl::WireSyncClient<fuchsia_hardware_network::Session>& session() { return session_; }
 
-  fuchsia::hardware::network::DeviceSyncPtr& device() { return device_; }
+  fidl::WireSyncClient<fuchsia_hardware_network::Device>& device() { return device_; }
 
   zx_status_t WaitRx() {
     return rx_.wait_one(ZX_FIFO_READABLE, zx::deadline_after(kTimeout), nullptr);
@@ -227,30 +244,32 @@ class SimpleClient {
     return tx_.wait_one(ZX_FIFO_READABLE, zx::deadline_after(kTimeout), nullptr);
   }
 
-  uint32_t rx_depth() const { return rx_depth_; }
+  uint16_t rx_depth() const { return rx_depth_; }
 
-  uint32_t tx_depth() const { return tx_depth_; }
+  uint16_t tx_depth() const { return tx_depth_; }
 
  private:
-  fuchsia::hardware::network::DeviceSyncPtr device_;
+  fidl::FidlAllocator<> alloc_;
+
+  fidl::WireSyncClient<fuchsia_hardware_network::Device> device_;
   zx::vmo data_vmo_;
   zx::vmo descriptors_vmo_;
-  uint32_t descriptor_count_;
+  uint16_t descriptor_count_;
   fzl::VmoMapper data_;
   fzl::VmoMapper descriptors_;
   zx::fifo rx_;
   zx::fifo tx_;
-  uint32_t tx_depth_;
-  uint32_t rx_depth_;
-  fuchsia::hardware::network::SessionSyncPtr session_;
+  uint16_t tx_depth_;
+  uint16_t rx_depth_;
+  fidl::WireSyncClient<fuchsia_hardware_network::Session> session_;
 };
 
 class TunTest : public gtest::RealLoopFixture {
  public:
   TunTest()
       : gtest::RealLoopFixture(),
-        loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        tun_ctl_(loop_.dispatcher()) {}
+        tun_ctl_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        tun_ctl_(tun_ctl_loop_.dispatcher()) {}
 
   void SetUp() override {
     fx_logger_config_t log_cfg = {
@@ -261,7 +280,7 @@ class TunTest : public gtest::RealLoopFixture {
         .num_tags = 0,
     };
     fx_log_reconfigure(&log_cfg);
-    ASSERT_OK(loop_.StartThread("tun-test"));
+    ASSERT_OK(tun_ctl_loop_.StartThread("tun-test"));
   }
 
   void TearDown() override {
@@ -272,269 +291,430 @@ class TunTest : public gtest::RealLoopFixture {
     ASSERT_OK(sync_completion_wait(&completion, kTimeout.get()));
     // Loop must be shutdown before TunCtl. Shutdown the loop here so it's explicit and not reliant
     // on the order of the fields in the class.
-    loop_.Shutdown();
+    tun_ctl_loop_.Shutdown();
   }
 
-  fuchsia::net::tun::ControlSyncPtr Connect() {
-    fuchsia::net::tun::ControlSyncPtr ret;
-    tun_ctl_.Connect(fidl::ServerEnd<fuchsia_net_tun::Control>(ret.NewRequest().TakeChannel()));
-    return ret;
+  zx::status<fidl::WireSyncClient<fuchsia_net_tun::Control>> Connect() {
+    zx::status endpoints = fidl::CreateEndpoints<fuchsia_net_tun::Control>();
+    if (endpoints.is_error()) {
+      return endpoints.take_error();
+    }
+    tun_ctl_.Connect(std::move(endpoints->server));
+    return zx::ok(fidl::BindSyncClient(std::move(endpoints->client)));
   }
 
-  static fuchsia::net::tun::BaseConfig DefaultBaseConfig() {
-    fuchsia::net::tun::BaseConfig config;
-    config.set_mtu(kDefaultMtu);
-    config.set_rx_types({fuchsia::hardware::network::FrameType::ETHERNET});
-    config.set_tx_types({fuchsia::hardware::network::FrameTypeSupport{
-        fuchsia::hardware::network::FrameType::ETHERNET, 0,
-        static_cast<fuchsia::hardware::network::TxFlags>(0)}});
+  fuchsia_net_tun::wire::BaseConfig DefaultBaseConfig() {
+    fuchsia_net_tun::wire::BaseConfig config(alloc_);
+    config.set_mtu(alloc_, kDefaultMtu);
+    const fuchsia_hardware_network::wire::FrameType rx_types[] = {
+        fuchsia_hardware_network::wire::FrameType::kEthernet,
+    };
+    fidl::VectorView<fuchsia_hardware_network::wire::FrameType> rx_types_view(alloc_,
+                                                                              std::size(rx_types));
+    std::copy(std::begin(rx_types), std::end(rx_types), rx_types_view.mutable_data());
+    const fuchsia_hardware_network::wire::FrameTypeSupport tx_types[] = {
+        fuchsia_hardware_network::wire::FrameTypeSupport{
+            .type = fuchsia_hardware_network::wire::FrameType::kEthernet,
+        },
+    };
+    fidl::VectorView<fuchsia_hardware_network::wire::FrameTypeSupport> tx_types_view(
+        alloc_, std::size(tx_types));
+    std::copy(std::begin(tx_types), std::end(tx_types), tx_types_view.mutable_data());
+    config.set_rx_types(alloc_, rx_types_view);
+    config.set_tx_types(alloc_, tx_types_view);
     return config;
   }
 
-  static fuchsia::net::tun::DeviceConfig DefaultDeviceConfig() {
-    fuchsia::net::tun::DeviceConfig config;
-    config.set_base(DefaultBaseConfig());
-    config.set_mac(fuchsia::net::MacAddress{0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
-    config.set_blocking(true);
+  fuchsia_net_tun::wire::DeviceConfig DefaultDeviceConfig() {
+    fuchsia_net_tun::wire::DeviceConfig config(alloc_);
+    config.set_base(alloc_, DefaultBaseConfig());
+    config.set_mac(alloc_, fuchsia_net::wire::MacAddress{0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
+    config.set_blocking(alloc_, true);
     return config;
   }
 
-  static fuchsia::net::tun::DevicePairConfig DefaultDevicePairConfig() {
-    fuchsia::net::tun::DevicePairConfig config;
-    config.set_base(DefaultBaseConfig());
-    config.set_mac_left(fuchsia::net::MacAddress{0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
-    config.set_mac_right(fuchsia::net::MacAddress{0x01, 0x02, 0x03, 0x04, 0x05, 0x07});
+  fuchsia_net_tun::wire::DevicePairConfig DefaultDevicePairConfig() {
+    fuchsia_net_tun::wire::DevicePairConfig config(alloc_);
+    config.set_base(alloc_, DefaultBaseConfig());
+    config.set_mac_left(alloc_, fuchsia_net::wire::MacAddress{0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
+    config.set_mac_right(alloc_, fuchsia_net::wire::MacAddress{0x01, 0x02, 0x03, 0x04, 0x05, 0x07});
     return config;
   }
 
-  fidl::InterfaceHandle<fuchsia::net::tun::Device> CreateDevice(
-      fuchsia::net::tun::DeviceConfig config) {
-    auto tun = Connect();
-    fidl::InterfaceHandle<fuchsia::net::tun::Device> device;
-    EXPECT_OK(tun->CreateDevice(std::move(config), device.NewRequest()));
-    return device;
+  zx::status<fidl::ClientEnd<fuchsia_net_tun::Device>> CreateDevice(
+      fuchsia_net_tun::wire::DeviceConfig config) {
+    zx::status endpoints = fidl::CreateEndpoints<fuchsia_net_tun::Device>();
+    if (endpoints.is_error()) {
+      return endpoints.take_error();
+    }
+    zx::status tun = Connect();
+    if (tun.is_error()) {
+      return tun.take_error();
+    }
+    fidl::WireResult result =
+        tun.value().CreateDevice(std::move(config), std::move(endpoints->server));
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    return zx::ok(std::move(endpoints->client));
   }
 
-  fidl::InterfaceHandle<fuchsia::net::tun::DevicePair> CreatePair(
-      fuchsia::net::tun::DevicePairConfig config) {
-    auto tun = Connect();
-    fidl::InterfaceHandle<fuchsia::net::tun::DevicePair> device;
-    EXPECT_OK(tun->CreatePair(std::move(config), device.NewRequest()));
-    return device;
+  zx::status<fidl::ClientEnd<fuchsia_net_tun::DevicePair>> CreatePair(
+      fuchsia_net_tun::wire::DevicePairConfig config) {
+    zx::status endpoints = fidl::CreateEndpoints<fuchsia_net_tun::DevicePair>();
+    if (endpoints.is_error()) {
+      return endpoints.take_error();
+    }
+    zx::status tun = Connect();
+    if (tun.is_error()) {
+      return tun.take_error();
+    }
+    fidl::WireResult result =
+        tun.value().CreatePair(std::move(config), std::move(endpoints->server));
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    return zx::ok(std::move(endpoints->client));
   }
 
  protected:
-  async::Loop loop_;
+  async::Loop tun_ctl_loop_;
   TunCtl tun_ctl_;
+  fidl::FidlAllocator<> alloc_;
+};
+
+template <class T>
+class CapturingEventHandler : public fidl::WireAsyncEventHandler<T> {
+ public:
+  virtual void Unbound(fidl::UnbindInfo info) override { info_ = info; }
+
+  std::optional<fidl::UnbindInfo> info_;
 };
 
 TEST_F(TunTest, InvalidConfigs) {
-  auto wait_for_error = [this](fuchsia::net::tun::DeviceConfig config) -> zx_status_t {
-    auto device = CreateDevice(std::move(config)).Bind();
-    zx_status_t epitaph = ZX_OK;
-    device.set_error_handler([&epitaph](zx_status_t err) { epitaph = err; });
-    if (!RunLoopWithTimeoutOrUntil([&epitaph] { return epitaph != ZX_OK; }, kTimeout)) {
+  auto wait_for_error = [this](fuchsia_net_tun::wire::DeviceConfig config) -> zx_status_t {
+    zx::status device = CreateDevice(std::move(config));
+    if (device.is_error()) {
+      return device.status_value();
+    }
+    std::shared_ptr handler = std::make_shared<CapturingEventHandler<fuchsia_net_tun::Device>>();
+    fidl::Client client(std::move(device.value()), dispatcher(), handler);
+    if (!RunLoopWithTimeoutOrUntil([handler] { return handler->info_.has_value(); }, kTimeout)) {
       return ZX_ERR_TIMED_OUT;
     }
-    return epitaph;
+    return handler->info_.value().status;
   };
+
   // Zero MTU
-  auto config = DefaultDeviceConfig();
-  config.mutable_base()->set_mtu(0);
-  ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  {
+    auto config = DefaultDeviceConfig();
+    config.base().set_mtu(alloc_, 0);
+    ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  }
 
   // MTU too large
-  config = DefaultDeviceConfig();
-  config.mutable_base()->set_mtu(fuchsia::net::tun::MAX_MTU + 1);
-  ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  {
+    auto config = DefaultDeviceConfig();
+    config.base().set_mtu(alloc_, fuchsia_net_tun::wire::kMaxMtu + 1);
+    ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  }
 
   // No Rx frames
-  config = DefaultDeviceConfig();
-  config.mutable_base()->clear_rx_types();
-  ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  {
+    auto config = DefaultDeviceConfig();
+    config.base().set_rx_types(nullptr);
+    ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  }
 
   // No Tx frames
-  config = DefaultDeviceConfig();
-  config.mutable_base()->clear_tx_types();
-  ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  {
+    auto config = DefaultDeviceConfig();
+    config.base().set_tx_types(nullptr);
+    ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  }
 
   // Empty Rx frames
-  config = DefaultDeviceConfig();
-  config.mutable_base()->set_rx_types({});
-  ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  {
+    auto config = DefaultDeviceConfig();
+    config.base().rx_types().set_count(0);
+    ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  }
 
   // Empty Tx frames
-  config = DefaultDeviceConfig();
-  config.mutable_base()->set_tx_types({});
-  ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  {
+    auto config = DefaultDeviceConfig();
+    config.base().tx_types().set_count(0);
+    ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
+  }
 }
 
 TEST_F(TunTest, ConnectNetworkDevice) {
-  auto tun = CreateDevice(DefaultDeviceConfig()).BindSync();
-  fuchsia::hardware::network::DeviceSyncPtr device;
-  fuchsia::net::tun::Protocols protos;
-  protos.set_network_device(device.NewRequest());
-  ASSERT_OK(tun->ConnectProtocols(std::move(protos)));
-  fuchsia::hardware::network::Info info;
-  ASSERT_OK(device->GetInfo(&info));
+  zx::status device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
+  ASSERT_OK(device_endpoints.status_value());
+
+  fuchsia_net_tun::wire::Protocols protos(alloc_);
+  protos.set_network_device(alloc_, std::move(device_endpoints->server));
+
+  zx::status client_end = CreateDevice(DefaultDeviceConfig());
+  ASSERT_OK(client_end.status_value());
+  fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(client_end.value()));
+  ASSERT_OK(tun.ConnectProtocols(std::move(protos)).status());
+
+  fidl::WireSyncClient device = fidl::BindSyncClient(std::move(device_endpoints->client));
+  fidl::WireResult info_result = device.GetInfo();
+  ASSERT_OK(info_result.status());
 }
 
 TEST_F(TunTest, Teardown) {
-  auto tun = CreateDevice(DefaultDeviceConfig()).BindSync();
-  fuchsia::hardware::network::DevicePtr device;
-  fuchsia::hardware::network::MacAddressingPtr mac;
-  fuchsia::net::tun::Protocols protos;
-  protos.set_mac_addressing(mac.NewRequest());
-  protos.set_network_device(device.NewRequest());
-  ASSERT_OK(tun->ConnectProtocols(std::move(protos)));
-  bool device_dead = false;
-  bool mac_dead = false;
-  device.set_error_handler([&device_dead](zx_status_t status) {
-    EXPECT_STATUS(status, ZX_ERR_PEER_CLOSED);
-    device_dead = true;
-  });
-  mac.set_error_handler([&mac_dead](zx_status_t status) {
-    EXPECT_STATUS(status, ZX_ERR_PEER_CLOSED);
-    mac_dead = true;
-  });
+  zx::status device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
+  ASSERT_OK(device_endpoints.status_value());
+  zx::status mac_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::MacAddressing>();
+  ASSERT_OK(mac_endpoints.status_value());
+
+  fuchsia_net_tun::wire::Protocols protos(alloc_);
+  protos.set_network_device(alloc_, std::move(device_endpoints->server));
+  protos.set_mac_addressing(alloc_, std::move(mac_endpoints->server));
+
+  zx::status client_end = CreateDevice(DefaultDeviceConfig());
+  ASSERT_OK(client_end.status_value());
+  fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(client_end.value()));
+  ASSERT_OK(tun.ConnectProtocols(std::move(protos)).status());
+
+  std::shared_ptr device_handler =
+      std::make_shared<CapturingEventHandler<fuchsia_hardware_network::Device>>();
+  std::shared_ptr mac_handler =
+      std::make_shared<CapturingEventHandler<fuchsia_hardware_network::MacAddressing>>();
+
+  fidl::Client device(std::move(device_endpoints->client), dispatcher(), device_handler);
+  fidl::Client mac(std::move(mac_endpoints->client), dispatcher(), mac_handler);
+
   // get rid of tun.
-  tun.Unbind().TakeChannel().reset();
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&device_dead, &mac_dead]() { return device_dead && mac_dead; },
-                                kTimeout, zx::duration::infinite()))
-      << "Timed out waiting for channels to close; device_dead=" << device_dead
-      << ", mac_dead=" << mac_dead;
+  tun.client_end().reset();
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&device_handler, &mac_handler]() {
+        return device_handler->info_.has_value() && mac_handler->info_.has_value();
+      },
+      kTimeout, zx::duration::infinite()))
+      << "Timed out waiting for channels to close; device_dead="
+      << device_handler->info_.has_value() << ", mac_dead=" << mac_handler->info_.has_value();
+  ASSERT_STATUS(device_handler->info_.value().status, ZX_ERR_PEER_CLOSED);
+  ASSERT_STATUS(mac_handler->info_.value().status, ZX_ERR_PEER_CLOSED);
 }
 
 TEST_F(TunTest, Status) {
-  auto tun = CreateDevice(DefaultDeviceConfig()).BindSync();
-  fuchsia::hardware::network::DeviceSyncPtr device;
-  fuchsia::net::tun::Protocols protos;
-  protos.set_network_device(device.NewRequest());
-  ASSERT_OK(tun->ConnectProtocols(std::move(protos)));
-  fuchsia::hardware::network::Status device_status;
-  ASSERT_OK(device->GetStatus(&device_status));
-  ASSERT_EQ(device_status.mtu(), kDefaultMtu);
-  ASSERT_EQ(device_status.flags(), fuchsia::hardware::network::StatusFlags());
-  fuchsia::hardware::network::StatusWatcherSyncPtr watcher;
+  zx::status device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
+  ASSERT_OK(device_endpoints.status_value());
 
-  ASSERT_OK(device->GetStatusWatcher(watcher.NewRequest(), 5));
+  fuchsia_net_tun::wire::Protocols protos(alloc_);
+  protos.set_network_device(alloc_, std::move(device_endpoints->server));
 
-  ASSERT_OK(watcher->WatchStatus(&device_status));
-  ASSERT_EQ(device_status.mtu(), kDefaultMtu);
-  ASSERT_EQ(device_status.flags(), fuchsia::hardware::network::StatusFlags());
+  zx::status client_end = CreateDevice(DefaultDeviceConfig());
+  ASSERT_OK(client_end.status_value());
+  fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(client_end.value()));
+  ASSERT_OK(tun.ConnectProtocols(std::move(protos)).status());
 
-  ASSERT_OK(tun->SetOnline(true));
+  fidl::WireSyncClient device = fidl::BindSyncClient(std::move(device_endpoints->client));
+  fidl::WireResult status_result = device.GetStatus();
+  ASSERT_OK(status_result.status());
+  {
+    fuchsia_hardware_network::wire::Status device_status = status_result.value().device_status;
+    ASSERT_EQ(device_status.mtu(), kDefaultMtu);
+    ASSERT_EQ(device_status.flags(), fuchsia_hardware_network::wire::StatusFlags());
+  }
 
-  ASSERT_OK(watcher->WatchStatus(&device_status));
-  ASSERT_EQ(device_status.mtu(), kDefaultMtu);
-  ASSERT_EQ(device_status.flags(), fuchsia::hardware::network::StatusFlags::ONLINE);
+  zx::status watcher_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::StatusWatcher>();
+  ASSERT_OK(watcher_endpoints.status_value());
+  ASSERT_OK(device.GetStatusWatcher(std::move(watcher_endpoints->server), 5).status());
+  fidl::WireSyncClient watcher = fidl::BindSyncClient(std::move(watcher_endpoints->client));
+  {
+    fidl::WireResult watch_status_result = watcher.WatchStatus();
+    ASSERT_OK(watch_status_result.status());
+    fuchsia_hardware_network::wire::Status device_status =
+        watch_status_result.value().device_status;
+    ASSERT_EQ(device_status.mtu(), kDefaultMtu);
+    ASSERT_EQ(device_status.flags(), fuchsia_hardware_network::wire::StatusFlags());
+  }
+
+  ASSERT_OK(tun.SetOnline(true).status());
+
+  {
+    fidl::WireResult watch_status_result = watcher.WatchStatus();
+    ASSERT_OK(watch_status_result.status());
+    fuchsia_hardware_network::wire::Status device_status =
+        watch_status_result.value().device_status;
+    ASSERT_EQ(device_status.mtu(), kDefaultMtu);
+    ASSERT_EQ(device_status.flags(), fuchsia_hardware_network::wire::StatusFlags::kOnline);
+  }
+}
+
+MATCHER(MacEq, "") {
+  auto [left, right] = arg;
+
+  return std::equal(left.octets.begin(), left.octets.end(), right.octets.begin(),
+                    right.octets.end());
+}
+
+MATCHER_P(MacEq, value, "") {
+  return std::equal(arg.octets.begin(), arg.octets.end(), value.octets.begin(), value.octets.end());
 }
 
 TEST_F(TunTest, Mac) {
-  auto config = DefaultDeviceConfig();
-  fuchsia::net::MacAddress ref_mac;
-  config.mac().Clone(&ref_mac);
-  auto tun = CreateDevice(std::move(config)).BindSync();
-  fuchsia::hardware::network::MacAddressingSyncPtr mac;
-  fuchsia::net::tun::Protocols protos;
-  protos.set_mac_addressing(mac.NewRequest());
-  ASSERT_OK(tun->ConnectProtocols(std::move(protos)));
+  zx::status mac_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::MacAddressing>();
+  ASSERT_OK(mac_endpoints.status_value());
 
-  fuchsia::net::MacAddress unicast;
+  fuchsia_net_tun::wire::Protocols protos(alloc_);
+  protos.set_mac_addressing(alloc_, std::move(mac_endpoints->server));
 
-  ASSERT_OK(mac->GetUnicastAddress(&unicast));
-  fuchsia::net::tun::InternalState internal_state;
+  fuchsia_net_tun::wire::DeviceConfig config = DefaultDeviceConfig();
+  fuchsia_net::wire::MacAddress unicast = config.mac();
 
-  ASSERT_OK(tun->WatchState(&internal_state));
-  ASSERT_TRUE(internal_state.has_mac());
-  ASSERT_EQ(internal_state.mac().mode(),
-            fuchsia::hardware::network::MacFilterMode::MULTICAST_FILTER);
+  zx::status client_end = CreateDevice(std::move(config));
+  ASSERT_OK(client_end.status_value());
+  fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(client_end.value()));
+  ASSERT_OK(tun.ConnectProtocols(std::move(protos)).status());
 
-  zx_status_t status;
-  ASSERT_OK(mac->AddMulticastAddress(fuchsia::net::MacAddress{1, 10, 20, 30, 40, 50}, &status));
-  ASSERT_OK(status);
+  fidl::WireSyncClient mac = fidl::BindSyncClient(std::move(mac_endpoints->client));
 
-  ASSERT_OK(tun->WatchState(&internal_state));
-  ASSERT_EQ(internal_state.mac().mode(),
-            fuchsia::hardware::network::MacFilterMode::MULTICAST_FILTER);
-  ASSERT_EQ(internal_state.mac().multicast_filters().size(), 1ul);
-  std::array<uint8_t, 6> cmp{1, 10, 20, 30, 40, 50};
-  ASSERT_EQ(internal_state.mac().multicast_filters()[0].octets, cmp);
+  fidl::WireResult get_unicast_address_result = mac.GetUnicastAddress();
+  ASSERT_OK(get_unicast_address_result.status());
+  ASSERT_THAT(get_unicast_address_result.value().address, MacEq(unicast));
 
-  ASSERT_OK(mac->SetMode(fuchsia::hardware::network::MacFilterMode::PROMISCUOUS, &status));
-  ASSERT_OK(status);
-  ASSERT_OK(tun->WatchState(&internal_state));
-  ASSERT_EQ(internal_state.mac().mode(), fuchsia::hardware::network::MacFilterMode::PROMISCUOUS);
-  ASSERT_TRUE(internal_state.mac().multicast_filters().empty())
-      << "Mac filters should be empty, but has " << internal_state.mac().multicast_filters().size()
-      << " entries";
+  {
+    fidl::WireResult watch_state_result = tun.WatchState();
+    ASSERT_OK(watch_state_result.status());
+    fuchsia_net_tun::wire::InternalState internal_state = watch_state_result.value().state;
+    ASSERT_TRUE(internal_state.has_mac());
+    ASSERT_EQ(internal_state.mac().mode(),
+              fuchsia_hardware_network::wire::MacFilterMode::kMulticastFilter);
+  }
+
+  fuchsia_net::wire::MacAddress multicast{1, 10, 20, 30, 40, 50};
+  ASSERT_OK(mac.AddMulticastAddress(multicast).status());
+
+  {
+    fidl::WireResult watch_state_result = tun.WatchState();
+    ASSERT_OK(watch_state_result.status());
+    fuchsia_net_tun::wire::InternalState internal_state = watch_state_result.value().state;
+    ASSERT_TRUE(internal_state.has_mac());
+    ASSERT_EQ(internal_state.mac().mode(),
+              fuchsia_hardware_network::wire::MacFilterMode::kMulticastFilter);
+    std::vector<fuchsia_net::wire::MacAddress> multicast_filters;
+    std::copy_n(internal_state.mac().multicast_filters().data(),
+                internal_state.mac().multicast_filters().count(),
+                std::back_inserter(multicast_filters));
+    ASSERT_THAT(multicast_filters, ::testing::Pointwise(MacEq(), {multicast}));
+  }
+
+  ASSERT_OK(mac.SetMode(fuchsia_hardware_network::wire::MacFilterMode::kPromiscuous).status());
+
+  {
+    fidl::WireResult watch_state_result = tun.WatchState();
+    ASSERT_OK(watch_state_result.status());
+    fuchsia_net_tun::wire::InternalState internal_state = watch_state_result.value().state;
+    ASSERT_TRUE(internal_state.has_mac());
+    ASSERT_EQ(internal_state.mac().mode(),
+              fuchsia_hardware_network::wire::MacFilterMode::kPromiscuous);
+    std::vector<fuchsia_net::wire::MacAddress> multicast_filters;
+    std::copy_n(internal_state.mac().multicast_filters().data(),
+                internal_state.mac().multicast_filters().count(),
+                std::back_inserter(multicast_filters));
+    ASSERT_THAT(multicast_filters, ::testing::IsEmpty());
+  }
 }
 
 TEST_F(TunTest, NoMac) {
-  auto config = DefaultDeviceConfig();
+  zx::status mac_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::MacAddressing>();
+  ASSERT_OK(mac_endpoints.status_value());
+
+  fuchsia_net_tun::wire::Protocols protos(alloc_);
+  protos.set_mac_addressing(alloc_, std::move(mac_endpoints->server));
+
+  fuchsia_net_tun::wire::DeviceConfig config = DefaultDeviceConfig();
   // remove mac information
-  config.clear_mac();
-  auto tun = CreateDevice(std::move(config)).BindSync();
-  fuchsia::hardware::network::MacAddressingPtr mac;
-  fuchsia::net::tun::Protocols protos;
-  protos.set_mac_addressing(mac.NewRequest());
-  ASSERT_OK(tun->ConnectProtocols(std::move(protos)));
-  bool done = false;
+  config.set_mac(nullptr);
+
+  zx::status client_end = CreateDevice(std::move(config));
+  ASSERT_OK(client_end.status_value());
+  fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(client_end.value()));
+  ASSERT_OK(tun.ConnectProtocols(std::move(protos)).status());
 
   // mac should be closed because we created tun without a mac information.
   // Wait for the error handler to report that back to us.
-  mac.set_error_handler([&done](zx_status_t error) {
-    EXPECT_STATUS(error, ZX_ERR_PEER_CLOSED);
-    done = true;
-  });
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&done]() { return done; }, kTimeout, zx::duration::infinite()));
+  std::shared_ptr mac_handler =
+      std::make_shared<CapturingEventHandler<fuchsia_hardware_network::MacAddressing>>();
+  fidl::Client mac(std::move(mac_endpoints->client), dispatcher(), mac_handler);
 
-  fuchsia::net::tun::InternalState internal_state;
-  ASSERT_OK(tun->GetState(&internal_state));
-  ASSERT_FALSE(internal_state.has_mac()) << "Mac state should be unset";
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&mac_handler]() { return mac_handler->info_.has_value(); },
+                                        kTimeout, zx::duration::infinite()));
+
+  fidl::WireResult get_state_result = tun.GetState();
+  ASSERT_OK(get_state_result.status());
+  ASSERT_FALSE(get_state_result.value().state.has_mac());
 }
 
 TEST_F(TunTest, SimpleRxTx) {
-  auto config = DefaultDeviceConfig();
-  config.set_online(true);
-  config.set_blocking(false);
-  auto tun = CreateDevice(std::move(config)).BindSync();
+  fuchsia_net_tun::wire::DeviceConfig config = DefaultDeviceConfig();
+  config.set_online(alloc_, true);
+  config.set_blocking(alloc_, false);
+
+  zx::status client_end = CreateDevice(std::move(config));
+  ASSERT_OK(client_end.status_value());
+  fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(client_end.value()));
 
   SimpleClient client;
-  ASSERT_OK(tun->ConnectProtocols(client.NewRequest()));
+  zx::status protos = client.NewRequest();
+  ASSERT_OK(protos.status_value());
+  ASSERT_OK(tun.ConnectProtocols(std::move(protos.value())).status());
   ASSERT_OK(client.OpenSession());
+  ASSERT_OK(client.session().SetPaused(false).status());
 
-  ASSERT_OK(client.session()->SetPaused(false));
-
-  zx::eventpair signals;
-  ASSERT_OK(tun->GetSignals(&signals));
+  fidl::WireResult get_signals_result = tun.GetSignals();
+  ASSERT_OK(get_signals_result.status());
+  zx::eventpair& signals = get_signals_result.value().signals;
 
   // Attempting to read frame without any available buffers should fail with should_wait and the
   // readable signal should not be set.
-  fuchsia::net::tun::Device_ReadFrame_Result read_frame_result;
-  ASSERT_OK(tun->ReadFrame(&read_frame_result));
-  ASSERT_TRUE(read_frame_result.is_err())
-      << "Got unexpected frame with " << read_frame_result.response().frame.data().size()
-      << "bytes, should've errored";
-  ASSERT_STATUS(read_frame_result.err(), ZX_ERR_SHOULD_WAIT);
-  ASSERT_STATUS(signals.wait_one(static_cast<uint32_t>(fuchsia::net::tun::Signals::READABLE),
-                                 zx::time::infinite_past(), nullptr),
-                ZX_ERR_TIMED_OUT);
+  {
+    fidl::WireResult read_frame_wire_result = tun.ReadFrame();
+    ASSERT_OK(read_frame_wire_result.status());
+    fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
+        read_frame_wire_result.value().result;
+    switch (read_frame_result.which()) {
+      case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kResponse:
+        GTEST_FAIL() << "Got frame with " << read_frame_result.response().frame.data().count()
+                     << "bytes, expected error";
+        break;
+      case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kErr:
+        ASSERT_STATUS(read_frame_result.err(), ZX_ERR_SHOULD_WAIT);
+        break;
+    }
+    ASSERT_STATUS(signals.wait_one(static_cast<uint32_t>(fuchsia_net_tun::wire::Signals::kReadable),
+                                   zx::time::infinite_past(), nullptr),
+                  ZX_ERR_TIMED_OUT);
+  }
 
   ASSERT_OK(client.SendTx({0x00, 0x01}, true));
-  ASSERT_OK(signals.wait_one(static_cast<uint32_t>(fuchsia::net::tun::Signals::READABLE),
+  ASSERT_OK(signals.wait_one(static_cast<uint32_t>(fuchsia_net_tun::wire::Signals::kReadable),
                              zx::deadline_after(kTimeout), nullptr));
 
-  ASSERT_OK(tun->ReadFrame(&read_frame_result));
-  ASSERT_TRUE(read_frame_result.is_response())
-      << "ReadFrame failed: " << zx_status_get_string(read_frame_result.err());
-  ASSERT_EQ(read_frame_result.response().frame.frame_type(),
-            fuchsia::hardware::network::FrameType::ETHERNET);
-  ASSERT_NO_FATAL_FAILURE(
-      SimpleClient::ValidateData(read_frame_result.response().frame.data(), 0x00));
-  ASSERT_FALSE(read_frame_result.response().frame.has_meta());
+  {
+    fidl::WireResult read_frame_wire_result = tun.ReadFrame();
+    ASSERT_OK(read_frame_wire_result.status());
+    fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
+        read_frame_wire_result.value().result;
+    switch (read_frame_result.which()) {
+      case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kResponse:
+        ASSERT_EQ(read_frame_result.response().frame.frame_type(),
+                  fuchsia_hardware_network::wire::FrameType::kEthernet);
+        ASSERT_NO_FATAL_FAILURE(
+            SimpleClient::ValidateData(read_frame_result.response().frame.data(), 0x00));
+        ASSERT_FALSE(read_frame_result.response().frame.has_meta());
+        break;
+      case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kErr:
+        GTEST_FAIL() << "ReadFrame failed: " << zx_status_get_string(read_frame_result.err());
+        break;
+    }
+  }
 
   // After read frame, the first descriptor must've been returned.
   uint16_t desc;
@@ -543,32 +723,55 @@ TEST_F(TunTest, SimpleRxTx) {
 
   // Attempting to send a frame without any available buffers should fail with should_wait and the
   // writable signal should not be set.
-  fuchsia::net::tun::Device_WriteFrame_Result write_frame_result;
+  fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result;
   {
-    fuchsia::net::tun::Frame frame;
-    frame.set_frame_type(fuchsia::hardware::network::FrameType::ETHERNET);
-    frame.set_data({0xAA, 0xBB});
-    ASSERT_OK(tun->WriteFrame(std::move(frame), &write_frame_result));
-    ASSERT_TRUE(write_frame_result.is_err());
-    ASSERT_STATUS(write_frame_result.err(), ZX_ERR_SHOULD_WAIT);
-    ASSERT_STATUS(signals.wait_one(static_cast<uint32_t>(fuchsia::net::tun::Signals::WRITABLE),
-                                   zx::time::infinite_past(), nullptr),
-                  ZX_ERR_TIMED_OUT);
+    fuchsia_net_tun::wire::Frame frame(alloc_);
+    frame.set_frame_type(alloc_, fuchsia_hardware_network::wire::FrameType::kEthernet);
+    uint8_t data[] = {0xAA, 0xBB};
+    frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(data));
+    fidl::WireResult write_frame_wire_result = tun.WriteFrame(std::move(frame));
+    ASSERT_OK(write_frame_wire_result.status());
+
+    fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
+        write_frame_wire_result.value().result;
+    switch (write_frame_result.which()) {
+      case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kResponse:
+        GTEST_FAIL() << "WriteFrame succeeded unexpectedly";
+        break;
+      case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kErr:
+        ASSERT_STATUS(write_frame_result.err(), ZX_ERR_SHOULD_WAIT);
+        ASSERT_STATUS(
+            signals.wait_one(static_cast<uint32_t>(fuchsia_net_tun::wire::Signals::kWritable),
+                             zx::time::infinite_past(), nullptr),
+            ZX_ERR_TIMED_OUT);
+        break;
+    }
   }
 
   ASSERT_OK(client.SendRx({0x02}, true));
 
   // But if we sent stuff out, now it should work after waiting for the available signal.
-  ASSERT_OK(signals.wait_one(static_cast<uint32_t>(fuchsia::net::tun::Signals::WRITABLE),
+  ASSERT_OK(signals.wait_one(static_cast<uint32_t>(fuchsia_net_tun::wire::Signals::kWritable),
                              zx::deadline_after(kTimeout), nullptr));
   {
-    fuchsia::net::tun::Frame frame;
-    frame.set_frame_type(fuchsia::hardware::network::FrameType::ETHERNET);
-    frame.set_data({0xAA, 0xBB});
-    ASSERT_OK(tun->WriteFrame(std::move(frame), &write_frame_result));
-    ASSERT_TRUE(write_frame_result.is_response())
-        << "Write frame failed with " << zx_status_get_string(write_frame_result.err());
+    fuchsia_net_tun::wire::Frame frame(alloc_);
+    frame.set_frame_type(alloc_, fuchsia_hardware_network::wire::FrameType::kEthernet);
+    uint8_t data[] = {0xAA, 0xBB};
+    frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(data));
+    fidl::WireResult write_frame_wire_result = tun.WriteFrame(std::move(frame));
+    ASSERT_OK(write_frame_wire_result.status());
+
+    fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
+        write_frame_wire_result.value().result;
+    switch (write_frame_result.which()) {
+      case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kResponse:
+        break;
+      case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kErr:
+        GTEST_FAIL() << "WriteFrame failed: " << zx_status_get_string(write_frame_result.err());
+        break;
+    }
   }
+
   // Check that data was correctly written to descriptor.
   ASSERT_OK(client.FetchRx(&desc));
   ASSERT_EQ(desc, 0x02);
@@ -580,20 +783,28 @@ TEST_F(TunTest, SimpleRxTx) {
 }
 
 TEST_F(TunTest, PairRxTx) {
-  auto dpair = CreatePair(DefaultDevicePairConfig()).BindSync();
-  fuchsia::net::tun::DevicePairEnds ends;
-  SimpleClient left;
-  SimpleClient right;
-  ends.set_left(left.NewRequest());
-  ends.set_right(right.NewRequest());
-  ASSERT_OK(dpair->ConnectProtocols(std::move(ends)));
+  SimpleClient left, right;
+
+  zx::status left_request = left.NewRequest();
+  ASSERT_OK(left_request.status_value());
+  zx::status right_request = right.NewRequest();
+  ASSERT_OK(right_request.status_value());
+
+  fuchsia_net_tun::wire::DevicePairEnds ends(alloc_);
+  ends.set_left(alloc_, std::move(left_request.value()));
+  ends.set_right(alloc_, std::move(right_request.value()));
+
+  zx::status client_end = CreatePair(DefaultDevicePairConfig());
+  ASSERT_OK(client_end.status_value());
+  fidl::WireSyncClient device_pair = fidl::BindSyncClient(std::move(client_end.value()));
+  ASSERT_OK(device_pair.ConnectProtocols(std::move(ends)).status());
 
   ASSERT_OK(left.OpenSession());
   ASSERT_OK(right.OpenSession());
 
   ASSERT_OK(right.SendRx({0x05, 0x06, 0x07}, true));
-  right.session()->SetPaused(false);
-  left.session()->SetPaused(false);
+  ASSERT_OK(right.session().SetPaused(false).status());
+  ASSERT_OK(left.session().SetPaused(false).status());
   ASSERT_OK(left.WaitOnline());
   ASSERT_OK(right.WaitOnline());
 
@@ -617,60 +828,103 @@ TEST_F(TunTest, PairRxTx) {
 }
 
 TEST_F(TunTest, PairOnlineSignal) {
-  auto dpair = CreatePair(DefaultDevicePairConfig()).BindSync();
-  fuchsia::net::tun::DevicePairEnds ends;
-  SimpleClient left;
-  SimpleClient right;
-  ends.set_left(left.NewRequest());
-  ends.set_right(right.NewRequest());
-  ASSERT_OK(dpair->ConnectProtocols(std::move(ends)));
+  SimpleClient left, right;
+
+  zx::status left_request = left.NewRequest();
+  ASSERT_OK(left_request.status_value());
+  zx::status right_request = right.NewRequest();
+  ASSERT_OK(right_request.status_value());
+
+  fuchsia_net_tun::wire::DevicePairEnds ends(alloc_);
+  ends.set_left(alloc_, std::move(left_request.value()));
+  ends.set_right(alloc_, std::move(right_request.value()));
+
+  zx::status client_end = CreatePair(DefaultDevicePairConfig());
+  ASSERT_OK(client_end.status_value());
+  fidl::WireSyncClient device_pair = fidl::BindSyncClient(std::move(client_end.value()));
+  ASSERT_OK(device_pair.ConnectProtocols(std::move(ends)).status());
 
   ASSERT_OK(left.OpenSession());
   ASSERT_OK(right.OpenSession());
 
   // Online status should be false for both sides before a session is opened.
-  fuchsia::hardware::network::StatusWatcherSyncPtr wleft, wright;
-  left.device()->GetStatusWatcher(wleft.NewRequest(), 2);
-  right.device()->GetStatusWatcher(wright.NewRequest(), 2);
+  zx::status left_watcher_endpoints =
+      fidl::CreateEndpoints<fuchsia_hardware_network::StatusWatcher>();
+  ASSERT_OK(left_watcher_endpoints.status_value());
+  ASSERT_OK(left.device().GetStatusWatcher(std::move(left_watcher_endpoints->server), 2).status());
 
-  fuchsia::hardware::network::Status sleft, sright;
-  ASSERT_OK(wleft->WatchStatus(&sleft));
-  ASSERT_OK(wright->WatchStatus(&sright));
+  zx::status right_watcher_endpoints =
+      fidl::CreateEndpoints<fuchsia_hardware_network::StatusWatcher>();
+  ASSERT_OK(right_watcher_endpoints.status_value());
+  ASSERT_OK(
+      right.device().GetStatusWatcher(std::move(right_watcher_endpoints->server), 2).status());
 
-  EXPECT_EQ(sleft.flags() & fuchsia::hardware::network::StatusFlags::ONLINE,
-            fuchsia::hardware::network::StatusFlags());
-  EXPECT_EQ(sright.flags() & fuchsia::hardware::network::StatusFlags::ONLINE,
-            fuchsia::hardware::network::StatusFlags());
+  fidl::WireSyncClient left_watcher =
+      fidl::BindSyncClient(std::move(left_watcher_endpoints->client));
+  fidl::WireSyncClient right_watcher =
+      fidl::BindSyncClient(std::move(right_watcher_endpoints->client));
+
+  {
+    fidl::WireResult left_watch_status_result = left_watcher.WatchStatus();
+    ASSERT_OK(left_watch_status_result.status());
+    fuchsia_hardware_network::wire::Status status_left =
+        left_watch_status_result.value().device_status;
+    EXPECT_EQ(status_left.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline,
+              fuchsia_hardware_network::wire::StatusFlags());
+
+    fidl::WireResult right_watch_status_result = right_watcher.WatchStatus();
+    ASSERT_OK(right_watch_status_result.status());
+    fuchsia_hardware_network::wire::Status status_right =
+        right_watch_status_result.value().device_status;
+    EXPECT_EQ(status_right.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline,
+              fuchsia_hardware_network::wire::StatusFlags());
+  }
 
   // When both sessions are unpaused, online signal must come up.
-  ASSERT_OK(left.session()->SetPaused(false));
-  ASSERT_OK(right.session()->SetPaused(false));
+  ASSERT_OK(left.session().SetPaused(false).status());
+  ASSERT_OK(right.session().SetPaused(false).status());
 
-  ASSERT_OK(wleft->WatchStatus(&sleft));
-  ASSERT_OK(wright->WatchStatus(&sright));
+  {
+    fidl::WireResult left_watch_status_result = left_watcher.WatchStatus();
+    ASSERT_OK(left_watch_status_result.status());
+    fuchsia_hardware_network::wire::Status status_left =
+        left_watch_status_result.value().device_status;
+    EXPECT_EQ(status_left.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline,
+              fuchsia_hardware_network::wire::StatusFlags::kOnline);
 
-  EXPECT_EQ(sleft.flags() & fuchsia::hardware::network::StatusFlags::ONLINE,
-            fuchsia::hardware::network::StatusFlags::ONLINE);
-  EXPECT_EQ(sright.flags() & fuchsia::hardware::network::StatusFlags::ONLINE,
-            fuchsia::hardware::network::StatusFlags::ONLINE);
+    fidl::WireResult right_watch_status_result = right_watcher.WatchStatus();
+    ASSERT_OK(right_watch_status_result.status());
+    fuchsia_hardware_network::wire::Status status_right =
+        right_watch_status_result.value().device_status;
+    EXPECT_EQ(status_right.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline,
+              fuchsia_hardware_network::wire::StatusFlags::kOnline);
+  }
 }
 
 TEST_F(TunTest, PairFallibleWrites) {
-  auto config = DefaultDevicePairConfig();
-  config.set_fallible_transmit_left(true);
+  SimpleClient left, right;
 
-  auto dpair = CreatePair(std::move(config)).BindSync();
-  fuchsia::net::tun::DevicePairEnds ends;
-  SimpleClient left;
-  SimpleClient right;
-  ends.set_left(left.NewRequest());
-  ends.set_right(right.NewRequest());
-  ASSERT_OK(dpair->ConnectProtocols(std::move(ends)));
+  zx::status left_request = left.NewRequest();
+  ASSERT_OK(left_request.status_value());
+  zx::status right_request = right.NewRequest();
+  ASSERT_OK(right_request.status_value());
+
+  fuchsia_net_tun::wire::DevicePairEnds ends(alloc_);
+  ends.set_left(alloc_, std::move(left_request.value()));
+  ends.set_right(alloc_, std::move(right_request.value()));
+
+  fuchsia_net_tun::wire::DevicePairConfig config = DefaultDevicePairConfig();
+  config.set_fallible_transmit_left(alloc_, true);
+
+  zx::status client_end = CreatePair(std::move(config));
+  ASSERT_OK(client_end.status_value());
+  fidl::WireSyncClient device_pair = fidl::BindSyncClient(std::move(client_end.value()));
+  ASSERT_OK(device_pair.ConnectProtocols(std::move(ends)).status());
 
   ASSERT_OK(left.OpenSession());
   ASSERT_OK(right.OpenSession());
-  ASSERT_OK(left.session()->SetPaused(false));
-  ASSERT_OK(right.session()->SetPaused(false));
+  ASSERT_OK(left.session().SetPaused(false).status());
+  ASSERT_OK(right.session().SetPaused(false).status());
   ASSERT_OK(left.WaitOnline());
   ASSERT_OK(right.WaitOnline());
 
@@ -680,24 +934,32 @@ TEST_F(TunTest, PairFallibleWrites) {
   ASSERT_OK(left.FetchTx(&desc));
   ASSERT_EQ(desc, 0x00);
   auto* d = left.descriptor(desc);
-  auto flags = static_cast<fuchsia::hardware::network::TxReturnFlags>(d->return_flags);
-  EXPECT_EQ(flags & fuchsia::hardware::network::TxReturnFlags::TX_RET_ERROR,
-            fuchsia::hardware::network::TxReturnFlags::TX_RET_ERROR);
+  auto flags = static_cast<fuchsia_hardware_network::wire::TxReturnFlags>(d->return_flags);
+  EXPECT_EQ(flags & fuchsia_hardware_network::wire::TxReturnFlags::kTxRetError,
+            fuchsia_hardware_network::wire::TxReturnFlags::kTxRetError);
 }
 
 TEST_F(TunTest, PairInfallibleWrites) {
-  auto dpair = CreatePair(DefaultDevicePairConfig()).BindSync();
-  fuchsia::net::tun::DevicePairEnds ends;
-  SimpleClient left;
-  SimpleClient right;
-  ends.set_left(left.NewRequest());
-  ends.set_right(right.NewRequest());
-  ASSERT_OK(dpair->ConnectProtocols(std::move(ends)));
+  SimpleClient left, right;
+
+  zx::status left_request = left.NewRequest();
+  ASSERT_OK(left_request.status_value());
+  zx::status right_request = right.NewRequest();
+  ASSERT_OK(right_request.status_value());
+
+  fuchsia_net_tun::wire::DevicePairEnds ends(alloc_);
+  ends.set_left(alloc_, std::move(left_request.value()));
+  ends.set_right(alloc_, std::move(right_request.value()));
+
+  zx::status client_end = CreatePair(DefaultDevicePairConfig());
+  ASSERT_OK(client_end.status_value());
+  fidl::WireSyncClient device_pair = fidl::BindSyncClient(std::move(client_end.value()));
+  ASSERT_OK(device_pair.ConnectProtocols(std::move(ends)).status());
 
   ASSERT_OK(left.OpenSession());
   ASSERT_OK(right.OpenSession());
-  ASSERT_OK(left.session()->SetPaused(false));
-  ASSERT_OK(right.session()->SetPaused(false));
+  ASSERT_OK(left.session().SetPaused(false).status());
+  ASSERT_OK(right.session().SetPaused(false).status());
   ASSERT_OK(left.WaitOnline());
   ASSERT_OK(right.WaitOnline());
 
@@ -716,79 +978,114 @@ TEST_F(TunTest, PairInfallibleWrites) {
 }
 
 TEST_F(TunTest, RejectsIfOffline) {
-  auto tun = CreateDevice(DefaultDeviceConfig()).BindSync();
-  SimpleClient cli;
-  ASSERT_OK(tun->ConnectProtocols(cli.NewRequest()));
-  ASSERT_OK(cli.OpenSession());
-  ASSERT_OK(cli.session()->SetPaused(false));
+  zx::status client_end = CreateDevice(DefaultDeviceConfig());
+  ASSERT_OK(client_end.status_value());
+  fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(client_end.value()));
+
+  SimpleClient client;
+  zx::status protos = client.NewRequest();
+  ASSERT_OK(protos.status_value());
+  ASSERT_OK(tun.ConnectProtocols(std::move(protos.value())).status());
+  ASSERT_OK(client.OpenSession());
+  ASSERT_OK(client.session().SetPaused(false).status());
 
   // Can't send from the tun end.
   {
-    fuchsia::net::tun::Frame frame;
-    frame.set_frame_type(fuchsia::hardware::network::FrameType::ETHERNET);
-    frame.set_data({0x01, 0x02, 0x03});
-    fuchsia::net::tun::Device_WriteFrame_Result result;
-    ASSERT_OK(tun->WriteFrame(std::move(frame), &result));
-    ASSERT_TRUE(result.is_err());
-    ASSERT_STATUS(result.err(), ZX_ERR_BAD_STATE);
+    fuchsia_net_tun::wire::Frame frame(alloc_);
+    frame.set_frame_type(alloc_, fuchsia_hardware_network::wire::FrameType::kEthernet);
+    uint8_t data[] = {0x01, 0x02, 0x03};
+    frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(data));
+    fidl::WireResult write_frame_wire_result = tun.WriteFrame(std::move(frame));
+    ASSERT_OK(write_frame_wire_result.status());
+
+    fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
+        write_frame_wire_result.value().result;
+    switch (write_frame_result.which()) {
+      case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kResponse:
+        GTEST_FAIL() << "WriteFrame succeeded unexpectedly";
+        break;
+      case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kErr:
+        ASSERT_STATUS(write_frame_result.err(), ZX_ERR_BAD_STATE);
+        break;
+    }
   }
   // Can't send from client end.
   {
-    ASSERT_OK(cli.SendTx({0x00}, true));
-    ASSERT_OK(cli.WaitTx());
+    ASSERT_OK(client.SendTx({0x00}, true));
+    ASSERT_OK(client.WaitTx());
     uint16_t desc;
-    ASSERT_OK(cli.FetchTx(&desc));
+    ASSERT_OK(client.FetchTx(&desc));
     ASSERT_EQ(desc, 0x00);
-    ASSERT_TRUE(static_cast<bool>(
-        fuchsia::hardware::network::TxReturnFlags(cli.descriptor(desc)->return_flags) &
-        fuchsia::hardware::network::TxReturnFlags::TX_RET_ERROR))
-        << "Bad return flags " << cli.descriptor(desc)->return_flags;
+    ASSERT_TRUE(
+        fuchsia_hardware_network::wire::TxReturnFlags(client.descriptor(desc)->return_flags) &
+        fuchsia_hardware_network::wire::TxReturnFlags::kTxRetError)
+        << "Bad return flags " << client.descriptor(desc)->return_flags;
   }
   // If we set online we'll be able to send.
-  ASSERT_OK(tun->SetOnline(true));
+  ASSERT_OK(tun.SetOnline(true).status());
 
   // Send from client end once more and read a single frame.
   {
-    ASSERT_OK(cli.SendTx({0x00, 0x01}, true));
-    fuchsia::net::tun::Device_ReadFrame_Result result;
-    ASSERT_OK(tun->ReadFrame(&result));
-    ASSERT_TRUE(result.is_response())
-        << "ReadFrame failed with " << zx_status_get_string(result.err());
+    ASSERT_OK(client.SendTx({0x00, 0x01}, true));
+
+    fidl::WireResult read_frame_wire_result = tun.ReadFrame();
+    ASSERT_OK(read_frame_wire_result.status());
+    fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
+        read_frame_wire_result.value().result;
+    switch (read_frame_result.which()) {
+      case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kResponse: {
+        ASSERT_EQ(read_frame_result.response().frame.frame_type(),
+                  fuchsia_hardware_network::wire::FrameType::kEthernet);
+        ASSERT_NO_FATAL_FAILURE(
+            SimpleClient::ValidateData(read_frame_result.response().frame.data(), 0x00));
+        ASSERT_FALSE(read_frame_result.response().frame.has_meta());
+      } break;
+      case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kErr:
+        GTEST_FAIL() << "ReadFrame failed: " << zx_status_get_string(read_frame_result.err());
+        break;
+    }
   }
   // Set offline and see if client received their tx buffers back.
-  ASSERT_OK(tun->SetOnline(false));
+  ASSERT_OK(tun.SetOnline(false).status());
 
   uint16_t desc;
-  ASSERT_OK(cli.WaitTx());
+  ASSERT_OK(client.WaitTx());
   // No error on first descriptor.
-  ASSERT_OK(cli.FetchTx(&desc));
+  ASSERT_OK(client.FetchTx(&desc));
   ASSERT_EQ(desc, 0x00);
-  EXPECT_FALSE(static_cast<bool>(
-      fuchsia::hardware::network::TxReturnFlags(cli.descriptor(desc)->return_flags) &
-      fuchsia::hardware::network::TxReturnFlags::TX_RET_ERROR))
-      << "Bad return flags " << cli.descriptor(desc)->return_flags;
+  EXPECT_FALSE(
+      fuchsia_hardware_network::wire::TxReturnFlags(client.descriptor(desc)->return_flags) &
+      fuchsia_hardware_network::wire::TxReturnFlags::kTxRetError)
+      << "Bad return flags " << client.descriptor(desc)->return_flags;
   // Error on second.
-  ASSERT_OK(cli.FetchTx(&desc));
+  ASSERT_OK(client.FetchTx(&desc));
   ASSERT_EQ(desc, 0x01);
-  EXPECT_TRUE(static_cast<bool>(
-      fuchsia::hardware::network::TxReturnFlags(cli.descriptor(desc)->return_flags) &
-      fuchsia::hardware::network::TxReturnFlags::TX_RET_ERROR))
-      << "Bad return flags " << cli.descriptor(desc)->return_flags;
+  EXPECT_TRUE(fuchsia_hardware_network::wire::TxReturnFlags(client.descriptor(desc)->return_flags) &
+              fuchsia_hardware_network::wire::TxReturnFlags::kTxRetError)
+      << "Bad return flags " << client.descriptor(desc)->return_flags;
 }
 
 TEST_F(TunTest, PairEcho) {
-  auto dpair = CreatePair(DefaultDevicePairConfig()).BindSync();
-  fuchsia::net::tun::DevicePairEnds ends;
-  SimpleClient left;
-  SimpleClient right;
-  ends.set_left(left.NewRequest());
-  ends.set_right(right.NewRequest());
-  ASSERT_OK(dpair->ConnectProtocols(std::move(ends)));
+  SimpleClient left, right;
+
+  zx::status left_request = left.NewRequest();
+  ASSERT_OK(left_request.status_value());
+  zx::status right_request = right.NewRequest();
+  ASSERT_OK(right_request.status_value());
+
+  fuchsia_net_tun::wire::DevicePairEnds ends(alloc_);
+  ends.set_left(alloc_, std::move(left_request.value()));
+  ends.set_right(alloc_, std::move(right_request.value()));
+
+  zx::status client_end = CreatePair(DefaultDevicePairConfig());
+  ASSERT_OK(client_end.status_value());
+  fidl::WireSyncClient device_pair = fidl::BindSyncClient(std::move(client_end.value()));
+  ASSERT_OK(device_pair.ConnectProtocols(std::move(ends)).status());
 
   ASSERT_OK(left.OpenSession());
   ASSERT_OK(right.OpenSession());
-  ASSERT_OK(left.session()->SetPaused(false));
-  ASSERT_OK(right.session()->SetPaused(false));
+  ASSERT_OK(left.session().SetPaused(false).status());
+  ASSERT_OK(right.session().SetPaused(false).status());
   ASSERT_OK(left.WaitOnline());
   ASSERT_OK(right.WaitOnline());
 
