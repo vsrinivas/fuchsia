@@ -62,6 +62,9 @@ const (
 	// The blobs manifest. TODO(fxbug.dev/60322) remove this.
 	blobManifestName = "blobs.json"
 
+	// A list of the objects that need their TTL refreshed.
+	objsToRefreshTTLTxt = "objs_to_refresh_ttl.txt"
+
 	// The ELF sizes manifest.
 	elfSizesManifestName = "elf_sizes.json"
 
@@ -110,6 +113,7 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   │   ├── $UUID
 │   │   │   │   ├── build-ids.txt
 │   │   │   │   ├── jiri.snapshot
+│   │   │   │   ├── objs_to_refresh_ttl.txt
 │   │   │   │   ├── publickey.pem
 │   │   │   │   ├── images
 │   │   │   │   │   └── <images>
@@ -316,7 +320,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		}
 		files = append(files, contents...)
 	}
-	return uploadFiles(ctx, files, sink, cmd.j)
+	return uploadFiles(ctx, files, sink, cmd.j, buildsUUIDDir)
 }
 
 func createBuildIDManifest(buildIDs []string) (string, error) {
@@ -408,6 +412,9 @@ func (s *cloudSink) write(ctx context.Context, upload *artifactory.Upload) error
 	if upload.Metadata != nil {
 		sw.Metadata = upload.Metadata
 	}
+	// The CustomTime needs to be set to work with the lifecycle condition
+	// set on the GCS bucket.
+	sw.CustomTime = time.Now()
 
 	// We optionally compress on the fly, and calculate the MD5 on the
 	// compressed data.
@@ -552,7 +559,7 @@ func dirToFiles(ctx context.Context, dir artifactory.Upload) ([]artifactory.Uplo
 	return files, nil
 }
 
-func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink, j int) error {
+func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink, j int, buildsUUIDDir string) error {
 	if j <= 0 {
 		return fmt.Errorf("Concurrency factor j must be a positive number")
 	}
@@ -584,6 +591,7 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 		}
 	}
 
+	objsToRefreshTTL := make(chan string)
 	var wg sync.WaitGroup
 	wg.Add(j)
 	upload := func() {
@@ -600,20 +608,14 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 					errs <- fmt.Errorf("object %q: collided", upload.Destination)
 					return
 				}
+				objsToRefreshTTL <- upload.Destination
 				continue
 			}
 
-			logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
-			if err := retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(uploadRetryBackoff), maxUploadAttempts), func() error {
-				if err := dest.write(ctx, &upload); err != nil {
-					return fmt.Errorf("%s: %w", upload.Destination, err)
-				}
-				return nil
-			}, nil); err != nil {
-				errs <- fmt.Errorf("%s: %w", upload.Destination, err)
+			if err := uploadFile(ctx, upload, dest); err != nil {
+				errs <- err
 				return
 			}
-			logger.Debugf(ctx, "object %q: created", upload.Destination)
 		}
 	}
 
@@ -621,7 +623,42 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 	for i := 0; i < j; i++ {
 		go upload()
 	}
-	wg.Wait()
-	close(errs)
-	return <-errs
+	go func() {
+		wg.Wait()
+		close(errs)
+		close(objsToRefreshTTL)
+	}()
+	var objs []string
+	for o := range objsToRefreshTTL {
+		objs = append(objs, o)
+	}
+
+	if err := <-errs; err != nil {
+		return err
+	}
+	// Upload a file listing all the deduplicated files that already existed in the
+	// upload destination. A post-processor will use this file to update the CustomTime
+	// of the objects and extend their TTL.
+	if len(objs) > 0 {
+		objsToRefreshTTLUpload := artifactory.Upload{
+			Contents:    []byte(strings.Join(objs, "\n")),
+			Destination: path.Join(buildsUUIDDir, objsToRefreshTTLTxt),
+		}
+		return uploadFile(ctx, objsToRefreshTTLUpload, dest)
+	}
+	return nil
+}
+
+func uploadFile(ctx context.Context, upload artifactory.Upload, dest dataSink) error {
+	logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
+	if err := retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(uploadRetryBackoff), maxUploadAttempts), func() error {
+		if err := dest.write(ctx, &upload); err != nil {
+			return fmt.Errorf("%s: %w", upload.Destination, err)
+		}
+		return nil
+	}, nil); err != nil {
+		return fmt.Errorf("%s: %w", upload.Destination, err)
+	}
+	logger.Debugf(ctx, "object %q: created", upload.Destination)
+	return nil
 }

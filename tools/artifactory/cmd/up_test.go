@@ -105,7 +105,7 @@ func sinkHasExpectedContents(t *testing.T, actual, expected map[string][]byte, j
 	sink := newMemSink()
 	ctx := context.Background()
 	files := getUploadFiles(dir, expected)
-	if err := uploadFiles(ctx, files, sink, j); err != nil {
+	if err := uploadFiles(ctx, files, sink, j, ""); err != nil {
 		t.Fatalf("failed to upload contents: %v", err)
 	}
 	sinkHasContents(t, sink, expected)
@@ -196,18 +196,49 @@ func TestUploading(t *testing.T) {
 		sink := newMemSink()
 		ctx := context.Background()
 		nonexistentFile := artifactory.Upload{Source: filepath.Join(dir, "nonexistent")}
-		if err := uploadFiles(ctx, []artifactory.Upload{nonexistentFile}, sink, 1); err != nil {
+		if err := uploadFiles(ctx, []artifactory.Upload{nonexistentFile}, sink, 1, ""); err != nil {
 			t.Fatal(err)
 		}
 		if len(sink.contents) > 0 {
 			t.Fatal("sink should be empty")
 		}
 		// Now check that uploading an empty files list also does not result in an error.
-		if err := uploadFiles(ctx, []artifactory.Upload{}, sink, 1); err != nil {
+		if err := uploadFiles(ctx, []artifactory.Upload{}, sink, 1, ""); err != nil {
 			t.Fatal(err)
 		}
 		if len(sink.contents) > 0 {
 			t.Fatal("sink should be empty")
 		}
+	})
+
+	t.Run("deduped objects are uploaded in objs_to_upload.txt", func(t *testing.T) {
+		actual := map[string][]byte{
+			"a":       []byte("one"),
+			"b":       []byte("two"),
+			"c/d":     []byte("three"),
+			"c/e/f/g": []byte("four"),
+		}
+		dir := artifactory.Upload{Source: newDirWithContents(t, actual), Recursive: true, Deduplicate: true}
+		files, err := dirToFiles(context.Background(), dir)
+		if err != nil {
+			t.Fatalf("failed to read dir: %v", err)
+		}
+
+		sink := newMemSink()
+		sink.contents["b"] = []byte("two")
+		sink.contents["c/d"] = []byte("three")
+		expected := map[string][]byte{
+			"a":                 []byte("one"),
+			"b":                 []byte("two"),
+			"c/d":               []byte("three"),
+			"c/e/f/g":           []byte("four"),
+			objsToRefreshTTLTxt: []byte("b\nc/d"),
+		}
+
+		ctx := context.Background()
+		if err := uploadFiles(ctx, files, sink, 1, ""); err != nil {
+			t.Fatal(err)
+		}
+		sinkHasContents(t, sink, expected)
 	})
 }
