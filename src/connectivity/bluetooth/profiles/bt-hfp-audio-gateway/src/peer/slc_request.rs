@@ -5,15 +5,13 @@
 use std::fmt;
 
 use crate::{
+    features::AgFeatures,
     peer::{
         calls::Call,
         gain_control::Gain,
+        indicators::{AgIndicators, HfIndicator},
         procedure::{dtmf::DtmfCode, hold::CallHoldAction, ProcedureMarker},
         update::AgUpdate,
-    },
-    protocol::{
-        features::AgFeatures,
-        indicators::{AgIndicators, HfIndicator},
     },
 };
 

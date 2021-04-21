@@ -4,9 +4,8 @@
 
 use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
-use crate::{
-    peer::{service_level_connection::SlcState, update::AgUpdate},
-    protocol::indicators::AgIndicatorsReporting,
+use crate::peer::{
+    indicators::AgIndicatorsReporting, service_level_connection::SlcState, update::AgUpdate,
 };
 use at_commands as at;
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::protocol::indicators::AgIndicator, fidl_fuchsia_bluetooth_hfp::CallState};
+use {crate::peer::indicators::AgIndicator, fidl_fuchsia_bluetooth_hfp::CallState};
 
 /// The fuchsia.bluetooth.hfp library representation of a Number.
 pub type FidlNumber = String;

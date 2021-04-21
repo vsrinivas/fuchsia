@@ -5,10 +5,12 @@
 use super::{Procedure, ProcedureError as Error, ProcedureMarker, ProcedureRequest};
 
 use crate::{
-    peer::{service_level_connection::SlcState, slc_request::SlcRequest, update::AgUpdate},
-    protocol::{
-        features::{AgFeatures, HfFeatures},
+    features::{AgFeatures, HfFeatures},
+    peer::{
         indicators::{AgIndicators, AgIndicatorsReporting},
+        service_level_connection::SlcState,
+        slc_request::SlcRequest,
+        update::AgUpdate,
     },
 };
 
@@ -435,8 +437,6 @@ impl SlcProcedureState for SlcErrorState {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use crate::protocol::features::HfFeatures;
     use matches::assert_matches;
 
     #[test]

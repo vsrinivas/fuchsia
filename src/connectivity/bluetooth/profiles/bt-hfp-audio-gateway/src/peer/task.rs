@@ -26,6 +26,7 @@ use {
 use super::{
     calls::{Call, Calls},
     gain_control::GainControl,
+    indicators::{AgIndicator, AgIndicators, HfIndicator},
     procedure::ProcedureMarker,
     ringer::Ringer,
     service_level_connection::ServiceLevelConnection,
@@ -34,12 +35,7 @@ use super::{
     PeerRequest,
 };
 
-use crate::{
-    config::AudioGatewayFeatureSupport,
-    error::Error,
-    profile::ProfileEvent,
-    protocol::indicators::{AgIndicator, AgIndicators, HfIndicator},
-};
+use crate::{config::AudioGatewayFeatureSupport, error::Error, profile::ProfileEvent};
 
 pub(super) struct PeerTask {
     id: PeerId,
@@ -463,8 +459,10 @@ mod tests {
     };
 
     use crate::{
+        features::HfFeatures,
         peer::{
             calls::Number,
+            indicators::{AgIndicatorsReporting, HfIndicators},
             service_level_connection::{
                 tests::{
                     create_and_initialize_slc, expect_data_received_by_peer, expect_peer_ready,
@@ -472,10 +470,6 @@ mod tests {
                 },
                 SlcState,
             },
-        },
-        protocol::{
-            features::HfFeatures,
-            indicators::{AgIndicatorsReporting, HfIndicators},
         },
     };
 

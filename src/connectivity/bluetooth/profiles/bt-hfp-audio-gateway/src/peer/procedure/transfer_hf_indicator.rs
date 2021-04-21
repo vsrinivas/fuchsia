@@ -96,7 +96,7 @@ impl Procedure for TransferHfIndicatorProcedure {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::indicators::HfIndicator;
+    use crate::peer::indicators::HfIndicator;
     use matches::assert_matches;
 
     #[test]

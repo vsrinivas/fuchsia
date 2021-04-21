@@ -21,14 +21,12 @@ use {
 };
 
 use super::{
+    indicators::{AgIndicators, AgIndicatorsReporting, HfIndicators},
     procedure::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest},
     slc_request::SlcRequest,
     update::AgUpdate,
 };
-use crate::protocol::{
-    features::{AgFeatures, HfFeatures},
-    indicators::{AgIndicators, AgIndicatorsReporting, HfIndicators},
-};
+use crate::features::{AgFeatures, HfFeatures};
 
 /// The maximum number of concurrent procedures currently supported by this SLC.
 /// This value is chosen as a number significantly more than the total number of procedures
@@ -628,12 +626,8 @@ impl FusedStream for ServiceLevelConnection {
 pub(crate) mod tests {
     use {
         super::*,
-        crate::protocol::{
-            features::{AgFeatures, HfFeatures},
-            indicators::{
-                AgIndicator, BATT_CHG_INDICATOR_INDEX, CALL_HELD_INDICATOR_INDEX,
-                CALL_INDICATOR_INDEX,
-            },
+        crate::peer::indicators::{
+            AgIndicator, BATT_CHG_INDICATOR_INDEX, CALL_HELD_INDICATOR_INDEX, CALL_INDICATOR_INDEX,
         },
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::Channel,

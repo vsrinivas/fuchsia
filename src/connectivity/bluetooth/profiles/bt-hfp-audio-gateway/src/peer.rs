@@ -20,6 +20,7 @@ use {
 
 pub mod calls;
 pub mod gain_control;
+pub mod indicators;
 pub mod procedure;
 mod ringer;
 pub mod service_level_connection;

@@ -43,6 +43,7 @@ rustc_binary("bin") {
   sources = [
     "src/config.rs",
     "src/error.rs",
+    "src/features.rs",
     "src/fidl_service.rs",
     "src/hfp.rs",
     "src/main.rs",
@@ -52,6 +53,7 @@ rustc_binary("bin") {
     "src/peer/calls/number.rs",
     "src/peer/calls/types.rs",
     "src/peer/gain_control.rs",
+    "src/peer/indicators.rs",
     "src/peer/procedure.rs",
     "src/peer/procedure/answer.rs",
     "src/peer/procedure/call_line_ident_notifications.rs",
@@ -77,9 +79,6 @@ rustc_binary("bin") {
     "src/peer/task.rs",
     "src/peer/update.rs",
     "src/profile.rs",
-    "src/protocol.rs",
-    "src/protocol/features.rs",
-    "src/protocol/indicators.rs",
     "src/service_definitions.rs",
   ]
 }

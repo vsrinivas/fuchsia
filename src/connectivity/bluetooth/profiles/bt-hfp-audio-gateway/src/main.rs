@@ -17,11 +17,11 @@ use crate::{
 
 mod config;
 mod error;
+mod features;
 mod fidl_service;
 mod hfp;
 mod peer;
 mod profile;
-mod protocol;
 mod service_definitions;
 
 #[fasync::run_singlethreaded]

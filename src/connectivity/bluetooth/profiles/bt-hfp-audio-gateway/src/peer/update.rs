@@ -4,20 +4,16 @@
 
 use {at_commands as at, std::iter::once};
 
-use crate::{
-    peer::{
-        calls::Call,
-        gain_control::Gain,
-        procedure::{
-            query_current_calls::build_clcc_response,
-            subscriber_number_information::build_cnum_response, ProcedureRequest,
-        },
-    },
-    protocol::{
-        features::AgFeatures,
-        indicators::{AgIndicator, AgIndicators, HfIndicators},
+use super::{
+    calls::Call,
+    gain_control::Gain,
+    indicators::{AgIndicator, AgIndicators, HfIndicators},
+    procedure::{
+        query_current_calls::build_clcc_response,
+        subscriber_number_information::build_cnum_response, ProcedureRequest,
     },
 };
+use crate::features::AgFeatures;
 
 // TODO (fxbug.dev/74091): Add multiparty support.
 // TODO (fxbug.dev/74093): Add Explicit Call Transfer support.

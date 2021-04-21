@@ -63,7 +63,7 @@ impl Procedure for PhoneStatusProcedure {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::indicators::{
+    use crate::peer::indicators::{
         AgIndicator, AgIndicatorsReporting, CALL_HELD_INDICATOR_INDEX, SIGNAL_INDICATOR_INDEX,
     };
     use matches::assert_matches;
