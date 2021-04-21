@@ -258,7 +258,7 @@ impl RenderResources {
 
 struct RecoveryViewAssistant {
     face: FontFace,
-    heading: String,
+    heading: &'static str,
     body: Option<Cow<'static, str>>,
     fdr_restriction: FdrRestriction,
     reset_state_machine: fdr::FactoryResetStateMachine,
@@ -273,7 +273,7 @@ impl RecoveryViewAssistant {
     fn new(
         app_context: &AppContext,
         view_key: ViewKey,
-        heading: &str,
+        heading: &'static str,
         body: Option<Cow<'static, str>>,
         fdr_restriction: FdrRestriction,
     ) -> Result<RecoveryViewAssistant, Error> {
@@ -283,7 +283,7 @@ impl RecoveryViewAssistant {
 
         Ok(RecoveryViewAssistant {
             face,
-            heading: heading.to_string(),
+            heading: heading,
             body,
             fdr_restriction,
             reset_state_machine: fdr::FactoryResetStateMachine::new(),
@@ -387,7 +387,7 @@ impl ViewAssistant for RecoveryViewAssistant {
             self.render_resources = Some(RenderResources::new(
                 render_context,
                 target_size,
-                &self.heading,
+                self.heading,
                 self.body.as_ref().map(Borrow::borrow),
                 self.countdown_ticks,
                 &self.face,
@@ -432,7 +432,7 @@ impl ViewAssistant for RecoveryViewAssistant {
                 RecoveryMessages::ResetMessage(state) => {
                     match state {
                         FactoryResetState::Waiting => {
-                            self.heading = RECOVERY_MODE_HEADLINE.to_string();
+                            self.heading = RECOVERY_MODE_HEADLINE;
                             self.body =
                                 get_recovery_body(self.fdr_restriction.is_initially_enabled())
                                     .map(Into::into);
@@ -492,7 +492,7 @@ impl ViewAssistant for RecoveryViewAssistant {
                     };
                 }
                 RecoveryMessages::CountdownTick(count) => {
-                    self.heading = COUNTDOWN_MODE_HEADLINE.to_string();
+                    self.heading = COUNTDOWN_MODE_HEADLINE;
                     self.countdown_ticks = *count;
                     if *count == 0 {
                         self.body = Some("Resetting device...".into());
@@ -510,7 +510,7 @@ impl ViewAssistant for RecoveryViewAssistant {
                     self.app_context.request_render(self.view_key);
                 }
                 RecoveryMessages::ResetFailed => {
-                    self.heading = "Reset failed".to_string();
+                    self.heading = "Reset failed";
                     self.body = Some("Please restart device to try again".into());
                     self.render_resources = None;
                     self.app_context.request_render(self.view_key);
