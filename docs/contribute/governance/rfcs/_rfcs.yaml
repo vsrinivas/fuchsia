@@ -1151,7 +1151,7 @@
   short_description: 'Generate custom core component realms per product configurations.'
   authors: ['dgonyeo@google.com']
   file: '0089_core_realm_variations.md'
-  area: ['Components']
+  area: ['Component Framework']
   issue: ['74801']
   gerrit_change_id: ['495678']
   status: 'Accepted'
