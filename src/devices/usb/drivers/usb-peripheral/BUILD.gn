@@ -27,7 +27,7 @@ driver_module("usb-peripheral") {
   deps = [
     ":usb_peripheral_bind",
     "//sdk/banjo/fuchsia.hardware.usb",
-    "//sdk/banjo/fuchsia.hardware.usb.dci",
+    "//sdk/banjo/fuchsia.hardware.usb.dci:fuchsia.hardware.usb.dci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.function",
     "//sdk/banjo/fuchsia.hardware.usb.modeswitch",
     "//sdk/banjo/fuchsia.hardware.usb.request",
@@ -69,7 +69,7 @@ test("usb-peripheral-unittest-bin") {
     ":usb_peripheral_bind",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb",
-    "//sdk/banjo/fuchsia.hardware.usb.dci",
+    "//sdk/banjo/fuchsia.hardware.usb.dci:fuchsia.hardware.usb.dci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.function",
     "//sdk/banjo/fuchsia.hardware.usb.modeswitch",
     "//sdk/banjo/fuchsia.hardware.usb.phy",

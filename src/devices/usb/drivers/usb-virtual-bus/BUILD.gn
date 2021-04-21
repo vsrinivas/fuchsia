@@ -24,7 +24,7 @@ source_set("common") {
   public_deps = [
     ":usb-virtual-bus-bind",
     "//sdk/banjo/fuchsia.hardware.usb.bus",
-    "//sdk/banjo/fuchsia.hardware.usb.dci",
+    "//sdk/banjo/fuchsia.hardware.usb.dci:fuchsia.hardware.usb.dci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.hci",
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
     "//src/devices/lib/driver",
@@ -158,7 +158,7 @@ test("usb-virtual-bus-unit-test-bin") {
   output_name = "usb-virtual-bus-unit-test"
   deps = [
     ":common",
-    "//sdk/banjo/fuchsia.hardware.usb.dci",
+    "//sdk/banjo/fuchsia.hardware.usb.dci:fuchsia.hardware.usb.dci_banjo_cpp",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
   ]

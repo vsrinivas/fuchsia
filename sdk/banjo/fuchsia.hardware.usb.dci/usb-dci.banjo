@@ -35,8 +35,8 @@ protocol UsbDci {
 [Transport = "Banjo", BanjoLayout = "ddk-interface"]
 protocol UsbDciInterface {
     /// Callback for handling ep0 control requests.
-    Control(fuchsia.hardware.usb.descriptor.UsbSetup setup, [Buffer] vector<uint8> write) -> (zx.status status,
-                                                                     [Buffer] vector<uint8> read);
+    Control(fuchsia.hardware.usb.descriptor.UsbSetup setup, [Buffer] vector<uint8>:MAX write) -> (zx.status status,
+                                                                     [Buffer] vector<uint8>:MAX read);
     /// Notifies change in USB connected state.
     SetConnected(bool connected) -> ();
     /// Notifies current USB speed..
