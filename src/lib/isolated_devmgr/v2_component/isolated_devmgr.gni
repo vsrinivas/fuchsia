@@ -72,6 +72,8 @@ template("isolated_devmgr_v2_component") {
           protocol = [
             "fuchsia.boot.Arguments",
             "fuchsia.kernel.RootJob",
+            "fuchsia.boot.Items",
+            "fuchsia.power.manager.DriverManagerRegistration",
           ]
         },
       ]
@@ -89,6 +91,8 @@ template("isolated_devmgr_v2_component") {
           protocol = [
             "fuchsia.boot.Arguments",
             "fuchsia.kernel.RootJob",
+            "fuchsia.boot.Items",
+            "fuchsia.power.manager.DriverManagerRegistration",
           ]
           from = "self"
           to = [ "#driver-manager-test" ]

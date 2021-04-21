@@ -9,10 +9,15 @@ executable("support") {
   sources = [ "support.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.boot",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
+    "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager_llcpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",

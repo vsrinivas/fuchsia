@@ -23,7 +23,9 @@
         {
             protocol: [
                 "fuchsia.boot.Arguments",
+                "fuchsia.boot.Items",
                 "fuchsia.kernel.RootJob",
+                "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.process.Launcher",
                 "fuchsia.sys.Launcher",
             ],
