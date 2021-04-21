@@ -15,7 +15,6 @@ class ExperimentalFlags {
   using FlagSet = uint32_t;
   enum class Flag : FlagSet {
     kEnableHandleRights = 0b01,
-    kDisallowOldUsingSyntax = 0b10,
     kAllowNewSyntax = 0b1000,
   };
 

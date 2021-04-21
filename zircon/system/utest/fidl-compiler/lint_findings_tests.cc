@@ -1977,11 +1977,10 @@ struct SomeStruct {
   test.substitute("TEST", "string");
   ASSERT_FINDINGS(test);
 
-  test.that("developer cannot work around the check by indirect typing, via 'using'")
-      .source_template(R"FIDL(
+  test.that("developer cannot work around the check by aliasing").source_template(R"FIDL(
 library fidl.a;
 
-using unbounded_string = ${TEST};
+alias unbounded_string = ${TEST};
 
 struct SomeStruct {
   unbounded_string test_string;
@@ -2232,12 +2231,12 @@ struct SomeStruct {
   test.substitute("TEST", "vector<uint8>");
   ASSERT_FINDINGS(test);
 
-  test.that("developer cannot work around the check by indirect typing, via 'using'")
+  test.that("developer cannot work around the check by indirect typing using an alias")
       .source_template(R"FIDL(
 library fidl.a;
 
 // explanation for why we want this
-using unbounded_vector = ${TEST};
+alias unbounded_vector = ${TEST};
 
 struct SomeStruct {
   unbounded_vector test_vector;

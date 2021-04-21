@@ -6,6 +6,8 @@
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
+#include "fidl/diagnostics.h"
+#include "fidl/experimental_flags.h"
 #include "test_library.h"
 
 namespace {
@@ -36,7 +38,7 @@ struct Message {
 };
 
 alias alias_of_int16 = int16;
-using alias_of_int16 = int16;
+alias alias_of_int16 = int16;
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
 }
@@ -191,7 +193,7 @@ struct Bad {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "int64");
 }
 
-TEST(AliasTests, GoodVectorParametrizedOnDecl) {
+TEST(AliasTests, GoodVectorParameterizedOnDecl) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -223,7 +225,7 @@ alias alias_of_vector_of_string = vector<string>;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(AliasTests, BadVectorParametrizedOnUse) {
+TEST(AliasTests, BadVectorParameterizedOnUse) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -236,10 +238,11 @@ type Message = struct {
 alias alias_of_vector = vector;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMustBeParameterized,
+                                      fidl::ErrCannotParameterizeAlias);
 }
 
-TEST(AliasTests, BadVectorParametrizedOnUseOld) {
+TEST(AliasTests, BadVectorParameterizedOnUseOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -249,7 +252,8 @@ struct Message {
 
 alias alias_of_vector = vector;
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMustBeParameterized,
+                                      fidl::ErrCannotParameterizeAlias);
 }
 
 TEST(AliasTests, BadVectorBoundedOnDecl) {
@@ -265,7 +269,8 @@ type Message = struct {
 alias alias_of_vector_max_8 = vector:8;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMustBeParameterized,
+                                      fidl::ErrCannotParameterizeAlias);
 }
 
 TEST(AliasTests, BadVectorBoundedOnDeclOld) {
@@ -278,7 +283,8 @@ struct Message {
 
 alias alias_of_vector_max_8 = vector:8;
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMustBeParameterized,
+                                      fidl::ErrCannotParameterizeAlias);
 }
 
 TEST(AliasTests, GoodVectorBoundedOnUse) {
@@ -377,7 +383,7 @@ alias alias_of_vector_of_string = vector<string>;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNullable);
 }
 
-TEST(AliasTests, BadCannotParametrizeTwice) {
+TEST(AliasTests, BadCannotParameterizeTwice) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -390,10 +396,10 @@ type Message = struct {
 alias alias_of_vector_of_string = vector<string>;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotParametrizeTwice);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotParameterizeAlias);
 }
 
-TEST(AliasTests, BadCannotParametrizeTwiceOld) {
+TEST(AliasTests, BadCannotParameterizeTwiceOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -403,7 +409,7 @@ struct Message {
 
 alias alias_of_vector_of_string = vector<string>;
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotParametrizeTwice);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotParameterizeAlias);
 }
 
 TEST(AliasTests, BadCannotBoundTwice) {
@@ -442,14 +448,13 @@ TEST(AliasTests, BadCannotNullTwice) {
 library example;
 
 type Message = struct {
-    f alias_of_vector_nullable<string>:optional;
+    f alias_of_vector_nullable:optional;
 };
 
-alias alias_of_vector_nullable = vector:optional;
+alias alias_of_vector_nullable = vector<string>:optional;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMustBeParameterized,
-                                      fidl::ErrCannotIndicateNullabilityTwice);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotIndicateNullabilityTwice);
 }
 
 TEST(AliasTests, BadCannotNullTwiceOld) {
@@ -457,13 +462,12 @@ TEST(AliasTests, BadCannotNullTwiceOld) {
 library example;
 
 struct Message {
-    alias_of_vector_nullable<string>? f;
+    alias_of_vector_nullable? f;
 };
 
-alias alias_of_vector_nullable = vector?;
+alias alias_of_vector_nullable = vector<string>?;
 )FIDL");
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMustBeParameterized,
-                                      fidl::ErrCannotIndicateNullabilityTwice);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotIndicateNullabilityTwice);
 }
 
 TEST(AliasTests, GoodMultiFileAliasReference) {
@@ -616,22 +620,24 @@ alias Bar2 = dependent.Bar;
   ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, cloned_dependency);
 }
 
-TEST(AliasTests, BadDisallowOldUsingSyntaxOld) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kDisallowOldUsingSyntax);
-  TestLibrary library(R"FIDL(
+// This test documents the faulty behavior of handle aliases in the old syntax:
+// since the alias isn't named "handle", we try to parse a subtype/size rather
+// than handle constraints.
+TEST(AliasTests, BadHandleAlias) {
+  auto library = WithLibraryZx(R"FIDL(
 library example;
 
-using alias_of_int16 = int16;
+using zx;
 
+alias my_handle = zx.handle:VMO;
+
+resource struct MyStruct {
+    my_handle:3 h;
+};
 )FIDL",
-                      std::move(experimental_flags));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOldUsingSyntaxDeprecated);
+                               fidl::ExperimentalFlags());
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotHaveSize)
 }
 
 }  // namespace
-// TODO(pascallouis): Test various handle parametrization scenarios, and
-// capture maybe_handle_subtype into FromTypeAlias struct.
-// As noted in the TypeAliasTypeTemplate, there is a bug currently where
-// handle parametrization of a type template is not properly passed down,
-// and as a result gets lost.

@@ -629,6 +629,10 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
 
   bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
+    // Note that because fidlc only populates these handle fields if it sees
+    // "handle" in the type constructor, aliases of handles will never correctly
+    // capture any handle constraints. It is not a TODO to fix this since this
+    // issue does not exist in the new syntax.
     assert(!args.handle_subtype);
     assert(!args.handle_rights);
 
@@ -640,16 +644,16 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
       }
     }
 
+    if (args.arg_type != nullptr)
+      return Fail(ErrCannotParameterizeAlias, args.span);
     const Type* arg_type = nullptr;
     if (decl_->partial_type_ctor->maybe_arg_type_ctor) {
-      if (args.arg_type) {
-        return Fail(ErrCannotParametrizeTwice, args.span);
-      }
       arg_type = decl_->partial_type_ctor->maybe_arg_type_ctor->type;
-    } else {
-      arg_type = args.arg_type;
     }
 
+    // TODO(fxbug.dev/74193): This code needs to "merge" the two size constraints
+    // by taking the stronger of the two (smaller bound). If we are applying a weaker
+    // constraint (i.e. the arg has no effect), we could consider making this a warning.
     const Size* size = nullptr;
     if (decl_->partial_type_ctor->maybe_size) {
       if (args.size) {
@@ -663,16 +667,12 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
     std::optional<uint32_t> obj_type;
     std::optional<types::HandleSubtype> handle_subtype;
     if (decl_->partial_type_ctor->handle_subtype_identifier) {
-      if (args.handle_subtype) {
-        return Fail(ErrCannotParametrizeTwice, args.span);
-      }
       obj_type = decl_->partial_type_ctor->handle_obj_type_resolved;
       handle_subtype = decl_->partial_type_ctor->handle_subtype_identifier_resolved;
-    } else {
-      obj_type = args.obj_type;
-      handle_subtype = args.handle_subtype;
     }
 
+    // TODO(fxbug.dev/74193): The type is nullable if optional is specified in
+    // either context
     types::Nullability nullability;
     if (decl_->partial_type_ctor->nullability == types::Nullability::kNullable) {
       if (args.nullability == types::Nullability::kNullable) {
@@ -1530,11 +1530,6 @@ bool Library::ConsumeTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld>
 
 void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive,
                            fidl::utils::Syntax syntax) {
-  if (using_directive->maybe_type_ctor) {
-    ConsumeTypeAlias(std::move(using_directive), syntax);
-    return;
-  }
-
   if (using_directive->attributes && using_directive->attributes->attributes.size() != 0) {
     Fail(ErrAttributesNotAllowedOnLibraryImport, using_directive->span(),
          *(using_directive->attributes));
@@ -1575,23 +1570,7 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_decl
     return false;
 
   return RegisterDecl(std::make_unique<TypeAlias>(std::move(alias_declaration->attributes),
-                                                  std::move(alias_name), std::move(type_ctor_),
-                                                  false /* allow_partial_type_ctor */));
-}
-
-bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive,
-                               fidl::utils::Syntax syntax) {
-  assert(using_directive->maybe_type_ctor);
-  assert(syntax == fidl::utils::Syntax::kOld && "new syntax shouldn't use using aliases");
-
-  auto span = using_directive->using_path->components[0]->span();
-  auto alias_name = Name::CreateSourced(this, span);
-  std::unique_ptr<TypeConstructor> partial_type_ctor_;
-  if (!ConsumeTypeConstructorOld(std::move(using_directive->maybe_type_ctor), &partial_type_ctor_))
-    return false;
-  return RegisterDecl(std::make_unique<TypeAlias>(
-      std::move(using_directive->attributes), std::move(alias_name), std::move(partial_type_ctor_),
-      true /* allow_partial_type_ctor */));
+                                                  std::move(alias_name), std::move(type_ctor_)));
 }
 
 void Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration) {
@@ -3977,30 +3956,8 @@ bool Library::CompileUnion(Union* union_declaration) {
 }
 
 bool Library::CompileTypeAlias(TypeAlias* decl) {
-  // Since type aliases can have partial type constructors, it's not always
-  // possible to compile them based solely on their declaration.
-  //
-  // For instance, we might have
-  //
-  //     using alias = vector:5;
-  //
-  //  which is only valid on use `alias<string>`.
-  //
-  // We temporarily disable error reporting, and attempt to compile the
-  // partial type constructor.
-  bool partial_type_ctor_compiled = false;
-  {
-    auto temporary_mode = reporter_->OverrideMode(decl->allow_partial_type_ctor
-                                                      ? Reporter::ReportingMode::kDoNotReport
-                                                      : Reporter::ReportingMode::kReport);
-    partial_type_ctor_compiled = CompileTypeConstructor(decl->partial_type_ctor.get());
-    if (!decl->allow_partial_type_ctor && !partial_type_ctor_compiled) {
-      return false;
-    }
-  }
-  if (decl->partial_type_ctor->maybe_arg_type_ctor && !partial_type_ctor_compiled) {
-    if (!CompileTypeConstructor(decl->partial_type_ctor->maybe_arg_type_ctor.get()))
-      return false;
+  if (!CompileTypeConstructor(decl->partial_type_ctor.get())) {
+    return false;
   }
   return ResolveSizeBound(decl->partial_type_ctor.get(), nullptr /* out_size */);
 }

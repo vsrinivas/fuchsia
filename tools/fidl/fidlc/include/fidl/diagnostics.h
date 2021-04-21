@@ -287,8 +287,8 @@ constexpr WarningDef<std::string, std::string> WarnAttributeTypo(
 // ---------------------------------------------------------------------------
 constexpr ErrorDef<flat::Name> ErrUnknownType("unknown type {}");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrMustBeAProtocol("{} must be a protocol");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotParametrizeTwice(
-    "{} cannot parametrize twice");
+constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotParameterizeAlias(
+    "{}: aliases cannot be parameterized");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBoundTwice("{} cannot bound twice");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotIndicateNullabilityTwice(
     "{} cannot indicate nullability twice");

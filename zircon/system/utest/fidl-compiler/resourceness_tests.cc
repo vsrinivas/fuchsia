@@ -52,8 +52,8 @@ resource protocol Foo {};
 }
 
 TEST(ResourcenessTests, BadUsingResourceness) {
-  invalid_resource_modifier("using", R"FIDL(
-resource using B = bool;
+  invalid_resource_modifier("alias", R"FIDL(
+resource alias B = bool;
 )FIDL");
 }
 
@@ -247,11 +247,11 @@ TEST(ResourcenessTests, BadResourceAliasesInValueType) {
     std::string fidl_library = R"FIDL(
 library example;
 
-using HandleAlias = handle;
-using ProtocolAlias = Protocol;
-using ResourceStructAlias = ResourceStruct;
-using ResourceTableAlias = ResourceStruct;
-using ResourceUnionAlias = ResourceStruct;
+alias HandleAlias = handle;
+alias ProtocolAlias = Protocol;
+alias ResourceStructAlias = ResourceStruct;
+alias ResourceTableAlias = ResourceStruct;
+alias ResourceUnionAlias = ResourceStruct;
 
 protocol Protocol {};
 resource struct ResourceStruct {};

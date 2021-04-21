@@ -34,53 +34,53 @@
 
 namespace {
 
-#define FOR_ENUM_VARIANTS(DO)  \
-  DO(Identifier)               \
-  DO(CompoundIdentifier)       \
-  DO(StringLiteral)            \
-  DO(NumericLiteral)           \
-  DO(TrueLiteral)              \
-  DO(FalseLiteral)             \
-  DO(Ordinal64)                \
-  DO(IdentifierConstant)       \
-  DO(LiteralConstant)          \
-  DO(BinaryOperatorConstant)   \
-  DO(Attribute)                \
-  DO(AttributeList)            \
-  DO(TypeConstructor)          \
-  DO(Using)                    \
-  DO(ConstDeclaration)         \
-  DO(BitsMember)               \
-  DO(BitsDeclaration)          \
-  DO(EnumMember)               \
-  DO(EnumDeclaration)          \
-  DO(Parameter)                \
-  DO(ParameterList)            \
-  DO(ProtocolMethod)           \
-  DO(ComposeProtocol)          \
-  DO(ProtocolDeclaration)      \
-  DO(ResourceDeclaration)      \
-  DO(ResourceProperty)         \
-  DO(ServiceMember)            \
-  DO(ServiceDeclaration)       \
-  DO(StructMember)             \
-  DO(StructDeclaration)        \
-  DO(TableMember)              \
-  DO(TableDeclaration)         \
-  DO(UnionMember)              \
-  DO(UnionDeclaration)         \
+#define FOR_ENUM_VARIANTS(DO)   \
+  DO(Identifier)                \
+  DO(CompoundIdentifier)        \
+  DO(StringLiteral)             \
+  DO(NumericLiteral)            \
+  DO(TrueLiteral)               \
+  DO(FalseLiteral)              \
+  DO(Ordinal64)                 \
+  DO(IdentifierConstant)        \
+  DO(LiteralConstant)           \
+  DO(BinaryOperatorConstant)    \
+  DO(Attribute)                 \
+  DO(AttributeList)             \
+  DO(TypeConstructor)           \
+  DO(Using)                     \
+  DO(ConstDeclaration)          \
+  DO(BitsMember)                \
+  DO(BitsDeclaration)           \
+  DO(EnumMember)                \
+  DO(EnumDeclaration)           \
+  DO(Parameter)                 \
+  DO(ParameterList)             \
+  DO(ProtocolMethod)            \
+  DO(ComposeProtocol)           \
+  DO(ProtocolDeclaration)       \
+  DO(ResourceDeclaration)       \
+  DO(ResourceProperty)          \
+  DO(ServiceMember)             \
+  DO(ServiceDeclaration)        \
+  DO(StructMember)              \
+  DO(StructDeclaration)         \
+  DO(TableMember)               \
+  DO(TableDeclaration)          \
+  DO(UnionMember)               \
+  DO(UnionDeclaration)          \
   DO(IdentifierLayoutParameter) \
-  DO(LiteralLayoutParameter)   \
-  DO(TypeLayoutParameter)      \
-  DO(LayoutParameterList)      \
-  DO(OrdinaledLayoutMember)    \
-  DO(StructLayoutMember)       \
-  DO(ValueLayoutMember)        \
-  DO(Layout)                   \
-  DO(InlineLayoutReference)    \
-  DO(NamedLayoutReference)     \
-  DO(TypeConstraints)          \
-  DO(TypeConstructorNew)       \
+  DO(LiteralLayoutParameter)    \
+  DO(TypeLayoutParameter)       \
+  DO(LayoutParameterList)       \
+  DO(OrdinaledLayoutMember)     \
+  DO(StructLayoutMember)        \
+  DO(ValueLayoutMember)         \
+  DO(Layout)                    \
+  DO(InlineLayoutReference)     \
+  DO(NamedLayoutReference)      \
+  DO(TypeConstraints)           \
+  DO(TypeConstructorNew)        \
   DO(TypeDecl)
 
 #define MAKE_ENUM_VARIANT(VAR) VAR,
@@ -481,7 +481,6 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
      {
          R"FIDL(library x; «using y»;)FIDL",
          R"FIDL(library x; «using y as z»;)FIDL",
-         R"FIDL(library x; «using y = int32»;)FIDL",
      }},
     {ElementType::ResourceDeclaration, {R"FIDL(
      library example; «resource_definition Res : uint32 { properties { Enum subtype; }; }»;)FIDL"}},

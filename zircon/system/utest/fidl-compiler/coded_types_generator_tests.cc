@@ -687,7 +687,7 @@ TEST(CodedTypesGeneratorTests, GoodScopingBugShouldNotAffectCodingTables) {
   TestLibrary library(R"FIDL(
 library example;
 
-using membertype = uint32;
+alias membertype = uint32;
 
 struct byte {
     membertype member = 1;

@@ -384,14 +384,12 @@ class Using final : public SourceElement {
  public:
   Using(SourceElement const& element, std::unique_ptr<Token> decl_start_token,
         std::unique_ptr<AttributeList> attributes, std::unique_ptr<CompoundIdentifier> using_path,
-        std::unique_ptr<Identifier> maybe_alias,
-        std::unique_ptr<TypeConstructorOld> maybe_type_ctor)
+        std::unique_ptr<Identifier> maybe_alias)
       : SourceElement(element),
         decl_start_token(std::move(decl_start_token)),
         attributes(std::move(attributes)),
         using_path(std::move(using_path)),
-        maybe_alias(std::move(maybe_alias)),
-        maybe_type_ctor(std::move(maybe_type_ctor)) {}
+        maybe_alias(std::move(maybe_alias)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
@@ -399,9 +397,6 @@ class Using final : public SourceElement {
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<CompoundIdentifier> using_path;
   std::unique_ptr<Identifier> maybe_alias;
-  // TODO(fxbug.dev/7807): Use a special purpose AST element, as is the case in the
-  // flat AST.
-  std::unique_ptr<TypeConstructorOld> maybe_type_ctor;
 };
 
 class ConstDeclaration final : public SourceElement {
@@ -957,7 +952,7 @@ class TypeLayoutParameter final : public LayoutParameter {
 class IdentifierLayoutParameter final : public LayoutParameter {
  public:
   explicit IdentifierLayoutParameter(SourceElement const& element,
-                                    std::unique_ptr<CompoundIdentifier> identifier)
+                                     std::unique_ptr<CompoundIdentifier> identifier)
       : LayoutParameter(element, Kind::kIdentifier), identifier(std::move(identifier)) {}
 
   void Accept(TreeVisitor* visitor) const;

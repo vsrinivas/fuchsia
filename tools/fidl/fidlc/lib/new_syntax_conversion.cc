@@ -166,12 +166,6 @@ std::string TypeConversion::Write(fidl::utils::Syntax syntax) {
   return out;
 };
 
-std::string UsingKeywordConversion::Write(fidl::utils::Syntax syntax) {
-  std::string keyword = syntax == fidl::utils::Syntax::kOld ? "using " : "alias ";
-
-  return prefix() + keyword + name_->copy_to_str() + " = " + type_text_;
-};
-
 std::string NameAndTypeConversion::Write(fidl::utils::Syntax syntax) {
   std::string ctor = !type_text_.empty() ? type_text_ : type_ctor_->copy_to_str();
   if (syntax == fidl::utils::Syntax::kOld) {

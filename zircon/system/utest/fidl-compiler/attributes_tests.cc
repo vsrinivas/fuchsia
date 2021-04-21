@@ -72,7 +72,7 @@ table ExampleTable {
 };
 
 [OnTypeAlias]
-using ExampleTypeAlias = uint32;
+alias ExampleTypeAlias = uint32;
 
 [OnUnion]
 union ExampleUnion {

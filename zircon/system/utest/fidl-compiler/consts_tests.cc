@@ -449,7 +449,7 @@ TEST(ConstsTests, GoodConstTestUsing) {
   TestLibrary library(R"FIDL(
 library example;
 
-using foo = int32;
+alias foo = int32;
 const foo c = 2;
 )FIDL");
   ASSERT_COMPILED_AND_CONVERT(library);
@@ -474,7 +474,7 @@ TEST(ConstsTests, BadConstTestUsingWithInconvertibleValueOld) {
   TestLibrary library(R"FIDL(
 library example;
 
-using foo = int32;
+alias foo = int32;
 const foo c = "nope";
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
@@ -929,7 +929,7 @@ TEST(ConstsTests, BadConstTestAssignTypeNameOld) {
            "bits Example { A = 1; };",
            "enum Example { A = 1; };",
            "union Example { 1: bool A; };",
-           "using Example = string;",
+           "alias Example = string;",
        }) {
     std::ostringstream ss;
     ss << "library example;\n";

@@ -473,28 +473,17 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeLis
     return Fail();
 
   std::unique_ptr<raw::Identifier> maybe_alias;
-  std::unique_ptr<raw::TypeConstructorOld> maybe_type_ctor;
-
   if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kAs))) {
     if (!Ok())
       return Fail();
     maybe_alias = ParseIdentifier();
     if (!Ok())
       return Fail();
-  } else if (MaybeConsumeToken(OfKind(Token::Kind::kEqual))) {
-    if (syntax_ == utils::Syntax::kNew ||
-        experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDisallowOldUsingSyntax))
-      return Fail(ErrOldUsingSyntaxDeprecated, using_path->span());
-    if (!Ok() || using_path->components.size() != 1u)
-      return Fail(ErrCompoundAliasIdentifier, using_path->span());
-    maybe_type_ctor = ParseTypeConstructorOld();
-    if (!Ok())
-      return Fail();
   }
 
   return std::make_unique<raw::Using>(
       scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes),
-      std::move(using_path), std::move(maybe_alias), std::move(maybe_type_ctor));
+      std::move(using_path), std::move(maybe_alias));
 }
 
 std::unique_ptr<raw::TypeConstructorOld> Parser::ParseTypeConstructorOld() {
@@ -1637,9 +1626,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
           // Failed to parse using declaration.
           return Done;
         }
-        if (using_decl->maybe_type_ctor) {
-          done_with_library_imports = true;
-        } else if (done_with_library_imports) {
+        if (done_with_library_imports) {
           reporter_->Report(ErrLibraryImportsMustBeGroupedAtTopOfFile, using_decl->span());
         }
         using_list.emplace_back(std::move(using_decl));
@@ -1719,7 +1706,7 @@ std::unique_ptr<raw::LayoutParameter> Parser::ParseLayoutParameter() {
         type_ctor->parameters == nullptr && type_ctor->constraints == nullptr) {
       auto named_ref = static_cast<raw::NamedLayoutReference*>(type_ctor->layout_ref.get());
       return std::make_unique<raw::IdentifierLayoutParameter>(scope.GetSourceElement(),
-                                                             std::move(named_ref->identifier));
+                                                              std::move(named_ref->identifier));
     }
     return std::make_unique<raw::TypeLayoutParameter>(scope.GetSourceElement(),
                                                       std::move(type_ctor));

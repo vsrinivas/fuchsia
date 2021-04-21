@@ -52,8 +52,6 @@ template("fidl_library") {
     summarization_target_name_json = "${target_name}_api_summarize_json"
   }
 
-  experimental_flags += [ "disallow_old_using_syntax" ]
-
   response_file = "$target_gen_dir/$target_name.args"
   fidl_stem = "$target_gen_dir/$target_name.fidl"
   json_representation = "$fidl_stem.json"

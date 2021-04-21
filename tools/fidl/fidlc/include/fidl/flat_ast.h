@@ -527,15 +527,21 @@ struct Resource final : public Decl {
 
 struct TypeAlias final : public Decl {
   TypeAlias(std::unique_ptr<raw::AttributeList> attributes, Name name,
-            std::unique_ptr<TypeConstructor> partial_type_ctor, bool allow_partial_type_ctor)
+            std::unique_ptr<TypeConstructor> partial_type_ctor)
       : Decl(Kind::kTypeAlias, std::move(attributes), std::move(name)),
-        partial_type_ctor(std::move(partial_type_ctor)),
-        allow_partial_type_ctor(allow_partial_type_ctor) {}
+        partial_type_ctor(std::move(partial_type_ctor)) {}
 
+  // The shape of this type constructor is more constrained than just being a
+  // "partial" type constructor - it is either a normal type constructor
+  // referring directly to a non-type-alias with all layout parameters fully
+  // specified (e.g. alias foo = array<T, 3>), or it is a type constructor
+  // referring to another type alias that has no layout parameters (e.g. alias
+  // bar = foo).
+  // The constraints on the other hand are indeed "partial" - any type alias
+  // at any point in a "type alias chain" can specify a constraint, but any
+  // constraint can only specified once. This behavior will change in
+  // fxbug.dev/74193.
   const std::unique_ptr<TypeConstructor> partial_type_ctor;
-  // TODO(fxbug.dev/7807): Remove when "using" ceased to be used for alias decl,
-  // as the new syntax with "alias" keyword disallows partial type.
-  bool allow_partial_type_ctor;
 };
 
 class TypeTemplate {

@@ -559,23 +559,6 @@ service X {
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
-TEST(ConverterTests, AliasFromUsing) {
-  std::string old_version = R"FIDL(
-library example;
-
-using foo = vector<uint32>;
-)FIDL";
-
-  std::string new_version = R"FIDL(
-library example;
-
-alias foo = vector<uint32>;
-)FIDL";
-
-  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
-  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
-}
-
 TEST(ConverterTests, AliasOfArray) {
   std::string old_version = R"FIDL(
 library example;

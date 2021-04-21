@@ -390,7 +390,7 @@ library example;
 
 const #Alias# #Constant# = 42;
 
-using #Alias# = uint32;
+alias #Alias# = uint32;
 
 )FIDL");
     TestLibrary library(source);
@@ -410,7 +410,7 @@ library example;
 
 enum #Enum# : #Alias# { A = 1; };
 
-using #Alias# = uint32;
+alias #Alias# = uint32;
 
 )FIDL");
     TestLibrary library(source);
@@ -430,7 +430,7 @@ library example;
 
 bits #Bits# : #Alias# { A = 1; };
 
-using #Alias# = uint32;
+alias #Alias# = uint32;
 
 )FIDL");
     TestLibrary library(source);

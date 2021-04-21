@@ -43,7 +43,6 @@ bits Bats : uint64 {
 };
 
 /// a type alias doc comment
-alias TheTypeAlias = vector:9;
 alias MyTypeAlias = vector:9;
 
 union MyUnion { // super annoying!
@@ -234,10 +233,8 @@ resource_definition SomeRes : uint32 {
     };
 };
 
-alias OldHandleAlias = zx.handle:VMO;
-alias OldHandleAlias2 = zx.handle:THREAD;
-alias MyOldHandleAlias = zx.handle:VMO;
-alias MyOldHandleAlias2 = zx.handle:THREAD;
+alias MyHandleAlias = zx.handle:VMO;
+alias MyHandleAlias2 = zx.handle:THREAD;
 
 struct Constraints {
     zx.handle:THING1 h1;
@@ -245,10 +242,6 @@ struct Constraints {
     zx.handle:<THING2, zx.rights.TRANSFER | zx.rights.SIGNAL> h3;
 };
 
-alias HandleAlias = zx.handle:<THING3>;
-alias MyHandleAlias = zx.handle:<THING3>;
-
-using HandleRightsAlias = zx.handle:<THING3, zx.rights.TRANSFER | zx.rights.SIGNAL>;
 alias MyHandleRightsAlias = zx.handle:<THING3, zx.rights.TRANSFER | zx.rights.SIGNAL>;
 
 // Comments at EOF

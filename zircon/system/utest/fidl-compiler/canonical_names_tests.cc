@@ -16,7 +16,7 @@ TEST(CanonicalNamesTests, GoodTopLevel) {
   TestLibrary library(R"FIDL(
 library example;
 
-using foobar = bool;
+alias foobar = bool;
 const bool f_oobar = true;
 struct fo_obar {};
 struct foo_bar {};
@@ -184,12 +184,12 @@ struct Something {};
   TestLibrary converted_dependency;
   ASSERT_COMPILED_AND_CONVERT_INTO(dependency, converted_dependency);
 
-  TestLibrary library(R"FIDL(
+  TestLibrary library("example.fidl", R"FIDL(
 library example;
 
 using foobar;
 
-using f_o_o_b_a_r = foobar.Something;
+alias f_o_o_b_a_r = foobar.Something;
 const bool f_oobar = true;
 struct fo_obar {};
 struct foo_bar {};
@@ -199,7 +199,8 @@ enum FoObAr { A = 1; };
 bits FooBaR { A = 1; };
 protocol FoObaR {};
 service FOoBAR {};
-)FIDL");
+)FIDL",
+                      &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, converted_dependency);
 }
@@ -215,12 +216,12 @@ struct Something {};
   TestLibrary cloned_dependency;
   ASSERT_COMPILED_AND_CLONE_INTO(dependency, cloned_dependency);
 
-  TestLibrary library(R"FIDL(
+  TestLibrary library("example.fidl", R"FIDL(
 library example;
 
 using foobar;
 
-using f_o_o_b_a_r = foobar.Something;
+alias f_o_o_b_a_r = foobar.Something;
 const bool f_oobar = true;
 struct fo_obar {};
 struct foo_bar {};
@@ -230,7 +231,8 @@ enum FoObAr { A = 1; };
 bits FooBaR { A = 1; };
 protocol FoObaR {};
 service FOoBAR {};
-)FIDL");
+)FIDL",
+                      &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, cloned_dependency);
 }
@@ -282,7 +284,7 @@ TEST(CanonicalNamesTests, BadTopLevel) {
 
 TEST(CanonicalNamesTests, BadTopLevelOld) {
   const auto lower = {
-      "using fooBar = bool;",          // these comments prevent clang-format
+      "alias fooBar = bool;",          // these comments prevent clang-format
       "const bool fooBar = true;",     // from packing multiple items per line
       "struct fooBar {};",             //
       "struct fooBar {};",             //
@@ -294,7 +296,7 @@ TEST(CanonicalNamesTests, BadTopLevelOld) {
       "service fooBar {};",            //
   };
   const auto upper = {
-      "using FooBar = bool;",          //
+      "alias FooBar = bool;",          //
       "const bool FooBar = true;",     //
       "struct FooBar {};",             //
       "struct FooBar {};",             //
@@ -714,7 +716,7 @@ library example;
 
 using foobar;
 
-using FOOBAR = foobar.Something;
+alias FOOBAR = foobar.Something;
 )FIDL");
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDeclNameConflictsWithLibraryImportCanonical);
@@ -868,7 +870,7 @@ TEST(CanonicalNamesTests, BadInconsistentTypeSpelling) {
 
 TEST(CanonicalNamesTests, BadInconsistentTypeSpellingOld) {
   const auto decl_templates = {
-      "using %s = bool;",          //
+      "alias %s = bool;",          //
       "struct %s {};",             //
       "struct %s {};",             //
       "table %s {};",              //

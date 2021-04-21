@@ -364,7 +364,7 @@ struct Something {};
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
-using foo = int16;
+alias foo = int16;
 using dependent;
 
 struct UseDependent {

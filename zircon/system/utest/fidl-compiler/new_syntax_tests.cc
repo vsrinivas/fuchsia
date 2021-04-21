@@ -713,20 +713,6 @@ type TypeDecl = struct {
   EXPECT_ERR(errors[11], fidl::ErrUnexpectedToken);
 }
 
-TEST(NewSyntaxTests, BadDisallowUsingAlias) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
-  TestLibrary library(R"FIDL(
-library example;
-
-using foo = uint8;
-)FIDL",
-                      std::move(experimental_flags));
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOldUsingSyntaxDeprecated);
-}
-
 // TODO(fxbug.dev/72671): this should be covered by an existing old syntax test
 TEST(NewSyntaxTests, GoodConstParsing) {
   fidl::ExperimentalFlags experimental_flags;

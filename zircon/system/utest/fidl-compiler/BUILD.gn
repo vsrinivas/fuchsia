@@ -72,7 +72,6 @@ if (current_toolchain == default_toolchain) {
       "structs_tests.cc",
       "table_tests.cc",
       "test_library.cc",
-      "type_alias_tests.cc",
       "types_tests.cc",
       "typeshape_tests.cc",
       "union_tests.cc",

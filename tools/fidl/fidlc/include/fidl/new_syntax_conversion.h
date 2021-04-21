@@ -157,24 +157,6 @@ class TypeConversion : public Conversion {
   std::string Write(fidl::utils::Syntax syntax) override;
 };
 
-// Ensures that we always use the "alias" keyword, instead of the now-deprecated
-// "using."
-class UsingKeywordConversion : public Conversion {
- public:
-  UsingKeywordConversion(const std::unique_ptr<raw::CompoundIdentifier>& name,
-                         const std::unique_ptr<raw::TypeConstructorOld>& type_ctor)
-      : name_(name), type_ctor_(type_ctor) {}
-  ~UsingKeywordConversion() override = default;
-
-  const std::unique_ptr<raw::CompoundIdentifier>& name_;
-  const std::unique_ptr<raw::TypeConstructorOld>& type_ctor_;
-  std::string type_text_;
-
-  void AddChildText(std::string child) override { type_text_ = child; }
-
-  std::string Write(fidl::utils::Syntax syntax) override;
-};
-
 // Handles the application of the "types come second" rule specified by FTP-050.
 // For example, this is the conversion used to turn "uint8 FOO" into "FOO
 // uint8."  The NameAndTypeConversion always nests a TypeConversion.

@@ -99,9 +99,6 @@ void Using::Accept(TreeVisitor* visitor) const {
   if (maybe_alias != nullptr) {
     visitor->OnIdentifier(maybe_alias);
   }
-  if (maybe_type_ctor != nullptr) {
-    visitor->OnTypeConstructorOld(maybe_type_ctor);
-  }
 }
 
 void AliasDeclaration::Accept(TreeVisitor* visitor) const {
