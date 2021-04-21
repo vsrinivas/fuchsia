@@ -5,6 +5,7 @@
 #ifndef SRC_FIRMWARE_GIGABOOT_SRC_OSBOOT_H_
 #define SRC_FIRMWARE_GIGABOOT_SRC_OSBOOT_H_
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <efi/protocol/graphics-output.h>
@@ -39,13 +40,7 @@ int boot_deprecated(efi_handle img, efi_system_table* sys, void* image, size_t s
 
 int zbi_boot(efi_handle img, efi_system_table* sys, void* image, size_t sz);
 
-#define IMAGE_INVALID 0
-#define IMAGE_EMPTY 1
-#define IMAGE_KERNEL 2
-#define IMAGE_RAMDISK 3
-#define IMAGE_COMBO 4
-
-unsigned identify_image(void* image, size_t sz);
+bool image_is_valid(void* image, size_t sz);
 
 // sz may be just one block or sector
 // if the header looks like a kernel image, return expected size

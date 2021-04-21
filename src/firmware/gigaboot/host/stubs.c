@@ -5,8 +5,9 @@
 // Stub implementations for files we're not yet ready to bring into the
 // host-side test build.
 
+#include <stdbool.h>
 #include <stddef.h>
 
 size_t image_getsize(void* image, size_t sz) { return 0; }
 
-unsigned identify_image(void* image, size_t sz) { return 0; }
+bool image_is_valid(void* image, size_t sz) { return false; }

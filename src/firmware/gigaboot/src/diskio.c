@@ -426,7 +426,7 @@ void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t extra_s
     goto fail1;
   }
 
-  if (identify_image(image, sz) != IMAGE_COMBO) {
+  if (!image_is_valid(image, sz)) {
     printf("%s partition has no valid image\n", guid_name);
     goto fail1;
   }

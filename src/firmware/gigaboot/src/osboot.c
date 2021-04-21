@@ -36,8 +36,7 @@
 #define KBUFSIZE (32 * 1024 * 1024)
 #define RBUFSIZE (512 * 1024 * 1024)
 
-static nbfile nbkernel;
-static nbfile nbramdisk;
+static nbfile nbzbi;
 static nbfile nbcmdline;
 
 static char cmdbuf[CMDLINE_MAX];
@@ -48,37 +47,7 @@ void print_cmdline(void) {
 
 nbfile* netboot_get_buffer(const char* name, size_t size) {
   if (!strcmp(name, NB_KERNEL_FILENAME)) {
-    return &nbkernel;
-  }
-  if (!strcmp(name, NB_RAMDISK_FILENAME)) {
-    efi_physical_addr mem = 0xFFFFFFFF;
-    size_t buf_size = size > 0 ? (size + PAGE_MASK) & ~PAGE_MASK : RBUFSIZE;
-
-    if (nbramdisk.size > 0) {
-      if (nbramdisk.size < buf_size) {
-        mem = (efi_physical_addr)nbramdisk.data;
-        nbramdisk.data = 0;
-        if (gBS->FreePages(mem - FRONT_BYTES, (nbramdisk.size / PAGE_SIZE) + FRONT_PAGES)) {
-          printf("Could not free previous ramdisk allocation\n");
-          nbramdisk.size = 0;
-          return NULL;
-        }
-        nbramdisk.size = 0;
-      } else {
-        return &nbramdisk;
-      }
-    }
-
-    printf("netboot: allocating %zu for ramdisk (requested %zu)\n", buf_size, size);
-    if (gBS->AllocatePages(AllocateMaxAddress, EfiLoaderData, (buf_size / PAGE_SIZE) + FRONT_PAGES,
-                           &mem)) {
-      printf("Failed to allocate network io buffer\n");
-      return NULL;
-    }
-    nbramdisk.data = (void*)(mem + FRONT_BYTES);
-    nbramdisk.size = buf_size;
-
-    return &nbramdisk;
+    return &nbzbi;
   }
   if (!strcmp(name, NB_CMDLINE_FILENAME)) {
     return &nbcmdline;
@@ -249,12 +218,8 @@ void do_netboot(void) {
     printf("Failed to allocate network io buffer\n");
     return;
   }
-  nbkernel.data = (void*)mem;
-  nbkernel.size = KBUFSIZE;
-
-  // ramdisk is dynamically allocated now
-  nbramdisk.data = 0;
-  nbramdisk.size = 0;
+  nbzbi.data = (void*)mem;
+  nbzbi.size = KBUFSIZE;
 
   nbcmdline.data = (void*)netboot_cmdline;
   nbcmdline.size = sizeof(netboot_cmdline);
@@ -267,11 +232,11 @@ void do_netboot(void) {
     if (n < 1) {
       continue;
     }
-    if (nbkernel.offset < 32768) {
+    if (nbzbi.offset < 32768) {
       // too small to be a kernel
       continue;
     }
-    uint8_t* x = nbkernel.data;
+    uint8_t* x = nbzbi.data;
     if ((x[0] == 'M') && (x[1] == 'Z') && (x[0x80] == 'P') && (x[0x81] == 'E')) {
       size_t exitdatasize;
       efi_status r;
@@ -290,8 +255,8 @@ void do_netboot(void) {
                           },
                   },
               .MemoryType = EfiLoaderData,
-              .StartAddress = (efi_physical_addr)nbkernel.data,
-              .EndAddress = (efi_physical_addr)(nbkernel.data + nbkernel.offset),
+              .StartAddress = (efi_physical_addr)nbzbi.data,
+              .EndAddress = (efi_physical_addr)(nbzbi.data + nbzbi.offset),
           },
           {
               .Header =
@@ -308,8 +273,8 @@ void do_netboot(void) {
       };
 
       printf("Attempting to run EFI binary...\n");
-      r = gBS->LoadImage(false, gImg, (efi_device_path_protocol*)mempath, (void*)nbkernel.data,
-                         nbkernel.offset, &h);
+      r = gBS->LoadImage(false, gImg, (efi_device_path_protocol*)mempath, (void*)nbzbi.data,
+                         nbzbi.offset, &h);
       if (EFI_ERROR(r)) {
         printf("LoadImage Failed (%s)\n", xefi_strerror(r));
         continue;
@@ -337,9 +302,7 @@ void do_netboot(void) {
       set_gfx_mode_from_cmdline(fbres);
     }
 
-    // maybe it's a kernel image?
-    boot_kernel(gImg, gSys, (void*)nbkernel.data, nbkernel.offset, (void*)nbramdisk.data,
-                nbramdisk.offset);
+    zbi_boot(gImg, gSys, (void*)nbzbi.data, nbzbi.offset);
     break;
   }
 }
@@ -479,13 +442,10 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
   size_t zedboot_size = 0;
   void* zedboot_kernel = NULL;
-  unsigned zedboot_ktype = IMAGE_INVALID;
   size_t ksz = 0;
   void* kernel = NULL;
-  unsigned ktype = IMAGE_INVALID;
   size_t ksz_b = 0;
   void* kernel_b = NULL;
-  unsigned ktype_b = IMAGE_INVALID;
 
   struct {
     const char16_t* wfilename;
@@ -494,15 +454,14 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
     const char* guid_name;
     void** kernel;
     size_t* size;
-    unsigned* ktype;
   } boot_list[] = {
       // ZIRCON-A with legacy fallback filename on EFI partition
-      {L"zircon.bin", "zircon.bin", GUID_ZIRCON_A_VALUE, GUID_ZIRCON_A_NAME, &kernel, &ksz, &ktype},
+      {L"zircon.bin", "zircon.bin", GUID_ZIRCON_A_VALUE, GUID_ZIRCON_A_NAME, &kernel, &ksz},
       // Recovery / ZIRCON-R
       {L"zedboot.bin", "zedboot.bin", GUID_ZIRCON_R_VALUE, GUID_ZIRCON_R_NAME, &zedboot_kernel,
-       &zedboot_size, &zedboot_ktype},
+       &zedboot_size},
       // no filename fallback for ZIRCON-B
-      {NULL, NULL, GUID_ZIRCON_B_VALUE, GUID_ZIRCON_B_NAME, &kernel_b, &ksz_b, &ktype_b},
+      {NULL, NULL, GUID_ZIRCON_B_VALUE, GUID_ZIRCON_B_NAME, &kernel_b, &ksz_b},
   };
   unsigned i;
 
@@ -558,32 +517,19 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
   // Look for ZIRCON-A/B/R partitions
   for (i = 0; i < sizeof(boot_list) / sizeof(*boot_list); i++) {
-    *boot_list[i].ktype = IMAGE_INVALID;
     *boot_list[i].kernel = image_load_from_disk(img, sys, EXTRA_ZBI_ITEM_SPACE, boot_list[i].size,
                                                 boot_list[i].guid_value, boot_list[i].guid_name);
 
     if (*boot_list[i].kernel != NULL) {
       printf("zircon image loaded from zircon partition %s\n", boot_list[i].guid_name);
-      *boot_list[i].ktype = IMAGE_COMBO;
     } else if (boot_list[i].wfilename != NULL) {
       *boot_list[i].kernel = xefi_load_file(boot_list[i].wfilename, boot_list[i].size, 0);
-      switch ((*boot_list[i].ktype = identify_image(*boot_list[i].kernel, *boot_list[i].size))) {
-        case IMAGE_EMPTY:
-          break;
-        case IMAGE_KERNEL:
-          printf("%s is a kernel image\n", boot_list[i].filename);
-          break;
-        case IMAGE_COMBO:
-          printf("%s is a kernel+ramdisk combo image\n", boot_list[i].filename);
-          break;
-        case IMAGE_RAMDISK:
-          printf("%s is a ramdisk?!\n", boot_list[i].filename);
-          __FALLTHROUGH;
-        case IMAGE_INVALID:
-          printf("%s is not a valid kernel or combo image\n", boot_list[i].filename);
-          *boot_list[i].ktype = IMAGE_INVALID;
-          *boot_list[i].size = 0;
-          *boot_list[i].kernel = NULL;
+      if (image_is_valid(*boot_list[i].kernel, *boot_list[i].size)) {
+        printf("%s is a valid image\n", boot_list[i].filename);
+      } else {
+        *boot_list[i].kernel = NULL;
+        *boot_list[i].size = 0;
+        printf("%s is not a valid image\n", boot_list[i].filename);
       }
     }
   }
@@ -738,23 +684,8 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
         append_avb_zbi_items(img, sys, kernel, ksz, "-a");
         print_cmdline();
 
-        if (ktype == IMAGE_COMBO) {
+        if (kernel != NULL) {
           zbi_boot(img, sys, kernel, ksz);
-        } else {
-          size_t rsz = 0;
-          void* ramdisk = NULL;
-          efi_file_protocol* ramdisk_file = xefi_open_file(L"bootdata.bin");
-          const char* ramdisk_name = "bootdata.bin";
-          if (ramdisk_file == NULL) {
-            ramdisk_file = xefi_open_file(L"ramdisk.bin");
-            ramdisk_name = "ramdisk.bin";
-          }
-          if (ramdisk_file) {
-            printf("Loading %s...\n", ramdisk_name);
-            ramdisk = xefi_read_file(ramdisk_file, &rsz, FRONT_BYTES);
-            ramdisk_file->Close(ramdisk_file);
-          }
-          boot_kernel(gImg, gSys, kernel, ksz, ramdisk, rsz);
         }
         goto fail;
       case '2':
@@ -767,23 +698,8 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
         append_avb_zbi_items(img, sys, kernel_b, ksz_b, "-b");
         print_cmdline();
 
-        if (ktype_b == IMAGE_COMBO) {
+        if (kernel != NULL) {
           zbi_boot(img, sys, kernel_b, ksz_b);
-        } else {
-          size_t rsz = 0;
-          void* ramdisk = NULL;
-          efi_file_protocol* ramdisk_file = xefi_open_file(L"bootdata.bin");
-          const char* ramdisk_name = "bootdata.bin";
-          if (ramdisk_file == NULL) {
-            ramdisk_file = xefi_open_file(L"ramdisk.bin");
-            ramdisk_name = "ramdisk.bin";
-          }
-          if (ramdisk_file) {
-            printf("Loading %s...\n", ramdisk_name);
-            ramdisk = xefi_read_file(ramdisk_file, &rsz, FRONT_BYTES);
-            ramdisk_file->Close(ramdisk_file);
-          }
-          boot_kernel(gImg, gSys, kernel, ksz, ramdisk, rsz);
         }
         goto fail;
       case 'r':
@@ -796,10 +712,8 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
         append_avb_zbi_items(img, sys, zedboot_kernel, zedboot_size, "-r");
         print_cmdline();
 
-        if (zedboot_ktype == IMAGE_COMBO) {
+        if (zedboot_kernel != NULL) {
           zbi_boot(img, sys, zedboot_kernel, zedboot_size);
-        } else {
-          printf("%s, wrong image type\n", GUID_ZIRCON_R_NAME);
         }
         goto fail;
       default:

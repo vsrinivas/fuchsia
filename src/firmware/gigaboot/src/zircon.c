@@ -142,6 +142,7 @@ static int header_check(void* image, size_t sz, uint64_t* _entry, size_t* _flen,
   return 0;
 }
 
+// TODO: verify crc32 when present
 static int item_check(zbi_header_t* bd, size_t sz) {
   if (sz > 0x7FFFFFFF) {
     // disallow 2GB+ items to avoid wrap on align issues
@@ -155,52 +156,64 @@ static int item_check(zbi_header_t* bd, size_t sz) {
   }
 }
 
-// TODO: verify crc32 when present
-unsigned identify_image(void* image, size_t sz) {
-  if (sz == 0) {
-    return IMAGE_EMPTY;
-  }
+bool image_is_valid(void* image, size_t sz) {
   if (sz < sizeof(zbi_header_t)) {
     printf("image is too small\n");
-    return IMAGE_INVALID;
+    return false;
   }
+
   zbi_header_t* bd = image;
   sz -= sizeof(zbi_header_t);
   if ((bd->type != ZBI_TYPE_CONTAINER) || item_check(bd, sz)) {
     printf("image has invalid header\n");
-    return IMAGE_INVALID;
+    return false;
   }
   image += sizeof(zbi_header_t);
-  unsigned n = 0;
-  unsigned r = 0;
+
+  enum {
+    kKernelAbsent,
+    kKernelFirst,
+    kKernelLater,
+  } kernel = kKernelAbsent;
+  bool bootfs = false;
+  bool empty = true;
+
   while (sz > sizeof(zbi_header_t)) {
     bd = image;
     sz -= sizeof(zbi_header_t);
     if (item_check(image, sz)) {
       printf("image has invalid bootitem\n");
-      return IMAGE_INVALID;
+      return false;
     }
     if (ZBI_IS_KERNEL_BOOTITEM(bd->type)) {
-      if (n != 0) {
-        printf("image has kernel in middle\n");
-        return IMAGE_INVALID;
-      } else {
-        r = IMAGE_KERNEL;
-      }
+      kernel = (empty && kernel == kKernelAbsent) ? kKernelFirst : kKernelLater;
+    } else if (bd->type == ZBI_TYPE_STORAGE_BOOTFS) {
+      bootfs = true;
     }
-    if (bd->type == ZBI_TYPE_STORAGE_BOOTFS) {
-      if ((r == IMAGE_KERNEL) || (r == IMAGE_COMBO)) {
-        r = IMAGE_COMBO;
-      } else {
-        r = IMAGE_RAMDISK;
-      }
-    }
+    empty = false;
     image += ZBI_ALIGN(bd->length) + sizeof(zbi_header_t);
     sz -= ZBI_ALIGN(bd->length);
-    n++;
   }
 
-  return r;
+  if (empty) {
+    printf("empty ZBI\n");
+  }
+  switch (kernel) {
+    case kKernelAbsent:
+      printf("no kernel item found\n");
+      break;
+    case kKernelLater:
+      printf("kernel item out of order: must be first\n");
+      break;
+    case kKernelFirst:
+      if (bootfs) {  // It's complete.
+        return true;
+      }
+      printf("missing BOOTFS\n");
+      break;
+  }
+
+  return false;
 }
 
 int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, void* ramdisk,
