@@ -103,15 +103,13 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo_Sync(
 
 zx_status_t fidl::WireResponseContext<
     ::fidl_test_inheritance::Super::Foo>::OnRawReply(fidl_incoming_msg_t* msg) {
-  zx_status_t status = fidl_decode_msg(
-      ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>::Type, msg,
-      nullptr);
-  if (unlikely(status != ZX_OK)) {
-    return status;
+  ::fidl::DecodedMessage<
+      ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>
+      decoded{msg};
+  if (unlikely(!decoded.ok())) {
+    return decoded.status();
   }
-  OnReply(reinterpret_cast<
-          ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>*>(
-      msg->bytes));
+  OnReply(decoded.PrimaryObject());
   return ZX_OK;
 }
 #endif  // __Fuchsia__
@@ -135,7 +133,6 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
     void OnReply(::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>*
                      response) override {
       cb_(response);
-
       delete this;
     }
 
@@ -188,19 +185,18 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
           ::fidl_test_inheritance::ksuper_foo_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            zx_status_t status = fidl_decode_msg(
-                ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::Type,
-                msg, nullptr);
-            if (unlikely(status != ZX_OK)) {
-              return status;
+            ::fidl::DecodedMessage<
+                ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>>
+                decoded{msg};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
             }
+            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_inheritance::Super>::FooCompleter::
                 Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_inheritance::Super>*>(interface)
-                ->Foo(reinterpret_cast<::fidl::WireRequest<
-                          ::fidl_test_inheritance::Super::Foo>*>(msg->bytes),
-                      completer);
+                ->Foo(primary, completer);
             return ZX_OK;
           },
       },
@@ -238,21 +234,19 @@ fidl::internal::WireDispatcher<::fidl_test_inheritance::Super>::TryDispatch(
           ::fidl_test_inheritance::ksuper_foo_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            zx_status_t status = fidl_decode_msg(
-                ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::Type,
-                msg, nullptr);
-            if (unlikely(status != ZX_OK)) {
-              return status;
+            ::fidl::DecodedMessage<
+                ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>>
+                decoded{msg};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
             }
-            auto message = reinterpret_cast<
-                ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>*>(
-                msg->bytes);
+            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_inheritance::Super>::FooCompleter::
                 Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_inheritance::Super>*>(
                 interface)
-                ->Foo(std::move(message->s), completer);
+                ->Foo(std::move(primary->s), completer);
             return ZX_OK;
           },
       },
@@ -416,15 +410,13 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo_Sync(
 
 zx_status_t fidl::WireResponseContext<
     ::fidl_test_inheritance::Sub::Foo>::OnRawReply(fidl_incoming_msg_t* msg) {
-  zx_status_t status = fidl_decode_msg(
-      ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>::Type, msg,
-      nullptr);
-  if (unlikely(status != ZX_OK)) {
-    return status;
+  ::fidl::DecodedMessage<
+      ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>
+      decoded{msg};
+  if (unlikely(!decoded.ok())) {
+    return decoded.status();
   }
-  OnReply(reinterpret_cast<
-          ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>*>(
-      msg->bytes));
+  OnReply(decoded.PrimaryObject());
   return ZX_OK;
 }
 #endif  // __Fuchsia__
@@ -448,7 +440,6 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
     void OnReply(::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>*
                      response) override {
       cb_(response);
-
       delete this;
     }
 
@@ -500,19 +491,18 @@ fidl::internal::WireServerDispatcher<::fidl_test_inheritance::Sub>::TryDispatch(
           ::fidl_test_inheritance::ksub_foo_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            zx_status_t status = fidl_decode_msg(
-                ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::Type,
-                msg, nullptr);
-            if (unlikely(status != ZX_OK)) {
-              return status;
+            ::fidl::DecodedMessage<
+                ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>>
+                decoded{msg};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
             }
+            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_inheritance::Sub>::FooCompleter::Sync
                 completer(txn);
             reinterpret_cast<::fidl::WireServer<::fidl_test_inheritance::Sub>*>(
                 interface)
-                ->Foo(reinterpret_cast<::fidl::WireRequest<
-                          ::fidl_test_inheritance::Sub::Foo>*>(msg->bytes),
-                      completer);
+                ->Foo(primary, completer);
             return ZX_OK;
           },
       },
@@ -550,20 +540,18 @@ fidl::internal::WireDispatcher<::fidl_test_inheritance::Sub>::TryDispatch(
           ::fidl_test_inheritance::ksub_foo_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            zx_status_t status = fidl_decode_msg(
-                ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::Type,
-                msg, nullptr);
-            if (unlikely(status != ZX_OK)) {
-              return status;
+            ::fidl::DecodedMessage<
+                ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>>
+                decoded{msg};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
             }
-            auto message = reinterpret_cast<
-                ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>*>(
-                msg->bytes);
+            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_inheritance::Sub>::FooCompleter::Sync
                 completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_inheritance::Sub>*>(interface)
-                ->Foo(std::move(message->s), completer);
+                ->Foo(std::move(primary->s), completer);
             return ZX_OK;
           },
       },

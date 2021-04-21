@@ -170,7 +170,7 @@ struct {{ .WireRequest }} final {
     {{- if .Request.IsResource }}
     ~DecodedMessage() {
       if (ok() && (PrimaryObject() != nullptr)) {
-      PrimaryObject()->_CloseHandles();
+        PrimaryObject()->_CloseHandles();
       }
     }
     {{- end }}

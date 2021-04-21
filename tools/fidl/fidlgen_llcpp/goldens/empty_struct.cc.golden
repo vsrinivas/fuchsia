@@ -205,16 +205,13 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
 zx_status_t fidl::WireResponseContext<
     ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
     OnRawReply(fidl_incoming_msg_t* msg) {
-  zx_status_t status = fidl_decode_msg(
-      ::fidl::WireResponse<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::Type,
-      msg, nullptr);
-  if (unlikely(status != ZX_OK)) {
-    return status;
+  ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
+      decoded{msg};
+  if (unlikely(!decoded.ok())) {
+    return decoded.status();
   }
-  OnReply(reinterpret_cast<::fidl::WireResponse<
-              ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*>(
-      msg->bytes));
+  OnReply(decoded.PrimaryObject());
   return ZX_OK;
 }
 #endif  // __Fuchsia__
@@ -242,7 +239,6 @@ zx_status_t fidl::WireResponseContext<
                  ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
                      response) override {
       cb_(response);
-
       delete this;
     }
 
@@ -286,18 +282,14 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
         reinterpret_cast<fidl_message_header_t*>(msg->bytes);
     switch (hdr->ordinal) {
       case ::fidl_test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
-        const char* error_message;
-        zx_status_t status = fidl_decode_etc(
-            ::fidl::WireResponse<
-                ::fidl_test_emptystruct::EmptyProtocol::Receive>::Type,
-            msg->bytes, msg->num_bytes, msg->handles, msg->num_handles,
-            &error_message);
-        if (status != ZX_OK) {
-          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+        ::fidl::DecodedMessage<::fidl::WireResponse<
+            ::fidl_test_emptystruct::EmptyProtocol::Receive>>
+            decoded{msg};
+        if (!decoded.ok()) {
+          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
+                                    decoded.status()};
         }
-        event_handler_->Receive(
-            reinterpret_cast<::fidl::WireResponse<
-                ::fidl_test_emptystruct::EmptyProtocol::Receive>*>(msg->bytes));
+        event_handler_->Receive(decoded.PrimaryObject());
         return std::nullopt;
       }
       default:
@@ -397,22 +389,19 @@ fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
           ::fidl_test_emptystruct::kEmptyProtocol_Send_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            zx_status_t status = fidl_decode_msg(
-                ::fidl::WireRequest<
-                    ::fidl_test_emptystruct::EmptyProtocol::Send>::Type,
-                msg, nullptr);
-            if (unlikely(status != ZX_OK)) {
-              return status;
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_emptystruct::EmptyProtocol::Send>>
+                decoded{msg};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
             }
+            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
                 SendCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>*>(
                 interface)
-                ->Send(reinterpret_cast<::fidl::WireRequest<
-                           ::fidl_test_emptystruct::EmptyProtocol::Send>*>(
-                           msg->bytes),
-                       completer);
+                ->Send(primary, completer);
             return ZX_OK;
           },
       },
@@ -420,22 +409,19 @@ fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
           ::fidl_test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            zx_status_t status = fidl_decode_msg(
-                ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::
-                                        SendAndReceive>::Type,
-                msg, nullptr);
-            if (unlikely(status != ZX_OK)) {
-              return status;
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
+                decoded{msg};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
             }
+            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
                 SendAndReceiveCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>*>(
                 interface)
-                ->SendAndReceive(reinterpret_cast<::fidl::WireRequest<
-                                     ::fidl_test_emptystruct::EmptyProtocol::
-                                         SendAndReceive>*>(msg->bytes),
-                                 completer);
+                ->SendAndReceive(primary, completer);
             return ZX_OK;
           },
       },
@@ -473,21 +459,19 @@ fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::dispatch_message(
           ::fidl_test_emptystruct::kEmptyProtocol_Send_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            zx_status_t status = fidl_decode_msg(
-                ::fidl::WireRequest<
-                    ::fidl_test_emptystruct::EmptyProtocol::Send>::Type,
-                msg, nullptr);
-            if (unlikely(status != ZX_OK)) {
-              return status;
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_emptystruct::EmptyProtocol::Send>>
+                decoded{msg};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
             }
-            auto message = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_emptystruct::EmptyProtocol::Send>*>(msg->bytes);
+            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
                 SendCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>*>(
                 interface)
-                ->Send(std::move(message->e), completer);
+                ->Send(std::move(primary->e), completer);
             return ZX_OK;
           },
       },
@@ -495,22 +479,19 @@ fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::dispatch_message(
           ::fidl_test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            zx_status_t status = fidl_decode_msg(
-                ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::
-                                        SendAndReceive>::Type,
-                msg, nullptr);
-            if (unlikely(status != ZX_OK)) {
-              return status;
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
+                decoded{msg};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
             }
-            auto message = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*>(
-                msg->bytes);
+            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
                 SendAndReceiveCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>*>(
                 interface)
-                ->SendAndReceive(std::move(message->e), completer);
+                ->SendAndReceive(std::move(primary->e), completer);
             return ZX_OK;
           },
       },

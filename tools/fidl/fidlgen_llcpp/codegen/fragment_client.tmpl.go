@@ -103,7 +103,8 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
 {{- define "ClientDispatchDefinition" }}
 {{ EnsureNamespace ""}}
 {{- IfdefFuchsia -}}
-std::optional<::fidl::UnbindInfo> {{ .WireClientImpl.NoLeading }}::DispatchEvent(fidl_incoming_msg_t* msg) {
+std::optional<::fidl::UnbindInfo>
+{{ .WireClientImpl.NoLeading }}::DispatchEvent(fidl_incoming_msg_t* msg) {
   {{- if .Events }}
   if (event_handler_ != nullptr) {
     fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
@@ -111,13 +112,11 @@ std::optional<::fidl::UnbindInfo> {{ .WireClientImpl.NoLeading }}::DispatchEvent
     {{- range .Events }}
       case {{ .OrdinalName }}:
       {
-        const char* error_message;
-        zx_status_t status = fidl_decode_etc({{ .WireResponse }}::Type, msg->bytes, msg->num_bytes,
-                                             msg->handles, msg->num_handles, &error_message);
-        if (status != ZX_OK) {
-          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+        ::fidl::DecodedMessage<{{ .WireResponse }}> decoded{msg};
+        if (!decoded.ok()) {
+          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, decoded.status()};
         }
-        event_handler_->{{ .Name }}(reinterpret_cast<{{ .WireResponse }}*>(msg->bytes));
+        event_handler_->{{ .Name }}(decoded.PrimaryObject());
         return std::nullopt;
       }
     {{- end }}
