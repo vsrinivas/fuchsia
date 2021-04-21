@@ -15,7 +15,6 @@
 package udp
 
 import (
-	"fmt"
 	"io"
 	"sync/atomic"
 
@@ -89,12 +88,11 @@ type endpoint struct {
 
 	// The following fields are used to manage the receive queue, and are
 	// protected by rcvMu.
-	rcvMu         sync.Mutex `state:"nosave"`
-	rcvReady      bool
-	rcvList       udpPacketList
-	rcvBufSizeMax int `state:".(int)"`
-	rcvBufSize    int
-	rcvClosed     bool
+	rcvMu      sync.Mutex `state:"nosave"`
+	rcvReady   bool
+	rcvList    udpPacketList
+	rcvBufSize int
+	rcvClosed  bool
 
 	// The following fields are protected by the mu mutex.
 	mu sync.RWMutex `state:"nosave"`
@@ -144,6 +142,10 @@ type endpoint struct {
 
 	// ops is used to get socket level options.
 	ops tcpip.SocketOptions
+
+	// frozen indicates if the packets should be delivered to the endpoint
+	// during restore.
+	frozen bool
 }
 
 // +stateify savable
@@ -173,14 +175,14 @@ func newEndpoint(s *stack.Stack, netProto tcpip.NetworkProtocolNumber, waiterQue
 		//
 		// Linux defaults to TTL=1.
 		multicastTTL:         1,
-		rcvBufSizeMax:        32 * 1024,
 		multicastMemberships: make(map[multicastMembership]struct{}),
 		state:                StateInitial,
 		uniqueID:             s.UniqueID(),
 	}
-	e.ops.InitHandler(e, e.stack, tcpip.GetStackSendBufferLimits)
+	e.ops.InitHandler(e, e.stack, tcpip.GetStackSendBufferLimits, tcpip.GetStackReceiveBufferLimits)
 	e.ops.SetMulticastLoop(true)
 	e.ops.SetSendBufferSize(32*1024, false /* notify */)
+	e.ops.SetReceiveBufferSize(32*1024, false /* notify */)
 
 	// Override with stack defaults.
 	var ss tcpip.SendBufferSizeOption
@@ -188,9 +190,9 @@ func newEndpoint(s *stack.Stack, netProto tcpip.NetworkProtocolNumber, waiterQue
 		e.ops.SetSendBufferSize(int64(ss.Default), false /* notify */)
 	}
 
-	var rs stack.ReceiveBufferSizeOption
+	var rs tcpip.ReceiveBufferSizeOption
 	if err := s.Option(&rs); err == nil {
-		e.rcvBufSizeMax = rs.Default
+		e.ops.SetReceiveBufferSize(int64(rs.Default), false /* notify */)
 	}
 
 	return e
@@ -622,26 +624,6 @@ func (e *endpoint) SetSockOptInt(opt tcpip.SockOptInt, v int) tcpip.Error {
 		e.mu.Lock()
 		e.sendTOS = uint8(v)
 		e.mu.Unlock()
-
-	case tcpip.ReceiveBufferSizeOption:
-		// Make sure the receive buffer size is within the min and max
-		// allowed.
-		var rs stack.ReceiveBufferSizeOption
-		if err := e.stack.Option(&rs); err != nil {
-			panic(fmt.Sprintf("e.stack.Option(%#v) = %s", rs, err))
-		}
-
-		if v < rs.Min {
-			v = rs.Min
-		}
-		if v > rs.Max {
-			v = rs.Max
-		}
-
-		e.mu.Lock()
-		e.rcvBufSizeMax = v
-		e.mu.Unlock()
-		return nil
 	}
 
 	return nil
@@ -799,12 +781,6 @@ func (e *endpoint) GetSockOptInt(opt tcpip.SockOptInt) (int, tcpip.Error) {
 			p := e.rcvList.Front()
 			v = p.data.Size()
 		}
-		e.rcvMu.Unlock()
-		return v, nil
-
-	case tcpip.ReceiveBufferSizeOption:
-		e.rcvMu.Lock()
-		v := e.rcvBufSizeMax
 		e.rcvMu.Unlock()
 		return v, nil
 
@@ -1255,20 +1231,29 @@ func (e *endpoint) Readiness(mask waiter.EventMask) waiter.EventMask {
 }
 
 // verifyChecksum verifies the checksum unless RX checksum offload is enabled.
-// On IPv4, UDP checksum is optional, and a zero value means the transmitter
-// omitted the checksum generation (RFC768).
-// On IPv6, UDP checksum is not optional (RFC2460 Section 8.1).
 func verifyChecksum(hdr header.UDP, pkt *stack.PacketBuffer) bool {
-	if !pkt.RXTransportChecksumValidated &&
-		(hdr.Checksum() != 0 || pkt.NetworkProtocolNumber == header.IPv6ProtocolNumber) {
-		netHdr := pkt.Network()
-		xsum := header.PseudoHeaderChecksum(ProtocolNumber, netHdr.DestinationAddress(), netHdr.SourceAddress(), hdr.Length())
-		for _, v := range pkt.Data().Views() {
-			xsum = header.Checksum(v, xsum)
-		}
-		return hdr.CalculateChecksum(xsum) == 0xffff
+	if pkt.RXTransportChecksumValidated {
+		return true
 	}
-	return true
+
+	// On IPv4, UDP checksum is optional, and a zero value means the transmitter
+	// omitted the checksum generation, as per RFC 768:
+	//
+	//   An all zero transmitted checksum value means that the transmitter
+	//   generated  no checksum  (for debugging or for higher level protocols that
+	//   don't care).
+	//
+	// On IPv6, UDP checksum is not optional, as per RFC 2460 Section 8.1:
+	//
+	//   Unlike IPv4, when UDP packets are originated by an IPv6 node, the UDP
+	//   checksum is not optional.
+	if pkt.NetworkProtocolNumber == header.IPv4ProtocolNumber && hdr.Checksum() == 0 {
+		return true
+	}
+
+	netHdr := pkt.Network()
+	payloadChecksum := pkt.Data().AsRange().Checksum()
+	return hdr.IsChecksumValid(netHdr.SourceAddress(), netHdr.DestinationAddress(), payloadChecksum)
 }
 
 // HandlePacket is called by the stack when new packets arrive to this transport
@@ -1284,7 +1269,6 @@ func (e *endpoint) HandlePacket(id stack.TransportEndpointID, pkt *stack.PacketB
 	}
 
 	if !verifyChecksum(hdr, pkt) {
-		// Checksum Error.
 		e.stack.Stats().UDP.ChecksumErrors.Increment()
 		e.stats.ReceiveErrors.ChecksumErrors.Increment()
 		return
@@ -1302,7 +1286,8 @@ func (e *endpoint) HandlePacket(id stack.TransportEndpointID, pkt *stack.PacketB
 		return
 	}
 
-	if e.rcvBufSize >= e.rcvBufSizeMax {
+	rcvBufSize := e.ops.GetReceiveBufferSize()
+	if e.frozen || e.rcvBufSize >= int(rcvBufSize) {
 		e.rcvMu.Unlock()
 		e.stack.Stats().UDP.ReceiveBufferErrors.Increment()
 		e.stats.ReceiveErrors.ReceiveBufferOverflow.Increment()
@@ -1435,4 +1420,19 @@ func (e *endpoint) SetOwner(owner tcpip.PacketOwner) {
 // SocketOptions implements tcpip.Endpoint.SocketOptions.
 func (e *endpoint) SocketOptions() *tcpip.SocketOptions {
 	return &e.ops
+}
+
+// freeze prevents any more packets from being delivered to the endpoint.
+func (e *endpoint) freeze() {
+	e.mu.Lock()
+	e.frozen = true
+	e.mu.Unlock()
+}
+
+// thaw unfreezes a previously frozen endpoint using endpoint.freeze() allows
+// new packets to be delivered again.
+func (e *endpoint) thaw() {
+	e.mu.Lock()
+	e.frozen = false
+	e.mu.Unlock()
 }

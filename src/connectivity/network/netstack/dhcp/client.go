@@ -1009,8 +1009,7 @@ func (c *Client) recv(
 			)
 			continue
 		}
-		// TODO(https://gvisor.dev/issues/5049): Abstract away checksum validation when possible.
-		if ip.CalculateChecksum() != 0xffff {
+		if !ip.IsChecksumValid() {
 			_ = syslog.WarnTf(
 				tag,
 				"%s: received damaged IP frame from %s; discarding %d bytes",
@@ -1063,9 +1062,7 @@ func (c *Client) recv(
 		}
 		payload := udp.Payload()
 		if xsum := udp.Checksum(); xsum != 0 {
-			xsum := header.PseudoHeaderChecksum(header.UDPProtocolNumber, ip.DestinationAddress(), ip.SourceAddress(), udp.Length())
-			xsum = header.Checksum(payload, xsum)
-			if udp.CalculateChecksum(xsum) != 0xffff {
+			if !udp.IsChecksumValid(ip.SourceAddress(), ip.DestinationAddress(), header.Checksum(payload, 0)) {
 				_ = syslog.WarnTf(
 					tag,
 					"%s: received damaged UDP frame (%s@%s -> %s); discarding %d bytes",

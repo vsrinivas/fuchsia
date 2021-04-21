@@ -510,20 +510,15 @@ func (ep *endpoint) GetSendBuffer(fidl.Context) (socket.BaseSocketGetSendBufferR
 
 func (ep *endpoint) SetReceiveBuffer(_ fidl.Context, size uint64) (socket.BaseSocketSetReceiveBufferResult, error) {
 	// Guard against overflow.
-	if maxInt := uint64(int(^uint(0) >> 1)); size > maxInt {
-		size = maxInt
+	if size > math.MaxInt64 {
+		size = math.MaxInt64
 	}
-	if err := ep.ep.SetSockOptInt(tcpip.ReceiveBufferSizeOption, int(size)); err != nil {
-		return socket.BaseSocketSetReceiveBufferResultWithErr(tcpipErrorToCode(err)), nil
-	}
+	ep.ep.SocketOptions().SetReceiveBufferSize(int64(size), true)
 	return socket.BaseSocketSetReceiveBufferResultWithResponse(socket.BaseSocketSetReceiveBufferResponse{}), nil
 }
 
 func (ep *endpoint) GetReceiveBuffer(fidl.Context) (socket.BaseSocketGetReceiveBufferResult, error) {
-	size, err := ep.ep.GetSockOptInt(tcpip.ReceiveBufferSizeOption)
-	if err != nil {
-		return socket.BaseSocketGetReceiveBufferResultWithErr(tcpipErrorToCode(err)), nil
-	}
+	size := ep.ep.SocketOptions().GetReceiveBufferSize()
 	return socket.BaseSocketGetReceiveBufferResultWithResponse(socket.BaseSocketGetReceiveBufferResponse{ValueBytes: uint64(size)}), nil
 }
 

@@ -166,11 +166,7 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, he *hardError, netProto t
 		return int32(size), nil
 
 	case C.SO_RCVBUF:
-		size, err := ep.GetSockOptInt(tcpip.ReceiveBufferSizeOption)
-		if err != nil {
-			return nil, err
-		}
-
+		size := ep.SocketOptions().GetReceiveBufferSize()
 		if size > math.MaxInt32 {
 			size = math.MaxInt32
 		}
@@ -541,7 +537,8 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
-		return ep.SetSockOptInt(tcpip.ReceiveBufferSizeOption, int(v))
+		ep.SocketOptions().SetReceiveBufferSize(int64(v), true)
+		return nil
 
 	case C.SO_REUSEADDR:
 		if len(optVal) < sizeOfInt32 {

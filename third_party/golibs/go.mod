@@ -23,17 +23,16 @@ require (
 	go.uber.org/multierr v1.6.0
 	golang.org/x/crypto v0.0.0-20210415154028-4f45737414dc
 	golang.org/x/mod v0.4.2 // indirect
-	golang.org/x/net v0.0.0-20210415231046-e915ea6b2b7d
-	golang.org/x/oauth2 v0.0.0-20210413134643-5e61552d6c78 // indirect
+	golang.org/x/net v0.0.0-20210420210106-798c2154c571
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210419170143-37df388d1f33
+	golang.org/x/sys v0.0.0-20210420205809-ac73e9fd8988
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	gonum.org/v1/gonum v0.9.1
-	google.golang.org/api v0.44.0 // indirect
-	google.golang.org/genproto v0.0.0-20210416161957-9910b6c460de // indirect
+	google.golang.org/api v0.45.0 // indirect
+	google.golang.org/genproto v0.0.0-20210420162539-3c870d7478d2 // indirect
 	google.golang.org/grpc v1.37.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/yaml.v2 v2.4.0
-	gvisor.dev/gvisor v0.0.0-20210419235248-971b7fe85715
+	gvisor.dev/gvisor v0.0.0-20210420205020-03fd0836497d
 )

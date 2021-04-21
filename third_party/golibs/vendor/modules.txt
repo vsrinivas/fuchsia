@@ -138,7 +138,7 @@ golang.org/x/lint/golint
 ## explicit
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20210415231046-e915ea6b2b7d
+# golang.org/x/net v0.0.0-20210420210106-798c2154c571
 ## explicit
 golang.org/x/net/bpf
 golang.org/x/net/context
@@ -154,7 +154,6 @@ golang.org/x/net/ipv4
 golang.org/x/net/ipv6
 golang.org/x/net/trace
 # golang.org/x/oauth2 v0.0.0-20210413134643-5e61552d6c78
-## explicit
 golang.org/x/oauth2
 golang.org/x/oauth2/google
 golang.org/x/oauth2/google/internal/externalaccount
@@ -164,7 +163,7 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20210419170143-37df388d1f33
+# golang.org/x/sys v0.0.0-20210420205809-ac73e9fd8988
 ## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
@@ -205,7 +204,7 @@ gonum.org/v1/gonum/mathext
 gonum.org/v1/gonum/mathext/internal/amos
 gonum.org/v1/gonum/mathext/internal/cephes
 gonum.org/v1/gonum/mathext/internal/gonum
-# google.golang.org/api v0.44.0
+# google.golang.org/api v0.45.0
 ## explicit
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
@@ -232,7 +231,7 @@ google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20210416161957-9910b6c460de
+# google.golang.org/genproto v0.0.0-20210420162539-3c870d7478d2
 ## explicit
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/iam/v1
@@ -333,7 +332,7 @@ google.golang.org/protobuf/types/pluginpb
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
-# gvisor.dev/gvisor v0.0.0-20210419235248-971b7fe85715
+# gvisor.dev/gvisor v0.0.0-20210420205020-03fd0836497d
 ## explicit
 gvisor.dev/gvisor/pkg/gohacks
 gvisor.dev/gvisor/pkg/goid
