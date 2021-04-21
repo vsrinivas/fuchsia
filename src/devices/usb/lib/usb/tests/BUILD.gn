@@ -44,7 +44,7 @@ test("usb-wrapper-test-bin") {
   deps = [
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/banjo/fuchsia.hardware.usb",
-    "//sdk/banjo/fuchsia.hardware.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake-bti",
@@ -64,7 +64,7 @@ test("usb-desc-lib-test-bin") {
   sources = [ "usb-desc-lib-test.cc" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.usb",
-    "//sdk/banjo/fuchsia.hardware.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/lib/fdio",
     "//src/devices/usb/lib/usb",
     "//zircon/public/lib/zxtest",

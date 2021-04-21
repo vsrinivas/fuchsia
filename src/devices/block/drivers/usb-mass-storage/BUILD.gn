@@ -39,7 +39,7 @@ source_set("block") {
     ":usb_mass_storage_bind",
     "//sdk/banjo/fuchsia.hardware.block",
     "//sdk/banjo/fuchsia.hardware.usb",
-    "//sdk/banjo/fuchsia.hardware.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",

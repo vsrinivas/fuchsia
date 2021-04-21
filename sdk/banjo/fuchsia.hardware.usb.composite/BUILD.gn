@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.usb.composite") {
+  fidl_only = true
   sdk_category = "partner"
   sources = [ "usb-composite.banjo" ]
   deps = [

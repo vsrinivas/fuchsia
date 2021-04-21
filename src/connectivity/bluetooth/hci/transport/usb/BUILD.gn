@@ -33,7 +33,7 @@ source_set("common") {
     ":bt_transport_usb_bind",
     "//sdk/banjo/fuchsia.hardware.bt.hci",
     "//sdk/banjo/fuchsia.hardware.usb",
-    "//sdk/banjo/fuchsia.hardware.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",

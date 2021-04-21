@@ -29,7 +29,7 @@ driver_module("usb-dfu") {
   deps = [
     ":usb_dfu_bind",
     "//sdk/banjo/fuchsia.hardware.usb",
-    "//sdk/banjo/fuchsia.hardware.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/fidl/fuchsia.hardware.usb.fwloader:fuchsia.hardware.usb.fwloader_c",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem_c",

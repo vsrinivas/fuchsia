@@ -30,7 +30,7 @@ driver_module("ftdi") {
     "//sdk/banjo/fuchsia.hardware.serial",
     "//sdk/banjo/fuchsia.hardware.serialimpl",
     "//sdk/banjo/fuchsia.hardware.usb",
-    "//sdk/banjo/fuchsia.hardware.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
