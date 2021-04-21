@@ -122,4 +122,25 @@ TEST_F(DebugAdapterContextTest, StoppedEvent) {
   EXPECT_TRUE(event_received);
 }
 
+TEST_F(DebugAdapterContextTest, DisconnectRequest) {
+  bool request_received = false;
+
+  context().set_destroy_connection_callback([&request_received]() { request_received = true; });
+
+  InitializeDebugging();
+
+  // Send disconnect request from client
+  auto response = client().send(dap::DisconnectRequest());
+
+  // Receive and process request in the server.
+  context().OnStreamReadable();
+  loop().RunUntilNoTasks();
+
+  // Run client to receive response.
+  RunClient();
+  auto got = response.get();
+  EXPECT_FALSE(got.error);
+  EXPECT_TRUE(request_received);
+}
+
 }  // namespace zxdb

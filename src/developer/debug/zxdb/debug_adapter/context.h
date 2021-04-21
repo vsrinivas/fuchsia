@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_DEBUG_ADAPTER_CONTEXT_H_
 
 #include <cstdint>
+#include <utility>
 
 #include <dap/protocol.h>
 #include <dap/session.h>
@@ -50,8 +51,9 @@ struct VariablesRecord {
 // Note: All methods in this class need to be executed on main thread to avoid concurrency bugs.
 class DebugAdapterContext : public ThreadObserver, ProcessObserver {
  public:
-  explicit DebugAdapterContext(Session* session, debug_ipc::StreamBuffer* stream);
+  using DestroyConnectionCallback = std::function<void()>;
 
+  explicit DebugAdapterContext(Session* session, debug_ipc::StreamBuffer* stream);
   virtual ~DebugAdapterContext();
 
   Session* session() { return session_; }
@@ -60,6 +62,12 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver {
 
   // Notification about the stream.
   void OnStreamReadable();
+
+  // Callback to delete the connection and hence this context. This callback will be posted on
+  // message loop.
+  void set_destroy_connection_callback(DestroyConnectionCallback cb) {
+    destroy_connection_cb_ = std::move(cb);
+  }
 
   // ThreadObserver implementation:
   void DidCreateThread(Thread* thread) override;
@@ -110,6 +118,8 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver {
 
   std::map<int64_t, VariablesRecord> id_to_variables_;
   int64_t next_variables_id_ = 1;
+
+  DestroyConnectionCallback destroy_connection_cb_;
 
   void Init();
 };

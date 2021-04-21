@@ -135,15 +135,16 @@ void DebugAdapterServer::ConnectionResolvedMainThread(fbl::unique_fd client) {
   context_ = std::make_unique<DebugAdapterContext>(session_, &buffer_->stream());
   buffer_->set_data_available_callback(
       [context = context_.get()]() { context->OnStreamReadable(); });
+  context_->set_destroy_connection_callback([this]() { OnDisconnect(); });
 
   // Reset the client connection on error.
   buffer_->set_error_callback([this]() {
     FX_LOGS(INFO) << "Connection lost.";
-    OnConnectionError();
+    OnDisconnect();
   });
 }
 
-void DebugAdapterServer::OnConnectionError() {
+void DebugAdapterServer::OnDisconnect() {
   ResetClientConnection();
   for (auto& observer : observers_) {
     observer.ClientDisconnected();

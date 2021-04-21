@@ -66,7 +66,7 @@ class DebugAdapterServer {
 
   bool Accept(fbl::unique_fd& client);
 
-  void OnConnectionError();
+  void OnDisconnect();
 
   void ResetClientConnection();
   FXL_DISALLOW_COPY_AND_ASSIGN(DebugAdapterServer);

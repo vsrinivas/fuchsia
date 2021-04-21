@@ -67,11 +67,6 @@ DebugAdapterContext::~DebugAdapterContext() {
 
 void DebugAdapterContext::Init() {
   // Register handlers with dap module.
-  dap_->registerHandler([](const dap::DisconnectRequest& req) {
-    DEBUG_LOG(DebugAdapter) << "DisconnectRequest received";
-    return dap::DisconnectResponse();
-  });
-
   dap_->registerHandler([this](const dap::LaunchRequestZxdb& req) {
     DEBUG_LOG(DebugAdapter) << "LaunchRequest received";
     return OnRequestLaunch(this, req);
@@ -140,6 +135,15 @@ void DebugAdapterContext::Init() {
         DEBUG_LOG(DebugAdapter) << "VariablesRequest received";
         OnRequestVariables(this, req, callback);
       });
+
+  dap_->registerHandler([this](const dap::DisconnectRequest& req) {
+    DEBUG_LOG(DebugAdapter) << "DisconnectRequest received";
+    if (destroy_connection_cb_) {
+      debug_ipc::MessageLoop::Current()->PostTask(
+          FROM_HERE, [cb = std::move(destroy_connection_cb_)]() mutable { cb(); });
+    }
+    return dap::DisconnectResponse();
+  });
 
   // Register to zxdb session events
   session()->thread_observers().AddObserver(this);
