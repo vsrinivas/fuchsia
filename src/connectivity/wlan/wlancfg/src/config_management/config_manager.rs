@@ -11,7 +11,7 @@ use {
         stash_conversion::*,
     },
     crate::{
-        client::{network_selection::upgrade_security, types},
+        client::types,
         legacy::known_ess_store::{self, EssJsonRead, KnownEss, KnownEssStore},
     },
     anyhow::format_err,
@@ -327,14 +327,14 @@ impl SavedNetworksManager {
     ) -> Vec<NetworkConfig> {
         let mut saved_networks_guard = self.saved_networks.lock().await;
         let mut matching_configs = Vec::new();
-        for security in compatible_policy_securities(scan_security) {
+        for security in compatible_policy_securities(&scan_security) {
             let id = NetworkIdentifier::new(ssid.clone(), security.into());
             // Check for conflicts; PSKs can't be used to connect to WPA3 networks.
             let configs = saved_networks_guard
                 .entry(id)
                 .or_default()
                 .iter()
-                .filter(|config| security_is_compatible(scan_security, &config.credential))
+                .filter(|config| security_is_compatible(&scan_security, &config.credential))
                 .into_iter()
                 .map(Clone::clone);
             matching_configs.extend(configs);
@@ -478,38 +478,58 @@ impl SavedNetworksManager {
     pub async fn record_scan_result(
         &self,
         scan_type: ScanResultType,
-        results: Vec<types::NetworkIdentifier>,
-    ) {
-        match scan_type {
-            ScanResultType::Undirected => {
-                self.record_hidden_prob_event(HiddenProbEvent::SeenPassive, results).await;
-            }
-            ScanResultType::Directed(target_ssids) => {
-                let ids_not_seen: Vec<types::NetworkIdentifier> = target_ssids
-                    .into_iter()
-                    .filter(|id| {
-                        // If we can find a matching scan result, this network should not be
-                        // included in the list of networks we didn't see.
-                        !contains_matching_network(id, &results)
-                    })
-                    .collect();
-                self.record_hidden_prob_event(HiddenProbEvent::NotSeenActive, ids_not_seen).await;
-            }
-        }
-    }
-
-    async fn record_hidden_prob_event(
-        &self,
-        event: HiddenProbEvent,
-        networks: Vec<types::NetworkIdentifier>,
+        results: Vec<types::NetworkIdentifierDetailed>,
     ) {
         let mut saved_networks = self.saved_networks.lock().await;
-        for network in networks.into_iter() {
-            if let Some(networks) = saved_networks.get_mut(&network.into()) {
-                for network in networks.iter_mut() {
-                    network.update_hidden_prob(event);
+        match scan_type {
+            ScanResultType::Undirected => {
+                // For each network we have seen, look for compatible configs and record results.
+                for scan_id in results {
+                    for security in compatible_policy_securities(&scan_id.security_type) {
+                        let configs = match saved_networks
+                            .get_mut(&NetworkIdentifier::new(scan_id.ssid.clone(), security))
+                        {
+                            Some(configs) => configs,
+                            None => continue,
+                        };
+                        // Check that the credential is compatible with the actual security type of
+                        // the scan result.
+                        let compatible_configs = configs.iter_mut().filter(|config| {
+                            security_is_compatible(&scan_id.security_type, &config.credential)
+                        });
+                        for config in compatible_configs {
+                            config.update_hidden_prob(HiddenProbEvent::SeenPassive)
+                        }
+                        // TODO(60619): Update the stash with new probability if it has changed
+                    }
                 }
-                // TODO(60619): Update the stash with new probability if it has changed
+            }
+            ScanResultType::Directed(target_ids) => {
+                // For each config of each targeted ID, check whether there is a scan result that
+                // could be used to connect. If not, update the hidden probability.
+                for target_id in target_ids.into_iter() {
+                    let configs = match saved_networks.get_mut(&target_id.clone().into()) {
+                        Some(configs) => configs,
+                        None => continue,
+                    };
+                    let potential_scans = results
+                        .iter()
+                        .filter(|scan_id| scan_id.ssid == target_id.ssid)
+                        .collect::<Vec<_>>();
+                    for config in configs {
+                        if let None = potential_scans.iter().find(|scan_id| {
+                            compatible_policy_securities(&scan_id.security_type)
+                                .contains(&config.security_type)
+                                && security_is_compatible(
+                                    &scan_id.security_type,
+                                    &config.credential,
+                                )
+                        }) {
+                            config.update_hidden_prob(HiddenProbEvent::NotSeenActive);
+                        }
+                        // TODO(60619): Update the stash with new probability if it has changed
+                    }
+                }
             }
         }
     }
@@ -549,20 +569,6 @@ pub fn select_subset_potentially_hidden_networks(
         .collect()
 }
 
-/// Checks whether the provided saved network identifier could be matched with one in the list of
-/// scanned network identifiers. The SSID must be the same, and the security type must be the same
-/// or one that matches by upgrading.
-fn contains_matching_network(
-    saved_id: &types::NetworkIdentifier,
-    scanned_ids: &Vec<types::NetworkIdentifier>,
-) -> bool {
-    scanned_ids.iter().any(|scanned_id| {
-        let security_matches = saved_id.type_ == scanned_id.type_
-            || upgrade_security(&scanned_id.type_.clone().into()).as_ref() == Some(&saved_id.type_);
-        scanned_id.ssid == saved_id.ssid && security_matches
-    })
-}
-
 /// Returns a security type that could have been upgraded to the provided security type
 /// in an auto connect.
 fn lower_valid_security(security_type: &SecurityType) -> Option<SecurityType> {
@@ -576,9 +582,8 @@ fn lower_valid_security(security_type: &SecurityType) -> Option<SecurityType> {
 /// Returns a list of security types that could be optionally upgraded to match with this detailed
 /// security type. For example, a WPA2/WPA3 could be connected to using a WPA2 config or a WPA3
 /// config.
-#[cfg(test)]
 fn compatible_policy_securities(
-    detailed_security: types::SecurityTypeDetailed,
+    detailed_security: &types::SecurityTypeDetailed,
 ) -> Vec<SecurityType> {
     use fidl_sme::Protection::*;
     match detailed_security {
@@ -597,13 +602,12 @@ fn compatible_policy_securities(
     }
 }
 
-#[cfg(test)]
 fn security_is_compatible(
-    scan_security: types::SecurityTypeDetailed,
+    scan_security: &types::SecurityTypeDetailed,
     credential: &Credential,
 ) -> bool {
-    if scan_security == types::SecurityTypeDetailed::Wpa3Personal
-        || scan_security == types::SecurityTypeDetailed::Wpa3Enterprise
+    if scan_security == &types::SecurityTypeDetailed::Wpa3Personal
+        || scan_security == &types::SecurityTypeDetailed::Wpa3Enterprise
     {
         if let Credential::Psk(_) = credential {
             return false;
@@ -899,7 +903,7 @@ mod tests {
             (Unknown, vec![]),
         ];
         for (detailed_security, security) in lower_compatible_pairs {
-            assert_eq!(compatible_policy_securities(detailed_security), security);
+            assert_eq!(compatible_policy_securities(&detailed_security), security);
         }
     }
 
@@ -1305,7 +1309,15 @@ mod tests {
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
         let saved_seen_id = NetworkIdentifier::new("foo", SecurityType::None);
+        let saved_seen_network = types::NetworkIdentifierDetailed {
+            ssid: saved_seen_id.ssid.clone(),
+            security_type: types::SecurityTypeDetailed::Open,
+        };
         let unsaved_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
+        let unsaved_network = types::NetworkIdentifierDetailed {
+            ssid: unsaved_id.ssid.clone(),
+            security_type: types::SecurityTypeDetailed::Wpa2Personal,
+        };
         let saved_unseen_id = NetworkIdentifier::new("baz", SecurityType::Wpa2);
         let seen_credential = Credential::None;
         let unseen_credential = Credential::Password(b"password".to_vec());
@@ -1321,7 +1333,7 @@ mod tests {
             .expect("Failed to save network");
 
         // Record passive scan results, including the saved network and another network.
-        let seen_networks = vec![saved_seen_id.clone().into(), unsaved_id.clone().into()];
+        let seen_networks = vec![saved_seen_network, unsaved_network];
         saved_networks.record_scan_result(ScanResultType::Undirected, seen_networks).await;
 
         assert_variant!(saved_networks.lookup(saved_seen_id).await.as_slice(), [config] => {
@@ -1330,6 +1342,209 @@ mod tests {
         assert_variant!(saved_networks.lookup(saved_unseen_id).await.as_slice(), [config] => {
             assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
         });
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_record_undirected_scan_with_upgraded_security() {
+        // Test that if we see a different compatible (higher) scan result for a saved network that
+        // could be used to connect, recording the scan results will change the hidden probability.
+        let stash_id = rand_string();
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let id = NetworkIdentifier::new("foobar", SecurityType::Wpa2);
+        let credential = Credential::Password(b"credential".to_vec());
+
+        // Save the networks
+        saved_networks.store(id.clone(), credential.clone()).await.expect("Failed to save network");
+
+        // Record passive scan results
+        let seen_networks = vec![types::NetworkIdentifierDetailed {
+            ssid: id.ssid.clone(),
+            security_type: types::SecurityTypeDetailed::Wpa3Personal,
+        }];
+        saved_networks.record_scan_result(ScanResultType::Undirected, seen_networks).await;
+        // The network was seen in a passive scan, so hidden probability should be updated.
+        assert_variant!(saved_networks.lookup(id).await.as_slice(), [config] => {
+            assert_eq!(config.hidden_probability, PROB_HIDDEN_IF_SEEN_PASSIVE);
+        });
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_record_undirected_scan_incompatible_credential() {
+        // Test that if we see a different compatible (higher) scan result for a saved network that
+        // could be used to connect, recording the scan results will change the hidden probability.
+        let stash_id = rand_string();
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let id = NetworkIdentifier::new("foobar", SecurityType::Wpa2);
+        let credential = Credential::Psk(vec![8; 32]);
+
+        // Save the networks
+        saved_networks.store(id.clone(), credential.clone()).await.expect("Failed to save network");
+
+        // Record passive scan results, including the saved network and another network.
+        let seen_networks = vec![types::NetworkIdentifierDetailed {
+            ssid: id.ssid.clone(),
+            security_type: types::SecurityTypeDetailed::Wpa3Personal,
+        }];
+        saved_networks.record_scan_result(ScanResultType::Undirected, seen_networks).await;
+        // The network in the passive scan results was not compatible, so hidden probability should
+        // not have been updated.
+        assert_variant!(saved_networks.lookup(id).await.as_slice(), [config] => {
+            assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
+        });
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_record_directed_scan_for_upgraded_security() {
+        // Test that if we see a different compatible (higher) scan result for a saved network that
+        // could be used to connect in a directed scan, the hidden probability will not be lowered.
+        let stash_id = rand_string();
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let id = NetworkIdentifier::new("foobar", SecurityType::Wpa);
+        let credential = Credential::Password(b"credential".to_vec());
+
+        // Save the networks
+        saved_networks.store(id.clone(), credential.clone()).await.expect("Failed to save network");
+        let config =
+            saved_networks.lookup(id.clone()).await.pop().expect("failed to lookup config");
+        assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
+
+        // Record directed scan results. The config's probability hidden should not be lowered
+        // since we did not fail to see it in a directed scan.
+        let seen_networks = vec![types::NetworkIdentifierDetailed {
+            ssid: id.ssid.clone(),
+            security_type: types::SecurityTypeDetailed::Wpa2Personal,
+        }];
+        let target = vec![types::NetworkIdentifier {
+            ssid: id.ssid.clone(),
+            type_: types::SecurityType::Wpa,
+        }];
+        saved_networks.record_scan_result(ScanResultType::Directed(target), seen_networks).await;
+
+        let config =
+            saved_networks.lookup(id.clone()).await.pop().expect("failed to lookup config");
+        assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_record_directed_scan_for_incompatible_credential() {
+        // Test that if we see a network that is not compatible because of the saved credential
+        // (but is otherwise compatible), the directed scan is not considered successful and the
+        // hidden probability of the config is lowered.
+        let stash_id = rand_string();
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let credential = Credential::Psk(vec![11; 32]);
+
+        // Save the networks
+        saved_networks.store(id.clone(), credential.clone()).await.expect("Failed to save network");
+        let config =
+            saved_networks.lookup(id.clone()).await.pop().expect("failed to lookup config");
+        assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
+
+        // Record directed scan results. The seen network does not match the saved network even
+        // though security is compatible, since the security type is not compatible with the PSK.
+        let target = vec![types::NetworkIdentifier {
+            ssid: id.ssid.clone(),
+            type_: types::SecurityType::Wpa2,
+        }];
+        let seen_networks = vec![types::NetworkIdentifierDetailed {
+            ssid: id.ssid.clone(),
+            security_type: types::SecurityTypeDetailed::Wpa3Personal,
+        }];
+        saved_networks.record_scan_result(ScanResultType::Directed(target), seen_networks).await;
+        // The hidden probability should have been lowered because a directed scan failed to find
+        // the network.
+        let config =
+            saved_networks.lookup(id.clone()).await.pop().expect("failed to lookup config");
+        assert!(config.hidden_probability < PROB_HIDDEN_DEFAULT);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_record_directed_scan_no_ssid_match() {
+        // Test that recording directed active scan results does not mistakenly match a config with
+        // a network with a different SSID.
+        let stash_id = rand_string();
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let credential = Credential::Psk(vec![11; 32]);
+        let diff_ssid = b"other-ssid".to_vec();
+
+        // Save the networks
+        saved_networks.store(id.clone(), credential.clone()).await.expect("Failed to save network");
+        let config =
+            saved_networks.lookup(id.clone()).await.pop().expect("failed to lookup config");
+        assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
+
+        // Record directed scan results. We target the saved network but see a different one.
+        let target = vec![types::NetworkIdentifier {
+            ssid: id.ssid.clone(),
+            type_: types::SecurityType::Wpa2,
+        }];
+        let seen_networks = vec![types::NetworkIdentifierDetailed {
+            ssid: diff_ssid,
+            security_type: types::SecurityTypeDetailed::Wpa2Personal,
+        }];
+        saved_networks.record_scan_result(ScanResultType::Directed(target), seen_networks).await;
+
+        let config = saved_networks.lookup(id).await.pop().expect("failed to lookup config");
+        assert!(config.hidden_probability < PROB_HIDDEN_DEFAULT);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_record_directed_one_not_compatible_one_compatible() {
+        // Test that if we see two networks with the same SSID but only one is compatible, the scan
+        // is recorded as successful for the config. In other words it isn't mistakenly recorded as
+        // a failure because of the config that isn't compatible.
+        let stash_id = rand_string();
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let credential = Credential::Password(b"foo-pass".to_vec());
+
+        // Save the networks
+        saved_networks.store(id.clone(), credential.clone()).await.expect("Failed to save network");
+        let config =
+            saved_networks.lookup(id.clone()).await.pop().expect("failed to lookup config");
+        assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
+
+        // Record directed scan results. We see one network with the same SSID that doesn't match,
+        // and one that does match.
+        let target = vec![types::NetworkIdentifier {
+            ssid: id.ssid.clone(),
+            type_: types::SecurityType::Wpa2,
+        }];
+        let seen_networks = vec![
+            types::NetworkIdentifierDetailed {
+                ssid: id.ssid.clone(),
+                security_type: types::SecurityTypeDetailed::Wpa1,
+            },
+            types::NetworkIdentifierDetailed {
+                ssid: id.ssid.clone(),
+                security_type: types::SecurityTypeDetailed::Wpa2Personal,
+            },
+        ];
+        saved_networks.record_scan_result(ScanResultType::Directed(target), seen_networks).await;
+        // Since the directed scan found a matching network, the hidden probability should not
+        // have been lowered.
+        let config = saved_networks.lookup(id).await.pop().expect("failed to lookup config");
+        assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
     }
 
     #[test]

@@ -127,9 +127,7 @@ pub(crate) async fn perform_scan<F>(
 {
     let mut bss_by_network: HashMap<SmeNetworkIdentifier, Vec<types::Bss>> = HashMap::new();
 
-    // Get an SME proxy
-    let mut iface_manager_guard = iface_manager.lock().await;
-    let sme_proxy = match iface_manager_guard.get_sme_proxy_for_scan().await {
+    let sme_proxy = match iface_manager.lock().await.get_sme_proxy_for_scan().await {
         Ok(proxy) => proxy,
         Err(e) => {
             // The attempt to get an SME proxy failed. Send an error to the requester, return early.
@@ -145,13 +143,6 @@ pub(crate) async fn perform_scan<F>(
             return;
         }
     };
-    // Determine whether WPA2/WPA3 is should be considered WPA2 or WPA3.
-    let wpa3_supported = iface_manager_guard.has_wpa3_capable_client().await.unwrap_or_else(|e| {
-        error!("Failed to get whether the device supports WPA3. Assuming no WPA3 support. {}", e);
-        false
-    });
-    // Drop lock on iface manager befor starting a scan.
-    drop(iface_manager_guard);
 
     // Perform an initial passive scan
     let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
@@ -190,7 +181,6 @@ pub(crate) async fn perform_scan<F>(
                     requested_active_scan_ids,
                     &results,
                     saved_networks_manager,
-                    wpa3_supported,
                 )
                 .await;
                 insert_bss_to_network_bss_map(&mut bss_by_network, results, false);
@@ -261,15 +251,12 @@ async fn record_directed_scan_results(
     target_ids: Vec<types::NetworkIdentifier>,
     scan_results: &Vec<fidl_sme::BssInfo>,
     saved_networks_manager: Arc<SavedNetworksManager>,
-    wpa3_supported: bool,
 ) {
     let ids = scan_results
         .iter()
-        .filter_map(|result| {
-            // If the converted security is None, skip this scan result.
-            security_from_sme_protection(result.protection, wpa3_supported).map(|security| {
-                types::NetworkIdentifier { ssid: result.ssid.clone(), type_: security }
-            })
+        .map(|result| types::NetworkIdentifierDetailed {
+            ssid: result.ssid.clone(),
+            security_type: result.protection,
         })
         .collect();
     // TODO(fxbug.dev/70965): modify this result to use the detailed security type

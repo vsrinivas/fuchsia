@@ -76,6 +76,11 @@ pub struct ScanResult {
     pub compatibility: Compatibility,
 }
 
+pub struct NetworkIdentifierDetailed {
+    pub ssid: Ssid,
+    pub security_type: SecurityTypeDetailed,
+}
+
 // An internal version of fidl_policy::Bss with extended information
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bss {
