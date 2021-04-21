@@ -16,7 +16,7 @@ protocol Usb {
 
     // Initiates a control transfer with the device in the IN direction.
     ControlIn(uint8 request_type, uint8 request, uint16 value, uint16 index, zx.time timeout)
-              -> (zx.status status, [Buffer] vector<uint8>:MAX read);
+        -> (zx.status status, [Buffer] vector<uint8>:MAX read);
 
     /// Queues a USB request.
     RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,

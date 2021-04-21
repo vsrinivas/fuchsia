@@ -71,4 +71,3 @@ struct UsbInterfaceDescriptor {
     uint8 b_interface_protocol;
     uint8 i_interface;
 };
-

@@ -2,15 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
+import("//build/fidl/fidl.gni")
 
-banjo("fuchsia.hardware.usb.function") {
-  disable_verification = true
-  fidl_only = true
-  sources = [ "usb-function.banjo" ]
-  deps = [
+fidl("fuchsia.hardware.usb.function") {
+  sources = [ "usb-function.fidl" ]
+  public_deps = [
     "//sdk/banjo/fuchsia.hardware.usb.descriptor",
     "//sdk/banjo/fuchsia.hardware.usb.request",
-    "//sdk/banjo/zx",
+    "//zircon/vdso/zx",
   ]
 }

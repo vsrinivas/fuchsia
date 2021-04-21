@@ -21,7 +21,7 @@ protocol UsbFunction {
 
     /// Configures an endpoint based on provided descriptors.
     ConfigEp(fuchsia.hardware.usb.descriptor.UsbEndpointDescriptor ep_desc,
-                fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor ss_comp_desc) -> (zx.status s);
+             fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor ss_comp_desc) -> (zx.status s);
 
     /// Disables the specified endpoint.
     DisableEp(uint8 address) -> (zx.status s);
@@ -61,7 +61,7 @@ protocol UsbFunctionInterface {
 
     /// Callback for handling ep0 control requests.
     Control(fuchsia.hardware.usb.descriptor.UsbSetup setup, [Buffer] vector<uint8>:MAX write) -> (zx.status status,
-                                                                     [Buffer] vector<uint8>:MAX read);
+                                                                                                  [Buffer] vector<uint8>:MAX read);
     /// Called to inform the function driver when the USB device configured state changes.
     /// Called with configured == true in response to a SET_CONFIGURATION control request
     /// that selects a configuration that contains this function. In this case, the function driver

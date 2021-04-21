@@ -57,12 +57,12 @@ Examples of usb-function drivers:
 * [ftdi-function driver](/src/devices/serial/drivers/ftdi/ftdi-function.cc)
 
 The usb-function driver needs to implement the
-[UsbFunctionInterface](/sdk/banjo/fuchsia.hardware.usb.function/usb-function.banjo#49)
+[UsbFunctionInterface](/sdk/banjo/fuchsia.hardware.usb.function/usb-function.fidl#49)
 banjo interface. These are the functions that are called from the
 usb-virtual-bus library as it sets up the driver in the USB stack.
 
 A usb-function driver binds on top of the
-[UsbFunction](/sdk/banjo/fuchsia.hardware.usb.function/usb-function.banjo#12)
+[UsbFunction](/sdk/banjo/fuchsia.hardware.usb.function/usb-function.fidl#12)
 protocol.  These are the calls that allow the function driver to allocate
 endpoints, register interface callbacks, queue USB requests, and more.
 

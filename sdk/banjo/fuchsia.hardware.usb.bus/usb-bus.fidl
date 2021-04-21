@@ -23,7 +23,7 @@ protocol UsbBus {
     DeviceRemoved([InOut] uint64 hub_device, uint32 port) -> (zx.status s);
     /// Used by USB hub driver to register its USB hub protocol with the USB bus driver.
     SetHubInterface([InOut] uint64 usb_device, fuchsia.hardware.usb.hub.UsbHubInterface hub)
--> (zx.status s);
+        -> (zx.status s);
 };
 
 /// Interface for use by the HCI controller to use to notify when devices are added and removed.
