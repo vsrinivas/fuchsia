@@ -24,7 +24,7 @@ class AllocatedNodeIterator {
   AllocatedNodeIterator(AllocatedNodeIterator&&) = default;
   AllocatedNodeIterator& operator=(AllocatedNodeIterator&&) = default;
 
-  AllocatedNodeIterator(NodeFinder* finder, Inode* inode);
+  AllocatedNodeIterator(NodeFinder* finder, uint32_t node_index, Inode* inode);
 
   // Returns true when there are no more nodes to traverse.
   bool Done() const;
@@ -40,6 +40,8 @@ class AllocatedNodeIterator {
   // It is unsafe to call this method if |Done()| is true.
   uint32_t NextNodeIndex() const;
 
+  uint32_t current_node_index() const { return current_node_index_; }
+
  private:
   // Number of extents in the current node.
   uint32_t NodeExtentCount() const;
@@ -48,6 +50,7 @@ class AllocatedNodeIterator {
   bool IsInode() const;
 
   NodeFinder* finder_;
+  uint32_t current_node_index_ = 0;
   Inode* inode_;
   ExtentContainer* extent_node_ = nullptr;
   // The extent index into the global inode (monotonically increases).

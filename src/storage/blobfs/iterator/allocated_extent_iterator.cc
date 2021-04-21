@@ -17,7 +17,7 @@ namespace blobfs {
 
 AllocatedExtentIterator::AllocatedExtentIterator(NodeFinder* finder, InodePtr inode,
                                                  uint32_t node_index)
-    : inode_(std::move(inode)), node_index_(node_index), node_iterator_(finder, inode_.get()) {}
+    : inode_(std::move(inode)), node_iterator_(finder, node_index, inode_.get()) {}
 
 zx::status<AllocatedExtentIterator> AllocatedExtentIterator::Create(NodeFinder* finder,
                                                                     uint32_t node_index) {
@@ -32,26 +32,27 @@ zx::status<AllocatedExtentIterator> AllocatedExtentIterator::Create(NodeFinder* 
   return zx::ok(AllocatedExtentIterator(finder, std::move(inode.value()), node_index));
 }
 
-bool AllocatedExtentIterator::Done() const { return ExtentIndex() == inode_->extent_count; }
+bool AllocatedExtentIterator::Done() const { return ExtentIndex() >= inode_->extent_count; }
 
-zx_status_t AllocatedExtentIterator::Next(const Extent** out) {
-  ZX_DEBUG_ASSERT(!Done());
-  zx_status_t status = ValidateExtentCount();
-  if (status != ZX_OK) {
-    return status;
+zx::status<const Extent*> AllocatedExtentIterator::Next() {
+  if (Done()) {
+    return zx::error(ZX_ERR_BAD_STATE);
   }
 
-  const Extent* extent = GetExtent();
-  UpdateIndices(*extent);
-  if (!Done() && local_index_ == (IsInode() ? kInlineMaxExtents : extent_node_->extent_count)) {
-    zx_status_t status = NextContainer();
-    if (status != ZX_OK) {
-      return status;
+  const Extent& extent = GetExtent();
+
+  if (ExtentIndex() + 1 < inode_->extent_count &&
+      local_index_ + 1 >= (IsInode() ? kInlineMaxExtents : extent_node_->extent_count)) {
+    if (zx_status_t status = NextContainer(); status != ZX_OK) {
+      return zx::error(status);
     }
+  } else {
+    ++local_index_;
   }
 
-  *out = extent;
-  return ZX_OK;
+  block_index_ += extent.Length();
+
+  return zx::ok(&extent);
 }
 
 uint64_t AllocatedExtentIterator::BlockIndex() const { return block_index_; }
@@ -62,13 +63,14 @@ uint32_t AllocatedExtentIterator::ExtentIndex() const {
 
 uint32_t AllocatedExtentIterator::NodeIndex() const {
   ZX_DEBUG_ASSERT(!Done());
-  return node_index_;
+  return node_iterator_.current_node_index();
 }
 
-zx_status_t AllocatedExtentIterator::VerifyIteration(NodeFinder* finder, Inode* inode) {
+zx_status_t AllocatedExtentIterator::VerifyIteration(NodeFinder* finder, uint32_t node_index,
+                                                     Inode* inode) {
   uint32_t container_count = 0;
-  AllocatedNodeIterator fast(finder, inode);
-  AllocatedNodeIterator slow(finder, inode);
+  AllocatedNodeIterator fast(finder, node_index, inode);
+  AllocatedNodeIterator slow(finder, node_index, inode);
   while (!fast.Done()) {
     zx::status<ExtentContainer*> status = fast.Next();
     if (status.is_error()) {
@@ -108,26 +110,11 @@ zx_status_t AllocatedExtentIterator::VerifyIteration(NodeFinder* finder, Inode* 
 
 bool AllocatedExtentIterator::IsInode() const { return extent_node_ == nullptr; }
 
-zx_status_t AllocatedExtentIterator::ValidateExtentCount() const {
-  ZX_ASSERT(local_index_ < (IsInode() ? kInlineMaxExtents : kContainerMaxExtents));
-  if (!IsInode() && local_index_ > extent_node_->extent_count) {
-    // This container doesn't recognize this extent as valid.
-    FX_LOGS(ERROR) << "Extent is invalid: " << local_index_;
-    return ZX_ERR_IO_DATA_INTEGRITY;
-  }
-  return ZX_OK;
-}
-
-void AllocatedExtentIterator::UpdateIndices(const Extent& extent) {
-  block_index_ += extent.Length();
-  local_index_++;
-}
-
-const Extent* AllocatedExtentIterator::GetExtent() const {
+const Extent& AllocatedExtentIterator::GetExtent() const {
   if (IsInode()) {
-    return &inode_->extents[local_index_];
+    return inode_->extents[local_index_];
   } else {
-    return &extent_node_->extents[local_index_];
+    return extent_node_->extents[local_index_];
   }
 }
 
@@ -145,9 +132,6 @@ zx_status_t AllocatedExtentIterator::NextContainer() {
   }
   extent_node_ = status.value();
   local_index_ = 0;
-  if (extent_node_->previous_node != node_index_) {
-    return ZX_ERR_IO_DATA_INTEGRITY;
-  }
   node_index_ = node_index;
 
   return ZX_OK;

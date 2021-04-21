@@ -130,12 +130,141 @@ class BlobfsCheckerTest : public testing::Test {
   Blobfs* blobfs() { return setup_.blobfs(); }
   std::unique_ptr<Blobfs> TakeBlobfs() { return setup_.TakeBlobfs(); }
 
+  void CorruptNode(fit::callback<void(Inode& node)> corrupt_fn,
+                   std::unique_ptr<BlockDevice>* device_out) {
+    fbl::RefPtr<fs::Vnode> root;
+    ASSERT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
+
+    std::string name;
+    AddRandomBlob(*root, 1024, nullptr, nullptr, &name);
+
+    fbl::RefPtr<fs::Vnode> file;
+    ASSERT_EQ(root->Lookup(name, &file), ZX_OK);
+    auto blob = fbl::RefPtr<Blob>::Downcast(file);
+
+    const uint32_t inode = blob->Ino();
+    const uint32_t node_block = NodeMapStartBlock(blobfs()->Info()) + inode / kBlobfsInodesPerBlock;
+
+    blob.reset();
+    file.reset();
+    root.reset();
+
+    // Unmount.
+    auto device = Blobfs::Destroy(TakeBlobfs());
+
+    storage::VmoBuffer buffer;
+    ASSERT_EQ(buffer.Initialize(device.get(), 1, kBlobfsBlockSize, "test_buffer"), ZX_OK);
+    block_fifo_request_t request{
+        .opcode = BLOCKIO_READ,
+        .vmoid = buffer.vmoid(),
+        .length = kBlobfsBlockSize / kBlockSize,
+        .vmo_offset = 0,
+        .dev_offset = node_block * kBlobfsBlockSize / kBlockSize,
+    };
+    ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
+
+    Inode& node = reinterpret_cast<Inode*>(buffer.Data(0))[inode % kBlobfsInodesPerBlock];
+
+    // Quick check to give us confidence that we got the right node.
+    EXPECT_EQ(node.blob_size, 1024u);
+
+    corrupt_fn(node);
+
+    // Write the change back.
+    request.opcode = BLOCKIO_WRITE;
+    ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
+
+    *device_out = std::move(device);
+  }
+
+  void CorruptExtentContainer(fit::callback<void(ExtentContainer& container)> corrupt_fn,
+                              fit::callback<void(Inode& node)> corrupt_node_fn,
+                              std::unique_ptr<BlockDevice>* device_out) {
+    fbl::RefPtr<fs::Vnode> root;
+    ASSERT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
+
+    // We need to create a blob that uses an extent container, so to do that, we fragment the free
+    // space by creating some blobs and then deleting every other one.
+    std::vector<std::string> names;
+    for (int i = 0; i < 16; ++i) {
+      std::string name;
+      AddRandomBlob(*root, 1024, nullptr, nullptr, &name);
+      names.push_back(name);
+    }
+    for (int i = 0; i < 16; i += 2) {
+      ASSERT_EQ(root->Unlink(names[i], false), ZX_OK);
+    }
+
+    // Sync now because the blocks are reserved until the journal is flushed.
+    sync_completion_t sync;
+    root->Sync([&](zx_status_t status) { sync_completion_signal(&sync); });
+    sync_completion_wait(&sync, ZX_TIME_INFINITE);
+
+    // This should end up creating a blob that typically (depending on compression) uses 7 extents.
+    std::string name;
+    AddRandomBlob(*root, 6 * 8192, nullptr, nullptr, &name);
+
+    fbl::RefPtr<fs::Vnode> file;
+    ASSERT_EQ(root->Lookup(name, &file), ZX_OK);
+    auto blob = fbl::RefPtr<Blob>::Downcast(file);
+
+    const uint32_t inode = blob->Ino();
+    auto node = blobfs()->GetNode(inode);
+
+    const uint32_t first_extent_container = node->header.next_node;
+
+    // Check that it did actually use an extent container.
+    ASSERT_NE(node->header.next_node, 0u);
+
+    const uint64_t node_map_start_block = NodeMapStartBlock(blobfs()->Info());
+    const uint64_t first_extent_container_block =
+        node_map_start_block + first_extent_container / kBlobfsInodesPerBlock;
+
+    // Assume that the inode and extent container are in the same block.
+    ASSERT_EQ(first_extent_container / kBlobfsInodesPerBlock, inode / kBlobfsInodesPerBlock);
+
+    node.value().reset();
+    blob.reset();
+    file.reset();
+    root.reset();
+
+    // Unmount.
+    auto device = Blobfs::Destroy(TakeBlobfs());
+
+    storage::VmoBuffer buffer;
+    ASSERT_EQ(buffer.Initialize(device.get(), 1, kBlobfsBlockSize, "test_buffer"), ZX_OK);
+    block_fifo_request_t request{
+        .opcode = BLOCKIO_READ,
+        .vmoid = buffer.vmoid(),
+        .length = kBlobfsBlockSize / kBlockSize,
+        .vmo_offset = 0,
+        .dev_offset = first_extent_container_block * kBlobfsBlockSize / kBlockSize,
+    };
+    ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
+
+    ExtentContainer& container = reinterpret_cast<ExtentContainer*>(
+        buffer.Data(0))[first_extent_container % kBlobfsInodesPerBlock];
+    EXPECT_EQ(container.previous_node, inode);
+
+    if (corrupt_node_fn) {
+      Inode& node = reinterpret_cast<Inode*>(buffer.Data(0))[inode % kBlobfsInodesPerBlock];
+      corrupt_node_fn(node);
+    }
+    corrupt_fn(container);
+
+    // Write the change back.
+    request.opcode = BLOCKIO_WRITE;
+    ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
+
+    *device_out = std::move(device);
+  }
+
  protected:
   BlobfsTestSetup setup_;
 };
 
 TEST_F(BlobfsCheckerTest, TestEmpty) {
-  BlobfsChecker checker(TakeBlobfs());
+  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_TRUE(checker.Check());
 }
 
@@ -147,7 +276,7 @@ TEST_F(BlobfsCheckerTest, TestNonEmpty) {
   }
   EXPECT_EQ(Sync(), ZX_OK);
 
-  BlobfsChecker checker(TakeBlobfs());
+  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_TRUE(checker.Check());
 }
 
@@ -162,7 +291,7 @@ TEST_F(BlobfsCheckerTest, TestInodeWithUnallocatedBlock) {
   Extent e(1, 1);
   blobfs()->GetAllocator()->FreeBlocks(e);
 
-  BlobfsChecker checker(TakeBlobfs());
+  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(checker.Check());
 }
 
@@ -178,7 +307,7 @@ TEST_F(BlobfsCheckerTest, TestAllocatedBlockCountTooHigh) {
   superblock.alloc_block_count++;
   ASSERT_EQ(UpdateSuperblock(superblock), ZX_OK);
 
-  BlobfsChecker checker(TakeBlobfs());
+  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(checker.Check());
 }
 
@@ -194,14 +323,14 @@ TEST_F(BlobfsCheckerTest, TestAllocatedBlockCountTooLow) {
   superblock.alloc_block_count = 2;
   UpdateSuperblock(superblock);
 
-  BlobfsChecker checker(TakeBlobfs());
+  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(checker.Check());
 }
 
 TEST_F(BlobfsCheckerTest, TestFewerThanMinimumBlocksAllocated) {
   Extent e(0, 1);
   blobfs()->GetAllocator()->FreeBlocks(e);
-  BlobfsChecker checker(TakeBlobfs());
+  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(checker.Check());
 }
 
@@ -215,7 +344,7 @@ TEST_F(BlobfsCheckerTest, TestAllocatedInodeCountTooHigh) {
   superblock.alloc_inode_count++;
   UpdateSuperblock(superblock);
 
-  BlobfsChecker checker(TakeBlobfs());
+  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(checker.Check());
 }
 
@@ -231,7 +360,7 @@ TEST_F(BlobfsCheckerTest, TestAllocatedInodeCountTooLow) {
   superblock.alloc_inode_count = 2;
   UpdateSuperblock(superblock);
 
-  BlobfsChecker checker(TakeBlobfs());
+  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(checker.Check());
 }
 
@@ -250,55 +379,107 @@ TEST_F(BlobfsCheckerTest, TestCorruptBlobs) {
   }
   EXPECT_EQ(Sync(), ZX_OK);
 
-  BlobfsChecker checker(TakeBlobfs());
+  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(checker.Check());
 }
 
 TEST_F(BlobfsCheckerTest, BadPreviousNode) {
-  fbl::RefPtr<fs::Vnode> root;
-  ASSERT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
+  std::unique_ptr<BlockDevice> device;
+  CorruptExtentContainer([](ExtentContainer& container) { ++container.previous_node; }, {},
+                         &device);
+  // At present, this issue gets caught at mount time.
+  ASSERT_EQ(setup_.Mount(std::move(device)), ZX_ERR_IO_DATA_INTEGRITY);
+}
 
-  // We need to create a blob that uses an extent container, so to do that, we fragment the free
-  // space by creating some blobs and then deleting every other one.
-  std::vector<std::string> names;
-  for (int i = 0; i < 16; ++i) {
-    std::string name;
-    AddRandomBlob(*root, 1024, nullptr, nullptr, &name);
-    names.push_back(name);
-  }
-  for (int i = 0; i < 16; i += 2) {
-    ASSERT_EQ(root->Unlink(names[i], false), ZX_OK);
-  }
+TEST_F(BlobfsCheckerTest, CorruptReserved) {
+  std::unique_ptr<BlockDevice> device;
+  CorruptNode([](Inode& node) { node.reserved = 1; }, &device);
+  ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
 
-  // Sync now because the blocks are reserved until the journal is flushed.
-  sync_completion_t sync;
-  root->Sync([&](zx_status_t status) { sync_completion_signal(&sync); });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  BlobfsChecker strict_checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  EXPECT_FALSE(strict_checker.Check());
 
-  // This should end up creating a blob that uses 9 extents.
-  std::string name;
-  AddRandomBlob(*root, 8 * 8192, nullptr, nullptr, &name);
+  BlobfsChecker checker(strict_checker.TakeBlobfs());
+  EXPECT_TRUE(checker.Check());
+}
 
-  fbl::RefPtr<fs::Vnode> file;
-  ASSERT_EQ(root->Lookup(name, &file), ZX_OK);
-  auto blob = fbl::RefPtr<Blob>::Downcast(file);
+TEST_F(BlobfsCheckerTest, CorruptFlags) {
+  std::unique_ptr<BlockDevice> device;
+  CorruptNode([](Inode& node) { node.header.flags |= ~kBlobFlagMaskValid; }, &device);
+  ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
 
-  const uint32_t inode = blob->Ino();
-  auto node = blobfs()->GetNode(inode);
+  BlobfsChecker strict_checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  EXPECT_FALSE(strict_checker.Check());
 
-  const uint32_t first_extent_container = node->header.next_node;
+  BlobfsChecker checker(strict_checker.TakeBlobfs());
+  EXPECT_TRUE(checker.Check());
+}
 
-  // Check that it did actually use an extent container.
-  ASSERT_NE(node->header.next_node, 0u);
+TEST_F(BlobfsCheckerTest, CorruptVersion) {
+  std::unique_ptr<BlockDevice> device;
+  CorruptNode([](Inode& node) { node.header.version = kBlobNodeVersion + 1; }, &device);
+  ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
 
+  BlobfsChecker strict_checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  EXPECT_FALSE(strict_checker.Check());
+
+  BlobfsChecker checker(strict_checker.TakeBlobfs());
+  EXPECT_TRUE(checker.Check());
+}
+
+TEST_F(BlobfsCheckerTest, CorruptFlagsInExtentContainer) {
+  std::unique_ptr<BlockDevice> device;
+  CorruptExtentContainer(
+      [](ExtentContainer& container) { container.header.flags |= kBlobFlagLZ4Compressed; }, {},
+      &device);
+  ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
+
+  BlobfsChecker strict_checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  EXPECT_FALSE(strict_checker.Check());
+
+  BlobfsChecker checker(strict_checker.TakeBlobfs());
+  EXPECT_TRUE(checker.Check());
+}
+
+TEST_F(BlobfsCheckerTest, CorruptNextNodeInInode) {
+  std::unique_ptr<BlockDevice> device;
+  CorruptNode(
+      [](Inode& node) {
+        // This only works because corrupt node currently only creates one extent container.
+        ASSERT_EQ(node.header.next_node, kMaxNodeId);
+        node.header.next_node = 0;
+      },
+      &device);
+  ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
+
+  BlobfsChecker strict_checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  EXPECT_FALSE(strict_checker.Check());
+
+  BlobfsChecker checker(strict_checker.TakeBlobfs());
+  EXPECT_TRUE(checker.Check());
+}
+
+TEST_F(BlobfsCheckerTest, CorruptNextNodeInExtentContainer) {
+  std::unique_ptr<BlockDevice> device;
+  CorruptExtentContainer(
+      [](ExtentContainer& container) {
+        // This only works because CorruptExtentContainer currently only creates one extent
+        // container, so this should be the last one.
+        ASSERT_EQ(container.header.next_node, kMaxNodeId);
+        container.header.next_node = 0;
+      },
+      {}, &device);
+  ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
+
+  BlobfsChecker strict_checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  EXPECT_FALSE(strict_checker.Check());
+
+  BlobfsChecker checker(strict_checker.TakeBlobfs());
+  EXPECT_TRUE(checker.Check());
+}
+
+TEST_F(BlobfsCheckerTest, CorruptUnallocatedNode) {
   const uint64_t node_map_start_block = NodeMapStartBlock(blobfs()->Info());
-  const uint64_t first_extent_container_block =
-      node_map_start_block + first_extent_container / kBlobfsInodesPerBlock;
-
-  node.value().reset();
-  blob.reset();
-  file.reset();
-  root.reset();
 
   // Unmount.
   auto device = setup_.Unmount();
@@ -311,27 +492,38 @@ TEST_F(BlobfsCheckerTest, BadPreviousNode) {
         .vmoid = buffer.vmoid(),
         .length = kBlobfsBlockSize / kBlockSize,
         .vmo_offset = 0,
-        .dev_offset = first_extent_container_block * kBlobfsBlockSize / kBlockSize,
+        .dev_offset = node_map_start_block * kBlobfsBlockSize / kBlockSize,
     };
     ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
-    ExtentContainer& container = reinterpret_cast<ExtentContainer*>(
-        buffer.Data(0))[first_extent_container % kBlobfsInodesPerBlock];
-    ASSERT_EQ(container.previous_node, inode);
+    Inode* node = reinterpret_cast<Inode*>(buffer.Data(0));
+    unsigned i;
+    for (i = 0; i < kBlobfsInodesPerBlock && node[i].header.IsAllocated(); ++i) {
+    }
+    ASSERT_LT(i, kBlobfsInodesPerBlock);
 
-    // Corrupt the previous node.
-    container.previous_node = inode + 1;
+    node[i].header.flags = kBlobFlagLZ4Compressed;
 
     // Write the change back.
     request.opcode = BLOCKIO_WRITE;
     ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
   }
 
-  ASSERT_EQ(ZX_OK, setup_.Mount(std::move(device)));
-  BlobfsChecker checker(TakeBlobfs());
+  ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
 
-  // Fsck should fail.
-  EXPECT_FALSE(checker.Check());
+  BlobfsChecker strict_checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  EXPECT_FALSE(strict_checker.Check());
+
+  BlobfsChecker checker(strict_checker.TakeBlobfs());
+  EXPECT_TRUE(checker.Check());
+}
+
+TEST_F(BlobfsCheckerTest, CorruptExtentCountInExtentContainer) {
+  std::unique_ptr<BlockDevice> device;
+  CorruptExtentContainer([](ExtentContainer& container) { container.extent_count += 100; },
+                         [](Inode& node) { node.extent_count += 100; }, &device);
+  // At present, this issue gets caught at mount time.
+  ASSERT_EQ(setup_.Mount(std::move(device)), ZX_ERR_IO_DATA_INTEGRITY);
 }
 
 }  // namespace

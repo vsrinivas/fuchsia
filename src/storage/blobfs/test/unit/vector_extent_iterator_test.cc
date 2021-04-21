@@ -70,10 +70,10 @@ TEST(VectorExtentIteratorTest, MultiExtent) {
   for (size_t i = 0; i < kAllocatedExtents; i++) {
     ASSERT_FALSE(iter.Done());
 
-    const Extent* extent;
-    ASSERT_EQ(iter.Next(&extent), ZX_OK);
-    ASSERT_TRUE(extents[i].extent() == *extent);
-    blocks_seen += extent->Length();
+    auto extent_or = iter.Next();
+    ASSERT_EQ(extent_or.status_value(), ZX_OK);
+    ASSERT_TRUE(extents[i].extent() == *extent_or.value());
+    blocks_seen += extent_or.value()->Length();
     ASSERT_EQ(blocks_seen, iter.BlockIndex());
   }
 

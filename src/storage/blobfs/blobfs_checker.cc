@@ -51,9 +51,33 @@ bool BlobfsChecker::TraverseInodeBitmap() {
     ZX_ASSERT_MSG(inode.is_ok(), "Failed to get node %u: status=%d", n, inode.status_value());
     if (inode->header.IsAllocated()) {
       alloc_inodes_++;
+
+      if (options_.strict) {
+        if (inode->reserved != 0) {
+          FX_LOGS(ERROR) << "check: reserved field non-zero: 0x" << std::hex << inode->reserved;
+          valid = false;
+        }
+
+        if ((inode->header.flags & ~kBlobFlagMaskValid)) {
+          FX_LOGS(ERROR) << "check: unexpected flags set: 0x" << std::hex << inode->header.flags;
+          valid = false;
+        }
+
+        if (inode->header.version != kBlobNodeVersion) {
+          FX_LOGS(ERROR) << "check: unexpected node version: " << inode->header.version;
+          valid = false;
+        }
+      }
+
       if (inode->header.IsExtentContainer()) {
-        // Extent containers are effectively validated as we traverse all the extents of a blob
-        // below.
+        if (options_.strict &&
+            (inode->header.flags & ~(kBlobFlagAllocated | kBlobFlagExtentContainer))) {
+          FX_LOGS(ERROR) << "check: unexpected flags set on extent container: 0x" << std::hex
+                         << inode->header.flags;
+          valid = false;
+        }
+
+        // Extent containers are further validated as we traverse all the extents of a blob below.
         continue;
       }
 
@@ -64,14 +88,14 @@ bool BlobfsChecker::TraverseInodeBitmap() {
                     extents.status_value());
 
       while (!extents->Done()) {
-        const Extent* extent;
-        zx_status_t status = extents->Next(&extent);
-        if (status != ZX_OK) {
+        auto extent_or = extents->Next();
+        if (extent_or.is_error()) {
           FX_LOGS(ERROR) << "check: Failed to acquire extent " << extents->ExtentIndex()
                          << " within inode " << n << ": " << *inode.value();
           blob_valid = false;
           break;
         }
+        const Extent* extent = extent_or.value();
         if (extent->Length() == 0) {
           FX_LOGS(ERROR) << "check: Found zero-length extent at idx " << extents->ExtentIndex()
                          << " within inode " << n << ": " << *inode.value();
@@ -93,6 +117,12 @@ bool BlobfsChecker::TraverseInodeBitmap() {
         inode_blocks_ += extent->Length();
       }
 
+      if (options_.strict && extents->node_prelude().next_node != kMaxNodeId) {
+        FX_LOGS(ERROR) << "check: unexpected next_node: " << std::hex
+                       << extents->node_prelude().next_node << " != " << kMaxNodeId;
+        valid = false;
+      }
+
       if (blob_valid) {
         if (zx_status_t status = blobfs_->LoadAndVerifyBlob(n); status != ZX_OK) {
           FX_LOGS(ERROR) << "check: detected inode " << n << " with bad state: " << status;
@@ -102,8 +132,13 @@ bool BlobfsChecker::TraverseInodeBitmap() {
       if (!blob_valid) {
         valid = false;
       }
+    } else {  // not allocated...
+      if (options_.strict && inode->header.flags != 0) {
+        FX_LOGS(ERROR) << "check: unallocated node with non-zero flags: " << inode->header.flags;
+        valid = false;
+      }
     }
-  }
+  }  // for ...
   return valid;
 }
 

@@ -36,7 +36,7 @@ class AllocatedExtentIterator : public ExtentIterator {
   // ExtentIterator interface.
 
   bool Done() const final;
-  zx_status_t Next(const Extent** out) final;
+  zx::status<const Extent*> Next() final;
   uint64_t BlockIndex() const final;
 
   ////////////////
@@ -51,7 +51,12 @@ class AllocatedExtentIterator : public ExtentIterator {
   uint32_t NodeIndex() const;
 
   // Returns |ZX_OK| when the node list can be safely traversed.
-  static zx_status_t VerifyIteration(NodeFinder* finder, Inode* inode);
+  static zx_status_t VerifyIteration(NodeFinder* finder, uint32_t node_index, Inode* inode);
+
+  // Returns the prelude for the current node.
+  const NodePrelude& node_prelude() const {
+    return extent_node_ ? extent_node_->header : inode_->header;
+  }
 
  private:
   AllocatedExtentIterator(NodeFinder* finder, InodePtr inode, uint32_t node_index);
@@ -59,14 +64,8 @@ class AllocatedExtentIterator : public ExtentIterator {
   // Indicates if the current node is the inode (as opposed to a container).
   bool IsInode() const;
 
-  // Returns |ZX_OK| if the container can accept another extent.
-  zx_status_t ValidateExtentCount() const;
-
-  // Moves the block, extent, and local indices forward.
-  void UpdateIndices(const Extent& extent);
-
   // Acquires the current extent.
-  const Extent* GetExtent() const;
+  const Extent& GetExtent() const;
 
   // Moves from either an inode to a container, or from one container to another.
   //

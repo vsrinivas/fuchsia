@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_ITERATOR_EXTENT_ITERATOR_H_
 #define SRC_STORAGE_BLOBFS_ITERATOR_EXTENT_ITERATOR_H_
 
+#include <lib/zx/status.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <zircon/types.h>
@@ -22,8 +23,8 @@ class ExtentIterator {
   // Returns true if there are no more extents to be consumed.
   virtual bool Done() const = 0;
 
-  // On success, returns ZX_OK and the next extent in |out|.
-  virtual zx_status_t Next(const Extent** out) = 0;
+  // On success, returns the next extent.
+  virtual zx::status<const Extent*> Next() = 0;
 
   // Returns the number of blocks iterated past already. Updated on each
   // call to |Next|.

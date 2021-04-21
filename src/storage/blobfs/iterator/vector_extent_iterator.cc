@@ -18,13 +18,12 @@ VectorExtentIterator::VectorExtentIterator(const fbl::Vector<ReservedExtent>& ex
 
 bool VectorExtentIterator::Done() const { return extent_index_ == extents_.size(); }
 
-zx_status_t VectorExtentIterator::Next(const Extent** out) {
+zx::status<const Extent*> VectorExtentIterator::Next() {
   ZX_DEBUG_ASSERT(!Done());
-  block_count_ += extents_[extent_index_].extent().Length();
-  *out = &extents_[extent_index_].extent();
-
-  extent_index_++;
-  return ZX_OK;
+  const Extent& extent = extents_[extent_index_].extent();
+  block_count_ += extent.Length();
+  ++extent_index_;
+  return zx::ok(&extent);
 }
 
 uint64_t VectorExtentIterator::BlockIndex() const { return block_count_; }

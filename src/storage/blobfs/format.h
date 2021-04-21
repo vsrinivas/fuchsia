@@ -347,17 +347,24 @@ constexpr uint16_t kBlobFlagMaskAnyCompression =
     (kBlobFlagLZ4Compressed | kBlobFlagZSTDCompressed | kBlobFlagZSTDSeekableCompressed |
      kBlobFlagChunkCompressed);
 
+// This mask is the mask of all valid flag bits, but we should be tolerant if we encounter bits set
+// on a filesystem in case the filesystem has been touched by a future version of blobfs.
+constexpr uint16_t kBlobFlagMaskValid =
+    kBlobFlagAllocated | kBlobFlagExtentContainer | kBlobFlagMaskAnyCompression;
+
 // The number of extents within a normal inode.
 constexpr uint32_t kInlineMaxExtents = 1;
 // The number of extents within an extent container node.
 constexpr uint32_t kContainerMaxExtents = 6;
 
+constexpr uint16_t kBlobNodeVersion = 0;
+
 struct __PACKED NodePrelude {
-  uint16_t flags;
-  uint16_t version;
+  uint16_t flags = 0;
+  uint16_t version = kBlobNodeVersion;
   // The next node containing this blob's extents.
   // Should not be used or read if there are no more extents.
-  uint32_t next_node;
+  uint32_t next_node = 0;
 
   bool IsAllocated() const { return flags & kBlobFlagAllocated; }
 

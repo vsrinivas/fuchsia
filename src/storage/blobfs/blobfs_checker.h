@@ -20,6 +20,11 @@ class BlobfsChecker {
   struct Options {
     // If true, repair simple issues.
     bool repair = true;
+
+    // If strict is true, perform checks on things like reserved fields which should be zeroed when
+    // formatted, but might be non-zero if a future version of Blobfs has touched the filesystem in
+    // a compatible way.
+    bool strict = false;
   };
 
   explicit BlobfsChecker(std::unique_ptr<Blobfs> blobfs) : BlobfsChecker(std::move(blobfs), {}) {}
@@ -33,6 +38,8 @@ class BlobfsChecker {
   // only once.
   // Returns true if the filesystem is valid.
   bool Check();
+
+  std::unique_ptr<Blobfs> TakeBlobfs() { return std::move(blobfs_); }
 
  private:
   std::unique_ptr<Blobfs> blobfs_;

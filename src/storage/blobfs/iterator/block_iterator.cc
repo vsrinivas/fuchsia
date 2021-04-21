@@ -26,10 +26,11 @@ zx_status_t BlockIterator::Next(uint32_t length, uint32_t* out_length, uint64_t*
 
   // If there are no blocks left, refill the extent.
   if (!blocks_left_) {
-    zx_status_t status = iterator_->Next(&extent_);
-    if (status != ZX_OK) {
-      return status;
+    auto extent_or = iterator_->Next();
+    if (extent_or.is_error()) {
+      return extent_or.status_value();
     }
+    extent_ = extent_or.value();
     blocks_left_ = extent_->Length();
   }
 

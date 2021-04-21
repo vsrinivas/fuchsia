@@ -319,7 +319,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   // Walks all the extents of a given inode and updates |extents_per_blob| and |used_fragments|
   // metrics.
-  zx_status_t ComputeBlobLevelFragmentation(Inode& inode);
+  zx_status_t ComputeBlobLevelFragmentation(uint32_t node_index, Inode& inode);
 
   // Returns fragmentation details for the filesystem.
   // This fuunction is not a thread safe function nor it is performanct as it ends up scanning

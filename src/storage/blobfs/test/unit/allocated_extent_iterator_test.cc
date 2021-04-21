@@ -109,10 +109,10 @@ TEST(AllocatedExtentIteratorTest, InlineNode) {
     ASSERT_EQ(i, iter->ExtentIndex());
     ASSERT_EQ(blocks_seen, iter->BlockIndex());
 
-    const Extent* extent;
-    ASSERT_EQ(iter->Next(&extent), ZX_OK);
-    ASSERT_TRUE(allocated_extents[i] == *extent);
-    blocks_seen += extent->Length();
+    auto extent_or = iter->Next();
+    ASSERT_EQ(extent_or.status_value(), ZX_OK);
+    ASSERT_TRUE(allocated_extents[i] == *extent_or.value());
+    blocks_seen += extent_or.value()->Length();
   }
 
   ASSERT_TRUE(iter->Done());
@@ -156,10 +156,10 @@ TEST(AllocatedExtentIteratorTest, MultiNode) {
     ASSERT_EQ(i, iter->ExtentIndex());
     ASSERT_EQ(blocks_seen, iter->BlockIndex());
 
-    const Extent* extent;
-    ASSERT_EQ(iter->Next(&extent), ZX_OK);
-    ASSERT_TRUE(allocated_extents[i] == *extent);
-    blocks_seen += extent->Length();
+    auto extent_or = iter->Next();
+    ASSERT_EQ(extent_or.status_value(), ZX_OK);
+    ASSERT_TRUE(allocated_extents[i] == *extent_or.value());
+    blocks_seen += extent_or.value()->Length();
   }
 
   ASSERT_TRUE(iter->Done());
@@ -196,11 +196,10 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
     auto iter = AllocatedExtentIterator::Create(allocator.get(), node_index);
     ASSERT_TRUE(iter.is_ok());
     ASSERT_TRUE(!iter->Done());
-    const Extent* extent;
     for (size_t i = 0; i < kInlineMaxExtents - 1; i++) {
-      ASSERT_EQ(iter->Next(&extent), ZX_OK);
+      ASSERT_EQ(iter->Next().status_value(), ZX_OK);
     }
-    ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter->Next(&extent));
+    ASSERT_EQ(iter->Next().status_value(), ZX_ERR_IO_DATA_INTEGRITY);
   }
 
   // Manually corrupt the next inode to point to an unallocated (but otherwise
@@ -213,11 +212,10 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
     auto iter = AllocatedExtentIterator::Create(allocator.get(), node_index);
     ASSERT_TRUE(iter.is_ok());
     ASSERT_TRUE(!iter->Done());
-    const Extent* extent;
     for (size_t i = 0; i < kInlineMaxExtents - 1; i++) {
-      ASSERT_EQ(iter->Next(&extent), ZX_OK);
+      ASSERT_EQ(iter->Next().status_value(), ZX_OK);
     }
-    ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter->Next(&extent));
+    ASSERT_EQ(iter->Next().status_value(), ZX_ERR_IO_DATA_INTEGRITY);
   }
 
   // Manually corrupt the next inode to point to a completely invalid node.
@@ -229,11 +227,10 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
     auto iter = AllocatedExtentIterator::Create(allocator.get(), node_index);
     ASSERT_TRUE(iter.is_ok());
     ASSERT_TRUE(!iter->Done());
-    const Extent* extent;
     for (size_t i = 0; i < kInlineMaxExtents - 1; i++) {
-      ASSERT_EQ(iter->Next(&extent), ZX_OK);
+      ASSERT_EQ(iter->Next().status_value(), ZX_OK);
     }
-    ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter->Next(&extent));
+    ASSERT_EQ(iter->Next().status_value(), ZX_ERR_IO_DATA_INTEGRITY);
   }
 }
 
@@ -366,42 +363,44 @@ TEST(AllocatedEXtentIteratorTest, VerifyIteration) {
   Inode* inode = inode_ptr.value().get();
 
   // Normal successful iteration
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode), ZX_OK);
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), node_index, inode), ZX_OK);
 
   // Corrupt last node extent count to be too high.
   allocator->GetNode(allocated_nodes[3])->AsExtentContainer()->extent_count++;
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode), ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), node_index, inode),
+            ZX_ERR_OUT_OF_RANGE);
 
   // Correct extent count.
   allocator->GetNode(allocated_nodes[3])->AsExtentContainer()->extent_count--;
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode), ZX_OK);
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), node_index, inode), ZX_OK);
 
   // Skip to the last node from the second, should notice a non-packed node.
   allocator->GetNode(allocated_nodes[1])->AsExtentContainer()->header.next_node =
       allocated_nodes[3];
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode), ZX_ERR_BAD_STATE);
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), node_index, inode),
+            ZX_ERR_IO_DATA_INTEGRITY);
 
   // Correct the node pointer.
   allocator->GetNode(allocated_nodes[1])->AsExtentContainer()->header.next_node =
       allocated_nodes[2];
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode), ZX_OK);
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), node_index, inode), ZX_OK);
 
   // Loop node 2 to point at node 1 to detect the cycle on fast iteration.
   allocator->GetNode(allocated_nodes[2])->AsExtentContainer()->header.next_node =
       allocated_nodes[1];
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode),
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), node_index, inode),
             ZX_ERR_IO_DATA_INTEGRITY);
 
   // Correct the list pointer.
   allocator->GetNode(allocated_nodes[2])->AsExtentContainer()->header.next_node =
       allocated_nodes[3];
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode), ZX_OK);
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), node_index, inode), ZX_OK);
 
   // Loop node 2 to point at itself to detect the cycle on slow iteration.
   inode->extent_count = 999;
   allocator->GetNode(allocated_nodes[2])->AsExtentContainer()->header.next_node =
       allocated_nodes[2];
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode),
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), node_index, inode),
             ZX_ERR_IO_DATA_INTEGRITY);
 }
 

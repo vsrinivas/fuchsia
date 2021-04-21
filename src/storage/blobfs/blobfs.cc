@@ -466,8 +466,11 @@ zx_status_t Blobfs::FreeInode(uint32_t node_index, BlobTransaction& transaction)
         }
       }
 
-      const Extent* extent;
-      ZX_ASSERT(extent_iter->Next(&extent) == ZX_OK);
+      auto extent_or = extent_iter->Next();
+      if (extent_or.is_error()) {
+        return extent_or.status_value();
+      }
+      const Extent* extent = extent_or.value();
 
       // Free the extent.
       FreeExtent(*extent, transaction);
@@ -902,7 +905,7 @@ zx_status_t Blobfs::InitializeVnodes() {
     }
 
     zx_status_t validation_status =
-        AllocatedExtentIterator::VerifyIteration(GetNodeFinder(), inode.value().get());
+        AllocatedExtentIterator::VerifyIteration(GetNodeFinder(), node_index, inode.value().get());
     if (validation_status != ZX_OK) {
       // Whatever the more differentiated error is here, the real root issue is
       // the integrity of the data that was just mirrored from the disk.
@@ -934,7 +937,7 @@ zx_status_t Blobfs::InitializeVnodes() {
   return ZX_OK;
 }
 
-zx_status_t Blobfs::ComputeBlobLevelFragmentation(Inode& inode) {
+zx_status_t Blobfs::ComputeBlobLevelFragmentation(uint32_t node_index, Inode& inode) {
   auto blob_fragmentaion = &metrics_->cobalt_metrics().FragmentationMetrics().extents_per_file;
   auto used_fragmentaion = &metrics_->cobalt_metrics().FragmentationMetrics().in_use_fragments;
   if (inode.extent_count == 0) {
@@ -946,7 +949,7 @@ zx_status_t Blobfs::ComputeBlobLevelFragmentation(Inode& inode) {
     used_fragmentaion->Add(inode.extents[i].Length());
   }
 
-  AllocatedNodeIterator extents_iter(GetNodeFinder(), &inode);
+  AllocatedNodeIterator extents_iter(GetNodeFinder(), node_index, &inode);
   while (!extents_iter.Done()) {
     zx::status<ExtentContainer*> container_or = extents_iter.Next();
     if (container_or.is_error()) {
@@ -975,7 +978,7 @@ void Blobfs::ComputeFragmentationMetrics() {
     }
 
     ++blobs_in_use;
-    if (ComputeBlobLevelFragmentation(*inode.value()) != ZX_OK) {
+    if (ComputeBlobLevelFragmentation(node_index, *inode.value()) != ZX_OK) {
       // We print error and continue.
       FX_LOGS(ERROR) << "Failed getting fragmentaion metrics for blob:" << node_index;
     }

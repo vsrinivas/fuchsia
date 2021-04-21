@@ -15,8 +15,8 @@
 
 namespace blobfs {
 
-AllocatedNodeIterator::AllocatedNodeIterator(NodeFinder* finder, Inode* inode)
-    : finder_(finder), inode_(inode) {
+AllocatedNodeIterator::AllocatedNodeIterator(NodeFinder* finder, uint32_t node_index, Inode* inode)
+    : finder_(finder), current_node_index_(node_index), inode_(inode) {
   ZX_ASSERT(finder_ && inode_);
 }
 
@@ -27,9 +27,10 @@ bool AllocatedNodeIterator::Done() const {
 zx::status<ExtentContainer*> AllocatedNodeIterator::Next() {
   ZX_DEBUG_ASSERT(!Done());
 
-  auto next_node = finder_->GetNode(NextNodeIndex());
+  const uint32_t next_node_index = NextNodeIndex();
+  auto next_node = finder_->GetNode(next_node_index);
   if (next_node.is_error()) {
-    FX_LOGS(ERROR) << "GetNode(" << NextNodeIndex() << ") failed: " << next_node.status_value();
+    FX_LOGS(ERROR) << "GetNode(" << next_node_index << ") failed: " << next_node.status_value();
     if (inode_) {
       FX_LOGS(ERROR) << "Inode: " << *inode_;
     }
@@ -38,13 +39,14 @@ zx::status<ExtentContainer*> AllocatedNodeIterator::Next() {
   ExtentContainer* next = next_node->AsExtentContainer();
 
   ZX_DEBUG_ASSERT(next != nullptr);
-  bool is_container = next->header.IsAllocated() && next->header.IsExtentContainer();
-  if (!is_container) {
-    FX_LOGS(ERROR) << "Next node " << NextNodeIndex() << " invalid: " << *next;
+  if (!next->header.IsAllocated() || !next->header.IsExtentContainer() ||
+      next->previous_node != current_node_index_ || next->extent_count > kContainerMaxExtents) {
+    FX_LOGS(ERROR) << "Next node " << next_node_index << " invalid: " << *next;
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
   extent_index_ += NodeExtentCount();
   extent_node_ = next;
+  current_node_index_ = next_node_index;
 
   return zx::ok(extent_node_);
 }
