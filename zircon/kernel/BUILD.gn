@@ -182,6 +182,7 @@ if (is_kernel) {
       "LK_DEBUGLEVEL=$kernel_debug_level",
       "DEBUG_PRINT_LEVEL=$kernel_debug_print_level",
       "VM_TRACING_LEVEL=$vm_tracing_level",
+      "FUTEX_TRACING_ENABLED=$futex_tracing_enabled",
     ]
 
     if (!disable_kernel_pci) {

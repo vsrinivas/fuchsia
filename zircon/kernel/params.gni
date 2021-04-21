@@ -47,6 +47,9 @@ declare_args() {
   # analysis.
   scheduler_queue_tracing_enabled = false
 
+  # Enables kernel tracing of futex interactions
+  futex_tracing_enabled = false
+
   # Enables tracing of wait queue depths.  Used for post-processing analysis of
   # how deep wait queues tend to be under various loads, as well as how
   # frequently the change depth.

@@ -21,6 +21,10 @@
 
 #define LOCAL_TRACE 0
 
+#ifndef FUTEX_TRACING_ENABLED
+#define FUTEX_TRACING_ENABLED false
+#endif
+
 namespace {  // file scope only
 
 // By default, Futex KTracing is disabled as it introduces some overhead in user
@@ -28,7 +32,7 @@ namespace {  // file scope only
 // debugging issues which could involve futex interactions may enable the
 // tracing by setting this top level flag to true, provided that their
 // investigation can tolerate the overhead.
-constexpr bool kEnableFutexKTracing = false;
+constexpr bool kEnableFutexKTracing = FUTEX_TRACING_ENABLED;
 
 class KTraceBase {
  public:
