@@ -166,8 +166,8 @@ class PortStatus {
   usb_port_status_t GetStatus() {
     fbl::AutoLock l(&mutex_);
     usb_port_status_t status_value;
-    status_value.wPortChange = change_mask_;
-    status_value.wPortStatus = status_mask_;
+    status_value.w_port_change = change_mask_;
+    status_value.w_port_status = status_mask_;
     return status_value;
   }
 
@@ -385,7 +385,7 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
 
   zx_status_t UsbBusConfigureHub(/* zx_device_t* */ uint64_t hub_device, usb_speed_t speed,
                                  const usb_hub_descriptor_t* desc, bool multi_tt) {
-    if (desc->bNbrPorts != emulation_.port_count) {
+    if (desc->b_nbr_ports != emulation_.port_count) {
       return ZX_ERR_INVALID_ARGS;
     }
     if (speed != emulation_.speed) {
@@ -451,7 +451,7 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
     uint8_t mask = 0;
     size_t i = 1;
     for (auto& port : port_status_) {
-      if (port.GetStatus().wPortChange) {
+      if (port.GetStatus().w_port_change) {
         mask |= (1 << i);
       }
       i++;

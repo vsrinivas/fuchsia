@@ -251,18 +251,18 @@ class UsbRootHub : public UsbDevice {
   };
 
   static constexpr usb_hub_descriptor_t hub_descriptor_ = {
-      .bDescLength = sizeof(usb_hub_descriptor_t),
-      .bDescriptorType = USB_HUB_DESC_TYPE,
-      .bNbrPorts = 1,
-      .wHubCharacteristics = 0,
-      .bPowerOn2PwrGood = 1,
-      .bHubContrCurrent = 0,
+      .b_desc_length = sizeof(usb_hub_descriptor_t),
+      .b_descriptor_type = USB_HUB_DESC_TYPE,
+      .b_nbr_ports = 1,
+      .w_hub_characteristics = 0,
+      .b_power_on2_pwr_good = 1,
+      .b_hub_contr_current = 0,
       .payload = {
 
           .hs =
               {
-                  .DeviceRemovable = {0, 0, 0, 0},
-                  .PortPwrCtrlMask = {0, 0, 0, 0},
+                  .device_removable = {0, 0, 0, 0},
+                  .port_pwr_ctrl_mask = {0, 0, 0, 0},
               },
       }};
 };

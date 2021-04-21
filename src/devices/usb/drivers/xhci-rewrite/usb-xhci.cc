@@ -604,8 +604,8 @@ TRBPromise UsbXhci::ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
     slot_context->set_SPEED(speed)
         .set_MULTI_TT(multi_tt)
         .set_HUB(1)
-        .set_PORT_COUNT(desc->bNbrPorts)
-        .set_TTT((speed == USB_SPEED_HIGH) ? ((desc->wHubCharacteristics >> 5) & 3) : 0);
+        .set_PORT_COUNT(desc->b_nbr_ports)
+        .set_TTT((speed == USB_SPEED_HIGH) ? ((desc->w_hub_characteristics >> 5) & 3) : 0);
     Control::Get().FromValue(0).set_Type(Control::EvaluateContextCommand).ToTrb(&cmd);
     cmd.set_SlotID(slot).set_BSR(0);
     cmd.ptr = state->GetInputContext()->phys()[0];

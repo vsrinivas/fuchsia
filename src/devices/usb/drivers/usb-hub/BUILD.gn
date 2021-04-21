@@ -30,7 +30,7 @@ driver_module("usb-hub") {
     "//sdk/banjo/fuchsia.hardware.usb.bus:fuchsia.hardware.usb.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.hub:fuchsia.hardware.usb.hub_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.usb.hubdescriptor",
+    "//sdk/banjo/fuchsia.hardware.usb.hubdescriptor:fuchsia.hardware.usb.hubdescriptor_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",

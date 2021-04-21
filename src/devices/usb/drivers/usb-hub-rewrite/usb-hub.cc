@@ -115,8 +115,8 @@ zx_status_t UsbHubDevice::RunSynchronously(fit::promise<void, zx_status_t> promi
 
 fit::promise<void, zx_status_t> UsbHubDevice::GetPortStatus() {
   std::vector<fit::promise<usb_port_status_t, zx_status_t>> pending_actions;
-  pending_actions.reserve(hub_descriptor_.bNbrPorts);
-  for (uint8_t i = 1; i <= hub_descriptor_.bNbrPorts; i++) {
+  pending_actions.reserve(hub_descriptor_.b_nbr_ports);
+  for (uint8_t i = 1; i <= hub_descriptor_.b_nbr_ports; i++) {
     pending_actions.push_back(GetPortStatus(PortNumber(i)));
   }
   return fit::join_promise_vector(std::move(pending_actions))
@@ -130,7 +130,7 @@ fit::promise<void, zx_status_t> UsbHubDevice::GetPortStatus() {
           }
           fbl::AutoLock l(&async_execution_context_);
           ZX_ASSERT(index <= port_status_.size());
-          port_status_[index].status = result.value().wPortStatus;
+          port_status_[index].status = result.value().w_port_status;
           index++;
         }
         return fit::ok();
@@ -190,8 +190,8 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
               }
               hub_descriptor_ = descriptor.descriptor;
               {
-                port_status_ = fbl::Array<PortStatus>(new PortStatus[hub_descriptor_.bNbrPorts],
-                                                      hub_descriptor_.bNbrPorts);
+                port_status_ = fbl::Array<PortStatus>(new PortStatus[hub_descriptor_.b_nbr_ports],
+                                                      hub_descriptor_.b_nbr_ports);
               }
               auto raw_desc = descriptor.descriptor;
               // TODO (fxbug.dev/57998): Don't pass zxdev() around.
@@ -218,8 +218,8 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
                     return PowerOnPorts()
                         .and_then([this]() {
                           // then wait for bPwrOn2PwrGood (2 millisecond intervals)
-                          return Sleep(
-                              zx::deadline_after(zx::msec(2 * hub_descriptor_.bPowerOn2PwrGood)));
+                          return Sleep(zx::deadline_after(
+                              zx::msec(2 * hub_descriptor_.b_power_on2_pwr_good)));
                         })
                         .and_then([this]() {
                           // Next -- we retrieve the port status
@@ -280,14 +280,14 @@ void UsbHubDevice::InterruptCallback(CallbackRequest request) {
   }
   int port = 1;
   int bit = 1;
-  while (bitmap < bitmap_end && port <= hub_descriptor_.bNbrPorts) {
+  while (bitmap < bitmap_end && port <= hub_descriptor_.b_nbr_ports) {
     if (*bitmap & (1 << bit)) {
       executor_->schedule_task(
           GetPortStatus(PortNumber(static_cast<uint8_t>(port)))
               .and_then([this, port_number = PortNumber(static_cast<uint8_t>(port))](
                             usb_port_status_t& status) {
                 fbl::AutoLock l(&async_execution_context_);
-                port_status_[PortNumberToIndex(port_number).value()].status = status.wPortStatus;
+                port_status_[PortNumberToIndex(port_number).value()].status = status.w_port_status;
                 HandlePortStatusChanged(port_number);
                 return fit::ok();
               }));
@@ -381,8 +381,8 @@ void UsbHubDevice::HandleResetComplete(PortNumber port) {
 
 fit::promise<void, zx_status_t> UsbHubDevice::PowerOnPorts() {
   std::vector<fit::promise<void, zx_status_t>> promises;
-  promises.reserve(hub_descriptor_.bNbrPorts);
-  for (uint8_t i = 0; i < hub_descriptor_.bNbrPorts; i++) {
+  promises.reserve(hub_descriptor_.b_nbr_ports);
+  for (uint8_t i = 0; i < hub_descriptor_.b_nbr_ports; i++) {
     promises.push_back(SetFeature(USB_RECIP_PORT, USB_FEATURE_PORT_POWER, i + 1));
   }
   return Fold(fit::join_promise_vector(std::move(promises)).box());
@@ -399,7 +399,7 @@ fit::promise<usb_port_status_t, zx_status_t> UsbHubDevice::GetPortStatus(PortNum
         return fit::ok(status);
       })
       .and_then([this, port](usb_port_status_t& status) {
-        uint16_t port_change = status.wPortChange;
+        uint16_t port_change = status.w_port_change;
         std::vector<fit::promise<void, zx_status_t>> pending_operations;
         if (port_change & USB_C_PORT_CONNECTION) {
           zxlogf(DEBUG, "USB_C_PORT_CONNECTION ");

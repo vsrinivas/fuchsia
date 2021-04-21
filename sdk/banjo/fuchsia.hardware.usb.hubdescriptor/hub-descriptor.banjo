@@ -44,15 +44,15 @@ const uint32 USB_FEATURE_FORCE_LINKPM_ACCEPT   = 30;
 
 [Packed, PreserveCNames]
 struct Usb2Payload {
-    array<uint8>:4 DeviceRemovable;
-    array<uint8>:4 PortPwrCtrlMask;
+    array<uint8>:4 device_removable;
+    array<uint8>:4 port_pwr_ctrl_mask;
 };
 
 [Packed, PreserveCNames]
 struct Usb3Payload {
-    uint8 bHubHdrDecLat;
-    uint16 wHubDelay;
-    uint16 DeviceRemovable;
+    uint8 b_hub_hdr_dec_lat;
+    uint16 w_hub_delay;
+    uint16 device_removable;
 };
 
 [Packed]
@@ -63,19 +63,19 @@ union UsbHubDescriptorPayload {
 
 [Packed, PreserveCNames]
 struct UsbHubDescriptor {
-    uint8 bDescLength;
-    uint8 bDescriptorType;
-    uint8 bNbrPorts;
-    uint16 wHubCharacteristics;
-    uint8 bPowerOn2PwrGood;
-    uint8 bHubContrCurrent;
+    uint8 b_desc_length;
+    uint8 b_descriptor_type;
+    uint8 b_nbr_ports;
+    uint16 w_hub_characteristics;
+    uint8 b_power_on2_pwr_good;
+    uint8 b_hub_contr_current;
     UsbHubDescriptorPayload payload;
 };
 
 [Packed, PreserveCNames]
 struct UsbPortStatus {
-  uint16 wPortStatus;
-  uint16 wPortChange;
+  uint16 w_port_status;
+  uint16 w_port_change;
 };
 
 // Port Status bits.

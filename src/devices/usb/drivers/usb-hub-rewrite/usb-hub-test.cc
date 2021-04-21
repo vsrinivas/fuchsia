@@ -386,7 +386,7 @@ TEST_F(SyntheticHarness, GetPortStatus) {
         case USB_RECIP_PORT | USB_DIR_IN: {
           usb_port_status_t* stat;
           usb_request_mmap(request, reinterpret_cast<void**>(&stat));
-          stat->wPortChange = i;
+          stat->w_port_change = i;
           usb_request_complete(request, ZX_OK, sizeof(usb_port_status_t), &completion);
           return;
         } break;
@@ -426,7 +426,7 @@ TEST_F(SyntheticHarness, GetPortStatus) {
     ASSERT_OK(RunSynchronously(dev->GetPortStatus(usb_hub::PortNumber(static_cast<uint8_t>(i)))
                                    .and_then([&](usb_port_status_t& port_status) {
                                      ran = true;
-                                     ASSERT_EQ(port_status.wPortChange, i);
+                                     ASSERT_EQ(port_status.w_port_change, i);
                                    })));
     ASSERT_TRUE(ran);
     ASSERT_EQ(features_cleared, i);

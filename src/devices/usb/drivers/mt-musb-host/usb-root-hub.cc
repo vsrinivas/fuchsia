@@ -21,8 +21,8 @@ void HubPort::Connect() {
   // We need to atomically both update the port status bits and signal a port status change.
   fbl::AutoLock _(&status_lock_);
 
-  status_.wPortChange |= USB_C_PORT_CONNECTION;
-  status_.wPortStatus |= USB_PORT_CONNECTION | USB_PORT_ENABLE | USB_PORT_POWER;
+  status_.w_port_change |= USB_C_PORT_CONNECTION;
+  status_.w_port_status |= USB_PORT_CONNECTION | USB_PORT_ENABLE | USB_PORT_POWER;
   connected_ = true;
 
   {
@@ -34,8 +34,8 @@ void HubPort::Connect() {
 void HubPort::Disconnect() {
   fbl::AutoLock _(&status_lock_);
 
-  status_.wPortChange |= USB_C_PORT_CONNECTION;
-  status_.wPortStatus &= static_cast<uint16_t>(~(USB_PORT_CONNECTION | USB_PORT_ENABLE));
+  status_.w_port_change |= USB_C_PORT_CONNECTION;
+  status_.w_port_status &= static_cast<uint16_t>(~(USB_PORT_CONNECTION | USB_PORT_ENABLE));
 
   connected_ = false;
 
@@ -47,12 +47,12 @@ void HubPort::Disconnect() {
 
 void HubPort::Disable() {
   fbl::AutoLock _(&status_lock_);
-  status_.wPortStatus &= static_cast<uint16_t>(~USB_PORT_ENABLE);
+  status_.w_port_status &= static_cast<uint16_t>(~USB_PORT_ENABLE);
 }
 
 void HubPort::Reset() {
   fbl::AutoLock _(&status_lock_);
-  status_.wPortStatus |= USB_PORT_RESET;
+  status_.w_port_status |= USB_PORT_RESET;
 
   auto power = regs::POWER_HOST::Get().ReadFrom(&usb_);
   power.set_hsenab(1).set_reset(1).WriteTo(&usb_);
@@ -64,49 +64,49 @@ void HubPort::Reset() {
   power = regs::POWER_HOST::Get().ReadFrom(&usb_);
   auto devctl = regs::DEVCTL::Get().ReadFrom(&usb_);
   if (devctl.lsdev()) {  // Low-speed mode.
-    status_.wPortStatus &= static_cast<uint16_t>(~USB_PORT_HIGH_SPEED);
-    status_.wPortStatus |= USB_PORT_LOW_SPEED;
+    status_.w_port_status &= static_cast<uint16_t>(~USB_PORT_HIGH_SPEED);
+    status_.w_port_status |= USB_PORT_LOW_SPEED;
   } else if (power.hsmode()) {  // High-speed mode.
-    status_.wPortStatus &= static_cast<uint16_t>(~USB_PORT_LOW_SPEED);
-    status_.wPortStatus |= USB_PORT_HIGH_SPEED;
+    status_.w_port_status &= static_cast<uint16_t>(~USB_PORT_LOW_SPEED);
+    status_.w_port_status |= USB_PORT_HIGH_SPEED;
   } else {  // Full-speed mode.
-    status_.wPortStatus &= static_cast<uint16_t>(~USB_PORT_LOW_SPEED);
-    status_.wPortStatus &= static_cast<uint16_t>(~USB_PORT_HIGH_SPEED);
+    status_.w_port_status &= static_cast<uint16_t>(~USB_PORT_LOW_SPEED);
+    status_.w_port_status &= static_cast<uint16_t>(~USB_PORT_HIGH_SPEED);
   }
 
   // See: 11.24.2.13 (USB 2.0 spec)
-  status_.wPortStatus |= USB_PORT_ENABLE;
-  status_.wPortStatus &= static_cast<uint16_t>(~USB_PORT_RESET);
-  status_.wPortChange |= USB_C_PORT_RESET;
+  status_.w_port_status |= USB_PORT_ENABLE;
+  status_.w_port_status &= static_cast<uint16_t>(~USB_PORT_RESET);
+  status_.w_port_change |= USB_C_PORT_RESET;
 }
 
 void HubPort::PowerOff() {
   fbl::AutoLock _(&status_lock_);
-  status_.wPortStatus &= static_cast<uint16_t>(~USB_PORT_POWER);
+  status_.w_port_status &= static_cast<uint16_t>(~USB_PORT_POWER);
 }
 
 void HubPort::PowerOn() {
   fbl::AutoLock _(&status_lock_);
-  status_.wPortStatus |= USB_PORT_POWER;
+  status_.w_port_status |= USB_PORT_POWER;
 }
 
 void HubPort::Suspend() {
   fbl::AutoLock _(&status_lock_);
-  status_.wPortStatus |= USB_PORT_SUSPEND;
+  status_.w_port_status |= USB_PORT_SUSPEND;
 }
 
 void HubPort::Resume() {
   fbl::AutoLock _(&status_lock_);
-  status_.wPortStatus &= static_cast<uint16_t>(~USB_PORT_SUSPEND);
+  status_.w_port_status &= static_cast<uint16_t>(~USB_PORT_SUSPEND);
 }
 
 void HubPort::ClearChangeBits(int mask) {
   fbl::AutoLock _(&status_lock_);
-  status_.wPortChange &= static_cast<uint16_t>(~mask);
+  status_.w_port_change &= static_cast<uint16_t>(~mask);
 }
 
 void HubPort::Wait() {
-  if (!(status().wPortChange & USB_C_PORT_CONNECTION)) {
+  if (!(status().w_port_change & USB_C_PORT_CONNECTION)) {
     // Wait only if there is no outstanding port status change.
     fbl::AutoLock _(&change_lock_);
     change_.Wait(&change_lock_);
