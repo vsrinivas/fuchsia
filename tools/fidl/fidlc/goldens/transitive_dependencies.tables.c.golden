@@ -3,9 +3,9 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedStruct bottom_FooTable;
-extern const struct FidlCodedStruct middle_BarTable;
-extern const struct FidlCodedStruct fidl_test_transitivedependencies_BazTable;
+__LOCAL extern const struct FidlCodedStruct bottom_FooTable;
+__LOCAL extern const struct FidlCodedStruct middle_BarTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_transitivedependencies_BazTable;
 
 
 

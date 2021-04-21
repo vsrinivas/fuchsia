@@ -3,14 +3,14 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedBits zx_rightsTable;
-extern const struct FidlCodedEnum zx_obj_typeTable;
-extern const struct FidlCodedStruct fidl_test_encapsulatedstructs_NonInlineStructTestStructTable;
-extern const struct FidlCodedStruct fidl_test_encapsulatedstructs_Int8Int32Table;
-extern const struct FidlCodedStruct fidl_test_encapsulatedstructs_Int16Int8Table;
-extern const struct FidlCodedStruct fidl_test_encapsulatedstructs_ArrayInt16Int8Table;
-extern const struct FidlCodedStruct fidl_test_encapsulatedstructs_StructPaddingTestStructTable;
-extern const struct FidlCodedStruct fidl_test_encapsulatedstructs_TopLevelStructTable;
+__LOCAL extern const struct FidlCodedBits zx_rightsTable;
+__LOCAL extern const struct FidlCodedEnum zx_obj_typeTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_encapsulatedstructs_NonInlineStructTestStructTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_encapsulatedstructs_Int8Int32Table;
+__LOCAL extern const struct FidlCodedStruct fidl_test_encapsulatedstructs_Int16Int8Table;
+__LOCAL extern const struct FidlCodedStruct fidl_test_encapsulatedstructs_ArrayInt16Int8Table;
+__LOCAL extern const struct FidlCodedStruct fidl_test_encapsulatedstructs_StructPaddingTestStructTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_encapsulatedstructs_TopLevelStructTable;
 
 static const struct FidlCodedStructPointer Pointer39fidl_test_encapsulatedstructs_Int16Int8Table = {.tag=kFidlTypeStructPointer, .struct_type=&fidl_test_encapsulatedstructs_Int16Int8Table};
 

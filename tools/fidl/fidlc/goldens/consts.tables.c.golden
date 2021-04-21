@@ -3,8 +3,8 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedEnum fidl_test_consts_EnumTypeTable;
-extern const struct FidlCodedBits fidl_test_consts_BitsTypeTable;
+__LOCAL extern const struct FidlCodedEnum fidl_test_consts_EnumTypeTable;
+__LOCAL extern const struct FidlCodedBits fidl_test_consts_BitsTypeTable;
 
 
 

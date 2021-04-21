@@ -3,18 +3,18 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedBits fidl_test_bindingsdenylist_OnlySyzkallerTable;
-extern const struct FidlCodedTable fidl_test_bindingsdenylist_OnlyRustTable;
-extern const struct FidlCodedXUnion fidl_test_bindingsdenylist_OnlyLlcppTable;
-extern const struct FidlCodedXUnion fidl_test_bindingsdenylist_OnlyLlcppNullableRefTable;
-extern const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyGoTable;
-extern const struct FidlCodedEnum fidl_test_bindingsdenylist_OnlyDartTable;
+__LOCAL extern const struct FidlCodedBits fidl_test_bindingsdenylist_OnlySyzkallerTable;
+__LOCAL extern const struct FidlCodedTable fidl_test_bindingsdenylist_OnlyRustTable;
+__LOCAL extern const struct FidlCodedXUnion fidl_test_bindingsdenylist_OnlyLlcppTable;
+__LOCAL extern const struct FidlCodedXUnion fidl_test_bindingsdenylist_OnlyLlcppNullableRefTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyGoTable;
+__LOCAL extern const struct FidlCodedEnum fidl_test_bindingsdenylist_OnlyDartTable;
 
 
-extern const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable;
 const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.bindingsdenylist/OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequest"};
 
-extern const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable;
 const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.bindingsdenylist/OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponse"};
 
 

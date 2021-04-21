@@ -232,10 +232,10 @@ using FlexibleFooPtr = ::std::unique_ptr<FlexibleFoo>;
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 
 }  // namespace _internal
@@ -275,10 +275,10 @@ class Protocol_RequestEncoder {
   }
 };
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 
 }  // namespace _internal

@@ -41,10 +41,10 @@
 namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 class Top;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
 
 class Top final {

@@ -469,9 +469,11 @@ zx_status_t Int32Wrapper::Clone(Int32Wrapper* _result) const {
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_nullable_SimpleProtocolAddRequestTable;
 
-extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_nullable_SimpleProtocolAddResponseTable;
 
 }  // namespace _internal
 SimpleProtocol::~SimpleProtocol() = default;

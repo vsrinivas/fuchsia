@@ -25,7 +25,7 @@ using subHandle = ::fidl::InterfaceHandle<sub>;
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
 
 }  // namespace _internal
 class super_RequestEncoder {
@@ -46,7 +46,8 @@ class super_RequestEncoder {
   }
 };
 namespace _internal {
-extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_inheritance_superfooResponseTable;
 
 }  // namespace _internal
 class super_ResponseEncoder {
@@ -70,7 +71,7 @@ class super_ResponseEncoder {
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
 
 }  // namespace _internal
 class sub_RequestEncoder {
@@ -91,7 +92,7 @@ class sub_RequestEncoder {
   }
 };
 namespace _internal {
-extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 
 }  // namespace _internal
 class sub_ResponseEncoder {

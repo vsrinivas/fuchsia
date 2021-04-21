@@ -41,9 +41,9 @@ class {{ .Name }};
 {{ "" }}
   {{- range .Methods }}
 {{ EnsureNamespace .Request.WireCodingTable }}
-extern "C" const fidl_type_t {{ .Request.WireCodingTable.Name }};
+__LOCAL extern "C" const fidl_type_t {{ .Request.WireCodingTable.Name }};
 {{ EnsureNamespace .Response.WireCodingTable }}
-extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
+__LOCAL extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
   {{- end }}
 {{ "" }}
 {{ EnsureNamespace . }}

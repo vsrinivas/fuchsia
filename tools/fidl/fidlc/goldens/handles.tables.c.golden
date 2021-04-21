@@ -3,10 +3,10 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedBits zx_rightsTable;
-extern const struct FidlCodedEnum zx_obj_typeTable;
-extern const struct FidlCodedEnum fidl_test_handles_obj_typeTable;
-extern const struct FidlCodedStruct fidl_test_handles_HandlesTable;
+__LOCAL extern const struct FidlCodedBits zx_rightsTable;
+__LOCAL extern const struct FidlCodedEnum zx_obj_typeTable;
+__LOCAL extern const struct FidlCodedEnum fidl_test_handles_obj_typeTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_handles_HandlesTable;
 
 
 static const struct FidlCodedHandle Handlehandle2147483648nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};

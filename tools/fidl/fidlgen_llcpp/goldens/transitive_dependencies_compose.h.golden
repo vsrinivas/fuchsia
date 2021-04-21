@@ -41,10 +41,10 @@
 namespace fidl_test_transitivedependenciescompose {
 class Top;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_transitivedependenciescompose_TopGetFooRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_transitivedependenciescompose_TopGetFooResponseTable;
 
 class Top final {

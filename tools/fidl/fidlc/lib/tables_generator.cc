@@ -296,7 +296,7 @@ void TablesGenerator::Generate(const coded::StructPointerType& pointer) {
 }
 
 void TablesGenerator::Generate(const coded::MessageType& message_type) {
-  Emit(&tables_file_, "extern const struct FidlCodedStruct ");
+  Emit(&tables_file_, "__LOCAL extern const struct FidlCodedStruct ");
   Emit(&tables_file_, NameTable(message_type.coded_name));
   Emit(&tables_file_, ";\n");
 
@@ -484,7 +484,7 @@ void TablesGenerator::Generate(const coded::XUnionField& field) {
 template <class T>
 std::string ForwardDecls(const T& t) {
   // Since we always generate nullable xunions they may be unused
-  return "extern const struct " + TableTypeName(t) + " " + NameTable(t.coded_name) + ";\n";
+  return "__LOCAL extern const struct " + TableTypeName(t) + " " + NameTable(t.coded_name) + ";\n";
 }
 
 void TablesGenerator::GenerateForward(const coded::EnumType& enum_type) {

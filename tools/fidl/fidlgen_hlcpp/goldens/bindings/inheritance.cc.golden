@@ -17,9 +17,10 @@ namespace fidl {
 namespace test {
 namespace inheritance {
 namespace _internal {
-extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
 
-extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_inheritance_superfooResponseTable;
 
 }  // namespace _internal
 super::~super() = default;
@@ -199,9 +200,9 @@ namespace fidl {
 namespace test {
 namespace inheritance {
 namespace _internal {
-extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
 
-extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 
 }  // namespace _internal
 sub::~sub() = default;

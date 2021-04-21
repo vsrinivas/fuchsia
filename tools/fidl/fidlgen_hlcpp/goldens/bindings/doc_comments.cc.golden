@@ -526,9 +526,11 @@ void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_doccomments_InterfaceMethodRequestTable;
 
-extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_doccomments_InterfaceOnEventEventTable;
 
 }  // namespace _internal
 Interface::~Interface() = default;

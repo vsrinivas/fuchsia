@@ -3,7 +3,7 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedStruct fidl_test_escaping_DocCommentWithQuotesTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_escaping_DocCommentWithQuotesTable;
 
 
 

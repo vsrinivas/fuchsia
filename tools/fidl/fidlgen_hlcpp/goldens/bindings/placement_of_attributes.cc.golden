@@ -514,7 +514,7 @@ zx_status_t ExampleStruct::Clone(ExampleStruct* _result) const {
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
 
 }  // namespace _internal

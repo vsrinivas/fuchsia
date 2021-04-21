@@ -146,22 +146,22 @@ struct Empty {
 };
 
 }  // namespace wire
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendResponseTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolReceiveRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolReceiveEventTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 
 class EmptyProtocol final {

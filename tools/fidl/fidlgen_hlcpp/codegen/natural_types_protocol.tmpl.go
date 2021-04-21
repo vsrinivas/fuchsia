@@ -27,7 +27,7 @@ using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
 {{- range .Methods }}
   {{- if .HasRequest }}
   {{ EnsureNamespace .Request.HlCodingTable }}
-  extern "C" const fidl_type_t {{ .Request.HlCodingTable.Name }};
+  __LOCAL extern "C" const fidl_type_t {{ .Request.HlCodingTable.Name }};
   {{- end }}
 {{- end }}
 
@@ -64,7 +64,7 @@ class {{ .RequestEncoder.Name }} {
 {{- range .Methods }}
   {{- if .HasResponse }}
   {{ EnsureNamespace .Response.HlCodingTable }}
-  extern "C" const fidl_type_t {{ .Response.HlCodingTable.Name }};
+  __LOCAL extern "C" const fidl_type_t {{ .Response.HlCodingTable.Name }};
   {{- end }}
 {{- end }}
 

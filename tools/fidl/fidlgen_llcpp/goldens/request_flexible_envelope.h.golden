@@ -327,16 +327,16 @@ class FlexibleFoo {
 };
 
 }  // namespace wire
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 
 class Protocol final {

@@ -290,9 +290,9 @@ struct ExampleFooResponse {
 };
 
 }  // namespace wire
-extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
 
-extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 
 class Example final {
   Example() = delete;

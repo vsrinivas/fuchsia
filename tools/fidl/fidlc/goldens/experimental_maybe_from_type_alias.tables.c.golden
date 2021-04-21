@@ -3,7 +3,7 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedStruct fidl_test_experimentalmaybefromtypealias_TestingTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_experimentalmaybefromtypealias_TestingTable;
 
 
 static const struct FidlCodedVector Vector1nonnullable6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint64Table), .max_count=1u, .element_size=8u, .nullable=kFidlNullability_Nonnullable};

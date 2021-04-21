@@ -3,13 +3,13 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedStruct bottom_FooTable;
+__LOCAL extern const struct FidlCodedStruct bottom_FooTable;
 
 
-extern const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable;
 const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.foreigntypeinresponseusedthroughcompose/TopGetFooRequest"};
 
-extern const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
 static const struct FidlStructElement Fields67fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponse[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };

@@ -3,7 +3,7 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedBits fidl_test_bitsconstants_BitsTypeTable;
+__LOCAL extern const struct FidlCodedBits fidl_test_bitsconstants_BitsTypeTable;
 
 
 

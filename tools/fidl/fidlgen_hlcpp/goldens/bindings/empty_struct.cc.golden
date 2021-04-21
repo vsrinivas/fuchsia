@@ -43,16 +43,16 @@ zx_status_t Empty::Clone(Empty* _result) const {
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolReceiveEventTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 
 }  // namespace _internal

@@ -826,13 +826,17 @@ struct Struct {
 };
 
 }  // namespace wire
-extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_doccomments_InterfaceMethodRequestTable;
 
-extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_doccomments_InterfaceMethodResponseTable;
 
-extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_doccomments_InterfaceOnEventRequestTable;
 
-extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_doccomments_InterfaceOnEventEventTable;
 
 /// interface comment #1
 ///

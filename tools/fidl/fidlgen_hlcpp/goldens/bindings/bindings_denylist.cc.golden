@@ -17,10 +17,10 @@ namespace fidl {
 namespace test {
 namespace bindingsdenylist {
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable;
 
 }  // namespace _internal

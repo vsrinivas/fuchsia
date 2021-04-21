@@ -17,7 +17,7 @@ namespace fidl {
 namespace test {
 namespace inheritancewithrecursivedecl {
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
 }  // namespace _internal
@@ -158,10 +158,10 @@ namespace fidl {
 namespace test {
 namespace inheritancewithrecursivedecl {
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
 }  // namespace _internal

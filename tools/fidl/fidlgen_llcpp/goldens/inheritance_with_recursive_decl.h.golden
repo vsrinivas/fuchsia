@@ -41,10 +41,10 @@ class Parent;
 
 class Child;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ParentFirstResponseTable;
 
 class Parent final {
@@ -539,16 +539,16 @@ class ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>
 };
 
 namespace fidl_test_inheritancewithrecursivedecl {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildFirstResponseTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_inheritancewithrecursivedecl_ChildSecondResponseTable;
 
 class Child final {

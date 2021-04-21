@@ -3,14 +3,14 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedXUnion fidl_test_arrays_UnionSmallArrayTable;
-extern const struct FidlCodedXUnion fidl_test_arrays_UnionSmallArrayNullableRefTable;
-extern const struct FidlCodedXUnion fidl_test_arrays_UnionLargeArrayTable;
-extern const struct FidlCodedXUnion fidl_test_arrays_UnionLargeArrayNullableRefTable;
-extern const struct FidlCodedTable fidl_test_arrays_TableSmallArrayTable;
-extern const struct FidlCodedTable fidl_test_arrays_TableLargeArrayTable;
-extern const struct FidlCodedStruct fidl_test_arrays_StructSmallArrayTable;
-extern const struct FidlCodedStruct fidl_test_arrays_StructLargeArrayTable;
+__LOCAL extern const struct FidlCodedXUnion fidl_test_arrays_UnionSmallArrayTable;
+__LOCAL extern const struct FidlCodedXUnion fidl_test_arrays_UnionSmallArrayNullableRefTable;
+__LOCAL extern const struct FidlCodedXUnion fidl_test_arrays_UnionLargeArrayTable;
+__LOCAL extern const struct FidlCodedXUnion fidl_test_arrays_UnionLargeArrayNullableRefTable;
+__LOCAL extern const struct FidlCodedTable fidl_test_arrays_TableSmallArrayTable;
+__LOCAL extern const struct FidlCodedTable fidl_test_arrays_TableLargeArrayTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_arrays_StructSmallArrayTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_arrays_StructLargeArrayTable;
 
 
 static const struct FidlCodedArray Array8_6uint32Table __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&fidl_internal_kUint32Table), .array_size=8u, .element_size=4u};

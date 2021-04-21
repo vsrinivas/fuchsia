@@ -49,10 +49,10 @@ class MultiHeterogeneousMemberService;
 
 class EmptyService;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_service_SecondProtocolMethodOnSecondRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_service_SecondProtocolMethodOnSecondResponseTable;
 
 class SecondProtocol final {
@@ -438,10 +438,10 @@ class ::fidl::WireInterface<::fidl_test_service::SecondProtocol>
 };
 
 namespace fidl_test_service {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_service_FirstProtocolMethodOnFirstRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_service_FirstProtocolMethodOnFirstResponseTable;
 
 class FirstProtocol final {

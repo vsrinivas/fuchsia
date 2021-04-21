@@ -17,22 +17,22 @@ namespace fidl {
 namespace test {
 namespace protocolrequest {
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentGetChildRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentGetChildResponseTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentGetChildRequestRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentGetChildRequestResponseTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentTakeChildRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
 
 }  // namespace _internal

@@ -3,9 +3,9 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedBits fidl_test_bits_StrictBitsTable;
-extern const struct FidlCodedBits fidl_test_bits_MyBitsTable;
-extern const struct FidlCodedBits fidl_test_bits_FlexibleBitsTable;
+__LOCAL extern const struct FidlCodedBits fidl_test_bits_StrictBitsTable;
+__LOCAL extern const struct FidlCodedBits fidl_test_bits_MyBitsTable;
+__LOCAL extern const struct FidlCodedBits fidl_test_bits_FlexibleBitsTable;
 
 
 

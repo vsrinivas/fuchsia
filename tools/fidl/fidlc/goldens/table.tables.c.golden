@@ -3,11 +3,11 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedTable fidl_test_table_SimpleTableTable;
-extern const struct FidlCodedTable fidl_test_table_ReverseOrdinalTableTable;
-extern const struct FidlCodedTable fidl_test_table_OlderSimpleTableTable;
-extern const struct FidlCodedTable fidl_test_table_NewerSimpleTableTable;
-extern const struct FidlCodedTable fidl_test_table_EmptyTableTable;
+__LOCAL extern const struct FidlCodedTable fidl_test_table_SimpleTableTable;
+__LOCAL extern const struct FidlCodedTable fidl_test_table_ReverseOrdinalTableTable;
+__LOCAL extern const struct FidlCodedTable fidl_test_table_OlderSimpleTableTable;
+__LOCAL extern const struct FidlCodedTable fidl_test_table_NewerSimpleTableTable;
+__LOCAL extern const struct FidlCodedTable fidl_test_table_EmptyTableTable;
 
 
 

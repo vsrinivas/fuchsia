@@ -3,22 +3,22 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedTable fidl_test_doccomments_TableTable;
-extern const struct FidlCodedStruct fidl_test_doccomments_StructTable;
-extern const struct FidlCodedXUnion fidl_test_doccomments_StrictUnionTable;
-extern const struct FidlCodedXUnion fidl_test_doccomments_StrictUnionNullableRefTable;
-extern const struct FidlCodedEnum fidl_test_doccomments_MyStrictEnumTable;
-extern const struct FidlCodedBits fidl_test_doccomments_MyStrictBitsTable;
-extern const struct FidlCodedEnum fidl_test_doccomments_MyFlexibleEnumTable;
-extern const struct FidlCodedBits fidl_test_doccomments_MyFlexibleBitsTable;
-extern const struct FidlCodedXUnion fidl_test_doccomments_FlexibleUnionTable;
-extern const struct FidlCodedXUnion fidl_test_doccomments_FlexibleUnionNullableRefTable;
+__LOCAL extern const struct FidlCodedTable fidl_test_doccomments_TableTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_doccomments_StructTable;
+__LOCAL extern const struct FidlCodedXUnion fidl_test_doccomments_StrictUnionTable;
+__LOCAL extern const struct FidlCodedXUnion fidl_test_doccomments_StrictUnionNullableRefTable;
+__LOCAL extern const struct FidlCodedEnum fidl_test_doccomments_MyStrictEnumTable;
+__LOCAL extern const struct FidlCodedBits fidl_test_doccomments_MyStrictBitsTable;
+__LOCAL extern const struct FidlCodedEnum fidl_test_doccomments_MyFlexibleEnumTable;
+__LOCAL extern const struct FidlCodedBits fidl_test_doccomments_MyFlexibleBitsTable;
+__LOCAL extern const struct FidlCodedXUnion fidl_test_doccomments_FlexibleUnionTable;
+__LOCAL extern const struct FidlCodedXUnion fidl_test_doccomments_FlexibleUnionNullableRefTable;
 
 
-extern const struct FidlCodedStruct fidl_test_doccomments_InterfaceMethodRequestTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_doccomments_InterfaceMethodRequestTable;
 const struct FidlCodedStruct fidl_test_doccomments_InterfaceMethodRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.doccomments/InterfaceMethodRequest"};
 
-extern const struct FidlCodedStruct fidl_test_doccomments_InterfaceOnEventEventTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_doccomments_InterfaceOnEventEventTable;
 const struct FidlCodedStruct fidl_test_doccomments_InterfaceOnEventEventTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.doccomments/InterfaceOnEventEvent"};
 
 

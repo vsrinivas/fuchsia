@@ -3,8 +3,8 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedEnum dependent_MyEnumTable;
-extern const struct FidlCodedStruct fidl_test_structdefaultvalueenumlibraryreference_FooTable;
+__LOCAL extern const struct FidlCodedEnum dependent_MyEnumTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_structdefaultvalueenumlibraryreference_FooTable;
 
 
 

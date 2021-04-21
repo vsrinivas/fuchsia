@@ -475,7 +475,7 @@ using WithErrorSyntax_ErrorAsEnum_ResponsePtr =
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_DiscoverableProtocolMethodRequestTable;
 
 }  // namespace _internal
@@ -503,10 +503,11 @@ class DiscoverableProtocol_ResponseEncoder {
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalRequestRequestTable;
 
-extern "C" const fidl_type_t fidl_test_protocols_TransitionalOneWayRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalOneWayRequestTable;
 
 }  // namespace _internal
 class Transitional_RequestEncoder {
@@ -541,10 +542,11 @@ class Transitional_RequestEncoder {
   }
 };
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalRequestResponseTable;
 
-extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalEventEventTable;
 
 }  // namespace _internal
 class Transitional_ResponseEncoder {
@@ -581,16 +583,16 @@ class Transitional_ResponseEncoder {
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodARequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodBRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
 
 }  // namespace _internal
@@ -666,16 +668,16 @@ class ChannelProtocol_RequestEncoder {
   }
 };
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolEventAEventTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodBResponseTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
 
 }  // namespace _internal
@@ -743,22 +745,22 @@ class ChannelProtocol_ResponseEncoder {
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 
 }  // namespace _internal
@@ -853,22 +855,22 @@ class WithAndWithoutRequestResponse_RequestEncoder {
   }
 };
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 }  // namespace _internal
@@ -1095,13 +1097,13 @@ using WithErrorSyntax_ErrorAsEnum_ResultPtr =
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable;
 
 }  // namespace _internal
@@ -1149,13 +1151,13 @@ class WithErrorSyntax_RequestEncoder {
   }
 };
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
 
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
 
 }  // namespace _internal

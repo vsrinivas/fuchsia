@@ -3,11 +3,11 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedEnum fidl_test_constants_EnumTypeTable;
-extern const struct FidlCodedEnum fidl_test_constants_EnumTable;
-extern const struct FidlCodedBits fidl_test_constants_BitsTypeTable;
-extern const struct FidlCodedBits fidl_test_constants_BitsTable;
-extern const struct FidlCodedStruct fidl_test_constants_StructTable;
+__LOCAL extern const struct FidlCodedEnum fidl_test_constants_EnumTypeTable;
+__LOCAL extern const struct FidlCodedEnum fidl_test_constants_EnumTable;
+__LOCAL extern const struct FidlCodedBits fidl_test_constants_BitsTypeTable;
+__LOCAL extern const struct FidlCodedBits fidl_test_constants_BitsTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_constants_StructTable;
 
 
 static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};

@@ -232,7 +232,8 @@ using StructWithNullableHandlePtr = ::std::unique_ptr<StructWithNullableHandle>;
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_nullable_SimpleProtocolAddRequestTable;
 
 }  // namespace _internal
 class SimpleProtocol_RequestEncoder {
@@ -255,7 +256,8 @@ class SimpleProtocol_RequestEncoder {
   }
 };
 namespace _internal {
-extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_nullable_SimpleProtocolAddResponseTable;
 
 }  // namespace _internal
 class SimpleProtocol_ResponseEncoder {

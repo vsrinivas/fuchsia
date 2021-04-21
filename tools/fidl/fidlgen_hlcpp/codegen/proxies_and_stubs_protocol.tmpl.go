@@ -213,11 +213,11 @@ class {{ .SyncProxy.Name }} : public {{ .SyncInterface }} {
 {{- range .Methods }}
 {{ if .HasRequest }}
 {{ EnsureNamespace .Request.HlCodingTable }}
-extern "C" const fidl_type_t {{ .Request.HlCodingTable.Name }};
+__LOCAL extern "C" const fidl_type_t {{ .Request.HlCodingTable.Name }};
 {{- end }}
 {{- if .HasResponse }}
 {{ EnsureNamespace .Response.HlCodingTable }}
-extern "C" const fidl_type_t {{ .Response.HlCodingTable.Name }};
+__LOCAL extern "C" const fidl_type_t {{ .Response.HlCodingTable.Name }};
 {{- end }}
 {{- end }}
 

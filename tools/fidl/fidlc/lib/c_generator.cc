@@ -1063,10 +1063,10 @@ void CGenerator::ProduceStructForwardDeclaration(const NamedStruct& named_struct
 void CGenerator::ProduceProtocolExternDeclaration(const NamedProtocol& named_protocol) {
   for (const auto& method_info : named_protocol.methods) {
     if (method_info.request) {
-      file_ << "extern const fidl_type_t " << method_info.request->coded_name << ";\n";
+      file_ << "__LOCAL extern const fidl_type_t " << method_info.request->coded_name << ";\n";
     }
     if (method_info.response) {
-      file_ << "extern const fidl_type_t " << method_info.response->coded_name << ";\n";
+      file_ << "__LOCAL extern const fidl_type_t " << method_info.response->coded_name << ";\n";
     }
   }
 }

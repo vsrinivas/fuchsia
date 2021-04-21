@@ -235,9 +235,9 @@ void Example_foo_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
 
-extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 
 }  // namespace _internal
 Example::~Example() = default;

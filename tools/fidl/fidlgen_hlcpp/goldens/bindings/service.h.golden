@@ -41,7 +41,7 @@ class EmptyService;
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_service_SecondProtocolMethodOnSecondRequestTable;
 
 }  // namespace _internal
@@ -70,7 +70,7 @@ class SecondProtocol_ResponseEncoder {
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_service_FirstProtocolMethodOnFirstRequestTable;
 
 }  // namespace _internal

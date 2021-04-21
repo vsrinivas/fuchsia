@@ -3,9 +3,9 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedEnum fidl_test_enum_MyStrictEnumTable;
-extern const struct FidlCodedEnum fidl_test_enum_MyFlexibleEnumWithCustomUnknownTable;
-extern const struct FidlCodedEnum fidl_test_enum_MyFlexibleEnumTable;
+__LOCAL extern const struct FidlCodedEnum fidl_test_enum_MyStrictEnumTable;
+__LOCAL extern const struct FidlCodedEnum fidl_test_enum_MyFlexibleEnumWithCustomUnknownTable;
+__LOCAL extern const struct FidlCodedEnum fidl_test_enum_MyFlexibleEnumTable;
 
 
 

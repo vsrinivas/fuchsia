@@ -22,7 +22,7 @@ using TopHandle = ::fidl::InterfaceHandle<Top>;
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_transitivedependenciescompose_TopGetFooRequestTable;
 
 }  // namespace _internal
@@ -43,7 +43,7 @@ class Top_RequestEncoder {
   }
 };
 namespace _internal {
-extern "C" const fidl_type_t
+__LOCAL extern "C" const fidl_type_t
     fidl_test_transitivedependenciescompose_TopGetFooResponseTable;
 
 }  // namespace _internal
