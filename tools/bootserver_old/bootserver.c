@@ -238,7 +238,7 @@ static int xfer2(struct sockaddr_in6* addr, const char* local_name, const char* 
 void usage(void) {
   fprintf(
       stderr,
-      "usage:   %s [ <option> ]* [<kernel>] [ <ramdisk> ] [ -- [ <kerneloption> ]* ]\n"
+      "usage:   %s [ <option> ]* [<zbi>] -- [ <kerneloption> ]* ]\n"
       "\n"
       "options:\n"
       "  -1         only boot once, then exit\n"
@@ -400,7 +400,6 @@ int main(int argc, char** argv) {
   const char* authorized_keys = NULL;
   const char* fvm_images[MAX_FVM_IMAGES] = {NULL, NULL, NULL, NULL};
   const char* kernel_fn = NULL;
-  const char* ramdisk_fn = NULL;
   const char* init_partition_tables_device_path = NULL;
   const char* wipe_partition_tables_device_path = NULL;
   int once = 0;
@@ -423,8 +422,6 @@ int main(int argc, char** argv) {
     if (argv[1][0] != '-') {
       if (kernel_fn == NULL) {
         kernel_fn = argv[1];
-      } else if (ramdisk_fn == NULL) {
-        ramdisk_fn = argv[1];
       } else {
         usage();
       }
@@ -876,9 +873,6 @@ int main(int argc, char** argv) {
     }
     if (status == 0 && cmdline[0]) {
       status = xfer(&ra, "(cmdline)", cmdline);
-    }
-    if (status == 0 && ramdisk_fn) {
-      status = xfer(&ra, ramdisk_fn, NB_RAMDISK_FILENAME);
     }
     // Wipe partition tables before writing anything to persistent storage.
     if (status == 0 && wipe_partition_tables_device_path) {
