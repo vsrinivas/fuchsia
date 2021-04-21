@@ -37,6 +37,12 @@ struct FilesystemOptions {
   // This should be left unset (to the default value of kBlobfsCurrentMinorVersion); it is exposed
   // for overriding during tests.
   uint64_t oldest_minor_version = kBlobfsCurrentMinorVersion;
+
+  // The number of inodes to allocate capacity for. This value will be rounded up to fill a complete
+  // block (or slice, if within FVM).
+  // When blobfs is within FVM, this is used to determine the initial node table size, which can
+  // grow when used.
+  uint64_t num_inodes = kBlobfsDefaultInodeCount;
 };
 
 // The minimum size of a blob that we will consider for compression. Attempting
@@ -68,13 +74,11 @@ uint32_t BlocksRequiredForBits(uint64_t bit_count);
 // |available|: An additional number of blocks available which may be used by the journal.
 uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available);
 
-// Creates a superblock, formatted for |block_count| disk blocks and |inode_count| inodes, on a
-// non-FVM volume.
+// Creates a superblock, formatted for |block_count| disk blocks on a non-FVM volume.
 // This method should also be invoked to create FVM-based superblocks, but it is the responsibility
 // of the caller to update |info->flags| to include |kBlobFlagFVM|, and fill in all
 // FVM-specific fields.
-void InitializeSuperblock(uint64_t block_count, uint64_t inode_count,
-                          const FilesystemOptions& options, Superblock* info);
+void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options, Superblock* info);
 
 // Get a pointer to the nth block of the bitmap.
 inline void* GetRawBitmapData(const RawBitmap& bm, uint64_t n) {

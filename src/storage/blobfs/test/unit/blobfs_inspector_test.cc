@@ -104,9 +104,8 @@ void CreateFakeBlobfsHandler(std::unique_ptr<FakeTransactionHandler>* handler) {
 
   // Superblock.
   Superblock superblock;
-  InitializeSuperblock(kBlockCount, kBlobfsDefaultInodeCount,
-                       {.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd},
-                       &superblock);
+  InitializeSuperblock(
+      kBlockCount, {.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd}, &superblock);
   memcpy(device->Data(kSuperblockOffset), &superblock, sizeof(superblock));
 
   // Allocation bitmap.

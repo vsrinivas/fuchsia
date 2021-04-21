@@ -94,9 +94,9 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet) {
     return ZX_ERR_NO_SPACE;
   }
 
-  if (info->inode_count < kBlobfsDefaultInodeCount) {
+  if (info->inode_count == 0) {
     if (!quiet)
-      FX_LOGS(ERROR) << "Not enough inodes (have " << info->inode_count << ")";
+      FX_LOGS(ERROR) << "Node table is zero-sized";
     return ZX_ERR_NO_SPACE;
   }
 
@@ -218,8 +218,8 @@ uint32_t BlocksRequiredForBits(uint64_t bit_count) {
 
 uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available) { return current + available; }
 
-void InitializeSuperblock(uint64_t block_count, uint64_t inode_count,
-                          const FilesystemOptions& options, Superblock* info) {
+void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options,
+                          Superblock* info) {
   memset(info, 0x00, sizeof(*info));
   info->magic0 = kBlobfsMagic0;
   info->magic1 = kBlobfsMagic1;
@@ -227,7 +227,7 @@ void InitializeSuperblock(uint64_t block_count, uint64_t inode_count,
   info->flags = kBlobFlagClean;
   info->block_size = kBlobfsBlockSize;
   // Round up |inode_count| to use a block-aligned amount.
-  info->inode_count = BlocksRequiredForInode(inode_count) * kBlobfsInodesPerBlock;
+  info->inode_count = BlocksRequiredForInode(options.num_inodes) * kBlobfsInodesPerBlock;
   info->alloc_block_count = kStartBlockMinimum;
   info->alloc_inode_count = 0;
   info->oldest_minor_version = options.oldest_minor_version;

@@ -40,7 +40,7 @@ zx::status<Superblock> FormatSuperblock(const fuchsia_hardware_block_BlockInfo& 
                                         const FilesystemOptions& options) {
   uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
   Superblock superblock;
-  InitializeSuperblock(blocks, kBlobfsDefaultInodeCount, options, &superblock);
+  InitializeSuperblock(blocks, options, &superblock);
 
   zx_status_t status = CheckSuperblock(&superblock, blocks);
   if (status != ZX_OK) {
@@ -55,11 +55,11 @@ zx::status<Superblock> FormatSuperblock(const fuchsia_hardware_block_BlockInfo& 
 zx::status<Superblock> FormatSuperblockFVM(BlockDevice* device,
                                            const fuchsia_hardware_block_volume_VolumeInfo& fvm_info,
                                            const FilesystemOptions& options) {
-  // Initialize the superblock with no blocks and no nodes. This'll set many of the fields (mostly
+  // Initialize the superblock with no blocks for now. This'll set many of the fields (mostly
   // block_counts) into invalid states, but we'll correct these later after we've allocated slices
   // for the various metadata regions.
   Superblock superblock;
-  InitializeSuperblock(/*block_count=*/0, /*inode_count=*/0, options, &superblock);
+  InitializeSuperblock(/*block_count=*/0, options, &superblock);
 
   superblock.slice_size = fvm_info.slice_size;
   superblock.flags |= kBlobFlagFVM;
@@ -93,9 +93,9 @@ zx::status<Superblock> FormatSuperblockFVM(BlockDevice* device,
     return zx::error(status);
   }
 
-  // Allocate the minimum number of node blocks in FVM.
+  // Allocate the requested number of node blocks in FVM.
   offset = kFVMNodeMapStart / blocks_per_slice;
-  length = BlocksToSlices(BlocksRequiredForInode(kBlobfsDefaultInodeCount));
+  length = BlocksToSlices(BlocksRequiredForInode(options.num_inodes));
   superblock.ino_slices = length;
   status = device->VolumeExtend(offset, superblock.ino_slices);
   if (status != ZX_OK) {

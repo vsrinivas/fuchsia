@@ -32,6 +32,18 @@
 namespace blobfs {
 namespace {
 
+constexpr FilesystemOptions DefaultFilesystemOptions() {
+  return FilesystemOptions{
+      .num_inodes = 512,
+  };
+}
+
+constexpr FilesystemOptions CreateFilesystemOptions(BlobLayoutFormat format) {
+  auto options = DefaultFilesystemOptions();
+  options.blob_layout_format = format;
+  return options;
+}
+
 class File {
  public:
   explicit File(FILE* file) : file_(file) {}
@@ -48,13 +60,14 @@ class File {
   FILE* file_;
 };
 
-std::unique_ptr<Blobfs> CreateBlobfs(uint64_t block_count, FilesystemOptions options) {
+std::unique_ptr<Blobfs> CreateBlobfs(
+    uint64_t block_count, const FilesystemOptions& options = DefaultFilesystemOptions()) {
   File fs_file(tmpfile());
   if (ftruncate(fs_file.fd(), block_count * kBlobfsBlockSize) == -1) {
     ADD_FAILURE() << "Failed to resize the file for " << block_count << " blocks";
     return nullptr;
   }
-  if (Mkfs(fs_file.fd(), block_count, kBlobfsDefaultInodeCount, options) == -1) {
+  if (Mkfs(fs_file.fd(), block_count, options) == -1) {
     ADD_FAILURE() << "Mkfs failed";
     return nullptr;
   }
@@ -136,27 +149,28 @@ Inode AddCompressedBlob(uint64_t data_size, Blobfs& blobfs) {
 
 TEST(BlobfsHostFormatTest, FormatDevice) {
   File file(tmpfile());
-  EXPECT_EQ(Mkfs(file.fd(), 10000, kBlobfsDefaultInodeCount, FilesystemOptions{}), 0);
+  EXPECT_EQ(Mkfs(file.fd(), 10000, DefaultFilesystemOptions()), 0);
 }
 
 TEST(BlobfsHostFormatTest, FormatDeviceWithExtraInodes) {
   File file(tmpfile());
-  EXPECT_EQ(Mkfs(file.fd(), 10000, kBlobfsDefaultInodeCount + 1, FilesystemOptions{}), 0);
+  EXPECT_EQ(Mkfs(file.fd(), 10000, FilesystemOptions{.num_inodes = kBlobfsDefaultInodeCount + 1}),
+            0);
 }
 
 TEST(BlobfsHostFormatTest, FormatZeroBlockDevice) {
   File file(tmpfile());
-  EXPECT_EQ(Mkfs(file.fd(), 0, kBlobfsDefaultInodeCount, FilesystemOptions{}), -1);
+  EXPECT_EQ(Mkfs(file.fd(), 0, DefaultFilesystemOptions()), -1);
 }
 
 TEST(BlobfsHostFormatTest, FormatTooSmallDevice) {
   File file(tmpfile());
-  EXPECT_EQ(Mkfs(file.fd(), 1, kBlobfsDefaultInodeCount, FilesystemOptions{}), -1);
+  EXPECT_EQ(Mkfs(file.fd(), 1, DefaultFilesystemOptions()), -1);
 }
 
 TEST(BlobfsHostFormatTest, FormatTooFewInodes) {
   File file(tmpfile());
-  EXPECT_EQ(Mkfs(file.fd(), 10000, kBlobfsDefaultInodeCount / 2, FilesystemOptions{}), -1);
+  EXPECT_EQ(Mkfs(file.fd(), 10000 / 2, FilesystemOptions{.num_inodes = 0}), -1);
 }
 
 // This test verifies that formatting actually writes zero-filled
@@ -164,7 +178,7 @@ TEST(BlobfsHostFormatTest, FormatTooFewInodes) {
 TEST(BlobfsHostFormatTest, JournalFormattedAsEmpty) {
   File file(tmpfile());
   constexpr uint64_t kBlockCount = 10000;
-  EXPECT_EQ(Mkfs(file.fd(), kBlockCount, kBlobfsDefaultInodeCount, FilesystemOptions{}), 0);
+  EXPECT_EQ(Mkfs(file.fd(), kBlockCount, DefaultFilesystemOptions()), 0);
 
   char block[kBlobfsBlockSize] = {};
   ASSERT_EQ(ReadBlock(file.fd(), 0, block), ZX_OK);
@@ -187,7 +201,7 @@ TEST(BlobfsHostFormatTest, JournalFormattedAsEmpty) {
 // Verify that we compress small files.
 TEST(BlobfsHostCompressionTest, CompressSmallFiles) {
   File fs_file(tmpfile());
-  EXPECT_EQ(Mkfs(fs_file.fd(), 10000, kBlobfsDefaultInodeCount, FilesystemOptions{}), 0);
+  EXPECT_EQ(Mkfs(fs_file.fd(), 10000, DefaultFilesystemOptions()), 0);
 
   constexpr size_t all_zero_size = 12 * 1024;
   File blob_file(tmpfile());
@@ -205,7 +219,7 @@ TEST(BlobfsHostCompressionTest, CompressSmallFiles) {
 
 TEST(BlobfsHostTest, WriteBlobWithPaddedFormatIsCorrect) {
   auto blobfs = CreateBlobfs(/*block_count=*/500,
-                             {.blob_layout_format = BlobLayoutFormat::kPaddedMerkleTreeAtStart});
+                             CreateFilesystemOptions(BlobLayoutFormat::kPaddedMerkleTreeAtStart));
   ASSERT_TRUE(blobfs != nullptr);
 
   // In the padded format the Merkle tree can't share a block with the data.
@@ -221,7 +235,7 @@ TEST(BlobfsHostTest, WriteBlobWithPaddedFormatIsCorrect) {
 
 TEST(BlobfsHostTest, WriteBlobWithCompactFormatAndSharedBlockIsCorrect) {
   auto blobfs = CreateBlobfs(/*block_count=*/500,
-                             {.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd});
+                             CreateFilesystemOptions(BlobLayoutFormat::kCompactMerkleTreeAtEnd));
   ASSERT_TRUE(blobfs != nullptr);
 
   // In the compact format the Merkle tree will fit perfectly into the end of the data.
@@ -238,7 +252,7 @@ TEST(BlobfsHostTest, WriteBlobWithCompactFormatAndSharedBlockIsCorrect) {
 
 TEST(BlobfsHostTest, WriteBlobWithCompactFormatAndBlockIsNotSharedIsCorrect) {
   auto blobfs = CreateBlobfs(/*block_count=*/500,
-                             {.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd});
+                             CreateFilesystemOptions(BlobLayoutFormat::kCompactMerkleTreeAtEnd));
   ASSERT_TRUE(blobfs != nullptr);
 
   // The Merkle tree doesn't fit in with the data.
@@ -254,7 +268,7 @@ TEST(BlobfsHostTest, WriteBlobWithCompactFormatAndBlockIsNotSharedIsCorrect) {
 
 TEST(BlobfsHostTest, WriteCompressedBlobWithCompactFormatAndSharedBlockIsCorrect) {
   auto blobfs = CreateBlobfs(/*block_count=*/500,
-                             {.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd});
+                             CreateFilesystemOptions(BlobLayoutFormat::kCompactMerkleTreeAtEnd));
   ASSERT_TRUE(blobfs != nullptr);
 
   // The blob is compressed to well under 1 block which leaves plenty of room for the Merkle tree.
@@ -269,7 +283,7 @@ TEST(BlobfsHostTest, WriteCompressedBlobWithCompactFormatAndSharedBlockIsCorrect
 
 TEST(BlobfsHostTest, WriteCompressedBlobWithPaddedFormatIsCorrect) {
   auto blobfs = CreateBlobfs(/*block_count=*/500,
-                             {.blob_layout_format = BlobLayoutFormat::kPaddedMerkleTreeAtStart});
+                             CreateFilesystemOptions(BlobLayoutFormat::kPaddedMerkleTreeAtStart));
   ASSERT_TRUE(blobfs != nullptr);
 
   // The Merkle tree requires 1 block and the blob is compressed to under 1 block.
@@ -284,7 +298,7 @@ TEST(BlobfsHostTest, WriteCompressedBlobWithPaddedFormatIsCorrect) {
 
 TEST(BlobfsHostTest, WriteEmptyBlobWithCompactFormatIsCorrect) {
   auto blobfs = CreateBlobfs(/*block_count=*/500,
-                             {.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd});
+                             CreateFilesystemOptions(BlobLayoutFormat::kCompactMerkleTreeAtEnd));
   ASSERT_TRUE(blobfs != nullptr);
 
   Inode inode = AddUncompressedBlob(/*data_size=*/0, *blobfs);
@@ -315,7 +329,7 @@ void CheckBlobContents(File& blob, fbl::Span<const uint8_t> contents) {
 
 TEST(BlobfsHostTest, VisitBlobsVisitsAllBlobsAndProvidesTheCorrectContents) {
   auto blobfs = CreateBlobfs(/*block_count=*/500,
-                             {.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd});
+                             CreateFilesystemOptions(BlobLayoutFormat::kCompactMerkleTreeAtEnd));
   ASSERT_TRUE(blobfs != nullptr);
 
   unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
@@ -365,7 +379,7 @@ TEST(BlobfsHostTest, VisitBlobsVisitsAllBlobsAndProvidesTheCorrectContents) {
 
 TEST(BlobfsHostTest, VisitBlobsForwardsVisitorErrors) {
   auto blobfs = CreateBlobfs(/*block_count=*/500,
-                             {.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd});
+                             CreateFilesystemOptions(BlobLayoutFormat::kCompactMerkleTreeAtEnd));
   ASSERT_TRUE(blobfs != nullptr);
 
   // One blob to visit at least.
@@ -395,7 +409,7 @@ std::vector<uint8_t> ReadFileContents(int fd) {
 
 TEST(BlobfsHostTest, ExportBlobsCreatesBlobsWithTheCorrectContentAndName) {
   auto blobfs = CreateBlobfs(/*block_count=*/500,
-                             {.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd});
+                             CreateFilesystemOptions(BlobLayoutFormat::kCompactMerkleTreeAtEnd));
   ASSERT_TRUE(blobfs != nullptr);
 
   unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
@@ -455,7 +469,7 @@ TEST(BlobfsHostTest, ExportBlobsCreatesBlobsWithTheCorrectContentAndName) {
 }
 
 TEST(BlobfsHostTest, GetNodeWithAnInvalidNodeIndexIsAnError) {
-  auto blobfs = CreateBlobfs(/*block_count=*/500, {});
+  auto blobfs = CreateBlobfs(/*block_count=*/500);
   ASSERT_TRUE(blobfs != nullptr);
   uint32_t invalid_node_index = kMaxNodeId - 1;
   auto node = blobfs->GetNode(invalid_node_index);
@@ -463,7 +477,7 @@ TEST(BlobfsHostTest, GetNodeWithAnInvalidNodeIndexIsAnError) {
 }
 
 TEST(BlobfsHostTest, CreateBlobfsWithNullBlobPassesFsck) {
-  std::unique_ptr<Blobfs> blobfs = CreateBlobfs(/*block_count=*/500, {});
+  std::unique_ptr<Blobfs> blobfs = CreateBlobfs(/*block_count=*/500);
   ASSERT_TRUE(blobfs);
   AddUncompressedBlob(/*data_size=*/0, *blobfs);
   BlobfsChecker checker(std::move(blobfs));

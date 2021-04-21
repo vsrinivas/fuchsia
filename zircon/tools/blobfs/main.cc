@@ -262,8 +262,8 @@ zx_status_t BlobfsCreator::Mkfs() {
     return ZX_ERR_IO;
   }
 
-  int r = blobfs::Mkfs(fd_.get(), block_count, required_inodes_,
-                       {.blob_layout_format = blob_layout_format_});
+  int r = blobfs::Mkfs(fd_.get(), block_count,
+                       {.blob_layout_format = blob_layout_format_, .num_inodes = required_inodes_});
 
   if (r >= 0 && !blob_list_.is_empty()) {
     zx_status_t status;

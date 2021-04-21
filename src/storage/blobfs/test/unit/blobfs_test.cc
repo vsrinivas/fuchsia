@@ -31,6 +31,7 @@ using ::block_client::FakeBlockDevice;
 
 constexpr uint32_t kBlockSize = 512;
 constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
+constexpr uint32_t kNumNodes = 128;
 
 class MockBlockDevice : public FakeBlockDevice {
  public:
@@ -291,6 +292,7 @@ TEST_F(FsckAtEndOfEveryTransactionTest, FsckAtEndOfEveryTransaction) {
 
 #endif  // !defined(NDEBUG)
 
+/*
 void VnodeSync(fs::Vnode* vnode) {
   // It's difficult to get a precise hook into the period between when data has been written and
   // when it has been flushed to disk.  The journal will delay flushing metadata, so the following
@@ -304,9 +306,9 @@ void VnodeSync(fs::Vnode* vnode) {
     sync_completion_wait(&sync, ZX_TIME_INFINITE);
   }
 }
+*/
 
 std::unique_ptr<BlobInfo> CreateBlob(const fbl::RefPtr<fs::Vnode>& root, size_t size) {
-  // Create fragmentation by creating blobs and deleting a few.
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", size);
   memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
@@ -319,7 +321,6 @@ std::unique_ptr<BlobInfo> CreateBlob(const fbl::RefPtr<fs::Vnode>& root, size_t 
   EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
   EXPECT_EQ(info->size_data, out_actual);
 
-  VnodeSync(file.get());
   file->Close();
   return info;
 }
@@ -475,6 +476,7 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
       {
           .blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd,
           .oldest_minor_version = kBlobfsCurrentMinorVersion,
+          .num_inodes = kNumNodes,
       },
       kNumBlocks);
   ASSERT_TRUE(device);
@@ -483,23 +485,25 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
       .metrics = true,
       .collector_factory =
           [&logger] { return std::make_unique<cobalt_client::Collector>(std::move(logger)); },
-      .metrics_flush_time = zx::sec(5)};
+      .metrics_flush_time = zx::msec(100)};
   BlobfsTestSetup setup;
   ASSERT_EQ(ZX_OK, setup.Mount(std::move(device), mount_options));
 
   srand(testing::UnitTest::GetInstance()->random_seed());
 
-  Stats expected;
-  expected.total_nodes = static_cast<int64_t>(setup.blobfs()->Info().inode_count);
-  expected.free_fragments[5] = 2;
-  logger_ptr->UpdateMetrics(setup.blobfs());
-  auto found = logger_ptr->GetStats();
-  ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
-  ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
-  ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
-  ASSERT_EQ(found.total_nodes, expected.total_nodes);
-  ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
-  ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+  {
+    Stats expected;
+    expected.total_nodes = static_cast<int64_t>(setup.blobfs()->Info().inode_count);
+    expected.free_fragments[6] = 2;
+    logger_ptr->UpdateMetrics(setup.blobfs());
+    auto found = logger_ptr->GetStats();
+    ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
+    ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
+    ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
+    ASSERT_EQ(found.total_nodes, expected.total_nodes);
+    ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
+    ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+  }
 
   fbl::RefPtr<fs::Vnode> root;
   ASSERT_EQ(setup.blobfs()->OpenRootNode(&root), ZX_OK);
@@ -510,21 +514,25 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
   // look like (first 10 bits set and all other bits unset.)
   // 111111111100000000....
   for (int i = 0; i < kSmallBlobCount; i++) {
-    infos.push_back(CreateBlob(root, 8192));
+    infos.push_back(CreateBlob(root, 64));
   }
 
-  expected.blobs_in_use = kSmallBlobCount;
-  expected.extents_per_blob[1] = kSmallBlobCount;
-  expected.in_use_fragments[1] = kSmallBlobCount;
-  expected.free_fragments[5] = 1;
-  logger_ptr->UpdateMetrics(setup.blobfs());
-  found = logger_ptr->GetStats();
-  ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
-  ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
-  ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
-  ASSERT_EQ(found.total_nodes, expected.total_nodes);
-  ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
-  ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+  {
+    Stats expected;
+    expected.total_nodes = static_cast<int64_t>(setup.blobfs()->Info().inode_count);
+    expected.blobs_in_use = kSmallBlobCount;
+    expected.extents_per_blob[1] = kSmallBlobCount;
+    expected.in_use_fragments[1] = kSmallBlobCount;
+    expected.free_fragments[6] = 1;
+    logger_ptr->UpdateMetrics(setup.blobfs());
+    auto found = logger_ptr->GetStats();
+    ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
+    ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
+    ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
+    ASSERT_EQ(found.total_nodes, expected.total_nodes);
+    ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
+    ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+  }
 
   // Delete few blobs. Notice the pattern we delete. With these deletions free(0) and used(1)
   // block bitmap will look as follows 1010100111000000... This creates 4 free fragments. 6 used
@@ -534,20 +542,24 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
   ASSERT_EQ(root->Unlink(infos[3]->path, false), ZX_OK);
   ASSERT_EQ(root->Unlink(infos[5]->path, false), ZX_OK);
   ASSERT_EQ(root->Unlink(infos[6]->path, false), ZX_OK);
-  VnodeSync(root.get());
 
-  expected.blobs_in_use = kSmallBlobCount - kBlobsDeleted;
-  expected.free_fragments[1] = 3;
-  expected.extents_per_blob[1] = kSmallBlobCount - kBlobsDeleted;
-  expected.in_use_fragments[1] = kSmallBlobCount - kBlobsDeleted;
-  logger_ptr->UpdateMetrics(setup.blobfs());
-  found = logger_ptr->GetStats();
-  ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
-  ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
-  ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
-  ASSERT_EQ(found.total_nodes, expected.total_nodes);
-  ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
-  ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+  {
+    Stats expected;
+    expected.total_nodes = static_cast<int64_t>(setup.blobfs()->Info().inode_count);
+    expected.blobs_in_use = kSmallBlobCount - kBlobsDeleted;
+    expected.free_fragments[1] = 3;
+    expected.free_fragments[6] = 1;
+    expected.extents_per_blob[1] = kSmallBlobCount - kBlobsDeleted;
+    expected.in_use_fragments[1] = kSmallBlobCount - kBlobsDeleted;
+    logger_ptr->UpdateMetrics(setup.blobfs());
+    auto found = logger_ptr->GetStats();
+    ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
+    ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
+    ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
+    ASSERT_EQ(found.total_nodes, expected.total_nodes);
+    ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
+    ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+  }
 
   // Create a huge(10 blocks) blob that potentially fills atleast three free fragments that we
   // created above.
@@ -562,21 +574,25 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
   // belows blows up. Assert that is not the case.
   ASSERT_GT(blocks, kBlobsDeleted);
 
-  expected.blobs_in_use += 1;
-  expected.extent_containers_in_use = 1;
-  expected.free_fragments.erase(1);
-  expected.free_fragments[5] = 1;
-  expected.extents_per_blob[1] = expected.extents_per_blob[1] + 1;
-  expected.in_use_fragments[1] = kSmallBlobCount - kBlobsDeleted + 3;
-  expected.in_use_fragments[2] = 1;
-  logger_ptr->UpdateMetrics(setup.blobfs());
-  found = logger_ptr->GetStats();
-  ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
-  ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
-  ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
-  ASSERT_EQ(found.total_nodes, expected.total_nodes);
-  ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
-  ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+  {
+    Stats expected;
+    expected.total_nodes = static_cast<int64_t>(setup.blobfs()->Info().inode_count);
+    expected.blobs_in_use = kSmallBlobCount - kBlobsDeleted + 1;
+    expected.extent_containers_in_use = 1;
+    expected.free_fragments[1] = 1;
+    expected.free_fragments[5] = 1;
+    expected.extents_per_blob[1] = kSmallBlobCount - kBlobsDeleted + 1;
+    expected.in_use_fragments[1] = kSmallBlobCount - kBlobsDeleted + 2;
+    expected.in_use_fragments[2] = 1;
+    logger_ptr->UpdateMetrics(setup.blobfs());
+    auto found = logger_ptr->GetStats();
+    ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
+    ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
+    ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
+    ASSERT_EQ(found.total_nodes, expected.total_nodes);
+    ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
+    ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+  }
 }
 
 }  // namespace

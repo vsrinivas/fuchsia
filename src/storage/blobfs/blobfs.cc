@@ -964,6 +964,7 @@ zx_status_t Blobfs::ComputeBlobLevelFragmentation(uint32_t node_index, Inode& in
 }
 
 void Blobfs::ComputeFragmentationMetrics() {
+  TRACE_DURATION("blobfs", "Blobfs::ComputeFragmentationMetrics");
   uint64_t extent_containers_in_use = 0;
   uint64_t blobs_in_use = 0;
   for (uint32_t node_index = 0; node_index < info_.inode_count; ++node_index) {

@@ -250,11 +250,11 @@ zx_status_t WriteBlock(int fd, uint64_t bno, const void* data);
 // Returns the number of blobfs blocks that fit in |fd|.
 zx_status_t GetBlockCount(int fd, uint64_t* out);
 
-// Formats a blobfs filesystem, meant to contain |block_count| blobfs blocks and at least
-// |inode_count| inodes, to the device represteted by |fd|.
+// Formats a blobfs filesystem, meant to contain |block_count| blobfs blocks, to the device
+// represteted by |fd|.
 //
 // Returns -1 on error, 0 on success.
-int Mkfs(int fd, uint64_t block_count, uint64_t inode_count, const FilesystemOptions& options);
+int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options);
 
 // Copies into |out_size| the number of bytes used by data in fs contained in a partition between
 // bytes |start| and |end|. If |start| and |end| are not passed, start is assumed to be zero and

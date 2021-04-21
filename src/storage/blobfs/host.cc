@@ -338,9 +338,9 @@ zx_status_t GetBlockCount(int fd, uint64_t* out) {
   return ZX_OK;
 }
 
-int Mkfs(int fd, uint64_t block_count, uint64_t inode_count, const FilesystemOptions& options) {
+int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options) {
   Superblock info;
-  InitializeSuperblock(block_count, inode_count, options, &info);
+  InitializeSuperblock(block_count, options, &info);
   zx_status_t status = CheckSuperblock(&info, block_count);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize superblock: " << status;
