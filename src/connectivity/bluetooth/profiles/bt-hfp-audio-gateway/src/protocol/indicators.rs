@@ -4,7 +4,7 @@
 
 use {at_commands as at, core::fmt::Debug, fidl_fuchsia_bluetooth_hfp::CallState};
 
-use crate::procedure::AgUpdate;
+use crate::peer::update::AgUpdate;
 
 /// This implementation supports the 7 indicators defined in HFP v1.8 Section 4.35.
 /// The indices of these indicators are fixed.

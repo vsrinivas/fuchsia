@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{AgUpdate, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
-use crate::peer::service_level_connection::SlcState;
+use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use crate::peer::{service_level_connection::SlcState, update::AgUpdate};
 
 /// Represents the speaker volume section of the Audio Volume Control procedure as defined in
 /// HFP v1.8 Section 4.29.1

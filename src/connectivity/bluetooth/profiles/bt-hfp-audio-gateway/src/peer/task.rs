@@ -26,15 +26,16 @@ use {
 use super::{
     calls::{Call, Calls},
     gain_control::GainControl,
+    procedure::{InformationRequest, ProcedureMarker},
     ringer::Ringer,
     service_level_connection::ServiceLevelConnection,
+    update::AgUpdate,
     PeerRequest,
 };
 
 use crate::{
     config::AudioGatewayFeatureSupport,
     error::Error,
-    procedure::{AgUpdate, InformationRequest, ProcedureMarker},
     profile::ProfileEvent,
     protocol::indicators::{AgIndicator, AgIndicators, HfIndicator},
 };

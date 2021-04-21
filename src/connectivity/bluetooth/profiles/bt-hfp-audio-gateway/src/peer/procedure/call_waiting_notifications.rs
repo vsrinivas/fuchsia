@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{AgUpdate, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
 use at_commands as at;
 
-use crate::peer::service_level_connection::SlcState;
+use crate::peer::{service_level_connection::SlcState, update::AgUpdate};
 
 /// The HF may disable or enable the Call Waiting Notifications via this
 /// procedure. See HFP v1.8, Section 4.21.

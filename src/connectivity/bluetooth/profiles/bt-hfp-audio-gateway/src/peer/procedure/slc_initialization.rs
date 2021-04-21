@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use super::{
-    AgUpdate, InformationRequest, Procedure, ProcedureError as Error, ProcedureMarker,
-    ProcedureRequest,
+    InformationRequest, Procedure, ProcedureError as Error, ProcedureMarker, ProcedureRequest,
 };
 
 use crate::{
-    peer::service_level_connection::SlcState,
+    peer::{service_level_connection::SlcState, update::AgUpdate},
     protocol::{
         features::{AgFeatures, HfFeatures},
         indicators::{AgIndicators, AgIndicatorsReporting},

@@ -20,9 +20,11 @@ use {
 
 pub mod calls;
 pub mod gain_control;
+pub mod procedure;
 mod ringer;
 pub mod service_level_connection;
 mod task;
+pub mod update;
 
 /// A request made to the Peer that should be passed along to the PeerTask
 enum PeerRequest {

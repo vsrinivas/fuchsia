@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{
-    AgUpdate, InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest,
-};
+use super::{InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
-use crate::peer::{calls::Call, service_level_connection::SlcState};
+use crate::peer::{calls::Call, service_level_connection::SlcState, update::AgUpdate};
 
 use {at_commands as at, fidl_fuchsia_bluetooth_hfp::CallState};
 

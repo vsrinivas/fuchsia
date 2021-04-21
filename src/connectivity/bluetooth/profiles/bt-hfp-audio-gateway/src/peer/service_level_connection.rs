@@ -20,14 +20,13 @@ use {
     std::{collections::HashMap, collections::VecDeque, io::Cursor},
 };
 
-use crate::{
-    procedure::{
-        AgUpdate, InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest,
-    },
-    protocol::{
-        features::{AgFeatures, HfFeatures},
-        indicators::{AgIndicators, AgIndicatorsReporting, HfIndicators},
-    },
+use super::{
+    procedure::{InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest},
+    update::AgUpdate,
+};
+use crate::protocol::{
+    features::{AgFeatures, HfFeatures},
+    indicators::{AgIndicators, AgIndicatorsReporting, HfIndicators},
 };
 
 /// The maximum number of concurrent procedures currently supported by this SLC.
@@ -629,7 +628,7 @@ pub(crate) mod tests {
     use {
         super::*,
         crate::{
-            procedure::InformationRequest,
+            peer::procedure::InformationRequest,
             protocol::{
                 features::{AgFeatures, HfFeatures},
                 indicators::{

@@ -21,7 +21,8 @@ use {
     },
 };
 
-use crate::{error::Error, procedure::AgUpdate};
+use super::update::AgUpdate;
+use crate::error::Error;
 
 type NotifyFn<Resp> = Box<dyn Fn(&u8, Resp) -> bool>;
 type GainHangingGet<Resp> = HangingGet<u8, Resp, NotifyFn<Resp>>;

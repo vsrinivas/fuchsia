@@ -4,8 +4,11 @@
 
 use at_commands as at;
 
-use super::{AgUpdate, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest, RING_BYTES};
-use crate::peer::service_level_connection::SlcState;
+use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use crate::peer::{
+    service_level_connection::SlcState,
+    update::{AgUpdate, RING_BYTES},
+};
 
 /// Represents the Ring (Alert) procedures as defined in HFP v1.8 Section 4.13 - 4.14.
 ///

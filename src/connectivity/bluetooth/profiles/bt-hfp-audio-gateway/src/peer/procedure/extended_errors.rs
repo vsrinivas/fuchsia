@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{AgUpdate, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
-use crate::peer::service_level_connection::SlcState;
+use crate::peer::{service_level_connection::SlcState, update::AgUpdate};
 use at_commands as at;
 
 /// The Hf may request that the Audio Gateway report extended error result codes as defined in

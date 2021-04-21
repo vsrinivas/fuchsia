@@ -20,7 +20,6 @@ mod error;
 mod fidl_service;
 mod hfp;
 mod peer;
-mod procedure;
 mod profile;
 mod protocol;
 mod service_definitions;

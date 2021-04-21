@@ -5,7 +5,7 @@
 use {
     crate::{
         error::CallError,
-        procedure::{dtmf::DtmfCode, hold::CallHoldAction},
+        peer::procedure::{dtmf::DtmfCode, hold::CallHoldAction},
         protocol::indicators::{CallIndicators, CallIndicatorsUpdates},
     },
     async_utils::{
