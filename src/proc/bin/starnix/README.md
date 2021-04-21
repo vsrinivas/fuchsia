@@ -26,6 +26,10 @@ $ fx set core.x64 --with-base //src/proc,//src/proc:tests
 $ fx build
 ```
 
+> Note: If you use `--with` instead of `--with-base`, the Fuchsia system might
+not boot because adding the `core.shard.cml` to the core component starts
+Starnix during system boot.
+
 ### Run Fuchsia
 
 Run Fuchsia as normal, for example using `fx serve` and `fx emu -N`.
@@ -41,7 +45,7 @@ fx log --tag starnix
 To run a Linux binary, ask starnix to start a component that wraps the binary:
 
 ```sh
-$ ffx starnix start fuchsia-pkg://fuchsia.com/hello_starnix#meta/hello_starnix.cm
+$ ffx starnix start fuchsia-pkg://fuchsia.com/hello-starnix#meta/hello_starnix.cm
 ```
 
 If this is the first time you've used the `ffx starnix` command, you might need
@@ -52,7 +56,7 @@ If everything is working, you should see some log messages like the following:
 
 ```
 [00064.846853][33707][33709][starnix, starnix] INFO: main
-[00064.847640][33707][33709][starnix, starnix] INFO: start_component: fuchsia-pkg://fuchsia.com/hello_starnix#meta/hello_starnix.cm
+[00064.847640][33707][33709][starnix, starnix] INFO: start_component: fuchsia-pkg://fuchsia.com/hello-starnix#meta/hello_starnix.cm
 ```
 
 ### Run a Linux test binary

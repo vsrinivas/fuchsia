@@ -189,9 +189,9 @@ async fn start_runner(
         match event {
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
                 fasync::Task::local(async move {
-                    start_component(start_info, controller)
-                        .await
-                        .expect("failed to start component")
+                    if let Err(e) = start_component(start_info, controller).await {
+                        error!("failed to start component: {}", e);
+                    }
                 })
                 .detach();
             }
