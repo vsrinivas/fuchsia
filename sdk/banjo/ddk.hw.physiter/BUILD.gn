@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("ddk.hw.physiter") {
+  fidl_only = true
   sdk_category = "partner"
   sources = [ "phys-iter.banjo" ]
 }

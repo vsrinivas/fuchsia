@@ -32,7 +32,7 @@ zx_library("usb") {
     "//src/devices/lib/dev-operation",
   ]
   deps = [
-    "//sdk/banjo/ddk.hw.physiter",
+    "//sdk/banjo/ddk.hw.physiter:ddk.hw.physiter_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
