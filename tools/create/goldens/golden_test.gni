@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
-import("//build/testing/host_test.gni")
+import("//build/python/python_host_test.gni")
 import("//build/testing/host_test_data.gni")
 
 # Defines a golden test for `fx create`.
@@ -62,40 +62,27 @@ template("golden_test") {
     outputs = [ "${test_dir}/goldens.json" ]
     contents = rebase_path(get_target_outputs(":${target_copy_goldens}"),
                            root_build_dir)
-    deps = [ ":${target_copy_goldens}" ]
-    output_conversion = "json"
-
-    # Include the generated file as a test dependency.
-    # Automated infrastructure only makes available what has been explicitly marked as a
-    # test dependency.
-    metadata = {
-      test_runtime_deps = outputs
-    }
-  }
-
-  # Copy the test script, into this test's gen directory, making it easier to
-  # find the .deps.json file relatively.
-  target_test_script = "${target_name}_test_script"
-  host_test_data(target_test_script) {
-    sources = [ "//tools/create/goldens/test_script.py" ]
-    outputs = [ "${test_dir}/test_script.py" ]
-
-    # The test script invokes the create tool.
     deps = [
-      ":${target_goldens_json}",
+      ":${target_copy_goldens}",
+
+      # The test script invokes the create tool.
       "//tools/create:install",
     ]
+    output_conversion = "json"
 
-    # Include the host tool as a test dependency.
+    # Include the generated file and host tool as a test dependency.
     # Automated infrastructure only makes available what has been explicitly marked as a
     # test dependency.
     metadata = {
-      test_runtime_deps = [ "${host_tools_dir}/create" ]
+      test_runtime_deps = outputs + [ "${host_tools_dir}/create" ]
     }
   }
 
-  # The first argument is the path to the `fx create` binary, relative to the root build directory.
-  test_args = [ rebase_path("${host_tools_dir}/create", root_build_dir) ]
+  # The directory where all the test data is.
+  test_args = [ rebase_path(test_dir, root_build_dir) ]
+
+  # The path to the `fx create` binary, relative to the root build directory.
+  test_args += [ rebase_path("${host_tools_dir}/create", root_build_dir) ]
 
   # The next argument is the path to the generated runtime dependecy JSON file. This includes
   # all files visible to the test. These include the golden project files.
@@ -116,10 +103,9 @@ template("golden_test") {
     "--silent",
   ]
 
-  # Generate a test target, so that this test can be executed with `fx test`.
-  host_test(target_name) {
-    binary_path = "${test_dir}/test_script.py"
-    args = test_args
-    deps = [ ":${target_test_script}" ]
+  python_host_test(target_name) {
+    main_source = "test_script.py"
+    extra_args = test_args
+    deps = [ ":${target_goldens_json}" ]
   }
 }

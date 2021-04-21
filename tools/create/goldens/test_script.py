@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -6,7 +6,6 @@
 Test script that invokes `fx create` and compares its output with a set of golden files.
 """
 
-from __future__ import print_function
 import argparse
 import difflib
 import json
@@ -15,21 +14,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-
-
-class TemporaryDirectory(object):
-    """Backport of tempfile.TemporaryDirectory for python 2.7."""
-
-    def __enter__(self):
-        self.name = tempfile.mkdtemp()
-        return self.name
-
-    def __exit__(self, type, value, traceback):
-        shutil.rmtree(self.name)
-
-
-# Use the python3 TemporaryDirectory if available, otherwise use the fallback impl.
-TemporaryDirectory = getattr(tempfile, 'TemporaryDirectory', TemporaryDirectory)
 
 
 # Prints a diff (if there is one) of the two files, and returns True if there was a difference.
@@ -56,12 +40,12 @@ def eprint(msg):
 
 
 def main():
-    script_dir = os.path.dirname(sys.argv[0])
-
     parser = argparse.ArgumentParser(
         description=
         "Invokes `fx create` and compares its output with a set of golden files."
     )
+    parser.add_argument(
+        'test_dir', help='path to the test\'s working directory')
     parser.add_argument('create_bin', help='path to the create binary')
     parser.add_argument(
         'golden_files', help='path to the JSON file listing all golden files')
@@ -71,18 +55,18 @@ def main():
         'create_args',
         nargs=argparse.REMAINDER,
         help='other arguments to `fx create`')
-    args = parser.parse_args()
+    proc_args = parser.parse_args()
 
     # Read the set of golden files accessible to this script.
-    with open(args.golden_files) as f:
+    with open(proc_args.golden_files) as f:
         golden_files = set(json.load(f))
 
     # Create a temporary directory to house the generated project.
-    with TemporaryDirectory() as project_dir:
+    with tempfile.TemporaryDirectory() as project_dir:
         args = [
-            args.create_bin, args.project_type,
-            os.path.join(project_dir, args.project_name)
-        ] + args.create_args
+            proc_args.create_bin, proc_args.project_type,
+            os.path.join(project_dir, proc_args.project_name)
+        ] + proc_args.create_args
 
         # Call the create tool
         subprocess.check_call(args)
@@ -93,7 +77,7 @@ def main():
         for generated_path in get_files_in_dir(project_dir):
             # Strip the tmp dir prefix to get the base path of the generated file.
             base_path = generated_path[len(project_dir) + 1:]
-            golden_path = os.path.join(script_dir, base_path)
+            golden_path = os.path.join(proc_args.test_dir, base_path)
             try:
                 golden_files.remove(golden_path)
             except KeyError:
@@ -114,9 +98,14 @@ def main():
                     base_path))
 
         if error:
-            return 1
-        return 0
+            sys.exit(1)
 
+
+# The python_host_test build rule calls `unittest.main`.
+# Since this is not a unittest (and can't be since it takes command line arguments),
+# we pretend our main is unittest's main.
+
+unittest = sys.modules[__name__]
 
 if __name__ == '__main__':
-    sys.exit(main())
+    unittest.main()
