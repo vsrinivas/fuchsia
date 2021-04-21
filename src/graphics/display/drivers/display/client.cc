@@ -646,9 +646,6 @@ void Client::SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_e
 }
 
 void Client::CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) {
-  // TODO (fxbug.dev/73315): Remove this log once we close out the ticket.
-  zxlogf(INFO, "Display::Client::CheckConfig called.\n");
-
   fhd::wire::ConfigResult res;
   std::vector<fhd::wire::ClientCompositionOp> ops;
 
@@ -684,8 +681,6 @@ void Client::CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) {
     pending_config_valid_ = true;
   }
 
-  // TODO (fxbug.dev/73315): Remove this log once we close out the ticket.
-  zxlogf(INFO, "Display::Client::CheckConfig Complete.\n");
   _completer.Reply(res, ::fidl::VectorView<fhd::wire::ClientCompositionOp>::FromExternal(ops));
 }
 
