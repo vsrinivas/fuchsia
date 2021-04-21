@@ -8,6 +8,7 @@
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,7 +36,7 @@ enum Boards {
 
 Boards board = UNKNOWN_BOARD;
 
-fbl::StringBuffer<sysinfo::BOARD_NAME_LEN> board_name;
+fbl::StringBuffer<sysinfo::wire::kBoardNameLen> board_name;
 
 Boards GetBoard() {
   zx::channel sysinfo_server_channel, sysinfo_client_channel;
@@ -50,7 +51,7 @@ Boards GetBoard() {
     return UNKNOWN_BOARD;
   }
   fdio_cpp::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
-  auto result = fidl::WireCall<sysinfo::SysInfo>(caller_sysinfo.channel()).GetBoardName();
+  auto result = fidl::WireCall(caller_sysinfo.borrow_as<sysinfo::SysInfo>()).GetBoardName();
   if (!result.ok() || result.value().status != ZX_OK) {
     return UNKNOWN_BOARD;
   }
@@ -69,17 +70,11 @@ Boards GetBoard() {
 }
 
 uint8_t GetGpioValue(const char* gpio_path) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
+  auto client_end = service::Connect<gpio::Gpio>(gpio_path);
+  if (!client_end.is_ok()) {
     return -1;
   }
-  status = fdio_service_connect(gpio_path, remote.release());
-  if (status != ZX_OK) {
-    return -1;
-  }
-
-  fidl::WireSyncClient<gpio::Gpio> client(std::move(local));
+  auto client = fidl::BindSyncClient(std::move(*client_end));
   auto res = client.Read();
   if (!res.ok() || res.value().result.is_err()) {
     return -1;
