@@ -17,15 +17,15 @@ use {
     std::time::Duration,
 };
 
+// On Fuchsia, we'll connect to overnetstack, and so we should at least see that.
+#[cfg(target_os = "fuchsia")]
+pub const MIN_PEERS: usize = 1;
+// Whereas on host, we'll connect to ascendd from the overnet library, so we should see the current process & ascendd at least.
+#[cfg(not(target_os = "fuchsia"))]
+pub const MIN_PEERS: usize = 2;
+
 // List peers, but wait for things to settle out first
 pub fn list_peers() -> impl Stream<Item = Result<NodeId, Error>> {
-    // On Fuchsia, we'll connect to overnetstack, and so we should at least see that.
-    #[cfg(target_os = "fuchsia")]
-    const MIN_PEERS: usize = 1;
-    // Whereas on host, we'll connect to ascendd from the overnet library, so we should see the current process & ascendd at least.
-    #[cfg(not(target_os = "fuchsia"))]
-    const MIN_PEERS: usize = 2;
-
     Generator::new(move |mut tx| async move {
         let r: Result<(), Error> = async {
             let svc = hoist().connect_as_service_consumer()?;

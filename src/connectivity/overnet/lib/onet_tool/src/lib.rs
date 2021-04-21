@@ -93,11 +93,14 @@ async fn list_links(args: ListLinks) -> Result<(), Error> {
                 let connecting_link_count = probe
                     .connecting_link_count
                     .ok_or_else(|| format_err!("No connecting link count in probe result"))?;
-                if connecting_link_count > 0 {
+                let links = probe.links.ok_or_else(|| format_err!("No links in probe result"))?;
+                if connecting_link_count > 0
+                    || (crate::list_peers::MIN_PEERS > 1 && links.is_empty())
+                {
                     Timer::new(Duration::from_millis(100)).await;
                     continue;
                 }
-                break probe.links.ok_or_else(|| format_err!("No links in probe result"))?;
+                break links;
             };
             links.sort_by(|a, b| a.source_local_id.cmp(&b.source_local_id));
             for link in links {
