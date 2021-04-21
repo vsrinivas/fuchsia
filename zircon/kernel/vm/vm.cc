@@ -13,6 +13,7 @@
 #include <lib/console.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/instrumentation/asan.h>
+#include <lib/lazy_init/lazy_init.h>
 #include <lib/zircon-internal/macros.h>
 #include <string.h>
 #include <trace.h>
@@ -75,6 +76,14 @@ const ktl::span<const kernel_region> kernel_regions{_kernel_regions};
 
 namespace {
 
+// Declare storage for vmars that make up the statically known initial kernel regions. These are
+// used to roughly sketch out and reserve portions of the kernel's aspace before we have the heap.
+lazy_init::LazyInit<VmAddressRegion> kernel_physmap_vmar;
+lazy_init::LazyInit<VmAddressRegion> kernel_image_vmar;
+#if !DISABLE_KASLR
+lazy_init::LazyInit<VmAddressRegion> kernel_random_padding_vmar;
+#endif
+
 // mark a range of physical pages as WIRED
 void MarkPagesInUsePhys(paddr_t pa, size_t len) {
   LTRACEF("pa %#" PRIxPTR ", len %#zx\n", pa, len);
@@ -98,11 +107,62 @@ void MarkPagesInUsePhys(paddr_t pa, size_t len) {
 
 }  // namespace
 
+// Initializes the statically known initial kernel region vmars. This is split out from
+// vm_init_preheap so that it can be marked with TA_NO_THREAD_SAFETY_ANALYSIS. It needs to be global
+// so that VmAddressRegion can friend it.
+void vm_init_preheap_vmars() TA_NO_THREAD_SAFETY_ANALYSIS {
+  fbl::RefPtr<VmAddressRegion> root_vmar = VmAspace::kernel_aspace()->RootVmar();
+
+  // For VMARs that we are just reserving we request full RWX permissions. This will get refined
+  // later in the proper vm_init.
+  constexpr uint32_t kKernelVmarFlags = VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_CAN_RWX_FLAGS;
+
+  fbl::AdoptRef<VmAddressRegion>(&kernel_physmap_vmar.Initialize(*root_vmar, PHYSMAP_BASE,
+                                                                 PHYSMAP_SIZE, kKernelVmarFlags,
+                                                                 "physmap vmar"))
+      ->Activate();
+
+  // |kernel_image_size| is the size in bytes of the region of memory occupied by the kernel
+  // program's various segments (code, rodata, data, bss, etc.), inclusive of any gaps between
+  // them.
+  const size_t kernel_image_size = get_kernel_size();
+  // Create a VMAR that covers the address space occupied by the kernel program segments (code,
+  // rodata, data, bss ,etc.). By creating this VMAR, we are effectively marking these addresses as
+  // off limits to the VM. That way, the VM won't inadvertently use them for something else. This is
+  // consistent with the initial mapping in start.S where the whole kernel region mapping was
+  // written into the page table.
+  //
+  // Note: Even though there might be usable gaps in between the segments, we're covering the whole
+  // regions. The thinking is that it's both simpler and safer to not use the address space that
+  // exists between kernel program segments.
+  fbl::AdoptRef<VmAddressRegion>(&kernel_image_vmar.Initialize(*root_vmar, kernel_regions[0].base,
+                                                               kernel_image_size, kKernelVmarFlags,
+                                                               "kernel region vmar"))
+      ->Activate();
+
+#if !DISABLE_KASLR  // Disable random memory padding for KASLR
+  // Reserve random padding of up to 64GB after first mapping. It will make
+  // the adjacent memory mappings (kstack_vmar, arena:handles and others) at
+  // non-static virtual addresses.
+  size_t size_entropy;
+  crypto::GlobalPRNG::GetInstance()->Draw(&size_entropy, sizeof(size_entropy));
+
+  const size_t random_size = PAGE_ALIGN(size_entropy % (64ULL * GB));
+  fbl::AdoptRef<VmAddressRegion>(
+      &kernel_random_padding_vmar.Initialize(*root_vmar, PHYSMAP_BASE + PHYSMAP_SIZE, random_size,
+                                             kKernelVmarFlags, "random padding vmar"))
+      ->Activate();
+  LTRACEF("VM: aspace random padding size: %#" PRIxPTR "\n", random_size);
+#endif
+}
+
 void vm_init_preheap() {
   LTRACE_ENTRY;
 
   // allow the vmm a shot at initializing some of its data structures
   VmAspace::KernelAspaceInitPreHeap();
+
+  vm_init_preheap_vmars();
 
   // mark the physical pages used by the boot time allocator
   if (boot_alloc_end != boot_alloc_start) {
@@ -148,36 +208,15 @@ void vm_init() {
   // Mark the physmap no-execute.
   physmap_protect_arena_regions_noexecute();
 
-  VmAspace* aspace = VmAspace::kernel_aspace();
-
-  fbl::RefPtr<VmAddressRegion> kernel_region;
-  // | kernel_region_size | is the size in bytes of the region of memory occupied by the kernel
-  // program's various segments (code, rodata, data, bss, etc.), inclusive of any gaps between
-  // them.
-  size_t kernel_region_size = get_kernel_size();
-  // Create a VMAR that covers the address space occupied by the kernel program segments (code,
-  // rodata, data, bss ,etc.). By creating this VMAR, we are effectively marking these addresses as
-  // off limits to the VM. That way, the VM won't inadverantly use them for something else. This is
-  // consistent with the initial mapping in start.S where the whole kernel region mapping was
-  // written into the page table.
-  //
-  // Note: Even though there might be usable gaps in between the segments, we're covering the whole
-  // regions. The thinking is that it's both simpler and safer to not use the address space that
-  // exists between kernel program segments.
-  zx_status_t status = aspace->RootVmar()->CreateSubVmar(
-      kernel_regions[0].base - aspace->RootVmar()->base(), kernel_region_size, 0,
-      VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_FLAG_SPECIFIC | VMAR_CAN_RWX_FLAGS, "kernel region vmar",
-      &kernel_region);
-  ASSERT(status == ZX_OK);
-
+  // Finish reserving the sections in the kernel_region
   for (const auto& region : kernel_regions) {
     ASSERT(IS_PAGE_ALIGNED(region.base));
 
-    dprintf(INFO,
+    dprintf(ALWAYS,
             "VM: reserving kernel region [%#" PRIxPTR ", %#" PRIxPTR ") flags %#x name '%s'\n",
             region.base, region.base + region.size, region.arch_mmu_flags, region.name);
-    status =
-        kernel_region->ReserveSpace(region.name, region.base, region.size, region.arch_mmu_flags);
+    zx_status_t status = kernel_image_vmar->ReserveSpace(region.name, region.base, region.size,
+                                                         region.arch_mmu_flags);
     ASSERT(status == ZX_OK);
 
 #if __has_feature(address_sanitizer)
@@ -185,23 +224,15 @@ void vm_init() {
 #endif  // __has_feature(address_sanitizer)
   }
 
-  // reserve the kernel aspace where the physmap is
-  status = aspace->RootVmar()->ReserveSpace("physmap", PHYSMAP_BASE, PHYSMAP_SIZE,
-                                            ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+  // Finishing reserving the physmap
+  zx_status_t status = kernel_physmap_vmar->ReserveSpace(
+      "physmap", PHYSMAP_BASE, PHYSMAP_SIZE, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
   ASSERT(status == ZX_OK);
 
-#if !DISABLE_KASLR  // Disable random memory padding for KASLR
-  // Reserve random padding of up to 64GB after first mapping. It will make
-  // the adjacent memory mappings (kstack_vmar, arena:handles and others) at
-  // non-static virtual addresses.
-  size_t entropy;
-  crypto::GlobalPRNG::GetInstance()->Draw(&entropy, sizeof(entropy));
-
-  size_t random_size = PAGE_ALIGN(entropy % (64ULL * GB));
-  status = aspace->RootVmar()->ReserveSpace("random_padding", PHYSMAP_BASE + PHYSMAP_SIZE,
-                                            random_size, 0);
+#if !DISABLE_KASLR
+  status = kernel_random_padding_vmar->ReserveSpace(
+      "random_padding", kernel_random_padding_vmar->base(), kernel_random_padding_vmar->size(), 0);
   ASSERT(status == ZX_OK);
-  LTRACEF("VM: aspace random padding size: %#" PRIxPTR "\n", random_size);
 #endif
 }
 

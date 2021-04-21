@@ -518,8 +518,15 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request)
       TA_REQ(lock()) override;
 
+  // Constructors are public as LazyInit cannot use them otherwise, even if friended, but
+  // otherwise should be considered private and Create...() should be used instead.
+  VmAddressRegion(VmAspace& aspace, vaddr_t base, size_t size, uint32_t vmar_flags);
+  VmAddressRegion(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
+                  const char* name);
+
  protected:
   friend class VmAspace;
+  friend void vm_init_preheap_vmars();
   // constructor for use in creating the kernel aspace singleton
   explicit VmAddressRegion(VmAspace& kernel_aspace);
   // Count the allocated pages, caller must be holding the aspace lock
@@ -530,17 +537,10 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
 
   friend class VmMapping;
 
-  friend fbl::RefPtr<VmAddressRegion>;
-
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmAddressRegion);
 
   fbl::Canary<fbl::magic("VMAR")> canary_;
-
-  // private constructors, use Create...() instead
-  VmAddressRegion(VmAspace& aspace, vaddr_t base, size_t size, uint32_t vmar_flags);
-  VmAddressRegion(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
-                  const char* name);
 
   zx_status_t DestroyLocked() TA_REQ(lock()) override;
 
