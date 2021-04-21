@@ -32,6 +32,10 @@
 //
 // Further pessimistically, we default to assigning vulnerability in the case
 // unknown architectures.
+//
+// For non-architectural MSRs whose fields give workarounds to specific errata,
+// if no further qualification is given (e.g., a field name/mnemonic), we name
+// the field "erratum_${ID}_workaround".
 
 namespace arch {
 
@@ -51,6 +55,52 @@ struct NullMsrIo {
 };
 
 }  // namespace internal
+
+// [amd/ssbd] references bits 10, 33, 54.
+// [amd/rg/17h/00h-0Fh] references bits 4, 57.
+//
+// MSRC001_1020.
+struct AmdLoadStoreConfigurationMsr
+    : public X86MsrBase<AmdLoadStoreConfigurationMsr, X86Msr::MSRC001_1020> {
+  // Bits [63:58] are reserved/unknown.
+  DEF_BIT(57, erratum_1095_workaround);
+  // Bits [56:55] are reserved/unknown.
+  DEF_BIT(54, ssbd_15h);
+  // Bits [53:34] are reserved/unknown.
+  DEF_BIT(33, ssbd_16h);
+  // Bits [32:11] are reserved/unknown.
+  DEF_BIT(10, ssbd_17h);
+  // Bits [9:5] are reserved/unknown.
+  DEF_BIT(4, erratum_1033_workaround);
+  // Bits [3:0] are reserved/unknown.
+};
+
+// [amd/rg/17h/00h-0Fh] references bit 4.
+//
+// MSRC001_1028.
+struct AmdC0011028Msr : public X86MsrBase<AmdC0011028Msr, X86Msr::MSRC001_1028> {
+  // Bits [63:5] are reserved/unknown.
+  DEF_BIT(4, erratum_1049_workaround);
+  // Bits [3:0] are reserved/unknown.
+};
+
+// [amd/rg/17h/00h-0Fh] references bit 13.
+//
+// MSRC001_1029.
+struct AmdC0011029Msr : public X86MsrBase<AmdC0011029Msr, X86Msr::MSRC001_1029> {
+  // Bits [63:14] are reserved/unknown.
+  DEF_BIT(13, erratum_1021_workaround);
+  // Bits [12:0] are reserved/unknown.
+};
+
+// [amd/rg/17h/00h-0Fh] references bit 34.
+//
+// MSRC001_102D.
+struct AmdC001102dMsr : public X86MsrBase<AmdC001102dMsr, X86Msr::MSRC001_102D> {
+  // Bits [63:35] are reserved/unknown.
+  DEF_BIT(34, erratum_1091_workaround);
+  // Bits [33:0] are reserved/unknown.
+};
 
 // Whether the CPU is susceptible to swapgs speculation attacks:
 // https://software.intel.com/security-software-guidance/advisory-guidance/speculative-behavior-swapgs-and-segment-registers
@@ -316,6 +366,59 @@ inline SpectreV2Mitigation GetPreferredSpectreV2Mitigation(CpuidIoProvider&& cpu
   // Retpolines comprise an architecturally agnostic, pure software solution,
   // which makes it a sensible default strategy.
   return SpectreV2Mitigation::kIbpbRetpoline;
+}
+
+// Applies workarounds to processor-specific errata.
+template <typename CpuidIoProvider, typename MsrIoProvider>
+inline void ApplyX86ErrataWorkarounds(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
+  if (cpuid.template Read<CpuidFeatureFlagsC>().hypervisor()) {
+    return;
+  }
+
+  switch (arch::GetVendor(cpuid)) {
+    case Vendor::kUnknown:
+      break;
+    case Vendor::kIntel:
+      break;
+    case Vendor::kAmd: {
+      const auto info = cpuid.template Read<CpuidVersionInfo>();
+      switch (info.family()) {
+        case 0x17: {
+          switch (info.model()) {
+            // [amd/rg/17h/00h-0Fh].
+            case 0x00 ... 0x0f: {
+              // ZP-B1 refers to (model, stepping) == (1, 1); some of the errata
+              // are detailed as only applying to that CPU.
+              const bool zp_b1 = info.model() == 1 && info.stepping() == 1;
+
+              // 1021: Load Operation May Receive Stale Data From Older Store Operation.
+              AmdC0011029Msr::Get().ReadFrom(&msr).set_erratum_1021_workaround(1).WriteTo(&msr);
+
+              auto lscfg = AmdLoadStoreConfigurationMsr::Get().ReadFrom(&msr);
+              // 1033: A Lock Operation May Cause the System to Hang.
+              if (zp_b1) {
+                lscfg.set_erratum_1033_workaround(1);
+              }
+              // 1095: Potential Violation of Read Ordering In Lock Operation in SMT Mode.
+              if (true) {  // TODO(fxbug.dev/37450): Do not apply if SMT is disabled.
+                lscfg.set_erratum_1095_workaround(1);
+              }
+              lscfg.WriteTo(&msr);
+
+              // 1049: FCMOV Instruction May Not Execute Correctly.
+              AmdC0011028Msr::Get().ReadFrom(&msr).set_erratum_1049_workaround(1).WriteTo(&msr);
+
+              // 1091: 4K Address Boundary Crossing Load Operation May Receive Stale Data.
+              AmdC001102dMsr::Get().ReadFrom(&msr).set_erratum_1091_workaround(1).WriteTo(&msr);
+              break;
+            }
+          }
+          break;
+        }
+      }
+      break;
+    }
+  }
 }
 
 }  // namespace arch

@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <lib/arch/x86/boot-cpuid.h>
+#include <lib/arch/x86/bug.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
 #include <platform.h>
@@ -32,6 +33,7 @@
 #include <arch/x86/mmu.h>
 #include <dev/hw_rng.h>
 #include <dev/interrupt.h>
+#include <hwreg/x86msr.h>
 #include <kernel/cpu.h>
 #include <kernel/event.h>
 #include <kernel/timer.h>
@@ -287,6 +289,8 @@ void x86_init_percpu(cpu_num_t cpu_num) {
     default:
       break;
   }
+
+  arch::ApplyX86ErrataWorkarounds(arch::BootCpuidIo{}, hwreg::X86MsrIo{});
 
   mp_set_curr_cpu_online(true);
 }

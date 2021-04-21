@@ -75,6 +75,9 @@ enum class X86Msr : uint32_t {
   // Sparsely documented, non-architectural AMD MSRs.
   MSR_VIRT_SPEC_CTRL = 0xc001'011f,  // Virtualized speculation control.
   MSRC001_1020 = 0xc001'1020,        // AMD load-store configuration.
+  MSRC001_1028 = 0xc001'1028,
+  MSRC001_1029 = 0xc001'1029,
+  MSRC001_102D = 0xc001'102d,
 };
 
 // A convenience class to inherit from in defining MSR register types. Gives a

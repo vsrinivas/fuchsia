@@ -36,31 +36,6 @@ struct ArchCapabilitiesMsr
   }
 };
 
-// [amd/ssbd] references bits 10, 33, 54.
-// [amd/rg/17h/00h-0Fh] references bits 4, 57.
-//
-// MSRC001_1020.
-//
-// AMD's load-store configuration MSR. Its fields are disparately documented,
-// and lackingly at that. In the revision guide for specific erratum, fields
-// are referenced as enabling workarounds, but further qualification is given
-// (e.g., a field name/mnemonic); in those cases, we name the field
-// "erratum_${number}_workaround".
-struct AmdLoadStoreConfigurationMsr
-    : public X86MsrBase<AmdLoadStoreConfigurationMsr, X86Msr::MSRC001_1020> {
-  // Bits [63:58] are reserved/unknown.
-  DEF_BIT(57, erratum_1095_workaround);
-  // Bits [56:55] are reserved/unknown.
-  DEF_BIT(54, ssbd_15h);
-  // Bits [53:34] are reserved/unknown.
-  DEF_BIT(33, ssbd_16h);
-  // Bits [32:11] are reserved/unknown.
-  DEF_BIT(10, ssbd_17h);
-  // Bits [9:5] are reserved/unknown.
-  DEF_BIT(4, erratum_1033_workaround);
-  // Bits [3:0] are reserved/unknown.
-};
-
 }  // namespace arch
 
 #endif  // ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_FEATURE_H_
