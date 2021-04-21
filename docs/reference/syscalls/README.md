@@ -1,5 +1,7 @@
 # Zircon System Calls
 
+[Life of a Fuchsia syscall](/docs/concepts/kernel/life_of_a_syscall.md)
+
 ## Handles
 + [handle_close](handle_close.md) - close a handle
 + [handle_close_many](handle_close_many.md) - close several handles

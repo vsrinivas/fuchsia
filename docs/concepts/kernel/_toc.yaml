@@ -22,6 +22,8 @@ toc:
     path: /docs/concepts/kernel/signals.md
 - title: "System calls"
   section:
+  - title: "Life of a Fuchsia syscall"
+    path: /docs/concepts/kernel/life_of_a_syscall.md
   - title: "vDSO (libzircon)"
     path: /docs/concepts/kernel/vdso.md
 - title: "Scheduling"

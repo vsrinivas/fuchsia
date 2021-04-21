@@ -37,6 +37,8 @@ registers and the stack, which is common across many systems that use ELF,
 such as Linux and all the BSD variants. They do not rely on complex
 features such as ELF Thread-Local Storage, nor on Fuchsia-specific ABI
 elements such as the [SafeStack](/docs/concepts/kernel/safestack.md) unsafe stack pointer.
+To see more information about the life of a syscall and its relationship to the vDSO, see
+[Life of a Fuchsia syscall](/docs/concepts/kernel/life_of_a_syscall.md).
 
 ### vDSO Unwind Information
 
