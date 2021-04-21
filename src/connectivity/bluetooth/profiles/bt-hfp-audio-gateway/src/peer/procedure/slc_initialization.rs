@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{
-    InformationRequest, Procedure, ProcedureError as Error, ProcedureMarker, ProcedureRequest,
-};
+use super::{Procedure, ProcedureError as Error, ProcedureMarker, ProcedureRequest};
 
 use crate::{
-    peer::{service_level_connection::SlcState, update::AgUpdate},
+    peer::{service_level_connection::SlcState, slc_request::SlcRequest, update::AgUpdate},
     protocol::{
         features::{AgFeatures, HfFeatures},
         indicators::{AgIndicators, AgIndicatorsReporting},
@@ -134,7 +132,7 @@ struct HfFeaturesReceived;
 
 impl SlcProcedureState for HfFeaturesReceived {
     fn request(&self) -> ProcedureRequest {
-        InformationRequest::GetAgFeatures {
+        SlcRequest::GetAgFeatures {
             response: Box::new(|features: AgFeatures| AgUpdate::Features(features)),
         }
         .into()
@@ -218,7 +216,7 @@ struct AgIndicatorStatusRequestReceived;
 
 impl SlcProcedureState for AgIndicatorStatusRequestReceived {
     fn request(&self) -> ProcedureRequest {
-        InformationRequest::GetAgIndicatorStatus {
+        SlcRequest::GetAgIndicatorStatus {
             response: Box::new(|status: AgIndicators| AgUpdate::IndicatorStatus(status)),
         }
         .into()
@@ -569,7 +567,7 @@ mod tests {
         let update1 = at::Command::Brsf { features: hf_features.bits() as i64 };
         assert_matches!(
             slc_proc.hf_update(update1, &mut state),
-            ProcedureRequest::Info(InformationRequest::GetAgFeatures { .. })
+            ProcedureRequest::Request(SlcRequest::GetAgFeatures { .. })
         );
 
         // Next update should be an AG Feature response.
@@ -586,7 +584,7 @@ mod tests {
         let update4 = at::Command::CindRead {};
         assert_matches!(
             slc_proc.hf_update(update4, &mut state),
-            ProcedureRequest::Info(InformationRequest::GetAgIndicatorStatus { .. })
+            ProcedureRequest::Request(SlcRequest::GetAgIndicatorStatus { .. })
         );
         let update5 = AgUpdate::IndicatorStatus(AgIndicators::default());
         assert_matches!(slc_proc.ag_update(update5, &mut state), ProcedureRequest::SendMessages(_));
@@ -613,7 +611,7 @@ mod tests {
         let update1 = at::Command::Brsf { features: hf_features.bits() as i64 };
         assert_matches!(
             slc_proc.hf_update(update1, &mut state),
-            ProcedureRequest::Info(InformationRequest::GetAgFeatures { .. })
+            ProcedureRequest::Request(SlcRequest::GetAgFeatures { .. })
         );
 
         // Next update should be an AG Feature response.
@@ -629,7 +627,7 @@ mod tests {
         let update5 = at::Command::CindRead {};
         assert_matches!(
             slc_proc.hf_update(update5, &mut state),
-            ProcedureRequest::Info(InformationRequest::GetAgIndicatorStatus { .. })
+            ProcedureRequest::Request(SlcRequest::GetAgIndicatorStatus { .. })
         );
 
         // Indicator status should be updated.

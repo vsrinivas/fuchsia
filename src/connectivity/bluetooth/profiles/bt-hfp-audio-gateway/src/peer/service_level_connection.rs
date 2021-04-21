@@ -21,7 +21,8 @@ use {
 };
 
 use super::{
-    procedure::{InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest},
+    procedure::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest},
+    slc_request::SlcRequest,
     update::AgUpdate,
 };
 use crate::protocol::{
@@ -222,10 +223,10 @@ pub struct ServiceLevelConnection {
     /// Queued AG requests waiting for the SLC to be initialized.
     requests_pending_initialization: VecDeque<(ProcedureMarker, AgUpdate)>,
     /// The sender used to relay updates to the stream implementation.
-    sender: Sender<InformationRequest>,
+    sender: Sender<SlcRequest>,
     /// The receiver polled by the stream implementation producing requests for more information
     /// from the HFP component.
-    receiver: Receiver<InformationRequest>,
+    receiver: Receiver<SlcRequest>,
 }
 
 impl ServiceLevelConnection {
@@ -344,7 +345,7 @@ impl ServiceLevelConnection {
     ///
     /// Returns a potential request for more information if the update cannot be directly
     /// handled by the SLC.
-    fn procedure_request(&mut self, request: ProcedureRequest) -> Option<InformationRequest> {
+    fn procedure_request(&mut self, request: ProcedureRequest) -> Option<SlcRequest> {
         match request {
             ProcedureRequest::None => {}
             ProcedureRequest::Error(e) => {
@@ -358,7 +359,7 @@ impl ServiceLevelConnection {
                     }
                 }
             }
-            ProcedureRequest::Info(req) => return Some(req),
+            ProcedureRequest::Request(req) => return Some(req),
         }
         None
     }
@@ -403,7 +404,7 @@ impl ServiceLevelConnection {
     ///
     /// Returns the an optional request for more information if the SLC requires input
     /// from the HFP component.
-    fn receive_data(&mut self, bytes: &mut Vec<u8>) -> Option<InformationRequest> {
+    fn receive_data(&mut self, bytes: &mut Vec<u8>) -> Option<SlcRequest> {
         let request = self.receive_data_internal(bytes);
         self.procedure_request(request)
     }
@@ -509,7 +510,7 @@ impl ServiceLevelConnection {
     fn process_requests_pending_initialization(
         &mut self,
         cx: &mut Context<'_>,
-    ) -> Option<Result<InformationRequest, ProcedureError>> {
+    ) -> Option<Result<SlcRequest, ProcedureError>> {
         if self.initialized() {
             while let Some((marker, request)) = self.requests_pending_initialization.pop_front() {
                 let request = self.handle_command(marker, request.into());
@@ -586,7 +587,7 @@ impl ServiceLevelConnection {
 }
 
 impl Stream for ServiceLevelConnection {
-    type Item = Result<InformationRequest, ProcedureError>;
+    type Item = Result<SlcRequest, ProcedureError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.is_terminated() {
@@ -627,14 +628,11 @@ impl FusedStream for ServiceLevelConnection {
 pub(crate) mod tests {
     use {
         super::*,
-        crate::{
-            peer::procedure::InformationRequest,
-            protocol::{
-                features::{AgFeatures, HfFeatures},
-                indicators::{
-                    AgIndicator, BATT_CHG_INDICATOR_INDEX, CALL_HELD_INDICATOR_INDEX,
-                    CALL_INDICATOR_INDEX,
-                },
+        crate::protocol::{
+            features::{AgFeatures, HfFeatures},
+            indicators::{
+                AgIndicator, BATT_CHG_INDICATOR_INDEX, CALL_HELD_INDICATOR_INDEX,
+                CALL_INDICATOR_INDEX,
             },
         },
         fuchsia_async as fasync,
@@ -747,7 +745,7 @@ pub(crate) mod tests {
             x => panic!("Unexpected stream item: {:?}", x),
         };
         // The BRSF should start the SLCI procedure.
-        assert_matches!(actual_request, InformationRequest::GetAgFeatures { .. });
+        assert_matches!(actual_request, SlcRequest::GetAgFeatures { .. });
     }
 
     #[fasync::run_until_stalled(test)]
@@ -792,7 +790,7 @@ pub(crate) mod tests {
         let command = format!("AT+BRSF={}\r", features.bits()).into_bytes();
         let _ = remote.as_ref().write(&command);
         match slc.next().await {
-            Some(Ok(InformationRequest::GetAgFeatures { .. })) => {}
+            Some(Ok(SlcRequest::GetAgFeatures { .. })) => {}
             x => panic!("Expected a GetAgFeatures request but got: {:?}", x),
         }
         // At this point, the SLC Initialization procedure should be in progress.
@@ -825,7 +823,7 @@ pub(crate) mod tests {
 
         let response_fn1 = {
             match exec.run_until_stalled(&mut slc.next()) {
-                Poll::Ready(Some(Ok(InformationRequest::GetAgFeatures { response }))) => response,
+                Poll::Ready(Some(Ok(SlcRequest::GetAgFeatures { response }))) => response,
                 x => panic!("Expected GetAgFeatures but got: {:?}", x),
             }
         };
@@ -852,9 +850,7 @@ pub(crate) mod tests {
         let _ = remote.as_ref().write(&command3);
         let response_fn2 = {
             match exec.run_until_stalled(&mut slc.next()) {
-                Poll::Ready(Some(Ok(InformationRequest::GetAgIndicatorStatus { response }))) => {
-                    response
-                }
+                Poll::Ready(Some(Ok(SlcRequest::GetAgIndicatorStatus { response }))) => response,
                 x => panic!("Expected GetAgFeatures but got: {:?}", x),
             }
         };
@@ -952,7 +948,7 @@ pub(crate) mod tests {
         // Simulate local response with AG Features - expect these to be sent to the peer.
         let ag_features_update = {
             match exec.run_until_stalled(&mut slc.next()) {
-                Poll::Ready(Some(Ok(InformationRequest::GetAgFeatures { response }))) => {
+                Poll::Ready(Some(Ok(SlcRequest::GetAgFeatures { response }))) => {
                     response(AgFeatures::empty())
                 }
                 x => panic!("Expected GetAgFeatures but got: {:?}", x),
@@ -980,7 +976,7 @@ pub(crate) mod tests {
         let _ = remote.as_ref().write(&command3);
         let ag_indicators = {
             match exec.run_until_stalled(&mut slc.next()) {
-                Poll::Ready(Some(Ok(InformationRequest::GetAgIndicatorStatus { response }))) => {
+                Poll::Ready(Some(Ok(SlcRequest::GetAgIndicatorStatus { response }))) => {
                     response(AgIndicators::default())
                 }
                 x => panic!("Expected GetAgFeatures but got: {:?}", x),

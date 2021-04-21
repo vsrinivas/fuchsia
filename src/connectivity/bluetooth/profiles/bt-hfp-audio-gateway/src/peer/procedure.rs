@@ -2,19 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {at_commands as at, std::fmt, thiserror::Error};
+use {at_commands as at, thiserror::Error};
 
-use crate::{
-    peer::{
-        calls::Call,
-        gain_control::Gain,
-        service_level_connection::{Command, SlcState},
-        update::AgUpdate,
-    },
-    protocol::{
-        features::AgFeatures,
-        indicators::{AgIndicators, HfIndicator},
-    },
+use crate::peer::{
+    service_level_connection::{Command, SlcState},
+    slc_request::SlcRequest,
+    update::AgUpdate,
 };
 
 /// Defines the implementation of the Answer Procedure.
@@ -75,10 +68,10 @@ pub mod volume_control;
 
 use call_line_ident_notifications::CallLineIdentNotificationsProcedure;
 use call_waiting_notifications::CallWaitingNotificationsProcedure;
-use dtmf::{DtmfCode, DtmfProcedure};
+use dtmf::DtmfProcedure;
 use extended_errors::ExtendedErrorsProcedure;
 use hang_up::HangUpProcedure;
-use hold::{CallHoldAction, HoldProcedure};
+use hold::HoldProcedure;
 use indicators_activation::IndicatorsActivationProcedure;
 use nrec::NrecProcedure;
 use phone_status::PhoneStatusProcedure;
@@ -240,91 +233,6 @@ impl ProcedureMarker {
     }
 }
 
-/// Information requests - use the `response` fn to build a response to the request.
-// TODO(fxbug.dev/70591): Add to this list once more procedures are implemented.
-pub enum InformationRequest {
-    GetAgFeatures { response: Box<dyn FnOnce(AgFeatures) -> AgUpdate> },
-
-    GetAgIndicatorStatus { response: Box<dyn FnOnce(AgIndicators) -> AgUpdate> },
-
-    GetNetworkOperatorName { response: Box<dyn FnOnce(Option<String>) -> AgUpdate> },
-
-    GetSubscriberNumberInformation { response: Box<dyn FnOnce(Vec<String>) -> AgUpdate> },
-
-    SetNrec { enable: bool, response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
-
-    SendHfIndicator { indicator: HfIndicator, response: Box<dyn FnOnce() -> AgUpdate> },
-
-    SendDtmf { code: DtmfCode, response: Box<dyn FnOnce() -> AgUpdate> },
-
-    SpeakerVolumeSynchronization { level: Gain, response: Box<dyn FnOnce() -> AgUpdate> },
-
-    MicrophoneVolumeSynchronization { level: Gain, response: Box<dyn FnOnce() -> AgUpdate> },
-
-    QueryCurrentCalls { response: Box<dyn FnOnce(Vec<Call>) -> AgUpdate> },
-
-    Answer { response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
-
-    HangUp { response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
-
-    Hold { command: CallHoldAction, response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
-}
-
-impl From<&InformationRequest> for ProcedureMarker {
-    fn from(src: &InformationRequest) -> ProcedureMarker {
-        use InformationRequest::*;
-        match src {
-            GetAgFeatures { .. } | GetAgIndicatorStatus { .. } => Self::SlcInitialization,
-            GetNetworkOperatorName { .. } => Self::QueryOperatorSelection,
-            GetSubscriberNumberInformation { .. } => Self::SubscriberNumberInformation,
-            SetNrec { .. } => Self::Nrec,
-            SendDtmf { .. } => Self::Dtmf,
-            SendHfIndicator { .. } => Self::TransferHfIndicator,
-            SpeakerVolumeSynchronization { .. } | MicrophoneVolumeSynchronization { .. } => {
-                Self::VolumeSynchronization
-            }
-            QueryCurrentCalls { .. } => Self::QueryCurrentCalls,
-            Answer { .. } => Self::Answer,
-            HangUp { .. } => Self::HangUp,
-            Hold { .. } => Self::Hold,
-        }
-    }
-}
-
-impl fmt::Debug for InformationRequest {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s;
-        let output = match &self {
-            Self::GetAgFeatures { .. } => "GetAgFeatures",
-            Self::GetAgIndicatorStatus { .. } => "GetAgIndicatorStatus",
-            Self::GetSubscriberNumberInformation { .. } => "GetSubscriberNumberInformation",
-            Self::SetNrec { enable: true, .. } => "SetNrec(enabled)",
-            Self::SetNrec { enable: false, .. } => "SetNrec(disabled)",
-            Self::GetNetworkOperatorName { .. } => "GetNetworkOperatorName",
-            Self::QueryCurrentCalls { .. } => "QueryCurrentCalls ",
-            // DTFM Code values are not displayed in Debug representation
-            Self::SendDtmf { .. } => "SendDtmf",
-            Self::SendHfIndicator { indicator, .. } => {
-                s = format!("SendHfIndicator({:?})", indicator);
-                &s
-            }
-            Self::SpeakerVolumeSynchronization { level, .. } => {
-                s = format!("SpeakerVolumeSynchronization({:?})", level);
-                &s
-            }
-            Self::MicrophoneVolumeSynchronization { level, .. } => {
-                s = format!("MicrophoneVolumeSynchronization({:?})", level);
-                &s
-            }
-            Self::Answer { .. } => "Answer",
-            Self::HangUp { .. } => "HangUp",
-            Self::Hold { .. } => "Hold",
-        }
-        .to_string();
-        write!(f, "{}", output)
-    }
-}
-
 /// The requests generated by an HFP procedure as it progresses through its state machine.
 #[derive(Debug)]
 pub enum ProcedureRequest {
@@ -332,7 +240,7 @@ pub enum ProcedureRequest {
     SendMessages(Vec<at::Response>),
 
     /// Request for information from the HFP component.
-    Info(InformationRequest),
+    Request(SlcRequest),
 
     /// Error from processing an update.
     Error(ProcedureError),
@@ -345,7 +253,7 @@ impl ProcedureRequest {
     /// Returns true if this request requires a response.
     pub fn requires_response(&self) -> bool {
         match &self {
-            Self::Info(..) => true,
+            Self::Request(..) => true,
             _ => false,
         }
     }
@@ -357,9 +265,9 @@ impl From<Vec<at::Response>> for ProcedureRequest {
     }
 }
 
-impl From<InformationRequest> for ProcedureRequest {
-    fn from(src: InformationRequest) -> Self {
-        Self::Info(src)
+impl From<SlcRequest> for ProcedureRequest {
+    fn from(src: SlcRequest) -> Self {
+        Self::Request(src)
     }
 }
 

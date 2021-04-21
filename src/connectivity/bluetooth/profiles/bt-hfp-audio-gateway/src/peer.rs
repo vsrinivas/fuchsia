@@ -23,6 +23,7 @@ pub mod gain_control;
 pub mod procedure;
 mod ringer;
 pub mod service_level_connection;
+pub mod slc_request;
 mod task;
 pub mod update;
 

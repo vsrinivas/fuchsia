@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
 use at_commands as at;
 
-use crate::peer::{service_level_connection::SlcState, update::AgUpdate};
+use crate::peer::{service_level_connection::SlcState, slc_request::SlcRequest, update::AgUpdate};
 
 /// Represents the current state of the HF request to get the Subscriber Number Information
 /// as defined in HFP v1.8, Section 4.31.
@@ -66,7 +66,7 @@ impl Procedure for SubscriberNumberInformationProcedure {
             (State::Start, at::Command::Cnum {}) => {
                 self.state.transition();
                 let response = Box::new(|numbers| AgUpdate::SubscriberNumbers(numbers));
-                InformationRequest::GetSubscriberNumberInformation { response }.into()
+                SlcRequest::GetSubscriberNumberInformation { response }.into()
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
         }
@@ -129,9 +129,9 @@ mod tests {
         let mut proc = SubscriberNumberInformationProcedure::new();
         let req = proc.hf_update(at::Command::Cnum {}, &mut SlcState::default());
         let update = match req {
-            ProcedureRequest::Info(InformationRequest::GetSubscriberNumberInformation {
-                response,
-            }) => response(vec![]),
+            ProcedureRequest::Request(SlcRequest::GetSubscriberNumberInformation { response }) => {
+                response(vec![])
+            }
             x => panic!("Unexpected message: {:?}", x),
         };
         let req = proc.ag_update(update, &mut SlcState::default());
@@ -148,9 +148,9 @@ mod tests {
         let req = proc.hf_update(at::Command::Cnum {}, &mut SlcState::default());
         let number = String::from("1234567");
         let update = match req {
-            ProcedureRequest::Info(InformationRequest::GetSubscriberNumberInformation {
-                response,
-            }) => response(vec![number.clone()]),
+            ProcedureRequest::Request(SlcRequest::GetSubscriberNumberInformation { response }) => {
+                response(vec![number.clone()])
+            }
             x => panic!("Unexpected message: {:?}", x),
         };
         let req = proc.ag_update(update, &mut SlcState::default());

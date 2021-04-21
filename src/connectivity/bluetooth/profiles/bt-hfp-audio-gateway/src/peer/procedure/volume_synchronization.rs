@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
 use {at_commands as at, core::convert::TryInto};
 
-use crate::peer::{service_level_connection::SlcState, update::AgUpdate};
+use crate::peer::{service_level_connection::SlcState, slc_request::SlcRequest, update::AgUpdate};
 
 /// Represents the current state of the Hf procedure to report its volume level as defined in
 /// HFP v1.8, Section 4.29.2.
@@ -68,7 +68,7 @@ impl Procedure for VolumeSynchronizationProcedure {
             (State::Start, at::Command::Vgs { level }) => {
                 self.state.transition();
                 match (*level).try_into() {
-                    Ok(level) => InformationRequest::SpeakerVolumeSynchronization {
+                    Ok(level) => SlcRequest::SpeakerVolumeSynchronization {
                         level,
                         response: Box::new(|| AgUpdate::Ok),
                     }
@@ -79,7 +79,7 @@ impl Procedure for VolumeSynchronizationProcedure {
             (State::Start, at::Command::Vgm { level }) => {
                 self.state.transition();
                 match (*level).try_into() {
-                    Ok(level) => InformationRequest::MicrophoneVolumeSynchronization {
+                    Ok(level) => SlcRequest::MicrophoneVolumeSynchronization {
                         level,
                         response: Box::new(|| AgUpdate::Ok),
                     }
@@ -144,7 +144,7 @@ mod tests {
         let mut proc = VolumeSynchronizationProcedure::new();
         let req = proc.hf_update(at::Command::Vgs { level: 1 }, &mut SlcState::default());
         let update = match req {
-            ProcedureRequest::Info(InformationRequest::SpeakerVolumeSynchronization {
+            ProcedureRequest::Request(SlcRequest::SpeakerVolumeSynchronization {
                 level,
                 response,
             }) if level == 1u8.try_into().unwrap() => response(),
@@ -163,7 +163,7 @@ mod tests {
         let mut proc = VolumeSynchronizationProcedure::new();
         let req = proc.hf_update(at::Command::Vgm { level: 1 }, &mut SlcState::default());
         let update = match req {
-            ProcedureRequest::Info(InformationRequest::MicrophoneVolumeSynchronization {
+            ProcedureRequest::Request(SlcRequest::MicrophoneVolumeSynchronization {
                 level,
                 response,
             }) if level == 1u8.try_into().unwrap() => response(),

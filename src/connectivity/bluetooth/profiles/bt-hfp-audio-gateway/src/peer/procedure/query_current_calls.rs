@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
-use crate::peer::{calls::Call, service_level_connection::SlcState, update::AgUpdate};
+use crate::peer::{
+    calls::Call, service_level_connection::SlcState, slc_request::SlcRequest, update::AgUpdate,
+};
 
 use {at_commands as at, fidl_fuchsia_bluetooth_hfp::CallState};
 
@@ -65,7 +67,7 @@ impl Procedure for QueryCurrentCallsProcedure {
             (State::Start, at::Command::Clcc { .. }) => {
                 self.state.transition();
                 let response = Box::new(AgUpdate::CurrentCalls);
-                InformationRequest::QueryCurrentCalls { response }.into()
+                SlcRequest::QueryCurrentCalls { response }.into()
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
         }
@@ -152,7 +154,7 @@ mod tests {
         let mut proc = QueryCurrentCallsProcedure::new();
         let req = proc.hf_update(at::Command::Clcc {}, &mut SlcState::default());
         let update = match req {
-            ProcedureRequest::Info(InformationRequest::QueryCurrentCalls { response }) => {
+            ProcedureRequest::Request(SlcRequest::QueryCurrentCalls { response }) => {
                 response(vec![])
             }
             x => panic!("Unexpected message: {:?}", x),
@@ -180,7 +182,7 @@ mod tests {
         let mut proc = QueryCurrentCallsProcedure::new();
         let req = proc.hf_update(at::Command::Clcc {}, &mut SlcState::default());
         let update = match req {
-            ProcedureRequest::Info(InformationRequest::QueryCurrentCalls { response }) => {
+            ProcedureRequest::Request(SlcRequest::QueryCurrentCalls { response }) => {
                 response(vec![terminated, ongoing.clone()])
             }
             x => panic!("Unexpected message: {:?}", x),

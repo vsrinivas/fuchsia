@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
-use crate::peer::{service_level_connection::SlcState, update::AgUpdate};
+use crate::peer::{service_level_connection::SlcState, slc_request::SlcRequest, update::AgUpdate};
 use at_commands as at;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -58,7 +58,7 @@ impl Procedure for AnswerProcedure {
                 let response = Box::new(|res: Result<(), ()>| {
                     res.map(|()| AgUpdate::Ok).unwrap_or(AgUpdate::Error)
                 });
-                InformationRequest::Answer { response }.into()
+                SlcRequest::Answer { response }.into()
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
         }
@@ -144,7 +144,7 @@ mod tests {
 
         let req = proc.hf_update(at::Command::Answer {}, &mut state);
         let update = match req {
-            ProcedureRequest::Info(InformationRequest::Answer { response }) => response(Ok(())),
+            ProcedureRequest::Request(SlcRequest::Answer { response }) => response(Ok(())),
             x => panic!("Unexpected message: {:?}", x),
         };
         let req = proc.ag_update(update, &mut state);
@@ -172,7 +172,7 @@ mod tests {
 
         let req = proc.hf_update(at::Command::Answer {}, &mut state);
         let update = match req {
-            ProcedureRequest::Info(InformationRequest::Answer { response }) => response(Err(())),
+            ProcedureRequest::Request(SlcRequest::Answer { response }) => response(Err(())),
             x => panic!("Unexpected message: {:?}", x),
         };
         let req = proc.ag_update(update, &mut state);

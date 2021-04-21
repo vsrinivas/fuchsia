@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
-use crate::peer::{calls::CallIdx, service_level_connection::SlcState, update::AgUpdate};
+use crate::peer::{
+    calls::CallIdx, service_level_connection::SlcState, slc_request::SlcRequest, update::AgUpdate,
+};
 use {
     at_commands as at,
     core::convert::{TryFrom, TryInto},
@@ -103,7 +105,7 @@ impl Procedure for HoldProcedure {
                         let response = Box::new(|res: Result<(), ()>| {
                             res.map(|()| AgUpdate::Ok).unwrap_or(AgUpdate::Error)
                         });
-                        InformationRequest::Hold { command, response }.into()
+                        SlcRequest::Hold { command, response }.into()
                     }
                     Err(()) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
                 }
@@ -219,7 +221,7 @@ mod tests {
 
         let req = proc.hf_update(at::Command::Chld { command: String::from("1") }, &mut state);
         let update = match req {
-            ProcedureRequest::Info(InformationRequest::Hold { command, response }) => {
+            ProcedureRequest::Request(SlcRequest::Hold { command, response }) => {
                 assert_eq!(command, CallHoldAction::ReleaseAllActive);
                 response(Ok(()))
             }
@@ -250,7 +252,7 @@ mod tests {
 
         let req = proc.hf_update(at::Command::Chld { command: String::from("22") }, &mut state);
         let update = match req {
-            ProcedureRequest::Info(InformationRequest::Hold { command, response }) => {
+            ProcedureRequest::Request(SlcRequest::Hold { command, response }) => {
                 assert_eq!(command, CallHoldAction::HoldAllExceptSpecified(2));
                 response(Err(()))
             }

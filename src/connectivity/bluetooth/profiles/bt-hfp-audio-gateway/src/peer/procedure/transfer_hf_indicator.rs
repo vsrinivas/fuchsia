@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
-use crate::peer::{service_level_connection::SlcState, update::AgUpdate};
+use crate::peer::{service_level_connection::SlcState, slc_request::SlcRequest, update::AgUpdate};
 use at_commands as at;
 
 /// Represents the current state of the HF request to transmit an HF Indicator value as
@@ -67,11 +67,8 @@ impl Procedure for TransferHfIndicatorProcedure {
                 // Per HFP v1.8 Section 4.36.1.5, we should send Error if the request `anum` is
                 // disabled, or the `value` is out of bounds.
                 if let Ok(indicator) = state.hf_indicators.update_indicator_value(anum, value) {
-                    InformationRequest::SendHfIndicator {
-                        indicator,
-                        response: Box::new(|| AgUpdate::Ok),
-                    }
-                    .into()
+                    SlcRequest::SendHfIndicator { indicator, response: Box::new(|| AgUpdate::Ok) }
+                        .into()
                 } else {
                     self.state.transition();
                     AgUpdate::Error.into()
@@ -147,7 +144,7 @@ mod tests {
         let cmd = at::Command::Biev { anum: at::BluetoothHFIndicator::BatteryLevel, value: 76 };
         let req = proc.hf_update(cmd, &mut state);
         let update = match req {
-            ProcedureRequest::Info(InformationRequest::SendHfIndicator {
+            ProcedureRequest::Request(SlcRequest::SendHfIndicator {
                 indicator: HfIndicator::BatteryLevel(76),
                 response,
             }) => response(),
@@ -191,7 +188,7 @@ mod tests {
         let cmd = at::Command::Biev { anum: at::BluetoothHFIndicator::EnhancedSafety, value: 1 };
         let req = proc.hf_update(cmd, &mut state);
         let update = match req {
-            ProcedureRequest::Info(InformationRequest::SendHfIndicator {
+            ProcedureRequest::Request(SlcRequest::SendHfIndicator {
                 indicator: HfIndicator::EnhancedSafety(true),
                 response,
             }) => response(),

@@ -26,9 +26,10 @@ use {
 use super::{
     calls::{Call, Calls},
     gain_control::GainControl,
-    procedure::{InformationRequest, ProcedureMarker},
+    procedure::ProcedureMarker,
     ringer::Ringer,
     service_level_connection::ServiceLevelConnection,
+    slc_request::SlcRequest,
     update::AgUpdate,
     PeerRequest,
 };
@@ -178,15 +179,15 @@ impl PeerTask {
     }
 
     /// Processes a `request` for information from an HFP procedure.
-    async fn procedure_request(&mut self, request: InformationRequest) {
+    async fn procedure_request(&mut self, request: SlcRequest) {
         let marker = (&request).into();
         match request {
-            InformationRequest::GetAgFeatures { response } => {
+            SlcRequest::GetAgFeatures { response } => {
                 let features = (&self._local_config).into();
                 // Update the procedure with the retrieved AG update.
                 self.connection.receive_ag_request(marker, response(features)).await;
             }
-            InformationRequest::GetSubscriberNumberInformation { response } => {
+            SlcRequest::GetSubscriberNumberInformation { response } => {
                 let result = if let Some(handler) = &mut self.handler {
                     handler.subscriber_number_information().await.ok().unwrap_or_else(Vec::new)
                 } else {
@@ -194,7 +195,7 @@ impl PeerTask {
                 };
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
-            InformationRequest::GetAgIndicatorStatus { response } => {
+            SlcRequest::GetAgIndicatorStatus { response } => {
                 let call_ind = self.calls.indicators();
                 let status = AgIndicators {
                     service: self.network.service_available.unwrap_or(false),
@@ -208,7 +209,7 @@ impl PeerTask {
                 // Update the procedure with the retrieved AG update.
                 self.connection.receive_ag_request(marker, response(status)).await;
             }
-            InformationRequest::GetNetworkOperatorName { response } => {
+            SlcRequest::GetNetworkOperatorName { response } => {
                 let format = self.connection.network_operator_name_format();
                 let name = match &self.handler {
                     Some(h) => {
@@ -230,15 +231,15 @@ impl PeerTask {
                 // Update the procedure with the result of retrieving the AG network name.
                 self.connection.receive_ag_request(marker, response(name_option)).await;
             }
-            InformationRequest::SendDtmf { code, response } => {
+            SlcRequest::SendDtmf { code, response } => {
                 self.calls.send_dtmf_code(code).await;
                 self.connection.receive_ag_request(marker, response()).await;
             }
-            InformationRequest::SendHfIndicator { indicator, response } => {
+            SlcRequest::SendHfIndicator { indicator, response } => {
                 self.hf_indicator_update(indicator);
                 self.connection.receive_ag_request(marker, response()).await;
             }
-            InformationRequest::SetNrec { enable, response } => {
+            SlcRequest::SetNrec { enable, response } => {
                 let result = if let Some(handler) = &mut self.handler {
                     if let Ok(Ok(())) = handler.set_nrec_mode(enable).await {
                         Ok(())
@@ -250,31 +251,31 @@ impl PeerTask {
                 };
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
-            InformationRequest::SpeakerVolumeSynchronization { level, response } => {
+            SlcRequest::SpeakerVolumeSynchronization { level, response } => {
                 self.gain_control.report_speaker_gain(level);
                 self.connection.receive_ag_request(marker, response()).await;
             }
-            InformationRequest::MicrophoneVolumeSynchronization { level, response } => {
+            SlcRequest::MicrophoneVolumeSynchronization { level, response } => {
                 self.gain_control.report_microphone_gain(level);
                 self.connection.receive_ag_request(marker, response()).await;
             }
-            InformationRequest::QueryCurrentCalls { response } => {
+            SlcRequest::QueryCurrentCalls { response } => {
                 let result = self.calls.current_calls();
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
-            InformationRequest::Answer { response } => {
+            SlcRequest::Answer { response } => {
                 let result = self.calls.answer().map_err(|e| {
                     warn!("Unexpected Answer from Hands Free: {}", e);
                 });
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
-            InformationRequest::HangUp { response } => {
+            SlcRequest::HangUp { response } => {
                 let result = self.calls.hang_up().map_err(|e| {
                     warn!("Unexpected Hang Up from Hands Free: {}", e);
                 });
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
-            InformationRequest::Hold { command, response } => {
+            SlcRequest::Hold { command, response } => {
                 let result = self.calls.hold(command).map_err(|e| {
                     warn!("Unexpected Action {:?} from Hands Free: {}", command, e);
                 });

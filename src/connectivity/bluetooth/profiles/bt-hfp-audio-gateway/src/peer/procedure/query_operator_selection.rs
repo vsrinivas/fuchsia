@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{InformationRequest, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
-use crate::peer::{service_level_connection::SlcState, update::AgUpdate};
+use crate::peer::{service_level_connection::SlcState, slc_request::SlcRequest, update::AgUpdate};
 
 use at_commands as at;
 
@@ -102,7 +102,7 @@ impl Procedure for QueryOperatorProcedure {
                         format_operator_name(format, network_name.unwrap_or_else(String::new));
                     AgUpdate::NetworkOperatorName(format, name)
                 });
-                InformationRequest::GetNetworkOperatorName { response }.into()
+                SlcRequest::GetNetworkOperatorName { response }.into()
             }
             (State::Terminated, at::Command::Cops { .. })
             | (State::Terminated, at::Command::CopsRead {}) => {
@@ -216,7 +216,7 @@ mod tests {
 
         let update2 = at::Command::CopsRead {};
         let update3 = match p.hf_update(update2, &mut state) {
-            ProcedureRequest::Info(InformationRequest::GetNetworkOperatorName { response }) => {
+            ProcedureRequest::Request(SlcRequest::GetNetworkOperatorName { response }) => {
                 response(test_operator_name)
             }
             x => {
@@ -258,7 +258,7 @@ mod tests {
 
         let update1 = at::Command::CopsRead {};
         let update2 = match p.hf_update(update1, &mut state) {
-            ProcedureRequest::Info(InformationRequest::GetNetworkOperatorName { response }) => {
+            ProcedureRequest::Request(SlcRequest::GetNetworkOperatorName { response }) => {
                 response(test_operator_name)
             }
             x => panic!("Expected get network operator request but got: {:?}", x),
@@ -275,7 +275,7 @@ mod tests {
 
         let update1 = at::Command::CopsRead {};
         let update2 = match p.hf_update(update1, &mut state) {
-            ProcedureRequest::Info(InformationRequest::GetNetworkOperatorName { response }) => {
+            ProcedureRequest::Request(SlcRequest::GetNetworkOperatorName { response }) => {
                 response(test_operator_name)
             }
             x => panic!("Expected get network operator request but got: {:?}", x),
