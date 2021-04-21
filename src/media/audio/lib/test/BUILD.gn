@@ -3,30 +3,19 @@
 # found in the LICENSE file.
 
 # This source set contains a broad variety of test-related classes.
+#
+# It intentionally includes every source_set defined in this file, to include
+# them in whole-tree compiles even if they have are no in-tree consumers.
 source_set("test") {
   testonly = true
 
   public_deps = [
     ":constants",
     ":hermetic_audio_test",
+    ":hermetic_pipeline_test_main",
     ":message_transceiver",
     ":null_renderer_capturer",
     ":test_fixture",
-  ]
-}
-
-source_set("test_fixture") {
-  testonly = true
-
-  sources = [
-    "test_fixture.cc",
-    "test_fixture.h",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/gtest",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/fit",
   ]
 }
 
@@ -134,4 +123,19 @@ source_set("null_renderer_capturer") {
   ]
 
   deps = [ "//sdk/fidl/fuchsia.media" ]
+}
+
+source_set("test_fixture") {
+  testonly = true
+
+  sources = [
+    "test_fixture.cc",
+    "test_fixture.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit",
+  ]
 }
