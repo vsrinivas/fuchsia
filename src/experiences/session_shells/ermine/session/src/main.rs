@@ -6,32 +6,21 @@
 #![recursion_limit = "256"]
 
 #[macro_use]
-mod input_testing_utilities;
 mod element_repository;
-mod input_device_registry_server;
-mod mouse_pointer_hack;
-mod pointer_hack_server;
-mod touch_pointer_hack;
-mod workstation_input_pipeline;
 
 use {
-    crate::{
-        element_repository::{ElementEventHandler, ElementManagerServer, ElementRepository},
-        input_device_registry_server::InputDeviceRegistryServer,
-        pointer_hack_server::PointerHackServer,
-    },
+    crate::element_repository::{ElementEventHandler, ElementManagerServer, ElementRepository},
     anyhow::{Context as _, Error},
-    legacy_element_management::SimpleElementManager,
-    fidl::endpoints::DiscoverableService,
-    fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
+    fidl::endpoints::{ClientEnd, DiscoverableService, Proxy, ServiceMarker},
     fidl_fuchsia_session::{
         ElementManagerMarker, ElementManagerRequestStream, GraphicalPresenterMarker,
     },
+    fidl_fuchsia_session_scene,
+    fidl_fuchsia_session_scene::{ManagerMarker, ManagerProxy},
     fidl_fuchsia_sys::LauncherMarker,
     fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_ui_app::ViewProviderMarker,
-    fidl_fuchsia_ui_policy::PresentationMarker,
-    fidl_fuchsia_ui_scenic::ScenicMarker,
+    fidl_fuchsia_ui_policy::{PresentationMarker, PresentationRequest, PresentationRequestStream},
     fidl_fuchsia_ui_views as ui_views,
     fidl_fuchsia_ui_views::ViewRefInstalledMarker,
     fuchsia_async as fasync,
@@ -39,17 +28,18 @@ use {
         client::{connect_to_service, launch_with_options, App, LaunchOptions},
         server::ServiceFs,
     },
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
-    futures::{try_join, StreamExt},
-    scene_management::{self, SceneManager},
+    futures::try_join,
+    futures::StreamExt,
+    futures::TryStreamExt,
+    legacy_element_management::SimpleElementManager,
     std::rc::Rc,
     std::sync::{Arc, Weak},
 };
 
 enum ExposedServices {
     ElementManager(ElementManagerRequestStream),
-    InputDeviceRegistry(InputDeviceRegistryRequestStream),
+    Presentation(PresentationRequestStream),
 }
 
 /// The maximum number of open requests to this component.
@@ -59,14 +49,11 @@ enum ExposedServices {
 /// any given time.
 const NUM_CONCURRENT_REQUESTS: usize = 5;
 
-async fn launch_ermine(
-    element_server: ElementManagerServer<SimpleElementManager>,
-) -> Result<(App, PointerHackServer), Error> {
+async fn launch_ermine() -> Result<(App, zx::Channel), Error> {
     let launcher = connect_to_service::<LauncherMarker>()?;
 
     let (client_chan, server_chan) = zx::Channel::create().unwrap();
 
-    let pointer_hack_server = PointerHackServer::new(server_chan, element_server);
     let mut launch_options = LaunchOptions::new();
     launch_options.set_additional_services(
         vec![
@@ -83,68 +70,57 @@ async fn launch_ermine(
         launch_options,
     )?;
 
-    Ok((app, pointer_hack_server))
+    Ok((app, server_chan))
 }
 
 async fn expose_services(
     element_server: ElementManagerServer<SimpleElementManager>,
-    input_device_registry_server: InputDeviceRegistryServer,
+    scene_manager: Arc<ManagerProxy>,
+    server_chan: zx::Channel,
 ) -> Result<(), Error> {
-    let mut fs = ServiceFs::new_local();
-    fs.dir("svc")
-        .add_fidl_service(ExposedServices::ElementManager)
-        .add_fidl_service(ExposedServices::InputDeviceRegistry);
+    let mut fs = ServiceFs::new();
+    fs.add_fidl_service_at(ElementManagerMarker::NAME, ExposedServices::ElementManager);
+    fs.add_fidl_service_at(PresentationMarker::NAME, ExposedServices::Presentation);
 
-    fs.take_and_serve_directory_handle()?;
+    fs.serve_connection(server_chan).unwrap();
 
     // create a reference so that we can use this within the `for_each_concurrent` generator.
     // If we do not create a ref we will run into issues with the borrow checker.
     let element_server_ref = &element_server;
-    let input_device_registry_server_ref = &input_device_registry_server;
-    fs.for_each_concurrent(
-        NUM_CONCURRENT_REQUESTS,
-        move |service_request: ExposedServices| async move {
-            match service_request {
-                ExposedServices::ElementManager(request_stream) => {
-                    // TODO(47079): handle error
-                    fx_log_info!("received incoming element manager request");
-                    let _ = element_server_ref.handle_request(request_stream).await;
-                }
-                ExposedServices::InputDeviceRegistry(request_stream) => {
-                    match input_device_registry_server_ref.handle_request(request_stream).await {
-                        Ok(()) => (),
-                        Err(e) => {
-                            // If `handle_request()` returns `Err`, then the `unbounded_send()` call
-                            // from `handle_request()` failed with either:
-                            // * `TrySendError::SendErrorKind::Full`, or
-                            // * `TrySendError::SendErrorKind::Disconnected`.
-                            //
-                            // These are unexpected, because:
-                            // * `Full` can't happen, because `InputDeviceRegistryServer`
-                            //   uses an `UnboundedSender`.
-                            // * `Disconnected` is highly unlikely, because the corresponding
-                            //   `UnboundedReceiver` lives in `main::input_fut`, and `input_fut`'s
-                            //   lifetime is nearly as long as `input_device_registry_server`'s.
-                            //
-                            // Nonetheless, InputDeviceRegistry isn't critical to production use.
-                            // So we just log the error and move on.
-                            fx_log_err!(
-                                "failed to forward InputDeviceRegistryRequestStream: {:?}; \
-                                 must restart to enable input injection",
-                                e
-                            )
-                        }
-                    }
-                }
+    fs.for_each_concurrent(NUM_CONCURRENT_REQUESTS, |service_request: ExposedServices| async {
+        match service_request {
+            ExposedServices::ElementManager(request_stream) => {
+                // TODO(47079): handle error
+                let _ = element_server_ref.handle_request(request_stream).await;
             }
-        },
-    )
+            ExposedServices::Presentation(request_stream) => {
+                // TODO(47079): handle error
+                let _ =
+                    handle_presentation_request_stream(request_stream, scene_manager.clone()).await;
+            }
+        }
+    })
     .await;
     Ok(())
 }
 
+/// The presentation's pointer events are forwarded to the scene manager,
+/// since the scene manager component contains the input pipeline.
+pub async fn handle_presentation_request_stream(
+    mut request_stream: PresentationRequestStream,
+    scene_manager: Arc<ManagerProxy>,
+) {
+    while let Ok(Some(request)) = request_stream.try_next().await {
+        match request {
+            PresentationRequest::CapturePointerEventsHack { listener, .. } => {
+                let _ = scene_manager.capture_pointer_events(listener);
+            }
+        }
+    }
+}
+
 async fn set_view_focus(
-    weak_focuser: Weak<ui_views::FocuserProxy>,
+    weak_focuser: Weak<fidl_fuchsia_session_scene::ManagerProxy>,
     mut view_ref: ui_views::ViewRef,
 ) -> Result<(), Error> {
     // [ViewRef]'s are one-shot use only. Duplicate it for use in request_focus below.
@@ -183,34 +159,30 @@ async fn main() -> Result<(), Error> {
 
     let mut element_repository = ElementRepository::new(Rc::new(element_manager));
 
-    let (app, pointer_hack_server) = launch_ermine(element_repository.make_server()).await?;
+    let (app, element_channel) = launch_ermine().await?;
     let view_provider = app.connect_to_service::<ViewProviderMarker>()?;
 
     let presenter = app.connect_to_service::<GraphicalPresenterMarker>()?;
     let mut handler = ElementEventHandler::new(presenter);
 
-    let scenic = connect_to_service::<ScenicMarker>()?;
-    let mut scene_manager = scene_management::FlatSceneManager::new(scenic, None, None).await?;
+    let scene_manager = Arc::new(connect_to_service::<ManagerMarker>().unwrap());
 
-    // This node can be used to move the associated view around.
-    let view_ref =
-        scene_manager.add_view_to_scene(view_provider, Some("Ermine".to_string())).await?;
-    let set_focus_fut = set_view_focus(Arc::downgrade(&scene_manager.focuser), view_ref);
+    let scene_channel: ClientEnd<ViewProviderMarker> = view_provider
+        .into_channel()
+        .expect("no other users of the wrapped channel")
+        .into_zx_channel()
+        .into();
+    let view_ref = scene_manager.set_root_view(scene_channel.into()).await.unwrap();
 
-    let (input_device_registry_server, input_device_registry_request_stream_receiver) =
-        input_device_registry_server::make_server_and_receiver();
+    let set_focus_fut = set_view_focus(Arc::downgrade(&scene_manager), view_ref);
+
     let services_fut =
-        expose_services(element_repository.make_server(), input_device_registry_server);
-    let input_fut = workstation_input_pipeline::handle_input(
-        scene_manager,
-        &pointer_hack_server,
-        input_device_registry_request_stream_receiver,
-    );
+        expose_services(element_repository.make_server(), scene_manager, element_channel);
     let element_manager_fut = element_repository.run_with_handler(&mut handler);
     let focus_fut = input::focus_listening::handle_focus_changes();
 
     //TODO(47080) monitor the futures to see if they complete in an error.
-    let _ = try_join!(services_fut, input_fut, element_manager_fut, focus_fut, set_focus_fut);
+    let _ = try_join!(element_manager_fut, focus_fut, services_fut, set_focus_fut);
 
     element_repository.shutdown()?;
 
