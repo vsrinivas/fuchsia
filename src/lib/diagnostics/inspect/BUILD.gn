@@ -8,6 +8,7 @@ group("tests") {
     "contrib/rust:tests",
     "derive:tests",
     "format/rust:tests",
+    "runtime/rust:tests",
     "rust:tests",
   ]
 }
