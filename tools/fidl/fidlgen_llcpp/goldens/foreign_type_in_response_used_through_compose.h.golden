@@ -843,7 +843,7 @@ class ::fidl::WireResponseContext<
           message) = 0;
 
  private:
-  void OnReply(uint8_t* reply) override;
+  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
 };
 #endif  // __Fuchsia__
 

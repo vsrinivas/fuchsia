@@ -36,11 +36,18 @@ struct {{ .WireServerDispatcher }} final {
   {{- if .ClientMethods }}
   static const ::fidl::internal::MethodEntry entries[] = {
     {{- range .ClientMethods }}
-      { {{ .OrdinalName }}, {{ .WireRequest }}::Type,
-        [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+      { {{ .OrdinalName }},
+        [](void* interface, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+          {{- if .RequestArgs }}
+          zx_status_t status = fidl_decode_msg({{ .WireRequest }}::Type, msg, nullptr);
+          if (unlikely(status != ZX_OK)) {
+            return status;
+          }
+          {{- end }}
           {{ .WireCompleter }}::Sync completer(txn);
           reinterpret_cast<{{ $.WireServer }}*>(interface)->{{ .Name }}(
-                reinterpret_cast<{{ .WireRequest }}*>(bytes), completer);
+                reinterpret_cast<{{ .WireRequest }}*>(msg->bytes), completer);
+          return ZX_OK;
         },
       },
     {{- end }}
@@ -58,7 +65,7 @@ struct {{ .WireServerDispatcher }} final {
       {{ .WireServer }}* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   {{- if .ClientMethods }}
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -80,10 +87,14 @@ struct {{ .WireServerDispatcher }} final {
   {{- if .ClientMethods }}
   static const ::fidl::internal::MethodEntry entries[] = {
     {{- range .ClientMethods }}
-      { {{ .OrdinalName }}, {{ .WireRequest }}::Type,
-        [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+      { {{ .OrdinalName }},
+        [](void* interface, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
           {{- if .RequestArgs }}
-            auto message = reinterpret_cast<{{ .WireRequest }}*>(bytes);
+          zx_status_t status = fidl_decode_msg({{ .WireRequest }}::Type, msg, nullptr);
+          if (unlikely(status != ZX_OK)) {
+            return status;
+          }
+          auto message = reinterpret_cast<{{ .WireRequest }}*>(msg->bytes);
           {{- end }}
           {{ .WireCompleter }}::Sync completer(txn);
           reinterpret_cast<{{ .Protocol.WireInterface }}*>(interface)->{{ .Name }}(
@@ -91,6 +102,7 @@ struct {{ .WireServerDispatcher }} final {
                   std::move(message->{{ $param.Name }}),
                 {{- end }}
                 completer);
+          return ZX_OK;
         },
       },
     {{- end }}
@@ -107,7 +119,7 @@ struct {{ .WireServerDispatcher }} final {
 ::fidl::DispatchResult {{ .WireDispatcher.NoLeading }}::Dispatch({{ .WireInterface }}* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   {{- if .ClientMethods }}
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }

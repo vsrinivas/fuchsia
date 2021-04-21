@@ -111,17 +111,24 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_inheritancewithrecursivedecl::kParent_First_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_inheritancewithrecursivedecl::Parent::First>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::
+                                        Parent::First>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
                                    Parent>::FirstCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
                 ::fidl_test_inheritancewithrecursivedecl::Parent>*>(interface)
                 ->First(reinterpret_cast<::fidl::WireRequest<
                             ::fidl_test_inheritancewithrecursivedecl::Parent::
-                                First>*>(bytes),
+                                First>*>(msg->bytes),
                         completer);
+            return ZX_OK;
           },
       },
   };
@@ -136,7 +143,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                  ::fidl_test_inheritancewithrecursivedecl::Parent>* impl,
              fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -159,17 +166,24 @@ fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Parent>::
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_inheritancewithrecursivedecl::kParent_First_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_inheritancewithrecursivedecl::Parent::First>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::
+                                        Parent::First>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_inheritancewithrecursivedecl::Parent::First>*>(
-                bytes);
+                msg->bytes);
             ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
                                    Parent>::FirstCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_inheritancewithrecursivedecl::Parent>*>(interface)
                 ->First(std::move(message->request), completer);
+            return ZX_OK;
           },
       },
   };
@@ -184,7 +198,7 @@ fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Parent>::
             impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -409,32 +423,46 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_inheritancewithrecursivedecl::kChild_First_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_inheritancewithrecursivedecl::Child::First>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::
+                                        Child::First>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
                                    Child>::FirstCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
                 ::fidl_test_inheritancewithrecursivedecl::Child>*>(interface)
                 ->First(reinterpret_cast<::fidl::WireRequest<
                             ::fidl_test_inheritancewithrecursivedecl::Child::
-                                First>*>(bytes),
+                                First>*>(msg->bytes),
                         completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_inheritancewithrecursivedecl::Child::Second>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::
+                                        Child::Second>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
                                    Child>::SecondCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
                 ::fidl_test_inheritancewithrecursivedecl::Child>*>(interface)
                 ->Second(reinterpret_cast<::fidl::WireRequest<
                              ::fidl_test_inheritancewithrecursivedecl::Child::
-                                 Second>*>(bytes),
+                                 Second>*>(msg->bytes),
                          completer);
+            return ZX_OK;
           },
       },
   };
@@ -449,7 +477,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                  ::fidl_test_inheritancewithrecursivedecl::Child>* impl,
              fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -472,32 +500,46 @@ fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_inheritancewithrecursivedecl::kChild_First_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_inheritancewithrecursivedecl::Child::First>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::
+                                        Child::First>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_inheritancewithrecursivedecl::Child::First>*>(
-                bytes);
+                msg->bytes);
             ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
                                    Child>::FirstCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_inheritancewithrecursivedecl::Child>*>(interface)
                 ->First(std::move(message->request), completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_inheritancewithrecursivedecl::Child::Second>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::
+                                        Child::Second>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_inheritancewithrecursivedecl::Child::Second>*>(
-                bytes);
+                msg->bytes);
             ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
                                    Child>::SecondCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_inheritancewithrecursivedecl::Child>*>(interface)
                 ->Second(std::move(message->request), completer);
+            return ZX_OK;
           },
       },
   };
@@ -512,7 +554,7 @@ fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
             impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});

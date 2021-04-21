@@ -18,7 +18,7 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
   virtual void OnReply({{ .WireResponse }}* message) = 0;
 
  private:
-  void OnReply(uint8_t* reply) override;
+  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
 };
 {{- EndifFuchsia }}
 {{- end }}
@@ -29,10 +29,15 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 {{ .WireResponseContext }}::{{ .WireResponseContext.Self }}()
-    : ::fidl::internal::ResponseContext({{ .WireResponse }}::Type, {{ .OrdinalName }}) {}
+    : ::fidl::internal::ResponseContext({{ .OrdinalName }}) {}
 
-void {{ .WireResponseContext }}::OnReply(uint8_t* reply) {
-  OnReply(reinterpret_cast<{{ .WireResponse }}*>(reply));
+zx_status_t {{ .WireResponseContext.NoLeading }}::OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status = fidl_decode_msg({{ .WireResponse }}::Type, msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
+  OnReply(reinterpret_cast<{{ .WireResponse }}*>(msg->bytes));
+  return ZX_OK;
 }
 {{- EndifFuchsia }}
 {{- end }}

@@ -29,7 +29,7 @@ namespace internal {
 // `FooMethodResponseContext`, that inherits from |ResponseContext| and
 // interprets the bytes passed to the |OnReply| call appropriately.
 // Users should interact with those subclasses; the notes here on lifecycle
-// apply to those subclasses too.
+// apply to those subclasses.
 //
 // ## Lifecycle
 //
@@ -51,10 +51,9 @@ namespace internal {
 // destruction, invoking |OnError| on each outstanding response context.
 class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, private list_node_t {
  public:
-  ResponseContext(const fidl_type_t* type, uint64_t ordinal)
+  explicit ResponseContext(uint64_t ordinal)
       : fbl::WAVLTreeContainable<ResponseContext*>(),
         list_node_t(LIST_INITIAL_CLEARED_VALUE),
-        type_(type),
         ordinal_(ordinal) {}
   virtual ~ResponseContext() = default;
 
@@ -64,14 +63,21 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
   ResponseContext(ResponseContext&& other) = delete;
   ResponseContext& operator=(ResponseContext&& other) = delete;
 
-  const fidl_type_t* type() const { return type_; }
   uint64_t ordinal() const { return ordinal_; }
   zx_txid_t Txid() const { return txid_; }
 
   // Invoked if a response has been received for this context.
   //
-  // |OnReply| is allowed to consume the current object.
-  virtual void OnReply(uint8_t* reply) = 0;
+  // |msg| references the incoming message in encoded form.
+  //
+  // If |OnRawReply| returns |ZX_OK|, that indicates decoding was successful,
+  // and |OnRawReply| has invoked the user response handler. Ownership of this
+  // object has been transferred to the user.
+  //
+  // If |OnRawReply| returns an error, that indicates decoding failure, and
+  // the caller should invoke |OnError| to propagate the error and give up
+  // ownership.
+  virtual zx_status_t OnRawReply(fidl_incoming_msg_t* msg) = 0;
 
   // Invoked if an error occurs handling the response message prior to invoking
   // the user-specified callback or if the ClientBase is destroyed with the
@@ -92,9 +98,8 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
     static bool EqualTo(const zx_txid_t& key1, const zx_txid_t& key2) { return key1 == key2; }
   };
 
-  const fidl_type_t* const type_;  // Type of a response with ordinal |ordinal_|.
-  const uint64_t ordinal_;         // Expected ordinal for the response.
-  zx_txid_t txid_ = 0;             // Zircon txid of outstanding transaction.
+  const uint64_t ordinal_;  // Expected ordinal for the response.
+  zx_txid_t txid_ = 0;      // Zircon txid of outstanding transaction.
 };
 
 // ChannelRef takes ownership of a channel. It can transfer the channel

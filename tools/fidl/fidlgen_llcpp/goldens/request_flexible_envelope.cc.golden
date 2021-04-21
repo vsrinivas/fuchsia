@@ -234,17 +234,24 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
     ::fidl_test_requestflexibleenvelope::Protocol::
         RequestStrictResponseFlexible>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                   RequestStrictResponseFlexible>::Type,
           ::fidl_test_requestflexibleenvelope::
               kProtocol_RequestStrictResponseFlexible_Ordinal) {}
 
-void ::fidl::WireResponseContext<
+zx_status_t fidl::WireResponseContext<
     ::fidl_test_requestflexibleenvelope::Protocol::
-        RequestStrictResponseFlexible>::OnReply(uint8_t* reply) {
+        RequestStrictResponseFlexible>::OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status = fidl_decode_msg(
+      ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+                               RequestStrictResponseFlexible>::Type,
+      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
   OnReply(reinterpret_cast<
           ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                   RequestStrictResponseFlexible>*>(reply));
+                                   RequestStrictResponseFlexible>*>(
+      msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -361,17 +368,24 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
     ::fidl_test_requestflexibleenvelope::Protocol::
         RequestFlexibleResponseStrict>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                   RequestFlexibleResponseStrict>::Type,
           ::fidl_test_requestflexibleenvelope::
               kProtocol_RequestFlexibleResponseStrict_Ordinal) {}
 
-void ::fidl::WireResponseContext<
+zx_status_t fidl::WireResponseContext<
     ::fidl_test_requestflexibleenvelope::Protocol::
-        RequestFlexibleResponseStrict>::OnReply(uint8_t* reply) {
+        RequestFlexibleResponseStrict>::OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status = fidl_decode_msg(
+      ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+                               RequestFlexibleResponseStrict>::Type,
+      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
   OnReply(reinterpret_cast<
           ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                   RequestFlexibleResponseStrict>*>(reply));
+                                   RequestFlexibleResponseStrict>*>(
+      msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -461,9 +475,16 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
       {
           ::fidl_test_requestflexibleenvelope::
               kProtocol_RequestStrictResponseFlexible_Ordinal,
-          ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                                  RequestStrictResponseFlexible>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_requestflexibleenvelope::Protocol::
+                        RequestStrictResponseFlexible>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
                 RequestStrictResponseFlexibleCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
@@ -471,16 +492,24 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
                 ->RequestStrictResponseFlexible(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestStrictResponseFlexible>*>(bytes),
+                            RequestStrictResponseFlexible>*>(msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_requestflexibleenvelope::
               kProtocol_RequestFlexibleResponseStrict_Ordinal,
-          ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                                  RequestFlexibleResponseStrict>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_requestflexibleenvelope::Protocol::
+                        RequestFlexibleResponseStrict>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
                 RequestFlexibleResponseStrictCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
@@ -488,8 +517,9 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
                 ->RequestFlexibleResponseStrict(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestFlexibleResponseStrict>*>(bytes),
+                            RequestFlexibleResponseStrict>*>(msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
   };
@@ -504,7 +534,7 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
         ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>* impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -527,35 +557,51 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
       {
           ::fidl_test_requestflexibleenvelope::
               kProtocol_RequestStrictResponseFlexible_Ordinal,
-          ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                                  RequestStrictResponseFlexible>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_requestflexibleenvelope::Protocol::
+                        RequestStrictResponseFlexible>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_requestflexibleenvelope::Protocol::
-                    RequestStrictResponseFlexible>*>(bytes);
+                    RequestStrictResponseFlexible>*>(msg->bytes);
             ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
                 RequestStrictResponseFlexibleCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_requestflexibleenvelope::Protocol>*>(interface)
                 ->RequestStrictResponseFlexible(std::move(message->s),
                                                 completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_requestflexibleenvelope::
               kProtocol_RequestFlexibleResponseStrict_Ordinal,
-          ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                                  RequestFlexibleResponseStrict>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_requestflexibleenvelope::Protocol::
+                        RequestFlexibleResponseStrict>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_requestflexibleenvelope::Protocol::
-                    RequestFlexibleResponseStrict>*>(bytes);
+                    RequestFlexibleResponseStrict>*>(msg->bytes);
             ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
                 RequestFlexibleResponseStrictCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_requestflexibleenvelope::Protocol>*>(interface)
                 ->RequestFlexibleResponseStrict(std::move(message->s),
                                                 completer);
+            return ZX_OK;
           },
       },
   };
@@ -570,7 +616,7 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
             impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});

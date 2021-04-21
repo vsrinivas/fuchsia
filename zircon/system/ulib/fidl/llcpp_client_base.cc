@@ -98,19 +98,13 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl_incoming_msg_t* msg) {
         return UnbindInfo{UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_FOUND};
       }
     }
-    const char* error_message = nullptr;
-    // Perform in-place decoding
-    fidl_trace(WillLLCPPDecode, context->type(), msg->bytes, msg->num_bytes, msg->num_handles);
-    zx_status_t status = fidl_decode_etc(context->type(), msg->bytes, msg->num_bytes, msg->handles,
-                                         msg->num_handles, &error_message);
-    fidl_trace(DidLLCPPDecode);
+    zx_status_t status = context->OnRawReply(msg);
     if (unlikely(status != ZX_OK)) {
       context->OnError();
       return UnbindInfo{UnbindInfo::kDecodeError, status};
     }
 
-    context->OnReply(reinterpret_cast<uint8_t*>(msg->bytes));
-    return {};
+    return std::nullopt;
   }
 
   // Dispatch events (received messages with no txid).

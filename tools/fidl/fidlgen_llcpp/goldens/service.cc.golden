@@ -62,9 +62,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_service::kSecondProtocol_MethodOnSecond_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_service::SecondProtocol::MethodOnSecond>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_service::SecondProtocol>::
                 MethodOnSecondCompleter::Sync completer(txn);
             reinterpret_cast<
@@ -73,8 +72,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                 ->MethodOnSecond(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_service::SecondProtocol::MethodOnSecond>*>(
-                        bytes),
+                        msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
   };
@@ -88,7 +88,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
         ::fidl::WireServer<::fidl_test_service::SecondProtocol>* impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -109,15 +109,15 @@ fidl::WireServer<::fidl_test_service::SecondProtocol>::dispatch_message(
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_service::kSecondProtocol_MethodOnSecond_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_service::SecondProtocol::MethodOnSecond>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_service::SecondProtocol>::
                 MethodOnSecondCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_service::SecondProtocol>*>(
                 interface)
                 ->MethodOnSecond(completer);
+            return ZX_OK;
           },
       },
   };
@@ -131,7 +131,7 @@ fidl::internal::WireDispatcher<::fidl_test_service::SecondProtocol>::Dispatch(
     ::fidl::WireInterface<::fidl_test_service::SecondProtocol>* impl,
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -215,9 +215,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_service::kFirstProtocol_MethodOnFirst_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_service::FirstProtocol::MethodOnFirst>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_service::FirstProtocol>::
                 MethodOnFirstCompleter::Sync completer(txn);
             reinterpret_cast<
@@ -226,8 +225,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                 ->MethodOnFirst(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_service::FirstProtocol::MethodOnFirst>*>(
-                        bytes),
+                        msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
   };
@@ -241,7 +241,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
         ::fidl::WireServer<::fidl_test_service::FirstProtocol>* impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -262,15 +262,15 @@ fidl::internal::WireDispatcher<::fidl_test_service::FirstProtocol>::TryDispatch(
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_service::kFirstProtocol_MethodOnFirst_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_service::FirstProtocol::MethodOnFirst>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_service::FirstProtocol>::
                 MethodOnFirstCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_service::FirstProtocol>*>(
                 interface)
                 ->MethodOnFirst(completer);
+            return ZX_OK;
           },
       },
   };
@@ -284,7 +284,7 @@ fidl::internal::WireDispatcher<::fidl_test_service::FirstProtocol>::Dispatch(
     ::fidl::WireInterface<::fidl_test_service::FirstProtocol>* impl,
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});

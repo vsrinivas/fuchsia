@@ -1827,7 +1827,7 @@ class ::fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::
                                RequestStrictResponseFlexible>* message) = 0;
 
  private:
-  void OnReply(uint8_t* reply) override;
+  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -1845,7 +1845,7 @@ class ::fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::
                                RequestFlexibleResponseStrict>* message) = 0;
 
  private:
-  void OnReply(uint8_t* reply) override;
+  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
 };
 #endif  // __Fuchsia__
 

@@ -7,11 +7,14 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/trace.h>
+
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client_base.h>
 #include <lib/fidl/llcpp/server.h>
 #include <zircon/syscalls.h>
-#endif
+#endif  // __Fuchsia__
+
 #include <zircon/assert.h>
 
 namespace fidl {
@@ -212,8 +215,9 @@ IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle
 IncomingMessage::~IncomingMessage() { FidlHandleInfoCloseMany(handles(), handle_actual()); }
 
 void IncomingMessage::Decode(const fidl_type_t* message_type) {
-  status_ =
-      fidl_decode_etc(message_type, bytes(), byte_actual(), handles(), handle_actual(), &error_);
+  fidl_trace(WillLLCPPDecode, message_type, bytes(), byte_actual(), handle_actual());
+  status_ = fidl_decode_msg(message_type, &message_, &error_);
+  fidl_trace(DidLLCPPDecode);
   ReleaseHandles();
 }
 

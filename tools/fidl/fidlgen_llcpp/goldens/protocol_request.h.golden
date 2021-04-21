@@ -2187,7 +2187,7 @@ class ::fidl::WireResponseContext<::fidl_test_protocolrequest::Parent::GetChild>
           message) = 0;
 
  private:
-  void OnReply(uint8_t* reply) override;
+  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -2205,7 +2205,7 @@ class ::fidl::WireResponseContext<
           ::fidl_test_protocolrequest::Parent::GetChildRequest>* message) = 0;
 
  private:
-  void OnReply(uint8_t* reply) override;
+  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
 };
 #endif  // __Fuchsia__
 

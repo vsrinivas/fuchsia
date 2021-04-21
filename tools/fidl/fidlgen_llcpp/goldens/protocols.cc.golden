@@ -205,16 +205,23 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
 ::fidl::WireResponseContext<::fidl_test_protocols::HandleRightsProtocol::
                                 ResponseMethod>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::
-                                   ResponseMethod>::Type,
           ::fidl_test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal) {
 }
 
-void ::fidl::WireResponseContext<::fidl_test_protocols::HandleRightsProtocol::
-                                     ResponseMethod>::OnReply(uint8_t* reply) {
+zx_status_t fidl::WireResponseContext<
+    ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>::
+    OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status = fidl_decode_msg(
+      ::fidl::WireResponse<
+          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>::Type,
+      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>*>(
-      reply));
+      msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -400,9 +407,16 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>::
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal,
-          ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
-                                  NoResponseMethod>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::HandleRightsProtocol::
+                        NoResponseMethod>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
                 NoResponseMethodCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
@@ -410,15 +424,23 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>::
                 ->NoResponseMethod(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_protocols::HandleRightsProtocol::
-                            NoResponseMethod>*>(bytes),
+                            NoResponseMethod>*>(msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal,
-          ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
-                                  ResponseMethod>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::HandleRightsProtocol::
+                        ResponseMethod>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
                 ResponseMethodCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
@@ -426,8 +448,9 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>::
                 ->ResponseMethod(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_protocols::HandleRightsProtocol::
-                            ResponseMethod>*>(bytes),
+                            ResponseMethod>*>(msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
   };
@@ -441,7 +464,7 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>::
         ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>* impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -463,32 +486,48 @@ fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::dispatch_message(
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal,
-          ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
-                                  NoResponseMethod>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::HandleRightsProtocol::
+                        NoResponseMethod>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_protocols::HandleRightsProtocol::
-                    NoResponseMethod>*>(bytes);
+                    NoResponseMethod>*>(msg->bytes);
             ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
                 NoResponseMethodCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_protocols::HandleRightsProtocol>*>(interface)
                 ->NoResponseMethod(std::move(message->h), completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal,
-          ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
-                                  ResponseMethod>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::HandleRightsProtocol::
+                        ResponseMethod>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>*>(
-                bytes);
+                msg->bytes);
             ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
                 ResponseMethodCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_protocols::HandleRightsProtocol>*>(interface)
                 ->ResponseMethod(std::move(message->h), completer);
+            return ZX_OK;
           },
       },
   };
@@ -503,7 +542,7 @@ fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::dispatch_message(
             impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -692,9 +731,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kDiscoverableProtocol_Method_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::DiscoverableProtocol::Method>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::
                 MethodCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
@@ -702,8 +740,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
                 ->Method(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_protocols::DiscoverableProtocol::Method>*>(
-                        bytes),
+                        msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
   };
@@ -717,7 +756,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
         ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -739,14 +778,14 @@ fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::dispatch_message(
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kDiscoverableProtocol_Method_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::DiscoverableProtocol::Method>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::
                 MethodCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_protocols::DiscoverableProtocol>*>(interface)
                 ->Method(completer);
+            return ZX_OK;
           },
       },
   };
@@ -761,7 +800,7 @@ fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::dispatch_message(
             impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -932,15 +971,21 @@ fidl::internal::WireClientImpl<
 ::fidl::WireResponseContext<
     ::fidl_test_protocols::Transitional::Request>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::Transitional::Request>::Type,
           ::fidl_test_protocols::kTransitional_Request_Ordinal) {}
 
-void ::fidl::WireResponseContext<
-    ::fidl_test_protocols::Transitional::Request>::OnReply(uint8_t* reply) {
+zx_status_t
+fidl::WireResponseContext<::fidl_test_protocols::Transitional::Request>::
+    OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status = fidl_decode_msg(
+      ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>::Type,
+      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
   OnReply(reinterpret_cast<
           ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>*>(
-      reply));
+      msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -1146,34 +1191,48 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>::HandleOneEvent(
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kTransitional_Request_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::Transitional::Request>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::Transitional::Request>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<::fidl_test_protocols::Transitional>::
                 RequestCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_protocols::Transitional>*>(
                 interface)
-                ->Request(
-                    reinterpret_cast<::fidl::WireRequest<
-                        ::fidl_test_protocols::Transitional::Request>*>(bytes),
-                    completer);
+                ->Request(reinterpret_cast<::fidl::WireRequest<
+                              ::fidl_test_protocols::Transitional::Request>*>(
+                              msg->bytes),
+                          completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::kTransitional_OneWay_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::Transitional::OneWay>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::Transitional::OneWay>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<::fidl_test_protocols::Transitional>::
                 OneWayCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_protocols::Transitional>*>(
                 interface)
-                ->OneWay(
-                    reinterpret_cast<::fidl::WireRequest<
-                        ::fidl_test_protocols::Transitional::OneWay>*>(bytes),
-                    completer);
+                ->OneWay(reinterpret_cast<::fidl::WireRequest<
+                             ::fidl_test_protocols::Transitional::OneWay>*>(
+                             msg->bytes),
+                         completer);
+            return ZX_OK;
           },
       },
   };
@@ -1187,7 +1246,7 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>::HandleOneEvent(
         ::fidl::WireServer<::fidl_test_protocols::Transitional>* impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -1208,32 +1267,46 @@ fidl::WireServer<::fidl_test_protocols::Transitional>::dispatch_message(
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kTransitional_Request_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::Transitional::Request>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::Transitional::Request>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_protocols::Transitional::Request>*>(bytes);
+                ::fidl_test_protocols::Transitional::Request>*>(msg->bytes);
             ::fidl::WireServer<::fidl_test_protocols::Transitional>::
                 RequestCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_protocols::Transitional>*>(
                 interface)
                 ->Request(std::move(message->x), completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::kTransitional_OneWay_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::Transitional::OneWay>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::Transitional::OneWay>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_protocols::Transitional::OneWay>*>(bytes);
+                ::fidl_test_protocols::Transitional::OneWay>*>(msg->bytes);
             ::fidl::WireServer<::fidl_test_protocols::Transitional>::
                 OneWayCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_protocols::Transitional>*>(
                 interface)
                 ->OneWay(std::move(message->x), completer);
+            return ZX_OK;
           },
       },
   };
@@ -1247,7 +1320,7 @@ fidl::internal::WireDispatcher<::fidl_test_protocols::Transitional>::Dispatch(
     ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -1648,14 +1721,21 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
 ::fidl::WireResponseContext<
     ::fidl_test_protocols::ChannelProtocol::MethodB>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::ChannelProtocol::MethodB>::Type,
           ::fidl_test_protocols::kChannelProtocol_MethodB_Ordinal) {}
 
-void ::fidl::WireResponseContext<
-    ::fidl_test_protocols::ChannelProtocol::MethodB>::OnReply(uint8_t* reply) {
+zx_status_t
+fidl::WireResponseContext<::fidl_test_protocols::ChannelProtocol::MethodB>::
+    OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status = fidl_decode_msg(
+      ::fidl::WireResponse<
+          ::fidl_test_protocols::ChannelProtocol::MethodB>::Type,
+      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
   OnReply(reinterpret_cast<::fidl::WireResponse<
-              ::fidl_test_protocols::ChannelProtocol::MethodB>*>(reply));
+              ::fidl_test_protocols::ChannelProtocol::MethodB>*>(msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -1757,15 +1837,22 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
 ::fidl::WireResponseContext<
     ::fidl_test_protocols::ChannelProtocol::TakeHandle>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::ChannelProtocol::TakeHandle>::Type,
           ::fidl_test_protocols::kChannelProtocol_TakeHandle_Ordinal) {}
 
-void ::fidl::WireResponseContext<
-    ::fidl_test_protocols::ChannelProtocol::TakeHandle>::OnReply(uint8_t*
-                                                                     reply) {
-  OnReply(reinterpret_cast<::fidl::WireResponse<
-              ::fidl_test_protocols::ChannelProtocol::TakeHandle>*>(reply));
+zx_status_t
+fidl::WireResponseContext<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
+    OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status = fidl_decode_msg(
+      ::fidl::WireResponse<
+          ::fidl_test_protocols::ChannelProtocol::TakeHandle>::Type,
+      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
+  OnReply(
+      reinterpret_cast<::fidl::WireResponse<
+          ::fidl_test_protocols::ChannelProtocol::TakeHandle>*>(msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -1868,15 +1955,22 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
 ::fidl::WireResponseContext<
     ::fidl_test_protocols::ChannelProtocol::MutateSocket>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::ChannelProtocol::MutateSocket>::Type,
           ::fidl_test_protocols::kChannelProtocol_MutateSocket_Ordinal) {}
 
-void ::fidl::WireResponseContext<
-    ::fidl_test_protocols::ChannelProtocol::MutateSocket>::OnReply(uint8_t*
-                                                                       reply) {
-  OnReply(reinterpret_cast<::fidl::WireResponse<
-              ::fidl_test_protocols::ChannelProtocol::MutateSocket>*>(reply));
+zx_status_t fidl::WireResponseContext<
+    ::fidl_test_protocols::ChannelProtocol::MutateSocket>::
+    OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status = fidl_decode_msg(
+      ::fidl::WireResponse<
+          ::fidl_test_protocols::ChannelProtocol::MutateSocket>::Type,
+      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
+  OnReply(
+      reinterpret_cast<::fidl::WireResponse<
+          ::fidl_test_protocols::ChannelProtocol::MutateSocket>*>(msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -2057,9 +2151,15 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kChannelProtocol_MethodA_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::ChannelProtocol::MethodA>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::ChannelProtocol::MethodA>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::
                 MethodACompleter::Sync completer(txn);
             reinterpret_cast<
@@ -2068,15 +2168,22 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
                 ->MethodA(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_protocols::ChannelProtocol::MethodA>*>(
-                        bytes),
+                        msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::kChannelProtocol_MethodB_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::ChannelProtocol::MethodB>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::ChannelProtocol::MethodB>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::
                 MethodBCompleter::Sync completer(txn);
             reinterpret_cast<
@@ -2085,15 +2192,22 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
                 ->MethodB(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_protocols::ChannelProtocol::MethodB>*>(
-                        bytes),
+                        msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::kChannelProtocol_TakeHandle_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::ChannelProtocol::TakeHandle>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::ChannelProtocol::TakeHandle>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::
                 TakeHandleCompleter::Sync completer(txn);
             reinterpret_cast<
@@ -2102,15 +2216,22 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
                 ->TakeHandle(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_protocols::ChannelProtocol::TakeHandle>*>(
-                        bytes),
+                        msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::kChannelProtocol_MutateSocket_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::ChannelProtocol::MutateSocket>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::ChannelProtocol::MutateSocket>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::
                 MutateSocketCompleter::Sync completer(txn);
             reinterpret_cast<
@@ -2119,8 +2240,9 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
                 ->MutateSocket(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_protocols::ChannelProtocol::MutateSocket>*>(
-                        bytes),
+                        msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
   };
@@ -2134,7 +2256,7 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
         ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>* impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -2155,11 +2277,17 @@ fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kChannelProtocol_MethodA_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::ChannelProtocol::MethodA>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::ChannelProtocol::MethodA>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_protocols::ChannelProtocol::MethodA>*>(bytes);
+                ::fidl_test_protocols::ChannelProtocol::MethodA>*>(msg->bytes);
             ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::
                 MethodACompleter::Sync completer(txn);
             reinterpret_cast<
@@ -2167,15 +2295,22 @@ fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
                 interface)
                 ->MethodA(std::move(message->a), std::move(message->b),
                           completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::kChannelProtocol_MethodB_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::ChannelProtocol::MethodB>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::ChannelProtocol::MethodB>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_protocols::ChannelProtocol::MethodB>*>(bytes);
+                ::fidl_test_protocols::ChannelProtocol::MethodB>*>(msg->bytes);
             ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::
                 MethodBCompleter::Sync completer(txn);
             reinterpret_cast<
@@ -2183,36 +2318,53 @@ fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
                 interface)
                 ->MethodB(std::move(message->a), std::move(message->b),
                           completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::kChannelProtocol_TakeHandle_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::ChannelProtocol::TakeHandle>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::ChannelProtocol::TakeHandle>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_protocols::ChannelProtocol::TakeHandle>*>(bytes);
+                ::fidl_test_protocols::ChannelProtocol::TakeHandle>*>(
+                msg->bytes);
             ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::
                 TakeHandleCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>*>(
                 interface)
                 ->TakeHandle(std::move(message->h), completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::kChannelProtocol_MutateSocket_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::ChannelProtocol::MutateSocket>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::ChannelProtocol::MutateSocket>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_protocols::ChannelProtocol::MutateSocket>*>(bytes);
+                ::fidl_test_protocols::ChannelProtocol::MutateSocket>*>(
+                msg->bytes);
             ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::
                 MutateSocketCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>*>(
                 interface)
                 ->MutateSocket(std::move(message->a), completer);
+            return ZX_OK;
           },
       },
   };
@@ -2226,7 +2378,7 @@ fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
         ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -2805,18 +2957,24 @@ fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
         NoRequestEmptyResponse>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  NoRequestEmptyResponse>::Type,
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal) {}
 
-void ::fidl::WireResponseContext<
+zx_status_t fidl::WireResponseContext<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        NoRequestEmptyResponse>::OnReply(uint8_t* reply) {
+        NoRequestEmptyResponse>::OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status =
+      fidl_decode_msg(::fidl::WireResponse<
+                          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                              NoRequestEmptyResponse>::Type,
+                      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  NoRequestEmptyResponse>*>(reply));
+                  NoRequestEmptyResponse>*>(msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -2930,18 +3088,24 @@ fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
         NoRequestWithResponse>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  NoRequestWithResponse>::Type,
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal) {}
 
-void ::fidl::WireResponseContext<
+zx_status_t fidl::WireResponseContext<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        NoRequestWithResponse>::OnReply(uint8_t* reply) {
+        NoRequestWithResponse>::OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status =
+      fidl_decode_msg(::fidl::WireResponse<
+                          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                              NoRequestWithResponse>::Type,
+                      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  NoRequestWithResponse>*>(reply));
+                  NoRequestWithResponse>*>(msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -3095,19 +3259,25 @@ fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
         WithRequestEmptyResponse>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  WithRequestEmptyResponse>::Type,
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal) {
 }
 
-void ::fidl::WireResponseContext<
+zx_status_t fidl::WireResponseContext<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        WithRequestEmptyResponse>::OnReply(uint8_t* reply) {
+        WithRequestEmptyResponse>::OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status =
+      fidl_decode_msg(::fidl::WireResponse<
+                          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                              WithRequestEmptyResponse>::Type,
+                      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  WithRequestEmptyResponse>*>(reply));
+                  WithRequestEmptyResponse>*>(msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -3228,18 +3398,24 @@ fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
         WithRequestWithResponse>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  WithRequestWithResponse>::Type,
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal) {}
 
-void ::fidl::WireResponseContext<
+zx_status_t fidl::WireResponseContext<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        WithRequestWithResponse>::OnReply(uint8_t* reply) {
+        WithRequestWithResponse>::OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status =
+      fidl_decode_msg(::fidl::WireResponse<
+                          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                              WithRequestWithResponse>::Type,
+                      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
   OnReply(reinterpret_cast<::fidl::WireResponse<
               ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  WithRequestWithResponse>*>(reply));
+                  WithRequestWithResponse>*>(msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -3475,10 +3651,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  NoRequestNoResponse>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 NoRequestNoResponseCompleter::Sync completer(txn);
@@ -3488,17 +3662,16 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                 ->NoRequestNoResponse(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                            NoRequestNoResponse>*>(bytes),
+                            NoRequestNoResponse>*>(msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  NoRequestEmptyResponse>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 NoRequestEmptyResponseCompleter::Sync completer(txn);
@@ -3508,17 +3681,16 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                 ->NoRequestEmptyResponse(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                            NoRequestEmptyResponse>*>(bytes),
+                            NoRequestEmptyResponse>*>(msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  NoRequestWithResponse>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 NoRequestWithResponseCompleter::Sync completer(txn);
@@ -3528,17 +3700,24 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                 ->NoRequestWithResponse(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                            NoRequestWithResponse>*>(bytes),
+                            NoRequestWithResponse>*>(msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  WithRequestNoResponse>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                        WithRequestNoResponse>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 WithRequestNoResponseCompleter::Sync completer(txn);
@@ -3548,17 +3727,24 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                 ->WithRequestNoResponse(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                            WithRequestNoResponse>*>(bytes),
+                            WithRequestNoResponse>*>(msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  WithRequestEmptyResponse>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                        WithRequestEmptyResponse>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 WithRequestEmptyResponseCompleter::Sync completer(txn);
@@ -3568,17 +3754,24 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                 ->WithRequestEmptyResponse(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                            WithRequestEmptyResponse>*>(bytes),
+                            WithRequestEmptyResponse>*>(msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  WithRequestWithResponse>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                        WithRequestWithResponse>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 WithRequestWithResponseCompleter::Sync completer(txn);
@@ -3588,8 +3781,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                 ->WithRequestWithResponse(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                            WithRequestWithResponse>*>(bytes),
+                            WithRequestWithResponse>*>(msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
   };
@@ -3604,7 +3798,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                  ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
              fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -3628,10 +3822,8 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  NoRequestNoResponse>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 NoRequestNoResponseCompleter::Sync completer(txn);
@@ -3639,15 +3831,14 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>*>(
                 interface)
                 ->NoRequestNoResponse(completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  NoRequestEmptyResponse>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 NoRequestEmptyResponseCompleter::Sync completer(txn);
@@ -3655,15 +3846,14 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>*>(
                 interface)
                 ->NoRequestEmptyResponse(completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  NoRequestWithResponse>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 NoRequestWithResponseCompleter::Sync completer(txn);
@@ -3671,18 +3861,25 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>*>(
                 interface)
                 ->NoRequestWithResponse(completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  WithRequestNoResponse>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                        WithRequestNoResponse>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                    WithRequestNoResponse>*>(bytes);
+                    WithRequestNoResponse>*>(msg->bytes);
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 WithRequestNoResponseCompleter::Sync completer(txn);
@@ -3690,18 +3887,25 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>*>(
                 interface)
                 ->WithRequestNoResponse(std::move(message->arg), completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  WithRequestEmptyResponse>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                        WithRequestEmptyResponse>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                    WithRequestEmptyResponse>*>(bytes);
+                    WithRequestEmptyResponse>*>(msg->bytes);
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 WithRequestEmptyResponseCompleter::Sync completer(txn);
@@ -3709,18 +3913,25 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>*>(
                 interface)
                 ->WithRequestEmptyResponse(std::move(message->arg), completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  WithRequestWithResponse>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                        WithRequestWithResponse>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
+            }
             auto message = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                    WithRequestWithResponse>*>(bytes);
+                    WithRequestWithResponse>*>(msg->bytes);
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 WithRequestWithResponseCompleter::Sync completer(txn);
@@ -3728,6 +3939,7 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>*>(
                 interface)
                 ->WithRequestWithResponse(std::move(message->arg), completer);
+            return ZX_OK;
           },
       },
   };
@@ -3742,7 +3954,7 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
                  ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
              fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -4219,16 +4431,22 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 ::fidl::WireResponseContext<::fidl_test_protocols::WithErrorSyntax::
                                 ResponseAsStruct>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::Type,
           ::fidl_test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal) {}
 
-void ::fidl::WireResponseContext<
+zx_status_t fidl::WireResponseContext<
     ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::
-    OnReply(uint8_t* reply) {
-  OnReply(
-      reinterpret_cast<::fidl::WireResponse<
-          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*>(reply));
+    OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status = fidl_decode_msg(
+      ::fidl::WireResponse<
+          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::Type,
+      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
+  OnReply(reinterpret_cast<::fidl::WireResponse<
+              ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*>(
+      msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -4328,16 +4546,22 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 ::fidl::WireResponseContext<::fidl_test_protocols::WithErrorSyntax::
                                 ErrorAsPrimitive>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Type,
           ::fidl_test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal) {}
 
-void ::fidl::WireResponseContext<
+zx_status_t fidl::WireResponseContext<
     ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::
-    OnReply(uint8_t* reply) {
-  OnReply(
-      reinterpret_cast<::fidl::WireResponse<
-          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*>(reply));
+    OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status = fidl_decode_msg(
+      ::fidl::WireResponse<
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Type,
+      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
+  OnReply(reinterpret_cast<::fidl::WireResponse<
+              ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*>(
+      msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -4436,15 +4660,22 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 ::fidl::WireResponseContext<
     ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::Type,
           ::fidl_test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal) {}
 
-void ::fidl::WireResponseContext<
-    ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::OnReply(uint8_t*
-                                                                      reply) {
-  OnReply(reinterpret_cast<::fidl::WireResponse<
-              ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>*>(reply));
+zx_status_t
+fidl::WireResponseContext<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
+    OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status = fidl_decode_msg(
+      ::fidl::WireResponse<
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::Type,
+      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
+  OnReply(
+      reinterpret_cast<::fidl::WireResponse<
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>*>(msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -4521,9 +4752,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
                 ResponseAsStructCompleter::Sync completer(txn);
             reinterpret_cast<
@@ -4531,15 +4761,15 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                 interface)
                 ->ResponseAsStruct(reinterpret_cast<::fidl::WireRequest<
                                        ::fidl_test_protocols::WithErrorSyntax::
-                                           ResponseAsStruct>*>(bytes),
+                                           ResponseAsStruct>*>(msg->bytes),
                                    completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
                 ErrorAsPrimitiveCompleter::Sync completer(txn);
             reinterpret_cast<
@@ -4547,15 +4777,15 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                 interface)
                 ->ErrorAsPrimitive(reinterpret_cast<::fidl::WireRequest<
                                        ::fidl_test_protocols::WithErrorSyntax::
-                                           ErrorAsPrimitive>*>(bytes),
+                                           ErrorAsPrimitive>*>(msg->bytes),
                                    completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
                 ErrorAsEnumCompleter::Sync completer(txn);
             reinterpret_cast<
@@ -4564,8 +4794,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                 ->ErrorAsEnum(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>*>(
-                        bytes),
+                        msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
   };
@@ -4579,7 +4810,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
         ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>* impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -4600,41 +4831,41 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
                 ResponseAsStructCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>*>(
                 interface)
                 ->ResponseAsStruct(completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
                 ErrorAsPrimitiveCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>*>(
                 interface)
                 ->ErrorAsPrimitive(completer);
+            return ZX_OK;
           },
       },
       {
           ::fidl_test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
                 ErrorAsEnumCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>*>(
                 interface)
                 ->ErrorAsEnum(completer);
+            return ZX_OK;
           },
       },
   };
@@ -4648,7 +4879,7 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
         ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});

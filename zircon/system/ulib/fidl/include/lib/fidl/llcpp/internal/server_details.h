@@ -44,10 +44,12 @@ class IncomingMessageDispatcher {
 struct MethodEntry {
   // The ordinal of the method handled by the entry.
   uint64_t ordinal;
-  // The coding table of the method (used to decode the message).
-  const fidl_type_t* type;
-  // The function which handles the decoded message.
-  void (*dispatch)(void* interface, void* bytes, ::fidl::Transaction* txn);
+
+  // The function which handles the encoded message.
+  //
+  // The function must consume the handles in |msg|.
+  // The function should perform decoding, and return the decoding status.
+  zx_status_t (*dispatch)(void* interface, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
 };
 
 // The compiler generates an array of MethodEntry for each protocol.

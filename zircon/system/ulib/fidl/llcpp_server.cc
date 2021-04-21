@@ -13,13 +13,9 @@ namespace internal {
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   while (begin < end) {
     if (hdr->ordinal == begin->ordinal) {
-      const char* error_message;
-      zx_status_t status = fidl_decode_etc(begin->type, msg->bytes, msg->num_bytes, msg->handles,
-                                           msg->num_handles, &error_message);
-      if (status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, status});
-      } else {
-        begin->dispatch(impl, msg->bytes, txn);
+      zx_status_t decode_status = begin->dispatch(impl, msg, txn);
+      if (unlikely(decode_status != ZX_OK)) {
+        txn->InternalError({::fidl::UnbindInfo::kDecodeError, decode_status});
       }
       return ::fidl::DispatchResult::kFound;
     }

@@ -114,9 +114,11 @@ namespace {
 class TestResponseContext : public internal::ResponseContext {
  public:
   explicit TestResponseContext(fidl::internal::WireClientImpl<TestProtocol>* client)
-      : internal::ResponseContext(&::fidl::_llcpp_coding_AnyZeroArgMessageTable, 0),
-        client_(client) {}
-  void OnReply(uint8_t* reply) override { client_->EraseTxid(this); }
+      : internal::ResponseContext(0), client_(client) {}
+  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override {
+    client_->EraseTxid(this);
+    return ZX_OK;
+  }
   void OnError() override {}
 
  private:
@@ -655,8 +657,11 @@ TEST(ClientBindingTestCase, CloneSupportsWaitForChannel) {
 class ReleaseTestResponseContext : public internal::ResponseContext {
  public:
   explicit ReleaseTestResponseContext(sync_completion_t* done)
-      : internal::ResponseContext(&::fidl::_llcpp_coding_AnyZeroArgMessageTable, 0), done_(done) {}
-  void OnReply(uint8_t* reply) override { delete this; }
+      : internal::ResponseContext(0), done_(done) {}
+  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override {
+    delete this;
+    return ZX_OK;
+  }
   void OnError() override {
     sync_completion_signal(done_);
     delete this;

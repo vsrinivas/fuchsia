@@ -169,17 +169,18 @@ fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>::HandleOneEvent(
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_doccomments::kInterface_Method_Ordinal,
-          ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_doccomments::Interface>::
                 MethodCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_doccomments::Interface>*>(
                 interface)
-                ->Method(
-                    reinterpret_cast<::fidl::WireRequest<
-                        ::fidl_test_doccomments::Interface::Method>*>(bytes),
-                    completer);
+                ->Method(reinterpret_cast<::fidl::WireRequest<
+                             ::fidl_test_doccomments::Interface::Method>*>(
+                             msg->bytes),
+                         completer);
+            return ZX_OK;
           },
       },
   };
@@ -193,7 +194,7 @@ fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>::HandleOneEvent(
         ::fidl::WireServer<::fidl_test_doccomments::Interface>* impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -214,14 +215,15 @@ fidl::internal::WireDispatcher<::fidl_test_doccomments::Interface>::TryDispatch(
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_doccomments::kInterface_Method_Ordinal,
-          ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_doccomments::Interface>::
                 MethodCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_doccomments::Interface>*>(
                 interface)
                 ->Method(completer);
+            return ZX_OK;
           },
       },
   };
@@ -235,7 +237,7 @@ fidl::internal::WireDispatcher<::fidl_test_doccomments::Interface>::Dispatch(
     ::fidl::WireInterface<::fidl_test_doccomments::Interface>* impl,
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});

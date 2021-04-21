@@ -117,19 +117,24 @@ fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
     WireResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl::WireResponse<
-              ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                  GetFoo>::Type,
           ::fidl_test_foreigntypeinresponseusedthroughcompose::
               kTop_GetFoo_Ordinal) {}
 
-void ::fidl::WireResponseContext<
+zx_status_t fidl::WireResponseContext<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
-    OnReply(uint8_t* reply) {
+    OnRawReply(fidl_incoming_msg_t* msg) {
+  zx_status_t status = fidl_decode_msg(
+      ::fidl::WireResponse<::fidl_test_foreigntypeinresponseusedthroughcompose::
+                               Top::GetFoo>::Type,
+      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
+  }
   OnReply(
       reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(
-          reply));
+          msg->bytes));
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 
@@ -215,10 +220,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
       {
           ::fidl_test_foreigntypeinresponseusedthroughcompose::
               kTop_GetFoo_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                  GetFoo>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<
                 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
                 GetFooCompleter::Sync completer(txn);
@@ -228,8 +231,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
                 ->GetFoo(
                     reinterpret_cast<::fidl::WireRequest<
                         ::fidl_test_foreigntypeinresponseusedthroughcompose::
-                            Top::GetFoo>*>(bytes),
+                            Top::GetFoo>*>(msg->bytes),
                     completer);
+            return ZX_OK;
           },
       },
   };
@@ -245,7 +249,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>* impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
@@ -271,10 +275,8 @@ fidl::WireServer<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
       {
           ::fidl_test_foreigntypeinresponseusedthroughcompose::
               kTop_GetFoo_Ordinal,
-          ::fidl::WireRequest<
-              ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-                  GetFoo>::Type,
-          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+          [](void* interface, fidl_incoming_msg_t* msg,
+             ::fidl::Transaction* txn) {
             ::fidl::WireServer<
                 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
                 GetFooCompleter::Sync completer(txn);
@@ -282,6 +284,7 @@ fidl::WireServer<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
                 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>*>(
                 interface)
                 ->GetFoo(completer);
+            return ZX_OK;
           },
       },
   };
@@ -297,7 +300,7 @@ fidl::WireServer<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
             ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>* impl,
         fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
