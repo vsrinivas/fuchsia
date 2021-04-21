@@ -580,6 +580,15 @@ void VmAddressRegion::Activate() {
   DEBUG_ASSERT(state_ == LifeCycleState::NOT_READY);
 
   state_ = LifeCycleState::ALIVE;
+
+  // Validate we are a correct child of our parent.
+  DEBUG_ASSERT(parent_->is_in_range(base_, size_));
+
+  // Look for a region in the parent starting from our desired base. If any region is found, make
+  // sure we do not intersect with it.
+  auto candidate = parent_->subregions_.IncludeOrHigher(base_);
+  ASSERT(candidate == parent_->subregions_.end() || candidate->base_ >= base_ + size_);
+
   parent_->subregions_.InsertRegion(fbl::RefPtr<VmAddressRegionOrMapping>(this));
 }
 
