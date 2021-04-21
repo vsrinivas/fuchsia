@@ -98,8 +98,12 @@ TEST_F(AudioRendererPipelineTestInt16, RenderSameFrameRate) {
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   const auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
   const auto frames_per_packet = num_frames / num_packets;
+  const auto kNumInitialSilentFrames = frames_per_packet;
 
-  auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames);
+  auto input_buffer = GenerateSilentAudio(format, kNumInitialSilentFrames);
+  auto signal = GenerateSequentialAudio(format, num_frames - kNumInitialSilentFrames);
+  input_buffer.Append(&signal);
+
   auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, packets);
@@ -121,25 +125,34 @@ TEST_F(AudioRendererPipelineTestInt16, RenderFasterFrameRate) {
   auto [renderer, format] = CreateRenderer(kOutputFrameRate * 2);
   const auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
   const auto frames_per_packet = num_frames / num_packets;
+  const auto kNumInitialSilentFrames = frames_per_packet;
 
   constexpr int16_t kSampleVal = 0xabc;
-  auto input_buffer = GenerateConstantAudio<ASF::SIGNED_16>(format, num_frames, kSampleVal);
+  auto input_buffer = GenerateSilentAudio(format, kNumInitialSilentFrames);
+  auto signal = GenerateConstantAudio(format, num_frames - kNumInitialSilentFrames, kSampleVal);
+  input_buffer.Append(&signal);
+
   auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
 
   // Output is 2x slower, therefore has half as many frames.
-  auto expected = GenerateConstantAudio<ASF::SIGNED_16>(format, num_frames / 2, kSampleVal);
+  auto expected = GenerateSilentAudio(format, kNumInitialSilentFrames / 2);
+  auto expected_signal =
+      GenerateConstantAudio(format, (num_frames - kNumInitialSilentFrames) / 2, kSampleVal);
+  expected.Append(&expected_signal);
 
   // The ring buffer should contain data followed by silence. Because this test uses
   // a different frame rate for the renderer vs the output device, we will use the
   // SincSampler, which emits the first frame one half "filter width" early then takes
   // one more half filter width to settle at the expected value.
-  auto data_start = kSincSamplerHalfFilterWidth;
+  auto data_start = kNumInitialSilentFrames / 2 + kSincSamplerHalfFilterWidth;
   auto data_end = expected.NumFrames() - kSincSamplerHalfFilterWidth;
   auto silence_start = expected.NumFrames() + kSincSamplerHalfFilterWidth;
   auto silence_end = output_->frame_count() - kSincSamplerHalfFilterWidth;
+  FX_LOGS(INFO) << "data_start " << data_start << ", data_end " << data_end << ", silence_start "
+                << silence_start << ", silence_end " << silence_end;
 
   CompareAudioBufferOptions opts;
   opts.num_frames_per_packet = kDebugFramesPerPacket;
@@ -155,16 +168,23 @@ TEST_F(AudioRendererPipelineTestInt16, RenderSlowerFrameRate) {
   auto [renderer, format] = CreateRenderer(kOutputFrameRate / 2);
   const auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
   const auto frames_per_packet = num_frames / num_packets;
+  const auto kNumInitialSilentFrames = frames_per_packet;
 
   constexpr int16_t kSampleVal = 0xabc;
-  auto input_buffer = GenerateConstantAudio<ASF::SIGNED_16>(format, num_frames, kSampleVal);
+  auto input_buffer = GenerateSilentAudio(format, kNumInitialSilentFrames);
+  auto signal = GenerateConstantAudio(format, num_frames - kNumInitialSilentFrames, kSampleVal);
+  input_buffer.Append(&signal);
+
   auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
 
   // Output is 2x faster, therefore has twice as many frames.
-  auto expected = GenerateConstantAudio<ASF::SIGNED_16>(format, num_frames * 2, kSampleVal);
+  auto expected = GenerateSilentAudio(format, kNumInitialSilentFrames * 2);
+  auto expected_signal =
+      GenerateConstantAudio(format, (num_frames - kNumInitialSilentFrames) * 2, kSampleVal);
+  expected.Append(&expected_signal);
 
   // The ring buffer should contain data followed by silence. Because this test uses
   // a different frame rate for the renderer vs the output device, we will use the
@@ -174,7 +194,7 @@ TEST_F(AudioRendererPipelineTestInt16, RenderSlowerFrameRate) {
   // Also, since the renderer is 2x slower than the output, the filter is effectively
   // expanded to 2x larger in the output (plus one to round fractional frames).
   auto filter_half_width = 2 * kSincSamplerHalfFilterWidth + 1;
-  auto data_start = filter_half_width;
+  auto data_start = kNumInitialSilentFrames * 2 + filter_half_width;
   auto data_end = expected.NumFrames() - filter_half_width;
   auto silence_start = expected.NumFrames() + filter_half_width;
   auto silence_end = output_->frame_count() - filter_half_width;
@@ -189,7 +209,71 @@ TEST_F(AudioRendererPipelineTestInt16, RenderSlowerFrameRate) {
                       AudioBufferSlice<ASF::SIGNED_16>(), opts);
 }
 
+// Hardcoding this const -- it needs to match the value in AudioRenderer
+constexpr zx::duration kPlayRampdownDuration = zx::msec(5);
+
+TEST_F(AudioRendererPipelineTestInt16, PlayRampUp) {
+  constexpr int64_t kPlayRampupFrames =
+      kOutputFrameRate * kPlayRampdownDuration.get() / zx::sec(1).get();
+
+  auto [renderer, format] = CreateRenderer(kOutputFrameRate);
+  const auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
+  const auto frames_per_packet = num_frames / num_packets;
+
+  constexpr int16_t kSampleVal = 0x7FF0;  // Very close to full-scale 16-bit
+  auto input_buffer = GenerateConstantAudio(format, num_frames, kSampleVal);
+
+  auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
+  // With current const values, NumPacketsAndFramesPerBatch provides 100 packets, but if this
+  // changes we need at least enough packets for initial playback plus a complete rampdown
+  ASSERT_GT(packets.size(), 2u);
+
+  renderer->PlaySynchronized(this, output_, 0);
+  renderer->WaitForPackets(this, {packets[0], packets[1]});
+  auto ring_buffer = output_->SnapshotRingBuffer();
+  renderer->Pause(this);
+
+  // The ring buffer should ramp from zero to the constant value, then hold steady for the rest.
+  auto num_channels = ring_buffer.NumSamples() / ring_buffer.NumFrames();
+  int64_t first_constant_frame = 0;
+
+  // The first frame should be all zeroes
+  for (auto chan = 0; chan < num_channels; ++chan) {
+    EXPECT_EQ(ring_buffer.SampleAt(0, chan), 0) << "First frame should be zeroes";
+  }
+
+  // Starting at frame 1, values should successively ramp up (increase) to our const input value.
+  for (auto frame = 1; frame < ring_buffer.NumFrames(); ++frame) {
+    EXPECT_GT(ring_buffer.SampleAt(frame, 0), ring_buffer.SampleAt(frame - 1, 0))
+        << "Frame values should monotonically ramp up (frarme " << frame << ")";
+    for (auto chan = 1; chan < num_channels; ++chan) {
+      // this sample should be more than this channel's in the previous frame
+      EXPECT_EQ(ring_buffer.SampleAt(frame, 0), ring_buffer.SampleAt(frame, chan))
+          << "Channel values should be identical (chan " << chan << ")";
+    }
+    if (ring_buffer.SampleAt(frame, 0) == kSampleVal) {
+      first_constant_frame = frame;
+      break;
+    }
+  }
+
+  // The ramp duration is unknown to clients, but currently it is 5 msec so we use insider info.
+  EXPECT_EQ(first_constant_frame, kPlayRampupFrames) << "Ramp-up duration was unexpected";
+
+  // After the initial ramp-up, there should be at least one packet of the constant value.
+  CompareAudioBufferOptions opts;
+  opts.num_frames_per_packet = frames_per_packet;
+  opts.test_label = "Constant value";
+  CompareAudioBuffers(AudioBufferSlice(&ring_buffer, first_constant_frame,
+                                       first_constant_frame + frames_per_packet),
+                      AudioBufferSlice(&input_buffer, first_constant_frame,
+                                       first_constant_frame + frames_per_packet),
+                      opts);
+}
+
+// Hardcoding this const -- it needs to match the value in AudioRenderer
 constexpr zx::duration kPauseRampdownDuration = zx::msec(5);
+
 TEST_F(AudioRendererPipelineTestInt16, PauseRampDown) {
   constexpr int64_t kPauseRampdownFrames =
       kOutputFrameRate * kPauseRampdownDuration.get() / zx::sec(1).get();
@@ -306,16 +390,20 @@ TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
   //
   // Note that 1 PTS == 1 frame.
   // To further simplify, all of the above sizes are integer numbers of packets.
-  const int64_t first_packet = 0;
-  const int64_t restart_packet = 2 + min_lead_time_in_packets;
-  const int64_t first_pts = first_packet * kPacketFrames;
-  const int64_t restart_pts = restart_packet * kPacketFrames;
   const auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
   const auto frames_per_packet = num_frames / num_packets;
+  // We insert one silent packet upfront, for initial gain ramp-up.
+  const auto kNumInitialSilentFrames = frames_per_packet;
 
   // Load the renderer with lots of packets, but interrupt after two of them.
-  auto first_input = GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames);
-  auto first_packets = renderer->AppendSlice(first_input, frames_per_packet, first_pts);
+  const int64_t restart_packet = 2 + min_lead_time_in_packets;
+  const int64_t restart_pts = restart_packet * kPacketFrames;
+
+  auto first_input = GenerateSilentAudio(format, kNumInitialSilentFrames);
+  auto signal = GenerateSequentialAudio(format, num_frames - kNumInitialSilentFrames);
+  first_input.Append(&signal);
+
+  auto first_packets = renderer->AppendSlice(first_input, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, {first_packets[0], first_packets[1]});
 
@@ -346,8 +434,7 @@ TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
   // Between Left|Right, initial data values were odd|even; these are even|odd, for quick contrast
   // when visually inspecting the buffer.
   const int16_t restart_data_value = 0x4000;
-  auto second_input =
-      GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames, restart_data_value);
+  auto second_input = GenerateSequentialAudio(format, num_frames, restart_data_value);
   auto second_packets = renderer->AppendSlice(second_input, frames_per_packet, restart_pts);
   renderer->WaitForPackets(this, second_packets);
 
@@ -376,6 +463,7 @@ TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
       AudioBufferSlice<ASF::SIGNED_16>(), opts);
 }
 
+// TODO(fxbug.dev/74985): Parameterize gainramp tests (volume-change, Play, Pause) for shared code.
 TEST_F(AudioRendererPipelineTestInt16, RampOnGainChanges) {
   fuchsia::media::audio::VolumeControlPtr volume;
   audio_core_->BindUsageVolumeControl(
@@ -390,7 +478,7 @@ TEST_F(AudioRendererPipelineTestInt16, RampOnGainChanges) {
   const int16_t kSampleFullVolume = 0x0200;
   const int16_t kSampleHalfVolume = 0x0010;
 
-  auto input_buffer = GenerateConstantAudio<ASF::SIGNED_16>(format, num_frames, kSampleFullVolume);
+  auto input_buffer = GenerateConstantAudio(format, num_frames, kSampleFullVolume);
   auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   auto start_time = renderer->PlaySynchronized(this, output_, 0);
 
@@ -521,7 +609,7 @@ class AudioRendererPipelineUnderflowTest : public HermeticAudioTest {
 // Validate that a slow effects pipeline registers an underflow.
 TEST_F(AudioRendererPipelineUnderflowTest, HasUnderflow) {
   // Inject one packet and wait for it to be rendered.
-  auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, kPacketFrames);
+  auto input_buffer = GenerateSequentialAudio(format_, kPacketFrames);
   auto packets = renderer_->AppendSlice(input_buffer, kPacketFrames);
   renderer_->PlaySynchronized(this, output_, 0);
   renderer_->WaitForPackets(this, packets);
@@ -570,8 +658,12 @@ TEST_F(AudioRendererPipelineEffectsTest, RenderWithEffects) {
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
   const auto frames_per_packet = num_frames / num_packets;
+  const auto kNumInitialSilentFrames = frames_per_packet;
 
-  auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames);
+  auto input_buffer = GenerateSilentAudio(format, kNumInitialSilentFrames);
+  auto signal = GenerateSequentialAudio(format, num_frames - kNumInitialSilentFrames);
+  input_buffer.Append(&signal);
+
   auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, packets);
@@ -609,8 +701,7 @@ TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerInvalidConfig) {
   EXPECT_EQ(result.err(), fuchsia::media::audio::UpdateEffectError::INVALID_CONFIG);
 }
 
-// Similar to RenderWithEffects, except we send a message to the effect to ask it to disable
-// processing.
+// Similar to RenderWithEffects, except we send a message to the effect to disable processing.
 TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerUpdateEffect) {
   // Disable the inverter; frames should be unmodified.
   fuchsia::media::audio::EffectsController_UpdateEffect_Result result;
@@ -621,8 +712,12 @@ TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerUpdateEffect) {
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
   const auto frames_per_packet = num_frames / num_packets;
+  const auto kNumInitialSilentFrames = frames_per_packet;
 
-  auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames);
+  auto input_buffer = GenerateSilentAudio(format, kNumInitialSilentFrames);
+  auto signal = GenerateSequentialAudio(format, num_frames - kNumInitialSilentFrames);
+  input_buffer.Append(&signal);
+
   auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, packets);
@@ -678,10 +773,14 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
   auto num_packets = 1;
   auto num_frames = PacketsToFrames(num_packets, kOutputFrameRate);
   const auto frames_per_packet = num_frames / num_packets;
+  const auto kNumInitialSilentFrames = frames_per_packet;
 
   // Initiate stream with first packets and send through default OutputPipeline, which has an
   // inversion_filter effect enabled.
-  auto first_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames);
+  auto first_buffer = GenerateSilentAudio(format, kNumInitialSilentFrames);
+  auto signal = GenerateSequentialAudio(format, num_frames - kNumInitialSilentFrames);
+  first_buffer.Append(&signal);
+
   auto first_packets = renderer->AppendSlice(first_buffer, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, first_packets);
@@ -738,7 +837,7 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
   const int64_t restart_packet = 2 + min_lead_time_in_packets;
   const int64_t restart_pts = PacketsToFrames(restart_packet, kOutputFrameRate);
 
-  auto second_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames);
+  auto second_buffer = GenerateSequentialAudio(format, num_frames);
   auto second_packets = renderer->AppendSlice(second_buffer, frames_per_packet, restart_pts);
   renderer->WaitForPackets(this, second_packets);
   ring_buffer = output_->SnapshotRingBuffer();
@@ -774,15 +873,17 @@ TEST_F(AudioRendererPipelineTuningTest, AudioTunerUpdateEffect) {
   auto num_packets = min_lead_time / kPacketLength;
   auto num_frames = PacketsToFrames(num_packets, kOutputFrameRate);
   const auto frames_per_packet = num_frames / num_packets;
+  const auto kNumInitialSilentFrames = frames_per_packet;
 
-  auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format, num_frames);
+  auto input_buffer = GenerateSilentAudio(format, kNumInitialSilentFrames);
+  auto signal = GenerateSequentialAudio(format, num_frames - kNumInitialSilentFrames);
+  input_buffer.Append(&signal);
   auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   renderer->PlaySynchronized(this, output_, 0);
   renderer->WaitForPackets(this, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
 
-  // The ring buffer should match the input buffer for the first num_packets. The remaining bytes
-  // should be zeros.
+  // Ring buffer should match input buffer, thru num_packets. The remainder should be zeros.
   CompareAudioBufferOptions opts;
   opts.num_frames_per_packet = kDebugFramesPerPacket;
   opts.test_label = "check data";

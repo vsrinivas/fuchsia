@@ -58,7 +58,7 @@ class BaseRenderer : public AudioObject,
   void EnableMinLeadTimeEvents(bool enabled) final;
   void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
   void Play(int64_t reference_time, int64_t media_time, PlayCallback callback) final;
-  void PlayNoReply(int64_t ref_time, int64_t med_time) final;
+  void PlayNoReply(int64_t ref_time, int64_t med_time) final { Play(ref_time, med_time, nullptr); }
   void Pause(PauseCallback callback) final;
   void PauseNoReply() final { Pause(nullptr); }
 
@@ -79,7 +79,9 @@ class BaseRenderer : public AudioObject,
   virtual void ReportStart();
   virtual void ReportStop();
   virtual void Shutdown();
-  // Overridden by children that need to intercept Pause. They should still call up to this.
+
+  // Overridden by children that need to intercept Play/Pause. They should still call up to these.
+  virtual void PlayInternal(zx::time reference_time, zx::time media_time, PlayCallback callback);
   virtual void PauseInternal(PauseCallback callback);
 
   // Hook called when the minimum clock lead time requirement changes.
