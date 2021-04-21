@@ -88,6 +88,7 @@ constexpr PagerErrorStatus ToPagerErrorStatus(zx_status_t status) {
     case ZX_ERR_IO_NOT_PRESENT:
     case ZX_ERR_IO_OVERRUN:
     case ZX_ERR_IO_REFUSED:
+    case ZX_ERR_PEER_CLOSED:
       return PagerErrorStatus::kErrIO;
     // Return ZX_ERR_BAD_STATE by default.
     default:
