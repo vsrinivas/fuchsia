@@ -24,6 +24,13 @@ class VirtualKeyboardController : public fuchsia::input::virtualkeyboard::Contro
   void RequestShow() override;
   void RequestHide() override;
   void WatchVisibility(WatchVisibilityCallback callback) override;
+
+ private:
+  void MaybeNotifyWatcher();
+
+  bool visible_;
+  std::optional<bool> last_sent_visible_;
+  WatchVisibilityCallback watch_callback_;
 };
 
 }  // namespace root_presenter
