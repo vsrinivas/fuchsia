@@ -42,17 +42,24 @@ Use `ffx --target <matcher>` to specify a matcher for the execution of a
 single command, or `ffx target default set <matcher>` to set the default
 matcher.";
 
-// TODO(72818): improve error text for these cases
-const TARGET_NOT_FOUND_MSG: &str = "\
-We weren't able to find a target matching your request.
+const NO_TARGETS_CONNECTED: &str = "\
+No devices found.
 
+Use `ffx target list` to view connected targets or run `ffx doctor` for further
+diagnostics.";
+
+// TODO(72818): improve error text for these cases
+const TARGET_NOT_FOUND_MSG_1: &str = "\
+We weren't able to find a target matching";
+
+const TARGET_NOT_FOUND_MSG_2: &str = "\n\n\
 Use `ffx target list` to verify the state of connected devices, or use `ffx
 --target <matcher>` to specify a different target for your request. To set
 the default target to be used in requests without an explicit matcher, use
 `ffx target default set <matcher>`.";
 
 // TODO(72818): improve error text for these cases
-const TARGET_FAILURE_MSG: &str = "\
+const TARGET_FAILURE_MSG: &str = "\n\
 We weren't able to open a connection to a target device.
 
 Use `ffx target list` to verify the state of connected devices. This error
@@ -103,12 +110,10 @@ impl Injector for Injection {
         let daemon_proxy = self.daemon_factory().await?;
         let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
         let app: Ffx = argh::from_env();
+        let target = app.target().await?;
         let result = timeout(
             proxy_timeout().await?,
-            daemon_proxy.get_fastboot(
-                app.target().await?.as_ref().map(|s| s.as_str()),
-                fastboot_server_end,
-            ),
+            daemon_proxy.get_fastboot(target.as_ref().map(|s| s.as_str()), fastboot_server_end),
         )
         .await
         .context("timeout")?
@@ -118,7 +123,7 @@ impl Injector for Injection {
             Ok(_) => Ok(fastboot_proxy),
             Err(DaemonError::NonFastbootDevice) => Err(ffx_error!(NON_FASTBOOT_MSG).into()),
             Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
-            Err(DaemonError::TargetNotFound) => Err(ffx_error!(TARGET_NOT_FOUND_MSG).into()),
+            Err(DaemonError::TargetNotFound) => Err(target_not_found(target)),
             Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
             Err(e) => Err(anyhow!("unexpected failure connecting to Fastboot: {:?}", e)),
         }
@@ -128,13 +133,10 @@ impl Injector for Injection {
         let daemon_proxy = self.daemon_factory().await?;
         let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
         let app: Ffx = argh::from_env();
-
+        let target = app.target().await?;
         let result = timeout(
             proxy_timeout().await?,
-            daemon_proxy.get_remote_control(
-                app.target().await?.as_ref().map(|s| s.as_str()),
-                remote_server_end,
-            ),
+            daemon_proxy.get_remote_control(target.as_ref().map(|s| s.as_str()), remote_server_end),
         )
         .await
         .context("timeout")?
@@ -143,7 +145,7 @@ impl Injector for Injection {
         match result {
             Ok(_) => Ok(remote_proxy),
             Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
-            Err(DaemonError::TargetNotFound) => Err(ffx_error!(TARGET_NOT_FOUND_MSG).into()),
+            Err(DaemonError::TargetNotFound) => Err(target_not_found(target)),
             Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
             Err(DaemonError::TargetInFastboot) => Err(ffx_error!(TARGET_IN_FASTBOOT).into()),
             Err(e) => Err(anyhow!("unexpected failure connecting to RCS: {:?}", e)),
@@ -152,6 +154,20 @@ impl Injector for Injection {
 
     async fn is_experiment(&self, key: &str) -> bool {
         ffx_config::get(key).await.unwrap_or(false)
+    }
+}
+
+fn target_not_found(target: Option<String>) -> anyhow::Error {
+    match target {
+        None => ffx_error!(NO_TARGETS_CONNECTED).into(),
+        Some(t) => {
+            if t.is_empty() {
+                ffx_error!(NO_TARGETS_CONNECTED).into()
+            } else {
+                ffx_error!("{} \"{}\". {}", TARGET_NOT_FOUND_MSG_1, t, TARGET_NOT_FOUND_MSG_2)
+                    .into()
+            }
+        }
     }
 }
 
