@@ -69,9 +69,11 @@ impl Display for Moniker {
 }
 
 impl Moniker {
-    fn root() -> Self {
+    /// The moniker of the root component.
+    pub fn root() -> Self {
         Moniker { path: vec![] }
     }
+
     fn is_root(&self) -> bool {
         return self.path.is_empty();
     }

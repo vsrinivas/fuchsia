@@ -166,8 +166,7 @@ impl ManagedRealm {
         // TODO(https://fxbug.dev/74977): once we can specify weak dependencies directly with the
         // RealmBuilder API, only mark dependencies as `weak` that originated from a `ChildUses.all`
         // configuration.
-        let root_moniker = Moniker::from(vec![]);
-        let cm_rust::ComponentDecl { offers, .. } = realm.get_decl_mut(&root_moniker)?;
+        let cm_rust::ComponentDecl { offers, .. } = realm.get_decl_mut(&Moniker::root())?;
         for offer in offers {
             match offer {
                 cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
