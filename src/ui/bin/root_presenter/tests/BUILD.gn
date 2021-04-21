@@ -57,6 +57,7 @@ executable("root_presenter_unittests_bin") {
     "safe_presenter_unittest.cc",
     "virtual_keyboard_controller_creator_unittest.cc",
     "virtual_keyboard_controller_unittest.cc",
+    "virtual_keyboard_manager_unittest.cc",
   ]
 
   deps = [

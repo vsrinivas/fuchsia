@@ -35,6 +35,7 @@
 #include "src/ui/bin/root_presenter/presentation.h"
 #include "src/ui/bin/root_presenter/safe_presenter.h"
 #include "src/ui/bin/root_presenter/virtual_keyboard_controller_creator.h"
+#include "src/ui/bin/root_presenter/virtual_keyboard_manager.h"
 #include "src/ui/lib/input_report_reader/input_reader.h"
 
 namespace root_presenter {
@@ -174,6 +175,7 @@ class App : public fuchsia::ui::policy::Presenter,
   std::unique_ptr<FocusDispatcher> focus_dispatcher_;
 
   VirtualKeyboardControllerCreator virtual_keyboard_controller_creator_;
+  VirtualKeyboardManager virtual_keyboard_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

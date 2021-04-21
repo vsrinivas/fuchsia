@@ -255,6 +255,8 @@ source_set("virtual_keyboard") {
     "virtual_keyboard_controller.h",
     "virtual_keyboard_controller_creator.cc",
     "virtual_keyboard_controller_creator.h",
+    "virtual_keyboard_manager.cc",
+    "virtual_keyboard_manager.h",
   ]
 
   deps = [
