@@ -2391,7 +2391,10 @@ mod tests {
 
     #[test]
     fn test_subnet_new() {
-        Subnet::new(Ipv4Addr::new([255, 255, 255, 255]), 32).unwrap();
+        assert_eq!(
+            Subnet::new(Ipv4Addr::new([255, 255, 255, 255]), 32).unwrap(),
+            Subnet { network: Ipv4Addr::new([255, 255, 255, 255]), prefix: 32 },
+        );
         // Prefix exceeds 32 bits
         assert_eq!(
             Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 33),
@@ -2400,7 +2403,13 @@ mod tests {
         // Network address has more than top 8 bits set
         assert_eq!(Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 8), Err(SubnetError::HostBitsSet));
 
-        AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([1, 2, 3, 4]), 32).unwrap();
+        assert_eq!(
+            AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([1, 2, 3, 4]), 32).unwrap(),
+            AddrSubnet {
+                addr: SpecifiedAddr(Ipv4Addr::new([1, 2, 3, 4])),
+                subnet: Subnet { network: Ipv4Addr::new([1, 2, 3, 4]), prefix: 32 }
+            }
+        );
         // The unspecified address will always fail because it is not valid for
         // the `SpecifiedAddr` witness (use assert, not assert_eq, because
         // AddrSubnet doesn't impl Debug).
