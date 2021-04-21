@@ -81,7 +81,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.usb.bus",
   "fuchsia.hardware.usb.composite",
   "fuchsia.hardware.usb.function",
-  "fuchsia.hardware.usb.hci",
   "fuchsia.hardware.usb.hub",
   "fuchsia.hardware.usb.hubdescriptor",
   "fuchsia.hardware.usb.modeswitch",

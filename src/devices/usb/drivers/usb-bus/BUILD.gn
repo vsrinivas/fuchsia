@@ -46,7 +46,7 @@ source_set("common") {
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/banjo/fuchsia.hardware.usb.bus",
-    "//sdk/banjo/fuchsia.hardware.usb.hci",
+    "//sdk/banjo/fuchsia.hardware.usb.hci:fuchsia.hardware.usb.hci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/fidl/fuchsia.hardware.usb.device:fuchsia.hardware.usb.device_llcpp",
     "//src/devices/usb/lib/usb",

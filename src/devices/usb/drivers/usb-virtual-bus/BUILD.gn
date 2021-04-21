@@ -25,7 +25,7 @@ source_set("common") {
     ":usb-virtual-bus-bind",
     "//sdk/banjo/fuchsia.hardware.usb.bus",
     "//sdk/banjo/fuchsia.hardware.usb.dci:fuchsia.hardware.usb.dci_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.usb.hci",
+    "//sdk/banjo/fuchsia.hardware.usb.hci:fuchsia.hardware.usb.hci_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",

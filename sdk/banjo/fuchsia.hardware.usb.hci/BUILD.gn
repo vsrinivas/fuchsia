@@ -6,6 +6,7 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.usb.hci") {
   disable_verification = true
+  fidl_only = true
   sources = [ "usb-hci.banjo" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.usb.bus",
