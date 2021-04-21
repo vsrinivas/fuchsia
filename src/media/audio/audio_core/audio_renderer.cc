@@ -4,12 +4,12 @@
 
 #include "src/media/audio/audio_core/audio_renderer.h"
 
+#include <fuchsia/media/audio/cpp/fidl.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <string>
 
-#include "fuchsia/media/audio/cpp/fidl.h"
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/stream_usage.h"
@@ -128,11 +128,30 @@ void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
   cleanup.cancel();
 }
 
+// To eliminate audible pops from discontinuity-on-immediate-start, ramp up from silence.
+constexpr bool kEnableRampUpOnPlay = true;
+constexpr float kInitialRampUpGainDb = fuchsia::media::audio::MUTED_GAIN_DB;
+constexpr zx::duration kRampUpOnPlayDuration = zx::msec(5);
+
 // To eliminate audible pops from discontinuity-on-pause, ramp down to silence, then pause.
 constexpr bool kEnableRampDownOnPause = true;
 constexpr float kFinalRampDownGainDb = fuchsia::media::audio::MUTED_GAIN_DB;
 constexpr zx::duration kRampDownOnPauseDuration = zx::msec(5);
 constexpr zx::duration kAdditionalDelayBeforePauseDuration = zx::msec(5);
+
+void AudioRenderer::PlayInternal(zx::time reference_time, zx::time media_time,
+                                 PlayCallback callback) {
+  if constexpr (kEnableRampUpOnPlay) {
+    // As a workaround until time-stamped Play/Pause/Gain commands, start a ramp-up then call Play.
+    // Set gain to silent, before starting the ramp-up to current val.
+    PostStreamGainMute({kInitialRampUpGainDb,
+                        GainRamp{stream_gain_db_, kRampUpOnPlayDuration,
+                                 fuchsia::media::audio::RampType::SCALE_LINEAR},
+                        std::nullopt});
+  }
+
+  BaseRenderer::PlayInternal(reference_time, media_time, std::move(callback));
+}
 
 void AudioRenderer::PauseInternal(PauseCallback callback) {
   // As a short-term workaround until time-stamped Play/Pause/Gain commands are in place, start the
