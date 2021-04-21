@@ -55,7 +55,7 @@ pub async fn get_daemon_proxy_single_link(
     let mut link = Box::pin(link);
     let find = find_next_daemon(exclusions).fuse();
     let mut find = Box::pin(find);
-    let mut timeout = fuchsia_async::Timer::new(Duration::from_secs(1)).fuse();
+    let mut timeout = fuchsia_async::Timer::new(Duration::from_secs(5)).fuse();
 
     let res = futures::select! {
         r = link => {

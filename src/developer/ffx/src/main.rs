@@ -454,7 +454,7 @@ mod test {
         assert!(str.contains("ffx doctor"));
     }
 
-    async fn test_daemon(sockpath: PathBuf, hash: &str) {
+    async fn test_daemon(sockpath: PathBuf, hash: &str, sleep_secs: u64) {
         let daemon_hoist = Arc::new(hoist::Hoist::new().unwrap());
 
         let (s, p) = fidl::Channel::create().unwrap();
@@ -468,6 +468,7 @@ mod test {
             // let (sock, _addr) = listener.accept().await.unwrap();
             let mut stream = listener.incoming();
             while let Some(sock) = stream.try_next().await.unwrap_or(None) {
+                fuchsia_async::Timer::new(Duration::from_secs(sleep_secs)).await;
                 let hoist_clone = daemon_hoist.clone();
                 link_tasks1.lock().await.push(Task::spawn(async move {
                     let (mut rx, mut tx) = sock.split();
@@ -523,7 +524,7 @@ mod test {
 
         let sockpath1 = sockpath.to_owned();
         let daemons_task = Task::spawn(async move {
-            test_daemon(sockpath1.to_owned(), "testcurrenthash").await;
+            test_daemon(sockpath1.to_owned(), "testcurrenthash", 0).await;
         });
 
         // wait until daemon binds the socket path
@@ -543,9 +544,9 @@ mod test {
         // Spawn two daemons, the first out of date, the second is up to date.
         let sockpath1 = sockpath.to_owned();
         let daemons_task = Task::spawn(async move {
-            test_daemon(sockpath1.to_owned(), "oldhash").await;
+            test_daemon(sockpath1.to_owned(), "oldhash", 0).await;
             // Note: testcurrenthash is explicitly expected by #cfg in get_daemon_proxy
-            test_daemon(sockpath1.to_owned(), "testcurrenthash").await;
+            test_daemon(sockpath1.to_owned(), "testcurrenthash", 0).await;
         });
 
         // wait until daemon binds the socket path
@@ -556,5 +557,47 @@ mod test {
         let proxy = init_daemon_proxy().await.unwrap();
         proxy.quit().await.unwrap();
         daemons_task.await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_init_daemon_blocked_for_4s_succeeds() {
+        let sockpath = setup_ascendd_temp();
+
+        // Spawn two daemons, the first out of date, the second is up to date.
+        let sockpath1 = sockpath.to_owned();
+        let daemon_task = Task::spawn(async move {
+            test_daemon(sockpath1.to_owned(), "testcurrenthash", 4).await;
+        });
+
+        // wait until daemon binds the socket path
+        while std::fs::metadata(&sockpath).is_err() {
+            fuchsia_async::Timer::new(Duration::from_millis(20)).await
+        }
+
+        let proxy = init_daemon_proxy().await.unwrap();
+        proxy.quit().await.unwrap();
+        daemon_task.await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_init_daemon_blocked_for_6s_timesout() {
+        let sockpath = setup_ascendd_temp();
+
+        // Spawn two daemons, the first out of date, the second is up to date.
+        let sockpath1 = sockpath.to_owned();
+        let _daemon_task = Task::spawn(async move {
+            test_daemon(sockpath1.to_owned(), "testcurrenthash", 6).await;
+        });
+
+        // wait until daemon binds the socket path
+        while std::fs::metadata(&sockpath).is_err() {
+            fuchsia_async::Timer::new(Duration::from_millis(20)).await
+        }
+
+        let err = init_daemon_proxy().await;
+        assert!(err.is_err());
+        let str = format!("{:?}", err);
+        assert!(str.contains("Timed out"));
+        assert!(str.contains("ffx doctor"));
     }
 }
