@@ -27,7 +27,7 @@ protocol UsbFunction {
     DisableEp(uint8 address) -> (zx.status s);
 
     /// Adds a string descriptor to the device configuration.
-    AllocStringDesc(string string) -> (zx.status s, uint8 index);
+    AllocStringDesc(string:MAX string) -> (zx.status s, uint8 index);
 
     /// Queues a USB request with the lower level driver.
     RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,
@@ -57,11 +57,11 @@ protocol UsbFunctionInterface {
     /// TODO(voydanoff) - descriptors will likely vary (different max packet sizes, etc)
     /// depending on whether we are in low/full, high or super speed mode.
     /// We will need to add a usb_speed_t argument to this callback.
-    GetDescriptors() -> ([Buffer] vector<uint8> descriptors);
+    GetDescriptors() -> ([Buffer] vector<uint8>:MAX descriptors);
 
     /// Callback for handling ep0 control requests.
-    Control(fuchsia.hardware.usb.descriptor.UsbSetup setup, [Buffer] vector<uint8> write) -> (zx.status status,
-                                                                     [Buffer] vector<uint8> read);
+    Control(fuchsia.hardware.usb.descriptor.UsbSetup setup, [Buffer] vector<uint8>:MAX write) -> (zx.status status,
+                                                                     [Buffer] vector<uint8>:MAX read);
     /// Called to inform the function driver when the USB device configured state changes.
     /// Called with configured == true in response to a SET_CONFIGURATION control request
     /// that selects a configuration that contains this function. In this case, the function driver

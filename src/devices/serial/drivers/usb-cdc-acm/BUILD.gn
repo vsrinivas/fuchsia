@@ -62,7 +62,7 @@ driver_module("fake-usb-cdc-acm") {
     ":usb_cdc_acm_function_bind",
     "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/banjo/fuchsia.hardware.usb.composite",
-    "//sdk/banjo/fuchsia.hardware.usb.function",
+    "//sdk/banjo/fuchsia.hardware.usb.function:fuchsia.hardware.usb.function_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",

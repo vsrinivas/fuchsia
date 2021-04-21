@@ -29,7 +29,7 @@ if (is_fuchsia) {
     deps = [
       ":usb_peripheral_test-bind",
       "//sdk/banjo/fuchsia.hardware.usb",
-      "//sdk/banjo/fuchsia.hardware.usb.function",
+      "//sdk/banjo/fuchsia.hardware.usb.function:fuchsia.hardware.usb.function_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.usb.request",
       "//src/devices/lib/driver",
       "//src/devices/usb/lib/usb",

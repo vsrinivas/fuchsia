@@ -22,7 +22,7 @@ test("usb-request-test-bin") {
   deps = [
     "//sdk/banjo/ddk.hw.physiter",
     "//sdk/banjo/fuchsia.hardware.usb",
-    "//sdk/banjo/fuchsia.hardware.usb.function",
+    "//sdk/banjo/fuchsia.hardware.usb.function:fuchsia.hardware.usb.function_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/lib/fdio",
     "//src/devices/testing/fake-bti",

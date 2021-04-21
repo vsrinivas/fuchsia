@@ -28,7 +28,7 @@ source_set("rndis-function-lib") {
     "//sdk/banjo/fuchsia.hardware.ethernet",
     "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/banjo/fuchsia.hardware.usb.composite",
-    "//sdk/banjo/fuchsia.hardware.usb.function",
+    "//sdk/banjo/fuchsia.hardware.usb.function:fuchsia.hardware.usb.function_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/connectivity/ethernet/lib/rndis",
     "//src/devices/usb/lib/usb",
