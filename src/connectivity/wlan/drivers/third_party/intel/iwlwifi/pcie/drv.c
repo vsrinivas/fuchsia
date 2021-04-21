@@ -959,10 +959,8 @@ static zx_status_t iwl_find_pci_device(uint16_t device_id, uint16_t subsystem_de
   return ZX_ERR_NOT_FOUND;
 }
 
-void iwl_pci_unbind(struct iwl_trans* trans) { iwl_trans_pcie_unbind(trans); }
-
-void iwl_pci_release(void* ctx) {
-  struct iwl_trans* trans = (struct iwl_trans*)ctx;
+void iwl_pci_unbind(struct iwl_trans* trans) {
+  iwl_trans_pcie_unbind(trans);
 
 #if 0   // NEEDS_PORTING
     /* if RTPM was in use, restore it to the state before probe */
@@ -976,12 +974,11 @@ void iwl_pci_release(void* ctx) {
 #endif  // NEEDS_PORTING
 
   iwl_drv_stop(trans->drv);
-
-  iwl_trans_pcie_free(trans);
 }
 
-zx_status_t iwl_pci_create(void* ctx, zx_device_t* parent, struct iwl_trans** out_trans,
-                           bool load_firmware) {
+void iwl_pci_release(struct iwl_trans* trans) { iwl_trans_pcie_free(trans); }
+
+zx_status_t iwl_pci_create(zx_device_t* parent, struct iwl_trans** out_trans, bool load_firmware) {
   struct iwl_trans* iwl_trans;
   zx_status_t status;
 
@@ -1000,23 +997,23 @@ zx_status_t iwl_pci_create(void* ctx, zx_device_t* parent, struct iwl_trans** ou
   uint16_t subsystem_device_id;
   status = pci_config_read16(&pci, PCI_CFG_SUBSYSTEM_ID, &subsystem_device_id);
   if (status != ZX_OK) {
-    IWL_ERR(ctx, "Failed to read PCI subsystem device ID: %s\n", zx_status_get_string(status));
+    IWL_ERR(nullptr, "Failed to read PCI subsystem device ID: %s\n", zx_status_get_string(status));
     return status;
   }
 
-  IWL_INFO(ctx, "Device ID: %04x Subsystem Device ID: %04x\n", pci_info.device_id,
+  IWL_INFO(nullptr, "Device ID: %04x Subsystem Device ID: %04x\n", pci_info.device_id,
            subsystem_device_id);
 
   const struct iwl_pci_device* device;
   status = iwl_find_pci_device(pci_info.device_id, subsystem_device_id, &device);
   if (status != ZX_OK) {
-    IWL_ERR(ctx, "Failed to find PCI config: %s\n", zx_status_get_string(status));
+    IWL_ERR(nullptr, "Failed to find PCI config: %s\n", zx_status_get_string(status));
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   iwl_trans = iwl_trans_pcie_alloc(&pci, device);
   if (!iwl_trans) {
-    IWL_ERR(ctx, "Failed to allocate PCIE transport: %s\n", zx_status_get_string(status));
+    IWL_ERR(nullptr, "Failed to allocate PCIE transport: %s\n", zx_status_get_string(status));
     return ZX_ERR_NO_MEMORY;
   }
 

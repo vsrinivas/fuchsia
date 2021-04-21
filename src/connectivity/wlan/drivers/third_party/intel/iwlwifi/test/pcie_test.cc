@@ -47,8 +47,7 @@ TEST(FakeDdkTesterPci, DeviceLifeCycle) {
   wlan::testing::FakeDdkTesterPci tester;
 
   // Create() allocates and binds the device.
-  EXPECT_OK(wlan::iwlwifi::PcieDevice::Create(nullptr, fake_ddk::kFakeParent, false),
-            "Bind failed");
+  EXPECT_OK(wlan::iwlwifi::PcieDevice::Create(fake_ddk::kFakeParent, false), "Bind failed");
 
   tester.dev()->DdkAsyncRemove();
   EXPECT_OK(tester.ddk().WaitUntilRemove());

@@ -36,11 +36,18 @@ void recv_wrapper(void* cookie, uint32_t flags, const uint8_t* data, size_t leng
   recv->Call(cookie, flags, data, length, info);
 }
 
-class StubDevice : public wlan::iwlwifi::Device {
+// This stub version of a Device provides an unowned drvdata() member from another source.
+class StubDevice : public ::wlan::iwlwifi::Device {
  public:
-  explicit StubDevice(zx_device_t* parent) : Device(parent){};
-  void DdkRelease() { delete this; };
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); };
+  explicit StubDevice(zx_device_t* parent, iwl_trans* drvdata)
+      : Device(parent), drvdata_(drvdata){};
+  void DdkInit(::ddk::InitTxn txn) override { txn.Reply(ZX_OK); }
+  void DdkUnbind(::ddk::UnbindTxn txn) override { txn.Reply(); };
+  iwl_trans* drvdata() override { return drvdata_; }
+  const iwl_trans* drvdata() const override { return drvdata_; }
+
+ private:
+  iwl_trans* drvdata_ = nullptr;
 };
 
 class WlanDeviceTest : public SingleApTest {
@@ -323,8 +330,7 @@ TEST_F(WlanDeviceTest, CreateAndDestroyIfaceTest) {
   };
   uint16_t out_id;
 
-  auto device = std::make_unique<StubDevice>(fake_ddk::kFakeParent);
-  device->override_iwl_trans(sim_trans_.iwl_trans());
+  auto device = std::make_unique<StubDevice>(fake_ddk::kFakeParent, sim_trans_.iwl_trans());
 
   EXPECT_OK(device->WlanphyImplCreateIface(&req, &out_id), "failed to create iface");
   EXPECT_OK(device->WlanphyImplDestroyIface(out_id), "failed to destroy iface");

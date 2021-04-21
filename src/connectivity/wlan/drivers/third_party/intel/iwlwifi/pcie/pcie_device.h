@@ -9,24 +9,30 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/device.h"
 
+struct iwl_trans;
+
 namespace wlan::iwlwifi {
 
 // This class uses the DDKTL classes to manage the lifetime of a iwlwifi driver instance.
 class PcieDevice : public Device {
  public:
-  // ::ddk::Device implementation.
-  void DdkRelease();
-  void DdkUnbind(ddk::UnbindTxn txn);
+  PcieDevice(const PcieDevice& device) = delete;
+  PcieDevice& operator=(const PcieDevice& other) = delete;
+  virtual ~PcieDevice() override;
 
   // Creates and binds PcieDevice instance. On success hands device off to device lifecycle
   // management.
-  static zx_status_t Create(void* ctx, zx_device_t* parent_device, bool load_firmware);
+  static zx_status_t Create(zx_device_t* parent_device, bool load_firmware);
 
-  // Do not allow copy via constructor or operator.
-  PcieDevice(const PcieDevice& device) = delete;
-  PcieDevice& operator=(const PcieDevice& other) = delete;
+  // Device implementation.
+  iwl_trans* drvdata() override;
+  const iwl_trans* drvdata() const override;
+  void DdkInit(::ddk::InitTxn txn) override;
+  void DdkUnbind(::ddk::UnbindTxn txn) override;
 
-  explicit PcieDevice(zx_device_t* parent) : Device(parent){};
+ protected:
+  explicit PcieDevice(zx_device_t* parent, iwl_trans* iwl_trans);
+  iwl_trans* drvdata_ = nullptr;
 };
 
 }  // namespace wlan::iwlwifi

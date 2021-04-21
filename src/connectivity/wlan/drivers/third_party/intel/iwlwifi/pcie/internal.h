@@ -1063,10 +1063,9 @@ void iwl_pcie_gen2_tx_stop(struct iwl_trans* trans);
 #endif  // NEEDS_PORTING
 
 /* PCIe device lifecycle related helpers */
-zx_status_t iwl_pci_create(void* ctx, zx_device_t* parent, struct iwl_trans** out_trans,
-                           bool load_firmware);
+zx_status_t iwl_pci_create(zx_device_t* parent, struct iwl_trans** out_trans, bool load_firmware);
 zx_status_t iwl_pci_start(struct iwl_trans* iwl_trans, zx_device_t* zxdev);
 void iwl_pci_unbind(struct iwl_trans* trans);
-void iwl_pci_release(void* ctx);
+void iwl_pci_release(struct iwl_trans* trans);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_

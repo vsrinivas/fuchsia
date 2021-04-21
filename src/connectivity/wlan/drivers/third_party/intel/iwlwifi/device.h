@@ -2,30 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_DEVICE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_DEVICE_H_
+
 #include <fuchsia/hardware/wlanphyimpl/cpp/banjo.h>
 #include <lib/ddk/device.h>
 
 #include <ddktl/device.h>
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
-
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_DEVICE_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_DEVICE_H_
+struct iwl_trans;
 
 namespace wlan::iwlwifi {
 
-class Device;
-using DeviceType = ::ddk::Device<Device, ddk::Unbindable>;
-
-class Device : public DeviceType, public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
+class Device : public ::ddk::Device<Device, ::ddk::Initializable, ::ddk::Unbindable>,
+               public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
  public:
-  virtual ~Device() = default;  // This is virtual to allow delete to happen on this class instead
-                                // of the derived class.
+  Device(const Device& device) = delete;
+  Device& operator=(const Device& other) = delete;
+  virtual ~Device();
 
-  // Ensure derived classes implement this ::ddk::Device method to unbind and
-  // free up allocated resources.
-  virtual void DdkRelease() = 0;
-  virtual void DdkUnbind(ddk::UnbindTxn txn) = 0;
+  // ::ddk::Device functions implemented by this class.
+  void DdkRelease();
+
+  // ::ddk::Device functions for initialization and unbinding, to be implemented by derived classes.
+  virtual void DdkInit(::ddk::InitTxn txn) = 0;
+  virtual void DdkUnbind(::ddk::UnbindTxn txn) = 0;
+
+  // State accessors.
+  virtual iwl_trans* drvdata() = 0;
+  virtual const iwl_trans* drvdata() const = 0;
 
   // WlanphyImpl interface implementation.
   zx_status_t WlanphyImplQuery(wlanphy_impl_info_t* out_info);
@@ -36,13 +41,9 @@ class Device : public DeviceType, public ::ddk::WlanphyImplProtocol<Device, ::dd
   zx_status_t WlanphyImplClearCountry();
   zx_status_t WlanphyImplGetCountry(wlanphy_country_t* out_country);
 
-  // Intended for only unit test overriding.
-  void override_iwl_trans(struct iwl_trans* iwl_trans) { iwl_trans_ = iwl_trans; };
-
  protected:
   // Only derived classes are allowed to create this object.
-  explicit Device(zx_device* parent) : DeviceType(parent){};
-  struct iwl_trans* iwl_trans_;
+  explicit Device(zx_device_t* parent);
 };
 
 }  // namespace wlan::iwlwifi

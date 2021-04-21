@@ -12,7 +12,7 @@
  * interfaces, we can mux all of that through this file using build time config options.
  */
 static zx_status_t pci_bus_bind(void* ctx, zx_device_t* parent) {
-  return wlan::iwlwifi::PcieDevice::Create(ctx, parent, true);
+  return wlan::iwlwifi::PcieDevice::Create(parent, true);
 }
 
 static constexpr zx_driver_ops_t pci_driver_ops = []() {
