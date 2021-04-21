@@ -13,7 +13,11 @@ namespace a11y {
 
 AccessibilityView::AccessibilityView(sys::ComponentContext* component_context,
                                      fuchsia::ui::scenic::ScenicPtr scenic)
-    : scenic_(std::move(scenic)), session_(scenic_.get()), session_listener_binding_(this) {
+    : scenic_(std::move(scenic)), session_(scenic_.get()) {
+  // Set up session listener event handler.
+  session_.set_event_handler(
+      [this](std::vector<fuchsia::ui::scenic::Event> events) { OnScenicEvent(std::move(events)); });
+
   // Connect to scenic accessibility view registry service.
   accessibility_view_registry_ =
       component_context->svc()->Connect<fuchsia::ui::accessibility::view::Registry>();
@@ -57,10 +61,6 @@ AccessibilityView::AccessibilityView(sys::ComponentContext* component_context,
             /* presentation_time = */ 0,
             /* presentation_callback = */ [](fuchsia::images::PresentationInfo info) {});
       });
-}
-
-void AccessibilityView::OnScenicError(::std::string error) {
-  FX_LOGS(ERROR) << "Scenic error: " << error;
 }
 
 void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {

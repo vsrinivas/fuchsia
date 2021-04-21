@@ -24,19 +24,15 @@ namespace a11y {
 // that a view confers, e.g. ability to request focus, consume and
 // respond to input events, annotate underlying views, and apply
 // coordinate transforms to its subtree.
-class AccessibilityView : fuchsia::ui::scenic::SessionListener {
+class AccessibilityView {
  public:
-  explicit AccessibilityView(sys::ComponentContext* component_context,
-                             fuchsia::ui::scenic::ScenicPtr scenic);
-  ~AccessibilityView() override = default;
-
-  // |fuchsia::ui::scenic::SessionListener|
-  void OnScenicError(::std::string error) override;
-
-  // |fuchsia::ui::scenic::SessionListener|
-  void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) override;
+  AccessibilityView(sys::ComponentContext* component_context,
+                    fuchsia::ui::scenic::ScenicPtr scenic);
+  ~AccessibilityView() = default;
 
  private:
+  void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events);
+
   // Connection to scenic.
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
@@ -53,9 +49,6 @@ class AccessibilityView : fuchsia::ui::scenic::SessionListener {
   // Holds the client view holder.
   // If not present, this view does not exist in the view tree.
   std::optional<scenic::ViewHolder> client_view_holder_;
-
-  // Scenic session listener.
-  fidl::Binding<fuchsia::ui::scenic::SessionListener> session_listener_binding_;
 
   // Interface between the accessibility view and the scenic service
   // that inserts it into the scene graph.

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LOCAL_GOOGLE_HOME_ABRUSHER_FUCHSIA_SRC_UI_A11Y_LIB_VIEW_TESTS_MOCKS_SCENIC_MOCKS_H_
-#define LOCAL_GOOGLE_HOME_ABRUSHER_FUCHSIA_SRC_UI_A11Y_LIB_VIEW_TESTS_MOCKS_SCENIC_MOCKS_H_
+#ifndef SRC_UI_A11Y_LIB_VIEW_TESTS_MOCKS_SCENIC_MOCKS_H_
+#define SRC_UI_A11Y_LIB_VIEW_TESTS_MOCKS_SCENIC_MOCKS_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
@@ -152,9 +152,8 @@ class MockScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
 
   void NotImplemented_(const std::string& name) override {}
 
-  void CreateSession(
-      fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
-      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override;
+  void CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
+                     fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override;
 
   fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler(
       async_dispatcher_t* dispatcher = nullptr);
@@ -169,4 +168,4 @@ class MockScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
 
 }  // namespace accessibility_test
 
-#endif  // LOCAL_GOOGLE_HOME_ABRUSHER_FUCHSIA_SRC_UI_A11Y_LIB_VIEW_TESTS_MOCKS_SCENIC_MOCKS_H_
+#endif  // SRC_UI_A11Y_LIB_VIEW_TESTS_MOCKS_SCENIC_MOCKS_H_
