@@ -742,22 +742,12 @@ pub mod sync {
     use fuchsia_zircon as zx;
 
     use super::*;
-    use crate::handle::HandleInfo;
 
     /// A synchronous client for making FIDL calls.
     #[derive(Debug)]
     pub struct Client {
         // Underlying channel
         channel: zx::Channel,
-
-        // Reusable byte buffer for reads / writes.
-        buf_bytes: Vec<u8>,
-
-        // Reusable handle buffer for reads.
-        buf_read_handles: Vec<HandleInfo>,
-
-        // Reusable handle buffer for writes.
-        buf_write_handles: Vec<HandleDisposition<'static>>,
 
         // The `ServiceMarker::DEBUG_NAME` for the service this client connects to.
         service_name: &'static str,
@@ -771,9 +761,6 @@ pub mod sync {
             create_trace_provider();
             Client {
                 channel,
-                buf_bytes: Vec::new(),
-                buf_read_handles: Vec::new(),
-                buf_write_handles: Vec::new(),
                 service_name,
             }
         }
@@ -784,27 +771,28 @@ pub mod sync {
         }
 
         /// Send a new message.
-        pub fn send<E: Encodable>(&mut self, msg: &mut E, ordinal: u64) -> Result<(), Error> {
-            self.buf_bytes.clear();
-            self.buf_write_handles.clear();
+        pub fn send<E: Encodable>(&self, msg: &mut E, ordinal: u64) -> Result<(), Error> {
+            let mut write_bytes = Vec::new();
+            let mut write_handles = Vec::new();
+
             let msg =
                 &mut TransactionMessage { header: TransactionHeader::new(0, ordinal), body: msg };
-            Encoder::encode(&mut self.buf_bytes, &mut self.buf_write_handles, msg)?;
+            Encoder::encode(&mut write_bytes, &mut write_handles, msg)?;
             self.channel
-                .write_etc(&mut self.buf_bytes, &mut self.buf_write_handles)
+                .write_etc(&mut write_bytes, &mut write_handles)
                 .map_err(|e| self.wrap_error(Error::ClientWrite, e))?;
             Ok(())
         }
 
         /// Send a new message expecting a response.
         pub fn send_query<E: Encodable, D: Decodable>(
-            &mut self,
+            &self,
             msg: &mut E,
             ordinal: u64,
             deadline: zx::Time,
         ) -> Result<D, Error> {
-            let mut write_bytes = Vec::<u8>::new();
-            let mut write_handles = Vec::<HandleDisposition<'static>>::new();
+            let mut write_bytes = Vec::new();
+            let mut write_handles = Vec::new();
 
             let msg =
                 &mut TransactionMessage { header: TransactionHeader::new(0, ordinal), body: msg };
@@ -899,7 +887,7 @@ mod tests {
     #[test]
     fn sync_client() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
-        let mut client = sync::Client::new(client_end, "test_service");
+        let client = sync::Client::new(client_end, "test_service");
         client.send(&mut SEND_DATA.clone(), SEND_ORDINAL).context("sending")?;
         let mut received = MessageBufEtc::new();
         server_end.read_etc(&mut received).context("reading")?;
@@ -911,7 +899,7 @@ mod tests {
     #[test]
     fn sync_client_with_response() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
-        let mut client = sync::Client::new(client_end, "test_service");
+        let client = sync::Client::new(client_end, "test_service");
         thread::spawn(move || {
             // Server
             let mut received = MessageBufEtc::new();
@@ -938,7 +926,7 @@ mod tests {
     #[test]
     fn sync_client_with_event_and_response() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
-        let mut client = sync::Client::new(client_end, "test_service");
+        let client = sync::Client::new(client_end, "test_service");
         thread::spawn(move || {
             // Server
             let mut received = MessageBufEtc::new();
@@ -970,7 +958,7 @@ mod tests {
     #[test]
     fn sync_client_peer_closed() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
-        let mut client = sync::Client::new(client_end, "test_service");
+        let client = sync::Client::new(client_end, "test_service");
         // Close the server channel.
         drop(server_end);
         assert_matches!(
@@ -988,7 +976,7 @@ mod tests {
     #[test]
     fn sync_client_does_not_receive_epitaphs() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
-        let mut client = sync::Client::new(client_end, "test_service");
+        let client = sync::Client::new(client_end, "test_service");
         // Close the server channel with an epitaph.
         server_end
             .close_with_epitaph(zx_status::Status::UNAVAILABLE)
