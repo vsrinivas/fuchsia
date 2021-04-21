@@ -99,7 +99,3 @@ kernel_cmdline("virtcon.keep-log-visible--true") {
 kernel_cmdline("ktrace.grpmask-0") {
   args = [ "ktrace.grpmask=0" ]
 }
-
-kernel_cmdline("kernel.pmm-checker.enable--false") {
-  args = [ "kernel.pmm-checker.enable=false" ]
-}
