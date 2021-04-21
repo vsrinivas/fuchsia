@@ -36,13 +36,15 @@ TEST(DispatcherHandleOwnership, ServerReceiveOneWay) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
-  class Server : public fidl::WireInterface<test::Protocol> {
+  class Server : public fidl::WireServer<test::Protocol> {
    public:
-    void SendResource(test::wire::Resource r, SendResourceCompleter::Sync& completer) override {
-      // The handles in |r| should be closed by the bindings runtime after we return.
+    void SendResource(SendResourceRequestView request,
+                      SendResourceCompleter::Sync& completer) override {
+      // The handles in |request| should be closed by the bindings runtime after we return.
     }
 
-    void GetResource(GetResourceCompleter::Sync& completer) override {
+    void GetResource(GetResourceRequestView request,
+                     GetResourceCompleter::Sync& completer) override {
       ZX_PANIC("Not used in test");
     }
   };
@@ -68,13 +70,15 @@ TEST(DispatcherHandleOwnership, ClientReceiveTwoWay) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
-  class Server : public fidl::WireInterface<test::Protocol> {
+  class Server : public fidl::WireServer<test::Protocol> {
    public:
-    void SendResource(test::wire::Resource r, SendResourceCompleter::Sync& completer) override {
+    void SendResource(SendResourceRequestView request,
+                      SendResourceCompleter::Sync& completer) override {
       ZX_PANIC("Not used in test");
     }
 
-    void GetResource(GetResourceCompleter::Sync& completer) override {
+    void GetResource(GetResourceRequestView request,
+                     GetResourceCompleter::Sync& completer) override {
       auto [observer, send] = CreateEventPair();
       fidl::FidlAllocator allocator;
       test::wire::Resource r(allocator);
