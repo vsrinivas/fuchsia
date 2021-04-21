@@ -44,6 +44,7 @@
 // Partitions indirect branch predictors across hyperthreads
 #define X86_SPEC_CTRL_STIBP (1ull << 1) /* Single Thread Indirect Branch Predictors */
 #define X86_SPEC_CTRL_SSBD (1ull << 2)
+#define X86_MSR_SMI_COUNT 0x00000034            /* Number of SMI interrupts since boot */
 #define X86_MSR_IA32_PRED_CMD 0x00000049        /* Indirect Branch Prediction Command */
 #define X86_MSR_IA32_BIOS_UPDT_TRIG 0x00000079u /* Microcode Patch Loader */
 #define X86_MSR_IA32_BIOS_SIGN_ID 0x0000008b    /* BIOS update signature */
@@ -111,6 +112,7 @@
 #define X86_MSR_PP1_POWER_LIMIT 0x00000640         /* PP1 RAPL power limit control */
 #define X86_MSR_PP1_ENERGY_STATUS 0x00000641       /* PP1 energy status */
 #define X86_MSR_PLATFORM_ENERGY_COUNTER 0x0000064d /* Platform energy counter */
+#define X86_MSR_PPERF 0x0000064e                   /* Productive performance count */
 #define X86_MSR_PLATFORM_POWER_LIMIT 0x0000065c    /* Platform power limit control */
 #define X86_MSR_AMD_F10_DE_CFG 0xc0011029          /* AMD Family 10h+ decode config */
 #define X86_MSR_AMD_F10_DE_CFG_LFENCE_SERIALIZE (1 << 1)

@@ -647,6 +647,12 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
     case X86_MSR_PP1_ENERGY_STATUS:
     case X86_MSR_PP1_POWER_LIMIT:
     case X86_MSR_RAPL_POWER_UNIT:
+    // From Volume 3, Section 14.2: We've configured CPUID to report no MPERF/APERF
+    // support, but Linux attempts to read stats anyhow. Just ignore it.
+    case X86_MSR_PPERF:
+    // From Volume 4, Table 2-15: Number of SMI interrupts since boot.
+    // We report 0 interrupts.
+    case X86_MSR_SMI_COUNT:
       next_rip(exit_info, vmcs);
       guest_state->rax = 0;
       guest_state->rdx = 0;
