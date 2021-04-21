@@ -180,13 +180,16 @@ config("compiler") {
         cflags += [ "-mno-outline-atomics" ]
       }
     } else if (current_cpu == "x64") {
-      # Let the compiler generate the cmpxchg16b instruction.
-      compiler_flags += [ "-mcx16" ]
       if (!is_gcc) {
         # TODO(fxrev.dev/485257): Enable for GCC when it supports march=x86-64-v2
         compiler_flags += [ "-march=x86-64-v2" ]
       } else {
         compiler_flags += [ "-march=x86-64" ]
+
+        # Add the interesting features that march=x86-64-v2 enables above
+        compiler_flags += [ "-mcx16" ]
+        compiler_flags += [ "-mpopcnt" ]
+        compiler_flags += [ "-msahf" ]
       }
     }
   } else if (current_os == "win") {

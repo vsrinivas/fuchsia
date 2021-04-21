@@ -92,12 +92,12 @@ config("compiler_relative_vtables") {
 config("compiler_cpu") {
   cflags = []
   if (current_cpu == "x64") {
-    cflags += [ "-mcx16" ]
     if (!is_gcc) {
       # TODO(fxrev.dev/485257): Enable for GCC when it supports march=x86-64-v2
       cflags += [ "-march=x86-64-v2" ]
     } else {
       cflags += [ "-march=x86-64" ]
+      cflags += [ "-mcx16" ]
     }
   }
   ldflags = cflags
