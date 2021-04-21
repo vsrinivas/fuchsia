@@ -44,5 +44,5 @@ protocol TemperatureLogger {
     StartLoggingForever(uint32 interval_ms) -> () error TemperatureLoggerError;
 
     /// Terminates logging if active. It is valid to call this method when logging is inactive.
-    StopLogging();
+    StopLogging() -> ();
 };

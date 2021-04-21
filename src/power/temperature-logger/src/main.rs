@@ -325,8 +325,9 @@ impl TemperatureLoggerServer {
                 let mut result = self.start_logging(interval_ms, None).await;
                 responder.send(&mut result)?;
             }
-            fthermal::TemperatureLoggerRequest::StopLogging { .. } => {
-                *self.logging_task.borrow_mut() = None
+            fthermal::TemperatureLoggerRequest::StopLogging { responder } => {
+                *self.logging_task.borrow_mut() = None;
+                responder.send()?;
             }
         }
 
@@ -634,7 +635,8 @@ mod tests {
         );
 
         // Stop logging.
-        assert!(runner.proxy.stop_logging().is_ok());
+        let mut query = runner.proxy.stop_logging();
+        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(())));
 
         // Now starting logging will succeed.
         let mut query = runner.proxy.start_logging(100, 200);
@@ -677,7 +679,9 @@ mod tests {
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
 
         // Stop logging multiple times.
-        assert!(runner.proxy.stop_logging().is_ok());
-        assert!(runner.proxy.stop_logging().is_ok());
+        let mut query = runner.proxy.stop_logging();
+        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(())));
+        let mut query = runner.proxy.stop_logging();
+        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(())));
     }
 }

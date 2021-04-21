@@ -25,7 +25,7 @@ impl Facade for TemperatureFacade {
                 Ok(to_value(result)?)
             }
             "StopLogging" => {
-                let result = self.stop_logging()?;
+                let result = self.stop_logging().await?;
                 Ok(to_value(result)?)
             }
             _ => bail!("Invalid TemperatureFacade FIDL method: {:?}", method),

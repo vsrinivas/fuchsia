@@ -132,8 +132,8 @@ impl TemperatureFacade {
     }
 
     /// Terminates logging by the TemperatureLogger service.
-    pub fn stop_logging(&self) -> Result<types::TemperatureLoggerResult, Error> {
-        self.get_logger_proxy()?.stop_logging()?;
+    pub async fn stop_logging(&self) -> Result<types::TemperatureLoggerResult, Error> {
+        self.get_logger_proxy()?.stop_logging().await?;
         Ok(types::TemperatureLoggerResult::Success)
     }
 }
@@ -248,13 +248,15 @@ mod tests {
 
         let _stream_task = fasync::Task::local(async move {
             match stream.try_next().await {
-                Ok(Some(TemperatureLoggerRequest::StopLogging { .. })) => {}
+                Ok(Some(TemperatureLoggerRequest::StopLogging { responder })) => {
+                    responder.send().unwrap()
+                }
                 other => panic!("Unexpected stream item: {:?}", other),
             }
         });
 
         let facade = TemperatureFacade { device_proxy: None, logger_proxy: Some(proxy) };
 
-        assert_matches!(facade.stop_logging(), Ok(types::TemperatureLoggerResult::Success));
+        assert_matches!(facade.stop_logging().await, Ok(types::TemperatureLoggerResult::Success));
     }
 }
