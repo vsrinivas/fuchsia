@@ -10,7 +10,7 @@ use crate::peer::{
 };
 use crate::router::Router;
 use anyhow::{format_err, Context as _, Error};
-use fidl_fuchsia_overnet_protocol::{BeginTransfer, Empty, StreamControl};
+use fidl_fuchsia_overnet_protocol::{BeginTransfer, Empty, SignalUpdate, StreamControl};
 use fuchsia_zircon_status as zx_status;
 use futures::{future::poll_fn, prelude::*, ready};
 use std::pin::Pin;
@@ -60,6 +60,16 @@ impl<Msg: Message> StreamWriter<Msg> {
         }
         self.stream
             .send(FrameType::Control, msg.as_slice(), fin, &self.stats)
+            .await
+            .with_context(|| format_err!("sending control message {:?}", msg))
+    }
+
+    pub async fn send_signal(&mut self, mut msg: SignalUpdate) -> Result<(), Error> {
+        assert_ne!(self.closed, true);
+        let msg = encode_fidl(&mut msg)
+            .with_context(|| format_err!("encoding control message {:?}", msg))?;
+        self.stream
+            .send(FrameType::Signal, msg.as_slice(), false, &self.stats)
             .await
             .with_context(|| format_err!("sending control message {:?}", msg))
     }
@@ -137,6 +147,7 @@ impl StreamWriterBinder for FramedStreamWriter {
 pub(crate) enum Frame<'a, Msg: Message> {
     Hello,
     Data(&'a mut Msg),
+    SignalUpdate(SignalUpdate),
     BeginTransfer(NodeId, TransferKey),
     AckTransfer,
     EndTransfer,
@@ -216,6 +227,12 @@ impl<'a, Msg: Message> ReadNext<'a, Msg> {
                             *self.state =
                                 ReadNextState::DeserializingData(bytes, Msg::Parser::new());
                             continue;
+                        }
+                        FrameType::Signal => {
+                            if fin {
+                                return Poll::Ready(Err(format_err!("unexpected end of stream")));
+                            }
+                            Frame::SignalUpdate(decode_fidl(&mut bytes)?)
                         }
                         FrameType::Control => match (fin, decode_fidl(&mut bytes)?) {
                             (true, StreamControl::AckTransfer(Empty {})) => Frame::AckTransfer,

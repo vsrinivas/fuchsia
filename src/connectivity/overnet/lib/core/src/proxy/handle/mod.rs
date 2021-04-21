@@ -3,12 +3,15 @@
 // found in the LICENSE file.
 
 mod channel;
+mod signals;
 mod socket;
 
 use super::stream::{Frame, StreamReaderBinder, StreamWriter};
 use crate::peer::{FramedStreamReader, MessageStats, PeerConnRef};
 use crate::router::Router;
 use anyhow::{bail, format_err, Error};
+use fidl::Signals;
+use fidl_fuchsia_overnet_protocol::SignalUpdate;
 use fuchsia_zircon_status as zx_status;
 use futures::{future::poll_fn, prelude::*, task::noop_waker_ref};
 use std::sync::{Arc, Weak};
@@ -45,13 +48,14 @@ impl<'a> RouterHolder<'a> {
 
 pub(crate) trait IO: Send {
     type Proxyable: Proxyable;
+    type Output;
     fn new() -> Self;
     fn poll_io(
         &mut self,
         msg: &mut <Self::Proxyable as Proxyable>::Message,
         proxyable: &Self::Proxyable,
         fut_ctx: &mut Context<'_>,
-    ) -> Poll<Result<(), zx_status::Status>>;
+    ) -> Poll<Result<Self::Output, zx_status::Status>>;
 }
 
 pub(crate) trait Serializer: Send {
@@ -73,14 +77,19 @@ pub(crate) trait Message: Send + Sized + Default + PartialEq + std::fmt::Debug {
     type Serializer: Serializer<Message = Self>;
 }
 
+pub(crate) enum ReadValue {
+    Message,
+    SignalUpdate(SignalUpdate),
+}
+
 pub(crate) trait Proxyable: Send + Sync + Sized + std::fmt::Debug {
     type Message: Message;
-    type Reader: IO<Proxyable = Self>;
-    type Writer: IO<Proxyable = Self>;
+    type Reader: IO<Proxyable = Self, Output = ReadValue>;
+    type Writer: IO<Proxyable = Self, Output = ()>;
 
     fn from_fidl_handle(hdl: fidl::Handle) -> Result<Self, Error>;
-
     fn into_fidl_handle(self) -> Result<fidl::Handle, Error>;
+    fn signal_peer(&self, clear: Signals, set: Signals) -> Result<(), Error>;
 }
 
 pub(crate) trait IntoProxied {
@@ -116,7 +125,7 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
     pub(crate) fn read<'a>(
         &'a self,
         msg: &'a mut Hdl::Message,
-    ) -> impl 'a + Future<Output = Result<(), zx_status::Status>> + Unpin {
+    ) -> impl 'a + Future<Output = Result<ReadValue, zx_status::Status>> + Unpin {
         self.handle_io(msg, Hdl::Reader::new())
     }
 
@@ -128,11 +137,19 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
         &self.stats
     }
 
-    fn handle_io<'a>(
+    pub(crate) fn apply_signal_update(&self, signal_update: SignalUpdate) -> Result<(), Error> {
+        if let Some(assert_signals) = signal_update.assert_signals {
+            self.hdl
+                .signal_peer(Signals::empty(), self::signals::from_wire_signals(assert_signals))?
+        }
+        Ok(())
+    }
+
+    fn handle_io<'a, I: 'a + IO<Proxyable = Hdl>>(
         &'a self,
         msg: &'a mut Hdl::Message,
-        mut io: impl 'a + IO<Proxyable = Hdl>,
-    ) -> impl 'a + Future<Output = Result<(), zx_status::Status>> + Unpin {
+        mut io: I,
+    ) -> impl 'a + Future<Output = Result<I::Output, zx_status::Status>> + Unpin {
         poll_fn(move |fut_ctx| io.poll_io(msg, &self.hdl, fut_ctx))
     }
 
@@ -143,11 +160,17 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
         let mut message = Default::default();
         let mut ctx = Context::from_waker(noop_waker_ref());
         loop {
-            match self.read(&mut message).poll_unpin(&mut ctx) {
+            let pr = self.read(&mut message).poll_unpin(&mut ctx);
+            match pr {
                 Poll::Pending => return Ok(()),
-                Poll::Ready(x) => x?,
+                Poll::Ready(Err(e)) => return Err(e.into()),
+                Poll::Ready(Ok(ReadValue::Message)) => {
+                    stream_writer.send_data(&mut message).await?
+                }
+                Poll::Ready(Ok(ReadValue::SignalUpdate(signal_update))) => {
+                    stream_writer.send_signal(signal_update).await?
+                }
             }
-            stream_writer.send_data(&mut message).await?;
         }
     }
 
@@ -159,6 +182,7 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
         loop {
             match drain_stream.next().await? {
                 Frame::Data(message) => self.write(message).await?,
+                Frame::SignalUpdate(signal_update) => self.apply_signal_update(signal_update)?,
                 Frame::EndTransfer => return Ok(self.hdl.into_fidl_handle()?),
                 Frame::Hello => bail!("Hello frame disallowed on drain streams"),
                 Frame::BeginTransfer(_, _) => bail!("BeginTransfer on drain stream"),

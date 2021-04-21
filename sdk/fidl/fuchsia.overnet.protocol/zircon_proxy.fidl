@@ -66,3 +66,24 @@ bits SocketRights : uint32 {
     READ = 0x01;
     WRITE = 0x02;
 };
+
+/// Signals that can be propagated.
+/// These are deliberately chosen to be different bits than defined in Zircon, to force mapping code
+/// to exist, and minimize the chance that Zircon ABI accidentally becomes Overnet protocol.
+bits Signals : uint32 {
+    USER_0 = 0x01;
+    USER_1 = 0x02;
+    USER_2 = 0x04;
+    USER_3 = 0x08;
+    USER_4 = 0x10;
+    USER_5 = 0x20;
+    USER_6 = 0x40;
+    USER_7 = 0x80;
+};
+
+/// Signal state updates.
+/// Transported as a side channel for each handle type, these propagate some signal bits.
+table SignalUpdate {
+    /// Update some signals
+    1: Signals assert_signals;
+};

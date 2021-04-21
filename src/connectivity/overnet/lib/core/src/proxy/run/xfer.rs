@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use super::super::{
-    handle::{Message, Proxyable, ProxyableHandle},
+    handle::{Message, Proxyable, ProxyableHandle, ReadValue},
     stream::{Frame, StreamReader, StreamWriter, StreamWriterBinder},
     Proxy, ProxyTransferInitiationReceiver, StreamRefSender,
 };
@@ -151,7 +151,10 @@ async fn drain_handle_to_stream<Hdl: 'static + Proxyable>(
     let mut message = Default::default();
     loop {
         match hdl.read(&mut message).await {
-            Ok(()) => stream_writer.send_data(&mut message).await?,
+            Ok(ReadValue::Message) => stream_writer.send_data(&mut message).await?,
+            Ok(ReadValue::SignalUpdate(signal_update)) => {
+                stream_writer.send_signal(signal_update).await?
+            }
             Err(zx_status::Status::PEER_CLOSED) => break,
             Err(x) => return Err(x.into()),
         }
@@ -200,6 +203,9 @@ async fn flush_outgoing_messages<Hdl: 'static + Proxyable>(
                 // We received an incoming message - place it on the handle pair for a moment until
                 // we can send it to the drain stream.
                 proxy.write_to_handle(msg).await?;
+            }
+            FlushOutgoingMsg::FromStream(Frame::SignalUpdate(signal_update)) => {
+                proxy.apply_signal_update(signal_update)?;
             }
             FlushOutgoingMsg::FromStream(Frame::BeginTransfer(
                 new_destination_node,
@@ -260,6 +266,7 @@ async fn drain_original_stream<Hdl: 'static + Proxyable>(
                 // we can send it to the drain stream.
                 proxy.write_to_handle(&mut message).await?;
             }
+            Ok(Frame::SignalUpdate(signal_update)) => proxy.apply_signal_update(signal_update)?,
             Ok(Frame::BeginTransfer(new_destination_node, new_transfer_key)) => {
                 // Uh oh! The other end has independently decided to transfer ownership of this
                 // handle. We use the quic endpoint to determine behavior (such that each end makes

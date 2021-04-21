@@ -6,13 +6,15 @@ mod handle;
 mod run;
 mod stream;
 
-use self::handle::{Proxyable, ProxyableHandle};
+use self::handle::{Proxyable, ProxyableHandle, ReadValue};
 use self::stream::StreamWriter;
 use crate::labels::{NodeId, TransferKey};
 use crate::peer::{FramedStreamWriter, MessageStats};
 use crate::router::Router;
 use anyhow::{format_err, Error};
-use fidl_fuchsia_overnet_protocol::{StreamId, StreamRef, TransferInitiator, TransferWaiter};
+use fidl_fuchsia_overnet_protocol::{
+    SignalUpdate, StreamId, StreamRef, TransferInitiator, TransferWaiter,
+};
 use fuchsia_zircon_status as zx_status;
 use futures::prelude::*;
 use std::pin::Pin;
@@ -130,10 +132,14 @@ impl<Hdl: 'static + Proxyable> Proxy<Hdl> {
         self.hdl().write(msg).await
     }
 
+    fn apply_signal_update(&self, signal_update: SignalUpdate) -> Result<(), Error> {
+        self.hdl().apply_signal_update(signal_update)
+    }
+
     fn read_from_handle<'a>(
         &'a self,
         msg: &'a mut Hdl::Message,
-    ) -> impl 'a + Future<Output = Result<(), zx_status::Status>> + Unpin {
+    ) -> impl 'a + Future<Output = Result<ReadValue, zx_status::Status>> + Unpin {
         self.hdl().read(msg)
     }
 

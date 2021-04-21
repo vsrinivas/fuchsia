@@ -6,6 +6,7 @@
 //! to another, and calling into crate::proxy::xfer once a handle transfer is required.
 
 use super::super::{
+    handle::ReadValue,
     stream::{Frame, StreamReader, StreamReaderBinder, StreamWriter, StreamWriterBinder},
     Proxy, ProxyTransferInitiationReceiver, Proxyable, RemoveFromProxyTable, StreamRefSender,
 };
@@ -142,34 +143,33 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
 ) -> Result<(), Error> {
     let mut message = Default::default();
     let finish_proxy_loop_action = loop {
-        let r = match futures::future::select(
-            &mut finish_proxy_loop,
-            proxy.read_from_handle(&mut message),
-        )
-        .await
-        {
+        let sr =
+            futures::future::select(&mut finish_proxy_loop, proxy.read_from_handle(&mut message))
+                .await;
+        match sr {
             Either::Left((finish_proxy_loop_action, _)) => {
                 // Note: Proxy guarantees that read_from_handle can be dropped safely without losing data.
                 break finish_proxy_loop_action;
             }
-            Either::Right((r, _)) => r,
-        };
-        match r {
-            Ok(()) => {
-                stream.send_data(&mut message).await.context("send_data")?;
-            }
-            Err(zx_status::Status::PEER_CLOSED) => {
+            Either::Right((Err(zx_status::Status::PEER_CLOSED), _)) => {
                 if let Some(finish_proxy_loop_action) = finish_proxy_loop.now_or_never() {
                     break finish_proxy_loop_action;
                 }
                 stream.send_shutdown(Ok(())).await.context("send_shutdown")?;
                 return Ok(());
             }
-            Err(x) => {
+            Either::Right((Err(x), _)) => {
                 stream.send_shutdown(Err(x)).await.context("send_shutdown")?;
                 return Err(x).context("read_from_handle");
             }
-        }
+            Either::Right((Ok(ReadValue::Message), _)) => {
+                drop(sr);
+                stream.send_data(&mut message).await.context("send_data")?;
+            }
+            Either::Right((Ok(ReadValue::SignalUpdate(signal_update)), _)) => {
+                stream.send_signal(signal_update).await.context("send_signal")?;
+            }
+        };
     };
     let proxy = Arc::try_unwrap(proxy).map_err(|_| format_err!("Proxy should be isolated"))?;
     match finish_proxy_loop_action {
@@ -232,6 +232,7 @@ async fn drain<Hdl: 'static + Proxyable>(
         let frame = drain_stream.next().await?;
         match frame {
             Frame::Data(message) => proxy.write_to_handle(message).await?,
+            Frame::SignalUpdate(signal_update) => proxy.apply_signal_update(signal_update)?,
             Frame::EndTransfer => break,
             Frame::BeginTransfer(_, _) => bail!("BeginTransfer on drain stream"),
             Frame::AckTransfer => bail!("AckTransfer on drain stream"),
@@ -269,13 +270,11 @@ async fn stream_to_handle<Hdl: 'static + Proxyable>(
                     }
                 }
             }
+            Frame::SignalUpdate(signal_update) => proxy.apply_signal_update(signal_update)?,
             Frame::BeginTransfer(new_destination_node, transfer_key) => {
-                return finish_proxy_loop.and_then_follow(
-                    initiate_transfer,
-                    new_destination_node,
-                    transfer_key,
-                    stream,
-                ).context("finish_proxy_loop")
+                return finish_proxy_loop
+                    .and_then_follow(initiate_transfer, new_destination_node, transfer_key, stream)
+                    .context("finish_proxy_loop")
             }
             Frame::EndTransfer => bail!("Received EndTransfer on a regular stream"),
             Frame::AckTransfer => bail!("Received AckTransfer before sending a BeginTransfer"),

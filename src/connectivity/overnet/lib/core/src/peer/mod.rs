@@ -759,7 +759,7 @@ async fn client_conn_stream(
                 let (frame_type, mut bytes, fin) =
                     conn_stream_reader.next().await.map_err(RunnerError::ServiceError)?;
                 match frame_type {
-                    FrameType::Hello | FrameType::Control => {
+                    FrameType::Hello | FrameType::Control | FrameType::Signal => {
                         return Err(RunnerError::BadFrameType(frame_type));
                     }
                     FrameType::Data => {
@@ -919,7 +919,7 @@ async fn server_conn_stream(
 
         let router = Weak::upgrade(&router).ok_or_else(|| RunnerError::RouterGone)?;
         match frame_type {
-            FrameType::Hello | FrameType::Control => {
+            FrameType::Hello | FrameType::Control | FrameType::Signal => {
                 return Err(RunnerError::BadFrameType(frame_type));
             }
             FrameType::Data => {

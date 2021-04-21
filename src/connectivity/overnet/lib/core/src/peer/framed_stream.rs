@@ -22,6 +22,7 @@ pub(crate) enum FrameType {
     Hello,
     Data,
     Control,
+    Signal,
 }
 
 /// Header for one frame of data on a QUIC stream
@@ -49,6 +50,7 @@ impl FrameHeader {
                 FrameType::Hello => 0,
                 FrameType::Data => 1,
                 FrameType::Control => 2,
+                FrameType::Signal => 3,
             } << 32);
         Ok(hdr.to_le_bytes())
     }
@@ -61,6 +63,7 @@ impl FrameHeader {
             0 => FrameType::Hello,
             1 => FrameType::Data,
             2 => FrameType::Control,
+            3 => FrameType::Signal,
             _ => return Err(anyhow::format_err!("Unknown frame type {}", hdr >> 32)),
         };
         Ok(FrameHeader { frame_type, length })
