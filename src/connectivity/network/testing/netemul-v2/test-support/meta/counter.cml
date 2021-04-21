@@ -13,10 +13,29 @@
     capabilities: [
         { protocol: "fuchsia.netemul.test.Counter" },
     ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.netemul.test.CounterA",
+                "fuchsia.netemul.test.CounterB",
+            ],
+            from: "parent",
+        },
+    ],
     expose: [
         {
             protocol: "fuchsia.netemul.test.Counter",
             from: "self",
+        },
+        {
+            protocol: "fuchsia.netemul.test.Counter",
+            from: "self",
+            as: "fuchsia.netemul.test.CounterA",
+        },
+        {
+            protocol: "fuchsia.netemul.test.Counter",
+            from: "self",
+            as: "fuchsia.netemul.test.CounterB",
         },
     ],
 }

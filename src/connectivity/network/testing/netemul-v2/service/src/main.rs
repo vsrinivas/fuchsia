@@ -4,7 +4,8 @@
 
 use {
     anyhow::{anyhow, Context as _},
-    fidl::endpoints::ServerEnd,
+    fidl::endpoints::{DiscoverableService, ServerEnd},
+    fidl_fuchsia_logger as flogger,
     fidl_fuchsia_netemul::{
         self as fnetemul, ChildDef, ChildUses, ManagedRealmMarker, ManagedRealmRequest,
         RealmOptions, SandboxRequest, SandboxRequestStream,
@@ -14,7 +15,7 @@ use {
     futures::{channel::mpsc, FutureExt as _, SinkExt as _, StreamExt as _, TryStreamExt as _},
     log::{debug, error, info},
     pin_utils::pin_mut,
-    std::collections::HashSet,
+    std::collections::HashMap,
     std::sync::atomic::{AtomicU64, Ordering},
 };
 
@@ -33,63 +34,102 @@ impl ManagedRealm {
         options: RealmOptions,
         prefix: &str,
     ) -> Result<ManagedRealm> {
-        use fuchsia_component_test::builder::{
-            Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint,
+        use fuchsia_component_test::{
+            builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+            Moniker,
         };
 
         let RealmOptions { name, children, .. } = options;
-        let mut exposed_services = HashSet::new();
-        let mut builder = RealmBuilder::new().await.context("error creating new `RealmBuilder`")?;
+        let mut exposed_services = HashMap::new();
+        let mut components_using_all = Vec::new();
+        let mut builder = RealmBuilder::new().await.context("error creating new realm builder")?;
         for ChildDef { url, name, exposes, uses, .. } in children.unwrap_or_default() {
             let url = url.ok_or(anyhow!("no url provided"))?;
             let name = name.ok_or(anyhow!("no name provided"))?;
             let _: &mut RealmBuilder = builder
-                .add_component(name.clone(), ComponentSource::url(url.clone()))
+                .add_component(name.as_ref(), ComponentSource::url(&url))
                 .await
                 .with_context(|| {
                     format!("error adding new component with name '{}' and url '{}'", name, url)
                 })?;
             if let Some(exposes) = exposes {
                 for exposed in exposes {
-                    let _: &mut RealmBuilder = builder
-                        .add_route(CapabilityRoute {
-                            capability: Capability::protocol(exposed.clone()),
-                            source: RouteEndpoint::component(name.clone()),
-                            targets: vec![RouteEndpoint::AboveRoot],
-                        })
-                        .with_context(|| {
-                            format!(
-                                "error adding route exposing capability '{}' from component '{}'",
-                                exposed, name
-                            )
-                        })?;
                     // TODO(https://fxbug.dev/72043): allow duplicate services.
                     // Service names will be aliased as `child_name/service_name`, and this panic
-                    // will be replaced with a panic if a child component with a duplicate name is
-                    // created.
-                    if !exposed_services.insert(exposed.clone()) {
-                        panic!("duplicate service name exposed from child: {}", exposed);
+                    // will be replaced with an INVALID_ARGS epitaph sent on the `ManagedRealm`
+                    // channel if a child component with a duplicate name is created.
+                    match exposed_services.entry(exposed) {
+                        std::collections::hash_map::Entry::Occupied(entry) => {
+                            panic!(
+                                "duplicate service name '{}' exposed from component '{}'",
+                                entry.key(),
+                                entry.get(),
+                            );
+                        }
+                        std::collections::hash_map::Entry::Vacant(entry) => {
+                            let _: &mut RealmBuilder = builder
+                                .add_route(CapabilityRoute {
+                                    capability: Capability::protocol(entry.key()),
+                                    source: RouteEndpoint::component(&name),
+                                    targets: vec![RouteEndpoint::AboveRoot],
+                                })
+                                .with_context(|| {
+                                    format!(
+                                        "error adding route exposing capability '{}' from \
+                                        component '{}'",
+                                        entry.key(),
+                                        name,
+                                    )
+                                })?;
+                            let _: &mut String = entry.insert(name.clone());
+                        }
                     }
                 }
             }
-            for used in uses {
-                match used {
-                    ChildUses::All(fnetemul::Empty {}) => todo!(),
+            if let Some(uses) = uses {
+                match uses {
+                    ChildUses::All(fnetemul::Empty {}) => {
+                        // Route all built-in netemul services to the child.
+                        // TODO(https://fxbug.dev/72992): route netemul-provided `/dev`.
+                        // TODO(https://fxbug.dev/72403): route netemul-provided `SyncManager`.
+                        // TODO(https://fxbug.dev/72402): route netemul-provided `NetworkContext`.
+                        let _: &mut RealmBuilder = builder
+                            .add_route(CapabilityRoute {
+                                capability: Capability::protocol(
+                                    flogger::LogSinkMarker::SERVICE_NAME,
+                                ),
+                                source: RouteEndpoint::AboveRoot,
+                                targets: vec![RouteEndpoint::component(&name)],
+                            })
+                            .with_context(|| {
+                                format!(
+                                    "error adding route exposing '{}' to component '{}'",
+                                    flogger::LogSinkMarker::SERVICE_NAME,
+                                    name
+                                )
+                            })?;
+                        let () = components_using_all.push(name);
+                    }
                     ChildUses::Capabilities(caps) => {
                         for cap in caps {
                             match cap {
                                 fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
-                                    let _: &mut RealmBuilder =
-                                        builder.add_route(CapabilityRoute {
+                                    let _: &mut RealmBuilder = builder
+                                        .add_route(CapabilityRoute {
                                             capability: Capability::protocol(
-                                                "fuchsia.logger.LogSink",
+                                                flogger::LogSinkMarker::SERVICE_NAME,
                                             ),
                                             source: RouteEndpoint::AboveRoot,
-                                            targets: vec![RouteEndpoint::component(name.clone())],
+                                            targets: vec![RouteEndpoint::component(&name)],
                                         })
-                                        .with_context(|| format!(
-                                            "error adding route exposing fuchsia.logger.LogSink to component '{}'", name
-                                        ))?;
+                                        .with_context(|| {
+                                            format!(
+                                                "error adding route exposing '{}' to component \
+                                                '{}'",
+                                                flogger::LogSinkMarker::SERVICE_NAME,
+                                                name,
+                                            )
+                                        })?;
                                 }
                                 _ => todo!(),
                             }
@@ -98,11 +138,56 @@ impl ManagedRealm {
                 }
             }
         }
-        let name = format!("{}-{}", prefix, name.unwrap_or("realm".to_string()));
-        info!("creating new ManagedRealm with name '{}'", name);
+        for component in components_using_all {
+            for (service, source) in &exposed_services {
+                // Don't route a capability back to its source.
+                if &component == source {
+                    continue;
+                }
+                let _: &mut RealmBuilder = builder
+                    .add_route(CapabilityRoute {
+                        capability: Capability::protocol(service),
+                        source: RouteEndpoint::component(source),
+                        targets: vec![RouteEndpoint::component(&component)],
+                    })
+                    .with_context(|| {
+                        format!(
+                            "error adding route exposing '{}' from component '{}' to component \
+                            '{}'",
+                            service, source, component,
+                        )
+                    })?;
+            }
+        }
         let mut realm = builder.build();
+        // Mark all dependencies between components in the test realm as weak, to allow for
+        // dependency cycles.
+        //
+        // TODO(https://fxbug.dev/74977): once we can specify weak dependencies directly with the
+        // RealmBuilder API, only mark dependencies as `weak` that originated from a `ChildUses.all`
+        // configuration.
+        let root_moniker = Moniker::from(vec![]);
+        let cm_rust::ComponentDecl { offers, .. } = realm.get_decl_mut(&root_moniker)?;
+        for offer in offers {
+            match offer {
+                cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                    dependency_type,
+                    ..
+                }) => {
+                    *dependency_type = cm_rust::DependencyType::WeakForMigration;
+                }
+                offer => error!(
+                    "there should only be protocol offers from the root of the managed realm; \
+                    found {:?}",
+                    offer
+                ),
+            }
+        }
+        let name =
+            name.map(|name| format!("{}-{}", prefix, name)).unwrap_or_else(|| prefix.to_string());
+        info!("creating new ManagedRealm with name '{}'", name);
         let () = realm.set_collection_name(REALM_COLLECTION_NAME);
-        let realm = realm.create_with_name(name).await.context("error creating `RealmInstance`")?;
+        let realm = realm.create_with_name(name).await.context("error creating realm instance")?;
         Ok(ManagedRealm { server_end, realm })
     }
 
@@ -254,7 +339,7 @@ mod tests {
             TestRealm { realm }
         }
 
-        fn connect_to_service<S: fidl::endpoints::DiscoverableService>(&self) -> S::Proxy {
+        fn connect_to_service<S: DiscoverableService>(&self) -> S::Proxy {
             let (proxy, server) = zx::Channel::create().expect("failed to create zx::Channel");
             let () = self
                 .realm
@@ -281,8 +366,6 @@ mod tests {
 
     const TEST_DRIVER_COMPONENT_NAME: &str = "test_driver";
     const COUNTER_COMPONENT_NAME: &str = "counter";
-    const COUNTER_SERVICE_NAME: &str =
-        <CounterMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME;
     const COUNTER_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/netemul-v2-tests#meta/counter.cm";
 
     #[fasync::run_singlethreaded(test)]
@@ -294,7 +377,7 @@ mod tests {
                     children: Some(vec![fnetemul::ChildDef {
                         url: Some(COUNTER_PACKAGE_URL.to_string()),
                         name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        exposes: Some(vec![COUNTER_SERVICE_NAME.to_string()]),
+                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
                             fnetemul::Capability::LogSink(fnetemul::Empty {}),
                         ])),
@@ -310,7 +393,6 @@ mod tests {
                     .await
                     .expect("fuchsia.netemul.test/Counter.increment call failed"),
                 1,
-                "unexpected counter value",
             );
         })
         .await
@@ -326,7 +408,7 @@ mod tests {
                     children: Some(vec![fnetemul::ChildDef {
                         url: Some(COUNTER_PACKAGE_URL.to_string()),
                         name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        exposes: Some(vec![COUNTER_SERVICE_NAME.to_string()]),
+                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
                             fnetemul::Capability::LogSink(fnetemul::Empty {}),
                         ])),
@@ -342,7 +424,7 @@ mod tests {
                     children: Some(vec![fnetemul::ChildDef {
                         url: Some(COUNTER_PACKAGE_URL.to_string()),
                         name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        exposes: Some(vec![COUNTER_SERVICE_NAME.to_string()]),
+                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
                             fnetemul::Capability::LogSink(fnetemul::Empty {}),
                         ])),
@@ -359,7 +441,6 @@ mod tests {
                     .await
                     .expect("fuchsia.netemul.test/Counter.increment call failed"),
                 1,
-                "unexpected counter value",
             );
             for i in 1..=10 {
                 assert_eq!(
@@ -368,7 +449,6 @@ mod tests {
                         .await
                         .expect("fuchsia.netemul.test/Counter.increment call failed"),
                     i,
-                    "unexpected counter value",
                 );
             }
             assert_eq!(
@@ -377,7 +457,6 @@ mod tests {
                     .await
                     .expect("fuchsia.netemul.test/Counter.increment call failed"),
                 2,
-                "unexpected counter value",
             );
         })
         .await
@@ -392,7 +471,7 @@ mod tests {
                     children: Some(vec![fnetemul::ChildDef {
                         url: Some(COUNTER_PACKAGE_URL.to_string()),
                         name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        exposes: Some(vec![COUNTER_SERVICE_NAME.to_string()]),
+                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
                             fnetemul::Capability::LogSink(fnetemul::Empty {}),
                         ])),
@@ -408,7 +487,6 @@ mod tests {
                     .await
                     .expect("fuchsia.netemul.test/Counter.increment call failed"),
                 1,
-                "unexpected counter value",
             );
             drop(realm);
             assert_eq!(
@@ -439,7 +517,7 @@ mod tests {
                             children: Some(vec![fnetemul::ChildDef {
                                 url: Some(COUNTER_PACKAGE_URL.to_string()),
                                 name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                                exposes: Some(vec![COUNTER_SERVICE_NAME.to_string()]),
+                                exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
                                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
                                 ])),
@@ -460,7 +538,6 @@ mod tests {
                         .await
                         .expect("fuchsia.netemul.test/Counter.increment call failed"),
                     1,
-                    "unexpected counter value",
                 );
                 let () = counters.push(counter);
             }
@@ -506,7 +583,7 @@ mod tests {
                     children: Some(vec![fnetemul::ChildDef {
                         url: Some(COUNTER_PACKAGE_URL.to_string()),
                         name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        exposes: Some(vec![COUNTER_SERVICE_NAME.to_string()]),
+                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
                             fnetemul::Capability::LogSink(fnetemul::Empty {}),
                         ])),
@@ -538,7 +615,7 @@ mod tests {
                         children: Some(vec![fnetemul::ChildDef {
                             url: Some(COUNTER_PACKAGE_URL.to_string()),
                             name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                            exposes: Some(vec![COUNTER_SERVICE_NAME.to_string()]),
+                            exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
                             uses: Some(fnetemul::ChildUses::Capabilities(vec![
                                 fnetemul::Capability::LogSink(fnetemul::Empty {}),
                             ])),
@@ -552,7 +629,7 @@ mod tests {
                         .get_moniker()
                         .await
                         .expect("fuchsia.netemul/ManagedRealm.get_moniker call failed"),
-                    format!("{}\\:auto_generated_realm_name{}-realm", REALM_COLLECTION_NAME, i),
+                    format!("{}\\:auto_generated_realm_name{}", REALM_COLLECTION_NAME, i),
                 );
             }
         })
@@ -572,7 +649,7 @@ mod tests {
                             children: Some(vec![fnetemul::ChildDef {
                                 url: Some(COUNTER_PACKAGE_URL.to_string()),
                                 name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                                exposes: Some(vec![COUNTER_SERVICE_NAME.to_string()]),
+                                exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
                                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
                                 ])),
@@ -643,6 +720,79 @@ mod tests {
                     ),
                 }
             }
+        })
+        .await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn child_uses_all_capabilities() {
+        // These services are aliased instances of the `fuchsia.netemul.test.Counter` service
+        // (configured in the component manifest), so there is no actual `CounterAMarker` type, for
+        // example, from which we could extract its `SERVICE_NAME`.
+        const COUNTER_A_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterA";
+        const COUNTER_B_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterB";
+
+        with_sandbox("child_uses_all_capabilities", |sandbox| async move {
+            let TestRealm { realm } = TestRealm::new(
+                &sandbox,
+                fnetemul::RealmOptions {
+                    children: Some(vec![
+                        fnetemul::ChildDef {
+                            url: Some(COUNTER_PACKAGE_URL.to_string()),
+                            name: Some("counter-a".to_string()),
+                            exposes: Some(vec![COUNTER_A_SERVICE_NAME.to_string()]),
+                            uses: Some(fnetemul::ChildUses::All(fnetemul::Empty {})),
+                            ..fnetemul::ChildDef::EMPTY
+                        },
+                        fnetemul::ChildDef {
+                            url: Some(COUNTER_PACKAGE_URL.to_string()),
+                            name: Some("counter-b".to_string()),
+                            exposes: Some(vec![COUNTER_B_SERVICE_NAME.to_string()]),
+                            uses: Some(fnetemul::ChildUses::All(fnetemul::Empty {})),
+                            ..fnetemul::ChildDef::EMPTY
+                        },
+                        // TODO(https://fxbug.dev/74868): once we can allow the ERROR logs that
+                        // result from the routing failure, add a child that does *not* use `All`,
+                        // and verify that it does not have access to the other components' exposed
+                        // services.
+                    ]),
+                    ..fnetemul::RealmOptions::EMPTY
+                },
+            );
+            let counter_b = {
+                let (counter_b, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
+                    .expect("failed to create CounterB proxy");
+                let () = realm
+                    .connect_to_service(COUNTER_B_SERVICE_NAME, None, server_end.into_channel())
+                    .expect("failed to connect to CounterB service");
+                counter_b
+            };
+            // counter-b should have access to counter-a's exposed service.
+            let (counter_a, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
+                .expect("failed to create CounterA proxy");
+            let () = counter_b
+                .connect_to_service(COUNTER_A_SERVICE_NAME, server_end.into_channel())
+                .expect("fuchsia.netemul.test/CounterB.connect_to_service call failed");
+            assert_eq!(
+                counter_a
+                    .increment()
+                    .await
+                    .expect("fuchsia.netemul.test/CounterA.increment call failed"),
+                1,
+            );
+            // counter-a should have access to counter-b's exposed service.
+            let (counter_b, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
+                .expect("failed to create CounterA proxy");
+            let () = counter_a
+                .connect_to_service(COUNTER_B_SERVICE_NAME, server_end.into_channel())
+                .expect("fuchsia.netemul.test/CounterA.connect_to_service call failed");
+            assert_eq!(
+                counter_b
+                    .increment()
+                    .await
+                    .expect("fuchsia.netemul.test/CounterB.increment call failed"),
+                1,
+            );
         })
         .await
     }

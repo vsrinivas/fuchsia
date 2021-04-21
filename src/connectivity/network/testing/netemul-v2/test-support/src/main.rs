@@ -6,7 +6,10 @@ use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_netemul_test::{CounterRequest, CounterRequestStream},
     fuchsia_async as fasync,
-    fuchsia_component::server::{ServiceFs, ServiceFsDir},
+    fuchsia_component::{
+        client,
+        server::{ServiceFs, ServiceFsDir},
+    },
     futures::prelude::*,
     log::{error, info},
     std::sync::Arc,
@@ -17,18 +20,37 @@ struct CounterData {
     value: u32,
 }
 
+const SVC_DIR: &str = "/svc";
+
 async fn handle_counter(
     stream: CounterRequestStream,
     data: Arc<Mutex<CounterData>>,
 ) -> Result<(), fidl::Error> {
     stream
-        .try_for_each(|CounterRequest::Increment { responder }| async {
-            let mut d = data.lock().unwrap();
-            d.value += 1;
-            info!("incrementing counter to {}", d.value);
-            let () = responder
-                .send(d.value)
-                .unwrap_or_else(|e| error!("error sending response: {:?}", e));
+        .try_for_each(|request| async {
+            match request {
+                CounterRequest::Increment { responder } => {
+                    let mut d = data.lock().unwrap();
+                    d.value += 1;
+                    info!("incrementing counter to {}", d.value);
+                    let () = responder
+                        .send(d.value)
+                        .unwrap_or_else(|e| error!("error sending response: {:?}", e));
+                }
+                CounterRequest::ConnectToService { service_name, request, control_handle: _ } => {
+                    info!("connecting to service '{}'", service_name);
+                    let () = client::connect_channel_to_service_at_path(
+                        request,
+                        &format!("{}/{}", SVC_DIR, service_name),
+                    )
+                    .unwrap_or_else(|e| {
+                        error!(
+                            "error connecting request to protocol '{}' in '{}' directory: {:?}",
+                            service_name, SVC_DIR, e,
+                        )
+                    });
+                }
+            }
             Ok(())
         })
         .await

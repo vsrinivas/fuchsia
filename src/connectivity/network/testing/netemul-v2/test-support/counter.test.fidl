@@ -4,9 +4,14 @@
 
 library fuchsia.netemul.test;
 
+using fuchsia.component;
+using zx;
+
 /// Sample interface that keeps a stateful integer counter starting at zero.
 [Discoverable]
 protocol Counter {
     /// Increments internal counter by one and returns new counter value.
     Increment() -> (uint32 value);
+    /// Connects `request` to a service named `service_name`.
+    ConnectToService(string:fuchsia.component.MAX_PATH_LENGTH service_name, zx.handle:CHANNEL request);
 };
