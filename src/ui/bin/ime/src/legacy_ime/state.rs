@@ -107,7 +107,12 @@ impl ImeState {
         let mut state = idx::text_state_byte_to_codeunit(self.text_state.clone());
         self.client
             .did_update_state(&mut state, Some(&mut uii::InputEvent::Keyboard(keyboard_event)))
-            .context("error sending state update to ImeClient: {:?}")?;
+            .with_context(|| {
+                format!(
+                    "ImeState::forward_event: error sending state update to ImeClient: {:?}",
+                    &keyboard_event
+                )
+            })?;
         Ok(())
     }
 
@@ -128,7 +133,10 @@ impl ImeState {
         if call_did_update_state {
             let mut state = idx::text_state_byte_to_codeunit(self.text_state.clone());
             self.client.did_update_state(&mut state, None).unwrap_or_else(|e| {
-                fx_log_warn!("error sending state update to ImeClient: {:?}", e)
+                fx_log_warn!(
+                    "ImeState::increment_revision: error sending state update to ImeClient: {:?}",
+                    e
+                )
             });
         }
     }

@@ -9,7 +9,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_input as fidl_input, fidl_fuchsia_ui_input3 as fidl_ui_input3,
     fuchsia_component::client::connect_to_service,
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{fx_log_debug, fx_log_err},
     input_synthesis::{keymaps, usages},
     std::convert::TryInto,
 };
@@ -50,20 +50,11 @@ impl InputHandler for ImeHandler {
                         self.modifier_tracker.update(fidl_ui_input3::KeyEventType::Released, *k);
                     });
 
-                let pressed_key_events: Vec<fidl_ui_input3::KeyEvent> = keyboard_device_event
-                    .get_keys(fidl_ui_input3::KeyEventType::Pressed)
-                    .into_iter()
-                    .map(|key| {
-                        create_key_event(
-                            &key,
-                            fidl_ui_input3::KeyEventType::Pressed,
-                            keyboard_device_event.modifiers,
-                            event_time,
-                            &self.modifier_tracker,
-                        )
-                    })
-                    .collect();
-                self.dispatch_keys(pressed_key_events).await;
+                // Below, it is important that key releases are sent before key presses.
+                // Otherwise, if a modifier key press happens at the same time as a regular key
+                // release, this would be registered as modifier action on that key, i.e. as
+                // the modifier acting on a key that became actuated *after* the modifier was
+                // released.
 
                 let released_key_events: Vec<fidl_ui_input3::KeyEvent> = keyboard_device_event
                     .get_keys(fidl_ui_input3::KeyEventType::Released)
@@ -79,6 +70,21 @@ impl InputHandler for ImeHandler {
                     })
                     .collect();
                 self.dispatch_keys(released_key_events).await;
+
+                let pressed_key_events: Vec<fidl_ui_input3::KeyEvent> = keyboard_device_event
+                    .get_keys(fidl_ui_input3::KeyEventType::Pressed)
+                    .into_iter()
+                    .map(|key| {
+                        create_key_event(
+                            &key,
+                            fidl_ui_input3::KeyEventType::Pressed,
+                            keyboard_device_event.modifiers,
+                            event_time,
+                            &self.modifier_tracker,
+                        )
+                    })
+                    .collect();
+                self.dispatch_keys(pressed_key_events).await;
 
                 // Consume the input event.
                 vec![]
@@ -141,10 +147,16 @@ fn create_key_event(
     event_time: input_device::EventTime,
     modifier_state: &keymaps::ModifierState,
 ) -> fidl_ui_input3::KeyEvent {
+    fx_log_debug!(
+        "ImeHandler::create_key_event: key:{:?}, modifier_state:{:?}, event_type: {:?}",
+        key,
+        &modifier_state,
+        &event_type
+    );
+    let hid_usage = usages::input3_key_to_hid_usage(*key);
     // TODO(fxbug.dev/73295): Conversion to key meaning should be the task of a keymapper input
     // pipeline stage.  It is not implemented yet.  Until it is, we compute the key meaning based
     // on the US QWERTY key map.
-    let hid_usage = usages::input3_key_to_hid_usage(*key);
     let key_meaning = match key {
         // Nonprintable keys get their own key meaning.
         fidl_input::Key::Enter => Some(fidl_ui_input3::KeyMeaning::NonPrintableKey(
@@ -161,8 +173,9 @@ fn create_key_event(
             .map(fidl_ui_input3::KeyMeaning::Codepoint)
             .map_err(|e| {
                 fx_log_err!(
-                    "ImeHandler::create_key_event: Could not convert HID usage to code point: {:?}",
-                    &hid_usage
+                    "ImeHandler::create_key_event: Could not convert HID usage to code point: {:?}, modifiers: {:?}",
+                    &hid_usage,
+                    modifier_state,
                 );
                 e
             })
@@ -339,18 +352,18 @@ mod tests {
             },
             fidl_ui_input3::KeyEvent {
                 timestamp: Some(event_time_i64),
-                type_: Some(fidl_ui_input3::KeyEventType::Pressed),
-                key: Some(fidl_input::Key::B),
-                modifiers: None,
-                key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(98)),
-                ..fidl_ui_input3::KeyEvent::EMPTY
-            },
-            fidl_ui_input3::KeyEvent {
-                timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Released),
                 key: Some(fidl_input::Key::A),
                 modifiers: None,
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(97)),
+                ..fidl_ui_input3::KeyEvent::EMPTY
+            },
+            fidl_ui_input3::KeyEvent {
+                timestamp: Some(event_time_i64),
+                type_: Some(fidl_ui_input3::KeyEventType::Pressed),
+                key: Some(fidl_input::Key::B),
+                modifiers: None,
+                key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(98)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
         ];

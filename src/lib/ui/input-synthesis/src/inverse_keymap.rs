@@ -63,7 +63,12 @@ impl InverseKeymap {
     pub fn new(keymap: &[Option<(char, Option<char>)>]) -> Self {
         let mut map = HashMap::new();
 
-        for (usage, entry) in keymap.iter().enumerate() {
+        // A real keymap is not invertible, so multiple keys can produce the same effect.  For
+        // example, a key `1` and a numeric keypad `1` will end up inserting the same element in
+        // the inverse keymap.  By iterating over the forward keymap in reverse, we give priority
+        // to more "conventional" keys, i.e. a key `1` will always be used instead of numeric
+        // keypad `1`.  A similar idea is applied in all match arms below.
+        for (usage, entry) in keymap.iter().enumerate().rev() {
             match entry {
                 Some((ch, Some(shift_ch))) if ch == shift_ch => {
                     map.insert(*ch, KeyStroke { usage: usage as u32, shift: Shift::DontCare });
@@ -202,6 +207,70 @@ mod tests {
                 [Usages::HidUsageKeyA],
                 [Usages::HidUsageKeyS],
                 [Usages::HidUsageKeyE],
+                [],
+            ]
+        );
+    }
+
+    #[test]
+    fn numerics() {
+        let keymap = InverseKeymap::new(QWERTY_MAP);
+
+        assert_eq!(
+            keymap.derive_key_sequence("0123456789"),
+            reports![
+                [Usages::HidUsageKey0],
+                [Usages::HidUsageKey1],
+                [Usages::HidUsageKey2],
+                [Usages::HidUsageKey3],
+                [Usages::HidUsageKey4],
+                [Usages::HidUsageKey5],
+                [Usages::HidUsageKey6],
+                [Usages::HidUsageKey7],
+                [Usages::HidUsageKey8],
+                [Usages::HidUsageKey9],
+                [],
+            ]
+        );
+    }
+
+    #[test]
+    fn internet_text_entry() {
+        let keymap = InverseKeymap::new(QWERTY_MAP);
+
+        assert_eq!(
+            keymap.derive_key_sequence("http://127.0.0.1:8080"),
+            reports![
+                [Usages::HidUsageKeyH],
+                [Usages::HidUsageKeyT],
+                [],
+                [Usages::HidUsageKeyT],
+                [Usages::HidUsageKeyP],
+                // ':'
+                // Shift is actuated first on its own, then together with
+                // the key.
+                [Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeySemicolon, Usages::HidUsageKeyLeftShift],
+                [],
+                [Usages::HidUsageKeySlash],
+                [],
+                [Usages::HidUsageKeySlash],
+                [Usages::HidUsageKey1],
+                [Usages::HidUsageKey2],
+                [Usages::HidUsageKey7],
+                [Usages::HidUsageKeyDot],
+                [Usages::HidUsageKey0],
+                [Usages::HidUsageKeyDot],
+                [Usages::HidUsageKey0],
+                [Usages::HidUsageKeyDot],
+                [Usages::HidUsageKey1],
+                [Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeySemicolon, Usages::HidUsageKeyLeftShift],
+                [],
+                [Usages::HidUsageKey8],
+                [Usages::HidUsageKey0],
+                [Usages::HidUsageKey8],
+                [Usages::HidUsageKey0],
                 [],
             ]
         );
