@@ -4047,3 +4047,12 @@ From //build/config/arm.gni:28
 
 From //build/config/arm.gni:12
 
+## `target_cpu = "x64"`
+
+### pmm_checker_from_board
+Used to control whether board definitions include PMM checker options.
+
+**Current value (from the default):** `true`
+
+From //boards/kernel_cmdline/BUILD.gn:28
+
