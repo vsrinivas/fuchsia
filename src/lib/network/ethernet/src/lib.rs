@@ -72,14 +72,14 @@ impl Client {
         buf_size: usize,
         name: &str,
     ) -> Result<Self, anyhow::Error> {
-        zx::Status::ok(dev.set_client_name(name).await?)?;
+        let () = zx::Status::ok(dev.set_client_name(name).await?)?;
         let (status, fifos) = dev.get_fifos().await?;
-        zx::Status::ok(status)?;
+        let () = zx::Status::ok(status)?;
         // Safe because we checked the return status above.
         let fifos = *fifos.unwrap();
         {
             let buf = zx::Vmo::from(buf.as_handle_ref().duplicate(zx::Rights::SAME_RIGHTS)?);
-            dev.set_io_buffer(buf).await?;
+            let () = zx::Status::ok(dev.set_io_buffer(buf).await?)?;
         }
         let pool = Mutex::new(buffer::BufferPool::new(buf, buf_size)?);
         Ok(Client { inner: Arc::new(ClientInner::new(dev, pool, fifos)?) })
@@ -102,7 +102,8 @@ impl Client {
         let dev = dev.as_raw_fd();
         let mut client = 0;
         // Safe because we're passing a valid fd.
-        zx::Status::ok(unsafe { fdio::fdio_sys::fdio_get_service_handle(dev, &mut client) })?;
+        let () =
+            zx::Status::ok(unsafe { fdio::fdio_sys::fdio_get_service_handle(dev, &mut client) })?;
         let dev = fidl::endpoints::ClientEnd::<sys::DeviceMarker>::new(
             // Safe because we checked the return status above.
             fuchsia_zircon::Channel::from(unsafe { fuchsia_zircon::Handle::from_raw(client) }),
@@ -161,12 +162,16 @@ impl Client {
     /// Send a buffer with the Ethernet device.
     ///
     /// TODO(tkilbourn): indicate to the caller whether the send failed due to lack of buffers.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `buf` is too large to fill one of the device buffers.
     pub fn send(&mut self, buf: &[u8]) {
         let mut guard = self.inner.pool.lock().unwrap();
         match guard.alloc_tx_buffer() {
             None => (),
             Some(mut t) => {
-                t.write(buf);
+                assert_eq!(t.write(buf), buf.len());
                 self.inner.push_tx(t.entry());
             }
         }
@@ -361,7 +366,10 @@ impl ClientInner {
 
     /// Queue an available receive buffer to the rx fifo.
     fn poll_queue_rx(&self, cx: &mut Context<'_>) -> Poll<Result<(), zx::Status>> {
-        ready!(self.rx_fifo.poll_write(cx))?;
+        if ready!(self.rx_fifo.poll_write(cx))? {
+            // rx fifo has closed.
+            return Poll::Ready(Err(zx::Status::PEER_CLOSED));
+        }
         let mut pool_guard = self.pool.lock().unwrap();
         match pool_guard.alloc_rx_buffer() {
             None => Poll::Pending,

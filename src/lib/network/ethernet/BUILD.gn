@@ -29,6 +29,8 @@ rustc_library("ethernet") {
     "src/ethernet_sys.rs",
     "src/lib.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("ethernet-tests") {
