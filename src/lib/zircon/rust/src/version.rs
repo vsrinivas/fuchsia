@@ -30,11 +30,25 @@ mod tests {
     #[test]
     fn get_version_string() -> Result<(), Status> {
         let sv = system_get_version_string();
-        assert!(sv.len() > 20);
-        assert!(sv.len() < 100);
-
         let s = sv.to_string();
-        assert_eq!(s, sv);
+
+        // Incremental builders set kernel version string to "nostamp".
+        // See fxbug.dev/74797 for details.
+        if s != "nostamp" {
+            assert!(
+                sv.len() > 20,
+                "system version string [{}] length {} should be > 20",
+                s,
+                sv.len()
+            );
+            assert!(
+                sv.len() < 100,
+                "system version string [{}] length {} should be < 100",
+                s,
+                sv.len()
+            );
+            assert_eq!(s, sv);
+        }
 
         Ok(())
     }
