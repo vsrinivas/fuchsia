@@ -5,7 +5,6 @@
 #include "h264_multi_decoder.h"
 
 #include <lib/media/codec_impl/codec_buffer.h>
-#include <lib/stdcompat/variant.h>
 #include <lib/trace/event.h>
 #include <zircon/syscalls.h>
 
@@ -1612,9 +1611,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
       OnFatalError();
       return;
     }
-    if (memcmp(
-            cpp17::get<std::unique_ptr<media::H264SliceHeader>>(slice_nalu->preparsed_header).get(),
-            &stashed_latest_slice_header_, sizeof(stashed_latest_slice_header_))) {
+    if (memcmp(slice_nalu->preparsed_header.get<std::unique_ptr<media::H264SliceHeader>>().get(),
+               &stashed_latest_slice_header_, sizeof(stashed_latest_slice_header_))) {
       LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirstMbInSliceError);
       LOG(ERROR, "inconsistent slice data for same first_mb_in_slice - broken input data");
       OnFatalError();
@@ -1625,7 +1623,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   if (first_mb_in_slice > per_frame_seen_first_mb_in_slice_) {
     DLOG("first_mb_in_slice > per_frame_seen_first_mb_in_slice_");
     memcpy(&stashed_latest_slice_header_,
-           cpp17::get<std::unique_ptr<media::H264SliceHeader>>(slice_nalu->preparsed_header).get(),
+           slice_nalu->preparsed_header.get<std::unique_ptr<media::H264SliceHeader>>().get(),
            sizeof(stashed_latest_slice_header_));
     if (sps_nalu) {
       media_decoder_->QueuePreparsedNalu(std::move(sps_nalu));
