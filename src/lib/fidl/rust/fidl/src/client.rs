@@ -19,7 +19,7 @@ use {
         future::{self, AndThen, FusedFuture, Future, FutureExt, MaybeDone, Ready, TryFutureExt},
         ready,
         stream::{FusedStream, Stream},
-        task::{noop_waker, Context, Poll, Waker},
+        task::{noop_waker, ArcWake, Context, Poll, Waker},
     },
     parking_lot::Mutex,
     slab::Slab,
@@ -294,8 +294,7 @@ impl Future for MessageResponse {
 
         // Drop the client reference if the response has been received
         if let Poll::Ready(Ok(_)) = res {
-            let client = this.client.take().expect("MessageResponse polled after completion");
-            client.wake_any();
+            this.client.take().expect("MessageResponse polled after completion");
         }
 
         res
@@ -306,7 +305,6 @@ impl Drop for MessageResponse {
     fn drop(&mut self) {
         if let Some(client) = &self.client {
             client.deregister_msg_interest(InterestId::from_txid(self.id));
-            client.wake_any();
         }
     }
 }
@@ -341,6 +339,41 @@ impl MessageInterest {
             buf
         } else {
             panic!("EXPECTED received message")
+        }
+    }
+
+    /// Registers the waker from `cx` if the message has not already been received, replacing any
+    /// previous waker registered.
+    fn register(&mut self, cx: &mut Context<'_>) {
+        if self.is_received() {
+            return;
+        }
+        if let Self::Discard = self {
+            panic!("Polled a discarded MessageReceiver?!");
+        }
+        // Must be either WillPoll or Waiting, replace the waker.
+        *self = Self::Waiting(cx.waker().clone());
+    }
+
+    /// Receive a message for this MessageInterest, waking the waiter if they are waiting to
+    /// poll.
+    /// Returns true if the task interested in the response no longer cares about it, in which
+    /// case this can be cleaned up.
+    fn receive(&mut self, message: MessageBufEtc) -> bool {
+        if let Self::Discard = self {
+            return true;
+        } else if let Self::Waiting(waker) = mem::replace(self, Self::Received(message)) {
+            waker.wake();
+        }
+        false
+    }
+
+    /// Wake the interested task, if it is waiting, putting it in a WillPoll state.
+    /// This function is idempotent.
+    fn wake(&mut self) {
+        if let Self::Waiting(waker) = self {
+            waker.wake_by_ref();
+            *self = Self::WillPoll;
         }
     }
 }
@@ -411,7 +444,6 @@ impl Stream for EventReceiver {
 impl Drop for EventReceiver {
     fn drop(&mut self) {
         self.inner.event_channel.lock().listener = EventListener::None;
-        self.inner.wake_any();
     }
 }
 
@@ -437,15 +469,47 @@ impl Default for EventListener {
     }
 }
 
+impl EventListener {
+    /// Wakes this, putting it in a WillPoll State until it is polled again.
+    fn wake(&mut self) {
+        *self = match mem::replace(self, Self::None) {
+            Self::Some(waker) => {
+                waker.wake();
+                Self::WillPoll
+            }
+            x => x,
+        };
+    }
+}
+
+struct CombinedWaker {
+    wakers: Vec<Waker>,
+}
+
+impl CombinedWaker {
+    fn make_waker(wakers: Vec<Waker>) -> Waker {
+        futures::task::waker(Arc::new(Self { wakers }))
+    }
+}
+
+impl ArcWake for CombinedWaker {
+    fn wake_by_ref(arc_self: &Arc<Self>) {
+        for waker in &arc_self.wakers {
+            waker.wake_by_ref();
+        }
+    }
+}
+
 /// A shared client channel which tracks EXPECTED and received responses
 #[derive(Debug)]
 struct ClientInner {
+    /// The channel that leads to the server we are connected to.
     channel: AsyncChannel,
 
-    /// A map of message interests to either `None` (no message received yet)
-    /// or `Some(DecodeBuf)` when a message has been received.
-    /// An interest is registered with `register_msg_interest` and deregistered
-    /// by either receiving a message via a call to `poll_recv` or manually
+    /// A map of MessageInterests, which track state of responses to two-way
+    /// messages.
+    /// An interest is registered here with `register_msg_interest` and deregistered
+    /// by either retrieving a message via a call to `poll_recv_msg_response` or manually
     /// deregistering with `deregister_msg_interest`
     message_interests: Mutex<Slab<MessageInterest>>,
 
@@ -477,6 +541,8 @@ impl ClientInner {
             lock.listener = EventListener::Some(cx.waker().clone());
         }
 
+        // Process any data on the channel, registering any tasks still waiting to wake when the
+        // channel becomes ready.
         let epitaph = self.recv_all()?;
 
         let mut lock = self.event_channel.lock();
@@ -495,6 +561,8 @@ impl ClientInner {
         }
     }
 
+    /// Poll for the response to `txid`, registering the waker associated with `cx` to be awoken,
+    /// or returning the response buffer if it has been received.
     fn poll_recv_msg_response(
         &self,
         txid: Txid,
@@ -502,17 +570,16 @@ impl ClientInner {
     ) -> Poll<Result<MessageBufEtc, Error>> {
         let interest_id = InterestId::from_txid(txid);
         {
-            // If have not yet received anything, update any stale WillPoll or Waiting(stale waker)
-            // message interest for the current message.
+            // Register our waker with the interest if we haven't received a message yet.
             let mut message_interests = self.message_interests.lock();
-            let message_interest = message_interests
+            message_interests
                 .get_mut(interest_id.as_raw_id())
-                .expect("Polled unregistered interest");
-            if !message_interest.is_received() {
-                *message_interest = MessageInterest::Waiting(cx.waker().clone());
-            }
+                .expect("Polled unregistered interest")
+                .register(cx);
         }
 
+        // Process any data on the channel, registering tasks still waiting for wake when the
+        // channel becomes ready.
         let epitaph = self.recv_all()?;
 
         let mut message_interests = self.message_interests.lock();
@@ -521,8 +588,8 @@ impl ClientInner {
             .expect("Polled unregistered interest")
             .is_received()
         {
-            // If, by happy accident, we just raced to getting the result,
-            // then yay! Return success.
+            // If we got the result remove the received buffer and return, freeing up the
+            // space for a new message.
             let buf = message_interests.remove(interest_id.as_raw_id()).unwrap_received();
             Poll::Ready(Ok(buf))
         } else {
@@ -538,6 +605,8 @@ impl ClientInner {
     }
 
     /// Poll for the receipt of any response message or an event.
+    /// Wakers present in any MessageInterest or the EventReceiver when this is called will be
+    /// notified when their message arrives or when there is new data if the channel is empty.
     ///
     /// Returns the epitaph (or PEER_CLOSED) if the channel was closed, and None otherwise.
     fn recv_all(&self) -> Result<Option<zx_status::Status>, Error> {
@@ -552,10 +621,8 @@ impl ClientInner {
                 return Ok(*epitaph_lock);
             }
             let buf = {
-                // Get a real waker if anyone is waiting, otherwise a noop waker will do.
-                // Messages waiting for a response provide a waker, and if events arrive without a
-                // waker they are queued.
-                let waker = self.get_pending_waker().unwrap_or_else(noop_waker);
+                // Get a combined waker that will wake up everyone who is waiting.
+                let waker = self.get_combined_waker();
                 let cx = &mut Context::from_waker(&waker);
 
                 let mut buf = MessageBufEtc::new();
@@ -563,11 +630,10 @@ impl ClientInner {
                 match result {
                     Poll::Ready(Ok(())) => {}
                     Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
-                        // The channel has been closed, and no epitaph was received. Set the epitaph to PEER_CLOSED.
+                        // The channel has been closed, and no epitaph was received.
+                        // Set the epitaph to PEER_CLOSED.
                         *epitaph_lock = Some(zx_status::Status::PEER_CLOSED);
-                        // The task that calls this method also has its Waker woken. This could be
-                        // optimized by excluding this task, but since this occurs on channel close,
-                        // it is not a critical optimization.
+                        // Wake up everyone waiting, since an epitaph is broadcast to all receivers.
                         self.wake_all();
                         return Ok(*epitaph_lock);
                     }
@@ -585,15 +651,12 @@ impl ClientInner {
                 return Err(Error::IncompatibleMagicNumber(header.magic_number()));
             }
             if header.is_epitaph() {
-                // Received an epitaph. Record this so that future operations receive the same
-                // epitaph.
+                // Received an epitaph. Record this so that everyone receives the same epitaph.
                 let handles = &mut [];
                 let mut epitaph_body = EpitaphBody::new_empty();
                 Decoder::decode_into(&header, &body_bytes, handles, &mut epitaph_body)?;
                 *epitaph_lock = Some(epitaph_body.error);
-                // The task that calls this method also has its Waker woken. This could be
-                // optimized by excluding this task, but since this occurs on channel close,
-                // it is not a critical optimization.
+                // Wake up everyone waiting, since an epitaph is broadcast to all receivers.
                 self.wake_all();
                 return Ok(*epitaph_lock);
             }
@@ -605,13 +668,7 @@ impl ClientInner {
                 // received an event
                 let mut lock = self.event_channel.lock();
                 lock.queue.push_back(buf);
-                if let EventListener::Some(_) = lock.listener {
-                    if let EventListener::Some(waker) =
-                        mem::replace(&mut lock.listener, EventListener::WillPoll)
-                    {
-                        waker.wake();
-                    }
-                }
+                lock.listener.wake();
             } else {
                 // received a message response
                 let recvd_interest_id = InterestId::from_txid(Txid(header.tx_id()));
@@ -620,15 +677,10 @@ impl ClientInner {
                 // If one is found, store the message so that it can be picked up later.
                 let mut message_interests = self.message_interests.lock();
                 let raw_recvd_interest_id = recvd_interest_id.as_raw_id();
-                if let Some(&MessageInterest::Discard) =
-                    message_interests.get(raw_recvd_interest_id)
-                {
-                    message_interests.remove(raw_recvd_interest_id);
-                } else if let Some(entry) = message_interests.get_mut(raw_recvd_interest_id) {
-                    let old_entry = mem::replace(entry, MessageInterest::Received(buf));
-                    if let MessageInterest::Waiting(waker) = old_entry {
-                        // Wake up the task to let them know a message has arrived.
-                        waker.wake();
+                if let Some(interest) = message_interests.get_mut(raw_recvd_interest_id) {
+                    let remove = interest.receive(buf);
+                    if remove {
+                        message_interests.remove(raw_recvd_interest_id);
                     }
                 }
             }
@@ -644,31 +696,33 @@ impl ClientInner {
         }
     }
 
-    /// Gets an arbitrary task that has polled on this channel and has not yet
-    /// gotten a response.
-    fn get_pending_waker(&self) -> Option<Waker> {
+    /// Gets a waker that will wake up all the tasks that are waiting on this channel.
+    /// `wake_all` is preferred if you are certain you are waking everyone immediately, as it is
+    /// idempotent (it will only wake each task once)
+    // TODO(fxbug.dev/74427): if Arc::new_cyclic becomes stable, we can wake tasks only when their
+    // message has arrived.
+    fn get_combined_waker(&self) -> Waker {
+        let mut wakers = Vec::new();
         {
             let lock = self.message_interests.lock();
+            wakers.reserve(lock.len() + 1);
             for (_, message_interest) in lock.iter() {
                 if let MessageInterest::Waiting(waker) = message_interest {
-                    return Some(waker.clone());
+                    wakers.push(waker.clone());
                 }
             }
         }
         {
             let lock = self.event_channel.lock();
             if let EventListener::Some(waker) = &lock.listener {
-                return Some(waker.clone());
+                wakers.push(waker.clone());
             }
         }
-        None
-    }
-
-    /// Wakes up an arbitrary task that has begun polling on the channel so that
-    /// it will call recv_all.
-    fn wake_any(&self) {
-        if let Some(waker) = self.get_pending_waker() {
-            waker.wake();
+        if !wakers.is_empty() {
+            wakers.shrink_to_fit();
+            CombinedWaker::make_waker(wakers)
+        } else {
+            noop_waker()
         }
     }
 
@@ -676,25 +730,11 @@ impl ClientInner {
     fn wake_all(&self) {
         {
             let mut lock = self.message_interests.lock();
-            for (_, message_interest) in lock.iter_mut() {
-                // Only wake and replace the tasks that have polled and have Wakers.
-                // Otherwise a task has received a response would have that buffer
-                // overridden.
-                if let MessageInterest::Waiting(_) = message_interest {
-                    if let MessageInterest::Waiting(waker) =
-                        mem::replace(message_interest, MessageInterest::WillPoll)
-                    {
-                        waker.wake();
-                    }
-                }
+            for (_, interest) in lock.iter_mut() {
+                interest.wake();
             }
         }
-        {
-            let lock = self.event_channel.lock();
-            if let EventListener::Some(waker) = &lock.listener {
-                waker.wake_by_ref();
-            }
-        }
+        self.event_channel.lock().listener.wake();
     }
 }
 
@@ -1303,8 +1343,10 @@ mod tests {
         // get event loop to deliver readiness notifications to channels
         let _ = executor.run_until_stalled(&mut future::pending::<()>());
 
-        // either response_waker or event_waker should be woken
-        assert_eq!(response_waker_count.get() + event_waker_count.get(), 1);
+        // BOTH response_waker and event_waker should be woken, since the transaction
+        // that arrived could be for either.
+        assert_eq!(response_waker_count.get(), 1);
+        assert_eq!(event_waker_count.get(), 1);
         let last_response_waker_count = response_waker_count.get();
 
         // we'll pretend event_waker was woken, and have that poll out the event
@@ -1374,9 +1416,11 @@ mod tests {
         // get event loop to deliver readiness notifications to channels
         let _ = executor.run_until_stalled(&mut future::pending::<()>());
 
-        // one waker should have woken up, since reading from a channel only supports
-        // a single waker.
-        assert_eq!(1, wakers.iter().fold(0, |acc, x| acc + x.get()));
+        // All the wakers should be woken up because the channel is ready to read, and the message
+        // could be for any of them.
+        for wake_count in &wakers {
+            assert_eq!(wake_count.get(), 1);
+        }
 
         // pretend that response1 woke and poll that to completion.
         assert_matches!(
@@ -1390,9 +1434,11 @@ mod tests {
         // get event loop to deliver readiness notifications to channels
         let _ = executor.run_until_stalled(&mut future::pending::<()>());
 
-        // response1 will have woken all other tasks again.
-        // NOTE: The task that is waking all other tasks is also woken.
-        assert_eq!(1 + wakers.len(), wakers.iter().fold(0, |acc, x| acc + x.get()));
+        // response1 will have woken all the wakers a second time, because epitaphs wake everyone.
+        // TODO: we don't actually need to do this, I think.
+        for wake_count in &wakers {
+            assert_eq!(wake_count.get(), 2);
+        }
 
         // poll response2 to completion.
         assert_matches!(

@@ -828,7 +828,12 @@ mod tests {
 
         // Should be woken now
         let woke_count_after = fut_wake_count.get();
-        assert_eq!(woke_count_after, woke_count_before + 1);
+        assert!(
+            woke_count_after > woke_count_before,
+            "connection didn't get woken: {} <= {}",
+            woke_count_after,
+            woke_count_before
+        );
 
         // Polling again should return the result.
         assert!(handler_fut.as_mut().poll(&mut counting_ctx).is_pending());
