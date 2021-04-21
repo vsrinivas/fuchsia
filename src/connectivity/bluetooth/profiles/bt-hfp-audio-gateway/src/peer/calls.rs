@@ -6,7 +6,6 @@ use {
     crate::{
         error::CallError,
         peer::procedure::{dtmf::DtmfCode, hold::CallHoldAction},
-        protocol::indicators::{CallIndicators, CallIndicatorsUpdates},
     },
     async_utils::{
         hanging_get::client::HangingGetStream,
@@ -23,89 +22,25 @@ use {
     },
 };
 
-pub use {fidl_fuchsia_bluetooth_hfp::CallState, number::Number};
+/// Defines the types associated with a phone number.
+mod number;
 
-// Enclose `Number` in a submodule to keep the private items from leaking into the `calls` module.
-mod number {
-    use super::FidlNumber;
+/// Defines the collection used to identify and store calls.
+mod call_list;
 
-    /// A phone number.
-    #[derive(Debug, Clone, PartialEq, Hash, Default, Eq)]
-    pub struct Number(String);
+/// Defines commonly used types when interacting with a call.
+pub mod types;
 
-    impl Number {
-        /// Format value indicating no changes on the number presentation are required.
-        /// See HFP v1.8, Section 4.34.2.
-        const NUMBER_FORMAT: i64 = 129;
-
-        /// Returns the numeric representation of the Number's format as specified in HFP v1.8,
-        /// Section 4.34.2.
-        pub fn type_(&self) -> i64 {
-            Number::NUMBER_FORMAT
-        }
-    }
-
-    impl From<Number> for String {
-        fn from(x: Number) -> Self {
-            x.0
-        }
-    }
-
-    impl From<&str> for Number {
-        fn from(n: &str) -> Self {
-            // Phone numbers must be enclosed in double quotes
-            let inner = if n.starts_with("\"") && n.ends_with("\"") {
-                n.to_string()
-            } else {
-                format!("\"{}\"", n)
-            };
-            Self(inner)
-        }
-    }
-
-    impl From<FidlNumber> for Number {
-        fn from(n: FidlNumber) -> Self {
-            n.as_str().into()
-        }
-    }
-}
+use {
+    call_list::CallList,
+    types::FidlNumber,
+    types::{CallIndicators, CallIndicatorsUpdates},
+};
+pub use {fidl_fuchsia_bluetooth_hfp::CallState, number::Number, types::Direction};
 
 /// The index associated with a call, that is guaranteed to be unique for the lifetime of the call,
 /// but will be recycled after the call is released.
 pub type CallIdx = usize;
-
-/// The direction of call initiation.
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Direction {
-    /// Call Direction is not known at this time.
-    Unknown,
-    /// Call originated on this device. This is also known as an Outgoing call.
-    MobileOriginated,
-    /// Call is terminated on this device. This is also known as an Incoming call.
-    MobileTerminated,
-}
-
-impl From<CallState> for Direction {
-    fn from(x: CallState) -> Self {
-        match x {
-            CallState::IncomingRinging | CallState::IncomingWaiting => Self::MobileTerminated,
-            CallState::OutgoingDialing | CallState::OutgoingAlerting => Self::MobileOriginated,
-            _ => Self::Unknown,
-        }
-    }
-}
-
-impl From<Direction> for i64 {
-    fn from(x: Direction) -> Self {
-        match x {
-            // When we do not know the direction, arbitrarily choose Mobile Originated.
-            // TODO (fxbug.dev/73326): Update the FIDL API so that the direction is always provided.
-            Direction::Unknown => 0,
-            Direction::MobileOriginated => 0,
-            Direction::MobileTerminated => 1,
-        }
-    }
-}
 
 /// Internal state and resources associated with a single call.
 struct CallEntry {
@@ -169,9 +104,6 @@ impl Call {
         Self { index, number, state, direction }
     }
 }
-
-/// The fuchsia.bluetooth.hfp library representation of a Number.
-type FidlNumber = String;
 
 /// A stream of updates to the state of calls. Each update contains the `Number` and the
 /// `CallState`. When the channel for a given call is closed, an epitaph is returned with the
@@ -565,99 +497,10 @@ impl FusedStream for Calls {
     }
 }
 
-/// A collection designed for the specific requirements of storing Calls with an associated index.
-///
-/// The requirements found in HFP v1.8, Section 4.34.2, "+CLCC":
-///
-///   * Each call is assigned a number starting at 1.
-///   * Calls hold their number until they are released.
-///   * New calls take the lowest available number.
-///
-/// Note: "Insert" is a O(n) operation in order to simplify the implementation.
-/// This data structure is best suited towards small n for this reason.
-struct CallList<T> {
-    inner: Vec<Option<T>>,
-}
-
-impl<T> Default for CallList<T> {
-    fn default() -> Self {
-        Self { inner: Vec::default() }
-    }
-}
-
-impl<T> CallList<T> {
-    /// Insert a new value into the list, returning an index that is guaranteed to be unique until
-    /// the value is removed from the list.
-    fn insert(&mut self, value: T) -> CallIdx {
-        let index = if let Some(index) = self.inner.iter_mut().position(|v| v.is_none()) {
-            self.inner[index] = Some(value);
-            index
-        } else {
-            self.inner.push(Some(value));
-            self.inner.len() - 1
-        };
-
-        Self::to_call_index(index)
-    }
-
-    /// Retrieve a value by index. Returns `None` if the index does not point to a value.
-    // TODO (fxb/64550): Remove when call requests are initiated
-    #[allow(unused)]
-    fn get(&self, index: CallIdx) -> Option<&T> {
-        match Self::to_internal_index(index) {
-            Some(index) => self.inner.get(index).map(|v| v.as_ref()).unwrap_or(None),
-            None => None,
-        }
-    }
-
-    /// Retrieve a mutable reference to a value by index. Returns `None` if the index does not point
-    /// to a value.
-    fn get_mut(&mut self, index: CallIdx) -> Option<&mut T> {
-        match Self::to_internal_index(index) {
-            Some(index) => self.inner.get_mut(index).map(|v| v.as_mut()).unwrap_or(None),
-            None => None,
-        }
-    }
-
-    /// Remove a value by index. Returns `None` if the value did not point to a value.
-    fn remove(&mut self, index: CallIdx) -> Option<T> {
-        match Self::to_internal_index(index) {
-            Some(index) => self.inner.get_mut(index).map(|v| v.take()).unwrap_or(None),
-            None => None,
-        }
-    }
-
-    /// Return an iterator of the calls and associated call indices.
-    fn calls(&self) -> impl Iterator<Item = (CallIdx, &T)> + Clone {
-        self.inner
-            .iter()
-            .enumerate()
-            .flat_map(|(i, entry)| entry.as_ref().map(|v| (Self::to_call_index(i), v)))
-    }
-
-    /// Convert a `CallIdx` to the internal index used to locate a call.
-    ///
-    /// The CallIdx for a call starts at 1 instead of 0, so the internal index must be decremented
-    /// after being received by the user.
-    ///
-    /// Returns `None` if `index` is 0 because 0 is an invalid index.
-    fn to_internal_index(index: CallIdx) -> Option<usize> {
-        (index != 0).then(|| index - 1)
-    }
-
-    /// Convert the internal index for a call to the external `CallIdx`.
-    /// The CallIdx for a call starts at 1 instead of 0, so the internal index must be incremented
-    /// before being returned to the user.
-    fn to_call_index(internal: usize) -> CallIdx {
-        internal + 1
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::protocol::indicators,
         fidl_fuchsia_bluetooth_hfp::{
             CallRequest, CallRequestStream, PeerHandlerMarker, PeerHandlerRequest,
             PeerHandlerRequestStream,
@@ -665,20 +508,6 @@ mod tests {
         fuchsia_async as fasync,
         matches::assert_matches,
     };
-
-    #[test]
-    fn number_type_in_valid_range() {
-        let number = Number::from("1234567");
-        // type values must be in range 128-175.
-        assert!(number.type_() >= 128);
-        assert!(number.type_() <= 175);
-    }
-
-    #[test]
-    fn number_str_roundtrip() {
-        let number = Number::from("1234567");
-        assert_eq!(number.clone(), Number::from(&*String::from(number)));
-    }
 
     #[test]
     fn call_is_active() {
@@ -695,87 +524,6 @@ mod tests {
         assert!(!call.is_active());
     }
 
-    #[test]
-    fn call_list_insert() {
-        let mut list = CallList::default();
-        let i1 = list.insert(1);
-        assert_eq!(i1, 1, "The first value must be assigned the number 1");
-        let i2 = list.insert(2);
-        assert_eq!(i2, 2, "The second value is assigned the next available number");
-    }
-
-    #[test]
-    fn call_list_get() {
-        let mut list = CallList::default();
-        let i1 = list.insert(1);
-        let i2 = list.insert(2);
-        assert_eq!(list.get(0), None);
-        assert_eq!(list.get(i1), Some(&1));
-        assert_eq!(list.get(i2), Some(&2));
-        assert_eq!(list.get(3), None);
-    }
-
-    #[test]
-    fn call_list_get_mut() {
-        let mut list = CallList::default();
-        let i1 = list.insert(1);
-        let i2 = list.insert(2);
-        assert_eq!(list.get_mut(i1), Some(&mut 1));
-        assert_eq!(list.get_mut(i2), Some(&mut 2));
-        assert_eq!(list.get_mut(3), None);
-    }
-
-    #[test]
-    fn call_list_remove() {
-        let mut list = CallList::default();
-        let i1 = list.insert(1);
-        let i2 = list.insert(2);
-        let removed = list.remove(i1);
-        assert!(removed.is_some());
-        assert_eq!(list.get(i1), None, "The value at i1 is removed");
-        assert_eq!(list.get(i2), Some(&2), "The value at i2 is untouched");
-        let invalid_idx = 0;
-        assert!(list.remove(invalid_idx).is_none());
-    }
-
-    #[test]
-    fn call_list_remove_and_insert_behaves() {
-        let mut list = CallList::default();
-        let i1 = list.insert(1);
-        let i2 = list.insert(2);
-        let i3 = list.insert(3);
-        let i4 = list.insert(4);
-        list.remove(i2);
-        list.remove(i1);
-        list.remove(i3);
-        let i5 = list.insert(5);
-        assert_eq!(i5, i1, "i5 is the lowest possible index (i1) even though i1 was not the first or last index removed");
-        assert_eq!(list.get(i5), Some(&5), "The value at i5 is correct");
-        let i6 = list.insert(6);
-        let i7 = list.insert(7);
-        assert_eq!(i6, i2, "i6 takes the next available index (i2)");
-        assert_eq!(i7, i3, "i7 takes the next available index (i3)");
-        let i8_ = list.insert(8);
-        assert_ne!(i8_, i4, "i4 is reserved, so i8_ must take a new index");
-        assert_eq!(
-            i8_, 5,
-            "i8_ takes an index of 5 since it is the last of the 5 values to be inserted"
-        );
-    }
-
-    #[test]
-    fn call_list_iter_returns_all_valid_values() {
-        let mut list = CallList::default();
-        let i1 = list.insert(1);
-        let i2 = list.insert(2);
-        let i3 = list.insert(3);
-        let i4 = list.insert(4);
-        list.remove(i2);
-        let actual: Vec<_> = list.calls().collect();
-        let expected = vec![(i1, &1), (i3, &3), (i4, &4)];
-        assert_eq!(actual, expected);
-    }
-
     /// The most common test setup includes an initialized Calls instance and an ongoing call.
     /// This helper function sets up a `Calls` instance in that state and returns the associated
     /// endpoints.
@@ -788,10 +536,10 @@ mod tests {
         let num = Number::from("1");
         calls.handle_new_call(client_end, num.clone(), CallState::IncomingRinging);
         let expected = CallIndicators {
-            call: indicators::Call::None,
-            callsetup: indicators::CallSetup::Incoming,
+            call: types::Call::None,
+            callsetup: types::CallSetup::Incoming,
             callwaiting: false,
-            callheld: indicators::CallHeld::None,
+            callheld: types::CallHeld::None,
         };
         assert_eq!(calls.indicators(), expected);
         (calls, peer_stream, call_stream, 1, num)
@@ -953,7 +701,7 @@ mod tests {
 
         let item = poll_next_item(&mut exec, &mut calls);
         let expected = CallIndicatorsUpdates {
-            callsetup: Some(indicators::CallSetup::Incoming),
+            callsetup: Some(types::CallSetup::Incoming),
             ..CallIndicatorsUpdates::default()
         };
         assert_eq!(item, expected);
@@ -971,7 +719,7 @@ mod tests {
         // The ready item is OutgoingAlerting even though there is also an IncomingRinging call.
         // This is because the OutgoingAlerting call state was reported last.
         let expected = CallIndicatorsUpdates {
-            callsetup: Some(indicators::CallSetup::OutgoingAlerting),
+            callsetup: Some(types::CallSetup::OutgoingAlerting),
             ..CallIndicatorsUpdates::default()
         };
         assert_eq!(item, expected);
@@ -985,7 +733,7 @@ mod tests {
         let item = poll_next_item(&mut exec, &mut calls);
         // Only indicators that have changed are returned.
         let expected = CallIndicatorsUpdates {
-            call: Some(indicators::Call::Some),
+            call: Some(types::Call::Some),
             ..CallIndicatorsUpdates::default()
         };
         assert_eq!(item, expected);
@@ -997,8 +745,8 @@ mod tests {
         // Stream has an item ready.
         let item = poll_next_item(&mut exec, &mut calls);
         let expected = CallIndicatorsUpdates {
-            callsetup: Some(indicators::CallSetup::None),
-            callheld: Some(indicators::CallHeld::Held),
+            callsetup: Some(types::CallSetup::None),
+            callheld: Some(types::CallHeld::Held),
             ..CallIndicatorsUpdates::default()
         };
         assert_eq!(item, expected);
@@ -1008,8 +756,8 @@ mod tests {
         // Stream has an item ready.
         let item = poll_next_item(&mut exec, &mut calls);
         let expected = CallIndicatorsUpdates {
-            call: Some(indicators::Call::None),
-            callheld: Some(indicators::CallHeld::None),
+            call: Some(types::Call::None),
+            callheld: Some(types::CallHeld::None),
             ..CallIndicatorsUpdates::default()
         };
         assert_eq!(item, expected);
