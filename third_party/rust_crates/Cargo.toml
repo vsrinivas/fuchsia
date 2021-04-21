@@ -227,7 +227,7 @@ polling = "2.0.2"
 pulldown-cmark = "0.6.0"
 quote = "1.0.2"
 serial_test = "0.5.1" # Not for use on Fuchsia, only for a single process.
-signal-hook = "0.1.17"
+signal-hook = "0.3.8"
 simplelog = "0.8.0"
 syn = { version = "1.0.5", features = ["full", "visit-mut", "extra-traits"] }
 synstructure = "0.12.1"
@@ -411,6 +411,9 @@ rustflags = ["--cfg=ops_bound", "--cfg=core_reverse", "--cfg=de_boxed_c_str", "-
 
 [gn.package.serde_derive."1.0.116"]
 rustflags = ["--cfg=underscore_consts"]
+
+[gn.package.signal-hook."0.3.8"]
+rustflags = []
 
 [gn.package.tiny_http."0.6.2"]
 # TODO(61282): Fix the leaks and remove this.

@@ -12,6 +12,7 @@ use {
         ManagerProxy, ShellControllerEvent, ShellControllerMarker, ShellParams,
     },
     futures::StreamExt,
+    signal_hook::{consts::signal::SIGINT, iterator::Signals},
 };
 
 #[ffx_plugin(
@@ -53,12 +54,20 @@ pub async fn shell_starnix(manager_proxy: ManagerProxy, _shell: ShellStarnixComm
         Err(anyhow!(ffx_error!("Shell terminated abnormally")))
     };
 
-    unsafe {
-        signal_hook::register(signal_hook::SIGINT, move || {
-            eprintln!("Caught interrupt. Forcing exit...");
-            std::process::exit(0);
-        })?;
-    }
+    // Force an exit on interrupt.
+    let mut signals = Signals::new(&[SIGINT]).unwrap();
+    let handle = signals.handle();
+    let thread = std::thread::spawn(move || {
+        for signal in signals.forever() {
+            match signal {
+                SIGINT => {
+                    eprintln!("Caught interrupt. Forcing exit...");
+                    std::process::exit(0);
+                }
+                _ => unreachable!(),
+            }
+        }
+    });
 
     let params = ShellParams {
         stdin: Some(sin.into()),
@@ -75,5 +84,10 @@ pub async fn shell_starnix(manager_proxy: ManagerProxy, _shell: ShellStarnixComm
     copy_result?;
 
     println!("(Shell exited with code: {})", return_code?);
+
+    // Shut down the signal thread.
+    handle.close();
+    thread.join().expect("thread to shutdown without panic");
+
     Ok(())
 }

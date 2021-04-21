@@ -664,7 +664,7 @@ if (!(current_os == "fuchsia")) {
 
 if (!(current_os == "fuchsia")) {
   group("signal-hook") {
-    deps = [ ":signal-hook-v0_1_17" ]
+    deps = [ ":signal-hook-v0_3_8" ]
   }
 }
 
@@ -1021,27 +1021,6 @@ rust_library("arbitrary-v0_4_0") {
     "-Cextra-filename=-7339b6a6d9177c8a",
     "--cfg=feature=\"derive\"",
     "--cfg=feature=\"derive_arbitrary\"",
-  ]
-}
-
-rust_library("arc-swap-v0_4_4") {
-  crate_name = "arc_swap"
-  crate_root = "//third_party/rust_crates/vendor/arc-swap/src/lib.rs"
-  output_name = "arc_swap-575b61fb70feca0a"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=575b61fb70feca0a",
-    "-Cextra-filename=-575b61fb70feca0a",
   ]
 }
 
@@ -8462,7 +8441,7 @@ rust_library("sharded-slab-v0_0_9") {
 
 rust_library("signal-hook-v0_1_17") {
   crate_name = "signal_hook"
-  crate_root = "//third_party/rust_crates/vendor/signal-hook/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/signal-hook-0.1.17/src/lib.rs"
   output_name = "signal_hook-deea52217afd7830"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -8472,7 +8451,7 @@ rust_library("signal-hook-v0_1_17") {
   deps = []
   deps += [ ":libc-v0_2_88" ]
   deps += [ ":mio-v0_7_0" ]
-  deps += [ ":signal-hook-registry-v1_2_0" ]
+  deps += [ ":signal-hook-registry-v1_3_0" ]
 
   rustenv = []
 
@@ -8490,18 +8469,43 @@ rust_library("signal-hook-v0_1_17") {
   }
 }
 
-rust_library("signal-hook-registry-v1_2_0") {
-  crate_name = "signal_hook_registry"
-  crate_root =
-      "//third_party/rust_crates/vendor/signal-hook-registry/src/lib.rs"
-  output_name = "signal_hook_registry-89f29a6954981833"
+rust_library("signal-hook-v0_3_8") {
+  crate_name = "signal_hook"
+  crate_root = "//third_party/rust_crates/vendor/signal-hook/src/lib.rs"
+  output_name = "signal_hook-b70d0d3d48db33cc"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":arc-swap-v0_4_4" ]
+  deps += [ ":libc-v0_2_88" ]
+  deps += [ ":signal-hook-registry-v1_3_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=b70d0d3d48db33cc",
+    "-Cextra-filename=-b70d0d3d48db33cc",
+    "--cfg=feature=\"channel\"",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"iterator\"",
+  ]
+}
+
+rust_library("signal-hook-registry-v1_3_0") {
+  crate_name = "signal_hook_registry"
+  crate_root =
+      "//third_party/rust_crates/vendor/signal-hook-registry/src/lib.rs"
+  output_name = "signal_hook_registry-13fb5f6650cce8dc"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
   deps += [ ":libc-v0_2_88" ]
 
   rustenv = []
@@ -8509,8 +8513,8 @@ rust_library("signal-hook-registry-v1_2_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=89f29a6954981833",
-    "-Cextra-filename=-89f29a6954981833",
+    "-Cmetadata=13fb5f6650cce8dc",
+    "-Cextra-filename=-13fb5f6650cce8dc",
   ]
 }
 

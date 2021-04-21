@@ -13,8 +13,7 @@ use {
         LauncherProxy, TerminationReason::*,
     },
     futures::StreamExt,
-    signal_hook,
-    std::sync::{Arc, Mutex},
+    signal_hook::{consts::signal::SIGINT, iterator::Signals},
 };
 
 // TODO(fxbug.dev/53159): refactor fuchsia-runtime so we can use the constant from there on the host,
@@ -53,23 +52,29 @@ pub async fn run_component(launcher_proxy: LauncherProxy, run: RunComponentComma
         Err(anyhow!("no termination event received"))
     };
 
-    let kill_arc = Arc::new(Mutex::new(false));
-    let arc_mut = kill_arc.clone();
-    unsafe {
-        signal_hook::register(signal_hook::SIGINT, move || {
-            let mut kill_started = arc_mut.lock().unwrap();
-            if !*kill_started {
-                println!("\nCaught interrupt, killing remote component.");
-                let _ = control_proxy.kill();
-                *kill_started = true;
-            } else {
-                // If for some reason the kill signal hangs, we want to give the user
-                // a way to exit ffx.
-                println!("Received second interrupt. Forcing exit...");
-                std::process::exit(0);
+    // Force an exit on interrupt.
+    let mut signals = Signals::new(&[SIGINT]).unwrap();
+    let handle = signals.handle();
+    let thread = std::thread::spawn(move || {
+        let mut kill_started = false;
+        for signal in signals.forever() {
+            match signal {
+                SIGINT => {
+                    if kill_started {
+                        println!("\nCaught interrupt, killing remote component.");
+                        let _ = control_proxy.kill();
+                        kill_started = true;
+                    } else {
+                        // If for some reason the kill signal hangs, we want to give the user
+                        // a way to exit ffx.
+                        println!("Received second interrupt. Forcing exit...");
+                        std::process::exit(0);
+                    }
+                }
+                _ => unreachable!(),
             }
-        })?;
-    }
+        }
+    });
 
     let out_fd = FileDescriptor {
         type0: HANDLE_TYPE_FILE_DESCRIPTOR,
@@ -124,6 +129,11 @@ pub async fn run_component(launcher_proxy: LauncherProxy, run: RunComponentComma
         };
         eprintln!("Error: {}. \nThere may be a more detailed error in the system logs.", message);
     }
+
+    // Shut down the signal thread.
+    handle.close();
+    thread.join().expect("thread to shutdown without panic");
+
     std::process::exit(exit_code as i32);
 }
 
