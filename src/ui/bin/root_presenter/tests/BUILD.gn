@@ -90,6 +90,9 @@ executable("root_presenter_unittests_bin") {
     "//src/ui/testing:mock_input_device",
     "//third_party/googletest:gmock",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("root_presenter_apptests_bin") {
@@ -110,6 +113,9 @@ executable("root_presenter_apptests_bin") {
     "//src/ui/bin/root_presenter:lib",
     "//src/ui/bin/root_presenter/tests/fakes",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("focus_dispatcher_unittests_bin") {

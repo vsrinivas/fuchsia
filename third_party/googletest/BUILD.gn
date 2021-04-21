@@ -13,9 +13,6 @@ config("gtest_private_config") {
 
 config("gtest_config") {
   include_dirs = [ "src/googletest/include" ]
-
-  # Suppress warnings from upstream code that happen in Fuchsia build
-  cflags = [ "-Wno-conversion" ]
 }
 
 static_library("gtest") {
@@ -219,9 +216,6 @@ config("gmock_config") {
     # fixed.
     "-Wno-inconsistent-missing-override",
   ]
-
-  # Suppress warnings from upstream code that happen in Fuchsia build
-  cflags = [ "-Wno-conversion" ]
 }
 
 static_library("gmock") {

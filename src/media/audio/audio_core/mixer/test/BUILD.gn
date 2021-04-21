@@ -47,6 +47,9 @@ executable("fidelity_test_bin") {
     "//third_party/googletest:gmock",
     "//zircon/public/lib/fbl",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Note: audio_core/mixer sets specific compiler flags for floating-point optimization which may make

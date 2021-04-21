@@ -28,6 +28,9 @@ source_set("i18n") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 intl_strings("l10n") {

@@ -49,6 +49,9 @@ executable("bin") {
 
   # HWCPipe uses exceptions to report errors, so they must be left enabled.
   configs -= [ "//build/config:no_exceptions" ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_test_package("transaction-elimination-test") {

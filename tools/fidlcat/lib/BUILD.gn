@@ -67,6 +67,9 @@ if (is_host) {
       "//tools/fidlcat:lib",
       "//zircon/system/public",
     ]
+
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   source_set("host_tests") {
@@ -86,6 +89,9 @@ if (is_host) {
       "//third_party/rapidjson",
       "//zircon/public/lib/fidl_base",
     ]
+
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
   }
 
   proto_library("session_proto") {
