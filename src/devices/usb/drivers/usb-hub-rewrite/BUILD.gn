@@ -22,7 +22,7 @@ driver_module("usb-hub-rewrite") {
   sources = [ "usb-hub.cc" ]
   deps = [
     ":bind",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.bus:fuchsia.hardware.usb.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.hub:fuchsia.hardware.usb.hub_banjo_cpp",
@@ -51,7 +51,7 @@ test("usb-hub-test") {
   defines = [ "UNITTEST" ]
   deps = [
     ":bind",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.bus:fuchsia.hardware.usb.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.hub:fuchsia.hardware.usb.hub_banjo_cpp",

@@ -45,7 +45,7 @@ source_set("qmi_driver_src") {
   deps = [
     ":qmi_usb_bind",
     "//sdk/banjo/fuchsia.hardware.ethernet",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.telephony.transport:fuchsia.hardware.telephony.transport_llcpp",
     "//sdk/fidl/fuchsia.telephony.snoop:fuchsia.telephony.snoop_llcpp",
     "//src/devices/lib/driver",

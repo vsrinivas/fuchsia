@@ -44,7 +44,7 @@ driver_module("usb-hid") {
   deps = [
     ":usb_hid_bind",
     "//sdk/banjo/fuchsia.hardware.hidbus",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/lib/driver",
@@ -68,7 +68,7 @@ driver_module("usb-one-endpoint-hid-fake-usb") {
   deps = [
     ":one_endpoint_hid_bind",
     "//sdk/banjo/fuchsia.hardware.hidbus",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.function:fuchsia.hardware.usb.function_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/lib/fit",
@@ -93,7 +93,7 @@ driver_module("usb-two-endpoint-hid-fake-usb") {
   deps = [
     ":two_endpoint_hid_bind",
     "//sdk/banjo/fuchsia.hardware.hidbus",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.function:fuchsia.hardware.usb.function_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/lib/fit",

@@ -26,7 +26,7 @@ driver_module("usb-hub") {
   sources = [ "usb-hub.c" ]
   deps = [
     ":usb_hub_bind",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.bus:fuchsia.hardware.usb.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.hub:fuchsia.hardware.usb.hub_banjo_cpp",

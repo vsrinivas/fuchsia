@@ -59,7 +59,7 @@ test("aml-usb-phy-test-bin") {
     ":aml_usb_phy_bind",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.registers:fuchsia.hardware.registers_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.modeswitch:fuchsia.hardware.usb.modeswitch_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.phy:fuchsia.hardware.usb.phy_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",

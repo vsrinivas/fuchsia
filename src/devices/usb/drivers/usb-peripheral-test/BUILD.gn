@@ -28,7 +28,7 @@ if (is_fuchsia) {
     sources = [ "driver.cc" ]
     deps = [
       ":usb_peripheral_test-bind",
-      "//sdk/banjo/fuchsia.hardware.usb",
+      "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.usb.function:fuchsia.hardware.usb.function_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.usb.request",
       "//src/devices/lib/driver",

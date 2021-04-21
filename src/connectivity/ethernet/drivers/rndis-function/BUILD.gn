@@ -26,7 +26,7 @@ source_set("rndis-function-lib") {
   public_deps = [
     ":rndis_function_bind",
     "//sdk/banjo/fuchsia.hardware.ethernet",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.function:fuchsia.hardware.usb.function_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",

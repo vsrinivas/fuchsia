@@ -37,7 +37,7 @@ driver_module("xhci") {
     ":usb_xhci_bind",
     "//sdk/banjo/fuchsia.hardware.pci",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.bus:fuchsia.hardware.usb.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.hci:fuchsia.hardware.usb.hci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.hub:fuchsia.hardware.usb.hub_banjo_cpp",

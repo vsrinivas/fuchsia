@@ -35,7 +35,7 @@ driver_module("asix-88179") {
   deps = [
     ":ethernet_ax88179_bind",
     "//sdk/banjo/fuchsia.hardware.ethernet",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/lib/fit",
     "//src/devices/lib/dev-operation",
@@ -69,7 +69,7 @@ driver_module("fake-asix-88179") {
     ":asix-88179-test-helper_llcpp",
     ":fake_usb_ax88179_bind",
     "//sdk/banjo/fuchsia.hardware.ethernet",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.function:fuchsia.hardware.usb.function_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/lib/driver",

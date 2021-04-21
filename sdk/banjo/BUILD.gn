@@ -77,7 +77,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.tee",
   "fuchsia.hardware.test",
   "fuchsia.hardware.thermal",
-  "fuchsia.hardware.usb",
   "fuchsia.hardware.usb.request",
   "fuchsia.hardware.vreg",
   "fuchsia.hardware.wlan.info",

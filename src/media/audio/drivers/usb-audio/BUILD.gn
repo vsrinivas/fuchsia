@@ -46,7 +46,7 @@ source_set("shared") {
   ]
   public_deps = [
     ":usb_audio_bind",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",

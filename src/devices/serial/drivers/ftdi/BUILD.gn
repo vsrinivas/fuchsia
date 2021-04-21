@@ -29,7 +29,7 @@ driver_module("ftdi") {
     "//sdk/banjo/fuchsia.hardware.i2cimpl",
     "//sdk/banjo/fuchsia.hardware.serial",
     "//sdk/banjo/fuchsia.hardware.serialimpl",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
@@ -64,7 +64,7 @@ driver_module("ftdi-fake-usb") {
   sources = [ "ftdi-function.cc" ]
   deps = [
     ":ftdi_function_bind",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.function:fuchsia.hardware.usb.function_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",

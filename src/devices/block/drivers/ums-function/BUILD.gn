@@ -30,7 +30,7 @@ driver_module("ums-function") {
   deps = [
     ":usb_ums_bind",
     "//sdk/banjo/fuchsia.hardware.block",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.function:fuchsia.hardware.usb.function_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/fidl/fuchsia.hardware.usb.peripheral.block:fuchsia.hardware.usb.peripheral.block_c",

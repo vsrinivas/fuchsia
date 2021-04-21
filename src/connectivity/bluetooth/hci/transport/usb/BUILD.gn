@@ -32,7 +32,7 @@ source_set("common") {
   public_deps = [
     ":bt_transport_usb_bind",
     "//sdk/banjo/fuchsia.hardware.bt.hci",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/lib/driver",

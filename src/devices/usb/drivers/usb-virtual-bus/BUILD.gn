@@ -71,7 +71,7 @@ driver_module("virtual-bus-tester") {
   deps = [
     ":fuchsia.hardware.usb.virtualbustest_llcpp",
     ":usb-virtual-bus-tester-bind",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/lib/driver",
@@ -102,7 +102,7 @@ driver_module("virtual-bus-tester-function") {
   sources = [ "peripheral.cc" ]
   deps = [
     ":usb-virtual-bus-tester-function-bind",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.function:fuchsia.hardware.usb.function_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/lib/driver",

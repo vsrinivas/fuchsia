@@ -27,7 +27,7 @@ driver_module("dwc2") {
   deps = [
     ":dwc2_bind",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.dci:fuchsia.hardware.usb.dci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.phy:fuchsia.hardware.usb.phy_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
@@ -59,7 +59,7 @@ test("dwc2-test-bin") {
   deps = [
     ":dwc2_bind",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.dci:fuchsia.hardware.usb.dci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.phy:fuchsia.hardware.usb.phy_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",

@@ -73,7 +73,7 @@ driver_module("driver") {
 
   deps = [
     ":usb_hci_test_bind",
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/fidl/fuchsia.hardware.usb.hcitest:fuchsia.hardware.usb.hcitest_llcpp",
     "//sdk/lib/fit",
