@@ -17,8 +17,11 @@ protocol PackageResolver {
     ///
     /// Ensures that a package is on the local filesystem.
     ///
-    /// + request `package_url` the package URL for a package (TODO: link to docs).
-    /// + request `selectors` the package selectors (TODO: link to docs).
+    /// + request `package_url` the package URL for a package. The following link describes
+    ///   the format, resource paths are not allowed:
+    ///   https://fuchsia.dev/fuchsia-src/concepts/packages/package_url.
+    /// + request `selectors` the package selectors. This feature is unimplemented and the
+    ///   parameter will be ignored.
     /// + request `dir` a request for a directory that will be resolved when the package has
     ///   been successfully cached.
     /// * error a zx_status value indicating failure. One of the following:
