@@ -78,7 +78,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.test",
   "fuchsia.hardware.thermal",
   "fuchsia.hardware.usb",
-  "fuchsia.hardware.usb.bus",
   "fuchsia.hardware.usb.composite",
   "fuchsia.hardware.usb.hub",
   "fuchsia.hardware.usb.hubdescriptor",
