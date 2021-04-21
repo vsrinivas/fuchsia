@@ -8,6 +8,7 @@ use fidl_fuchsia_input_report::ConsumerControlButton;
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum FactoryResetState {
     Waiting,
+    AwaitingPolicy(usize),
     StartCountdown,
     CancelCountdown,
     ExecuteReset,
@@ -16,6 +17,7 @@ pub enum FactoryResetState {
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum ResetEvent {
     ButtonPress(ConsumerControlButton, Phase),
+    AwaitPolicyResult(usize, bool),
     CountdownFinished,
     CountdownCancelled,
 }
@@ -24,6 +26,7 @@ pub struct FactoryResetStateMachine {
     volume_up_phase: Phase,
     volume_down_phase: Phase,
     state: FactoryResetState,
+    last_policy_check_id: usize,
 }
 
 impl FactoryResetStateMachine {
@@ -32,6 +35,7 @@ impl FactoryResetStateMachine {
             volume_down_phase: Phase::Up,
             volume_up_phase: Phase::Up,
             state: FactoryResetState::Waiting,
+            last_policy_check_id: 0,
         }
     }
 
@@ -54,62 +58,86 @@ impl FactoryResetStateMachine {
         }
     }
 
+    /// Updates the state machine's button state on button presses and returns
+    /// the new state and a boolean indicating if that new state is changed from
+    /// the previous state.
     pub fn handle_event(&mut self, event: ResetEvent) -> FactoryResetState {
         let new_state: FactoryResetState = match self.state {
-            FactoryResetState::Waiting => {
-                match event {
-                    ResetEvent::ButtonPress(button, phase) => {
-                        self.update_button_state(button, phase);
-                        if self.check_buttons_pressed() {
-                            println!("recovery: start reset countdown");
-                            FactoryResetState::StartCountdown
-                        } else {
-                            FactoryResetState::Waiting
-                        }
-                    },
-                    ResetEvent::CountdownCancelled | ResetEvent::CountdownFinished =>
-                        panic!("Not expecting timer updates when in waiting state"),
-                }
-            },
-            FactoryResetState::StartCountdown => {
-                match event {
-                    ResetEvent::ButtonPress(button, phase) => {
-                        self.update_button_state(button, phase);
-                        if self.check_buttons_pressed() {
-                            panic!("Not expecting both buttons to be pressed while in StartCountdown state");
-                        } else {
-                            println!("recovery: cancel reset countdown");
-                            FactoryResetState::CancelCountdown
-                        }
-                    },
-                    ResetEvent::CountdownCancelled => panic!("Not expecting CountdownCancelled here, expecting input event to move to CancelCountdown state first."),
-                    ResetEvent::CountdownFinished => {
-                        println!("recovery: execute factory reset");
-                        FactoryResetState::ExecuteReset
+            FactoryResetState::Waiting => match event {
+                ResetEvent::ButtonPress(button, phase) => {
+                    self.update_button_state(button, phase);
+                    if self.check_buttons_pressed() {
+                        self.last_policy_check_id += 1;
+                        FactoryResetState::AwaitingPolicy(self.last_policy_check_id)
+                    } else {
+                        FactoryResetState::Waiting
                     }
                 }
-            },
-            FactoryResetState::CancelCountdown => {
-                match event {
-                    ResetEvent::CountdownCancelled => FactoryResetState::Waiting,
-                    _ => panic!("Only expecting CountdownCancelled event in CancelCountdown state"),
+                ResetEvent::CountdownCancelled | ResetEvent::CountdownFinished => {
+                    panic!("Not expecting timer updates when in waiting state")
                 }
+                ResetEvent::AwaitPolicyResult(_, _) => FactoryResetState::Waiting,
             },
-            FactoryResetState::ExecuteReset => {
-                match event {
-                    ResetEvent::ButtonPress(_, _) => {
-                        println!("Ignoring button press while executing factory reset");
-                        FactoryResetState::ExecuteReset
-                    },
-                    ResetEvent::CountdownCancelled | ResetEvent::CountdownFinished => {
-                        panic!("Not expecting countdown events while in ExecuteReset state")
-                    },
+            FactoryResetState::AwaitingPolicy(check_id) => match event {
+                ResetEvent::ButtonPress(button, phase) => {
+                    self.update_button_state(button, phase);
+                    if !self.check_buttons_pressed() {
+                        FactoryResetState::Waiting
+                    } else {
+                        FactoryResetState::AwaitingPolicy(check_id)
+                    }
+                }
+                ResetEvent::AwaitPolicyResult(check_id, fdr_enabled)
+                    if check_id == self.last_policy_check_id =>
+                {
+                    if fdr_enabled {
+                        println!("recovery: start reset countdown");
+                        FactoryResetState::StartCountdown
+                    } else {
+                        FactoryResetState::Waiting
+                    }
+                }
+                _ => FactoryResetState::Waiting,
+            },
+            FactoryResetState::StartCountdown => match event {
+                ResetEvent::ButtonPress(button, phase) => {
+                    self.update_button_state(button, phase);
+                    if self.check_buttons_pressed() {
+                        panic!(
+                            "Not expecting both buttons to be pressed while in StartCountdown state"
+                        );
+                    } else {
+                        println!("recovery: cancel reset countdown");
+                        FactoryResetState::CancelCountdown
+                    }
+                }
+                ResetEvent::CountdownCancelled => {
+                    panic!(
+                        "Not expecting CountdownCancelled here, expecting input event to \
+                                move to CancelCountdown state first."
+                    );
+                }
+                ResetEvent::CountdownFinished => {
+                    println!("recovery: execute factory reset");
+                    FactoryResetState::ExecuteReset
+                }
+                ResetEvent::AwaitPolicyResult(_, _) => FactoryResetState::StartCountdown,
+            },
+            FactoryResetState::CancelCountdown => match event {
+                ResetEvent::CountdownCancelled => FactoryResetState::Waiting,
+                ResetEvent::AwaitPolicyResult(_, _) => FactoryResetState::CancelCountdown,
+                _ => panic!("Only expecting CountdownCancelled event in CancelCountdown state."),
+            },
+            FactoryResetState::ExecuteReset => match event {
+                ResetEvent::AwaitPolicyResult(_, _) => FactoryResetState::ExecuteReset,
+                _ => {
+                    panic!("Not expecting countdown events while in ExecuteReset state")
                 }
             },
         };
 
         self.state = new_state;
-        return new_state;
+        new_state
     }
 
     #[cfg(test)]
@@ -132,6 +160,8 @@ mod tests {
         assert_eq!(state, FactoryResetState::Waiting);
         let state = state_machine
             .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeDown, Phase::Down));
+        assert_eq!(state, FactoryResetState::AwaitingPolicy(1));
+        let state = state_machine.handle_event(ResetEvent::AwaitPolicyResult(1, true));
         assert_eq!(state, FactoryResetState::StartCountdown);
         let state = state_machine.handle_event(ResetEvent::CountdownFinished);
         assert_eq!(state, FactoryResetState::ExecuteReset);
@@ -148,6 +178,8 @@ mod tests {
         assert_eq!(state, FactoryResetState::Waiting);
         let state = state_machine
             .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeUp, Phase::Down));
+        assert_eq!(state, FactoryResetState::AwaitingPolicy(1));
+        let state = state_machine.handle_event(ResetEvent::AwaitPolicyResult(1, true));
         assert_eq!(state, FactoryResetState::StartCountdown);
         let state = state_machine.handle_event(ResetEvent::CountdownFinished);
         assert_eq!(state, FactoryResetState::ExecuteReset);
@@ -168,12 +200,16 @@ mod tests {
         assert_eq!(state, FactoryResetState::Waiting);
         let state = state_machine
             .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeDown, Phase::Down));
+        assert_eq!(state, FactoryResetState::AwaitingPolicy(1));
+        let state = state_machine.handle_event(ResetEvent::AwaitPolicyResult(1, true));
         assert_eq!(state, FactoryResetState::StartCountdown);
         let state = state_machine.handle_event(ResetEvent::ButtonPress(button, Phase::Up));
         assert_eq!(state, FactoryResetState::CancelCountdown);
         let state = state_machine.handle_event(ResetEvent::CountdownCancelled);
         assert_eq!(state, FactoryResetState::Waiting);
         let state = state_machine.handle_event(ResetEvent::ButtonPress(button, Phase::Down));
+        assert_eq!(state, FactoryResetState::AwaitingPolicy(2));
+        let state = state_machine.handle_event(ResetEvent::AwaitPolicyResult(2, true));
         assert_eq!(state, FactoryResetState::StartCountdown);
     }
 
@@ -206,6 +242,8 @@ mod tests {
         assert_eq!(state, FactoryResetState::Waiting);
         let state = state_machine
             .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeDown, Phase::Down));
+        assert_eq!(state, FactoryResetState::AwaitingPolicy(1));
+        let state = state_machine.handle_event(ResetEvent::AwaitPolicyResult(1, true));
         assert_eq!(state, FactoryResetState::StartCountdown);
         let state = state_machine
             .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeDown, Phase::Up));
