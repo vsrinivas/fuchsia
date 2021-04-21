@@ -21,12 +21,20 @@ TEST_F(RequestLaunchTest, LaunchInTerminal) {
   // Dummy process to attach to.
   launch_req.process = "test";
   // Shell command to run the program. It is a list of args with first one being the command.
-  launch_req.runCommand = {"fx", "run", "test"};
+  launch_req.launchCommand = "fx run test";
 
   // Register client handler for RunInTerminal which will be called by server during Launch request.
   bool run_in_terminal_received = false;
   client().registerHandler([&](const dap::RunInTerminalRequest& req) {
-    EXPECT_EQ(launch_req.runCommand, req.args);
+    // Concatenate args and check of the command is same as launch command.
+    std::string command;
+    for_each(req.args.begin(), req.args.end(), [&command](const std::string& s) {
+      if (!command.empty()) {
+        command += ' ';
+      }
+      command += s;
+    });
+    EXPECT_EQ(launch_req.launchCommand, command);
     run_in_terminal_received = true;
     return dap::RunInTerminalResponse();
   });

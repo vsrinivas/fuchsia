@@ -20,10 +20,14 @@ static_library("debug_adapter") {
     "handlers/request_next.h",
     "handlers/request_pause.cc",
     "handlers/request_pause.h",
+    "handlers/request_scopes.cc",
+    "handlers/request_scopes.h",
     "handlers/request_stacktrace.cc",
     "handlers/request_stacktrace.h",
     "handlers/request_threads.cc",
     "handlers/request_threads.h",
+    "handlers/request_variables.cc",
+    "handlers/request_variables.h",
     "server.cc",
     "server.h",
   ]
@@ -47,8 +51,10 @@ source_set("tests") {
     "handlers/request_launch_unittest.cc",
     "handlers/request_next_unittest.cc",
     "handlers/request_pause_unittest.cc",
+    "handlers/request_scopes_unittest.cc",
     "handlers/request_stacktrace_unittest.cc",
     "handlers/request_threads_unittest.cc",
+    "handlers/request_variables_unittest.cc",
     "server_unittest.cc",
   ]
   deps = [

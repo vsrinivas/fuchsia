@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_DEBUG_ADAPTER_CONTEXT_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_DEBUG_ADAPTER_CONTEXT_H_
 
+#include <cstdint>
+
 #include <dap/protocol.h>
 #include <dap/session.h>
 
@@ -14,6 +16,8 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/format_node.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -21,6 +25,25 @@ class Session;
 class DebugAdapterServer;
 class DebugAdapterReader;
 class DebugAdapterWriter;
+
+// Types of variables reported in variables request.
+enum class VariablesType {
+  kLocal = 0,
+  kArguments,
+  kRegister,
+  kChildVariable,
+  kVariablesTypeCount,  // Keep this in the end always
+};
+
+struct VariablesRecord {
+  int64_t frame_id;
+  VariablesType type = VariablesType::kVariablesTypeCount;
+  // Fields to store children information corresponding to the record so that subsequent variables
+  // request can be processed. Store the format node in `parent` if children exist. If `parent`'s
+  // child has children, store a weak pointer to it in `child`.
+  std::unique_ptr<FormatNode> parent;
+  fxl::WeakPtr<FormatNode> child;
+};
 
 // Handles processing requests from debug adapter client with help from zxdb client session and dap
 // library.
@@ -57,9 +80,16 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver {
   Err CheckStoppedThread(Thread* thread);
 
   // Helper methods to get/set frame to ID mapping
-  int IdForFrame(Frame* frame, int stack_index);
-  Frame* FrameforId(int id);
+  int64_t IdForFrame(Frame* frame, int stack_index);
+  Frame* FrameforId(int64_t id);
   void DeleteFrameIdsForThread(Thread* thread);
+
+  // Helper methods to get/set variables references
+  int64_t IdForVariables(int64_t frame_id, VariablesType type,
+                         std::unique_ptr<FormatNode> parent = nullptr,
+                         fxl::WeakPtr<FormatNode> child = nullptr);
+  VariablesRecord* VariablesRecordForID(int64_t id);
+  void DeleteVariablesIdsForFrameId(int64_t id);
 
  private:
   Session* const session_;
@@ -75,9 +105,11 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver {
     uint64_t thread_koid = 0;
     int stack_index = 0;
   };
+  std::map<int64_t, FrameRecord> id_to_frame_;
+  int64_t next_frame_id_ = 1;
 
-  std::map<int, FrameRecord> id_to_frame_;
-  int next_frame_id_ = 1;
+  std::map<int64_t, VariablesRecord> id_to_variables_;
+  int64_t next_variables_id_ = 1;
 
   void Init();
 };

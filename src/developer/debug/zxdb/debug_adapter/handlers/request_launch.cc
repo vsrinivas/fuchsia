@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_launch.h"
 
+#include <dap/types.h>
+
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -12,11 +14,27 @@ namespace dap {
 
 DAP_IMPLEMENT_STRUCT_TYPEINFO_EXT(LaunchRequestZxdb, LaunchRequest, "launch",
                                   DAP_FIELD(process, "process"),
-                                  DAP_FIELD(runCommand, "runCommand"), DAP_FIELD(cwd, "cwd"));
+                                  DAP_FIELD(launchCommand, "launchCommand"), DAP_FIELD(cwd, "cwd"));
 
 }  // namespace dap
 
 namespace zxdb {
+
+void GetCommandArray(const dap::string& cmd_string, dap::array<dap::string>& cmd) {
+  // Split command string at whitespaces to an array of strings.
+  // This is required by RunInTerminal request.
+  size_t split_pos = cmd_string.find(' ');
+  size_t start_pos = 0;
+
+  while (split_pos != std::string::npos) {
+    cmd.push_back(cmd_string.substr(start_pos, split_pos - start_pos));
+    start_pos = split_pos + 1;
+    split_pos = cmd_string.find(' ', start_pos);
+  }
+
+  cmd.push_back(
+      cmd_string.substr(start_pos, std::min(split_pos, cmd_string.size()) - start_pos + 1));
+}
 
 dap::ResponseOrError<dap::LaunchResponse> OnRequestLaunch(DebugAdapterContext* context,
                                                           const dap::LaunchRequestZxdb& req) {
@@ -32,7 +50,7 @@ dap::ResponseOrError<dap::LaunchResponse> OnRequestLaunch(DebugAdapterContext* c
   dap::RunInTerminalRequest run_request;
   run_request.title = "zxdb launch";
   run_request.kind = "integrated";
-  run_request.args = req.runCommand;
+  GetCommandArray(req.launchCommand, run_request.args);
   if (req.cwd) {
     run_request.cwd = req.cwd.value();
   }

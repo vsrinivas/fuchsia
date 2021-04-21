@@ -5,7 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_DEBUG_ADAPTER_HANDLERS_REQUEST_ATTACH_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_DEBUG_ADAPTER_HANDLERS_REQUEST_ATTACH_H_
 
-#include "dap/typeof.h"
+#include <dap/typeof.h>
+
 #include "src/developer/debug/zxdb/debug_adapter/context.h"
 
 namespace dap {

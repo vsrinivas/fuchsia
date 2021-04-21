@@ -15,9 +15,12 @@
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_launch.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_next.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_pause.h"
+#include "src/developer/debug/zxdb/debug_adapter/handlers/request_scopes.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_stacktrace.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_threads.h"
+#include "src/developer/debug/zxdb/debug_adapter/handlers/request_variables.h"
 #include "src/developer/debug/zxdb/debug_adapter/server.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -124,6 +127,18 @@ void DebugAdapterContext::Init() {
              std::function<void(dap::ResponseOrError<dap::StackTraceResponse>)> callback) {
         DEBUG_LOG(DebugAdapter) << "StackTraceRequest received";
         OnRequestStackTrace(this, req, callback);
+      });
+
+  dap_->registerHandler([this](const dap::ScopesRequest& req) {
+    DEBUG_LOG(DebugAdapter) << "ScopesRequest received";
+    return OnRequestScopes(this, req);
+  });
+
+  dap_->registerHandler(
+      [this](const dap::VariablesRequest& req,
+             std::function<void(dap::ResponseOrError<dap::VariablesResponse>)> callback) {
+        DEBUG_LOG(DebugAdapter) << "VariablesRequest received";
+        OnRequestVariables(this, req, callback);
       });
 
   // Register to zxdb session events
@@ -270,7 +285,7 @@ Err DebugAdapterContext::CheckStoppedThread(Thread* thread) {
   return Err();
 }
 
-int DebugAdapterContext::IdForFrame(Frame* frame, int stack_index) {
+int64_t DebugAdapterContext::IdForFrame(Frame* frame, int stack_index) {
   FrameRecord record = {};
   record.thread_koid = frame->GetThread()->GetKoid();
   record.stack_index = stack_index;
@@ -286,7 +301,7 @@ int DebugAdapterContext::IdForFrame(Frame* frame, int stack_index) {
   return current_frame_id;
 }
 
-Frame* DebugAdapterContext::FrameforId(int id) {
+Frame* DebugAdapterContext::FrameforId(int64_t id) {
   // id - 0 is invalid
   if (!id) {
     return nullptr;
@@ -308,9 +323,59 @@ Frame* DebugAdapterContext::FrameforId(int id) {
 
 void DebugAdapterContext::DeleteFrameIdsForThread(Thread* thread) {
   auto thread_koid = thread->GetKoid();
-  for (auto it = id_to_frame_.begin(); it != id_to_frame_.end(); it++) {
+  for (auto it = id_to_frame_.begin(); it != id_to_frame_.end();) {
     if (it->second.thread_koid == thread_koid) {
-      id_to_frame_.erase(it);
+      DeleteVariablesIdsForFrameId(it->first);
+      it = id_to_frame_.erase(it);
+    } else {
+      it++;
+    }
+  }
+}
+
+int64_t DebugAdapterContext::IdForVariables(int64_t frame_id, VariablesType type,
+                                            std::unique_ptr<FormatNode> parent,
+                                            fxl::WeakPtr<FormatNode> child) {
+  // Check if an entry exists already, except for kChildVariable records, as those are always
+  // created newly.
+  if (type != VariablesType::kChildVariable) {
+    for (auto const& it : id_to_variables_) {
+      if (it.second.frame_id == frame_id && it.second.type == type) {
+        return it.first;
+      }
+    }
+  }
+
+  VariablesRecord record;
+  record.frame_id = frame_id;
+  record.type = type;
+  record.parent = std::move(parent);
+  record.child = std::move(child);
+
+  int current_variables_id = next_variables_id_++;
+  id_to_variables_[current_variables_id] = std::move(record);
+  return current_variables_id;
+}
+
+VariablesRecord* DebugAdapterContext::VariablesRecordForID(int64_t id) {
+  // id - 0 is invalid
+  if (!id) {
+    return nullptr;
+  }
+
+  if (auto it = id_to_variables_.find(id); it != id_to_variables_.end()) {
+    return &it->second;
+  }
+  // Not found
+  return nullptr;
+}
+
+void DebugAdapterContext::DeleteVariablesIdsForFrameId(int64_t id) {
+  for (auto it = id_to_variables_.begin(); it != id_to_variables_.end();) {
+    if (it->second.frame_id == id) {
+      it = id_to_variables_.erase(it);
+    } else {
+      it++;
     }
   }
 }

@@ -5,7 +5,6 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/zxdb/debug_adapter/context_test.h"
-#include "src/developer/debug/zxdb/debug_adapter/handlers/request_launch.h"
 
 namespace zxdb {
 
