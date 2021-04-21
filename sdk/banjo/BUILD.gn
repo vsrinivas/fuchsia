@@ -79,7 +79,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.thermal",
   "fuchsia.hardware.usb",
   "fuchsia.hardware.usb.hubdescriptor",
-  "fuchsia.hardware.usb.modeswitch",
   "fuchsia.hardware.usb.phy",
   "fuchsia.hardware.usb.request",
   "fuchsia.hardware.vreg",
