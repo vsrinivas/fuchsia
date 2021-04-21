@@ -9,6 +9,7 @@
 
 #include <gtest/gtest.h>
 
+#include "fuchsia/media/cpp/fidl.h"
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
@@ -270,6 +271,100 @@ TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
   EXPECT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 1u);
 }
 
+// AudioRenderer should survive, if it calls Play while already playing.
+TEST_F(AudioRendererTest, DoublePlay) {
+  auto output =
+      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                       &context().link_matrix(), context().clock_manager());
+  context().route_graph().AddDevice(output.get());
+  RunLoopUntilIdle();
+
+  context().route_graph().AddRenderer(std::move(renderer_));
+  fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION);
+  fidl_renderer_->SetPcmStreamType(stream_type_);
+  fidl_renderer_->AddPayloadBuffer(0, std::move(vmo_));
+  fidl_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
+                       [](int64_t ref_time, int64_t media_time) {
+                         EXPECT_NE(ref_time, fuchsia::media::NO_TIMESTAMP);
+                         EXPECT_NE(media_time, fuchsia::media::NO_TIMESTAMP);
+                       });
+  RunLoopFor(zx::msec(20));  // wait for any Play-related pended actions to try to complete
+
+  fidl_renderer_->Play(fuchsia::media::NO_TIMESTAMP, 0, [](int64_t ref_time, int64_t media_time) {
+    EXPECT_NE(ref_time, fuchsia::media::NO_TIMESTAMP);
+    EXPECT_NE(media_time, fuchsia::media::NO_TIMESTAMP);
+  });
+  RunLoopFor(zx::msec(20));  // wait for any Play-related pended actions to try to complete
+
+  EXPECT_TRUE(fidl_renderer_.is_bound());
+}
+
+// AudioRenderer should survive, if it calls Pause for a second time before calling Play.
+// Timestamps returned from this second Pause should be the same as those from the first.
+TEST_F(AudioRendererTest, DoublePause) {
+  auto output =
+      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                       &context().link_matrix(), context().clock_manager());
+  context().route_graph().AddDevice(output.get());
+  RunLoopUntilIdle();
+
+  context().route_graph().AddRenderer(std::move(renderer_));
+  fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION);
+  fidl_renderer_->SetPcmStreamType(stream_type_);
+  fidl_renderer_->AddPayloadBuffer(0, std::move(vmo_));
+  fidl_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
+  RunLoopUntilIdle();
+
+  int64_t received_ref_time = fuchsia::media::NO_TIMESTAMP;
+  int64_t received_media_time = fuchsia::media::NO_TIMESTAMP;
+  fidl_renderer_->Pause(
+      [&received_ref_time, &received_media_time](int64_t ref_time, int64_t media_time) {
+        EXPECT_NE(ref_time, fuchsia::media::NO_TIMESTAMP);
+        EXPECT_NE(media_time, fuchsia::media::NO_TIMESTAMP);
+
+        received_ref_time = ref_time;
+        received_media_time = media_time;
+
+        FX_LOGS(INFO) << "Received ref_time " << ref_time << ", media_time " << media_time;
+      });
+  RunLoopFor(zx::msec(20));  // wait for any Pause-related pended actions to try to complete
+
+  fidl_renderer_->Pause(
+      [&received_ref_time, &received_media_time](int64_t ref_time, int64_t media_time) {
+        EXPECT_NE(ref_time, fuchsia::media::NO_TIMESTAMP);
+        EXPECT_NE(media_time, fuchsia::media::NO_TIMESTAMP);
+
+        EXPECT_EQ(received_ref_time, ref_time);
+        EXPECT_EQ(received_media_time, media_time);
+      });
+  RunLoopFor(zx::msec(20));  // wait for any Pause-related pended actions to try to complete
+
+  EXPECT_TRUE(fidl_renderer_.is_bound());
+}
+
+// AudioRenderer should survive if calling Pause before ever calling Play.
+// We return timestamps that try to indicate that no previous timeline transform was established.
+TEST_F(AudioRendererTest, PauseBeforePlay) {
+  auto output =
+      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                       &context().link_matrix(), context().clock_manager());
+  context().route_graph().AddDevice(output.get());
+  RunLoopUntilIdle();
+
+  context().route_graph().AddRenderer(std::move(renderer_));
+  fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION);
+  fidl_renderer_->SetPcmStreamType(stream_type_);
+  fidl_renderer_->AddPayloadBuffer(0, std::move(vmo_));
+
+  fidl_renderer_->Pause([](int64_t ref_time, int64_t media_time) {
+    EXPECT_EQ(ref_time, fuchsia::media::NO_TIMESTAMP);
+    EXPECT_EQ(media_time, fuchsia::media::NO_TIMESTAMP);
+  });
+  RunLoopFor(zx::msec(20));  // wait for any Pause-related pended actions to try to complete
+
+  EXPECT_TRUE(fidl_renderer_.is_bound());
+}
+
 TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
   auto output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
@@ -282,13 +377,120 @@ TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
   fidl_renderer_->SetPcmStreamType(stream_type_);
   fidl_renderer_->AddPayloadBuffer(0, std::move(vmo_));
 
-  fidl_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
-  RunLoopUntilIdle();
+  bool received_play_callback = false;
+  fidl_renderer_->Play(
+      fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
+      [&received_play_callback](int64_t __UNUSED ref_time, int64_t __UNUSED media_time) {
+        received_play_callback = true;
+      });
+
+  auto run_loop_count = 0;
+  while (!received_play_callback && run_loop_count < 100) {
+    RunLoopFor(zx::msec(5));
+    ++run_loop_count;
+  }
   EXPECT_TRUE(context().audio_admin().IsActive(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT));
 
-  fidl_renderer_->PauseNoReply();
-  RunLoopUntilIdle();
+  bool received_pause_callback = false;
+  fidl_renderer_->Pause(
+      [&received_pause_callback](int64_t __UNUSED ref_time, int64_t __UNUSED media_time) {
+        received_pause_callback = true;
+      });
+
+  run_loop_count = 0;
+  while (!received_pause_callback && run_loop_count < 100) {
+    RunLoopFor(zx::msec(5));
+    ++run_loop_count;
+  }
   EXPECT_FALSE(context().audio_admin().IsActive(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT));
+}
+
+// AudioCore should survive, if a renderer is unbound between a Play call and its callback.
+TEST_F(AudioRendererTest, RemoveRendererDuringPlay) {
+  auto output =
+      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                       &context().link_matrix(), context().clock_manager());
+  context().route_graph().AddDevice(output.get());
+  RunLoopUntilIdle();
+
+  context().route_graph().AddRenderer(std::move(renderer_));
+  fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION);
+  fidl_renderer_->SetPcmStreamType(stream_type_);
+  fidl_renderer_->AddPayloadBuffer(0, std::move(vmo_));
+  fidl_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
+                       [](int64_t ref_time, int64_t media_time) {
+                         FX_LOGS(INFO)
+                             << "Play callback: ref " << ref_time << ", media " << media_time;
+                       });
+
+  // Simulate closing the client binding. This will shutdown the renderer.
+  fidl_renderer_.Unbind();
+  RunLoopFor(zx::msec(20));  // wait for any Play-related pended actions to try to complete
+}
+
+// AudioCore should survive, if a renderer is unbound immediately after PlayNoReply, as AudioCore
+// may kick off deferred actions that need to be safely retired.
+TEST_F(AudioRendererTest, RemoveRendererDuringPlayNoReply) {
+  auto output =
+      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                       &context().link_matrix(), context().clock_manager());
+  context().route_graph().AddDevice(output.get());
+  RunLoopUntilIdle();
+
+  context().route_graph().AddRenderer(std::move(renderer_));
+  fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
+  fidl_renderer_->SetPcmStreamType(stream_type_);
+  fidl_renderer_->AddPayloadBuffer(0, std::move(vmo_));
+  fidl_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
+
+  // Simulate closing the client binding. This will shutdown the renderer.
+  fidl_renderer_.Unbind();
+  RunLoopFor(zx::msec(20));  // wait for any Play-related pended actions to try to complete
+}
+
+// AudioCore should survive, if a renderer is unbound between a Pause call and its callback.
+TEST_F(AudioRendererTest, RemoveRendererDuringPause) {
+  auto output =
+      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                       &context().link_matrix(), context().clock_manager());
+  context().route_graph().AddDevice(output.get());
+  RunLoopUntilIdle();
+
+  context().route_graph().AddRenderer(std::move(renderer_));
+  fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION);
+  fidl_renderer_->SetPcmStreamType(stream_type_);
+  fidl_renderer_->AddPayloadBuffer(0, std::move(vmo_));
+  fidl_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
+
+  fidl_renderer_->Pause([](int64_t ref_time, int64_t media_time) {
+    FX_LOGS(INFO) << "Pause callback: ref " << ref_time << ", media " << media_time;
+  });
+
+  // Simulate closing the client binding. This will shutdown the renderer.
+  fidl_renderer_.Unbind();
+  RunLoopFor(zx::msec(20));  // wait for any Pause-related pended actions to try to complete
+}
+
+// AudioCore should survive, if a renderer is unbound immediately after PauseNoReply, as AudioCore
+// may kick off deferred actions that need to be safely retired.
+TEST_F(AudioRendererTest, RemoveRendererDuringPauseNoReply) {
+  auto output =
+      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                       &context().link_matrix(), context().clock_manager());
+  context().route_graph().AddDevice(output.get());
+  RunLoopUntilIdle();
+
+  context().route_graph().AddRenderer(std::move(renderer_));
+  fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
+  fidl_renderer_->SetPcmStreamType(stream_type_);
+  fidl_renderer_->AddPayloadBuffer(0, std::move(vmo_));
+  fidl_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
+
+  fidl_renderer_->PauseNoReply();
+
+  // Simulate closing the client binding. This will shutdown the renderer.
+  fidl_renderer_.Unbind();
+  RunLoopFor(zx::msec(20));  // wait for any Pause-related pended actions to try to complete
 }
 
 TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {

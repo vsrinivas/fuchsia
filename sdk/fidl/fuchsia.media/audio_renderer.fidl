@@ -304,11 +304,10 @@ protocol AudioRenderer {
     /// the relationship between the media and reference timelines which was
     /// established (if requested).
     ///
-    // TODO(mpuryear): Define behavior in the case that a user calls `Pause()`
-    // while the system is already in the paused state. We should probably do
-    // nothing but provide a valid correspondence pair in response.
+    /// If the AudioRenderer is already in the paused state when this called,
+    /// the previously-established timeline values are returned (if requested).
     //
-    // TODO(mpuryear): Collapse these if we ever have optional retvals in FIDL
+    // TODO(mpuryear): Remove NoReply variants if FIDL gets optional retvals.
     Pause() -> (int64 reference_time, int64 media_time);
     PauseNoReply();
 

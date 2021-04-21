@@ -58,6 +58,9 @@ class RendererShimImpl {
                             VirtualDevice<fuchsia::virtualaudio::Output>* output_device,
                             int64_t media_time);
 
+  // Send a Pause command to the renderer and wait until it is processed.
+  std::pair<int64_t, int64_t> Pause(TestFixture* fixture);
+
   struct Packet {
     // The packet spans timestamps [start_pts, end_pts), so end_pts is the start_pts of the
     // next contiguous packet. By default, unless overriden by SetPtsUnits, 1 PTS = 1 frame.

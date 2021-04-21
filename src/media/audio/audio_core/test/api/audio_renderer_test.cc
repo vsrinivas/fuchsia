@@ -429,7 +429,6 @@ TEST_F(AudioRendererTest, DiscardAllPackets_ReturnsAfterAllPackets) {
 }
 
 // TODO(mpuryear): test DiscardAllPacketsNoReply();
-// Also when no packets, when started
 
 //
 // AudioRenderer validation
@@ -514,8 +513,6 @@ TEST_F(AudioRendererTest, Play) {
   ASSERT_NE(media_time_received, -1);
 }
 
-// TODO(mpuryear): Also: when already in Play, very positive vals, very negative
-// vals
 TEST_F(AudioRendererTest, PlayNoReply) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
@@ -531,14 +528,6 @@ TEST_F(AudioRendererTest, PlayNoReply) {
   audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
   ExpectCallback();
 }
-
-// TODO(mpuryear): test Pause()->(int64 reference_time, int64 media_time);
-// Verify success after setting format and submitting buffers.
-// Also: when already in Pause
-
-// TODO(mpuryear): test PauseNoReply();
-// Verify success after setting format and submitting buffers.
-// Also: when already in Pause
 
 // Validate MinLeadTime events, when enabled.
 TEST_F(AudioRendererTest, EnableMinLeadTimeEvents) {

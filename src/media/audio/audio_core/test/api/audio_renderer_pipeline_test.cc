@@ -189,6 +189,89 @@ TEST_F(AudioRendererPipelineTestInt16, RenderSlowerFrameRate) {
                       AudioBufferSlice<ASF::SIGNED_16>(), opts);
 }
 
+constexpr zx::duration kPauseRampdownDuration = zx::msec(5);
+TEST_F(AudioRendererPipelineTestInt16, PauseRampDown) {
+  constexpr int64_t kPauseRampdownFrames =
+      kOutputFrameRate * kPauseRampdownDuration.get() / zx::sec(1).get();
+
+  auto [renderer, format] = CreateRenderer(kOutputFrameRate);
+  const auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
+  const auto frames_per_packet = num_frames / num_packets;
+  const auto kNumInitialSilentFrames = frames_per_packet;
+
+  constexpr int16_t kSampleVal = 0x7FF0;  // Very close to full-scale 16-bit
+  auto input_buffer = GenerateSilentAudio(format, kNumInitialSilentFrames);
+  auto signal = GenerateConstantAudio(format, num_frames - kNumInitialSilentFrames, kSampleVal);
+  input_buffer.Append(&signal);
+
+  auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
+  // With current const values, NumPacketsAndFramesPerBatch provides 100 packets, but if this
+  // changes we need at least enough packets for initial playback plus a complete rampdown
+  ASSERT_GT(packets.size(), 3u);
+
+  renderer->PlaySynchronized(this, output_, 0);
+  renderer->WaitForPackets(this, {packets[0], packets[1]});
+  auto [pause_ref_time, pause_media_time] = renderer->Pause(this);
+  auto renderer_ref_time = renderer->ReferenceTimeFromMonotonicTime(zx::clock::get_monotonic());
+  EXPECT_GT(renderer_ref_time.get(), pause_ref_time)
+      << "Pause received pause_ref_time " << pause_ref_time
+      << " in the future (now=" << renderer_ref_time.get() << ")";
+  auto ring_buffer = output_->SnapshotRingBuffer();
+
+  // The ring buffer should match the input buffer for the first 2 packets, then fade out.
+  CompareAudioBufferOptions opts;
+  opts.num_frames_per_packet = frames_per_packet;
+  // First buffer should be silence actually.
+  opts.test_label = "Initial silence";
+  CompareAudioBuffers(AudioBufferSlice(&ring_buffer, 0, frames_per_packet),
+                      AudioBufferSlice<ASF::SIGNED_16>(), opts);
+
+  // Second buffer should be constant value.
+  opts.test_label = "Constant value";
+  CompareAudioBuffers(AudioBufferSlice(&ring_buffer, frames_per_packet, 2 * frames_per_packet),
+                      AudioBufferSlice(&signal, 0, frames_per_packet), opts);
+
+  // We don't know exactly when the Pause took effect in the stream, so we search forward for the
+  // first frame value that differs from the constant value.
+  int64_t first_ramping_frame = 2 * frames_per_packet;
+  int64_t first_zero_frame = 2 * frames_per_packet;
+  auto num_channels = ring_buffer.NumSamples() / ring_buffer.NumFrames();
+
+  for (auto frame = 2 * frames_per_packet; frame < ring_buffer.NumFrames(); ++frame) {
+    for (auto chan = 1; chan < num_channels; ++chan) {
+      EXPECT_EQ(ring_buffer.SampleAt(frame, chan), ring_buffer.SampleAt(frame, 0));
+    }
+    if (ring_buffer.SampleAt(frame, 0) != kSampleVal) {
+      first_ramping_frame = frame;
+      break;
+    }
+  }
+
+  // Starting at first_ramping_frame, values should successively ramp down (decrease) to 0. This
+  // ramp duration is unknown to clients, although currently it is 5 msec; we use insider info.
+  for (auto frame = first_ramping_frame; frame < ring_buffer.NumFrames(); ++frame) {
+    for (auto chan = 0; chan < num_channels; ++chan) {
+      // this sample should be less than this channel's in the previous frame
+      EXPECT_LT(ring_buffer.SampleAt(frame, chan), ring_buffer.SampleAt(frame - 1, chan))
+          << "Frame values should monotonically ramp down";
+    }
+    if (ring_buffer.SampleAt(frame, 0) == 0) {
+      first_zero_frame = frame;
+      break;
+    }
+  }
+  // From last constant-value frame to first zero-value frame, should be kPauseRampdownFrames.
+  EXPECT_EQ(first_zero_frame - (first_ramping_frame - 1), kPauseRampdownFrames)
+      << "Ramp-down duration was unexpected";
+
+  for (auto frame = first_zero_frame; frame < ring_buffer.NumFrames(); ++frame) {
+    for (auto chan = 0; chan < num_channels; ++chan) {
+      // Every remaining sample should be zero.
+      EXPECT_EQ(ring_buffer.SampleAt(frame, chan), 0);
+    }
+  }
+}
+
 TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   const auto kPacketFrames = PacketsToFrames(1, kOutputFrameRate);

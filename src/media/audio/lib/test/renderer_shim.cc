@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
+#include <utility>
 
 #include "lib/zx/time.h"
 #include "src/media/audio/lib/clock/utils.h"
@@ -112,6 +113,27 @@ zx::time RendererShimImpl::PlaySynchronized(
       ReferenceTimeFromMonotonicTime(output_device->NextSynchronizedTimestamp(min_start_time));
   Play(fixture, reference_time, media_time);
   return reference_time;
+}
+
+std::pair<int64_t, int64_t> RendererShimImpl::Pause(TestFixture* fixture) {
+  zx_time_t ref_clock_now;
+  auto status = reference_clock_.read(&ref_clock_now);
+  EXPECT_EQ(status, ZX_OK);
+
+  int64_t pause_ref_time = -1;
+  int64_t pause_media_time = -1;
+
+  fidl_->Pause(fixture->AddCallback("Pause", [ref_clock_now, &pause_ref_time, &pause_media_time](
+                                                 int64_t reference_time, int64_t media_time) {
+    EXPECT_GT(reference_time, ref_clock_now);
+
+    pause_ref_time = reference_time;
+    pause_media_time = media_time;
+  }));
+  fixture->ExpectCallback();
+
+  // Now do something with these clock values.
+  return std::make_pair(pause_ref_time, pause_media_time);
 }
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
