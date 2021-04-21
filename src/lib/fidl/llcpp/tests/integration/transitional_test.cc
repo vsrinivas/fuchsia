@@ -16,9 +16,10 @@ namespace test = ::llcpptest_transitional_test;
 
 namespace {
 
-class Server : public fidl::WireInterface<test::TransitionMethods> {
+class Server : public fidl::WireServer<test::TransitionMethods> {
  public:
-  void ImplementedMethod(ImplementedMethodCompleter::Sync& txn) override {
+  void ImplementedMethod(ImplementedMethodRequestView request,
+                         ImplementedMethodCompleter::Sync& txn) override {
     // Reply call to maintain an open connection.
     txn.Reply(fidl::StringView("test reply"));
   }

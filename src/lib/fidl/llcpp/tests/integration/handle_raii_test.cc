@@ -26,31 +26,35 @@ namespace test = ::llcpptest_handleraii_test;
 // All the tests in this file check that when a result is freed, all the handles inside the result
 // are closed.
 
-class HandleCloseProviderServer : public fidl::WireInterface<test::HandleProvider> {
+class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> {
  public:
-  void GetHandle(GetHandleCompleter::Sync& completer) override {
+  void GetHandle(GetHandleRequestView request, GetHandleCompleter::Sync& completer) override {
     zx::event e;
     zx::event::create(0, &e);
     completer.Reply(std::move(e));
   }
-  void GetHandleStruct(GetHandleStructCompleter::Sync& completer) override {
+  void GetHandleStruct(GetHandleStructRequestView request,
+                       GetHandleStructCompleter::Sync& completer) override {
     test::wire::HandleStruct s;
     zx::event::create(0, &s.h);
     completer.Reply(std::move(s));
   }
-  void GetHandleStructStruct(GetHandleStructStructCompleter::Sync& completer) override {
+  void GetHandleStructStruct(GetHandleStructStructRequestView request,
+                             GetHandleStructStructCompleter::Sync& completer) override {
     test::wire::HandleStructStruct s;
     zx::event::create(0, &s.s.h);
     completer.Reply(std::move(s));
   }
-  void GetMultiFieldStruct(GetMultiFieldStructCompleter::Sync& completer) override {
+  void GetMultiFieldStruct(GetMultiFieldStructRequestView request,
+                           GetMultiFieldStructCompleter::Sync& completer) override {
     test::wire::MultiFieldStruct s;
     zx::event::create(0, &s.h1);
     zx::event::create(0, &s.s.h);
     zx::event::create(0, &s.h2);
     completer.Reply(std::move(s));
   }
-  void GetMultiArgs(GetMultiArgsCompleter::Sync& completer) override {
+  void GetMultiArgs(GetMultiArgsRequestView request,
+                    GetMultiArgsCompleter::Sync& completer) override {
     zx::event h1;
     zx::event::create(0, &h1);
     test::wire::HandleStruct s;
@@ -59,9 +63,10 @@ class HandleCloseProviderServer : public fidl::WireInterface<test::HandleProvide
     zx::event::create(0, &h2);
     completer.Reply(std::move(h1), std::move(s), std::move(h2));
   }
-  void GetVectorStruct(uint32_t count, GetVectorStructCompleter::Sync& completer) override {
+  void GetVectorStruct(GetVectorStructRequestView request,
+                       GetVectorStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    fidl::VectorView<test::wire::HandleStruct> v(allocator, count);
+    fidl::VectorView<test::wire::HandleStruct> v(allocator, request->count);
     for (auto& s : v) {
       zx::event::create(0, &s.h);
     }
@@ -69,73 +74,76 @@ class HandleCloseProviderServer : public fidl::WireInterface<test::HandleProvide
     s.v = std::move(v);
     completer.Reply(std::move(s));
   }
-  void GetArrayStruct(GetArrayStructCompleter::Sync& completer) override {
+  void GetArrayStruct(GetArrayStructRequestView request,
+                      GetArrayStructCompleter::Sync& completer) override {
     test::wire::ArrayStruct s;
     for (size_t i = 0; i < s.a.size(); ++i) {
       zx::event::create(0, &s.a[i].h);
     }
     completer.Reply(std::move(s));
   }
-  void GetHandleUnion(int32_t field, GetHandleUnionCompleter::Sync& completer) override {
+  void GetHandleUnion(GetHandleUnionRequestView request,
+                      GetHandleUnionCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
     test::wire::HandleUnion u;
-    if (field == 1) {
+    if (request->field == 1) {
       u.set_h1(allocator);
       zx::event::create(0, &u.mutable_h1());
-    } else if (field == 2) {
+    } else if (request->field == 2) {
       u.set_h2(allocator);
       zx::event::create(0, &u.mutable_h2().h);
     }
     completer.Reply(std::move(u));
   }
-  void GetHandleUnionStruct(int32_t field,
+  void GetHandleUnionStruct(GetHandleUnionStructRequestView request,
                             GetHandleUnionStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
     test::wire::HandleUnionStruct u;
-    if (field == 1) {
+    if (request->field == 1) {
       zx::event event;
       zx::event::create(0, &event);
       u.u.set_h1(allocator, std::move(event));
-    } else if (field == 2) {
+    } else if (request->field == 2) {
       u.u.set_h2(allocator);
       zx::event::create(0, &u.u.mutable_h2().h);
     }
     completer.Reply(std::move(u));
   }
-  void GetHandleTable(uint32_t fields, GetHandleTableCompleter::Sync& completer) override {
+  void GetHandleTable(GetHandleTableRequestView request,
+                      GetHandleTableCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
     test::wire::HandleTable t(allocator);
-    if ((fields & 1) != 0) {
+    if ((request->fields & 1) != 0) {
       zx::event event;
       zx::event::create(0, &event);
       t.set_h1(allocator, std::move(event));
     }
-    if ((fields & 2) != 0) {
+    if ((request->fields & 2) != 0) {
       t.set_h2(allocator);
       zx::event::create(0, &t.h2().h);
     }
     completer.Reply(std::move(t));
   }
-  void GetHandleTableStruct(uint32_t fields,
+  void GetHandleTableStruct(GetHandleTableStructRequestView request,
                             GetHandleTableStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
     test::wire::HandleTableStruct reply;
     reply.t.Allocate(allocator);
-    if ((fields & 1) != 0) {
+    if ((request->fields & 1) != 0) {
       zx::event event;
       zx::event::create(0, &event);
       reply.t.set_h1(allocator, std::move(event));
     }
-    if ((fields & 2) != 0) {
+    if ((request->fields & 2) != 0) {
       reply.t.set_h2(allocator);
       zx::event::create(0, &reply.t.h2().h);
     }
     completer.Reply(std::move(reply));
   }
-  void GetOptionalHandleStruct(bool defined,
+  void GetOptionalHandleStruct(GetOptionalHandleStructRequestView request,
                                GetOptionalHandleStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    if (defined) {
+    if (request->defined) {
       fidl::ObjectView<test::wire::HandleStruct> s(allocator);
       zx::event::create(0, &s->h);
       completer.Reply(s);
@@ -143,31 +151,31 @@ class HandleCloseProviderServer : public fidl::WireInterface<test::HandleProvide
       completer.Reply(nullptr);
     }
   }
-  void GetOptionalHandleUnion(int32_t field,
+  void GetOptionalHandleUnion(GetOptionalHandleUnionRequestView request,
                               GetOptionalHandleUnionCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
     test::wire::HandleUnion u;
-    if (field == 1) {
+    if (request->field == 1) {
       zx::event event;
       zx::event::create(0, &event);
       u.set_h1(allocator, std::move(event));
-    } else if (field == 2) {
+    } else if (request->field == 2) {
       u.set_h2(allocator);
       zx::event::create(0, &u.mutable_h2().h);
     }
     completer.Reply(std::move(u));
   }
   void GetOptionalHandleUnionStruct(
-      bool defined, int32_t field,
+      GetOptionalHandleUnionStructRequestView request,
       GetOptionalHandleUnionStructCompleter::Sync& completer) override {
-    if (defined) {
+    if (request->defined) {
       fidl::FidlAllocator allocator;
       fidl::ObjectView<test::wire::HandleUnionStruct> u(allocator);
-      if (field == 1) {
+      if (request->field == 1) {
         zx::event event;
         zx::event::create(0, &event);
         u->u.set_h1(allocator, std::move(event));
-      } else if (field == 2) {
+      } else if (request->field == 2) {
         u->u.set_h2(allocator);
         zx::event::create(0, &u->u.mutable_h2().h);
       }
@@ -177,18 +185,18 @@ class HandleCloseProviderServer : public fidl::WireInterface<test::HandleProvide
     }
   }
   void GetOptionalHandleTableStruct(
-      bool defined, uint32_t fields,
+      GetOptionalHandleTableStructRequestView request,
       GetOptionalHandleTableStructCompleter::Sync& completer) override {
-    if (defined) {
+    if (request->defined) {
       fidl::FidlAllocator allocator;
       fidl::ObjectView<test::wire::HandleTableStruct> reply(allocator);
       reply->t.Allocate(allocator);
-      if ((fields & 1) != 0) {
+      if ((request->fields & 1) != 0) {
         fidl::ObjectView<zx::event> e(allocator);
         zx::event::create(0, e.get());
         reply->t.set_h1(e);
       }
-      if ((fields & 2) != 0) {
+      if ((request->fields & 2) != 0) {
         fidl::ObjectView<test::wire::HandleStruct> s(allocator);
         zx::event::create(0, &s->h);
         reply->t.set_h2(s);
@@ -199,10 +207,11 @@ class HandleCloseProviderServer : public fidl::WireInterface<test::HandleProvide
     }
   }
   void GetHandleStructOptionalStruct(
-      bool defined, GetHandleStructOptionalStructCompleter::Sync& completer) override {
+      GetHandleStructOptionalStructRequestView request,
+      GetHandleStructOptionalStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
     test::wire::HandleStructOptionalStruct reply;
-    if (defined) {
+    if (request->defined) {
       fidl::ObjectView<test::wire::HandleStruct> s(allocator);
       zx::event::create(0, &s->h);
       reply.s = s;
@@ -210,16 +219,16 @@ class HandleCloseProviderServer : public fidl::WireInterface<test::HandleProvide
     completer.Reply(std::move(reply));
   }
   void GetHandleUnionOptionalStruct(
-      bool defined, int32_t field,
+      GetHandleUnionOptionalStructRequestView request,
       GetHandleUnionOptionalStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
     test::wire::HandleUnionOptionalStruct reply;
-    if (defined) {
-      if (field == 1) {
+    if (request->defined) {
+      if (request->field == 1) {
         zx::event event;
         zx::event::create(0, &event);
         reply.u.set_h1(allocator, std::move(event));
-      } else if (field == 2) {
+      } else if (request->field == 2) {
         fidl::ObjectView<test::wire::HandleStruct> s(allocator);
         reply.u.set_h2(allocator);
         zx::event::create(0, &reply.u.mutable_h2().h);
@@ -227,89 +236,92 @@ class HandleCloseProviderServer : public fidl::WireInterface<test::HandleProvide
     }
     completer.Reply(std::move(reply));
   }
-  void GetVectorOfHandle(uint32_t count, GetVectorOfHandleCompleter::Sync& completer) override {
+  void GetVectorOfHandle(GetVectorOfHandleRequestView request,
+                         GetVectorOfHandleCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    fidl::VectorView<zx::event> v(allocator, count);
+    fidl::VectorView<zx::event> v(allocator, request->count);
     for (auto& item : v) {
       zx::event::create(0, &item);
     }
     completer.Reply(std::move(v));
   }
-  void GetVectorOfVectorOfHandle(uint32_t count1, uint32_t count2,
+  void GetVectorOfVectorOfHandle(GetVectorOfVectorOfHandleRequestView request,
                                  GetVectorOfVectorOfHandleCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    fidl::VectorView<fidl::VectorView<zx::event>> v(allocator, count1);
-    for (uint32_t i1 = 0; i1 < count1; ++i1) {
-      v[i1].Allocate(allocator, count2);
-      for (uint32_t i2 = 0; i2 < count2; ++i2) {
+    fidl::VectorView<fidl::VectorView<zx::event>> v(allocator, request->count1);
+    for (uint32_t i1 = 0; i1 < request->count1; ++i1) {
+      v[i1].Allocate(allocator, request->count2);
+      for (uint32_t i2 = 0; i2 < request->count2; ++i2) {
         zx::event::create(0, &v[i1][i2]);
       }
     }
     completer.Reply(std::move(v));
   }
   void GetVectorOfVectorOfVectorOfHandle(
-      uint32_t count1, uint32_t count2, uint32_t count3,
+      GetVectorOfVectorOfVectorOfHandleRequestView request,
       GetVectorOfVectorOfVectorOfHandleCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    fidl::VectorView<fidl::VectorView<fidl::VectorView<zx::event>>> v(allocator, count1);
-    for (uint32_t i1 = 0; i1 < count1; ++i1) {
-      v[i1].Allocate(allocator, count2);
-      for (uint32_t i2 = 0; i2 < count2; ++i2) {
-        v[i1][i2].Allocate(allocator, count3);
-        for (uint32_t i3 = 0; i3 < count3; ++i3) {
+    fidl::VectorView<fidl::VectorView<fidl::VectorView<zx::event>>> v(allocator, request->count1);
+    for (uint32_t i1 = 0; i1 < request->count1; ++i1) {
+      v[i1].Allocate(allocator, request->count2);
+      for (uint32_t i2 = 0; i2 < request->count2; ++i2) {
+        v[i1][i2].Allocate(allocator, request->count3);
+        for (uint32_t i3 = 0; i3 < request->count3; ++i3) {
           zx::event::create(0, &v[i1][i2][i3]);
         }
       }
     }
     completer.Reply(std::move(v));
   }
-  void GetVectorOfHandleStruct(uint32_t count,
+  void GetVectorOfHandleStruct(GetVectorOfHandleStructRequestView request,
                                GetVectorOfHandleStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    fidl::VectorView<test::wire::HandleStruct> v(allocator, count);
+    fidl::VectorView<test::wire::HandleStruct> v(allocator, request->count);
     for (auto& item : v) {
       zx::event::create(0, &item.h);
     }
     completer.Reply(std::move(v));
   }
   void GetVectorOfVectorOfHandleStruct(
-      uint32_t count1, uint32_t count2,
+      GetVectorOfVectorOfHandleStructRequestView request,
       GetVectorOfVectorOfHandleStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    fidl::VectorView<fidl::VectorView<test::wire::HandleStruct>> v(allocator, count1);
-    for (uint32_t i1 = 0; i1 < count1; ++i1) {
-      v[i1].Allocate(allocator, count2);
-      for (uint32_t i2 = 0; i2 < count2; ++i2) {
+    fidl::VectorView<fidl::VectorView<test::wire::HandleStruct>> v(allocator, request->count1);
+    for (uint32_t i1 = 0; i1 < request->count1; ++i1) {
+      v[i1].Allocate(allocator, request->count2);
+      for (uint32_t i2 = 0; i2 < request->count2; ++i2) {
         zx::event::create(0, &v[i1][i2].h);
       }
     }
     completer.Reply(std::move(v));
   }
   void GetVectorOfVectorOfVectorOfHandleStruct(
-      uint32_t count1, uint32_t count2, uint32_t count3,
+      GetVectorOfVectorOfVectorOfHandleStructRequestView request,
       GetVectorOfVectorOfVectorOfHandleStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    fidl::VectorView<fidl::VectorView<fidl::VectorView<test::wire::HandleStruct>>> v(allocator,
-                                                                                     count1);
-    for (uint32_t i1 = 0; i1 < count1; ++i1) {
-      v[i1].Allocate(allocator, count2);
-      for (uint32_t i2 = 0; i2 < count2; ++i2) {
-        v[i1][i2].Allocate(allocator, count3);
-        for (uint32_t i3 = 0; i3 < count3; ++i3) {
+    fidl::VectorView<fidl::VectorView<fidl::VectorView<test::wire::HandleStruct>>> v(
+        allocator, request->count1);
+    for (uint32_t i1 = 0; i1 < request->count1; ++i1) {
+      v[i1].Allocate(allocator, request->count2);
+      for (uint32_t i2 = 0; i2 < request->count2; ++i2) {
+        v[i1][i2].Allocate(allocator, request->count3);
+        for (uint32_t i3 = 0; i3 < request->count3; ++i3) {
           zx::event::create(0, &v[i1][i2][i3].h);
         }
       }
     }
     completer.Reply(std::move(v));
   }
-  void GetArrayOfHandle(GetArrayOfHandleCompleter::Sync& completer) override {
+  void GetArrayOfHandle(GetArrayOfHandleRequestView request,
+                        GetArrayOfHandleCompleter::Sync& completer) override {
     fidl::Array<zx::event, 2> a;
     for (auto& item : a) {
       zx::event::create(0, &item);
     }
     completer.Reply(std::move(a));
   }
-  void GetArrayOfArrayOfHandle(GetArrayOfArrayOfHandleCompleter::Sync& completer) override {
+  void GetArrayOfArrayOfHandle(GetArrayOfArrayOfHandleRequestView request,
+                               GetArrayOfArrayOfHandleCompleter::Sync& completer) override {
     fidl::Array<fidl::Array<zx::event, 2>, 3> a;
     for (auto& item1 : a) {
       for (auto& item2 : item1) {
@@ -319,6 +331,7 @@ class HandleCloseProviderServer : public fidl::WireInterface<test::HandleProvide
     completer.Reply(std::move(a));
   }
   void GetArrayOfArrayOfArrayOfHandle(
+      GetArrayOfArrayOfArrayOfHandleRequestView request,
       GetArrayOfArrayOfArrayOfHandleCompleter::Sync& completer) override {
     fidl::Array<fidl::Array<fidl::Array<zx::event, 2>, 3>, 4> a;
     for (auto& item1 : a) {
@@ -330,7 +343,8 @@ class HandleCloseProviderServer : public fidl::WireInterface<test::HandleProvide
     }
     completer.Reply(std::move(a));
   }
-  void GetArrayOfHandleStruct(GetArrayOfHandleStructCompleter::Sync& completer) override {
+  void GetArrayOfHandleStruct(GetArrayOfHandleStructRequestView request,
+                              GetArrayOfHandleStructCompleter::Sync& completer) override {
     fidl::Array<test::wire::HandleStruct, 2> a;
     for (auto& item : a) {
       zx::event::create(0, &item.h);
@@ -338,6 +352,7 @@ class HandleCloseProviderServer : public fidl::WireInterface<test::HandleProvide
     completer.Reply(std::move(a));
   }
   void GetArrayOfArrayOfHandleStruct(
+      GetArrayOfArrayOfHandleStructRequestView request,
       GetArrayOfArrayOfHandleStructCompleter::Sync& completer) override {
     fidl::Array<fidl::Array<test::wire::HandleStruct, 2>, 3> a;
     for (auto& item1 : a) {
@@ -348,6 +363,7 @@ class HandleCloseProviderServer : public fidl::WireInterface<test::HandleProvide
     completer.Reply(std::move(a));
   }
   void GetArrayOfArrayOfArrayOfHandleStruct(
+      GetArrayOfArrayOfArrayOfHandleStructRequestView request,
       GetArrayOfArrayOfArrayOfHandleStructCompleter::Sync& completer) override {
     fidl::Array<fidl::Array<fidl::Array<test::wire::HandleStruct, 2>, 3>, 4> a;
     for (auto& item1 : a) {
@@ -359,20 +375,20 @@ class HandleCloseProviderServer : public fidl::WireInterface<test::HandleProvide
     }
     completer.Reply(std::move(a));
   }
-  void GetMixed1(uint32_t count, GetMixed1Completer::Sync& completer) override {
+  void GetMixed1(GetMixed1RequestView request, GetMixed1Completer::Sync& completer) override {
     fidl::FidlAllocator allocator;
     fidl::Array<fidl::VectorView<zx::event>, 2> a;
     for (auto& item1 : a) {
-      item1.Allocate(allocator, count);
+      item1.Allocate(allocator, request->count);
       for (auto& item2 : item1) {
         zx::event::create(0, &item2);
       }
     }
     completer.Reply(std::move(a));
   }
-  void GetMixed2(uint32_t count, GetMixed2Completer::Sync& completer) override {
+  void GetMixed2(GetMixed2RequestView request, GetMixed2Completer::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    fidl::VectorView<fidl::Array<zx::event, 2>> v(allocator, count);
+    fidl::VectorView<fidl::Array<zx::event, 2>> v(allocator, request->count);
     for (auto& item1 : v) {
       for (auto& item2 : item1) {
         zx::event::create(0, &item2);

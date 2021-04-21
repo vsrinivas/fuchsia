@@ -65,7 +65,7 @@ struct MethodEntry {
 // Binds an implementation of some FIDL server protocol |interface| and
 // |server_end| to the |dispatcher|.
 //
-// |interface| should be a pointer to some |fidl::WireInterface<Protocol>| class.
+// |interface| should be a pointer to some |fidl::WireServer<Protocol>| class.
 //
 // |IncomingMessageDispatcher::dispatch_message| looks up an incoming FIDL
 // message in the associated protocol and possibly invokes a handler on

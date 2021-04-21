@@ -18,17 +18,17 @@ namespace {
 
 using ::fidl_test_coding_fuchsia::Example;
 
-class Server : public fidl::WireInterface<Example> {
+class Server : public fidl::WireServer<Example> {
  public:
   explicit Server(const char* data, size_t size) : data_(data), size_(size) {}
 
-  void TwoWay(fidl::StringView in, TwoWayCompleter::Sync& completer) override {
-    ASSERT_EQ(size_, in.size());
-    EXPECT_EQ(0, strncmp(data_, in.data(), size_));
-    completer.Reply(std::move(in));
+  void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
+    ASSERT_EQ(size_, request->in.size());
+    EXPECT_EQ(0, strncmp(data_, request->in.data(), size_));
+    completer.Reply(request->in);
   }
 
-  void OneWay(fidl::StringView, OneWayCompleter::Sync&) override {}
+  void OneWay(OneWayRequestView, OneWayCompleter::Sync&) override {}
 
  private:
   const char* data_;
@@ -180,18 +180,18 @@ TEST(GenAPITestCase, Epitaph) {
 }
 
 TEST(GenAPITestCase, UnbindInfoEncodeError) {
-  class ErrorServer : public fidl::WireInterface<Example> {
+  class ErrorServer : public fidl::WireServer<Example> {
    public:
     explicit ErrorServer() {}
 
-    void TwoWay(fidl::StringView in, TwoWayCompleter::Sync& completer) override {
+    void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
       // Fail to send the reply due to an encoding error (the buffer is too small).
       fidl::BufferSpan empty;
-      EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, completer.Reply(empty, std::move(in)).status());
+      EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, completer.Reply(empty, request->in).status());
       completer.Close(ZX_OK);  // This should not panic.
     }
 
-    void OneWay(fidl::StringView, OneWayCompleter::Sync&) override {}
+    void OneWay(OneWayRequestView, OneWayCompleter::Sync&) override {}
   };
 
   auto endpoints = fidl::CreateEndpoints<Example>();
@@ -267,15 +267,15 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
 // After a client is unbound, no more calls can be made on that client.
 TEST(GenAPITestCase, UnbindPreventsSubsequentCalls) {
   // Use a server to count the number of |OneWay| calls.
-  class Server : public fidl::WireInterface<Example> {
+  class Server : public fidl::WireServer<Example> {
    public:
     Server() = default;
 
-    void TwoWay(fidl::StringView in, TwoWayCompleter::Sync& completer) override {
+    void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
       ZX_PANIC("Not used in this test");
     }
 
-    void OneWay(fidl::StringView, OneWayCompleter::Sync&) override { num_one_way_.fetch_add(1); }
+    void OneWay(OneWayRequestView, OneWayCompleter::Sync&) override { num_one_way_.fetch_add(1); }
 
     int num_one_way() const { return num_one_way_.load(); }
 

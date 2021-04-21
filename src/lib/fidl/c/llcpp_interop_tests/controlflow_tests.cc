@@ -34,16 +34,20 @@ namespace {
 
 namespace gen = ::fidl_test_llcpp_controlflow;
 
-class Server : public fidl::WireInterface<gen::ControlFlow> {
+class Server : public fidl::WireServer<gen::ControlFlow> {
  public:
-  void Shutdown(ShutdownCompleter::Sync& txn) final { txn.Close(ZX_OK); }
+  void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& txn) final {
+    txn.Close(ZX_OK);
+  }
 
   void NoReplyMustSendAccessDeniedEpitaph(
+      NoReplyMustSendAccessDeniedEpitaphRequestView request,
       NoReplyMustSendAccessDeniedEpitaphCompleter::Sync& txn) final {
     txn.Close(ZX_ERR_ACCESS_DENIED);
   }
 
-  void MustSendAccessDeniedEpitaph(MustSendAccessDeniedEpitaphCompleter::Sync& txn) final {
+  void MustSendAccessDeniedEpitaph(MustSendAccessDeniedEpitaphRequestView request,
+                                   MustSendAccessDeniedEpitaphCompleter::Sync& txn) final {
     txn.Close(ZX_ERR_ACCESS_DENIED);
   }
 };

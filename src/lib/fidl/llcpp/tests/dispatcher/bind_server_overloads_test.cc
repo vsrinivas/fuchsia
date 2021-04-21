@@ -15,7 +15,7 @@ namespace {
 
 using ::fidl_test_coding_fuchsia::Simple;
 
-class Server : public fidl::WireInterface<Simple> {
+class Server : public fidl::WireServer<Simple> {
  public:
   explicit Server(sync_completion_t* destroyed) : destroyed_(destroyed) {}
   Server(Server&& other) = delete;
@@ -25,8 +25,12 @@ class Server : public fidl::WireInterface<Simple> {
 
   ~Server() override { sync_completion_signal(destroyed_); }
 
-  void Echo(int32_t request, EchoCompleter::Sync& completer) override { ZX_PANIC("Never used"); }
-  void Close(CloseCompleter::Sync& completer) override { ZX_PANIC("Never used"); }
+  void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+    ZX_PANIC("Never used");
+  }
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+    ZX_PANIC("Never used");
+  }
 
  private:
   sync_completion_t* destroyed_;

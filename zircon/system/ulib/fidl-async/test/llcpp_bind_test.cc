@@ -12,7 +12,7 @@
 
 namespace {
 
-class Server : public fidl::WireInterface<::fidl_test_simple::Simple> {
+class Server : public fidl::WireServer<::fidl_test_simple::Simple> {
  public:
   explicit Server(sync_completion_t* destroyed) : destroyed_(destroyed) {}
   Server(Server&& other) = delete;
@@ -22,8 +22,12 @@ class Server : public fidl::WireInterface<::fidl_test_simple::Simple> {
 
   ~Server() override { sync_completion_signal(destroyed_); }
 
-  void Echo(int32_t request, EchoCompleter::Sync& completer) override { completer.Reply(request); }
-  void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_OK); }
+  void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+    completer.Reply(request->request);
+  }
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+    completer.Close(ZX_OK);
+  }
 
  private:
   sync_completion_t* destroyed_;
@@ -125,7 +129,7 @@ class PlaceholderBase2 {
 };
 
 class MultiInheritanceServer : public PlaceholderBase1,
-                               public fidl::WireInterface<::fidl_test_simple::Simple>,
+                               public fidl::WireServer<::fidl_test_simple::Simple>,
                                public PlaceholderBase2 {
  public:
   explicit MultiInheritanceServer(sync_completion_t* destroyed) : destroyed_(destroyed) {}
@@ -136,8 +140,12 @@ class MultiInheritanceServer : public PlaceholderBase1,
 
   ~MultiInheritanceServer() override { sync_completion_signal(destroyed_); }
 
-  void Echo(int32_t request, EchoCompleter::Sync& completer) override { completer.Reply(request); }
-  void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_OK); }
+  void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+    completer.Reply(request->request);
+  }
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+    completer.Close(ZX_OK);
+  }
 
   void Foo() override {}
   void Bar() override {}

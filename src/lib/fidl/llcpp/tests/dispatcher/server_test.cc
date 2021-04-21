@@ -16,7 +16,7 @@
 #include <zxtest/zxtest.h>
 
 //
-// Mock FIDL protocol and its |WireInterface| definition.
+// Mock FIDL protocol and its |WireServer| definition.
 //
 
 namespace fidl_test {
@@ -51,11 +51,11 @@ class ::fidl::WireEventSender<fidl_test::TestProtocol> {
 };
 
 template <>
-class ::fidl::WireInterface<fidl_test::TestProtocol>
+class ::fidl::WireServer<fidl_test::TestProtocol>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
-  WireInterface() = default;
-  ~WireInterface() override = default;
+  WireServer() = default;
+  ~WireServer() override = default;
 
   using _EnclosingProtocol = fidl_test::TestProtocol;
 
@@ -68,7 +68,7 @@ class ::fidl::WireInterface<fidl_test::TestProtocol>
 
 namespace {
 
-class TestServer : public fidl::WireInterface<fidl_test::TestProtocol> {};
+class TestServer : public fidl::WireServer<fidl_test::TestProtocol> {};
 
 //
 // Tests covering the error behavior of |BindServer|.

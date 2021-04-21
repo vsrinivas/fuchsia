@@ -23,7 +23,7 @@ using ::fidl_test_coding_fuchsia::Simple;
 constexpr uint32_t kNumberOfAsyncs = 10;
 constexpr int32_t kExpectedReply = 7;
 
-class Server : public fidl::WireInterface<Simple> {
+class Server : public fidl::WireServer<Simple> {
  public:
   explicit Server(sync_completion_t* destroyed) : destroyed_(destroyed) {}
   Server(Server&& other) = delete;
@@ -33,18 +33,24 @@ class Server : public fidl::WireInterface<Simple> {
 
   ~Server() override { sync_completion_signal(destroyed_); }
 
-  void Echo(int32_t request, EchoCompleter::Sync& completer) override { completer.Reply(request); }
-  void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_OK); }
+  void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+    completer.Reply(request->request);
+  }
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+    completer.Close(ZX_OK);
+  }
 
  private:
   sync_completion_t* destroyed_;
 };
 
 TEST(BindServerTestCase, SyncReply) {
-  struct SyncServer : fidl::WireInterface<Simple> {
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
-      completer.Reply(request);
+  struct SyncServer : fidl::WireServer<Simple> {
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      ADD_FAILURE("Must not call close");
+    }
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+      completer.Reply(request->request);
     }
   };
 
@@ -77,13 +83,16 @@ TEST(BindServerTestCase, SyncReply) {
 }
 
 TEST(BindServerTestCase, AsyncReply) {
-  struct AsyncServer : fidl::WireInterface<Simple> {
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+  struct AsyncServer : fidl::WireServer<Simple> {
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      ADD_FAILURE("Must not call close");
+    }
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-      async::PostTask(worker_->dispatcher(), [request, completer = completer.ToAsync()]() mutable {
-        completer.Reply(request);
-      });
+      async::PostTask(worker_->dispatcher(),
+                      [request = request->request, completer = completer.ToAsync()]() mutable {
+                        completer.Reply(request);
+                      });
       ASSERT_OK(worker_->StartThread());
     }
     std::unique_ptr<async::Loop> worker_;
@@ -118,21 +127,23 @@ TEST(BindServerTestCase, AsyncReply) {
 }
 
 TEST(BindServerTestCase, MultipleAsyncReplies) {
-  struct AsyncDelayedServer : fidl::WireInterface<Simple> {
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+  struct AsyncDelayedServer : fidl::WireServer<Simple> {
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      ADD_FAILURE("Must not call close");
+    }
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       auto worker = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-      async::PostTask(worker->dispatcher(),
-                      [request, completer = completer.ToAsync(), this]() mutable {
-                        static std::atomic<int> count;
-                        // Since we block until we get kNumberOfAsyncs concurrent requests
-                        // this can only pass if we allow concurrent async replies.
-                        if (++count == kNumberOfAsyncs) {
-                          sync_completion_signal(&done_);
-                        }
-                        sync_completion_wait(&done_, ZX_TIME_INFINITE);
-                        completer.Reply(request);
-                      });
+      async::PostTask(worker->dispatcher(), [request = request->request,
+                                             completer = completer.ToAsync(), this]() mutable {
+        static std::atomic<int> count;
+        // Since we block until we get kNumberOfAsyncs concurrent requests
+        // this can only pass if we allow concurrent async replies.
+        if (++count == kNumberOfAsyncs) {
+          sync_completion_signal(&done_);
+        }
+        sync_completion_wait(&done_, ZX_TIME_INFINITE);
+        completer.Reply(request);
+      });
       ASSERT_OK(worker->StartThread());
       loops_.push_back(std::move(worker));
     }
@@ -183,26 +194,28 @@ TEST(BindServerTestCase, MultipleAsyncReplies) {
 }
 
 TEST(BindServerTestCase, MultipleAsyncRepliesOnePeerClose) {
-  struct AsyncDelayedServer : fidl::WireInterface<Simple> {
+  struct AsyncDelayedServer : fidl::WireServer<Simple> {
     AsyncDelayedServer(std::vector<std::unique_ptr<async::Loop>>* loops) : loops_(loops) {}
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      ADD_FAILURE("Must not call close");
+    }
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       auto worker = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-      async::PostTask(worker->dispatcher(),
-                      [request, completer = completer.ToAsync(), this]() mutable {
-                        bool signal = false;
-                        static std::atomic<int> count;
-                        if (++count == kNumberOfAsyncs) {
-                          signal = true;
-                        }
-                        if (signal) {
-                          sync_completion_signal(&done_);
-                          completer.Close(ZX_OK);  // Peer close.
-                        } else {
-                          sync_completion_wait(&done_, ZX_TIME_INFINITE);
-                          completer.Reply(request);
-                        }
-                      });
+      async::PostTask(worker->dispatcher(), [request = request->request,
+                                             completer = completer.ToAsync(), this]() mutable {
+        bool signal = false;
+        static std::atomic<int> count;
+        if (++count == kNumberOfAsyncs) {
+          signal = true;
+        }
+        if (signal) {
+          sync_completion_signal(&done_);
+          completer.Close(ZX_OK);  // Peer close.
+        } else {
+          sync_completion_wait(&done_, ZX_TIME_INFINITE);
+          completer.Reply(request);
+        }
+      });
       ASSERT_OK(worker->StartThread());
       loops_->push_back(std::move(worker));
     }
@@ -284,21 +297,23 @@ TEST(BindServerTestCase, CallbackDestroyOnClientClose) {
 }
 
 TEST(BindServerTestCase, CallbackErrorClientTriggered) {
-  struct ErrorServer : fidl::WireInterface<Simple> {
+  struct ErrorServer : fidl::WireServer<Simple> {
     explicit ErrorServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       // Launches a thread so we can hold the transaction in progress.
       worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-      async::PostTask(worker_->dispatcher(),
-                      [request, completer = completer.ToAsync(), this]() mutable {
-                        sync_completion_signal(worker_start_);
-                        sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
-                        completer.Reply(request);
-                      });
+      async::PostTask(worker_->dispatcher(), [request = request->request,
+                                              completer = completer.ToAsync(), this]() mutable {
+        sync_completion_signal(worker_start_);
+        sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
+        completer.Reply(request);
+      });
       ASSERT_OK(worker_->StartThread());
     }
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      ADD_FAILURE("Must not call close");
+    }
     sync_completion_t* worker_start_;
     sync_completion_t* worker_done_;
     std::unique_ptr<async::Loop> worker_;
@@ -354,15 +369,17 @@ TEST(BindServerTestCase, CallbackErrorClientTriggered) {
 }
 
 TEST(BindServerTestCase, DestroyBindingWithPendingCancel) {
-  struct WorkingServer : fidl::WireInterface<Simple> {
+  struct WorkingServer : fidl::WireServer<Simple> {
     explicit WorkingServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       sync_completion_signal(worker_start_);
       sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
-      EXPECT_EQ(ZX_ERR_PEER_CLOSED, completer.Reply(request).status());
+      EXPECT_EQ(ZX_ERR_PEER_CLOSED, completer.Reply(request->request).status());
     }
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      ADD_FAILURE("Must not call close");
+    }
     sync_completion_t* worker_start_;
     sync_completion_t* worker_done_;
   };
@@ -418,21 +435,23 @@ TEST(BindServerTestCase, DestroyBindingWithPendingCancel) {
 }
 
 TEST(BindServerTestCase, CallbackErrorServerTriggered) {
-  struct ErrorServer : fidl::WireInterface<Simple> {
+  struct ErrorServer : fidl::WireServer<Simple> {
     explicit ErrorServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       // Launches a thread so we can hold the transaction in progress.
       worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-      async::PostTask(worker_->dispatcher(),
-                      [request, completer = completer.ToAsync(), this]() mutable {
-                        sync_completion_signal(worker_start_);
-                        sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
-                        completer.Reply(request);
-                      });
+      async::PostTask(worker_->dispatcher(), [request = request->request,
+                                              completer = completer.ToAsync(), this]() mutable {
+        sync_completion_signal(worker_start_);
+        sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
+        completer.Reply(request);
+      });
       ASSERT_OK(worker_->StartThread());
     }
-    void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_ERR_INTERNAL); }
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      completer.Close(ZX_ERR_INTERNAL);
+    }
     sync_completion_t* worker_start_;
     sync_completion_t* worker_done_;
     std::unique_ptr<async::Loop> worker_;
@@ -560,15 +579,17 @@ TEST(BindServerTestCase, ExplicitUnbind) {
 }
 
 TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
-  struct WorkingServer : fidl::WireInterface<Simple> {
+  struct WorkingServer : fidl::WireServer<Simple> {
     explicit WorkingServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       sync_completion_signal(worker_start_);
       sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
-      completer.Reply(request);
+      completer.Reply(request->request);
     }
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      ADD_FAILURE("Must not call close");
+    }
     sync_completion_t* worker_start_;
     sync_completion_t* worker_done_;
   };
@@ -621,13 +642,13 @@ TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
 // return |ZX_ERR_CANCELED| after the server has been unbound.
 TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
   using ::fidl_test_coding_fuchsia::Example;
-  class Server : public fidl::WireInterface<Example> {
+  class Server : public fidl::WireServer<Example> {
    public:
-    void TwoWay(fidl::StringView in, TwoWayCompleter::Sync& completer) override {
+    void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
       ADD_FAILURE("Not used in this test");
     }
 
-    void OneWay(fidl::StringView in, OneWayCompleter::Sync& completer) override {
+    void OneWay(OneWayRequestView request, OneWayCompleter::Sync& completer) override {
       ADD_FAILURE("Not used in this test");
     }
   };
@@ -705,10 +726,12 @@ TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
 }
 
 TEST(BindServerTestCase, ConcurrentSyncReply) {
-  struct ConcurrentSyncServer : fidl::WireInterface<Simple> {
+  struct ConcurrentSyncServer : fidl::WireServer<Simple> {
     ConcurrentSyncServer(int max_reqs) : max_reqs_(max_reqs) {}
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      ADD_FAILURE("Must not call close");
+    }
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       // Increment the request count. Yield to allow other threads to execute.
       auto i = ++req_cnt_;
       zx_nanosleep(0);
@@ -725,7 +748,7 @@ TEST(BindServerTestCase, ConcurrentSyncReply) {
       } else {
         sync_completion_signal(&on_max_reqs_);
       }
-      completer.Reply(request);
+      completer.Reply(request->request);
     }
     sync_completion_t on_max_reqs_;
     const int max_reqs_;
@@ -765,15 +788,15 @@ TEST(BindServerTestCase, ConcurrentSyncReply) {
 }
 
 TEST(BindServerTestCase, ConcurrentIdempotentClose) {
-  struct ConcurrentSyncServer : fidl::WireInterface<Simple> {
-    void Close(CloseCompleter::Sync& completer) override {
+  struct ConcurrentSyncServer : fidl::WireServer<Simple> {
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
       // Add the wait back to the dispatcher. Sleep to allow another thread in.
       completer.EnableNextDispatch();
       zx_nanosleep(0);
       // Close with ZX_OK.
       completer.Close(ZX_OK);
     }
-    void Echo(int32_t, EchoCompleter::Sync&) override { ADD_FAILURE("Must not call echo"); }
+    void Echo(EchoRequestView, EchoCompleter::Sync&) override { ADD_FAILURE("Must not call echo"); }
   };
 
   auto endpoints = fidl::CreateEndpoints<Simple>();
@@ -896,12 +919,14 @@ TEST(BindServerTestCase, ServerClose) {
 }
 
 TEST(BindServerTestCase, UnbindInfoChannelError) {
-  struct WorkingServer : fidl::WireInterface<Simple> {
+  struct WorkingServer : fidl::WireServer<Simple> {
     WorkingServer() = default;
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
-      EXPECT_EQ(ZX_ERR_ACCESS_DENIED, completer.Reply(request).status());
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+      EXPECT_EQ(ZX_ERR_ACCESS_DENIED, completer.Reply(request->request).status());
     }
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      ADD_FAILURE("Must not call close");
+    }
   };
 
   // Launches a new thread for the server so we can wait on the worker.
@@ -968,15 +993,17 @@ TEST(BindServerTestCase, UnbindInfoDispatcherError) {
 }
 
 TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
-  struct WorkingServer : fidl::WireInterface<Simple> {
+  struct WorkingServer : fidl::WireServer<Simple> {
     explicit WorkingServer(std::optional<EchoCompleter::Async>* async_completer,
                            sync_completion_t* ready)
         : async_completer_(async_completer), ready_(ready) {}
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       sync_completion_signal(ready_);
       *async_completer_ = completer.ToAsync();  // Releases ownership of the binding.
     }
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      ADD_FAILURE("Must not call close");
+    }
     std::optional<EchoCompleter::Async>* async_completer_;
     sync_completion_t* ready_;
   };
@@ -1034,7 +1061,7 @@ class PlaceholderBase2 {
 };
 
 class MultiInheritanceServer : public PlaceholderBase1,
-                               public fidl::WireInterface<Simple>,
+                               public fidl::WireServer<Simple>,
                                public PlaceholderBase2 {
  public:
   explicit MultiInheritanceServer(sync_completion_t* destroyed) : destroyed_(destroyed) {}
@@ -1045,8 +1072,12 @@ class MultiInheritanceServer : public PlaceholderBase1,
 
   ~MultiInheritanceServer() override { sync_completion_signal(destroyed_); }
 
-  void Echo(int32_t request, EchoCompleter::Sync& completer) override { completer.Reply(request); }
-  void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_OK); }
+  void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+    completer.Reply(request->request);
+  }
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+    completer.Close(ZX_OK);
+  }
 
   void Foo() override {}
   void Bar() override {}

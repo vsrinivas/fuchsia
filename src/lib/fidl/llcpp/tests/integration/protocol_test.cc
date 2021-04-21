@@ -34,19 +34,19 @@ uint32_t GetHandleCount(zx::unowned<T> h) {
 
 }  // namespace
 
-class ErrorServer : public fidl::WireInterface<test::ErrorMethods> {
+class ErrorServer : public fidl::WireServer<test::ErrorMethods> {
  public:
-  void NoArgsPrimitiveError(bool should_error,
+  void NoArgsPrimitiveError(NoArgsPrimitiveErrorRequestView request,
                             NoArgsPrimitiveErrorCompleter::Sync& completer) override {
-    if (should_error) {
+    if (request->should_error) {
       completer.ReplyError(kErrorStatus);
     } else {
       completer.ReplySuccess();
     }
   }
-  void ManyArgsCustomError(bool should_error,
+  void ManyArgsCustomError(ManyArgsCustomErrorRequestView request,
                            ManyArgsCustomErrorCompleter::Sync& completer) override {
-    if (should_error) {
+    if (request->should_error) {
       completer.ReplyError(test::wire::MyError::kReallyBadError);
     } else {
       completer.ReplySuccess(1, 2, 3);
@@ -119,12 +119,12 @@ TEST_F(ResultTest, OwnedSuccessManyArgs) {
   ASSERT_EQ(success.c, 3);
 }
 
-class FrobinatorImpl : public fidl::WireInterface<test::Frobinator> {
+class FrobinatorImpl : public fidl::WireServer<test::Frobinator> {
  public:
-  virtual void Frob(::fidl::StringView value, FrobCompleter::Sync& completer) override {}
+  virtual void Frob(FrobRequestView request, FrobCompleter::Sync& completer) override {}
 
-  virtual void Grob(::fidl::StringView value, GrobCompleter::Sync& completer) override {
-    completer.Reply(std::move(value));
+  virtual void Grob(GrobRequestView request, GrobCompleter::Sync& completer) override {
+    completer.Reply(request->value);
   }
 };
 
@@ -269,23 +269,25 @@ TEST(EventSenderTest, SendEvent) {
   ASSERT_TRUE(event_handler->received());
 }
 
-class HandleProviderServer : public fidl::WireInterface<test::HandleProvider> {
+class HandleProviderServer : public fidl::WireServer<test::HandleProvider> {
  public:
-  void GetHandle(GetHandleCompleter::Sync& completer) override {
+  void GetHandle(GetHandleRequestView request, GetHandleCompleter::Sync& completer) override {
     test::wire::HandleStruct s;
     zx::event::create(0, &s.h);
     completer.Reply(std::move(s));
   }
 
-  void GetHandleVector(uint32_t count, GetHandleVectorCompleter::Sync& completer) override {
-    std::vector<test::wire::HandleStruct> v(count);
+  void GetHandleVector(GetHandleVectorRequestView request,
+                       GetHandleVectorCompleter::Sync& completer) override {
+    std::vector<test::wire::HandleStruct> v(request->count);
     for (auto& s : v) {
       zx::event::create(0, &s.h);
     }
     completer.Reply(fidl::VectorView<test::wire::HandleStruct>::FromExternal(v));
   }
 
-  void GetHandleUnion(GetHandleUnionCompleter::Sync& completer) override {
+  void GetHandleUnion(GetHandleUnionRequestView request,
+                      GetHandleUnionCompleter::Sync& completer) override {
     zx::event h;
     zx::event::create(0, &h);
     test::wire::HandleUnionStruct s = {
@@ -367,7 +369,7 @@ TEST_F(HandleTest, HandleClosedOnResultOfDestructorAfterVectorMove) {
   }
 }
 
-class EmptyImpl : public fidl::WireInterface<test::Empty> {
+class EmptyImpl : public fidl::WireServer<test::Empty> {
  public:
 };
 

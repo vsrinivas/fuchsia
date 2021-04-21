@@ -190,9 +190,10 @@ class RewriteTransaction : public fidl::Transaction {
   zx::unowned_channel channel_;
 };
 
-class Server : fidl::WireInterface<test::ReceiveFlexibleEnvelope>, private async_wait_t {
+class Server : fidl::WireServer<test::ReceiveFlexibleEnvelope>, private async_wait_t {
  public:
-  void GetUnknownXUnionMoreBytes(GetUnknownXUnionMoreBytesCompleter::Sync& completer) override {
+  void GetUnknownXUnionMoreBytes(GetUnknownXUnionMoreBytesRequestView request,
+                                 GetUnknownXUnionMoreBytesCompleter::Sync& completer) override {
     test::wire::FlexibleXUnion xunion;
     fidl::Array<uint8_t, 30> array = {};
     xunion.set_want_more_than_30_bytes(
@@ -200,7 +201,8 @@ class Server : fidl::WireInterface<test::ReceiveFlexibleEnvelope>, private async
     completer.Reply(std::move(xunion));
   }
 
-  void GetUnknownXUnionMoreHandles(GetUnknownXUnionMoreHandlesCompleter::Sync& completer) override {
+  void GetUnknownXUnionMoreHandles(GetUnknownXUnionMoreHandlesRequestView request,
+                                   GetUnknownXUnionMoreHandlesCompleter::Sync& completer) override {
     test::wire::FlexibleXUnion xunion;
     fidl::Array<zx::handle, 4> array = {};
     xunion.set_want_more_than_4_handles(
@@ -208,14 +210,16 @@ class Server : fidl::WireInterface<test::ReceiveFlexibleEnvelope>, private async
     completer.Reply(std::move(xunion));
   }
 
-  void GetUnknownTableMoreBytes(GetUnknownTableMoreBytesCompleter::Sync& completer) override {
+  void GetUnknownTableMoreBytes(GetUnknownTableMoreBytesRequestView request,
+                                GetUnknownTableMoreBytesCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
     test::wire::FlexibleTable flexible_table(allocator);
     flexible_table.set_want_more_than_30_bytes_at_ordinal_3(allocator);
     completer.Reply(std::move(flexible_table));
   }
 
-  void GetUnknownTableMoreHandles(GetUnknownTableMoreHandlesCompleter::Sync& completer) override {
+  void GetUnknownTableMoreHandles(GetUnknownTableMoreHandlesRequestView request,
+                                  GetUnknownTableMoreHandlesCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
     test::wire::FlexibleTable flexible_table(allocator);
     flexible_table.set_want_more_than_4_handles_at_ordinal_4(allocator);

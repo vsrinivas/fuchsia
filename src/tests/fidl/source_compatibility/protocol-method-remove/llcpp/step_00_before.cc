@@ -8,10 +8,11 @@
 namespace fidl_test = fidl_test_protocolmethodremove;
 
 // [START contents]
-class Server final : public fidl::WireInterface<fidl_test::Example> {
+class Server final : public fidl::WireServer<fidl_test::Example> {
  public:
-  void ExistingMethod(ExistingMethodCompleter::Sync& completer) final {}
-  void OldMethod(OldMethodCompleter::Sync& completer) final {}
+  void ExistingMethod(ExistingMethodRequestView request,
+                      ExistingMethodCompleter::Sync& completer) final {}
+  void OldMethod(OldMethodRequestView request, OldMethodCompleter::Sync& completer) final {}
 };
 
 void client(fidl::Client<fidl_test::Example> client) {

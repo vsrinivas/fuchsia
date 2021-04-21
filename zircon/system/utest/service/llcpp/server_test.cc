@@ -25,7 +25,7 @@ namespace {
 using Echo = ::fidl_service_test::Echo;
 using EchoService = ::fidl_service_test::EchoService;
 
-class EchoCommon : public fidl::WireInterface<Echo> {
+class EchoCommon : public fidl::WireServer<Echo> {
  public:
   explicit EchoCommon(const char* prefix) : prefix_(prefix) {}
 
@@ -33,8 +33,8 @@ class EchoCommon : public fidl::WireInterface<Echo> {
     return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
-  void EchoString(fidl::StringView input, EchoStringCompleter::Sync& completer) override {
-    std::string reply = prefix_ + ": " + std::string(input.data(), input.size());
+  void EchoString(EchoStringRequestView request, EchoStringCompleter::Sync& completer) override {
+    std::string reply = prefix_ + ": " + std::string(request->value.data(), request->value.size());
     completer.Reply(fidl::StringView::FromExternal(reply));
   }
 
@@ -69,8 +69,8 @@ class ServerTest : public zxtest::Test {
  protected:
   ServerTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), outgoing_(loop_.dispatcher()) {}
 
-  llcpp::sys::ServiceHandler SetUpInstance(fidl::WireInterface<Echo>* foo_impl,
-                                           fidl::WireInterface<Echo>* bar_impl) {
+  llcpp::sys::ServiceHandler SetUpInstance(fidl::WireServer<Echo>* foo_impl,
+                                           fidl::WireServer<Echo>* bar_impl) {
     llcpp::sys::ServiceHandler handler;
     EchoService::Handler my_service(&handler);
 

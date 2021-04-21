@@ -25,9 +25,9 @@ using namespace fidl_test_compatibility;
 
 class EchoClientApp {
  public:
-  EchoClientApp(::fidl::StringView&& server_url)
+  EchoClientApp(::fidl::StringView server_url)
       : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
-        client_(fidl::WireSyncClient<Echo>(ConnectTo(std::move(server_url)))) {}
+        client_(fidl::WireSyncClient<Echo>(ConnectTo(server_url))) {}
 
   // Half the methods are testing the managed flavor; the other half are testing caller-allocate.
 
@@ -136,43 +136,42 @@ class EchoClientApp {
   fidl::WireSyncClient<Echo> client_;
 };
 
-class EchoConnection final : public fidl::WireInterface<Echo> {
+class EchoConnection final : public fidl::WireServer<Echo> {
  public:
   EchoConnection() = default;
 
-  void EchoStruct(wire::Struct value, ::fidl::StringView forward_to_server,
-                  EchoStructCompleter::Sync& completer) override {
-    if (forward_to_server.empty()) {
-      completer.Reply(std::move(value));
+  void EchoStruct(EchoStructRequestView request, EchoStructCompleter::Sync& completer) override {
+    if (request->forward_to_server.empty()) {
+      completer.Reply(std::move(request->value));
     } else {
-      EchoClientApp app(std::move(forward_to_server));
-      auto result = app.EchoStruct(std::move(value), "");
+      EchoClientApp app(request->forward_to_server);
+      auto result = app.EchoStruct(std::move(request->value), "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
       completer.Reply(std::move(result.Unwrap()->value));
     }
   }
 
-  void EchoStructWithError(wire::Struct value, wire::DefaultEnum err,
-                           ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
+  void EchoStructWithError(EchoStructWithErrorRequestView request,
                            EchoStructWithErrorCompleter::Sync& completer) override {
-    if (forward_to_server.empty()) {
-      if (result_variant == wire::RespondWith::kErr) {
-        completer.ReplyError(err);
+    if (request->forward_to_server.empty()) {
+      if (request->result_variant == wire::RespondWith::kErr) {
+        completer.ReplyError(request->result_err);
       } else {
-        completer.ReplySuccess(std::move(value));
+        completer.ReplySuccess(std::move(request->value));
       }
     } else {
-      EchoClientApp app(std::move(forward_to_server));
-      auto result = app.EchoStructWithError(std::move(value), err, "", result_variant);
+      EchoClientApp app(request->forward_to_server);
+      auto result = app.EchoStructWithError(std::move(request->value), request->result_err, "",
+                                            request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
       completer.Reply(std::move(result->result));
     }
   }
 
-  void EchoStructNoRetVal(wire::Struct value, ::fidl::StringView forward_to_server,
+  void EchoStructNoRetVal(EchoStructNoRetValRequestView request,
                           EchoStructNoRetValCompleter::Sync&) override {
-    if (forward_to_server.empty()) {
-      auto status = server_binding_.value()->EchoEvent(std::move(value));
+    if (request->forward_to_server.empty()) {
+      auto status = server_binding_.value()->EchoEvent(std::move(request->value));
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed: %s",
                     zx_status_get_string(status));
     } else {
@@ -196,9 +195,9 @@ class EchoConnection final : public fidl::WireInterface<Echo> {
         zx_status_t status_ = ZX_OK;
       };
 
-      EchoClientApp app(std::move(forward_to_server));
+      EchoClientApp app(request->forward_to_server);
       EventHandler event_handler(this);
-      zx_status_t status = app.EchoStructNoRetVal(std::move(value), "", event_handler);
+      zx_status_t status = app.EchoStructNoRetVal(std::move(request->value), "", event_handler);
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
                     zx_status_get_string(status));
       ZX_ASSERT_MSG(event_handler.status() == ZX_OK, "Replying with event failed indirect: %s",
@@ -206,84 +205,81 @@ class EchoConnection final : public fidl::WireInterface<Echo> {
     }
   }
 
-  void EchoArrays(wire::ArraysStruct value, ::fidl::StringView forward_to_server,
-                  EchoArraysCompleter::Sync& completer) override {
-    if (forward_to_server.empty()) {
-      completer.Reply(std::move(value));
+  void EchoArrays(EchoArraysRequestView request, EchoArraysCompleter::Sync& completer) override {
+    if (request->forward_to_server.empty()) {
+      completer.Reply(std::move(request->value));
     } else {
       std::vector<uint8_t> request_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
       std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
-      EchoClientApp app(std::move(forward_to_server));
+      EchoClientApp app(request->forward_to_server);
       auto result = app.EchoArrays(
           ::fidl::BufferSpan(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
-          std::move(value), "",
+          std::move(request->value), "",
           ::fidl::BufferSpan(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
       completer.Reply(std::move(result.Unwrap()->value));
     }
   }
 
-  void EchoArraysWithError(wire::ArraysStruct value, wire::DefaultEnum err,
-                           ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
+  void EchoArraysWithError(EchoArraysWithErrorRequestView request,
                            EchoArraysWithErrorCompleter::Sync& completer) override {
-    if (forward_to_server.empty()) {
-      if (result_variant == wire::RespondWith::kErr) {
-        completer.ReplyError(err);
+    if (request->forward_to_server.empty()) {
+      if (request->result_variant == wire::RespondWith::kErr) {
+        completer.ReplyError(request->result_err);
       } else {
-        completer.ReplySuccess(std::move(value));
+        completer.ReplySuccess(std::move(request->value));
       }
     } else {
-      EchoClientApp app(std::move(forward_to_server));
-      auto result = app.EchoArraysWithError(std::move(value), err, "", result_variant);
+      EchoClientApp app(request->forward_to_server);
+      auto result = app.EchoArraysWithError(std::move(request->value), request->result_err, "",
+                                            request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.error());
       completer.Reply(std::move(result->result));
     }
   }
 
-  void EchoVectors(wire::VectorsStruct value, ::fidl::StringView forward_to_server,
-                   EchoVectorsCompleter::Sync& completer) override {
-    if (forward_to_server.empty()) {
-      completer.Reply(std::move(value));
+  void EchoVectors(EchoVectorsRequestView request, EchoVectorsCompleter::Sync& completer) override {
+    if (request->forward_to_server.empty()) {
+      completer.Reply(std::move(request->value));
     } else {
-      EchoClientApp app(std::move(forward_to_server));
+      EchoClientApp app(request->forward_to_server);
       wire::VectorsStruct out_value;
-      auto result = app.EchoVectors(std::move(value), "");
+      auto result = app.EchoVectors(std::move(request->value), "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.error());
       completer.Reply(std::move(result.Unwrap()->value));
     }
   }
 
-  void EchoVectorsWithError(wire::VectorsStruct value, wire::DefaultEnum err,
-                            ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
+  void EchoVectorsWithError(EchoVectorsWithErrorRequestView request,
                             EchoVectorsWithErrorCompleter::Sync& completer) override {
-    if (forward_to_server.empty()) {
-      if (result_variant == wire::RespondWith::kErr) {
-        completer.ReplyError(err);
+    if (request->forward_to_server.empty()) {
+      if (request->result_variant == wire::RespondWith::kErr) {
+        completer.ReplyError(request->result_err);
       } else {
-        completer.ReplySuccess(std::move(value));
+        completer.ReplySuccess(std::move(request->value));
       }
     } else {
-      EchoClientApp app(std::move(forward_to_server));
-      auto result = app.EchoVectorsWithError(std::move(value), err, "", result_variant);
+      EchoClientApp app(request->forward_to_server);
+      auto result = app.EchoVectorsWithError(std::move(request->value), request->result_err, "",
+                                             request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.error());
       completer.Reply(std::move(result->result));
     }
   }
 
-  void EchoTable(wire::AllTypesTable value, ::fidl::StringView forward_to_server,
-                 EchoTableCompleter::Sync& completer) override {
-    if (forward_to_server.empty()) {
-      completer.Reply(std::move(value));
+  void EchoTable(EchoTableRequestView request, EchoTableCompleter::Sync& completer) override {
+    if (request->forward_to_server.empty()) {
+      completer.Reply(std::move(request->value));
     } else {
       std::vector<uint8_t> request_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
       std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
-      EchoClientApp app(std::move(forward_to_server));
+      EchoClientApp app(request->forward_to_server);
       auto result = app.EchoTable(
           ::fidl::BufferSpan(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
-          std::move(value), "",
+          std::move(request->value), "",
           ::fidl::BufferSpan(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.error());
@@ -291,22 +287,21 @@ class EchoConnection final : public fidl::WireInterface<Echo> {
     }
   }
 
-  void EchoTableWithError(wire::AllTypesTable value, wire::DefaultEnum err,
-                          ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
+  void EchoTableWithError(EchoTableWithErrorRequestView request,
                           EchoTableWithErrorCompleter::Sync& completer) override {
-    if (forward_to_server.empty()) {
-      if (result_variant == wire::RespondWith::kErr) {
-        completer.ReplyError(err);
+    if (request->forward_to_server.empty()) {
+      if (request->result_variant == wire::RespondWith::kErr) {
+        completer.ReplyError(request->result_err);
       } else {
-        completer.ReplySuccess(std::move(value));
+        completer.ReplySuccess(std::move(request->value));
       }
     } else {
       std::vector<uint8_t> request_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
       std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
-      EchoClientApp app(std::move(forward_to_server));
+      EchoClientApp app(request->forward_to_server);
       auto result = app.EchoTableWithError(
           ::fidl::BufferSpan(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
-          std::move(value), err, "", result_variant,
+          std::move(request->value), request->result_err, "", request->result_variant,
           ::fidl::BufferSpan(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.error());
@@ -314,32 +309,30 @@ class EchoConnection final : public fidl::WireInterface<Echo> {
     }
   }
 
-  void EchoXunions(::fidl::VectorView<wire::AllTypesXunion> value,
-                   ::fidl::StringView forward_to_server,
-                   EchoXunionsCompleter::Sync& completer) override {
-    if (forward_to_server.empty()) {
-      completer.Reply(std::move(value));
+  void EchoXunions(EchoXunionsRequestView request, EchoXunionsCompleter::Sync& completer) override {
+    if (request->forward_to_server.empty()) {
+      completer.Reply(std::move(request->value));
     } else {
-      EchoClientApp app(std::move(forward_to_server));
-      auto result = app.EchoXunions(std::move(value), "");
+      EchoClientApp app(request->forward_to_server);
+      auto result = app.EchoXunions(std::move(request->value), "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.error());
       completer.Reply(std::move(result.Unwrap()->value));
     }
   }
 
-  void EchoXunionsWithError(::fidl::VectorView<wire::AllTypesXunion> value, wire::DefaultEnum err,
-                            ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
+  void EchoXunionsWithError(EchoXunionsWithErrorRequestView request,
                             EchoXunionsWithErrorCompleter::Sync& completer) override {
-    if (forward_to_server.empty()) {
-      if (result_variant == wire::RespondWith::kErr) {
-        completer.ReplyError(err);
+    if (request->forward_to_server.empty()) {
+      if (request->result_variant == wire::RespondWith::kErr) {
+        completer.ReplyError(request->result_err);
       } else {
-        completer.ReplySuccess(std::move(value));
+        completer.ReplySuccess(std::move(request->value));
       }
     } else {
-      EchoClientApp app(std::move(forward_to_server));
-      auto result = app.EchoXunionsWithError(std::move(value), err, "", result_variant);
+      EchoClientApp app(request->forward_to_server);
+      auto result = app.EchoXunionsWithError(std::move(request->value), request->result_err, "",
+                                             request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.error());
       completer.Reply(std::move(result->result));

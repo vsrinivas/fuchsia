@@ -301,17 +301,17 @@ namespace {
 
 namespace gen = fidl_test_llcpp_basictypes;
 
-class Server : public fidl::WireInterface<gen::TestInterface> {
+class Server : public fidl::WireServer<gen::TestInterface> {
  public:
-  void ConsumeSimpleStruct(gen::wire::SimpleStruct arg,
+  void ConsumeSimpleStruct(ConsumeSimpleStructRequestView request,
                            ConsumeSimpleStructCompleter::Sync& txn) override {
     num_struct_calls_.fetch_add(1);
     // Verify that all the handles are valid channels
-    if (!IsPeerValid(zx::unowned_eventpair(arg.ep))) {
+    if (!IsPeerValid(zx::unowned_eventpair(request->arg.ep))) {
       txn.Reply(ZX_ERR_INVALID_ARGS, -1);
       return;
     }
-    for (auto& row : arg.arr) {
+    for (auto& row : request->arg.arr) {
       for (auto& handle : row) {
         if (!IsPeerValid(zx::unowned_eventpair(handle))) {
           txn.Reply(ZX_ERR_INVALID_ARGS, -1);
@@ -320,7 +320,7 @@ class Server : public fidl::WireInterface<gen::TestInterface> {
       }
     }
     // Loop back field argument
-    txn.Reply(ZX_OK, arg.field);
+    txn.Reply(ZX_OK, request->arg.field);
   }
 
   uint64_t num_struct_calls() const { return num_struct_calls_.load(); }
