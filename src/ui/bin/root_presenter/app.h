@@ -110,7 +110,15 @@ class App : public fuchsia::ui::policy::Presenter,
   // |fuchsia.ui.views.Focuser|
   void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) override;
 
+  // Note: the sub-objects of `component_context_` may hold unowned pointers to sub-objects of
+  // `this`. For example, `FactoryResetManager`'s ctor calls
+  //     context.outgoing()->AddPublicService([this] ...);
+  //
+  // This is okay, even though `fdr_manager_` is destroyed before `component_context_`.
+  // Reason being: `main.cc` won't destroy `App` until the event loop has exited.
+  // And after the event loop has exited, we won't process any further FIDL requests.
   sys::ComponentContext* const component_context_;
+
   sys::ComponentInspector inspector_;
   InputReportInspector input_report_inspector_;
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
