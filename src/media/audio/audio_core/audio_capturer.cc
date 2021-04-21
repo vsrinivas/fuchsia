@@ -64,7 +64,7 @@ void AudioCapturer::ReportStop() {
 
 void AudioCapturer::OnStateChanged(State old_state, State new_state) {
   BaseCapturer::OnStateChanged(old_state, new_state);
-  if (!loopback_ && new_state == State::OperatingSync) {
+  if (!loopback_ && new_state == State::WaitingForRequest) {
     context().volume_manager().NotifyStreamChanged(this);
   }
 }
@@ -174,13 +174,9 @@ void AudioCapturer::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
   context().volume_manager().NotifyStreamChanged(this);
   State state = capture_state();
   SetRoutingProfile(StateIsRoutable(state));
-  if (state == State::OperatingAsync) {
-    ReportStart();
-  }
-  if (state == State::OperatingSync) {
-    if (has_pending_packets()) {
-      ReportStart();
-    }
+  if (!loopback_ && (state == State::SyncOperating || state == State::AsyncOperating)) {
+    context().audio_admin().UpdateCapturerState(FidlCaptureUsageFromCaptureUsage(usage_).value(),
+                                                true, this);
   }
 }
 

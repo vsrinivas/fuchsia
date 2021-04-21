@@ -50,59 +50,77 @@ class BaseCapturer : public AudioObject,
 
   ExecutionDomain& mix_domain() const { return *mix_domain_; }
 
-  // Notes about the BaseCapturer state machine.
+  // The BaseCapturer state machine:
+  //
+  //                           (start)
+  //                              |
+  //                              V
+  //                        WaitingForVmo
+  //                              |
+  //                              | (client provides a VMO)
+  //                              V
+  //                       WaitingForRequest
+  //                     | ^              ^  |
+  //                     | |              |  | (client calls CaptureAt)
+  //                     | |  ( no more ) |  |
+  //                     | |  (CaptureAt) |  |
+  //                     | |  ( pending ) |  V
+  //                     | |      SyncOperating
+  //                     | |
+  // (client calls     ) | |
+  // (StartAsyncCapture) | +------------------+
+  //                     V                    |
+  //            AsyncOperating                |
+  //                     |                    |
+  //  (client calls    ) |                    |
+  //  (StopAsyncCapture) |                    |
+  //                     V                    |
+  //            AsyncStopping                 |
+  //                     |                    |
+  //  (mixer thread    ) |                    |
+  //  (finishes cleanup) |                    |
+  //                     V                    |
+  //            AsyncStoppingCallbackPending  |
+  //                     |                    |
+  // (FIDL thread      ) |                    |
+  // (delivers callback) +--------------------+
+  //
   //
   // :: WaitingForVmo ::
-  // AudioCapturers start in this mode. They should have a default capture mode
-  // set, and will accept a mode change up until the point where they have a
-  // shared payload VMO assigned to them. At this point they transition into the
-  // OperatingSync state. Only the main service thread may transition out of
-  // this state.
+  // AudioCapturers start in this state. They should have a default capture
+  // format set, and will accept a state change up until the point where they
+  // have a shared payload VMO assigned to them.
   //
-  // :: OperatingSync ::
-  // After a mode has been assigned and a shared payload VMO has provided, the
-  // AudioCapturer is now operating in synchronous mode. Clients may provided
-  // buffers to be filled using the CaptureAt method and may cancel these
-  // buffers using the Flush method. They may also transition to asynchronous
-  // mode by calling StartAsyncCapture, but only when there are no pending
-  // buffers in flight. Only the main service thread may transition out of
-  // this state.
+  // :: WaitingForRequest ::
+  // After a format has been assigned and a shared payload VMO has provided, the
+  // AudioCapturer is waiting to operate in Sync or Async mode.
   //
-  // :: OperatingAsync ::
-  // AudioCapturers enter OperatingAsync after a successful call to
-  // StartAsyncCapture. Threads from the mix_domain allocate and fill pending
-  // payload buffers, then signal the main service thread in order to send them
-  // back to the client over the AudioCapturerClient interface provided when
-  // starting. CaptureAt and Flush are illegal operations while in this state.
-  // clients may begin the process of returning to synchronous capture mode by
-  // calling StopAsyncCapture. Only the main service thread may transition out
-  // of this state.
+  // :: SyncOperating ::
+  // AudioCapturers enter SyncOperating after a successful call to CaptureAt.
+  // They remain in this state until all pending CaptureAt requests are handled
+  // or flushed.
+  //
+  // :: AsyncOperating ::
+  // AudioCapturers enter AsyncOperating after a successful call to
+  // StartAsyncCapture. CaptureAt and Flush are illegal while in this state.
   //
   // :: AsyncStopping ::
+  // :: AsyncStoppingCallbackPending ::
   // AudioCapturers enter AsyncStopping after a successful call to
   // StopAsyncCapture. A thread from the mix_domain will handle the details of
-  // stopping, including transferring all partially filled pending buffers to
-  // the finished queue. Aside from setting the gain, all operations are illegal
-  // while the AudioCapturer is in the process of stopping. Once the mix domain
-  // thread has finished cleaning up, it will transition to the
-  // AsyncStoppingCallbackPending state and signal the main service thread in
-  // order to complete the process. Only a mix domain thread may transition out
-  // of this state.
+  // stopping. Aside from setting the gain, all operations are illegal while the
+  // AudioCapturer is in the process of stopping. Once the mix domain thread has
+  // finished cleaning up, it will transition to the AsyncStoppingCallbackPending
+  // state and signal the main service thread in order to complete the process.
   //
-  // :: AsyncStoppingCallbackPending ::
-  // AudioCapturers enter AsyncStoppingCallbackPending after a mix domain thread
-  // has finished the process of shutting down the capture process and is ready
-  // to signal to the client that the AudioCapturer is now in synchronous
-  // capture mode again. The main service thread will send all partially and
-  // completely filled buffers to the user, ensuring that there is at least one
-  // buffer sent indicating end-of-stream, even if that buffer needs to be of
-  // zero length. Finally, the main service thread will signal that the stopping
-  // process is finished using the client supplied callback (if any), and
-  // finally transition back to the OperatingSync state.
+  // :: Shutdown ::
+  // AudioCapturers enter this state when the connection is closing. We might
+  // transition to this state from any other state.
   enum class State {
     WaitingForVmo,
-    OperatingSync,
-    OperatingAsync,
+    WaitingForRequest,
+    SyncOperating,
+    AsyncOperating,
     AsyncStopping,
     AsyncStoppingCallbackPending,
     Shutdown,
@@ -208,8 +226,8 @@ class BaseCapturer : public AudioObject,
 
   // Queue of pending and ready packets.
   //
-  // Concurrency notes: Initially this is nullptr. When we transition to state OperatingSync
-  // or OperatingAsync, we create a new queue and start mixing. Later, in response to a FIDL
+  // Concurrency notes: Initially this is nullptr. When we transition to state SyncOperating
+  // or AsyncOperating, we create a new queue and start mixing. Later, in response to a FIDL
   // call, we might change operating modes from Sync -> Async or visa versa. To do this, we
   // create a new queue, but as this happens, the mixer may be concurrently mixing on the old
   // queue. We use a shared_ptr to ensure that the mixer can hold a valid reference for the

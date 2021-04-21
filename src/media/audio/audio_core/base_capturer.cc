@@ -82,7 +82,8 @@ BaseCapturer::~BaseCapturer() { TRACE_DURATION("audio.debug", "BaseCapturer::~Ba
 void BaseCapturer::OnLinkAdded() { RecomputePresentationDelay(); }
 
 void BaseCapturer::UpdateState(State new_state) {
-  if (new_state == State::OperatingSync) {
+  if (new_state == State::WaitingForRequest) {
+    // Transitioning from initializing -> Sync or Async -> Sync: we need a new packet queue.
     set_packet_queue(CapturePacketQueue::CreateDynamicallyAllocated(payload_buf_, format_.value()));
   }
   if (new_state == State::Shutdown) {
@@ -92,7 +93,9 @@ void BaseCapturer::UpdateState(State new_state) {
     }
   }
   State old_state = state_.exchange(new_state);
-  OnStateChanged(old_state, new_state);
+  if (old_state != new_state) {
+    OnStateChanged(old_state, new_state);
+  }
 }
 
 fit::promise<> BaseCapturer::Cleanup() {
@@ -128,10 +131,8 @@ void BaseCapturer::CleanupFromMixThread() {
 }
 
 void BaseCapturer::BeginShutdown() {
-  context_.threading_model().FidlDomain().ScheduleTask(Cleanup().then([this](fit::result<>&) {
-    ReportStop();
-    context_.route_graph().RemoveCapturer(*this);
-  }));
+  context_.threading_model().FidlDomain().ScheduleTask(
+      Cleanup().then([this](fit::result<>&) { context_.route_graph().RemoveCapturer(*this); }));
 }
 
 void BaseCapturer::OnStateChanged(State old_state, State new_state) {
@@ -139,6 +140,12 @@ void BaseCapturer::OnStateChanged(State old_state, State new_state) {
   bool is_routable = StateIsRoutable(new_state);
   if (was_routable != is_routable) {
     SetRoutingProfile(is_routable);
+  }
+  if (new_state == State::SyncOperating || new_state == State::AsyncOperating) {
+    ReportStart();
+  }
+  if (old_state == State::SyncOperating || old_state == State::AsyncOperating) {
+    ReportStop();
   }
 }
 
@@ -154,8 +161,9 @@ BaseCapturer::InitializeSourceLink(const AudioObject& source,
 
   switch (state_.load()) {
     // We are operational. Go ahead and add the input to our mix stage.
-    case State::OperatingSync:
-    case State::OperatingAsync:
+    case State::WaitingForRequest:
+    case State::SyncOperating:
+    case State::AsyncOperating:
     case State::AsyncStopping:
     case State::AsyncStoppingCallbackPending:
     case State::WaitingForVmo:
@@ -273,8 +281,8 @@ void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
 
   // Mark ourselves as routable now that we're fully configured. Although we might still fail to
   // create links to audio sources, we have successfully configured this capturer's mode, so we are
-  // now in the OperatingSync state.
-  UpdateState(State::OperatingSync);
+  // now in the WaitingForRequest state.
+  UpdateState(State::WaitingForRequest);
   cleanup.cancel();
 }
 
@@ -284,22 +292,14 @@ void BaseCapturer::RemovePayloadBuffer(uint32_t id) {
   BeginShutdown();
 }
 
-// Are we actively capturing: either OperatingAsync, or OperatingSync with pending capture buffers
 bool BaseCapturer::IsOperating() {
   State state = state_.load();
   switch (state) {
-    // If OperatingAsync, we are actively generating capture packets
-    case State::OperatingAsync:
+    case State::SyncOperating:
+    case State::AsyncOperating:
     case State::AsyncStopping:
     case State::AsyncStoppingCallbackPending:
       return true;
-
-    // If OperatingSync, then a pending packet means one or more CaptureAt() is pending.
-    // Else, CaptureAt has never been called or has completed: no capture operation is active.
-    case State::OperatingSync:
-      return has_pending_packets();
-
-    // Otherwise, the capturer is still being initialized or is being shutdown
     default:
       return false;
   }
@@ -319,8 +319,8 @@ void BaseCapturer::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames,
   // It is illegal to call CaptureAt unless we are currently operating in
   // synchronous mode.
   State state = state_.load();
-  if (state != State::OperatingSync) {
-    FX_LOGS(WARNING) << "CaptureAt called while not operating in sync mode "
+  if (state != State::WaitingForRequest && state != State::SyncOperating) {
+    FX_LOGS(WARNING) << "CaptureAt called while in wrong state "
                      << "(state = " << static_cast<uint32_t>(state) << ")";
     return;
   }
@@ -336,9 +336,9 @@ void BaseCapturer::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames,
 
   // If the pending list was empty, we need to poke the mixer.
   if (was_empty) {
+    UpdateState(State::SyncOperating);
     mix_wakeup_.Signal();
   }
-  ReportStart();
 
   // Things went well. Cancel the cleanup timer and we are done.
   cleanup.cancel();
@@ -347,7 +347,7 @@ void BaseCapturer::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames,
 void BaseCapturer::ReleasePacket(fuchsia::media::StreamPacket packet) {
   TRACE_DURATION("audio", "BaseCapturer::ReleasePacket");
   State state = state_.load();
-  if (state != State::OperatingAsync) {
+  if (state != State::AsyncOperating) {
     FX_LOGS(WARNING) << "ReleasePacket called while not operating in async mode "
                      << "(state = " << static_cast<uint32_t>(state) << ")";
     return;
@@ -365,8 +365,8 @@ void BaseCapturer::DiscardAllPackets(DiscardAllPacketsCallback cbk) {
   // It is illegal to call DiscardAllPackets unless we are currently operating in
   // synchronous mode.
   State state = state_.load();
-  if (state != State::OperatingSync) {
-    FX_LOGS(WARNING) << "DiscardAllPackets called while not operating in sync mode "
+  if (state != State::WaitingForRequest && state != State::SyncOperating) {
+    FX_LOGS(WARNING) << "DiscardAllPackets called while not in wrong state "
                      << "(state = " << static_cast<uint32_t>(state) << ")";
     BeginShutdown();
     return;
@@ -382,7 +382,9 @@ void BaseCapturer::DiscardAllPackets(DiscardAllPacketsCallback cbk) {
     binding_.events().OnEndOfStream();
   }
 
-  ReportStop();
+  if (state != State::WaitingForRequest) {
+    UpdateState(State::WaitingForRequest);
+  }
 
   if (cbk != nullptr && binding_.is_bound()) {
     cbk();
@@ -395,7 +397,7 @@ void BaseCapturer::StartAsyncCapture(uint32_t frames_per_packet) {
 
   // To enter Async mode, we must be in Synchronous mode and not have packets in flight.
   State state = state_.load();
-  if (state != State::OperatingSync) {
+  if (state != State::WaitingForRequest) {
     FX_LOGS(WARNING) << "Bad state while attempting to enter async capture mode "
                      << "(state = " << static_cast<uint32_t>(state) << ")";
     return;
@@ -414,10 +416,9 @@ void BaseCapturer::StartAsyncCapture(uint32_t frames_per_packet) {
     return;
   }
 
-  // Transition to the OperatingAsync state.
+  // Transition to the AsyncOperating state.
   set_packet_queue(result.take_value());
-  UpdateState(State::OperatingAsync);
-  ReportStart();
+  UpdateState(State::AsyncOperating);
 
   // Kick the work thread to get the ball rolling.
   mix_wakeup_.Signal();
@@ -434,28 +435,27 @@ void BaseCapturer::StopAsyncCapture(StopAsyncCaptureCallback cbk) {
   // To leave async mode, we must be (1) in Async mode or (2) already in Sync mode (in which case,
   // there is really nothing to do but signal the callback if one was provided).
   State state = state_.load();
-  if (state == State::OperatingSync) {
+  if (state == State::WaitingForRequest || state == State::SyncOperating) {
     if (cbk != nullptr) {
       cbk();
     }
     return;
   }
 
-  if (state != State::OperatingAsync) {
+  if (state != State::AsyncOperating) {
     FX_LOGS(WARNING) << "Bad state while attempting to stop async capture mode "
                      << "(state = " << static_cast<uint32_t>(state) << ")";
     BeginShutdown();
     return;
   }
 
-  // We're done with this packet queue. We're transititioning to OperatingSync.
-  // Later, if we transition back to OperatingAsync, we'll create a brand new packet queue.
+  // We're done with this packet queue. We're transititioning to WaitingForRequest.
+  // Later, if we transition back to AsyncOperating, we'll create a brand new packet queue.
   packet_queue()->Shutdown();
 
   // Stash our callback, transition to AsyncStopping, then poke the work thread to shut down.
   FX_DCHECK(pending_async_stop_cbk_ == nullptr);
   pending_async_stop_cbk_ = std::move(cbk);
-  ReportStop();
   UpdateState(State::AsyncStopping);
   mix_wakeup_.Signal();
 }
@@ -497,7 +497,8 @@ zx_status_t BaseCapturer::Process() {
         ShutdownFromMixDomain();
         return ZX_ERR_INTERNAL;
 
-      // If we are awakened while in the callback pending state, this is spurious wakeup: ignore it.
+      // Spurious wakeups: there are not pending packets to fill.
+      case State::WaitingForRequest:
       case State::AsyncStoppingCallbackPending:
         return ZX_OK;
 
@@ -506,11 +507,11 @@ zx_status_t BaseCapturer::Process() {
         DoStopAsyncCapture();
         return ZX_OK;
 
-      case State::OperatingSync:
+      case State::SyncOperating:
         async_mode = false;
         break;
 
-      case State::OperatingAsync:
+      case State::AsyncOperating:
         async_mode = true;
         break;
 
@@ -531,8 +532,8 @@ zx_status_t BaseCapturer::Process() {
 
     // If there was nothing in our pending capture buffer queue, then one of two things is true:
     //
-    // 1) We are OperatingSync and our user is not supplying packets fast enough.
-    // 2) We are OperatingAsync and our user is not releasing packets fast enough.
+    // 1) We are AsyncOperating and our user is not supplying packets fast enough.
+    // 2) We are AsyncOperating and our user is not releasing packets fast enough.
     //
     // Either way, this is an overflow. Invalidate the frames_to_ref_clock transformation and make
     // sure we don't have a wakeup timer pending.
@@ -540,8 +541,7 @@ zx_status_t BaseCapturer::Process() {
       discontinuity_ = true;
       mix_timer_.Cancel();
 
-      if (state_.load() == State::OperatingSync) {
-        ReportStop();
+      if (state_.load() == State::SyncOperating) {
         return ZX_OK;
       }
 
@@ -678,7 +678,7 @@ void BaseCapturer::DoStopAsyncCapture() {
   FX_DCHECK(state_.load() == State::AsyncStopping);
 
   // Discard all pending packets. We won't need to worry about recycling these,
-  // because we're transitioning back to OperatingSync, at which time we'll create
+  // because we're transitioning back to SyncOperating, at which time we'll create
   // an entirely new CapturePacketQueue.
   packet_queue()->DiscardPendingPackets();
   discontinuity_ = true;
@@ -719,9 +719,7 @@ void BaseCapturer::FinishAsyncStopThunk() {
     pending_async_stop_cbk_ = nullptr;
   }
 
-  // All done!  Transition back to the OperatingSync state.
-  ReportStop();
-  UpdateState(State::OperatingSync);
+  UpdateState(State::WaitingForRequest);
 }
 
 void BaseCapturer::FinishBuffersThunk() {
@@ -776,6 +774,10 @@ void BaseCapturer::FinishBuffers() {
 
       binding_.events().OnPacketProduced(pkt);
     }
+  }
+
+  if (state_.load() == State::SyncOperating && pq->PendingSize() == 0) {
+    UpdateState(State::WaitingForRequest);
   }
 }
 
