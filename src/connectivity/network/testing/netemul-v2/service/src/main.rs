@@ -5,13 +5,18 @@
 use {
     anyhow::{anyhow, Context as _},
     fidl::endpoints::{DiscoverableService, ServerEnd},
-    fidl_fuchsia_logger as flogger,
+    fidl_fuchsia_io2 as fio2, fidl_fuchsia_logger as flogger, fidl_fuchsia_net_tun as fnet_tun,
     fidl_fuchsia_netemul::{
         self as fnetemul, ChildDef, ChildUses, ManagedRealmMarker, ManagedRealmRequest,
         RealmOptions, SandboxRequest, SandboxRequestStream,
     },
+    fidl_fuchsia_netemul_network as fnetemul_network, fidl_fuchsia_process as fprocess,
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
+    fuchsia_component_test::{
+        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+        Moniker,
+    },
     futures::{channel::mpsc, FutureExt as _, SinkExt as _, StreamExt as _, TryStreamExt as _},
     log::{debug, error, info},
     pin_utils::pin_mut,
@@ -34,11 +39,6 @@ impl ManagedRealm {
         options: RealmOptions,
         prefix: &str,
     ) -> Result<ManagedRealm> {
-        use fuchsia_component_test::{
-            builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-            Moniker,
-        };
-
         let RealmOptions { name, children, .. } = options;
         let mut exposed_services = HashMap::new();
         let mut components_using_all = Vec::new();
@@ -233,16 +233,143 @@ impl ManagedRealm {
     }
 }
 
+const NETWORK_CONTEXT_COMPONENT_NAME: &str = "network-context";
+const ISOLATED_DEVMGR_COMPONENT_NAME: &str = "isolated-devmgr";
+const NETWORK_TUN_COMPONENT_NAME: &str = "network-tun";
+
+#[derive(serde::Deserialize)]
+struct Package {
+    name: String,
+}
+
+// TODO(https://fxbug.dev/67854): remove once we have relative package URLs.
+const PACKAGE_IDENTITY_FILE: &str = "/pkg/meta/package";
+
+async fn get_this_package_name() -> Result<String> {
+    let contents = io_util::file::read_in_namespace_to_string(PACKAGE_IDENTITY_FILE)
+        .await
+        .context("error opening file")?;
+    let Package { name } =
+        serde_json::from_str(&contents).context("failed to deserialize package identity file")?;
+    Ok(name)
+}
+
+async fn setup_network_realm(
+    sandbox_name: impl std::fmt::Display,
+) -> Result<fuchsia_component_test::RealmInstance> {
+    let pkg = get_this_package_name().await?;
+    let package_url = |component_name: &str| {
+        format!("fuchsia-pkg://fuchsia.com/{}#meta/{}.cm", pkg, component_name)
+    };
+    let network_context_package_url = package_url(NETWORK_CONTEXT_COMPONENT_NAME);
+    let isolated_devmgr_package_url = package_url(ISOLATED_DEVMGR_COMPONENT_NAME);
+    let network_tun_package_url = package_url(NETWORK_TUN_COMPONENT_NAME);
+
+    let mut builder = RealmBuilder::new().await.context("error creating new realm builder")?;
+    let _: &mut RealmBuilder = builder
+        .add_component(
+            NETWORK_CONTEXT_COMPONENT_NAME,
+            ComponentSource::url(network_context_package_url),
+        )
+        .await
+        .context("error adding network-context component")?
+        .add_component(
+            ISOLATED_DEVMGR_COMPONENT_NAME,
+            ComponentSource::url(isolated_devmgr_package_url),
+        )
+        .await
+        .context("error adding isolated-devmgr component")?
+        .add_component(NETWORK_TUN_COMPONENT_NAME, ComponentSource::url(network_tun_package_url))
+        .await
+        .context("error adding network-tun component")?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol(fnetemul_network::NetworkContextMarker::SERVICE_NAME),
+            source: RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME),
+            targets: vec![RouteEndpoint::AboveRoot],
+        })
+        .with_context(|| {
+            format!(
+                "error adding route exposing capability '{}' from component '{}'",
+                fnetemul_network::NetworkContextMarker::SERVICE_NAME,
+                NETWORK_CONTEXT_COMPONENT_NAME
+            )
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::directory(
+                "dev",
+                "/dev",
+                fio2::Operations::from_bits(fio2::R_STAR_DIR).unwrap(),
+            ),
+            source: RouteEndpoint::component(ISOLATED_DEVMGR_COMPONENT_NAME),
+            targets: vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)],
+        })
+        .with_context(|| {
+            format!(
+                "error adding route exposing directory 'dev' from component '{}' to '{}'",
+                ISOLATED_DEVMGR_COMPONENT_NAME, NETWORK_CONTEXT_COMPONENT_NAME
+            )
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol(fnet_tun::ControlMarker::SERVICE_NAME),
+            source: RouteEndpoint::component(NETWORK_TUN_COMPONENT_NAME),
+            targets: vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)],
+        })
+        .with_context(|| {
+            format!(
+                "error adding route exposing capability '{}' from component '{}'",
+                fnet_tun::ControlMarker::SERVICE_NAME,
+                NETWORK_CONTEXT_COMPONENT_NAME
+            )
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol(fprocess::LauncherMarker::SERVICE_NAME),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component(ISOLATED_DEVMGR_COMPONENT_NAME)],
+        })
+        .with_context(|| {
+            format!(
+                "error adding route exposing capability '{}' to components",
+                fprocess::LauncherMarker::SERVICE_NAME,
+            )
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol(flogger::LogSinkMarker::SERVICE_NAME),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![
+                RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME),
+                RouteEndpoint::component(ISOLATED_DEVMGR_COMPONENT_NAME),
+                RouteEndpoint::component(NETWORK_TUN_COMPONENT_NAME),
+            ],
+        })
+        .with_context(|| {
+            format!(
+                "error adding route exposing capability '{}' to components",
+                flogger::LogSinkMarker::SERVICE_NAME,
+            )
+        })?;
+    let mut realm = builder.build();
+    let () = realm.set_collection_name(REALM_COLLECTION_NAME);
+    realm
+        .create_with_name(format!("{}-network-realm", sandbox_name))
+        .await
+        .context("error creating realm instance")
+}
+
 async fn handle_sandbox(
     stream: SandboxRequestStream,
     sandbox_name: impl std::fmt::Display,
-) -> Result<(), fidl::Error> {
+) -> Result {
     let (tx, rx) = mpsc::channel(1);
     let realm_index = AtomicU64::new(0);
+    // TODO(https://fxbug.dev/74534): define only one instance of `network-context` and associated
+    // components, and do routing statically, once we no longer need `isolated-devmgr`.
+    let network_realm =
+        setup_network_realm(&sandbox_name).await.context("failed to setup network realm")?;
     let sandbox_fut = stream.try_for_each_concurrent(None, |request| {
         let mut tx = tx.clone();
         let sandbox_name = &sandbox_name;
         let realm_index = &realm_index;
+        let network_realm = &network_realm;
         async move {
             match request {
                 // TODO(https://fxbug.dev/72253): send the correct epitaph on failure.
@@ -257,8 +384,11 @@ async fn handle_sandbox(
                         Err(err) => error!("error creating ManagedRealm: {:?}", err),
                     }
                 }
-                SandboxRequest::GetNetworkContext { network_context: _, control_handle: _ } => {
-                    todo!()
+                SandboxRequest::GetNetworkContext { network_context, control_handle: _ } => {
+                    network_realm
+                        .root
+                        .connect_request_to_protocol_at_exposed_dir(network_context)
+                        .unwrap_or_else(|e| error!("error getting NetworkContext: {:?}", e))
                 }
                 SandboxRequest::GetSyncManager { sync_manager: _, control_handle: _ } => todo!(),
             }
@@ -275,7 +405,7 @@ async fn handle_sandbox(
         .fuse();
     pin_mut!(sandbox_fut, realms_fut);
     futures::select! {
-        result = sandbox_fut => result,
+        result = sandbox_fut => Ok(result?),
         () = realms_fut => unreachable!("realms_fut should never complete"),
     }
 }
@@ -356,9 +486,6 @@ mod tests {
         F: FnOnce(fnetemul::SandboxProxy) -> Fut,
         Fut: futures::Future<Output = ()>,
     {
-        let () = fuchsia_syslog::init().expect("cannot init logger");
-        let () = fuchsia_syslog::set_severity(fuchsia_syslog::levels::DEBUG);
-        info!("starting test...");
         let (sandbox, fut) = setup_sandbox_service(name);
         let ((), ()) = futures::future::join(fut, test(sandbox)).await;
     }
@@ -367,21 +494,25 @@ mod tests {
     const COUNTER_COMPONENT_NAME: &str = "counter";
     const COUNTER_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/netemul-v2-tests#meta/counter.cm";
 
-    #[fasync::run_singlethreaded(test)]
+    fn counter_component() -> fnetemul::ChildDef {
+        fnetemul::ChildDef {
+            url: Some(COUNTER_PACKAGE_URL.to_string()),
+            name: Some(COUNTER_COMPONENT_NAME.to_string()),
+            exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
+            uses: Some(fnetemul::ChildUses::Capabilities(vec![fnetemul::Capability::LogSink(
+                fnetemul::Empty {},
+            )])),
+            ..fnetemul::ChildDef::EMPTY
+        }
+    }
+
+    #[fuchsia::test]
     async fn can_connect_to_single_service() {
         with_sandbox("can_connect_to_single_service", |sandbox| async move {
             let realm = TestRealm::new(
                 &sandbox,
                 fnetemul::RealmOptions {
-                    children: Some(vec![fnetemul::ChildDef {
-                        url: Some(COUNTER_PACKAGE_URL.to_string()),
-                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
-                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                        ])),
-                        ..fnetemul::ChildDef::EMPTY
-                    }]),
+                    children: Some(vec![counter_component()]),
                     ..fnetemul::RealmOptions::EMPTY
                 },
             );
@@ -397,22 +528,14 @@ mod tests {
         .await
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn multiple_realms() {
         with_sandbox("multiple_realms", |sandbox| async move {
             let realm_a = TestRealm::new(
                 &sandbox,
                 fnetemul::RealmOptions {
                     name: Some("a".to_string()),
-                    children: Some(vec![fnetemul::ChildDef {
-                        url: Some(COUNTER_PACKAGE_URL.to_string()),
-                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
-                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                        ])),
-                        ..fnetemul::ChildDef::EMPTY
-                    }]),
+                    children: Some(vec![counter_component()]),
                     ..fnetemul::RealmOptions::EMPTY
                 },
             );
@@ -420,15 +543,7 @@ mod tests {
                 &sandbox,
                 fnetemul::RealmOptions {
                     name: Some("b".to_string()),
-                    children: Some(vec![fnetemul::ChildDef {
-                        url: Some(COUNTER_PACKAGE_URL.to_string()),
-                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
-                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                        ])),
-                        ..fnetemul::ChildDef::EMPTY
-                    }]),
+                    children: Some(vec![counter_component()]),
                     ..fnetemul::RealmOptions::EMPTY
                 },
             );
@@ -461,21 +576,13 @@ mod tests {
         .await
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn drop_realm_destroys_children() {
         with_sandbox("drop_realm_destroys_children", |sandbox| async move {
             let realm = TestRealm::new(
                 &sandbox,
                 fnetemul::RealmOptions {
-                    children: Some(vec![fnetemul::ChildDef {
-                        url: Some(COUNTER_PACKAGE_URL.to_string()),
-                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
-                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                        ])),
-                        ..fnetemul::ChildDef::EMPTY
-                    }]),
+                    children: Some(vec![counter_component()]),
                     ..fnetemul::RealmOptions::EMPTY
                 },
             );
@@ -503,7 +610,7 @@ mod tests {
         .await
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn drop_sandbox_destroys_realms() {
         with_sandbox("drop_sandbox_destroys_realms", |sandbox| async move {
             const REALMS_COUNT: usize = 10;
@@ -513,15 +620,7 @@ mod tests {
                     TestRealm::new(
                         &sandbox,
                         fnetemul::RealmOptions {
-                            children: Some(vec![fnetemul::ChildDef {
-                                url: Some(COUNTER_PACKAGE_URL.to_string()),
-                                name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                                exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
-                                uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                                    fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                                ])),
-                                ..fnetemul::ChildDef::EMPTY
-                            }]),
+                            children: Some(vec![counter_component()]),
                             ..fnetemul::RealmOptions::EMPTY
                         },
                     )
@@ -572,22 +671,14 @@ mod tests {
         .await
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn set_realm_name() {
         with_sandbox("set_realm_name", |sandbox| async move {
             let TestRealm { realm } = TestRealm::new(
                 &sandbox,
                 fnetemul::RealmOptions {
                     name: Some("test-realm-name".to_string()),
-                    children: Some(vec![fnetemul::ChildDef {
-                        url: Some(COUNTER_PACKAGE_URL.to_string()),
-                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
-                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                        ])),
-                        ..fnetemul::ChildDef::EMPTY
-                    }]),
+                    children: Some(vec![counter_component()]),
                     ..fnetemul::RealmOptions::EMPTY
                 },
             );
@@ -602,7 +693,7 @@ mod tests {
         .await
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn auto_generated_realm_name() {
         with_sandbox("auto_generated_realm_name", |sandbox| async move {
             const REALMS_COUNT: usize = 10;
@@ -611,15 +702,7 @@ mod tests {
                     &sandbox,
                     fnetemul::RealmOptions {
                         name: None,
-                        children: Some(vec![fnetemul::ChildDef {
-                            url: Some(COUNTER_PACKAGE_URL.to_string()),
-                            name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                            exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
-                            uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                                fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                            ])),
-                            ..fnetemul::ChildDef::EMPTY
-                        }]),
+                        children: Some(vec![counter_component()]),
                         ..fnetemul::RealmOptions::EMPTY
                     },
                 );
@@ -635,7 +718,7 @@ mod tests {
         .await
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn inspect() {
         with_sandbox("inspect", |sandbox| async move {
             const REALMS_COUNT: usize = 10;
@@ -645,15 +728,7 @@ mod tests {
                     TestRealm::new(
                         &sandbox,
                         fnetemul::RealmOptions {
-                            children: Some(vec![fnetemul::ChildDef {
-                                url: Some(COUNTER_PACKAGE_URL.to_string()),
-                                name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                                exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
-                                uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                                    fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                                ])),
-                                ..fnetemul::ChildDef::EMPTY
-                            }]),
+                            children: Some(vec![counter_component()]),
                             ..fnetemul::RealmOptions::EMPTY
                         },
                     )
@@ -723,7 +798,7 @@ mod tests {
         .await
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn child_uses_all_capabilities() {
         // These services are aliased instances of the `fuchsia.netemul.test.Counter` service
         // (configured in the component manifest), so there is no actual `CounterAMarker` type, for
@@ -794,5 +869,100 @@ mod tests {
             );
         })
         .await
+    }
+
+    #[fuchsia::test]
+    async fn network_context() {
+        with_sandbox("network_context", |sandbox| async move {
+            let (network_ctx, server) =
+                fidl::endpoints::create_proxy::<fnetemul_network::NetworkContextMarker>()
+                    .expect("failed to create network context proxy");
+            let () = sandbox.get_network_context(server).expect("FIDL error");
+            let (endpoint_mgr, server) =
+                fidl::endpoints::create_proxy::<fnetemul_network::EndpointManagerMarker>()
+                    .expect("failed to create endpoint manager proxy");
+            let () = network_ctx.get_endpoint_manager(server).expect("FIDL error");
+            let endpoints = endpoint_mgr.list_endpoints().await.expect("FIDL error");
+            assert_eq!(endpoints, Vec::<String>::new());
+
+            let backings = [
+                fnetemul_network::EndpointBacking::Ethertap,
+                fnetemul_network::EndpointBacking::NetworkDevice,
+            ];
+            for (i, backing) in backings.iter().enumerate() {
+                let name = format!("ep{}", i);
+                let (status, endpoint) = endpoint_mgr
+                    .create_endpoint(
+                        &name,
+                        &mut fnetemul_network::EndpointConfig {
+                            mtu: 1500,
+                            mac: None,
+                            backing: *backing,
+                        },
+                    )
+                    .await
+                    .expect("FIDL error");
+                let () = zx::Status::ok(status).expect("endpoint creation");
+                let endpoint = endpoint
+                    .expect("endpoint creation")
+                    .into_proxy()
+                    .expect("failed to create endpoint proxy");
+                assert_eq!(endpoint.get_name().await.expect("FIDL error"), name);
+                assert_eq!(
+                    endpoint.get_config().await.expect("FIDL error"),
+                    fnetemul_network::EndpointConfig { mtu: 1500, mac: None, backing: *backing }
+                );
+            }
+        })
+        .await
+    }
+
+    fn get_network_manager(
+        sandbox: &fnetemul::SandboxProxy,
+    ) -> fnetemul_network::NetworkManagerProxy {
+        let (network_ctx, server) =
+            fidl::endpoints::create_proxy::<fnetemul_network::NetworkContextMarker>()
+                .expect("failed to create network context proxy");
+        let () = sandbox.get_network_context(server).expect("FIDL error");
+        let (network_mgr, server) =
+            fidl::endpoints::create_proxy::<fnetemul_network::NetworkManagerMarker>()
+                .expect("failed to create network manager proxy");
+        let () = network_ctx.get_network_manager(server).expect("FIDL error");
+        network_mgr
+    }
+
+    #[fuchsia::test]
+    async fn network_context_per_sandbox_connection() {
+        let (sandbox1, sandbox1_fut) = setup_sandbox_service("sandbox_1");
+        let (sandbox2, sandbox2_fut) = setup_sandbox_service("sandbox_2");
+        let test = async move {
+            let net_mgr1 = get_network_manager(&sandbox1);
+            let net_mgr2 = get_network_manager(&sandbox2);
+
+            let (status, _network) = net_mgr1
+                .create_network("network", fnetemul_network::NetworkConfig::EMPTY)
+                .await
+                .expect("FIDL error");
+            let () = zx::Status::ok(status).expect("network creation");
+            let (status, _network) = net_mgr1
+                .create_network("network", fnetemul_network::NetworkConfig::EMPTY)
+                .await
+                .expect("FIDL error");
+            assert_eq!(zx::Status::from_raw(status), zx::Status::ALREADY_EXISTS);
+
+            let (status, _network) = net_mgr2
+                .create_network("network", fnetemul_network::NetworkConfig::EMPTY)
+                .await
+                .expect("FIDL error");
+            let () = zx::Status::ok(status).expect("network creation");
+            drop(sandbox1);
+            drop(sandbox2);
+        };
+        let ((), (), ()) = futures::future::join3(
+            sandbox1_fut.map(|()| info!("sandbox1_fut complete")),
+            sandbox2_fut.map(|()| info!("sandbox2_fut complete")),
+            test.map(|()| info!("test complete")),
+        )
+        .await;
     }
 }

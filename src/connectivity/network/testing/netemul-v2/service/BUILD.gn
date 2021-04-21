@@ -7,6 +7,7 @@ import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
 rustc_binary("bin") {
   testonly = true
@@ -14,8 +15,13 @@ rustc_binary("bin") {
   name = "netemul_sandbox_v2"
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun-rustc",
+    "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
     "//src/connectivity/network/testing/netemul-v2/fidl:fuchsia.netemul-rustc",
+    "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -26,6 +32,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
   ]
   test_deps = [
     "//src/connectivity/network/testing/netemul-v2/test-support:fidl-rustc",
@@ -33,6 +41,7 @@ rustc_binary("bin") {
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
+    "//src/lib/fuchsia",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:matches",
   ]
@@ -65,10 +74,26 @@ fuchsia_component("netemul-sandbox-v2-test-driver") {
   deps = [ ":bin_test" ]
 }
 
+group("network-drivers") {
+  testonly = true
+  deps = [
+    "//src/connectivity/ethernet/drivers/ethernet",
+    "//src/connectivity/ethernet/drivers/ethertap",
+  ]
+}
+
+isolated_devmgr_v2_component("netemul-devmgr") {
+  package_name = "netemul-v2-tests"
+  deps = [ ":network-drivers" ]
+}
+
 fuchsia_test_package("netemul-v2-tests") {
   test_components = [ ":netemul-sandbox-v2-test-root" ]
   deps = [
+    ":netemul-devmgr",
     ":netemul-sandbox-v2-test-driver",
+    "//src/connectivity/network/testing/netemul-v2/network-context",
     "//src/connectivity/network/testing/netemul-v2/test-support:counter",
+    "//src/connectivity/network/tun/network-tun:component-v2",
   ]
 }

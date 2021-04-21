@@ -19,13 +19,16 @@
     ],
     use: [
         {
-            protocol: "fuchsia.diagnostics.ArchiveAccessor",
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
             from: "parent",
         },
     ],
     offer: [
         {
-            protocol: "fuchsia.logger.LogSink",
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
             from: "parent",
             to: "#netemul",
         },

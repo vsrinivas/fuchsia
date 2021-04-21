@@ -16,6 +16,7 @@
             protocol: [
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
             ],
             from: "parent",
             to: [ "#test_driver" ],
