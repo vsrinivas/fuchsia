@@ -393,7 +393,11 @@ __NO_ASAN static void efi_stow_crashlog(zircon_crash_reason_t, const void* log, 
   }
   efi_status result =
       services->SetVariable(crashlog_name, &zircon_guid, ZIRCON_CRASHLOG_EFIATTR, len, log);
-  if (result != EFI_SUCCESS) {
+  // If we are writing a zero length crashlog then this has the meaning of deleting the variable
+  // from the efi storage, if the crashlog already doesn't exist then attempting to delete it is
+  // results in an error. From our point of view this error is spurious and so we avoid printing a
+  // confusing error message.
+  if (result != EFI_SUCCESS && (result != EFI_NOT_FOUND || len > 0)) {
     printf("EFI error while attempting to store crashlog: %" PRIx64 "\n", result);
     return;
   }
