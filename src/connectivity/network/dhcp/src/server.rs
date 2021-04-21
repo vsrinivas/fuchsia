@@ -374,33 +374,47 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
         let record =
             LeaseRecord::new(Some(offered), options, self.time_source.now(), lease_length_seconds)?;
         let Self { records, pool, store, .. } = self;
-        if let Some(store) = store {
-            let () =
-                store.insert(&client_id, &record).context("failed to store client in stash")?;
-        }
-        match records.insert(client_id, record).map(|LeaseRecord { current, .. }| current).flatten()
-        {
+        let entry = records.entry(client_id);
+        let current = match &entry {
+            std::collections::hash_map::Entry::Occupied(occupied) => {
+                let LeaseRecord { current, .. } = occupied.get();
+                *current
+            }
+            std::collections::hash_map::Entry::Vacant(_vacant) => None,
+        };
+        let () = match current {
             Some(current) => {
                 // If there is a lease record with a currently leased address, and the offered address
                 // does not match that leased address, then the offered address was calculated contrary
                 // to RFC2131#section4.3.1.
-                if current != offered {
-                    panic!(
-                        "server offered address {} which does not match address in lease record {}",
-                        offered, current
-                    );
-                }
-                Ok(())
+                assert_eq!(
+                    current, offered,
+                    "server offered address does not match address in lease record"
+                );
             }
             None => {
                 match pool.allocate_addr(offered) {
-                    Ok(()) => Ok(()),
+                    Ok(()) => (),
                     // An error here indicates that the offered address is already allocated, an
                     // irrecoverable inconsistency.
                     Err(e) => panic!("fatal server address allocation failure: {}", e),
                 }
             }
+        };
+        if let Some(store) = store {
+            let () =
+                store.insert(entry.key(), &record).context("failed to store client in stash")?;
         }
+        // TODO(https://github.com/rust-lang/rust/issues/65225): use entry.insert.
+        let () = match entry {
+            std::collections::hash_map::Entry::Occupied(mut occupied) => {
+                let _: LeaseRecord = occupied.insert(record);
+            }
+            std::collections::hash_map::Entry::Vacant(vacant) => {
+                let _: &mut LeaseRecord = vacant.insert(record);
+            }
+        };
+        Ok(())
     }
 
     fn handle_request(&mut self, req: Message) -> Result<ServerAction, ServerError> {
