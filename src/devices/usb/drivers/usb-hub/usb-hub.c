@@ -429,7 +429,7 @@ static int usb_hub_thread(void* arg) {
   uint8_t status_buf[128 / 8];
   memset(status_buf, 0, sizeof(status_buf));
 
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = usb_hub_interrupt_complete,
       .ctx = hub,
   };

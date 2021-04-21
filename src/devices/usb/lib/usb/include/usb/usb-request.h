@@ -96,13 +96,13 @@ void usb_request_release(usb_request_t* req);
 //
 // The complete_cb() will be called as the last action of this method.
 void usb_request_complete(usb_request_t* req, zx_status_t status, zx_off_t actual,
-                          const usb_request_complete_t* complete_cb);
+                          const usb_request_complete_callback_t* complete_cb);
 
 // Same as usb_request_complete() but also allows specifying the number of
 // silently completed requests.
 void usb_request_complete_base(usb_request_t* req, zx_status_t status, zx_off_t actual,
                                size_t silent_completions_count,
-                               const usb_request_complete_t* complete_cb);
+                               const usb_request_complete_callback_t* complete_cb);
 
 // initializes a phys_iter_t for a usb request
 // max_length is the maximum length of a range returned by usb_request_phys_iter_next()

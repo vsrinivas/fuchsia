@@ -148,7 +148,7 @@ zx_status_t Device::QueueUsbRequestHandler(const uint8_t* ip, size_t length, usb
     return ZX_ERR_IO;
   }
 
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = usb_write_complete,
       .ctx = this,
   };
@@ -519,7 +519,7 @@ static void qmi_interrupt_cb(void* ctx, usb_request_t* req) {
 
 int Device::EventLoop(void) {
   usb_request_t* txn = int_txn_buf_;
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = qmi_usb::qmi_interrupt_cb,
       .ctx = this,
   };
@@ -573,7 +573,7 @@ int Device::EventLoop(void) {
     } else if (packet.key == INTERRUPT_MSG) {
       if (txn->response.status == ZX_OK) {
         QmiInterruptHandler(txn);
-        usb_request_complete_t complete = {
+        usb_request_complete_callback_t complete = {
             .callback = qmi_interrupt_cb,
             .ctx = this,
         };
@@ -676,7 +676,7 @@ void Device::UsbReadCompleteHandler(usb_request_t* request) {
 
   zx_nanosleep(zx_deadline_after(ZX_USEC(rx_endpoint_delay_)));
 
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = qmi_usb::usb_read_complete,
       .ctx = this,
   };
@@ -929,7 +929,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
       return status;
     }
 
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback = usb_read_complete,
         .ctx = this,
     };

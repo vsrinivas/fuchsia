@@ -89,7 +89,7 @@ struct xhci_slot_t {
 
 struct xhci_usb_request_internal_t {
   // callback to the upper layer
-  usb_request_complete_t complete_cb;
+  usb_request_complete_callback_t complete_cb;
   // for queueing request at xhci level
   list_node_t node;
   xhci_trb_t* context;
@@ -256,7 +256,7 @@ zx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int spee
 void xhci_remove_device(xhci_t* xhci, int slot_id);
 
 void xhci_request_queue(xhci_t* xhci, usb_request_t* req,
-                        const usb_request_complete_t* complete_cb);
+                        const usb_request_complete_callback_t* complete_cb);
 
 }  // namespace usb_xhci
 

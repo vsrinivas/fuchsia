@@ -45,7 +45,7 @@ class UsbFunction : public UsbFunctionType,
   zx_status_t UsbFunctionDisableEp(uint8_t address);
   zx_status_t UsbFunctionAllocStringDesc(const char* str, uint8_t* out_index);
   void UsbFunctionRequestQueue(usb_request_t* usb_request,
-                               const usb_request_complete_t* complete_cb);
+                               const usb_request_complete_callback_t* complete_cb);
   zx_status_t UsbFunctionEpSetStall(uint8_t ep_address);
   zx_status_t UsbFunctionEpClearStall(uint8_t ep_address);
   size_t UsbFunctionGetRequestSize();

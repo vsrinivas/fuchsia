@@ -87,7 +87,7 @@ void FtdiDevice::ReadComplete(usb_request_t* request) {
     completed_reads_queue_.push(std::move(req));
     CheckStateLocked();
   } else {
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback =
             [](void* ctx, usb_request_t* request) {
               static_cast<FtdiDevice*>(ctx)->ReadComplete(request);
@@ -166,7 +166,7 @@ zx_status_t FtdiDevice::DdkWrite(const void* buf, size_t length, zx_off_t off, s
   *actual = req->CopyTo(buf, length, 0);
   req->request()->header.length = length;
 
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback =
           [](void* ctx, usb_request_t* request) {
             static_cast<FtdiDevice*>(ctx)->WriteComplete(request);
@@ -195,7 +195,7 @@ zx_status_t FtdiDevice::DdkRead(void* data, size_t len, zx_off_t off, size_t* ac
   size_t offset = read_offset_;
   uint8_t* buffer = static_cast<uint8_t*>(data);
 
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback =
           [](void* ctx, usb_request_t* request) {
             static_cast<FtdiDevice*>(ctx)->ReadComplete(request);
@@ -450,7 +450,7 @@ zx_status_t FtdiDevice::Bind() {
     return FtdiBindFail(status);
   }
 
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback =
           [](void* ctx, usb_request_t* request) {
             static_cast<FtdiDevice*>(ctx)->ReadComplete(request);

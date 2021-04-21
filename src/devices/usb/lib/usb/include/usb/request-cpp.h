@@ -292,7 +292,7 @@ struct CallbackTraits {
 
   static void Callback(CallbackType* callback, void* cookie, usb_request_t* op, zx_status_t status,
                        zx_off_t actual, size_t silent_completions_count = 0) {
-    usb_request_complete_t complete_cb = {
+    usb_request_complete_callback_t complete_cb = {
         .callback = callback,
         .ctx = cookie,
     };
@@ -314,7 +314,7 @@ class BorrowedRequest
   using BaseClass = operation::BorrowedOperation<BorrowedRequest<Storage>, OperationTraits,
                                                  CallbackTraits, Storage>;
 
-  BorrowedRequest(usb_request_t* request, const usb_request_complete_t& complete_cb,
+  BorrowedRequest(usb_request_t* request, const usb_request_complete_callback_t& complete_cb,
                   size_t parent_req_size, bool allow_destruct = true)
       : BaseClass(request, complete_cb.callback, complete_cb.ctx, parent_req_size, allow_destruct) {
   }
@@ -420,7 +420,7 @@ class CallbackRequest
   auto private_storage() { return Request::private_storage(); }
   template <typename ClientType>
   void Queue(ClientType& function) {
-    usb_request_complete_t completion;
+    usb_request_complete_callback_t completion;
     completion.ctx = reinterpret_cast<void*>(parent_request_size_);
     completion.callback = [](void* ctx, usb_request_t* request) {
       Invoke(request, reinterpret_cast<size_t>(ctx));
@@ -429,7 +429,7 @@ class CallbackRequest
   }
   template <typename ClientType, typename Lambda>
   void Queue(ClientType& function, Lambda callback) {
-    usb_request_complete_t completion;
+    usb_request_complete_callback_t completion;
     completion.ctx = reinterpret_cast<void*>(parent_request_size_);
     completion.callback = [](void* ctx, usb_request_t* request) {
       Invoke(request, reinterpret_cast<size_t>(ctx));

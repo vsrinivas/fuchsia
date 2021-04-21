@@ -137,7 +137,7 @@ static zx_status_t ax88772b_wait_for_phy(ax88772b_t* eth) {
 
 static void queue_interrupt_requests_locked(ax88772b_t* eth) {
   usb_request_t* req;
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = ax88772b_interrupt_complete,
       .ctx = eth,
   };
@@ -211,7 +211,7 @@ static zx_status_t ax88772b_send(ax88772b_t* eth, usb_request_t* request,
   request->header.length = length + ETH_HEADER_SIZE;
 
   zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = ax88772b_write_complete,
       .ctx = eth,
   };
@@ -246,7 +246,7 @@ static void ax88772b_read_complete(void* ctx, usb_request_t* request) {
 
   if (eth->online) {
     zx_nanosleep(zx_deadline_after(ZX_USEC(eth->rx_endpoint_delay)));
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback = ax88772b_read_complete,
         .ctx = eth,
     };
@@ -329,7 +329,7 @@ static void ax88772b_interrupt_complete(void* ctx, usb_request_t* request) {
         list_for_every_entry_safe (&eth->free_read_reqs, req_int, prev, usb_req_internal_t, node) {
           list_delete(&req_int->node);
           req = REQ_INTERNAL_TO_USB_REQ(req_int, eth->parent_req_size);
-          usb_request_complete_t complete = {
+          usb_request_complete_callback_t complete = {
               .callback = ax88772b_read_complete,
               .ctx = eth,
           };

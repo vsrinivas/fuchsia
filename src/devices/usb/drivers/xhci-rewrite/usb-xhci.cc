@@ -230,7 +230,7 @@ TRBPromise UsbXhci::EnableSlotCommand() {
 
 fit::promise<OwnedRequest, void> UsbXhci::UsbHciRequestQueue(OwnedRequest usb_request) {
   fit::bridge<OwnedRequest, void> bridge;
-  usb_request_complete_t completion;
+  usb_request_complete_callback_t completion;
   completion.callback = [](void* ctx, usb_request_t* req) {
     auto completer = static_cast<fit::completer<OwnedRequest, void>*>(ctx);
     completer->complete_ok(OwnedRequest(req, sizeof(usb_request_t)));
@@ -748,7 +748,7 @@ void UsbXhci::DdkRelease() {
 
 // USB HCI protocol implementation.
 void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request_,
-                                 const usb_request_complete_t* complete_cb_) {
+                                 const usb_request_complete_callback_t* complete_cb_) {
   Request request(usb_request_, *complete_cb_, sizeof(usb_request_t));
 
   if (!running_) {

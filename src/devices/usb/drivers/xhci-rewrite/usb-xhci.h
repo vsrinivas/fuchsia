@@ -91,10 +91,12 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   void UsbHciNormalRequestQueue(Request request);
 
   // USB HCI protocol implementation.
-  void UsbHciRequestQueue(usb_request_t* usb_request, const usb_request_complete_t* complete_cb);
+  void UsbHciRequestQueue(usb_request_t* usb_request,
+                          const usb_request_complete_callback_t* complete_cb);
 
   // Queues a USB request (compatibility shim for usb::CallbackRequest in unit test)
-  void RequestQueue(usb_request_t* usb_request, const usb_request_complete_t* complete_cb) {
+  void RequestQueue(usb_request_t* usb_request,
+                    const usb_request_complete_callback_t* complete_cb) {
     UsbHciRequestQueue(usb_request, complete_cb);
   }
 

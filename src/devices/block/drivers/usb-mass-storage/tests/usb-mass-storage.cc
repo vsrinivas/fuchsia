@@ -194,7 +194,7 @@ static size_t GetMaxTransferSize(void* ctx, uint8_t ep) {
 }
 static size_t GetRequestSize(void* ctx) { return sizeof(usb_request_t); }
 static void RequestQueue(void* ctx, usb_request_t* usb_request,
-                         const usb_request_complete_t* complete_cb) {
+                         const usb_request_complete_callback_t* complete_cb) {
   Context* context = reinterpret_cast<Context*>(ctx);
   if (context->pending_write) {
     void* data;

@@ -574,7 +574,7 @@ std::optional<Request> UsbHubDevice::AllocRequest() {
 
 fit::promise<Request, void> UsbHubDevice::RequestQueue(Request request) {
   fit::bridge<Request, void> bridge;
-  usb_request_complete_t completion;
+  usb_request_complete_callback_t completion;
   completion.callback = [](void* ctx, usb_request_t* req) {
     std::unique_ptr<fit::completer<Request, void>> completer(
         static_cast<fit::completer<Request, void>*>(ctx));

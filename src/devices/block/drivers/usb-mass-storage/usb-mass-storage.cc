@@ -100,12 +100,12 @@ void UsbMassStorageDevice::DdkUnbind(ddk::UnbindTxn txn) {
 }
 
 void UsbMassStorageDevice::RequestQueue(usb_request_t* request,
-                                        const usb_request_complete_t* completion) {
+                                        const usb_request_complete_callback_t* completion) {
   fbl::AutoLock l(&txn_lock_);
   pending_requests_++;
   UsbRequestContext context;
   context.completion = *completion;
-  usb_request_complete_t complete;
+  usb_request_complete_callback_t complete;
   complete.callback = [](void* ctx, usb_request_t* req) {
     UsbRequestContext context;
     memcpy(&context,
@@ -329,7 +329,7 @@ zx_status_t UsbMassStorageDevice::SendCbw(uint8_t lun, uint32_t transfer_length,
   memcpy(cbw->CBWCB, command, command_len);
 
   sync_completion_t completion;
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = ReqComplete,
       .ctx = &completion,
   };
@@ -340,7 +340,7 @@ zx_status_t UsbMassStorageDevice::SendCbw(uint8_t lun, uint32_t transfer_length,
 
 zx_status_t UsbMassStorageDevice::ReadCsw(uint32_t* out_residue) {
   sync_completion_t completion;
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = ReqComplete,
       .ctx = &completion,
   };
@@ -397,7 +397,7 @@ void UsbMassStorageDevice::QueueRead(uint16_t transfer_length) {
   // Read response code from device
   usb_request_t* read_request = data_req_;
   read_request->header.length = transfer_length;
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = ReqComplete,
       .ctx = NULL,
   };
@@ -409,7 +409,7 @@ zx_status_t UsbMassStorageDevice::ReadSync(uint16_t transfer_length) {
   usb_request_t* read_request = data_req_;
   read_request->header.length = transfer_length;
   sync_completion_t completion;
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = ReqComplete,
       .ctx = &completion,
   };
@@ -569,7 +569,7 @@ zx_status_t UsbMassStorageDevice::DataTransfer(Transaction* txn, zx_off_t offset
   }
 
   sync_completion_t completion;
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = ReqComplete,
       .ctx = &completion,
   };

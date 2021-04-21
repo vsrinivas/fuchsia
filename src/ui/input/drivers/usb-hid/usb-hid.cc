@@ -65,7 +65,7 @@ void UsbHidbus::UsbInterruptCallback(usb_request_t* req) {
   }
 
   if (requeue) {
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback =
             [](void* ctx, usb_request_t* request) {
               static_cast<UsbHidbus*>(ctx)->UsbInterruptCallback(request);
@@ -100,7 +100,7 @@ zx_status_t UsbHidbus::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
   ifc_ = ifc;
   if (!req_queued_) {
     req_queued_ = true;
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback =
             [](void* ctx, usb_request_t* request) {
               static_cast<UsbHidbus*>(ctx)->UsbInterruptCallback(request);
@@ -185,7 +185,7 @@ zx_status_t UsbHidbus::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const u
                                        size_t len) {
   if (has_endptout_) {
     sync_completion_reset(&set_report_complete_);
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback =
             [](void* ctx, usb_request_t* request) {
               sync_completion_signal(&static_cast<UsbHidbus*>(ctx)->set_report_complete_);

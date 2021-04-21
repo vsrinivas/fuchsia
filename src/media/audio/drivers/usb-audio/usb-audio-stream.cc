@@ -1017,7 +1017,7 @@ void UsbAudioStream::QueueRequestLocked() {
 
   req->header.frame = usb_frame_num_++;
   req->header.length = todo;
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = UsbAudioStream::RequestCompleteCallback,
       .ctx = this,
   };

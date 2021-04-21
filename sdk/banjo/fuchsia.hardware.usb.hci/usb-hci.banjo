@@ -6,6 +6,7 @@ library fuchsia.hardware.usb.hci;
 
 using zx;
 using fuchsia.hardware.usb.bus;
+using fuchsia.hardware.usb.descriptor;
 using fuchsia.hardware.usb.hubdescriptor;
 using fuchsia.hardware.usb.request;
 
@@ -13,7 +14,7 @@ using fuchsia.hardware.usb.request;
 protocol UsbHci {
     /// Queues a USB request with the HCI driver.
     RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,
-                 [InOut] fuchsia.hardware.usb.request.UsbRequestComplete complete_cb) -> ();
+                 [InOut] fuchsia.hardware.usb.request.UsbRequestCompleteCallback complete_cb) -> ();
     /// Registers callbacks to the USB bus driver with the HCI driver.
     SetBusInterface(fuchsia.hardware.usb.bus.UsbBusInterface bus_intf) -> ();
     /// Returns the maximum number of USB devices that might be connected to the controller.

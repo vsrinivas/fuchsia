@@ -5,10 +5,9 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.usb.function") {
-  translate_to_fidl = false
+  disable_verification = true
   sources = [ "usb-function.banjo" ]
   deps = [
-    "//sdk/banjo/ddk.hw.physiter",
     "//sdk/banjo/fuchsia.hardware.usb.descriptor",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/banjo/zx",

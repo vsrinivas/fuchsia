@@ -162,7 +162,7 @@ static zx_status_t queue_request(ecm_ctx_t* ctx, const uint8_t* data, size_t len
     zxlogf(ERROR, "%s: failed to copy data into send txn (error %zd)", module_name, bytes_copied);
     return ZX_ERR_IO;
   }
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = usb_write_complete,
       .ctx = ctx,
   };
@@ -218,7 +218,7 @@ static void usb_write_complete(void* cookie,
       zxlogf(DEBUG, "%s: resetting transmit endpoint", module_name);
       request->reset = true;
       request->reset_address = ctx->tx_endpoint.addr;
-      usb_request_complete_t complete = {
+      usb_request_complete_callback_t complete = {
           .callback = usb_write_complete,
           .ctx = ctx,
       };
@@ -236,7 +236,7 @@ static void usb_write_complete(void* cookie,
       }
       request->reset = true;
       request->reset_address = ctx->tx_endpoint.addr;
-      usb_request_complete_t complete = {
+      usb_request_complete_callback_t complete = {
           .callback = usb_write_complete,
           .ctx = ctx,
       };
@@ -304,7 +304,7 @@ static void usb_read_complete(void* cookie, usb_request_t* request) __TA_NO_THRE
     zxlogf(DEBUG, "%s: resetting receive endpoint", module_name);
     request->reset = true;
     request->reset_address = ctx->rx_endpoint.addr;
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback = usb_read_complete,
         .ctx = ctx,
     };
@@ -320,7 +320,7 @@ static void usb_read_complete(void* cookie, usb_request_t* request) __TA_NO_THRE
            module_name, ETHERNET_RECV_DELAY);
     request->reset = true;
     request->reset_address = ctx->rx_endpoint.addr;
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback = usb_read_complete,
         .ctx = ctx,
     };
@@ -333,7 +333,7 @@ static void usb_read_complete(void* cookie, usb_request_t* request) __TA_NO_THRE
     zx_nanosleep(zx_deadline_after(ZX_USEC(ctx->rx_endpoint_delay)));
   }
   request->reset = false;
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = usb_read_complete,
       .ctx = ctx,
   };
@@ -477,7 +477,7 @@ static int ecm_int_handler_thread(void* cookie) {
   ecm_ctx_t* ctx = cookie;
   usb_request_t* txn = ctx->int_txn_buf;
 
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = ecm_interrupt_complete,
       .ctx = ctx,
   };
@@ -633,7 +633,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
   }
 #endif
 
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = usb_read_complete,
       .ctx = ecm_ctx,
   };

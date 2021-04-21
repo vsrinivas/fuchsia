@@ -5,8 +5,9 @@
 use {
     super::{
         util::{
-            array_bounds, get_declarations, get_doc_comment, name_buffer, name_size, not_callback,
-            primitive_type_to_c_str, to_c_name, validate_declarations, Decl, ProtocolType,
+            array_bounds, get_base_type_from_alias, get_declarations, get_doc_comment, name_buffer,
+            name_size, not_callback, primitive_type_to_c_str, to_c_name, validate_declarations,
+            Decl, ProtocolType,
         },
         Backend,
     },
@@ -211,15 +212,6 @@ fn field_to_c_str(
         }
     }
     Ok(accum)
-}
-
-fn get_base_type_from_alias(alias: &Option<&String>) -> Option<String> {
-    if let Some(name) = alias {
-        if name.starts_with("zx/") {
-            return Some(format!("zx_{}_t", &name[3..]));
-        }
-    }
-    None
 }
 
 fn get_first_param(method: &Method, ir: &FidlIr) -> Result<(bool, String), Error> {

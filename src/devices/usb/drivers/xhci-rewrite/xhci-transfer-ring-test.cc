@@ -55,7 +55,8 @@ class TransferRingHarness : public zxtest::Test {
                               std::move(callback));
   }
 
-  void RequestQueue(usb_request_t* usb_request, const usb_request_complete_t* complete_cb) {
+  void RequestQueue(usb_request_t* usb_request,
+                    const usb_request_complete_callback_t* complete_cb) {
     pending_req_ = Request(usb_request, *complete_cb, sizeof(usb_request_t));
   }
 
@@ -166,7 +167,7 @@ zx_status_t UsbXhci::UsbHciCancelAll(uint32_t device_id, uint8_t ep_address) {
 size_t UsbXhci::UsbHciGetRequestSize() { return Request::RequestSize(sizeof(usb_request_t)); }
 
 void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request,
-                                 const usb_request_complete_t* complete_cb) {}
+                                 const usb_request_complete_callback_t* complete_cb) {}
 
 zx_status_t EventRing::AddSegmentIfNone() { return ZX_OK; }
 

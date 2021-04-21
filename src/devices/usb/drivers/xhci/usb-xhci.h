@@ -36,7 +36,8 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   void DdkRelease();
 
   // USB HCI protocol implementation.
-  void UsbHciRequestQueue(usb_request_t* usb_request, const usb_request_complete_t* complete_cb);
+  void UsbHciRequestQueue(usb_request_t* usb_request,
+                          const usb_request_complete_callback_t* complete_cb);
   void UsbHciSetBusInterface(const usb_bus_interface_protocol_t* bus_intf);
   size_t UsbHciGetMaxDeviceCount();
   zx_status_t UsbHciEnableEndpoint(uint32_t device_id, const usb_endpoint_descriptor_t* ep_desc,

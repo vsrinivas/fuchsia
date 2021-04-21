@@ -141,7 +141,7 @@ void UsbTest::TestBulkOutComplete(usb_request_t* req) {
       ZX_ASSERT(result == req->response.actual);
       req->header.length = req->response.actual;
 
-      usb_request_complete_t complete = {
+      usb_request_complete_callback_t complete = {
           .callback =
               [](void* ctx, usb_request_t* req) {
                 static_cast<UsbTest*>(ctx)->TestBulkInComplete(req);
@@ -159,7 +159,7 @@ void UsbTest::TestBulkOutComplete(usb_request_t* req) {
   }
 
   // Requeue read.
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = [](void* ctx,
                      usb_request_t* req) { static_cast<UsbTest*>(ctx)->TestBulkOutComplete(req); },
       .ctx = this,
@@ -224,7 +224,7 @@ zx_status_t UsbTest::UsbFunctionInterfaceControl(const usb_setup_t* setup,
     ZX_ASSERT(result == test_data_length_);
     req->request()->header.length = test_data_length_;
 
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback = [](void* ctx,
                        usb_request_t* req) { static_cast<UsbTest*>(ctx)->TestIntrComplete(req); },
         .ctx = this,
@@ -259,7 +259,7 @@ zx_status_t UsbTest::UsbFunctionInterfaceSetConfigured(bool configured, usb_spee
     fbl::AutoLock lock(&lock_);
     std::optional<usb::Request<void>> req;
     while ((req = bulk_out_reqs_.pop())) {
-      usb_request_complete_t complete = {
+      usb_request_complete_callback_t complete = {
           .callback =
               [](void* ctx, usb_request_t* req) {
                 static_cast<UsbTest*>(ctx)->TestBulkOutComplete(req);

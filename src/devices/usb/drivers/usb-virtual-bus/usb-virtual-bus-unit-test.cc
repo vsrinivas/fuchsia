@@ -87,7 +87,7 @@ TEST(VirtualBusUnitTest, UnbindDuringControlRequest) {
   // Do this in a new thread as it is a blocking operation, and we will not
   // request it be completed until after we begin unbinding.
   std::thread req_thread([&] {
-    usb_request_complete_t callback = {
+    usb_request_complete_callback_t callback = {
         .callback =
             [](void* ctx, usb_request_t* req) {
               sync_completion_t* sync = static_cast<sync_completion_t*>(ctx);

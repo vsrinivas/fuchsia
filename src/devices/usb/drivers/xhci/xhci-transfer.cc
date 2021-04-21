@@ -585,7 +585,7 @@ zx_status_t xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request
   sync_completion_t completion;
 
   req->header.length = length;
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = xhci_control_complete,
       .ctx = &completion,
   };

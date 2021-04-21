@@ -17,6 +17,7 @@ __BEGIN_CDECLS
 typedef struct vectors vectors_t;
 typedef struct handles handles_t;
 typedef struct arrays arrays_t;
+typedef struct zx_types zx_types_t;
 #define vectors_size UINT32_C(32)
 typedef uint8_t u8_enum_t;
 #define U8_ENUM_X UINT8_C(23)
@@ -378,6 +379,21 @@ struct arrays {
     float f32_2[32][4];
     double f64_2[32][4];
     zx_handle_t handle_2[32][4];
+};
+
+struct zx_types {
+    zx_status_t status;
+    zx_time_t time;
+    zx_duration_t duration;
+    zx_ticks_t ticks;
+    zx_koid_t koid;
+    zx_vaddr_t vaddr;
+    zx_paddr_t paddr;
+    zx_paddr32_t paddr32;
+    zx_gpaddr_t gpaddr;
+    zx_off_t offset;
+    zx_procarg_t procarg;
+    zx_signals_t signals;
 };
 
 union this_is_a_union {

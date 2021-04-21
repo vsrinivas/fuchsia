@@ -23,7 +23,7 @@ namespace usb_virtual_bus {
 void UsbVirtualDevice::DdkRelease() { delete this; }
 
 void UsbVirtualDevice::UsbDciRequestQueue(usb_request_t* req,
-                                          const usb_request_complete_t* complete_cb) {
+                                          const usb_request_complete_callback_t* complete_cb) {
   bus_->UsbDciRequestQueue(req, complete_cb);
 }
 

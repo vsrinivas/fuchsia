@@ -4,6 +4,7 @@
 
 library fuchsia.hardware.usb.dci;
 
+using fuchsia.hardware.usb.descriptor;
 using fuchsia.hardware.usb.request;
 using zx;
 
@@ -11,9 +12,9 @@ using zx;
 protocol UsbDci {
     /// Queues a USB request with the DCI driver.
     RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,
-                 [InOut] fuchsia.hardware.usb.request.UsbRequestComplete complete_cb) -> ();
+                 [InOut] fuchsia.hardware.usb.request.UsbRequestCompleteCallback complete_cb) -> ();
     /// Registers callback interface with the DCI driver.
-    SetInterface(UsbDciInterface @interface) -> (zx.status s);
+    SetInterface(UsbDciInterface interface) -> (zx.status s);
     /// Configures an endpoint based on provided descriptors.
     ConfigEp(fuchsia.hardware.usb.descriptor.UsbEndpointDescriptor ep_desc,
                 fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor ss_comp_desc) -> (zx.status s);

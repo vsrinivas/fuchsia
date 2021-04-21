@@ -38,7 +38,7 @@ size_t parent_req_size = usb_get_request_size(&usb);
 usb_request_t* request;
 usb_request_alloc(&request, transfer_length, endpoint_addr,
 parent_req_size+sizeof(your_context_struct_t));
-usb_request_complete_t complete = {
+usb_request_complete_callback_t complete = {
       .callback = usb_request_complete,
       .ctx = your_context_pointer,
 };
@@ -65,7 +65,7 @@ parent_req_size = usb.GetRequestSize();
 std::optional<usb::Request<void>> req;
 status = usb::Request<void>::Alloc(&req, transfer_length,
 endpoint_addr, parent_req_size);
-usb_request_complete_t complete = {
+usb_request_complete_callback_t complete = {
       .callback =
           [](void* ctx, usb_request_t* request) {
             static_cast<YourDeviceClass*>(ctx)->YourHandlerFunction(request);

@@ -67,7 +67,7 @@ class FakeUsbCdcAcmFunction : public DeviceType,
   int Thread();
   void DataInComplete() TA_REQ(mtx_);
   void DataOutComplete() TA_REQ(mtx_);
-  void RequestQueue(usb_request_t* req, const usb_request_complete_t* completion);
+  void RequestQueue(usb_request_t* req, const usb_request_complete_callback_t* completion);
   void CompletionCallback(usb_request_t* req);
 
   ddk::UsbFunctionProtocolClient function_;
@@ -110,7 +110,7 @@ void FakeUsbCdcAcmFunction::CompletionCallback(usb_request_t* req) {
 }
 
 void FakeUsbCdcAcmFunction::RequestQueue(usb_request_t* req,
-                                         const usb_request_complete_t* completion) {
+                                         const usb_request_complete_callback_t* completion) {
   atomic_fetch_add(&pending_request_count_, 1);
   function_.RequestQueue(req, completion);
 }
@@ -125,7 +125,7 @@ void FakeUsbCdcAcmFunction::DataOutComplete() {
   __UNUSED size_t copied =
       usb_request_copy_from(data_out_req_->request(), data.data(), data.size(), 0);
 
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback =
           [](void* ctx, usb_request_t* req) {
             return static_cast<FakeUsbCdcAcmFunction*>(ctx)->CompletionCallback(req);
@@ -206,7 +206,7 @@ zx_status_t FakeUsbCdcAcmFunction::UsbFunctionInterfaceSetConfigured(bool config
       zxlogf(ERROR, "usb-cdc-acm-function: usb_function_config_ep failed");
     }
     // queue first read on OUT endpoint
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback =
             [](void* ctx, usb_request_t* req) {
               return static_cast<FakeUsbCdcAcmFunction*>(ctx)->CompletionCallback(req);

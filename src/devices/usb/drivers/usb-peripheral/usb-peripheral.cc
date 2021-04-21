@@ -68,14 +68,14 @@ void UsbPeripheral::RequestComplete(usb_request_t* req) {
 }
 
 void UsbPeripheral::UsbPeripheralRequestQueue(usb_request_t* usb_request,
-                                              const usb_request_complete_t* complete_cb) {
+                                              const usb_request_complete_callback_t* complete_cb) {
   if (shutting_down_) {
     usb_request_complete(usb_request, ZX_ERR_IO_NOT_PRESENT, 0, complete_cb);
     return;
   }
   fbl::AutoLock l(&pending_requests_lock_);
   usb::BorrowedRequest<void> request(usb_request, *complete_cb, dci_.GetRequestSize());
-  __UNUSED usb_request_complete_t completion;
+  __UNUSED usb_request_complete_callback_t completion;
   completion.ctx = this;
   completion.callback = [](void* ctx, usb_request_t* req) {
     reinterpret_cast<UsbPeripheral*>(ctx)->RequestComplete(req);

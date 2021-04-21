@@ -336,7 +336,7 @@ zx_status_t UsbVirtualBus::UsbDciCancelAll(uint8_t endpoint) {
 }
 
 void UsbVirtualBus::UsbDciRequestQueue(usb_request_t* req,
-                                       const usb_request_complete_t* complete_cb) {
+                                       const usb_request_complete_callback_t* complete_cb) {
   Request request(req, *complete_cb, sizeof(usb_request_t));
 
   uint8_t index = EpAddressToIndex(request.request()->header.ep_address);
@@ -399,7 +399,7 @@ size_t UsbVirtualBus::UsbDciGetRequestSize() {
 }
 
 void UsbVirtualBus::UsbHciRequestQueue(usb_request_t* req,
-                                       const usb_request_complete_t* complete_cb) {
+                                       const usb_request_complete_callback_t* complete_cb) {
   Request request(req, *complete_cb, sizeof(usb_request_t));
 
   uint8_t index = EpAddressToIndex(request.request()->header.ep_address);

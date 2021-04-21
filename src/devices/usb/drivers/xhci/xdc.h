@@ -140,7 +140,7 @@ typedef struct {
 
 typedef struct {
   list_node_t node;
-  usb_request_complete_t complete_cb;
+  usb_request_complete_callback_t complete_cb;
   void* context;
 } xdc_req_internal_t;
 

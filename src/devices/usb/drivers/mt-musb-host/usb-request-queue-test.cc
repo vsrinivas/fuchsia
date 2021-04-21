@@ -92,7 +92,7 @@ class TransactionQueueTest : public zxtest::Test {
 
   std::optional<ddk::MmioBuffer> mmio_;
 
-  static constexpr usb_request_complete_t cb_ = {
+  static constexpr usb_request_complete_callback_t cb_ = {
       .callback = [](void*, usb_request_t* r) { usb::Request<>(r, sizeof(usb_request_t)); },
       .ctx = nullptr,
   };
@@ -250,7 +250,7 @@ TEST_F(TransactionQueueTest, QueueThread_CancelAll) {
   };
 
   capture_t cap;
-  const usb_request_complete_t cb = {
+  const usb_request_complete_callback_t cb = {
       .callback = callback,
       .ctx = &cap,
   };

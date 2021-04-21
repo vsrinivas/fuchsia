@@ -39,6 +39,21 @@ struct primitive_types {
     float64 f64;
 };
 
+struct zx_types {
+    zx.status status;
+    zx.time time;
+    zx.duration duration;
+    zx.ticks ticks;
+    zx.koid koid;
+    zx.vaddr vaddr;
+    zx.paddr paddr;
+    zx.paddr32 paddr32;
+    zx.gpaddr gpaddr;
+    zx.off offset;
+    zx.procarg procarg;
+    zx.signals signals;
+};
+
 struct default_values {
     bool b1 = true;
     bool b2 = false;

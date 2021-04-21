@@ -113,7 +113,7 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
     size_t copy_length = usb_request_copy_to(req, file.view(sent, size).data(), size, 0);
     ZX_ASSERT(copy_length == size);
     sync_completion_reset(&completion_);
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback = interrupt_complete,
         .ctx = &completion_,
     };
@@ -174,7 +174,7 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
     size_t copy_length = usb_request_copy_to(req, file.view(sent, size).data(), size, 0);
     ZX_ASSERT(copy_length == size);
     sync_completion_reset(&completion_);
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback = interrupt_complete,
         .ctx = &completion_,
     };

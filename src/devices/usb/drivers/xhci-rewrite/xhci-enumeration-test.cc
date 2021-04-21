@@ -305,7 +305,7 @@ zx_status_t UsbXhci::UsbHciCancelAll(uint32_t device_id, uint8_t ep_address) {
 }
 
 void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request,
-                                 const usb_request_complete_t* complete_cb) {
+                                 const usb_request_complete_callback_t* complete_cb) {
   auto state = reinterpret_cast<TestState*>(parent_);
   auto context = state->trb_context_allocator_.New();
   context->request = Request(usb_request, *complete_cb, sizeof(usb_request_t));
@@ -331,7 +331,7 @@ int UsbXhci::InitThread() {
 
 fit::promise<OwnedRequest, void> UsbXhci::UsbHciRequestQueue(OwnedRequest usb_request) {
   fit::bridge<OwnedRequest, void> bridge;
-  usb_request_complete_t completion;
+  usb_request_complete_callback_t completion;
   completion.callback = [](void* ctx, usb_request_t* req) {
     auto completer = static_cast<fit::completer<OwnedRequest, void>*>(ctx);
     completer->complete_ok(OwnedRequest(req, sizeof(usb_request_t)));

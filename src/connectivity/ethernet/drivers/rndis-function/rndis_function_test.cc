@@ -5,10 +5,10 @@
 #include "rndis_function.h"
 
 #include <fuchsia/hardware/usb/function/cpp/banjo.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sync/completion.h>
 
-#include <lib/ddk/metadata.h>
 #include <zxtest/zxtest.h>
 
 class FakeFunction : public ddk::UsbFunctionProtocol<FakeFunction, ddk::base_protocol> {
@@ -50,7 +50,7 @@ class FakeFunction : public ddk::UsbFunctionProtocol<FakeFunction, ddk::base_pro
   zx_status_t UsbFunctionAllocStringDesc(const char* str, uint8_t* out_index) { return ZX_OK; }
 
   void UsbFunctionRequestQueue(usb_request_t* usb_request,
-                               const usb_request_complete_t* complete_cb) {
+                               const usb_request_complete_callback_t* complete_cb) {
     usb::BorrowedRequest request(usb_request, *complete_cb, sizeof(usb_request_t));
     switch (request.request()->header.ep_address) {
       case kBulkOutEndpoint:

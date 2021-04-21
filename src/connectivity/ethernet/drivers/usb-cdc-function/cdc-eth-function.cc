@@ -242,7 +242,7 @@ static void usb_request_callback(void* ctx, usb_request_t* req) {
   }
   // Invoke the real completion if not shutting down.
   if (!cdc->unbound) {
-    usb_request_complete_t completion;
+    usb_request_complete_callback_t completion;
     memcpy(&completion, reinterpret_cast<unsigned char*>(req) + cdc->usb_request_offset,
            sizeof(completion));
     completion.callback(completion.ctx, req);
@@ -256,7 +256,7 @@ static void usb_request_callback(void* ctx, usb_request_t* req) {
 }
 
 static void usb_request_queue(void* ctx, usb_function_protocol_t* function, usb_request_t* req,
-                              const usb_request_complete_t* completion) {
+                              const usb_request_complete_callback_t* completion) {
   usb_cdc_t* cdc = static_cast<usb_cdc_t*>(ctx);
   if (cdc->suspending) {
     instrumented_request_release(ctx, req);
@@ -269,7 +269,7 @@ static void usb_request_queue(void* ctx, usb_function_protocol_t* function, usb_
   }
   cdc->pending_request_count++;
   mtx_unlock(&cdc->pending_request_lock);
-  usb_request_complete_t internal_completion;
+  usb_request_complete_callback_t internal_completion;
   internal_completion.callback = usb_request_callback;
   internal_completion.ctx = ctx;
   memcpy(reinterpret_cast<unsigned char*>(req) + cdc->usb_request_offset, completion,
@@ -369,7 +369,7 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethernet_netbuf_t* netbuf) {
     return ZX_ERR_INTERNAL;
   }
 
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = cdc_tx_complete,
       .ctx = cdc,
   };
@@ -490,7 +490,7 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
   ZX_ASSERT(result == sizeof(network_notification));
   req->header.length = sizeof(network_notification);
 
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = cdc_intr_complete,
       .ctx = cdc,
   };
@@ -537,7 +537,7 @@ static void cdc_rx_complete(void* ctx, usb_request_t* req) {
     mtx_unlock(&cdc->ethernet_mutex);
   }
 
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = cdc_rx_complete,
       .ctx = cdc,
   };
@@ -669,7 +669,7 @@ static zx_status_t cdc_set_interface(void* ctx, uint8_t interface, uint8_t alt_s
     mtx_lock(&cdc->rx_mutex);
     usb_request_t* req;
     while ((req = usb_req_list_remove_head(&cdc->bulk_out_reqs, cdc->parent_req_size)) != NULL) {
-      usb_request_complete_t complete = {
+      usb_request_complete_callback_t complete = {
           .callback = cdc_rx_complete,
           .ctx = cdc,
       };
@@ -852,7 +852,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
   cdc->bulk_max_packet = BULK_MAX_PACKET;  // FIXME(voydanoff) USB 3.0 support
   cdc->parent_req_size = usb_function_get_request_size(&cdc->function);
   uint64_t req_size =
-      cdc->parent_req_size + sizeof(usb_req_internal_t) + sizeof(usb_request_complete_t);
+      cdc->parent_req_size + sizeof(usb_req_internal_t) + sizeof(usb_request_complete_callback_t);
   cdc->usb_request_offset = cdc->parent_req_size + sizeof(usb_req_internal_t);
   status = usb_function_alloc_interface(&cdc->function, &descriptors.comm_intf.b_interface_number);
   if (status != ZX_OK) {

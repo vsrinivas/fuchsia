@@ -114,7 +114,7 @@ static void ums_data_complete(void* ctx, usb_request_t* req);
 static void ums_csw_complete(void* ctx, usb_request_t* req);
 
 static void usb_request_queue(void* ctx, usb_function_protocol_t* function, usb_request_t* req,
-                              const usb_request_complete_t* completion) {
+                              const usb_request_complete_callback_t* completion) {
   usb_ums_t* ums = (usb_ums_t*)ctx;
   atomic_fetch_add(&ums->pending_request_count, 1);
   usb_function_request_queue(function, req, completion);
@@ -140,7 +140,7 @@ static void ums_function_queue_data(usb_ums_t* ums, usb_request_t* req) {
   ums->data_length += req->header.length;
   req->header.ep_address =
       ums->current_cbw.bmCBWFlags & USB_DIR_IN ? ums->bulk_in_addr : ums->bulk_out_addr;
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = ums_completion_callback,
       .ctx = ums,
   };
@@ -149,7 +149,7 @@ static void ums_function_queue_data(usb_ums_t* ums, usb_request_t* req) {
 
 static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
   // first queue next cbw so it is ready to go
-  usb_request_complete_t cbw_complete = {
+  usb_request_complete_callback_t cbw_complete = {
       .callback = ums_completion_callback,
       .ctx = ums,
   };
@@ -166,7 +166,7 @@ static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
   csw->bmCSWStatus = status;
 
   req->header.length = sizeof(ums_csw_t);
-  usb_request_complete_t csw_complete = {
+  usb_request_complete_callback_t csw_complete = {
       .callback = ums_completion_callback,
       .ctx = ums,
   };
@@ -527,7 +527,7 @@ static zx_status_t ums_set_configured(void* ctx, bool configured, usb_speed_t sp
 
   if (configured && status == ZX_OK) {
     // queue first read on OUT endpoint
-    usb_request_complete_t cbw_complete = {
+    usb_request_complete_callback_t cbw_complete = {
         .callback = ums_completion_callback,
         .ctx = ums,
     };

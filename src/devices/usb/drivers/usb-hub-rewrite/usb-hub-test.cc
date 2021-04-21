@@ -152,7 +152,8 @@ class SyntheticHarness : public zxtest::Test {
     ASSERT_TRUE(device_->HasOps());
   }
 
-  void SetRequestCallback(fit::function<void(usb_request_t*, usb_request_complete_t)> callback) {
+  void SetRequestCallback(
+      fit::function<void(usb_request_t*, usb_request_complete_callback_t)> callback) {
     device_->SetRequestCallback(std::move(callback));
   }
 
@@ -348,7 +349,7 @@ TEST_F(SmaysHarness, Timeout) {
 TEST_F(SyntheticHarness, SetFeature) {
   auto dev = device();
   bool ran = false;
-  SetRequestCallback([&](usb_request_t* request, usb_request_complete_t completion) {
+  SetRequestCallback([&](usb_request_t* request, usb_request_complete_callback_t completion) {
     ASSERT_EQ(request->setup.bm_request_type, 3);
     ASSERT_EQ(request->setup.b_request, USB_REQ_SET_FEATURE);
     ASSERT_EQ(request->setup.w_index, 2);
@@ -362,7 +363,7 @@ TEST_F(SyntheticHarness, SetFeature) {
 TEST_F(SyntheticHarness, ClearFeature) {
   auto dev = device();
   bool ran = false;
-  SetRequestCallback([&](usb_request_t* request, usb_request_complete_t completion) {
+  SetRequestCallback([&](usb_request_t* request, usb_request_complete_callback_t completion) {
     ASSERT_EQ(request->setup.bm_request_type, 3);
     ASSERT_EQ(request->setup.b_request, USB_REQ_CLEAR_FEATURE);
     ASSERT_EQ(request->setup.w_index, 2);
@@ -380,7 +381,7 @@ TEST_F(SyntheticHarness, GetPortStatus) {
   for (uint16_t i = 0; i < 127; i++) {
     bool ran = false;
     uint16_t features_cleared = 0;
-    SetRequestCallback([&](usb_request_t* request, usb_request_complete_t completion) {
+    SetRequestCallback([&](usb_request_t* request, usb_request_complete_callback_t completion) {
       switch (request->setup.bm_request_type) {
         case USB_RECIP_PORT | USB_DIR_IN: {
           usb_port_status_t* stat;
@@ -434,7 +435,7 @@ TEST_F(SyntheticHarness, GetPortStatus) {
 
 TEST_F(SyntheticHarness, BadDescriptorTest) {
   auto dev = device();
-  SetRequestCallback([&](usb_request_t* request, usb_request_complete_t completion) {
+  SetRequestCallback([&](usb_request_t* request, usb_request_complete_callback_t completion) {
     usb_device_descriptor_t* devdesc;
     usb_request_mmap(request, reinterpret_cast<void**>(&devdesc));
     devdesc->b_length = sizeof(usb_device_descriptor_t);

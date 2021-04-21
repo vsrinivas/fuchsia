@@ -5,6 +5,7 @@
 library fuchsia.hardware.usb.request;
 
 using ddk.hw.physiter;
+using fuchsia.hardware.usb.descriptor;
 using zx;
 
 /// Should be set by the requestor.
@@ -35,7 +36,7 @@ struct UsbResponse {
     uint64 silent_completions_count;
 };
 
-struct UsbRequest {
+resource struct UsbRequest {
     UsbHeader header;
 
     /// For control transactions.
@@ -89,6 +90,6 @@ struct UsbRequest {
 };
 
 [Transport = "Banjo", BanjoLayout="ddk-callback"]
-protocol UsbRequestComplete {
+protocol UsbRequestCompleteCallback {
     Callback([InOut] UsbRequest req) -> ();
 };

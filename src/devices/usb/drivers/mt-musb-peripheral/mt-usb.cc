@@ -675,7 +675,7 @@ zx_status_t MtUsb::UsbDciCancelAll(uint8_t ep) {
   }
   return ZX_OK;
 }
-void MtUsb::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* cb) {
+void MtUsb::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_callback_t* cb) {
   auto* ep = EndpointFromAddress(req->header.ep_address);
   if (ep == nullptr) {
     usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, cb);

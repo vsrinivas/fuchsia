@@ -103,7 +103,7 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
                             return Ok(format!("{}_t", to_c_name(id.name())));
                         }
                     }
-                    t => Err(format_err!("unknown ident type in ty_to_cpp_str {:?}", t)),
+                    t => return ty_to_cpp_str(ast, wrappers, &t),
                 }
             }
         }

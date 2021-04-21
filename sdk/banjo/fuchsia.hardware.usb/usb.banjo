@@ -4,6 +4,7 @@
 
 library fuchsia.hardware.usb;
 
+using fuchsia.hardware.usb.descriptor;
 using fuchsia.hardware.usb.request;
 using zx;
 
@@ -19,7 +20,7 @@ protocol Usb {
 
     /// Queues a USB request.
     RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,
-                 [InOut] fuchsia.hardware.usb.request.UsbRequestComplete complete_cb) -> ();
+                 [InOut] fuchsia.hardware.usb.request.UsbRequestCompleteCallback complete_cb) -> ();
 
     /// Returns the speed of the device.
     GetSpeed() -> (fuchsia.hardware.usb.descriptor.UsbSpeed s);

@@ -151,7 +151,7 @@ class Asix88179Ethernet : public DeviceType,
 
   std::thread cancel_thread_;
 
-  usb_request_complete_t read_request_complete_ = {
+  usb_request_complete_callback_t read_request_complete_ = {
       .callback =
           [](void* ctx, usb_request_t* request) {
             reinterpret_cast<Asix88179Ethernet*>(ctx)->ReadComplete(request);
@@ -159,7 +159,7 @@ class Asix88179Ethernet : public DeviceType,
       .ctx = this,
   };
 
-  usb_request_complete_t write_request_complete_ = {
+  usb_request_complete_callback_t write_request_complete_ = {
       .callback =
           [](void* ctx, usb_request_t* request) {
             reinterpret_cast<Asix88179Ethernet*>(ctx)->WriteComplete(request);
@@ -167,7 +167,7 @@ class Asix88179Ethernet : public DeviceType,
       .ctx = this,
   };
 
-  usb_request_complete_t interrupt_request_complete_ = {
+  usb_request_complete_callback_t interrupt_request_complete_ = {
       .callback =
           [](void* ctx, usb_request_t* request) {
             reinterpret_cast<Asix88179Ethernet*>(ctx)->InterruptComplete(request);

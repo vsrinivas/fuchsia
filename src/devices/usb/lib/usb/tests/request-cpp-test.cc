@@ -18,7 +18,7 @@ using Request = usb::Request<void>;
 
 constexpr size_t kParentReqSize = sizeof(usb_request_t);
 constexpr size_t kReqSize = Request::RequestSize(kParentReqSize);
-constexpr usb_request_complete_t kNoCallback = {};
+constexpr usb_request_complete_callback_t kNoCallback = {};
 
 TEST(UsbRequestListTest, TrivialLifetime) {
   usb::RequestList<void> list;
@@ -323,7 +323,7 @@ TEST(UsbRequestListTest, MultipleLayerWithCallback) {
     ++(*counter);
   };
 
-  usb_request_complete_t complete_cb = {
+  usb_request_complete_callback_t complete_cb = {
       .callback = callback,
       .ctx = &num_callbacks,
   };
@@ -577,7 +577,7 @@ TEST(UsbRequestQueue, MultipleLayerWithCallback) {
     auto* queue = static_cast<usb::RequestQueue<uint64_t>*>(ctx);
     queue->push(SecondLayerReq(request, kFirstLayerReqSize));
   };
-  usb_request_complete_t complete_cb = {
+  usb_request_complete_callback_t complete_cb = {
       .callback = callback,
       .ctx = &queue,
   };
@@ -827,7 +827,7 @@ TEST(UsbRequestTest, Callback) {
     // We take ownership.
     Request unused(request, kBaseReqSize);
   };
-  usb_request_complete_t complete_cb = {
+  usb_request_complete_callback_t complete_cb = {
       .callback = callback,
       .ctx = &called,
   };
@@ -844,7 +844,7 @@ TEST(UsbRequestTest, CallbackRequest) {
   usb_function_protocol_t fake_function = {};
   usb_function_protocol_ops_t fake_ops;
   fake_ops.request_queue = [](void* ctx, usb_request_t* usb_request,
-                              const usb_request_complete_t* complete_cb) {
+                              const usb_request_complete_callback_t* complete_cb) {
     usb_request_complete(usb_request, ZX_OK, 0, complete_cb);
   };
   fake_function.ops = &fake_ops;

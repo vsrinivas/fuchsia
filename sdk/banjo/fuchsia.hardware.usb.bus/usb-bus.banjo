@@ -8,8 +8,7 @@ using zx;
 using fuchsia.hardware.usb.hub;
 using fuchsia.hardware.usb.hubdescriptor;
 
-enum UsbSpeed : uint32 {
-};
+alias UsbSpeed = uint32;
 
 // Note: the "uint64 foo_device" parameters should be interpreted as zx_device_t*.
 // TODO(fxb/69023): restore types.

@@ -132,7 +132,7 @@ zx_status_t UsbMidiSink::DdkWrite(const void* data, size_t length, zx_off_t offs
     size_t result = req->CopyTo(buffer, 4, 0);
     ZX_ASSERT(result == 4);
     req->request()->header.length = 4;
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback = [](void* ctx,
                        usb_request_t* req) { static_cast<UsbMidiSink*>(ctx)->WriteComplete(req); },
         .ctx = this,

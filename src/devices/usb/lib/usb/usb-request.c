@@ -305,13 +305,13 @@ __EXPORT void usb_request_release(usb_request_t* req) {
 }
 
 __EXPORT void usb_request_complete(usb_request_t* req, zx_status_t status, zx_off_t actual,
-                                   const usb_request_complete_t* complete_cb) {
+                                   const usb_request_complete_callback_t* complete_cb) {
   usb_request_complete_base(req, status, actual, 0, complete_cb);
 }
 
 __EXPORT void usb_request_complete_base(usb_request_t* req, zx_status_t status, zx_off_t actual,
                                         size_t silent_completions_count,
-                                        const usb_request_complete_t* complete_cb) {
+                                        const usb_request_complete_callback_t* complete_cb) {
   req->response.status = status;
   req->response.actual = actual;
   req->response.silent_completions_count = silent_completions_count;

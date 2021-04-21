@@ -106,7 +106,8 @@ class FakeHci : public ddk::UsbHciProtocol<FakeHci> {
     return usb::BorrowedRequest<void>::RequestSize(sizeof(usb_request_t));
   }
 
-  void UsbHciRequestQueue(usb_request_t* usb_request_, const usb_request_complete_t* complete_cb_) {
+  void UsbHciRequestQueue(usb_request_t* usb_request_,
+                          const usb_request_complete_callback_t* complete_cb_) {
     usb::BorrowedRequest<void> request(usb_request_, *complete_cb_, sizeof(usb_request_t));
     if (should_return_empty_) {
       request.Complete(ZX_OK, 0);
@@ -278,7 +279,7 @@ class DeviceTest : public zxtest::Test {
 
   size_t get_parent_request_size() { return device_->UsbGetRequestSize(); }
 
-  void RequestQueue(usb_request_t* request, const usb_request_complete_t* completion) {
+  void RequestQueue(usb_request_t* request, const usb_request_complete_callback_t* completion) {
     device_->UsbRequestQueue(request, completion);
   }
 
@@ -770,7 +771,8 @@ class EvilFakeHci : public ddk::UsbHciProtocol<EvilFakeHci> {
     return usb::BorrowedRequest<void>::RequestSize(sizeof(usb_request_t));
   }
 
-  void UsbHciRequestQueue(usb_request_t* usb_request_, const usb_request_complete_t* complete_cb_) {
+  void UsbHciRequestQueue(usb_request_t* usb_request_,
+                          const usb_request_complete_callback_t* complete_cb_) {
     usb::BorrowedRequest<void> request(usb_request_, *complete_cb_, sizeof(usb_request_t));
     EXPECT_EQ(request.request()->header.ep_address, 0);
     EXPECT_EQ(request.request()->setup.bm_request_type,

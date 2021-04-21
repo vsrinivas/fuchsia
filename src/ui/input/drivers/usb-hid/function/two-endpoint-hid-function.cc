@@ -135,7 +135,7 @@ int FakeUsbHidFunction::Thread() {
     // Release the lock before queueing, as the callback acquires the lock and is sometimes run in
     // the same thread.
     lock.release();
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback =
             [](void* ctx, usb_request_t* req) {
               return static_cast<FakeUsbHidFunction*>(ctx)->UsbEndpointOutCallback(req);

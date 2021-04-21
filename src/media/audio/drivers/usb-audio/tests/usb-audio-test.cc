@@ -110,7 +110,8 @@ class FakeDevice : public FakeDeviceType,
     return ZX_ERR_INTERNAL;
   }
 
-  void UsbRequestQueue(usb_request_t* usb_request, const usb_request_complete_t* complete_cb) {}
+  void UsbRequestQueue(usb_request_t* usb_request,
+                       const usb_request_complete_callback_t* complete_cb) {}
 
   usb_speed_t UsbGetSpeed() { return USB_SPEED_FULL; }
 

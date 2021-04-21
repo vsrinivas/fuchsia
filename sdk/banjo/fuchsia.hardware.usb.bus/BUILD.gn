@@ -5,10 +5,8 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.usb.bus") {
-  translate_to_fidl = false
   sources = [ "usb-bus.banjo" ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.usb.descriptor",
     "//sdk/banjo/fuchsia.hardware.usb.hub",
     "//sdk/banjo/fuchsia.hardware.usb.hubdescriptor",
     "//sdk/banjo/zx",

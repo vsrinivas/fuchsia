@@ -89,14 +89,14 @@ class UsbCdcAcmDevice : public DeviceType,
   std::thread cancel_thread_;
 
   // USB callback functions.
-  usb_request_complete_t read_request_complete_ = {
+  usb_request_complete_callback_t read_request_complete_ = {
       .callback =
           [](void* ctx, usb_request_t* request) {
             reinterpret_cast<UsbCdcAcmDevice*>(ctx)->ReadComplete(request);
           },
       .ctx = this,
   };
-  usb_request_complete_t write_request_complete_ = {
+  usb_request_complete_callback_t write_request_complete_ = {
       .callback =
           [](void* ctx, usb_request_t* request) {
             reinterpret_cast<UsbCdcAcmDevice*>(ctx)->WriteComplete(request);

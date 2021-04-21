@@ -1023,7 +1023,7 @@ void Dwc2::DdkSuspend(ddk::SuspendTxn txn) {
   txn.Reply(ZX_OK, 0);
 }
 
-void Dwc2::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* cb) {
+void Dwc2::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_callback_t* cb) {
   {
     fbl::AutoLock lock(&lock_);
     if (shutting_down_) {

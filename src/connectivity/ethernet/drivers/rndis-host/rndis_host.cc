@@ -184,7 +184,7 @@ void RndisHost::ReadComplete(usb_request_t* request) {
 
   // TODO: Only usb_request_queue if the device is online.
   zx_nanosleep(zx_deadline_after(ZX_USEC(rx_endpoint_delay_)));
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = [](void* arg, usb_request_t* request) -> void {
         static_cast<RndisHost*>(arg)->ReadComplete(request);
       },
@@ -292,7 +292,7 @@ void RndisHost::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
 
   zx_nanosleep(zx_deadline_after(ZX_USEC(tx_endpoint_delay_)));
   {
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback = [](void* arg, usb_request_t* request) -> void {
           static_cast<RndisHost*>(arg)->WriteComplete(request);
         },
@@ -552,7 +552,7 @@ zx_status_t RndisHost::StartThread() {
   {
     fbl::AutoLock lock(&mutex_);
     usb_request_t* txn;
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback = [](void* arg, usb_request_t* request) -> void {
           static_cast<RndisHost*>(arg)->ReadComplete(request);
         },

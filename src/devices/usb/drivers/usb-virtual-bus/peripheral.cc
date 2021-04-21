@@ -54,7 +54,7 @@ zx_status_t TestFunction::UsbFunctionInterfaceSetConfigured(bool configured, usb
     function_.ConfigEp(&descriptor_.bulk_out, nullptr);
 
     // queue first read on OUT endpoint
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback =
             [](void* ctx, usb_request_t* req) {
               return static_cast<TestFunction*>(ctx)->CompletionCallback(req);

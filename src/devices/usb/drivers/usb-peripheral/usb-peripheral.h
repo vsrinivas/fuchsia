@@ -138,7 +138,7 @@ class UsbPeripheral
   inline const ddk::UsbDciProtocolClient& dci() const { return dci_; }
   inline size_t ParentRequestSize() const { return parent_request_size_; }
   void UsbPeripheralRequestQueue(usb_request_t* usb_request,
-                                 const usb_request_complete_t* complete_cb);
+                                 const usb_request_complete_callback_t* complete_cb);
 
   zx_status_t UsbDciCancelAll(uint8_t ep_address);
 

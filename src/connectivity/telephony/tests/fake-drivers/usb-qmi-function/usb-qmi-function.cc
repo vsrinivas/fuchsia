@@ -79,7 +79,7 @@ zx_status_t FakeUsbQmiFunction::UsbFunctionInterfaceControl(
     if (setup->b_request == 0) {
       ReplyQmiMsg(write_buffer, write_size, tx_data_, 256, &tx_size_);
       if (usb_int_req_) {
-        usb_request_complete_t complete = {
+        usb_request_complete_callback_t complete = {
             .callback =
                 [](void* ctx, usb_request_t* req) {
                   return static_cast<FakeUsbQmiFunction*>(ctx)->QmiCompletionCallback(req);

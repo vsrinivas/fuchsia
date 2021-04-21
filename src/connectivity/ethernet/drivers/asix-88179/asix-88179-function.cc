@@ -74,7 +74,7 @@ class FakeUsbAx88179Function : public DeviceType,
   void SetOnline(bool online, SetOnlineCompleter::Sync& completer) override;
 
  private:
-  void RequestQueue(usb_request_t* req, const usb_request_complete_t* completion);
+  void RequestQueue(usb_request_t* req, const usb_request_complete_callback_t* completion);
 
   ddk::UsbFunctionProtocolClient function_;
 
@@ -104,7 +104,7 @@ void FakeUsbAx88179Function::SetOnline(bool online, SetOnlineCompleter::Sync& co
   memset(&status, 0, sizeof(status));
   status[2] = online;
 
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = [](void* ctx, usb_request_t* req) {},
       .ctx = nullptr,
   };
@@ -198,7 +198,7 @@ zx_status_t FakeUsbAx88179Function::Bind() {
 }
 
 void FakeUsbAx88179Function::RequestQueue(usb_request_t* req,
-                                          const usb_request_complete_t* completion) {
+                                          const usb_request_complete_callback_t* completion) {
   function_.RequestQueue(req, completion);
 }
 

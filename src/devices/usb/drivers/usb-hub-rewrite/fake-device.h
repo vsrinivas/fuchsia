@@ -47,7 +47,7 @@ struct IOEntry : fbl::DoublyLinkedListable<std::unique_ptr<IOEntry>> {
   const usb_ss_ep_comp_descriptor_t* ss_com_desc;
   bool enable;
   usb_speed_t speed;
-  usb_request_complete_t completion;
+  usb_request_complete_callback_t completion;
   usb_hub_interface_protocol_t hub_interface;
   bool multi_tt;
   IOEntry(IOQueue* complete_queue, OperationType type)
@@ -628,7 +628,7 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
     }
   }
 
-  void UsbRequestQueue(usb_request_t* request, const usb_request_complete_t* completion) {
+  void UsbRequestQueue(usb_request_t* request, const usb_request_complete_callback_t* completion) {
     if (synthetic_) {
       auto entry = MakeSyncEntry(OperationType::kUsbRequestQueue);
       entry->request = request;
@@ -861,7 +861,8 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
 
   IOQueue& GetStateChangeQueue() { return state_change_queue_; }
 
-  void SetRequestCallback(fit::function<void(usb_request_t*, usb_request_complete_t)> callback) {
+  void SetRequestCallback(
+      fit::function<void(usb_request_t*, usb_request_complete_callback_t)> callback) {
     ZX_ASSERT(synthetic_);
     request_callback_ = std::move(callback);
   }
@@ -905,7 +906,8 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
   void* ctx_;
   EmulationMetadata emulation_;
   usb_hub_interface_protocol_t hub_protocol_;
-  std::optional<fit::function<void(usb_request_t*, usb_request_complete_t)>> request_callback_;
+  std::optional<fit::function<void(usb_request_t*, usb_request_complete_callback_t)>>
+      request_callback_;
 };
 
 #endif  // SRC_DEVICES_USB_DRIVERS_USB_HUB_REWRITE_FAKE_DEVICE_H_

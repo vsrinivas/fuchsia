@@ -162,7 +162,7 @@ static void usb_request_send(void* ctx, usb_protocol_t* function, usb_request_t*
   }
   atomic_fetch_add(&cdc->pending_request_count, 1);
   mtx_unlock(&cdc->pending_request_lock);
-  usb_request_complete_t internal_completion;
+  usb_request_complete_callback_t internal_completion;
   internal_completion.callback = (void*)usb_request_callback;
   internal_completion.ctx = ctx;
   memcpy((unsigned char*)(req) + cdc->parent_req_size + sizeof(usb_req_internal_t), &callback,

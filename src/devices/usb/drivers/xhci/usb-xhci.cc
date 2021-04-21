@@ -59,7 +59,7 @@ void xhci_remove_device(xhci_t* xhci, int slot_id) {
 }
 
 void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request,
-                                 const usb_request_complete_t* complete_cb) {
+                                 const usb_request_complete_callback_t* complete_cb) {
   xhci_request_queue(xhci_.get(), usb_request, complete_cb);
 }
 
@@ -151,7 +151,7 @@ size_t UsbXhci::UsbHciGetRequestSize() {
 }
 
 void xhci_request_queue(xhci_t* xhci, usb_request_t* req,
-                        const usb_request_complete_t* complete_cb) {
+                        const usb_request_complete_callback_t* complete_cb) {
   zx_status_t status;
 
   xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);

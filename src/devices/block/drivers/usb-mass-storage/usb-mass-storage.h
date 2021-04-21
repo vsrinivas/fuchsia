@@ -68,7 +68,7 @@ struct Transaction {
 class UsbMassStorageDevice;
 
 struct UsbRequestContext {
-  usb_request_complete_t completion;
+  usb_request_complete_callback_t completion;
 };
 
 using MassStorageDeviceType =
@@ -138,7 +138,7 @@ class UsbMassStorageDevice : public MassStorageDeviceType {
 
   int WorkerThread(ddk::InitTxn&& txn);
 
-  void RequestQueue(usb_request_t* request, const usb_request_complete_t* completion);
+  void RequestQueue(usb_request_t* request, const usb_request_complete_callback_t* completion);
 
   usb::UsbDevice usb_;
 

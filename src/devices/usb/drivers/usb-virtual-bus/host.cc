@@ -47,7 +47,7 @@ void Device::RunShortPacketTest(RunShortPacketTestCompleter::Sync& completer) {
     completer.Close(ZX_ERR_BAD_STATE);
     return;
   }
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback =
           [](void* ctx, usb_request_t* request) {
             static_cast<Device*>(ctx)->RequestComplete(request);

@@ -622,7 +622,7 @@ impl FidlIr {
     }
 
     pub fn is_protocol(&self, identifier: &CompoundIdentifier) -> bool {
-        self.declarations.0.get(identifier) == Some(&Declaration::Interface)
+        self.get_declaration(identifier).map_or(false, |decl| decl == &Declaration::Interface)
     }
 
     pub fn get_protocol_attributes(

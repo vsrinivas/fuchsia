@@ -241,7 +241,7 @@ zx_status_t UsbInterface::UsbControlIn(uint8_t request_type, uint8_t request, ui
 }
 
 void UsbInterface::UsbRequestQueue(usb_request_t* usb_request,
-                                   const usb_request_complete_t* complete_cb) {
+                                   const usb_request_complete_callback_t* complete_cb) {
   usb_.RequestQueue(usb_request, complete_cb);
 }
 

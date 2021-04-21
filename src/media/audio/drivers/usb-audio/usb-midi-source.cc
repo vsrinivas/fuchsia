@@ -46,7 +46,7 @@ void UsbMidiSource::ReadComplete(usb_request_t* req) {
   if (req->response.status == ZX_OK && req->response.actual > 0) {
     completed_reads_.push(UsbRequest(req, parent_req_size_));
   } else {
-    usb_request_complete_t complete = {
+    usb_request_complete_callback_t complete = {
         .callback = [](void* ctx,
                        usb_request_t* req) { static_cast<UsbMidiSource*>(ctx)->ReadComplete(req); },
         .ctx = this,
@@ -79,7 +79,7 @@ zx_status_t UsbMidiSource::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
   }
 
   // queue up reads, including stale completed reads
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = [](void* ctx,
                      usb_request_t* req) { static_cast<UsbMidiSource*>(ctx)->ReadComplete(req); },
       .ctx = this,
@@ -129,7 +129,7 @@ zx_status_t UsbMidiSource::DdkRead(void* data, size_t len, zx_off_t off, size_t*
   *actual = get_midi_message_length(*(static_cast<uint8_t*>(data)));
   free_read_reqs_.push(std::move(*req));
 
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = [](void* ctx,
                      usb_request_t* req) { static_cast<UsbMidiSource*>(ctx)->ReadComplete(req); },
       .ctx = this,

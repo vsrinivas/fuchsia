@@ -229,6 +229,23 @@ pub struct arrays {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct zx_types {
+    pub status: zircon::sys::zx_status_t,
+    pub time: zircon::sys::zx_time_t,
+    pub duration: zircon::sys::zx_duration_t,
+    pub ticks: zircon::sys::zx_ticks_t,
+    pub koid: zircon::sys::zx_koid_t,
+    pub vaddr: zircon::sys::zx_vaddr_t,
+    pub paddr: zircon::sys::zx_paddr_t,
+    pub paddr32: zircon::sys::zx_paddr32_t,
+    pub gpaddr: zircon::sys::zx_gpaddr_t,
+    pub offset: zircon::sys::zx_off_t,
+    pub procarg: zircon::sys::zx_procarg_t,
+    pub signals: zircon::sys::zx_signals_t,
+}
+
+#[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct unions {
     pub s: this_is_a_union,

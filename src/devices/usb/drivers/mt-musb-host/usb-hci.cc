@@ -38,7 +38,7 @@ constexpr uint32_t kDeviceId = 1;
 }  // namespace
 
 void UsbHci::UsbHciRequestQueue(usb_request_t* usb_request,
-                                const usb_request_complete_t* complete_cb) {
+                                const usb_request_complete_callback_t* complete_cb) {
   usb::BorrowedRequest<> req(usb_request, *complete_cb, sizeof(usb_request_t));
   device_[usb_request->header.device_id]->HandleRequest(std::move(req));
 }

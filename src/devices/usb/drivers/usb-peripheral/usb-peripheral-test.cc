@@ -10,6 +10,7 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/interrupt.h>
@@ -22,7 +23,6 @@
 #include <map>
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/usb-peripheral-config.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <zxtest/zxtest.h>
@@ -46,7 +46,7 @@ class FakeDevice : public ddk::UsbDciProtocol<FakeDevice, ddk::base_protocol> {
   FakeDevice() : proto_({&usb_dci_protocol_ops_, this}) {}
 
   // USB DCI protocol implementation.
-  void UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* cb) {}
+  void UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_callback_t* cb) {}
 
   zx_status_t UsbDciSetInterface(const usb_dci_interface_protocol_t* interface) {
     interface_ = *interface;

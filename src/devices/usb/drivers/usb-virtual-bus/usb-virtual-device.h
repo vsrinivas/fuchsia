@@ -28,7 +28,8 @@ class UsbVirtualDevice : public UsbVirtualDeviceType,
   void DdkRelease();
 
   // USB device controller protocol implementation.
-  void UsbDciRequestQueue(usb_request_t* usb_request, const usb_request_complete_t* complete_cb);
+  void UsbDciRequestQueue(usb_request_t* usb_request,
+                          const usb_request_complete_callback_t* complete_cb);
   zx_status_t UsbDciSetInterface(const usb_dci_interface_protocol_t* interface);
   zx_status_t UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc,
                              const usb_ss_ep_comp_descriptor_t* ss_comp_desc);

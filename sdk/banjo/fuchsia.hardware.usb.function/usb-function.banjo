@@ -4,13 +4,14 @@
 
 library fuchsia.hardware.usb.function;
 
+using fuchsia.hardware.usb.descriptor;
 using fuchsia.hardware.usb.request;
 using zx;
 
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol UsbFunction {
     /// Registers callbacks to the USB function driver.
-    SetInterface(UsbFunctionInterface @interface) -> (zx.status s);
+    SetInterface(UsbFunctionInterface interface) -> (zx.status s);
 
     /// Allocates a unique interface descriptor number.
     AllocInterface() -> (zx.status s, uint8 intf_num);
@@ -26,11 +27,11 @@ protocol UsbFunction {
     DisableEp(uint8 address) -> (zx.status s);
 
     /// Adds a string descriptor to the device configuration.
-    AllocStringDesc(string @string) -> (zx.status s, uint8 index);
+    AllocStringDesc(string string) -> (zx.status s, uint8 index);
 
     /// Queues a USB request with the lower level driver.
     RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,
-                 [InOut] fuchsia.hardware.usb.request.UsbRequestComplete complete_cb) -> ();
+                 [InOut] fuchsia.hardware.usb.request.UsbRequestCompleteCallback complete_cb) -> ();
 
     /// Stalls the specified endpoint.
     EpSetStall(uint8 ep_address) -> (zx.status s);

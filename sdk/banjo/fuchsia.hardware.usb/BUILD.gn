@@ -5,8 +5,8 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.usb") {
+  disable_verification = true
   sdk_category = "partner"
-  translate_to_fidl = false
   sources = [ "usb.banjo" ]
   deps = [
     "//sdk/banjo/ddk.hw.physiter",

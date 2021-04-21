@@ -130,7 +130,7 @@ class RndisFunction : public RndisFunctionType,
 
   std::optional<fit::function<void()>> shutdown_callback_;
 
-  usb_request_complete_t read_request_complete_ = {
+  usb_request_complete_callback_t read_request_complete_ = {
       .callback =
           [](void* ctx, usb_request_t* request) {
             auto rndis = reinterpret_cast<RndisFunction*>(ctx);
@@ -140,7 +140,7 @@ class RndisFunction : public RndisFunctionType,
       .ctx = this,
   };
 
-  usb_request_complete_t write_request_complete_ = {
+  usb_request_complete_callback_t write_request_complete_ = {
       .callback =
           [](void* ctx, usb_request_t* request) {
             auto rndis = reinterpret_cast<RndisFunction*>(ctx);
@@ -150,7 +150,7 @@ class RndisFunction : public RndisFunctionType,
       .ctx = this,
   };
 
-  usb_request_complete_t notification_request_complete_ = {
+  usb_request_complete_callback_t notification_request_complete_ = {
       .callback =
           [](void* ctx, usb_request_t* request) {
             auto rndis = reinterpret_cast<RndisFunction*>(ctx);

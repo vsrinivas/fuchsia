@@ -323,7 +323,7 @@ zx_status_t UsbDevice::Control(uint8_t request_type, uint8_t request, uint16_t v
   req->request()->header.length = length;
   // We call this directly instead of via hci_queue, as it's safe to call our
   // own completion callback, and prevents clients getting into odd deadlocks.
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = ControlComplete,
       .ctx = &completion,
   };
@@ -381,7 +381,8 @@ zx_status_t UsbDevice::UsbControlIn(uint8_t request_type, uint8_t request, uint1
                  read_size, out_read_actual);
 }
 
-void UsbDevice::UsbRequestQueue(usb_request_t* req, const usb_request_complete_t* complete_cb) {
+void UsbDevice::UsbRequestQueue(usb_request_t* req,
+                                const usb_request_complete_callback_t* complete_cb) {
   req->header.device_id = device_id_;
   if (req->reset) {
     // Save client's callback in private storage.
@@ -399,7 +400,7 @@ void UsbDevice::UsbRequestQueue(usb_request_t* req, const usb_request_complete_t
 
   // Queue to HCI driver with our own completion callback so we can call client's completion
   // on our own thread, to avoid drivers from deadlocking the HCI driver's interrupt thread.
-  usb_request_complete_t complete = {
+  usb_request_complete_callback_t complete = {
       .callback = [](void* ctx,
                      usb_request_t* req) { static_cast<UsbDevice*>(ctx)->RequestComplete(req); },
       .ctx = this,
