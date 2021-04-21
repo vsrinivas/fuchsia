@@ -6,14 +6,23 @@
 
 use anyhow::{Context as _, Error};
 use crossbeam::channel;
+use fidl_fuchsia_accessibility_semantics as fsemantics;
+use fidl_fuchsia_fonts as ffonts;
 use fidl_fuchsia_intl as fintl;
+use fidl_fuchsia_posix_socket as fsocket;
 use fidl_fuchsia_settings as fsettings;
 use fidl_fuchsia_sys::{ComponentControllerEvent, LauncherProxy};
+use fidl_fuchsia_sysmem as fsysmem;
+use fidl_fuchsia_tracing_provider as fprovider;
 use fidl_fuchsia_ui_app::ViewProviderMarker;
+use fidl_fuchsia_ui_input as finput;
+use fidl_fuchsia_ui_input3 as finput3;
+use fidl_fuchsia_ui_scenic as fscenic;
+use fidl_fuchsia_vulkan_loader as floader;
 use fidl_test_placeholders as fecho;
 use fuchsia_async as fasync;
 use fuchsia_async::DurationExt;
-use fuchsia_component::client;
+use fuchsia_component::{client, server};
 use fuchsia_runtime as runtime;
 use fuchsia_scenic as scenic;
 use fuchsia_syslog::macros::*;
@@ -255,7 +264,37 @@ pub async fn check_reported_time_with_update(
     let formatter = formatter_for_timezone(PARTIAL_TIMESTAMP_FORMAT, TIMEZONE_NAME);
     let detailed_format = formatter_for_timezone(FULL_TIMESTAMP_FORMAT, TIMEZONE_NAME);
 
-    let launcher = client::launcher().context("Failed to get the launcher")?;
+    // Creates a test environment, and wires through to it the services it needs to start up. A
+    // test environment is necessary here, despite this test being a system test to ensure that the
+    // Dart and Flutter runners spawned by the test would be shut down and the entire test fixture
+    // dismantled properly.
+    let mut services = server::ServiceFs::new_local();
+
+    // Needed by both dart and flutter flavor of this test.
+    services
+        .add_proxy_service::<fsysmem::AllocatorMarker, _>()
+        .add_proxy_service::<fsocket::ProviderMarker, _>()
+        .add_proxy_service::<floader::LoaderMarker, _>()
+        .add_proxy_service::<fprovider::RegistryMarker, _>()
+        .add_proxy_service::<fintl::PropertyProviderMarker, _>();
+    // Needed by flutter flavor of this test only.
+    // Flutter runner needs quite a few services to be proxied.
+    if get_view {
+        services
+            .add_proxy_service::<finput::ImeServiceMarker, _>()
+            .add_proxy_service::<fsemantics::SemanticsManagerMarker, _>()
+            .add_proxy_service::<fscenic::ScenicMarker, _>()
+            // For reasons I don't quite understand, only this service is reported as missing in
+            // the environment's sandbox, even though it is declared exactly the same way as all
+            // others that are present.  The test still passes, though.
+            .add_proxy_service::<finput3::KeyboardMarker, _>()
+            .add_proxy_service::<ffonts::ProviderMarker, _>();
+    }
+    let env =
+        services.create_nested_environment("timezone-server-env").expect("nested env is created");
+    fasync::Task::local(services.collect()).detach();
+
+    let launcher = env.launcher();
     let app = launch_time_service(&launcher, server_url, get_view)
         .await
         .context("failed to launch the dart service under test")?;

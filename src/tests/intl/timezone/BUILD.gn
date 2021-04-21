@@ -34,10 +34,19 @@ rustc_library("lib") {
   sources = [ "src/lib.rs" ]
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics-rustc",
+    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -116,7 +125,6 @@ rustc_test("timezone_flutter_bin_test") {
   sources = [ "timezone_flutter_test.rs" ]
   deps = [
     ":lib",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",

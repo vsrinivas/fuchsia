@@ -11,10 +11,21 @@
         ],
         "services": [
             "fidl.examples.echo.EchoService",
+            "fuchsia.accessibility.semantics.SemanticsManager",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.fonts.Provider",
+            "fuchsia.intl.PropertyProvider",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
             "fuchsia.settings.Intl",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.input3.Keyboard",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.vulkan.loader.Loader"
         ]
     }
 }
