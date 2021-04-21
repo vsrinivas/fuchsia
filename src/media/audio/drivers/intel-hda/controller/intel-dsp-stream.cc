@@ -55,19 +55,20 @@ void IntelDspStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
     return;
   }
   auto [client, server] = *std::move(endpoints);
-  fidl::OnUnboundFn<fidl::WireInterface<audio_fidl::RingBuffer>> on_unbound =
-      [this](fidl::WireInterface<audio_fidl::RingBuffer>*, fidl::UnbindInfo,
+  fidl::OnUnboundFn<fidl::WireServer<audio_fidl::RingBuffer>> on_unbound =
+      [this](fidl::WireServer<audio_fidl::RingBuffer>*, fidl::UnbindInfo,
              fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer>) { ring_buffer_.reset(); };
 
-  fidl::BindServer<fidl::WireInterface<audio_fidl::RingBuffer>>(
-      dispatcher(), std::move(ring_buffer), this, std::move(on_unbound));
+  fidl::BindServer<fidl::WireServer<audio_fidl::RingBuffer>>(dispatcher(), std::move(ring_buffer),
+                                                             this, std::move(on_unbound));
 
   ring_buffer_ = std::move(client);
   IntelHDAStreamBase::CreateRingBuffer(channel, std::move(format), std::move(server), completer);
 }
 
 // Pass-through.
-void IntelDspStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
+void IntelDspStream::GetProperties(GetPropertiesRequestView request,
+                                   GetPropertiesCompleter::Sync& completer) {
   auto result = fidl::WireCall(ring_buffer_).GetProperties();
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on GetProperties res = %d", result.status());
@@ -78,9 +79,9 @@ void IntelDspStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
 }
 
 // Pass-through.
-void IntelDspStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
-                            GetVmoCompleter::Sync& completer) {
-  auto result = fidl::WireCall(ring_buffer_).GetVmo(min_frames, notifications_per_ring);
+void IntelDspStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& completer) {
+  auto result = fidl::WireCall(ring_buffer_)
+                    .GetVmo(request->min_frames, request->clock_recovery_notifications_per_ring);
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on GetVmo res = %d", result.status());
     completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
@@ -91,7 +92,7 @@ void IntelDspStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
 }
 
 // Not just pass-through, we also start the DSP pipeline.
-void IntelDspStream::Start(StartCompleter::Sync& completer) {
+void IntelDspStream::Start(StartRequestView request, StartCompleter::Sync& completer) {
   fbl::AutoLock lock(obj_lock());
   auto result = fidl::WireCall(ring_buffer_).Start();
   if (result.status() != ZX_OK) {
@@ -111,7 +112,7 @@ void IntelDspStream::Start(StartCompleter::Sync& completer) {
 }
 
 // Not just pass-through, we also pause the DSP pipeline.
-void IntelDspStream::Stop(StopCompleter::Sync& completer) {
+void IntelDspStream::Stop(StopRequestView request, StopCompleter::Sync& completer) {
   fbl::AutoLock lock(obj_lock());
   auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
   Status status = dsp->PausePipeline(pipeline_);
@@ -132,6 +133,7 @@ void IntelDspStream::Stop(StopCompleter::Sync& completer) {
 
 // Pass-through.
 void IntelDspStream::WatchClockRecoveryPositionInfo(
+    WatchClockRecoveryPositionInfoRequestView request,
     WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
   auto result = fidl::WireCall(ring_buffer_).WatchClockRecoveryPositionInfo();
   if (result.status() != ZX_OK) {

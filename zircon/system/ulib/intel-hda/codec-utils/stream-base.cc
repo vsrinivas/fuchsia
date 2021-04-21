@@ -297,7 +297,8 @@ zx_status_t IntelHDAStreamBase::SetDMAStreamLocked(uint16_t id, uint8_t tag) {
   return ZX_OK;
 }
 
-void IntelHDAStreamBase::GetChannel(GetChannelCompleter::Sync& completer) {
+void IntelHDAStreamBase::GetChannel(GetChannelRequestView request,
+                                    GetChannelCompleter::Sync& completer) {
   fbl::AutoLock obj_lock(&obj_lock_);
 
   // Do not allow any new connections if we are in the process of shutting down
@@ -348,14 +349,14 @@ void IntelHDAStreamBase::GetChannel(GetChannelCompleter::Sync& completer) {
   }
   stream_channels_.push_back(stream_channel);
 
-  fidl::OnUnboundFn<fidl::WireInterface<audio_fidl::StreamConfig>> on_unbound =
-      [this, stream_channel](fidl::WireInterface<audio_fidl::StreamConfig>*, fidl::UnbindInfo,
+  fidl::OnUnboundFn<fidl::WireServer<audio_fidl::StreamConfig>> on_unbound =
+      [this, stream_channel](fidl::WireServer<audio_fidl::StreamConfig>*, fidl::UnbindInfo,
                              fidl::ServerEnd<fuchsia_hardware_audio::StreamConfig>) {
         fbl::AutoLock channel_lock(&this->obj_lock_);
         this->ProcessClientDeactivateLocked(stream_channel.get());
       };
 
-  fidl::BindServer<fidl::WireInterface<audio_fidl::StreamConfig>>(
+  fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfig>>(
       loop_.dispatcher(), std::move(stream_channel_local), stream_channel.get(),
       std::move(on_unbound));
 
@@ -678,7 +679,7 @@ void IntelHDAStreamBase::NotifyPlugStateLocked(bool plugged, int64_t plug_time) 
 
 void IntelHDAStreamBase::GetProperties(
     StreamChannel* channel,
-    fidl::WireInterface<audio_fidl::StreamConfig>::GetPropertiesCompleter::Sync& completer) {
+    fidl::WireServer<audio_fidl::StreamConfig>::GetPropertiesCompleter::Sync& completer) {
   fbl::AutoLock obj_lock(&obj_lock_);
   fidl::FidlAllocator allocator;
   audio_fidl::wire::StreamProperties response(allocator);

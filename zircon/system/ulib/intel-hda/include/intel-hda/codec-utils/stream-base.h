@@ -51,22 +51,22 @@ class IntelHDACodecDriverBase;
 
 class IntelHDAStreamBase;
 
-// IntelHdaStreamStream implements fidl::WireInterface<Device>.
+// IntelHdaStreamStream implements fidl::WireServer<Device>.
 // All this is serialized in the single threaded IntelHdaStreamStream's dispatcher() in loop_.
 class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
                            public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStreamBase>>,
-                           public fidl::WireInterface<fuchsia_hardware_audio::Device> {
+                           public fidl::WireServer<fuchsia_hardware_audio::Device> {
  public:
-  // StreamChannel (thread compatible) implements fidl::WireInterface<StreamConfig> so the server
+  // StreamChannel (thread compatible) implements fidl::WireServer<StreamConfig> so the server
   // for a StreamConfig channel is a StreamChannel instead of a IntelHDAStreamBase (as is the case
   // for Device and RingBuffer channels), this way we can track which StreamConfig channel for gain
   // changes notifications.
   // In some methods, we pass "this" (StreamChannel*) to IntelHDAStreamBase that
   // gets managed in IntelHDAStreamBase.
   // All this is serialized in the single threaded IntelHDAStreamBase's dispatcher() in loop_.
-  // All the fidl::WireInterface<StreamConfig> methods are forwarded to IntelHDAStreamBase.
+  // All the fidl::WireServer<StreamConfig> methods are forwarded to IntelHDAStreamBase.
   class StreamChannel : public RingBufferChannel,
-                        public fidl::WireInterface<fuchsia_hardware_audio::StreamConfig>,
+                        public fidl::WireServer<fuchsia_hardware_audio::StreamConfig>,
                         public fbl::DoublyLinkedListable<fbl::RefPtr<StreamChannel>> {
    public:
     template <typename... ConstructorSignature>
@@ -88,26 +88,28 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
     }
 
     // fuchsia hardware audio Stream Interface.
-    void GetProperties(GetPropertiesCompleter::Sync& completer) override {
+    void GetProperties(GetPropertiesRequestView request,
+                       GetPropertiesCompleter::Sync& completer) override {
       stream_.GetProperties(this, completer);
     }
-    void GetSupportedFormats(GetSupportedFormatsCompleter::Sync& completer) override {
+    void GetSupportedFormats(GetSupportedFormatsRequestView request,
+                             GetSupportedFormatsCompleter::Sync& completer) override {
       stream_.GetSupportedFormats(completer);
     }
-    void WatchGainState(WatchGainStateCompleter::Sync& completer) override {
+    void WatchGainState(WatchGainStateRequestView request,
+                        WatchGainStateCompleter::Sync& completer) override {
       stream_.WatchGainState(this, completer);
     }
-    void WatchPlugState(WatchPlugStateCompleter::Sync& completer) override {
+    void WatchPlugState(WatchPlugStateRequestView request,
+                        WatchPlugStateCompleter::Sync& completer) override {
       stream_.WatchPlugState(this, completer);
     }
-    void SetGain(fuchsia_hardware_audio::wire::GainState target_state,
-                 SetGainCompleter::Sync& completer) override {
-      stream_.SetGain(std::move(target_state), completer);
+    void SetGain(SetGainRequestView request, SetGainCompleter::Sync& completer) override {
+      stream_.SetGain(request->target_state, completer);
     }
-    void CreateRingBuffer(fuchsia_hardware_audio::wire::Format format,
-                          ::fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer> ring_buffer,
+    void CreateRingBuffer(CreateRingBufferRequestView request,
                           CreateRingBufferCompleter::Sync& completer) override {
-      stream_.CreateRingBuffer(this, std::move(format), std::move(ring_buffer), completer);
+      stream_.CreateRingBuffer(this, request->format, std::move(request->ring_buffer), completer);
     }
 
    private:
@@ -234,7 +236,7 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   void ReleaseUnsolTagLocked(uint8_t tag) __TA_REQUIRES(obj_lock_);
 
   // fuchsia.hardware.audio.Device
-  void GetChannel(GetChannelCompleter::Sync& completer) override;
+  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
 
   // fuchsia hardware audio Stream Interface (forwarded from StreamChannel)
   void GetProperties(StreamChannel* channel,

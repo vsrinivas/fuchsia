@@ -179,15 +179,15 @@ zx_status_t IntelHDAStream::SetStreamFormat(async_dispatcher_t* dispatcher, uint
     return ZX_ERR_NO_MEMORY;
   }
 
-  fidl::OnUnboundFn<fidl::WireInterface<audio_fidl::RingBuffer>> on_unbound =
-      [this](fidl::WireInterface<audio_fidl::RingBuffer>*, fidl::UnbindInfo,
+  fidl::OnUnboundFn<fidl::WireServer<audio_fidl::RingBuffer>> on_unbound =
+      [this](fidl::WireServer<audio_fidl::RingBuffer>*, fidl::UnbindInfo,
              fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer>) {
         this->ProcessClientDeactivate();
       };
 
   fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer> server(std::move(server_endpoint));
-  fidl::BindServer<fidl::WireInterface<audio_fidl::RingBuffer>>(dispatcher, std::move(server), this,
-                                                                std::move(on_unbound));
+  fidl::BindServer<fidl::WireServer<audio_fidl::RingBuffer>>(dispatcher, std::move(server), this,
+                                                             std::move(on_unbound));
 
   // Record and program the stream format, then record the fifo depth we get
   // based on this format selection.
@@ -277,7 +277,8 @@ void IntelHDAStream::DeactivateLocked() {
 }
 
 // Ring Buffer GetProperties.
-void IntelHDAStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
+void IntelHDAStream::GetProperties(GetPropertiesRequestView request,
+                                   GetPropertiesCompleter::Sync& completer) {
   fbl::AutoLock channel_lock(&channel_lock_);
   fidl::FidlAllocator allocator;
   audio_fidl::wire::RingBufferProperties properties(allocator);
@@ -288,8 +289,7 @@ void IntelHDAStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
   completer.Reply(std::move(properties));
 }
 
-void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
-                            GetVmoCompleter::Sync& completer) {
+void IntelHDAStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& completer) {
   zx::vmo ring_buffer_vmo;
   zx::vmo client_rb_handle;
   uint64_t tmp;
@@ -310,13 +310,13 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   // 1) The user's minimum ring buffer size in frames 0.
   // 2) The user's minimum ring buffer size in bytes is too large to hold in a 32 bit integer.
   // 3) The user wants more notifications per ring than we have BDL entries.
-  tmp = static_cast<uint64_t>(min_frames) * bytes_per_frame_;
-  if ((min_frames == 0) || (tmp > std::numeric_limits<uint32_t>::max()) ||
-      (notifications_per_ring > MAX_BDL_LENGTH)) {
+  tmp = static_cast<uint64_t>(request->min_frames) * bytes_per_frame_;
+  if ((request->min_frames == 0) || (tmp > std::numeric_limits<uint32_t>::max()) ||
+      (request->clock_recovery_notifications_per_ring > MAX_BDL_LENGTH)) {
     LOG(DEBUG,
         "Invalid client args while setting buffer "
         "(min frames %u, notif/ring %u)",
-        min_frames, notifications_per_ring);
+        request->min_frames, request->clock_recovery_notifications_per_ring);
     completer.ReplyError(audio_fidl::wire::GetVmoError::kInvalidArgs);
     return;
   }
@@ -378,8 +378,10 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   // Program the buffer descriptor list.  Mark BDL entries as needed to
   // generate interrupts with the frequency requested by the user.
   uint32_t nominal_irq_spacing;
-  nominal_irq_spacing =
-      notifications_per_ring ? (rb_size + notifications_per_ring - 1) / notifications_per_ring : 0;
+  nominal_irq_spacing = request->clock_recovery_notifications_per_ring
+                            ? (rb_size + request->clock_recovery_notifications_per_ring - 1) /
+                                  request->clock_recovery_notifications_per_ring
+                            : 0;
 
   uint32_t next_irq_pos;
   uint32_t amt_done;
@@ -445,7 +447,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   }
 
   ZX_DEBUG_ASSERT(entry > 0);
-  if (irqs_inserted < notifications_per_ring) {
+  if (irqs_inserted < request->clock_recovery_notifications_per_ring) {
     bdl()[entry - 1].flags = IntelHDABDLEntry::IOC_FLAG;
   }
 
@@ -481,7 +483,7 @@ void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   completer.ReplySuccess(num_ring_buffer_frames, std::move(client_rb_handle));
 }
 
-void IntelHDAStream::Start(StartCompleter::Sync& completer) {
+void IntelHDAStream::Start(StartRequestView request, StartCompleter::Sync& completer) {
   uint32_t ctl_val;
   const auto bdl_phys = bdl_hda_mem_.region(0).phys_addr;
 
@@ -549,7 +551,7 @@ void IntelHDAStream::Start(StartCompleter::Sync& completer) {
   completer.Reply(start_time);
 }
 
-void IntelHDAStream::Stop(StopCompleter::Sync& completer) {
+void IntelHDAStream::Stop(StopRequestView request, StopCompleter::Sync& completer) {
   fbl::AutoLock channel_lock(&channel_lock_);
   if (running_) {
     // Start by preventing the IRQ thread from processing status interrupts.
@@ -569,6 +571,7 @@ void IntelHDAStream::Stop(StopCompleter::Sync& completer) {
 }
 
 void IntelHDAStream::WatchClockRecoveryPositionInfo(
+    WatchClockRecoveryPositionInfoRequestView request,
     WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
   fbl::AutoLock lock(&notif_lock_);
   position_completer_ = completer.ToAsync();
