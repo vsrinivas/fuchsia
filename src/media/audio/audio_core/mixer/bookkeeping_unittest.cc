@@ -44,7 +44,6 @@ TEST(BookkeepingTest, Reset) {
 
   bookkeeping.Reset();
 
-  // Rate should not be changed, but position modulo should be.
   EXPECT_EQ(bookkeeping.rate_modulo(), 5ull);
   EXPECT_EQ(bookkeeping.denominator(), 7ull);
   EXPECT_TRUE(bookkeeping.gain.IsRamping());

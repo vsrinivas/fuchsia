@@ -91,18 +91,13 @@ TEST_F(AudioLoopbackStressTest, SingleLongCapture) {
   // The total length (including repetitions) should be longer than all ring buffers
   // inside audio_core, to ensure that audio_core's loopback buffer wraps around at
   // least once.
-
-  // We prepend silence to our signal, to account for initial gain-ramping on Play.
-  constexpr auto kNumInitialSilentFrames = kPacketFrames;
-  auto silence = GenerateSilentAudio(kFormat, kNumInitialSilentFrames);
-  auto silent_packets = renderer->AppendSlice(silence, kPacketFrames);
-
-  AudioBuffer<ASF::SIGNED_24_IN_32> input(
-      kFormat, kInputDurationSeconds * kFrameRate - kNumInitialSilentFrames);
-  for (auto frame = 0; frame < input.NumFrames(); frame++) {
-    input.samples()[frame] = frame << 8;
+  AudioBuffer<ASF::SIGNED_24_IN_32> input(kFormat, kInputDurationSeconds * kFrameRate);
+  for (auto [k, sample] = std::tuple{0u, static_cast<int32_t>(0)}; k < input.NumFrames(); k++) {
+    input.samples()[k] = sample;
+    sample += 1 << 8;
   }
-  auto input_packets = renderer->AppendSlice(input, kPacketFrames, silence.NumFrames());
+
+  auto input_packets = renderer->AppendSlice(input, kPacketFrames);
 
   // Collect all captured packets.
   std::vector<CapturedPacket> captured_packets;
@@ -122,7 +117,7 @@ TEST_F(AudioLoopbackStressTest, SingleLongCapture) {
   auto start_time = zx::clock::get_monotonic() + renderer->min_lead_time() + tolerance;
   renderer->Play(this, start_time, 0);
 
-  // Wait until all packets are fully rendered (this includes any initial silent ones).
+  // Wait until all packets are fully rendered.
   renderer->WaitForPackets(this, input_packets);
 
   // Wait until we've captured a packet with pts > start_time + expected duration.
@@ -141,14 +136,16 @@ TEST_F(AudioLoopbackStressTest, SingleLongCapture) {
   capturer->fidl()->StopAsyncCaptureNoReply();
   RunLoopUntilIdle();
 
-  // Find the first output frame. Since input[0] == 0 (silence), look for input[1], which is 1.
+  // Find the first output frame. Since input[0] == 0, which is silence, look for
+  // input[1], which is 1.
   auto second_output_frame = FirstNonSilentFrame(captured_packets);
   ASSERT_FALSE(second_output_frame == std::nullopt)
       << "could not find data sample 0x1 in the captured output";
 
   auto [packet_it, frame] = *second_output_frame;
   if (frame == 0) {
-    // In practice this should never fail, as capture starts before AudioCore emits any audio.
+    // In practice this check should never fail because capture should start before
+    // AudioCore starts emitting any audio.
     FX_CHECK(packet_it > captured_packets.begin());
     packet_it--;
     frame = packet_it->data.NumFrames() - 1;

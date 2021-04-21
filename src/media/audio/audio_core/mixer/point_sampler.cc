@@ -3,13 +3,13 @@
 
 #include "src/media/audio/audio_core/mixer/point_sampler.h"
 
-#include <fuchsia/media/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
 #include <algorithm>
 #include <limits>
 
+#include "fuchsia/media/cpp/fidl.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
 #include "src/media/audio/audio_core/mixer/position_manager.h"

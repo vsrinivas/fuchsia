@@ -4,12 +4,12 @@
 
 #include "src/media/audio/lib/format/audio_buffer.h"
 
-#include <fuchsia/media/cpp/fidl.h>
-
 #include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include "fuchsia/media/cpp/fidl.h"
 
 namespace media::audio {
 
