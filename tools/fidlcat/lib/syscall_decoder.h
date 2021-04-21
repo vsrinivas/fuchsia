@@ -83,7 +83,7 @@ class SyscallDecoderArgument {
     if (stage == Stage::kEntry) {
       entry_loading_ = false;
     } else {
-      entry_loading_ = false;
+      exit_loading_ = false;
     }
   }
 
