@@ -316,6 +316,7 @@ strdup
 strerror
 strerror_r
 strlen
+strncasecmp
 strncat
 strncmp
 strncpy
