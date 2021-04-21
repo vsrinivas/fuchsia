@@ -6,11 +6,13 @@ use {
     anyhow::{Context, Error},
     fidl::endpoints::{create_proxy, ClientEnd},
     fidl_fuchsia_component_runner::{
-        ComponentControllerMarker, ComponentRunnerMarker, ComponentStartInfo,
+        ComponentControllerEventStream, ComponentControllerMarker, ComponentRunnerMarker,
+        ComponentRunnerProxy, ComponentStartInfo,
     },
     fidl_fuchsia_data as fdata, fidl_fuchsia_test as ftest,
     fuchsia_component::client::connect_to_service,
-    futures::TryStreamExt,
+    fuchsia_zircon as zx,
+    futures::{StreamExt, TryStreamExt},
     runner::component::ComponentNamespace,
     std::convert::TryInto,
 };
@@ -35,9 +37,11 @@ pub async fn handle_suite_requests(
                 handle_case_iterator(test_url, stream).await?;
             }
             ftest::SuiteRequest::Run { tests, options: _options, listener, .. } => {
+                let starnix_runner = connect_to_service::<ComponentRunnerMarker>()?;
                 let namespace = namespace.clone()?;
                 let program = program.clone();
-                run_test_cases(tests, test_url, program, listener, namespace).await?;
+                run_test_cases(tests, test_url, program, listener, namespace, starnix_runner)
+                    .await?;
             }
         }
     }
@@ -56,12 +60,14 @@ pub async fn handle_suite_requests(
 /// - `program`: The program data associated with the runner request for the test component.
 /// - `listener`: The listener for the test run.
 /// - `namespace`: The incoming namespace to provide to the test component.
+/// - `starnix_runner`: A proxy to the starnix runner's `ComponentRunner`.
 async fn run_test_cases(
     tests: Vec<ftest::Invocation>,
     test_url: &str,
     program: Option<fdata::Dictionary>,
     listener: ClientEnd<ftest::RunListenerMarker>,
     namespace: ComponentNamespace,
+    starnix_runner: ComponentRunnerProxy,
 ) -> Result<(), Error> {
     let run_listener_proxy =
         listener.into_proxy().context("Can't convert run listener channel to proxy")?;
@@ -74,9 +80,8 @@ async fn run_test_cases(
         let (case_listener_proxy, case_listener) = create_proxy::<ftest::CaseListenerMarker>()?;
         run_listener_proxy.on_test_case_started(test, log_end, case_listener)?;
 
-        // Connect to the starnix runner to run the test component.
-        let starnix_runner = connect_to_service::<ComponentRunnerMarker>()?;
-        let (_, component_controller_server_end) = create_proxy::<ComponentControllerMarker>()?;
+        let (component_controller, component_controller_server_end) =
+            create_proxy::<ComponentControllerMarker>()?;
         let ns = Some(ComponentNamespace::try_into(namespace.clone()?)?);
         let start_info = ComponentStartInfo {
             resolved_url: Some(test_url.to_string()),
@@ -88,17 +93,38 @@ async fn run_test_cases(
         };
 
         starnix_runner.start(start_info, component_controller_server_end)?;
-        // The result is always set to pass. This should be updated to return a result
-        // based on whether or not the test component was run successfully.
-        let result =
-            ftest::Result_ { status: Some(ftest::Status::Passed), ..ftest::Result_::EMPTY };
-
+        let result = read_result(component_controller.take_event_stream()).await;
         case_listener_proxy.finished(result)?;
     }
 
     run_listener_proxy.on_finished()?;
 
     Ok(())
+}
+
+/// Reads the result of the test run from `event_stream`.
+///
+/// The result is determined by reading the epitaph from the provided `event_stream`.
+async fn read_result(mut event_stream: ComponentControllerEventStream) -> ftest::Result_ {
+    let component_epitaph = match event_stream.next().await {
+        Some(Err(fidl::Error::ClientChannelClosed { status, .. })) => status,
+        result => {
+            fuchsia_syslog::fx_log_err!(
+                "Didn't get epitaph from the component controller, instead got: {:?}",
+                result
+            );
+            // Fail the test case here, since the component controller's epitaph couldn't be
+            // read.
+            zx::Status::INTERNAL
+        }
+    };
+
+    match component_epitaph {
+        zx::Status::OK => {
+            ftest::Result_ { status: Some(ftest::Status::Passed), ..ftest::Result_::EMPTY }
+        }
+        _ => ftest::Result_ { status: Some(ftest::Status::Failed), ..ftest::Result_::EMPTY },
+    }
 }
 
 /// Lists all the available test cases and returns them in response to
@@ -129,8 +155,19 @@ async fn handle_case_iterator(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl::endpoints::create_request_stream, fuchsia_async as fasync};
+    use {
+        super::*,
+        fidl::endpoints::{create_proxy_and_stream, create_request_stream},
+        fidl_fuchsia_component_runner::ComponentRunnerRequest,
+        fuchsia_async as fasync,
+        futures::TryStreamExt,
+        std::convert::TryFrom,
+    };
 
+    /// Returns a `ftest::CaseIteratorProxy` that is served by `super::handle_case_iterator`.
+    ///
+    /// # Parameters
+    /// - `test_name`: The name of the test case that is provided to `handle_case_iterator`.
     fn set_up_iterator(test_name: &str) -> ftest::CaseIteratorProxy {
         let test_name = test_name.to_string();
         let (iterator_client_end, iterator_stream) =
@@ -142,6 +179,96 @@ mod tests {
         .detach();
 
         iterator_client_end.into_proxy().expect("Failed to create proxy")
+    }
+
+    /// Spawns a `ComponentRunnerRequestStream` server that immediately closes all incoming
+    /// component controllers with the epitaph specified in `component_controller_epitaph`.
+    ///
+    /// This function can be used to mock the starnix runner in a way that simulates a component
+    /// exiting with or without error.
+    ///
+    /// # Parameters
+    /// - `component_controller_epitaph`: The epitaph used to close the component controller.
+    ///
+    /// # Returns
+    /// A `ComponentRunnerProxy` that serves each run request by closing the component with the
+    /// provided epitaph.
+    fn spawn_runner(component_controller_epitaph: zx::Status) -> ComponentRunnerProxy {
+        let (proxy, mut request_stream) =
+            create_proxy_and_stream::<ComponentRunnerMarker>().unwrap();
+        fasync::Task::local(async move {
+            while let Some(event) =
+                request_stream.try_next().await.expect("Error in test runner request stream")
+            {
+                match event {
+                    ComponentRunnerRequest::Start {
+                        start_info: _start_info, controller, ..
+                    } => {
+                        controller
+                            .close_with_epitaph(component_controller_epitaph)
+                            .expect("Could not close with epitaph");
+                    }
+                }
+            }
+        })
+        .detach();
+        proxy
+    }
+
+    /// Returns the status from the first test case reported to `run_listener_stream`.
+    ///
+    /// This is done by listening to the first `CaseListener` provided via `OnTestCaseStarted`.
+    ///
+    /// # Parameters
+    /// - `run_listener_stream`: The run listener stream to extract the test status from.
+    ///
+    /// # Returns
+    /// The status of the first test case that is run, or `None` if no such status is reported.
+    async fn listen_to_test_result(
+        mut run_listener_stream: ftest::RunListenerRequestStream,
+    ) -> Option<ftest::Status> {
+        match run_listener_stream.try_next().await.expect("..") {
+            Some(ftest::RunListenerRequest::OnTestCaseStarted {
+                invocation: _,
+                primary_log: _,
+                listener,
+                ..
+            }) => match listener
+                .into_stream()
+                .expect("Failed to get case listener stream")
+                .try_next()
+                .await
+                .expect("Failed to get case listener stream request")
+            {
+                Some(ftest::CaseListenerRequest::Finished { result, .. }) => result.status,
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    /// Spawns a task that calls `super::run_test_cases` with the provided `run_listener` and
+    /// `runner_proxy`. The call is made with a test cases vector consisting of one mock test case.
+    fn spawn_run_test_cases(
+        run_listener: ClientEnd<ftest::RunListenerMarker>,
+        runner_proxy: ComponentRunnerProxy,
+    ) {
+        fasync::Task::local(async move {
+            let _ = run_test_cases(
+                vec![ftest::Invocation {
+                    name: Some("".to_string()),
+                    tag: Some("".to_string()),
+                    ..ftest::Invocation::EMPTY
+                }],
+                "",
+                None,
+                run_listener,
+                ComponentNamespace::try_from(vec![]).expect(""),
+                runner_proxy,
+            )
+            .await;
+        })
+        .detach();
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -167,5 +294,29 @@ mod tests {
         let iterator_proxy = set_up_iterator("test");
         let result = iterator_proxy.get_next().await.expect("Didn't get first result");
         assert_eq!(result[0].enabled, Some(true));
+    }
+
+    /// Tests that when starnix closes the component controller with an `OK` status, the test case
+    /// passes.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_component_controller_epitaph_ok() {
+        let proxy = spawn_runner(zx::Status::OK);
+        let (run_listener, run_listener_stream) =
+            create_request_stream::<ftest::RunListenerMarker>()
+                .expect("Couldn't create case listener");
+        spawn_run_test_cases(run_listener, proxy);
+        assert_eq!(listen_to_test_result(run_listener_stream).await, Some(ftest::Status::Passed));
+    }
+
+    /// Tests that when starnix closes the component controller with an error status, the test case
+    /// fails.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_component_controller_epitaph_not_ok() {
+        let proxy = spawn_runner(zx::Status::INTERNAL);
+        let (run_listener, run_listener_stream) =
+            create_request_stream::<ftest::RunListenerMarker>()
+                .expect("Couldn't create case listener");
+        spawn_run_test_cases(run_listener, proxy);
+        assert_eq!(listen_to_test_result(run_listener_stream).await, Some(ftest::Status::Failed));
     }
 }
