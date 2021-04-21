@@ -139,7 +139,6 @@ config("allow_unused_results") {
     "//src/connectivity/bluetooth/*",
     "//src/connectivity/ethernet/*",
     "//src/connectivity/lib/at-commands/*",
-    "//src/connectivity/lib/internet-checksum/*",
     "//src/connectivity/lib/net-types/*",
     "//src/connectivity/location/*",
     "//src/connectivity/lowpan/*",
