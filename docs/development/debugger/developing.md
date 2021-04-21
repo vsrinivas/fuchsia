@@ -91,5 +91,6 @@ one, only attach to them.
 To run the debug agent tests:
 
 ```posix-terminal
-fx test debug_agent_tests
+fx test debug_agent_unit_tests
+fx test debug_agent_integration_tests
 ```

@@ -103,8 +103,10 @@ template("variant_shared_library_redirect") {
     _output_dir = target_out_dir
   }
 
-  testonly = false
   forward_variables_from(invoker, [ "testonly" ])
+  if (!defined(testonly)) {
+    testonly = false
+  }
 
   _select = {
     host = is_host

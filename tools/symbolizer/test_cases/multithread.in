@@ -1,4 +1,4 @@
-# Triggered by running bin/backtrace_request in fuchsia-pkg://fuchsia.com/debug_agent_tests.
+# Triggered by running bin/backtrace_request in fuchsia-pkg://fuchsia.com/debug_agent_helpers.
 # Captured by `fx log --raw`.
 [00169.289073][1][2][klog] INFO: <== BACKTRACE REQUEST: process foo[41906] thread initial-thread[41908]
 ...

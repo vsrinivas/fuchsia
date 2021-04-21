@@ -2,8 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("integration_tests") {
-  testonly = true
+import("//build/test.gni")
+
+test("integration_tests") {
   output_name = "debug_agent_integration_tests"
 
   # Helper classes.

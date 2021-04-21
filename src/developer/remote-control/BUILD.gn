@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/components.gni")
+import("//build/images/shell_commands.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/test_spec.gni")
 
 group("remote-control") {
@@ -102,86 +102,65 @@ rustc_binary("bin") {
   ]
 }
 
-test_package("remote-control-lib-tests") {
-  deps = [
-    ":lib_test",
-    "//src/developer/remote-control/testing/mock-sys-launcher:mock-sys-launcher-bin",
-  ]
-  meta = [
-    {
-      path = rebase_path("testing/mock-sys-launcher/meta/mock_sys_launcher.cml")
-      dest = "mock_sys_launcher.cm"
-    },
-    {
-      path = rebase_path("meta/test_driver.cml")
-      dest = "test_driver.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "mock_sys_launcher"
-    },
-  ]
-
-  v2_tests = [
-    {
-      name = "remote_control_lib_test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_test_component("lib_test-component") {
+  component_name = "remote_control_lib_test"
+  manifest = "meta/test_driver.cml"
+  deps = [ ":lib_test" ]
 }
 
-package("pkg-diagnostics-bridge") {
+# Used at runtime during testing, but not a test.
+fuchsia_component("mock_sys_launcher-component") {
+  testonly = true
+  component_name = "mock_sys_launcher"
+  manifest = "testing/mock-sys-launcher/meta/mock_sys_launcher.cml"
+  deps = [ "//src/developer/remote-control/testing/mock-sys-launcher:mock-sys-launcher-bin" ]
+}
+
+fuchsia_test_package("remote-control-lib-tests") {
+  test_components = [ ":lib_test-component" ]
+  deps = [ ":mock_sys_launcher-component" ]
+}
+
+fuchsia_package_with_single_component("pkg-diagnostics-bridge") {
   package_name = "remote-diagnostics-bridge"
   deps = [
     ":bin",
     "//build/validate:non_production_tag",
     "//src/developer/remote-control/diagnostics-bridge",
   ]
+  manifest = "diagnostics-bridge/meta/diagnostics-bridge.cml"
+}
 
-  binaries = [
-    {
-      name = "remote_control_bin"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("diagnostics-bridge/meta/diagnostics-bridge.cml")
-      dest = "diagnostics-bridge.cm"
-    },
+fuchsia_component("remote-control-component") {
+  component_name = "remote-control"
+  manifest = "meta/remote-control.cml"
+  deps = [
+    ":bin",
+    "//src/developer/remote-control/diagnostics-bridge",
   ]
 }
 
-package("pkg") {
+# Used to ensure that remote_control_runner is available as a shell command,
+# from the 'remote-control' package, but not its other binaries.
+# fuchsia_shell_package() cannot be used here because it would also add
+# 'remote_control_bin' as a shell command.
+shell_command("remote-control-runner_shell_command") {
+  package_name = "remote-control"
+  deps = [ "//src/developer/remote-control/runner" ]
+}
+
+fuchsia_component("remote-control-runner-component") {
+  component_name = "remote-control-runner"
+  manifest = "runner/meta/remote-control-runner.cmx"
+  deps = [ "//src/developer/remote-control/runner" ]
+}
+
+fuchsia_shell_package("pkg") {
   package_name = "remote-control"
   deps = [
-    ":bin",
-    "//build/validate:non_production_tag",
-    "//src/developer/remote-control/diagnostics-bridge",
-    "//src/developer/remote-control/runner",
-  ]
-
-  binaries = [
-    {
-      name = "remote_control_bin"
-    },
-    {
-      name = "remote_control_runner"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/remote-control.cml")
-      dest = "remote-control.cm"
-    },
-    {
-      path = rebase_path("runner/meta/remote-control-runner.cmx")
-      dest = "remote-control-runner.cmx"
-    },
+    ":remote-control-component",
+    ":remote-control-runner-component",
+    ":remote-control-runner_shell_command",
   ]
 }
 
@@ -191,6 +170,7 @@ group("runtime") {
   deps = [
     ":pkg",
     ":pkg-diagnostics-bridge",
+    "//build/validate:non_production_tag",
     "//src/connectivity/overnet:runtime",
   ]
 }

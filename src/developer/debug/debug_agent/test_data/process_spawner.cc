@@ -55,7 +55,7 @@ zx_status_t LaunchProcess(zx_handle_t job, const std::vector<const char*>& argv,
 
 }  // namespace
 
-const char kBinaryPath[] = "/pkgfs/packages/debug_agent_tests/0/bin/process_loop";
+const char kBinaryPath[] = "/pkgfs/packages/debug_agent_helpers/0/bin/process_loop";
 
 int main() {
   zx_handle_t default_job = zx_job_default();
