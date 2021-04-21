@@ -112,6 +112,7 @@ impl fmt::Display for HostInfo {
         writeln!(fmt, "HostInfo:")?;
         writeln!(fmt, "\tidentifier:\t{}", self.id.to_string())?;
         writeln!(fmt, "\taddress:\t{}", self.address)?;
+        writeln!(fmt, "\tactive:\t{}", self.active)?;
         writeln!(fmt, "\ttechnology:\t{:?}", self.technology)?;
         writeln!(
             fmt,

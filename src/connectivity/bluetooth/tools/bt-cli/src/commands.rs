@@ -204,8 +204,7 @@ pub enum ReplControl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use parking_lot::Mutex;
-    use std::{collections::HashMap, sync::Arc};
+    use std::sync::Arc;
 
     #[test]
     fn test_gen_commands_macro() {
@@ -216,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_completer() {
-        let state = Arc::new(Mutex::new(State { peers: HashMap::new() }));
+        let state = Arc::new(Mutex::new(State::new()));
         let cmdhelper = CmdHelper::new(state);
         assert!(cmdhelper.complete("he", 0).unwrap().1.contains(&"help".to_string()));
         assert!(cmdhelper.complete("dis", 0).unwrap().1.contains(&"discoverable".to_string()));

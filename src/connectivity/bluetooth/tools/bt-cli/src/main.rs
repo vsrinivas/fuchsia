@@ -4,17 +4,17 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_bluetooth::PeerId as FidlPeerId,
-    fidl_fuchsia_bluetooth_control::{
-        ControlEvent, ControlEventStream, ControlMarker, ControlProxy, PairingOptions,
-        PairingSecurityLevel, TechnologyType,
+    fidl_fuchsia_bluetooth::{HostId as FidlHostId, PeerId as FidlPeerId},
+    fidl_fuchsia_bluetooth_sys::{
+        AccessMarker, AccessProxy, BondableMode, HostWatcherMarker, HostWatcherProxy,
+        PairingOptions, PairingSecurityLevel, ProcedureTokenProxy, TechnologyType,
     },
     fuchsia_async::{self as fasync, futures::select},
-    fuchsia_bluetooth::types::{AdapterInfo, Peer, Status},
+    fuchsia_bluetooth::types::{HostId, HostInfo, Peer, PeerId},
     fuchsia_component::client::connect_to_service,
     futures::{
         channel::mpsc::{channel, SendError},
-        FutureExt, Sink, SinkExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
+        FutureExt, Sink, SinkExt, Stream, StreamExt, TryFutureExt,
     },
     parking_lot::Mutex,
     pin_utils::pin_mut,
@@ -22,7 +22,7 @@ use {
     rustyline::{error::ReadlineError, CompletionType, Config, EditMode, Editor},
     std::{
         cmp::Ordering, collections::HashMap, convert::TryFrom, fmt::Write, iter::FromIterator,
-        sync::Arc, thread,
+        str::FromStr, sync::Arc, thread,
     },
 };
 
@@ -39,55 +39,53 @@ static PROMPT: &str = "\x1b[34mbt>\x1b[0m ";
 /// Used when evented output is intermingled with the REPL prompt.
 static CLEAR_LINE: &str = "\x1b[2K";
 
-async fn get_active_adapter(control_svc: &ControlProxy) -> Result<String, Error> {
-    match control_svc.get_active_adapter_info().await? {
-        Some(adapter) => AdapterInfo::try_from(*adapter).map(|a| a.to_string()),
+async fn get_active_host(state: &Mutex<State>) -> Result<String, Error> {
+    let state = state.lock();
+    let active_iter = state.hosts.iter().find(|&h| h.active);
+    match active_iter {
+        Some(host) => Ok(host.to_string()),
         None => Ok(String::from("No Active Adapter")),
     }
 }
 
-async fn get_adapters(control_svc: &ControlProxy) -> Result<String, Error> {
-    if let Some(adapters) = control_svc.get_adapters().await? {
-        let mut string = String::new();
-        for adapter in adapters {
-            let _ = writeln!(string, "{}", AdapterInfo::try_from(adapter)?);
-        }
-        return Ok(string);
+async fn get_hosts(state: &Mutex<State>) -> Result<String, Error> {
+    let mut string = String::new();
+    for host in &state.lock().hosts {
+        let _ = writeln!(string, "{}", host);
     }
-    Ok(String::from("No adapters detected"))
+    if string.is_empty() {
+        return Ok(String::from("No adapters detected"));
+    }
+    Ok(string)
 }
 
-async fn set_active_adapter<'a>(
+async fn set_active_host<'a>(
     args: &'a [&'a str],
-    control_svc: &'a ControlProxy,
+    host_svc: &'a HostWatcherProxy,
 ) -> Result<String, Error> {
     if args.len() != 1 {
         return Err(format_err!("usage: {}", Cmd::SetActiveAdapter.cmd_help()));
     }
     println!("Setting active adapter");
-    // `args[0]` is the identifier of the adapter to make active
-    let response = control_svc.set_active_adapter(args[0]).await?;
-    if response.error.is_some() {
-        Ok(Status::from(response).to_string())
-    } else {
-        Ok(String::new())
+    let host_id = HostId::from_str(args[0])?;
+    let mut fidl_host_id: FidlHostId = host_id.into();
+    match host_svc.set_active(&mut fidl_host_id).await {
+        Ok(_) => Ok(String::new()),
+        Err(err) => Ok(format!("Error setting active host: {}", err)),
     }
 }
 
-async fn set_adapter_name<'a>(
+async fn set_local_name<'a>(
     args: &'a [&'a str],
-    control_svc: &'a ControlProxy,
+    access_svc: &'a AccessProxy,
 ) -> Result<String, Error> {
-    if args.len() > 1 {
-        return Err(format_err!("usage: {}", Cmd::SetAdapterName.cmd_help()));
+    if args.len() != 1 {
+        return Ok(format!("usage: {}", Cmd::SetAdapterName.cmd_help()));
     }
-    println!("Setting local name of the active adapter");
-    // `args[0]` is the value to set as the name of the adapter
-    let response = control_svc.set_name(args.get(0).map(|&name| name)).await?;
-    if response.error.is_some() {
-        Ok(Status::from(response).to_string())
-    } else {
-        Ok(String::new())
+    println!("Setting local name of the active host");
+    match access_svc.set_local_name(args[0]) {
+        Ok(_) => Ok(String::new()),
+        Err(err) => Ok(format!("Error setting local name: {:?}", err)),
     }
 }
 
@@ -95,23 +93,22 @@ async fn set_adapter_name<'a>(
 /// will be used if arguments aren't provided.
 ///
 /// Returns an error if the input is not recognized as a valid device class .
-async fn set_adapter_device_class<'a>(
+async fn set_device_class<'a>(
     args: &'a [&'a str],
-    control_svc: &'a ControlProxy,
+    access_svc: &'a AccessProxy,
 ) -> Result<String, Error> {
     let mut args = args.iter();
     println!("Setting device class of the active adapter");
-    let mut cod = DeviceClass {
+    let mut device_class = DeviceClass {
         major: args.next().map(|arg| arg.try_into()).unwrap_or(Ok(MajorClass::Uncategorized))?,
         minor: args.next().map(|arg| arg.try_into()).unwrap_or(Ok(MinorClass::not_set()))?,
         service: args.try_into()?,
     }
     .into();
-    let response = control_svc.set_device_class(&mut cod).await?;
-    if response.error.is_some() {
-        Ok(Status::from(response).to_string())
-    } else {
-        Ok(format!("Set device class to 0x{:x}", cod.value))
+
+    match access_svc.set_device_class(&mut device_class) {
+        Ok(_) => Ok(format!("Set device class to 0x{:x}", device_class.value)),
+        Err(err) => Ok(format!("Error setting device class: {}", err)),
     }
 }
 
@@ -155,84 +152,87 @@ fn get_peer<'a>(args: &'a [&'a str], state: &Mutex<State>) -> String {
         .unwrap_or_else(|| String::from("No known peer"))
 }
 
-async fn set_discovery(discovery: bool, control_svc: &ControlProxy) -> Result<String, Error> {
+async fn set_discovery(
+    discovery: bool,
+    state: &Mutex<State>,
+    access_svc: &AccessProxy,
+) -> Result<String, Error> {
     println!("{} Discovery!", if discovery { "Starting" } else { "Stopping" });
-    let response = control_svc.request_discovery(discovery).await?;
-    if response.error.is_some() {
-        Ok(Status::from(response).to_string())
-    } else {
-        Ok(String::new())
+    if !discovery {
+        state.lock().discovery_token = None;
+        return Ok(String::new());
+    }
+
+    let (token, token_server) = fidl::endpoints::create_proxy()?;
+    match access_svc.start_discovery(token_server).await? {
+        Ok(_) => {
+            state.lock().discovery_token = Some(token);
+            Ok(String::new())
+        }
+        Err(err) => Ok(format!("Discovery error: {:?}", err)),
     }
 }
 
 // Find the identifier for a `Peer` based on a `key` that is either an identifier or an
 // address.
 // Returns `None` if the given address does not belong to a known peer.
-fn to_identifier(state: &Mutex<State>, key: &str) -> Option<String> {
+fn to_identifier(state: &Mutex<State>, key: &str) -> Option<PeerId> {
     // Compile regex inline because it is not ever expected to be a bottleneck
     let address_pattern = Regex::new(r"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$")
         .expect("Could not compile mac address regex pattern.");
     if address_pattern.is_match(key) {
-        state
-            .lock()
-            .peers
-            .values()
-            .find(|peer| peer.address.to_string() == key)
-            .map(|peer| peer.id.to_string())
+        state.lock().peers.values().find(|peer| peer.address.to_string() == key).map(|peer| peer.id)
     } else {
-        Some(key.to_string())
+        key.parse().ok()
     }
 }
 
 async fn connect<'a>(
     args: &'a [&'a str],
     state: &'a Mutex<State>,
-    control_svc: &'a ControlProxy,
+    access_proxy: &'a AccessProxy,
 ) -> Result<String, Error> {
     if args.len() != 1 {
         return Ok(format!("usage: {}", Cmd::Connect.cmd_help()));
     }
     // `args[0]` is the identifier of the peer to connect to
-    let id = match to_identifier(state, args[0]) {
+    let peer_id = match to_identifier(state, args[0]) {
         Some(id) => id,
         None => return Ok(format!("Unable to connect: Unknown address {}", args[0])),
     };
-    let response = control_svc.connect(&id).await?;
-    if response.error.is_some() {
-        Ok(Status::from(response).to_string())
-    } else {
-        Ok(String::new())
+    let response = access_proxy.connect(&mut peer_id.into()).await?;
+    match response {
+        Ok(_) => Ok(String::new()),
+        Err(err) => Ok(format!("Connect error: {:?}", err)),
     }
 }
 
-fn parse_disconnect<'a>(args: &'a [&'a str], state: &'a Mutex<State>) -> Result<String, String> {
+fn parse_disconnect<'a>(args: &'a [&'a str], state: &'a Mutex<State>) -> Result<PeerId, String> {
     if args.len() != 1 {
         return Err(format!("usage: {}", Cmd::Disconnect.cmd_help()));
     }
     // `args[0]` is the identifier of the peer to connect to
-    let id = match to_identifier(state, args[0]) {
-        Some(id) => id,
+    match to_identifier(state, args[0]) {
+        Some(id) => Ok(id),
         None => return Err(format!("Unable to disconnect: Unknown address {}", args[0])),
-    };
-    Ok(id)
+    }
 }
 
-async fn handle_disconnect(id: String, control_svc: &ControlProxy) -> Result<String, Error> {
-    let response = control_svc.disconnect(&id).await?;
-    if response.error.is_some() {
-        Ok(Status::from(response).to_string())
-    } else {
-        Ok(String::new())
+async fn handle_disconnect(id: PeerId, access_svc: &AccessProxy) -> Result<String, Error> {
+    let response = access_svc.disconnect(&mut id.into()).await?;
+    match response {
+        Ok(_) => Ok(String::new()),
+        Err(err) => Ok(format!("Disconnect error: {:?}", err)),
     }
 }
 
 async fn disconnect<'a>(
     args: &'a [&'a str],
     state: &'a Mutex<State>,
-    control_svc: &'a ControlProxy,
+    access_svc: &'a AccessProxy,
 ) -> Result<String, Error> {
     match parse_disconnect(args, state) {
-        Ok(id) => handle_disconnect(id, control_svc).await,
+        Ok(id) => handle_disconnect(id, access_svc).await,
         Err(msg) => Ok(msg),
     }
 }
@@ -249,10 +249,10 @@ fn parse_pairing_security_level(level: &str) -> Result<PairingSecurityLevel, Str
     }
 }
 
-fn parse_bondable_mode(mode: &str) -> Result<bool, String> {
+fn parse_bondable_mode(mode: &str) -> Result<BondableMode, String> {
     match mode.to_ascii_uppercase().as_str() {
-        "T" => Ok(true),
-        "F" => Ok(false),
+        "T" => Ok(BondableMode::Bondable),
+        "F" => Ok(BondableMode::NonBondable),
         _ => return Err("Bondable mode must be either \"T\" or \"F\"".to_string()),
     }
 }
@@ -272,47 +272,39 @@ fn parse_pair(args: &[&str], state: &Mutex<State>) -> Result<(FidlPeerId, Pairin
         return Err(format!("usage: {}", Cmd::Pair.cmd_help()));
     }
     // `args[0]` is the identifier of the peer to connect to
-    let peer_id = match to_identifier(state, args[0]).map(|id| u64::from_str_radix(&id, 16)) {
-        Some(Ok(value)) => FidlPeerId { value },
-        Some(Err(e)) => return Err(format!("Unable to pair - invalid peer address: {:?}", e)),
-        None => return Err(format!("Unable to pair: Unknown address {}", args[0])),
+    let peer_id = match to_identifier(state, args[0]) {
+        Some(id) => id,
+        None => return Err(format!("Unable to pair: invalid peer address: {}", args[0])),
     };
     let le_security_level = Some(parse_pairing_security_level(args[1])?);
     // `args[2]` is the requested bonding preference of the pairing
-    let bondable_mode = parse_bondable_mode(args[2])?;
+    let bondable_mode = Some(parse_bondable_mode(args[2])?);
     // if `args[3]` is present, it corresponds to the connected transport over which to pair
     let transport = if args.len() == 4 { Some(parse_pairing_transport(args[3])?) } else { None };
     Ok((
-        peer_id,
-        PairingOptions {
-            le_security_level,
-            non_bondable: Some(!bondable_mode),
-            transport,
-            ..PairingOptions::EMPTY
-        },
+        peer_id.into(),
+        PairingOptions { le_security_level, bondable_mode, transport, ..PairingOptions::EMPTY },
     ))
 }
 
 async fn handle_pair(
     mut peer_id: FidlPeerId,
     pairing_opts: PairingOptions,
-    control_svc: &ControlProxy,
+    access_svc: &AccessProxy,
 ) -> Result<String, Error> {
-    let response = control_svc.pair(&mut peer_id, pairing_opts).await?;
-    if response.error.is_some() {
-        Ok(Status::from(response).to_string())
-    } else {
-        Ok(String::new())
+    match access_svc.pair(&mut peer_id, pairing_opts).await? {
+        Ok(_) => Ok(String::new()),
+        Err(err) => Ok(format!("Pair error: {:?}", err)),
     }
 }
 
 async fn pair(
     args: &[&str],
     state: &Mutex<State>,
-    control_svc: &ControlProxy,
+    access_svc: &AccessProxy,
 ) -> Result<String, Error> {
     match parse_pair(args, state) {
-        Ok((peer_id, pairing_opts)) => handle_pair(peer_id, pairing_opts, control_svc).await,
+        Ok((peer_id, pairing_opts)) => handle_pair(peer_id, pairing_opts, access_svc).await,
         Err(e) => Ok(e),
     }
 }
@@ -320,68 +312,48 @@ async fn pair(
 async fn forget<'a>(
     args: &'a [&'a str],
     state: &'a Mutex<State>,
-    control_svc: &'a ControlProxy,
+    access_svc: &'a AccessProxy,
 ) -> Result<String, Error> {
     if args.len() != 1 {
         return Ok(format!("usage: {}", Cmd::Forget.cmd_help()));
     }
     // `args[0]` is the identifier of the remote device to connect to
-    let id = match to_identifier(state, args[0]) {
+    let peer_id = match to_identifier(state, args[0]) {
         Some(id) => id,
         None => return Ok(format!("Unable to forget: Unknown address {}", args[0])),
     };
-    let response = control_svc.forget(&id).await?;
-    if response.error.is_some() {
-        Ok(Status::from(response).to_string())
-    } else {
-        println!("Peer has been removed");
-        Ok(String::new())
+    match access_svc.forget(&mut peer_id.into()).await? {
+        Ok(_) => {
+            println!("Peer has been removed");
+            Ok(String::new())
+        }
+        Err(err) => Ok(format!("Forget error: {:?}", err)),
     }
 }
 
-async fn set_discoverable(discoverable: bool, control_svc: &ControlProxy) -> Result<String, Error> {
+async fn set_discoverable(
+    discoverable: bool,
+    access_svc: &AccessProxy,
+    state: &Mutex<State>,
+) -> Result<String, Error> {
     if discoverable {
         println!("Becoming discoverable..");
+        if state.lock().discoverable_token.is_some() {
+            return Ok(String::new());
+        }
+        let (token, token_server) = fidl::endpoints::create_proxy()?;
+        match access_svc.make_discoverable(token_server).await? {
+            Ok(_) => {
+                state.lock().discoverable_token = Some(token);
+                Ok(String::new())
+            }
+            Err(err) => Ok(format!("MakeDiscoverable error: {:?}", err)),
+        }
     } else {
         println!("Revoking discoverability..");
-    }
-    let response = control_svc.set_discoverable(discoverable).await?;
-    if response.error.is_some() {
-        Ok(Status::from(response).to_string())
-    } else {
+        state.lock().discoverable_token = None;
         Ok(String::new())
     }
-}
-
-/// Listen on the control event channel for new events. Track state and print output where
-/// appropriate.
-async fn run_listeners(mut stream: ControlEventStream, state: &Mutex<State>) -> Result<(), Error> {
-    while let Some(evt) = stream.try_next().await? {
-        print!("{}", CLEAR_LINE);
-        match evt {
-            ControlEvent::OnActiveAdapterChanged { adapter: Some(adapter) } => {
-                println!("Active adapter set to {}", adapter.address);
-            }
-            ControlEvent::OnActiveAdapterChanged { adapter: None } => {
-                println!("No active adapter");
-            }
-            ControlEvent::OnAdapterUpdated { adapter } => {
-                println!("Adapter {} updated", adapter.address);
-            }
-            ControlEvent::OnAdapterRemoved { identifier } => {
-                println!("Adapter {} removed", identifier);
-            }
-            ControlEvent::OnDeviceUpdated { device } => {
-                let peer = Peer::try_from(device).context("Malformed FIDL peer")?;
-                print_peer_state_updates(&state.lock(), &peer);
-                state.lock().peers.insert(peer.id.to_string(), peer);
-            }
-            ControlEvent::OnDeviceRemoved { identifier } => {
-                state.lock().peers.remove(&identifier);
-            }
-        }
-    }
-    Ok(())
 }
 
 fn print_peer_state_updates(state: &State, peer: &Peer) {
@@ -391,7 +363,7 @@ fn print_peer_state_updates(state: &State, peer: &Peer) {
 }
 
 fn peer_state_updates(state: &State, peer: &Peer) -> Option<String> {
-    let previous = state.peers.get(&peer.id.to_string());
+    let previous = state.peers.get(&peer.id);
     let was_connected = previous.map_or(false, |p| p.connected);
     let was_bonded = previous.map_or(false, |p| p.bonded);
 
@@ -415,31 +387,31 @@ fn peer_state_updates(state: &State, peer: &Peer) -> Option<String> {
 
 /// Tracks all state local to the command line tool.
 pub struct State {
-    pub peers: HashMap<String, Peer>,
+    pub peers: HashMap<PeerId, Peer>,
+    pub discoverable_token: Option<ProcedureTokenProxy>,
+    pub discovery_token: Option<ProcedureTokenProxy>,
+    pub hosts: Vec<HostInfo>,
 }
 
 impl State {
-    pub fn new(
-        devs: Vec<fidl_fuchsia_bluetooth_control::RemoteDevice>,
-    ) -> Result<Arc<Mutex<State>>, Error> {
-        use std::convert::TryInto;
-
-        let mut peers = HashMap::new();
-        for d in devs {
-            peers.insert(d.identifier.clone(), d.try_into()?);
+    pub fn new() -> State {
+        State {
+            peers: HashMap::new(),
+            discoverable_token: None,
+            discovery_token: None,
+            hosts: vec![],
         }
-
-        Ok(Arc::new(Mutex::new(State { peers })))
     }
 }
 
 async fn parse_and_handle_cmd(
-    bt_svc: &ControlProxy,
+    bt_svc: &AccessProxy,
+    host_svc: &HostWatcherProxy,
     state: Arc<Mutex<State>>,
     line: String,
 ) -> Result<ReplControl, Error> {
     match parse_cmd(line) {
-        ParseResult::Valid((cmd, args)) => handle_cmd(bt_svc, state, cmd, args).await,
+        ParseResult::Valid((cmd, args)) => handle_cmd(bt_svc, host_svc, state, cmd, args).await,
         ParseResult::Empty => Ok(ReplControl::Continue),
         ParseResult::Error(err) => {
             println!("{}", err);
@@ -472,7 +444,8 @@ fn parse_cmd(line: String) -> ParseResult<(Cmd, Vec<String>)> {
 /// Handle a single raw input command from a user and indicate whether the command should
 /// result in continuation or breaking of the read evaluate print loop.
 async fn handle_cmd(
-    bt_svc: &ControlProxy,
+    access_svc: &AccessProxy,
+    host_svc: &HostWatcherProxy,
     state: Arc<Mutex<State>>,
     cmd: Cmd,
     args: Vec<String>,
@@ -480,21 +453,21 @@ async fn handle_cmd(
     let args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     let args: &[&str] = &*args;
     let res = match cmd {
-        Cmd::Connect => connect(args, &state, &bt_svc).await,
-        Cmd::Disconnect => disconnect(args, &state, &bt_svc).await,
-        Cmd::Pair => pair(args, &state, &bt_svc).await,
-        Cmd::Forget => forget(args, &state, &bt_svc).await,
-        Cmd::StartDiscovery => set_discovery(true, &bt_svc).await,
-        Cmd::StopDiscovery => set_discovery(false, &bt_svc).await,
-        Cmd::Discoverable => set_discoverable(true, &bt_svc).await,
-        Cmd::NotDiscoverable => set_discoverable(false, &bt_svc).await,
+        Cmd::Connect => connect(args, &state, &access_svc).await,
+        Cmd::Disconnect => disconnect(args, &state, &access_svc).await,
+        Cmd::Pair => pair(args, &state, &access_svc).await,
+        Cmd::Forget => forget(args, &state, &access_svc).await,
+        Cmd::StartDiscovery => set_discovery(true, &state, &access_svc).await,
+        Cmd::StopDiscovery => set_discovery(false, &state, &access_svc).await,
+        Cmd::Discoverable => set_discoverable(true, &access_svc, &state).await,
+        Cmd::NotDiscoverable => set_discoverable(false, &access_svc, &state).await,
         Cmd::GetPeers => Ok(get_peers(args, &state)),
         Cmd::GetPeer => Ok(get_peer(args, &state)),
-        Cmd::GetAdapters => get_adapters(&bt_svc).await,
-        Cmd::SetActiveAdapter => set_active_adapter(args, &bt_svc).await,
-        Cmd::SetAdapterName => set_adapter_name(args, &bt_svc).await,
-        Cmd::SetAdapterDeviceClass => set_adapter_device_class(args, &bt_svc).await,
-        Cmd::ActiveAdapter => get_active_adapter(&bt_svc).await,
+        Cmd::GetAdapters => get_hosts(&state).await,
+        Cmd::SetActiveAdapter => set_active_host(args, &host_svc).await,
+        Cmd::SetAdapterName => set_local_name(args, &access_svc).await,
+        Cmd::SetAdapterDeviceClass => set_device_class(args, &access_svc).await,
+        Cmd::ActiveAdapter => get_active_host(&state).await,
         Cmd::Help => Ok(Cmd::help_msg().to_string()),
         Cmd::Exit | Cmd::Quit => return Ok(ReplControl::Break),
     }?;
@@ -558,14 +531,62 @@ fn cmd_stream(
     (cmd_receiver, ack_sender)
 }
 
+async fn watch_peers(access_svc: AccessProxy, state: Arc<Mutex<State>>) -> Result<(), Error> {
+    // Used to avoid printing all peers on first watch_peers() call.
+    let mut first_loop = true;
+    loop {
+        let (updated, removed) = access_svc.watch_peers().await?;
+        for peer in updated.into_iter() {
+            let peer = Peer::try_from(peer).context("Malformed FIDL peer")?;
+            if !first_loop {
+                print!("{}", CLEAR_LINE);
+                print_peer_state_updates(&state.lock(), &peer);
+            }
+            state.lock().peers.insert(peer.id, peer);
+        }
+        for id in removed.into_iter() {
+            let peer_id = PeerId::try_from(id).context("Malformed FIDL peer id")?;
+            state.lock().peers.remove(&peer_id);
+        }
+        first_loop = false;
+    }
+}
+
+async fn watch_hosts(host_svc: HostWatcherProxy, state: Arc<Mutex<State>>) -> Result<(), Error> {
+    let mut first_result = true;
+    loop {
+        let fidl_hosts = host_svc.watch().await?;
+        let mut hosts = Vec::<HostInfo>::new();
+        if !first_result && !hosts.is_empty() {
+            print!("{}", CLEAR_LINE);
+        }
+        for fidl_host in &fidl_hosts {
+            let host = HostInfo::try_from(fidl_host)?;
+            if !first_result {
+                println!(
+                    "Adapter updated: [address: {}, active: {}, discoverable: {}, discovering: {}]",
+                    host.address, host.active, host.discoverable, host.discovering
+                );
+            }
+            hosts.push(host);
+        }
+        state.lock().hosts = hosts;
+        first_result = false;
+    }
+}
+
 /// REPL execution
-async fn run_repl(bt_svc: ControlProxy, state: Arc<Mutex<State>>) -> Result<(), Error> {
+async fn run_repl(
+    access_svc: AccessProxy,
+    host_svc: HostWatcherProxy,
+    state: Arc<Mutex<State>>,
+) -> Result<(), Error> {
     // `cmd_stream` blocks on input in a separate thread and passes commands and acks back to
     // the main thread via async channels.
     let (mut commands, mut acks) = cmd_stream(state.clone());
 
     while let Some(cmd) = commands.next().await {
-        match parse_and_handle_cmd(&bt_svc, state.clone(), cmd).await {
+        match parse_and_handle_cmd(&access_svc, &host_svc, state.clone(), cmd).await {
             Ok(ReplControl::Continue) => {} // continue silently
             Ok(ReplControl::Break) => break,
             Err(e) => println!("Error handling command: {}", e),
@@ -577,24 +598,21 @@ async fn run_repl(bt_svc: ControlProxy, state: Arc<Mutex<State>>) -> Result<(), 
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let bt_svc = connect_to_service::<ControlMarker>()
-        .context("failed to connect to bluetooth control interface")?;
-    let evt_stream = bt_svc.take_event_stream();
-
-    let devices = bt_svc
-        .get_known_remote_devices()
-        .await
-        .context("failed to obtain list of remote devices")?;
-    let state = State::new(devices)?;
-    let repl =
-        run_repl(bt_svc, state.clone()).map_err(|e| e.context("REPL failed unexpectedly").into());
-    let listeners = run_listeners(evt_stream, &state)
-        .map_err(|e| e.context("Failed to subscribe to bluetooth events").into());
+    let access_svc = connect_to_service::<AccessMarker>()
+        .context("failed to connect to bluetooth access interface")?;
+    let host_watcher_svc =
+        connect_to_service::<HostWatcherMarker>().context("failed to watch hosts")?;
+    let state = Arc::new(Mutex::new(State::new()));
+    let peer_watcher = watch_peers(access_svc.clone(), state.clone());
+    let repl = run_repl(access_svc, host_watcher_svc.clone(), state.clone())
+        .map_err(|e| e.context("REPL failed unexpectedly").into());
+    let host_watcher = watch_hosts(host_watcher_svc, state);
     pin_mut!(repl);
-    pin_mut!(listeners);
+    pin_mut!(peer_watcher);
     select! {
         r = repl.fuse() => r,
-        l = listeners.fuse() => l,
+        p = peer_watcher.fuse() => p,
+        h = host_watcher.fuse() => h,
     }
 }
 
@@ -602,13 +620,9 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
     use {
-        anyhow::format_err,
-        bt_fidl_mocks::control::ControlMock,
+        bt_fidl_mocks::sys::AccessMock,
         fidl_fuchsia_bluetooth as fbt, fidl_fuchsia_bluetooth_sys as fsys,
-        fuchsia_bluetooth::{
-            bt_fidl_status,
-            types::{Address, PeerId},
-        },
+        fuchsia_bluetooth::types::{Address, PeerId},
         fuchsia_zircon::{Duration, DurationNum},
         futures::join,
         parking_lot::Mutex,
@@ -672,9 +686,9 @@ mod tests {
     }
 
     fn state_with(p: Peer) -> State {
-        let mut peers = HashMap::new();
-        peers.insert(p.id.to_string(), p);
-        State { peers }
+        let mut state = State::new();
+        state.peers.insert(p.id, p);
+        state
     }
 
     #[test]
@@ -706,13 +720,13 @@ mod tests {
 
     #[test]
     fn test_get_peers() {
-        let mut state = State { peers: HashMap::new() };
+        let mut state = State::new();
         state.peers.insert(
-            "abcd".to_string(),
+            PeerId(0xabcd),
             named_peer(PeerId(0xabcd), Address::Public([0xAB, 0x89, 0x67, 0x45, 0x23, 0x01]), None),
         );
         state.peers.insert(
-            "beef".to_string(),
+            PeerId(0xbeef),
             named_peer(
                 PeerId(0xbeef),
                 Address::Public([0x11, 0x00, 0x55, 0x7E, 0xDE, 0xAD]),
@@ -792,7 +806,7 @@ mod tests {
             let (prev, (connected, bonded), expected) = case;
             let state = match prev {
                 Some((c, b)) => state_with(peer(c, b)),
-                None => State { peers: HashMap::new() },
+                None => State::new(),
             };
             assert_eq!(
                 peer_state_updates(&state, &peer(connected, bonded)),
@@ -807,14 +821,14 @@ mod tests {
         let state = Mutex::new(state_with(peer(true, false)));
         let cases = vec![
             // valid peer id
-            ("disconnect deadbeef", Ok("deadbeef".to_string())),
+            ("disconnect deadbeef", Ok(PeerId(0xdeadbeef))),
             // unknown address
             (
                 "disconnect 00:00:00:00:00:00",
                 Err("Unable to disconnect: Unknown address 00:00:00:00:00:00".to_string()),
             ),
             // known address
-            ("disconnect 00:00:00:00:00:01", Ok("00000000deadbeef".to_string())),
+            ("disconnect 00:00:00:00:00:01", Ok(PeerId(0xdeadbeef))),
             // no id param
             ("disconnect", Err(format!("usage: {}", Cmd::Disconnect.cmd_help()))),
         ];
@@ -823,7 +837,7 @@ mod tests {
         }
     }
 
-    fn parse_disconnect_id(line: &str, state: &Mutex<State>) -> Result<String, String> {
+    fn parse_disconnect_id(line: &str, state: &Mutex<State>) -> Result<PeerId, String> {
         let args = match parse_cmd(line.to_string()) {
             ParseResult::Valid((Cmd::Disconnect, args)) => Ok(args),
             ParseResult::Valid((_, _)) => Err("Command is not disconnect"),
@@ -853,8 +867,8 @@ mod tests {
     #[test]
     fn test_parse_bondable_mode() {
         let cases = vec![
-            ("T", Ok(true)),
-            ("f", Ok(false)),
+            ("T", Ok(BondableMode::Bondable)),
+            ("f", Ok(BondableMode::NonBondable)),
             ("TEST", Err("Bondable mode must be either \"T\" or \"F\"".to_string())),
         ];
         for (input_str, expected) in cases {
@@ -894,7 +908,7 @@ mod tests {
                     FidlPeerId { value: u64::from_str_radix("beef", 16).unwrap() },
                     PairingOptions {
                         le_security_level: Some(PairingSecurityLevel::Encrypted),
-                        non_bondable: Some(false),
+                        bondable_mode: Some(BondableMode::Bondable),
                         transport: Some(TechnologyType::LowEnergy),
                         ..PairingOptions::EMPTY
                     },
@@ -907,7 +921,7 @@ mod tests {
                     FidlPeerId { value: u64::from_str_radix("beef", 16).unwrap() },
                     PairingOptions {
                         le_security_level: Some(PairingSecurityLevel::Authenticated),
-                        non_bondable: Some(true),
+                        bondable_mode: Some(BondableMode::NonBondable),
                         transport: None,
                         ..PairingOptions::EMPTY
                     },
@@ -942,14 +956,14 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_disconnect() {
         let peer = peer(true, false);
-        let peer_id = peer.id.to_string();
-
-        let args = vec![peer_id.as_str()];
+        let peer_id = peer.id;
+        let peer_id_string = peer.id.to_string();
+        let args = vec![peer_id_string.as_str()];
         let state = Mutex::new(state_with(peer));
-        let (proxy, mut mock) = ControlMock::new(timeout()).expect("failed to create mock");
+        let (proxy, mut mock) = AccessMock::new(timeout()).expect("failed to create mock");
 
         let cmd = disconnect(args.as_slice(), &state, &proxy);
-        let mock_expect = mock.expect_disconnect(peer_id.clone(), bt_fidl_status!());
+        let mock_expect = mock.expect_disconnect(peer_id.into(), Ok(()));
         let (result, mock_result) = join!(cmd, mock_expect);
 
         let _ = mock_result.expect("mock FIDL expectation not satisfied");
@@ -959,33 +973,31 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_disconnect_error() {
         let peer = peer(true, false);
-        let peer_id = peer.id.to_string();
-
-        let args = vec![peer_id.as_str()];
+        let peer_id = peer.id;
+        let peer_id_string = peer.id.to_string();
+        let args = vec![peer_id_string.as_str()];
         let state = Mutex::new(state_with(peer));
-        let (proxy, mut mock) = ControlMock::new(timeout()).expect("failed to create mock");
+        let (proxy, mut mock) = AccessMock::new(timeout()).expect("failed to create mock");
 
-        let error_msg = "oopsy daisy";
         let cmd = disconnect(args.as_slice(), &state, &proxy);
-        let mock_expect = mock
-            .expect_disconnect(peer_id.clone(), bt_fidl_status!(Failed, format_err!(error_msg)));
+        let mock_expect = mock.expect_disconnect(peer_id.into(), Err(fsys::Error::Failed));
         let (result, mock_result) = join!(cmd, mock_expect);
 
         let _ = mock_result.expect("mock FIDL expectation not satisfied");
-        assert!(result.expect("expected a result").contains(error_msg));
+        assert!(result.expect("expected a result").contains("Disconnect error"));
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_forget() {
         let peer = peer(true, false);
-        let peer_id = peer.id.to_string();
-
-        let args = vec![peer_id.as_str()];
+        let peer_id = peer.id;
+        let peer_id_string = peer.id.to_string();
+        let args = vec![peer_id_string.as_str()];
         let state = Mutex::new(state_with(peer));
-        let (proxy, mut mock) = ControlMock::new(1.second()).expect("failed to create mock");
+        let (proxy, mut mock) = AccessMock::new(1.second()).expect("failed to create mock");
 
         let cmd = forget(args.as_slice(), &state, &proxy);
-        let mock_expect = mock.expect_forget(peer_id.clone(), bt_fidl_status!());
+        let mock_expect = mock.expect_forget(peer_id.into(), Ok(()));
         let (result, mock_result) = join!(cmd, mock_expect);
 
         assert!(mock_result.is_ok());
@@ -995,41 +1007,39 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_forget_error() {
         let peer = peer(true, false);
-        let peer_id = peer.id.to_string();
-
-        let args = vec![peer_id.as_str()];
+        let peer_id = peer.id;
+        let peer_id_string = peer.id.to_string();
+        let args = vec![peer_id_string.as_str()];
         let state = Mutex::new(state_with(peer));
-        let (proxy, mut mock) = ControlMock::new(1.second()).expect("failed to create mock");
+        let (proxy, mut mock) = AccessMock::new(1.second()).expect("failed to create mock");
 
-        let error_msg = "oopsy daisy";
         let cmd = forget(args.as_slice(), &state, &proxy);
-        let mock_expect =
-            mock.expect_forget(peer_id.clone(), bt_fidl_status!(Failed, format_err!(error_msg)));
+        let mock_expect = mock.expect_forget(peer_id.into(), Err(fsys::Error::Failed));
         let (result, mock_result) = join!(cmd, mock_expect);
 
         assert!(mock_result.is_ok());
-        assert!(result.expect("expected a result").contains(error_msg));
+        assert!(result.expect("expected a result").contains("Forget error"));
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_pair() {
         let peer =
             custom_peer(PeerId(0xbeef), Address::Public([1, 0, 0, 0, 0, 0]), true, false, None);
-        let peer_id: FidlPeerId = peer.id.into();
+        let peer_id = peer.id;
         let peer_id_string = peer.id.to_string();
         let pairing_options = PairingOptions {
             le_security_level: Some(PairingSecurityLevel::Encrypted),
-            non_bondable: Some(false),
+            bondable_mode: Some(BondableMode::Bondable),
             transport: None,
             ..PairingOptions::EMPTY
         };
 
         let args = vec![peer_id_string.as_str(), "ENC", "T"];
         let state = Mutex::new(state_with(peer));
-        let (proxy, mut mock) = ControlMock::new(1.second()).expect("failed to create mock");
+        let (proxy, mut mock) = AccessMock::new(1.second()).expect("failed to create mock");
 
         let cmd = pair(args.as_slice(), &state, &proxy);
-        let mock_expect = mock.expect_pair(peer_id, pairing_options, bt_fidl_status!());
+        let mock_expect = mock.expect_pair(peer_id.into(), pairing_options, Ok(()));
         let (result, mock_result) = join!(cmd, mock_expect);
 
         assert!(mock_result.is_ok());
@@ -1040,29 +1050,25 @@ mod tests {
     async fn test_pair_error() {
         let peer =
             custom_peer(PeerId(0xbeef), Address::Public([1, 0, 0, 0, 0, 0]), true, false, None);
-        let peer_id: FidlPeerId = peer.id.into();
+        let peer_id = peer.id;
         let peer_id_string = peer.id.to_string();
         let pairing_options = PairingOptions {
             le_security_level: Some(PairingSecurityLevel::Encrypted),
-            non_bondable: Some(false),
+            bondable_mode: Some(BondableMode::Bondable),
             transport: None,
             ..PairingOptions::EMPTY
         };
 
         let args = vec![peer_id_string.as_str(), "ENC", "T"];
         let state = Mutex::new(state_with(peer));
-        let (proxy, mut mock) = ControlMock::new(1.second()).expect("failed to create mock");
+        let (proxy, mut mock) = AccessMock::new(1.second()).expect("failed to create mock");
 
-        let error_msg = "oopsy daisy";
         let cmd = pair(args.as_slice(), &state, &proxy);
-        let mock_expect = mock.expect_pair(
-            peer_id,
-            pairing_options,
-            bt_fidl_status!(Failed, format_err!(error_msg)),
-        );
+        let mock_expect =
+            mock.expect_pair(peer_id.into(), pairing_options, Err(fsys::Error::Failed));
         let (result, mock_result) = join!(cmd, mock_expect);
 
         assert!(mock_result.is_ok());
-        assert!(result.expect("expected a result").contains(error_msg));
+        assert!(result.expect("expected a result").contains("Pair error"));
     }
 }

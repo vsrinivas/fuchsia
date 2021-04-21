@@ -7,8 +7,8 @@ use fuchsia_zircon::{Duration, DurationNum};
 /// Defines a generic utility to expect calls to a FIDL message and extract their parameters.
 pub mod expect;
 
-/// Mock utilities for fuchsia.bluetooth.control.
-pub mod control;
+/// Mock utilities for fuchsia.bluetooth.sys.
+pub mod sys;
 
 /// Mock utilities for fuchsia.bluetooth.gatt.
 pub mod gatt;

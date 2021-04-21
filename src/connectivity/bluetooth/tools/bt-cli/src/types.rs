@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl_fuchsia_bluetooth_control as fidl_control,
+    fidl_fuchsia_bluetooth::DeviceClass as FidlDeviceClass,
 };
 
 pub trait TryInto<T> {
@@ -126,11 +126,11 @@ pub struct DeviceClass {
     pub service: ServiceClass,
 }
 
-impl From<DeviceClass> for fidl_control::DeviceClass {
+impl From<DeviceClass> for FidlDeviceClass {
     fn from(cod: DeviceClass) -> Self {
         let value = (cod.minor.0 & 0b11_1111) << 2 // bits [2,7] represent the minor class
             | (((cod.major as u32) & 0b1_1111) << 8) // bits [8,12] represent the major class
             | (cod.service.0 & 0b111_1111_1111) << 13; // bits [13,23] represent the service class
-        fidl_control::DeviceClass { value }
+        FidlDeviceClass { value }
     }
 }
