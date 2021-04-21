@@ -226,6 +226,7 @@ flutter_test("ermine_unittests") {
     "ermine_story_test.dart",
     "ermine_test.dart",
     "oobe_model_test.dart",
+    "oobe_widget_test.dart",
     "overview_widget_test.dart",
     "recents_widget_test.dart",
     "status_model_test.dart",

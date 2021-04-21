@@ -17,7 +17,7 @@ void main() async {
 
   setUp(() {
     appModel = MockAppModel();
-    oobe = Oobe(model: TestOobe(onFinished: appModel.exitOobe));
+    oobe = TestOobe(OobeModel(onFinished: appModel.exitOobe));
   });
 
   testWidgets('Should display header, body and footer', (tester) async {
