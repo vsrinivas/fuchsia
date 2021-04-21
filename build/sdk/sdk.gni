@@ -343,19 +343,19 @@ template("sdk") {
     inputs = [ archive_manifest_file ]
 
     outputs = [ stamp_file ]
+    depfile = "${stamp_file}.d"
 
     args = [
       "--out-dir",
-      rebase_path("$root_out_dir/sdk/exported/$sdk_name"),
+      rebase_path("$root_out_dir/sdk/exported/$sdk_name", root_build_dir),
       "--stamp-file",
-      rebase_path(stamp_file),
+      rebase_path(stamp_file, root_build_dir),
       "--manifest",
-      rebase_path(archive_manifest_file),
+      rebase_path(archive_manifest_file, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
     ]
 
     deps = [ ":$archive_manifest_target_name" ]
-
-    # TODO(fxbug.dev/70721): Make deps hermetic.
-    hermetic_deps = false
   }
 }

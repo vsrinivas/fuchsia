@@ -33,21 +33,38 @@ def main():
         '--stamp-file', help='Path to the victory file', required=True)
     parser.add_argument(
         '--manifest', help='Path to the SDK\'s manifest file', required=True)
+    parser.add_argument('--depfile', help='Path to depfile', required=True)
     args = parser.parse_args()
 
-    # Remove any existing output.
-    shutil.rmtree(args.out_dir, True)
+    # Remove any existing outputs. Manually removing all subdirectories and
+    # files instead of using shutil.rmtree, to avoid registering spurious reads
+    # on stale subdirectories.
+    if os.path.exits(args.out_dir):
+        for root, dirs, files in os.walk(gopath_src, topdown=False):
+            for file in files:
+                os.unlink(os.path.join(root, file))
+            for dir in dirs:
+                os.rmdir(os.path.join(root, dir))
 
     with open(args.manifest, 'r') as manifest_file:
         mappings = [l.strip().split('=', 1) for l in manifest_file.readlines()]
 
+    sources, destinations = [], []
     for dest, source in mappings:
         destination = os.path.join(args.out_dir, dest)
         make_dir(destination)
+        source = os.path.relpath(source)
         shutil.copy2(source, destination)
+        sources.append(source)
+        destinations.append(destination)
 
     with open(args.stamp_file, 'w') as stamp_file:
         stamp_file.write('Now go use it\n')
+
+    with open(args.depfile, 'w') as depfile:
+        depfile.write(
+            '{} {}: {}\n'.format(
+                args.stamp_file, ' '.join(destinations), ' '.join(sources)))
 
 
 if __name__ == '__main__':
