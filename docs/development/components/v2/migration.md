@@ -869,14 +869,39 @@ shard:
 }
 ```
 
-#### Reading Inspect data from the Hub {#inspect-hub}
+#### Inspect data in tests {#inspect-tests}
 
-If your test components read Inspect diagnostics data from the [Hub](#hub),
-migrate to the `fuchsia.diagnostics.ArchiveAccessor` service provided by the
-[Archivist][archivist].
+If your test components read Inspect diagnostics data, migrate to the
+`fuchsia.diagnostics.ArchiveAccessor` service provided by the [Archivist][archivist].
+Consider the following approaches you may be currently using from Components v1 to accomplish this:
 
-1.  When [migrating tests](#migrate-tests), add the protocol capability to your
-    test root or test driver:
+- Injected services. The test CMX contains `fuchsia.diagnostics.ArchiveAccessor` as an
+  `injected-service`, reading isolated inspect data from an embedded Archivist limited
+  to test components:
+
+  ```json5
+  {
+      "fuchsia.test": {
+          "injected-services": {
+              "fuchsia.diagnostics.ArchiveAccessor":
+                  "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx",
+              ...
+          }
+      },
+      ...
+  ```
+
+  It means the test is reading isolated inspect data from an embedded Archivist
+  that only sees test components.
+
+- Directly from the [Hub](#hub).
+
+In v2, there's an Archivist running inside each test. Instead of
+instantiating another Archivist in your test, you can use that embedded Archivist
+Accessor protocol directly in your test. Therefore you'll need to do the following:
+
+1. When [migrating tests](#migrate-tests), add the protocol capability to your
+   test root or test driver:
 
     ```json5
     // test_driver.cml (test driver)
@@ -891,11 +916,11 @@ migrate to the `fuchsia.diagnostics.ArchiveAccessor` service provided by the
     }
     ```
 
-1.  Update your program to use the `ArchiveReader` library, which is available
-    in [C++][archive-cpp], [Rust][archive-rust], and [Dart][archive-dart].
+1. Update your program to use the `ArchiveReader` library, which is available
+   in [C++][archive-cpp], [Rust][archive-rust], and [Dart][archive-dart].
 
-    Note: For components in other languages, use the `ArchiveAccessor`
-    [FIDL protocol][archive-fidl] directly.
+   Note: For components in other languages, use the `ArchiveAccessor`
+   [FIDL protocol][archive-fidl] directly.
 
 ### Logging {#logging}
 
@@ -1014,7 +1039,7 @@ When migrating to Components v2, consider the following alternatives:
 -   [Observing lifecycle events](#events): Clients watching the filesystem to
     observe component instance changes should use
     [event capabilities][event-capabilities] instead.
--   [Reading inspect data](#inspect-hub): Clients reading Inspect data from
+-   [Reading inspect data](#inspect-tests): Clients reading Inspect data from
     `out/diagnostics` should migrate to the `fuchsia.diagnostics.ArchiveAccessor`
     service instead.
 -   [Connecting to exposed services](#injected-services): Clients connecting
