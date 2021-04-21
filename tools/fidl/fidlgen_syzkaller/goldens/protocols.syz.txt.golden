@@ -6,6 +6,7 @@
 include <fidl/test/protocols/c/fidl.h>
 fidl_test_protocols_obj_type = fidl_test_protocols_obj_type_NONE, fidl_test_protocols_obj_type_SOCKET
 fidl_test_protocols_ErrorEnun = fidl_test_protocols_ErrorEnun_ERR_FOO, fidl_test_protocols_ErrorEnun_ERR_BAR
+fidl_test_protocols_rights = fidl_test_protocols_rights_TRANSFER, fidl_test_protocols_rights_DUPLICATE
 fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseInLine {
        a int64
        b int64
@@ -343,4 +344,43 @@ resource zx_chan_fidl_test_protocols_DiscoverableProtocol_server[zx_chan]
 zx_channel_create$fidl_test_protocols_DiscoverableProtocol(options const[0], out0 ptr[out, zx_chan_fidl_test_protocols_DiscoverableProtocol_client], out1 ptr[out, zx_chan_fidl_test_protocols_DiscoverableProtocol_server])
 fdio_service_connect$fidl_test_protocols_DiscoverableProtocol(path ptr[in, string["/svc/fidl.test.protocols.DiscoverableProtocol"]], handle zx_chan_fidl_test_protocols_DiscoverableProtocol_server)
 zx_channel_write$fidl_test_protocols_DiscoverableProtocolMethod(handle zx_chan_fidl_test_protocols_DiscoverableProtocol_client, options const[0], bytes ptr[in, fidl_test_protocols_DiscoverableProtocolMethodRequest], num_bytes bytesize[bytes], handles ptr[in, fidl_test_protocols_DiscoverableProtocolMethodRequestHandles], num_handles bytesize[handles])
+
+
+fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequest {
+       hdr fidl_message_header[5073990954122988412]
+       h flags[fidl_handle_presence, int32]
+} [packed]
+fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestHandles {
+       h zx_socket
+} [packed]
+fidl_test_protocols_HandleRightsProtocolResponseMethodRequest {
+       hdr fidl_message_header[6841738779450413052]
+       h flags[fidl_handle_presence, int32]
+} [packed]
+fidl_test_protocols_HandleRightsProtocolResponseMethodRequestHandles {
+       h zx_socket
+} [packed]
+fidl_test_protocols_HandleRightsProtocolResponseMethodResponse {
+       hdr fidl_message_header[6841738779450413052]
+       h flags[fidl_handle_presence, int32]
+} [packed]
+fidl_test_protocols_HandleRightsProtocolResponseMethodResponseHandles {
+       h zx_socket
+} [packed]
+fidl_test_protocols_HandleRightsProtocolAnEventEvent {
+       hdr fidl_message_header[929632006073412977]
+       h flags[fidl_handle_presence, int32]
+} [packed]
+fidl_test_protocols_HandleRightsProtocolAnEventEventHandles {
+       h zx_socket
+} [packed]
+
+resource zx_chan_fidl_test_protocols_HandleRightsProtocol_client[zx_chan]
+resource zx_chan_fidl_test_protocols_HandleRightsProtocol_server[zx_chan]
+
+zx_channel_create$fidl_test_protocols_HandleRightsProtocol(options const[0], out0 ptr[out, zx_chan_fidl_test_protocols_HandleRightsProtocol_client], out1 ptr[out, zx_chan_fidl_test_protocols_HandleRightsProtocol_server])
+fdio_service_connect$fidl_test_protocols_HandleRightsProtocol(path ptr[in, string["/svc/"]], handle zx_chan_fidl_test_protocols_HandleRightsProtocol_server)
+zx_channel_write$fidl_test_protocols_HandleRightsProtocolNoResponseMethod(handle zx_chan_fidl_test_protocols_HandleRightsProtocol_client, options const[0], bytes ptr[in, fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequest], num_bytes bytesize[bytes], handles ptr[in, fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestHandles], num_handles bytesize[handles])
+zx_channel_call$fidl_test_protocols_HandleRightsProtocolResponseMethod(handle zx_chan_fidl_test_protocols_HandleRightsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[fidl_test_protocols_HandleRightsProtocolResponseMethodRequest, fidl_test_protocols_HandleRightsProtocolResponseMethodRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], fidl_test_protocols_HandleRightsProtocolResponseMethodResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$fidl_test_protocols_HandleRightsProtocolAnEvent(handle zx_chan_fidl_test_protocols_HandleRightsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, fidl_test_protocols_HandleRightsProtocolAnEventEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 

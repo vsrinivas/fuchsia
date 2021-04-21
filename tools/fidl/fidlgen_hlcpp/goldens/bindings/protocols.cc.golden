@@ -837,6 +837,278 @@ void WithErrorSyntax_ErrorAsEnum_Result::EnsureStorageInitialized(
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolResponseMethodResponseTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolAnEventEventTable;
+
+}  // namespace _internal
+HandleRightsProtocol::~HandleRightsProtocol() = default;
+
+const fidl_type_t* ::fidl::test::protocols::
+    HandleRightsProtocol_RequestDecoder::GetType(uint64_t ordinal,
+                                                 bool* out_needs_response) {
+  switch (ordinal) {
+    case ::fidl::test::protocols::internal::
+        kHandleRightsProtocol_NoResponseMethod_Ordinal:
+      *out_needs_response = false;
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+    case ::fidl::test::protocols::internal::
+        kHandleRightsProtocol_ResponseMethod_Ordinal:
+      *out_needs_response = true;
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+    default:
+      *out_needs_response = false;
+      return nullptr;
+  }
+}
+
+const fidl_type_t* HandleRightsProtocol_ResponseDecoder::GetType(
+    uint64_t ordinal) {
+  switch (ordinal) {
+    case ::fidl::test::protocols::internal::
+        kHandleRightsProtocol_ResponseMethod_Ordinal:
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_HandleRightsProtocolResponseMethodResponseTable;
+    case ::fidl::test::protocols::internal::
+        kHandleRightsProtocol_AnEvent_Ordinal:
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_HandleRightsProtocolAnEventEventTable;
+    default:
+      return nullptr;
+  }
+}
+
+HandleRightsProtocol_EventSender::~HandleRightsProtocol_EventSender() = default;
+
+HandleRightsProtocol_Sync::~HandleRightsProtocol_Sync() = default;
+
+HandleRightsProtocol_Proxy::HandleRightsProtocol_Proxy(
+    ::fidl::internal::ProxyController* controller)
+    : controller_(controller) {
+  (void)controller_;
+}
+
+HandleRightsProtocol_Proxy::~HandleRightsProtocol_Proxy() = default;
+
+zx_status_t HandleRightsProtocol_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
+  zx_status_t status = ZX_OK;
+  switch (message.ordinal()) {
+    case ::fidl::test::protocols::internal::
+        kHandleRightsProtocol_AnEvent_Ordinal: {
+      if (!AnEvent) {
+        status = ZX_OK;
+        break;
+      }
+      const char* error_msg = nullptr;
+      status = message.Decode(
+          &::fidl::test::protocols::_internal::
+              fidl_test_protocols_HandleRightsProtocolAnEventEventTable,
+          &error_msg);
+      if (status != ZX_OK) {
+        FIDL_REPORT_DECODING_ERROR(
+            message,
+            &::fidl::test::protocols::_internal::
+                fidl_test_protocols_HandleRightsProtocolAnEventEventTable,
+            error_msg);
+        break;
+      }
+      ::fidl::Decoder decoder(std::move(message));
+      AnEvent(::fidl::DecodeAs<::zx::socket>(&decoder, 16));
+      break;
+    }
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+void HandleRightsProtocol_Proxy::NoResponseMethod(::zx::socket h) {
+  ::fidl::Encoder _encoder(::fidl::test::protocols::internal::
+                               kHandleRightsProtocol_NoResponseMethod_Ordinal);
+  controller_->Send(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable,
+      ::fidl::test::protocols::HandleRightsProtocol_RequestEncoder::
+          NoResponseMethod(&_encoder, &h),
+      nullptr);
+}
+namespace {
+
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+HandleRightsProtocol_ResponseMethod_ResponseHandler(
+    HandleRightsProtocol::ResponseMethodCallback&& callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for HandleRightsProtocol::ResponseMethod\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<::zx::socket>(&decoder, 16));
+        return ZX_OK;
+      },
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_HandleRightsProtocolResponseMethodResponseTable);
+}
+
+}  // namespace
+void HandleRightsProtocol_Proxy::ResponseMethod(
+    ::zx::socket h, ResponseMethodCallback callback) {
+  ::fidl::Encoder _encoder(::fidl::test::protocols::internal::
+                               kHandleRightsProtocol_ResponseMethod_Ordinal);
+  controller_->Send(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable,
+      ::fidl::test::protocols::HandleRightsProtocol_RequestEncoder::
+          ResponseMethod(&_encoder, &h),
+      HandleRightsProtocol_ResponseMethod_ResponseHandler(std::move(callback)));
+}
+
+HandleRightsProtocol_Stub::HandleRightsProtocol_Stub(
+    ::fidl::test::protocols::HandleRightsProtocol_Stub::
+        HandleRightsProtocol_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
+
+HandleRightsProtocol_Stub::~HandleRightsProtocol_Stub() = default;
+
+namespace {
+
+class HandleRightsProtocol_ResponseMethod_Responder final {
+ public:
+  HandleRightsProtocol_ResponseMethod_Responder(
+      ::fidl::internal::PendingResponse response)
+      : response_(std::move(response)) {}
+
+  void operator()(::zx::socket h) {
+    ::fidl::Encoder _encoder(::fidl::test::protocols::internal::
+                                 kHandleRightsProtocol_ResponseMethod_Ordinal);
+    response_.Send(
+        &::fidl::test::protocols::_internal::
+            fidl_test_protocols_HandleRightsProtocolResponseMethodResponseTable,
+        ::fidl::test::protocols::HandleRightsProtocol_ResponseEncoder::
+            ResponseMethod(&_encoder, &h));
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+};
+
+}  // namespace
+
+zx_status_t HandleRightsProtocol_Stub::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
+  bool needs_response;
+  const fidl_type_t* request_type =
+      ::fidl::test::protocols::HandleRightsProtocol_RequestDecoder::GetType(
+          message.ordinal(), &needs_response);
+  if (request_type == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Decode(request_type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+    return status;
+  }
+  uint64_t ordinal = message.ordinal();
+  switch (ordinal) {
+    case ::fidl::test::protocols::internal::
+        kHandleRightsProtocol_NoResponseMethod_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->NoResponseMethod(::fidl::DecodeAs<::zx::socket>(&decoder, 16));
+      break;
+    }
+    case ::fidl::test::protocols::internal::
+        kHandleRightsProtocol_ResponseMethod_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->ResponseMethod(
+          ::fidl::DecodeAs<::zx::socket>(&decoder, 16),
+          HandleRightsProtocol_ResponseMethod_Responder(std::move(response)));
+      break;
+    }
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+void HandleRightsProtocol_Stub::AnEvent(::zx::socket h) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kHandleRightsProtocol_AnEvent_Ordinal);
+  sender_()->Send(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_HandleRightsProtocolAnEventEventTable,
+      ::fidl::test::protocols::HandleRightsProtocol_ResponseEncoder::AnEvent(
+          &_encoder, &h));
+}
+
+HandleRightsProtocol_SyncProxy::HandleRightsProtocol_SyncProxy(
+    ::zx::channel channel)
+    : proxy_(::std::move(channel)) {}
+
+HandleRightsProtocol_SyncProxy::~HandleRightsProtocol_SyncProxy() = default;
+
+zx_status_t HandleRightsProtocol_SyncProxy::NoResponseMethod(::zx::socket h) {
+  ::fidl::Encoder _encoder(::fidl::test::protocols::internal::
+                               kHandleRightsProtocol_NoResponseMethod_Ordinal);
+  return proxy_.Send(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable,
+      ::fidl::test::protocols::HandleRightsProtocol_RequestEncoder::
+          NoResponseMethod(&_encoder, &h));
+}
+
+zx_status_t HandleRightsProtocol_SyncProxy::ResponseMethod(
+    ::zx::socket h, ::zx::socket* out_h) {
+  ::fidl::Encoder _encoder(::fidl::test::protocols::internal::
+                               kHandleRightsProtocol_ResponseMethod_Ordinal);
+  ::fidl::IncomingMessageBuffer buffer_;
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  zx_status_t status_ = proxy_.Call(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable,
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_HandleRightsProtocolResponseMethodResponseTable,
+      ::fidl::test::protocols::HandleRightsProtocol_RequestEncoder::
+          ResponseMethod(&_encoder, &h),
+      &response_);
+  if (status_ != ZX_OK) return status_;
+  ::fidl::Decoder decoder_(std::move(response_));
+  *out_h = ::fidl::DecodeAs<::zx::socket>(&decoder_, 16);
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_DiscoverableProtocolMethodRequestTable;
 
 }  // namespace _internal

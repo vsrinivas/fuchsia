@@ -13,6 +13,7 @@
 
 namespace fuzzing {
 
+using rights = ::fidl::test::protocols::rights;
 using obj_type = ::fidl::test::protocols::obj_type;
 using WithErrorSyntax_ResponseAsStruct_Response =
     ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response;
@@ -28,6 +29,20 @@ using ErrorEnun = ::fidl::test::protocols::ErrorEnun;
 using WithErrorSyntax_ErrorAsEnum_Result =
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result;
 
+template <>
+struct MinSize<rights> {
+  operator size_t() { return sizeof(rights); }
+};
+template <>
+struct Allocate<rights> {
+  rights operator()(FuzzInput* src, size_t* size) {
+    rights out;
+    ZX_ASSERT(*size >= sizeof(rights));
+    ZX_ASSERT(src->CopyObject(&out));
+    *size = sizeof(rights);
+    return out;
+  }
+};
 template <>
 struct MinSize<obj_type> {
   operator size_t() { return sizeof(uint64_t); }

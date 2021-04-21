@@ -191,3 +191,29 @@ class DiscoverableProtocol$TestBase extends DiscoverableProtocol {
         StackTrace.current);
   }
 }
+
+class HandleRightsProtocol$TestBase extends HandleRightsProtocol {
+  @override
+  $async.Future<void> noResponseMethod($zircon.Socket h) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'noResponseMethod not implemented on HandleRightsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<$zircon.Socket> responseMethod($zircon.Socket h) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'responseMethod not implemented on HandleRightsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Stream<$zircon.Socket> get anEvent {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'anEvent not implemented on HandleRightsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+}

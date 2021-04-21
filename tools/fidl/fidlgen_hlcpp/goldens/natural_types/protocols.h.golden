@@ -10,6 +10,69 @@
 namespace fidl {
 namespace test {
 namespace protocols {
+enum class rights : uint32_t {
+
+  TRANSFER = 1u,
+
+  DUPLICATE = 2u,
+};
+
+const static rights rightsMask = static_cast<rights>(3u);
+
+constexpr inline ::fidl::test::protocols::rights operator|(
+    ::fidl::test::protocols::rights _lhs,
+    ::fidl::test::protocols::rights _rhs) {
+  return static_cast<::fidl::test::protocols::rights>(
+      static_cast<uint32_t>(_lhs) | static_cast<uint32_t>(_rhs));
+}
+
+constexpr inline ::fidl::test::protocols::rights& operator|=(
+    ::fidl::test::protocols::rights& _lhs,
+    ::fidl::test::protocols::rights _rhs) {
+  _lhs = _lhs | _rhs;
+  return _lhs;
+}
+
+constexpr inline ::fidl::test::protocols::rights operator&(
+    ::fidl::test::protocols::rights _lhs,
+    ::fidl::test::protocols::rights _rhs) {
+  return static_cast<::fidl::test::protocols::rights>(
+      static_cast<uint32_t>(_lhs) & static_cast<uint32_t>(_rhs));
+}
+
+constexpr inline ::fidl::test::protocols::rights& operator&=(
+    ::fidl::test::protocols::rights& _lhs,
+    ::fidl::test::protocols::rights _rhs) {
+  _lhs = _lhs & _rhs;
+  return _lhs;
+}
+
+constexpr inline ::fidl::test::protocols::rights operator^(
+    ::fidl::test::protocols::rights _lhs,
+    ::fidl::test::protocols::rights _rhs) {
+  return static_cast<::fidl::test::protocols::rights>(
+      static_cast<uint32_t>(_lhs) ^ static_cast<uint32_t>(_rhs));
+}
+
+constexpr inline ::fidl::test::protocols::rights& operator^=(
+    ::fidl::test::protocols::rights& _lhs,
+    ::fidl::test::protocols::rights _rhs) {
+  _lhs = _lhs ^ _rhs;
+  return _lhs;
+}
+
+constexpr inline ::fidl::test::protocols::rights operator~(
+    ::fidl::test::protocols::rights _value) {
+  return static_cast<::fidl::test::protocols::rights>(
+      ~static_cast<uint32_t>(_value) &
+      static_cast<uint32_t>(::fidl::test::protocols::rightsMask));
+}
+
+inline zx_status_t Clone(::fidl::test::protocols::rights value,
+                         ::fidl::test::protocols::rights* result) {
+  *result = value;
+  return ZX_OK;
+}
 
 enum class obj_type : uint32_t {
 
@@ -23,6 +86,13 @@ inline zx_status_t Clone(::fidl::test::protocols::obj_type value,
   *result = value;
   return ZX_OK;
 }
+
+#ifdef __Fuchsia__
+
+class HandleRightsProtocol;
+using HandleRightsProtocolHandle =
+    ::fidl::InterfaceHandle<HandleRightsProtocol>;
+#endif  // __Fuchsia__
 
 class WithErrorSyntax_ResponseAsStruct_Response;
 
@@ -79,6 +149,105 @@ class WithErrorSyntax_ErrorAsEnum_Result;
 
 class WithErrorSyntax;
 using WithErrorSyntaxHandle = ::fidl::InterfaceHandle<WithErrorSyntax>;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+
+}  // namespace _internal
+class HandleRightsProtocol_RequestEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage NoResponseMethod(
+      ::fidl::Encoder* _encoder, ::zx::socket* h) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, h, 16,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x3,
+                   });
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &::fidl::test::protocols::_internal::
+            fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage ResponseMethod(::fidl::Encoder* _encoder,
+                                                     ::zx::socket* h) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, h, 16,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x3,
+                   });
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &::fidl::test::protocols::_internal::
+            fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolResponseMethodResponseTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolAnEventEventTable;
+
+}  // namespace _internal
+class HandleRightsProtocol_ResponseEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage ResponseMethod(::fidl::Encoder* _encoder,
+                                                     ::zx::socket* h) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, h, 16,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x1,
+                   });
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &::fidl::test::protocols::_internal::
+            fidl_test_protocols_HandleRightsProtocolResponseMethodResponseTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage AnEvent(::fidl::Encoder* _encoder,
+                                              ::zx::socket* h) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, h, 16,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x3,
+                   });
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_HandleRightsProtocolAnEventEventTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+};
 #endif  // __Fuchsia__
 
 class WithErrorSyntax_ResponseAsStruct_Response final {
@@ -1214,6 +1383,41 @@ class WithErrorSyntax_ResponseEncoder {
 
 }  // namespace protocols
 }  // namespace test
+template <>
+struct CodingTraits<::fidl::test::protocols::rights> {
+  static constexpr size_t inline_size_old =
+      sizeof(::fidl::test::protocols::rights);
+  static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::fidl::test::protocols::rights);
+  static void Encode(
+      Encoder* encoder, ::fidl::test::protocols::rights* value, size_t offset,
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
+    uint32_t underlying = static_cast<uint32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(Decoder* decoder, ::fidl::test::protocols::rights* value,
+                     size_t offset) {
+    uint32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::fidl::test::protocols::rights>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::fidl::test::protocols::rights value,
+                         ::fidl::test::protocols::rights* result) {
+  return ::fidl::test::protocols::Clone(value, result);
+}
+
+template <>
+struct Equality<::fidl::test::protocols::rights> {
+  bool operator()(const ::fidl::test::protocols::rights& _lhs,
+                  const ::fidl::test::protocols::rights& _rhs) const {
+    uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
+    uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
+    return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
+  }
+};
 template <>
 struct CodingTraits<::fidl::test::protocols::obj_type> {
   static constexpr size_t inline_size_old =

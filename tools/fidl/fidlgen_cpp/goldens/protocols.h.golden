@@ -6,6 +6,9 @@
 #include <fidl/test/protocols/llcpp/fidl.h>
 
 namespace fidl_test_protocols {
+using rights = ::fidl::test::protocols::rights;
+const static rights rightsMask = ::fidl::test::protocols::rightsMask;
+
 using obj_type = ::fidl::test::protocols::obj_type;
 
 using WithErrorSyntax_ResponseAsStruct_Response =

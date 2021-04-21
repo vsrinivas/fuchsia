@@ -7,6 +7,20 @@ namespace fidl {
 namespace test {
 namespace protocols {
 namespace testing {
+class HandleRightsProtocol_TestBase
+    : public ::fidl::test::protocols::HandleRightsProtocol {
+ public:
+  virtual ~HandleRightsProtocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void NoResponseMethod(::zx::socket h) override {
+    NotImplemented_("NoResponseMethod");
+  }
+  void ResponseMethod(::zx::socket h,
+                      ResponseMethodCallback callback) override {
+    NotImplemented_("ResponseMethod");
+  }
+};
+
 class DiscoverableProtocol_TestBase
     : public ::fidl::test::protocols::DiscoverableProtocol {
  public:

@@ -8,9 +8,15 @@ enum obj_type : uint32 {
     SOCKET = 14;
 };
 
+bits rights : uint32 {
+    TRANSFER = 1;
+    DUPLICATE = 2;
+};
+
 resource_definition handle : uint32 {
     properties {
         obj_type subtype;
+        rights rights;
     };
 };
 
@@ -59,4 +65,10 @@ protocol Transitional {
 [Discoverable]
 protocol DiscoverableProtocol {
     Method();
+};
+
+protocol HandleRightsProtocol {
+    NoResponseMethod(handle:<SOCKET, rights.TRANSFER | rights.DUPLICATE> h);
+    ResponseMethod(handle:<SOCKET, rights.TRANSFER | rights.DUPLICATE> h) -> (handle:<SOCKET, rights.TRANSFER> h);
+    -> AnEvent(handle:<SOCKET, rights.TRANSFER | rights.DUPLICATE> h);
 };

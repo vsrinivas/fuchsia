@@ -6,6 +6,30 @@
 namespace fidl_test_protocols {
 namespace testing {
 
+class HandleRightsProtocol_TestBase
+    : public ::fidl::WireInterface<
+          ::fidl_test_protocols::HandleRightsProtocol> {
+ public:
+  virtual ~HandleRightsProtocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name,
+                               ::fidl::CompleterBase& completer) = 0;
+
+  using Interface =
+      ::fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>;
+  virtual void NoResponseMethod(
+      ::zx::socket h,
+      ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
+          NoResponseMethodCompleter::Sync& completer) override {
+    NotImplemented_("NoResponseMethod", completer);
+  }
+  virtual void ResponseMethod(
+      ::zx::socket h,
+      ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
+          ResponseMethodCompleter::Sync& completer) override {
+    NotImplemented_("ResponseMethod", completer);
+  }
+};
+
 class DiscoverableProtocol_TestBase
     : public ::fidl::WireInterface<
           ::fidl_test_protocols::DiscoverableProtocol> {

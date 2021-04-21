@@ -152,6 +152,68 @@ const $fidl.EnumType<ErrorEnun> kErrorEnun_Type = $fidl.EnumType<ErrorEnun>(
     values: {0x1: null, 0x2: null},
     ctor: ErrorEnun._ctor);
 
+class Rights extends $fidl.Bits {
+  factory Rights(int _v) {
+    if ((_v & ~$mask.$value) != 0) {
+      throw $fidl.FidlError('Bits value contains unknown bit(s): $_v',
+          $fidl.FidlErrorCode.fidlInvalidBit);
+    }
+    return Rights._(_v);
+  }
+  static const Rights transfer = Rights._(0x1);
+  static const Rights duplicate = Rights._(0x2);
+  static const Rights $none = Rights._(0);
+  static const Rights $mask = Rights._(0x3);
+
+  const Rights._(this.$value);
+
+  Rights operator |(Rights other) {
+    return Rights._($value | other.$value);
+  }
+
+  Rights operator &(Rights other) {
+    return Rights._($value & other.$value);
+  }
+
+  Rights operator ~() {
+    return Rights._(~$value & $mask.$value);
+  }
+
+  @override
+  final int $value;
+
+  @override
+  bool hasUnknownBits() {
+    return getUnknownBits() != 0;
+  }
+
+  @override
+  int getUnknownBits() {
+    return $value & ~$mask.$value;
+  }
+
+  @override
+  String toString() {
+    List<String> parts = [];
+    if ($value & 0x1 != 0) {
+      parts.add(r'Rights.transfer');
+    }
+    if ($value & 0x2 != 0) {
+      parts.add(r'Rights.duplicate');
+    }
+    if (parts.isEmpty) {
+      return r'Rights.$none';
+    } else {
+      return parts.join(" | ");
+    }
+  }
+
+  static Rights _ctor(int v) => Rights(v);
+}
+
+const $fidl.BitsType<Rights> krights_Type =
+    $fidl.BitsType<Rights>(type: $fidl.Uint32Type(), ctor: Rights._ctor);
+
 enum WithErrorSyntaxResponseAsStructResultTag {
   response, // 0x1
   err, // 0x2
@@ -2720,6 +2782,324 @@ class DiscoverableProtocolBinding
       default:
         throw $fidl.FidlError(
             r'Unexpected message name for DiscoverableProtocolBinding');
+    }
+  }
+}
+
+// noResponseMethod: ($zircon.Socket h)
+const int _kHandleRightsProtocol_NoResponseMethod_Ordinal = 0x466a6fe3be0bcb7c;
+const $fidl.MethodType _kHandleRightsProtocol_NoResponseMethod_Type =
+    $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<$zircon.Socket>(
+        type: $fidl.SocketType(objectType: 14, rights: 3), offset: 0),
+  ],
+  response: [],
+  name: r"HandleRightsProtocol.NoResponseMethod",
+  requestInlineSize: 8,
+  responseInlineSize: 0,
+);
+// responseMethod: ($zircon.Socket h) -> ($zircon.Socket h)
+const int _kHandleRightsProtocol_ResponseMethod_Ordinal = 0x5ef2bd2bbb280ffc;
+const $fidl.MethodType _kHandleRightsProtocol_ResponseMethod_Type =
+    $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<$zircon.Socket>(
+        type: $fidl.SocketType(objectType: 14, rights: 3), offset: 0),
+  ],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<$zircon.Socket>(
+        type: $fidl.SocketType(objectType: 14, rights: 1), offset: 0),
+  ],
+  name: r"HandleRightsProtocol.ResponseMethod",
+  requestInlineSize: 8,
+  responseInlineSize: 8,
+);
+// anEvent:  -> ($zircon.Socket h)
+const int _kHandleRightsProtocol_AnEvent_Ordinal = 0xce6b76255d6ed71;
+const $fidl.MethodType _kHandleRightsProtocol_AnEvent_Type = $fidl.MethodType(
+  request: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<$zircon.Socket>(
+        type: $fidl.SocketType(objectType: 14, rights: 3), offset: 0),
+  ],
+  name: r"HandleRightsProtocol.AnEvent",
+  requestInlineSize: 0,
+  responseInlineSize: 8,
+);
+
+abstract class HandleRightsProtocol {
+  $fidl.ServiceData? get $serviceData => HandleRightsProtocolData();
+  $async.Future<void> noResponseMethod($zircon.Socket h);
+  $async.Future<$zircon.Socket> responseMethod($zircon.Socket h);
+  $async.Stream<$zircon.Socket>? get anEvent;
+}
+
+// TODO: Remove ServiceData for non-service
+class HandleRightsProtocolData
+    implements $fidl.ServiceData<HandleRightsProtocol> {
+  const HandleRightsProtocolData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return HandleRightsProtocolBinding();
+  }
+}
+
+class HandleRightsProtocolProxy extends $fidl.AsyncProxy<HandleRightsProtocol>
+    implements HandleRightsProtocol {
+  HandleRightsProtocolProxy()
+      : super($fidl.AsyncProxyController<HandleRightsProtocol>(
+            $interfaceName: r'HandleRightsProtocol')) {
+    ctrl.onResponse = _handleResponse;
+    ctrl.whenClosed.then((_) {
+      _anEventEventStreamController.close();
+    }, onError: (_) {});
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      case _kHandleRightsProtocol_AnEvent_Ordinal:
+        final String _name = _kHandleRightsProtocol_AnEvent_Type.name;
+        try {
+          Timeline.startSync(_name);
+          final List<$fidl.MemberType> $types =
+              _kHandleRightsProtocol_AnEvent_Type.response!;
+          _anEventEventStreamController.add($fidl.decodeMessage(
+              $message,
+              _kHandleRightsProtocol_AnEvent_Type.decodeResponseInlineSize(),
+              $types[0]));
+        } catch (_e) {
+          ctrl.proxyError(
+              $fidl.FidlError('Exception handling event $_name: $_e'));
+          ctrl.close();
+          rethrow;
+        } finally {
+          Timeline.finishSync();
+        }
+        break;
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        ctrl.close();
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      case _kHandleRightsProtocol_ResponseMethod_Ordinal:
+        final String _name = _kHandleRightsProtocol_ResponseMethod_Type.name;
+        try {
+          Timeline.startSync(_name);
+          final List<$fidl.MemberType> $types =
+              _kHandleRightsProtocol_ResponseMethod_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kHandleRightsProtocol_ResponseMethod_Type
+                  .decodeResponseInlineSize(),
+              $types[0]);
+
+          $completer.complete($response);
+        } catch (_e) {
+          ctrl.proxyError($fidl.FidlError(
+              'Exception handling method response $_name: $_e'));
+          ctrl.close();
+          rethrow;
+        } finally {
+          Timeline.finishSync();
+        }
+        break;
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        ctrl.close();
+        break;
+    }
+  }
+
+  @override
+  $async.Future<void> noResponseMethod($zircon.Socket h) async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder();
+    $encoder.encodeMessageHeader(
+        _kHandleRightsProtocol_NoResponseMethod_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kHandleRightsProtocol_NoResponseMethod_Type.request!;
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kHandleRightsProtocol_NoResponseMethod_Type
+            .encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, h, $fidl.kMessageHeaderSize, 1);
+    });
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+
+  @override
+  $async.Future<$zircon.Socket> responseMethod($zircon.Socket h) async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder();
+    $encoder.encodeMessageHeader(
+        _kHandleRightsProtocol_ResponseMethod_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kHandleRightsProtocol_ResponseMethod_Type.request!;
+    $fidl.encodeMessageWithCallback($encoder,
+        _kHandleRightsProtocol_ResponseMethod_Type.encodingRequestInlineSize(),
+        () {
+      $types[0].encode($encoder, h, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer = $async.Completer<$zircon.Socket>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  final _anEventEventStreamController =
+      $async.StreamController<$zircon.Socket>.broadcast();
+  @override
+  $async.Stream<$zircon.Socket> get anEvent =>
+      _anEventEventStreamController.stream;
+}
+
+class HandleRightsProtocolBinding
+    extends $fidl.AsyncBinding<HandleRightsProtocol> {
+  HandleRightsProtocolBinding() : super(r"HandleRightsProtocol") {
+    final List<$async.StreamSubscription<dynamic>> $subscriptions = [];
+    void $unsubscribe() {
+      for (final $sub in $subscriptions) {
+        $sub.cancel();
+      }
+      $subscriptions.clear();
+    }
+
+    whenBound.then((_) {
+      final impl = this.impl;
+      if (impl != null) {
+        final _anEvent_stream = impl.anEvent;
+        if (_anEvent_stream != null) {
+          $subscriptions.add(_anEvent_stream.listen(($response) {
+            final $fidl.Encoder $encoder = $fidl.Encoder();
+            $encoder.encodeMessageHeader(
+                _kHandleRightsProtocol_AnEvent_Ordinal, 0);
+            final List<$fidl.MemberType> $types =
+                _kHandleRightsProtocol_AnEvent_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kHandleRightsProtocol_AnEvent_Type
+                    .encodingResponseInlineSize(),
+                $types[0],
+                $response);
+            sendMessage($encoder.message);
+          }));
+        }
+      }
+    });
+    whenClosed.then((_) => $unsubscribe());
+  }
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kHandleRightsProtocol_NoResponseMethod_Ordinal:
+        final String _name = _kHandleRightsProtocol_NoResponseMethod_Type.name;
+        try {
+          Timeline.startSync(_name);
+          final List<$fidl.MemberType> $types =
+              _kHandleRightsProtocol_NoResponseMethod_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kHandleRightsProtocol_NoResponseMethod_Type
+                      .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
+            return _impl.noResponseMethod(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+        } catch (_e) {
+          close();
+          print('Exception handling method call $_name: $_e');
+          rethrow;
+        } finally {
+          Timeline.finishSync();
+        }
+        break;
+      case _kHandleRightsProtocol_ResponseMethod_Ordinal:
+        final String _name = _kHandleRightsProtocol_ResponseMethod_Type.name;
+        try {
+          Timeline.startSync(_name);
+          final List<$fidl.MemberType> $types =
+              _kHandleRightsProtocol_ResponseMethod_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<$zircon.Socket> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<$zircon.Socket>>(
+                  $message,
+                  _kHandleRightsProtocol_ResponseMethod_Type
+                      .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
+            return _impl.responseMethod(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($response) {
+            final $fidl.Encoder $encoder = $fidl.Encoder();
+            $encoder.encodeMessageHeader(
+                _kHandleRightsProtocol_ResponseMethod_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kHandleRightsProtocol_ResponseMethod_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kHandleRightsProtocol_ResponseMethod_Type
+                    .encodingResponseInlineSize(),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            close();
+            print('Exception handling method call $_name: $_e');
+          });
+        } catch (_e) {
+          close();
+          print('Exception handling method call $_name: $_e');
+          rethrow;
+        } finally {
+          Timeline.finishSync();
+        }
+        break;
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for HandleRightsProtocolBinding');
     }
   }
 }

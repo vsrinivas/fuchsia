@@ -4,6 +4,614 @@
 
 #include <memory>
 
+namespace fidl_test_protocols {
+[[maybe_unused]] constexpr uint64_t
+    kHandleRightsProtocol_NoResponseMethod_Ordinal = 5073990954122988412lu;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolNoResponseMethodResponseTable;
+
+[[maybe_unused]] constexpr uint64_t
+    kHandleRightsProtocol_ResponseMethod_Ordinal = 6841738779450413052lu;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolResponseMethodResponseTable;
+
+[[maybe_unused]] constexpr uint64_t kHandleRightsProtocol_AnEvent_Ordinal =
+    929632006073412977lu;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolAnEventRequestTable;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolAnEventEventTable;
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireResult<
+    ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>::
+    WireResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>
+            _client,
+        ::zx::socket&& h) {
+  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>
+      _request(zx_txid_t(0), std::move(h));
+  _request.GetOutgoingMessage().Write(_client);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireUnownedResult<
+    ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>
+            _client,
+        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+        ::zx::socket&& h) {
+  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>
+      _request(_request_bytes, _request_byte_capacity, 0, std::move(h));
+  _request.GetOutgoingMessage().Write(_client);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireResult<
+    ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>::
+    WireResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>
+            _client,
+        ::zx::socket&& h) {
+  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
+      _request(zx_txid_t(0), std::move(h));
+  _request.GetOutgoingMessage()
+      .Call<::fidl::WireResponse<
+          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>(
+          _client, bytes_.data(), bytes_.size());
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
+::fidl::WireResult<
+    ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>::
+    WireResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>
+            _client,
+        ::zx::socket&& h, zx_time_t _deadline) {
+  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
+      _request(zx_txid_t(0), std::move(h));
+  _request.GetOutgoingMessage()
+      .Call<::fidl::WireResponse<
+          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>(
+          _client, bytes_.data(), bytes_.size(), _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireUnownedResult<
+    ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>
+            _client,
+        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+        ::zx::socket&& h, uint8_t* _response_bytes,
+        uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
+      _request(_request_bytes, _request_byte_capacity, 0, std::move(h));
+  _request.GetOutgoingMessage()
+      .Call<::fidl::WireResponse<
+          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>(
+          _client, _response_bytes, _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+}  // namespace fidl_test_protocols
+#ifdef __Fuchsia__
+::fidl::Result
+fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
+    NoResponseMethod(::zx::socket&& h) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ::fidl::WireResult<
+        ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>(
+            _channel->handle()),
+        std::move(h));
+    return ::fidl::Result(_res.status(), _res.error());
+  }
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::Result
+fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
+    NoResponseMethod(::fidl::BufferSpan _request_buffer, ::zx::socket&& h) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, std::move(h));
+    return ::fidl::Result(_res.status(), _res.error());
+  }
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::WireResult<::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>
+fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
+    ResponseMethod_Sync(::zx::socket&& h) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>(
+            _channel->handle()),
+        std::move(h));
+  }
+  return ::fidl::WireResult<
+      ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::WireUnownedResult<
+    ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>
+fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
+    ResponseMethod_Sync(::fidl::BufferSpan _request_buffer, ::zx::socket&& h,
+                        ::fidl::BufferSpan _response_buffer) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, std::move(h),
+        _response_buffer.data, _response_buffer.capacity);
+  }
+  return ::fidl::WireUnownedResult<
+      ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::WireResponseContext<::fidl_test_protocols::HandleRightsProtocol::
+                                ResponseMethod>::WireResponseContext()
+    : ::fidl::internal::ResponseContext(
+          ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::
+                                   ResponseMethod>::Type,
+          ::fidl_test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal) {
+}
+
+void ::fidl::WireResponseContext<::fidl_test_protocols::HandleRightsProtocol::
+                                     ResponseMethod>::OnReply(uint8_t* reply) {
+  OnReply(reinterpret_cast<::fidl::WireResponse<
+              ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>*>(
+      reply));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::Result fidl::internal::
+    WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::ResponseMethod(
+        ::zx::socket&& h,
+        ::fit::callback<void(
+            ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::
+                                     ResponseMethod>* response)>
+            _cb) {
+  class ResponseContext final
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod> {
+   public:
+    ResponseContext(
+        ::fit::callback<void(
+            ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::
+                                     ResponseMethod>* response)>
+            cb)
+        : cb_(std::move(cb)) {}
+
+    void OnReply(::fidl::WireResponse<
+                 ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>*
+                     response) override {
+      cb_(response);
+
+      response->_CloseHandles();
+
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+   private:
+    ::fit::callback<void(
+        ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::
+                                 ResponseMethod>* response)>
+        cb_;
+  };
+
+  auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  ::fidl::WireRequest<
+      ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>::
+      OwnedEncodedMessage _request(_context->Txid(), std::move(h));
+  return _request.GetOutgoingMessage().Write(this, _context);
+}
+
+::fidl::Result fidl::internal::
+    WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::ResponseMethod(
+        ::fidl::BufferSpan _request_buffer, ::zx::socket&& h,
+        ::fidl::WireResponseContext<
+            ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>*
+            _context) {
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+
+  ::fidl::WireRequest<
+      ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>::
+      UnownedEncodedMessage _request(_request_buffer.data,
+                                     _request_buffer.capacity, _context->Txid(),
+                                     std::move(h));
+  return _request.GetOutgoingMessage().Write(this, _context);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::DispatchEvent(
+        fidl_incoming_msg_t* msg) {
+  if (event_handler_ != nullptr) {
+    fidl_message_header_t* hdr =
+        reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+    switch (hdr->ordinal) {
+      case ::fidl_test_protocols::kHandleRightsProtocol_AnEvent_Ordinal: {
+        const char* error_message;
+        zx_status_t status = fidl_decode_etc(
+            ::fidl::WireResponse<
+                ::fidl_test_protocols::HandleRightsProtocol::AnEvent>::Type,
+            msg->bytes, msg->num_bytes, msg->handles, msg->num_handles,
+            &error_message);
+        if (status != ZX_OK) {
+          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+        }
+        event_handler_->AnEvent(
+            reinterpret_cast<::fidl::WireResponse<
+                ::fidl_test_protocols::HandleRightsProtocol::AnEvent>*>(
+                msg->bytes));
+        return std::nullopt;
+      }
+      default:
+        break;
+    }
+  }
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                            ZX_ERR_NOT_SUPPORTED};
+}
+#endif  // __Fuchsia__
+
+::fidl::Result
+fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>::
+    HandleOneEvent(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>
+            client_end) {
+  zx_status_t status = client_end.channel()->wait_one(
+      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
+      nullptr);
+  if (status != ZX_OK) {
+    return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
+  }
+  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::
+                                 AnEvent>::MaxNumHandles >= x) {
+      x = ::fidl::WireResponse<
+          ::fidl_test_protocols::HandleRightsProtocol::AnEvent>::MaxNumHandles;
+    }
+    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
+      x = ZX_CHANNEL_MAX_MSG_HANDLES;
+    }
+    return x;
+  })();
+  ::fidl::internal::InlineMessageBuffer<24> read_storage;
+  uint8_t* read_bytes = read_storage.data();
+  zx_handle_info_t read_handles[kHandleAllocSize];
+  uint32_t actual_bytes;
+  uint32_t actual_handles;
+  status = client_end.channel()->read_etc(
+      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles,
+      read_storage.size(), kHandleAllocSize, &actual_bytes, &actual_handles);
+  if (status == ZX_ERR_BUFFER_TOO_SMALL) {
+    // Message size is unexpectedly larger than calculated.
+    // This can only be due to a newer version of the protocol defining a new
+    // event, whose size exceeds the maximum of known events in the current
+    // protocol.
+    return ::fidl::Result(Unknown(), nullptr);
+  }
+  if (status != ZX_OK) {
+    return ::fidl::Result(status, ::fidl::kErrorReadFailed);
+  }
+  if (actual_bytes < sizeof(fidl_message_header_t)) {
+    FidlHandleInfoCloseMany(read_handles, actual_handles);
+    return ::fidl::Result(ZX_ERR_INVALID_ARGS, ::fidl::kErrorInvalidHeader);
+  }
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(read_bytes);
+  status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    FidlHandleInfoCloseMany(read_handles, actual_handles);
+    return ::fidl::Result(status, ::fidl::kErrorInvalidHeader);
+  }
+  switch (hdr->ordinal) {
+    case ::fidl_test_protocols::kHandleRightsProtocol_AnEvent_Ordinal: {
+      const char* error_message;
+      zx_status_t status = fidl_decode_etc(
+          ::fidl::WireResponse<
+              ::fidl_test_protocols::HandleRightsProtocol::AnEvent>::Type,
+          read_bytes, actual_bytes, read_handles, actual_handles,
+          &error_message);
+      if (status != ZX_OK) {
+        return ::fidl::Result(status, error_message);
+      }
+      AnEvent(reinterpret_cast<::fidl::WireResponse<
+                  ::fidl_test_protocols::HandleRightsProtocol::AnEvent>*>(
+          read_bytes));
+      return ::fidl::Result(ZX_OK, nullptr);
+    }
+    default: {
+      FidlHandleInfoCloseMany(read_handles, actual_handles);
+      return ::fidl::Result(Unknown(), nullptr);
+    }
+  }
+}
+
+#ifdef __Fuchsia__
+
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<
+    ::fidl_test_protocols::HandleRightsProtocol>::
+    TryDispatch(
+        ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>* impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal,
+          ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
+                                  NoResponseMethod>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
+                NoResponseMethodCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl::WireServer<
+                ::fidl_test_protocols::HandleRightsProtocol>*>(interface)
+                ->NoResponseMethod(
+                    reinterpret_cast<::fidl::WireRequest<
+                        ::fidl_test_protocols::HandleRightsProtocol::
+                            NoResponseMethod>*>(bytes),
+                    completer);
+          },
+      },
+      {
+          ::fidl_test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal,
+          ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
+                                  ResponseMethod>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
+                ResponseMethodCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl::WireServer<
+                ::fidl_test_protocols::HandleRightsProtocol>*>(interface)
+                ->ResponseMethod(
+                    reinterpret_cast<::fidl::WireRequest<
+                        ::fidl_test_protocols::HandleRightsProtocol::
+                            ResponseMethod>*>(bytes),
+                    completer);
+          },
+      },
+  };
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
+}
+
+::fidl::DispatchResult fidl::internal::
+    WireServerDispatcher<::fidl_test_protocols::HandleRightsProtocol>::Dispatch(
+        ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>* impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  }
+  return dispatch_result;
+}
+::fidl::DispatchResult
+fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireServerDispatcher<
+      ::fidl_test_protocols::HandleRightsProtocol>::Dispatch(this, msg, txn);
+}
+
+::fidl::DispatchResult fidl::internal::
+    WireDispatcher<::fidl_test_protocols::HandleRightsProtocol>::TryDispatch(
+        ::fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>*
+            impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal,
+          ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
+                                  NoResponseMethod>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_protocols::HandleRightsProtocol::
+                    NoResponseMethod>*>(bytes);
+            ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
+                NoResponseMethodCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_protocols::HandleRightsProtocol>*>(interface)
+                ->NoResponseMethod(std::move(message->h), completer);
+          },
+      },
+      {
+          ::fidl_test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal,
+          ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
+                                  ResponseMethod>::Type,
+          [](void* interface, void* bytes, ::fidl::Transaction* txn) {
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>*>(
+                bytes);
+            ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
+                ResponseMethodCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl::WireInterface<
+                ::fidl_test_protocols::HandleRightsProtocol>*>(interface)
+                ->ResponseMethod(std::move(message->h), completer);
+          },
+      },
+  };
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
+}
+
+::fidl::DispatchResult fidl::internal::
+    WireDispatcher<::fidl_test_protocols::HandleRightsProtocol>::Dispatch(
+        ::fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>*
+            impl,
+        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
+    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  }
+  return dispatch_result;
+}
+::fidl::DispatchResult
+fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>::
+    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireDispatcher<
+      ::fidl_test_protocols::HandleRightsProtocol>::Dispatch(this, msg, txn);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::Result fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
+    ResponseMethodCompleterBase::Reply(::zx::socket&& h) {
+  ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
+      ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
+      _response{std::move(h)};
+  return ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
+      ResponseMethodCompleterBase::SendReply(&_response.GetOutgoingMessage());
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::Result fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
+    ResponseMethodCompleterBase::Reply(::fidl::BufferSpan _backing_buffer,
+                                       ::zx::socket&& h) {
+  ::fidl::WireResponse<
+      ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>::
+      UnownedEncodedMessage _response(_backing_buffer.data,
+                                      _backing_buffer.capacity, std::move(h));
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
+}
+#endif  // __Fuchsia__
+
+void ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
+                             NoResponseMethod>::_InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(
+      &_hdr, _txid,
+      ::fidl_test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal);
+}
+
+void ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
+                             NoResponseMethod>::_CloseHandles() {
+  h.reset();
+}
+
+void ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
+                             ResponseMethod>::_InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(
+      &_hdr, _txid,
+      ::fidl_test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal);
+}
+
+void ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
+                             ResponseMethod>::_CloseHandles() {
+  h.reset();
+}
+
+void ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::
+                              ResponseMethod>::_InitHeader() {
+  fidl_init_txn_header(
+      &_hdr, 0,
+      ::fidl_test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal);
+}
+
+void ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::
+                              ResponseMethod>::_CloseHandles() {
+  h.reset();
+}
+
+void ::fidl::WireResponse<
+    ::fidl_test_protocols::HandleRightsProtocol::AnEvent>::_InitHeader() {
+  fidl_init_txn_header(
+      &_hdr, 0, ::fidl_test_protocols::kHandleRightsProtocol_AnEvent_Ordinal);
+}
+
+void ::fidl::WireResponse<
+    ::fidl_test_protocols::HandleRightsProtocol::AnEvent>::_CloseHandles() {
+  h.reset();
+}
+
+#ifdef __Fuchsia__
+
+zx_status_t
+fidl::WireEventSender<::fidl_test_protocols::HandleRightsProtocol>::AnEvent(
+    ::zx::socket&& h) const {
+  ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
+      ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>
+      _response{std::move(h)};
+  _response.Write(server_end_);
+  return _response.status();
+}
+
+zx_status_t
+fidl::WireEventSender<::fidl_test_protocols::HandleRightsProtocol>::AnEvent(
+    ::fidl::BufferSpan _buffer, ::zx::socket&& h) const {
+  ::fidl::UnownedEncodedMessage<::fidl::WireResponse<
+      ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>
+      _response(_buffer.data, _buffer.capacity, std::move(h));
+  _response.Write(server_end_);
+  return _response.status();
+}
+
+#endif  // __Fuchsia__
+
 void ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntaxResponseAsStructResult) ==

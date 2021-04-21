@@ -3,6 +3,7 @@
 #include <lib/fidl/internal.h>
 
 
+__LOCAL extern const struct FidlCodedBits fidl_test_protocols_rightsTable;
 __LOCAL extern const struct FidlCodedEnum fidl_test_protocols_obj_typeTable;
 __LOCAL extern const struct FidlCodedStruct fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 __LOCAL extern const struct FidlCodedXUnion fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
@@ -15,6 +16,38 @@ __LOCAL extern const struct FidlCodedEnum fidl_test_protocols_ErrorEnunTable;
 __LOCAL extern const struct FidlCodedXUnion fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 __LOCAL extern const struct FidlCodedXUnion fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultNullableRefTable;
 
+
+static const struct FidlCodedHandle Handlesocket3nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_SOCKET, .handle_rights=3u, .nullable=kFidlNullability_Nonnullable};
+
+__LOCAL extern const struct FidlCodedStruct fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+static const struct FidlStructElement Fields63fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=16u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
+};
+const struct FidlCodedStruct fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable = {.tag=kFidlTypeStruct, .elements=Fields63fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequest, .element_count=2u, .size=24u, .name="fidl.test.protocols/HandleRightsProtocolNoResponseMethodRequest"};
+
+__LOCAL extern const struct FidlCodedStruct fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+static const struct FidlStructElement Fields61fidl_test_protocols_HandleRightsProtocolResponseMethodRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=16u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
+};
+const struct FidlCodedStruct fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable = {.tag=kFidlTypeStruct, .elements=Fields61fidl_test_protocols_HandleRightsProtocolResponseMethodRequest, .element_count=2u, .size=24u, .name="fidl.test.protocols/HandleRightsProtocolResponseMethodRequest"};
+
+static const struct FidlCodedHandle Handlesocket1nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_SOCKET, .handle_rights=1u, .nullable=kFidlNullability_Nonnullable};
+
+__LOCAL extern const struct FidlCodedStruct fidl_test_protocols_HandleRightsProtocolResponseMethodResponseTable;
+static const struct FidlStructElement Fields62fidl_test_protocols_HandleRightsProtocolResponseMethodResponse[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=16u, .field_type=(fidl_type_t*)(&Handlesocket1nonnullableTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
+};
+const struct FidlCodedStruct fidl_test_protocols_HandleRightsProtocolResponseMethodResponseTable = {.tag=kFidlTypeStruct, .elements=Fields62fidl_test_protocols_HandleRightsProtocolResponseMethodResponse, .element_count=2u, .size=24u, .name="fidl.test.protocols/HandleRightsProtocolResponseMethodResponse"};
+
+__LOCAL extern const struct FidlCodedStruct fidl_test_protocols_HandleRightsProtocolAnEventEventTable;
+static const struct FidlStructElement Fields52fidl_test_protocols_HandleRightsProtocolAnEventEvent[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=16u, .field_type=(fidl_type_t*)(&Handlesocket3nonnullableTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
+};
+const struct FidlCodedStruct fidl_test_protocols_HandleRightsProtocolAnEventEventTable = {.tag=kFidlTypeStruct, .elements=Fields52fidl_test_protocols_HandleRightsProtocolAnEventEvent, .element_count=2u, .size=24u, .name="fidl.test.protocols/HandleRightsProtocolAnEventEvent"};
 
 __LOCAL extern const struct FidlCodedStruct fidl_test_protocols_DiscoverableProtocolMethodRequestTable;
 const struct FidlCodedStruct fidl_test_protocols_DiscoverableProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.protocols/DiscoverableProtocolMethodRequest"};
@@ -154,6 +187,8 @@ static const struct FidlStructElement Fields54fidl_test_protocols_WithErrorSynta
 };
 const struct FidlCodedStruct fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable = {.tag=kFidlTypeStruct, .elements=Fields54fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponse, .element_count=1u, .size=40u, .name="fidl.test.protocols/WithErrorSyntaxErrorAsEnumResponse"};
 
+
+const struct FidlCodedBits fidl_test_protocols_rightsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=3ul, .name="fidl.test.protocols/rights"};
 
 static bool EnumValidatorFor_fidl_test_protocols_obj_type(uint64_t v) {
   switch (v) {
