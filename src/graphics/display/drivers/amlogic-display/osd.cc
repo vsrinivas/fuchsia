@@ -82,9 +82,11 @@ constexpr uint32_t kAfbcColorReorderA = 4;
 uint64_t Osd::GetLastImageApplied() {
   ZX_DEBUG_ASSERT(initialized_);
   fbl::AutoLock lock(&rdma_lock_);
+  
   auto stat_reg = RdmaStatusReg::Get();
-  while (stat_reg.ReadFrom(&(*vpu_mmio_)).req_latch() != 0 ||
-         stat_reg.ReadFrom(&(*vpu_mmio_)).done() & RDMA_STATUS_DONE(kRdmaChannel + 1)) {
+  while (rdma_active_ &&
+         (stat_reg.ReadFrom(&(*vpu_mmio_)).req_latch() != 0 ||
+         stat_reg.ReadFrom(&(*vpu_mmio_)).done() & RDMA_STATUS_DONE(kRdmaChannel + 1))) {
     rdma_active_cnd_.Wait(&rdma_lock_);
   }
   return latest_applied_config_;
