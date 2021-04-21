@@ -278,43 +278,50 @@ impl fmt::Display for UserAddress {
     }
 }
 
-pub struct SyscallResult(u64);
+/// The result of executing a syscall.
+///
+/// It would be nice to have this also cover errors, but currently there is no stable way
+/// to implement `std::ops::Try` (for the `?` operator) for custom enums, making it difficult
+/// to work with.
+pub enum SyscallResult {
+    /// The process exited as a result of the syscall. The associated `u64` represents the process'
+    /// exit code.
+    Exit(i32),
 
-pub const SUCCESS: SyscallResult = SyscallResult(0);
-
-impl SyscallResult {
-    pub fn value(&self) -> u64 {
-        self.0
-    }
+    /// The syscall completed successfully. The associated `u64` is the return value from the
+    /// syscall.
+    Success(u64),
 }
+
+pub const SUCCESS: SyscallResult = SyscallResult::Success(0);
 
 impl From<UserAddress> for SyscallResult {
     fn from(value: UserAddress) -> Self {
-        SyscallResult(value.ptr() as u64)
+        SyscallResult::Success(value.ptr() as u64)
     }
 }
 
 impl From<i32> for SyscallResult {
     fn from(value: i32) -> Self {
-        SyscallResult(value as u64)
+        SyscallResult::Success(value as u64)
     }
 }
 
 impl From<u32> for SyscallResult {
     fn from(value: u32) -> Self {
-        SyscallResult(value as u64)
+        SyscallResult::Success(value as u64)
     }
 }
 
 impl From<u64> for SyscallResult {
     fn from(value: u64) -> Self {
-        SyscallResult(value)
+        SyscallResult::Success(value)
     }
 }
 
 impl From<usize> for SyscallResult {
     fn from(value: usize) -> Self {
-        SyscallResult(value as u64)
+        SyscallResult::Success(value as u64)
     }
 }
 

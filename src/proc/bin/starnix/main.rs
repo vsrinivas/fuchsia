@@ -35,6 +35,7 @@ mod uapi;
 use executive::*;
 use loader::*;
 use syscall_table::dispatch_syscall;
+use uapi::SyscallResult;
 
 // TODO: Should we move this code into fuchsia_zircon? It seems like part of a better abstraction
 // for exception channels.
@@ -55,12 +56,12 @@ fn as_exception_info(buffer: &zx::MessageBuf) -> zx_exception_info_t {
 ///   - setting the thread's registers to their post-syscall values
 ///   - setting the exception state to `ZX_EXCEPTION_STATE_HANDLED`
 ///
-/// Once this function has completed, the process' exit code (if one is available) can be read from
-/// `process_context.exit_code`.
+/// # Returns
+/// The exit code of the process.
 async fn run_process(
     process_context: Arc<ProcessContext>,
     exceptions: fasync::Channel,
-) -> Result<(), Error> {
+) -> Result<i32, Error> {
     let mut buffer = zx::MessageBuf::new();
     while exceptions.recv_msg(&mut buffer).await.is_ok() {
         let info = as_exception_info(&buffer);
@@ -92,9 +93,16 @@ async fn run_process(
         // something)
         info!(target: "strace", "{}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x})", syscall_number, args.0, args.1, args.2, args.3, args.4, args.5);
         match dispatch_syscall(&mut ctx, syscall_number, args) {
-            Ok(rv) => {
-                info!(target: "strace", "-> {:#x}", rv.value());
-                ctx.registers.rax = rv.value();
+            Ok(SyscallResult::Exit(return_value)) => {
+                info!(target: "strace", "-> exit {:#x}", return_value);
+                // The process has been killed at this point, so execution is stopped. If, for
+                // example, this function continued to attempt to write to th thread's registers
+                // there would be a race between the process teardown and the register write.
+                return Ok(return_value);
+            }
+            Ok(SyscallResult::Success(return_value)) => {
+                info!(target: "strace", "-> {:#x}", return_value);
+                ctx.registers.rax = return_value;
             }
             Err(errno) => {
                 info!(target: "strace", "!-> {}", errno);
@@ -106,7 +114,7 @@ async fn run_process(
         exception.set_exception_state(&ZX_EXCEPTION_STATE_HANDLED)?;
     }
 
-    Ok(())
+    Ok(0)
 }
 
 async fn start_component(
@@ -165,14 +173,14 @@ async fn start_component(
     let (process_context, exceptions) =
         load_executable(&job, executable_vmo, ldsvc_client, &params).await?;
     let process_context = Arc::new(process_context);
-    run_process(process_context.clone(), exceptions).await?;
+    let exit_code = run_process(process_context.clone(), exceptions).await?;
 
     // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
     // communicate the exit code. The component manager could interpret certain epitaphs as starnix
     // being unstable, and chose to terminate starnix as a result.
     // Errors when closing the controller with an epitaph are disregarded, since there are
     // legitimate reasons for this to fail (like the client having closed the channel).
-    let _ = match process_context.exit_code.lock().unwrap_or(1) {
+    let _ = match exit_code {
         0 => controller.close_with_epitaph(zx::Status::OK),
         _ => controller.close_with_epitaph(zx::Status::from_raw(
             fcomponent::Error::InstanceDied.into_primitive() as i32,

@@ -7,7 +7,6 @@ use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_ldsvc as fldsvc;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, AsHandleRef, Status, Task};
-use parking_lot::Mutex;
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
 
@@ -156,7 +155,6 @@ pub async fn load_executable(
         handle: process,
         mm: MemoryManager::new(root_vmar),
         security: SecurityContext { uid: 3, gid: 3, euid: 3, egid: 3 },
-        exit_code: Mutex::new(None),
     };
 
     let auxv = vec![

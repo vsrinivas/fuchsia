@@ -128,9 +128,6 @@ pub struct ProcessContext {
     pub handle: zx::Process,
     pub security: SecurityContext,
     pub mm: MemoryManager,
-
-    /// The exit code reported by the process, if the process has exited.
-    pub exit_code: Mutex<Option<i32>>,
 }
 
 impl ProcessContext {
