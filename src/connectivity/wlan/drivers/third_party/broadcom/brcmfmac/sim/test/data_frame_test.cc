@@ -140,7 +140,10 @@ class DataFrameTest : public SimTest {
     std::list<wlan_assoc_result_t> expected_results;
 
     // Track number of association responses
-    size_t assoc_resp_count;
+    size_t assoc_resp_count = 0;
+
+    // Track number of deauth indications.
+    size_t deauth_ind_count = 0;
   };
 
   // Data Context with respect to driver callbacks
@@ -188,6 +191,8 @@ class DataFrameTest : public SimTest {
 
   bool assoc_check_for_eapol_rx_ = false;
 
+  bool testing_rx_freeze_deauth_ = false;
+
  private:
   // StationIfc overrides
   void Rx(std::shared_ptr<const simulation::SimFrame> frame,
@@ -200,9 +205,11 @@ class DataFrameTest : public SimTest {
   // Event handlers
   void OnJoinConf(const wlanif_join_confirm_t* resp);
   void OnAuthConf(const wlanif_auth_confirm_t* resp);
+  void OnDeauthInd(const wlanif_deauth_indication_t* ind);
   void OnAssocConf(const wlanif_assoc_confirm_t* resp);
   void OnDisassocInd(const wlanif_disassoc_indication_t* ind);
   void OnEapolConf(const wlanif_eapol_confirm_t* resp);
+  void OnSignalReport(const wlanif_signal_report_indication* ind);
   void OnEapolInd(const wlanif_eapol_indication_t* ind);
   void OnDataRecv(const void* data_buffer, size_t data_size);
   static void TxComplete(void* ctx, zx_status_t status, ethernet_netbuf_t* netbuf);
@@ -228,7 +235,7 @@ wlanif_impl_ifc_protocol_ops_t DataFrameTest::sme_ops_ = {
         },
     .deauth_ind =
         [](void* cookie, const wlanif_deauth_indication_t* ind) {
-          // Ignore
+          static_cast<DataFrameTest*>(cookie)->OnDeauthInd(ind);
         },
     .assoc_conf =
         [](void* cookie, const wlanif_assoc_confirm_t* resp) {
@@ -248,7 +255,7 @@ wlanif_impl_ifc_protocol_ops_t DataFrameTest::sme_ops_ = {
         },
     .signal_report =
         [](void* cookie, const wlanif_signal_report_indication* ind) {
-          // Ignore
+          static_cast<DataFrameTest*>(cookie)->OnSignalReport(ind);
         },
     .eapol_ind =
         [](void* cookie, const wlanif_eapol_indication_t* ind) {
@@ -316,6 +323,17 @@ void DataFrameTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
 }
 
+void DataFrameTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
+  if (!testing_rx_freeze_deauth_) {
+    // This function is only used for rx freeze deauth testing now.
+    return;
+  }
+  assoc_context_.deauth_ind_count++;
+  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  // Do a re-association right after deauth.
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(200));
+}
+
 void DataFrameTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   assoc_context_.assoc_resp_count++;
   EXPECT_EQ(resp->result_code, assoc_context_.expected_results.front());
@@ -336,6 +354,16 @@ void DataFrameTest::OnEapolInd(const wlanif_eapol_indication_t* ind) {
     ASSERT_EQ(assoc_context_.assoc_resp_count, 1U);
   }
   eapol_ind_count++;
+}
+
+void DataFrameTest::OnSignalReport(const wlanif_signal_report_indication* ind) {
+  if (!testing_rx_freeze_deauth_) {
+    // This function is only used for rx freeze deauth testing now.
+    return;
+  }
+  // Transmit a frame to AP right after each signal report to increase tx count and hold rx count.
+  auto frame = CreateEthernetFrame(kApBssid, kClientMacAddress, htobe16(ETH_P_IP), kSampleEthBody);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::Tx, this, frame), zx::msec(200));
 }
 
 void DataFrameTest::OnDisassocInd(const wlanif_disassoc_indication_t* ind) {}
@@ -532,7 +560,6 @@ TEST_F(DataFrameTest, RxDataFrame) {
   zx::duration delay = zx::msec(1);
   // Start a fake AP
   simulation::FakeAp ap(env_.get(), kApBssid, kApSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
   // Assoc driver with fake AP
@@ -565,7 +592,6 @@ TEST_F(DataFrameTest, RxMalformedDataFrame) {
 
   // Start a fake AP
   simulation::FakeAp ap(env_.get(), kApBssid, kApSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
   // Assoc driver with fake AP
@@ -595,7 +621,6 @@ TEST_F(DataFrameTest, RxEapolFrame) {
 
   // Start a fake AP
   simulation::FakeAp ap(env_.get(), kApBssid, kApSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
   // Assoc driver with fake AP
@@ -627,7 +652,6 @@ TEST_F(DataFrameTest, RxEapolFrameAfterAssoc) {
 
   // Start a fake AP
   simulation::FakeAp ap(env_.get(), kApBssid, kApSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
   // Assoc driver with fake AP
@@ -661,7 +685,6 @@ TEST_F(DataFrameTest, RxUcastBeforeAssoc) {
 
   // Start a fake AP
   simulation::FakeAp ap(env_.get(), kApBssid, kApSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
   // Assoc driver with fake AP
@@ -682,6 +705,38 @@ TEST_F(DataFrameTest, RxUcastBeforeAssoc) {
   // Confirm that the driver did not receive the packet
   EXPECT_EQ(non_eapol_data_count, 0U);
   EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
+}
+
+TEST_F(DataFrameTest, DeauthWhenRxFreeze) {
+  testing_rx_freeze_deauth_ = true;
+
+  constexpr zx::duration kFirstAssocDelay = zx::msec(1);
+  constexpr zx::duration kRxFreezeTestDuration = zx::hour(1);
+
+  // Create our device instance
+  Init();
+
+  // Start a fake AP
+  simulation::FakeAp ap(env_.get(), kApBssid, kApSsid, kDefaultChannel);
+  aps_.push_back(&ap);
+
+  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), kFirstAssocDelay);
+
+  env_->Run(kRxFreezeTestDuration);
+
+  // One deauth should be triggered and a deauth_ind was sent to SME, and there should be only two
+  // deauths triggered in the one hour test.
+  EXPECT_EQ(assoc_context_.deauth_ind_count, (size_t)BRCMF_RX_FREEZE_MAX_DEAUTHS_PER_HOUR);
+  // The device got reconnected after deauth.
+  EXPECT_EQ(ap.GetNumAssociatedClient(), 1U);
+
+  // Run the test for another one hour,  verify that additional deauths can be triggered.
+  env_->Run(kRxFreezeTestDuration);
+
+  EXPECT_EQ(assoc_context_.deauth_ind_count, (size_t)(2 * BRCMF_RX_FREEZE_MAX_DEAUTHS_PER_HOUR));
+  // The device got reconnected after deauth.
+  EXPECT_EQ(ap.GetNumAssociatedClient(), 1U);
 }
 
 }  // namespace wlan::brcmfmac

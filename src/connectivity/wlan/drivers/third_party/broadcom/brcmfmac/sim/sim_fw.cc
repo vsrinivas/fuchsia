@@ -640,6 +640,7 @@ zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
   }
 
   brcmf_netbuf_free(netbuf);
+
   return ZX_OK;
 }
 
@@ -1524,7 +1525,12 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
   }
 }
 
-void SimFirmware::SetAssocState(AssocState::AssocStateName state) { assoc_state_.state = state; }
+void SimFirmware::SetAssocState(AssocState::AssocStateName state) {
+  if (state == AssocState::NOT_ASSOCIATED) {
+    auth_state_.state = AuthState::NOT_AUTHENTICATED;
+  }
+  assoc_state_.state = state;
+}
 
 // Disassociate the Local Client (request coming in from the driver)
 void SimFirmware::DisassocLocalClient(wlan_ieee80211::ReasonCode reason) {

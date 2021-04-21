@@ -275,6 +275,13 @@ struct net_device {
   uint8_t dev_addr[ETH_ALEN];
   char name[NET_DEVICE_NAME_MAX_LEN];
   void* priv;
+  // The total number of times that brcmf_log_client_stats() has been called (only increases when
+  // device is connected).
+  uint32_t client_stats_log_count;
+  // The most recent times we have triggered a deauthentication for an rx freeze. We only track
+  // the most recent BRCMF_RX_FREEZE_MAX_REASSOCS_PER_HOUR times. The time point is represented by
+  // the count of client_stats logs.
+  std::list<uint32_t> rx_freeze_deauth_times;
   struct {
     int tx_dropped;
     int tx_packets;
@@ -291,9 +298,7 @@ struct net_device {
                           // brcmf_log_client_stats().
     int rx_freeze_count;  // The number of brcmf_log_client_stats called in which rx_packet number
                           // freeze happens.
-    // The most recent times we have triggered a deauthentication for an rx freeze. We only track
-    // the most recent BRCMF_RX_FREEZE_MAX_REASSOCS_PER_HOUR times.
-    std::list<zx_time_t> rx_freeze_deauth_times;
+
     // rssi histogram, index = -(rssi), For ex, -128 => 128....-1 => 1
     std::array<uint64_t, RSSI_HISTOGRAM_LEN> rssi_buckets;
     wlanif_mlme_stats_t mlme_stats;
