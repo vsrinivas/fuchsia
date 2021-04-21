@@ -35,7 +35,7 @@ source_set("common") {
   sources = [ "usb-device.cc" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.usb.composite",
-    "//sdk/banjo/fuchsia.hardware.usb.hub",
+    "//sdk/banjo/fuchsia.hardware.usb.hub:fuchsia.hardware.usb.hub_banjo_cpp",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/utf_conversion",
