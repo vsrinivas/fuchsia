@@ -358,6 +358,16 @@ presuming that the bootloader provides enough information to know how to disable
 the WDT at all.
 )""")
 
+DEFINE_OPTION("gfxconsole.early", bool, gfx_console_early, {false}, R"""(
+This option requests that the kernel start a graphics console
+during early boot (if possible), to display kernel debug print
+messages while the system is starting.  When userspace starts up, a usermode
+graphics console driver takes over.
+
+The early kernel console can be slow on some platforms, so if it is not
+needed for debugging it may speed up boot to disable it.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

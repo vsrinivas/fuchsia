@@ -214,16 +214,6 @@ a problem arise.
 This option (disabled by default) allows the system to use a hardware IOMMU
 if present.
 
-## gfxconsole.early=\<bool>
-
-This option (disabled by default) requests that the kernel start a graphics
-console during early boot (if possible), to display kernel debug print
-messages while the system is starting.  When userspace starts up, a usermode
-graphics console driver takes over.
-
-The early kernel console can be slow on some platforms, so if it is not
-needed for debugging it may speed up boot to disable it.
-
 ## gfxconsole.font=\<name>
 
 This option asks the graphics console to use a specific font.  Currently

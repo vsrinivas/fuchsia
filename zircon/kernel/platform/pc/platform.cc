@@ -314,7 +314,7 @@ static void platform_early_display_init(void) {
     return;
   }
 
-  if (gCmdline.GetBool(kernel_option::kGfxConsoleEarly, false) == false) {
+  if (gBootOptions->gfx_console_early == false) {
     early_console_disabled = true;
     return;
   }

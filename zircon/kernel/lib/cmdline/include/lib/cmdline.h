@@ -124,7 +124,6 @@ extern Cmdline gCmdline;
 
 // TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
-static constexpr const char kGfxConsoleEarly[] = "gfxconsole.early";
 static constexpr const char kGfxConsoleFont[] = "gfxconsole.font";
 static constexpr const char kHaltOnPanic[] = "kernel.halt-on-panic";
 static constexpr const char kKtraceBufSize[] = "ktrace.bufsize";
