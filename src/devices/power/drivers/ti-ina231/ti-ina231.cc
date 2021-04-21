@@ -6,8 +6,8 @@
 
 #include <endian.h>
 #include <lib/ddk/debug.h>
-
 #include <lib/ddk/metadata.h>
+
 #include <ddktl/fidl.h>
 
 #include "src/devices/power/drivers/ti-ina231/ti-ina231-bind.h"
@@ -88,7 +88,8 @@ zx_status_t Ina231Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) 
   return transaction.Status();
 }
 
-void Ina231Device::GetPowerWatts(GetPowerWattsCompleter::Sync& completer) {
+void Ina231Device::GetPowerWatts(GetPowerWattsRequestView request,
+                                 GetPowerWattsCompleter::Sync& completer) {
   auto power_reg = Read16(Register::kPowerReg);
   if (power_reg.is_error()) {
     completer.ReplyError(power_reg.error_value());

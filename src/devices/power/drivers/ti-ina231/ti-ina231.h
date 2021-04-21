@@ -21,7 +21,7 @@ using DeviceType = ddk::Device<Ina231Device, ddk::Messageable>;
 
 class Ina231Device : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_POWER_SENSOR>,
-                     public fidl::WireInterface<power_sensor_fidl::Device> {
+                     public fidl::WireServer<power_sensor_fidl::Device> {
  public:
   Ina231Device(zx_device_t* parent, uint32_t shunt_resistor_uohms, ddk::I2cChannel i2c)
       : DeviceType(parent), shunt_resistor_uohms_(shunt_resistor_uohms), i2c_(i2c) {}
@@ -32,7 +32,8 @@ class Ina231Device : public DeviceType,
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
-  void GetPowerWatts(GetPowerWattsCompleter::Sync& completer) override;
+  void GetPowerWatts(GetPowerWattsRequestView request,
+                     GetPowerWattsCompleter::Sync& completer) override;
 
   // Visible for testing.
   zx_status_t Init();
