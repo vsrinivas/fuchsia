@@ -74,28 +74,28 @@ async fn main() -> Result<(), Error> {
     log::info!("persistent={}", persistent);
     if persistent {
         let stash = Stash::new(DEFAULT_STASH_ID).context("failed to instantiate stash")?;
-        // The server parameters and the cache of client entries must be consistent with one
-        // another in order to ensure correct server operation. The cache cannot be consistent with
-        // default parameters, so if parameters fail to load from the stash, then the cache should
+        // The server parameters and the client records must be consistent with one another in
+        // order to ensure correct server operation. The records cannot be consistent with default
+        // parameters, so if parameters fail to load from the stash, then the records should
         // default to empty.
-        let (params, options, cache) = match stash.load_parameters().await {
+        let (params, options, records) = match stash.load_parameters().await {
             Ok(params) => {
                 let options = stash.load_options().await.unwrap_or_else(|e| {
                     log::warn!("failed to load options from stash: {:?}", e);
                     HashMap::new()
                 });
-                let cache = stash.load_client_configs().await.unwrap_or_else(|e| {
-                    log::warn!("failed to load cached client config from stash: {:?}", e);
+                let records = stash.load_client_records().await.unwrap_or_else(|e| {
+                    log::warn!("failed to load client records from stash: {:?}", e);
                     HashMap::new()
                 });
-                (params, options, cache)
+                (params, options, records)
             }
             Err(e) => {
                 log::warn!("failed to load parameters from stash: {:?}", e);
                 (default_parameters(), HashMap::new(), HashMap::new())
             }
         };
-        let server = match Server::new_from_state(stash.clone(), params, options, cache) {
+        let server = match Server::new_from_state(stash.clone(), params, options, records) {
             Ok(v) => v,
             Err(e) => {
                 log::warn!("failed to create server from persistent state: {}", e);

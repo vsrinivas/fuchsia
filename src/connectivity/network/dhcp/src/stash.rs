@@ -4,7 +4,7 @@
 
 use crate::configuration::ServerParameters;
 use crate::protocol::{identifier::ClientIdentifier, DhcpOption, OptionCode};
-use crate::server::{CachedClients, CachedConfig, DataStore};
+use crate::server::{ClientRecords, DataStore, LeaseRecord};
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr as _;
 use std::string::ToString as _;
@@ -48,35 +48,22 @@ pub enum StashError {
 impl DataStore for Stash {
     type Error = StashError;
 
-    /// Stores the `client_config` value with the `client_id` key in `fuchsia.stash`.
-    ///
-    /// This function stores the `client_config` as a serialized JSON string.
-    fn store_client_config(
+    fn insert(
         &mut self,
         client_id: &ClientIdentifier,
-        client_config: &CachedConfig,
+        client_record: &LeaseRecord,
     ) -> Result<(), Self::Error> {
-        self.store(&self.client_key(client_id), client_config)
+        self.store(&self.client_key(client_id), client_record)
     }
 
-    /// Stores `opts` in `fuchsia.stash`.
-    ///
-    /// This function stores the `opts` as a serialized JSON string.
     fn store_options(&mut self, opts: &[DhcpOption]) -> Result<(), Self::Error> {
         self.store(OPTIONS_KEY, opts)
     }
 
-    /// Stores `params` in `fuchsia.stash`.
-    ///
-    /// This function stores the `params` as a serialized JSON string.
     fn store_parameters(&mut self, params: &ServerParameters) -> Result<(), Self::Error> {
         self.store(PARAMETERS_KEY, params)
     }
 
-    /// Deletes the stash entry associated with `client`, if any.
-    ///
-    /// This function immediately commits the deletion operation to the Stash, i.e. there is no
-    /// batching of delete operations.
     fn delete(&mut self, client_id: &ClientIdentifier) -> Result<(), Self::Error> {
         self.rm_key(&self.client_key(client_id))
     }
@@ -129,13 +116,13 @@ impl Stash {
         Ok(())
     }
 
-    /// Loads a `CachedClients` map from data stored in `fuchsia.stash`.
+    /// Loads a `ClientRecords` map from data stored in `fuchsia.stash`.
     ///
     /// This function will retrieve all client configuration data from `fuchsia.stash`, deserialize
-    /// the JSON string values, and load the resulting structured data into a `CachedClients`
+    /// the JSON string values, and load the resulting structured data into a `ClientRecords`
     /// hashmap. Any key-value pair which could not be parsed or deserialized will be removed and
     /// skipped.
-    pub async fn load_client_configs(&self) -> Result<CachedClients, StashError> {
+    pub async fn load_client_records(&self) -> Result<ClientRecords, StashError> {
         use futures::TryStreamExt as _;
 
         let (iter, server) =
@@ -174,7 +161,7 @@ impl Stash {
                     return Ok(None);
                 }
             };
-            let val: CachedConfig = match serde_json::from_str(&val) {
+            let val: LeaseRecord = match serde_json::from_str(&val) {
                 Ok(v) => v,
                 Err(e) => {
                     log::warn!("failed to parse JSON from string: {}", e);
@@ -315,9 +302,9 @@ mod tests {
 
         // Store value in stash.
         let client_id = ClientIdentifier::from(crate::server::tests::random_mac_generator());
-        let client_config = CachedConfig::default();
+        let client_record = LeaseRecord::default();
         let () = stash
-            .store_client_config(&client_id, &client_config)
+            .insert(&client_id, &client_record)
             .with_context(|| format!("failed to store client in {}", id))?;
 
         // Verify value actually stored in stash.
@@ -329,8 +316,8 @@ mod tests {
             fidl_fuchsia_stash::Value::Stringval(v) => v,
             v => panic!("stored value is not a string: {:?}", v),
         };
-        let value: CachedConfig = serde_json::from_str(&value)?;
-        assert_eq!(value, client_config);
+        let value: LeaseRecord = serde_json::from_str(&value)?;
+        assert_eq!(value, client_record);
         Ok(())
     }
 
@@ -399,9 +386,9 @@ mod tests {
         let accessor = stash.proxy.clone();
 
         let client_id = ClientIdentifier::from(crate::server::tests::random_mac_generator());
-        let client_config = CachedConfig::default();
+        let client_record = LeaseRecord::default();
         let serialized_client =
-            serde_json::to_string(&client_config).context("serialization failed")?;
+            serde_json::to_string(&client_record).context("serialization failed")?;
         let client_key = stash.client_key(&client_id);
         let mut client_val = fidl_fuchsia_stash::Value::Stringval(serialized_client);
         let () = accessor
@@ -412,11 +399,11 @@ mod tests {
             .with_context(|| format!("failed to commit stash state change in {}", id))?;
 
         let loaded_cache = stash
-            .load_client_configs()
+            .load_client_records()
             .await
             .with_context(|| format!("failed to load map from stash in {}", id))?;
 
-        let cached_clients = std::iter::once((client_id, client_config)).collect();
+        let cached_clients = std::iter::once((client_id, client_record)).collect();
         assert_eq!(loaded_cache, cached_clients);
 
         Ok(())
@@ -509,9 +496,9 @@ mod tests {
         let accessor = stash.proxy.clone();
 
         let client_id = ClientIdentifier::from(crate::server::tests::random_mac_generator());
-        let client_config = CachedConfig::default();
+        let client_record = LeaseRecord::default();
         let serialized_client =
-            serde_json::to_string(&client_config).context("serialization failed")?;
+            serde_json::to_string(&client_record).context("serialization failed")?;
         let invalid_key = "invalid_key";
         let mut client_stringval = fidl_fuchsia_stash::Value::Stringval(serialized_client);
         let () = accessor
@@ -527,7 +514,7 @@ mod tests {
             .with_context(|| format!("failed to commit stash state change in {}", id))?;
 
         let loaded_cache = stash
-            .load_client_configs()
+            .load_client_records()
             .await
             .with_context(|| format!("failed to load map from stash in {}", id))?;
 
@@ -544,9 +531,9 @@ mod tests {
 
         // Store value in stash.
         let client_id = ClientIdentifier::from(crate::server::tests::random_mac_generator());
-        let client_config = CachedConfig::default();
+        let client_record = LeaseRecord::default();
         let () = stash
-            .store_client_config(&client_id, &client_config)
+            .insert(&client_id, &client_record)
             .with_context(|| format!("failed to store client in {}", id))?;
 
         // Verify value actually stored in stash.
@@ -577,9 +564,9 @@ mod tests {
 
         // Store a value in the stash.
         let client_mac = ClientIdentifier::from(crate::server::tests::random_mac_generator());
-        let client_config = CachedConfig::default();
+        let client_record = LeaseRecord::default();
         let serialized_client =
-            serde_json::to_string(&client_config).context("serialization failed")?;
+            serde_json::to_string(&client_record).context("serialization failed")?;
         let client_key = stash.client_key(&client_mac);
         let mut client_val = fidl_fuchsia_stash::Value::Stringval(serialized_client);
         let () = accessor
