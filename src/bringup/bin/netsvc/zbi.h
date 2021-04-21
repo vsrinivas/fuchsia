@@ -12,7 +12,7 @@
 
 #include <string_view>
 
-zx_status_t netboot_prepare_zbi(zx::vmo nbkernel, zx::vmo nbdata, std::string_view cmdline,
-                                zx::vmo* kernel_zbi, zx::vmo* data_zbi);
+zx_status_t netboot_prepare_zbi(zx::vmo zbi_in, std::string_view cmdline, zx::vmo* kernel_zbi,
+                                zx::vmo* data_zbi);
 
 #endif  // SRC_BRINGUP_BIN_NETSVC_ZBI_H_

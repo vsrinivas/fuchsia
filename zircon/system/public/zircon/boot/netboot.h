@@ -57,7 +57,6 @@
 
 #define NB_FILENAME_PREFIX "<<netboot>>"
 #define NB_KERNEL_FILENAME NB_FILENAME_PREFIX "kernel.bin"
-#define NB_RAMDISK_FILENAME NB_FILENAME_PREFIX "ramdisk.bin"
 #define NB_CMDLINE_FILENAME NB_FILENAME_PREFIX "cmdline"
 
 #define NB_IMAGE_PREFIX "<<image>>"

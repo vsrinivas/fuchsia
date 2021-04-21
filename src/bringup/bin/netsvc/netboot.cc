@@ -50,8 +50,7 @@ struct nbfilecontainer_t {
   zx_handle_t data;  // handle to vmo that backs netbootfile.
 };
 
-static nbfilecontainer_t nbkernel;
-static nbfilecontainer_t nbdata;
+static nbfilecontainer_t nbzbi;
 static nbfilecontainer_t nbcmdline;
 
 // Pointer to the currently active transfer.
@@ -151,9 +150,7 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
   nbfilecontainer_t* result;
 
   if (!strcmp(name, NB_KERNEL_FILENAME)) {
-    result = &nbkernel;
-  } else if (!strcmp(name, NB_RAMDISK_FILENAME)) {
-    result = &nbdata;
+    result = &nbzbi;
   } else if (!strcmp(name, NB_CMDLINE_FILENAME)) {
     result = &nbcmdline;
   } else {
@@ -289,7 +286,7 @@ static zx_status_t do_dmctl_mexec() {
   zx::vmo kernel_zbi, data_zbi;
   // TODO(scottmg): range check nbcmdline.file.size rather than just casting.
   zx_status_t status = netboot_prepare_zbi(
-      zx::vmo(nbkernel.data), zx::vmo(nbdata.data),
+      zx::vmo(nbzbi.data),
       std::string_view(reinterpret_cast<const char*>(nbcmdline.file.data), nbcmdline.file.size),
       &kernel_zbi, &data_zbi);
   if (status != ZX_OK) {
