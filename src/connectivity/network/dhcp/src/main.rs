@@ -15,9 +15,8 @@ use {
         },
         stash::Stash,
     },
-    fuchsia_async::{self as fasync, net::UdpSocket, Interval},
+    fuchsia_async::{self as fasync, net::UdpSocket},
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
-    fuchsia_zircon::DurationNum,
     futures::{Future, SinkExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _},
     net_types::ethernet::Mac,
     std::{
@@ -30,10 +29,6 @@ use {
 
 /// A buffer size in excess of the maximum allowable DHCP message size.
 const BUF_SZ: usize = 1024;
-/// The rate in seconds at which expiration DHCP leases are recycled back into the managed address
-/// pool. The current value of 5 is meant to facilitate manual testing.
-// TODO(atait): Replace with Duration type after it has been updated to const fn.
-const EXPIRATION_INTERVAL_SECS: i64 = 5;
 
 enum IncomingService {
     Server(fidl_fuchsia_net_dhcp::Server_RequestStream),
@@ -489,16 +484,6 @@ async fn define_msg_handling_loop_future<DS: DataStore>(
     }
 }
 
-fn define_lease_expiration_handler_future<'a, DS: DataStore>(
-    server: &'a RefCell<ServerDispatcherRuntime<Server<DS>>>,
-) -> impl Future<Output = Result<(), Error>> + 'a {
-    Interval::new(EXPIRATION_INTERVAL_SECS.seconds())
-        .map(move |()| {
-            server.borrow_mut().release_expired_leases().context("failed to release expired leases")
-        })
-        .try_collect::<()>()
-}
-
 fn define_running_server_fut<'a, S, DS>(
     server: &'a RefCell<ServerDispatcherRuntime<Server<DS>>>,
     socket_stream: S,
@@ -514,16 +499,16 @@ where
         let msg_loops = futures::future::try_join_all(
             sockets.into_iter().map(|sock| define_msg_handling_loop_future(sock, server)),
         );
-        let lease_expiration_handler = define_lease_expiration_handler_future(server);
-
-        let fut = futures::future::try_join(msg_loops, lease_expiration_handler);
 
         log::info!("Server starting");
-        match futures::future::Abortable::new(fut, abort_registration).await {
-            Ok(Ok((_void, ()))) => Err(anyhow::anyhow!("Server futures finished unexpectedly")),
+        match futures::future::Abortable::new(msg_loops, abort_registration).await {
+            Ok(Ok(v)) => {
+                let _: Vec<Void> = v;
+                Err(anyhow::anyhow!("Server futures finished unexpectedly"))
+            }
             Ok(Err(error)) => {
-                // There was an error handling the server sockets or lease
-                // expiration. Disable the server.
+                // There was an error handling the server sockets. Disable the
+                // server.
                 log::error!("Server encountered an error: {}. Stopping server.", error);
                 let () = server.borrow_mut().disable();
                 Ok(())

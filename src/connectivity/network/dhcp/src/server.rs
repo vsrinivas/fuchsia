@@ -319,30 +319,36 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
     // the message was received (if 'giaddr' is 0) or on the address of
     // the relay agent that forwarded the message ('giaddr' when not 0).
     fn get_offered(&mut self, client: &Message) -> Result<Ipv4Addr, ServerError> {
-        let Self { cache, pool, .. } = self;
         let id = ClientIdentifier::from(client);
-        if let Some(CachedConfig { current, previous, .. }) = cache.get(&id) {
+        if let Some(CachedConfig { current, previous, .. }) = self.cache.get(&id) {
             if let Some(current) = current {
-                if !pool.addr_is_allocated(*current) {
+                if !self.pool.addr_is_allocated(*current) {
                     panic!("address {} from active lease is unallocated in address pool", current);
                 }
                 return Ok(*current);
             }
             if let Some(previous) = previous {
-                if pool.addr_is_available(*previous) {
+                if self.pool.addr_is_available(*previous) {
                     return Ok(*previous);
                 }
             }
         }
         if let Some(requested_addr) = get_requested_ip_addr(&client) {
-            if pool.addr_is_available(requested_addr) {
+            if self.pool.addr_is_available(requested_addr) {
                 return Ok(requested_addr);
             }
         }
         // TODO(https://fxbug.dev/21423): The ip should be handed out based on
         // client subnet. Currently, the server blindly hands out the next
         // available ip from its available ip pool, without any subnet analysis.
-        self.pool.available().next().ok_or(ServerError::from(AddressPoolError::Ipv4AddrExhaustion))
+        if let Some(addr) = self.pool.available().next() {
+            return Ok(addr);
+        }
+        let () = self.release_expired_leases()?;
+        if let Some(addr) = self.pool.available().next() {
+            return Ok(addr);
+        }
+        Err(ServerError::ServerAddressPoolFailure(AddressPoolError::Ipv4AddrExhaustion))
     }
 
     fn store_client_config(
@@ -569,7 +575,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
             // Upon receipt of a DHCPRELEASE message, the server marks the network address as not
             // allocated.  The server SHOULD retain a record of the client's initialization
             // parameters for possible reuse in response to subsequent requests from the client.
-            let () = release_lease(&client_id, config, pool, store)?;
+            let () = release_leased_addr(&client_id, config, pool, store)?;
             Ok(ServerAction::AddressRelease(rel.ciaddr))
         } else {
             Err(ServerError::UnknownClientId(client_id))
@@ -735,7 +741,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
 
     /// Releases all allocated IP addresses whose leases have expired back to
     /// the pool of addresses available for allocation.
-    pub fn release_expired_leases(&mut self) -> Result<(), ServerError> {
+    fn release_expired_leases(&mut self) -> Result<(), ServerError> {
         let Self { cache, pool, time_source, store, .. } = self;
         let now = time_source
             .now()
@@ -745,7 +751,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
             .iter_mut()
             .filter(|(_id, config)| config.current.is_some() && config.expired(now))
             .try_for_each(|(id, config)| {
-                let () = match release_lease(id, config, pool, store) {
+                let () = match release_leased_addr(id, config, pool, store) {
                     Ok(()) => (),
                     // Panic because server's state is irrecoverably inconsistent.
                     Err(ServerError::ServerAddressPoolFailure(e)) => {
@@ -773,9 +779,8 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
     }
 }
 
-// TODO(https://fxrev.dev/514951): The linked CL may render this function redundant. Revisit it
-// there.
-fn release_lease<DS: DataStore>(
+// TODO(https://fxbug.dev/74998): Find an alternative to panicking.
+fn release_leased_addr<DS: DataStore>(
     id: &ClientIdentifier,
     config: &mut CachedConfig,
     pool: &mut AddressPool,
@@ -2567,6 +2572,7 @@ pub mod tests {
         let requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, requested_ip);
 
+        assert!(server.pool.universe.insert(requested_ip));
         assert!(server.pool.allocated.insert(requested_ip));
 
         matches::assert_matches!(
@@ -2797,6 +2803,7 @@ pub mod tests {
         req.options.push(DhcpOption::RequestedIpAddress(init_reboot_client_ip));
         server.params.server_ips = vec![std_ip_v4!("192.165.25.1")];
 
+        assert!(server.pool.universe.insert(init_reboot_client_ip));
         assert!(server.pool.allocated.insert(init_reboot_client_ip));
         // Expire client binding to make it invalid.
         matches::assert_matches!(
@@ -2988,6 +2995,7 @@ pub mod tests {
 
         let bound_client_ip = random_ipv4_generator();
 
+        assert!(server.pool.universe.insert(bound_client_ip));
         assert!(server.pool.allocated.insert(bound_client_ip));
         req.ciaddr = bound_client_ip;
 
