@@ -5,6 +5,7 @@
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 declare_args() {
   build_all_vp9_file_decoder_conformance_tests = false
@@ -110,6 +111,13 @@ package("use_h264_decoder_test") {
       dest = "bear.h264"
     },
   ]
+}
+
+resource("bear_h264") {
+  sources = [
+    "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
+  ]
+  outputs = [ "data/bear.h264" ]
 }
 
 # Gaps in frame_num are often handled specially.  We need to at least verify this doesn't get stuck
