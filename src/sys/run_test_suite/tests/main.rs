@@ -644,9 +644,9 @@ async fn test_logging_component() {
             .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
-[TIMESTAMP][PID][TID][<root>][logging_test] DEBUG: my debug message 
-[TIMESTAMP][PID][TID][<root>][logging_test] INFO: my info message 
-[TIMESTAMP][PID][TID][<root>][logging_test] WARN: my warn message 
+[TIMESTAMP][PID][TID][<root>][logging_test] DEBUG: my debug message \n\
+[TIMESTAMP][PID][TID][<root>][logging_test] INFO: my info message \n\
+[TIMESTAMP][PID][TID][<root>][logging_test] WARN: my warn message \n\
 [PASSED]	log_and_exit
 ";
     assert_output!(output, expected_output);
@@ -674,8 +674,8 @@ async fn test_logging_component_min_severity() {
         .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
-[TIMESTAMP][PID][TID][<root>][logging_test] INFO: my info message 
-[TIMESTAMP][PID][TID][<root>][logging_test] WARN: my warn message 
+[TIMESTAMP][PID][TID][<root>][logging_test] INFO: my info message \n\
+[TIMESTAMP][PID][TID][<root>][logging_test] WARN: my warn message \n\
 [PASSED]	log_and_exit
 ";
     assert_output!(output, expected_output);
@@ -785,9 +785,9 @@ async fn test_max_severity(max_severity: Severity) {
         .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
-[TIMESTAMP][PID][TID][<root>][error_logging_test] INFO: my info message 
-[TIMESTAMP][PID][TID][<root>][error_logging_test] WARN: my warn message 
-[TIMESTAMP][PID][TID][<root>][error_logging_test] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message 
+[TIMESTAMP][PID][TID][<root>][error_logging_test] INFO: my info message \n\
+[TIMESTAMP][PID][TID][<root>][error_logging_test] WARN: my warn message \n\
+[TIMESTAMP][PID][TID][<root>][error_logging_test] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message \n\
 [PASSED]	log_and_exit
 ";
 
