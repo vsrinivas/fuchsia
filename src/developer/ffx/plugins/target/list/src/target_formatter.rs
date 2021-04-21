@@ -5,9 +5,9 @@
 use {
     anyhow::{anyhow, Error, Result},
     ffx_daemon::target::TargetAddr,
-    ffx_daemon_core::net::IsLocalAddr,
     ffx_list_args::Format,
     fidl_fuchsia_developer_bridge as bridge,
+    netext::IsLocalAddr,
     serde::Serialize,
     serde_json::json,
     std::cmp::max,

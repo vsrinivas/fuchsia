@@ -11,12 +11,10 @@ use {
     async_io::Async,
     async_lock::Mutex,
     async_net::UdpSocket,
-    ffx_daemon_core::{
-        events,
-        net::{self, IsLocalAddr},
-    },
+    ffx_daemon_core::events,
     fuchsia_async::{Task, Timer},
     futures::FutureExt,
+    netext::{get_mcast_interfaces, IsLocalAddr},
     packet::{InnerPacketBuilder, ParseBuffer},
     std::collections::HashMap,
     std::collections::HashSet,
@@ -117,7 +115,7 @@ async fn interface_discovery(
             to_delete.insert(ip.clone());
         }
 
-        for iface in net::get_mcast_interfaces().unwrap_or(Vec::new()) {
+        for iface in get_mcast_interfaces().unwrap_or(Vec::new()) {
             match iface.id() {
                 Ok(id) => {
                     if let Some(sock) = v6_listen_socket.upgrade() {

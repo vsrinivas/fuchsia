@@ -6,32 +6,19 @@ import("//build/rust/rustc_library.gni")
 
 if (is_host) {
   rustc_library("lib") {
-    name = "ffx_daemon_core"
+    name = "netext"
     version = "0.1.0"
     edition = "2018"
     with_unit_tests = true
 
     deps = [
-      "//src/developer/ffx/core:lib",
-      "//src/developer/ffx/lib/timeout:lib",
-      "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:async-trait",
-      "//third_party/rust_crates:futures",
       "//third_party/rust_crates:itertools",
-      "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:libc",
-      "//third_party/rust_crates:log",
       "//third_party/rust_crates:nix",
-      "//third_party/rust_crates:pin-project",
-      "//third_party/rust_crates:simplelog",
     ]
 
-    sources = [
-      "src/events.rs",
-      "src/lib.rs",
-      "src/task.rs",
-    ]
+    sources = [ "src/lib.rs" ]
   }
 }
 

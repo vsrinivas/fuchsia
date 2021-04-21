@@ -26,6 +26,7 @@ if (is_host) {
       "//src/developer/ffx/core:lib",
       "//src/developer/ffx/core/version:lib",
       "//src/developer/ffx/daemon/core:lib",
+      "//src/developer/ffx/lib/netext:lib",
       "//src/developer/ffx/lib/timeout:lib",
       "//src/developer/ffx/logger/data:lib",
       "//src/developer/ffx/logger/test_utils:lib",
