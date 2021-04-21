@@ -29,7 +29,6 @@
 #include "src/storage/fshost/fshost-boot-args.h"
 #include "src/storage/fshost/inspect-manager.h"
 #include "src/storage/fshost/metrics.h"
-#include "src/storage/fshost/registry.h"
 
 namespace devmgr {
 
@@ -88,10 +87,6 @@ class FsManager {
   // Serves connection to the root directory ("/") on |server|.
   zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> server);
 
-  // Serves connection to the fshost directory (exporting the "fuchsia.fshost" services) on
-  // |server|.
-  zx_status_t ServeFshostRoot(zx::channel server) { return registry_.ServeRoot(std::move(server)); }
-
   // Asynchronously shut down all the filesystems managed by fshost and then signal the main thread
   // to exit. Calls |callback| when complete.
   void Shutdown(fit::function<void(zx_status_t)> callback);
@@ -149,10 +144,6 @@ class FsManager {
 
   // The base, root directory which serves the rest of the fshost.
   fbl::RefPtr<memfs::VnodeDir> global_root_;
-
-  // Controls the external fshost vnode, as well as registration of filesystems
-  // dynamically within the fshost.
-  fshost::Registry registry_;
 
   // Keeps a collection of metrics being track at the FsHost level.
   std::unique_ptr<FsHostMetrics> metrics_;

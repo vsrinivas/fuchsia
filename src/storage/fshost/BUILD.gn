@@ -61,8 +61,6 @@ source_set("fshost-registry") {
     "fs-manager.cc",
     "fshost-boot-args.cc",
     "lifecycle.cc",
-    "registry.cc",
-    "registry_vnode.cc",
   ]
   public_deps = [
     ":inspect",

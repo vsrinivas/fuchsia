@@ -4,26 +4,7 @@
 
 library fuchsia.fshost;
 
-using fuchsia.io;
 using zx;
-
-/// Manages filesystems which wish to be globally exposed under the filesystem host.
-[Discoverable]
-protocol Registry {
-    /// Registers the output directory of a filesystem. These filesystems are
-    /// exported from the fuchsia.fshost.Filesystems service, where they are
-    /// be identified by an instance number (of the form "000", "001", etc).
-    ///
-    /// This directory is automatically de-registered from fuchsia.fshost.Filesystems
-    /// if the server end of the connection is closed.
-    RegisterFilesystem(fuchsia.io.Directory public_export) -> (zx.status s);
-};
-
-/// A collection of all registered filesystems.
-[Discoverable]
-protocol Filesystems {
-    compose fuchsia.io.Directory;
-};
 
 /// Manages the block watcher.
 [Discoverable]

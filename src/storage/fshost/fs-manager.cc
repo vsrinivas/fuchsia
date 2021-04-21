@@ -54,7 +54,6 @@ FsManager::FsManager(std::shared_ptr<FshostBootArgs> boot_args,
                      std::unique_ptr<FsHostMetrics> metrics)
     : global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)),
       outgoing_vfs_(fs::ManagedVfs(global_loop_->dispatcher())),
-      registry_(global_loop_.get()),
       metrics_(std::move(metrics)),
       boot_args_(boot_args) {
   ZX_ASSERT(global_root_ == nullptr);
@@ -86,12 +85,6 @@ zx_status_t FsManager::SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Direct
                                               std::shared_ptr<loader::LoaderServiceBase> loader,
                                               BlockWatcher& watcher) {
   auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-
-  // TODO(unknown): fshost exposes two separate service directories, one here and one in
-  // the registry vfs that's mounted under fs-manager-svc further down in this
-  // function. These should be combined by either pulling the registry services
-  // into this VFS or by pushing the services in this directory into the
-  // registry.
 
   // Add loader and admin services to the vfs
   svc_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
@@ -129,21 +122,6 @@ zx_status_t FsManager::SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Direct
     return status;
   }
   outgoing_dir->AddEntry("fs", fbl::MakeRefCounted<fs::RemoteDir>(std::move(filesystems_client)));
-
-  // Add /fs-manager-svc to the vfs
-  zx::channel services_client, services_server;
-  status = zx::channel::create(0, &services_client, &services_server);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to create channel";
-    return status;
-  }
-  status = this->ServeFshostRoot(std::move(services_server));
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot serve export directory";
-    return status;
-  }
-  outgoing_dir->AddEntry("fs-manager-svc",
-                         fbl::MakeRefCounted<fs::RemoteDir>(std::move(services_client)));
 
   // TODO(fxbug.dev/39588): delete this
   // Add the delayed directory

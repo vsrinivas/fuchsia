@@ -6,10 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.fshost") {
   sources = [ "fshost.fidl" ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.io",
-
-    # TODO(fxbug.dev/69670): remove fuchsia.io2, which should come transitively from fuchsia.io.
-    "//sdk/fidl/fuchsia.io2",
-  ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

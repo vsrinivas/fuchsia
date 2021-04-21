@@ -7,6 +7,7 @@
 #include <fuchsia/fshost/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/skipblock/llcpp/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 

@@ -25,8 +25,6 @@
 #include "fs-manager.h"
 #include "fshost-fs-provider.h"
 #include "metrics.h"
-#include "registry.h"
-#include "registry_vnode.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/storage/fshost/block-watcher.h"
@@ -39,75 +37,6 @@ namespace fio = fuchsia_io;
 std::unique_ptr<cobalt_client::Collector> MakeCollector() {
   return std::make_unique<cobalt_client::Collector>(
       std::make_unique<cobalt_client::InMemoryLogger>());
-}
-
-// Test that when no filesystems have been added to the fshost vnode, it
-// stays empty.
-TEST(VnodeTestCase, NoFilesystems) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-
-  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  auto fshost_vn = fbl::MakeRefCounted<fshost::RegistryVnode>(loop.dispatcher(), dir);
-
-  fbl::RefPtr<fs::Vnode> node;
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup("0", &node));
-}
-
-// Test that when filesystem has been added to the fshost vnode, it appears
-// in the supplied remote tracking directory.
-TEST(VnodeTestCase, AddFilesystem) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-
-  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  auto fshost_vn = fbl::MakeRefCounted<fshost::RegistryVnode>(loop.dispatcher(), dir);
-
-  // Adds a new filesystem to the fshost service node.
-  // This filesystem should appear as a new entry within |dir|.
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  ASSERT_OK(endpoints.status_value());
-
-  fidl::UnownedClientEnd<fuchsia_io::Directory> client_value = endpoints->client.borrow();
-  ASSERT_OK(fshost_vn->AddFilesystem(std::move(endpoints->client)));
-  fbl::RefPtr<fs::Vnode> node;
-  ASSERT_OK(dir->Lookup("0", &node));
-  EXPECT_EQ(node->GetRemote(), client_value);
-}
-
-TEST(VnodeTestCase, AddFilesystemThroughFidl) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
-
-  // set up registry service
-  auto registry_endpoints = fidl::CreateEndpoints<fuchsia_fshost::Registry>();
-  ASSERT_OK(registry_endpoints.status_value());
-  auto [registry_client, registry_server] = std::move(registry_endpoints.value());
-
-  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  auto fshost_vn = std::make_unique<fshost::RegistryVnode>(loop.dispatcher(), dir);
-  auto server_binding =
-      fidl::BindServer(loop.dispatcher(), std::move(registry_server), std::move(fshost_vn));
-
-  // make a new "vfs" "client" that doesn't really point anywhere.
-  auto vfs_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  ASSERT_OK(vfs_endpoints.status_value());
-  auto [vfs_client, vfs_server] = std::move(vfs_endpoints.value());
-  zx_info_handle_basic_t vfs_client_info;
-  ASSERT_OK(vfs_client.channel().get_info(ZX_INFO_HANDLE_BASIC, &vfs_client_info,
-                                          sizeof(vfs_client_info), nullptr, nullptr));
-
-  // register the filesystem through the fidl interface
-  auto resp = fidl::WireCall(registry_client).RegisterFilesystem(std::move(vfs_client));
-  ASSERT_TRUE(resp.ok());
-  ASSERT_OK(resp.value().s);
-
-  // confirm that the filesystem was registered
-  fbl::RefPtr<fs::Vnode> node;
-  ASSERT_OK(dir->Lookup("0", &node));
-  zx_info_handle_basic_t vfs_remote_info;
-  auto remote = node->GetRemote();
-  ASSERT_OK(remote.channel()->get_info(ZX_INFO_HANDLE_BASIC, &vfs_remote_info,
-                                       sizeof(vfs_remote_info), nullptr, nullptr));
-  EXPECT_EQ(vfs_remote_info.koid, vfs_client_info.koid);
 }
 
 class FakeDriverManagerAdmin final

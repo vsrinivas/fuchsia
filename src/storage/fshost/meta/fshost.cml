@@ -103,14 +103,6 @@
             path: "/fs/volume",
         },
         {
-            protocol: "fuchsia.fshost.Filesystems",
-            path: "/fs-manager-svc/fuchsia.fshost.Filesystems",
-        },
-        {
-            protocol: "fuchsia.fshost.Registry",
-            path: "/fs-manager-svc/fuchsia.fshost.Registry",
-        },
-        {
             protocol: [
                 "fuchsia.fshost.Admin",
                 "fuchsia.fshost.BlockWatcher",
@@ -226,8 +218,6 @@
             protocol: [
                 "fuchsia.fshost.Admin",
                 "fuchsia.fshost.BlockWatcher",
-                "fuchsia.fshost.Filesystems",
-                "fuchsia.fshost.Registry",
                 "fuchsia.update.verify.BlobfsVerifier",
             ],
             from: "self",

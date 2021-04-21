@@ -16,8 +16,6 @@
 namespace devmgr {
 namespace {
 
-namespace fio = fuchsia_io;
-
 constexpr uint32_t kBlockCount = 1024 * 256;
 constexpr uint32_t kBlockSize = 512;
 constexpr uint32_t kSliceSize = 32'768;
