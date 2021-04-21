@@ -28,10 +28,6 @@ config("abi") {
 
   if (is_gcc) {
     cflags += [
-      "-falign-jumps=1",
-      "-falign-loops=1",
-      "-falign-functions=4",
-
       # Optimization: Since FPU is disabled, do not pass flag in %rax to
       # varargs routines that floating point args are in use.
       "-mskip-rax-setup",
