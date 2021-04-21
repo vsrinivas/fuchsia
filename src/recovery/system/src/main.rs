@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use argh::FromArgs;
 use carnelian::{
     color::Color,
@@ -19,11 +19,13 @@ use carnelian::{
 use euclid::{point2, size2};
 use fidl_fuchsia_input_report::ConsumerControlButton;
 use fidl_fuchsia_recovery::FactoryResetMarker;
+use fidl_fuchsia_recovery_policy::FactoryResetMarker as FactoryResetPolicyMarker;
 use fuchsia_async::{self as fasync, Task};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon::{Duration, Event};
 use futures::StreamExt;
-use std::path::PathBuf;
+use std::borrow::{Borrow, Cow};
+use std::path::{Path, PathBuf};
 
 const FACTORY_RESET_TIMER_IN_SECONDS: u8 = 10;
 const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.shed";
@@ -82,6 +84,7 @@ enum RecoveryMessages {
     OtaFinished {
         result: Result<(), Error>,
     },
+    PolicyResult(usize, bool),
     ResetMessage(FactoryResetState),
     CountdownTick(u8),
     ResetFailed,
@@ -94,18 +97,41 @@ const COUNTDOWN_MODE_HEADLINE: &'static str = "Factory reset device";
 const COUNTDOWN_MODE_BODY: &'static str = "Continue holding the keys to the end of the countdown. \
 This will wipe all of your data from this device and reset it to factory settings.";
 
+const PATH_TO_FDR_RESTRICTION_CONFIG: &'static str = "/config/data/check_fdr_restriction.json";
+
+/// An enum to track whether fdr is restricted or not.
+#[derive(Copy, Clone)]
+enum FdrRestriction {
+    /// Fdr is not restricted and can proceed without any additional checks.
+    NotRestricted,
+    /// Fdr is possibly restricted. The policy should be checked when attempting
+    /// factory device reset.
+    Restricted { fdr_initially_enabled: bool },
+}
+
+impl FdrRestriction {
+    fn is_initially_enabled(&self) -> bool {
+        match self {
+            FdrRestriction::NotRestricted => true,
+            FdrRestriction::Restricted { fdr_initially_enabled } => *fdr_initially_enabled,
+        }
+    }
+}
+
 struct RecoveryAppAssistant {
     app_context: AppContext,
     display_rotation: DisplayRotation,
+    fdr_restriction: FdrRestriction,
 }
 
 impl RecoveryAppAssistant {
-    pub fn new(app_context: &AppContext) -> Self {
+    pub fn new(app_context: &AppContext, fdr_restriction: FdrRestriction) -> Self {
         let args: Args = argh::from_env();
 
         Self {
             app_context: app_context.clone(),
             display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg0),
+            fdr_restriction,
         }
     }
 }
@@ -116,11 +142,13 @@ impl AppAssistant for RecoveryAppAssistant {
     }
 
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        let body = get_recovery_body(self.fdr_restriction.is_initially_enabled());
         Ok(Box::new(RecoveryViewAssistant::new(
             &self.app_context,
             view_key,
             RECOVERY_MODE_HEADLINE,
-            RECOVERY_MODE_BODY,
+            body.map(Into::into),
+            self.fdr_restriction,
         )?))
     }
 
@@ -138,7 +166,7 @@ impl RenderResources {
         render_context: &mut RenderContext,
         target_size: Size,
         heading: &str,
-        body: &str,
+        body: Option<&str>,
         countdown_ticks: u8,
         face: &FontFace,
         is_counting_down: bool,
@@ -206,21 +234,23 @@ impl RenderResources {
             },
         );
 
-        let margin = 0.23;
-        let body_x = target_size.width * margin;
-        let wrap_width = target_size.width - 2.0 * body_x;
-        builder.text(
-            face.clone(),
-            &body,
-            body_text_size,
-            point2(body_x, heading_text_location.y + text_size),
-            TextFacetOptions {
-                horizontal_alignment: TextHorizontalAlignment::Left,
-                color: BODY_COLOR,
-                max_width: Some(wrap_width),
-                ..TextFacetOptions::default()
-            },
-        );
+        if let Some(body) = body {
+            let margin = 0.23;
+            let body_x = target_size.width * margin;
+            let wrap_width = target_size.width - 2.0 * body_x;
+            builder.text(
+                face.clone(),
+                &body,
+                body_text_size,
+                point2(body_x, heading_text_location.y + text_size),
+                TextFacetOptions {
+                    horizontal_alignment: TextHorizontalAlignment::Left,
+                    color: BODY_COLOR,
+                    max_width: Some(wrap_width),
+                    ..TextFacetOptions::default()
+                },
+            );
+        }
 
         Self { scene: builder.build() }
     }
@@ -229,7 +259,8 @@ impl RenderResources {
 struct RecoveryViewAssistant {
     face: FontFace,
     heading: String,
-    body: String,
+    body: Option<Cow<'static, str>>,
+    fdr_restriction: FdrRestriction,
     reset_state_machine: fdr::FactoryResetStateMachine,
     app_context: AppContext,
     view_key: ViewKey,
@@ -243,7 +274,8 @@ impl RecoveryViewAssistant {
         app_context: &AppContext,
         view_key: ViewKey,
         heading: &str,
-        body: &str,
+        body: Option<Cow<'static, str>>,
+        fdr_restriction: FdrRestriction,
     ) -> Result<RecoveryViewAssistant, Error> {
         RecoveryViewAssistant::setup(app_context, view_key)?;
 
@@ -252,7 +284,8 @@ impl RecoveryViewAssistant {
         Ok(RecoveryViewAssistant {
             face,
             heading: heading.to_string(),
-            body: body.to_string(),
+            body,
+            fdr_restriction,
             reset_state_machine: fdr::FactoryResetStateMachine::new(),
             app_context: app_context.clone(),
             view_key: 0,
@@ -293,6 +326,23 @@ impl RecoveryViewAssistant {
         fasync::Task::local(f).detach();
 
         Ok(())
+    }
+
+    /// Checks whether fdr policy allows factory reset to be performed. If not, then it will not
+    /// move forward with the reset. If it is, then it will forward the message to begin reset.
+    async fn check_fdr_and_maybe_reset(
+        view_key: ViewKey,
+        app_context: AppContext,
+        check_id: usize,
+    ) {
+        let fdr_enabled = check_fdr_enabled().await.unwrap_or_else(|error| {
+            eprintln!("recovery: Error occurred, but proceeding with reset: {:?}", error);
+            true
+        });
+        app_context.queue_message(
+            view_key,
+            make_message(RecoveryMessages::PolicyResult(check_id, fdr_enabled)),
+        );
     }
 
     async fn execute_reset(view_key: ViewKey, app_context: AppContext) {
@@ -338,7 +388,7 @@ impl ViewAssistant for RecoveryViewAssistant {
                 render_context,
                 target_size,
                 &self.heading,
-                &self.body,
+                self.body.as_ref().map(Borrow::borrow),
                 self.countdown_ticks,
                 &self.face,
                 self.reset_state_machine.is_counting_down(),
@@ -356,28 +406,40 @@ impl ViewAssistant for RecoveryViewAssistant {
             match message {
                 #[cfg(feature = "http_setup_server")]
                 RecoveryMessages::EventReceived => {
-                    self.body = "Got event".to_string();
+                    self.body = Some("Got event".into());
                 }
                 #[cfg(feature = "http_setup_server")]
                 RecoveryMessages::StartingOta => {
-                    self.body = "Starting OTA update".to_string();
+                    self.body = Some("Starting OTA update".into());
                 }
                 #[cfg(feature = "http_setup_server")]
                 RecoveryMessages::OtaFinished { result } => {
                     if let Err(e) = result {
-                        self.body = format!("OTA failed: {:?}", e);
+                        self.body = Some(format!("OTA failed: {:?}", e).into());
                     } else {
-                        self.body = "OTA succeeded".to_string();
+                        self.body = Some("OTA succeeded".into());
                     }
+                }
+                RecoveryMessages::PolicyResult(check_id, fdr_enabled) => {
+                    let state = self
+                        .reset_state_machine
+                        .handle_event(ResetEvent::AwaitPolicyResult(*check_id, *fdr_enabled));
+                    self.app_context.queue_message(
+                        self.view_key,
+                        make_message(RecoveryMessages::ResetMessage(state)),
+                    );
                 }
                 RecoveryMessages::ResetMessage(state) => {
                     match state {
                         FactoryResetState::Waiting => {
                             self.heading = RECOVERY_MODE_HEADLINE.to_string();
-                            self.body = RECOVERY_MODE_BODY.to_string();
+                            self.body =
+                                get_recovery_body(self.fdr_restriction.is_initially_enabled())
+                                    .map(Into::into);
                             self.render_resources = None;
                             self.app_context.request_render(self.view_key);
                         }
+                        FactoryResetState::AwaitingPolicy(_) => {} // no-op
                         FactoryResetState::StartCountdown => {
                             let view_key = self.view_key;
                             let local_app_context = self.app_context.clone();
@@ -433,7 +495,7 @@ impl ViewAssistant for RecoveryViewAssistant {
                     self.heading = COUNTDOWN_MODE_HEADLINE.to_string();
                     self.countdown_ticks = *count;
                     if *count == 0 {
-                        self.body = "Resetting device...".to_string();
+                        self.body = Some("Resetting device...".into());
                         let state =
                             self.reset_state_machine.handle_event(ResetEvent::CountdownFinished);
                         assert_eq!(state, FactoryResetState::ExecuteReset);
@@ -442,14 +504,14 @@ impl ViewAssistant for RecoveryViewAssistant {
                             make_message(RecoveryMessages::ResetMessage(state)),
                         );
                     } else {
-                        self.body = COUNTDOWN_MODE_BODY.to_string();
+                        self.body = Some(COUNTDOWN_MODE_BODY.into());
                     }
                     self.render_resources = None;
                     self.app_context.request_render(self.view_key);
                 }
                 RecoveryMessages::ResetFailed => {
                     self.heading = "Reset failed".to_string();
-                    self.body = "Please restart device to try again".to_string();
+                    self.body = Some("Please restart device to try again".into());
                     self.render_resources = None;
                     self.app_context.request_render(self.view_key);
                 }
@@ -465,12 +527,34 @@ impl ViewAssistant for RecoveryViewAssistant {
     ) -> Result<(), Error> {
         match consumer_control_event.button {
             ConsumerControlButton::VolumeUp | ConsumerControlButton::VolumeDown => {
-                let state: FactoryResetState =
-                    self.reset_state_machine.handle_event(ResetEvent::ButtonPress(
-                        consumer_control_event.button,
-                        consumer_control_event.phase,
-                    ));
-                if state != fdr::FactoryResetState::ExecuteReset {
+                let state = self.reset_state_machine.handle_event(ResetEvent::ButtonPress(
+                    consumer_control_event.button,
+                    consumer_control_event.phase,
+                ));
+
+                if let fdr::FactoryResetState::AwaitingPolicy(check_id) = state {
+                    match self.fdr_restriction {
+                        FdrRestriction::Restricted { .. } => {
+                            fasync::Task::local(RecoveryViewAssistant::check_fdr_and_maybe_reset(
+                                self.view_key,
+                                self.app_context.clone(),
+                                check_id,
+                            ))
+                            .detach();
+                        }
+                        // When fdr is not restricted, immediately send an enabled event.
+                        FdrRestriction::NotRestricted => {
+                            let state = self
+                                .reset_state_machine
+                                .handle_event(ResetEvent::AwaitPolicyResult(check_id, true));
+                            if state != fdr::FactoryResetState::ExecuteReset {
+                                context.queue_message(make_message(
+                                    RecoveryMessages::ResetMessage(state),
+                                ));
+                            }
+                        }
+                    }
+                } else {
                     context.queue_message(make_message(RecoveryMessages::ResetMessage(state)));
                 }
             }
@@ -520,11 +604,44 @@ impl ViewAssistant for RecoveryViewAssistant {
     }
 }
 
+/// Determines whether or not fdr is enabled.
+async fn check_fdr_enabled() -> Result<bool, Error> {
+    let proxy = connect_to_service::<FactoryResetPolicyMarker>()?;
+    proxy
+        .get_enabled()
+        .await
+        .map_err(|e| format_err!("Could not get status of factory reset: {:?}", e))
+}
+
+/// Return the recovery body based on whether or not factory reset is restricted.
+const fn get_recovery_body(fdr_enabled: bool) -> Option<&'static str> {
+    if fdr_enabled {
+        Some(RECOVERY_MODE_BODY)
+    } else {
+        None
+    }
+}
+
 fn make_app_assistant_fut(
     app_context: &AppContext,
 ) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
     let f = async move {
-        let assistant = Box::new(RecoveryAppAssistant::new(app_context));
+        // Build the fdr restriction depending on whether the fdr restriction config exists,
+        // and if so, whether or not the policy api allows fdr.
+        let fdr_restriction = {
+            let has_restricted_fdr_config = Path::new(PATH_TO_FDR_RESTRICTION_CONFIG).exists();
+            if has_restricted_fdr_config {
+                let fdr_initially_enabled = check_fdr_enabled().await.unwrap_or_else(|error| {
+                    eprintln!("Could not get fdr policy. Falling back to `true`: {:?}", error);
+                    true
+                });
+                FdrRestriction::Restricted { fdr_initially_enabled }
+            } else {
+                FdrRestriction::NotRestricted
+            }
+        };
+
+        let assistant = Box::new(RecoveryAppAssistant::new(app_context, fdr_restriction));
         Ok::<AppAssistantPtr, Error>(assistant)
     };
     Box::pin(f)

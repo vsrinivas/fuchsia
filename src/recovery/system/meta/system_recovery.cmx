@@ -24,6 +24,7 @@
             "fuchsia.paver.Paver",
             "fuchsia.process.Launcher",
             "fuchsia.recovery.FactoryReset",
+            "fuchsia.recovery.policy.FactoryReset",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",

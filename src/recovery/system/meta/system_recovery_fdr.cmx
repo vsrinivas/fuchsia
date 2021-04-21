@@ -20,6 +20,7 @@
         "services": [
             "fuchsia.process.Launcher",
             "fuchsia.recovery.FactoryReset",
+            "fuchsia.recovery.policy.FactoryReset",
             "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator"
         ]
