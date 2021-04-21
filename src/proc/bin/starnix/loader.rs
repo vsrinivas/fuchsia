@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Context, Error};
-use fidl::endpoints::ClientEnd;
-use fidl_fuchsia_ldsvc as fldsvc;
-use fuchsia_async as fasync;
-use fuchsia_zircon::{self as zx, AsHandleRef, Status, Task};
+use anyhow::{Context, Error};
+use fidl_fuchsia_io as fio;
+use fuchsia_zircon::{self as zx, AsHandleRef, Status};
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
 
 use crate::executive::*;
+use crate::fs::{FdTable, SyslogFile};
 use crate::uapi::*;
 
 pub struct ProcessParameters {
@@ -109,15 +108,14 @@ fn load_elf(vmo: &zx::Vmo, vmar: &zx::Vmar) -> Result<LoadedElf, Error> {
     Ok(LoadedElf { headers, base, bias })
 }
 
-// When it's time to implement execve, this should be changed to return an errno.
+// TODO(tbodt): change to return an errno when it's time to implement execve
+// TODO(tbodt): passing the root to this function doesn't make any sense
 pub async fn load_executable(
     job: &zx::Job,
     executable: zx::Vmo,
-    loader_service: ClientEnd<fldsvc::LoaderMarker>,
     params: &ProcessParameters,
-) -> Result<(ProcessContext, fasync::Channel), Error> {
-    let loader_service = loader_service.into_proxy()?;
-
+    root: fio::DirectoryProxy,
+) -> Result<ProcessContext, Error> {
     job.set_name(&params.name)?;
     let (process, root_vmar) = job.create_child_process(params.name.as_bytes())?;
 
@@ -127,10 +125,12 @@ pub async fn load_executable(
     {
         let mut interp = vec![0; interp_hdr.filesz as usize];
         executable.read(&mut interp, interp_hdr.offset as u64)?;
-        let interp = CStr::from_bytes_with_nul(&interp)?.to_str()?;
-        let (status, interp_vmo) = loader_service.load_object(interp).await?;
-        zx::Status::ok(status)?;
-        let interp_vmo = interp_vmo.ok_or_else(|| anyhow!("didn't get a vmo back"))?;
+        // TODO: once it exists, use the Starnix VFS to open and map the interpreter
+        let mut interp = CStr::from_bytes_with_nul(&interp)?.to_str()?;
+        if interp.starts_with('/') {
+            interp = &interp[1..];
+        }
+        let interp_vmo = library_loader::load_vmo(&root, interp).await?;
         Some(load_elf(&interp_vmo, &root_vmar).context("Interpreter ELF failed to load")?)
     } else {
         None
@@ -141,7 +141,7 @@ pub async fn load_executable(
 
     // TODO(tbodt): implement MAP_GROWSDOWN and then reset this to 1 page. The current value of
     // this is based on adding 0x1000 each time a segfault appears.
-    let stack_size: usize = 0x4000;
+    let stack_size: usize = 0x5000;
     let stack_vmo = zx::Vmo::create(stack_size as u64)?;
     stack_vmo.set_name(CStr::from_bytes_with_nul(b"[stack]\0")?)?;
     let stack_base = root_vmar
@@ -149,13 +149,20 @@ pub async fn load_executable(
         .context("failed to map stack")?;
     let stack = stack_base + stack_size - 8;
 
-    let exceptions = fasync::Channel::from_channel(process.create_exception_channel()?)?;
     let process = ProcessContext {
         process_id: 3, // TODO: Assign from a process map.
         handle: process,
         mm: MemoryManager::new(root_vmar),
         security: SecurityContext { uid: 3, gid: 3, euid: 3, egid: 3 },
+        root,
+        fd_table: FdTable::new(),
     };
+
+    // TODO(tbodt): this would fit better elsewhere
+    let stdio = SyslogFile::new();
+    assert!(process.fd_table.install_fd(stdio.clone()).unwrap().raw() == 0);
+    assert!(process.fd_table.install_fd(stdio.clone()).unwrap().raw() == 1);
+    assert!(process.fd_table.install_fd(stdio).unwrap().raw() == 2);
 
     let auxv = vec![
         (AT_UID, process.security.uid as u64),
@@ -165,6 +172,7 @@ pub async fn load_executable(
         (AT_BASE, interp_elf.map_or(0, |interp| interp.base as u64)),
         (AT_PHDR, main_elf.bias.wrapping_add(main_elf.headers.file_header().phoff) as u64),
         (AT_PHNUM, main_elf.headers.file_header().phnum as u64),
+        (AT_ENTRY, main_elf.bias.wrapping_add(main_elf.headers.file_header().entry) as u64),
         (AT_SECURE, 0),
     ];
     let stack = populate_initial_stack(&stack_vmo, &params, auxv, stack_base, stack)?;
@@ -172,12 +180,13 @@ pub async fn load_executable(
     let main_thread = process.handle.create_thread("initial-thread".as_bytes())?;
     process.handle.start(&main_thread, entry, stack, zx::Handle::invalid(), 0)?;
 
-    Ok((process, exceptions))
+    Ok(process)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuchsia_async as fasync;
 
     #[fasync::run_singlethreaded(test)]
     async fn trivial_initial_stack() {

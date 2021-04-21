@@ -10,6 +10,8 @@
 #include <asm-x86/asm/prctl.h>
 #include <asm-x86/asm/unistd_64.h>
 #include <linux/auxvec.h>
+#include <linux/fcntl.h>
+#include <linux/limits.h>
 #include <linux/mman.h>
 #include <linux/sched.h>
 #include <linux/time.h>

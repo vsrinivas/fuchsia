@@ -5,6 +5,7 @@
 use paste::paste;
 
 use crate::executive::ThreadContext;
+use crate::fs::FdNumber;
 use crate::syscalls::*;
 use crate::uapi::*;
 
@@ -26,9 +27,19 @@ impl FromSyscallArg for usize {
         arg as usize
     }
 }
+impl FromSyscallArg for u64 {
+    fn from_arg(arg: u64) -> u64 {
+        arg
+    }
+}
 impl FromSyscallArg for UserAddress {
     fn from_arg(arg: u64) -> UserAddress {
         UserAddress::from(arg)
+    }
+}
+impl FromSyscallArg for FdNumber {
+    fn from_arg(arg: u64) -> FdNumber {
+        FdNumber::from_raw(arg as i32)
     }
 }
 trait IntoSyscallArg<T> {
@@ -79,6 +90,7 @@ pub fn dispatch_syscall(
         exit[1],
         exit_group[1],
         fstat[2],
+        fstatfs[2],
         getegid[0],
         geteuid[0],
         getgid[0],
@@ -88,6 +100,8 @@ pub fn dispatch_syscall(
         getuid[0],
         mmap[6],
         mprotect[3],
+        openat[4],
+        pread64[4],
         readlink[3],
         sched_getscheduler[1],
         set_tid_address[1],

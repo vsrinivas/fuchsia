@@ -12,6 +12,8 @@ use {
     zerocopy::{AsBytes, FromBytes},
 };
 
+use crate::fs::FdNumber;
+
 #[cfg(target_arch = "x86_64")]
 use linux_uapi::x86_64 as uapi;
 pub use uapi::*;
@@ -24,6 +26,9 @@ pub type off_t = uapi::__kernel_off_t;
 pub type pid_t = uapi::__kernel_pid_t;
 pub type uid_t = uapi::__kernel_uid_t;
 
+pub const PAGE_SIZE: u64 = 4 * 1024;
+
+#[derive(Debug, Eq, PartialEq)]
 pub struct Errno(u32);
 
 impl Errno {
@@ -178,7 +183,7 @@ pub const EHWPOISON: Errno = Errno(uapi::EHWPOISON);
 // fdio_status_to_errno. See fxbug.dev/30921 for more context.
 // TODO: Replace clients with more context-specific mappings.
 impl Errno {
-    pub fn from_status(status: zx::Status) -> Self {
+    pub fn from_status_like_fdio(status: zx::Status) -> Self {
         match status {
             zx::Status::NOT_FOUND => ENOENT,
             zx::Status::NO_MEMORY => ENOMEM,
@@ -301,6 +306,12 @@ impl From<UserAddress> for SyscallResult {
     }
 }
 
+impl From<FdNumber> for SyscallResult {
+    fn from(value: FdNumber) -> Self {
+        SyscallResult::Success(value.raw() as u64)
+    }
+}
+
 impl From<i32> for SyscallResult {
     fn from(value: i32) -> Self {
         SyscallResult::Success(value as u64)
@@ -374,4 +385,21 @@ pub struct stat_t {
 pub struct iovec_t {
     pub iov_base: UserAddress,
     pub iov_len: usize,
+}
+
+#[derive(Debug, Default, AsBytes)]
+#[repr(C)]
+pub struct statfs {
+    f_type: i64,
+    f_bsize: i64,
+    f_blocks: i64,
+    f_bfree: i64,
+    f_bavail: i64,
+    f_files: i64,
+    f_ffree: i64,
+    f_fsid: i64,
+    f_namelen: i64,
+    f_frsize: i64,
+    f_flags: i64,
+    f_spare: [i64; 4],
 }

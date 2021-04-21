@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, format_err, Context, Error},
-    fidl::endpoints::{self, ClientEnd, ServerEnd},
+    fidl::endpoints::{self, ServerEnd},
     fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_component_runner::{
         self as fcrunner, ComponentControllerMarker, ComponentStartInfo,
@@ -15,7 +15,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{
         self as zx, sys::zx_exception_info_t, sys::ZX_EXCEPTION_STATE_HANDLED,
-        sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
+        sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL, AsHandleRef, Task,
     },
     futures::{StreamExt, TryStreamExt},
     io_util::directory,
@@ -27,6 +27,7 @@ use {
 };
 
 mod executive;
+mod fs;
 mod loader;
 mod syscall_table;
 mod syscalls;
@@ -45,6 +46,19 @@ fn as_exception_info(buffer: &zx::MessageBuf) -> zx_exception_info_t {
     unsafe { mem::transmute(tmp) }
 }
 
+fn read_channel_sync(chan: &zx::Channel, buf: &mut zx::MessageBuf) -> Result<(), zx::Status> {
+    let res = chan.read(buf);
+    if let Err(zx::Status::SHOULD_WAIT) = res {
+        chan.wait_handle(
+            zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED,
+            zx::Time::INFINITE,
+        )?;
+        chan.read(buf)
+    } else {
+        res
+    }
+}
+
 /// Runs the process associated with `process_context`.
 ///
 /// The process in `process_context.handle` is expected to already have been started. This function
@@ -56,14 +70,14 @@ fn as_exception_info(buffer: &zx::MessageBuf) -> zx_exception_info_t {
 ///   - setting the thread's registers to their post-syscall values
 ///   - setting the exception state to `ZX_EXCEPTION_STATE_HANDLED`
 ///
-/// # Returns
-/// The exit code of the process.
-async fn run_process(
+/// Once this function has completed, the process' exit code (if one is available) can be read from
+/// `process_context.exit_code`.
+fn run_process(
     process_context: Arc<ProcessContext>,
-    exceptions: fasync::Channel,
+    exceptions: zx::Channel,
 ) -> Result<i32, Error> {
     let mut buffer = zx::MessageBuf::new();
-    while exceptions.recv_msg(&mut buffer).await.is_ok() {
+    while read_channel_sync(&exceptions, &mut buffer).is_ok() {
         let info = as_exception_info(&buffer);
         assert!(buffer.n_handles() == 1);
         let exception = zx::Exception::from(buffer.take_handle(0).unwrap());
@@ -151,15 +165,6 @@ async fn start_component(
     let executable_vmo = library_loader::load_vmo(&root_proxy, &binary_path)
         .await
         .context("failed to load executable")?;
-    let (ldsvc_client, ldsvc_server) = zx::Channel::create()?;
-    library_loader::start(
-        directory::clone_no_describe(
-            &root_proxy,
-            Some(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE),
-        )?,
-        ldsvc_server,
-    );
-    let ldsvc_client = ClientEnd::new(ldsvc_client);
 
     let parent_job = fuchsia_runtime::job_default();
     let job = parent_job.create_child_job()?;
@@ -170,23 +175,31 @@ async fn start_component(
         environ: vec![],
     };
 
-    let (process_context, exceptions) =
-        load_executable(&job, executable_vmo, ldsvc_client, &params).await?;
-    let process_context = Arc::new(process_context);
-    let exit_code = run_process(process_context.clone(), exceptions).await?;
+    std::thread::spawn(move || {
+        let err = (|| -> Result<(), Error> {
+            let process_context =
+                block_on(load_executable(&job, executable_vmo, &params, root_proxy))?;
+            let process_context = Arc::new(process_context);
+            let exit_code = run_process(
+                process_context.clone(),
+                process_context.handle.create_exception_channel()?,
+            )?;
 
-    // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
-    // communicate the exit code. The component manager could interpret certain epitaphs as starnix
-    // being unstable, and chose to terminate starnix as a result.
-    // Errors when closing the controller with an epitaph are disregarded, since there are
-    // legitimate reasons for this to fail (like the client having closed the channel).
-    let _ = match exit_code {
-        0 => controller.close_with_epitaph(zx::Status::OK),
-        _ => controller.close_with_epitaph(zx::Status::from_raw(
-            fcomponent::Error::InstanceDied.into_primitive() as i32,
-        )),
-    };
-
+            // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
+            // communicate the exit code. The component manager could interpret certain epitaphs as starnix
+            // being unstable, and chose to terminate starnix as a result.
+            // Errors when closing the controller with an epitaph are disregarded, since there are
+            // legitimate reasons for this to fail (like the client having closed the channel).
+            let _ = match exit_code {
+                0 => controller.close_with_epitaph(zx::Status::OK),
+                _ => controller.close_with_epitaph(zx::Status::from_raw(
+                    fcomponent::Error::InstanceDied.into_primitive() as i32,
+                )),
+            };
+            Ok(())
+        })();
+        err.unwrap();
+    });
     Ok(())
 }
 
@@ -279,4 +292,8 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
     fs.collect::<()>().await;
     Ok(())
+}
+
+pub fn block_on<F: std::future::Future>(fut: F) -> F::Output {
+    fuchsia_async::Executor::new().unwrap().run_singlethreaded(fut)
 }

@@ -25,4 +25,5 @@ bindgen \
   src/proc/lib/linux_uapi/wrapper.h \
   -- \
   -I third_party/android/platform/bionic/libc/kernel/uapi \
-  -I third_party/android/platform/bionic/libc/kernel/android/uapi
+  -I third_party/android/platform/bionic/libc/kernel/android/uapi \
+  -I src/proc/lib/linux_uapi/stub
