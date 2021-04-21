@@ -270,16 +270,16 @@ class MockTransferBuffer : public TransferBuffer {
     } else {
       EXPECT_EQ(vmo_.write(blob.raw_data() + offset, 0, length), ZX_OK);
     }
-    if (offset + length == blob.raw_data_size() && do_merkle_tree_at_end_of_data_) {
-      constexpr static std::array<uint8_t, 64> mock_merkle_tree = {0xAB};
+    if (offset + length == blob.raw_data_size() && offset + length % kBlobfsBlockSize != 0 &&
+        do_merkle_tree_at_end_of_data_) {
+      // Poison the unaligned tail (which in a real blob would contain merkle tree data) with a
+      // non-zero value. The pager should not leak these bytes; they should be zeroed.
       uint64_t pos = offset + length;
-      uint64_t vmo_size;
-      EXPECT_EQ(vmo_.get_size(&vmo_size), ZX_OK);
-      while (pos + mock_merkle_tree.size() <= vmo_size) {
-        EXPECT_EQ(vmo_.write(mock_merkle_tree.data(), pos, mock_merkle_tree.size()), ZX_OK);
-        pos += mock_merkle_tree.size();
-      }
-      EXPECT_EQ(vmo_.write(mock_merkle_tree.data(), pos, vmo_size - pos), ZX_OK);
+      size_t len = fbl::round_up(pos, kBlobfsBlockSize) - pos;
+      EXPECT_LT(len, kBlobfsBlockSize);
+      uint8_t buf[kBlobfsBlockSize];
+      ::memset(buf, 0xAB, len);
+      EXPECT_EQ(vmo_.write(buf, pos, len), ZX_OK);
     }
     return zx::ok();
   }
