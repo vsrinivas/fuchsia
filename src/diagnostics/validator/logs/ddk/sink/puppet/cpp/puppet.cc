@@ -74,6 +74,11 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
     puppet_->EmitLog(std::move(spec), std::move(callback));
   }
 
+  void EmitPrintfLog(::fuchsia::validate::logs::PrintfRecordSpec spec,
+                     EmitPrintfLogCallback callback) override {
+    callback();
+  }
+
  private:
   fuchsia::validate::logs::LogSinkPuppetPtr puppet_;
   driver_integration_test::IsolatedDevmgr devmgr_;

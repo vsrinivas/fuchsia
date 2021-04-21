@@ -6,7 +6,8 @@
         "args": [
             "--url",
             "fuchsia-pkg://fuchsia.com/log-sink-validator-cpp#meta/sink-validator-cpp-puppet.cmx",
-            "--new-file-line-rules"
+            "--new-file-line-rules",
+            "--test-printf"
         ],
         "binary": "bin/sink_validator"
     },

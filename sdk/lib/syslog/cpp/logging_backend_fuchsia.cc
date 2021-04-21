@@ -155,7 +155,7 @@ struct RecordState {
   static RecordState* CreatePtr(LogBuffer* buffer) {
     return reinterpret_cast<RecordState*>(&buffer->record_state);
   }
-  size_t PtrToIndex(void* ptr) {
+  size_t PtrToIndex(void* ptr) const {
     return reinterpret_cast<size_t>(static_cast<uint8_t*>(ptr)) - reinterpret_cast<size_t>(header);
   }
 };
@@ -301,6 +301,7 @@ class Encoder {
 const size_t kMaxTags = 4;  // Legacy from ulib/syslog. Might be worth rethinking.
 // Compiler thinks this is unused even though WriteLogToSocket uses it.
 __UNUSED const char kMessageFieldName[] = "message";
+const char kPrintfFieldName[] = "printf";
 const char kVerbosityFieldName[] = "verbosity";
 const char kPidFieldName[] = "pid";
 const char kTidFieldName[] = "tid";
@@ -344,7 +345,7 @@ class LogState {
 };
 
 void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const char* file_name,
-                         unsigned int line, const char* msg, const char* condition,
+                         unsigned int line, const char* msg, const char* condition, bool is_printf,
                          zx_handle_t socket) {
   // Ensure we have log state
   auto& log_state = LogState::Get();
@@ -377,6 +378,10 @@ void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const 
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
   encoder.Begin(*state, time, ::fuchsia::diagnostics::Severity(severity));
+  if (is_printf) {
+    encoder.AppendArgumentKey(record, SliceFromArray(kPrintfFieldName));
+    encoder.AppendArgumentValue(record, static_cast<uint64_t>(0));
+  }
   encoder.AppendArgumentKey(record, SliceFromArray(kPidFieldName));
   encoder.AppendArgumentValue(record, static_cast<uint64_t>(pid));
   encoder.AppendArgumentKey(record, SliceFromArray(kTidFieldName));
@@ -408,15 +413,23 @@ void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const 
   encoder.AppendArgumentValue(record, static_cast<uint64_t>(line));
 }
 
+void BeginRecordPrintf(LogBuffer* buffer, syslog::LogSeverity severity, const char* file_name,
+                       unsigned int line, const char* msg) {
+  BeginRecordInternal(buffer, severity, file_name, line, msg, nullptr, true /* is_printf */,
+                      ZX_HANDLE_INVALID);
+}
+
 void BeginRecord(LogBuffer* buffer, syslog::LogSeverity severity, const char* file_name,
                  unsigned int line, const char* msg, const char* condition) {
-  BeginRecordInternal(buffer, severity, file_name, line, msg, condition, ZX_HANDLE_INVALID);
+  BeginRecordInternal(buffer, severity, file_name, line, msg, condition, false /* is_printf */,
+                      ZX_HANDLE_INVALID);
 }
 
 void BeginRecordWithSocket(LogBuffer* buffer, syslog::LogSeverity severity, const char* file_name,
                            unsigned int line, const char* msg, const char* condition,
                            zx_handle_t socket) {
-  BeginRecordInternal(buffer, severity, file_name, line, msg, condition, socket);
+  BeginRecordInternal(buffer, severity, file_name, line, msg, condition, false /* is_printf */,
+                      socket);
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, const char* value) {

@@ -65,7 +65,7 @@ Values for severity are defined in [/sdk/fidl/fuchsia.diagnostics.stream/source.
 ## Arguments
 
 Log record data is conveyed via a list of typed key-value pairs. The keys are always non-empty
-strings, and the values can have several types.
+strings (except in the case of printf), which supports different types of arguments, and the values can have several types.
 
 ### Argument header
 
@@ -201,6 +201,31 @@ Name      = {64,NameEnd}           name of the argument, padded to 8-byte alignm
 Value     = {NameEnd+1,SizeWords*64}
 ```
 ---
+
+# Structured printf
+
+Structured print-format (printf) sends format strings and arguments directly as
+key-value pairs. The structured printf format string acts as if it were a printf
+format string, and readers should interpret it as such.
+
+## Marking a message as printf
+
+Structured printf messages are denoted by a single key called "printf" at the
+start of a log message, followed by a u64 value of 0. This *must* be the first
+key/value pair in a message, or it will not be interpreted as a printf message
+(and will instead be a regular key/value pair). If a second printf key is
+encoded in the message, it will be interpreted as a key-value pair with key
+"printf" and the standard rules apply to such fields.
+
+## Encoding printf args
+
+Printf args consist of key-value pairs with an empty key followed by a value
+whose type *must* match that which was specified in the format string. Printf
+values must come before other user-defined key-value pairs in a message.
+Key-value pairs consisting of empty strings that come after a user-defined
+key-value-pair will be treated as a normal key-value pair. Programs which format
+printf messages *should* print key-value pairs after the message string, unless
+specified otherwise in the format message.
 
 # Encoding "legacy" format messages
 

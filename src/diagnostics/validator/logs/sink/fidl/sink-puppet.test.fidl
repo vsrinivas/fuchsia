@@ -17,10 +17,23 @@ struct PuppetInfo {
     zx.koid tid;
 };
 
+union PrintfValue {
+    1: uint64 unsigned_integer_value;
+    2: string string_value;
+    3: float64 float_value;
+    4: int64 integer_value;
+};
+
 struct RecordSpec {
     string:MAX_ARG_NAME_LENGTH file;
     uint32 line;
     fuchsia.diagnostics.stream.Record record;
+};
+
+struct PrintfRecordSpec {
+    RecordSpec record;
+    vector<PrintfValue>:MAX printf_arguments;
+    string:MAX_ARG_NAME_LENGTH msg;
 };
 
 [Discoverable]
@@ -30,4 +43,7 @@ protocol LogSinkPuppet {
 
     /// Logs a record.
     EmitLog(RecordSpec spec) -> ();
+
+    /// Logs a printf record.
+    EmitPrintfLog(PrintfRecordSpec spec) -> ();
 };

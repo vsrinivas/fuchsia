@@ -8,7 +8,9 @@ use diagnostics_log_encoding::{parse::parse_record, Argument, Record, Severity, 
 use fidl_fuchsia_diagnostics_stream::{MAX_ARGS, MAX_ARG_NAME_LENGTH};
 use fidl_fuchsia_logger::{LogSinkRequest, LogSinkRequestStream, MAX_DATAGRAM_LEN_BYTES};
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
-use fidl_fuchsia_validate_logs::{LogSinkPuppetMarker, LogSinkPuppetProxy, PuppetInfo, RecordSpec};
+use fidl_fuchsia_validate_logs::{
+    LogSinkPuppetMarker, LogSinkPuppetProxy, PrintfRecordSpec, PrintfValue, PuppetInfo, RecordSpec,
+};
 use fuchsia_async::{Socket, Task};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
@@ -34,13 +36,16 @@ struct Opt {
     /// set to true if you want to use the new file/line rules (where file and line numbers are always included)
     #[argh(switch)]
     new_file_line_rules: bool,
+    /// true if you want to test structured printf
+    #[argh(switch)]
+    test_printf: bool,
 }
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&[]).unwrap();
-    let Opt { puppet_url, new_file_line_rules } = argh::from_env();
-    Puppet::launch(&puppet_url, new_file_line_rules).await?.test().await
+    let Opt { puppet_url, new_file_line_rules, test_printf } = argh::from_env();
+    Puppet::launch(&puppet_url, new_file_line_rules, test_printf).await?.test().await
 }
 
 struct Puppet {
@@ -54,7 +59,11 @@ struct Puppet {
 }
 
 impl Puppet {
-    async fn launch(puppet_url: &str, new_file_line_rules: bool) -> Result<Self, Error> {
+    async fn launch(
+        puppet_url: &str,
+        new_file_line_rules: bool,
+        has_structured_printf: bool,
+    ) -> Result<Self, Error> {
         let mut fs = ServiceFs::new();
         fs.add_fidl_service(|s: LogSinkRequestStream| s);
 
@@ -110,7 +119,9 @@ impl Puppet {
                     .add_string("message", "Puppet started.")
                     .build(puppet.start_time..zx::Time::get_monotonic())
             );
-
+            if has_structured_printf {
+                assert_printf_record(&puppet, new_file_line_rules).await?;
+            }
             Ok(puppet)
         } else {
             Err(anyhow::format_err!("shouldn't ever receive legacy connections"))
@@ -171,7 +182,6 @@ impl Puppet {
         }
 
         proptest_thread.join().unwrap();
-
         info!("Tested LogSink socket successfully.");
         Ok(())
     }
@@ -187,6 +197,45 @@ impl Puppet {
         let record = self.read_record(new_file_line_rules).await?;
         Ok((record, before..after))
     }
+}
+
+async fn assert_printf_record(puppet: &Puppet, new_file_line_rules: bool) -> Result<(), Error> {
+    let args = vec![
+        PrintfValue::IntegerValue(5),
+        PrintfValue::StringValue("test".to_string()),
+        PrintfValue::FloatValue(0.5),
+    ];
+    let record = RecordSpec {
+        file: "test_file.cc".to_string(),
+        line: 9001,
+        record: Record {
+            arguments: vec![Argument {
+                name: "key".to_string(),
+                value: diagnostics_log_encoding::Value::Text("value".to_string()),
+            }],
+            severity: Severity::Info,
+            timestamp: 0,
+        },
+    };
+    let mut spec: PrintfRecordSpec = PrintfRecordSpec {
+        record: record,
+        printf_arguments: args,
+        msg: "Test printf int %i string %s double %f".to_string(),
+    };
+    puppet.proxy.emit_printf_log(&mut spec).await?;
+    info!("Waiting for printf");
+    assert_eq!(
+        puppet.read_record(new_file_line_rules).await?,
+        RecordAssertion::new(&puppet.info, Severity::Info, new_file_line_rules)
+            .add_string("message", "Test printf int %i string %s double %f")
+            .add_printf(Value::SignedInt(5))
+            .add_printf(Value::Text("test".to_string()))
+            .add_printf(Value::Floating(0.5))
+            .add_string("key", "value")
+            .build(puppet.start_time..zx::Time::get_monotonic())
+    );
+    info!("Got printf");
+    Ok(())
 }
 
 #[derive(Debug, Arbitrary)]
@@ -276,6 +325,19 @@ struct TestRecord {
     timestamp: i64,
     severity: Severity,
     arguments: BTreeMap<String, Value>,
+    printf_arguments: Vec<Value>,
+}
+
+/// State machine used for parsing a record.
+enum StateMachine {
+    /// Initial state (Printf, ModifiedNormal)
+    Init,
+    /// Regular parsing case (no special mode such as printf)
+    RegularArgs,
+    /// Modified parsing case (may switch to printf args)
+    NestedRegularArgs,
+    /// Inside printf args (may switch to RegularArgs)
+    PrintfArgs,
 }
 
 impl TestRecord {
@@ -283,23 +345,54 @@ impl TestRecord {
         let Record { timestamp, severity, arguments } = parse_record(buf)?.0;
 
         let mut sorted_args = BTreeMap::new();
-        for Argument { name, value } in arguments {
-            if severity >= Severity::Error || new_file_line_rules {
-                if name == "file" {
-                    sorted_args.insert(name, Value::Text(STUB_ERROR_FILENAME.to_owned()));
-                    continue;
-                } else if name == "line" {
-                    sorted_args.insert(name, Value::UnsignedInt(STUB_ERROR_LINE));
-                    continue;
+        let mut printf_arguments = vec![];
+
+        let mut state = StateMachine::Init;
+        for Argument { name, value } in arguments.into_iter() {
+            macro_rules! insert_normal {
+                () => {
+                    if severity >= Severity::Error || new_file_line_rules {
+                        if name == "file" {
+                            sorted_args.insert(name, Value::Text(STUB_ERROR_FILENAME.to_owned()));
+                            continue;
+                        } else if name == "line" {
+                            sorted_args.insert(name, Value::UnsignedInt(STUB_ERROR_LINE));
+                            continue;
+                        }
+                    }
+                    sorted_args.insert(name, value);
+                };
+            }
+            match state {
+                StateMachine::Init if name == "printf" => {
+                    state = StateMachine::NestedRegularArgs;
+                }
+                StateMachine::Init => {
+                    insert_normal!();
+                    state = StateMachine::RegularArgs;
+                }
+                StateMachine::RegularArgs => {
+                    insert_normal!();
+                }
+                StateMachine::NestedRegularArgs if name == "" => {
+                    state = StateMachine::PrintfArgs;
+                    printf_arguments.push(value);
+                }
+                StateMachine::NestedRegularArgs => {
+                    insert_normal!();
+                }
+                StateMachine::PrintfArgs if name == "" => {
+                    printf_arguments.push(value);
+                }
+                StateMachine::PrintfArgs => {
+                    insert_normal!();
+                    state = StateMachine::RegularArgs;
                 }
             }
-            sorted_args.insert(name, value);
         }
-
-        Ok(Self { timestamp, severity, arguments: sorted_args })
+        Ok(Self { timestamp, severity, arguments: sorted_args, printf_arguments })
     }
 }
-
 impl PartialEq<RecordAssertion> for TestRecord {
     fn eq(&self, rhs: &RecordAssertion) -> bool {
         rhs.eq(self)
@@ -311,6 +404,7 @@ struct RecordAssertion {
     valid_times: Range<zx::Time>,
     severity: Severity,
     arguments: BTreeMap<String, Value>,
+    printf_arguments: Vec<Value>,
 }
 
 impl RecordAssertion {
@@ -319,7 +413,11 @@ impl RecordAssertion {
         severity: Severity,
         new_file_line_rules: bool,
     ) -> RecordAssertionBuilder {
-        let mut builder = RecordAssertionBuilder { severity, arguments: BTreeMap::new() };
+        let mut builder = RecordAssertionBuilder {
+            severity,
+            arguments: BTreeMap::new(),
+            printf_arguments: vec![],
+        };
         if let Some(tag) = &info.tag {
             builder.add_string("tag", tag);
         }
@@ -338,12 +436,14 @@ impl PartialEq<TestRecord> for RecordAssertion {
         self.valid_times.contains(&zx::Time::from_nanos(rhs.timestamp))
             && self.severity == rhs.severity
             && self.arguments == rhs.arguments
+            && self.printf_arguments == rhs.printf_arguments
     }
 }
 
 struct RecordAssertionBuilder {
     severity: Severity,
     arguments: BTreeMap<String, Value>,
+    printf_arguments: Vec<Value>,
 }
 
 impl RecordAssertionBuilder {
@@ -352,7 +452,13 @@ impl RecordAssertionBuilder {
             valid_times,
             severity: self.severity,
             arguments: std::mem::replace(&mut self.arguments, Default::default()),
+            printf_arguments: self.printf_arguments.clone(),
         }
+    }
+
+    fn add_printf(&mut self, value: Value) -> &mut Self {
+        self.printf_arguments.push(value);
+        self
     }
 
     fn add_string(&mut self, name: &str, value: &str) -> &mut Self {

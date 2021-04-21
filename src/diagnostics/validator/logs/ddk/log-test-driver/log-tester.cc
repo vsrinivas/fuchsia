@@ -47,6 +47,11 @@ void LogTester::DdkInit(ddk::InitTxn txn) {
   return txn.Reply(ZX_OK);
 }
 
+void LogTester::EmitPrintfLog(::fuchsia_validate_logs::wire::PrintfRecordSpec spec,
+                              EmitPrintfLogCompleter::Sync& completer) {
+  completer.Reply();
+}
+
 zx_koid_t GetKoid(zx_handle_t handle) {
   zx_info_handle_basic_t info;
   zx_status_t status =

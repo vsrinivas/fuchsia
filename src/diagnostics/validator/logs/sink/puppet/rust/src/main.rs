@@ -47,6 +47,9 @@ async fn run_puppet(mut requests: LogSinkPuppetRequestStream) {
                 });
                 responder.send().unwrap();
             }
+            LogSinkPuppetRequest::EmitPrintfLog { spec: _, responder } => {
+                responder.send().unwrap();
+            }
         }
     }
 }

@@ -32,6 +32,8 @@ class LogTester : public LogTesterType,
   void GetInfo(GetInfoCompleter::Sync& completer) override;
   void EmitLog(fuchsia_validate_logs::wire::RecordSpec spec,
                EmitLogCompleter::Sync& completer) override;
+  void EmitPrintfLog(fuchsia_validate_logs::wire::PrintfRecordSpec spec,
+                     EmitPrintfLogCompleter::Sync& completer) override;
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
