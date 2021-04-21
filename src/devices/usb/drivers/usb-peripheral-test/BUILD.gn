@@ -30,7 +30,7 @@ if (is_fuchsia) {
       ":usb_peripheral_test-bind",
       "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.usb.function:fuchsia.hardware.usb.function_banjo_cpp",
-      "//sdk/banjo/fuchsia.hardware.usb.request",
+      "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
       "//src/devices/lib/driver",
       "//src/devices/usb/lib/usb",
       "//src/lib/ddk",

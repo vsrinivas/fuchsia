@@ -48,7 +48,7 @@ source_set("shared") {
     ":usb_audio_bind",
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.usb.request",
+    "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//sdk/fidl/fuchsia.hardware.midi:fuchsia.hardware.midi_llcpp",
     "//src/devices/lib/driver",

@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.usb.descriptor") {
+  fidl_only = true
   sdk_category = "partner"
   sources = [ "usb.banjo" ]
 }

@@ -29,7 +29,7 @@ driver_module("usb-cdc-ecm") {
   deps = [
     ":ethernet_usb_cdc_ecm_bind",
     ":usb-cdc-ecm-lib",
-    "//sdk/banjo/fuchsia.hardware.usb.request",
+    "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/listnode",

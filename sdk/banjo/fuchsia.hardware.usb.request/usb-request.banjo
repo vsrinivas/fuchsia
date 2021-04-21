@@ -53,9 +53,9 @@ resource struct UsbRequest {
 
     zx.handle pmt;
     /// Phys addresses of the payload.
-    [Mutable] vector<zx.paddr> phys;
+    [Mutable] vector<zx.paddr>:MAX phys;
 
-    [Mutable] vector<ddk.hw.physiter.SgEntry> sg;
+    [Mutable] vector<ddk.hw.physiter.SgEntry>:MAX sg;
 
     UsbResponse response;
 

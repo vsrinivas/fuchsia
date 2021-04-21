@@ -6,69 +6,69 @@ library fuchsia.hardware.usb.descriptor;
 
 // USB standard descriptor specifications.
 enum UsbSpeed : uint32 {
-    undefined = 0;
-    full = 1;
-    low = 2;
-    high = 3;
-    super = 4;
+    UNDEFINED = 0;
+    FULL = 1;
+    LOW = 2;
+    HIGH = 3;
+    SUPER = 4;
 };
 
 [Packed]
 struct UsbSetup {
-    uint8 bmRequestType;
-    uint8 bRequest;
-    uint16 wValue;
-    uint16 wIndex;
-    uint16 wLength;
+    uint8 bm_request_type;
+    uint8 b_request;
+    uint16 w_value;
+    uint16 w_index;
+    uint16 w_length;
 };
 
 [Packed]
 struct UsbDeviceDescriptor {
-    uint8 bLength;
-    uint8 bDescriptorType;
-    uint16 bcdUsb;
-    uint8 bDeviceClass;
-    uint8 bDeviceSubClass;
-    uint8 bDeviceProtocol;
-    uint8 bMaxPacketSize0;
-    uint16 idVendor;
-    uint16 idProduct;
-    uint16 bcdDevice;
-    uint8 iManufacturer;
-    uint8 iProduct;
-    uint8 iSerialNumber;
-    uint8 bNumConfigurations;
+    uint8 b_length;
+    uint8 b_descriptor_type;
+    uint16 bcd_usb;
+    uint8 b_device_class;
+    uint8 b_device_sub_class;
+    uint8 b_device_protocol;
+    uint8 b_max_packet_size0;
+    uint16 id_vendor;
+    uint16 id_product;
+    uint16 bcd_device;
+    uint8 i_manufacturer;
+    uint8 i_product;
+    uint8 i_serial_number;
+    uint8 b_num_configurations;
 };
 
 [Packed]
 struct UsbSsEpCompDescriptor {
-    uint8 bLength;
-    uint8 bDescriptorType;
-    uint8 bMaxBurst;
-    uint8 bmAttributes;
-    uint16 wBytesPerInterval;
+    uint8 b_length;
+    uint8 b_descriptor_type;
+    uint8 b_max_burst;
+    uint8 bm_attributes;
+    uint16 w_bytes_per_interval;
 };
 
 [Packed]
 struct UsbEndpointDescriptor {
-    uint8 bLength;
-    uint8 bDescriptorType;
-    uint8 bEndpointAddress;
-    uint8 bmAttributes;
-    uint16 wMaxPacketSize;
-    uint8 bInterval;
+    uint8 b_length;
+    uint8 b_descriptor_type;
+    uint8 b_endpoint_address;
+    uint8 bm_attributes;
+    uint16 w_max_packet_size;
+    uint8 b_interval;
 };
 
 [Packed]
 struct UsbInterfaceDescriptor {
-    uint8 bLength;
-    uint8 bDescriptorType;
-    uint8 bInterfaceNumber;
-    uint8 bAlternateSetting;
-    uint8 bNumEndpoints;
-    uint8 bInterfaceClass;
-    uint8 bInterfaceSubClass;
-    uint8 bInterfaceProtocol;
-    uint8 iInterface;
+    uint8 b_length;
+    uint8 b_descriptor_type;
+    uint8 b_interface_number;
+    uint8 b_alternate_setting;
+    uint8 b_num_endpoints;
+    uint8 b_interface_class;
+    uint8 b_interface_sub_class;
+    uint8 b_interface_protocol;
+    uint8 i_interface;
 };
 

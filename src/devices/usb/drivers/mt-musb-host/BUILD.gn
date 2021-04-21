@@ -108,7 +108,7 @@ test("mt-hci-request-queue-test-bin") {
   output_name = "mt-hci-request-queue-test"
   deps = [
     "//sdk/banjo/fuchsia.hardware.usb.hci:fuchsia.hardware.usb.hci_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.usb.request",
+    "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
     "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
     "//src/devices/testing/fake_ddk",

@@ -6,6 +6,7 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.usb.request") {
   disable_verification = true
+  fidl_only = true
   sdk_category = "partner"
   sources = [ "usb-request.banjo" ]
   deps = [
