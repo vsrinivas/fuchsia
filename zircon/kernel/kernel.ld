@@ -114,6 +114,12 @@ SECTIONS
         *(.rodata* .gnu.linkonce.r.*)
     } :rodata
 
+    BootCpuidLeaf : {
+        PROVIDE_HIDDEN(__start_BootCpuidLeaf = .);
+        KEEP(*(BootCpuidLeaf))
+        PROVIDE_HIDDEN(__stop_BootCpuidLeaf = .);
+    }
+
     /*
      * When compiling PIC, the compiler puts things into sections it
      * thinks need to be writable until after dynamic relocation.  In
@@ -259,12 +265,6 @@ SECTIONS
         PROVIDE_HIDDEN(__stop___sancov_guards = .);
     }
 
-    BootCpuid : {
-        PROVIDE_HIDDEN(__start_BootCpuid = .);
-        *(BootCpuid)
-        PROVIDE_HIDDEN(__stop_BootCpuid = .);
-    }
-
     .data : ALIGN(128) {
         /* Pull out any aligned data into a separate section to make sure
          * individual variables do not alias with any unaligned vars.
@@ -274,6 +274,14 @@ SECTIONS
 
         *(.data .data.* .gnu.linkonce.d.*)
     }
+
+    BootCpuidData : {
+        PROVIDE_HIDDEN(__start_BootCpuidData = .);
+        KEEP(*(BootCpuidData))
+        PROVIDE_HIDDEN(__stop_BootCpuidData = .);
+    }
+    ASSERT(SIZEOF(BootCpuidData) ==  2 * SIZEOF(BootCpuidLeaf),
+           "The BootCpuidLeaf and BootCpuidData sizes should precisely correlate: one holds CPUID leaf information and the other the associated values")
 
     /*
      * Note that this end size might not be aligned.  That's OK.  It's

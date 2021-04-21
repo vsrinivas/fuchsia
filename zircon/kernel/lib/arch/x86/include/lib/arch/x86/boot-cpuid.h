@@ -47,11 +47,6 @@ namespace internal {
 // that are tolerable to use from assembly.
 extern "C" CpuidIo gBootCpuid0, gBootCpuidHyp0, gBootCpuidExt0, gBootCpuidFeature, gBootCpuidExtf;
 
-// This is used to set up compile-time initial values for InitializeBootCpuid()
-// to fill in later.  See BootCpuidIo, below.
-template <uint32_t Leaf, uint32_t Subleaf = 0>
-inline constexpr CpuidIo kBootCpuidInitializer = {{Leaf, 0, Subleaf, 0}};
-
 }  // namespace internal
 
 // A "CPUID I/O provider", BootCpuidIo's methods are expected to be
@@ -95,8 +90,13 @@ class BootCpuidIo {
     static_assert(alignof(CpuidIo) == alignof(uint32_t));
     static_assert(sizeof(CpuidIo) == sizeof(uint32_t[4]));
     static_assert(std::is_same_v<decltype(CpuidIo{}.values_), uint32_t[4]>);
-    [[gnu::section("BootCpuid")]] alignas(uint32_t) static CpuidIo gCpuidIo =
-        internal::kBootCpuidInitializer<Leaf, Subleaf>;
+
+    // "used" for kCpuidLeaf to prevent compiler-GC; "used" for kCpuidIo to be
+    // doubly sure that every BootCpuidLeaf entry has an associated one in
+    // BootCpuidData.
+    [[gnu::section("BootCpuidData"), gnu::used]] alignas(uint32_t) static CpuidIo gCpuidIo;
+    [[gnu::section("BootCpuidLeaf"), gnu::used]] alignas(
+        uint32_t) static const uint32_t kCpuidLeaf[2] = {Leaf, Subleaf};
 #else
     // TODO(fxbug.dev/27083): GCC doesn't honor the section attribute in a
     // COMDAT context.  Instead, just do on-demand initialization right here.
@@ -122,7 +122,7 @@ class BootCpuidIo {
 };
 
 // Call this once early in startup, before any uses of arch::BootCpuIdIo.  It
-// initializes all the kBootCpuidInitializer<...> values by using the CPUID
+// initializes all the CpuidIo values in link map by using the CPUID
 // instruction.  See below for implementation details.
 extern "C" void InitializeBootCpuid();
 

@@ -12,15 +12,17 @@
 #define LEA_GLOBAL(x, reg) lea (x)(%rip), reg
 #define BX %rbx
 #define REGSIZE 8
-#define START %rsi
-#define STOP %rdi
+#define LEAVES_START %rsi
+#define LEAVES_STOP %rdi
+#define DATA_START %r8
 #else
 #define GLOBAL(x) x
 #define LEA_GLOBAL(x, reg) mov $x, reg
 #define BX %ebx
 #define REGSIZE 4
-#define START %esi
-#define STOP %edi
+#define LEAVES_START %esi
+#define LEAVES_STOP %edi
+#define DATA_START %ebp
 #endif // __x86_64__
 
 // Stores CPUID values represented by EAX-EDX at a particular address.
@@ -38,6 +40,12 @@ mov %edx, CPUID_EDX + \addr
   push BX
   .cfi_adjust_cfa_offset REGSIZE
   .cfi_rel_offset BX, 0
+// We need to make use of another call-saved register in the 32-bit case.
+#ifndef __x86_64__
+  push DATA_START
+  .cfi_adjust_cfa_offset REGSIZE
+  .cfi_rel_offset DATA_START, 0
+#endif
 
   // The zeroth leaves (basic, hypervisor, and extended) are special because
   // they tell us what other leaves exist.
@@ -62,8 +70,9 @@ mov %edx, CPUID_EDX + \addr
   // their objects into the special section named "BootCpuid", so the linker
   // magically defines these two symbols.  The compile-time initialized values
   // give the leaf and subleaf to query.
-  LEA_GLOBAL(__start_BootCpuid, START)
-  LEA_GLOBAL(__stop_BootCpuid, STOP)
+  LEA_GLOBAL(__start_BootCpuidLeaf, LEAVES_START)
+  LEA_GLOBAL(__stop_BootCpuidLeaf, LEAVES_STOP)
+  LEA_GLOBAL(__start_BootCpuidData, DATA_START)
   jmp .Loopcheck
 
 .Loop:
@@ -77,7 +86,7 @@ mov %edx, CPUID_EDX + \addr
   // leaves, as we do not expect them to be present in the special section and
   // further we expect to have already initiliazed them at the top of the
   // routine.
-  mov CPUID_EAX(START), %eax
+  mov 0(LEAVES_START), %eax
 
   // Skip to the hypervisor range if the extended range is unsupported.
   cmpl $0, GLOBAL(gBootCpuidExt0 + CPUID_EAX)
@@ -106,22 +115,31 @@ mov %edx, CPUID_EDX + \addr
 
 .Linit:
   // Load the subleaf and ask the hardware.
-  mov CPUID_ECX(START), %ecx
+  mov 4(LEAVES_START), %ecx
   cpuid
 
   // Store the register values.
 .Lstore:
-  store_cpuid 0(START)
+  store_cpuid 0(DATA_START)
 
   // Next iteration.
-  lea (4 * 4)(START), START
+  lea (4 * 4)(DATA_START), DATA_START
+  lea (4 * 2)(LEAVES_START), LEAVES_START
 .Loopcheck:
-  cmp START, STOP
+  // A link-time assertion ensures that BootCpuidLeaf and BootCpuidData
+  // sections have the same number of entries, so we need only track the
+  // iteration through BootCpuidLeaf.
+  cmp LEAVES_START, LEAVES_STOP
   jne .Loop
 
   pop BX
   .cfi_adjust_cfa_offset -REGSIZE
   .cfi_same_value BX
+#ifndef __x86_64__
+  pop DATA_START
+  .cfi_adjust_cfa_offset -REGSIZE
+  .cfi_same_value DATA_START
+#endif
 
   ret
 

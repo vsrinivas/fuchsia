@@ -84,6 +84,12 @@ SECTIONS {
     QUAD(PHYS_LOAD_ADDRESS);
   } :load
 
+  BootCpuidLeaf : {
+    PROVIDE_HIDDEN(__start_BootCpuidLeaf = .);
+    KEEP(*(BootCpuidLeaf))
+    PROVIDE_HIDDEN(__stop_BootCpuidLeaf = .);
+  }
+
   /*
    * Dynamic linking metadata.
    *
@@ -125,6 +131,14 @@ SECTIONS {
   .data : {
     *(.data*)
   }
+
+  BootCpuidData : {
+    PROVIDE_HIDDEN(__start_BootCpuidData = .);
+    KEEP(*(BootCpuidData))
+    PROVIDE_HIDDEN(__stop_BootCpuidData = .);
+  }
+  ASSERT(SIZEOF(BootCpuidData) ==  2 * SIZEOF(BootCpuidLeaf),
+         "The BootCpuidLeaf and BootCpuidData sizes should precisely correlate: one holds CPUID leaf information and the other the associated values")
 
   /*
    * Any writable orphan sections will be placed here.  The separate clause

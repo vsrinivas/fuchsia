@@ -12,18 +12,22 @@ namespace internal {
 // The zeroth basic, hypervisor, and extended leaves (0, 0x4000'0000, and
 // 0x8000'0000) are handled specially in InitializeBootCpuid itself.
 // Note that they are not in the special section.
-CpuidIo gBootCpuid0 = kBootCpuidInitializer<CpuidMaximumLeaf::kLeaf>;
-CpuidIo gBootCpuidHyp0 = kBootCpuidInitializer<CpuidMaximumHypervisorLeaf::kLeaf>;
-CpuidIo gBootCpuidExt0 = kBootCpuidInitializer<CpuidMaximumExtendedLeaf::kLeaf>;
+CpuidIo gBootCpuid0;
+CpuidIo gBootCpuidHyp0;
+CpuidIo gBootCpuidExt0;
 
 // These leaves are used from assembly code that needs unmangled names for
 // them, but InitializeBootCpuid handles them like implicit instantiations.
 
-[[gnu::section("BootCpuid")]] alignas(uint32_t) CpuidIo gBootCpuidFeature =
-    kBootCpuidInitializer<CpuidFeatureFlagsC::kLeaf>;
+[[gnu::section("BootCpuidData")]] alignas(uint32_t) CpuidIo gBootCpuidFeature;
+[[gnu::section("BootCpuidLeaf"),
+  gnu::used]] alignas(uint32_t) static const uint32_t kBootCpuidFeatureLeaf[2] = {
+    CpuidFeatureFlagsC::kLeaf, 0};
 
-[[gnu::section("BootCpuid")]] alignas(uint32_t) CpuidIo gBootCpuidExtf =
-    kBootCpuidInitializer<CpuidExtendedFeatureFlagsB::kLeaf>;
+[[gnu::section("BootCpuidData")]] alignas(uint32_t) CpuidIo gBootCpuidExtf;
+[[gnu::section("BootCpuidLeaf"),
+  gnu::used]] alignas(uint32_t) static const uint32_t kBootCpuidExtfLeaf[2] = {
+    CpuidExtendedFeatureFlagsB::kLeaf, 0};
 
 }  // namespace internal
 }  // namespace arch
