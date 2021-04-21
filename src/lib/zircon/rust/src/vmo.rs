@@ -6,7 +6,7 @@
 
 use crate::ok;
 use crate::{object_get_info, object_get_property, object_set_property, ObjectQuery, Topic};
-use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Resource, Status};
 use crate::{Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet};
 use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
@@ -159,10 +159,7 @@ impl Vmo {
     /// Wraps the
     /// [zx_vmo_replace_as_executable](https://fuchsia.dev/fuchsia-src/reference/syscalls/vmo_replace_as_executable.md)
     /// syscall.
-    pub fn replace_as_executable(self) -> Result<Vmo, Status> {
-        // TODO(fxbug.dev/24770): Add resource argument for exec setter.
-        let vmex = Handle::invalid();
-
+    pub fn replace_as_executable(self, vmex: &Resource) -> Result<Vmo, Status> {
         let mut out = 0;
         let status = unsafe {
             sys::zx_vmo_replace_as_executable(self.raw_handle(), vmex.raw_handle(), &mut out)
@@ -239,7 +236,9 @@ unsafe_handle_properties!(object: Vmo,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Rights;
+    use crate::{Handle, Rights};
+    use fidl_fuchsia_kernel as fkernel;
+    use fuchsia_component::client::connect_channel_to_service;
 
     #[test]
     fn vmo_deprecated_flags() {
@@ -434,18 +433,22 @@ mod tests {
         assert_eq!(&read_buffer[0..5], b"three");
     }
 
-    // TODO(fxbug.dev/24770): In the near-ish future zx_vmo_replace_as_executable will be restricted and
-    // will require either the process run in a job with some special policy or have access to a
-    // special resource. We will either need to run the test binary with that capability or delete
-    // this test at that point.
     #[test]
     fn vmo_replace_as_executeable() {
+        use fuchsia_zircon::{Channel, HandleBased, Time};
+
         let vmo = Vmo::create(16).unwrap();
 
         let info = vmo.as_handle_ref().basic_info().unwrap();
         assert!(!info.rights.contains(Rights::EXECUTE));
 
-        let exec_vmo = vmo.replace_as_executable().unwrap();
+        let (client_end, server_end) = Channel::create().unwrap();
+        connect_channel_to_service::<fkernel::VmexResourceMarker>(server_end).unwrap();
+        let mut service = fkernel::VmexResourceSynchronousProxy::new(client_end);
+        let resource = service.get(Time::INFINITE).expect("couldn't get vmex resource");
+        let resource = unsafe { crate::Resource::from(Handle::from_raw(resource.into_raw())) };
+
+        let exec_vmo = vmo.replace_as_executable(&resource).unwrap();
         let info = exec_vmo.as_handle_ref().basic_info().unwrap();
         assert!(info.rights.contains(Rights::EXECUTE));
     }

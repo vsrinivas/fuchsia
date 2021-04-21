@@ -31,7 +31,9 @@ async fn run_service(mut stream: ProtectedOperationsRequestStream) -> Result<(),
                 // TODO: zx::Vmo::replace_as_executable currently always uses an invalid resource,
                 // which is what we want here because we're exercising ZX_POL_AMBIENT_MARK_VMO_EXEC.
                 // When it's updated, this should continue using an invalid resource handle.
-                let mut result = vmo.replace_as_executable().map_err(zx::Status::into_raw);
+                let mut result = vmo
+                    .replace_as_executable(&zx::Resource::from(zx::Handle::invalid()))
+                    .map_err(zx::Status::into_raw);
                 responder.send(&mut result)?;
             }
         }
