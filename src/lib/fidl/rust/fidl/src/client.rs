@@ -26,9 +26,6 @@ use {
     std::{collections::VecDeque, marker::Unpin, mem, pin::Pin, sync::Arc},
 };
 
-#[cfg(target_os = "fuchsia")]
-use fuchsia_zircon::AsHandleRef;
-
 fn decode_transaction_body<D: Decodable>(mut buf: MessageBufEtc) -> Result<D, Error> {
     let (bytes, handles) = buf.split_mut();
     let (header, body_bytes) = decode_transaction_header(bytes)?;
@@ -766,9 +763,6 @@ pub mod sync {
         service_name: &'static str,
     }
 
-    // TODO: remove this and allow multiple overlapping queries on the same channel.
-    pub(super) const QUERY_TX_ID: u32 = 42;
-
     impl Client {
         /// Create a new synchronous FIDL client.
         pub fn new(channel: zx::Channel, service_name: &'static str) -> Self {
@@ -809,50 +803,27 @@ pub mod sync {
             ordinal: u64,
             deadline: zx::Time,
         ) -> Result<D, Error> {
-            // Write the message into the channel
-            self.buf_bytes.clear();
-            self.buf_write_handles.clear();
-            let msg = &mut TransactionMessage {
-                header: TransactionHeader::new(QUERY_TX_ID, ordinal),
-                body: msg,
-            };
-            Encoder::encode(&mut self.buf_bytes, &mut self.buf_write_handles, msg)?;
-            self.channel
-                .write_etc(&mut self.buf_bytes, &mut self.buf_write_handles)
-                .map_err(|e| self.wrap_error(Error::ClientWrite, e))?;
+            let mut write_bytes = Vec::<u8>::new();
+            let mut write_handles = Vec::<HandleDisposition<'static>>::new();
 
-            // Read the response
-            self.buf_bytes.clear();
-            self.buf_read_handles.clear();
-            match self.channel.read_etc_split(&mut self.buf_bytes, &mut self.buf_read_handles) {
-                Ok(()) => {}
-                Err(zx_status::Status::SHOULD_WAIT) => {
-                    let signals = self
-                        .channel
-                        .wait_handle(
-                            zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED,
-                            deadline,
-                        )
-                        .map_err(|e| Error::ClientRead(e.into()))?;
-                    if !signals.contains(zx::Signals::CHANNEL_READABLE) {
-                        debug_assert!(signals.contains(zx::Signals::CHANNEL_PEER_CLOSED));
-                        return Err(
-                            self.wrap_error(Error::ClientRead, zx_status::Status::PEER_CLOSED)
-                        );
-                    }
-                    self.channel
-                        .read_etc_split(&mut self.buf_bytes, &mut self.buf_read_handles)
-                        .map_err(|e| self.wrap_error(Error::ClientRead, e))?;
-                }
-                Err(e) => return Err(self.wrap_error(Error::ClientRead, e)),
-            }
-            let (header, body_bytes) = decode_transaction_header(&self.buf_bytes)?;
-            // TODO(fxbug.dev/73477): Handle epitaphs.
-            if header.tx_id() != QUERY_TX_ID || header.ordinal() != ordinal {
-                return Err(Error::UnexpectedSyncResponse);
-            }
+            let msg =
+                &mut TransactionMessage { header: TransactionHeader::new(0, ordinal), body: msg };
+            Encoder::encode(&mut write_bytes, &mut write_handles, msg)?;
+
+            let mut buf = zx::MessageBufEtc::new();
+            buf.ensure_capacity_bytes(zx::sys::ZX_CHANNEL_MAX_MSG_BYTES as usize);
+            buf.ensure_capacity_handle_infos(zx::sys::ZX_CHANNEL_MAX_MSG_HANDLES as usize);
+
+            // TODO: We should be able to use the same memory to back the bytes we use for writing
+            // and reading.
+            self.channel
+                .call_etc(deadline, &write_bytes, &mut write_handles, &mut buf)
+                .map_err(|e| self.wrap_error(Error::ClientCall, e))?;
+
+            let (bytes, mut handle_infos) = buf.split();
+            let (header, body_bytes) = decode_transaction_header(&bytes)?;
             let mut output = D::new_empty();
-            Decoder::decode_into(&header, body_bytes, &mut self.buf_read_handles, &mut output)?;
+            Decoder::decode_into(&header, body_bytes, &mut handle_infos, &mut output)?;
             Ok(output)
         }
 
@@ -886,7 +857,7 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_async::{DurationExt, TimeoutExt},
         fuchsia_zircon as zx,
-        fuchsia_zircon::DurationNum,
+        fuchsia_zircon::{AsHandleRef, DurationNum},
         futures::{join, FutureExt, StreamExt},
         futures_test::task::new_count_waker,
         matches::assert_matches,
@@ -950,8 +921,39 @@ mod tests {
             server_end.read_etc(&mut received).expect("failed to read on server end");
             let (buf, _handles) = received.split_mut();
             let (header, _body_bytes) = decode_transaction_header(buf).expect("server decode");
-            assert_eq!(header.tx_id(), sync::QUERY_TX_ID);
             assert_eq!(header.ordinal(), SEND_ORDINAL);
+            send_transaction(TransactionHeader::new(header.tx_id(), header.ordinal()), &server_end);
+        });
+        let response_data = client
+            .send_query::<u8, u8>(
+                &mut SEND_DATA.clone(),
+                SEND_ORDINAL,
+                zx::Time::after(5.seconds()),
+            )
+            .context("sending query")?;
+        assert_eq!(SEND_DATA, response_data);
+        Ok(())
+    }
+
+    #[test]
+    fn sync_client_with_event_and_response() -> Result<(), Error> {
+        let (client_end, server_end) = zx::Channel::create().context("chan create")?;
+        let mut client = sync::Client::new(client_end, "test_service");
+        thread::spawn(move || {
+            // Server
+            let mut received = MessageBufEtc::new();
+            server_end
+                .wait_handle(zx::Signals::CHANNEL_READABLE, zx::Time::after(5.seconds()))
+                .expect("failed to wait for channel readable");
+            server_end.read_etc(&mut received).expect("failed to read on server end");
+            let (buf, _handles) = received.split_mut();
+            let (header, _body_bytes) = decode_transaction_header(buf).expect("server decode");
+            assert_ne!(header.tx_id(), 0);
+            assert_eq!(header.ordinal(), SEND_ORDINAL);
+            // First, send an event.
+            send_transaction(TransactionHeader::new(0, 5), &server_end);
+            // Then send the reply. The kernel should pick the correct message to deliver based
+            // on the tx_id.
             send_transaction(TransactionHeader::new(header.tx_id(), header.ordinal()), &server_end);
         });
         let response_data = client
@@ -997,26 +999,6 @@ mod tests {
                 status: zx_status::Status::PEER_CLOSED,
                 service_name: "test_service",
             })
-        );
-        Ok(())
-    }
-
-    // TODO(fxbug.dev/73478): When the sync client supports receiving events,
-    // rename this and expect the client to receive both response and event.
-    #[test]
-    fn sync_client_broken_by_event() -> Result<(), Error> {
-        let (client_end, server_end) = zx::Channel::create().context("chan create")?;
-        let mut client = sync::Client::new(client_end, "test_service");
-        // Send an event from the server.
-        send_transaction(TransactionHeader::new(0, 5), &server_end);
-        // Client gets the event instead of the expected sync method response.
-        assert_matches!(
-            client.send_query::<u8, u8>(
-                &mut SEND_DATA.clone(),
-                SEND_ORDINAL,
-                zx::Time::after(5.seconds()),
-            ),
-            Err(crate::Error::UnexpectedSyncResponse)
         );
         Ok(())
     }
