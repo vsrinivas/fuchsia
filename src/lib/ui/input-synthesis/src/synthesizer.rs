@@ -243,7 +243,7 @@ impl<'a> Replayer<'a> {
     ///
     /// All timing in [TimedKeyEvent] is relative to the instance in the monotonic clock base at which
     /// we started replaying the entire event sequence.  The replay returns an error in case
-    /// the events are not sequenced with nondecreasing timestamps.
+    /// the events are not sequenced with strictly increasing timestamps.
     async fn replay<'b: 'a>(&mut self, events: &'b [TimedKeyEvent]) -> Result<(), Error> {
         let mut last_key_event_at = Duration::from_micros(0);
 
@@ -253,6 +253,19 @@ impl<'a> Replayer<'a> {
                 return Err(anyhow::anyhow!(
                     concat!(
                         "TimedKeyEvent was requested out of sequence: ",
+                        "TimedKeyEvent: {:?}, low watermark for duration_since_start: {:?}"
+                    ),
+                    &key_event,
+                    last_key_event_at
+                ));
+            }
+            if key_event.duration_since_start == last_key_event_at {
+                // If you see this error message, read the documentation for how to send key events
+                // correctly in the TimedKeyEvent documentation.
+                return Err(anyhow::anyhow!(
+                    concat!(
+                        "TimedKeyEvent was requested at the same time instant as a previous event. ",
+                        "This is not allowed, each key event must happen at a distinct timestamp: ",
                         "TimedKeyEvent: {:?}, low watermark for duration_since_start: {:?}"
                     ),
                     &key_event,
@@ -955,6 +968,33 @@ mod tests {
                         input::Key::B,
                         input3::KeyEventType::Pressed,
                         Duration::from_millis(10),
+                    ),
+                ],
+                &mut fake_event_listener,
+            )
+            .await;
+            match result {
+                Err(_) => Ok(()),
+                Ok(_) => Err(anyhow::anyhow!("expected error but got Ok")),
+            }
+        }
+
+        #[fasync::run_singlethreaded(test)]
+        async fn dispatch_key_events_with_same_timestamp() -> Result<(), Error> {
+            let mut fake_event_listener = FakeInputDeviceRegistry::new();
+
+            // Configures a two-key chord in the wrong temporal order.
+            let result = dispatch_key_events_async(
+                &vec![
+                    TimedKeyEvent::new(
+                        input::Key::A,
+                        input3::KeyEventType::Pressed,
+                        Duration::from_millis(20),
+                    ),
+                    TimedKeyEvent::new(
+                        input::Key::B,
+                        input3::KeyEventType::Pressed,
+                        Duration::from_millis(20),
                     ),
                 ],
                 &mut fake_event_listener,
