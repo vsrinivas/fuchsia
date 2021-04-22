@@ -21,7 +21,9 @@ fn explore(
         // Recurse on the children
         let mut future_children = vec![];
         let children_dir = hub_dir.open_dir("children").expect("open_dir(`children`) failed!");
-        for child_name in children_dir.entries().await {
+        for child_name in
+            children_dir.entries().await.expect("Could not get entries from directory.")
+        {
             let child_dir = children_dir
                 .open_dir(&child_name)
                 .expect(format!("open_dir(`{}`) failed!", child_name).as_str());
@@ -93,25 +95,31 @@ impl Execution {
         // Get the ELF runtime
         let elf_runtime = if exec_dir.exists("runtime").await {
             let runtime_dir = exec_dir.open_dir("runtime").expect("open_dir(`runtime`) failed!");
-            if runtime_dir.exists("elf").await {
-                let elf_runtime_dir = runtime_dir.open_dir("elf").expect("open_dir(`elf`) failed!");
+            let entries = runtime_dir.entries().await;
+            if let Ok(entries) = entries {
+                if entries.iter().any(|s| s == "elf") {
+                    let elf_runtime_dir =
+                        runtime_dir.open_dir("elf").expect("open_dir(`elf`) failed!");
 
-                let (job_id, process_id) = futures::join!(
-                    elf_runtime_dir.read_file("job_id"),
-                    elf_runtime_dir.read_file("process_id"),
-                );
+                    let (job_id, process_id) = futures::join!(
+                        elf_runtime_dir.read_file("job_id"),
+                        elf_runtime_dir.read_file("process_id"),
+                    );
 
-                let job_id = job_id
-                    .expect("read_file(`job_id`) failed!")
-                    .parse::<u32>()
-                    .expect("parse(`job_id`) failed!");
+                    let job_id = job_id
+                        .expect("read_file(`job_id`) failed!")
+                        .parse::<u32>()
+                        .expect("parse(`job_id`) failed!");
 
-                let process_id = process_id
-                    .expect("read_file(`process_id`) failed!")
-                    .parse::<u32>()
-                    .expect("parse(`process_id`) failed!");
+                    let process_id = process_id
+                        .expect("read_file(`process_id`) failed!")
+                        .parse::<u32>()
+                        .expect("parse(`process_id`) failed!");
 
-                Some(ElfRuntime { job_id, process_id })
+                    Some(ElfRuntime { job_id, process_id })
+                } else {
+                    None
+                }
             } else {
                 None
             }
@@ -137,12 +145,14 @@ impl Execution {
 
         let expose_dir = exec_dir.open_dir("expose").expect("open_dir(`expose`) failed!");
 
-        let (exposed_capabilities, incoming_capabilities) =
-            futures::join!(expose_dir.entries(), get_capabilities(in_dir),);
+        let exposed_capabilities =
+            expose_dir.entries().await.expect("Could not get entries from directory.");
+
+        let incoming_capabilities = get_capabilities(in_dir).await;
 
         let outgoing_capabilities = if exec_dir.exists("out").await {
             let out_dir = exec_dir.open_dir("out").expect("open_dir(`out`) failed!");
-            get_capabilities_timeout(out_dir).await
+            get_capabilities_timeout(out_dir).await.ok()
         } else {
             // The directory doesn't exist. This is probably because
             // there is no runtime on the component.

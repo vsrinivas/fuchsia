@@ -77,16 +77,15 @@ impl Directory {
     // Checks if a file exists in this directory.
     // Function is not recursive. Does not check subdirectories.
     pub async fn exists(&self, filename: &str) -> bool {
-        self.entries().await.iter().any(|s| s == filename)
+        self.entries()
+            .await
+            .expect("Could not get entries from directory.")
+            .iter()
+            .any(|s| s == filename)
     }
 
     // Return a list of filenames in the directory
-    pub async fn entries(&self) -> Vec<String> {
-        readdir(&self.proxy)
-            .await
-            .expect("readdir() failed!")
-            .iter()
-            .map(|entry| entry.name.clone())
-            .collect()
+    pub async fn entries(&self) -> Result<Vec<String>, Error> {
+        Ok(readdir(&self.proxy).await?.iter().map(|entry| entry.name.clone()).collect())
     }
 }

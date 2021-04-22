@@ -15,7 +15,7 @@ static UNKNOWN: &str = "UNKNOWN";
 /// Used as a helper function to traverse <realm id>/r/, <realm id>/c/,
 /// <component instance id>/c/, following through into their id subdirectories.
 async fn open_id_directories(id_dir: Directory) -> Vec<Directory> {
-    let mut ids = id_dir.entries().await;
+    let mut ids = id_dir.entries().await.expect("Could not get entries from directory.");
     let proxy = Arc::new(id_dir);
     join_all(ids.drain(..).map(move |id| {
         let proxy = proxy.clone();
@@ -36,7 +36,8 @@ fn visit_child_realms(
     subcommand: Subcommand,
 ) -> BoxFuture<'static, Vec<V1Realm>> {
     async move {
-        let mut realm_names = child_realms_dir.entries().await;
+        let mut realm_names =
+            child_realms_dir.entries().await.expect("Could not get entries from directory.");
         let proxy = Arc::new(child_realms_dir);
         // visit all entries within <realm id>/r/
         join_all(realm_names.drain(..).map(move |realm_name| {
@@ -74,7 +75,8 @@ fn visit_child_components(
     subcommand: Subcommand,
 ) -> BoxFuture<'static, Vec<V1Component>> {
     async move {
-        let mut component_names = child_components_dir.entries().await;
+        let mut component_names =
+            child_components_dir.entries().await.expect("Could not get entries from directory.");
         let proxy = Arc::new(child_components_dir);
         join_all(component_names.drain(..).map(move |component_name| {
             let proxy = proxy.clone();
@@ -258,6 +260,7 @@ impl V1Component {
                     component_dir.open_dir("out").expect("open_dir(`out`) failed!"),
                 )
                 .await
+                .ok()
             } else {
                 // The directory doesn't exist. This is probably because
                 // there is no runtime on the component.

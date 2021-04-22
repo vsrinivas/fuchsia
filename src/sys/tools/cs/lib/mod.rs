@@ -10,7 +10,6 @@ use {
     crate::io::Directory,
     anyhow::{format_err, Error},
     fuchsia_async::TimeoutExt,
-    futures::future::FutureExt,
 };
 
 #[derive(Copy, Debug, Eq, PartialEq, Clone)]
@@ -56,13 +55,15 @@ pub static WIDTH_CS_TREE: usize = 19;
 static CAPABILITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
 
 pub(crate) async fn get_capabilities(capability_dir: Directory) -> Vec<String> {
-    let mut entries = capability_dir.entries().await;
+    let mut entries =
+        capability_dir.entries().await.expect("Could not get entries from directory.");
 
     for (index, name) in entries.iter().enumerate() {
         if name == "svc" {
             entries.remove(index);
             let svc_dir = capability_dir.open_dir("svc").expect("open_dir(`svc`) failed!");
-            let mut svc_entries = svc_dir.entries().await;
+            let mut svc_entries =
+                svc_dir.entries().await.expect("Could not get entries from directory.");
             entries.append(&mut svc_entries);
             break;
         }
@@ -72,27 +73,26 @@ pub(crate) async fn get_capabilities(capability_dir: Directory) -> Vec<String> {
     entries
 }
 
-pub(crate) async fn get_capabilities_timeout(capability_dir: Directory) -> Option<Vec<String>> {
-    let entries =
-        capability_dir.entries().map(|d| Some(d)).on_timeout(CAPABILITY_TIMEOUT, || None).await;
-    if let Some(mut entries) = entries {
-        for (index, name) in entries.iter().enumerate() {
-            if name == "svc" {
-                entries.remove(index);
-                let svc_dir = capability_dir.open_dir("svc").expect("open_dir(`svc`) failed!");
-                let mut svc_entries = svc_dir.entries().await;
-                entries.append(&mut svc_entries);
-                break;
-            }
+pub(crate) async fn get_capabilities_timeout(
+    capability_dir: Directory,
+) -> Result<Vec<String>, Error> {
+    let mut entries = capability_dir
+        .entries()
+        .on_timeout(CAPABILITY_TIMEOUT, || Err(format_err!("Timeout occurred")))
+        .await?;
+    for (index, name) in entries.iter().enumerate() {
+        if name == "svc" {
+            entries.remove(index);
+            let svc_dir = capability_dir.open_dir("svc").expect("open_dir(`svc`) failed!");
+            let mut svc_entries =
+                svc_dir.entries().await.expect("Could not get entries from directory.");
+            entries.append(&mut svc_entries);
+            break;
         }
-
-        entries.sort_unstable();
-        Some(entries)
-    } else {
-        // Can't get capabilities because the directory could not be opened.
-        // This is probably because it isn't being served.
-        None
     }
+
+    entries.sort_unstable();
+    Ok(entries)
 }
 
 #[cfg(test)]
@@ -148,8 +148,8 @@ mod tests {
             .expect("from_namespace() failed: failed to open root hub directory!");
         let capabilities = get_capabilities_timeout(root_dir).await;
         assert_eq!(
-            capabilities,
-            Some(vec!["fuchsia.bar".to_string(), "fuchsia.foo".to_string(), "hub".to_string()])
+            capabilities.unwrap(),
+            vec!["fuchsia.bar".to_string(), "fuchsia.foo".to_string(), "hub".to_string()]
         );
     }
 }
