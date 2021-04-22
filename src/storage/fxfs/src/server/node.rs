@@ -36,8 +36,7 @@ impl FxNode for Placeholder {
     }
 }
 
-/// PlaceholderOwner is a reserved slot in the node cache. It should be filled with a node
-/// (PlaceholderOwner::set), then committed back to the cache via NodeCache::commit.
+/// PlaceholderOwner is a reserved slot in the node cache.
 pub struct PlaceholderOwner<'a> {
     inner: Arc<Placeholder>,
     committed: bool,
@@ -45,6 +44,7 @@ pub struct PlaceholderOwner<'a> {
 }
 
 impl PlaceholderOwner<'_> {
+    /// Commits a node to the cache, replacing the placeholder and unblocking any waiting callers.
     pub fn commit(mut self, node: &Arc<dyn FxNode>) {
         let this_object_id = self.inner.object_id();
         assert_eq!(node.object_id(), this_object_id);
@@ -55,7 +55,6 @@ impl PlaceholderOwner<'_> {
 
 impl Drop for PlaceholderOwner<'_> {
     fn drop(&mut self) {
-        assert_eq!(Arc::strong_count(&self.inner), 1, "References to Placeholder should be unique");
         let mut p = self.inner.0.lock().unwrap();
         if !self.committed {
             // If the placeholder is dropped before it was committed, remove the cache entry so that
