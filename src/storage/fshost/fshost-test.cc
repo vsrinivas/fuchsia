@@ -4,6 +4,7 @@
 
 #include <fuchsia/fshost/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/io2/llcpp/fidl.h>
 #include <fuchsia/process/lifecycle/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -162,7 +163,8 @@ class MockDirectoryAdminOpener : public fidl::WireInterface<fio::DirectoryAdmin>
 
   // fuchsia.io/Directory:
   void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) override {}
-  void Unlink2(fidl::StringView path, Unlink2Completer::Sync& completer) override {}
+  void Unlink2(fidl::StringView name, fuchsia_io2::wire::UnlinkOptions options,
+               Unlink2Completer::Sync& completer) override {}
   void ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sync& completer) override {}
   void Rewind(RewindCompleter::Sync& completer) override {}
   void GetToken(GetTokenCompleter::Sync& completer) override {}

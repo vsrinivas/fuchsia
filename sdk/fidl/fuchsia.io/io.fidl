@@ -547,19 +547,16 @@ protocol Directory {
     /// objects with multiple references (such as files which are still open)
     /// will not actually be destroyed until all references are closed.
     ///
-    /// + `path` identifies the node to be detached.
-    ///   If `path` contains multiple segments, then the directory is traversed,
-    ///   one segment at a time, relative to the directory represented by this
-    ///   connection.
-    ///
     /// * error `ZX_ERR_ACCESS_DENIED` if the connection does not have
     ///   [`Rights.WRITE_BYTES`].
     /// * error `ZX_ERR_NOT_SUPPORTED` if the underlying filesystem does not
     ///   support writing.
-    /// * error `ZX_ERR_BAD_PATH` if `path` is invalid.
-    /// * error `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
-    /// * error `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point,
+    /// * error `ZX_ERR_BAD_PATH` if `name` is invalid.
+    /// * error `ZX_ERR_NOT_EMPTY` if `name` refers to a non-empty directory.
+    /// * error `ZX_ERR_UNAVAILABLE` if `name` refers to a mount point,
     ///   containing a remote channel.
+    /// * error `ZX_ERR_NOT_DIR` if the options requested a directory but something other than a
+    ///     directory was found.
     ///
     /// Other errors may be returned for filesystem-specific reasons.
     ///
@@ -567,8 +564,8 @@ protocol Directory {
     ///
     /// * [`Rights.ENUMERATE`]
     /// * [`Rights.MODIFY_DIRECTORY`]
-    [Selector = "fuchsia.io/Directory.Unlink"]
-    Unlink2(fuchsia.io2.Path path) -> () error zx.status;
+    [Selector = "fuchsia.io/Directory.Unlink", Transitional]
+    Unlink2(fuchsia.io2.Name name, fuchsia.io2.UnlinkOptions options) -> () error zx.status;
 
     /// Reads a collection of variably sized dirents into a buffer.
     /// The number of dirents in a directory may be very large: akin to

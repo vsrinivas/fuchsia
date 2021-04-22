@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -67,7 +68,8 @@ class TestServer final : public fidl::WireRawChannelInterface<fio::Directory> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Unlink2(::fidl::StringView path, Unlink2Completer::Sync& completer) override {
+  void Unlink2(::fidl::StringView name, fuchsia_io2::wire::UnlinkOptions options,
+               Unlink2Completer::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

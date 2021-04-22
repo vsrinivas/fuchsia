@@ -59,11 +59,12 @@ void DirectoryConnection::Open(uint32_t flags, uint32_t mode, std::string path,
             binding_.dispatcher());
 }
 
-void DirectoryConnection::Unlink(::std::string path, UnlinkCallback callback) {
+void DirectoryConnection::Unlink(std::string path, UnlinkCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 
-void DirectoryConnection::Unlink2(::std::string path, Unlink2Callback callback) {
+void DirectoryConnection::Unlink2(std::string name, fuchsia::io2::UnlinkOptions options,
+                                  Unlink2Callback callback) {
   callback(fuchsia::io::Directory_Unlink2_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
 }
 
@@ -88,12 +89,12 @@ void DirectoryConnection::GetToken(GetTokenCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED, zx::handle());
 }
 
-void DirectoryConnection::Rename(::std::string src, zx::handle dst_parent_token, std::string dst,
+void DirectoryConnection::Rename(std::string src, zx::handle dst_parent_token, std::string dst,
                                  RenameCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 
-void DirectoryConnection::Link(::std::string src, zx::handle dst_parent_token, std::string dst,
+void DirectoryConnection::Link(std::string src, zx::handle dst_parent_token, std::string dst,
                                LinkCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }

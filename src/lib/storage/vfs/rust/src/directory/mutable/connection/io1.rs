@@ -31,6 +31,7 @@ use {
         DirectoryMarker, DirectoryObject, DirectoryRequest, NodeAttributes, NodeInfo, NodeMarker,
         OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
     },
+    fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
     std::sync::Arc,
@@ -163,10 +164,10 @@ impl MutableConnection {
     ) -> Result<ConnectionState, Error> {
         match request {
             DerivedDirectoryRequest::Unlink { path, responder } => {
-                self.handle_unlink(path, |status| responder.send(status.into_raw())).await?;
+                self.handle_unlink(path, None, |status| responder.send(status.into_raw())).await?;
             }
-            DerivedDirectoryRequest::Unlink2 { path, responder } => {
-                self.handle_unlink(path, |status| {
+            DerivedDirectoryRequest::Unlink2 { name, options, responder } => {
+                self.handle_unlink(name, Some(options), |status| {
                     responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))
                 })
                 .await?;
@@ -208,19 +209,26 @@ impl MutableConnection {
         self.base.directory.set_attrs(flags, attributes).await
     }
 
-    async fn handle_unlink<R>(&mut self, path: String, responder: R) -> Result<(), fidl::Error>
+    async fn handle_unlink<R>(
+        &mut self,
+        name: String,
+        _options: Option<UnlinkOptions>,
+        responder: R,
+    ) -> Result<(), fidl::Error>
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
+        // TODO(fxbug.dev/74923): do something with options.
+
         if self.base.flags & OPEN_RIGHT_WRITABLE == 0 {
             return responder(Status::BAD_HANDLE);
         }
 
-        if path == "/" || path == "" || path == "." || path == "./" {
+        if name == "/" || name == "" || name == "." || name == "./" {
             return responder(Status::BAD_PATH);
         }
 
-        let path = match Path::validate_and_split(path) {
+        let path = match Path::validate_and_split(name) {
             Ok(path) => path,
             Err(status) => return responder(status),
         };
@@ -229,11 +237,6 @@ impl MutableConnection {
             return responder(Status::BAD_PATH);
         }
 
-        // TODO(fxbug.dev/74544): Support traversal for Unlink.
-        // It is non-trivial, as we need to go from node to node and we do not store their type
-        // information. One solution is to add `unlink` to `DirectoryEntry`, similar to `open`. But,
-        // unlike `open` it requires the operation to stay on the stack, even when we are hitting a
-        // mount point, as we need to return status over the same connection.
         if !path.is_single_component() {
             return responder(Status::BAD_PATH);
         }

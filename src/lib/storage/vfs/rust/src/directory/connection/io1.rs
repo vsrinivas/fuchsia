@@ -29,6 +29,7 @@ use {
         DirectoryWatchResponder, NodeAttributes, NodeInfo, NodeMarker, INO_UNKNOWN,
         MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE, OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_WRITABLE,
     },
+    fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_async::Channel,
     fuchsia_zircon::{
         sys::{ZX_ERR_INVALID_ARGS, ZX_ERR_NOT_SUPPORTED, ZX_OK},
@@ -194,7 +195,8 @@ pub(in crate::directory) enum DerivedDirectoryRequest {
         responder: DirectoryUnlinkResponder,
     },
     Unlink2 {
-        path: String,
+        name: String,
+        options: UnlinkOptions,
         responder: DirectoryUnlink2Responder,
     },
     GetToken {
@@ -251,7 +253,9 @@ impl From<DirectoryRequest> for DirectoryRequestType {
                 responder,
             } => Base(AddInotifyFilter { path, filters, watch_descriptor, socket, responder }),
             DirectoryRequest::Unlink { path, responder } => Derived(Unlink { path, responder }),
-            DirectoryRequest::Unlink2 { path, responder } => Derived(Unlink2 { path, responder }),
+            DirectoryRequest::Unlink2 { name, options, responder } => {
+                Derived(Unlink2 { name, options, responder })
+            }
             DirectoryRequest::ReadDirents { max_bytes, responder } => {
                 Base(ReadDirents { max_bytes, responder })
             }

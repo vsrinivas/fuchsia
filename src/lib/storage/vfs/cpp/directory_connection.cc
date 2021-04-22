@@ -193,12 +193,15 @@ void DirectoryConnection::Unlink(fidl::StringView path, UnlinkCompleter::Sync& c
     completer.Reply(ZX_ERR_BAD_HANDLE);
     return;
   }
+
   zx_status_t status = vfs()->Unlink(vnode(), std::string_view(path.data(), path.size()));
   completer.Reply(status);
 }
 
-void DirectoryConnection::Unlink2(fidl::StringView path, Unlink2Completer::Sync& completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink2] our options: ", options(), ", path: ", path.data());
+void DirectoryConnection::Unlink2(fidl::StringView name,
+                                  fuchsia_io2::wire::UnlinkOptions unlink_options,
+                                  Unlink2Completer::Sync& completer) {
+  FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink2] our options: ", options(), ", name: ", name.data());
 
   if (options().flags.node_reference) {
     completer.ReplyError(ZX_ERR_BAD_HANDLE);
@@ -208,7 +211,17 @@ void DirectoryConnection::Unlink2(fidl::StringView path, Unlink2Completer::Sync&
     completer.ReplyError(ZX_ERR_BAD_HANDLE);
     return;
   }
-  zx_status_t status = vfs()->Unlink(vnode(), std::string_view(path.data(), path.size()));
+  std::string_view name_str(name.data(), name.size());
+  if (name_str.find('/') != std::string_view::npos) {
+    completer.ReplyError(ZX_ERR_BAD_PATH);
+    return;
+  }
+  zx_status_t status =
+      vfs()->Unlink(vnode(), name_str,
+                    unlink_options.has_flags()
+                        ? static_cast<bool>((unlink_options.flags() &
+                                             fuchsia_io2::wire::UnlinkFlags::kMustBeDirectory))
+                        : false);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {

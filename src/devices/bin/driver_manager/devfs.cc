@@ -186,7 +186,8 @@ class DevfsFidlServer : public fidl::WireInterface<fio::DirectoryAdmin> {
   void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
-  void Unlink2(fidl::StringView path, Unlink2Completer::Sync& completer) override {
+  void Unlink2(fidl::StringView name, fuchsia_io2::wire::UnlinkOptions options,
+               Unlink2Completer::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) override;

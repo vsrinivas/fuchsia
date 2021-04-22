@@ -260,6 +260,23 @@ zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
   return ZX_OK;
 }
 
+zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view name, bool must_be_dir) {
+  {
+    std::lock_guard lock(vfs_lock_);
+    if (ReadonlyLocked()) {
+      return ZX_ERR_ACCESS_DENIED;
+    } else {
+      if (zx_status_t status = vndir->Unlink(name, must_be_dir); status != ZX_OK) {
+        return status;
+      }
+    }
+  }
+#ifdef __Fuchsia__
+  vndir->Notify(name, fio::wire::kWatchEventRemoved);
+#endif
+  return ZX_OK;
+}
+
 zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view path) {
   bool must_be_dir;
   zx_status_t r;
@@ -271,21 +288,7 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view path) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  {
-    std::lock_guard lock(vfs_lock_);
-    if (ReadonlyLocked()) {
-      r = ZX_ERR_ACCESS_DENIED;
-    } else {
-      r = vndir->Unlink(path, must_be_dir);
-    }
-  }
-  if (r != ZX_OK) {
-    return r;
-  }
-#ifdef __Fuchsia__
-  vndir->Notify(path, fio::wire::kWatchEventRemoved);
-#endif
-  return ZX_OK;
+  return Unlink(vndir, path, must_be_dir);
 }
 
 #ifdef __Fuchsia__

@@ -507,7 +507,7 @@ class _DirConnection extends Directory {
   }
 
   @override
-  Future<int> unlink2(String path) async {
+  Future<int> unlink2(String name, io2_fidl.UnlinkOptions options) async {
     return ZX.ERR_NOT_SUPPORTED;
   }
 

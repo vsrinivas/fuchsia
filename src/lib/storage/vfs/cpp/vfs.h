@@ -94,7 +94,9 @@ class Vfs {
   // for more information.
   OpenResult Open(fbl::RefPtr<Vnode> vn, std::string_view path, VnodeConnectionOptions options,
                   Rights parent_rights, uint32_t mode) __TA_EXCLUDES(vfs_lock_);
-  zx_status_t Unlink(fbl::RefPtr<Vnode> vn, std::string_view path) __TA_EXCLUDES(vfs_lock_);
+  zx_status_t Unlink(fbl::RefPtr<Vnode> vn, std::string_view path, bool must_be_dir)
+      __TA_EXCLUDES(vfs_lock_);
+  zx_status_t Unlink(fbl::RefPtr<Vnode> vndir, std::string_view path) __TA_EXCLUDES(vfs_lock_);
 
   // Sets whether this file system is read-only.
   void SetReadonly(bool value) __TA_EXCLUDES(vfs_lock_);

@@ -209,6 +209,9 @@ impl<'entries> Simple<'entries> {
             DirectoryRequest::Unlink { path: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
+            DirectoryRequest::Unlink2 { responder, .. } => {
+                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
+            }
             DirectoryRequest::ReadDirents { max_bytes, responder } => {
                 self.handle_read_dirents(connection, max_bytes, |status, entries| {
                     responder.send(status.into_raw(), entries)

@@ -79,19 +79,16 @@ protocol Directory {
     /// objects with multiple references (such as files which are still open)
     /// will not actually be destroyed until all references are closed.
     ///
-    /// + `path` identifies the node to be detached.
-    ///   If `path` contains multiple segments, then the directory is traversed,
-    ///   one segment at a time, relative to the directory represented by this
-    ///   connection.
-    ///
     /// * error `ZX_ERR_ACCESS_DENIED` if the connection does not have
     ///   [`Rights.WRITE_BYTES`].
     /// * error `ZX_ERR_NOT_SUPPORTED` if the underlying filesystem does not
     ///   support writing.
-    /// * error `ZX_ERR_BAD_PATH` if `path` is invalid.
-    /// * error `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
-    /// * error `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point,
+    /// * error `ZX_ERR_BAD_PATH` if `name` is invalid.
+    /// * error `ZX_ERR_NOT_EMPTY` if `name` refers to a non-empty directory.
+    /// * error `ZX_ERR_UNAVAILABLE` if `name` refers to a mount point,
     ///   containing a remote channel.
+    /// * error `ZX_ERR_NOT_DIR` if the options requested a directory but something other than a
+    ///     directory was found.
     ///
     /// Other errors may be returned for filesystem-specific reasons.
     ///
@@ -100,6 +97,8 @@ protocol Directory {
     /// * [`Rights.ENUMERATE`]
     /// * [`Rights.MODIFY_DIRECTORY`]
     Unlink(Path path) -> () error zx.status;
+    [Transitional]
+    Unlink2(Name name, UnlinkOptions options) -> () error zx.status;
 
     /// Initiates a directory listing operation over the input channel,
     /// starting at seek offset 0.
@@ -183,4 +182,15 @@ enum OpenMode : uint32 {
 /// The selection of this variant in [`Representation`] implies that the
 /// connection speaks the [`fuchsia.io2/Directory`] protocol.
 table DirectoryInfo {
+};
+
+/// Options for [`Directory.Unlink`].
+table UnlinkOptions {
+    1: UnlinkFlags flags;
+};
+
+/// Flags for [`Directory.Unlink`].
+bits UnlinkFlags : uint64 {
+    /// If set, the unlink will fail (with ZX_ERR_NOT_DIR) if the object is not a directory.
+    MUST_BE_DIRECTORY = 0x01;
 };
