@@ -35,7 +35,7 @@ source_set("common") {
     "//zircon/system/ulib/fzl",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.badblock",
+    "//sdk/banjo/fuchsia.hardware.badblock:fuchsia.hardware.badblock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.nand",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
     "//src/devices/lib/dev-operation",

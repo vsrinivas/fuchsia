@@ -29,7 +29,7 @@ driver_module("nandpart") {
   ]
   deps = [
     ":nandpart-bind",
-    "//sdk/banjo/fuchsia.hardware.badblock",
+    "//sdk/banjo/fuchsia.hardware.badblock:fuchsia.hardware.badblock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.nand",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/devices/lib/dev-operation",
