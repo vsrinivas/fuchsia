@@ -3,15 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{format_err, Error},
     component_events::{events::*, injectors::*, matcher::EventMatcher},
-    fidl::endpoints::Proxy,
+    fidl::endpoints::{Proxy, ServiceMarker},
     fidl_fidl_examples_routing_echo as fecho,
     fidl_fuchsia_io::{OPEN_FLAG_DIRECTORY, OPEN_FLAG_POSIX},
-    fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync,
+    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync,
     futures::{channel::mpsc, StreamExt},
     hub_report_capability::*,
     io_util::*,
+    matches::assert_matches,
     std::{path::PathBuf, sync::Arc},
     test_utils_lib::opaque_test::*,
 };
@@ -103,6 +104,23 @@ impl TestRunner {
         let res = echo_proxy.echo_string(Some("hippos")).await?;
         assert_eq!(res, Some("hippos".to_string()));
         Ok(())
+    }
+
+    pub async fn resolve_component(
+        &self,
+        resolve_component_path: &str,
+        relative_moniker: &str,
+    ) -> Result<(), Error> {
+        let full_path = self.external_hub_v2_path.join(resolve_component_path);
+        let full_path = full_path.to_str().expect("invalid chars");
+        let node_proxy = open_node_in_namespace(full_path, OPEN_RIGHT_READABLE)?;
+        let resolve_component_proxy = fsys::ResolveComponentProxy::new(
+            node_proxy.into_channel().expect("could not get channel from proxy"),
+        );
+        resolve_component_proxy
+            .resolve(relative_moniker)
+            .await?
+            .map_err(|err| format_err!("Err: {:?}", err))
     }
 
     pub async fn verify_directory_listing_externally(
@@ -317,7 +335,7 @@ async fn dynamic_child_test() {
     test_runner
         .verify_directory_listing(
             "children/coll:simple_instance",
-            vec!["children", "component_type", "deleting", "id", "url"],
+            vec!["children", "component_type", "debug", "deleting", "id", "url"],
         )
         .await;
 
@@ -335,7 +353,16 @@ async fn dynamic_child_test() {
     test_runner
         .verify_directory_listing(
             "children/coll:simple_instance",
-            vec!["children", "component_type", "deleting", "exec", "id", "resolved", "url"],
+            vec![
+                "children",
+                "component_type",
+                "debug",
+                "deleting",
+                "exec",
+                "id",
+                "resolved",
+                "url",
+            ],
         )
         .await;
 
@@ -351,7 +378,7 @@ async fn dynamic_child_test() {
         .send()
         .unwrap();
 
-    // Wait for the dynamic child to stop
+    // Wait for the dynamic child to stopk
     let event = EventMatcher::ok()
         .moniker("./coll:simple_instance:1")
         .expect_match::<Stopped>(&mut event_stream)
@@ -361,7 +388,7 @@ async fn dynamic_child_test() {
     test_runner
         .verify_directory_listing(
             "children/coll:simple_instance",
-            vec!["children", "component_type", "deleting", "id", "resolved", "url"],
+            vec!["children", "component_type", "debug", "deleting", "id", "resolved", "url"],
         )
         .await;
 
@@ -380,7 +407,7 @@ async fn dynamic_child_test() {
     test_runner
         .verify_directory_listing(
             "deleting/coll:simple_instance:1",
-            vec!["children", "component_type", "deleting", "id", "resolved", "url"],
+            vec!["children", "component_type", "debug", "deleting", "id", "resolved", "url"],
         )
         .await;
 
@@ -401,7 +428,7 @@ async fn dynamic_child_test() {
     test_runner
         .verify_directory_listing(
             "deleting/coll:simple_instance:1/deleting/child:0",
-            vec!["children", "component_type", "deleting", "id", "url"],
+            vec!["children", "component_type", "debug", "deleting", "id", "url"],
         )
         .await;
 
@@ -453,7 +480,7 @@ async fn visibility_test() {
     test_runner
         .verify_directory_listing(
             "children/child",
-            vec!["children", "component_type", "deleting", "id", "url"],
+            vec!["children", "component_type", "debug", "deleting", "id", "url"],
         )
         .await;
 
@@ -462,4 +489,103 @@ async fn visibility_test() {
 
     // Wait for the component to stop
     test_runner.wait_for_component_stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn resolve_component_test_from_child() {
+    let (test_runner, _) = TestRunner::start(
+        "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/simple.cm",
+        1,
+        vec![],
+    )
+    .await;
+
+    // Verify that the child exists in the parent's hub
+    test_runner.verify_directory_listing_externally("children", vec!["child"]).await;
+
+    // Verify that the child's hub has the directories we expect
+    // i.e. no "resolved" because the child has not resolved yet.
+    test_runner
+        .verify_directory_listing_externally(
+            "children/child",
+            vec!["children", "component_type", "debug", "deleting", "id", "url"],
+        )
+        .await;
+
+    // Verify that `ResolveComponent` is available in the child's debug directory.
+    let child_debug_dir = "children/child/debug";
+    test_runner
+        .verify_directory_listing_externally(
+            child_debug_dir,
+            vec![fsys::ResolveComponentMarker::NAME],
+        )
+        .await;
+    let resolve_component_path =
+        format!("{}/{}", child_debug_dir, fsys::ResolveComponentMarker::NAME);
+
+    let res = test_runner.resolve_component(&resolve_component_path, "./doesnotexist").await;
+    assert_matches!(res, Err(_));
+    let res = test_runner.resolve_component(&resolve_component_path, ".").await;
+    assert_matches!(res, Ok(()));
+
+    // Verify that the child's hub has the directories we expect.
+    // i.e. "resolved" exists because the child has now been resolved.
+    test_runner
+        .verify_directory_listing_externally(
+            "children/child",
+            vec!["children", "component_type", "debug", "deleting", "id", "resolved", "url"],
+        )
+        .await;
+
+    test_runner
+        .verify_directory_listing_externally(
+            "children/child/resolved",
+            vec!["expose", "resolved_url"],
+        )
+        .await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn resolve_component_test_from_parent() {
+    let (test_runner, _) = TestRunner::start(
+        "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/simple.cm",
+        1,
+        vec![],
+    )
+    .await;
+
+    // Verify that the child's hub has the directories we expect
+    // i.e. no "resolved" because the child has not resolved yet.
+    test_runner
+        .verify_directory_listing_externally(
+            "children/child",
+            vec!["children", "component_type", "debug", "deleting", "id", "url"],
+        )
+        .await;
+
+    // Verify that `ResolveComponent` is available in the debug directory.
+    let debug_dir = "debug";
+    test_runner
+        .verify_directory_listing_externally(debug_dir, vec![fsys::ResolveComponentMarker::NAME])
+        .await;
+    let resolve_component_path = format!("{}/{}", debug_dir, fsys::ResolveComponentMarker::NAME);
+
+    let res = test_runner.resolve_component(&resolve_component_path, "./child:0").await;
+    assert_matches!(res, Ok(()));
+
+    // Verify that the child's hub has the directories we expect.
+    // i.e. "resolved" exists because the child has now been resolved.
+    test_runner
+        .verify_directory_listing_externally(
+            "children/child",
+            vec!["children", "component_type", "debug", "deleting", "id", "resolved", "url"],
+        )
+        .await;
+
+    test_runner
+        .verify_directory_listing_externally(
+            "children/child/resolved",
+            vec!["expose", "resolved_url"],
+        )
+        .await;
 }

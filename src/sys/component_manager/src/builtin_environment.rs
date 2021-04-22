@@ -46,6 +46,7 @@ use {
             hooks::EventType,
             hub::Hub,
             model::{Model, ModelParams},
+            resolve_component_factory::ResolveComponentFactory,
             resolver::{BuiltinResolver, Resolver, ResolverRegistry},
             storage::admin_protocol::StorageAdmin,
         },
@@ -313,7 +314,6 @@ pub struct BuiltinEnvironment {
     pub num_threads: usize,
     pub out_dir_contents: OutDirContents,
     pub inspector: Inspector,
-
     _service_fs_task: Option<fasync::Task<()>>,
 }
 
@@ -592,7 +592,10 @@ impl BuiltinEnvironment {
         model.root.hooks.install(stop_notifier.hooks()).await;
 
         let hub = if enable_hub {
-            let hub = Arc::new(Hub::new(root_component_url.as_str().to_owned())?);
+            let hub = Arc::new(Hub::new(
+                root_component_url.as_str().to_owned(),
+                ResolveComponentFactory::new(Arc::downgrade(&model)),
+            )?);
             model.root.hooks.install(hub.hooks()).await;
             Some(hub)
         } else {

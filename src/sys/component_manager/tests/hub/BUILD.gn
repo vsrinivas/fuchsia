@@ -43,6 +43,7 @@ rustc_test("hub_integration_test_bin") {
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:matches",
   ]
 
   sources = [ "hub_integration_test.rs" ]
@@ -71,6 +72,11 @@ fuchsia_component("simple") {
   manifest = "components/simple_component/meta/simple.cml"
 }
 
+fuchsia_component("hub_client") {
+  testonly = true
+  manifest = "components/simple_component/meta/hub_client.cml"
+}
+
 fuchsia_component("visibility_reporter") {
   testonly = true
   deps = [ "components:visibility_reporter_bin" ]
@@ -95,6 +101,7 @@ fuchsia_unittest_package("hub_integration_test") {
     ":child",
     ":dynamic_child_reporter",
     ":grandchild",
+    ":hub_client",
     ":hub_integration_test_bin",
     ":simple",
     ":visibility_reporter",

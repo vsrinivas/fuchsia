@@ -175,6 +175,8 @@ template("component_manager") {
     "src/model/model.rs",
     "src/model/namespace.rs",
     "src/model/policy.rs",
+    "src/model/resolve_component.rs",
+    "src/model/resolve_component_factory.rs",
     "src/model/resolver.rs",
     "src/model/rights.rs",
     "src/model/routing/error.rs",

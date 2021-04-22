@@ -9,22 +9,26 @@ use {
         model::{
             addable_directory::AddableDirectoryWithResult,
             component::WeakComponentInstance,
-            dir_tree::DirTree,
+            dir_tree::{DirTree, DirTreeCapability},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration, RuntimeInfo},
+            resolve_component::ResolveComponent,
+            resolve_component_factory::ResolveComponentFactory,
             routing_fns::{route_expose_fn, route_use_fn},
         },
     },
     async_trait::async_trait,
-    cm_rust::ComponentDecl,
+    cm_rust::{CapabilityPath, ComponentDecl},
     directory_broker,
-    fidl::endpoints::ServerEnd,
+    fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
-    fuchsia_trace as trace, fuchsia_zircon as zx,
+    fidl_fuchsia_sys2::ResolveComponentMarker,
+    fuchsia_async as fasync, fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::lock::Mutex,
     moniker::AbsoluteMoniker,
     std::{
         collections::HashMap,
+        convert::TryFrom,
         path::PathBuf,
         sync::{Arc, Weak},
     },
@@ -94,18 +98,34 @@ struct Execution {
 pub struct Hub {
     instances: Mutex<HashMap<AbsoluteMoniker, Instance>>,
     scope: ExecutionScope,
+    resolve_component_factory: ResolveComponentFactory,
 }
 
 impl Hub {
-    /// Create a new Hub given a `component_url` for the root component.
-    pub fn new(component_url: String) -> Result<Self, ModelError> {
+    /// Create a new Hub given a `component_url` for the root component and a
+    /// `resolve_component_factory` which can create scoped ResolveComponent services.
+    pub fn new(
+        component_url: String,
+        resolve_component_factory: ResolveComponentFactory,
+    ) -> Result<Self, ModelError> {
         let mut instances_map = HashMap::new();
         let abs_moniker = AbsoluteMoniker::root();
 
-        Hub::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
-            .expect("Did not create directory.");
+        let resolve_component = resolve_component_factory.create(&abs_moniker);
 
-        Ok(Hub { instances: Mutex::new(instances_map), scope: ExecutionScope::new() })
+        Hub::add_instance_if_necessary(
+            resolve_component,
+            &abs_moniker,
+            component_url,
+            &mut instances_map,
+        )?
+        .expect("Did not create directory.");
+
+        Ok(Hub {
+            instances: Mutex::new(instances_map),
+            scope: ExecutionScope::new(),
+            resolve_component_factory,
+        })
     }
 
     pub async fn open_root(
@@ -162,6 +182,7 @@ impl Hub {
     }
 
     fn add_instance_if_necessary(
+        resolve_component: ResolveComponent,
         abs_moniker: &AbsoluteMoniker,
         component_url: String,
         instance_map: &mut HashMap<AbsoluteMoniker, Instance>,
@@ -203,6 +224,8 @@ impl Hub {
         let deleting = pfs::simple();
         instance.add_node("deleting", deleting.clone(), &abs_moniker)?;
 
+        Self::add_debug_directory(resolve_component, instance.clone(), abs_moniker)?;
+
         instance_map.insert(
             abs_moniker.clone(),
             Instance {
@@ -220,13 +243,17 @@ impl Hub {
     }
 
     async fn add_instance_to_parent_if_necessary<'a>(
+        resolve_component: ResolveComponent,
         abs_moniker: &'a AbsoluteMoniker,
         component_url: String,
         mut instances_map: &'a mut HashMap<AbsoluteMoniker, Instance>,
     ) -> Result<(), ModelError> {
-        if let Some(controlled) =
-            Hub::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
-        {
+        if let Some(controlled) = Hub::add_instance_if_necessary(
+            resolve_component,
+            &abs_moniker,
+            component_url,
+            &mut instances_map,
+        )? {
             if let (Some(leaf), Some(parent_moniker)) = (abs_moniker.leaf(), abs_moniker.parent()) {
                 // In the children directory, the child's instance id is not used
                 trace::duration!("component_manager", "hub:add_instance_to_parent");
@@ -272,6 +299,43 @@ impl Hub {
             )?;
         }
         execution_directory.add_node("in", in_dir, target_moniker)?;
+        Ok(())
+    }
+
+    fn add_debug_directory(
+        resolve_component: ResolveComponent,
+        parent_directory: Directory,
+        target_moniker: &AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:add_debug_directory");
+
+        let mut debug_dir = pfs::simple();
+
+        let resolve_component_path =
+            CapabilityPath::try_from(format!("/{}", ResolveComponentMarker::NAME).as_str())
+                .unwrap();
+        let capabilities = vec![DirTreeCapability::new(
+            resolve_component_path,
+            Box::new(
+                move |_flags: u32,
+                      _mode: u32,
+                      _relative_path: String,
+                      server_end: ServerEnd<NodeMarker>| {
+                    let resolve_component = resolve_component.clone();
+                    let server_end =
+                        ServerEnd::<ResolveComponentMarker>::new(server_end.into_channel());
+                    let resolve_component_stream = server_end.into_stream().unwrap();
+                    fasync::Task::spawn(async move {
+                        resolve_component.serve(resolve_component_stream).await;
+                    })
+                    .detach();
+                },
+            ),
+        )];
+        let tree = DirTree::build_from_capabilities(capabilities);
+        tree.install(target_moniker, &mut debug_dir)?;
+
+        parent_directory.add_node("debug", debug_dir, target_moniker)?;
         Ok(())
     }
 
@@ -429,8 +493,13 @@ impl Hub {
         component_url: String,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_discovered_async");
+
+        let resolve_component = self.resolve_component_factory.create(&target_moniker);
+
         let mut instances_map = self.instances.lock().await;
+
         Self::add_instance_to_parent_if_necessary(
+            resolve_component,
             target_moniker,
             component_url,
             &mut instances_map,
@@ -1058,5 +1127,32 @@ mod tests {
         )
         .expect("Failed to open directory");
         assert_eq!(vec!["bar", "hippo"], list_directory_recursive(&expose_dir).await);
+    }
+
+    #[fuchsia::test]
+    async fn hub_debug_directory() {
+        let root_component_url = "test:///root".to_string();
+        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
+            root_component_url.clone(),
+            vec![ComponentDescriptor {
+                name: "root",
+                decl: ComponentDeclBuilder::new().add_lazy_child("a").build(),
+                host_fn: None,
+                runtime_host_fn: Some(bleep_runtime_dir_fn()),
+            }],
+        )
+        .await;
+
+        let debug_svc_dir = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("debug"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+
+        assert_eq!(
+            vec!["fuchsia.sys2.ResolveComponent"],
+            list_directory_recursive(&debug_svc_dir).await
+        );
     }
 }

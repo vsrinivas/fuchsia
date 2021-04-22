@@ -13,6 +13,22 @@ use {
     vfs::directory::immutable::simple as pfs,
 };
 
+/// Indicates a capability to add to a constructed DirTree. This struct
+/// consists of two components:
+/// 1. The `path` within the DirTree for the specified capability.
+/// 2. The `routing_fn` closure to call when a connection to the capability
+///    is attempted.
+pub struct DirTreeCapability {
+    path: CapabilityPath,
+    routing_fn: RoutingFn,
+}
+
+impl DirTreeCapability {
+    pub fn new(path: CapabilityPath, routing_fn: RoutingFn) -> DirTreeCapability {
+        Self { path, routing_fn }
+    }
+}
+
 /// Represents the directory hierarchy of the exposed directory, not including the nodes for the
 /// capabilities themselves.
 pub(super) struct DirTree {
@@ -21,6 +37,15 @@ pub(super) struct DirTree {
 }
 
 impl DirTree {
+    /// Builds a directory hierarchy from a vector of paths, and a `RoutingFn`.
+    pub fn build_from_capabilities(capabilities: Vec<DirTreeCapability>) -> Self {
+        let mut tree = DirTree { directory_nodes: HashMap::new(), broker_nodes: HashMap::new() };
+        for capability in capabilities {
+            tree.add_capability(capability.path, capability.routing_fn);
+        }
+        tree
+    }
+
     /// Builds a directory hierarchy from a component's `uses` declarations.
     /// `routing_factory` is a closure that generates the routing function that will be called
     /// when a leaf node is opened.
@@ -83,12 +108,11 @@ impl DirTree {
         }
 
         let path = match use_.path() {
-            Some(path) => path,
+            Some(path) => path.clone(),
             None => return,
         };
-        let tree = self.to_directory_node(path);
         let routing_fn = routing_factory(component, use_.clone());
-        tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
+        self.add_capability(path, routing_fn);
     }
 
     fn add_expose_capability(
@@ -97,7 +121,7 @@ impl DirTree {
         component: WeakComponentInstance,
         expose: &ExposeDecl,
     ) {
-        let path = match expose {
+        let path: CapabilityPath = match expose {
             cm_rust::ExposeDecl::Service(d) => {
                 format!("/{}", d.target_name).parse().expect("couldn't parse name as path")
             }
@@ -112,8 +136,12 @@ impl DirTree {
                 return;
             }
         };
-        let tree = self.to_directory_node(&path);
         let routing_fn = routing_factory(component, expose.clone());
+        self.add_capability(path, routing_fn);
+    }
+
+    fn add_capability(&mut self, path: CapabilityPath, routing_fn: RoutingFn) {
+        let tree = self.to_directory_node(&path);
         tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
     }
 
