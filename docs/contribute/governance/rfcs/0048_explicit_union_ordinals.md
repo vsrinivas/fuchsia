@@ -45,7 +45,7 @@ Additionally, and to further align with tables, we require that ordinals be
 sequentially assigned from 1, and allow the keyword `reserved` to be used to
 explicitly skip a union variant.
 
-### Hashing Only for Protocols
+### Hashing Only for Protocols {#hashing-only-for-protocols}
 
 Unlike types, protocols use a hash based approach to assign ordinals. This is
 motivated by two key use cases:

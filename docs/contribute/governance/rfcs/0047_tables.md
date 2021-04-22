@@ -9,7 +9,7 @@ Note: Formerly known as [FTP](../deprecated-ftp-process.md)-007.
 
 Add a mechanism for forward and backwards compatible compound data types to the FIDL language.
 
-## Motivation
+## Motivation {#motivation}
 
 FIDL structs provide no mechanism to mutate the schema over time.
 Tables are similar to structs, but add ordinals to each field to allow structure evolution:
@@ -71,7 +71,7 @@ Particularly:
 - interface arguments can be tables
 - tables can be made optional
 
-### Wire format
+### Wire format {#wire-format}
 
 Tables are stored as a packed `vector<envelope>`,
 each element of the vector is one ordinal element (so index 0 is ordinal 1,

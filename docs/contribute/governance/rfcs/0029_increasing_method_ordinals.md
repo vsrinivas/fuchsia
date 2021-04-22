@@ -19,7 +19,7 @@ We propose:
 
 ## Motivation
 
-#### Combatting Breakage at a Distance
+#### Combatting Breakage at a Distance {#breakage-at-a-distance}
 
 We've looked for some time at the issue of breakage at a distance, which the
 composition model introduces.

@@ -3,7 +3,7 @@
 This document is a high level overview of the Fuchsia Interface Definition
 Language (FIDL), which is the language used to describe interprocess
 communication (IPC) protocols used by programs running on Fuchsia. This overview
-introduces the concepts behind FIDL - developers familiar with these concepts
+introduces the concepts behind FIDL &mdash; developers familiar with these concepts
 already can start writing code by following the [tutorials][fidl-tutorials], or
 dive deeper by reading the [language][language-reference] or
 [bindings][bindings-reference] references.
@@ -501,12 +501,14 @@ particular, the design of FIDL aims to satisfy the following goals:
 #### Specificity
 
 *   Describe data structures and protocols used by IPC on Zircon.
-*   Optimized for interprocess communication only; FIDL must not be persisted to
-    disk or used for network transfer across device boundaries.
+*   Optimized for interprocess communication. Although FIDL is also used for
+    persisting to disk and for network transfer, its design is not optimized for
+    these secondary use cases.
 *   Efficiently transport messages consisting of data (bytes) and capabilities
     (handles) over Zircon channels between processes running on the same device.
-*   Designed specifically to facilitate effective use of Zircon primitives; not
-    intended for use on other platforms; not portable.
+*   Designed specifically to facilitate effective use of Zircon primitives.
+    Although FIDL is used on other platforms (e.g. via ffx), its design puts
+    Fuchsia first.
 *   Offers convenient APIs for creating, sending, receiving, and consuming
     messages.
 *   Perform sufficient validation to maintain protocol invariants (but no more

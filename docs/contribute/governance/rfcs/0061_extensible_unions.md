@@ -206,7 +206,7 @@ This would go against various places in Fuchsia where unions represent
 performance critical messages, and where there is little extension
 expectation, e.g. `fuchsia.io/NodeInfo`, `fuchsia.net/IpAddress`.
 
-## Pros and Cons of Keeping Static Unions
+## Pros and Cons of Keeping Static Unions {#pros-and-cons}
 
 ### Pros
 

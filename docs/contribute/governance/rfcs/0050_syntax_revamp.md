@@ -208,7 +208,7 @@ Essentially, from a FIDL language standpoint, nothing about string needs to be
 "special", it does not need to appear in the specification. The treatment of
 string is best left to the [FIDL bindings specification][bindings-spec]
 
-#### Binary wire format first
+#### Binary wire format first {#binary-wire-format-first}
 
 While many formats can represent FIDL messages, the [FIDL Wire Format][wire-format]
 (or "FIDL Binary Wire Format") is the one which has preferential treatment, and

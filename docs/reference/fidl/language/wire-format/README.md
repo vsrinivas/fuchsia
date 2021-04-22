@@ -75,7 +75,7 @@ visit Cart:
         visit Item.quantity
 ```
 
-### Dual Forms: Encoded vs Decoded
+### Dual Forms: Encoded vs Decoded {#dual-forms}
 
 The same message content can be expressed in one of two forms:
 **encoded** and **decoded**.
