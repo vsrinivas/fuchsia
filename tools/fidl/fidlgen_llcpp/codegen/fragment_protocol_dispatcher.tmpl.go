@@ -41,14 +41,17 @@ struct {{ .WireServerDispatcher }} final {
       { {{ .OrdinalName }},
         [](void* interface, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
           {{- if .RequestArgs }}
-          zx_status_t status = fidl_decode_msg({{ .WireRequest }}::Type, msg, nullptr);
-          if (unlikely(status != ZX_OK)) {
-            return status;
+          ::fidl::DecodedMessage<{{ .WireRequest }}> decoded{msg};
+          if (unlikely(!decoded.ok())) {
+            return decoded.status();
           }
+          auto* primary = decoded.PrimaryObject();
+          {{- else }}
+          auto* primary = reinterpret_cast<{{ .WireRequest }}*>(msg->bytes);
           {{- end }}
           {{ .WireCompleter }}::Sync completer(txn);
           reinterpret_cast<{{ $.WireServer }}*>(interface)->{{ .Name }}(
-                reinterpret_cast<{{ .WireRequest }}*>(msg->bytes), completer);
+              primary, completer);
           return ZX_OK;
         },
       },
@@ -92,16 +95,16 @@ struct {{ .WireServerDispatcher }} final {
       { {{ .OrdinalName }},
         [](void* interface, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
           {{- if .RequestArgs }}
-          zx_status_t status = fidl_decode_msg({{ .WireRequest }}::Type, msg, nullptr);
-          if (unlikely(status != ZX_OK)) {
-            return status;
+          ::fidl::DecodedMessage<{{ .WireRequest }}> decoded{msg};
+          if (unlikely(!decoded.ok())) {
+            return decoded.status();
           }
-          auto message = reinterpret_cast<{{ .WireRequest }}*>(msg->bytes);
+          auto* primary = decoded.PrimaryObject();
           {{- end }}
           {{ .WireCompleter }}::Sync completer(txn);
           reinterpret_cast<{{ .Protocol.WireInterface }}*>(interface)->{{ .Name }}(
                 {{- range $index, $param := .RequestArgs }}
-                  std::move(message->{{ $param.Name }}),
+                  std::move(primary->{{ $param.Name }}),
                 {{- end }}
                 completer);
           return ZX_OK;

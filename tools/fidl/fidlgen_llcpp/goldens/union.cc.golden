@@ -317,17 +317,14 @@ zx_status_t
 fidl::WireResponseContext<::fidl_test_union::TestProtocol::
                               StrictXUnionHenceResponseMayBeStackAllocated>::
     OnRawReply(fidl_incoming_msg_t* msg) {
-  zx_status_t status = fidl_decode_msg(
-      ::fidl::WireResponse<
-          ::fidl_test_union::TestProtocol::
-              StrictXUnionHenceResponseMayBeStackAllocated>::Type,
-      msg, nullptr);
-  if (unlikely(status != ZX_OK)) {
-    return status;
+  ::fidl::DecodedMessage<
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>>
+      decoded{msg};
+  if (unlikely(!decoded.ok())) {
+    return decoded.status();
   }
-  OnReply(reinterpret_cast<::fidl::WireResponse<
-              ::fidl_test_union::TestProtocol::
-                  StrictXUnionHenceResponseMayBeStackAllocated>*>(msg->bytes));
+  OnReply(decoded.PrimaryObject());
   return ZX_OK;
 }
 #endif  // __Fuchsia__
@@ -358,7 +355,6 @@ fidl::WireResponseContext<::fidl_test_union::TestProtocol::
                                  StrictXUnionHenceResponseMayBeStackAllocated>*
             response) override {
       cb_(response);
-
       delete this;
     }
 
@@ -447,18 +443,14 @@ zx_status_t
 fidl::WireResponseContext<::fidl_test_union::TestProtocol::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>::
     OnRawReply(fidl_incoming_msg_t* msg) {
-  zx_status_t status = fidl_decode_msg(
-      ::fidl::WireResponse<
-          ::fidl_test_union::TestProtocol::
-              FlexibleXUnionHenceResponseMustBeHeapAllocated>::Type,
-      msg, nullptr);
-  if (unlikely(status != ZX_OK)) {
-    return status;
+  ::fidl::DecodedMessage<
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+      decoded{msg};
+  if (unlikely(!decoded.ok())) {
+    return decoded.status();
   }
-  OnReply(
-      reinterpret_cast<::fidl::WireResponse<
-          ::fidl_test_union::TestProtocol::
-              FlexibleXUnionHenceResponseMustBeHeapAllocated>*>(msg->bytes));
+  OnReply(decoded.PrimaryObject());
   return ZX_OK;
 }
 #endif  // __Fuchsia__
@@ -489,7 +481,6 @@ fidl::WireResponseContext<::fidl_test_union::TestProtocol::
                      FlexibleXUnionHenceResponseMustBeHeapAllocated>* response)
         override {
       cb_(response);
-
       delete this;
     }
 
@@ -546,17 +537,16 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
               kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
+            auto* primary = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_union::TestProtocol::
+                    StrictXUnionHenceResponseMayBeStackAllocated>*>(msg->bytes);
             ::fidl::WireServer<::fidl_test_union::TestProtocol>::
                 StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync
                     completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_union::TestProtocol>*>(interface)
-                ->StrictXUnionHenceResponseMayBeStackAllocated(
-                    reinterpret_cast<::fidl::WireRequest<
-                        ::fidl_test_union::TestProtocol::
-                            StrictXUnionHenceResponseMayBeStackAllocated>*>(
-                        msg->bytes),
-                    completer);
+                ->StrictXUnionHenceResponseMayBeStackAllocated(primary,
+                                                               completer);
             return ZX_OK;
           },
       },
@@ -565,17 +555,17 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
               kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
+            auto* primary = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_union::TestProtocol::
+                    FlexibleXUnionHenceResponseMustBeHeapAllocated>*>(
+                msg->bytes);
             ::fidl::WireServer<::fidl_test_union::TestProtocol>::
                 FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync
                     completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_union::TestProtocol>*>(interface)
-                ->FlexibleXUnionHenceResponseMustBeHeapAllocated(
-                    reinterpret_cast<::fidl::WireRequest<
-                        ::fidl_test_union::TestProtocol::
-                            FlexibleXUnionHenceResponseMustBeHeapAllocated>*>(
-                        msg->bytes),
-                    completer);
+                ->FlexibleXUnionHenceResponseMustBeHeapAllocated(primary,
+                                                                 completer);
             return ZX_OK;
           },
       },

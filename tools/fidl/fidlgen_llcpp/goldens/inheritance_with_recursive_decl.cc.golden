@@ -113,21 +113,18 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
           ::fidl_test_inheritancewithrecursivedecl::kParent_First_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            zx_status_t status = fidl_decode_msg(
-                ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::
-                                        Parent::First>::Type,
-                msg, nullptr);
-            if (unlikely(status != ZX_OK)) {
-              return status;
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_inheritancewithrecursivedecl::Parent::First>>
+                decoded{msg};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
             }
+            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
                                    Parent>::FirstCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
                 ::fidl_test_inheritancewithrecursivedecl::Parent>*>(interface)
-                ->First(reinterpret_cast<::fidl::WireRequest<
-                            ::fidl_test_inheritancewithrecursivedecl::Parent::
-                                First>*>(msg->bytes),
-                        completer);
+                ->First(primary, completer);
             return ZX_OK;
           },
       },
@@ -168,21 +165,18 @@ fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Parent>::
           ::fidl_test_inheritancewithrecursivedecl::kParent_First_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            zx_status_t status = fidl_decode_msg(
-                ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::
-                                        Parent::First>::Type,
-                msg, nullptr);
-            if (unlikely(status != ZX_OK)) {
-              return status;
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_inheritancewithrecursivedecl::Parent::First>>
+                decoded{msg};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
             }
-            auto message = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_inheritancewithrecursivedecl::Parent::First>*>(
-                msg->bytes);
+            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
                                    Parent>::FirstCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_inheritancewithrecursivedecl::Parent>*>(interface)
-                ->First(std::move(message->request), completer);
+                ->First(std::move(primary->request), completer);
             return ZX_OK;
           },
       },
@@ -425,21 +419,18 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
           ::fidl_test_inheritancewithrecursivedecl::kChild_First_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            zx_status_t status = fidl_decode_msg(
-                ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::
-                                        Child::First>::Type,
-                msg, nullptr);
-            if (unlikely(status != ZX_OK)) {
-              return status;
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_inheritancewithrecursivedecl::Child::First>>
+                decoded{msg};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
             }
+            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
                                    Child>::FirstCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
                 ::fidl_test_inheritancewithrecursivedecl::Child>*>(interface)
-                ->First(reinterpret_cast<::fidl::WireRequest<
-                            ::fidl_test_inheritancewithrecursivedecl::Child::
-                                First>*>(msg->bytes),
-                        completer);
+                ->First(primary, completer);
             return ZX_OK;
           },
       },
@@ -447,21 +438,18 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
           ::fidl_test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            zx_status_t status = fidl_decode_msg(
-                ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::
-                                        Child::Second>::Type,
-                msg, nullptr);
-            if (unlikely(status != ZX_OK)) {
-              return status;
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_inheritancewithrecursivedecl::Child::Second>>
+                decoded{msg};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
             }
+            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
                                    Child>::SecondCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
                 ::fidl_test_inheritancewithrecursivedecl::Child>*>(interface)
-                ->Second(reinterpret_cast<::fidl::WireRequest<
-                             ::fidl_test_inheritancewithrecursivedecl::Child::
-                                 Second>*>(msg->bytes),
-                         completer);
+                ->Second(primary, completer);
             return ZX_OK;
           },
       },
@@ -502,21 +490,18 @@ fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
           ::fidl_test_inheritancewithrecursivedecl::kChild_First_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            zx_status_t status = fidl_decode_msg(
-                ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::
-                                        Child::First>::Type,
-                msg, nullptr);
-            if (unlikely(status != ZX_OK)) {
-              return status;
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_inheritancewithrecursivedecl::Child::First>>
+                decoded{msg};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
             }
-            auto message = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_inheritancewithrecursivedecl::Child::First>*>(
-                msg->bytes);
+            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
                                    Child>::FirstCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_inheritancewithrecursivedecl::Child>*>(interface)
-                ->First(std::move(message->request), completer);
+                ->First(std::move(primary->request), completer);
             return ZX_OK;
           },
       },
@@ -524,21 +509,18 @@ fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
           ::fidl_test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            zx_status_t status = fidl_decode_msg(
-                ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::
-                                        Child::Second>::Type,
-                msg, nullptr);
-            if (unlikely(status != ZX_OK)) {
-              return status;
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_inheritancewithrecursivedecl::Child::Second>>
+                decoded{msg};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
             }
-            auto message = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_inheritancewithrecursivedecl::Child::Second>*>(
-                msg->bytes);
+            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::
                                    Child>::SecondCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_inheritancewithrecursivedecl::Child>*>(interface)
-                ->Second(std::move(message->request), completer);
+                ->Second(std::move(primary->request), completer);
             return ZX_OK;
           },
       },
