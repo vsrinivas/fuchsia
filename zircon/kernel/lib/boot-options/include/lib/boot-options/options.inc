@@ -368,6 +368,14 @@ The early kernel console can be slow on some platforms, so if it is not
 needed for debugging it may speed up boot to disable it.
 )""")
 
+DEFINE_OPTION("gfxconsole.font", SmallString, gfx_console_font, {"9x16"}, R"""(
+Supported fonts:
+- `9x16`
+- `18x32`
+
+This option asks the graphics console to use a specific font.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

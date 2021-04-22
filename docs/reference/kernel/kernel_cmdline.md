@@ -214,11 +214,6 @@ a problem arise.
 This option (disabled by default) allows the system to use a hardware IOMMU
 if present.
 
-## gfxconsole.font=\<name>
-
-This option asks the graphics console to use a specific font.  Currently
-only "9x16" (the default) and "18x32" (a double-size font) are supported.
-
 ## kernel.arm64.event-stream.enable=\<bool>
 
 When enabled, each ARM cpu will enable an event stream generator, which per-cpu

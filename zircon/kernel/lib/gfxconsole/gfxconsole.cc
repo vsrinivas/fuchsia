@@ -17,7 +17,7 @@
 #include <align.h>
 #include <assert.h>
 #include <debug.h>
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/gfx.h>
 #include <lib/gfxconsole.h>
 #include <lib/io.h>
@@ -167,7 +167,7 @@ static void gfxconsole_print_callback(PrintCallback* cb, ktl::string_view str) {
 static PrintCallback cb{gfxconsole_print_callback};
 
 static void gfxconsole_setup(gfx_surface* surface, gfx_surface* hw_surface) {
-  const char* fname = gCmdline.GetString(kernel_option::kGfxConsoleFont);
+  const char* fname = gBootOptions->gfx_console_font.data();
   if (fname != NULL) {
     if (!strcmp(fname, "18x32")) {
       font = &gfx_font_18x32;

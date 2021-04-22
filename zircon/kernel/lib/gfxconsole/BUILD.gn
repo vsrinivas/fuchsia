@@ -10,7 +10,7 @@ zx_library("gfxconsole") {
   kernel = true
   sources = [ "gfxconsole.cc" ]
   deps = [
-    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/gfx",
   ]
   public_deps = [
