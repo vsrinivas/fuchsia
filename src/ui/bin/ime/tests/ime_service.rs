@@ -11,6 +11,7 @@ use fidl_fuchsia_ui_input as ui_input;
 use fidl_fuchsia_ui_input3 as ui_input3;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
+use fuchsia_zircon as zx;
 use futures::{StreamExt, TryStreamExt};
 use input_synthesis::usages::Usages;
 
@@ -132,12 +133,22 @@ fn connect_to_ime_service() -> Result<ui_input::ImeServiceProxy> {
         .context("Failed to connect to fuchsia.ui.input.ImeService")
 }
 
+const DELAY: zx::Duration = zx::Duration::from_seconds(5);
+
+// TODO(fxbug.dev/75030) This is horrible, but inevitable. Until the linked
+// bug is fixed.  It can't work in 100% of the cases, and it can't work 100%
+// reliably regardless of the value of DELAY.
+async fn wait_for_editor_binding() {
+    fasync::Timer::new(fasync::Time::after(DELAY)).await;
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn test_input_updates_ime_state() -> Result<()> {
     let ime_service = connect_to_ime_service()?;
     let key_event_service = connect_to_key_event_service()?;
 
     let (_ime, mut editor_stream) = bind_editor(&ime_service)?;
+    wait_for_editor_binding().await;
 
     simulate_keypress(&key_event_service, input::Key::A).await?;
 
@@ -197,6 +208,7 @@ async fn test_input_triggers_action() -> Result<()> {
     let key_event_service = connect_to_key_event_service()?;
 
     let (_ime, mut editor_stream) = bind_editor(&ime_service)?;
+    wait_for_editor_binding().await;
 
     // send key events
     simulate_keypress(&key_event_service, input::Key::Enter).await?;
