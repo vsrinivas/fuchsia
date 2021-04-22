@@ -55,8 +55,7 @@ foreach(source, proto_input_filepaths) {
 }
 
 protoc_label = "//third_party/protobuf:protoc($host_toolchain)"
-protoc_gen_dart_label =
-    "//topaz/tools/protobuf/protoc_gen_dart($host_toolchain)"
+protoc_gen_dart_label = "//tools/protobuf/protoc_gen_dart($host_toolchain)"
 
 protoc_path = get_label_info(protoc_label, "root_out_dir") + "/protoc"
 proto_gen_target = dart_library_target_name + "_generate_bindings"
