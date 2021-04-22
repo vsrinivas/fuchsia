@@ -233,13 +233,8 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
 }
 
 async fn proxy_timeout() -> Result<Duration> {
-    let proxy_timeout: ffx_config::Value = ffx_config::get(PROXY_TIMEOUT_SECS).await?;
-    Ok(Duration::from_millis(
-        (proxy_timeout
-            .as_f64()
-            .ok_or(anyhow!("unable to convert to float: {:?}", proxy_timeout))?
-            * 1000.0) as u64,
-    ))
+    let proxy_timeout: f64 = ffx_config::get(PROXY_TIMEOUT_SECS).await?;
+    Ok(Duration::from_millis((proxy_timeout * 1000.0) as u64))
 }
 
 #[derive(Debug)]
