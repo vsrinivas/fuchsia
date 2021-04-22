@@ -188,7 +188,7 @@ mod tests {
 
     fn create_test_dev(name: &str) -> Result<DeviceFile, Error> {
         let control = open_rdwr(CONTROL_DEVICE)?;
-        let mut root_dev = RootDeviceSynchronousProxy::new(fdio::clone_channel(&control)?);
+        let root_dev = RootDeviceSynchronousProxy::new(fdio::clone_channel(&control)?);
 
         let (local, remote) = zx::Channel::create()?;
         let (status, path) =
@@ -204,7 +204,7 @@ mod tests {
 
     fn remove_test_dev(dev: &DeviceFile) -> Result<(), Error> {
         let channel = fdio::clone_channel(dev.file())?;
-        let mut device = DeviceSynchronousProxy::new(channel);
+        let device = DeviceSynchronousProxy::new(channel);
         Ok(device.destroy()?)
     }
 

@@ -67,7 +67,7 @@ pub async fn validate_removal_of_fake_device(dir_path_str: &str) -> Result<(), E
 /// Remove device in isolated_devmgr
 pub fn unbind_fake_device(device: &File) -> Result<(), Error> {
     let channel = fdio::clone_channel(device)?;
-    let mut interface = ControllerSynchronousProxy::new(channel);
+    let interface = ControllerSynchronousProxy::new(channel);
     interface.schedule_unbind(zx::Time::INFINITE)?.map_err(|e| zx::Status::from_raw(e).into())
 }
 

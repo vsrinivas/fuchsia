@@ -22,7 +22,7 @@ pub fn list_host_devices() -> Vec<PathBuf> {
 /// Opens a Host Fidl interface on a bt-host device using a Fidl message
 pub fn open_host_channel(device: &File) -> Result<zx::Channel, Error> {
     let dev_channel = fdio::clone_channel(device)?;
-    let mut host = HostSynchronousProxy::new(dev_channel);
+    let host = HostSynchronousProxy::new(dev_channel);
     let (ours, theirs) = zx::Channel::create()?;
     host.open(theirs)?;
     Ok(ours)

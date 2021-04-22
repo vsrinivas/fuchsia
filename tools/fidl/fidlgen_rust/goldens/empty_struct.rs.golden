@@ -65,11 +65,11 @@ impl EmptyProtocolSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn r#send_(&mut self, mut e: &mut Empty) -> Result<(), fidl::Error> {
+    pub fn r#send_(&self, mut e: &mut Empty) -> Result<(), fidl::Error> {
         self.client.send(&mut (e), 0x1e4e78d0556b6f28)
     }
     pub fn r#send_and_receive(
-        &mut self,
+        &self,
         mut e: &mut Empty,
         ___deadline: zx::Time,
     ) -> Result<(Empty), fidl::Error> {

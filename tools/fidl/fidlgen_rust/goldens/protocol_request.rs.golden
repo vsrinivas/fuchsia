@@ -344,7 +344,7 @@ impl ParentSynchronousProxy {
         self.client.into_channel()
     }
     pub fn r#get_child(
-        &mut self,
+        &self,
         ___deadline: zx::Time,
     ) -> Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error> {
         let _value: (
@@ -355,7 +355,7 @@ impl ParentSynchronousProxy {
         Ok(_value.0.into_inner())
     }
     pub fn r#get_child_request(
-        &mut self,
+        &self,
         ___deadline: zx::Time,
     ) -> Result<(fidl::endpoints::ServerEnd<ChildMarker>), fidl::Error> {
         let _value: (
@@ -366,13 +366,13 @@ impl ParentSynchronousProxy {
         Ok(_value.0.into_inner())
     }
     pub fn r#take_child(
-        &mut self,
+        &self,
         mut c: fidl::endpoints::ClientEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
         self.client.send(&mut (c), 0x5311bd7214c0f6e)
     }
     pub fn r#take_child_request(
-        &mut self,
+        &self,
         mut r: fidl::endpoints::ServerEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
         self.client.send(&mut (r), 0x15dae312bad5a9cc)

@@ -209,7 +209,7 @@ fn benchmark_{{ .Name }}_echo_call(b: &mut Bencher) {
 			{{ .Name }}_echo_call_server_thread(server_end).await;
 		});
 	});
-	let mut proxy = {{ .ValueType }}EchoCallSynchronousProxy::new(client_end);
+	let proxy = {{ .ValueType }}EchoCallSynchronousProxy::new(client_end);
 	b.iter_batched_ref(|| {
 		{{- if .HandleDefs }}
 		let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();

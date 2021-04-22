@@ -29,7 +29,7 @@ pub fn launch_isolated_driver_manager() -> Result<(), Error> {
     // Connect to the realm to get acccess to the isolated driver manager's outgoing directory.
     let (client, server) = zx::Channel::create()?;
     fuchsia_component::client::connect_channel_to_service::<fsys::RealmMarker>(server)?;
-    let mut realm = fsys::RealmSynchronousProxy::new(client);
+    let realm = fsys::RealmSynchronousProxy::new(client);
     let mut child_ref = fsys::ChildRef { name: "isolated-devmgr".to_string(), collection: None };
     let (client, server) = zx::Channel::create()?;
     realm
@@ -39,7 +39,7 @@ pub fn launch_isolated_driver_manager() -> Result<(), Error> {
             zx::Time::INFINITE,
         )?
         .map_err(|e| format_err!("Failed to bind to child: {:#?}", e))?;
-    let mut exposed_dir = fio::DirectorySynchronousProxy::new(client);
+    let exposed_dir = fio::DirectorySynchronousProxy::new(client);
 
     // Now open the exported /dev and bind it to our namespace.
     let (client, server) = zx::Channel::create()?;

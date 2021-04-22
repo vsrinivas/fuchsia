@@ -48,7 +48,7 @@ pub async fn get_device_proxy_from_isolated_devmgr(
 /// Schedule unbind of a device
 pub fn unbind_device_in_isolated_devmgr(device: &File) -> Result<(), Error> {
     let channel = fdio::clone_channel(device)?;
-    let mut controller_proxy = ControllerSynchronousProxy::new(channel);
+    let controller_proxy = ControllerSynchronousProxy::new(channel);
     controller_proxy
         .schedule_unbind(zx::Time::INFINITE)?
         .map_err(|e| zx::Status::from_raw(e).into())

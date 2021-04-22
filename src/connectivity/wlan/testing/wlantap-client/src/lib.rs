@@ -34,7 +34,7 @@ impl Wlantap {
         let (ours, theirs) = endpoints::create_proxy()?;
 
         let channel = fdio::clone_channel(&self.file)?;
-        let mut wlantap_ctl_proxy = wlantap::WlantapCtlSynchronousProxy::new(channel);
+        let wlantap_ctl_proxy = wlantap::WlantapCtlSynchronousProxy::new(channel);
 
         let status = wlantap_ctl_proxy.create_phy(&mut config, theirs, zx::Time::INFINITE)?;
 

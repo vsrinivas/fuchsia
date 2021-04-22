@@ -84,7 +84,7 @@ impl ExampleSynchronousProxy {
         self.client.into_channel()
     }
     pub fn r#foo(
-        &mut self,
+        &self,
         mut s: &str,
         ___deadline: zx::Time,
     ) -> Result<(ExampleFooResult), fidl::Error> {

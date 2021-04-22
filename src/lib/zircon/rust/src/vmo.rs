@@ -444,7 +444,7 @@ mod tests {
 
         let (client_end, server_end) = Channel::create().unwrap();
         connect_channel_to_service::<fkernel::VmexResourceMarker>(server_end).unwrap();
-        let mut service = fkernel::VmexResourceSynchronousProxy::new(client_end);
+        let service = fkernel::VmexResourceSynchronousProxy::new(client_end);
         let resource = service.get(Time::INFINITE).expect("couldn't get vmex resource");
         let resource = unsafe { crate::Resource::from(Handle::from_raw(resource.into_raw())) };
 

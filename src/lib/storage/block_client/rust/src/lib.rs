@@ -278,6 +278,7 @@ pub trait BlockClient: Send + Sync {
 
 /// RemoteBlockClient is a BlockClient that communicates with a real block device over FIDL.
 pub struct RemoteBlockClient {
+    // TODO: This mutex might no longer be needed.
     device: Mutex<block::BlockSynchronousProxy>,
     block_size: u32,
     block_count: u64,
@@ -314,7 +315,7 @@ impl RemoteBlockClient {
     }
 
     fn from_channel(channel: zx::Channel) -> Result<Self, Error> {
-        let mut block_device = block::BlockSynchronousProxy::new(channel);
+        let block_device = block::BlockSynchronousProxy::new(channel);
         let (status, maybe_info) = block_device.get_info(zx::Time::INFINITE)?;
         let info = maybe_info.ok_or(zx::Status::from_raw(status))?;
         let (status, maybe_fifo) = block_device.get_fifo(zx::Time::INFINITE)?;
@@ -375,7 +376,7 @@ impl RemoteBlockClient {
 impl BlockClient for RemoteBlockClient {
     /// Wraps AttachVmo from fuchsia.hardware.block::Block.
     fn attach_vmo(&self, vmo: &zx::Vmo) -> Result<VmoId, Error> {
-        let mut device = self.device.lock().unwrap();
+        let device = self.device.lock().unwrap();
         let (status, maybe_vmo_id) = device
             .attach_vmo(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?, zx::Time::INFINITE)?;
         Ok(VmoId::new(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id))

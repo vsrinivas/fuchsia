@@ -12,7 +12,7 @@ use super::open_rdwr;
 pub fn create_test_device(test_path: &str, dev_name: &str) -> Result<String, Error> {
     let test_dev = open_rdwr(test_path)?;
     let channel = fdio::clone_channel(&test_dev)?;
-    let mut interface = RootDeviceSynchronousProxy::new(channel);
+    let interface = RootDeviceSynchronousProxy::new(channel);
 
     let (status, devpath) =
         interface.create_device(dev_name, None, fuchsia_zircon::Time::INFINITE)?;
@@ -22,7 +22,7 @@ pub fn create_test_device(test_path: &str, dev_name: &str) -> Result<String, Err
 
 pub fn bind_test_device(device: &File, driver_name: &str) -> Result<(), Error> {
     let channel = fdio::clone_channel(device)?;
-    let mut interface = ControllerSynchronousProxy::new(channel);
+    let interface = ControllerSynchronousProxy::new(channel);
     interface
         .bind(driver_name, fuchsia_zircon::Time::INFINITE)?
         .map_err(|e| fuchsia_zircon::Status::from_raw(e).into())
@@ -30,6 +30,6 @@ pub fn bind_test_device(device: &File, driver_name: &str) -> Result<(), Error> {
 
 pub fn destroy_test_device(device: &File) -> Result<(), Error> {
     let channel = fdio::clone_channel(device)?;
-    let mut interface = DeviceSynchronousProxy::new(channel);
+    let interface = DeviceSynchronousProxy::new(channel);
     Ok(interface.destroy()?)
 }

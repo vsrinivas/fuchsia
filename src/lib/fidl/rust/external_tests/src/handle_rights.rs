@@ -49,7 +49,7 @@ fn send_handle_sync() {
         });
     });
 
-    let mut proxy = SendHandleProtocolSynchronousProxy::new(client_end);
+    let proxy = SendHandleProtocolSynchronousProxy::new(client_end);
     let ev = Event::create().unwrap();
     proxy.send_handle(ev).unwrap();
     receiver_fifo.recv().unwrap();
@@ -102,7 +102,7 @@ fn echo_handle_sync() {
         });
     });
 
-    let mut proxy = EchoHandleProtocolSynchronousProxy::new(client_end);
+    let proxy = EchoHandleProtocolSynchronousProxy::new(client_end);
     let ev = Event::create().unwrap();
     let h_response = proxy.echo_handle(ev, Time::INFINITE).unwrap();
 

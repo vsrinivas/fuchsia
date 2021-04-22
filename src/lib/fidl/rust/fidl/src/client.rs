@@ -759,10 +759,7 @@ pub mod sync {
             // Initialize tracing. This is a no-op if FIDL userspace tracing is
             // disabled or if the function was already called.
             create_trace_provider();
-            Client {
-                channel,
-                service_name,
-            }
+            Client { channel, service_name }
         }
 
         /// Get the underlying channel out of the client.

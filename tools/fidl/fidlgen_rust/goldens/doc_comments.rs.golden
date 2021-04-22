@@ -271,7 +271,7 @@ impl InterfaceSynchronousProxy {
     /// method comment #1
     ///
     /// method comment #3
-    pub fn r#method(&mut self) -> Result<(), fidl::Error> {
+    pub fn r#method(&self) -> Result<(), fidl::Error> {
         self.client.send(&mut (), 0x5c492542705b4265)
     }
 }

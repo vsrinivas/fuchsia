@@ -250,7 +250,7 @@ pub fn clone_channel(file: &impl AsRawFd) -> Result<zx::Channel, zx::Status> {
 /// Retrieves the topological path for a device node.
 pub fn device_get_topo_path(dev: &File) -> Result<String, zx::Status> {
     let channel = clone_channel(dev)?;
-    let mut interface = ControllerSynchronousProxy::new(channel);
+    let interface = ControllerSynchronousProxy::new(channel);
     interface
         .get_topological_path(fuchsia_zircon::Time::INFINITE)
         .map_err(|_| zx::Status::IO)?

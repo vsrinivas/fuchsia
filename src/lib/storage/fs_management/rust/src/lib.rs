@@ -75,7 +75,7 @@ impl FSInstance {
     ) -> Result<Self, Error> {
         let (node, server_end) =
             fidl::endpoints::create_endpoints::<fidl_fuchsia_io::NodeMarker>()?;
-        let mut node = NodeSynchronousProxy::new(node.into_channel());
+        let node = NodeSynchronousProxy::new(node.into_channel());
 
         let actions = vec![
             // root handle is passed in as a PA_USER0 handle at argument 0
@@ -108,7 +108,7 @@ impl FSInstance {
             .connect(&self.mount_point, OPEN_RIGHT_ADMIN, server_chan)
             .context("failed to connect to filesystem")?;
 
-        let mut proxy = DirectoryAdminSynchronousProxy::new(client_chan);
+        let proxy = DirectoryAdminSynchronousProxy::new(client_chan);
         proxy.unmount(zx::Time::INFINITE).context("failed to unmount")?;
 
         namespace
@@ -126,7 +126,7 @@ impl FSInstance {
             .connect(&self.mount_point, OPEN_RIGHT_ADMIN, server_chan)
             .context("failed to connect to filesystem")?;
 
-        let mut proxy = DirectoryAdminSynchronousProxy::new(client_chan);
+        let proxy = DirectoryAdminSynchronousProxy::new(client_chan);
 
         let (status, result) = proxy
             .query_filesystem(zx::Time::INFINITE)

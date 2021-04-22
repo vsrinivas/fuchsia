@@ -166,7 +166,7 @@ impl ExampleProtocolSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn r#method(&mut self, mut arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error> {
+    pub fn r#method(&self, mut arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error> {
         self.client.send(&mut (arg), 0x207d2f81c0ddb184)
     }
 }

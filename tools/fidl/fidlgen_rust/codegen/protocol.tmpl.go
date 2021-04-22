@@ -130,7 +130,7 @@ impl {{ $protocol.Name }}SynchronousProxy {
 	{{- range .DocComments}}
 	///{{ . }}
 	{{- end}}
-	pub fn r#{{ $method.Name }}(&mut self,
+	pub fn r#{{ $method.Name }}(&self,
 		{{- range $request := $method.Request }}
 		mut {{ $request.Name }}: {{ $request.BorrowedType }},
 		{{- end }}

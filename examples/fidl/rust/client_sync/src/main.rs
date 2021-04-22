@@ -17,7 +17,7 @@ fn main() -> Result<(), Error> {
     connect_channel_to_service::<EchoMarker>(server_end)
         .context("Failed to connect to echo service")?;
     // Create a synchronous proxy using the client end
-    let mut echo = EchoSynchronousProxy::new(client_end);
+    let echo = EchoSynchronousProxy::new(client_end);
 
     // Make an EchoString request, with a timeout of 1 second for receiving the response
     let res = echo.echo_string("hello", zx::Time::after(1.second()))?;

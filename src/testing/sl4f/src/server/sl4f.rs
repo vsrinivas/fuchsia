@@ -290,8 +290,7 @@ impl Sl4f {
         let (client_end, server_end) = fidl::endpoints::create_endpoints::<FacadeIteratorMarker>()?;
         match facade_provider.get_facades(server_end) {
             Ok(_) => {
-                let mut facade_iter =
-                    FacadeIteratorSynchronousProxy::new(client_end.into_channel());
+                let facade_iter = FacadeIteratorSynchronousProxy::new(client_end.into_channel());
                 loop {
                     match facade_iter.get_next(zx::Time::INFINITE) {
                         Ok(facades) if facades.is_empty() => break, // Indicates completion.

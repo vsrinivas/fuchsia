@@ -168,7 +168,7 @@ impl MoldContext {
                 ServerEnd::new(collection_request),
             )
             .expect("failed to bind shared collection");
-        let mut buffer_collection = BufferCollectionSynchronousProxy::new(collection_client);
+        let buffer_collection = BufferCollectionSynchronousProxy::new(collection_client);
         let mut constraints = buffer_collection_constraints(size.width, size.height);
         buffer_collection
             .set_constraints(true, &mut constraints)

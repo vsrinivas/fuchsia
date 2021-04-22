@@ -41,8 +41,7 @@ impl FidlNode {
 
 impl FidlFile {
     pub fn from_node(node: fio::NodeProxy) -> Result<FdHandle, Errno> {
-        let mut node =
-            fio::NodeSynchronousProxy::new(node.into_channel().unwrap().into_zx_channel());
+        let node = fio::NodeSynchronousProxy::new(node.into_channel().unwrap().into_zx_channel());
         let node = match node.describe(zx::Time::INFINITE).map_err(fidl_error)? {
             fio::NodeInfo::Directory(_) => {
                 FidlNode::Directory(fio::DirectorySynchronousProxy::new(node.into_channel()))
@@ -67,7 +66,7 @@ impl FileDesc for FidlFile {
             total += vec.iov_len;
         }
         let (status, data) = match *self.node.lock() {
-            FidlNode::File(ref mut n) => {
+            FidlNode::File(ref n) => {
                 // TODO(tbodt): Break this into 8k chunks if needed to fit in the FIDL protocol
                 n.read_at(total as u64, offset as u64, zx::Time::INFINITE).map_err(fidl_error)
             }
@@ -106,7 +105,7 @@ impl FileDesc for FidlFile {
         prot -= zx::VmarFlags::PERM_EXECUTE;
 
         let (status, buffer) = match *self.node.lock() {
-            FidlNode::File(ref mut n) => {
+            FidlNode::File(ref n) => {
                 n.get_buffer(prot.bits(), zx::Time::INFINITE).map_err(fidl_error)
             }
             _ => Err(ENODEV),

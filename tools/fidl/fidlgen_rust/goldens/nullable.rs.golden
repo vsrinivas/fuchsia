@@ -237,7 +237,7 @@ impl SimpleProtocolSynchronousProxy {
         self.client.into_channel()
     }
     pub fn r#add(
-        &mut self,
+        &self,
         mut a: i32,
         mut b: i32,
         ___deadline: zx::Time,

@@ -58,7 +58,7 @@ impl TopSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn r#get_foo(&mut self, ___deadline: zx::Time) -> Result<(fidl_bottom::Foo), fidl::Error> {
+    pub fn r#get_foo(&self, ___deadline: zx::Time) -> Result<(fidl_bottom::Foo), fidl::Error> {
         let _value: (fidl_bottom::Foo,) =
             self.client.send_query(&mut (), 0x2c8ccb022c3c571f, ___deadline)?;
         Ok(_value.0)

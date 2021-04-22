@@ -34,7 +34,7 @@ fn main() -> Result<(), Error> {
     let (server_end, client_end) = zx::Channel::create()?;
     app.pass_to_service::<EchoMarker>(server_end).context("Failed to connect to echo service")?;
 
-    let mut proxy = EchoSynchronousProxy::new(client_end);
+    let proxy = EchoSynchronousProxy::new(client_end);
     let res = proxy.echo_string(Some("hello world!"), zx::Time::after(1.second()))?;
     println!("response: {:?}", res);
     Ok(())

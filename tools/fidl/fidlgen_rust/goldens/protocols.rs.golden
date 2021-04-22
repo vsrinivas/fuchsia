@@ -191,28 +191,25 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn r#no_request_no_response(&mut self) -> Result<(), fidl::Error> {
+    pub fn r#no_request_no_response(&self) -> Result<(), fidl::Error> {
         self.client.send(&mut (), 0x6ad894147d0c6ba4)
     }
-    pub fn r#no_request_empty_response(
-        &mut self,
-        ___deadline: zx::Time,
-    ) -> Result<(), fidl::Error> {
+    pub fn r#no_request_empty_response(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
         let _value: () = self.client.send_query(&mut (), 0x4068f26bf6d868ae, ___deadline)?;
         Ok(())
     }
     pub fn r#no_request_with_response(
-        &mut self,
+        &self,
         ___deadline: zx::Time,
     ) -> Result<(String), fidl::Error> {
         let _value: (String,) = self.client.send_query(&mut (), 0x447e655905ccfbf4, ___deadline)?;
         Ok(_value.0)
     }
-    pub fn r#with_request_no_response(&mut self, mut arg: &str) -> Result<(), fidl::Error> {
+    pub fn r#with_request_no_response(&self, mut arg: &str) -> Result<(), fidl::Error> {
         self.client.send(&mut (arg), 0x7cb47b2f9e76d17d)
     }
     pub fn r#with_request_empty_response(
-        &mut self,
+        &self,
         mut arg: &str,
         ___deadline: zx::Time,
     ) -> Result<(), fidl::Error> {
@@ -220,7 +217,7 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
         Ok(())
     }
     pub fn r#with_request_with_response(
-        &mut self,
+        &self,
         mut arg: &str,
         ___deadline: zx::Time,
     ) -> Result<(String), fidl::Error> {
@@ -1529,7 +1526,7 @@ impl WithErrorSyntaxSynchronousProxy {
         self.client.into_channel()
     }
     pub fn r#response_as_struct(
-        &mut self,
+        &self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error> {
         let _value: (WithErrorSyntaxResponseAsStructResultHandleWrapper) =
@@ -1537,7 +1534,7 @@ impl WithErrorSyntaxSynchronousProxy {
         Ok(_value.map(|_value| (_value.0, _value.1, _value.2)))
     }
     pub fn r#error_as_primitive(
-        &mut self,
+        &self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error> {
         let _value: (WithErrorSyntaxErrorAsPrimitiveResultHandleWrapper) =
@@ -1545,7 +1542,7 @@ impl WithErrorSyntaxSynchronousProxy {
         Ok(_value.map(|_value| ()))
     }
     pub fn r#error_as_enum(
-        &mut self,
+        &self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error> {
         let _value: (WithErrorSyntaxErrorAsEnumResultHandleWrapper) =
@@ -2437,11 +2434,11 @@ impl ChannelProtocolSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn r#method_a(&mut self, mut a: i64, mut b: i64) -> Result<(), fidl::Error> {
+    pub fn r#method_a(&self, mut a: i64, mut b: i64) -> Result<(), fidl::Error> {
         self.client.send(&mut (a, b), 0x7d92c10fb2d002e)
     }
     pub fn r#method_b(
-        &mut self,
+        &self,
         mut a: i64,
         mut b: i64,
         ___deadline: zx::Time,
@@ -2451,7 +2448,7 @@ impl ChannelProtocolSynchronousProxy {
         Ok(_value.0)
     }
     pub fn r#take_handle(
-        &mut self,
+        &self,
         mut h: fidl::Handle,
         ___deadline: zx::Time,
     ) -> Result<(), fidl::Error> {
@@ -2459,7 +2456,7 @@ impl ChannelProtocolSynchronousProxy {
         Ok(())
     }
     pub fn r#mutate_socket(
-        &mut self,
+        &self,
         mut a: fidl::Socket,
         ___deadline: zx::Time,
     ) -> Result<(fidl::Socket), fidl::Error> {
@@ -3462,11 +3459,11 @@ impl TransitionalSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn r#request(&mut self, mut x: i64, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
+    pub fn r#request(&self, mut x: i64, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
         let _value: (i64,) = self.client.send_query(&mut (x), 0x62d345e621780ee8, ___deadline)?;
         Ok(_value.0)
     }
-    pub fn r#one_way(&mut self, mut x: i64) -> Result<(), fidl::Error> {
+    pub fn r#one_way(&self, mut x: i64) -> Result<(), fidl::Error> {
         self.client.send(&mut (x), 0xf99bc4b26bc9ea5)
     }
 }
@@ -4059,7 +4056,7 @@ impl DiscoverableProtocolSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn r#method(&mut self) -> Result<(), fidl::Error> {
+    pub fn r#method(&self) -> Result<(), fidl::Error> {
         self.client.send(&mut (), 0x39790af74e0167)
     }
 }
@@ -4407,11 +4404,11 @@ impl HandleRightsProtocolSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn r#no_response_method(&mut self, mut h: fidl::Socket) -> Result<(), fidl::Error> {
+    pub fn r#no_response_method(&self, mut h: fidl::Socket) -> Result<(), fidl::Error> {
         self.client.send(&mut (h), 0x466a6fe3be0bcb7c)
     }
     pub fn r#response_method(
-        &mut self,
+        &self,
         mut h: fidl::Socket,
         ___deadline: zx::Time,
     ) -> Result<(fidl::Socket), fidl::Error> {

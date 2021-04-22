@@ -121,7 +121,7 @@ impl ProtocolSynchronousProxy {
         self.client.into_channel()
     }
     pub fn r#request_strict_response_flexible(
-        &mut self,
+        &self,
         mut s: &mut StrictFoo,
         ___deadline: zx::Time,
     ) -> Result<(FlexibleFoo), fidl::Error> {
@@ -130,7 +130,7 @@ impl ProtocolSynchronousProxy {
         Ok(_value.0)
     }
     pub fn r#request_flexible_response_strict(
-        &mut self,
+        &self,
         mut s: &mut FlexibleFoo,
         ___deadline: zx::Time,
     ) -> Result<(StrictFoo), fidl::Error> {

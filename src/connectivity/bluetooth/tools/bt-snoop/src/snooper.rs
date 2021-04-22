@@ -178,7 +178,7 @@ impl Stream for Snooper {
 // TODO (belgum) use asynchronous client
 pub fn open_snoop_channel(device: &File) -> Result<Channel, Error> {
     let hci_channel = fdio::clone_channel(device)?;
-    let mut interface = HciSynchronousProxy::new(hci_channel);
+    let interface = HciSynchronousProxy::new(hci_channel);
     let (ours, theirs) = Channel::create()?;
     interface.open_snoop_channel(theirs)?;
     Ok(ours)

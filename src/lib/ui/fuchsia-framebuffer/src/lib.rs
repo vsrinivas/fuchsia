@@ -581,7 +581,7 @@ impl FrameBuffer {
         let file = OpenOptions::new().read(true).write(true).open(device_path)?;
 
         let channel = fdio::clone_channel(&file)?;
-        let mut provider = ProviderSynchronousProxy::new(channel);
+        let provider = ProviderSynchronousProxy::new(channel);
 
         let (device_client, device_server) = zx::Channel::create()?;
         let (dc_client, dc_server) = endpoints::create_endpoints::<ControllerMarker>()?;

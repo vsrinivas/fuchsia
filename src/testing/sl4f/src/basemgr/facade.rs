@@ -49,7 +49,7 @@ impl BaseManagerFacade {
         if self.find_all_sessions()?.is_empty() {
             return Ok(RestartSessionResult::NoSessionToRestart);
         }
-        let mut basemgr_proxy = match self.discover_basemgr_service()? {
+        let basemgr_proxy = match self.discover_basemgr_service()? {
             Some(proxy) => proxy,
             None => return Err(format_err!("Unable to connect to Base Manager Service")),
         };
@@ -76,7 +76,7 @@ impl BaseManagerFacade {
     /// Facade to kill basemgr from Sl4f
     pub async fn kill_basemgr(&self) -> Result<KillBasemgrResult, Error> {
         match self.discover_basemgr_service()? {
-            Some(mut proxy) => {
+            Some(proxy) => {
                 proxy.shutdown()?;
                 Ok(KillBasemgrResult::Success)
             }
@@ -88,7 +88,7 @@ impl BaseManagerFacade {
     /// Use default config if custom config is not provided.
     pub async fn start_basemgr(&self, args: Value) -> Result<BasemgrResult, Error> {
         match self.discover_basemgr_service()? {
-            Some(mut proxy) => {
+            Some(proxy) => {
                 proxy.shutdown()?;
             }
             None => {}
@@ -228,7 +228,7 @@ impl BaseManagerFacade {
         };
         commands.push(StoryCommand::AddMod(add_mod));
 
-        let mut puppet_master = match self.discover_puppet_master()? {
+        let puppet_master = match self.discover_puppet_master()? {
             Some(proxy) => proxy,
             None => return Err(format_err!("Unable to connect to Puppet Master Service")),
         };

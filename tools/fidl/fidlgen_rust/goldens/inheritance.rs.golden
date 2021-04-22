@@ -57,7 +57,7 @@ impl Super_SynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn r#foo(&mut self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
+    pub fn r#foo(&self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
         let _value: (i64,) = self.client.send_query(&mut (s), 0x45602cf3b581d6ab, ___deadline)?;
         Ok(_value.0)
     }
@@ -523,7 +523,7 @@ impl SubSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
-    pub fn r#foo(&mut self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
+    pub fn r#foo(&self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
         let _value: (i64,) = self.client.send_query(&mut (s), 0x45602cf3b581d6ab, ___deadline)?;
         Ok(_value.0)
     }
