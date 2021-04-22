@@ -13,7 +13,6 @@ package fake_clock
 
 import (
 	"context"
-	"runtime"
 	"syscall/zx"
 	"syscall/zx/zxwait"
 	"testing"
@@ -119,25 +118,6 @@ func TestNanosleep(t *testing.T) {
 	control.advance(250)
 	// Waits for the goroutine to finish.
 	<-done
-}
-
-// Ensures that the output of Sys_clock_get(ZX_CLOCK_MONOTONIC) matches the
-// output of Sys_clock_get_monotonic.
-func TestClockGet(t *testing.T) {
-	// TODO(fxbug.dev/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
-	control := setup(t)
-	defer control.Close()
-
-	control.advance(90000)
-	t1 := getSysTime()
-	var t2 zx.Time
-	if status := zx.Sys_clock_get(runtime.ZX_CLOCK_MONOTONIC, &t2); status != zx.ErrOk {
-		t.Fatalf("Sys_clock_get(ZX_CLOCK_MONOTONIC, %d) returned error: %s", t2, status)
-	}
-	if t1 != t2 {
-		t.Fatalf("clock_get_monotonic returned: %d, clock_get(ZX_CLOCK_MONOTONIC) returned: %d", t1, t2)
-	}
 }
 
 // Tests that timing out on a Wait works as expected and status/signals are
