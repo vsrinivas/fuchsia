@@ -41,11 +41,16 @@
 #include <zircon/types.h>
 
 #include <cstddef>
+#include <type_traits>
 
 // Statically asserts that type |name| has sizeof(|size|) and alignof(|alignment|).
-#define VALIDATE_TYPE_SIZE_ALIGNMENT(name, size, alignment)                                   \
-  static_assert(sizeof(name) == (size), "size change to " #name " breaks ABI compatibility"); \
-  static_assert(alignof(name) == (alignment),                                                 \
+#define VALIDATE_TYPE_SIZE_ALIGNMENT(name, size, alignment)                                      \
+  static_assert(std::is_trivial_v<name>, "ABI types must be Trivial");                           \
+  static_assert(std::is_standard_layout_v<name>, "ABI types must have a Standard Layout");       \
+  static_assert(std::has_unique_object_representations_v<name>,                                  \
+                "ABI types must have unique object representations (e.g. no implicit padding)"); \
+  static_assert(sizeof(name) == (size), "size change to " #name " breaks ABI compatibility");    \
+  static_assert(alignof(name) == (alignment),                                                    \
                 "alignment change to " #name " breaks ABI compatibility")
 
 // Statically asserts that type |name| has field |field| at offset |offset| with size |size|.
