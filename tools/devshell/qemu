@@ -147,7 +147,7 @@ if [[ -n "${fvm_source}" ]]; then
 fi
 
 if [[ -z "${PKG_TARGET}" ]]; then
-  "${FUCHSIA_DIR}/zircon/scripts/run-zircon" "${run_zircon_args[@]}" "${args[@]}" "$@"
+  "${FUCHSIA_DIR}/zircon/scripts/run-zircon" "${args[@]}" "${run_zircon_args[@]}" "$@"
 else
   # Create symlinks to all of the various components in a temp directory, so
   # that our tar file is just a archive of individual files with no paths.
