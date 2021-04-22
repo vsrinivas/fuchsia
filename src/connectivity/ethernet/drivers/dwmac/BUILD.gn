@@ -28,7 +28,7 @@ driver_module("dwmac") {
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.ethernet",
     "//sdk/banjo/fuchsia.hardware.ethernet.board",
-    "//sdk/banjo/fuchsia.hardware.ethernet.mac",
+    "//sdk/banjo/fuchsia.hardware.ethernet.mac:fuchsia.hardware.ethernet.mac_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",

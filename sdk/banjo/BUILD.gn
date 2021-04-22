@@ -38,7 +38,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.dsiimpl",
   "fuchsia.hardware.ethernet",
   "fuchsia.hardware.ethernet.board",
-  "fuchsia.hardware.ethernet.mac",
   "fuchsia.hardware.goldfish.addressspace",
   "fuchsia.hardware.goldfish.control",
   "fuchsia.hardware.goldfish.pipe",
