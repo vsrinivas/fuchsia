@@ -5,7 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_ui_input as ui_input, fidl_fuchsia_ui_input3 as ui_input3,
-    fuchsia_syslog::{fx_log_err, fx_log_warn},
+    fuchsia_syslog::{fx_log_debug, fx_log_err},
     futures::{TryFutureExt, TryStreamExt},
 };
 
@@ -75,7 +75,12 @@ impl Service {
                                 KeyEvent::new(&key_event, keyboard3.get_keys_pressed().await)?;
                             ime_service.inject_input(key_event_obj.clone()).await.unwrap_or_else(
                                 |e| {
-                                    fx_log_warn!(
+                                    // Most of the time this is not a real error: what it actually
+                                    // means is that we tried to offer text input to a text edit
+                                    // field, but no such field is currently in focus.  Therefore
+                                    // increasing the verbosity of the message, so that it's only
+                                    // printed when you *really* need it for debugging.
+                                    fx_log_debug!(
                                         concat!(
                                             "keyboard::Service::spawn_key_event_injector: ",
                                             "error injecting input into IME: {:?}"
