@@ -781,7 +781,7 @@ mod tests {
                     [datum] => match datum {
                         None => panic!("empty inspect payload in realm {}", i),
                         Some(data) => {
-                            fuchsia_inspect::assert_inspect_tree!(data, root: {
+                            diagnostics_reader::assert_data_tree!(data, root: {
                                 counter: {
                                     count: u64::from(i),
                                 }

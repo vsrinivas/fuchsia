@@ -24,9 +24,9 @@ use thiserror::Error;
 
 use parking_lot::Mutex;
 
-pub use diagnostics_data::{tree_assertion, Data, Inspect, Lifecycle, Logs, Severity};
+pub use diagnostics_data::{Data, Inspect, Lifecycle, Logs, Severity};
 pub use diagnostics_hierarchy::{
-    assert_data_tree, testing::AnyProperty, DiagnosticsHierarchy, Property,
+    assert_data_tree, testing::*, tree_assertion, DiagnosticsHierarchy, Property,
 };
 
 const RETRY_DELAY_MS: i64 = 300;

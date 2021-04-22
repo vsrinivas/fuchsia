@@ -4,11 +4,10 @@
 
 use {
     diagnostics_data::Logs,
-    diagnostics_hierarchy::assert_data_tree,
+    diagnostics_hierarchy::{assert_data_tree, testing::AnyProperty},
     diagnostics_reader::{ArchiveReader, Inspect},
     diagnostics_testing::Severity,
     fuchsia_component_test::ScopedInstance,
-    fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
     futures::stream::StreamExt,
     log::info,
     std::{collections::HashSet, iter::FromIterator},
@@ -35,7 +34,7 @@ async fn read_v2_components_inspect() {
         .await
         .expect("got inspect data");
 
-    assert_inspect_tree!(data[0].payload.as_ref().unwrap(), root: {
+    assert_data_tree!(data[0].payload.as_ref().unwrap(), root: {
         "fuchsia.inspect.Health": {
             status: "OK",
             start_timestamp_nanos: AnyProperty,
@@ -68,7 +67,7 @@ async fn read_v2_components_single_selector() {
 
     // Only inspect from child_a should be reported
     assert_eq!(data.len(), 1);
-    assert_inspect_tree!(data[0].payload.as_ref().unwrap(), root: {
+    assert_data_tree!(data[0].payload.as_ref().unwrap(), root: {
         "fuchsia.inspect.Health": {
             status: "OK",
             start_timestamp_nanos: AnyProperty,
@@ -105,7 +104,7 @@ async fn read_v2_components_recursive_glob() {
     assert_eq!(data_vec.len(), expected_monikers.len());
     let mut found_monikers = HashSet::new();
     for data in data_vec {
-        assert_inspect_tree!(data.payload.as_ref().unwrap(), root: {
+        assert_data_tree!(data.payload.as_ref().unwrap(), root: {
             "fuchsia.inspect.Health": {
                 status: "OK",
                 start_timestamp_nanos: AnyProperty,
@@ -146,7 +145,7 @@ async fn read_v2_components_subtree_with_recursive_glob() {
     assert_eq!(data_vec.len(), expected_monikers.len());
     let mut found_monikers = HashSet::new();
     for data in data_vec {
-        assert_inspect_tree!(data.payload.as_ref().unwrap(), root: {
+        assert_data_tree!(data.payload.as_ref().unwrap(), root: {
             "fuchsia.inspect.Health": {
                 status: "OK",
                 start_timestamp_nanos: AnyProperty,

@@ -4,9 +4,8 @@
 
 use {
     anyhow::Error,
-    diagnostics_reader::{ArchiveReader, Inspect},
+    diagnostics_reader::{assert_data_tree, ArchiveReader, Inspect},
     fuchsia_async::{self as fasync},
-    fuchsia_inspect::testing::assert_inspect_tree,
 };
 
 #[fasync::run_singlethreaded(test)]
@@ -15,7 +14,7 @@ async fn stash_inspect() -> Result<(), Error> {
     let data = ArchiveReader::new().add_selector("stash:root").snapshot::<Inspect>().await?;
     assert_eq!(1, data.len());
 
-    assert_inspect_tree!(data[0].payload.as_ref().unwrap(),
+    assert_data_tree!(data[0].payload.as_ref().unwrap(),
         root: contains {
             secure_mode: false,
             "fuchsia.inspect.Health": contains {
@@ -32,7 +31,7 @@ async fn stash_secure_inspect() -> Result<(), Error> {
     let data = ArchiveReader::new().add_selector("stash_secure:root").snapshot::<Inspect>().await?;
     assert_eq!(1, data.len());
 
-    assert_inspect_tree!(data[0].payload.as_ref().unwrap(),
+    assert_data_tree!(data[0].payload.as_ref().unwrap(),
         root: contains {
             secure_mode: true,
             "fuchsia.inspect.Health": contains {

@@ -26,10 +26,10 @@
 //!     .reader_for("some_other_component_that_was_launched.cmx")
 //!     .inspect().await;
 //!
-//! assert_inspect_tree!(inspect.payload.as_ref().unwrap(), root: {
+//! assert_data_tree!(inspect.payload.as_ref().unwrap(), root: {
 //!   ...
 //! });
-//! assert_inspect_tree!(nested_inspect.payload.as_ref().unwrap(), root: {
+//! assert_data_tree!(nested_inspect.payload.as_ref().unwrap(), root: {
 //!   ...
 //! });
 //!
@@ -236,8 +236,8 @@ impl AppReader {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use diagnostics_data::assert_data_tree;
     use fidl_fuchsia_diagnostics::Severity;
-    use fuchsia_inspect::assert_inspect_tree;
     use futures::pin_mut;
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -255,11 +255,11 @@ mod tests {
         let nested_inspect =
             test_realm.reader_for("inspect_test_component.cmx", &[]).inspect().await;
 
-        assert_inspect_tree!(emitter_inspect.payload.as_ref().unwrap(), root: {
+        assert_data_tree!(emitter_inspect.payload.as_ref().unwrap(), root: {
             other_int: 7u64,
         });
 
-        assert_inspect_tree!(nested_inspect.payload.as_ref().unwrap(), root: {
+        assert_data_tree!(nested_inspect.payload.as_ref().unwrap(), root: {
             int: 3u64,
             "lazy-node": {
                 a: "test",

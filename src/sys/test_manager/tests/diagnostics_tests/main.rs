@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    diagnostics_reader::{ArchiveReader, Inspect, Logs},
+    diagnostics_reader::{assert_data_tree, AnyProperty, ArchiveReader, Inspect, Logs},
     fuchsia_async as fasync,
     fuchsia_component_test::ScopedInstance,
-    fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
     futures::StreamExt,
 };
 
@@ -26,7 +25,7 @@ async fn test_isolated_diagnostics_can_be_read_by_the_test() {
         .expect("got inspect data");
     assert_eq!(data.len(), 1);
     assert_eq!(data[0].moniker, format!(r#"coll\:{}"#, instance.child_name()));
-    assert_inspect_tree!(data[0].payload.as_ref().unwrap(), root: {
+    assert_data_tree!(data[0].payload.as_ref().unwrap(), root: {
         "fuchsia.inspect.Health": {
             status: "OK",
             start_timestamp_nanos: AnyProperty,
