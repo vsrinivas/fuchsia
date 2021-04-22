@@ -47,6 +47,7 @@ pub(super) struct PeerTask {
         HangingGetStream<NetworkInformation>,
         Empty<Result<NetworkInformation, fidl::Error>>,
     >,
+    battery_level: u8,
     calls: Calls,
     gain_control: GainControl,
     connection: ServiceLevelConnection,
@@ -66,6 +67,8 @@ impl PeerTask {
             handler: None,
             network: NetworkInformation::EMPTY,
             network_updates: empty().right_stream(),
+            // TODO (fxbug.dev/74667): Retrieve battery status from Fuchsia power service
+            battery_level: 5,
             calls: Calls::new(None),
             gain_control: GainControl::new()?,
             connection: ServiceLevelConnection::new(),
@@ -170,6 +173,11 @@ impl PeerTask {
                 self.on_search_result(protocol, attributes).await
             }
             PeerRequest::Handle(handler) => self.on_peer_handler(handler).await?,
+            PeerRequest::BatteryLevel(level) => {
+                self.battery_level = level;
+                let status = AgIndicator::BatteryLevel(self.battery_level);
+                self.phone_status_update(status).await;
+            }
         }
         Ok(())
     }
@@ -200,7 +208,7 @@ impl PeerTask {
                     callheld: call_ind.callheld,
                     signal: self.network.signal_strength.map(|ss| ss as u8).unwrap_or(0),
                     roam: self.network.roaming.unwrap_or(false),
-                    battchg: 5, // TODO: Retrieve battery status from Fuchsia power service.
+                    battchg: self.battery_level,
                 };
                 // Update the procedure with the retrieved AG update.
                 self.connection.receive_ag_request(marker, response(status)).await;

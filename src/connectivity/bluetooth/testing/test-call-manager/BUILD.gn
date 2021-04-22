@@ -8,6 +8,7 @@ rustc_library("test-call-manager") {
   deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.hfp.test:fuchsia.bluetooth.hfp.test-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/lib/packet-encoding",
     "//src/lib/async-utils",

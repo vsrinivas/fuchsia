@@ -886,6 +886,11 @@ impl Facade for HfpFacade {
                 self.set_nrec_support(support).await;
                 Ok(to_value(())?)
             }
+            "SetBatteryLevel" => {
+                let level = parse_arg!(args, as_u64, "value")?;
+                self.set_battery_level(level).await?;
+                Ok(to_value(())?)
+            }
             "GetState" => {
                 let result = self.get_state().await;
                 Ok(to_value(result)?)

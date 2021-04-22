@@ -32,8 +32,10 @@ async fn main() -> Result<(), Error> {
     let profile = Profile::register_audio_gateway(feature_support)?;
 
     let (call_manager_sender, call_manager_receiver) = mpsc::channel(1);
+    let (test_request_sender, test_request_receiver) = mpsc::channel(1);
 
-    let hfp = Hfp::new(profile, call_manager_receiver, feature_support).run();
+    let hfp =
+        Hfp::new(profile, call_manager_receiver, feature_support, test_request_receiver).run();
     pin_mut!(hfp);
 
     let mut fs = ServiceFs::new();
@@ -43,7 +45,7 @@ async fn main() -> Result<(), Error> {
         warn!("Could not serve inspect: {}", e);
     }
 
-    let services = run_services(fs, call_manager_sender);
+    let services = run_services(fs, call_manager_sender, test_request_sender);
     pin_mut!(services);
 
     match future::select(services, hfp).await {

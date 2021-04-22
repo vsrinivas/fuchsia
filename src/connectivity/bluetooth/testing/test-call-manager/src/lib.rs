@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Error};
+use anyhow::{bail, format_err, Error};
 use async_utils::hanging_get::client::HangingGetStream;
 use derivative::Derivative;
 use fidl_fuchsia_bluetooth::PeerId;
@@ -13,6 +13,7 @@ use fidl_fuchsia_bluetooth_hfp::{
     PeerHandlerRequestStream, PeerHandlerWaitForCallResponder,
     PeerHandlerWatchNetworkInformationResponder, SignalStrength,
 };
+use fidl_fuchsia_bluetooth_hfp_test::{HfpTestMarker, HfpTestProxy};
 use fuchsia_async as fasync;
 use fuchsia_component::client;
 // TODO (fxbug.dev/72691): Replace usage with `log` macros.
@@ -40,6 +41,7 @@ struct ManagerState {
     operator: String,
     subscriber_numbers: Vec<String>,
     nrec_support: bool,
+    battery_level: Option<u8>,
 }
 
 impl Default for ManagerState {
@@ -50,6 +52,7 @@ impl Default for ManagerState {
             operator: String::new(),
             subscriber_numbers: vec![],
             nrec_support: true,
+            battery_level: None,
         }
     }
 }
@@ -116,6 +119,7 @@ pub struct ManagerStateSer {
     operator: String,
     subscriber_numbers: Vec<String>,
     nrec_support: bool,
+    battery_level: Option<u8>,
 }
 
 #[derive(Serialize)]
@@ -146,6 +150,7 @@ impl From<&ManagerState> for ManagerStateSer {
             operator: state.operator.clone(),
             subscriber_numbers: state.subscriber_numbers.clone(),
             nrec_support: state.nrec_support.clone(),
+            battery_level: state.battery_level.clone(),
         }
     }
 }
@@ -200,6 +205,9 @@ struct TestCallManagerInner {
     /// Running instance of the bt-hfp-audio-gateway component.
     #[derivative(Debug = "ignore")]
     hfp_component: Option<client::App>,
+    /// Connection to HFP Test interface
+    #[derivative(Debug = "ignore")]
+    test_proxy: Option<HfpTestProxy>,
     /// Call manager state that is not associated with a particular peer or call.
     manager: ManagerState,
     /// Most commands are directed at a single peer. These commands are sent to the `active_peer`.
@@ -264,6 +272,12 @@ impl TestCallManager {
             let hfp_service_proxy = bt_hfp
                 .connect_to_service::<HfpMarker>()
                 .map_err(|err| format_err!("Failed to create HFP service proxy: {}", err))?;
+
+            inner.test_proxy =
+                Some(bt_hfp.connect_to_service::<HfpTestMarker>().map_err(|err| {
+                    format_err!("Failed to create HFP Test service proxy: {}", err)
+                })?);
+
             inner.hfp_component = Some(bt_hfp);
             let (client_end, stream) =
                 fidl::endpoints::create_request_stream::<CallManagerMarker>()?;
@@ -272,6 +286,7 @@ impl TestCallManager {
             let task = fasync::Task::spawn(
                 self.clone().watch_for_peers(stream).map(|f| f.unwrap_or_else(|_| {})),
             );
+
             inner.manager.peer_watcher = Some(task);
         }
         Ok(())
@@ -808,6 +823,20 @@ impl TestCallManager {
 
     pub async fn set_nrec_support(&self, value: bool) {
         self.inner.lock().await.manager.nrec_support = value;
+    }
+
+    pub async fn set_battery_level(&self, value: u64) -> Result<(), Error> {
+        if value > 5 {
+            bail!("Value out of range: {}. Battery level must be 0-5.", value);
+        }
+        let mut inner = self.inner.lock().await;
+        let proxy = inner
+            .test_proxy
+            .as_ref()
+            .ok_or_else(|| format_err!("Cannot set battery without HfpTest proxy"))?;
+        proxy.battery_indicator(value as u8)?;
+        inner.manager.battery_level = Some(value as u8);
+        Ok(())
     }
 
     pub async fn get_state(&self) -> StateSer {

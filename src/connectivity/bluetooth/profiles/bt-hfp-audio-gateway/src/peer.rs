@@ -32,6 +32,7 @@ pub mod update;
 enum PeerRequest {
     Profile(ProfileEvent),
     Handle(PeerHandlerProxy),
+    BatteryLevel(u8),
 }
 
 /// Represents a Bluetooth peer that implements the HFP Hands Free role.
@@ -102,6 +103,10 @@ impl Peer {
             .await
             .map_err(|_| Error::PeerRemoved)?;
         Ok(server_end)
+    }
+
+    pub async fn battery_level(&mut self, level: u8) {
+        let _ = self.queue.try_send_fut(PeerRequest::BatteryLevel(level)).await;
     }
 
     /// Method completes when a peer task accepts the request.

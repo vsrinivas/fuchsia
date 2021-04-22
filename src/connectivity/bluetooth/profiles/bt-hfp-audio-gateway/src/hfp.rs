@@ -6,6 +6,7 @@ use {
     async_utils::stream::FutureMap,
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_bluetooth_hfp::{CallManagerProxy, PeerHandlerMarker},
+    fidl_fuchsia_bluetooth_hfp_test::HfpTestRequest,
     fuchsia_bluetooth::types::PeerId,
     futures::{channel::mpsc::Receiver, select, stream::StreamExt},
     std::{collections::hash_map::Entry, matches},
@@ -29,6 +30,7 @@ pub struct Hfp {
     call_manager_registration: Receiver<CallManagerProxy>,
     /// A collection of Bluetooth peers that support the HFP profile.
     peers: FutureMap<PeerId, Peer>,
+    test_requests: Receiver<HfpTestRequest>,
 }
 
 impl Hfp {
@@ -37,6 +39,7 @@ impl Hfp {
         profile: Profile,
         call_manager_registration: Receiver<CallManagerProxy>,
         config: AudioGatewayFeatureSupport,
+        test_requests: Receiver<HfpTestRequest>,
     ) -> Self {
         Self {
             profile,
@@ -44,6 +47,7 @@ impl Hfp {
             call_manager: None,
             peers: FutureMap::new(),
             config,
+            test_requests,
         }
     }
 
@@ -63,6 +67,9 @@ impl Hfp {
                 manager = self.call_manager_registration.select_next_some() => {
                     self.handle_new_call_manager(manager).await?;
                 }
+                request = self.test_requests.select_next_some() => {
+                    self.handle_test_request(request).await?;
+                }
                 removed = self.peers.next() => {
                     if let Some(removed) = removed {
                         log::debug!("peer removed: {}", removed);
@@ -70,6 +77,17 @@ impl Hfp {
                 }
                 complete => {
                     break;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn handle_test_request(&mut self, request: HfpTestRequest) -> Result<(), Error> {
+        match request {
+            HfpTestRequest::BatteryIndicator { level, .. } => {
+                for peer in self.peers.inner().values_mut() {
+                    peer.battery_level(level).await;
                 }
             }
         }
@@ -140,7 +158,7 @@ mod tests {
         crate::profile::test_server::{setup_profile_and_test_server, LocalProfileTestServer},
         fidl_fuchsia_bluetooth as bt,
         fidl_fuchsia_bluetooth_hfp::{
-            CallManagerMarker, CallManagerRequest, CallManagerRequestStream, NetworkInformation,
+            CallManagerMarker, CallManagerRequest, CallManagerRequestStream,
         },
         fuchsia_async as fasync,
         futures::{channel::mpsc, SinkExt, TryStreamExt},
@@ -152,9 +170,10 @@ mod tests {
         // dropping the server is expected to produce an error from Hfp::run
         drop(server);
 
-        let (_tx, rx) = mpsc::channel(0);
+        let (_tx, rx1) = mpsc::channel(1);
+        let (_, rx2) = mpsc::channel(1);
 
-        let hfp = Hfp::new(profile, rx, AudioGatewayFeatureSupport::default());
+        let hfp = Hfp::new(profile, rx1, AudioGatewayFeatureSupport::default(), rx2);
         let result = hfp.run().await;
         assert!(result.is_err());
     }
@@ -171,9 +190,11 @@ mod tests {
         let (mut sender, receiver) = mpsc::channel(1);
         sender.send(proxy).await.expect("Hfp to receive the proxy");
 
+        let (_, rx) = mpsc::channel(1);
+
         // Run hfp in a background task since we are testing that the profile server observes the
         // expected behavior when interacting with hfp.
-        let hfp = Hfp::new(profile, receiver, AudioGatewayFeatureSupport::default());
+        let hfp = Hfp::new(profile, receiver, AudioGatewayFeatureSupport::default(), rx);
         let _hfp_task = fasync::Task::local(hfp.run());
 
         // Drive both services to expected steady states without any errors.
@@ -182,31 +203,25 @@ mod tests {
             call_manager_init_and_peer_handling(stream),
         )
         .await;
-        matches::assert_matches!(result, (Ok(()), Ok(())));
+        assert!(result.0.is_ok());
+        assert!(result.1.is_ok());
     }
 
     /// Respond to all FIDL messages expected during the initialization of the Hfp main run loop
     /// and during the simulation of a new `Peer` being added.
     ///
-    /// Returns Ok(()) when all expected messages have been handled normally.
+    /// Returns Ok(()) when a peer has made a connection request to the call manager.
     async fn call_manager_init_and_peer_handling(
         mut stream: CallManagerRequestStream,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<CallManagerRequestStream, anyhow::Error> {
         match stream.try_next().await? {
             Some(CallManagerRequest::PeerConnected { id: _, handle, responder }) => {
                 responder.send()?;
-                let mut stream = handle.into_stream()?;
-                let responder = stream
-                    .next()
-                    .await
-                    .expect("some request to be received")?
-                    .into_watch_network_information()
-                    .expect("watch network information request");
-                responder.send(NetworkInformation::EMPTY)?;
+                let _ = handle.into_stream()?;
             }
             x => anyhow::bail!("Unexpected request received: {:?}", x),
         };
-        Ok(())
+        Ok(stream)
     }
 
     /// Respond to all FIDL messages expected during the initialization of the Hfp main run loop and
@@ -215,7 +230,7 @@ mod tests {
     /// Returns Ok(()) when all expected messages have been handled normally.
     async fn profile_server_init_and_peer_handling(
         mut server: LocalProfileTestServer,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<LocalProfileTestServer, anyhow::Error> {
         server.complete_registration().await;
 
         // Send search result
@@ -226,6 +241,7 @@ mod tests {
             .service_found(&mut bt::PeerId { value: 1 }, None, &mut vec![].iter_mut())
             .await?;
 
-        Ok(())
+        log::info!("profile server done");
+        Ok(server)
     }
 }

@@ -5,8 +5,9 @@
 use {
     anyhow::{Context, Error},
     fidl_fuchsia_bluetooth_hfp::{CallManagerProxy, HfpRequest, HfpRequestStream},
+    fidl_fuchsia_bluetooth_hfp_test::{HfpTestRequest, HfpTestRequestStream},
     fuchsia_component::server::{ServiceFs, ServiceObj},
-    futures::{channel::mpsc::Sender, SinkExt, StreamExt, TryStreamExt},
+    futures::{channel::mpsc::Sender, FutureExt, SinkExt, StreamExt, TryStreamExt},
     log::info,
 };
 
@@ -16,6 +17,7 @@ const MAX_CONCURRENT_CONNECTIONS: usize = 10;
 /// All FIDL services that are exposed by this component's ServiceFs.
 pub enum Services {
     Hfp(HfpRequestStream),
+    HfpTest(HfpTestRequestStream),
 }
 
 /// Handle a new incoming Hfp protocol client connection. This async function completes when
@@ -24,7 +26,7 @@ async fn handle_hfp_client_connection(
     stream: HfpRequestStream,
     call_manager: Sender<CallManagerProxy>,
 ) {
-    log::info!("new hfp connection");
+    info!("new hfp connection");
     if let Err(e) = handle_hfp_client_connection_result(stream, call_manager).await {
         // An error processing client provided parameters is not a fatal error.
         // Log and return.
@@ -48,14 +50,35 @@ async fn handle_hfp_client_connection_result(
     Ok(())
 }
 
+async fn handle_hfp_test_client_connection(
+    mut stream: HfpTestRequestStream,
+    mut test_requests: Sender<HfpTestRequest>,
+) {
+    while let Some(request) = stream.next().await {
+        match request {
+            Ok(request) => {
+                if let Err(e) = test_requests.send(request).await {
+                    info!("Error handling test request: {}", e);
+                    break;
+                }
+            }
+            Err(e) => info!("Error in test connection: {}", e),
+        }
+    }
+}
+
 pub async fn run_services(
     mut fs: ServiceFs<ServiceObj<'_, Services>>,
     call_manager: Sender<CallManagerProxy>,
+    test_requests: Sender<HfpTestRequest>,
 ) -> Result<(), Error> {
-    fs.dir("svc").add_fidl_service(Services::Hfp);
+    fs.dir("svc").add_fidl_service(Services::Hfp).add_fidl_service(Services::HfpTest);
     fs.take_and_serve_directory_handle().context("Failed to serve ServiceFs directory")?;
-    fs.for_each_concurrent(MAX_CONCURRENT_CONNECTIONS, move |Services::Hfp(stream)| {
-        handle_hfp_client_connection(stream, call_manager.clone())
+    fs.for_each_concurrent(MAX_CONCURRENT_CONNECTIONS, move |connection| match connection {
+        Services::Hfp(stream) => handle_hfp_client_connection(stream, call_manager.clone()).boxed(),
+        Services::HfpTest(stream) => {
+            handle_hfp_test_client_connection(stream, test_requests.clone()).boxed()
+        }
     })
     .await;
     Ok(())
