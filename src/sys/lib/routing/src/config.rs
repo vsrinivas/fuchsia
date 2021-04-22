@@ -8,8 +8,8 @@ use {
     cm_types::Url,
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_internal::{
-        self as component_internal, BuiltinPkgResolver, CapabilityPolicyAllowlists,
-        DebugRegistrationPolicyAllowlists, OutDirContents,
+        self as component_internal, BuiltinBootResolver, BuiltinPkgResolver,
+        CapabilityPolicyAllowlists, DebugRegistrationPolicyAllowlists, OutDirContents,
     },
     fidl_fuchsia_sys2 as fsys,
     moniker::{AbsoluteMoniker, ExtendedMoniker, MonikerError},
@@ -64,7 +64,8 @@ pub struct RuntimeConfig {
     /// The list of capabilities offered from component manager's namespace.
     pub namespace_capabilities: Vec<cm_rust::CapabilityDecl>,
 
-    /// Which builtin resolver to use. If not supplied this defaults to the NONE option.
+    /// Which builtin resolver to use for the fuchsia-pkg scheme. If not supplied this defaults to
+    /// the NONE option.
     pub builtin_pkg_resolver: BuiltinPkgResolver,
 
     /// Determine what content to expose through the component manager's
@@ -82,6 +83,10 @@ pub struct RuntimeConfig {
 
     /// If true, component manager will log all events dispatched in the topology.
     pub log_all_events: bool,
+
+    /// Which builtin resolver to use for the fuchsia-boot scheme. If not supplied this defaults to
+    /// the NONE option.
+    pub builtin_boot_resolver: BuiltinBootResolver,
 }
 
 /// Runtime security policy.
@@ -166,6 +171,7 @@ impl Default for RuntimeConfig {
             root_component_url: Default::default(),
             component_id_index_path: None,
             log_all_events: false,
+            builtin_boot_resolver: BuiltinBootResolver::None,
         }
     }
 }
@@ -276,6 +282,9 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
             root_component_url,
             component_id_index_path: config.component_id_index_path,
             log_all_events,
+            builtin_boot_resolver: config
+                .builtin_boot_resolver
+                .unwrap_or(default.builtin_boot_resolver),
         })
     }
 }
@@ -621,6 +630,7 @@ mod tests {
                 root_component_url: Some(FOO_PKG_URL.to_string()),
                 component_id_index_path: Some("/boot/config/component_id_index".to_string()),
                 log_all_events: Some(true),
+                builtin_boot_resolver: Some(component_internal::BuiltinBootResolver::None),
                 ..component_internal::Config::EMPTY
             },
             RuntimeConfig {
@@ -708,6 +718,7 @@ mod tests {
                 root_component_url: Some(Url::new(FOO_PKG_URL.to_string()).unwrap()),
                 component_id_index_path: Some("/boot/config/component_id_index".to_string()),
                 log_all_events: true,
+                builtin_boot_resolver: BuiltinBootResolver::None,
             }
         ),
     }

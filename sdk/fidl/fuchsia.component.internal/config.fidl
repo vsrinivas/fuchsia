@@ -49,7 +49,8 @@ table Config {
     /// Value defaults to 1.
     7: uint32 num_threads;
 
-    /// Which builtin resolver to use. If not supplied this defaults to the NONE option.
+    /// Which builtin resolver to use for the fuchsia-pkg scheme. If not supplied this defaults to
+    /// the NONE option.
     8: BuiltinPkgResolver builtin_pkg_resolver;
 
     /// Determine what content to expose through the component manager's
@@ -67,9 +68,13 @@ table Config {
 
     /// If true, component manager will log all events dispatched in the topology.
     12: bool log_all_events;
+
+    /// Which builtin resolver to use for the fuchsia-boot scheme. If not supplied this defaults to
+    /// the NONE option.
+    13: BuiltinBootResolver builtin_boot_resolver;
 };
 
-/// The builtin resolver to use, if any.
+/// The builtin resolver to use for the fuchsia-pkg scheme, if any.
 enum BuiltinPkgResolver : uint8 {
     /// No builtin package resolver is used. Products supply a package resolver as a component, or
     /// can opt to not include one at all.
@@ -78,6 +83,20 @@ enum BuiltinPkgResolver : uint8 {
     /// Try to use the `fuchsia.sys.Loader` protocol from the namespace, typically this is provided
     /// by `appmgr`. Test scenarios commonly use this option.
     APPMGR_BRIDGE = 3;
+};
+
+/// The builtin resolver to use for the fuchsia-boot scheme, if any.
+enum BuiltinBootResolver : uint8 {
+    /// No builtin boot resolver is used.
+    NONE = 1;
+
+    /// Try to use the /boot directory from the namespace. Typically this is provided
+    /// to component manager during initialization of the system.
+    BOOT = 2;
+
+    /// Try to use the /pkg directory from the namespace. Typically this is provided
+    /// to a nested component manager that a part of a test package.
+    PKG = 3;
 };
 
 /// Runtime security policy.

@@ -28,6 +28,9 @@ pub static SCHEME: &str = "fuchsia-boot";
 /// On a typical system, this /boot directory is the bootfs served from the contents of the
 /// 'ZBI_TYPE_STORAGE_BOOTFS' ZBI item by bootsvc, the process which starts component_manager.
 ///
+/// For unit and integration tests, the /pkg directory in component_manager's namespace may be used
+/// to load components.
+///
 /// URL syntax:
 /// - fuchsia-boot:///path/within/bootfs#meta/component.cm
 pub struct FuchsiaBootResolver {
@@ -35,13 +38,13 @@ pub struct FuchsiaBootResolver {
 }
 
 impl FuchsiaBootResolver {
-    /// Create a new FuchsiaBootResolver. This first checks whether a /boot directory is present in
-    /// the namespace, and returns Ok(None) if not present. This is generally the case in unit and
-    /// integration tests where this resolver is unused.
-    pub fn new() -> Result<Option<FuchsiaBootResolver>, Error> {
+    /// Create a new FuchsiaBootResolver. This first checks whether the path passed in is present in
+    /// the namespace, and returns Ok(None) if not present. For unit and integration tests, this
+    /// path may point to /pkg.
+    pub fn new(path: &'static str) -> Result<Option<FuchsiaBootResolver>, Error> {
         // Note that this check is synchronous. The async executor also likely is not being polled
         // yet, since this is called during startup.
-        let bootfs_dir = Path::new("/boot");
+        let bootfs_dir = Path::new(path);
         if !bootfs_dir.exists() {
             return Ok(None);
         }

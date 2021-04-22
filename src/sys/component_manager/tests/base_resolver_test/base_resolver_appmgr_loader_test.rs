@@ -4,8 +4,7 @@
 
 use {
     component_events::{events::*, matcher::EventMatcher},
-    fidl::endpoints::Proxy,
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     test_utils_lib::opaque_test::*,
 };
 
@@ -16,21 +15,12 @@ use {
 /// manager configuration here sets the built-in resolver to 'None', meaning we
 /// expect the attempt to start `echo_server` to not resolve.
 async fn base_resolver_appmgr_bridge_test() {
-    // Obtain access to this component's pkg directory
-    let pkg_proxy = io_util::open_directory_in_namespace(
-        "/pkg",
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
-    )
-    .unwrap();
-    let pkg_channel = pkg_proxy.into_channel().unwrap().into_zx_channel();
-
     // Create an OpaqueTest that uses the appmgr bridge config
     let test = OpaqueTestBuilder::new("fuchsia-boot:///#meta/simple_root.cm")
         .component_manager_url(
             "fuchsia-pkg://fuchsia.com/base_resolver_test#meta/component_manager_appmgr_loader.cmx",
         )
         .config("/pkg/data/component_manager_config_appmgr_loader")
-        .add_dir_handle("/boot", pkg_channel.into())
         .build()
         .await
         .unwrap();

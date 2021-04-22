@@ -57,7 +57,7 @@ use {
     cm_rust::{CapabilityName, RunnerRegistration},
     cm_types::Url,
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd, ServiceMarker},
-    fidl_fuchsia_component_internal::{BuiltinPkgResolver, OutDirContents},
+    fidl_fuchsia_component_internal::{BuiltinBootResolver, BuiltinPkgResolver, OutDirContents},
     fidl_fuchsia_diagnostics_types::Task as DiagnosticsTask,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
@@ -219,7 +219,7 @@ impl BuiltinEnvironmentBuilder {
             .collect();
 
         let boot_resolver = if self.add_environment_resolvers {
-            let boot_resolver = register_boot_resolver(&mut self.resolvers)?;
+            let boot_resolver = register_boot_resolver(&mut self.resolvers, &runtime_config)?;
             register_appmgr_resolver(&mut self.resolvers, &runtime_config)?;
             boot_resolver
         } else {
@@ -875,11 +875,17 @@ impl BuiltinEnvironment {
 // it can be installed as a Builtin capability.
 fn register_boot_resolver(
     resolvers: &mut ResolverRegistry,
+    runtime_config: &RuntimeConfig,
 ) -> Result<Option<Arc<FuchsiaBootResolver>>, Error> {
-    let boot_resolver = FuchsiaBootResolver::new().context("Failed to create boot resolver")?;
+    let path = match &runtime_config.builtin_boot_resolver {
+        BuiltinBootResolver::Boot => "/boot",
+        BuiltinBootResolver::Pkg => "/pkg",
+        BuiltinBootResolver::None => return Ok(None),
+    };
+    let boot_resolver = FuchsiaBootResolver::new(path).context("Failed to create boot resolver")?;
     match boot_resolver {
         None => {
-            info!("No /boot directory in namespace, fuchsia-boot resolver unavailable");
+            info!("No {} directory in namespace, fuchsia-boot resolver unavailable", path);
             Ok(None)
         }
         Some(boot_resolver) => {
@@ -896,21 +902,18 @@ fn register_appmgr_resolver(
     resolvers: &mut ResolverRegistry,
     runtime_config: &RuntimeConfig,
 ) -> Result<(), Error> {
-    if let Some(loader) = connect_sys_loader()? {
-        match &runtime_config.builtin_pkg_resolver {
-            BuiltinPkgResolver::None => {
-                warn!(
-                    "Appmgr bridge package resolver is available, but not enabled, verify \
-                    configuration correctness"
-                );
-            }
-            BuiltinPkgResolver::AppmgrBridge => {
+    match &runtime_config.builtin_pkg_resolver {
+        BuiltinPkgResolver::AppmgrBridge => {
+            if let Some(loader) = connect_sys_loader()? {
                 resolvers.register(
                     fuchsia_pkg_resolver::SCHEME.to_string(),
                     Box::new(fuchsia_pkg_resolver::FuchsiaPkgResolver::new(loader)),
                 );
+            } else {
+                warn!("Could not create appmgr bridge resolver because fuchsia.sys.Loader was not found in component manager namespace. Verify configuration correctness.");
             }
         }
+        BuiltinPkgResolver::None => {}
     }
     Ok(())
 }

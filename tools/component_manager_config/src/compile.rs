@@ -34,6 +34,7 @@ struct Config {
     root_component_url: Option<Url>,
     component_id_index_path: Option<String>,
     log_all_events: Option<bool>,
+    builtin_boot_resolver: Option<BuiltinBootResolver>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -44,6 +45,16 @@ enum BuiltinPkgResolver {
 }
 
 symmetrical_enums!(BuiltinPkgResolver, component_internal::BuiltinPkgResolver, None, AppmgrBridge);
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+enum BuiltinBootResolver {
+    None,
+    Boot,
+    Pkg,
+}
+
+symmetrical_enums!(BuiltinBootResolver, component_internal::BuiltinBootResolver, None, Boot, Pkg);
 
 impl std::default::Default for BuiltinPkgResolver {
     fn default() -> Self {
@@ -220,6 +231,10 @@ impl TryFrom<Config> for component_internal::Config {
             },
             component_id_index_path: config.component_id_index_path,
             log_all_events: config.log_all_events,
+            builtin_boot_resolver: match config.builtin_boot_resolver {
+                Some(builtin_boot_resolver) => Some(builtin_boot_resolver.into()),
+                None => None,
+            },
             ..Self::EMPTY
         })
     }
@@ -334,6 +349,7 @@ impl Config {
         extend_if_unset!(self, another, root_component_url);
         extend_if_unset!(self, another, component_id_index_path);
         extend_if_unset!(self, another, log_all_events);
+        extend_if_unset!(self, another, builtin_boot_resolver);
         Ok(self)
     }
 
@@ -479,6 +495,7 @@ mod tests {
             root_component_url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx",
             component_id_index_path: "/this/is/an/absolute/path",
             log_all_events: true,
+            builtin_boot_resolver: "boot",
         }"#;
         let config = compile_str(input).expect("failed to compile");
         assert_eq!(
@@ -569,6 +586,7 @@ mod tests {
                 root_component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx".to_string()),
                 component_id_index_path: Some("/this/is/an/absolute/path".to_string()),
                 log_all_events: Some(true),
+                builtin_boot_resolver: Some(component_internal::BuiltinBootResolver::Boot),
                 ..component_internal::Config::EMPTY
             }
         );
