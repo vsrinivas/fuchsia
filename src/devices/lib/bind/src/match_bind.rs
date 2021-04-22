@@ -106,9 +106,9 @@ impl DeviceMatcher {
             Symbol::NumberValue(key) => PropertyKey::NumberKey(key),
             Symbol::StringValue(key) => PropertyKey::StringKey(key),
             Symbol::Key(key, _) => PropertyKey::StringKey(key),
-            _ => unimplemented!(
-                "Only number and string-based property keys are supported. See fxb/71834."
-            ),
+            _ => {
+                return Err(BytecodeError::InvalidKeyType);
+            }
         };
 
         let bind_value = self.read_next_value()?;
@@ -618,6 +618,22 @@ mod test {
 
         verify_match_result(
             Err(BytecodeError::InvalidBoolValue(15)),
+            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            HashMap::new(),
+        );
+    }
+
+    #[test]
+    fn invalid_key_type() {
+        let mut instructions: Vec<u8> = vec![];
+        append_inequal_cond(
+            &mut instructions,
+            EncodedValue { value_type: RawValueType::BoolValue, value: 1 },
+            EncodedValue { value_type: RawValueType::BoolValue, value: 15 },
+        );
+
+        verify_match_result(
+            Err(BytecodeError::InvalidKeyType),
             DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
             HashMap::new(),
         );

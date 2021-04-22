@@ -519,6 +519,12 @@ impl From<BytecodeError> for UserError {
             BytecodeError::InvalidJumpLocation => {
                 UserError::new("E814", "Jump offset did not land on a jumping pad", None, false)
             }
+            BytecodeError::InvalidKeyType => UserError::new(
+                "E815",
+                "Only number-based and string-based keys are supported.",
+                None,
+                false,
+            ),
         }
     }
 }

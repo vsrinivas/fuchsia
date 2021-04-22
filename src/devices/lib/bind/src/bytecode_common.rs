@@ -25,6 +25,7 @@ pub enum BytecodeError {
     MissingEntryInSymbolTable(u32),
     MismatchValueTypes,
     InvalidJumpLocation,
+    InvalidKeyType,
 }
 
 impl fmt::Display for BytecodeError {
