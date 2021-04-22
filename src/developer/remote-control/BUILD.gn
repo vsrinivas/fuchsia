@@ -155,7 +155,7 @@ fuchsia_component("remote-control-runner-component") {
   deps = [ "//src/developer/remote-control/runner" ]
 }
 
-fuchsia_shell_package("pkg") {
+fuchsia_package("pkg") {
   package_name = "remote-control"
   deps = [
     ":remote-control-component",
