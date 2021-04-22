@@ -41,11 +41,14 @@ use crate::{
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use async_utils::mutex_ticket::MutexTicket;
-use fidl::{endpoints::ClientEnd, AsHandleRef, Channel, Handle, HandleBased, Socket, SocketOpts};
+use fidl::{
+    endpoints::ClientEnd, AsHandleRef, Channel, EventPair, Handle, HandleBased, Socket, SocketOpts,
+};
 use fidl_fuchsia_overnet::{ConnectionInfo, ServiceProviderMarker, ServiceProviderProxyInterface};
 use fidl_fuchsia_overnet_protocol::{
-    ChannelHandle, Implementation, LinkDiagnosticInfo, PeerConnectionDiagnosticInfo, RouteMetrics,
-    SocketHandle, SocketType, StreamId, StreamRef, ZirconHandle,
+    ChannelHandle, EventPairHandle, EventPairRights, Implementation, LinkDiagnosticInfo,
+    PeerConnectionDiagnosticInfo, RouteMetrics, SocketHandle, SocketType, StreamId, StreamRef,
+    ZirconHandle,
 };
 use fuchsia_async::Task;
 use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
@@ -711,6 +714,10 @@ impl Router {
                 HandleType::Socket(socket_type, rights) => {
                     Ok(ZirconHandle::Socket(SocketHandle { stream_ref, socket_type, rights }))
                 }
+                HandleType::EventPair => Ok(ZirconHandle::EventPair(EventPairHandle {
+                    stream_ref,
+                    rights: EventPairRights::empty(),
+                })),
             }
         } else {
             // This handle (and its pair) is previously unseen... establish a proxy stream for it
@@ -760,6 +767,26 @@ impl Router {
                     );
                     ZirconHandle::Socket(SocketHandle { stream_ref, socket_type, rights })
                 }
+                HandleType::EventPair => {
+                    self.add_proxied(
+                        &mut *proxied_streams,
+                        info.this_handle_key,
+                        info.pair_handle_key,
+                        tx,
+                        crate::proxy::spawn_send(
+                            EventPair::from_handle(handle).into_proxied()?,
+                            rx,
+                            stream_writer.into(),
+                            stream_reader.into(),
+                            stats,
+                            Arc::downgrade(&self),
+                        ),
+                    );
+                    ZirconHandle::EventPair(EventPairHandle {
+                        stream_ref,
+                        rights: EventPairRights::empty(),
+                    })
+                }
             })
         }
     }
@@ -772,63 +799,85 @@ impl Router {
         conn: PeerConnRef<'_>,
         stats: Arc<MessageStats>,
     ) -> Result<Handle, Error> {
-        let (tx, rx) = futures::channel::oneshot::channel();
-        let debug_id = generate_node_id().0;
-        let rx = ProxyTransferInitiationReceiver::new(rx.map_err(move |_| {
-            format_err!("cancelled transfer via recv_proxied; debug_id={}", debug_id)
-        }));
-        Ok(match handle {
+        match handle {
             ZirconHandle::Channel(ChannelHandle { stream_ref, rights }) => {
-                let (h, p) = crate::proxy::spawn_recv(
-                    move || Channel::create().map_err(Into::into),
-                    rights,
-                    rx,
-                    stream_ref,
+                self.recv_proxied_handle(
                     conn,
                     stats,
-                    Arc::downgrade(&self),
+                    stream_ref,
+                    move || Channel::create().map_err(Into::into),
+                    rights,
                 )
-                .await?;
-                if let Some(p) = p {
-                    let info = handle_info(h.as_handle_ref())?;
-                    self.add_proxied(
-                        &mut *self.proxied_streams.lock().await,
-                        info.pair_handle_key,
-                        info.this_handle_key,
-                        tx,
-                        p,
-                    );
-                }
-                h
+                .await
             }
             ZirconHandle::Socket(SocketHandle { stream_ref, socket_type, rights }) => {
                 let opts = match socket_type {
                     SocketType::Stream => SocketOpts::STREAM,
                     SocketType::Datagram => SocketOpts::DATAGRAM,
                 };
-                let (h, p) = crate::proxy::spawn_recv(
-                    move || Socket::create(opts).map_err(Into::into),
-                    rights,
-                    rx,
-                    stream_ref,
+                self.recv_proxied_handle(
                     conn,
                     stats,
-                    Arc::downgrade(&self),
+                    stream_ref,
+                    move || Socket::create(opts).map_err(Into::into),
+                    rights,
                 )
-                .await?;
-                if let Some(p) = p {
-                    let info = handle_info(h.as_handle_ref())?;
-                    self.add_proxied(
-                        &mut *self.proxied_streams.lock().await,
-                        info.pair_handle_key,
-                        info.this_handle_key,
-                        tx,
-                        p,
-                    );
-                }
-                h
+                .await
             }
-        })
+            ZirconHandle::EventPair(EventPairHandle { stream_ref, rights }) => {
+                self.recv_proxied_handle(
+                    conn,
+                    stats,
+                    stream_ref,
+                    move || EventPair::create().map_err(Into::into),
+                    rights,
+                )
+                .await
+            }
+        }
+    }
+
+    async fn recv_proxied_handle<Hdl, CreateType>(
+        self: &Arc<Self>,
+        conn: PeerConnRef<'_>,
+        stats: Arc<MessageStats>,
+        stream_ref: StreamRef,
+        create_handles: impl FnOnce() -> Result<(CreateType, CreateType), Error> + 'static,
+        rights: CreateType::Rights,
+    ) -> Result<Handle, Error>
+    where
+        Hdl: 'static + crate::proxy::Proxyable,
+        CreateType: 'static
+            + fidl::HandleBased
+            + IntoProxied<Proxied = Hdl>
+            + std::fmt::Debug
+            + crate::handle_info::WithRights,
+    {
+        let (tx, rx) = futures::channel::oneshot::channel();
+        let rx = ProxyTransferInitiationReceiver::new(
+            rx.map_err(move |_| format_err!("cancelled transfer via recv_proxied")),
+        );
+        let (h, p) = crate::proxy::spawn_recv(
+            create_handles,
+            rights,
+            rx,
+            stream_ref,
+            conn,
+            stats,
+            Arc::downgrade(&self),
+        )
+        .await?;
+        if let Some(p) = p {
+            let info = handle_info(h.as_handle_ref())?;
+            self.add_proxied(
+                &mut *self.proxied_streams.lock().await,
+                info.pair_handle_key,
+                info.this_handle_key,
+                tx,
+                p,
+            );
+        }
+        Ok(h)
     }
 
     // Note the endpoint of a transfer that we know about (may complete a transfer operation)

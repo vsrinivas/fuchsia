@@ -63,6 +63,7 @@ CORE_SOURCES = [
   "src/proxy/stream.rs",
   "src/proxy/handle/mod.rs",
   "src/proxy/handle/channel.rs",
+  "src/proxy/handle/event_pair.rs",
   "src/proxy/handle/signals.rs",
   "src/proxy/handle/socket.rs",
   "src/router/diagnostics_service.rs",

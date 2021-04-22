@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod channel;
+mod event_pair;
 mod signals;
 mod socket;
 

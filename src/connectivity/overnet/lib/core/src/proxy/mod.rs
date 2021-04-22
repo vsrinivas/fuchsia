@@ -6,7 +6,7 @@ mod handle;
 mod run;
 mod stream;
 
-use self::handle::{Proxyable, ProxyableHandle, ReadValue};
+use self::handle::{ProxyableHandle, ReadValue};
 use self::stream::StreamWriter;
 use crate::labels::{NodeId, TransferKey};
 use crate::peer::{FramedStreamWriter, MessageStats};
@@ -22,6 +22,7 @@ use std::sync::{Arc, Weak};
 use std::task::{Context, Poll};
 
 pub(crate) use self::handle::IntoProxied;
+pub(crate) use self::handle::Proxyable;
 pub(crate) use self::run::spawn::recv as spawn_recv;
 pub(crate) use self::run::spawn::send as spawn_send;
 

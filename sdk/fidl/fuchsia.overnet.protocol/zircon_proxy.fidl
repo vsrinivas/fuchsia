@@ -21,6 +21,8 @@ union ZirconHandle {
     1: ChannelHandle channel;
     /// A proxied socket.
     2: SocketHandle socket;
+    /// A proxied eventpair.
+    3: EventPairHandle event_pair;
 };
 
 /// A proxied channel.
@@ -51,6 +53,16 @@ struct SocketHandle {
     SocketType socket_type;
 };
 
+/// A proxied eventpair.
+struct EventPairHandle {
+    /// The handle rights that are given to this handle.
+    EventPairRights rights;
+    /// The Overnet proxy stream that was created to carry this eventpair.
+    /// No payloads will be sent over this stream, however transport and signal control messages
+    /// will be per the normal StreamControl/SignalUpdate protocols used for all handle types.
+    StreamRef stream_ref;
+};
+
 /// Channel rights.
 /// Overnet treats rights as per-object type, to reduce the space of things that can be communicated
 /// over its wire format. Transfer rights are always assumed present.
@@ -65,6 +77,13 @@ bits ChannelRights : uint32 {
 bits SocketRights : uint32 {
     READ = 0x01;
     WRITE = 0x02;
+};
+
+/// EventPair rights.
+/// Overnet treats rights as per-object type, to reduce the space of things that can be communicated
+/// over its wire format. Transfer rights are always assumed present.
+bits EventPairRights : uint32 {
+    DO_NOT_USE = 0x80000000;
 };
 
 /// Signals that can be propagated.

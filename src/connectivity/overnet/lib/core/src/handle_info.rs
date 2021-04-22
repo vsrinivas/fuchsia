@@ -4,7 +4,7 @@
 
 use anyhow::{bail, Error};
 use fidl::HandleRef;
-use fidl_fuchsia_overnet_protocol::{ChannelRights, SocketRights, SocketType};
+use fidl_fuchsia_overnet_protocol::{ChannelRights, EventPairRights, SocketRights, SocketType};
 
 #[cfg(target_os = "fuchsia")]
 use fidl::AsHandleRef;
@@ -25,6 +25,7 @@ pub(crate) enum HandleType {
     /// A handle of type channel is being sent.
     Channel(ChannelRights),
     Socket(SocketType, SocketRights),
+    EventPair,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -43,6 +44,7 @@ pub(crate) fn handle_info(hdl: HandleRef<'_>) -> Result<HandleInfo, Error> {
         fidl::ObjectType::SOCKET => {
             HandleType::Socket(SocketType::Stream, SocketRights::Read | SocketRights::Write)
         }
+        fidl::ObjectType::EVENTPAIR => HandleType::EventPair,
         _ => bail!("Unsupported handle type"),
     };
     let (this_handle_key, pair_handle_key) = hdl.koid_pair();
@@ -86,6 +88,7 @@ pub(crate) fn handle_info(handle: HandleRef<'_>) -> Result<HandleInfo, Error> {
             rights.set(SocketRights::Write, basic_info.rights.contains(zx::Rights::WRITE));
             HandleType::Socket(socket_type, rights)
         }
+        zx::ObjectType::EVENTPAIR => HandleType::EventPair,
         _ => bail!("Handle type not proxyable {:?}", handle.basic_info()?.object_type),
     };
 
@@ -148,6 +151,16 @@ impl WithRights for fidl::Socket {
     fn with_rights(self, rights: SocketRights) -> Result<Self, Error> {
         if rights != SocketRights::Read | SocketRights::Write {
             bail!("Restricted rights not supported on non-Fuchsia platforms");
+        }
+        Ok(self)
+    }
+}
+
+impl WithRights for fidl::EventPair {
+    type Rights = EventPairRights;
+    fn with_rights(self, rights: EventPairRights) -> Result<Self, Error> {
+        if !rights.is_empty() {
+            bail!("Non-empty rights ({:?}) not supported for event pair", rights);
         }
         Ok(self)
     }
