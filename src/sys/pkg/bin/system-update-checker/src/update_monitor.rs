@@ -305,7 +305,7 @@ mod test_inspect {
     use super::*;
     use event_queue::{ClosedClient, Notify};
     use fuchsia_async as fasync;
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::assert_data_tree;
 
     #[derive(Clone, Debug)]
     struct FakeStateNotifier;
@@ -324,7 +324,7 @@ mod test_inspect {
             inspector.root().create_child("update-monitor"),
         );
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 "update-monitor": {
@@ -345,7 +345,7 @@ mod test_inspect {
 
         update_monitor.advance_update_state(State::CheckingForUpdates).await;
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 "update-monitor": {
@@ -366,7 +366,7 @@ mod test_inspect {
 
         update_monitor.set_version_available(version_available.to_string());
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 "update-monitor": {

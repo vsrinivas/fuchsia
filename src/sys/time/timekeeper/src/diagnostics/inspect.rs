@@ -525,7 +525,7 @@ mod tests {
             },
             time_source::FakeTimeSource,
         },
-        fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty},
+        fuchsia_inspect::{assert_data_tree, testing::AnyProperty},
         lazy_static::lazy_static,
     };
 
@@ -618,7 +618,7 @@ mod tests {
     fn after_initialization() {
         let inspector = &Inspector::new();
         let (_inspect_diagnostics, _) = create_test_object(&inspector, false);
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 initialization: contains {
@@ -677,7 +677,7 @@ mod tests {
             track: Track::Primary,
             reason: ClockUpdateReason::TimeStep,
         });
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 initialization: contains {
@@ -712,7 +712,7 @@ mod tests {
             outcome: InitializeRtcOutcome::Succeeded,
             time: Some(zx::Time::from_nanos(RTC_INITIAL_TIME)),
         });
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 real_time_clock: contains {
@@ -727,7 +727,7 @@ mod tests {
         inspect_diagnostics.record(Event::WriteRtc { outcome: WriteRtcOutcome::Succeeded });
         inspect_diagnostics.record(Event::WriteRtc { outcome: WriteRtcOutcome::Succeeded });
         inspect_diagnostics.record(Event::WriteRtc { outcome: WriteRtcOutcome::Failed });
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 real_time_clock: contains {
@@ -744,7 +744,7 @@ mod tests {
     fn time_sources() {
         let inspector = &Inspector::new();
         let (test, _) = create_test_object(&inspector, true);
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 primary_time_source: contains {
@@ -767,7 +767,7 @@ mod tests {
         test.record(Event::TimeSourceFailed { role: Role::Primary, error: TSE::CallFailed });
         test.record(Event::TimeSourceStatus { role: Role::Monitor, status: Status::Network });
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 primary_time_source: contains {
@@ -791,7 +791,7 @@ mod tests {
     fn tracks() {
         let inspector = &Inspector::new();
         let (test, _) = create_test_object(&inspector, true);
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 // For brevity we only verify the uninitialized contents of one entry per buffer.
@@ -870,7 +870,7 @@ mod tests {
         test.record(make_event(FDR::UtcBeforeWindow));
         test.record(make_event(FDR::InsufficientSamples));
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 primary_track: contains {

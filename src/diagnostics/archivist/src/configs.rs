@@ -206,7 +206,7 @@ fn validate_static_selector(static_selector: &Selector) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty};
+    use fuchsia_inspect::testing::{assert_data_tree, AnyProperty};
     use std::io::Write;
     use std::path::Path;
 
@@ -333,7 +333,7 @@ mod tests {
 
         let inspector = inspect::Inspector::new();
         config.record_to_inspect(inspector.root());
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             filtering_enabled: true,
             selector_count: 0u64,
             errors: {
@@ -361,7 +361,7 @@ mod tests {
 
         let inspector = inspect::Inspector::new();
         config.record_to_inspect(inspector.root());
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             filtering_enabled: true,
             selector_count: 1u64,
             errors: {
@@ -399,7 +399,7 @@ mod tests {
 
         let inspector = inspect::Inspector::new();
         config.record_to_inspect(inspector.root());
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             filtering_enabled: true,
             selector_count: 3u64,
             config_files: {
@@ -429,7 +429,7 @@ mod tests {
 
         let inspector = inspect::Inspector::new();
         config.record_to_inspect(inspector.root());
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             filtering_enabled: false,
             selector_count: 0u64,
             config_files: {
@@ -461,7 +461,7 @@ mod tests {
 
         let inspector = inspect::Inspector::new();
         config.record_to_inspect(inspector.root());
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             filtering_enabled: false,
             selector_count: 3u64,
             config_files: {
@@ -492,7 +492,7 @@ mod tests {
 
         let inspector = inspect::Inspector::new();
         config.record_to_inspect(inspector.root());
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             filtering_enabled: true,
             selector_count: 1u64,
             errors: {

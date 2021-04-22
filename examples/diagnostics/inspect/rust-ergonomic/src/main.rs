@@ -35,7 +35,7 @@ mod quick_start_before {
 }
 
 mod quick_start_after {
-    use fuchsia_inspect::{assert_inspect_tree, NumericProperty};
+    use fuchsia_inspect::{assert_data_tree, NumericProperty};
 
     // [START quick_start_after_decl]
     use fuchsia_inspect_derive::{
@@ -90,19 +90,19 @@ mod quick_start_after {
         let mut yak = Yak::new()
             .with_inspect(/* parent node */ inspector.root(), /* name */ "my_yak")?;
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             my_yak: { hair_length_mm: 5u64, shaved_counter: 0u64 }
         });
 
         // Mutation
         yak.shave();
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             my_yak: { hair_length_mm: 0u64, shaved_counter: 1u64 }
         });
 
         // Destruction
         std::mem::drop(yak);
-        assert_inspect_tree!(inspector, root: {});
+        assert_data_tree!(inspector, root: {});
         // [END quick_start_after_init]
 
         Ok(())
@@ -110,7 +110,7 @@ mod quick_start_after {
 }
 
 mod derive_inspect {
-    use fuchsia_inspect::{assert_inspect_tree, Node};
+    use fuchsia_inspect::{assert_data_tree, Node};
     use fuchsia_inspect_derive::{AttachError, IValue, Inspect, WithInspect};
     use std::cell::RefCell;
 
@@ -201,7 +201,7 @@ mod derive_inspect {
 
         // [START inspect_node_present_init]
         let yak = Yak::new().with_inspect(inspector.root(), "my_yak")?;
-        assert_inspect_tree!(inspector, root: { my_yak: { name: "Lil Sebastian", age: 3u64 }});
+        assert_data_tree!(inspector, root: { my_yak: { name: "Lil Sebastian", age: 3u64 }});
         // [END inspect_node_present_init]
 
         let _ = yak; // Suppress unused warning
@@ -215,7 +215,7 @@ mod derive_inspect {
         // [START inspect_nested_init]
         // Stable owns a Yak, which also implements Inspect.
         let stable = Stable::new().with_inspect(inspector.root(), "stable")?;
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
             root: { stable: { yak: { name: "Lil Sebastian", age: 3u64 }}});
         // [END inspect_nested_init]
 
@@ -225,7 +225,7 @@ mod derive_inspect {
 }
 
 mod smart_pointers {
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::assert_data_tree;
     use fuchsia_inspect_derive::{AttachError, IValue, WithInspect};
 
     #[test]
@@ -245,26 +245,26 @@ mod smart_pointers {
             *number_guard += 1;
 
             // Inspect state not yet updated
-            assert_inspect_tree!(inspector, root: { my_number: 1337u64 });
+            assert_data_tree!(inspector, root: { my_number: 1337u64 });
         }
         // When the guard goes out of scope, the inspect state is updated
-        assert_inspect_tree!(inspector, root: { my_number: 1339u64 });
+        assert_data_tree!(inspector, root: { my_number: 1339u64 });
 
         number.iset(1340); // Sets the source value AND updates inspect
-        assert_inspect_tree!(inspector, root: { my_number: 1340u64 });
+        assert_data_tree!(inspector, root: { my_number: 1340u64 });
 
         let inner = number.into_inner(); // Detaches from inspect tree...
         assert_eq!(inner, 1340u16); // ...and returns the inner value.
                                     // [END smart_pointers_ivalue]
 
-        assert_inspect_tree!(inspector, root: {});
+        assert_data_tree!(inspector, root: {});
 
         Ok(())
     }
 }
 
 mod unit {
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::assert_data_tree;
     use fuchsia_inspect_derive::{AttachError, IValue, WithInspect};
 
     use fuchsia_inspect_derive::Unit;
@@ -299,14 +299,14 @@ mod unit {
         let rect = IValue::new(rect_original) // IValue wraps Rect, because it implements `Unit`
             .with_inspect(inspector.root(), "rectangle")?;
 
-        assert_inspect_tree!(inspector, root: { rectangle: {
+        assert_data_tree!(inspector, root: { rectangle: {
             top_left: { x: -3f64, y: 5f64 },
             bottom_right: { x: 2f64, y: -1.5f64 },
         }});
         // [END unit_nested_init]
 
         std::mem::drop(rect);
-        assert_inspect_tree!(inspector, root: {});
+        assert_data_tree!(inspector, root: {});
 
         Ok(())
     }

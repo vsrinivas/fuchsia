@@ -17,7 +17,7 @@ use {
 use {
     anyhow::format_err,
     diagnostics_reader::{ArchiveReader, ComponentSelector, DiagnosticsHierarchy, Inspect},
-    fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
+    fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
 };
 // [END include_test_stuff]
 
@@ -91,7 +91,7 @@ async fn start_with_fizzbuzz() -> Result<(), Error> {
     // [START result_hierarchy]
     let hierarchy = test.get_inspect_hierarchy().await?;
     // [END result_hierarchy]
-    assert_inspect_tree!(hierarchy, root: contains {
+    assert_data_tree!(hierarchy, root: contains {
         "fuchsia.inspect.Health": contains {
             status: "OK",
             // The metric with a timestamp has an unpredictable value, so
@@ -111,7 +111,7 @@ async fn start_without_fizzbuzz() -> Result<(), Error> {
     assert_eq!(result, "olleh");
 
     let hierarchy = test.get_inspect_hierarchy().await?;
-    assert_inspect_tree!(hierarchy, root: contains {
+    assert_data_tree!(hierarchy, root: contains {
         "fuchsia.inspect.Health": contains {
             status: "UNHEALTHY",
             message: "FizzBuzz connection closed",

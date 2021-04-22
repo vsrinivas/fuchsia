@@ -212,7 +212,7 @@ mod tests {
     use super::*;
     use crate::configuration::get_config;
     use fuchsia_async as fasync;
-    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use fuchsia_inspect::{assert_data_tree, Inspector};
     use omaha_client::{common::UserCounting, protocol::Cohort, state_machine};
     use std::time::Duration;
 
@@ -222,7 +222,7 @@ mod tests {
         let node = ConfigurationNode::new(inspector.root().create_child("configuration"));
         node.set(&get_config("0.1.2").await);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 configuration: {
@@ -254,7 +254,7 @@ mod tests {
         ];
         node.set(&apps);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 apps: {
@@ -275,7 +275,7 @@ mod tests {
         };
         node.set(&state);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 state: {
@@ -292,7 +292,7 @@ mod tests {
         let schedule = UpdateCheckSchedule::default();
         node.set(&schedule);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 schedule: {
@@ -309,7 +309,7 @@ mod tests {
         let protocol_state = ProtocolState::default();
         node.set(&protocol_state);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 protocol_state: {
@@ -334,7 +334,7 @@ mod tests {
         node.add_result(SystemTime::UNIX_EPOCH, &result);
         node.add_result(SystemTime::UNIX_EPOCH + Duration::from_secs(100000), &result);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 last_results: {
@@ -347,7 +347,7 @@ mod tests {
         for i in 0..10 {
             node.add_result(SystemTime::UNIX_EPOCH + Duration::from_secs(i * 1000000), &result);
         }
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 last_results: {

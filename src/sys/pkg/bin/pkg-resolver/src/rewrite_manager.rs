@@ -333,7 +333,7 @@ impl RewriteManagerBuilder<inspect::Node> {
 #[cfg(test)]
 pub(crate) mod tests {
     use {
-        super::*, anyhow::Error, fuchsia_inspect::assert_inspect_tree, matches::assert_matches,
+        super::*, anyhow::Error, fuchsia_inspect::assert_data_tree, matches::assert_matches,
         serde_json::json,
     };
 
@@ -607,7 +607,7 @@ pub(crate) mod tests {
             .inspect_node(node)
             .build();
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 rewrite_manager: {
@@ -642,7 +642,7 @@ pub(crate) mod tests {
         let _manager =
             RewriteManagerBuilder::new(Option::<&Path>::None).unwrap().inspect_node(node).build();
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 rewrite_manager: {
@@ -662,7 +662,7 @@ pub(crate) mod tests {
         let dynamic_config = make_rule_config(vec![]);
         let mut manager =
             RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().inspect_node(node).build();
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 rewrite_manager: {
@@ -679,7 +679,7 @@ pub(crate) mod tests {
             .add(rule!("example.com" => "example.org", "/this_rolldice/" => "/that_rolldice/"));
         manager.apply(transaction).unwrap();
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 rewrite_manager: {

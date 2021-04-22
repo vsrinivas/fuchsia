@@ -150,7 +150,7 @@ impl SessionInspect {
 mod tests {
     use super::*;
     use fuchsia_async::DurationExt;
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::assert_data_tree;
     use fuchsia_inspect_derive::WithInspect;
     use fuchsia_zircon::DurationNum;
     use std::convert::TryFrom;
@@ -165,7 +165,7 @@ mod tests {
             SessionInspect::default().with_inspect(inspect.root(), "session").unwrap();
 
         // Default inspect tree.
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             session: {
                 connected: "Connected",
             }
@@ -173,7 +173,7 @@ mod tests {
 
         // Inspect when disconnected.
         session_inspect.disconnect();
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             session: {
                 connected: "Disconnected",
             }
@@ -189,7 +189,7 @@ mod tests {
             .unwrap();
 
         // Default inspect tree.
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             multiplexer: {
                 role: "Unassigned",
             }
@@ -199,7 +199,7 @@ mod tests {
         let parameters = SessionParameters { credit_based_flow: true, max_frame_size: 99 };
         multiplexer.set_role(Role::Initiator);
         multiplexer.set_parameters(parameters);
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             multiplexer: {
                 role: "Initiator",
                 flow_control: CREDIT_FLOW_CONTROL,
@@ -215,7 +215,7 @@ mod tests {
             SessionChannelInspect::default().with_inspect(inspect.root(), "channel").unwrap();
 
         // Default inspect tree.
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             channel: {
                 dlci: 0u64,
             }
@@ -223,7 +223,7 @@ mod tests {
 
         // Inspect with a DLCI.
         channel.set_dlci(DLCI::try_from(8).unwrap());
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             channel: {
                 dlci: 8u64,
             }
@@ -231,7 +231,7 @@ mod tests {
 
         // Flow control property set with a null flow control mode. No credits should be stored.
         channel.set_flow_control(FlowControlMode::None);
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             channel: {
                 dlci: 8u64,
             }
@@ -239,7 +239,7 @@ mod tests {
 
         // Flow control property set with a credit based flow control mode.
         channel.set_flow_control(FlowControlMode::CreditBased(Credits::new(10, 19)));
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             channel: {
                 dlci: 8u64,
                 initial_local_credits: 10u64,
@@ -257,7 +257,7 @@ mod tests {
         let mut stream =
             DuplexDataStreamInspect::default().with_inspect(inspect.root(), "stream").unwrap();
         // Default inspect tree.
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             inbound_stream: {
                 bytes_per_second_current: 0u64,
                 total_bytes: 0u64,
@@ -270,7 +270,7 @@ mod tests {
 
         stream.start();
         // Both nodes should have same start_time.
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             inbound_stream: {
                 bytes_per_second_current: 0u64,
                 start_time: 1_234_567i64,
@@ -286,7 +286,7 @@ mod tests {
         exec.set_fake_time(1.seconds().after_now());
         // An inbound transfer should have no impact on the outbound stats.
         stream.record_inbound_transfer(500, fasync::Time::now());
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             inbound_stream: {
                 bytes_per_second_current: 500u64,
                 start_time: 1_234_567i64,
@@ -301,7 +301,7 @@ mod tests {
 
         exec.set_fake_time(1.seconds().after_now());
         stream.record_outbound_transfer(250, fasync::Time::now());
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             inbound_stream: {
                 bytes_per_second_current: 500u64, // 500 bytes in 1 second
                 start_time: 1_234_567i64,

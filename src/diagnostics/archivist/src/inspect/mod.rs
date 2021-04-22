@@ -368,7 +368,7 @@ mod tests {
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_async::{self as fasync, Task},
         fuchsia_component::server::ServiceFs,
-        fuchsia_inspect::{assert_inspect_tree, reader, testing::AnyProperty, Inspector},
+        fuchsia_inspect::{assert_data_tree, reader, testing::AnyProperty, Inspector},
         fuchsia_zircon as zx,
         fuchsia_zircon::Peered,
         futures::future::join_all,
@@ -515,7 +515,7 @@ mod tests {
                         // Assert we can read the tree proxy and get the data we expected.
                         let hierarchy =
                             reader::read(tree).await.expect("failed to read hierarchy from tree");
-                        assert_inspect_tree!(hierarchy, root: {
+                        assert_data_tree!(hierarchy, root: {
                             a: 1i64,
                             lazy: {
                                 b: 3.14,
@@ -527,7 +527,7 @@ mod tests {
                                 .into();
                         // Assert the vmo also points to that data (in this case since there's no
                         // lazy nodes).
-                        assert_inspect_tree!(partial_hierarchy, root: {
+                        assert_data_tree!(partial_hierarchy, root: {
                             a: 1i64,
                         });
                     }
@@ -880,7 +880,7 @@ mod tests {
         let root = inspector.root();
         let test_archive_accessor_node = root.create_child("test_archive_accessor_node");
 
-        assert_inspect_tree!(inspector, root: {test_archive_accessor_node: {}});
+        assert_data_tree!(inspector, root: {test_archive_accessor_node: {}});
 
         let test_accessor_stats =
             Arc::new(diagnostics::AccessorStats::new(test_archive_accessor_node));
@@ -888,7 +888,7 @@ mod tests {
         let test_batch_iterator_stats1 =
             Arc::new(diagnostics::ConnectionStats::for_inspect(test_accessor_stats.clone()));
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             test_archive_accessor_node: {
                 archive_accessor_connections_closed: 0u64,
                 archive_accessor_connections_opened: 0u64,
@@ -993,8 +993,8 @@ mod tests {
             assert_eq!(*result_payload, expected_payload);
 
             // stream_diagnostics_requests is 0 since its tracked via archive_accessor server,
-            // which isnt running in this unit test.
-            assert_inspect_tree!(inspector_arc.clone(), root: {
+            // which isn't running in this unit test.
+            assert_data_tree!(inspector_arc.clone(), root: {
                 test_archive_accessor_node: {
                     archive_accessor_connections_closed: 0u64,
                     archive_accessor_connections_opened: 0u64,
@@ -1068,7 +1068,7 @@ mod tests {
             let result_array = result_json.as_array().expect("unit test json should be array.");
             assert_eq!(result_array.len(), 0, "Expect no schemas to be returned.");
 
-            assert_inspect_tree!(inspector_arc.clone(), root: {
+            assert_data_tree!(inspector_arc.clone(), root: {
                 test_archive_accessor_node: {
                     archive_accessor_connections_closed: 0u64,
                     archive_accessor_connections_opened: 0u64,

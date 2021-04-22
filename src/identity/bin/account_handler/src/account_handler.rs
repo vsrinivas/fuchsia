@@ -651,7 +651,7 @@ mod tests {
     use fuchsia_async as fasync;
     use fuchsia_async::DurationExt;
     use fuchsia_inspect::testing::AnyProperty;
-    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use fuchsia_inspect::{assert_data_tree, Inspector};
     use fuchsia_zircon as zx;
     use futures::future::join;
     use lazy_static::lazy_static;
@@ -737,7 +737,7 @@ mod tests {
 
             // Check that no more objects are lurking in inspect
             std::mem::drop(test_object);
-            assert_inspect_tree!(inspector, root: {});
+            assert_data_tree!(inspector, root: {});
         };
 
         (proxy, server_fut)
@@ -842,7 +842,7 @@ mod tests {
                 async move {
                     account_handler_proxy.create_account(None).await??;
 
-                    assert_inspect_tree!(inspector, root: {
+                    assert_data_tree!(inspector, root: {
                         account_handler: contains {
                             account: contains {
                                 open_client_channels: 0u64,
@@ -854,7 +854,7 @@ mod tests {
                     let (acp_client_end, _) = create_endpoints().unwrap();
                     account_handler_proxy.get_account(acp_client_end, account_server_end).await??;
 
-                    assert_inspect_tree!(inspector, root: {
+                    assert_data_tree!(inspector, root: {
                         account_handler: contains {
                             lifecycle: "initialized",
                             account: contains {
@@ -872,7 +872,7 @@ mod tests {
 
                     // Lock the account and check that channels are closed
                     account_handler_proxy.lock_account().await??;
-                    assert_inspect_tree!(inspector, root: {
+                    assert_data_tree!(inspector, root: {
                         account_handler: contains {
                             lifecycle: "locked",
                         }
@@ -900,7 +900,7 @@ mod tests {
             Arc::clone(&inspector),
             |proxy| async move {
                 proxy.create_account(None).await??;
-                assert_inspect_tree!(inspector, root: {
+                assert_data_tree!(inspector, root: {
                     account_handler: contains {
                         lifecycle: "initialized",
                     }
@@ -918,13 +918,13 @@ mod tests {
             Arc::clone(&inspector),
             |proxy| async move {
                 proxy.preload().await??;
-                assert_inspect_tree!(inspector, root: {
+                assert_data_tree!(inspector, root: {
                     account_handler: contains {
                         lifecycle: "locked",
                     }
                 });
                 proxy.unlock_account().await??;
-                assert_inspect_tree!(inspector, root: {
+                assert_data_tree!(inspector, root: {
                     account_handler: contains {
                         lifecycle: "initialized",
                     }
@@ -1004,7 +1004,7 @@ mod tests {
 
                 // Check that the handler is still uninitialized and that none of the failed calls
                 // were able to alter the pre-auth state.
-                assert_inspect_tree!(inspector, root: { account_handler: contains {
+                assert_data_tree!(inspector, root: { account_handler: contains {
                     lifecycle: "uninitialized",
                 }});
                 assert_eq!(
@@ -1014,7 +1014,7 @@ mod tests {
 
                 // Account creation with enrollment succeeded
                 proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await.unwrap().unwrap();
-                assert_inspect_tree!(inspector, root: { account_handler: contains {
+                assert_data_tree!(inspector, root: { account_handler: contains {
                     lifecycle: "initialized",
                 }});
                 assert_eq!(pre_auth_manager.get().await.unwrap().as_ref(), &*TEST_PRE_AUTH_SINGLE);
@@ -1056,7 +1056,7 @@ mod tests {
                 assert_eq!(proxy.unlock_account().await.unwrap(), Ok(()));
 
                 // Lifecycle updated
-                assert_inspect_tree!(inspector, root: { account_handler: contains {
+                assert_data_tree!(inspector, root: { account_handler: contains {
                     lifecycle: "initialized",
                 }});
 
@@ -1099,7 +1099,7 @@ mod tests {
                 assert_eq!(proxy.unlock_account().await.unwrap(), Ok(()));
 
                 // Lifecycle updated
-                assert_inspect_tree!(inspector, root: { account_handler: contains {
+                assert_data_tree!(inspector, root: { account_handler: contains {
                     lifecycle: "initialized",
                 }});
 
@@ -1173,7 +1173,7 @@ mod tests {
                 );
 
                 // Account handler is still locked
-                assert_inspect_tree!(inspector, root: { account_handler: contains {
+                assert_data_tree!(inspector, root: { account_handler: contains {
                     lifecycle: "locked",
                 }});
 
@@ -1231,21 +1231,21 @@ mod tests {
                 async move {
                     // TODO(satsukiu): add more meaningful tests once there's some functionality
                     // to test
-                    assert_inspect_tree!(inspector, root: {
+                    assert_data_tree!(inspector, root: {
                         account_handler: {
                             local_account_id: TEST_ACCOUNT_ID_UINT,
                             lifecycle: "uninitialized",
                         }
                     });
                     proxy.prepare_for_account_transfer().await??;
-                    assert_inspect_tree!(inspector, root: {
+                    assert_data_tree!(inspector, root: {
                         account_handler: {
                             local_account_id: TEST_ACCOUNT_ID_UINT,
                             lifecycle: "pendingTransfer",
                         }
                     });
                     proxy.perform_account_transfer(&[]).await??;
-                    assert_inspect_tree!(inspector, root: {
+                    assert_data_tree!(inspector, root: {
                         account_handler: {
                             local_account_id: TEST_ACCOUNT_ID_UINT,
                             lifecycle: "transferred",
@@ -1426,7 +1426,7 @@ mod tests {
             Arc::clone(&inspector),
             |proxy| {
                 async move {
-                    assert_inspect_tree!(inspector, root: {
+                    assert_data_tree!(inspector, root: {
                         account_handler: {
                             local_account_id: TEST_ACCOUNT_ID_UINT,
                             lifecycle: "uninitialized",
@@ -1434,7 +1434,7 @@ mod tests {
                     });
 
                     proxy.create_account(None).await??;
-                    assert_inspect_tree!(inspector, root: {
+                    assert_data_tree!(inspector, root: {
                         account_handler: {
                             local_account_id: TEST_ACCOUNT_ID_UINT,
                             lifecycle: "initialized",
@@ -1464,7 +1464,7 @@ mod tests {
                     // Make sure remove_account() can make progress with an open channel.
                     proxy.remove_account(FORCE_REMOVE_ON).await??;
 
-                    assert_inspect_tree!(inspector, root: {
+                    assert_data_tree!(inspector, root: {
                         account_handler: {
                             local_account_id: TEST_ACCOUNT_ID_UINT,
                             lifecycle: "finished",
@@ -1641,7 +1641,7 @@ mod tests {
                 assert!(account_proxy.get_persona_ids().await.is_ok());
 
                 // The state remains initialized
-                assert_inspect_tree!(inspector, root: {
+                assert_data_tree!(inspector, root: {
                     account_handler: contains {
                         lifecycle: "initialized",
                     }
@@ -1709,7 +1709,7 @@ mod tests {
                 // Channel is unusable
                 assert!(account_proxy.get_persona_ids().await.is_err());
 
-                assert_inspect_tree!(inspector, root: {
+                assert_data_tree!(inspector, root: {
                     account_handler: contains {
                         lifecycle: "locked",
                     }

@@ -11,7 +11,7 @@ use {
     fidl::{endpoints::RequestStream, Error as FidlError},
     fidl_fuchsia_bluetooth_snoop::{PacketType, SnoopMarker, SnoopProxy, SnoopRequestStream},
     fuchsia_async::{Channel, Executor},
-    fuchsia_inspect::{assert_inspect_tree, Inspector},
+    fuchsia_inspect::{assert_data_tree, Inspector},
     fuchsia_zircon as zx,
     futures::pin_mut,
     std::task::Poll,
@@ -131,7 +131,7 @@ async fn test_packet_logs_inspect() {
     let mut packet_logs =
         PacketLogs::new(2, 256, 256, Duration::from_secs(60), runtime_metrics_node);
 
-    assert_inspect_tree!(inspect, root: {
+    assert_data_tree!(inspect, root: {
         runtime_metrics: {
             logging_active_for_devices: "",
         }
@@ -144,7 +144,7 @@ async fn test_packet_logs_inspect() {
     let mut expected_data = vec![];
     write_pcap_header(&mut expected_data).expect("write to succeed");
 
-    assert_inspect_tree!(inspect, root: {
+    assert_data_tree!(inspect, root: {
         runtime_metrics: {
             logging_active_for_devices: "\"001\"",
             device_0: {
@@ -166,7 +166,7 @@ async fn test_packet_logs_inspect() {
 
     packet_logs.log_packet(&id_1, packet).await;
 
-    assert_inspect_tree!(inspect, root: {
+    assert_data_tree!(inspect, root: {
         runtime_metrics: {
             logging_active_for_devices: "\"001\"",
             device_0: {
@@ -194,7 +194,7 @@ fn test_snoop_config_inspect() {
     let inspect = Inspector::new();
     let snoop_config_node = inspect.root().create_child("configuration");
     let config = SnoopConfig::from_args(args, snoop_config_node);
-    assert_inspect_tree!(inspect, root: {
+    assert_data_tree!(inspect, root: {
         configuration: {
             log_size_soft_max_bytes: 1024u64,
             log_size_hard_max_bytes: "1024",

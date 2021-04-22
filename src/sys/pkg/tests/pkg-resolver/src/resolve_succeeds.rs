@@ -9,7 +9,7 @@
 use {
     fidl_fuchsia_pkg_ext::MirrorConfigBuilder,
     fuchsia_async as fasync,
-    fuchsia_inspect::assert_inspect_tree,
+    fuchsia_inspect::assert_data_tree,
     fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::{serve::responder, Package, PackageBuilder, RepositoryBuilder},
     fuchsia_zircon::Status,
@@ -374,7 +374,7 @@ async fn retries() {
     let hierarchy = env.pkg_resolver_inspect_hierarchy().await;
     let repo_blob_url = format!("{}/blobs", served_repository.local_url());
     let repo_blob_url = &repo_blob_url;
-    assert_inspect_tree!(
+    assert_data_tree!(
         hierarchy,
         root: contains {
             repository_manager: contains {
@@ -446,7 +446,7 @@ async fn handles_429_responses() {
 
     let repo_blob_url = format!("{}/blobs", served_repository.local_url());
     let repo_blob_url = &repo_blob_url;
-    assert_inspect_tree!(
+    assert_data_tree!(
         hierarchy,
         root: contains {
             repository_manager: contains {

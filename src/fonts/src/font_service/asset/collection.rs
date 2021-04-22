@@ -424,7 +424,7 @@ impl AssetCollectionInspectData {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, async_trait::async_trait, finspect::assert_inspect_tree, fuchsia_async as fasync,
+        super::*, async_trait::async_trait, finspect::assert_data_tree, fuchsia_async as fasync,
         fuchsia_zircon as zx, std::path::Path,
     };
 
@@ -503,7 +503,7 @@ mod tests {
         let collection = builder.build();
 
         // Note partial `contains` match. Cache is tested separately.
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             asset_collection: {
                 assets: {
                     "0": {
@@ -526,7 +526,7 @@ mod tests {
 
         collection.get_asset(AssetId(0), CacheMissPolicy::BlockUntilDownloaded).await?;
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             asset_collection: contains {
                 assets: {
                     "0": {
@@ -548,7 +548,7 @@ mod tests {
 
         collection.get_asset(AssetId(1), CacheMissPolicy::BlockUntilDownloaded).await?;
         // Asset 1 gets cached, asset 1 is evicted but size info is kept.
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             asset_collection: contains {
                 assets: {
                     "0": {

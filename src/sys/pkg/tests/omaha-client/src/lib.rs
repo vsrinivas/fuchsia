@@ -22,7 +22,7 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_inspect::{
-        assert_inspect_tree,
+        assert_data_tree,
         reader::DiagnosticsHierarchy,
         testing::{AnyProperty, TreeAssertion},
         tree_assertion,
@@ -371,7 +371,7 @@ impl TestEnv {
     }
 
     async fn assert_platform_metrics(&self, children: TreeAssertion) {
-        assert_inspect_tree!(
+        assert_data_tree!(
             self.inspect_hierarchy().await,
             "root": contains {
                 "platform_metrics": contains {
@@ -813,7 +813,7 @@ async fn test_omaha_client_update_error() {
     ))
     .await;
 
-    assert_inspect_tree!(
+    assert_data_tree!(
         env.inspect_hierarchy().await,
         "root": contains {
             "platform_metrics": contains {
@@ -957,7 +957,7 @@ async fn test_omaha_client_policy_config_inspect() {
     // Wait for omaha client to start.
     let _ = env.proxies.channel_control.get_current().await;
 
-    assert_inspect_tree!(
+    assert_data_tree!(
         env.inspect_hierarchy().await,
         "root": contains {
             "policy_config": {

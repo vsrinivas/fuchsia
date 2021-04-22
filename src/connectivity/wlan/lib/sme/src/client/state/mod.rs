@@ -1397,7 +1397,7 @@ mod tests {
     use super::*;
     use anyhow::format_err;
     use fidl_fuchsia_wlan_common as fidl_common;
-    use fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector};
+    use fuchsia_inspect::{assert_data_tree, testing::AnyProperty, Inspector};
     use futures::channel::{mpsc, oneshot};
     use link_state::{EstablishingRsna, LinkUp};
     use std::sync::Arc;
@@ -2117,7 +2117,7 @@ mod tests {
         expect_result(receiver, ConnectResult::Canceled);
         assert_idle(state);
 
-        assert_inspect_tree!(h._inspector, root: contains {
+        assert_data_tree!(h._inspector, root: contains {
             state_events: {
                 // There's no disconnect_ctx node
                 "0": {
@@ -2139,7 +2139,7 @@ mod tests {
         let state = exchange_deauth(state, &mut h);
         assert_idle(state);
 
-        assert_inspect_tree!(h._inspector, root: contains {
+        assert_data_tree!(h._inspector, root: contains {
             state_events: {
                 "0": contains {
                     disconnect_ctx: {
@@ -2206,7 +2206,7 @@ mod tests {
         let state = state.on_mlme_event(disassociate_ind, &mut h.context);
         assert_associating(state, &fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]));
 
-        assert_inspect_tree!(h._inspector, root: contains {
+        assert_data_tree!(h._inspector, root: contains {
             state_events: {
                 "0": contains {
                     disconnect_ctx: {
@@ -2235,7 +2235,7 @@ mod tests {
         let state = state.on_mlme_event(disassociate_ind, &mut h.context);
         assert_associating(state, &fake_bss!(Wpa2, ssid: b"wpa2".to_vec()));
 
-        assert_inspect_tree!(h._inspector, root: contains {
+        assert_data_tree!(h._inspector, root: contains {
             state_events: {
                 // There's no disconnect_ctx node
                 "0": {

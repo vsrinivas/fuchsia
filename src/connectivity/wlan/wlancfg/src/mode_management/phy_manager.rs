@@ -672,7 +672,7 @@ mod tests {
         fidl::endpoints,
         fidl_fuchsia_wlan_device as fidl_device, fidl_fuchsia_wlan_device_service as fidl_service,
         fuchsia_async::{run_singlethreaded, Executor},
-        fuchsia_inspect::{self as inspect, assert_inspect_tree},
+        fuchsia_inspect::{self as inspect, assert_data_tree},
         fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK},
         futures::stream::StreamExt,
         futures::task::Poll,
@@ -2011,14 +2011,14 @@ mod tests {
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
-        assert_inspect_tree!(test_values.inspector, root: {
+        assert_data_tree!(test_values.inspector, root: {
             phy_manager: {
                 phy_add_fail_count: 0u64,
             },
         });
 
         phy_manager.log_phy_add_failure();
-        assert_inspect_tree!(test_values.inspector, root: {
+        assert_data_tree!(test_values.inspector, root: {
             phy_manager: {
                 phy_add_fail_count: 1u64,
             },

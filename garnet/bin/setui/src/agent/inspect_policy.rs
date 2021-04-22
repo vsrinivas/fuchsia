@@ -250,7 +250,7 @@ mod tests {
     use std::collections::HashSet;
 
     use fuchsia_inspect as inspect;
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::assert_data_tree;
     use fuchsia_zircon::Time;
     use futures::future::BoxFuture;
     use futures::StreamExt;
@@ -337,7 +337,7 @@ mod tests {
         .await;
 
         // Inspect agent writes value to inspect.
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             policy_values: {
                 "Audio": {
                     value: format!("{:?}", expected_state),
@@ -465,7 +465,7 @@ mod tests {
         .await;
 
         // Inspect agent writes value to inspect.
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             policy_values: {
                 "Audio": {
                     value: format!("{:?}", expected_state),

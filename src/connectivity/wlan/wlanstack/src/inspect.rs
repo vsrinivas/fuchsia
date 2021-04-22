@@ -273,7 +273,7 @@ impl HistogramsSubtrees {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_inspect::assert_inspect_tree, wlan_common::assert_variant};
+    use {super::*, fuchsia_inspect::assert_data_tree, wlan_common::assert_variant};
 
     #[test]
     fn test_mark_unmark_active_client_iface_simple() {
@@ -381,7 +381,7 @@ mod tests {
             .log_per_antenna_noise_floor_histograms(&noise_floor_histograms[..], &inspector);
         histograms_subtrees.log_per_antenna_rssi_histograms(&rssi_histograms[..], &inspector);
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             antenna0_2Ghz: {
                 antenna_index: 0u64,
                 antenna_freq: "2Ghz",

@@ -263,7 +263,7 @@ impl InspectData {
 mod tests {
     use super::*;
     use fidl::endpoints::RequestStream;
-    use inspect::assert_inspect_tree;
+    use inspect::assert_data_tree;
     use matches::assert_matches;
 
     /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
@@ -292,7 +292,7 @@ mod tests {
             fidl::endpoints::create_proxy::<fpower::RebootMethodsWatcherMarker>().unwrap();
         node.add_reboot_watcher(watcher_proxy.clone());
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 ShutdownWatcher: {
@@ -341,9 +341,9 @@ mod tests {
         // Verify the watcher_stream gets the correct reboot notification
         assert_matches!(
             exec.run_until_stalled(&mut watcher_stream.try_next()),
-            futures::task::Poll::Ready(
-                Ok(Some(fpower::RebootMethodsWatcherRequest::OnReboot { .. }))
-            )
+            futures::task::Poll::Ready(Ok(Some(
+                fpower::RebootMethodsWatcherRequest::OnReboot { .. }
+            )))
         );
     }
 

@@ -326,7 +326,7 @@ mod tests {
         fidl_fuchsia_update_installer_ext::{
             PrepareFailureReason, Progress, UpdateInfo, UpdateInfoAndProgress,
         },
-        fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector},
+        fuchsia_inspect::{assert_data_tree, testing::AnyProperty, Inspector},
         mpsc::{Receiver, Sender},
         parking_lot::Mutex,
         std::sync::Arc,
@@ -727,7 +727,7 @@ mod tests {
         // status update is forwarded to monitors.
         let _ = state_receiver.next().await;
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 current_attempt: {
@@ -772,7 +772,7 @@ mod tests {
         let _ = state_receiver.next().await;
         let _ = state_receiver.next().await;
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 current_attempt: {
@@ -812,7 +812,7 @@ mod tests {
         );
         let () = state_sender.send(State::Prepare).await.unwrap();
         let _ = state_receiver.next().await;
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 current_attempt: {
@@ -827,7 +827,7 @@ mod tests {
         // End the first update attempt, show status node is removed.
         drop(state_sender);
         let _ = state_receiver.next().await;
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 current_attempt: {}
@@ -847,7 +847,7 @@ mod tests {
         let () =
             state_sender1.send(State::FailPrepare(PrepareFailureReason::Internal)).await.unwrap();
         let _ = state_receiver1.next().await;
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 current_attempt: {
@@ -871,7 +871,7 @@ mod tests {
             )
             .await;
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 current_attempt: {}
@@ -898,7 +898,7 @@ mod tests {
             Ok(Ok("my-attempt".to_string()))
         );
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 current_attempt: {

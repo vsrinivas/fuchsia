@@ -10,7 +10,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_component::client::{connect_to_service, launch},
-    fuchsia_inspect::assert_inspect_tree,
+    fuchsia_inspect::assert_data_tree,
     fuchsia_zircon::Duration,
     futures::stream::StreamExt,
     lazy_static::lazy_static,
@@ -65,7 +65,7 @@ async fn check_nested(
     let results = fetcher.snapshot::<Inspect>().await?.into_iter().collect::<Vec<_>>();
     assert_eq!(results.len(), expected_results);
     for result in results {
-        assert_inspect_tree!(result.payload.as_ref().unwrap(), root: contains {
+        assert_data_tree!(result.payload.as_ref().unwrap(), root: contains {
             "fuchsia.inspect.Health": contains {
                 status: "OK",
             }

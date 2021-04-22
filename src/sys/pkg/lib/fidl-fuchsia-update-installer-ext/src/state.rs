@@ -861,7 +861,7 @@ fn arb_info_and_progress() -> impl Strategy<Value = (UpdateInfo, Progress)> {
 mod tests {
     use {
         super::*,
-        fuchsia_inspect::{assert_inspect_tree, Inspector},
+        fuchsia_inspect::{assert_data_tree, Inspector},
         matches::assert_matches,
         serde_json::json,
     };
@@ -984,7 +984,7 @@ mod tests {
             let inspector = Inspector::new();
             state.write_to_inspect(inspector.root());
 
-            assert_inspect_tree! {
+            assert_data_tree! {
                 inspector,
                 root: contains {
                     "state": state.name(),
@@ -1085,7 +1085,7 @@ mod tests {
         );
         let inspector = Inspector::new();
         state.write_to_inspect(&inspector.root());
-        assert_inspect_tree! {
+        assert_data_tree! {
             inspector,
             root: {
                 "state": "fail_fetch",
@@ -1106,7 +1106,7 @@ mod tests {
         let state = State::FailPrepare(PrepareFailureReason::OutOfSpace);
         let inspector = Inspector::new();
         state.write_to_inspect(&inspector.root());
-        assert_inspect_tree! {
+        assert_data_tree! {
             inspector,
             root: {
                 "state": "fail_prepare",
@@ -1123,7 +1123,7 @@ mod tests {
         });
         let inspector = Inspector::new();
         state.write_to_inspect(&inspector.root());
-        assert_inspect_tree! {
+        assert_data_tree! {
             inspector,
             root: {
                 "state": "reboot",

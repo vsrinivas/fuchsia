@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_async as fasync,
     fuchsia_hash::Hash,
-    fuchsia_inspect::assert_inspect_tree,
+    fuchsia_inspect::assert_data_tree,
     fuchsia_pkg_testing::{
         serve::responder, Package, PackageBuilder, RepositoryBuilder, SystemImageBuilder,
     },
@@ -527,7 +527,7 @@ async fn test_resolve_falls_back_not_in_repo() {
     // to an on-disk package.
     // (We've fallen back twice, once for the actual package resolve and one for the get_hash call)
     let hierarchy = env.pkg_resolver_inspect_hierarchy().await;
-    assert_inspect_tree!(
+    assert_data_tree!(
         hierarchy,
         root: contains {
             resolver_service: contains {
@@ -548,7 +548,7 @@ async fn test_resolve_falls_back_not_in_repo() {
 
     // We didn't fall back to an on-disk package, so the inspect counter should not have changed.
     let hierarchy = env.pkg_resolver_inspect_hierarchy().await;
-    assert_inspect_tree!(
+    assert_data_tree!(
         hierarchy,
         root: contains {
             resolver_service: contains {

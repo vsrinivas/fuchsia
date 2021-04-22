@@ -189,7 +189,7 @@ mod test {
     use super::*;
     use crate::datatypes::Poll;
     use crate::diagnostics::Event;
-    use fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector};
+    use fuchsia_inspect::{assert_data_tree, testing::AnyProperty, Inspector};
     use fuchsia_zircon as zx;
     use lazy_static::lazy_static;
 
@@ -223,7 +223,7 @@ mod test {
     fn test_successes() {
         let inspector = Inspector::new();
         let inspect = InspectDiagnostics::new(inspector.root());
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 failures: {}
@@ -236,7 +236,7 @@ mod test {
             TEST_ROUND_TRIP_2,
             TEST_ROUND_TRIP_3,
         ])));
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 sample_0: {
@@ -271,7 +271,7 @@ mod test {
     fn test_success_overwrite_on_overflow() {
         let inspector = Inspector::new();
         let inspect = InspectDiagnostics::new(inspector.root());
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 failures: {}
@@ -290,7 +290,7 @@ mod test {
 
         // Recording a new success should wrap the buffer and zero out unused rtt entries.
         inspect.record(Event::Success(&sample_with_rtts(&[TEST_ROUND_TRIP_2])));
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 sample_0: contains {
@@ -321,7 +321,7 @@ mod test {
     fn test_failure() {
         let inspector = Inspector::new();
         let inspect = InspectDiagnostics::new(inspector.root());
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 failures: {},
@@ -330,7 +330,7 @@ mod test {
         );
 
         inspect.record(Event::Failure(HttpsDateErrorType::NoCertificatesPresented));
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 failures: {
@@ -342,7 +342,7 @@ mod test {
 
         inspect.record(Event::Failure(HttpsDateErrorType::NoCertificatesPresented));
         inspect.record(Event::Failure(HttpsDateErrorType::NetworkError));
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 failures: {
@@ -358,7 +358,7 @@ mod test {
     fn test_phase() {
         let inspector = Inspector::new();
         let inspect = InspectDiagnostics::new(inspector.root());
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 phase: "Initial",
@@ -366,7 +366,7 @@ mod test {
             }
         );
         inspect.record(Event::Phase(Phase::Maintain));
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 phase: "Maintain",
@@ -381,7 +381,7 @@ mod test {
         let inspect = InspectDiagnostics::new(inspector.root());
 
         inspect.record(Event::NetworkCheckSuccessful);
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 network_check_time: AnyProperty,

@@ -690,7 +690,7 @@ mod tests {
         fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
         fuchsia_async as fasync,
         fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
-        fuchsia_inspect::{self as inspect, assert_inspect_tree},
+        fuchsia_inspect::{self as inspect, assert_data_tree},
         futures::{
             channel::{mpsc, oneshot},
             prelude::*,
@@ -1710,7 +1710,7 @@ mod tests {
             ))
         );
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             test: {
                 "0": {
                     "@time": inspect::testing::AnyProperty,
@@ -2216,7 +2216,7 @@ mod tests {
         );
 
         // Check the network selections were logged
-        assert_inspect_tree!(test_values.inspector, root: {
+        assert_data_tree!(test_values.inspector, root: {
             net_select_test: {
                 network_selection: {
                     "0": {

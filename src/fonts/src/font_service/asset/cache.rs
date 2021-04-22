@@ -153,8 +153,7 @@ impl AssetCacheInspectData {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl_fuchsia_mem as mem, fuchsia_inspect::assert_inspect_tree,
-        fuchsia_zircon as zx,
+        super::*, fidl_fuchsia_mem as mem, fuchsia_inspect::assert_data_tree, fuchsia_zircon as zx,
     };
 
     /// Creates a `Cache` with some mocked assets.
@@ -303,7 +302,7 @@ mod tests {
         let inspector = finspect::Inspector::new();
         let capacity = 3000;
         let mut cache = Cache::new(capacity, inspector.root());
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             asset_cache: {
                 capacity_bytes: 3000u64,
                 used_bytes: 0u64,
@@ -314,7 +313,7 @@ mod tests {
         let asset = mock_asset(1, 1024, 1000);
         cache.push(asset);
 
-        assert_inspect_tree!(inspector, root: contains {
+        assert_data_tree!(inspector, root: contains {
             asset_cache: {
                 capacity_bytes: 3000u64,
                 used_bytes: 1000u64,

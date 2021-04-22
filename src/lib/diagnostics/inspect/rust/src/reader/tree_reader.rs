@@ -122,14 +122,14 @@ where
 mod tests {
     use {
         super::*,
-        crate::{assert_inspect_tree, reader, Inspector},
+        crate::{assert_data_tree, reader, Inspector},
     };
 
     #[fuchsia::test]
     async fn test_read() -> Result<(), anyhow::Error> {
         let inspector = test_inspector();
         let hierarchy = read(&inspector).await?;
-        assert_inspect_tree!(hierarchy, root: {
+        assert_data_tree!(hierarchy, root: {
             int: 3i64,
             "lazy-node": {
                 a: "test",
@@ -149,7 +149,7 @@ mod tests {
         let root_hierarchy: DiagnosticsHierarchy =
             PartialNodeHierarchy::try_from(snapshot_tree.snapshot)?.into();
         assert_eq!(snapshot_tree.children.keys().collect::<Vec<&String>>(), vec!["lazy-node-0"]);
-        assert_inspect_tree!(root_hierarchy, root: {
+        assert_data_tree!(root_hierarchy, root: {
             int: 3i64,
         });
 
@@ -157,7 +157,7 @@ mod tests {
         let lazy_node_hierarchy: DiagnosticsHierarchy =
             PartialNodeHierarchy::try_from(lazy_node.snapshot)?.into();
         assert_eq!(lazy_node.children.keys().collect::<Vec<&String>>(), vec!["lazy-values-0"]);
-        assert_inspect_tree!(lazy_node_hierarchy, root: {
+        assert_data_tree!(lazy_node_hierarchy, root: {
             a: "test",
             child: {},
         });
@@ -165,7 +165,7 @@ mod tests {
         let lazy_values = lazy_node.children.remove("lazy-values-0").unwrap().unwrap();
         let lazy_values_hierarchy = PartialNodeHierarchy::try_from(lazy_values.snapshot)?;
         assert_eq!(lazy_values.children.keys().len(), 0);
-        assert_inspect_tree!(lazy_values_hierarchy, root: {
+        assert_data_tree!(lazy_values_hierarchy, root: {
             double: 3.14,
         });
 
@@ -185,7 +185,7 @@ mod tests {
         let hierarchy = reader::read(&inspector).await?;
         assert_eq!(hierarchy.missing.len(), 1);
         assert_eq!(hierarchy.missing[0].reason, MissingValueReason::LinkParseFailure);
-        assert_inspect_tree!(hierarchy, root: {});
+        assert_data_tree!(hierarchy, root: {});
         Ok(())
     }
 
@@ -200,7 +200,7 @@ mod tests {
         assert_eq!(hierarchy.missing.len(), 1);
         assert_eq!(hierarchy.missing[0].reason, MissingValueReason::LinkNotFound);
         assert_eq!(hierarchy.missing[0].name, "missing");
-        assert_inspect_tree!(hierarchy, root: {});
+        assert_data_tree!(hierarchy, root: {});
         Ok(())
     }
 

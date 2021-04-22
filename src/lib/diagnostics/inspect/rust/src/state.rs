@@ -737,7 +737,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            assert_inspect_tree,
+            assert_data_tree,
             reader::{snapshot::Snapshot, PartialNodeHierarchy},
             Inspector,
         },
@@ -1323,7 +1323,7 @@ mod tests {
                 Ok(inspector) => {
                     let hierarchy =
                         PartialNodeHierarchy::try_from(&*inspector.vmo.unwrap()).unwrap();
-                    assert_inspect_tree!(hierarchy, root: {
+                    assert_data_tree!(hierarchy, root: {
                         a: 1u64,
                     });
                 }

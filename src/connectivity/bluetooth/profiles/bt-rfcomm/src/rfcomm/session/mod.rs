@@ -1194,7 +1194,7 @@ mod tests {
         inner.iattach(inspect.root(), "session_test").expect("should attach to inspect tree");
         let session = Arc::new(Mutex::new(inner));
         // Default inspect tree.
-        fuchsia_inspect::assert_inspect_tree!(inspect, root: {
+        fuchsia_inspect::assert_data_tree!(inspect, root: {
             session_test: contains {
                 connected: "Connected",
             },
@@ -1209,7 +1209,7 @@ mod tests {
         drop(data_sender);
         assert_matches!(exec.run_until_stalled(&mut session_task), Poll::Ready(Ok(_)));
         // Inspect when Session is not active.
-        fuchsia_inspect::assert_inspect_tree!(inspect, root: {
+        fuchsia_inspect::assert_data_tree!(inspect, root: {
             session_test: contains {
                 connected: "Disconnected",
             }

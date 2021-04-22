@@ -243,7 +243,7 @@ fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod test {
 
-    use {super::*, fuchsia_inspect::assert_inspect_tree, tel_dev::isolated_devmgr};
+    use {super::*, fuchsia_inspect::assert_data_tree, tel_dev::isolated_devmgr};
 
     impl Manager {
         fn open_isolated_devmgr_file(path: &PathBuf) -> File {
@@ -270,7 +270,7 @@ mod test {
             Ok((app, ril))
         };
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             manager: {
                 radios: {}
             }
@@ -280,7 +280,7 @@ mod test {
             let (app, ril) = create_app_and_ril_for_test().unwrap();
             let path = PathBuf::from(r"class/qmi-transport/000");
             let _radio1 = Radio::new(app, ril, manager.radios_node.create_child("radio-1"), path);
-            assert_inspect_tree!(inspector, root: {
+            assert_data_tree!(inspector, root: {
                manager: {
                    radios: {
                        "radio-1": {
@@ -293,7 +293,7 @@ mod test {
             // Radio will be removed from inspect tree as it is out of scope/dropped
         }
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             manager: {
                 radios: {}
             }
@@ -303,7 +303,7 @@ mod test {
         let path = PathBuf::from(r"class/qmi-transport/001");
         let node = manager.radios_node.create_child("radio-1");
         let _radio1 = Radio::new(app, ril, node, path);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             manager: {
                 radios: {
                     "radio-1": {
@@ -318,7 +318,7 @@ mod test {
         let node2 = manager.radios_node.create_child("radio-2");
         let _radio2 = Radio::new(app2, ril2, node2, path2);
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             manager: {
                 radios: {
                     "radio-1": {
@@ -349,7 +349,7 @@ mod test {
             )
             .await?;
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
            manager: {
                radios: {
                    "radio-qmi-000": {
@@ -361,7 +361,7 @@ mod test {
 
         manager.remove_devices(PathBuf::from("000"), PathBuf::from(r"class/qmi-transport"));
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
            manager: {
                radios: {
                }

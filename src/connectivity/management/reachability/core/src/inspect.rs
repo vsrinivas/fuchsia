@@ -41,14 +41,14 @@ impl InspectInfo {
 mod tests {
     use {
         super::*,
-        fuchsia_inspect::{assert_inspect_tree, Inspector},
+        fuchsia_inspect::{assert_data_tree, Inspector},
     };
 
     #[test]
     fn test_log_state() {
         let inspector = Inspector::new();
         let mut i = InspectInfo::new(inspector.root(), "id", "myname");
-        assert_inspect_tree!(inspector, root: contains {
+        assert_data_tree!(inspector, root: contains {
             id: {
                 name:"myname",
                 IPv4:{"0": contains {
@@ -63,7 +63,7 @@ mod tests {
         });
 
         i.log_state(Proto::IPv4, State::Internet);
-        assert_inspect_tree!(inspector, root: contains {
+        assert_data_tree!(inspector, root: contains {
             id: {
                 name:"myname",
                 IPv4:{"0": contains {
@@ -81,7 +81,7 @@ mod tests {
         });
         i.log_state(Proto::IPv4, State::Gateway);
         i.log_state(Proto::IPv6, State::Local);
-        assert_inspect_tree!(inspector, root: contains {
+        assert_data_tree!(inspector, root: contains {
             id: {
                 name:"myname",
                 IPv4:{"0": contains {

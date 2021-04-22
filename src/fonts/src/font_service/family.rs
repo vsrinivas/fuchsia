@@ -294,7 +294,7 @@ mod tests {
         anyhow::Error,
         char_collection::char_collect,
         fidl_fuchsia_fonts::{Slant, Width},
-        finspect::assert_inspect_tree,
+        finspect::assert_data_tree,
         maplit::{btreemap, btreeset},
         pretty_assertions::assert_eq,
     };
@@ -405,7 +405,7 @@ mod tests {
 
         let inspector = finspect::Inspector::new();
         let _inspect_data = AliasInspectData::new(inspector.root(), alias, &overrides);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             Alif: {
                 style_overrides: {
                     weight: 600u64,
@@ -461,7 +461,7 @@ mod tests {
 
         // The contents of `AliasInspectData` and `TypefaceInspectData` are tested in their
         // respective unit tests. This test just asserts the overall structure.
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             Alpha: {
                 aliases: {
                     Ay: contains {},

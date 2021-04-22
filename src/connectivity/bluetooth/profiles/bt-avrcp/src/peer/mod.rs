@@ -564,7 +564,7 @@ mod tests {
         },
         fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
         fuchsia_bluetooth::types::Channel,
-        fuchsia_inspect::assert_inspect_tree,
+        fuchsia_inspect::assert_data_tree,
         fuchsia_inspect_derive::WithInspect,
         fuchsia_zircon::DurationNum,
         futures::{pin_mut, task::Poll},
@@ -847,7 +847,7 @@ mod tests {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
 
         // Inspect tree should be updated with the connection error count.
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             peer: contains {},
             metrics: contains {
                 connection_errors: 1u64,
@@ -879,7 +879,7 @@ mod tests {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
 
         // Inspect tree should be updated with the connection.
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             peer: contains {
                 control: "Connected",
             },
@@ -897,7 +897,7 @@ mod tests {
         // Run to update watcher state.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
         // Inspect tree should be updated with the browse connection.
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             peer: contains {
                 control: "Connected",
             },
@@ -913,7 +913,7 @@ mod tests {
         // Run to update watcher state.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
         // Inspect tree should be updated with the disconnection.
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             peer: contains {
                 control: "Disconnected",
             },

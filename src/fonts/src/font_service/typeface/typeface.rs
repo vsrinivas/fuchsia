@@ -269,7 +269,7 @@ mod tests {
         super::*,
         char_collection::char_collect,
         fidl_fuchsia_fonts::{Slant, Width, WEIGHT_NORMAL},
-        finspect::assert_inspect_tree,
+        finspect::assert_data_tree,
         maplit::btreeset,
     };
 
@@ -314,7 +314,7 @@ mod tests {
             },
         );
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             "017": {
                 asset_id: 5u64,
                 asset_location: "/path/to/asset-5.ttf",
@@ -331,7 +331,7 @@ mod tests {
 
         let _inspect_data = inspect_data.with_family_name("Alpha");
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             "017": contains {
                 asset_id: 5u64,
                 family_name: "Alpha",

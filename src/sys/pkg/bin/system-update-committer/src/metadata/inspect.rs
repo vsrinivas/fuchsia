@@ -42,7 +42,7 @@ mod tests {
     use {
         super::*,
         anyhow::anyhow,
-        fuchsia_inspect::{assert_inspect_tree, Inspector},
+        fuchsia_inspect::{assert_data_tree, Inspector},
         proptest::prelude::*,
     };
 
@@ -52,7 +52,7 @@ mod tests {
 
         let () = write_to_inspect(inspector.root(), &Ok(()), Duration::from_micros(2));
 
-        assert_inspect_tree! {
+        assert_data_tree! {
             inspector,
             root: {
                 "ota_verification_duration": {
@@ -72,7 +72,7 @@ mod tests {
             Duration::from_micros(2),
         );
 
-        assert_inspect_tree! {
+        assert_data_tree! {
             inspector,
             root: {
                 "ota_verification_duration": {
@@ -95,7 +95,7 @@ mod tests {
             Duration::from_micros(2),
         );
 
-        assert_inspect_tree! {
+        assert_data_tree! {
             inspector,
             root: {
                 "ota_verification_duration": {
@@ -118,7 +118,7 @@ mod tests {
             Duration::from_micros(2),
         );
 
-        assert_inspect_tree! {
+        assert_data_tree! {
             inspector,
             root: {
                 "ota_verification_duration": {
@@ -140,7 +140,7 @@ mod tests {
             let () =
                 write_to_inspect(inspector.root(), &Ok(()), Duration::new(u64::MAX, nanos));
 
-            assert_inspect_tree! {
+            assert_data_tree! {
                 inspector,
                 root: {
                     "ota_verification_duration": {

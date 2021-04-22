@@ -183,7 +183,7 @@ mod tests {
         char_collection::char_collect,
         fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width},
         fidl_fuchsia_io as io, fidl_fuchsia_mem as mem,
-        fuchsia_inspect::{self as finspect, assert_inspect_tree},
+        fuchsia_inspect::{self as finspect, assert_data_tree},
         fuchsia_url::pkg_url::PkgUrl,
         manifest::v2,
         maplit::btreemap,
@@ -336,7 +336,7 @@ mod tests {
         );
 
         // Testing overall structure and order. Details are covered in more granular unit tests.
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             manifests: {
                 "0": "/path/to/manifest-a.font_manifest.json",
                 "1": "/path/to/manifest-b.font_manifest.json",

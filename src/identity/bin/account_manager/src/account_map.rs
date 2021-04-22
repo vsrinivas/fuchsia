@@ -226,7 +226,7 @@ mod tests {
     use crate::fake_account_handler_connection::{
         FakeAccountHandlerConnection, CORRUPT_HANDLER_ACCOUNT_ID, UNKNOWN_ERROR_ACCOUNT_ID,
     };
-    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use fuchsia_inspect::{assert_data_tree, Inspector};
     use lazy_static::lazy_static;
     use std::sync::Arc;
     use tempfile::TempDir;
@@ -302,7 +302,7 @@ mod tests {
                 &*TEST_ACCOUNT_ID_2
             );
         }
-        assert_inspect_tree!(inspector, root: { accounts: {
+        assert_data_tree!(inspector, root: { accounts: {
             total: 2u64,
             active: 2u64,
         }});
@@ -316,7 +316,7 @@ mod tests {
             ACCOUNT_HANDLER_CONTEXT.clone(),
             inspector.root(),
         )?;
-        assert_inspect_tree!(inspector, root: { accounts: {
+        assert_data_tree!(inspector, root: { accounts: {
             total: 1u64,
             active: 0u64,
         }});
@@ -332,7 +332,7 @@ mod tests {
             map.get_handler(&TEST_ACCOUNT_ID_1).await?.get_account_id(),
             &*TEST_ACCOUNT_ID_1
         );
-        assert_inspect_tree!(inspector, root: { accounts: {
+        assert_data_tree!(inspector, root: { accounts: {
             total: 1u64,
             active: 1u64,
         }});
@@ -345,7 +345,7 @@ mod tests {
             map.remove_account(&TEST_ACCOUNT_ID_1).await.unwrap_err().api_error,
             ApiError::NotFound
         );
-        assert_inspect_tree!(inspector, root: { accounts: {
+        assert_data_tree!(inspector, root: { accounts: {
             total: 0u64,
             active: 0u64,
         }});
@@ -360,7 +360,7 @@ mod tests {
         )?;
 
         // Check that the removed account was persisted correctly
-        assert_inspect_tree!(inspector, root: { accounts: {
+        assert_data_tree!(inspector, root: { accounts: {
             total: 0u64,
             active: 0u64,
         }});
@@ -385,7 +385,7 @@ mod tests {
             inspector.root(),
         );
         // Initial state
-        assert_inspect_tree!(inspector, root: { accounts: {
+        assert_data_tree!(inspector, root: { accounts: {
             total: 2u64,
             active: 0u64,
         }});
@@ -405,7 +405,7 @@ mod tests {
         );
 
         // Check that no spurious changes were caused
-        assert_inspect_tree!(inspector, root: { accounts: {
+        assert_data_tree!(inspector, root: { accounts: {
             total: 2u64,
             active: 0u64,
         }});
@@ -426,7 +426,7 @@ mod tests {
             inspector.root(),
         );
         // Initial state
-        assert_inspect_tree!(inspector, root: { accounts: {
+        assert_data_tree!(inspector, root: { accounts: {
             total: 1u64,
             active: 0u64,
         }});
@@ -441,7 +441,7 @@ mod tests {
             ApiError::FailedPrecondition
         );
         // Check that no spurious changes were caused
-        assert_inspect_tree!(inspector, root: { accounts: {
+        assert_data_tree!(inspector, root: { accounts: {
             total: 1u64,
             active: 0u64,
         }});

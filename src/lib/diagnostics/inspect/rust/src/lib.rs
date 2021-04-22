@@ -109,7 +109,10 @@ use inspect_format::Block;
 pub use diagnostics_hierarchy::{
     DiagnosticsHierarchy, ExponentialHistogramParams, LinearHistogramParams,
 };
-pub use testing::{assert_inspect_tree, tree_assertion};
+pub use testing::{assert_data_tree, tree_assertion};
+
+// TODO: cleanup. For soft migration only.
+pub use assert_data_tree as assert_inspect_tree;
 
 pub use {crate::error::Error, crate::state::Stats};
 
@@ -122,9 +125,7 @@ mod state;
 
 pub mod testing {
     pub use diagnostics_hierarchy::{
-        // TODO(fxbug.dev/74581): export only assert_data_tree once the soft migration is done.
         assert_data_tree,
-        assert_data_tree as assert_inspect_tree,
         testing::{
             AnyProperty, DiagnosticsHierarchyGetter, HistogramAssertion, NonZeroUintProperty,
             PropertyAssertion, TreeAssertion,
@@ -1303,7 +1304,7 @@ pub fn unique_name(prefix: &str) -> String {
 mod tests {
     use {
         super::*,
-        crate::{assert_inspect_tree, heap::Heap, reader},
+        crate::{assert_data_tree, heap::Heap, reader},
         diagnostics_hierarchy::{DiagnosticsHierarchy, Property as DProperty},
         fuchsia_zircon::{AsHandleRef, Peered},
         inspect_format::{constants, BlockType, LinkNodeDisposition},
@@ -1915,7 +1916,7 @@ mod tests {
         let vmo = embedded_inspector.duplicate_vmo().unwrap();
 
         inspector.root().record_lazy_child_from_vmo("lazy", Arc::new(vmo));
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             test: 3u64,
             lazy: {
                 test2: 4u64,
@@ -1942,7 +1943,7 @@ mod tests {
             let child = inspector.root().create_child("child");
             child.record(property);
             child.record_double("c", 3.14);
-            assert_inspect_tree!(inspector, root: {
+            assert_data_tree!(inspector, root: {
                 a: 1u64,
                 b: 2u64,
                 child: {
@@ -1952,7 +1953,7 @@ mod tests {
         }
         // `child` went out of scope, meaning it was deleted.
         // Property `a` should be gone as well, given that it was being tracked by `child`.
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             b: 2u64,
         });
     }
@@ -1963,7 +1964,7 @@ mod tests {
         inspector.root().record_child("test", |node| {
             node.record_int("a", 1);
         });
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             test: {
                 a: 1i64,
             }
@@ -1984,7 +1985,7 @@ mod tests {
             let child = main_weak.create_child("child");
             child.record(property);
             child.record_double("c", 3.14);
-            assert_inspect_tree!(inspector, root: { main: {
+            assert_data_tree!(inspector, root: { main: {
                 a: 1u64,
                 b: 2u64,
                 c: 3u64,
@@ -1995,7 +1996,7 @@ mod tests {
         }
         // `child` went out of scope, meaning it was deleted.
         // Property `a` should be gone as well, given that it was being tracked by `child`.
-        assert_inspect_tree!(inspector, root: { main: {
+        assert_data_tree!(inspector, root: { main: {
             b: 2u64,
             c: 3u64
         }});
@@ -2003,7 +2004,7 @@ mod tests {
         // Recording after dropping a strong reference is a no-op
         main_weak.record_double("d", 1.0);
         // Verify that dropping a strong reference cleans up the state
-        assert_inspect_tree!(inspector, root: { });
+        assert_data_tree!(inspector, root: { });
     }
 
     #[test]
@@ -2018,7 +2019,7 @@ mod tests {
         assert_eq!(name_2, "a1");
         inspector.root().record_uint(name_2, 1);
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             a0: 1u64,
             a1: 1u64,
         });
@@ -2116,7 +2117,7 @@ mod tests {
 
         // Ensure that the variable that we mutated internally can be used.
         child.record_int("c", 3);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             value: 2i64,
             child: {
                 a: 1i64,

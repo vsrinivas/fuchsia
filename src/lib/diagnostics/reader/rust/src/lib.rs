@@ -457,7 +457,7 @@ mod tests {
         super::*,
         anyhow::format_err,
         diagnostics_data::{Data, LifecycleType},
-        diagnostics_hierarchy::assert_data_tree as assert_inspect_tree,
+        diagnostics_hierarchy::assert_data_tree,
         fidl_fuchsia_diagnostics as fdiagnostics,
         fidl_fuchsia_sys::ComponentControllerEvent,
         fuchsia_component::{
@@ -536,7 +536,7 @@ mod tests {
             .await?;
 
         assert_eq!(results.len(), 1);
-        assert_inspect_tree!(results[0].payload.as_ref().unwrap(), root: {
+        assert_data_tree!(results[0].payload.as_ref().unwrap(), root: {
             int: 3u64,
             "lazy-node": {
                 a: "test",
@@ -563,7 +563,7 @@ mod tests {
         assert_eq!(response[0].metadata.component_url, TEST_COMPONENT_URL);
         assert_eq!(response[0].moniker, "test-ok/inspect_test_component.cmx");
 
-        assert_inspect_tree!(response[0].payload.as_ref().unwrap(), root: {
+        assert_data_tree!(response[0].payload.as_ref().unwrap(), root: {
             int: 3u64,
             "lazy-node": {
                 a: "test"
@@ -614,7 +614,7 @@ mod tests {
             .await
             .expect("got result");
         assert_eq!(result.len(), 1);
-        assert_inspect_tree!(result[0].payload.as_ref().unwrap(), root: { x: 1u64 });
+        assert_data_tree!(result[0].payload.as_ref().unwrap(), root: { x: 1u64 });
     }
 
     fn spawn_fake_archive() -> fdiagnostics::ArchiveAccessorProxy {

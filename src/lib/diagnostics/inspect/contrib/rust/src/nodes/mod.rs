@@ -56,17 +56,17 @@ impl TimeProperty {
 mod tests {
     use super::*;
 
-    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use fuchsia_inspect::{assert_data_tree, Inspector};
 
     #[test]
     fn test_time_metadata_format() {
         let inspector = Inspector::new();
         let time_property =
             inspector.root().create_time_at("time", zx::Time::from_nanos(123_456700000));
-        assert_inspect_tree!(inspector, root: { time: 123_456700000i64 });
+        assert_data_tree!(inspector, root: { time: 123_456700000i64 });
         time_property.set_at(zx::Time::from_nanos(333_005000000));
-        assert_inspect_tree!(inspector, root: { time: 333_005000000i64 });
+        assert_data_tree!(inspector, root: { time: 333_005000000i64 });
         time_property.set_at(zx::Time::from_nanos(333_444000000));
-        assert_inspect_tree!(inspector, root: { time: 333_444000000i64 });
+        assert_data_tree!(inspector, root: { time: 333_444000000i64 });
     }
 }

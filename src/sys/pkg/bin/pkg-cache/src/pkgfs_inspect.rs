@@ -56,7 +56,7 @@ mod tests {
     use {
         super::*,
         fuchsia_async as fasync,
-        fuchsia_inspect::assert_inspect_tree,
+        fuchsia_inspect::assert_data_tree,
         std::fs::{create_dir_all, File},
         tempfile::TempDir,
     };
@@ -98,7 +98,7 @@ mod tests {
         let _pkgfs_inspect =
             PkgfsInspectState::new(system_image, inspector.root().create_child("pkgfs")).await;
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             "pkgfs": {
                 INSPECT_EXEC_PROP_NAME.to_string() => expected_state,
             }

@@ -11,7 +11,7 @@ use std::{cell, rc, sync};
 
 use fuchsia_async as fasync;
 use fuchsia_inspect::{
-    assert_inspect_tree, Inspector, Node, NumericProperty, Property, StringProperty, UintProperty,
+    assert_data_tree, Inspector, Node, NumericProperty, Property, StringProperty, UintProperty,
 };
 use fuchsia_inspect_derive::{AttachError, IDebug, IValue, Inspect, Unit, WithInspect};
 
@@ -208,12 +208,12 @@ fn unit_primitive() {
     let root = inspector.root();
     let mut num = 127i8;
     let mut num_data = num.inspect_create(&root, "num");
-    assert_inspect_tree!(inspector, root: { num: 127i64 });
+    assert_data_tree!(inspector, root: { num: 127i64 });
     num = -128;
     num.inspect_update(&mut num_data);
-    assert_inspect_tree!(inspector, root: { num: -128i64 });
+    assert_data_tree!(inspector, root: { num: -128i64 });
     std::mem::drop(num_data);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
 }
 
 #[test]
@@ -222,17 +222,17 @@ fn unit_flat() {
     let root = inspector.root();
     let mut yakling = Yakling { name: "Lil Sebastian".to_string(), age: 5 };
     let mut yakling_data = yakling.inspect_create(&root, "yak");
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         yak: { name: "Lil Sebastian", years_old: 5u64 }
     });
     yakling.name = "Sebastian".to_string();
     yakling.age = 10;
     yakling.inspect_update(&mut yakling_data);
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         yak: { name: "Sebastian", years_old: 10u64 }
     });
     std::mem::drop(yakling_data);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
 }
 
 #[test]
@@ -246,7 +246,7 @@ fn unit_nested() {
         yakling: Yakling { name: "Lil Sebastian".to_string(), age: 2 },
     };
     let mut yak_data = yak.inspect_create(&root, "my_yak");
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         my_yak: {
             name: "Big Sebastian",
             age: 25i64,
@@ -260,7 +260,7 @@ fn unit_nested() {
     yak.name = "Big Sebastian Sr.".to_string();
     yak.credit_card_no = "1234".to_string();
     yak.inspect_update(&mut yak_data);
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         my_yak: {
             name: "Big Sebastian Sr.",
             age: 25i64,
@@ -271,7 +271,7 @@ fn unit_nested() {
         }
     });
     std::mem::drop(yak_data);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
 }
 
 #[test]
@@ -280,7 +280,7 @@ fn unit_basic_types() {
     let root = inspector.root();
     let mut basic = BasicTypes::default();
     let mut basic_data = basic.inspect_create(&root, "basic");
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         basic: {
             t_u8: 0u64,
             t_u16: 0u64,
@@ -304,7 +304,7 @@ fn unit_basic_types() {
     basic.t_f32 = 1.0;
     basic.t_vec_u8 = vec![0x13, 0x37];
     basic.inspect_update(&mut basic_data);
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         basic: {
             t_u8: 0u64,
             t_u16: 0u64,
@@ -324,7 +324,7 @@ fn unit_basic_types() {
         }
     });
     std::mem::drop(basic_data);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
 }
 
 #[test]
@@ -334,16 +334,16 @@ fn unit_generic() {
     let a = "some_ref".to_string();
     let mut generic_unit = GenericUnit { _convoluted: &a, easy: "owned".to_string() };
     let mut inspect_data = generic_unit.inspect_create(&root, "a_struct");
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         a_struct: { easy: "owned" }
     });
     generic_unit.easy = "owned altered".to_string();
     generic_unit.inspect_update(&mut inspect_data);
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         a_struct: { easy: "owned altered" }
     });
     std::mem::drop(inspect_data);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
 }
 
 #[test]
@@ -351,11 +351,11 @@ fn unit_option() -> Result<(), AttachError> {
     let inspector = Inspector::new();
     let mut option_yakling: Option<Yakling> = None;
     let mut option_yakling_data = option_yakling.inspect_create(inspector.root(), "option_yakling");
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
 
     option_yakling = Some(Yakling { name: "Sebastian".to_string(), age: 3 });
     option_yakling.inspect_update(&mut option_yakling_data);
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         option_yakling: {
             name: "Sebastian",
             years_old: 3u64
@@ -364,7 +364,7 @@ fn unit_option() -> Result<(), AttachError> {
 
     option_yakling.as_mut().unwrap().age = 4;
     option_yakling.inspect_update(&mut option_yakling_data);
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         option_yakling: {
             name: "Sebastian",
             years_old: 4u64
@@ -373,22 +373,22 @@ fn unit_option() -> Result<(), AttachError> {
 
     option_yakling = None;
     option_yakling.inspect_update(&mut option_yakling_data);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
 
     std::mem::drop(option_yakling_data);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
 
     // Cover `inspect_create(..)` from `Some(..)`
     let option_yakling = Some(Yakling { name: "Sebastian".to_string(), age: 3 });
     let option_yakling_data = option_yakling.inspect_create(inspector.root(), "option_yakling");
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         option_yakling: {
             name: "Sebastian",
             years_old: 3u64
         },
     });
     std::mem::drop(option_yakling_data);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
     Ok(())
 }
 
@@ -397,23 +397,23 @@ fn ivalue_primitive() {
     let inspector = Inspector::new();
     let root = inspector.root();
     let mut num = IValue::attached(126i8, &root, "num");
-    assert_inspect_tree!(inspector, root: { num: 126i64 });
+    assert_data_tree!(inspector, root: { num: 126i64 });
 
     // Modifying num should change its value but not update inspect
     {
         let mut num = num.as_mut();
         *num += 1;
         assert_eq!(*num, 127);
-        assert_inspect_tree!(inspector, root: { num: 126i64 });
+        assert_data_tree!(inspector, root: { num: 126i64 });
     }
 
     // Now inspect is updated
-    assert_inspect_tree!(inspector, root: { num: 127i64 });
+    assert_data_tree!(inspector, root: { num: 127i64 });
     num.iset(-128);
     assert_eq!(*num, -128);
-    assert_inspect_tree!(inspector, root: { num: -128i64 });
+    assert_data_tree!(inspector, root: { num: -128i64 });
     std::mem::drop(num);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
 }
 
 #[test]
@@ -427,7 +427,7 @@ fn ivalue_nested() {
         yakling: Yakling { name: "Lil Sebastian".to_string(), age: 2 },
     };
     let mut yak = IValue::attached(yak_base, &root, "my_yak");
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         my_yak: {
             name: "Big Sebastian",
             age: 25i64,
@@ -443,7 +443,7 @@ fn ivalue_nested() {
         yak.name = "Big Sebastian Sr.".to_string();
         yak.credit_card_no = "1234".to_string();
     }
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         my_yak: {
             name: "Big Sebastian Sr.",
             age: 25i64,
@@ -454,7 +454,7 @@ fn ivalue_nested() {
         }
     });
     std::mem::drop(yak);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
 }
 
 #[test]
@@ -462,11 +462,11 @@ fn idebug_enum() {
     let inspector = Inspector::new();
     let root = inspector.root();
     let mut horse = IDebug::attached(Horse::Arabian, &root, "horse");
-    assert_inspect_tree!(inspector, root: { horse: "Arabian" });
+    assert_data_tree!(inspector, root: { horse: "Arabian" });
     horse.iset(Horse::Icelandic);
-    assert_inspect_tree!(inspector, root: { horse: "Icelandic" });
+    assert_data_tree!(inspector, root: { horse: "Icelandic" });
     std::mem::drop(horse);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
 }
 
 #[test]
@@ -542,7 +542,7 @@ async fn iowned_composite() -> Result<(), AttachError> {
     let inspector = Inspector::new();
     let mut yak = PowerYak::default();
     yak.iattach(inspector.root(), "my_yak")?;
-    assert_inspect_tree!(inspector, root: { my_yak: {
+    assert_data_tree!(inspector, root: { my_yak: {
         name: "",
         age: "0",
         size: "",
@@ -557,7 +557,7 @@ async fn iowned_composite() -> Result<(), AttachError> {
     yak.counter.add(1337);
     yak.last_words.write().set("good bye, friends");
     yak.bday();
-    assert_inspect_tree!(inspector, root: { my_yak: {
+    assert_data_tree!(inspector, root: { my_yak: {
         name: "Lil Sebastian",
         age: "24",
         size: "small",
@@ -566,7 +566,7 @@ async fn iowned_composite() -> Result<(), AttachError> {
         last_words: "good bye, friends",
     }});
     std::mem::drop(yak);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
     Ok(())
 }
 
@@ -578,7 +578,7 @@ async fn derive_inspect_nested_interior_mut() -> Result<(), AttachError> {
 
     // Ensure only a reference is necessary, since AutoYak utilizes interior mutability
     let yak = &yak_mut;
-    assert_inspect_tree!(inspector, root: { my_yak: {
+    assert_data_tree!(inspector, root: { my_yak: {
         name: "Sebastian",
         horse_type: "Icelandic",
         child: {
@@ -586,7 +586,7 @@ async fn derive_inspect_nested_interior_mut() -> Result<(), AttachError> {
         },
     }});
     yak.host_bday().await;
-    assert_inspect_tree!(inspector, root: { my_yak: {
+    assert_data_tree!(inspector, root: { my_yak: {
         name: "Sebastian",
         horse_type: "Icelandic",
         child: {
@@ -594,7 +594,7 @@ async fn derive_inspect_nested_interior_mut() -> Result<(), AttachError> {
         },
     }});
     std::mem::drop(yak_mut);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
     Ok(())
 }
 
@@ -603,7 +603,7 @@ async fn derive_inspect_forward() -> Result<(), AttachError> {
     let inspector = Inspector::new();
     let mut yak = AutoYakWrapper::from(AutoYak::new("Sebastian".to_string()));
     yak.iattach(inspector.root(), "my_yak")?;
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         my_yak: {
             name: "Sebastian",
             horse_type: "Icelandic",
@@ -613,7 +613,7 @@ async fn derive_inspect_forward() -> Result<(), AttachError> {
         },
     });
     std::mem::drop(yak);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
     Ok(())
 }
 
@@ -622,12 +622,12 @@ async fn derive_inspect_nodeless() -> Result<(), AttachError> {
     let inspector = Inspector::new();
     let mut yak = NodeLessYak::new("Sebastian".to_string(), 2);
     yak.iattach(inspector.root(), "ignored")?;
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         name: "Sebastian",
         age: 2u64,
     });
     std::mem::drop(yak);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
     Ok(())
 }
 
@@ -641,15 +641,15 @@ fn derive_inspect_generic() -> Result<(), AttachError> {
         inspect_node: Node::default(),
     };
     yak.iattach(inspector.root(), "generic_yak")?;
-    assert_inspect_tree!(inspector, root: { generic_yak: {
+    assert_data_tree!(inspector, root: { generic_yak: {
         special_ability: "monomorphization",
     }});
     yak.special_ability.iset("lifetime parameterization".to_string());
-    assert_inspect_tree!(inspector, root: { generic_yak: {
+    assert_data_tree!(inspector, root: { generic_yak: {
         special_ability: "lifetime parameterization",
     }});
     std::mem::drop(yak);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
     Ok(())
 }
 
@@ -658,7 +658,7 @@ async fn with_inspect_mutable() -> Result<(), AttachError> {
     let inspector = Inspector::new();
     let mut yakling = inner::AutoYakling::default().with_inspect(inspector.root(), "my_yak")?;
     let mut happy = IValue::new(false).with_inspect(inspector.root(), "happy")?;
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         my_yak: {
             age: 0u64,
         },
@@ -666,7 +666,7 @@ async fn with_inspect_mutable() -> Result<(), AttachError> {
     });
     yakling.bday();
     happy.iset(true);
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         my_yak: {
             age: 1u64,
         },
@@ -674,7 +674,7 @@ async fn with_inspect_mutable() -> Result<(), AttachError> {
     });
     std::mem::drop(yakling);
     std::mem::drop(happy);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
     Ok(())
 }
 
@@ -683,7 +683,7 @@ async fn with_inspect_interior_mutability() -> Result<(), AttachError> {
     let inspector = Inspector::new();
     let yak = AutoYakWrapper::from(AutoYak::new("Sebastian".to_string()))
         .with_inspect(inspector.root(), "my_yak")?;
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         my_yak: {
             name: "Sebastian",
             horse_type: "Icelandic",
@@ -693,7 +693,7 @@ async fn with_inspect_interior_mutability() -> Result<(), AttachError> {
         },
     });
     yak.inner.lock().host_bday().await;
-    assert_inspect_tree!(inspector, root: {
+    assert_data_tree!(inspector, root: {
         my_yak: {
             name: "Sebastian",
             horse_type: "Icelandic",
@@ -703,6 +703,6 @@ async fn with_inspect_interior_mutability() -> Result<(), AttachError> {
         },
     });
     std::mem::drop(yak);
-    assert_inspect_tree!(inspector, root: {});
+    assert_data_tree!(inspector, root: {});
     Ok(())
 }

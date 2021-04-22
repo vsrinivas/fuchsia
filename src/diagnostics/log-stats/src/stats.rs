@@ -351,7 +351,7 @@ mod tests {
 
         // Send |msg1|. Creates a new entry in bucket 0.
         state.granular_stats.record_log(&msg1);
-        assert_inspect_tree!(state.inspector,
+        assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
               "0": {
@@ -371,7 +371,7 @@ mod tests {
 
         // Send |msg2|. Creates a new entry in bucket 0.
         state.granular_stats.record_log(&msg2);
-        assert_inspect_tree!(state.inspector,
+        assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
               "0": {
@@ -397,7 +397,7 @@ mod tests {
         // Send |msg1| again. No new entry is added. The existing entry will have its count
         // incremented.
         state.granular_stats.record_log(&msg1);
-        assert_inspect_tree!(state.inspector,
+        assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
               "0": {
@@ -422,7 +422,7 @@ mod tests {
 
         // Send |msg2| again. A new entry must be added because a new bucket is created.
         state.granular_stats.record_log(&msg2);
-        assert_inspect_tree!(state.inspector,
+        assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
               "0": {
@@ -455,7 +455,7 @@ mod tests {
 
         // Send |msg1|. Creates a new entry in the new bucket.
         state.granular_stats.record_log(&msg1);
-        assert_inspect_tree!(state.inspector,
+        assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
               "0": {
@@ -496,7 +496,7 @@ mod tests {
 
         // Send |msg1|. Creates a new entry in the new bucket. The first bucket is dropped.
         state.granular_stats.record_log(&msg1);
-        assert_inspect_tree!(state.inspector,
+        assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
               "1": {
@@ -549,7 +549,7 @@ mod tests {
 
         // Fatal message should be recorded.
         state.granular_stats.record_log(&fatal_msg);
-        assert_inspect_tree!(state.inspector,
+        assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
               "0": {
@@ -566,7 +566,7 @@ mod tests {
 
         // Error message should be recorded.
         state.granular_stats.record_log(&error_msg);
-        assert_inspect_tree!(state.inspector,
+        assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
               "0": {
@@ -591,7 +591,7 @@ mod tests {
         state.granular_stats.record_log(&info_msg);
         state.granular_stats.record_log(&debug_msg);
         state.granular_stats.record_log(&trace_msg);
-        assert_inspect_tree!(state.inspector,
+        assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
               "0": {
@@ -676,7 +676,7 @@ mod tests {
             let msg = create_message(&msg_str);
             state.granular_stats.record_log(&msg);
             if i == MAX_RECORDS_PER_BUCKET + 1 {
-                assert_inspect_tree!(state.inspector,
+                assert_data_tree!(state.inspector,
                    root: {
                        granular_stats: {
                            "0": contains {
@@ -685,7 +685,7 @@ mod tests {
                        }
                 });
             } else {
-                assert_inspect_tree!(state.inspector,
+                assert_data_tree!(state.inspector,
                    root: {
                        granular_stats: {
                            "0": contains {
@@ -698,7 +698,7 @@ mod tests {
 
         // First MAX_RECORDS_PER_BUCKET logs should be recorded.
         let last_key = &(MAX_RECORDS_PER_BUCKET - 1).to_string();
-        assert_inspect_tree!(state.inspector,
+        assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
               "0": contains {
@@ -730,7 +730,7 @@ mod tests {
         // Repeat the first message another time. Its count should increase to 2.
         let msg = create_message("[path/to/file.cpp(1)] Hello");
         state.granular_stats.record_log(&msg);
-        assert_inspect_tree!(state.inspector,
+        assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
               "0": contains {
@@ -769,7 +769,7 @@ mod tests {
         );
 
         state.granular_stats.record_log(&msg);
-        assert_inspect_tree!(state.inspector,
+        assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
               "0": {
@@ -801,7 +801,7 @@ mod tests {
             ),
         );
         state.granular_stats.record_log(&msg);
-        assert_inspect_tree!(state.inspector,
+        assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
               "0": {
@@ -838,7 +838,7 @@ mod tests {
             ),
         );
         state.granular_stats.record_log(&msg);
-        assert_inspect_tree!(state.inspector,
+        assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
               "0": {
@@ -951,7 +951,7 @@ mod tests {
             drop(component_stats);
             println!("Component stats Arc dropped");
         }));
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
             root: {
                 component_stats: {
                     a: {
@@ -998,7 +998,7 @@ mod tests {
         }));
 
         // Both logs are in stats; freshness matches time of last recorded log.
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
             root: {
                 component_stats: {
                     a: {
@@ -1028,7 +1028,7 @@ mod tests {
         // Advance to t=3*timeout: timer should fire, deleting "a" stats as garbage.
         state.set_time_and_run_timers(3 * gc_interval_nanos);
         state.assert_next_timer_at(4 * gc_interval_nanos);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             "component_stats": {
                 b: {
                     "last_log_monotonic_nanos": 2 * gc_interval_nanos,
@@ -1046,7 +1046,7 @@ mod tests {
         // Advance to t=4*timeout: timer should fire, deleting "b" stats as garbage.
         state.set_time_and_run_timers(4 * gc_interval_nanos);
         state.assert_next_timer_at(5 * gc_interval_nanos);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             "component_stats": {}
         });
 

@@ -246,7 +246,7 @@ pub mod tests {
     use super::*;
     use fuchsia_inspect::testing::TreeAssertion;
     use futures::TryStreamExt;
-    use inspect::assert_inspect_tree;
+    use inspect::assert_data_tree;
     use std::task::Poll;
 
     /// Spawns a new task that acts as a fake thermal driver for testing purposes. The driver only
@@ -403,7 +403,7 @@ pub mod tests {
         }
 
         root.add_child_assertion(temperature_readings);
-        assert_inspect_tree!(inspector, root: { root, });
+        assert_data_tree!(inspector, root: { root, });
     }
 
     /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.

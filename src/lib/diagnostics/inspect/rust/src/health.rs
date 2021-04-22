@@ -172,7 +172,7 @@ impl Node {
 mod tests {
     use {
         super::*,
-        crate::assert_inspect_tree,
+        crate::assert_data_tree,
         diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
         std::convert::TryFrom,
     };
@@ -182,10 +182,10 @@ mod tests {
         let inspector = Inspector::new();
         let mut root = inspector.root();
         // In the beginning, the inspector has no stats.
-        assert_inspect_tree!(inspector, root: contains {});
+        assert_data_tree!(inspector, root: contains {});
 
         let mut health = Node::new_with_timestamp(root, zx::Time::from_nanos(42));
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "STARTING_UP",
@@ -194,7 +194,7 @@ mod tests {
         });
 
         health.set_ok();
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "OK",
@@ -203,7 +203,7 @@ mod tests {
         });
 
         health.set_unhealthy("Bad state");
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "UNHEALTHY",
@@ -214,7 +214,7 @@ mod tests {
 
         // Verify that the message changes.
         health.set_unhealthy("Another bad state");
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "UNHEALTHY",
@@ -225,7 +225,7 @@ mod tests {
 
         // Also verifies that there is no more message.
         health.set_ok();
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "OK",
@@ -235,7 +235,7 @@ mod tests {
 
         // Revert to STARTING_UP, but only for tests.
         health.set_starting_up();
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "STARTING_UP",

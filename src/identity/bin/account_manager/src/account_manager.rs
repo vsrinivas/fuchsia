@@ -399,7 +399,7 @@ mod tests {
         AuthChangeGranularity, InitialAccountState, Scenario, ThreatScenario,
     };
     use fuchsia_async as fasync;
-    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use fuchsia_inspect::{assert_data_tree, Inspector};
     use fuchsia_zircon as zx;
     use futures::future::join;
     use lazy_static::lazy_static;
@@ -534,7 +534,7 @@ mod tests {
             create_accounts(vec![], data_dir.path(), &inspector),
             |proxy, _test_object| async move {
                 assert_eq!(proxy.get_account_ids().await?.len(), 0);
-                assert_inspect_tree!(inspector, root: contains {
+                assert_data_tree!(inspector, root: contains {
                     accounts: {
                         active: 0 as u64,
                         total: 0 as u64,
@@ -565,7 +565,7 @@ mod tests {
                     proxy.remove_account(LocalAccountId::new(42).into(), FORCE_REMOVE_ON).await?,
                     Err(ApiError::NotFound)
                 );
-                assert_inspect_tree!(inspector, root: contains {
+                assert_data_tree!(inspector, root: contains {
                     accounts: {
                         total: 1 as u64,
                         active: 0 as u64,

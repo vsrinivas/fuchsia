@@ -431,7 +431,7 @@ mod tests {
     use {
         super::*,
         futures::{FutureExt, TryStreamExt},
-        inspect::assert_inspect_tree,
+        inspect::assert_data_tree,
         matches::assert_matches,
         std::cell::Cell,
     };
@@ -550,7 +550,7 @@ mod tests {
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
 
         // Check default values before first temperature poll.
-        assert_inspect_tree!(
+        assert_data_tree!(
             runner.inspector,
             root: {
                 TemperatureLogger: {
@@ -566,7 +566,7 @@ mod tests {
             runner.cpu_temperature.set(30.0 + i as f32);
             runner.gpu_temperature.set(40.0 + i as f32);
             runner.iterate_logging_task();
-            assert_inspect_tree!(
+            assert_data_tree!(
                 runner.inspector,
                 root: {
                     TemperatureLogger: {
@@ -582,7 +582,7 @@ mod tests {
         runner.cpu_temperature.set(77.0);
         runner.gpu_temperature.set(77.0);
         runner.iterate_logging_task();
-        assert_inspect_tree!(
+        assert_data_tree!(
             runner.inspector,
             root: {
                 TemperatureLogger: {
@@ -606,7 +606,7 @@ mod tests {
             runner.cpu_temperature.set(i as f32);
             runner.gpu_temperature.set(i as f32);
             runner.iterate_logging_task();
-            assert_inspect_tree!(
+            assert_data_tree!(
                 runner.inspector,
                 root: {
                     TemperatureLogger: {

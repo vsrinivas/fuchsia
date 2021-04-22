@@ -138,7 +138,7 @@ mod tests {
     use super::*;
     use fidl::endpoints::*;
     use fidl_fuchsia_identity_account::{AccountListenerMarker, AccountListenerRequest};
-    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use fuchsia_inspect::{assert_data_tree, Inspector};
     use futures::prelude::*;
     use lazy_static::lazy_static;
 
@@ -304,7 +304,7 @@ mod tests {
         };
 
         let request_fut = async move {
-            assert_inspect_tree!(inspector, root : { listeners: contains {
+            assert_data_tree!(inspector, root : { listeners: contains {
                 active: 0 as u64,
                 total_opened: 0 as u64,
             }});
@@ -312,7 +312,7 @@ mod tests {
                 .add_listener(listener_1, options_1, &TEST_ACCOUNT_IDS)
                 .await
                 .is_ok());
-            assert_inspect_tree!(inspector, root : { listeners: contains {
+            assert_data_tree!(inspector, root : { listeners: contains {
                 active: 1 as u64,
                 total_opened: 1 as u64,
             }});
@@ -320,16 +320,16 @@ mod tests {
                 .add_listener(listener_2, options_2, &TEST_ACCOUNT_IDS)
                 .await
                 .is_ok());
-            assert_inspect_tree!(inspector, root : { listeners: {
+            assert_data_tree!(inspector, root : { listeners: {
                 active: 2 as u64,
                 total_opened: 2 as u64,
                 events: 0 as u64,
             }});
 
             account_event_emitter.publish(&EVENT_ADDED).await;
-            assert_inspect_tree!(inspector, root : { listeners: contains { events: 1 as u64 }});
+            assert_data_tree!(inspector, root : { listeners: contains { events: 1 as u64 }});
             account_event_emitter.publish(&EVENT_REMOVED).await;
-            assert_inspect_tree!(inspector, root : { listeners: contains { events: 2 as u64 }});
+            assert_data_tree!(inspector, root : { listeners: contains { events: 2 as u64 }});
         };
         join3(serve_fut_1, serve_fut_2, request_fut).await;
     }
@@ -367,7 +367,7 @@ mod tests {
 
         let request_fut = async move {
             account_event_emitter.publish(&EVENT_ADDED).await; // Normal event
-            assert_inspect_tree!(inspector, root : { listeners: {
+            assert_data_tree!(inspector, root : { listeners: {
                 active: 1 as u64, // Listener remains
                 total_opened: 1 as u64,
                 events: 1 as u64,
@@ -378,7 +378,7 @@ mod tests {
 
         // Now the server is dropped, so the new publish should trigger a drop of the client
         account_event_emitter.publish(&EVENT_REMOVED).await;
-        assert_inspect_tree!(inspector, root : { listeners: {
+        assert_data_tree!(inspector, root : { listeners: {
             active: 0 as u64, // Listener dropped
             total_opened: 1 as u64,
             events: 2 as u64,

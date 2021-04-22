@@ -579,7 +579,7 @@ mod tests {
 
         assert!(exec.run_until_stalled(&mut decode_fut).is_pending());
 
-        fuchsia_inspect::assert_inspect_tree!(inspector, root: {
+        fuchsia_inspect::assert_data_tree!(inspector, root: {
         stream: {
             start_time: 5_678900000i64,
             total_bytes: 0 as u64,
@@ -602,7 +602,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut decode_fut).is_pending());
 
         // We should have updated the rx stats.
-        fuchsia_inspect::assert_inspect_tree!(inspector, root: {
+        fuchsia_inspect::assert_data_tree!(inspector, root: {
         stream: {
             start_time: 5_678900000i64,
             total_bytes: sbc_packet_size,

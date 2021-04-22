@@ -6,7 +6,7 @@ use {
     crate::TestEnv,
     blobfs_ramdisk::BlobfsRamdisk,
     fuchsia_async as fasync,
-    fuchsia_inspect::assert_inspect_tree,
+    fuchsia_inspect::assert_data_tree,
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
     pkgfs_ramdisk::PkgfsRamdisk,
 };
@@ -40,7 +40,7 @@ async fn assert_base_blob_count(
 
     let hierarchy = env.inspect_hierarchy().await;
 
-    assert_inspect_tree!(
+    assert_data_tree!(
         hierarchy,
         root: contains {
             "blob-location": {
@@ -124,7 +124,7 @@ async fn assert_pkgfs_executability_restrictions_enabled(
     env.block_until_started().await;
 
     let hierarchy = env.inspect_hierarchy().await;
-    assert_inspect_tree!(
+    assert_data_tree!(
         hierarchy,
         root: contains {
             "pkgfs" : {

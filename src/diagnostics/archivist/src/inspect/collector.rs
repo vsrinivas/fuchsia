@@ -189,7 +189,7 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_component::server::ServiceFs,
         fuchsia_inspect::reader::PartialNodeHierarchy,
-        fuchsia_inspect::{assert_inspect_tree, reader, Inspector},
+        fuchsia_inspect::{assert_data_tree, reader, Inspector},
         fuchsia_zircon as zx,
         fuchsia_zircon::Peered,
         futures::{FutureExt, StreamExt},
@@ -331,7 +331,7 @@ mod tests {
                         // Assert we can read the tree proxy and get the data we expected.
                         let hierarchy =
                             reader::read(tree).await.expect("failed to read hierarchy from tree");
-                        assert_inspect_tree!(hierarchy, root: {
+                        assert_data_tree!(hierarchy, root: {
                             a: 1i64,
                             lazy: {
                                 b: 3.14,
@@ -343,7 +343,7 @@ mod tests {
                                 .into();
                         // Assert the vmo also points to that data (in this case since there's no
                         // lazy nodes).
-                        assert_inspect_tree!(partial_hierarchy, root: {
+                        assert_data_tree!(partial_hierarchy, root: {
                             a: 1i64,
                         });
                     }

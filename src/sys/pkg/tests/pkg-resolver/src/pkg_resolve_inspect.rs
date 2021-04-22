@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
     fuchsia_async as fasync,
     fuchsia_inspect::{
-        assert_inspect_tree,
+        assert_data_tree,
         reader::Property,
         testing::{AnyProperty, PropertyAssertion},
         tree_assertion,
@@ -30,7 +30,7 @@ async fn initial_inspect_state() {
     // Obtain inspect hierarchy
     let hierarchy = env.pkg_resolver_inspect_hierarchy().await;
 
-    assert_inspect_tree!(
+    assert_data_tree!(
         hierarchy,
         root: {
             rewrite_manager: {
@@ -79,7 +79,7 @@ async fn adding_repo_updates_inspect_state() {
     // Obtain inspect service and convert into a node hierarchy.
     let hierarchy = env.pkg_resolver_inspect_hierarchy().await;
 
-    assert_inspect_tree!(
+    assert_data_tree!(
         hierarchy,
         root: contains {
             repository_manager: contains {
@@ -117,7 +117,7 @@ async fn resolving_package_updates_inspect_state() {
         .await
         .expect("package to resolve");
 
-    assert_inspect_tree!(
+    assert_data_tree!(
         env.pkg_resolver_inspect_hierarchy().await,
         root: contains {
             repository_manager: contains {
@@ -262,7 +262,7 @@ async fn package_and_blob_queues() {
         futures::future::Either::Right(((), resolve_fut)) => resolve_fut,
     };
 
-    assert_inspect_tree!(
+    assert_data_tree!(
         env.pkg_resolver_inspect_hierarchy().await,
         root: contains {
             blob_fetcher: contains {
@@ -297,7 +297,7 @@ async fn package_and_blob_queues() {
     unblocker();
     let _pkg = resolve_fut.await.unwrap();
 
-    assert_inspect_tree!(
+    assert_data_tree!(
         env.pkg_resolver_inspect_hierarchy().await,
         root: contains {
             blob_fetcher: contains {
@@ -325,7 +325,7 @@ async fn channel_in_vbmeta_appears_in_inspect_state() {
 
     let hierarchy = env.pkg_resolver_inspect_hierarchy().await;
 
-    assert_inspect_tree!(
+    assert_data_tree!(
         hierarchy,
         root: contains {
             rewrite_manager: {

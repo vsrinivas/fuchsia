@@ -237,7 +237,7 @@ pub mod tests {
     use super::*;
     use fuchsia_async as fasync;
     use futures::TryStreamExt;
-    use inspect::assert_inspect_tree;
+    use inspect::assert_data_tree;
     use std::cell::Cell;
 
     fn setup_fake_driver(
@@ -358,7 +358,7 @@ pub mod tests {
         .build()
         .unwrap();
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 "DeviceControlHandler (Fake)": contains {}

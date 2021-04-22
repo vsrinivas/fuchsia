@@ -110,7 +110,7 @@ impl<'c> NodeWriter<'c> {
 mod tests {
     use super::*;
 
-    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use fuchsia_inspect::{assert_data_tree, Inspector};
 
     #[test]
     fn test_node_writer() {
@@ -125,7 +125,7 @@ mod tests {
             .create_int("int_key", 2)
             .create_double("double_key", 3f64);
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             config: {
                 str_key: "str_value",
                 bool_key: true,
@@ -152,7 +152,7 @@ mod tests {
             .create_int("int_key".to_string(), 2)
             .create_double("double_key".to_string(), 3f64);
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             config: {
                 str_key: "str_value",
                 bool_key: true,

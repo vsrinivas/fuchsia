@@ -879,7 +879,7 @@ mod tests {
     use fidl_fuchsia_update::{self as update, ManagerMarker, MonitorMarker, MonitorRequest};
     use fidl_fuchsia_update_channel::ProviderMarker;
     use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
-    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use fuchsia_inspect::{assert_data_tree, Inspector};
     use matches::assert_matches;
     use omaha_client::{common::App, protocol::Cohort};
 
@@ -1272,7 +1272,7 @@ mod tests {
             StubFidlServer::on_state_change(Rc::clone(&fidl), state).await;
 
             let app_set = fidl.borrow().app_set.clone();
-            assert_inspect_tree!(
+            assert_data_tree!(
                 inspector,
                 root: {
                     apps: {
@@ -1303,7 +1303,7 @@ mod tests {
         proxy.set_target("target-channel").await.unwrap();
         let fidl = fidl.borrow();
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 apps: {
@@ -1319,7 +1319,7 @@ mod tests {
         let state_node = StateNode::new(inspector.root().create_child("state"));
         let fidl = FidlServerBuilder::new().with_state_node(state_node).build().await;
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 state: {
@@ -1331,7 +1331,7 @@ mod tests {
         StubFidlServer::on_state_change(Rc::clone(&fidl), state_machine::State::InstallingUpdate)
             .await;
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 state: {

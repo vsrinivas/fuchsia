@@ -386,7 +386,7 @@ mod tests {
         fidl_fuchsia_update_installer_ext::{
             Initiator, PrepareFailureReason, UpdateInfo, UpdateInfoAndProgress,
         },
-        fuchsia_inspect::{assert_inspect_tree, Inspector},
+        fuchsia_inspect::{assert_data_tree, Inspector},
         mock_paver::MockPaverServiceBuilder,
         pretty_assertions::assert_eq,
         serde_json::json,
@@ -469,7 +469,7 @@ mod tests {
             UpdateHistory::load_from_or_default(make_reader("not json"), history_node).await;
         assert_eq!(history.update_attempts, VecDeque::new());
 
-        assert_inspect_tree! {
+        assert_data_tree! {
             inspector,
             root: {
                 "history": {
@@ -643,7 +643,7 @@ mod tests {
             ]
         );
 
-        assert_inspect_tree! {
+        assert_data_tree! {
             inspector,
             root: {
                 "history": {
@@ -733,7 +733,7 @@ mod tests {
 
         // We should have added our new attempt in the newest bounded_node slot,
         // with the highest index (2).
-        assert_inspect_tree! {
+        assert_data_tree! {
             inspector,
             root: {
                 "history": {

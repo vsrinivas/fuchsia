@@ -12,7 +12,7 @@ use {
 ///
 /// Child `Node`s at indices `[begin, end)` are guaranteed to be fully constructed.
 /// ```
-/// # use fuchsia_inspect::{assert_inspect_tree, Inspector},
+/// # use fuchsia_inspect::{assert_data_tree, Inspector},
 /// # use bounded_node::BoundedNode,
 ///
 /// let inspector = Inspector::new();
@@ -35,7 +35,7 @@ use {
 ///     Item { _node: n }
 /// });
 ///
-/// assert_inspect_tree!(
+/// assert_data_tree!(
 ///     inspector,
 ///     root: {
 ///         "bounded-node": {
@@ -94,7 +94,7 @@ impl<V> BoundedNode<V> {
 mod test {
     use {
         super::*,
-        fuchsia_inspect::{assert_inspect_tree, Inspector},
+        fuchsia_inspect::{assert_data_tree, Inspector},
     };
 
     struct Item {
@@ -115,7 +115,7 @@ mod test {
 
         bounded_node.push(|n| Item::new(n, 0));
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 "bounded-node": {
@@ -136,7 +136,7 @@ mod test {
 
         bounded_node.push(|n| Item::new(n, 0));
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 "bounded-node": {
@@ -161,7 +161,7 @@ mod test {
             bounded_node.push(|n| Item::new(n, i));
         }
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 "bounded-node": {

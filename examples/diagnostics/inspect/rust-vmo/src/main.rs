@@ -88,7 +88,7 @@ fn build_hierarchy(node: &inspect::Node, vmo_size: usize) -> Vec<inspect::IntPro
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::assert_data_tree;
 
     #[test]
     fn build_hierarchy_sizes() {
@@ -109,7 +109,7 @@ mod tests {
             properties.len()
         );
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             node_256:
                 contains {
                     "0": 0i64,

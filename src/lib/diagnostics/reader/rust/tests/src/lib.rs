@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    diagnostics_hierarchy::assert_data_tree as assert_inspect_tree,
+    diagnostics_hierarchy::assert_data_tree,
     diagnostics_reader::{ArchiveReader, Inspect},
 };
 
@@ -17,7 +17,7 @@ async fn verify_proxy_reuse() -> Result<(), Error> {
 
     assert_eq!(results.len(), 1);
 
-    assert_inspect_tree!(results[0].payload.as_ref().unwrap(), root: {
+    assert_data_tree!(results[0].payload.as_ref().unwrap(), root: {
         "all_archive_accessor": {
             archive_accessor_connections_opened: 1u64,
         }
@@ -27,7 +27,7 @@ async fn verify_proxy_reuse() -> Result<(), Error> {
 
     assert_eq!(results.len(), 1);
 
-    assert_inspect_tree!(results[0].payload.as_ref().unwrap(), root: {
+    assert_data_tree!(results[0].payload.as_ref().unwrap(), root: {
         "all_archive_accessor": {
             archive_accessor_connections_opened: 1u64,
         }
@@ -41,7 +41,7 @@ async fn verify_proxy_reuse() -> Result<(), Error> {
 
     assert_eq!(results.len(), 1);
 
-    assert_inspect_tree!(results[0].payload.as_ref().unwrap(), root: {
+    assert_data_tree!(results[0].payload.as_ref().unwrap(), root: {
         "all_archive_accessor": {
             archive_accessor_connections_opened: 2u64,
         }

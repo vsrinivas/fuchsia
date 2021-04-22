@@ -96,7 +96,7 @@ impl<T: RuntimeStatsSource> TaskInfo<T> {
 mod tests {
     use super::*;
     use crate::diagnostics::testing::FakeTask;
-    use fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty};
+    use fuchsia_inspect::testing::{assert_data_tree, AnyProperty};
 
     #[fuchsia::test]
     async fn rotates_measurements_per_task() {
@@ -160,7 +160,7 @@ mod tests {
 
         let inspector = inspect::Inspector::new();
         task.record_to_node(inspector.root());
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             "1": {
                 "@samples": {
                     "0": {

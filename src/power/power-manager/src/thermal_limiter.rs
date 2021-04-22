@@ -463,7 +463,7 @@ impl InspectData {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use inspect::assert_inspect_tree;
+    use inspect::assert_data_tree;
 
     pub fn setup_test_node() -> Rc<ThermalLimiter> {
         ThermalLimiterBuilder::new().build().unwrap()
@@ -806,7 +806,7 @@ pub mod tests {
         assert_eq!(get_actor_state(&mut stream).await, 0);
 
         // Test that a client node is present for the new client
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 ThermalLimiter: contains {

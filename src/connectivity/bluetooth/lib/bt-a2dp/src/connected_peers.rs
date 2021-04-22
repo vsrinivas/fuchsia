@@ -408,7 +408,7 @@ mod tests {
         ProfileMarker, ProfileRequestStream, ServiceClassProfileIdentifier,
     };
     use fidl_fuchsia_cobalt::CobaltEvent;
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::assert_data_tree;
     use futures::channel::mpsc;
     use futures::{self, pin_mut, task::Poll, StreamExt};
     use std::convert::{TryFrom, TryInto};
@@ -922,19 +922,19 @@ mod tests {
         let inspect = inspect::Inspector::new();
         peers.iattach(inspect.root(), "peers").expect("should attach to inspect tree");
 
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             peers: { local_streams: contains {}, discovered: contains {}, preferred_peer_direction: "Sink" }});
 
         peers.set_preferred_direction(avdtp::EndpointType::Source);
 
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             peers: { local_streams: contains {}, discovered: contains {}, preferred_peer_direction: "Source" }});
 
         // Connect a peer, it should show up in the tree.
         let (_remote, channel) = Channel::create();
         assert!(peers.connected(id, channel, None).is_ok());
 
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             peers: {
                 discovered: contains {},
                 preferred_peer_direction: "Source",

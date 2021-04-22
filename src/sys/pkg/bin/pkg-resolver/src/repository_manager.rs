@@ -837,7 +837,7 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryKey},
-        fuchsia_inspect::assert_inspect_tree,
+        fuchsia_inspect::assert_data_tree,
         fuchsia_url::pkg_url::RepoUrl,
         http::Uri,
         maplit::hashmap,
@@ -1607,7 +1607,7 @@ mod tests {
             .inspect_node(inspector.root().create_child("repository_manager"))
             .build();
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 repository_manager: {
@@ -1651,7 +1651,7 @@ mod tests {
             .inspect_node(inspector.root().create_child("repository_manager"))
             .build();
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 repository_manager: {
@@ -1681,7 +1681,7 @@ mod tests {
             .inspect_node(inspector.root().create_child("repository_manager"))
             .build();
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 repository_manager: contains {
@@ -1705,7 +1705,7 @@ mod tests {
         // Insert and make sure inspect state is updated
         repomgr.insert(Arc::clone(&config)).expect("insert worked");
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 repository_manager: contains {
@@ -1730,7 +1730,7 @@ mod tests {
 
         // Remove and make sure inspect state is updated
         repomgr.remove(&fuchsia_url).expect("remove worked");
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 repository_manager: contains {

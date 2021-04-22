@@ -178,7 +178,7 @@ async fn inspect_nic() -> Result {
     // Debug print the tree to make debugging easier in case of failures.
     println!("Got inspect data: {:#?}", data);
     use fuchsia_inspect::testing::{AnyProperty, NonZeroUintProperty};
-    fuchsia_inspect::assert_inspect_tree!(data, NICs: {
+    fuchsia_inspect::assert_data_tree!(data, NICs: {
         loopback_props.id.to_string() => {
             Name: loopback_props.name,
             Loopback: "true",

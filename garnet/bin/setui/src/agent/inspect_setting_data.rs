@@ -231,7 +231,7 @@ impl InspectSettingAgent {
 
 #[cfg(test)]
 mod tests {
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::assert_data_tree;
     use fuchsia_zircon::Time;
 
     use crate::agent::Invocation;
@@ -275,7 +275,7 @@ mod tests {
         InspectSettingAgent::create_with_node(context, inspect_node, Some(&inspector)).await;
 
         // Inspect agent should not report any setting values.
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             setting_types: {
                 "value": "[\"Unknown\"]",
             },
@@ -316,7 +316,7 @@ mod tests {
         }
 
         // Inspect agent writes value to inspect.
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             setting_types: {
                 "value": "[\"Unknown\"]",
             },
@@ -350,7 +350,7 @@ mod tests {
         InspectSettingAgent::create_with_node(context, inspect_node, Some(&inspector)).await;
 
         // Inspect agent should not report any setting values.
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             setting_types: {
                 "value": "[\"Unknown\"]",
             },
@@ -376,7 +376,7 @@ mod tests {
         let _payload = proxy_receptor.next_payload().await;
 
         // Inspect agent writes value to inspect.
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             setting_types: {
                 "value": "[\"Unknown\"]",
             },

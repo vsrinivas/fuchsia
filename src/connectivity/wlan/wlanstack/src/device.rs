@@ -255,7 +255,7 @@ mod tests {
         fidl_fuchsia_wlan_mlme::MlmeMarker,
         fuchsia_async as fasync,
         fuchsia_cobalt::{self, CobaltSender},
-        fuchsia_inspect::{assert_inspect_tree, Inspector},
+        fuchsia_inspect::{assert_data_tree, Inspector},
         futures::channel::mpsc,
         futures::future::join,
         futures::sink::SinkExt,
@@ -351,7 +351,7 @@ mod tests {
         assert_variant!(fut_result, Poll::Ready(_), "expected SME serving to be terminated");
         assert!(iface_map.get(&5).is_none());
 
-        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+        assert_data_tree!(inspect_tree.inspector, root: contains {
             device_events: {
                 "0": contains { msg: "new iface #5 with role 'Client'" },
                 "1": contains { msg: "iface removed: #5" },

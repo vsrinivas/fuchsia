@@ -827,7 +827,7 @@ mod tests {
         fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker},
         fidl_fuchsia_wlan_sme as fidl_sme,
         fidl_fuchsia_wlan_stats::{Counter, DispatcherStats, IfaceStats, PacketCounter},
-        fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector},
+        fuchsia_inspect::{assert_data_tree, testing::AnyProperty, Inspector},
         fuchsia_zircon as zx,
         futures::channel::mpsc,
         maplit::hashset,
@@ -1446,7 +1446,7 @@ mod tests {
         let _cobalt_1dot1_events =
             drain_cobalt_events(&mut exec, &mut fut, &mut cobalt_1dot1_stream);
 
-        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+        assert_data_tree!(inspect_tree.inspector, root: contains {
             client_stats: contains {
                 connect: {
                     "0": {
@@ -1496,7 +1496,7 @@ mod tests {
         let _cobalt_1dot1_events =
             drain_cobalt_events(&mut exec, &mut fut, &mut cobalt_1dot1_stream);
 
-        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+        assert_data_tree!(inspect_tree.inspector, root: contains {
             client_stats: contains {
                 disconnect: {
                     "0": {
@@ -1565,7 +1565,7 @@ mod tests {
         let _cobalt_1dot1_events =
             drain_cobalt_events(&mut exec, &mut fut, &mut cobalt_1dot1_stream);
 
-        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+        assert_data_tree!(inspect_tree.inspector, root: contains {
             client_stats: contains {
                 disconnect: {
                     "0": {
@@ -1629,7 +1629,7 @@ mod tests {
         let _cobalt_1dot1_events =
             drain_cobalt_events(&mut exec, &mut fut, &mut cobalt_1dot1_stream);
 
-        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+        assert_data_tree!(inspect_tree.inspector, root: contains {
             client_stats: contains {
                 disconnect: {
                     "0": {
@@ -1673,7 +1673,7 @@ mod tests {
         };
         log_scan_stats(&mut cobalt_sender, inspect_tree.clone(), &scan_stats, true);
 
-        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+        assert_data_tree!(inspect_tree.inspector, root: contains {
             client_stats: contains {
                 scan: {
                     "0": {
@@ -1704,7 +1704,7 @@ mod tests {
         };
         log_scan_stats(&mut cobalt_sender, inspect_tree.clone(), &scan_stats, true);
 
-        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+        assert_data_tree!(inspect_tree.inspector, root: contains {
             client_stats: contains {
                 scan_failures: {
                     "0": {
@@ -1722,7 +1722,7 @@ mod tests {
         let current = fake_iface_stats(20);
         log_counters_to_inspect(1, &last, &current, inspect_tree.clone());
 
-        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+        assert_data_tree!(inspect_tree.inspector, root: contains {
             client_stats: contains {
                 counters: {
                     "0": {
@@ -1745,7 +1745,7 @@ mod tests {
         let current = fake_iface_stats(10);
         log_counters_to_inspect(1, &last, &current, inspect_tree.clone());
 
-        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+        assert_data_tree!(inspect_tree.inspector, root: contains {
             client_stats: contains {
                 counters: {
                     "0": {

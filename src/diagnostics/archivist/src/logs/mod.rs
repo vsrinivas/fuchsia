@@ -29,7 +29,7 @@ mod tests {
     use diagnostics_data::{DROPPED_LABEL, MESSAGE_LABEL, PID_LABEL, TAG_LABEL, TID_LABEL};
     use diagnostics_log_encoding::{Argument, Record, Severity as StreamSeverity, Value};
     use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
-    use fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty};
+    use fuchsia_inspect::{assert_data_tree, testing::AnyProperty};
     use fuchsia_zircon as zx;
     use std::sync::Arc;
 
@@ -88,7 +88,7 @@ mod tests {
             )
             .await;
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             log_stats_tree,
             root: contains {
                 sources: {
@@ -166,7 +166,7 @@ mod tests {
 
             let log_stats_tree = $harness.filter_test(vec![message, message2], None).await;
 
-            assert_inspect_tree!(
+            assert_data_tree!(
                 log_stats_tree,
                 root: contains {
                     sources: {
@@ -626,7 +626,7 @@ mod tests {
         ];
 
         let klog_stats_tree = debuglog_test(expected_logs, klog_reader).await;
-        assert_inspect_tree!(
+        assert_data_tree!(
             klog_stats_tree,
             root: contains {
                 "sources": {

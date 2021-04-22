@@ -525,7 +525,7 @@ pub mod tests {
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
     use futures::TryStreamExt;
-    use inspect::assert_inspect_tree;
+    use inspect::assert_data_tree;
     use matches::assert_matches;
 
     fn setup_fake_service(params: CpuControlParams) -> fcpuctrl::DeviceProxy {
@@ -863,7 +863,7 @@ pub mod tests {
         .await
         .unwrap();
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 "CpuControlHandler (Fake)": contains {

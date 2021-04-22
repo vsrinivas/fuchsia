@@ -126,7 +126,7 @@ mod tests {
         TreeMarker, TreeNameIteratorMarker, TreeNameIteratorProxy, TreeProxy,
     };
     use fuchsia_inspect::{
-        assert_inspect_tree,
+        assert_data_tree,
         reader::{DiagnosticsHierarchy, PartialNodeHierarchy},
         Inspector,
     };
@@ -138,7 +138,7 @@ mod tests {
         let tree = spawn_server(test_inspector(), TreeServerSettings::default())?;
         let tree_content = tree.get_content().await?;
         let hierarchy = parse_content(tree_content)?;
-        assert_inspect_tree!(hierarchy, root: {
+        assert_data_tree!(hierarchy, root: {
             a: 1i64,
         });
         Ok(())
@@ -161,7 +161,7 @@ mod tests {
         tree.open_child("lazy-0", server_end)?;
         let tree_content = child_tree.get_content().await?;
         let hierarchy = parse_content(tree_content)?;
-        assert_inspect_tree!(hierarchy, root: {
+        assert_data_tree!(hierarchy, root: {
             b: 2u64,
         });
         let (name_iterator, server_end) =
@@ -173,7 +173,7 @@ mod tests {
         child_tree.open_child("lazy-vals-0", server_end)?;
         let tree_content = child_tree_2.get_content().await?;
         let hierarchy = parse_content(tree_content)?;
-        assert_inspect_tree!(hierarchy, root: {
+        assert_data_tree!(hierarchy, root: {
             c: 3.0,
         });
         let (name_iterator, server_end) =
@@ -197,13 +197,13 @@ mod tests {
 
         // A tree that copies the vmo doesn't see the new int
         let hierarchy = parse_content(tree_content_copy)?;
-        assert_inspect_tree!(hierarchy, root: {
+        assert_data_tree!(hierarchy, root: {
             a: 1i64,
         });
 
         // A tree that duplicates the vmo sees the new int
         let hierarchy = parse_content(tree_content_dup)?;
-        assert_inspect_tree!(hierarchy, root: {
+        assert_data_tree!(hierarchy, root: {
             a: 1i64,
             new: 6i64,
         });

@@ -278,7 +278,7 @@ pub mod tests {
     use super::*;
     use fuchsia_async as fasync;
     use futures::TryStreamExt;
-    use inspect::assert_inspect_tree;
+    use inspect::assert_data_tree;
 
     const TEST_NUM_CORES: u32 = 4;
 
@@ -433,7 +433,7 @@ pub mod tests {
         // For each message, the node will query CPU load and log the sample into Inspect
         node.handle_message(&Message::GetTotalCpuLoad).await.unwrap();
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 CpuStatsHandler: {

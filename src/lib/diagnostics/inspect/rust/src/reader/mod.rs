@@ -494,7 +494,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            assert_inspect_tree, ArrayProperty, ExponentialHistogramParams, HistogramProperty,
+            assert_data_tree, ArrayProperty, ExponentialHistogramParams, HistogramProperty,
             Inspector, LinearHistogramParams,
         },
         anyhow::Error,
@@ -554,7 +554,7 @@ mod tests {
 
         let result = read(&inspector).await.unwrap();
 
-        assert_inspect_tree!(result, root: {
+        assert_data_tree!(result, root: {
             "int-root": 3i64,
             "property-double-array": double_array_data,
             "child-1": {
@@ -599,7 +599,7 @@ mod tests {
         let prop2 = node2.create_string("val", "test");
         let prop3 = node3.create_string("val", "test");
 
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
             root: {
                 child1: {
                     val: "test",
@@ -614,7 +614,7 @@ mod tests {
         );
 
         std::mem::drop(node3);
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
             root: {
                 child1: {
                     val: "test",
@@ -626,7 +626,7 @@ mod tests {
         );
 
         std::mem::drop(node2);
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
             root: {
                 child1: {
                     val: "test",
@@ -637,7 +637,7 @@ mod tests {
         // Recreate the nodes. Ensure that the old properties are not picked up.
         let node2 = node1.create_child("child2");
         let _node3 = node2.create_child("child3");
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
             root: {
                 child1: {
                     val: "test",
@@ -650,7 +650,7 @@ mod tests {
 
         // Delete out of order, leaving 3 dangling.
         std::mem::drop(node2);
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
             root: {
                 child1: {
                     val: "test",
@@ -659,25 +659,25 @@ mod tests {
         );
 
         std::mem::drop(node1);
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
             root: {
             }
         );
 
         std::mem::drop(prop3);
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
             root: {
             }
         );
 
         std::mem::drop(prop2);
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
             root: {
             }
         );
 
         std::mem::drop(prop1);
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
             root: {
             }
         );
@@ -809,7 +809,7 @@ mod tests {
         });
 
         let hierarchy = read(&inspector).await?;
-        assert_inspect_tree!(hierarchy, root: {
+        assert_data_tree!(hierarchy, root: {
             int: 3i64,
             child: {
                 double: 1.5,

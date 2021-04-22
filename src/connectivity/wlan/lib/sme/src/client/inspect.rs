@@ -507,7 +507,7 @@ mod tests {
     use {
         super::*,
         crate::client::test_utils,
-        fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector},
+        fuchsia_inspect::{assert_data_tree, testing::AnyProperty, Inspector},
     };
 
     #[test]
@@ -520,7 +520,7 @@ mod tests {
         // SME is idle. Pulse node should not have any field except "last_updated" and "status"
         let status = SmeStatus { connected_to: None, connecting_to: None };
         pulse.update(status, &hasher);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             last_pulse: {
                 started: AnyProperty,
                 last_updated: AnyProperty,
@@ -532,7 +532,7 @@ mod tests {
         // fields are still kept.
         let status = SmeStatus { connected_to: None, connecting_to: Some(b"foo".to_vec()) };
         pulse.update(status, &hasher);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             last_pulse: {
                 started: AnyProperty,
                 last_updated: AnyProperty,
@@ -549,7 +549,7 @@ mod tests {
         let status =
             SmeStatus { connected_to: Some(test_utils::fake_bss_info()), connecting_to: None };
         pulse.update(status, &hasher);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             last_pulse: {
                 started: AnyProperty,
                 last_updated: AnyProperty,
@@ -570,7 +570,7 @@ mod tests {
         // The "prev_connected_to" field is logged.
         let status = SmeStatus { connected_to: None, connecting_to: None };
         pulse.update(status, &hasher);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             last_pulse: {
                 started: AnyProperty,
                 last_updated: AnyProperty,
@@ -599,7 +599,7 @@ mod tests {
         bss_info.wmm_param = None;
         let status = SmeStatus { connected_to: Some(bss_info.clone()), connecting_to: None };
         pulse.update(status, &hasher);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             last_pulse: contains {
                 status: contains {
                     connected_to: contains {
@@ -614,7 +614,7 @@ mod tests {
         bss_info.wmm_param = Some(wmm_param);
         let status = SmeStatus { connected_to: Some(bss_info.clone()), connecting_to: None };
         pulse.update(status, &hasher);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             last_pulse: contains {
                 status: contains {
                     connected_to: contains {
@@ -668,7 +668,7 @@ mod tests {
         bss_info.wmm_param = Some(wmm_param);
         let status = SmeStatus { connected_to: Some(bss_info.clone()), connecting_to: None };
         pulse.update(status, &hasher);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             last_pulse: contains {
                 status: contains {
                     connected_to: contains {
@@ -714,7 +714,7 @@ mod tests {
         bss_info.wmm_param = None;
         let status = SmeStatus { connected_to: Some(bss_info.clone()), connecting_to: None };
         pulse.update(status, &hasher);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             last_pulse: contains {
                 status: contains {
                     connected_to: contains {

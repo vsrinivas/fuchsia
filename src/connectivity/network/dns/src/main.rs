@@ -1120,7 +1120,7 @@ mod tests {
     use dns::test_util::*;
     use dns::DEFAULT_PORT;
     use fidl_fuchsia_net_ext::IntoExt as _;
-    use fuchsia_inspect::{assert_inspect_tree, testing::NonZeroUintProperty, tree_assertion};
+    use fuchsia_inspect::{assert_data_tree, testing::NonZeroUintProperty, tree_assertion};
     use matches::assert_matches;
     use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, std_ip, std_ip_v4, std_ip_v6};
     use net_types::ip::Ip as _;
@@ -1695,7 +1695,7 @@ mod tests {
         let inspector = fuchsia_inspect::Inspector::new();
         let _config_state_node =
             add_config_state_inspect(inspector.root(), env.config_state.clone());
-        assert_inspect_tree!(inspector, root:{
+        assert_data_tree!(inspector, root:{
             servers: {}
         });
         env.run_config_sink(|mut sink| async move {
@@ -1705,7 +1705,7 @@ mod tests {
                 .unwrap();
         })
         .await;
-        assert_inspect_tree!(inspector, root:{
+        assert_data_tree!(inspector, root:{
             servers: {
                 "0": {
                     address: "[2001:4860:4860::4444%2]:53",
@@ -1729,7 +1729,7 @@ mod tests {
         let inspector = fuchsia_inspect::Inspector::new();
         let _query_stats_inspect_node =
             add_query_stats_inspect(inspector.root(), env.stats.clone());
-        assert_inspect_tree!(inspector, root:{
+        assert_data_tree!(inspector, root:{
             query_stats: {}
         });
 
@@ -1761,7 +1761,7 @@ mod tests {
                 .await;
             })
             .await;
-        assert_inspect_tree!(inspector, root:{
+        assert_data_tree!(inspector, root:{
             query_stats: {
                 "window 1": {
                     start_time_nanos: NonZeroUintProperty,
@@ -1846,7 +1846,7 @@ mod tests {
             });
             expected.add_child_assertion(child);
         }
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             expected,
         });
     }
@@ -1872,7 +1872,7 @@ mod tests {
                 FAILED_QUERY_DURATION,
             );
         }
-        assert_inspect_tree!(inspector, root:{
+        assert_data_tree!(inspector, root:{
             query_stats: {
                 "window 1": {
                     start_time_nanos: u64::try_from(
@@ -1944,7 +1944,7 @@ mod tests {
             });
             expected.add_child_assertion(child);
         }
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             expected,
         });
     }

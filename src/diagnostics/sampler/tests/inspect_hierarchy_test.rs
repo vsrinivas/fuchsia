@@ -9,7 +9,7 @@ use fidl_fuchsia_sys::ComponentControllerEvent;
 use fuchsia_async as fasync;
 use fuchsia_async::futures::StreamExt;
 use fuchsia_component::client::{launch, launcher, App};
-use fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty};
+use fuchsia_inspect::{assert_data_tree, testing::AnyProperty};
 
 async fn setup() -> (App, App, MockRebootControllerProxy) {
     let package = "fuchsia-pkg://fuchsia.com/sampler-integration-tests#meta/";
@@ -75,7 +75,7 @@ async fn sampler_inspect_test() {
     // TODO(42067): Introduce better fencing so we can
     // guarantee we fetch the hierachy after the metrics were sampled
     // AND fully processed.
-    assert_inspect_tree!(
+    assert_data_tree!(
         hierarchy,
         root: {
             "sampler_executor_stats": {

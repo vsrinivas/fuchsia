@@ -230,7 +230,7 @@ fn main() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_inspect::assert_inspect_tree};
+    use {super::*, fuchsia_inspect::assert_data_tree};
 
     #[test]
     fn test_tree() {
@@ -248,7 +248,7 @@ mod tests {
         bob.add_task("CORP-101", "Circle back and re-sync").set_completion(0.75);
         bob.add_task("CORP-102", "Look into issue with facilities").set_completion(0.8);
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             reporting_tree: {
                 tasks: {},
                 reports: {

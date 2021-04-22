@@ -210,7 +210,7 @@ mod test {
         fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
         fidl_fuchsia_pkg_ext::{RepositoryConfigBuilder, RepositoryConfigs, RepositoryKey},
         fuchsia_async as fasync,
-        fuchsia_inspect::assert_inspect_tree,
+        fuchsia_inspect::assert_data_tree,
         futures::channel::mpsc,
         sysconfig_client::channel::OtaUpdateChannelConfig,
     };
@@ -319,7 +319,7 @@ mod test {
             res.unwrap().unwrap(),
             Rule::new("fuchsia.com", "repo-from-vbmeta", "/", "/").unwrap()
         );
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
               omaha_channel: {
@@ -362,7 +362,7 @@ mod test {
             Rule::new("fuchsia.com", "a.channel-from-sysconfig.bcde.fuchsia.com", "/", "/")
                 .unwrap()
         );
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
               omaha_channel: {
@@ -399,7 +399,7 @@ mod test {
         .await;
 
         matches::assert_matches!(res, Ok(None));
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
               omaha_channel: {

@@ -70,7 +70,7 @@ pub struct PackageWithRewrittenUrl {
 mod tests {
     use {
         super::*,
-        fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector},
+        fuchsia_inspect::{assert_data_tree, testing::AnyProperty, Inspector},
     };
 
     #[test]
@@ -79,7 +79,7 @@ mod tests {
 
         let resolver_service =
             ResolverService::from_node(inspector.root().create_child("resolver_service"));
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 resolver_service: contains {
@@ -89,7 +89,7 @@ mod tests {
         );
 
         let package = resolver_service.resolve(&"fuchsia-pkg://example.org/name".parse().unwrap());
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 resolver_service: contains {
@@ -104,7 +104,7 @@ mod tests {
 
         let _package =
             package.rewritten_url(&"fuchsia-pkg://rewritten.example.org/name".parse().unwrap());
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 resolver_service: contains {
@@ -129,7 +129,7 @@ mod tests {
             resolver_service.resolve(&"fuchsia-pkg://example.org/name".parse().unwrap());
         let _package1 =
             resolver_service.resolve(&"fuchsia-pkg://example.org/other".parse().unwrap());
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 resolver_service: contains {
@@ -148,7 +148,7 @@ mod tests {
 
         let resolver_service =
             ResolverService::from_node(inspector.root().create_child("resolver_service"));
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 resolver_service: contains {
@@ -158,7 +158,7 @@ mod tests {
         );
 
         resolver_service.cache_fallback_due_to_not_found();
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 resolver_service: contains {

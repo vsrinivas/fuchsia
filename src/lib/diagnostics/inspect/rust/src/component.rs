@@ -98,17 +98,17 @@ pub fn health() -> Health {
 mod tests {
     use {
         super::*,
-        crate::{assert_inspect_tree, health::Reporter, testing::AnyProperty},
+        crate::{assert_data_tree, health::Reporter, testing::AnyProperty},
     };
 
     #[test]
     fn health_checker_lifecycle() {
         let inspector = super::inspector();
         // In the beginning, the inspector has no stats.
-        assert_inspect_tree!(inspector, root: contains {});
+        assert_data_tree!(inspector, root: contains {});
 
         let mut health = health();
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "STARTING_UP",
@@ -117,7 +117,7 @@ mod tests {
         });
 
         health.set_ok();
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "OK",
@@ -126,7 +126,7 @@ mod tests {
         });
 
         health.set_unhealthy("Bad state");
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "UNHEALTHY",
@@ -137,7 +137,7 @@ mod tests {
 
         // Verify that the message changes.
         health.set_unhealthy("Another bad state");
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "UNHEALTHY",
@@ -148,7 +148,7 @@ mod tests {
 
         // Also verifies that there is no more message.
         health.set_ok();
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "OK",
@@ -161,7 +161,7 @@ mod tests {
     fn record_on_inspector() {
         let inspector = super::inspector();
         inspector.root().record_int("a", 1);
-        assert_inspect_tree!(inspector, root: contains {
+        assert_data_tree!(inspector, root: contains {
             a: 1i64,
         })
     }

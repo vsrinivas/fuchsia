@@ -204,7 +204,7 @@ mod tests {
     use crate::nodes::BoundedListNode;
 
     use fuchsia_inspect::{
-        assert_inspect_tree,
+        assert_data_tree,
         {testing::AnyProperty, Inspector},
     };
     use parking_lot::Mutex;
@@ -228,7 +228,7 @@ mod tests {
         // Logging empty event
         inspect_log!(node, {});
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             list_node: {
                 "0": { "@time": AnyProperty, k1: "1", meaning_of_life: 42u64, k3: 3i64, k4: 4f64 },
                 "1": { "@time": AnyProperty, small_uint: 1u64, small_int: 2i64, float: 3f64 },
@@ -252,7 +252,7 @@ mod tests {
             k2: if true { 10u64 } else { 20 }
         });
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             list_node: {
                 "0": {
                     "@time": AnyProperty,
@@ -275,7 +275,7 @@ mod tests {
         let key = "@@@";
         inspect_log!(node, var key: "!!!");
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             list_node: {
                 "0": {
                     "@time": AnyProperty,
@@ -335,7 +335,7 @@ mod tests {
         inspect_log!(node, some?: Some("a"));
         inspect_log!(node, none?: None as Option<String>);
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             list_node: {
                 "0": { "@time": AnyProperty, some: "a" },
                 "1": { "@time": AnyProperty },
@@ -350,7 +350,7 @@ mod tests {
 
         inspect_log!(node, bytes: InspectBytes(&bytes));
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             list_node: {
                 "0": { "@time": AnyProperty, bytes: vec![11u8, 22, 33] }
             }
@@ -364,7 +364,7 @@ mod tests {
 
         inspect_log!(node, list: InspectList(&list));
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             list_node: {
                 "0": {
                     "@time": AnyProperty,
@@ -388,7 +388,7 @@ mod tests {
 
         inspect_log!(node, list: list_mapped);
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             list_node: {
                 "0": {
                     "@time": AnyProperty,
@@ -440,7 +440,7 @@ mod tests {
             y: y,
         })));
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             list_node: {
                 "0": {
                     "@time": AnyProperty,

@@ -109,7 +109,7 @@ mod tests {
         fidl_fuchsia_inspect_deprecated::{
             InspectRequest, InspectRequestStream, Metric, Object, Property,
         },
-        fuchsia_inspect::assert_inspect_tree,
+        fuchsia_inspect::assert_data_tree,
         futures::{TryFutureExt, TryStreamExt},
         lazy_static::lazy_static,
         maplit::{hashmap, hashset},
@@ -122,7 +122,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<InspectMarker>()?;
         spawn_server(server_stream, "root".to_string());
         let hierarchy = load_hierarchy(client_proxy).await?;
-        assert_inspect_tree!(hierarchy, root: {
+        assert_data_tree!(hierarchy, root: {
             double_value: 5.2,
             a: {
                 int_value: -3i64,

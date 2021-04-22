@@ -79,7 +79,7 @@ mod test_inspectable_repository_config {
     use {
         super::*,
         fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryKey},
-        fuchsia_inspect::assert_inspect_tree,
+        fuchsia_inspect::assert_data_tree,
         fuchsia_url::pkg_url::RepoUrl,
         http::Uri,
     };
@@ -101,7 +101,7 @@ mod test_inspectable_repository_config {
         let inspectable =
             InspectableRepositoryConfig::new(config, inspector.root(), "test-property");
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 "test-property": {
@@ -141,7 +141,7 @@ mod test_inspectable_repository_config {
             .expect("get repo config")
             .insert_mirror(mirror_config.clone());
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 "test-property": {

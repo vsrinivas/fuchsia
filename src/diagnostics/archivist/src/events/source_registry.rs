@@ -226,7 +226,7 @@ mod tests {
         super::*,
         async_trait::async_trait,
         fidl_fuchsia_logger::LogSinkMarker,
-        fuchsia_inspect::{self as inspect, assert_inspect_tree},
+        fuchsia_inspect::{self as inspect, assert_data_tree},
         fuchsia_zircon as zx,
         futures::SinkExt,
         lazy_static::lazy_static,
@@ -366,7 +366,7 @@ mod tests {
         validate_events(&mut stream, &LEGACY_IDENTITY).await;
         validate_events(&mut stream, &MONIKER_IDENTITY).await;
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             events: {
                 sources: {
                     v1: {

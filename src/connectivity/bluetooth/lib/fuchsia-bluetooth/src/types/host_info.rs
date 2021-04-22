@@ -172,7 +172,7 @@ mod tests {
     use super::*;
     use {
         fidl_fuchsia_bluetooth as fbt,
-        fuchsia_inspect::{self as inspect, assert_inspect_tree},
+        fuchsia_inspect::{self as inspect, assert_data_tree},
     };
 
     fn empty_info() -> fsys::HostInfo {
@@ -338,7 +338,7 @@ mod tests {
             discovering: true,
         };
         let mut info = Inspectable::new(info, node);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             info: contains {
                 identifier: 1u64,
                 technology: "LowEnergy",
@@ -357,7 +357,7 @@ mod tests {
             discoverable: true,
             discovering: true,
         });
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             info: contains {
                 identifier: 1u64,
                 technology: "LowEnergy",

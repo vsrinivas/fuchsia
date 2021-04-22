@@ -94,7 +94,7 @@ pub(crate) async fn run_admin_service(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::assert_data_tree;
 
     #[test]
     fn test_experiments_start_disabled() {
@@ -102,7 +102,7 @@ mod tests {
         let node = inspector.root().create_child("experiments");
         let state = State::new(node);
         assert_eq!(state.get_state(Experiment::Lightbulb), false);
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 experiments: {}
@@ -117,7 +117,7 @@ mod tests {
         let mut state = State::new(node);
         state.set_state(Experiment::Lightbulb, true);
         assert_eq!(state.get_state(Experiment::Lightbulb), true);
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 experiments: {
@@ -135,7 +135,7 @@ mod tests {
         state.set_state(Experiment::Lightbulb, true);
         state.set_state(Experiment::Lightbulb, false);
         assert_eq!(state.get_state(Experiment::Lightbulb), false);
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 experiments: {

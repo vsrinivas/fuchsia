@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_inspect::{assert_inspect_tree, Inspector, Node},
+    fuchsia_inspect::{assert_data_tree, Inspector, Node},
     inspect_writable::{InspectWritable, InspectWritableNode},
 };
 
@@ -36,7 +36,7 @@ fn valid_struct() {
     // Use the create API to write the state using a wrapped node we could update later.
     let last_state = WEATHER_REPORT_1.create(root.create_child("last_state"));
 
-    assert_inspect_tree!(
+    assert_data_tree!(
         inspector,
         root: contains {
             initial_state: contains {
@@ -57,7 +57,7 @@ fn valid_struct() {
     // Update the last state to a new value.
     last_state.update(&WEATHER_REPORT_2);
 
-    assert_inspect_tree!(
+    assert_data_tree!(
         inspector,
         root: contains {
             initial_state: contains {

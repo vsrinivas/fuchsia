@@ -13,7 +13,7 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
-    fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty},
+    fuchsia_inspect::{assert_data_tree, testing::AnyProperty},
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{channel::oneshot, prelude::*},
     matches::assert_matches,
@@ -326,7 +326,7 @@ async fn inspect_health_status_ok() {
 
     // Observe verification shows up in inspect.
     let hierarchy = env.system_update_committer_inspect_hierarchy().await;
-    assert_inspect_tree!(
+    assert_data_tree!(
         hierarchy,
         root: {
             "verification": {
@@ -375,7 +375,7 @@ async fn paver_failure_causes_reboot() {
     assert_eq!(reboot_recv.await, Ok(RebootReason::RetrySystemUpdate));
 
     let hierarchy = env.system_update_committer_inspect_hierarchy().await;
-    assert_inspect_tree!(
+    assert_data_tree!(
         hierarchy,
         root: {
             "verification": {},
@@ -417,7 +417,7 @@ async fn verification_failure_causes_reboot() {
 
     // Observe failed verification shows up in inspect.
     let hierarchy = env.system_update_committer_inspect_hierarchy().await;
-    assert_inspect_tree!(
+    assert_data_tree!(
         hierarchy,
         root: {
             "verification": {
@@ -470,7 +470,7 @@ async fn verification_failure_does_not_cause_reboot() {
 
     // Observe failed verification shows up in inspect.
     let hierarchy = env.system_update_committer_inspect_hierarchy().await;
-    assert_inspect_tree!(
+    assert_data_tree!(
         hierarchy,
         root: {
             "verification": {

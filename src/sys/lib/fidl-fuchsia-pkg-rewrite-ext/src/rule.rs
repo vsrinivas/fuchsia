@@ -346,7 +346,7 @@ mod serde_tests {
 #[cfg(test)]
 mod rule_tests {
     use super::*;
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::assert_data_tree;
     use matches::assert_matches;
     use proptest::prelude::*;
 
@@ -605,7 +605,7 @@ mod rule_tests {
 
             let _state = rule.create_inspect_state(node);
 
-            assert_inspect_tree!(
+            assert_data_tree!(
                 inspector,
                 root: {
                     rule_node: {

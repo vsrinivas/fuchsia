@@ -544,14 +544,14 @@ mod test {
     use {
         super::*,
         crate::archive::EventFileGroupStats,
-        fuchsia_inspect::{assert_inspect_tree, health::Reporter, testing::AnyProperty, Inspector},
+        fuchsia_inspect::{assert_data_tree, health::Reporter, testing::AnyProperty, Inspector},
         std::iter::FromIterator,
     };
 
     #[test]
     fn health() {
         component::health().set_ok();
-        assert_inspect_tree!(component::inspector(),
+        assert_data_tree!(component::inspector(),
         root: {
             "fuchsia.inspect.Health": {
                 status: "OK",
@@ -560,7 +560,7 @@ mod test {
         });
 
         component::health().set_unhealthy("Bad state");
-        assert_inspect_tree!(component::inspector(),
+        assert_data_tree!(component::inspector(),
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "UNHEALTHY",
@@ -570,7 +570,7 @@ mod test {
         });
 
         component::health().set_ok();
-        assert_inspect_tree!(component::inspector(),
+        assert_data_tree!(component::inspector(),
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "OK",
@@ -588,7 +588,7 @@ mod test {
             ("c/d".to_string(), EventFileGroupStats { file_count: 3, size: 4 }),
         ]));
 
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: contains {
             archived_events: {
                "a/b": {
@@ -609,7 +609,7 @@ mod test {
         let mut tracker = ProcessingTimeTracker::new(inspector.root().create_child("test"));
 
         tracker.track("a", 1e9 as u64);
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: {
             test: {
                 a: {
@@ -620,7 +620,7 @@ mod test {
         });
 
         tracker.track("a", 5e8 as u64);
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: {
             test: {
                 a: {
@@ -631,7 +631,7 @@ mod test {
         });
 
         tracker.track("a", 5500e6 as u64);
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: {
             test: {
                 a: {
@@ -645,7 +645,7 @@ mod test {
             tracker.track(&format!("b{}", time), time * 1e9 as u64);
         }
 
-        assert_inspect_tree!(inspector,
+        assert_data_tree!(inspector,
         root: {
             test: {
                 b40: { "@time": AnyProperty, duration_seconds: 40f64 },

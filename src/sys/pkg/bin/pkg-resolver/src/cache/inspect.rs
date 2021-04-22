@@ -196,7 +196,7 @@ impl<S: State> Attempt<S> {
 mod tests {
     use {
         super::*,
-        fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector},
+        fuchsia_inspect::{assert_data_tree, testing::AnyProperty, Inspector},
         std::time::Duration,
     };
 
@@ -222,7 +222,7 @@ mod tests {
         let inspector = Inspector::new();
 
         let _blob_fetcher = BlobFetcher::from_node(inspector.root().create_child("blob_fetcher"));
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: {
@@ -241,7 +241,7 @@ mod tests {
 
         let blob_fetcher = BlobFetcher::from_node(inspector.root().create_child("blob_fetcher"));
         let inspect = blob_fetcher.fetch(&BlobId::parse(ZEROES_HASH).unwrap());
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -255,7 +255,7 @@ mod tests {
         );
 
         let inspect = inspect.http();
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -270,7 +270,7 @@ mod tests {
         );
 
         let inspect = inspect.mirror("fake-mirror");
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -287,7 +287,7 @@ mod tests {
         );
 
         let attempt = inspect.attempt();
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -310,7 +310,7 @@ mod tests {
         );
 
         attempt.state(Http::CreateBlob);
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -333,7 +333,7 @@ mod tests {
         );
 
         drop(attempt);
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -356,7 +356,7 @@ mod tests {
 
         let blob_fetcher = BlobFetcher::from_node(inspector.root().create_child("blob_fetcher"));
         let inspect = blob_fetcher.fetch(&BlobId::parse(ZEROES_HASH).unwrap());
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -370,7 +370,7 @@ mod tests {
         );
 
         let inspect = inspect.local_mirror();
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -386,7 +386,7 @@ mod tests {
         );
 
         let attempt = inspect.attempt();
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -408,7 +408,7 @@ mod tests {
         );
 
         attempt.state(LocalMirror::CreateBlob);
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -440,7 +440,7 @@ mod tests {
         attempt.expected_size_bytes(9);
         attempt.write_bytes(6);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -462,7 +462,7 @@ mod tests {
 
         attempt.state(LocalMirror::TruncateBlob);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -492,7 +492,7 @@ mod tests {
         let attempt = inspect.attempt();
         attempt.write_bytes(7);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -511,7 +511,7 @@ mod tests {
 
         attempt.write_bytes(8);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -537,7 +537,7 @@ mod tests {
         let _inspect0 = blob_fetcher.fetch(&BlobId::parse(ZEROES_HASH).unwrap());
         let _inspect1 = blob_fetcher.fetch(&BlobId::parse(ONES_HASH).unwrap());
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {
@@ -559,7 +559,7 @@ mod tests {
         let _attempt0 = inspect.attempt();
         let _attempt1 = inspect.attempt();
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 blob_fetcher: contains {

@@ -528,7 +528,7 @@ impl InspectData {
 mod tests {
     use super::*;
     use crate::utils::connect_proxy;
-    use inspect::assert_inspect_tree;
+    use inspect::assert_data_tree;
     use matches::assert_matches;
     use std::cell::Cell;
 
@@ -625,7 +625,7 @@ mod tests {
             .handle_set_termination_state_message(fpowerstatecontrol::SystemPowerState::FullyOn)
             .await;
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 DriverManagerHandler: {

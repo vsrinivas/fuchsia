@@ -228,7 +228,7 @@ pub(crate) fn append_pcap<W: Write>(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync, fuchsia_inspect::assert_inspect_tree};
+    use {super::*, fuchsia_async as fasync, fuchsia_inspect::assert_data_tree};
 
     /// An empty log tests that the most basic inspect data is plumbed through the lazy generation
     /// function. See top level tests module for more integrated tests.
@@ -246,7 +246,7 @@ mod tests {
         write_pcap_header(&mut hdr).expect("write to succeed");
 
         let inspect = generate_lazy_values_for_packet_log(id.clone(), log.clone()).await.unwrap();
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             hci_device_name: id,
             byte_len: 0u64,
             number_of_items: 0u64,

@@ -1081,7 +1081,7 @@ mod tests {
         fidl_fuchsia_bluetooth_sys::TechnologyType,
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::{bonding_data::example, Peer, PeerId},
-        fuchsia_inspect::{self as inspect, assert_inspect_tree},
+        fuchsia_inspect::{self as inspect, assert_data_tree},
         futures::stream::TryStreamExt,
         matches::assert_matches,
         std::collections::HashSet,
@@ -1135,7 +1135,7 @@ mod tests {
         let peer_id = PeerId(1);
 
         // assert inspect tree is in clean state
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             system: contains {
                 peer_count: 0u64,
                 peers: {}
@@ -1144,7 +1144,7 @@ mod tests {
 
         // add new peer and assert inspect tree is updated
         dispatcher.on_device_updated(peer(peer_id)).await;
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             system: contains {
                 peer_count: 1u64,
                 peers: {
@@ -1158,7 +1158,7 @@ mod tests {
 
         // remove peer and assert inspect tree is updated
         dispatcher.on_device_removed(peer_id).await;
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             system: contains {
                 peer_count: 0u64,
                 peers: { }

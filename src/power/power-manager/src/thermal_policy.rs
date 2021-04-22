@@ -958,7 +958,7 @@ impl HistoricalMaxCpuTemperature {
 #[cfg(test)]
 mod historical_max_cpu_temperature_tests {
     use super::*;
-    use inspect::assert_inspect_tree;
+    use inspect::assert_data_tree;
 
     /// Tests that after each max temperature recording, the max temperature is reset for the next
     /// round. The test would fail if HistoricalMaxCpuTemperature was not resetting the previous max
@@ -982,7 +982,7 @@ mod historical_max_cpu_temperature_tests {
             max_temperatures.log_raw_cpu_temperature(Celsius(40.0));
         }
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 historical_max_cpu_temperature_c: {
@@ -1004,7 +1004,7 @@ mod historical_max_cpu_temperature_tests {
         executor.set_fake_time(Seconds(0.0).into());
 
         // Tree is initially empty
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 historical_max_cpu_temperature_c: {}
@@ -1017,7 +1017,7 @@ mod historical_max_cpu_temperature_tests {
         }
 
         // Tree is still empty
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 historical_max_cpu_temperature_c: {}
@@ -1026,7 +1026,7 @@ mod historical_max_cpu_temperature_tests {
 
         // After one more temperature sample, the max temperature should be logged
         max_temperatures.log_raw_cpu_temperature(Celsius(50.0));
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 historical_max_cpu_temperature_c: {
@@ -1059,7 +1059,7 @@ mod historical_max_cpu_temperature_tests {
             max_temperatures.log_raw_cpu_temperature(Celsius(50.0));
         }
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 historical_max_cpu_temperature_c: {
@@ -1082,7 +1082,7 @@ mod historical_max_cpu_temperature_tests {
         max_temperatures.log_raw_cpu_temperature(Celsius(30.0));
         max_temperatures.log_raw_cpu_temperature(Celsius(20.0));
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 historical_max_cpu_temperature_c: {
@@ -1248,7 +1248,7 @@ pub mod tests {
     use crate::cobalt_metrics::mock_cobalt_metrics::MockCobaltMetrics;
     use crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNodeMaker};
     use crate::{msg_eq, msg_ok_return};
-    use inspect::testing::{assert_inspect_tree, HistogramAssertion};
+    use inspect::testing::{assert_data_tree, HistogramAssertion};
 
     pub fn get_sample_interval(thermal_policy: &ThermalPolicy) -> Seconds {
         thermal_policy.config.policy_params.controller_params.sample_interval
@@ -1449,7 +1449,7 @@ pub mod tests {
             .build(&node_futures)
             .unwrap();
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 ThermalPolicy: {
@@ -1577,7 +1577,7 @@ pub mod tests {
             });
         expected_cpu_2_power_usage_hist.insert_values(vec![throttle_cpu2_power_used.0]);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 ThermalPolicy: contains {
@@ -1665,7 +1665,7 @@ pub mod tests {
                 .is_ready());
         }
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
                 platform_metrics: {

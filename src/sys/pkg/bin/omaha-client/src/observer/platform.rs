@@ -126,7 +126,7 @@ mod test {
     use {
         super::*,
         fuchsia_inspect::{
-            assert_inspect_tree,
+            assert_data_tree,
             testing::{AnyProperty, TreeAssertion},
             tree_assertion, Inspector,
         },
@@ -140,7 +140,7 @@ mod test {
 
         emitter.emit(event);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             "root": {
                 "emitter": contains {
@@ -240,7 +240,7 @@ mod test {
 
         emitter.emit(Event::InstallationError { target_version: Some(TARGET_VERSION) });
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             "root": {
                 "emitter": contains {
@@ -313,7 +313,7 @@ mod test {
         mock::set_session_id(10);
         emitter.emit(Event::ErrorCheckingForUpdate);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             "root": {
                 "emitter": contains {
@@ -347,7 +347,7 @@ mod test {
         mock::set_session_id(10);
         emitter.emit(Event::CheckingForUpdates);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             "root": {
                 "emitter": contains {

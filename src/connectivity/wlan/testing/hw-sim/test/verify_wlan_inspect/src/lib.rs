@@ -8,7 +8,7 @@ use {
     diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
     fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{self as wlantap, WlantapPhyProxy},
-    fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
+    fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
     fuchsia_zircon::DurationNum,
     pin_utils::pin_mut,
     selectors,
@@ -144,7 +144,7 @@ async fn verify_wlan_inspect() {
     }
 
     let hierarchy = get_inspect_hierarchy().await.expect("expect Inspect data");
-    assert_inspect_tree!(hierarchy, root: contains {
+    assert_data_tree!(hierarchy, root: contains {
         latest_active_client_iface: 0u64,
         client_stats: contains {
             connect: {
@@ -193,7 +193,7 @@ async fn verify_wlan_inspect() {
     .await;
 
     let hierarchy = get_inspect_hierarchy().await.expect("expect Inspect data");
-    assert_inspect_tree!(hierarchy, root: contains {
+    assert_data_tree!(hierarchy, root: contains {
         latest_active_client_iface: 0u64,
         client_stats: contains {
             connect: {

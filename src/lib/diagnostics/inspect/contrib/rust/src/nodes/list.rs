@@ -55,7 +55,7 @@ impl BoundedListNode {
 mod tests {
     use super::*;
 
-    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use fuchsia_inspect::{assert_data_tree, Inspector};
 
     #[test]
     fn test_bounded_list_node_basic() {
@@ -63,9 +63,9 @@ mod tests {
         let list_node = inspector.root().create_child("list_node");
         let mut list_node = BoundedListNode::new(list_node, 3);
         let _ = list_node.create_entry();
-        assert_inspect_tree!(inspector, root: { list_node: { "0": {} } });
+        assert_data_tree!(inspector, root: { list_node: { "0": {} } });
         let _ = list_node.create_entry();
-        assert_inspect_tree!(inspector, root: { list_node: { "0": {}, "1": {} } });
+        assert_data_tree!(inspector, root: { list_node: { "0": {}, "1": {} } });
     }
 
     #[test]
@@ -77,13 +77,13 @@ mod tests {
         let _ = list_node.create_entry();
         let _ = list_node.create_entry();
 
-        assert_inspect_tree!(inspector, root: { list_node: { "0": {}, "1": {}, "2": {} } });
+        assert_data_tree!(inspector, root: { list_node: { "0": {}, "1": {}, "2": {} } });
 
         let _ = list_node.create_entry();
-        assert_inspect_tree!(inspector, root: { list_node: { "1": {}, "2": {}, "3": {} } });
+        assert_data_tree!(inspector, root: { list_node: { "1": {}, "2": {}, "3": {} } });
 
         let _ = list_node.create_entry();
-        assert_inspect_tree!(inspector, root: { list_node: { "2": {}, "3": {}, "4": {} } });
+        assert_data_tree!(inspector, root: { list_node: { "2": {}, "3": {}, "4": {} } });
     }
 
     #[test]
@@ -92,9 +92,9 @@ mod tests {
         let list_node = inspector.root().create_child("list_node");
         let mut list_node = BoundedListNode::new(list_node, 0);
         let _ = list_node.create_entry();
-        assert_inspect_tree!(inspector, root: { list_node: { "0": {} } });
+        assert_data_tree!(inspector, root: { list_node: { "0": {} } });
         let _ = list_node.create_entry();
-        assert_inspect_tree!(inspector, root: { list_node: { "1": {} } });
+        assert_data_tree!(inspector, root: { list_node: { "1": {} } });
     }
 
     #[test]
@@ -112,7 +112,7 @@ mod tests {
         } // <-- node_writer is dropped
 
         // verify list node 0 is still in the tree
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             list_node: {
                 "0": {
                     str_key: "str_value",

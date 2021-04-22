@@ -450,7 +450,7 @@ pub mod tests {
     use crate::shutdown_request::RebootReason;
     use crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNodeMaker};
     use crate::{msg_eq, msg_ok_return};
-    use inspect::assert_inspect_tree;
+    use inspect::assert_data_tree;
     use matches::assert_matches;
 
     pub fn setup_test_node(shutdown_function: impl Fn() + 'static) -> Rc<SystemShutdownHandler> {
@@ -525,7 +525,7 @@ pub mod tests {
         // This gives us something interesting to verify in Inspect.
         let _ = node.handle_shutdown(ShutdownRequest::Reboot(RebootReason::HighTemperature)).await;
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 SystemShutdownHandler: {

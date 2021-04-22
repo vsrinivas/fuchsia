@@ -108,7 +108,7 @@ impl BlobLocation {
 mod tests {
     use {
         super::*,
-        fuchsia_inspect::assert_inspect_tree,
+        fuchsia_inspect::assert_data_tree,
         fuchsia_pkg::{MetaContents, PackagePath},
         maplit::{btreemap, hashmap},
         std::{
@@ -207,7 +207,7 @@ mod tests {
         )
         .await;
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             "blob-location": {
                 "base-blobs": {
                     count: 4u64,
@@ -250,7 +250,7 @@ mod tests {
         )
         .await;
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             "blob-location": {
                 "base-blobs": {
                     count: 3u64,
@@ -278,7 +278,7 @@ mod tests {
 
         assert!(blob_location_result.is_err());
 
-        assert_inspect_tree!(inspector, root: {});
+        assert_data_tree!(inspector, root: {});
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

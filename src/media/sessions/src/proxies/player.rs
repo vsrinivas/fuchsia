@@ -485,7 +485,7 @@ mod test {
         stream::{StreamExt, TryStreamExt},
     };
     use futures_test::task::noop_waker;
-    use inspect::{assert_inspect_tree, Inspector};
+    use inspect::{assert_data_tree, Inspector};
     use matches::assert_matches;
 
     static TEST_DOMAIN: &str = "test_domain";
@@ -622,7 +622,7 @@ mod test {
         let (inspector, mut player, player_server) = test_player();
         let mut requests = player_server.into_stream()?;
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             test_player: {state: {}},
         });
 
@@ -651,7 +651,7 @@ mod test {
 
         let _ = player.next().await.expect("Polling player event");
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             test_player: {state: { player_capabilities: "ValidPlayerCapabilities { flags: Play | Pause }"}}
         });
 

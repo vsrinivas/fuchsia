@@ -99,7 +99,7 @@ mod tests {
         anyhow::Error,
         fidl_fuchsia_examples_inspect::{ReverserMarker, ReverserProxy},
         // [START include_testing]
-        fuchsia_inspect::{self, assert_inspect_tree},
+        fuchsia_inspect::{self, assert_data_tree},
         // [END include_testing]
         futures::channel::oneshot,
     };
@@ -133,7 +133,7 @@ mod tests {
         assert_eq!(result, "rehtona");
 
         // [START assert_tree]
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             reverser_service: {
                 total_requests: 3u64,
                 connection_count: 2u64,
@@ -152,7 +152,7 @@ mod tests {
         drop(reverser1);
         channel_closed_rcv_1.await?;
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             reverser_service: {
                 total_requests: 3u64,
                 connection_count: 2u64,

@@ -623,7 +623,7 @@ mod inspect_tests {
         super::*,
         crate::DEFAULT_TUF_METADATA_TIMEOUT,
         fuchsia_async as fasync,
-        fuchsia_inspect::assert_inspect_tree,
+        fuchsia_inspect::assert_data_tree,
         fuchsia_pkg_testing::{serve::responder, PackageBuilder, RepositoryBuilder},
         fuchsia_url::pkg_url::RepoUrl,
         futures::stream::StreamExt,
@@ -662,7 +662,7 @@ mod inspect_tests {
         )
         .await
         .expect("created Repository");
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 "repo-node": {
@@ -683,7 +683,7 @@ mod inspect_tests {
         );
 
         drop(repo);
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {}
         );
@@ -720,7 +720,7 @@ mod inspect_tests {
 
         repo.get_merkle_at_path(&target_path).await.expect("fetched merkle from tuf");
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 "repo-node": {
@@ -786,7 +786,7 @@ mod inspect_tests {
         // Wait for AutoClient to finish updating and release the UpdatingTufClient
         repo.updating_client.lock().await;
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 "repo-node": {

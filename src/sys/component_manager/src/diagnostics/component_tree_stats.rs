@@ -329,7 +329,7 @@ mod tests {
             },
         },
         diagnostics_hierarchy::DiagnosticsHierarchy,
-        fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
+        fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
         fuchsia_zircon::AsHandleRef,
         moniker::AbsoluteMoniker,
     };
@@ -489,7 +489,7 @@ mod tests {
 
         // Verify initially there's no second most recent measurement since we only
         // have the initial measurement written.
-        assert_inspect_tree!(&hierarchy, root: contains {
+        assert_data_tree!(&hierarchy, root: contains {
             cpu_stats: contains {
                 recent_usage: {
                     previous_cpu_time: 0i64,
@@ -514,7 +514,7 @@ mod tests {
         let hierarchy = inspect::reader::read(&inspector).await.expect("read inspect hierarchy");
 
         // Verify that previous is now there and holds the previously recent values.
-        assert_inspect_tree!(&hierarchy, root: contains {
+        assert_data_tree!(&hierarchy, root: contains {
             cpu_stats: contains {
                 recent_usage: {
                     previous_cpu_time: 2 + 1i64,
@@ -559,7 +559,7 @@ mod tests {
         assert!(stats.tree.lock().await.get(&extended_moniker).is_some());
 
         // Verify the data written to inspect.
-        assert_inspect_tree!(test.builtin_environment.inspector, root: {
+        assert_data_tree!(test.builtin_environment.inspector, root: {
             cpu_stats: {
                 processing_times_ns: AnyProperty,
                 "@total": {
@@ -630,7 +630,7 @@ mod tests {
         ActionSet::register(component, StopAction::new()).await.expect("stopped");
 
         assert!(stats.tree.lock().await.get(&extended_moniker).is_some());
-        assert_inspect_tree!(test.builtin_environment.inspector, root: contains {
+        assert_data_tree!(test.builtin_environment.inspector, root: contains {
             cpu_stats: contains {
                 measurements: contains {
                     components: contains {
@@ -679,7 +679,7 @@ mod tests {
             let job = zx::Job::from(zx::Handle::invalid());
             task.set_task(DiagnosticsTask::Job(job));
         }
-        assert_inspect_tree!(test.builtin_environment.inspector, root: contains {
+        assert_data_tree!(test.builtin_environment.inspector, root: contains {
             cpu_stats: contains {
                 measurements: contains {
                     components: contains {
@@ -716,7 +716,7 @@ mod tests {
         // For the rotation verification see previous tests.
         stats.measure().await;
 
-        assert_inspect_tree!(test.builtin_environment.inspector, root: contains {
+        assert_data_tree!(test.builtin_environment.inspector, root: contains {
             cpu_stats: contains {
                 measurements: contains {
                     components: contains {

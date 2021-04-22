@@ -948,7 +948,7 @@ mod tests {
             .with_inspect(inspect.root(), "channel_")
             .unwrap();
         // Default tree.
-        inspect::assert_inspect_tree!(inspect, root: {
+        inspect::assert_data_tree!(inspect, root: {
             channel_: {
                 dlci: 8u64,
             },
@@ -960,7 +960,7 @@ mod tests {
         ));
         assert!(channel.set_flow_control(flow_control).is_ok());
         // Inspect tree should be updated with the initial credits.
-        inspect::assert_inspect_tree!(inspect, root: {
+        inspect::assert_data_tree!(inspect, root: {
             channel_: {
                 dlci: 8u64,
                 initial_local_credits: 12u64,
@@ -983,7 +983,7 @@ mod tests {
         let (inspect, _channel, _client, mut outgoing_frames) =
             create_and_establish(Role::Initiator, DLCI::try_from(8).unwrap(), Some(flow_control));
         // Upon establishment, the inspect tree should have a `flow_controller` node.
-        inspect::assert_inspect_tree!(inspect, root: {
+        inspect::assert_data_tree!(inspect, root: {
             channel_: contains {
                 flow_controller: {
                     controller_type: "credit_flow",
@@ -1008,7 +1008,7 @@ mod tests {
         expect_frame(&mut exec, &mut outgoing_frames, FrameData::Disconnect, Some(dlci));
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
         // The flow controller node should be removed indicating the inactiveness of the channel.
-        inspect::assert_inspect_tree!(inspect, root: {
+        inspect::assert_data_tree!(inspect, root: {
             channel_: {
                 dlci: 8u64,
                 initial_local_credits: 12u64,
@@ -1039,7 +1039,7 @@ mod tests {
             assert!(exec.run_until_stalled(&mut data_received_by_client).is_ready());
         }
         // Flow controller inspect node should be updated.
-        inspect::assert_inspect_tree!(inspect, root: {
+        inspect::assert_data_tree!(inspect, root: {
             flow_controller: {
                 controller_type: "credit_flow",
                 local_credits: 60u64, // 50 (initial) + 10 (Replenished in `data1`)
@@ -1068,7 +1068,7 @@ mod tests {
             assert!(exec.run_until_stalled(&mut send_fut).is_ready());
         }
         // Flow controller inspect node should be updated.
-        inspect::assert_inspect_tree!(inspect, root: {
+        inspect::assert_data_tree!(inspect, root: {
             flow_controller: {
                 controller_type: "credit_flow",
                 local_credits: 59u64, // 60 (previous amount) - 1 (sent frame)

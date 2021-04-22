@@ -162,7 +162,7 @@ impl MetricsNode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {fuchsia_inspect::assert_inspect_tree, fuchsia_inspect_derive::WithInspect};
+    use {fuchsia_inspect::assert_data_tree, fuchsia_inspect_derive::WithInspect};
 
     #[test]
     fn multiple_peers_connection_updates_to_shared_node() {
@@ -174,7 +174,7 @@ mod tests {
         let (id2, metrics2) = (PeerId(7982), metrics.clone());
 
         // Default inspect tree.
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             metrics: contains {
                 connection_errors: 0u64,
                 control_connections: 0u64,
@@ -190,7 +190,7 @@ mod tests {
         // Peer #2 successfully connects.
         metrics1.new_peer(id2);
         metrics2.control_connection();
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             metrics: contains {
                 connection_errors: 1u64,
                 control_connections: 1u64,
@@ -204,7 +204,7 @@ mod tests {
         metrics1.connection_error();
         metrics1.connection_error();
         metrics1.control_connection();
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             metrics: contains {
                 connection_errors: 3u64,
                 control_connections: 2u64,
@@ -220,7 +220,7 @@ mod tests {
         metrics1.control_collision();
         metrics1.control_connection();
         metrics1.browse_connection();
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             metrics: contains {
                 connection_errors: 3u64,
                 control_connections: 3u64,
@@ -243,7 +243,7 @@ mod tests {
         let ct_service1 = AvrcpControllerFeatures::empty();
         metrics.controller_features(id1, ct_service1);
         metrics.target_features(id1, tg_service1);
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             metrics: contains {
                 target_peers_supporting_browsing: 0u64,
                 distinct_target_peers_supporting_browsing: 0u64,
@@ -262,7 +262,7 @@ mod tests {
         let tg_service2 = AvrcpTargetFeatures::all();
         metrics.controller_features(id2, ct_service2);
         metrics.target_features(id2, tg_service2);
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             metrics: contains {
                 target_peers_supporting_browsing: 1u64,
                 distinct_target_peers_supporting_browsing: 1u64,
@@ -277,7 +277,7 @@ mod tests {
         // Peer #2 is re-discovered. Distinct counts shouldn't change.
         metrics.controller_features(id2, ct_service2);
         metrics.target_features(id2, tg_service2);
-        assert_inspect_tree!(inspect, root: {
+        assert_data_tree!(inspect, root: {
             metrics: contains {
                 target_peers_supporting_browsing: 2u64,
                 distinct_target_peers_supporting_browsing: 1u64,

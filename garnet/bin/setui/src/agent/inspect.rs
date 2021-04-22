@@ -225,7 +225,7 @@ mod tests {
     use crate::intl::types::{IntlInfo, LocaleId, TemperatureUnit};
     use crate::service;
 
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::assert_data_tree;
     use fuchsia_inspect::testing::{AnyProperty, TreeAssertion};
     use fuchsia_zircon::Time;
     use std::collections::HashSet;
@@ -316,7 +316,7 @@ mod tests {
             )
             .await;
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             switchboard: {
                 "Display": {
                     "SetDisplayInfo": {
@@ -398,7 +398,7 @@ mod tests {
 
         request_processor.send_and_receive(SettingType::Display, Request::Get).await;
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             switchboard: {
                 "Display": {
                     "SetDisplayInfo": {
@@ -490,7 +490,7 @@ mod tests {
             tree_assertion
         }
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             switchboard: {
                 display_subtree_assertion(),
                 "Intl": {

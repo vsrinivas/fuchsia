@@ -76,7 +76,7 @@ impl<T: InspectType> IfaceTree for T {}
 mod tests {
     use super::*;
 
-    use fuchsia_inspect::{assert_inspect_tree, Inspector, StringProperty};
+    use fuchsia_inspect::{assert_data_tree, Inspector, StringProperty};
 
     #[test]
     fn test_iface_manager_eviction() {
@@ -87,7 +87,7 @@ mod tests {
         ifaces_trees.create_iface_child(inspector.root(), 2);
         ifaces_trees.create_iface_child(inspector.root(), 3);
         ifaces_trees.create_iface_child(inspector.root(), 4);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             "iface-1": {},
             "iface-2": {},
             "iface-3": {},
@@ -96,14 +96,14 @@ mod tests {
 
         // If threshold is not exceeded, `notify_iface_removed` should not cause removal yet
         ifaces_trees.notify_iface_removed(2);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             "iface-1": {},
             "iface-2": {},
             "iface-3": {},
             "iface-4": {},
         });
         ifaces_trees.notify_iface_removed(3);
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             "iface-1": {},
             "iface-2": {},
             "iface-3": {},
@@ -112,13 +112,13 @@ mod tests {
 
         // Ifaces are removed now that number of dead nodes exceeds threshold
         ifaces_trees.notify_iface_removed(1);
-        assert_inspect_tree!(inspector, root: { "iface-1": {}, "iface-3": {}, "iface-4": {} });
+        assert_data_tree!(inspector, root: { "iface-1": {}, "iface-3": {}, "iface-4": {} });
         ifaces_trees.notify_iface_removed(4);
-        assert_inspect_tree!(inspector, root: { "iface-1": {}, "iface-4": {} });
+        assert_data_tree!(inspector, root: { "iface-1": {}, "iface-4": {} });
 
         // Notify removal on nonexistent node should have no effect
         ifaces_trees.notify_iface_removed(5);
-        assert_inspect_tree!(inspector, root: { "iface-1": {}, "iface-4": {} });
+        assert_data_tree!(inspector, root: { "iface-1": {}, "iface-4": {} });
     }
 
     #[test]
@@ -133,7 +133,7 @@ mod tests {
         });
         holder.add_iface_subtree(iface_subtree);
 
-        assert_inspect_tree!(inspector, root: {
+        assert_data_tree!(inspector, root: {
             "iface-1": {
                 apple: "yum",
                 banana: {},

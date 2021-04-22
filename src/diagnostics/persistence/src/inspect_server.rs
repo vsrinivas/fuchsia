@@ -59,7 +59,7 @@ pub fn serve_persisted_data(persist_root: &fuchsia_inspect::Node) -> Result<(), 
 mod test {
     use super::*;
     use anyhow::Error;
-    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use fuchsia_inspect::{assert_data_tree, Inspector};
 
     // This tests all the types, and also the stack-safety mechanism by including data that should
     // be clipped.
@@ -67,7 +67,7 @@ mod test {
     fn test_json_export() -> Result<(), Error> {
         let inspector = Inspector::new();
         let inspect = inspector.root();
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: contains {
             }
@@ -81,7 +81,7 @@ mod test {
         *data_parsed.get_mut("unsigned").unwrap() = serde_json::json!(9223372036854775808u64);
         store_data(inspect, "types", &data_parsed, MAX_TREE_DEPTH - 3);
 
-        assert_inspect_tree!(
+        assert_data_tree!(
             inspector,
             root: {
                 types: {
