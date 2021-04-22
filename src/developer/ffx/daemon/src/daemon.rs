@@ -220,7 +220,11 @@ impl Daemon {
         };
         let mut mdns = MdnsTargetFinder::new(&config)?;
         mdns.start(queue.clone())?;
-        Ok(Daemon { target_collection: target_collection.clone(), event_queue: queue, ascendd: ascendd, })
+        Ok(Daemon {
+            target_collection: target_collection.clone(),
+            event_queue: queue,
+            ascendd: ascendd,
+        })
     }
 
     /// get_target attempts to get the target that matches the match string if
@@ -856,6 +860,8 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    // TODO(72965): Disabled due to flakiness. Remove when fxbug.dev/72965 is resolved.
+    #[ignore]
     async fn test_getting_rcs_multiple_targets_mdns_with_empty_selector_should_err() -> Result<()> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
@@ -869,6 +875,8 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    // TODO(72965): Disabled due to flakiness. Remove when fxbug.dev/72965 is resolved.
+    #[ignore]
     async fn test_getting_rcs_multiple_targets_mdns_with_empty_selector_should_return_ambiguous_target_error(
     ) -> Result<()> {
         let (daemon_proxy, stream) =
@@ -884,6 +892,8 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    // TODO(72965): Disabled due to flakiness. Remove when fxbug.dev/72965 is resolved.
+    #[ignore]
     async fn test_getting_rcs_multiple_targets_mdns_with_correct_selector_should_not_err(
     ) -> Result<()> {
         let (daemon_proxy, stream) =
@@ -900,6 +910,8 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    // TODO(72965): Disabled due to flakiness. Remove when fxbug.dev/72965 is resolved.
+    #[ignore]
     async fn test_getting_rcs_multiple_targets_mdns_with_incorrect_selector_should_err(
     ) -> Result<()> {
         let (daemon_proxy, stream) =
@@ -918,6 +930,8 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    // TODO(72965): Disabled due to flakiness. Remove when fxbug.dev/72965 is resolved.
+    #[ignore]
     async fn test_list_targets_mdns_discovery() -> Result<()> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
