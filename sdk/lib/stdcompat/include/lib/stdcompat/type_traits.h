@@ -446,16 +446,19 @@ using type_identity_t = typename type_identity<T>::type;
 
 #if __cpp_lib_is_constant_evaluated >= 201811L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
+#define LIB_STDCOMPAT_CONSTEVAL_SUPPORT 1
 using std::is_constant_evaluated;
 
 #else  // Provide polyfill for std::is_constant_evaluated
 
 #if defined(__has_builtin) && __has_builtin(__builtin_is_constant_evaluated)
 
+#define LIB_STDCOMPAT_CONSTEVAL_SUPPORT 1
 inline constexpr bool is_constant_evaluated() noexcept { return __builtin_is_constant_evaluated(); }
 
 #else
 
+#define LIB_STDCOMPAT_CONSTEVAL_SUPPORT 0
 inline constexpr bool is_constant_evaluated() noexcept { return false; }
 
 #endif  // __has_builtin(__builtin_is_constant_evaluated)

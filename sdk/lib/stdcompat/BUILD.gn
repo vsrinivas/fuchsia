@@ -19,6 +19,7 @@ zx_library("stdcompat") {
   sdk_migrated = true
 
   sdk_headers = [
+    "lib/stdcompat/algorithm.h",
     "lib/stdcompat/array.h",
     "lib/stdcompat/bit.h",
     "lib/stdcompat/cstddef.h",
@@ -38,6 +39,7 @@ zx_library("stdcompat") {
     # Due to a bug in the SDK bazel generation, private headers in sources are
     # not propagated correctly until this is fixed, internal healders are un the public
     # section.
+    "lib/stdcompat/internal/algorithm.h",
     "lib/stdcompat/internal/array.h",
     "lib/stdcompat/internal/bit.h",
     "lib/stdcompat/internal/constructors.h",
