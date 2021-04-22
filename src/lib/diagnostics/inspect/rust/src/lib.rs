@@ -122,6 +122,8 @@ mod state;
 
 pub mod testing {
     pub use diagnostics_hierarchy::{
+        // TODO(fxbug.dev/74581): export only assert_data_tree once the soft migration is done.
+        assert_data_tree,
         assert_data_tree as assert_inspect_tree,
         testing::{
             AnyProperty, DiagnosticsHierarchyGetter, HistogramAssertion, NonZeroUintProperty,
