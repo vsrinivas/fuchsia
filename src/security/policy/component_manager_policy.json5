@@ -157,8 +157,6 @@
                     "/core",
                     "/core/appmgr",
                     "/core/debug_serial",
-                    "/core/starnix_manager/starnix_runner",
-                    "/core/test_manager/starnix_test_runner/starnix_runner",
                 ],
             },
             {

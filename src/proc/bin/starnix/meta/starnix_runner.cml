@@ -21,7 +21,6 @@
         {
             protocol: [
                 "fuchsia.component.runner.ComponentRunner",
-                "fuchsia.kernel.VmexResource",
                 "fuchsia.sys2.Realm",
             ],
             from: "parent",
