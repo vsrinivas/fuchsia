@@ -22,7 +22,7 @@ all_deps = [
   ":wlanif_bind",
   "//garnet/lib/wlan/protocol",
   "//sdk/banjo/ddk.hw.wlan.wlaninfo",
-  "//sdk/banjo/fuchsia.hardware.wlanif",
+  "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
   "//sdk/fidl/fuchsia.wlan.device",
   "//sdk/fidl/fuchsia.wlan.internal",
   "//sdk/fidl/fuchsia.wlan.mlme",

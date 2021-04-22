@@ -79,8 +79,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.vreg",
   "fuchsia.hardware.wlan.info",
   "fuchsia.hardware.wlan.mac",
-  "fuchsia.hardware.wlanif",
-  "fuchsia.hardware.wlanphy",
 ]
 
 # This target only exists to support the `analyze_deps.py` script. It is
