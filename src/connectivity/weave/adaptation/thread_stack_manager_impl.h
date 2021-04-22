@@ -6,6 +6,8 @@
 
 #include <fuchsia/lowpan/device/cpp/fidl.h>
 
+#include <nest/trait/network/TelemetryNetworkWpanTrait.h>
+
 namespace nl {
 namespace Weave {
 namespace DeviceLayer {
@@ -75,6 +77,10 @@ class NL_DLL_EXPORT ThreadStackManagerImpl final : public ThreadStackManager {
     virtual WEAVE_ERROR GetPrimary802154MACAddress(uint8_t* mac_address) = 0;
     // Set whether Thread should be in joinable mode or not.
     virtual WEAVE_ERROR SetThreadJoinable(bool enable) = 0;
+
+    // Log a NetworkWpanStatsEvent.
+    virtual nl::Weave::Profiles::DataManagement::event_id_t LogNetworkWpanStatsEvent(
+        Schema::Nest::Trait::Network::TelemetryNetworkWpanTrait::NetworkWpanStatsEvent* event) = 0;
   };
 
   // Sets the delegate containing the platform-specific implementation. It is

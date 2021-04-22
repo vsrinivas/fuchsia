@@ -12,7 +12,6 @@
 #include <Weave/DeviceLayer/PlatformManager.h>
 #include <Weave/DeviceLayer/ThreadStackManager.h>
 #include <Weave/Support/TraitEventUtils.h>
-#include <nest/trait/network/TelemetryNetworkWpanTrait.h>
 // clang-format on
 
 #include "thread_stack_manager_delegate_impl.h"
@@ -618,7 +617,7 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetAndLogThreadStatsCounters() {
                  << "  MAC Rx FCS Fail:         " << counter_event.macRxFailFcs << "\n"
                  << "  MAC Rx Other Fail:       " << counter_event.macRxFailOther << "\n";
 
-  event_id = nl::LogEvent(&counter_event);
+  event_id = LogNetworkWpanStatsEvent(&counter_event);
   FX_LOGS(DEBUG) << "Thread telemetry stats event ID: " << event_id << ".";
 
   return status;
@@ -741,6 +740,12 @@ zx_status_t ThreadStackManagerDelegateImpl::GetProtocols(Protocols protocols) {
 std::string ThreadStackManagerDelegateImpl::GetInterfaceName() const { return interface_name_; }
 
 bool ThreadStackManagerDelegateImpl::IsThreadSupported() const { return is_thread_supported_; }
+
+nl::Weave::Profiles::DataManagement::event_id_t
+ThreadStackManagerDelegateImpl::LogNetworkWpanStatsEvent(
+    Schema::Nest::Trait::Network::TelemetryNetworkWpanTrait::NetworkWpanStatsEvent* event) {
+  return nl::LogEvent(event);
+}
 
 }  // namespace DeviceLayer
 }  // namespace Weave

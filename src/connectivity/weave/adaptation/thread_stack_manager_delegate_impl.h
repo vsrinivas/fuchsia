@@ -45,6 +45,10 @@ class NL_DLL_EXPORT ThreadStackManagerDelegateImpl : public ThreadStackManagerIm
   WEAVE_ERROR GetPrimary802154MACAddress(uint8_t* mac_address) override;
   WEAVE_ERROR SetThreadJoinable(bool enable) override;
 
+  nl::Weave::Profiles::DataManagement::event_id_t LogNetworkWpanStatsEvent(
+      Schema::Nest::Trait::Network::TelemetryNetworkWpanTrait::NetworkWpanStatsEvent* event)
+      override;
+
  private:
   std::string interface_name_;
   fuchsia::lowpan::device::DeviceSyncPtr device_;
