@@ -29,7 +29,7 @@ driver_module("vs680-clk") {
   ]
   deps = [
     ":vs680-clk-bind",
-    "//sdk/banjo/fuchsia.hardware.clockimpl",
+    "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//src/devices/bus/lib/device-protocol-pdev",
@@ -56,7 +56,7 @@ test("vs680-clk-test-bin") {
   ]
   deps = [
     ":vs680-clk-bind",
-    "//sdk/banjo/fuchsia.hardware.clockimpl",
+    "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/lib/fdio",

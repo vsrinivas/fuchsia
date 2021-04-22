@@ -61,7 +61,7 @@ driver_module("astro") {
   ]
   deps = [
     ":astro-bind",
-    "//sdk/banjo/fuchsia.hardware.clockimpl",
+    "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.iommu",
