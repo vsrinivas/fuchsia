@@ -5,27 +5,28 @@
 use {
     crate::{
         display_provider::{DisplayControllerProviderInjector, DisplayState},
-        tap_actor::TapActor,
+        input_actor::InputActor,
+        session::Session,
+        session_actor::SessionActor,
         Args,
     },
     async_trait::async_trait,
     component_events::{
-        events::EventSource,
+        events::{Event, EventMode, EventSource, EventSubscription, Started},
         injectors::{CapabilityInjector, TestNamespaceInjector},
         matcher::EventMatcher,
     },
-    fidl::endpoints::create_proxy,
-    fidl_fuchsia_ui_input as finput,
+    fidl_fuchsia_ui_scenic as fscenic,
     fuchsia_component::client::connect_to_service_at,
     futures::lock::Mutex,
-    log::info,
+    rand::{rngs::SmallRng, Rng, SeedableRng},
     std::sync::Arc,
     std::time::Duration,
-    stress_test::{actor::ActorRunner, environment::Environment},
+    stress_test::{actor::ActorRunner, environment::Environment, random_seed},
     test_utils_lib::opaque_test::OpaqueTest,
 };
 
-const ROOT_URL: &str = "fuchsia-pkg://fuchsia.com/scenic-stress-tests#meta/root.cm";
+const ROOT_URL: &str = "fuchsia-pkg://fuchsia.com/scenic-stress-tests#meta/scenic.cm";
 
 /// Injects a capability at |path| by connecting to a test namespace capability
 /// at the same |path|.
@@ -41,8 +42,8 @@ async fn inject_from_test_namespace(
 
 /// Starts Scenic in an isolated instance of component manager.
 /// Injects required dependencies from the system or from the test, as needed.
-/// Waits for the display to update at least |min_updates| times before returning.
-async fn init_scenic(min_updates: u64) -> (OpaqueTest, DisplayState) {
+/// Waits for the scenic to start before returning.
+async fn init_scenic() -> (OpaqueTest, DisplayState) {
     let test = OpaqueTest::default(ROOT_URL).await.unwrap();
     let event_source = test.connect_to_event_source().await.unwrap();
     let display_state = DisplayState::new();
@@ -95,80 +96,34 @@ async fn init_scenic(min_updates: u64) -> (OpaqueTest, DisplayState) {
         .inject(&event_source, EventMatcher::ok())
         .await;
 
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
+        .await
+        .unwrap();
+
     // Start all the components
     event_source.start_component_tree().await;
 
-    info!("Waiting for {} display updates...", min_updates);
-
-    // Wait for the display to update the minimum number of times
-    while display_state.get_num_updates() < min_updates {}
+    // Wait for scenic to start
+    event_stream.next().await.unwrap();
 
     (test, display_state)
-}
-
-fn create_touch_device(
-    registry: &finput::InputDeviceRegistryProxy,
-    width: u32,
-    height: u32,
-) -> finput::InputDeviceProxy {
-    let mut device = finput::DeviceDescriptor {
-        device_info: None,
-        keyboard: None,
-        media_buttons: None,
-        mouse: None,
-        stylus: None,
-        touchscreen: Some(Box::new(finput::TouchscreenDescriptor {
-            x: finput::Axis {
-                range: finput::Range { min: 0, max: width as i32 },
-                resolution: 1,
-                scale: finput::AxisScale::Linear,
-            },
-            y: finput::Axis {
-                range: finput::Range { min: 0, max: height as i32 },
-                resolution: 1,
-                scale: finput::AxisScale::Linear,
-            },
-            max_finger_id: 255,
-        })),
-        sensor: None,
-    };
-
-    let (input_device_proxy, input_device_server) =
-        create_proxy::<finput::InputDeviceMarker>().unwrap();
-    registry
-        .register_device(&mut device, input_device_server)
-        .expect("Could not register touch device with InputDeviceRegistry");
-    input_device_proxy
 }
 
 /// Contains the running instance of scenic and the actors that operate on it.
 /// This object lives for the entire duration of the test.
 pub struct ScenicEnvironment {
     args: Args,
-    _opaque_test: OpaqueTest,
+    opaque_test: OpaqueTest,
     _display_state: DisplayState,
-    tap_actor: Arc<Mutex<TapActor>>,
 }
 
 impl ScenicEnvironment {
     pub async fn new(args: Args) -> Self {
         // Start Scenic and wait for it to be ready
-        let (opaque_test, display_state) = init_scenic(1).await;
+        let (opaque_test, display_state) = init_scenic().await;
 
-        // Create a touchscreen input device using the InputDeviceRegistry
-        let svc_dir_path =
-            opaque_test.get_hub_v2_path().join("children/root_presenter/exec/out/svc");
-        let svc_dir_path = svc_dir_path.to_str().unwrap();
-
-        let registry = connect_to_service_at::<finput::InputDeviceRegistryMarker>(svc_dir_path)
-            .expect("Could not connect to InputDeviceRegistry");
-
-        let device = create_touch_device(&registry, 640, 480);
-
-        // Create the actor that will use the touchscreen input device to send taps.
-        let tap_actor = Arc::new(Mutex::new(TapActor::new(device)));
-
-        Self { args, _opaque_test: opaque_test, _display_state: display_state, tap_actor }
+        Self { args, opaque_test, _display_state: display_state }
     }
 }
 
@@ -189,11 +144,38 @@ impl Environment for ScenicEnvironment {
     }
 
     fn actor_runners(&mut self) -> Vec<ActorRunner> {
-        vec![ActorRunner::new(
-            "tap_actor",
-            Some(Duration::from_secs(self.args.touch_delay_secs)),
-            self.tap_actor.clone(),
-        )]
+        let seed = random_seed();
+        let mut rng = SmallRng::from_seed(seed.to_le_bytes());
+
+        // Connect to the Scenic protocol
+        let svc_dir_path = self.opaque_test.get_hub_v2_path().join("exec/out/svc");
+        let svc_dir_path = svc_dir_path.to_str().unwrap();
+        let scenic_proxy = connect_to_service_at::<fscenic::ScenicMarker>(svc_dir_path)
+            .expect("Could not connect to InputDeviceRegistry");
+        let scenic_proxy = Arc::new(scenic_proxy);
+
+        // Create the root session
+        let (root_session, compositor_id, session_ptr) =
+            Session::initialize_as_root(&mut rng, scenic_proxy);
+
+        let input_runner = {
+            // Create the input actor
+            let seed = rng.gen::<u128>();
+            let rng = SmallRng::from_seed(seed.to_le_bytes());
+            let input_actor =
+                Arc::new(Mutex::new(InputActor::new(rng, session_ptr, compositor_id)));
+            ActorRunner::new("input_actor", Some(Duration::from_millis(16)), input_actor)
+        };
+
+        let session_runner = {
+            // Create the session actor
+            let seed = rng.gen::<u128>();
+            let rng = SmallRng::from_seed(seed.to_le_bytes());
+            let session_actor = Arc::new(Mutex::new(SessionActor::new(rng, root_session)));
+            ActorRunner::new("session_actor", Some(Duration::from_millis(250)), session_actor)
+        };
+
+        vec![session_runner, input_runner]
     }
 
     async fn reset(&mut self) {

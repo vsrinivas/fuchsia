@@ -10,9 +10,8 @@ use {
         endpoints::{RequestStream, ServerEnd},
         AsHandleRef, Event,
     },
-    fidl_fuchsia_hardware_display as fdisp, fuchsia_async as fasync,
-    fuchsia_async::futures::TryStreamExt,
-    fuchsia_zircon as sys,
+    fidl_fuchsia_hardware_display as fdisp, fuchsia_async as fasync, fuchsia_zircon as sys,
+    futures::StreamExt,
     log::debug,
     std::{
         collections::HashMap,
@@ -54,12 +53,6 @@ impl DisplayState {
                 events: HashMap::new(),
             })),
         }
-    }
-
-    // Returns the number of updates applied to the display
-    pub fn get_num_updates(&self) -> u64 {
-        let state = self.inner.lock().unwrap();
-        state.num_updates
     }
 
     // Returns the current image ID and increments it by one.
@@ -150,15 +143,17 @@ impl DisplayController {
         // Start handling controller requests from scenic
         fasync::Task::spawn(async move {
             loop {
-                let request = stream.try_next().await.unwrap().unwrap();
-
-                // This happens too often. Logging it is not worthwhile
-                if let fdisp::ControllerRequest::AcknowledgeVsync { .. } = request {
-                    continue;
+                match stream.next().await {
+                    Some(Ok(request)) => {
+                        self.process_controller_request(request);
+                    }
+                    Some(Err(e)) => {
+                        panic!("Display controller stream error: {:?}", e);
+                    }
+                    None => {
+                        panic!("Display controller was closed!");
+                    }
                 }
-
-                self.process_controller_request(request);
-                debug!("################################");
             }
         })
         .detach();
@@ -216,17 +211,15 @@ impl DisplayController {
                 index,
                 responder,
             } => {
-                debug!("ImportImage");
-                debug!("image_config -> {:?}", image_config);
-                debug!("collection_id -> {:?}", collection_id);
-                debug!("index -> {:?}", index);
+                debug!(
+                    "ImportImage [image_config:{:?}][collection_id:{}][index:{}]",
+                    image_config, collection_id, index
+                );
                 let image_id = self.state.increment_image_id();
                 responder.send(0, image_id).unwrap();
             }
             fdisp::ControllerRequest::ImportEvent { event, id, control_handle: _ } => {
-                debug!("ImportEvent");
-                debug!("event -> {:?}", event);
-                debug!("id -> {:?}", id);
+                debug!("ImportEvent [event:{:?}][id:{}]", event, id);
                 self.state.add_event(id, event);
             }
             fdisp::ControllerRequest::CreateLayer { responder } => {
@@ -239,18 +232,17 @@ impl DisplayController {
                 layer_ids,
                 control_handle: _,
             } => {
-                debug!("SetDisplayLayers");
-                debug!("display_id -> {:?}", display_id);
-                debug!("layer_ids -> {:?}", layer_ids);
+                debug!("SetDisplayLayers [display_id:{}][layer_ids:{:?}]", display_id, layer_ids);
             }
             fdisp::ControllerRequest::SetLayerPrimaryConfig {
                 layer_id,
                 image_config,
                 control_handle: _,
             } => {
-                debug!("SetLayerPrimaryConfig");
-                debug!("layer_id -> {:?}", layer_id);
-                debug!("image_config -> {:?}", image_config);
+                debug!(
+                    "SetLayerPrimaryConfig [layer_id:{}][image_config:{:?}]",
+                    layer_id, image_config
+                );
             }
             fdisp::ControllerRequest::SetLayerImage {
                 layer_id,
@@ -259,32 +251,22 @@ impl DisplayController {
                 signal_event_id,
                 control_handle: _,
             } => {
-                debug!("SetLayerImage");
-                debug!("layer_id -> {:?}", layer_id);
-                debug!("image_id -> {:?}", image_id);
-                debug!("wait_event_id -> {:?}", wait_event_id);
-                debug!("signal_event_id -> {:?}", signal_event_id);
+                debug!("SetLayerImage [layer_id:{}][image_id:{}][wait_event_id:{}][signal_event_id:{}]", layer_id, image_id, wait_event_id, signal_event_id);
                 self.state.set_layer_image(layer_id, image_id, signal_event_id);
             }
             fdisp::ControllerRequest::ApplyConfig { control_handle: _ } => {
                 debug!("ApplyConfig");
             }
             fdisp::ControllerRequest::EnableVsync { enable, control_handle } => {
-                debug!("EnableVsync");
-                debug!("enable -> {:?}", enable);
+                debug!("EnableVsync [enable:{}]", enable);
                 self.start_vsync_thread(control_handle);
-            }
-            fdisp::ControllerRequest::AcknowledgeVsync { cookie, control_handle: _ } => {
-                debug!("AcknowledgeVsync");
-                debug!("cookie -> {:?}", cookie);
             }
             fdisp::ControllerRequest::ImportBufferCollection {
                 collection_id,
                 collection_token,
                 responder,
             } => {
-                debug!("ImportBufferCollection");
-                debug!("collection_id -> {:?}", collection_id);
+                debug!("ImportBufferCollection [collection_id:{}]", collection_id);
 
                 // Close the buffer collection token immediately
                 let proxy = collection_token.into_proxy().unwrap();
@@ -296,21 +278,27 @@ impl DisplayController {
                 collection_id,
                 control_handle: _,
             } => {
-                debug!("ReleaseBufferCollection");
-                debug!("collection_id -> {:?}", collection_id);
+                debug!("ReleaseBufferCollection [collection_id:{}]", collection_id);
             }
             fdisp::ControllerRequest::SetBufferCollectionConstraints {
                 collection_id,
                 config,
                 responder,
             } => {
-                debug!("SetBufferCollectionConstraints");
-                debug!("collection_id -> {:?}", collection_id);
-                debug!("config -> {:?}", config);
+                debug!(
+                    "SetBufferCollectionConstraints [collection_id:{}][config:{:?}]",
+                    collection_id, config
+                );
                 responder.send(0).unwrap();
             }
-            _ => {
-                panic!("Unexpected ControllerRequest received");
+            fdisp::ControllerRequest::DestroyLayer { layer_id, control_handle: _ } => {
+                debug!("DestroyLayer [layer_id:{}]", layer_id);
+            }
+            fdisp::ControllerRequest::ReleaseImage { image_id, control_handle: _ } => {
+                debug!("ReleaseImage [image_id:{}]", image_id);
+            }
+            r => {
+                panic!("Unexpected ControllerRequest received: {:#?}", r);
             }
         }
     }
@@ -334,11 +322,11 @@ impl ProtocolInjector for DisplayControllerProviderInjector {
         self: Arc<Self>,
         mut request_stream: fdisp::ProviderRequestStream,
     ) -> Result<(), Error> {
-        if let Ok(Some(fdisp::ProviderRequest::OpenController {
+        if let Some(Ok(fdisp::ProviderRequest::OpenController {
             device: _,
             controller,
             responder,
-        })) = request_stream.try_next().await
+        })) = request_stream.next().await
         {
             debug!("Received request to open controller");
             responder.send(0).unwrap();

@@ -8,7 +8,7 @@
             "--time-limit-secs",
             "79200"
         ],
-        "binary": "test/input_stressor"
+        "binary": "test/scenic_stressor"
     },
     "sandbox": {
         "dev": [

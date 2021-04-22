@@ -11,18 +11,22 @@ import("//src/lib/vulkan/layers.gni")
 import("//src/ui/lib/escher/build_args.gni")
 import("//src/ui/lib/escher/shaders/shaders.gni")
 
-rustc_binary("input-stressor-bin") {
-  name = "input_stressor"
+rustc_binary("scenic-stressor-bin") {
+  name = "scenic_stressor"
   edition = "2018"
   testonly = true
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/ui/input-synthesis",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/testing:test_utils_lib",
@@ -40,16 +44,17 @@ rustc_binary("input-stressor-bin") {
   sources = [
     "src/display_provider.rs",
     "src/environment.rs",
+    "src/input_actor.rs",
     "src/main.rs",
-    "src/tap_actor.rs",
+    "src/pointer_state.rs",
+    "src/session.rs",
+    "src/session_actor.rs",
   ]
 }
 
 test_package("scenic-stress-tests") {
   deps = [
-    ":input-stressor-bin",
-    "//src/ui/bin/root_presenter:bin",
-    "//src/ui/examples/simplest_app:bin",
+    ":scenic-stressor-bin",
     "//src/ui/scenic/bin",
   ]
 
@@ -57,31 +62,12 @@ test_package("scenic-stress-tests") {
     {
       name = "scenic"
     },
-    {
-      name = "root_presenter"
-    },
-    {
-      name = "simplest_app"
-      dest = "view"
-    },
   ]
 
   meta = [
     {
-      path = rebase_path("meta/root.cml")
-      dest = "root.cm"
-    },
-    {
       path = rebase_path("meta/scenic.cml")
       dest = "scenic.cm"
-    },
-    {
-      path = rebase_path("meta/root_presenter.cml")
-      dest = "root_presenter.cm"
-    },
-    {
-      path = rebase_path("meta/view.cml")
-      dest = "view.cm"
     },
   ]
 
@@ -90,7 +76,7 @@ test_package("scenic-stress-tests") {
       log_settings = {
         max_severity = "ERROR"
       }
-      name = "input_stressor"
+      name = "scenic_stressor"
       environments = [
         {
           dimensions = {

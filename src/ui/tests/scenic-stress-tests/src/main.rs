@@ -4,7 +4,10 @@
 
 mod display_provider;
 mod environment;
-mod tap_actor;
+mod input_actor;
+mod pointer_state;
+mod session;
+mod session_actor;
 
 use {
     anyhow::Error,
