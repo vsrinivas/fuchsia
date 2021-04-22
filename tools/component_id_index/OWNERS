@@ -1,4 +1,3 @@
-adamlesinski@google.com
-geb@google.com
-shayba@google.com
-vardhan@google.com
+include /src/sys/component_manager/OWNERS
+
+# COMPONENT: ComponentFramework>Libraries

@@ -2,4 +2,4 @@ adamlesinski@google.com
 
 include /src/sys/component_manager/OWNERS
 
-# COMPONENT: ComponentFramework>Runtime
+# COMPONENT: ComponentFramework

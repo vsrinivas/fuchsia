@@ -1,5 +1,5 @@
-adamlesinski@google.com
-
 include /src/sys/component_manager/OWNERS
 
-# COMPONENT: ComponentFramework>Runtime
+adamlesinski@google.com
+
+# COMPONENT: ComponentFramework

@@ -1,5 +1,3 @@
-casbor@google.com
-anmittal@google.com
-geb@google.com
+include /src/sys/test_manager/OWNERS
 
-# COMPONENT: ComponentFramework>Testing
+# COMPONENT: TestRunnerFramework

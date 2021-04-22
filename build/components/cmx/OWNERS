@@ -1,8 +1,3 @@
-geb@google.com
-jmatt@google.com
-shayba@google.com
-thatguy@google.com
-vardhan@google.com
-yaneury@google.com
+include /src/sys/component_manager/OWNERS
 
-# COMPONENT: ComponentFramework>Runtime
+# COMPONENT: ComponentFramework>Tools
