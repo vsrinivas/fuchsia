@@ -415,7 +415,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:133
+From //build/images/args.gni:130
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
@@ -921,7 +921,7 @@ flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:64
+From //zircon/kernel/params.gni:67
 
 ### dwarf_version
 Explicitly specify DWARF version used.
@@ -973,7 +973,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:91
+From //zircon/kernel/params.gni:94
 
 ### enable_mdns_trace
 Enables the tracing feature of mdns, which can be turned on using
@@ -1251,6 +1251,13 @@ above changes.
 **Current value (from the default):** `[]`
 
 From //build/security.gni:21
+
+### futex_tracing_enabled
+Enables kernel tracing of futex interactions
+
+**Current value (from the default):** `false`
+
+From //zircon/kernel/params.gni:51
 
 ### fvm_emmc_partition_size
 The size in bytes of the FVM partition on the target eMMC devices.
@@ -1620,7 +1627,7 @@ the two and set kernel_debug_level independently.
 
 **Current value (from the default):** `2`
 
-From //zircon/kernel/params.gni:76
+From //zircon/kernel/params.gni:79
 
 ### kernel_debug_print_level
 Controls the verbosity of kernel dprintf messages. The higher the value,
@@ -1631,7 +1638,7 @@ the more dprintf messages emitted. Valid values are 0-2 (inclusive):
 
 **Current value (from the default):** `2`
 
-From //zircon/kernel/params.gni:83
+From //zircon/kernel/params.gni:86
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -1639,7 +1646,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //zircon/kernel/params.gni:68
+From //zircon/kernel/params.gni:71
 
 ### kernel_version_git_checkout
 By default the kernel version string is generated based on the full git
@@ -2700,13 +2707,6 @@ Controls whether we should output GSYM files for Fuchsia binaries.
 **Current value (from the default):** `false`
 
 From //build/config/BUILDCONFIG.gn:33
-
-### override_recovery_label
-TODO(comfoltey) remove obsolete label override_recovery_label
-
-**Current value (from the default):** `""`
-
-From //build/images/args.gni:122
 
 ### package_flavor_selections
 Used to configure the set of package flavors desired.
@@ -3775,7 +3775,7 @@ zero add increasing details at the cost of increased trace buffer use.
 
 **Current value (from the default):** `0`
 
-From //zircon/kernel/params.gni:60
+From //zircon/kernel/params.gni:63
 
 ### vulkan_host_runtime_dir
 
@@ -3811,7 +3811,7 @@ frequently the change depth.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:53
+From //zircon/kernel/params.gni:56
 
 ### warn_on_sdk_changes
 Whether to only warn when an SDK has been modified.
