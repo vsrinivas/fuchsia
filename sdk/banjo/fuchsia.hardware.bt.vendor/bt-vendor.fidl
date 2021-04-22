@@ -35,7 +35,7 @@ struct BtVendorSetAclPriorityParams {
 };
 
 union BtVendorParams {
-   1: BtVendorSetAclPriorityParams set_acl_priority;
+    1: BtVendorSetAclPriorityParams set_acl_priority;
 };
 
 enum BtVendorCommand {
