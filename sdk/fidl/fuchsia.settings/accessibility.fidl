@@ -77,9 +77,15 @@ table CaptionsSettings {
     3: CaptionFontStyle font_style;
 
     /// Border color used around the closed captions window.
+    ///
+    /// Each color channel should be a finite number otherwise will cause
+    /// SetAccessibilityInfo to fail with INVALID_VALUE.
     4: fuchsia.ui.types.ColorRgba window_color;
 
     /// Background color of the closed captions window.
+    ///
+    /// Each color channel should be a finite number otherwise will cause
+    /// SetAccessibilityInfo to fail with INVALID_VALUE.
     5: fuchsia.ui.types.ColorRgba background_color;
 };
 
@@ -88,10 +94,13 @@ table CaptionFontStyle {
     1: CaptionFontFamily family;
     /// 47 CFR §79.103(c)(2) requires at least 3-bit RGB for user override of
     /// closed-captions color.
+    ///
+    /// Each color channel should be a finite number otherwise will cause
+    /// SetAccessibilityInfo to fail with INVALID_VALUE.
     2: fuchsia.ui.types.ColorRgba color;
     /// Size of closed captions text relative to the default captions size. A
     /// range of [0.5, 2] is guaranteed to be supported (as 47 CFR §79.103(c)(4)
-    /// establishes).
+    /// establishes). Size should be a finite number.
     3: float32 relative_size;
     4: EdgeStyle char_edge_style;
 };
