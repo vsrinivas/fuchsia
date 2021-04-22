@@ -6,7 +6,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <debug.h>
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/console.h>
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
@@ -37,7 +37,7 @@ void platform_halt(platform_halt_action suggested_action, zircon_crash_reason_t 
   // can) if we plan to halt instead of instigate a reboot.  If we are going to
   // try to actually reboot, pet the dog one last time to give ourselves the
   // maximum amount to arrange our graceful reboot.
-  bool halt_on_panic = gCmdline.GetBool(kernel_option::kHaltOnPanic, false);
+  bool halt_on_panic = gBootOptions->halt_on_panic;
   if (ENABLE_PANIC_SHELL || halt_on_panic) {
     hw_watchdog_set_enabled(false);
   } else {

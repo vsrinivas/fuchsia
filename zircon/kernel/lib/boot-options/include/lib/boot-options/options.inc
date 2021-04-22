@@ -376,6 +376,27 @@ Supported fonts:
 This option asks the graphics console to use a specific font.
 )""")
 
+DEFINE_OPTION("kernel.halt-on-panic", bool, halt_on_panic, {false}, R"""(
+If this option is set, the system will halt on a kernel panic instead
+of rebooting. To enable halt-on-panic, pass the kernel command line
+argument `kernel.halt-on-panic=true`.
+
+Since the kernel can't reliably draw to a framebuffer when the GPU is enabled,
+the system will reboot by default if the kernel crashes or panics.
+
+If the kernel crashes and the system reboots, the log from the kernel panic will
+appear at `/boot/log/last-panic.txt`, suitable for viewing, downloading, etc.
+
+> Please attach your `last-panic.txt` and `zircon.elf` files to any kernel
+> panic bugs you file.
+
+If there's a `last-panic.txt`, that indicates that this is the first successful
+boot since a kernel panic occurred.
+
+It is not "sticky" -- if you reboot cleanly, it will be gone, and if you crash
+again it will be replaced.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 
