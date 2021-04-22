@@ -9,17 +9,22 @@ use {
         runtime_stats_source::RuntimeStatsSource,
     },
     fuchsia_inspect as inspect, fuchsia_zircon as zx, fuchsia_zircon_sys as zx_sys,
+    futures::{future::BoxFuture, lock::Mutex, FutureExt},
+    std::sync::Weak,
 };
 
+#[derive(Debug)]
 pub struct TaskInfo<T: RuntimeStatsSource> {
     koid: zx_sys::zx_koid_t,
     task: T,
+    pub has_parent_task: bool,
     measurements: MeasurementsQueue,
+    children: Vec<Weak<Mutex<TaskInfo<T>>>>,
     should_drop_old_measurements: bool,
     post_invalidation_measurements: usize,
 }
 
-impl<T: RuntimeStatsSource> TaskInfo<T> {
+impl<T: RuntimeStatsSource + Send + Sync> TaskInfo<T> {
     /// Creates a new `TaskInfo` from the given cpu stats provider.
     // Due to https://github.com/rust-lang/rust/issues/50133 we cannot just derive TryFrom on a
     // generic type given a collision with the blanket implementation.
@@ -27,7 +32,9 @@ impl<T: RuntimeStatsSource> TaskInfo<T> {
         Ok(Self {
             koid: task.koid()?,
             task,
+            has_parent_task: false,
             measurements: MeasurementsQueue::new(),
+            children: vec![],
             should_drop_old_measurements: false,
             post_invalidation_measurements: 0,
         })
@@ -36,24 +43,57 @@ impl<T: RuntimeStatsSource> TaskInfo<T> {
     /// Take a new measurement. If the handle of this task is invalid, then it keeps track of how
     /// many measurements would have been done. When the maximum amount allowed is hit, then it
     /// drops the oldest measurement.
-    pub async fn measure(&mut self) -> Option<&Measurement> {
-        if self.task.handle_is_invalid() {
-            if self.should_drop_old_measurements {
-                self.measurements.pop_front();
-            } else {
-                self.post_invalidation_measurements += 1;
-                self.should_drop_old_measurements = self.post_invalidation_measurements
-                    + self.measurements.len()
-                    >= COMPONENT_CPU_MAX_SAMPLES;
-            }
+    pub async fn measure_if_no_parent(&mut self) -> Option<&Measurement> {
+        // Tasks with a parent are measured by the parent as done right below in the internal
+        // `do_measure`.
+        if self.has_parent_task {
             return None;
         }
-        if let Ok(runtime_info) = self.task.get_runtime_info().await {
-            let measurement = runtime_info.into();
-            self.measurements.insert(measurement);
-            return self.measurements.back();
+        self.measure_subtree().await
+    }
+
+    /// Adds a weak pointer to a task for which this task is the parent.
+    pub fn add_child(&mut self, task: Weak<Mutex<TaskInfo<T>>>) {
+        self.children.push(task);
+    }
+
+    fn measure_subtree<'a>(&'a mut self) -> BoxFuture<'a, Option<&'a Measurement>> {
+        async move {
+            if self.task.handle_is_invalid() {
+                if self.should_drop_old_measurements {
+                    self.measurements.pop_front();
+                } else {
+                    self.post_invalidation_measurements += 1;
+                    self.should_drop_old_measurements = self.post_invalidation_measurements
+                        + self.measurements.len()
+                        >= COMPONENT_CPU_MAX_SAMPLES;
+                }
+                return None;
+            }
+            if let Ok(runtime_info) = self.task.get_runtime_info().await {
+                let mut measurement = runtime_info.into();
+
+                // Subtract all child measurements.
+                let mut alive_children = vec![];
+                while let Some(weak_child) = self.children.pop() {
+                    if let Some(child) = weak_child.upgrade() {
+                        let mut child_guard = child.lock().await;
+                        if let Some(child_measurement) = child_guard.measure_subtree().await {
+                            measurement -= child_measurement;
+                        }
+                        if child_guard.is_alive() {
+                            alive_children.push(weak_child);
+                        }
+                    }
+                }
+                self.children = alive_children;
+
+                self.measurements.insert(measurement);
+                return self.measurements.back();
+            }
+            None
         }
-        None
+        .boxed()
     }
 
     /// A task is alive when:
@@ -76,14 +116,13 @@ impl<T: RuntimeStatsSource> TaskInfo<T> {
         parent.record(node);
     }
 
-    #[cfg(test)]
-    pub fn total_measurements(&self) -> usize {
-        self.measurements.len()
+    pub fn koid(&self) -> zx_sys::zx_koid_t {
+        self.koid
     }
 
     #[cfg(test)]
-    pub fn set_task(&mut self, task: T) {
-        self.task = task;
+    pub fn total_measurements(&self) -> usize {
+        self.measurements.len()
     }
 
     #[cfg(test)]
@@ -94,9 +133,12 @@ impl<T: RuntimeStatsSource> TaskInfo<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::diagnostics::testing::FakeTask;
-    use fuchsia_inspect::testing::{assert_data_tree, AnyProperty};
+    use {
+        super::*,
+        crate::diagnostics::testing::FakeTask,
+        fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
+        std::sync::Arc,
+    };
 
     #[fuchsia::test]
     async fn rotates_measurements_per_task() {
@@ -105,11 +147,11 @@ mod tests {
         assert!(task.is_alive());
 
         // Take three measurements.
-        task.measure().await;
+        task.measure_if_no_parent().await;
         assert_eq!(task.measurements.len(), 1);
-        task.measure().await;
+        task.measure_if_no_parent().await;
         assert_eq!(task.measurements.len(), 2);
-        task.measure().await;
+        task.measure_if_no_parent().await;
         assert!(task.is_alive());
         assert_eq!(task.measurements.len(), 3);
 
@@ -118,20 +160,20 @@ mod tests {
 
         // Allow MAX-N (N=3 here) measurements to be taken until we start dropping.
         for i in 3..COMPONENT_CPU_MAX_SAMPLES {
-            task.measure().await;
+            task.measure_if_no_parent().await;
             assert_eq!(task.measurements.len(), 3);
             assert_eq!(task.post_invalidation_measurements, i - 2);
         }
 
-        task.measure().await; // 1 dropped, 2 left
+        task.measure_if_no_parent().await; // 1 dropped, 2 left
         assert!(task.is_alive());
         assert_eq!(task.measurements.len(), 2);
-        task.measure().await; // 2 dropped, 1 left
+        task.measure_if_no_parent().await; // 2 dropped, 1 left
         assert!(task.is_alive());
         assert_eq!(task.measurements.len(), 1);
 
         // Take one last measure.
-        task.measure().await; // 3 dropped, 0 left
+        task.measure_if_no_parent().await; // 3 dropped, 0 left
         assert!(!task.is_alive());
         assert_eq!(task.measurements.len(), 0);
     }
@@ -155,8 +197,8 @@ mod tests {
         ))
         .unwrap();
 
-        task.measure().await;
-        task.measure().await;
+        task.measure_if_no_parent().await;
+        task.measure_if_no_parent().await;
 
         let inspector = inspect::Inspector::new();
         task.record_to_node(inspector.root());
@@ -176,5 +218,91 @@ mod tests {
                 }
             }
         });
+    }
+
+    #[fuchsia::test]
+    async fn measure_with_children() {
+        let mut task = TaskInfo::try_from(FakeTask::new(
+            1,
+            vec![
+                zx::TaskRuntimeInfo {
+                    cpu_time: 100,
+                    queue_time: 200,
+                    ..zx::TaskRuntimeInfo::default()
+                },
+                zx::TaskRuntimeInfo {
+                    cpu_time: 300,
+                    queue_time: 400,
+                    ..zx::TaskRuntimeInfo::default()
+                },
+            ],
+        ))
+        .unwrap();
+
+        let child_1 = Arc::new(Mutex::new(
+            TaskInfo::try_from(FakeTask::new(
+                2,
+                vec![
+                    zx::TaskRuntimeInfo {
+                        cpu_time: 10,
+                        queue_time: 20,
+                        ..zx::TaskRuntimeInfo::default()
+                    },
+                    zx::TaskRuntimeInfo {
+                        cpu_time: 30,
+                        queue_time: 40,
+                        ..zx::TaskRuntimeInfo::default()
+                    },
+                ],
+            ))
+            .unwrap(),
+        ));
+
+        let child_2 = Arc::new(Mutex::new(
+            TaskInfo::try_from(FakeTask::new(
+                3,
+                vec![
+                    zx::TaskRuntimeInfo {
+                        cpu_time: 5,
+                        queue_time: 2,
+                        ..zx::TaskRuntimeInfo::default()
+                    },
+                    zx::TaskRuntimeInfo {
+                        cpu_time: 15,
+                        queue_time: 4,
+                        ..zx::TaskRuntimeInfo::default()
+                    },
+                ],
+            ))
+            .unwrap(),
+        ));
+
+        task.add_child(Arc::downgrade(&child_1));
+        task.add_child(Arc::downgrade(&child_2));
+
+        {
+            let measurement = task.measure_if_no_parent().await.unwrap();
+            assert_eq!(measurement.cpu_time().into_nanos(), 100 - 10 - 5);
+            assert_eq!(measurement.queue_time().into_nanos(), 200 - 20 - 2);
+        }
+        assert_eq!(child_1.lock().await.total_measurements(), 1);
+        assert_eq!(child_2.lock().await.total_measurements(), 1);
+
+        // Fake child 2 not being alive anymore. It should be removed.
+        {
+            let mut child_2_guard = child_2.lock().await;
+            child_2_guard.task.invalid_handle = true;
+            child_2_guard.measurements = MeasurementsQueue::new();
+        }
+
+        assert_eq!(task.children.len(), 2);
+        {
+            let measurement = task.measure_if_no_parent().await.unwrap();
+            assert_eq!(measurement.cpu_time().into_nanos(), 300 - 30);
+            assert_eq!(measurement.queue_time().into_nanos(), 400 - 40);
+        }
+
+        assert_eq!(task.children.len(), 1); // after measuring dead children are cleaned.
+        assert_eq!(child_1.lock().await.total_measurements(), 2);
     }
 }

@@ -7,11 +7,11 @@ use {
     fuchsia_inspect as inspect, fuchsia_zircon as zx,
     std::{
         collections::VecDeque,
-        ops::{AddAssign, Deref, DerefMut},
+        ops::{AddAssign, Deref, DerefMut, SubAssign},
     },
 };
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Measurement {
     timestamp: zx::Time,
     cpu_time: zx::Duration,
@@ -61,6 +61,16 @@ impl AddAssign<&Measurement> for Measurement {
     }
 }
 
+impl SubAssign<&Measurement> for Measurement {
+    fn sub_assign(&mut self, other: &Measurement) {
+        *self = Self {
+            timestamp: self.timestamp,
+            cpu_time: self.cpu_time - other.cpu_time,
+            queue_time: self.queue_time - other.queue_time,
+        };
+    }
+}
+
 impl From<zx::TaskRuntimeInfo> for Measurement {
     fn from(info: zx::TaskRuntimeInfo) -> Self {
         Self {
@@ -71,6 +81,7 @@ impl From<zx::TaskRuntimeInfo> for Measurement {
     }
 }
 
+#[derive(Debug)]
 pub struct MeasurementsQueue {
     values: VecDeque<Measurement>,
 }
