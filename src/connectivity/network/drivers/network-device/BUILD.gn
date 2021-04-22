@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
 
 bind_rules("network-device_bind") {
   rules = "network_device.bind"
@@ -48,7 +49,7 @@ group("tests") {
   ]
 }
 
-executable("driver-test") {
+test("driver-test") {
   testonly = true
   output_name = "network-device-test"
   sources = [
@@ -62,8 +63,9 @@ executable("driver-test") {
     ":src",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/predicates",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
   ]
 }
 

@@ -6,15 +6,16 @@
 #include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
 
-#include <zxtest/cpp/zxtest.h>
-#include <zxtest/zxtest.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
+#include "src/lib/testing/predicates/status.h"
 #include "test_util.h"
 
 namespace network {
 namespace testing {
 
-class MacDeviceTest : public zxtest::Test {
+class MacDeviceTest : public ::testing::Test {
  public:
   void SetUp() override {
     // enable full tracing for tests, easier to debug problems.
@@ -47,10 +48,10 @@ class MacDeviceTest : public zxtest::Test {
     return device.status_value();
   }
 
-  fit::result<fidl::WireSyncClient<netdev::MacAddressing>, zx_status_t> OpenInstance() {
-    auto endpoints = fidl::CreateEndpoints<netdev::MacAddressing>();
+  zx::status<fidl::WireSyncClient<netdev::MacAddressing>> OpenInstance() {
+    zx::status endpoints = fidl::CreateEndpoints<netdev::MacAddressing>();
     if (endpoints.is_error()) {
-      return fit::error(endpoints.status_value());
+      return endpoints.take_error();
     }
     auto [client_end, server_end] = std::move(*endpoints);
     // Create the loop with a test thread lazily.
@@ -58,14 +59,14 @@ class MacDeviceTest : public zxtest::Test {
       loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNeverAttachToThread);
       zx_status_t status = loop_->StartThread("test-thread", nullptr);
       if (status != ZX_OK) {
-        return fit::error(status);
+        return zx::error(status);
       }
     }
     zx_status_t status = device_->Bind(loop_->dispatcher(), std::move(server_end));
     if (status != ZX_OK) {
-      return fit::error(status);
+      return zx::error(status);
     }
-    return fit::ok(fidl::BindSyncClient(std::move(client_end)));
+    return zx::ok(fidl::BindSyncClient(std::move(client_end)));
   }
 
  protected:
@@ -77,27 +78,30 @@ class MacDeviceTest : public zxtest::Test {
   std::unique_ptr<MacAddrDeviceInterface> device_;
 };
 
+MATCHER_P(MacEq, value, "") {
+  return std::equal(arg.octets.begin(), arg.octets.end(), value.octets.begin(), value.octets.end());
+}
+
 TEST_F(MacDeviceTest, GetAddress) {
   ASSERT_OK(CreateDevice());
-  auto open_result = OpenInstance();
-  ASSERT_TRUE(open_result.is_ok(), "OpenInstance failed: %s",
-              zx_status_get_string(open_result.error()));
-  auto client = open_result.take_value();
-  auto result = client.GetUnicastAddress();
-  ASSERT_TRUE(result.ok());
-  ASSERT_BYTES_EQ(result.value().address.octets.data(), impl_.mac(), MAC_SIZE);
+  zx::status open_result = OpenInstance();
+  ASSERT_OK(open_result.status_value());
+  fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
+  fidl::WireResult result = client.GetUnicastAddress();
+  ASSERT_OK(result.status());
+  ASSERT_THAT(result.value().address, MacEq(impl_.mac()));
 }
 
 TEST_F(MacDeviceTest, UnrecognizedMode) {
   // set some arbitrary not supported mode:
   impl_.features().supported_modes |= (1u << 31u);
-  ASSERT_EQ(CreateDevice(), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_STATUS(CreateDevice(), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(MacDeviceTest, EmptyMode) {
   // set an empty set for supported modes
   impl_.features().supported_modes = 0;
-  ASSERT_EQ(CreateDevice(), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_STATUS(CreateDevice(), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(MacDeviceTest, StartupModeFilter) {
@@ -120,26 +124,24 @@ TEST_F(MacDeviceTest, StartupModePromiscuous) {
 TEST_F(MacDeviceTest, SetBadMode) {
   impl_.features().supported_modes = MODE_MULTICAST_FILTER;
   ASSERT_OK(CreateDevice());
-  auto open_result = OpenInstance();
-  ASSERT_TRUE(open_result.is_ok(), "OpenInstance failed: %s",
-              zx_status_get_string(open_result.error()));
-  auto client = open_result.take_value();
+  zx::status open_result = OpenInstance();
+  ASSERT_OK(open_result.status_value());
+  fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
-  auto result = client.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
-  ASSERT_TRUE(result.ok());
-  ASSERT_EQ(result.value().status, ZX_ERR_NOT_SUPPORTED);
+  fidl::WireResult result = client.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
+  ASSERT_OK(result.status());
+  ASSERT_STATUS(result.value().status, ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(MacDeviceTest, SetPromiscuous) {
   ASSERT_OK(CreateDevice());
-  auto open_result = OpenInstance();
-  ASSERT_TRUE(open_result.is_ok(), "OpenInstance failed: %s",
-              zx_status_get_string(open_result.error()));
-  auto client = open_result.take_value();
+  zx::status open_result = OpenInstance();
+  ASSERT_OK(open_result.status_value());
+  fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
-  auto result = client.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
-  ASSERT_TRUE(result.ok());
-  ASSERT_EQ(result.value().status, ZX_OK);
+  fidl::WireResult result = client.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
+  ASSERT_OK(result.status());
+  ASSERT_OK(result.value().status);
   ASSERT_OK(impl_.WaitConfigurationChanged());
   ASSERT_EQ(impl_.mode(), MODE_PROMISCUOUS);
   ASSERT_TRUE(impl_.addresses().empty());
@@ -147,13 +149,12 @@ TEST_F(MacDeviceTest, SetPromiscuous) {
 
 TEST_F(MacDeviceTest, SetMulticastPromiscuous) {
   ASSERT_OK(CreateDevice());
-  auto open_result = OpenInstance();
-  ASSERT_TRUE(open_result.is_ok(), "OpenInstance failed: %s",
-              zx_status_get_string(open_result.error()));
-  auto client = open_result.take_value();
+  zx::status open_result = OpenInstance();
+  ASSERT_OK(open_result.status_value());
+  fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
-  auto result = client.SetMode(netdev::wire::MacFilterMode::kMulticastPromiscuous);
-  ASSERT_TRUE(result.ok());
+  fidl::WireResult result = client.SetMode(netdev::wire::MacFilterMode::kMulticastPromiscuous);
+  ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
   ASSERT_OK(impl_.WaitConfigurationChanged());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_PROMISCUOUS);
@@ -162,42 +163,46 @@ TEST_F(MacDeviceTest, SetMulticastPromiscuous) {
 
 TEST_F(MacDeviceTest, InvalidMulticastAddress) {
   ASSERT_OK(CreateDevice());
-  auto open_result = OpenInstance();
-  ASSERT_TRUE(open_result.is_ok(), "OpenInstance failed: %s",
-              zx_status_get_string(open_result.error()));
-  auto client = open_result.take_value();
+  zx::status open_result = OpenInstance();
+  ASSERT_OK(open_result.status_value());
+  fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
   MacAddress addr{{0x00, 0x01, 0x02, 0x03, 0x04, 0x05}};
-  auto add = client.AddMulticastAddress(addr);
-  ASSERT_TRUE(add.ok());
-  ASSERT_EQ(add.value().status, ZX_ERR_INVALID_ARGS);
+  fidl::WireResult add = client.AddMulticastAddress(addr);
+  ASSERT_OK(add.status());
+  ASSERT_STATUS(add.value().status, ZX_ERR_INVALID_ARGS);
 
   // same thing should happen for RemoveMulticastAddress:
-  auto remove = client.RemoveMulticastAddress(addr);
-  ASSERT_TRUE(remove.ok());
-  ASSERT_EQ(remove.value().status, ZX_ERR_INVALID_ARGS);
+  fidl::WireResult remove = client.RemoveMulticastAddress(addr);
+  ASSERT_OK(remove.status());
+  ASSERT_STATUS(remove.value().status, ZX_ERR_INVALID_ARGS);
+}
+
+MATCHER(MacEq, "") {
+  auto [left, right] = arg;
+
+  return std::equal(left.octets.begin(), left.octets.end(), right.octets.begin(),
+                    right.octets.end());
 }
 
 TEST_F(MacDeviceTest, AddRemoveMulticastFilter) {
   ASSERT_OK(CreateDevice());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
 
-  auto open_result = OpenInstance();
-  ASSERT_TRUE(open_result.is_ok(), "OpenInstance failed: %s",
-              zx_status_get_string(open_result.error()));
-  auto client = open_result.take_value();
+  zx::status open_result = OpenInstance();
+  ASSERT_OK(open_result.status_value());
+  fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
   MacAddress addr{{0x01, 0x01, 0x02, 0x03, 0x04, 0x05}};
-  auto add = client.AddMulticastAddress(addr);
-  ASSERT_TRUE(add.ok());
+  fidl::WireResult add = client.AddMulticastAddress(addr);
+  ASSERT_OK(add.status());
   ASSERT_OK(add.value().status);
   ASSERT_OK(impl_.WaitConfigurationChanged());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
-  ASSERT_EQ(impl_.addresses().size(), 1ul);
-  ASSERT_BYTES_EQ(impl_.addresses()[0].octets.data(), addr.octets.data(), MAC_SIZE);
+  ASSERT_THAT(impl_.addresses(), ::testing::Pointwise(MacEq(), {addr}));
 
-  auto remove = client.RemoveMulticastAddress(addr);
-  ASSERT_TRUE(remove.ok());
+  fidl::WireResult remove = client.RemoveMulticastAddress(addr);
+  ASSERT_OK(remove.status());
   ASSERT_OK(impl_.WaitConfigurationChanged());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
   ASSERT_TRUE(impl_.addresses().empty());
@@ -207,15 +212,14 @@ TEST_F(MacDeviceTest, OverflowsIntoMulticastPromiscuous) {
   ASSERT_OK(CreateDevice());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
 
-  auto open_result = OpenInstance();
-  ASSERT_TRUE(open_result.is_ok(), "OpenInstance failed: %s",
-              zx_status_get_string(open_result.error()));
-  auto client = open_result.take_value();
+  zx::status open_result = OpenInstance();
+  ASSERT_OK(open_result.status_value());
+  fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
   for (size_t i = 0; i < impl_.features().multicast_filter_count + 1; i++) {
     MacAddress addr{{0x01, 0x00, 0x00, 0x00, 0x00, static_cast<unsigned char>(i)}};
-    auto result = client.AddMulticastAddress(addr);
-    ASSERT_TRUE(result.ok());
+    fidl::WireResult result = client.AddMulticastAddress(addr);
+    ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
     ASSERT_OK(impl_.WaitConfigurationChanged());
   }
@@ -227,28 +231,26 @@ TEST_F(MacDeviceTest, MostPermissiveClientWins) {
   ASSERT_OK(CreateDevice());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
 
-  auto open_result = OpenInstance();
-  ASSERT_TRUE(open_result.is_ok(), "OpenInstance failed: %s",
-              zx_status_get_string(open_result.error()));
-  auto cli1 = open_result.take_value();
+  zx::status open_result1 = OpenInstance();
+  ASSERT_OK(open_result1.status_value());
+  fidl::WireSyncClient<netdev::MacAddressing>& cli1 = open_result1.value();
 
-  open_result = OpenInstance();
-  ASSERT_TRUE(open_result.is_ok(), "OpenInstance failed: %s",
-              zx_status_get_string(open_result.error()));
-  auto cli2 = open_result.take_value();
+  zx::status open_result2 = OpenInstance();
+  ASSERT_OK(open_result2.status_value());
+  fidl::WireSyncClient<netdev::MacAddressing>& cli2 = open_result2.value();
 
   MacAddress addr{{0x01, 0x00, 0x00, 0x00, 0x00, 0x02}};
   {
-    auto result = cli1.AddMulticastAddress(addr);
-    ASSERT_TRUE(result.ok());
+    fidl::WireResult result = cli1.AddMulticastAddress(addr);
+    ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
     ASSERT_OK(impl_.WaitConfigurationChanged());
     ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
     ASSERT_EQ(impl_.addresses().size(), 1ul);
   }
   {
-    auto result = cli2.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
-    ASSERT_TRUE(result.ok());
+    fidl::WireResult result = cli2.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
+    ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
     ASSERT_OK(impl_.WaitConfigurationChanged());
     ASSERT_EQ(impl_.mode(), MODE_PROMISCUOUS);
@@ -265,13 +267,12 @@ TEST_F(MacDeviceTest, FallsBackToDefaultMode) {
   ASSERT_OK(CreateDevice());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
 
-  auto open_result = OpenInstance();
-  ASSERT_TRUE(open_result.is_ok(), "OpenInstance failed: %s",
-              zx_status_get_string(open_result.error()));
-  auto client = open_result.take_value();
+  zx::status open_result = OpenInstance();
+  ASSERT_OK(open_result.status_value());
+  fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
-  auto result = client.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
-  ASSERT_TRUE(result.ok());
+  fidl::WireResult result = client.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
+  ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
   ASSERT_OK(impl_.WaitConfigurationChanged());
   ASSERT_EQ(impl_.mode(), MODE_PROMISCUOUS);

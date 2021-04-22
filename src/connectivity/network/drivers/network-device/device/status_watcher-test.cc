@@ -12,7 +12,9 @@
 #include <thread>
 
 #include <fbl/mutex.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
+
+#include "src/lib/testing/predicates/status.h"
 
 namespace network {
 namespace testing {
@@ -24,10 +26,10 @@ constexpr StatusFlags kStatusOnline = StatusFlags::kOnline;
 constexpr StatusFlags kStatusOffline = StatusFlags();
 
 status_t MakeStatus(StatusFlags status_flags, uint32_t mtu) {
-  status_t ret;
-  ret.flags = static_cast<uint32_t>(status_flags);
-  ret.mtu = mtu;
-  return ret;
+  return {
+      .mtu = mtu,
+      .flags = static_cast<uint32_t>(status_flags),
+  };
 }
 
 class ObservedStatus {
@@ -48,11 +50,18 @@ class WatchClient {
  public:
   static constexpr uint32_t kEvent = ZX_USER_SIGNAL_0;
 
-  explicit WatchClient(fidl::ClientEnd<netdev::StatusWatcher> chan)
-      : channel_(std::move(chan)), running_(true) {
-    ASSERT_OK(zx::event::create(0, &event_));
+  WatchClient(const WatchClient&) = delete;
+  WatchClient(WatchClient&&) = delete;
 
-    thread_ = std::thread([this]() { Thread(); });
+  static zx::status<std::unique_ptr<WatchClient>> Create(
+      fidl::ClientEnd<netdev::StatusWatcher> client_end) {
+    zx::event event;
+    if (zx_status_t status = zx::event::create(0, &event); status != ZX_OK) {
+      return zx::error(status);
+    }
+    std::unique_ptr ptr =
+        std::unique_ptr<WatchClient>(new WatchClient(std::move(client_end), std::move(event)));
+    return zx::ok(std::move(ptr));
   }
 
   ~WatchClient() {
@@ -77,7 +86,7 @@ class WatchClient {
   }
 
   void NoEvents(zx::duration duration) {
-    ASSERT_EQ(event_.wait_one(kEvent, zx::deadline_after(duration), nullptr), ZX_ERR_TIMED_OUT);
+    ASSERT_STATUS(event_.wait_one(kEvent, zx::deadline_after(duration), nullptr), ZX_ERR_TIMED_OUT);
   }
 
   void WaitForEventCount(size_t count) {
@@ -93,9 +102,14 @@ class WatchClient {
   }
 
  private:
+  explicit WatchClient(fidl::ClientEnd<netdev::StatusWatcher> client_end, zx::event event)
+      : channel_(std::move(client_end)), event_(std::move(event)) {
+    thread_ = std::thread([this]() { Thread(); });
+  }
+
   void Thread() {
     for (;;) {
-      auto result = channel_.WatchStatus();
+      fidl::WireResult result = channel_.WatchStatus();
       {
         fbl::AutoLock lock(&lock_);
         event_.signal(0, kEvent);
@@ -117,10 +131,10 @@ class WatchClient {
   zx::event event_;
   std::thread thread_;
   std::queue<ObservedStatus> observed_status_ __TA_GUARDED(lock_);
-  bool running_ __TA_GUARDED(lock_);
+  bool running_ __TA_GUARDED(lock_) = true;
 };
 
-class StatusWatcherTest : public zxtest::Test {
+class StatusWatcherTest : public ::testing::Test {
  public:
   StatusWatcherTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
@@ -156,10 +170,11 @@ class StatusWatcherTest : public zxtest::Test {
  protected:
   // Creates a watcher and returns an unowned pointer to it for interaction.
   // The test fixture will destroy the created watcher objects when they are unbound.
-  StatusWatcher* MakeWatcher(fidl::ServerEnd<netdev::StatusWatcher> channel, uint32_t buffers,
-                             fit::callback<void(StatusWatcher*)> on_closed = nullptr) {
+  zx::status<StatusWatcher*> MakeWatcher(fidl::ServerEnd<netdev::StatusWatcher> channel,
+                                         uint32_t buffers,
+                                         fit::callback<void(StatusWatcher*)> on_closed = nullptr) {
     fbl::AutoLock lock(&lock_);
-    auto watcher = std::make_unique<StatusWatcher>(buffers);
+    std::unique_ptr watcher = std::make_unique<StatusWatcher>(buffers);
     zx_status_t status = watcher->Bind(
         loop_.dispatcher(), std::move(channel),
         [this, callback = std::move(on_closed)](StatusWatcher* closed_watcher) mutable {
@@ -173,116 +188,130 @@ class StatusWatcherTest : public zxtest::Test {
           }
         });
     if (status != ZX_OK) {
-      ADD_FATAL_FAILURE("Failed to bind watcher: %s", zx_status_get_string(status));
+      return zx::error(status);
     }
-    auto* unowned = watcher.get();
+    StatusWatcher* unowned = watcher.get();
     watchers_.push_back(std::move(watcher));
-    return unowned;
+    return zx::ok(unowned);
   }
 
   async::Loop loop_;
   fbl::Mutex lock_;
   fbl::DoublyLinkedList<std::unique_ptr<StatusWatcher>> watchers_ __TA_GUARDED(lock_);
-  sync_completion_t* teardown_completion_ __TA_GUARDED(lock_);
+  sync_completion_t* teardown_completion_ __TA_GUARDED(lock_) = nullptr;
 };
 
 TEST_F(StatusWatcherTest, HangsForStatus) {
-  auto endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);
-  WatchClient cli(std::move(ch));
-  ASSERT_NO_FATAL_FAILURES();
-  StatusWatcher* watcher;
-  ASSERT_NO_FATAL_FAILURES(watcher = MakeWatcher(std::move(req), 2));
+  zx::status watch_client_creation = WatchClient::Create(std::move(ch));
+  ASSERT_OK(watch_client_creation.status_value());
+  WatchClient& cli = *watch_client_creation.value();
   // ensure that the client is hanging waiting for a new status observation.
-  ASSERT_NO_FATAL_FAILURES(cli.NoEvents(zx::msec(10)));
+  ASSERT_NO_FATAL_FAILURE(cli.NoEvents(zx::msec(10)));
   for (int i = 0; i < 100; i++) {
     ASSERT_FALSE(cli.PopObserved().has_value());
   }
 }
 
 TEST_F(StatusWatcherTest, SingleStatus) {
-  auto endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);
-  WatchClient cli(std::move(ch));
-  ASSERT_NO_FATAL_FAILURES();
-  StatusWatcher* watcher;
-  ASSERT_NO_FATAL_FAILURES(watcher = MakeWatcher(std::move(req), 1));
+  zx::status watch_client_creation = WatchClient::Create(std::move(ch));
+  ASSERT_OK(watch_client_creation.status_value());
+  WatchClient& cli = *watch_client_creation.value();
+  zx::status watcher_creation = MakeWatcher(std::move(req), 1);
+  ASSERT_OK(watcher_creation.status_value());
+  StatusWatcher* watcher = watcher_creation.value();
   watcher->PushStatus(MakeStatus(kStatusOnline, 100));
   cli.WaitForEventAndReset();
-  auto opt = cli.PopObserved();
+  std::optional opt = cli.PopObserved();
   ASSERT_TRUE(opt.has_value());
-  auto status = opt.value();
-  ASSERT_EQ(status.mtu(), 100);
+  ObservedStatus status = opt.value();
+  ASSERT_EQ(status.mtu(), 100u);
   ASSERT_TRUE(status.flags() & StatusFlags::kOnline);
 }
 
 TEST_F(StatusWatcherTest, QueuesStatus) {
-  auto endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);
-  StatusWatcher* watcher;
-  ASSERT_NO_FATAL_FAILURES(watcher = MakeWatcher(std::move(req), 3));
+  zx::status watcher_creation = MakeWatcher(std::move(req), 3);
+  ASSERT_OK(watcher_creation.status_value());
+  StatusWatcher* watcher = watcher_creation.value();
   watcher->PushStatus(MakeStatus(kStatusOnline, 100));
   watcher->PushStatus(MakeStatus(kStatusOnline, 200));
   watcher->PushStatus(MakeStatus(kStatusOnline, 300));
-  WatchClient cli(std::move(ch));
-  ASSERT_NO_FATAL_FAILURES();
+  zx::status watch_client_creation = WatchClient::Create(std::move(ch));
+  ASSERT_OK(watch_client_creation.status_value());
+  WatchClient& cli = *watch_client_creation.value();
   cli.WaitForEventCount(3);
-  auto opt = cli.PopObserved();
-  ASSERT_TRUE(opt.has_value());
-  auto status = opt.value();
-  EXPECT_EQ(status.mtu(), 100);
-  EXPECT_TRUE(status.flags() & StatusFlags::kOnline);
-  opt = cli.PopObserved();
-  ASSERT_TRUE(opt.has_value());
-  status = opt.value();
-  EXPECT_EQ(status.mtu(), 200);
-  EXPECT_TRUE(status.flags() & StatusFlags::kOnline);
-  opt = cli.PopObserved();
-  ASSERT_TRUE(opt.has_value());
-  status = opt.value();
-  EXPECT_EQ(status.mtu(), 300);
-  EXPECT_TRUE(status.flags() & StatusFlags::kOnline);
+  {
+    std::optional opt = cli.PopObserved();
+    ASSERT_TRUE(opt.has_value());
+    ObservedStatus status = opt.value();
+    EXPECT_EQ(status.mtu(), 100u);
+    EXPECT_TRUE(status.flags() & StatusFlags::kOnline);
+  }
+  {
+    std::optional opt = cli.PopObserved();
+    ASSERT_TRUE(opt.has_value());
+    ObservedStatus status = opt.value();
+    EXPECT_EQ(status.mtu(), 200u);
+    EXPECT_TRUE(status.flags() & StatusFlags::kOnline);
+  }
+  {
+    std::optional opt = cli.PopObserved();
+    ASSERT_TRUE(opt.has_value());
+    ObservedStatus status = opt.value();
+    EXPECT_EQ(status.mtu(), 300u);
+    EXPECT_TRUE(status.flags() & StatusFlags::kOnline);
+  }
 }
 
 TEST_F(StatusWatcherTest, DropsOldestStatus) {
-  auto endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);
-  StatusWatcher* watcher;
-  ASSERT_NO_FATAL_FAILURES(watcher = MakeWatcher(std::move(req), 2));
+  zx::status watcher_creation = MakeWatcher(std::move(req), 2);
+  ASSERT_OK(watcher_creation.status_value());
+  StatusWatcher* watcher = watcher_creation.value();
   watcher->PushStatus(MakeStatus(kStatusOnline, 100));
   watcher->PushStatus(MakeStatus(kStatusOnline, 200));
   watcher->PushStatus(MakeStatus(kStatusOnline, 300));
-  WatchClient cli(std::move(ch));
-  ASSERT_NO_FATAL_FAILURES();
+  zx::status watch_client_creation = WatchClient::Create(std::move(ch));
+  ASSERT_OK(watch_client_creation.status_value());
+  WatchClient& cli = *watch_client_creation.value();
   cli.WaitForEventCount(2);
-  auto opt = cli.PopObserved();
-  ASSERT_TRUE(opt.has_value());
-  auto status = opt.value();
-  ASSERT_EQ(status.mtu(), 200);
-  ASSERT_TRUE(status.flags() & StatusFlags::kOnline);
-  opt = cli.PopObserved();
-  ASSERT_TRUE(opt.has_value());
-  status = opt.value();
-  ASSERT_EQ(status.mtu(), 300);
-  ASSERT_TRUE(status.flags() & StatusFlags::kOnline);
-  ASSERT_FALSE(cli.PopObserved().has_value());
+  {
+    std::optional opt = cli.PopObserved();
+    ASSERT_TRUE(opt.has_value());
+    ObservedStatus status = opt.value();
+    ASSERT_EQ(status.mtu(), 200u);
+    ASSERT_TRUE(status.flags() & StatusFlags::kOnline);
+  }
+  {
+    std::optional opt = cli.PopObserved();
+    ASSERT_TRUE(opt.has_value());
+    ObservedStatus status = opt.value();
+    ASSERT_EQ(status.mtu(), 300u);
+    ASSERT_TRUE(status.flags() & StatusFlags::kOnline);
+    ASSERT_FALSE(cli.PopObserved().has_value());
+  }
 }
 
 TEST_F(StatusWatcherTest, CallsOnClosedCallback) {
-  auto endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);
 
-  StatusWatcher* watcher;
   sync_completion_t completion;
-  ASSERT_NO_FATAL_FAILURES(
-      watcher = MakeWatcher(std::move(req), 2, [&completion](StatusWatcher* watcher) {
-        sync_completion_signal(&completion);
-      }));
+  zx::status watcher_creation =
+      MakeWatcher(std::move(req), 2,
+                  [&completion](StatusWatcher* watcher) { sync_completion_signal(&completion); });
+  ASSERT_OK(watcher_creation.status_value());
 
   // close the channel:
   ch.reset();
@@ -292,59 +321,76 @@ TEST_F(StatusWatcherTest, CallsOnClosedCallback) {
 TEST_F(StatusWatcherTest, LockStepWatch) {
   // Tests that if everytime a status is pushed a waiter is already registered (no queuing ever
   // happens), StatusWatcher behaves appropriately.
-  auto endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);
-  StatusWatcher* watcher;
-  ASSERT_NO_FATAL_FAILURES(watcher = MakeWatcher(std::move(req), 2));
+  zx::status watcher_creation = MakeWatcher(std::move(req), 2);
+  ASSERT_OK(watcher_creation.status_value());
+  StatusWatcher* watcher = watcher_creation.value();
   // push an initial status
   watcher->PushStatus(MakeStatus(kStatusOnline, 100));
-  WatchClient cli(std::move(ch));
-  ASSERT_NO_FATAL_FAILURES();
+  zx::status watch_client_creation = WatchClient::Create(std::move(ch));
+  ASSERT_OK(watch_client_creation.status_value());
+  WatchClient& cli = *watch_client_creation.value();
   cli.WaitForEventAndReset();
-  auto evt = cli.PopObserved();
-  ASSERT_TRUE(evt.has_value());
-  EXPECT_TRUE(evt->flags() & StatusFlags::kOnline);
+  {
+    std::optional evt = cli.PopObserved();
+    ASSERT_TRUE(evt.has_value());
+    EXPECT_TRUE(evt->flags() & StatusFlags::kOnline);
+  }
   // wait for a bit to guarantee that WatchClient is hanging.
-  ASSERT_NO_FATAL_FAILURES(cli.NoEvents(zx::msec(10)));
+  ASSERT_NO_FATAL_FAILURE(cli.NoEvents(zx::msec(10)));
   watcher->PushStatus(MakeStatus(kStatusOffline, 100));
-  ASSERT_NO_FATAL_FAILURES(cli.WaitForEventAndReset());
-  evt = cli.PopObserved();
-  ASSERT_TRUE(evt.has_value());
-  EXPECT_FALSE(evt->flags() & StatusFlags::kOnline);
+  ASSERT_NO_FATAL_FAILURE(cli.WaitForEventAndReset());
+  {
+    std::optional evt = cli.PopObserved();
+    ASSERT_TRUE(evt.has_value());
+    EXPECT_FALSE(evt->flags() & StatusFlags::kOnline);
+  }
 
   // go again with status set to online.
-  ASSERT_NO_FATAL_FAILURES(cli.NoEvents(zx::msec(10)));
+  ASSERT_NO_FATAL_FAILURE(cli.NoEvents(zx::msec(10)));
   watcher->PushStatus(MakeStatus(kStatusOnline, 100));
-  ASSERT_NO_FATAL_FAILURES(cli.WaitForEventAndReset());
-  evt = cli.PopObserved();
-  ASSERT_TRUE(evt.has_value());
-  EXPECT_TRUE(evt->flags() & StatusFlags::kOnline);
+  ASSERT_NO_FATAL_FAILURE(cli.WaitForEventAndReset());
+  {
+    std::optional evt = cli.PopObserved();
+    ASSERT_TRUE(evt.has_value());
+    EXPECT_TRUE(evt->flags() & StatusFlags::kOnline);
+  }
 }
 
 TEST_F(StatusWatcherTest, IgnoresDuplicateStatus) {
   // Tests that if PushStatus is called twice with the same status, only one event is generated.
-  auto endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);
-  StatusWatcher* watcher;
-  ASSERT_NO_FATAL_FAILURES(watcher = MakeWatcher(std::move(req), 2));
+  zx::status watcher_creation = MakeWatcher(std::move(req), 2);
+  ASSERT_OK(watcher_creation.status_value());
+  StatusWatcher* watcher = watcher_creation.value();
   // push an initial status twice
   watcher->PushStatus(MakeStatus(kStatusOnline, 100));
   watcher->PushStatus(MakeStatus(kStatusOnline, 100));
-  WatchClient cli(std::move(ch));
-  ASSERT_NO_FATAL_FAILURES();
+  zx::status watch_client_creation = WatchClient::Create(std::move(ch));
+  ASSERT_OK(watch_client_creation.status_value());
+  WatchClient& cli = *watch_client_creation.value();
   cli.WaitForEventAndReset();
-  auto evt = cli.PopObserved();
+
+  {
+    std::optional evt = cli.PopObserved();
+    ASSERT_TRUE(evt.has_value());
+    EXPECT_TRUE(evt->flags() & StatusFlags::kOnline);
+  }
 
   // wait for a bit to guarantee that WatchClient is hanging.
-  ASSERT_NO_FATAL_FAILURES(cli.NoEvents(zx::msec(10)));
+  ASSERT_NO_FATAL_FAILURE(cli.NoEvents(zx::msec(10)));
   // push a different status.
   watcher->PushStatus(MakeStatus(kStatusOffline, 100));
-  ASSERT_NO_FATAL_FAILURES(cli.WaitForEventAndReset());
-  evt = cli.PopObserved();
-  ASSERT_TRUE(evt.has_value());
-  EXPECT_FALSE(evt->flags() & StatusFlags::kOnline);
+  ASSERT_NO_FATAL_FAILURE(cli.WaitForEventAndReset());
+  {
+    std::optional evt = cli.PopObserved();
+    ASSERT_TRUE(evt.has_value());
+    EXPECT_FALSE(evt->flags() & StatusFlags::kOnline);
+  }
 }
 
 }  // namespace testing

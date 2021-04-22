@@ -7,11 +7,11 @@
 #include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
 
-#include <zxtest/cpp/zxtest.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "device_interface.h"
 #include "log.h"
+#include "src/lib/testing/predicates/status.h"
 #include "test_util.h"
 
 // Enable timeouts only to test things locally, committed code should not use timeouts.
@@ -28,7 +28,7 @@ namespace testing {
 
 using netdev::wire::RxFlags;
 
-class NetworkDeviceTest : public zxtest::Test {
+class NetworkDeviceTest : public ::testing::Test {
  public:
   void SetUp() override {
     fx_logger_config_t log_cfg = {
@@ -92,7 +92,7 @@ class NetworkDeviceTest : public zxtest::Test {
   }
 
   fidl::WireSyncClient<netdev::Device> OpenConnection() {
-    auto endpoints = fidl::CreateEndpoints<netdev::Device>();
+    zx::status endpoints = fidl::CreateEndpoints<netdev::Device>();
     EXPECT_OK(endpoints.status_value());
     auto [client_end, server_end] = std::move(*endpoints);
     EXPECT_OK(device_->Bind(std::move(server_end)));
@@ -121,7 +121,7 @@ class NetworkDeviceTest : public zxtest::Test {
     session_name[strlen(session_name) - 1] = static_cast<char>('a' + session_counter_);
     session_counter_++;
 
-    auto connection = OpenConnection();
+    fidl::WireSyncClient connection = OpenConnection();
     return session->Open(connection, session_name, flags, num_descriptors, buffer_size,
                          std::move(frame_types));
   }
@@ -147,8 +147,8 @@ TEST_F(NetworkDeviceTest, GetInfo) {
   impl_.info().min_rx_buffer_length = 2048;
   impl_.info().min_tx_buffer_length = 60;
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
-  auto rsp = connection.GetInfo();
+  fidl::WireSyncClient connection = OpenConnection();
+  fidl::WireResult rsp = connection.GetInfo();
   ASSERT_OK(rsp.status());
   auto& info = rsp.value().info;
   EXPECT_EQ(info.tx_depth, impl_.info().tx_depth * 2);
@@ -192,7 +192,7 @@ TEST_F(NetworkDeviceTest, InvalidRxThreshold) {
 
 TEST_F(NetworkDeviceTest, OpenSession) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
   for (uint16_t i = 0; i < 16; i++) {
@@ -206,7 +206,7 @@ TEST_F(NetworkDeviceTest, OpenSession) {
 
 TEST_F(NetworkDeviceTest, RxBufferBuild) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
   session.SetPaused(false);
@@ -243,7 +243,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   // check first descriptor:
   auto rx = impl_.rx_buffers().pop_back();
   ASSERT_TRUE(rx);
-  ASSERT_EQ(rx->buff().data.parts_count, 1);
+  ASSERT_EQ(rx->buff().data.parts_count, 1u);
   ASSERT_EQ(rx->buff().data.parts_list[0].offset, session.descriptor(0)->offset);
   ASSERT_EQ(rx->buff().data.parts_list[0].length, kDefaultBufferLength);
   rx->return_buffer().total_length = 64;
@@ -252,7 +252,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   // check second descriptor:
   rx = impl_.rx_buffers().pop_back();
   ASSERT_TRUE(rx);
-  ASSERT_EQ(rx->buff().data.parts_count, 1);
+  ASSERT_EQ(rx->buff().data.parts_count, 1u);
   desc = session.descriptor(1);
   ASSERT_EQ(rx->buff().data.parts_list[0].offset, desc->offset + desc->head_length);
   ASSERT_EQ(rx->buff().data.parts_list[0].length,
@@ -263,7 +263,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   // check third descriptor:
   rx = impl_.rx_buffers().pop_back();
   ASSERT_TRUE(rx);
-  ASSERT_EQ(rx->buff().data.parts_count, 3);
+  ASSERT_EQ(rx->buff().data.parts_count, 3u);
   auto* d0 = session.descriptor(2);
   auto* d1 = session.descriptor(3);
   auto* d2 = session.descriptor(4);
@@ -285,55 +285,55 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   size_t read_back;
   ASSERT_OK(session.FetchRx(all_descs, kDescTests + 1, &read_back));
   ASSERT_EQ(read_back, kDescTests);
-  EXPECT_EQ(all_descs[0], 0);
-  EXPECT_EQ(all_descs[1], 1);
-  EXPECT_EQ(all_descs[2], 2);
+  EXPECT_EQ(all_descs[0], 0u);
+  EXPECT_EQ(all_descs[1], 1u);
+  EXPECT_EQ(all_descs[2], 2u);
   // finally check all the stuff that was returned:
   // check returned first descriptor:
   desc = session.descriptor(0);
   EXPECT_EQ(desc->offset, session.canonical_offset(0));
-  EXPECT_EQ(desc->chain_length, 0);
+  EXPECT_EQ(desc->chain_length, 0u);
   EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(RxFlags::kRxAccel0));
-  EXPECT_EQ(desc->head_length, 0);
-  EXPECT_EQ(desc->data_length, 64);
-  EXPECT_EQ(desc->tail_length, 0);
+  EXPECT_EQ(desc->head_length, 0u);
+  EXPECT_EQ(desc->data_length, 64u);
+  EXPECT_EQ(desc->tail_length, 0u);
   // check returned second descriptor:
   desc = session.descriptor(1);
   EXPECT_EQ(desc->offset, session.canonical_offset(1));
-  EXPECT_EQ(desc->chain_length, 0);
+  EXPECT_EQ(desc->chain_length, 0u);
   EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(RxFlags::kRxAccel1));
-  EXPECT_EQ(desc->head_length, 16);
-  EXPECT_EQ(desc->data_length, 15);
-  EXPECT_EQ(desc->tail_length, 32);
+  EXPECT_EQ(desc->head_length, 16u);
+  EXPECT_EQ(desc->data_length, 15u);
+  EXPECT_EQ(desc->tail_length, 32u);
   // check returned third descriptor and the chained ones:
   desc = session.descriptor(2);
   EXPECT_EQ(desc->offset, session.canonical_offset(2));
-  EXPECT_EQ(desc->chain_length, 2);
-  EXPECT_EQ(desc->nxt, 3);
+  EXPECT_EQ(desc->chain_length, 2u);
+  EXPECT_EQ(desc->nxt, 3u);
   EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(RxFlags::kRxAccel2));
-  EXPECT_EQ(desc->head_length, 0);
-  EXPECT_EQ(desc->data_length, 10);
-  EXPECT_EQ(desc->tail_length, 0);
+  EXPECT_EQ(desc->head_length, 0u);
+  EXPECT_EQ(desc->data_length, 10u);
+  EXPECT_EQ(desc->tail_length, 0u);
   desc = session.descriptor(3);
   EXPECT_EQ(desc->offset, session.canonical_offset(3));
-  EXPECT_EQ(desc->chain_length, 1);
-  EXPECT_EQ(desc->nxt, 4);
-  EXPECT_EQ(desc->inbound_flags, 0);
-  EXPECT_EQ(desc->head_length, 0);
-  EXPECT_EQ(desc->data_length, 15);
-  EXPECT_EQ(desc->tail_length, 0);
+  EXPECT_EQ(desc->chain_length, 1u);
+  EXPECT_EQ(desc->nxt, 4u);
+  EXPECT_EQ(desc->inbound_flags, 0u);
+  EXPECT_EQ(desc->head_length, 0u);
+  EXPECT_EQ(desc->data_length, 15u);
+  EXPECT_EQ(desc->tail_length, 0u);
   desc = session.descriptor(4);
   EXPECT_EQ(desc->offset, session.canonical_offset(4));
-  EXPECT_EQ(desc->chain_length, 0);
-  EXPECT_EQ(desc->inbound_flags, 0);
-  EXPECT_EQ(desc->head_length, 0);
-  EXPECT_EQ(desc->data_length, 0);
-  EXPECT_EQ(desc->tail_length, 0);
+  EXPECT_EQ(desc->chain_length, 0u);
+  EXPECT_EQ(desc->inbound_flags, 0u);
+  EXPECT_EQ(desc->head_length, 0u);
+  EXPECT_EQ(desc->data_length, 0u);
+  EXPECT_EQ(desc->tail_length, 0u);
 }
 
 TEST_F(NetworkDeviceTest, TxBufferBuild) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
   session.SetPaused(false);
@@ -368,14 +368,14 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   // load the buffers from the fake device implementation and check them.
   auto tx = impl_.tx_buffers().pop_front();
   ASSERT_TRUE(tx);
-  ASSERT_EQ(tx->buff().data.parts_count, 1);
+  ASSERT_EQ(tx->buff().data.parts_count, 1u);
   ASSERT_EQ(tx->buff().data.parts_list[0].offset, session.descriptor(0)->offset);
   ASSERT_EQ(tx->buff().data.parts_list[0].length, kDefaultBufferLength);
   return_session.Enqueue(std::move(tx));
   // check second descriptor:
   tx = impl_.tx_buffers().pop_front();
   ASSERT_TRUE(tx);
-  ASSERT_EQ(tx->buff().data.parts_count, 1);
+  ASSERT_EQ(tx->buff().data.parts_count, 1u);
   desc = session.descriptor(1);
   ASSERT_EQ(tx->buff().data.parts_list[0].offset, desc->offset + desc->head_length);
   ASSERT_EQ(tx->buff().data.parts_list[0].length,
@@ -385,7 +385,7 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   // check third descriptor:
   tx = impl_.tx_buffers().pop_front();
   ASSERT_TRUE(tx);
-  ASSERT_EQ(tx->buff().data.parts_count, 3);
+  ASSERT_EQ(tx->buff().data.parts_count, 3u);
   auto* d0 = session.descriptor(2);
   auto* d1 = session.descriptor(3);
   auto* d2 = session.descriptor(4);
@@ -406,12 +406,12 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
 
   ASSERT_OK(session.FetchTx(all_descs, kDescTests + 1, &read_back));
   ASSERT_EQ(read_back, kDescTests);
-  EXPECT_EQ(all_descs[0], 0);
-  EXPECT_EQ(all_descs[1], 1);
-  EXPECT_EQ(all_descs[2], 2);
+  EXPECT_EQ(all_descs[0], 0u);
+  EXPECT_EQ(all_descs[1], 1u);
+  EXPECT_EQ(all_descs[2], 2u);
   // check the status of the returned descriptors
   desc = session.descriptor(0);
-  EXPECT_EQ(desc->return_flags, 0);
+  EXPECT_EQ(desc->return_flags, 0u);
   desc = session.descriptor(1);
   EXPECT_EQ(desc->return_flags,
             static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
@@ -424,7 +424,7 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
 
 TEST_F(NetworkDeviceTest, SessionEpitaph) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
   ASSERT_OK(session.SetPaused(false));
@@ -446,7 +446,7 @@ TEST_F(NetworkDeviceTest, SessionEpitaph) {
 
 TEST_F(NetworkDeviceTest, SessionPauseUnpause) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   // pausing and unpausing the session makes the device start and stop:
   ASSERT_OK(OpenSession(&session));
@@ -462,7 +462,7 @@ TEST_F(NetworkDeviceTest, SessionPauseUnpause) {
 
 TEST_F(NetworkDeviceTest, TwoSessionsTx) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
   TestSession session_b;
@@ -506,10 +506,10 @@ TEST_F(NetworkDeviceTest, TwoSessionsTx) {
 
   uint16_t rd;
   ASSERT_OK(session_a.FetchTx(&rd));
-  ASSERT_EQ(rd, 0);
+  ASSERT_EQ(rd, 0u);
   ASSERT_OK(session_b.FetchTx(&rd));
-  ASSERT_EQ(rd, 1);
-  ASSERT_EQ(session_a.descriptor(0)->return_flags, 0);
+  ASSERT_EQ(rd, 1u);
+  ASSERT_EQ(session_a.descriptor(0)->return_flags, 0u);
   ASSERT_EQ(session_b.descriptor(1)->return_flags,
             static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
                                   netdev::wire::TxReturnFlags::kTxRetNotAvailable));
@@ -517,7 +517,7 @@ TEST_F(NetworkDeviceTest, TwoSessionsTx) {
 
 TEST_F(NetworkDeviceTest, TwoSessionsRx) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
   TestSession session_b;
@@ -570,7 +570,7 @@ TEST_F(NetworkDeviceTest, TwoSessionsRx) {
 
 TEST_F(NetworkDeviceTest, ListenSession) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
   TestSession session_b;
@@ -591,16 +591,17 @@ TEST_F(NetworkDeviceTest, ListenSession) {
 
   uint16_t desc_idx;
   ASSERT_OK(session_b.FetchRx(&desc_idx));
-  ASSERT_EQ(desc_idx, 0);
+  ASSERT_EQ(desc_idx, 0u);
   auto* desc = session_b.descriptor(0);
   ASSERT_EQ(desc->data_length, send_buff.size());
   auto* data = session_b.buffer(desc->offset);
-  ASSERT_BYTES_EQ(data, &send_buff.at(0), send_buff.size());
+  ASSERT_EQ(std::basic_string_view(data, send_buff.size()),
+            std::basic_string_view(send_buff.data(), send_buff.size()));
 }
 
 TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
   TestSession session_b;
@@ -635,14 +636,14 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
   /// ...and Session b should still receive the data.
   uint16_t desc;
   ASSERT_OK(session_b.FetchRx(&desc));
-  ASSERT_EQ(desc, 1);
-  ASSERT_EQ(session_b.descriptor(1)->data_length, 5);
+  ASSERT_EQ(desc, 1u);
+  ASSERT_EQ(session_b.descriptor(1)->data_length, 5u);
 }
 
 TEST_F(NetworkDeviceTest, DelayedStart) {
   ASSERT_OK(CreateDevice());
   impl_.set_auto_start(false);
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
   ASSERT_OK(session_a.SetPaused(false));
@@ -682,7 +683,7 @@ TEST_F(NetworkDeviceTest, DelayedStart) {
 TEST_F(NetworkDeviceTest, DelayedStop) {
   ASSERT_OK(CreateDevice());
   impl_.set_auto_stop(false);
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
   ASSERT_OK(session_a.SetPaused(false));
@@ -715,7 +716,7 @@ TEST_F(NetworkDeviceTest, DelayedStop) {
 
 TEST_F(NetworkDeviceTest, ReclaimBuffers) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
   ASSERT_OK(session_a.SetPaused(false));
@@ -726,8 +727,8 @@ TEST_F(NetworkDeviceTest, ReclaimBuffers) {
   ASSERT_OK(session_a.SendTx(1));
   ASSERT_OK(WaitTx());
   ASSERT_OK(WaitRxAvailable());
-  ASSERT_EQ(impl_.tx_buffers().size_slow(), 1);
-  ASSERT_EQ(impl_.rx_buffers().size_slow(), 1);
+  ASSERT_EQ(impl_.tx_buffers().size_slow(), 1u);
+  ASSERT_EQ(impl_.rx_buffers().size_slow(), 1u);
   ASSERT_OK(session_a.SetPaused(true));
   ASSERT_OK(WaitStop());
   impl_.tx_buffers().clear();
@@ -736,7 +737,7 @@ TEST_F(NetworkDeviceTest, ReclaimBuffers) {
   // check that the tx buffer was reclaimed
   uint16_t desc;
   ASSERT_OK(session_a.FetchTx(&desc));
-  ASSERT_EQ(desc, 1);
+  ASSERT_EQ(desc, 1u);
   // check that the return flags reflect the error
   ASSERT_EQ(session_a.descriptor(1)->return_flags,
             static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
@@ -746,12 +747,12 @@ TEST_F(NetworkDeviceTest, ReclaimBuffers) {
   ASSERT_OK(session_a.SetPaused(false));
   ASSERT_OK(WaitStart());
   ASSERT_OK(WaitRxAvailable());
-  ASSERT_EQ(impl_.rx_buffers().size_slow(), 1);
+  ASSERT_EQ(impl_.rx_buffers().size_slow(), 1u);
 }
 
 TEST_F(NetworkDeviceTest, Teardown) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
   ASSERT_OK(session_a.SetPaused(false));
@@ -771,7 +772,7 @@ TEST_F(NetworkDeviceTest, Teardown) {
 
 TEST_F(NetworkDeviceTest, TeardownWithReclaim) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
   ASSERT_OK(session_a.SetPaused(false));
@@ -782,8 +783,8 @@ TEST_F(NetworkDeviceTest, TeardownWithReclaim) {
   ASSERT_OK(session_a.SendTx(1));
   ASSERT_OK(WaitTx());
   ASSERT_OK(WaitRxAvailable());
-  ASSERT_EQ(impl_.tx_buffers().size_slow(), 1);
-  ASSERT_EQ(impl_.rx_buffers().size_slow(), 1);
+  ASSERT_EQ(impl_.tx_buffers().size_slow(), 1u);
+  ASSERT_EQ(impl_.rx_buffers().size_slow(), 1u);
 
   DiscardDeviceSync();
   session_a.WaitClosed(TEST_DEADLINE);
@@ -793,7 +794,7 @@ TEST_F(NetworkDeviceTest, TxHeadLength) {
   constexpr uint16_t kHeadLength = 16;
   impl_.info().tx_head_length = kHeadLength;
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
   ASSERT_OK(session.SetPaused(false));
@@ -809,7 +810,7 @@ TEST_F(NetworkDeviceTest, TxHeadLength) {
   uint16_t descs[] = {0, 1};
   size_t sent;
   ASSERT_OK(session.SendTx(descs, 2, &sent));
-  ASSERT_EQ(sent, 2);
+  ASSERT_EQ(sent, 2u);
   ASSERT_OK(WaitTx());
   auto buffs = impl_.tx_buffers().begin();
   std::vector<uint8_t> data;
@@ -818,13 +819,13 @@ TEST_F(NetworkDeviceTest, TxHeadLength) {
   // check first buffer
   ASSERT_EQ(buffs->buff().head_length, kHeadLength);
   ASSERT_OK(buffs->GetData(&data, vmo_provider));
-  ASSERT_EQ(data.size(), kHeadLength + 1);
+  ASSERT_EQ(data.size(), kHeadLength + 1u);
   ASSERT_EQ(data[kHeadLength], 0xAA);
   buffs++;
   // check second buffer
   ASSERT_EQ(buffs->buff().head_length, kHeadLength);
   ASSERT_OK(buffs->GetData(&data, vmo_provider));
-  ASSERT_EQ(data.size(), kHeadLength + 1);
+  ASSERT_EQ(data.size(), kHeadLength + 1u);
   ASSERT_EQ(data[kHeadLength], 0xBB);
   buffs++;
   ASSERT_EQ(buffs, impl_.tx_buffers().end());
@@ -832,7 +833,7 @@ TEST_F(NetworkDeviceTest, TxHeadLength) {
 
 TEST_F(NetworkDeviceTest, InvalidTxFrameType) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
   ASSERT_OK(session.SetPaused(false));
@@ -848,7 +849,7 @@ TEST_F(NetworkDeviceTest, InvalidTxFrameType) {
 
 TEST_F(NetworkDeviceTest, RxFrameTypeFilter) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
   ASSERT_OK(session.SetPaused(false));
@@ -870,14 +871,14 @@ TEST_F(NetworkDeviceTest, RxFrameTypeFilter) {
 TEST_F(NetworkDeviceTest, ObserveStatus) {
   using netdev::wire::StatusFlags;
   ASSERT_OK(CreateDevice());
-  auto endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [client_end, server_end] = std::move(*endpoints);
-  auto watcher = fidl::BindSyncClient(std::move(client_end));
-  ASSERT_TRUE(OpenConnection().GetStatusWatcher(std::move(server_end), 3).ok());
+  fidl::WireSyncClient watcher = fidl::BindSyncClient(std::move(client_end));
+  ASSERT_OK(OpenConnection().GetStatusWatcher(std::move(server_end), 3).status());
   {
-    auto result = watcher.WatchStatus();
-    ASSERT_TRUE(result.ok());
+    fidl::WireResult result = watcher.WatchStatus();
+    ASSERT_OK(result.status());
     ASSERT_EQ(result.value().device_status.mtu(), impl_.status().mtu);
     ASSERT_TRUE(result.value().device_status.flags() & StatusFlags::kOnline);
   }
@@ -885,14 +886,14 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
   impl_.SetOnline(false);
   impl_.SetOnline(true);
   {
-    auto result = watcher.WatchStatus();
-    ASSERT_TRUE(result.ok());
+    fidl::WireResult result = watcher.WatchStatus();
+    ASSERT_OK(result.status());
     ASSERT_EQ(result.value().device_status.mtu(), impl_.status().mtu);
     ASSERT_FALSE(result.value().device_status.flags() & StatusFlags::kOnline);
   }
   {
-    auto result = watcher.WatchStatus();
-    ASSERT_TRUE(result.ok());
+    fidl::WireResult result = watcher.WatchStatus();
+    ASSERT_OK(result.status());
     ASSERT_EQ(result.value().device_status.mtu(), impl_.status().mtu);
     ASSERT_TRUE(result.value().device_status.flags() & StatusFlags::kOnline);
   }
@@ -907,7 +908,7 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
 TEST_F(NetworkDeviceTest, ReturnTxInline) {
   impl_.set_auto_return_tx(true);
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
   ASSERT_OK(session.SetPaused(false));
@@ -923,7 +924,7 @@ TEST_F(NetworkDeviceTest, ReturnTxInline) {
 // Test that opening a session with unknown Rx types will fail.
 TEST_F(NetworkDeviceTest, RejectsInvalidRxTypes) {
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   auto frame_type = netdev::wire::FrameType::kIpv4;
   ASSERT_STATUS(
@@ -954,14 +955,14 @@ TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
 
   const auto& session = dev->sessions_unsafe().front();
 
-  ASSERT_STR_EQ("hello", session.name());
+  ASSERT_STREQ("hello", session.name());
 }
 
 TEST_F(NetworkDeviceTest, RejectsSmallRxBuffers) {
   constexpr uint32_t kMinRxLength = 60;
   impl_.info().min_rx_buffer_length = kMinRxLength;
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
   ASSERT_OK(session.SetPaused(false));
@@ -979,7 +980,7 @@ TEST_F(NetworkDeviceTest, RejectsSmallTxBuffers) {
   constexpr uint32_t kMinTxLength = 60;
   impl_.info().min_tx_buffer_length = kMinTxLength;
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
   ASSERT_OK(session.SetPaused(false));
@@ -996,7 +997,7 @@ TEST_F(NetworkDeviceTest, RejectsSmallTxBuffers) {
 TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
   constexpr uint64_t kReturnBufferSize = 1;
   ASSERT_OK(CreateDevice());
-  auto connection = OpenConnection();
+  fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   uint16_t descriptor_count = impl_.info().rx_depth * 2;
   ASSERT_OK(OpenSession(&session, netdev::wire::SessionFlags::kPrimary, descriptor_count));
@@ -1019,7 +1020,7 @@ TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
   for (uint16_t i = 0; i < half_depth; i++) {
     ASSERT_OK(session.SendRx(descriptors[i]));
     ASSERT_OK(WaitRxAvailable());
-    ASSERT_EQ(impl_.rx_buffers().size_slow(), i + 1);
+    ASSERT_EQ(impl_.rx_buffers().size_slow(), i + 1u);
   }
   // Send the rest of the buffers.
   size_t actual;
@@ -1035,7 +1036,8 @@ TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
     return_session.EnqueueWithSize(impl_.rx_buffers().pop_front(), kReturnBufferSize);
     return_session.Commit();
     // Check that no more buffers are enqueued.
-    ASSERT_STATUS(WaitRxAvailable(zx::time::infinite_past()), ZX_ERR_TIMED_OUT, "remaining=%d", i);
+    ASSERT_STATUS(WaitRxAvailable(zx::time::infinite_past()), ZX_ERR_TIMED_OUT)
+        << "remaining=" << i;
   }
   // Check again with some time slack for the last buffer.
   ASSERT_STATUS(WaitRxAvailable(zx::deadline_after(zx::msec(10))), ZX_ERR_TIMED_OUT);
@@ -1058,30 +1060,29 @@ TEST_F(NetworkDeviceTest, RxQueueIdlesOnPausedSession) {
 
   sync_completion_t completion;
 
-  auto get_next_key = [&observed_key,
-                       &completion](zx::duration timeout) -> fit::result<uint64_t, zx_status_t> {
+  auto get_next_key = [&observed_key, &completion](zx::duration timeout) -> zx::status<uint64_t> {
     zx_status_t status = sync_completion_wait(&completion, timeout.get());
     fbl::AutoLock l(&observed_key.lock);
+    std::optional k = observed_key.key;
     if (status != ZX_OK) {
       // Whenever wait fails, key must not have a value.
-      auto k = observed_key.key;
-      EXPECT_FALSE(k.has_value(), "unexpected observed key value %ld", *k);
-      return fit::error(status);
+      EXPECT_EQ(k, std::nullopt);
+      return zx::error(status);
     }
     sync_completion_reset(&completion);
-    if (!observed_key.key.has_value()) {
-      return fit::error(ZX_ERR_BAD_STATE);
+    if (!k.has_value()) {
+      return zx::error(ZX_ERR_BAD_STATE);
     }
-    auto key = *observed_key.key;
+    uint64_t key = *k;
     observed_key.key.reset();
-    return fit::ok(key);
+    return zx::ok(key);
   };
 
   auto* dev_iface = static_cast<internal::DeviceInterface*>(device_.get());
   dev_iface->evt_rx_queue_packet = [&observed_key, &completion](uint64_t key) {
     fbl::AutoLock l(&observed_key.lock);
-    auto k = observed_key.key;
-    EXPECT_FALSE(k.has_value(), "expected empty observed key, got %ld", *k);
+    std::optional k = observed_key.key;
+    EXPECT_EQ(k, std::nullopt);
     observed_key.key = key;
     sync_completion_signal(&completion);
   };
@@ -1093,22 +1094,29 @@ TEST_F(NetworkDeviceTest, RxQueueIdlesOnPausedSession) {
   TestSession session;
   ASSERT_OK(OpenSession(&session));
 
-  auto key = get_next_key(zx::duration::infinite());
-  ASSERT_TRUE(key.is_ok(), "failed to get next key: %s", zx_status_get_string(key.error()));
-  ASSERT_EQ(key.value(), internal::RxQueue::kSessionSwitchKey);
+  {
+    zx::status key = get_next_key(zx::duration::infinite());
+    ASSERT_OK(key.status_value());
+    ASSERT_EQ(key.value(), internal::RxQueue::kSessionSwitchKey);
+  }
+
   session.ResetDescriptor(0);
   // Make the FIFO readable.
   ASSERT_OK(session.SendRx(0));
   // It should not trigger any RxQueue events.
-  key = get_next_key(zx::msec(50));
-  ASSERT_TRUE(key.is_error(), "unexpected key value %ld", key.value());
-  ASSERT_STATUS(key.error(), ZX_ERR_TIMED_OUT);
+  {
+    zx::status key = get_next_key(zx::msec(50));
+    ASSERT_TRUE(key.is_error()) << "unexpected key value " << key.value();
+    ASSERT_STATUS(key.status_value(), ZX_ERR_TIMED_OUT);
+  }
 
   // Kill the session and check that we see a session switch again.
   ASSERT_OK(session.Close());
-  key = get_next_key(zx::duration::infinite());
-  ASSERT_TRUE(key.is_ok(), "failed to get next key: %s", zx_status_get_string(key.error()));
-  ASSERT_EQ(key.value(), internal::RxQueue::kSessionSwitchKey);
+  {
+    zx::status key = get_next_key(zx::duration::infinite());
+    ASSERT_OK(key.status_value());
+    ASSERT_EQ(key.value(), internal::RxQueue::kSessionSwitchKey);
+  }
 }
 
 }  // namespace testing

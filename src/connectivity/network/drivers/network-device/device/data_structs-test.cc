@@ -7,12 +7,9 @@
 #include <sstream>
 #include <vector>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
-template <>
-fbl::String zxtest::PrintValue(const network::internal::IndexedSlab<uint64_t>::Iterator& value) {
-  return fbl::StringPrintf("Iterator<%d>", *value);
-}
+#include "src/lib/testing/predicates/status.h"
 
 namespace network {
 namespace testing {
@@ -25,16 +22,16 @@ TEST(DataStructsTest, RingQueue) {
   zx::status queue_creation = RingQueue::Create(kCapacity);
   ASSERT_OK(queue_creation.status_value());
   std::unique_ptr queue = std::move(queue_creation.value());
-  ASSERT_EQ(queue->count(), 0);
+  ASSERT_EQ(queue->count(), 0u);
   queue->Push(1);
   queue->Push(2);
   queue->Push(3);
-  ASSERT_EQ(queue->Peek(), 1);
-  ASSERT_EQ(queue->count(), 3);
-  ASSERT_EQ(queue->Pop(), 1);
-  ASSERT_EQ(queue->Pop(), 2);
-  ASSERT_EQ(queue->Pop(), 3);
-  ASSERT_DEATH([&queue]() { queue->Pop(); });
+  ASSERT_EQ(queue->Peek(), 1u);
+  ASSERT_EQ(queue->count(), 3u);
+  ASSERT_EQ(queue->Pop(), 1u);
+  ASSERT_EQ(queue->Pop(), 2u);
+  ASSERT_EQ(queue->Pop(), 3u);
+  ASSERT_DEATH_IF_SUPPORTED(queue->Pop(), "ASSERT FAILED");
 }
 
 TEST(DataStructsTest, RingQueueOverCapacity) {
@@ -44,7 +41,7 @@ TEST(DataStructsTest, RingQueueOverCapacity) {
   std::unique_ptr queue = std::move(queue_creation.value());
   queue->Push(1);
   queue->Push(2);
-  ASSERT_DEATH([&queue]() { queue->Push(3); });
+  ASSERT_DEATH_IF_SUPPORTED(queue->Push(3), "ASSERT FAILED");
 }
 
 TEST(DataStructsTest, IndexedSlab) {
@@ -53,13 +50,13 @@ TEST(DataStructsTest, IndexedSlab) {
   ASSERT_OK(slab_creation.status_value());
   std::unique_ptr slab = std::move(slab_creation.value());
   ASSERT_EQ(slab->available(), kCapacity);
-  auto a = slab->Push(1);
-  auto b = slab->Push(2);
-  auto c = slab->Push(3);
+  uint32_t a = slab->Push(1);
+  uint32_t b = slab->Push(2);
+  uint32_t c = slab->Push(3);
   ASSERT_EQ(slab->available(), kCapacity - 3);
-  ASSERT_EQ(slab->Get(a), 1);
-  ASSERT_EQ(slab->Get(b), 2);
-  ASSERT_EQ(slab->Get(c), 3);
+  ASSERT_EQ(slab->Get(a), 1u);
+  ASSERT_EQ(slab->Get(b), 2u);
+  ASSERT_EQ(slab->Get(c), 3u);
   slab->Free(a);
   slab->Free(b);
   slab->Free(c);
@@ -73,7 +70,7 @@ TEST(DataStructsTest, IndexedSlabOverCapacity) {
   std::unique_ptr slab = std::move(slab_creation.value());
   slab->Push(1);
   slab->Push(2);
-  ASSERT_DEATH([&slab]() { slab->Push(3); });
+  ASSERT_DEATH_IF_SUPPORTED(slab->Push(3), "ASSERT FAILED");
 }
 
 TEST(DataStructsTest, IndexedSlabDoubleFree) {
@@ -85,7 +82,7 @@ TEST(DataStructsTest, IndexedSlabDoubleFree) {
   uint32_t b = slab->Push(2);
   slab->Free(b);
   ASSERT_EQ(slab->available(), kCapacity - 1);
-  ASSERT_DEATH(([b, &slab]() { slab->Free(b); }));
+  ASSERT_DEATH_IF_SUPPORTED(slab->Free(b), "ASSERT FAILED");
 }
 
 void VerifyIterator(IndexedSlab& slab, const std::vector<uint64_t>& expect) {
@@ -99,10 +96,10 @@ void VerifyIterator(IndexedSlab& slab, const std::vector<uint64_t>& expect) {
   auto context = context_stream.str();
   auto i = slab.begin();
   for (auto& e : expect) {
-    ASSERT_EQ(slab.Get(*i), e, ": %s", context.c_str());
+    ASSERT_EQ(slab.Get(*i), e) << ": " << context.c_str();
     ++i;
   }
-  ASSERT_EQ(i, slab.end(), ": %s", context.c_str());
+  ASSERT_EQ(i, slab.end()) << ": " << context.c_str();
 }
 
 TEST(DataStructsTest, IndexedSlabIterator) {
@@ -112,11 +109,11 @@ TEST(DataStructsTest, IndexedSlabIterator) {
   std::unique_ptr slab = std::move(slab_creation.value());
   // If we're empty, the iterator should be empty:
   ASSERT_EQ(slab->begin(), slab->end());
-  auto i1 = slab->Push(1);
+  uint32_t i1 = slab->Push(1);
 
   VerifyIterator(*slab, {1});
-  auto i2 = slab->Push(2);
-  auto i3 = slab->Push(3);
+  uint32_t i2 = slab->Push(2);
+  uint32_t i3 = slab->Push(3);
   slab->Push(4);
   VerifyIterator(*slab, {1, 2, 3, 4});
   slab->Free(i2);

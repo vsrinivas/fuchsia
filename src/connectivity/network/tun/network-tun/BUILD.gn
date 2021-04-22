@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
+import("//build/test.gni")
 import("//build/testing/environments.gni")
 
 source_set("src") {
@@ -65,7 +66,7 @@ fuchsia_package("network-tun") {
   deps = [ ":component" ]
 }
 
-executable("network_tun_unittest") {
+test("network_tun_unittest") {
   testonly = true
   sources = [
     "buffer_unittest.cc",

@@ -4,7 +4,9 @@
 
 #include "test_util.h"
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
+
+#include "src/lib/testing/predicates/status.h"
 
 namespace network {
 namespace testing {
@@ -70,7 +72,7 @@ FakeNetworkDeviceImpl::FakeNetworkDeviceImpl()
   tx_types_[0].supported_flags = 0;
   tx_types_[0].features = netdev::wire::kFrameFeaturesRaw;
 
-  ASSERT_OK(zx::event::create(0, &event_));
+  EXPECT_OK(zx::event::create(0, &event_));
 }
 
 FakeNetworkDeviceImpl::~FakeNetworkDeviceImpl() {
@@ -118,7 +120,7 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplGetStatus(status_t* out_status) {
 
 void FakeNetworkDeviceImpl::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list,
                                                      size_t buf_count) {
-  EXPECT_NE(buf_count, 0);
+  EXPECT_NE(buf_count, 0u);
   ASSERT_TRUE(device_client_.is_valid());
   if (auto_return_tx_) {
     ASSERT_TRUE(buf_count < kTxDepth);

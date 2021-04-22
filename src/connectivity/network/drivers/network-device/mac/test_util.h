@@ -30,7 +30,7 @@ class FakeMacDeviceImpl : public ddk::MacAddrImplProtocol<FakeMacDeviceImpl> {
 
   zx_status_t WaitConfigurationChanged();
 
-  uint8_t* mac() { return mac_; }
+  const fuchsia_net::wire::MacAddress& mac() { return mac_; }
 
   features_t& features() { return features_; }
 
@@ -43,7 +43,7 @@ class FakeMacDeviceImpl : public ddk::MacAddrImplProtocol<FakeMacDeviceImpl> {
   }
 
  private:
-  uint8_t mac_[MAC_SIZE] = {0x00, 0x02, 0x03, 0x04, 0x05, 0x06};
+  fuchsia_net::wire::MacAddress mac_ = {0x00, 0x02, 0x03, 0x04, 0x05, 0x06};
   features_t features_{};
   mode_t mode_ = 0;
   std::vector<MacAddress> addresses_;
