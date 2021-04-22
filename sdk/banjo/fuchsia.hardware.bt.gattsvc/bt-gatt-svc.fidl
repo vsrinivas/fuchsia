@@ -79,13 +79,13 @@ struct BtGattChr {
     uint8 properties;
     uint16 extended_properties;
 
-    [Mutable] vector<BtGattDescriptor> descriptor;
+    [Mutable] vector<BtGattDescriptor>:MAX descriptor;
 };
 
 /// Value change notification callback of the |EnableNotifications| function.
 [Transport = "Banjo", BanjoLayout = "ddk-callback"]
 protocol BtGattNotificationValue {
-    Callback(BtGattId id, [Buffer] vector<uint8> value) -> ();
+    Callback(BtGattId id, [Buffer] vector<uint8>:MAX value) -> ();
 };
 
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
@@ -96,24 +96,24 @@ protocol BtGattSvc {
     /// initiated by |connect|. The service will be ready to receive further requests once this
     /// has been called successfully and the |status| callback has been called with success.
     [Async]
-    Connect() -> (BtGattStatus status, vector<BtGattChr> characteristic);
+    Connect() -> (BtGattStatus status, vector<BtGattChr>:MAX characteristic);
 
     /// Stops this service and unregisters previously registered callbacks.
     Stop() -> ();
 
     /// Reads the value of the characteristic with the given ID.
     [Async]
-    ReadCharacteristic(BtGattId id) -> (BtGattStatus status, BtGattId id, [Buffer] vector<uint8> value);
+    ReadCharacteristic(BtGattId id) -> (BtGattStatus status, BtGattId id, [Buffer] vector<uint8>:MAX value);
 
     /// Reads the long value of the characteristic with the given ID.
     [Async]
     ReadLongCharacteristic(BtGattId id, uint16 offset, uint64 max_bytes)
-                     -> (BtGattStatus status, BtGattId id, [Buffer] vector<uint8> value);
+        -> (BtGattStatus status, BtGattId id, [Buffer] vector<uint8>:MAX value);
 
     /// Writes a characteristic with the given ID. Automatically handles long writes
     /// if required by the mtu size.
     [Async]
-    WriteCharacteristic(BtGattId id, [Buffer] vector<uint8> buf) -> (BtGattStatus status, BtGattId id);
+    WriteCharacteristic(BtGattId id, [Buffer] vector<uint8>:MAX buf) -> (BtGattStatus status, BtGattId id);
 
     /// Enables notifications from the characteristic with the given ID. Returns
     /// `ZX_ERR_BAD_STATE` if the service has not been started yet.
@@ -124,5 +124,5 @@ protocol BtGattSvc {
     /// of this operation.
     [Async]
     EnableNotifications(BtGattId id, BtGattNotificationValue value_cb)
-                     -> (BtGattStatus status, BtGattId id);
+        -> (BtGattStatus status, BtGattId id);
 };
