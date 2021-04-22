@@ -4,7 +4,10 @@
 
 use fidl::endpoints::Proxy;
 use fidl_fuchsia_io as fio;
+use fidl_fuchsia_kernel as fkernel;
+use fuchsia_component::client::connect_channel_to_service;
 use fuchsia_zircon as zx;
+use lazy_static::lazy_static;
 use log::info;
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -13,6 +16,16 @@ use super::*;
 use crate::fd_impl_seekable;
 use crate::uapi::*;
 use crate::ThreadContext;
+
+lazy_static! {
+    static ref VMEX_RESOURCE: zx::Resource = {
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        connect_channel_to_service::<fkernel::VmexResourceMarker>(server_end)
+            .expect("couldn't connect to fuchsia.kernel.VmexResource");
+        let mut service = fkernel::VmexResourceSynchronousProxy::new(client_end);
+        service.get(zx::Time::INFINITE).expect("couldn't talk to fuchsia.kernel.VmexResource")
+    };
+}
 
 #[derive(FileDesc)]
 pub struct FidlFile {
@@ -113,9 +126,7 @@ impl FileDesc for FidlFile {
         zx::Status::ok(status).map_err(fio_error)?;
         let mut vmo = buffer.unwrap().vmo;
         if has_execute {
-            // TODO(fxbug.dev/74466): This currently only works if you delete the VMEX resource
-            // check from the kernel. Replace this with an actual VMEX resource.
-            vmo = vmo.replace_as_executable(&zx::Resource::from(zx::Handle::invalid())).unwrap();
+            vmo = vmo.replace_as_executable(&VMEX_RESOURCE).expect("replace_as_executable failed");
         }
         Ok(vmo)
     }
