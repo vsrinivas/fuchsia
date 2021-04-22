@@ -238,9 +238,16 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
   zx_status_t call_status = ZX_OK;
   static_assert(sizeof(zx_device_prop_t) == sizeof(uint64_t));
   uint64_t device_id = 0;
+
+  // TODO(fxb/74654): Implement support for string properties.
+  ::fuchsia_device_manager::wire::DevicePropertyList property_list = {
+      .props = ::fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty>::FromExternal(
+          props_list),
+      .str_props = ::fidl::VectorView<fuchsia_device_manager::wire::DeviceStrProperty>(),
+  };
+
   auto response = rpc->AddDevice_Sync(
-      std::move(coordinator_remote), std::move(device_controller_remote),
-      ::fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty>::FromExternal(props_list),
+      std::move(coordinator_remote), std::move(device_controller_remote), property_list,
       ::fidl::StringView::FromExternal(child->name()), child->protocol_id(),
       ::fidl::StringView::FromExternal(child->driver->libname()),
       ::fidl::StringView::FromExternal(proxy_args, proxy_args_len), add_device_config,

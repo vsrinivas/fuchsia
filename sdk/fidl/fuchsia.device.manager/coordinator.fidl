@@ -15,6 +15,18 @@ struct DeviceProperty {
     uint32 value;
 };
 
+/// This has the same structure as zx_device_str_prop_t.
+struct DeviceStrProperty {
+    string:STR_LENGTH_MAX key;
+    string:STR_LENGTH_MAX value;
+};
+
+// TODO(fxb/74654): String properties are unimplemented.
+struct DevicePropertyList {
+    vector<DeviceProperty>:PROPERTIES_MAX props;
+    vector<DeviceStrProperty>:STR_PROPERTIES_MAX str_props;
+};
+
 // TODO(bwb): Make this descriptive of binding, not zx_bind_inst_t
 // currently a magic bitfield defined in binding.h
 struct BindInstruction {
@@ -56,6 +68,12 @@ const uint32 METADATA_MAX = 32;
 
 /// Maximum number of properties that can be attached to a device
 const uint32 PROPERTIES_MAX = 256;
+
+/// Maximum number of string properties that can be attached to a device
+const uint32 STR_PROPERTIES_MAX = 256;
+
+/// Maximum length of a string property key and value.
+const uint32 STR_LENGTH_MAX = 255;
 
 /// Maximum number of fragments that a composite device can have
 const uint32 FRAGMENTS_MAX = 16;
@@ -107,6 +125,7 @@ struct DeviceMetadata {
 /// Composite device parts and properties
 struct CompositeDeviceDescriptor {
     vector<DeviceProperty>:PROPERTIES_MAX props;
+    vector<DeviceStrProperty>:STR_PROPERTIES_MAX str_props;
     vector<DeviceFragment>:FRAGMENTS_MAX fragments;
     uint32 coresident_device_index;
     vector<DeviceMetadata>:METADATA_MAX? metadata;
@@ -225,8 +244,9 @@ protocol Coordinator {
     /// and will be forwarded to the shadow device. `client_remote`, if present,
     /// will be passed to the device as an open connection for the client.
     /// On success, the returned `local_device_id` is the identifier assigned by devmgr.
+    // TODO(fxb/74654): String properties are unimplemented.
     AddDevice(request<Coordinator> coordinator, DeviceController device_controller,
-              vector<DeviceProperty>:PROPERTIES_MAX props,
+              DevicePropertyList property_list,
               string:DEVICE_NAME_MAX name, uint32 protocol_id,
               string:DEVICE_PATH_MAX? driver_path, string:DEVICE_ARGS_MAX? args,
               AddDeviceConfig device_add_config, bool has_init, zx.handle:VMO? inspect,

@@ -807,8 +807,9 @@ int Device::RunCompatibilityTests() {
 
 #undef TEST_LOGF
 
+// TODO(fxb/74654): Implement support for string properties.
 void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controller_client,
-                       ::fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty> props,
+                       ::fuchsia_device_manager::wire::DevicePropertyList property_list,
                        ::fidl::StringView name_view, uint32_t protocol_id,
                        ::fidl::StringView driver_path_view, ::fidl::StringView args_view,
                        fuchsia_device_manager::wire::AddDeviceConfig device_add_config,
@@ -826,9 +827,10 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
 
   fbl::RefPtr<Device> device;
   zx_status_t status = parent->coordinator->AddDevice(
-      parent, std::move(device_controller_client), std::move(coordinator), props.data(),
-      props.count(), name, protocol_id, driver_path, args, invisible, skip_autobind, has_init,
-      kEnableAlwaysInit, std::move(inspect), std::move(client_remote), &device);
+      parent, std::move(device_controller_client), std::move(coordinator),
+      property_list.props.data(), property_list.props.count(), name, protocol_id, driver_path, args,
+      invisible, skip_autobind, has_init, kEnableAlwaysInit, std::move(inspect),
+      std::move(client_remote), &device);
   if (device != nullptr &&
       (device_add_config & fuchsia_device_manager::wire::AddDeviceConfig::kAllowMultiComposite)) {
     device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;

@@ -106,7 +106,7 @@ class Device
   using AllDevicesListTag = internal::DeviceAllDevicesListTag;
 
   void AddDevice(::zx::channel coordinator, ::zx::channel device_controller,
-                 ::fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty> props,
+                 ::fuchsia_device_manager::wire::DevicePropertyList property_list,
                  ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path,
                  ::fidl::StringView args,
                  fuchsia_device_manager::wire::AddDeviceConfig device_add_config, bool has_init,
