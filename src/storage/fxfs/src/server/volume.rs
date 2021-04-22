@@ -9,62 +9,35 @@ use {
             directory::{Directory, ObjectDescriptor},
             HandleOptions, ObjectStore,
         },
-        server::{directory::FxDirectory, file::FxFile, node::FxNode},
+        server::{
+            directory::FxDirectory,
+            file::FxFile,
+            node::{FxNode, GetResult, NodeCache},
+        },
         volume::Volume,
     },
-    anyhow::{anyhow, bail, Error},
+    anyhow::{bail, Error},
     fuchsia_zircon::Status,
-    std::{
-        any::Any,
-        collections::HashMap,
-        sync::{Arc, Weak},
-    },
+    std::{any::Any, sync::Arc},
     vfs::{
         filesystem::{Filesystem, FilesystemRename},
         path::Path,
     },
 };
 
-struct NodeCache(HashMap<u64, Weak<dyn FxNode>>);
-
-impl NodeCache {
-    fn add(&mut self, object_id: u64, node: Weak<dyn FxNode>) {
-        self.0.insert(object_id, node);
-    }
-
-    fn remove(&mut self, object_id: u64) {
-        // This is a programming error, so panic here.
-        assert!(self.0.remove(&object_id).is_some(), "No node found for {}", object_id);
-    }
-
-    fn get(&mut self, object_id: u64) -> Result<Arc<dyn FxNode>, Error> {
-        if let Some(node) = self.0.get(&object_id) {
-            if let Some(node) = node.upgrade() {
-                Ok(node)
-            } else {
-                // TODO(jfsulliv): This should be done in FxNode::drop (or FxDirectory/FxFile).
-                self.0.remove(&object_id);
-                Err(anyhow!(FxfsError::NotFound).context("Node was closed"))
-            }
-        } else {
-            Err(anyhow!(FxfsError::NotFound).context(format!("No node with id {}", object_id)))
-        }
-    }
-}
-
 /// FxVolume represents an opened volume. It is also a (weak) cache for all opened Nodes within the
 /// volume.
 pub struct FxVolume {
-    // We need a futures-aware mutex here to make open_or_load_node atomic, since it might require
-    // asynchronously loading the node and then inserting it into the cache.
-    // TODO(jfsulliv): This is horribly inefficient. Fix this by inserting a placeholder object that
-    // we then go update in place.
-    nodes: futures::lock::Mutex<NodeCache>,
+    cache: NodeCache,
     store: Arc<ObjectStore>,
     graveyard: Directory,
 }
 
 impl FxVolume {
+    pub fn new(store: Arc<ObjectStore>, graveyard: Directory) -> Self {
+        Self { cache: NodeCache::new(), store, graveyard }
+    }
+
     pub fn store(&self) -> &Arc<ObjectStore> {
         &self.store
     }
@@ -73,16 +46,8 @@ impl FxVolume {
         &self.graveyard
     }
 
-    pub async fn add_node(&self, object_id: u64, node: Weak<dyn FxNode>) {
-        self.nodes.lock().await.add(object_id, node)
-    }
-
-    pub async fn remove_node(&self, object_id: u64) {
-        self.nodes.lock().await.remove(object_id)
-    }
-
-    pub async fn get_node(&self, object_id: u64) -> Result<Arc<dyn FxNode>, Error> {
-        self.nodes.lock().await.get(object_id)
+    pub fn cache(&self) -> &NodeCache {
+        &self.cache
     }
 
     /// Attempts to get a node from the node cache. If the node wasn't present in the cache, loads
@@ -93,15 +58,14 @@ impl FxVolume {
         object_id: u64,
         object_descriptor: ObjectDescriptor,
     ) -> Result<Arc<dyn FxNode>, Error> {
-        let mut nodes = self.nodes.lock().await;
-        match nodes.get(object_id) {
-            Ok(node) => Ok(node),
-            Err(e) if FxfsError::NotFound.matches(&e) => {
+        match self.cache.get_or_reserve(object_id).await {
+            GetResult::Node(node) => Ok(node),
+            GetResult::Placeholder(placeholder) => {
                 let node = match object_descriptor {
                     ObjectDescriptor::File => {
                         let file =
                             self.store.open_object(object_id, HandleOptions::default()).await?;
-                        Arc::new(FxFile::new(file)) as Arc<dyn FxNode>
+                        Arc::new(FxFile::new(file, self.clone())) as Arc<dyn FxNode>
                     }
                     ObjectDescriptor::Directory => {
                         let directory = self.store.open_directory(object_id).await?;
@@ -109,10 +73,9 @@ impl FxVolume {
                     }
                     _ => bail!(FxfsError::Inconsistent),
                 };
-                nodes.add(object_id, Arc::downgrade(&node));
+                placeholder.commit(&node);
                 Ok(node)
             }
-            Err(e) => return Err(e),
         }
     }
 }
@@ -140,13 +103,12 @@ impl FxVolumeAndRoot {
     pub async fn new(volume: Volume) -> Self {
         let (store, root_directory, graveyard) = volume.into();
         let root_object_id = root_directory.object_id();
-        let volume = Arc::new(FxVolume {
-            nodes: futures::lock::Mutex::new(NodeCache(HashMap::new())),
-            store,
-            graveyard,
-        });
+        let volume = Arc::new(FxVolume::new(store, graveyard));
         let root: Arc<dyn FxNode> = Arc::new(FxDirectory::new(volume.clone(), root_directory));
-        volume.add_node(root_object_id, Arc::downgrade(&root)).await;
+        match volume.cache.get_or_reserve(root_object_id).await {
+            GetResult::Node(_) => unreachable!(),
+            GetResult::Placeholder(placeholder) => placeholder.commit(&root),
+        }
         Self { volume, root }
     }
 

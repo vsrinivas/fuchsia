@@ -11,7 +11,12 @@ use {
             transaction::{LockKey, Transaction},
             INVALID_OBJECT_ID,
         },
-        server::{errors::map_to_status, file::FxFile, node::FxNode, volume::FxVolume},
+        server::{
+            errors::map_to_status,
+            file::FxFile,
+            node::{FxNode, GetResult},
+            volume::FxVolume,
+        },
     },
     anyhow::{bail, Error},
     async_trait::async_trait,
@@ -84,7 +89,7 @@ impl FxDirectory {
             // lock in place.
             let keys =
                 [LockKey::object(store.store_object_id(), current_dir.directory.object_id())];
-            let mut transaction_or_guard = if last_segment && flags & OPEN_FLAG_CREATE != 0 {
+            let transaction_or_guard = if last_segment && flags & OPEN_FLAG_CREATE != 0 {
                 Left(fs.clone().new_transaction(&keys).await?)
             } else {
                 // When child objects are created, the object is created along with the directory
@@ -93,30 +98,34 @@ impl FxDirectory {
                 Right(fs.read_lock(&keys).await)
             };
 
-            let creating = transaction_or_guard.is_left();
             current_node = match current_dir.directory.lookup(name).await {
                 Ok((object_id, object_descriptor)) => {
-                    if creating && flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 {
+                    if transaction_or_guard.is_left() && flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 {
                         bail!(FxfsError::AlreadyExists);
                     }
                     self.volume.get_or_load_node(object_id, object_descriptor).await?
                 }
                 Err(e) if FxfsError::NotFound.matches(&e) => {
-                    if creating {
-                        current_dir
-                            .create_child(transaction_or_guard.as_mut().left().unwrap(), name, mode)
-                            .await?
+                    if let Left(mut transaction) = transaction_or_guard {
+                        let node = current_dir.create_child(&mut transaction, name, mode).await?;
+                        if let GetResult::Placeholder(p) =
+                            self.volume.cache().get_or_reserve(node.object_id()).await
+                        {
+                            p.commit(&node);
+                            transaction.commit().await;
+                        } else {
+                            // We created a node, but the object ID was already used in the cache,
+                            // which suggests a object ID was reused (which would either be a bug or
+                            // corruption).
+                            bail!(FxfsError::Inconsistent);
+                        }
+                        node
                     } else {
                         bail!(e)
                     }
                 }
                 Err(e) => bail!(e),
             };
-
-            if let Left(transaction) = transaction_or_guard {
-                transaction.commit().await;
-                self.volume.add_node(current_node.object_id(), Arc::downgrade(&current_node)).await;
-            }
         }
         Ok(current_node)
     }
@@ -133,7 +142,7 @@ impl FxDirectory {
             Ok(Arc::new(FxDirectory::new(self.volume.clone(), dir)) as Arc<dyn FxNode>)
         } else {
             let handle = self.directory.create_child_file(transaction, name).await?;
-            Ok(Arc::new(FxFile::new(handle)) as Arc<dyn FxNode>)
+            Ok(Arc::new(FxFile::new(handle, self.volume.clone())) as Arc<dyn FxNode>)
         }
     }
 
@@ -180,7 +189,7 @@ impl FxDirectory {
 
         // TODO(jfsulliv): We can immediately delete files if they have no open references, but
         // we need appropriate locking in place to be able to check the file's open count.
-        if let ObjectDescriptor::File = object_descriptor {
+        let _dir = if let ObjectDescriptor::File = object_descriptor {
             directory::move_child(
                 &mut transaction,
                 &self.directory,
@@ -189,16 +198,30 @@ impl FxDirectory {
                 &format!("{}", child_object_id),
             )
             .await?;
+            None
         } else {
-            // TODO(jfsulliv): This load is only necessary to avoid races if the directory node
-            // isn't cached. We can replace this unnecessary load with a cache placeholder when that
-            // is implemented.
-            let node = self.volume.get_or_load_node(child_object_id, object_descriptor).await?;
-            let dir =
-                node.into_any().downcast::<FxDirectory>().map_err(|_| FxfsError::Inconsistent)?;
-            dir.is_deleted.store(true, Ordering::Relaxed);
+            // For directories, we need to set |is_deleted| on the in-memory node. If the node's
+            // absent from the cache, we *must* load the node into memory, and make sure the node
+            // stays in the cache until we commit the transaction, because otherwise another caller
+            // could load the node from disk before we commit the transaction and would not see that
+            // it's been unlinked.
+            // Holding a placeholder here could deadlock, since transaction.commit() will block
+            // until there are no readers, but a reader could be blocked on the cache by the
+            // placeholder.
+            // TODO(csuter): Separate out a commit_prepare which acquires the lock, so that we can
+            // handle situations like this more gracefully. (Alternatively, add a callback to
+            // commit.)
             self.directory.remove_child(&mut transaction, &name).await?;
-        }
+            let dir = self
+                .volume
+                .get_or_load_node(child_object_id, object_descriptor)
+                .await?
+                .into_any()
+                .downcast::<FxDirectory>()
+                .unwrap();
+            dir.is_deleted.store(true, Ordering::Relaxed);
+            Some(dir)
+        };
         transaction.commit().await;
 
         Ok(())
@@ -213,6 +236,12 @@ impl FxDirectory {
             .into_any()
             .downcast::<FxDirectory>()
             .unwrap()
+    }
+}
+
+impl Drop for FxDirectory {
+    fn drop(&mut self) {
+        self.volume.cache().remove(self.object_id());
     }
 }
 

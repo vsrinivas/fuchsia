@@ -6,7 +6,7 @@ use {
     crate::{
         object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::StoreObjectHandle,
-        server::{errors::map_to_status, node::FxNode},
+        server::{errors::map_to_status, node::FxNode, volume::FxVolume},
     },
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
@@ -35,15 +35,22 @@ use {
 /// FxFile represents an open connection to a file.
 pub struct FxFile {
     handle: StoreObjectHandle,
+    volume: Arc<FxVolume>,
     open_count: AtomicUsize,
 }
 
 impl FxFile {
-    pub fn new(handle: StoreObjectHandle) -> Self {
-        Self { handle, open_count: AtomicUsize::new(0) }
+    pub fn new(handle: StoreObjectHandle, volume: Arc<FxVolume>) -> Self {
+        Self { handle, volume, open_count: AtomicUsize::new(0) }
     }
     pub fn open_count(&self) -> usize {
         self.open_count.load(Ordering::Relaxed)
+    }
+}
+
+impl Drop for FxFile {
+    fn drop(&mut self) {
+        self.volume.cache().remove(self.object_id());
     }
 }
 
