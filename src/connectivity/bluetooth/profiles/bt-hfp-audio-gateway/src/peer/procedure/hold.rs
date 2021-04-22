@@ -102,9 +102,7 @@ impl Procedure for HoldProcedure {
                 self.state.transition();
                 match command.as_str().try_into() {
                     Ok(command) => {
-                        let response = Box::new(|res: Result<(), ()>| {
-                            res.map(|()| AgUpdate::Ok).unwrap_or(AgUpdate::Error)
-                        });
+                        let response = Box::new(Into::into);
                         SlcRequest::Hold { command, response }.into()
                     }
                     Err(()) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),

@@ -55,9 +55,7 @@ impl Procedure for AnswerProcedure {
         match (self.state, update) {
             (State::Start, at::Command::Answer {}) => {
                 self.state.transition();
-                let response = Box::new(|res: Result<(), ()>| {
-                    res.map(|()| AgUpdate::Ok).unwrap_or(AgUpdate::Error)
-                });
+                let response = Box::new(Into::into);
                 SlcRequest::Answer { response }.into()
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),

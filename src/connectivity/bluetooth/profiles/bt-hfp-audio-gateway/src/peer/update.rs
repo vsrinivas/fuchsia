@@ -155,3 +155,13 @@ impl From<AgUpdate> for ProcedureRequest {
         .into()
     }
 }
+
+impl From<Result<(), ()>> for AgUpdate {
+    fn from(r: Result<(), ()>) -> Self {
+        if r.is_ok() {
+            AgUpdate::Ok
+        } else {
+            AgUpdate::Error
+        }
+    }
+}

@@ -58,9 +58,7 @@ impl Procedure for NrecProcedure {
         match (self.state, update) {
             (State::Start, at::Command::Nrec { nrec: enable }) => {
                 self.state.transition();
-                let response = Box::new(|res: Result<(), ()>| {
-                    res.map(|()| AgUpdate::Ok).unwrap_or(AgUpdate::Error)
-                });
+                let response = Box::new(Into::into);
                 SlcRequest::SetNrec { enable, response }.into()
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
