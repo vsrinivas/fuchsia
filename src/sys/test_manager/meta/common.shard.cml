@@ -29,6 +29,10 @@
             url: "fuchsia-pkg://fuchsia.com/go-test-runner#meta/go-test-runner.cm",
         },
         {
+            name: "inspect_test_runner",
+            url: "fuchsia-pkg://fuchsia.com/inspect-test-runner#meta/inspect-test-runner.cm",
+        },
+        {
             name: "runner_memfs",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/memfs.cm",
         },
@@ -116,6 +120,7 @@
                 "#elf_test_runner",
                 "#go_test_runner",
                 "#gtest_runner",
+                "#inspect_test_runner",
                 "#runner_memfs",
                 "#rust_test_runner",
                 "#starnix_test_runner",
@@ -149,6 +154,24 @@
             from: "framework",
             to: "#debug_data",
             modes: [ "async" ],
+        },
+        {
+            protocol: "fuchsia.diagnostics.ArchiveAccessor",
+            from: "parent",
+            as: "fuchsia.diagnostics.RealArchiveAccessor",
+            to: [ "#inspect_test_runner" ],
+        },
+        {
+            protocol: "fuchsia.diagnostics.FeedbackArchiveAccessor",
+            from: "parent",
+            as: "fuchsia.diagnostics.RealFeedbackArchiveAccessor",
+            to: [ "#inspect_test_runner" ],
+        },
+        {
+            protocol: "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+            from: "parent",
+            as: "fuchsia.diagnostics.RealLegacyMetricsArchiveAccessor",
+            to: [ "#inspect_test_runner" ],
         },
         {
             storage: "data",

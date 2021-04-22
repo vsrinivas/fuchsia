@@ -1,0 +1,9 @@
+{
+    include: [ "src/sys/test_runners/inspect/default.shard.cml" ],
+    program: {
+        // This accessor is not valid.
+        accessor: "unknown",
+        timeout_seconds: "1",
+        cases: [ "example:root:version" ],
+    },
+}

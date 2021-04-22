@@ -1,0 +1,15 @@
+{
+    include: [ "src/sys/test_runners/inspect/default.shard.cml" ],
+    program: {
+        // Read from the FeedbackArchiveAccessor
+        accessor: "FEEDBACK",
+        timeout_seconds: "1",
+        cases: [
+            // Check that a value is in a certain range.
+            "example:root:value WHERE [a] And(a >= 5, a < 10)",
+
+            // Check that a value exists.
+            "example:root:version",
+        ],
+    },
+}

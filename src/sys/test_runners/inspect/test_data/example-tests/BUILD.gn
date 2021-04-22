@@ -1,0 +1,23 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+fuchsia_component("archive-example") {
+  testonly = true
+  manifest = "meta/archive_example.cml"
+  component_name = "archive_example"
+}
+
+fuchsia_component("feedback-example") {
+  testonly = true
+  manifest = "meta/feedback_example.cml"
+  component_name = "feedback_example"
+}
+
+fuchsia_component("legacy-example") {
+  testonly = true
+  manifest = "meta/legacy_example.cml"
+  component_name = "legacy_example"
+}

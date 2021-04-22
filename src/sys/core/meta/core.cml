@@ -365,6 +365,7 @@
                 "#appmgr",
                 "#log-stats",
                 "#sampler",
+                "#test_manager",
             ],
         },
         {

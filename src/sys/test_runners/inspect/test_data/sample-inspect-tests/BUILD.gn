@@ -1,0 +1,15 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+fuchsia_component("sample-component") {
+  testonly = true
+  manifest = "meta/sample_inspect_tests.cml"
+  component_name = "sample_inspect_tests"
+}
+
+fuchsia_test_package("sample-inspect-tests") {
+  test_components = [ ":sample-component" ]
+}

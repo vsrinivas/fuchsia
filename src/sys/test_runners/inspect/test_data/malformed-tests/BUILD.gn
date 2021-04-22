@@ -1,0 +1,29 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+fuchsia_component("invalid-case") {
+  testonly = true
+  manifest = "meta/invalid_case.cml"
+  component_name = "invalid_case"
+}
+
+fuchsia_component("invalid-evaluation") {
+  testonly = true
+  manifest = "meta/invalid_evaluation.cml"
+  component_name = "invalid_evaluation"
+}
+
+fuchsia_component("missing-program") {
+  testonly = true
+  manifest = "meta/missing_program.cml"
+  component_name = "missing_program"
+}
+
+fuchsia_component("unknown-pipeline") {
+  testonly = true
+  manifest = "meta/unknown_pipeline.cml"
+  component_name = "unknown_pipeline"
+}

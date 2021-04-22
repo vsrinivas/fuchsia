@@ -16,6 +16,10 @@
                     from: "#gtest_runner",
                 },
                 {
+                    runner: "inspect_test_runner",
+                    from: "#inspect_test_runner",
+                },
+                {
                     runner: "rust_test_runner",
                     from: "#rust_test_runner",
                 },

@@ -1,0 +1,22 @@
+// This test is intended to work for a core product built as well as
+// for the integration tests for the inspect test runner.
+{
+    include: [ "src/sys/test_runners/inspect/default.shard.cml" ],
+    program: {
+        accessor: "ALL",
+        timeout_seconds: "30",
+        cases: [
+            // Check archivist has any data
+            "bootstrap/archivist:root",
+
+            // Check archivist saw at least one START event
+            "bootstrap/archivist:root/event_stats/recent_events/*:event WHERE [a] Count(Filter(Fn([b], b == 'START'), a)) > 0",
+
+            // Check archivist saw at least one LOG_SINK_REQUESTED event
+            "bootstrap/archivist:root/event_stats/recent_events/*:event WHERE [a] Count(Filter(Fn([b], b == \"LOG_SINK_REQUESTED\"), a)) > 0",
+
+            // Check archivist counted components running
+            "bootstrap/archivist:root/event_stats:components_seen_running WHERE [a] a > 1",
+        ],
+    },
+}
