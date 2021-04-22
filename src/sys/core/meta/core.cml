@@ -88,7 +88,7 @@
         },
         {
             name: "remote-diagnostics-bridge",
-            url: "fuchsia-pkg://fuchsia.com/remote-diagnostics-bridge#meta/diagnostics-bridge.cm",
+            url: "fuchsia-pkg://fuchsia.com/remote-diagnostics-bridge#meta/remote-diagnostics-bridge.cm",
         },
         {
             name: "debug_serial",
