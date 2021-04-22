@@ -10,7 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
+	"reflect"
 	"text/template"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
@@ -31,24 +31,58 @@ type TypedArgument struct {
 	MutableAccess bool
 }
 
-type formatParam func(cpp.Type, string) string
+// formatParam funcs are helpers that transform a type and name into a string
+// for rendering in a template.
+type formatParam func(string, cpp.Type) string
 
-func formatParams(params []cpp.Parameter, prefixIfNonempty string, format formatParam) string {
-	if len(params) == 0 {
-		return ""
+// visitSliceMembers visits each member of nested slices passed in and calls
+// |fn| on each of them in depth first order.
+func visitSliceMembers(val reflect.Value, fn func(interface{})) {
+	switch val.Type().Kind() {
+	case reflect.Slice:
+		for j := 0; j < val.Len(); j++ {
+			visitSliceMembers(val.Index(j), fn)
+		}
+	case reflect.Interface:
+		visitSliceMembers(val.Elem(), fn)
+	default:
+		fn(val.Interface())
 	}
-	args := []string{}
-
-	for _, p := range params {
-		args = append(args, format(p.Type, p.Name()))
-	}
-	if len(args) > 0 {
-		return prefixIfNonempty + strings.Join(args, ", ")
-	}
-	return ""
 }
 
-func calleeParam(t cpp.Type, n string) string {
+// renderParams renders a nested list of parameter definitions.
+// The parameter definitions are either strings or cpp.Parameters.
+// Parameter structs are rendered with the supplied format func.
+// The strings and formatted Parameters are joined with commas and returned.
+func renderParams(format formatParam, list interface{}) string {
+	var (
+		buf   bytes.Buffer
+		first = true
+	)
+	visitSliceMembers(reflect.ValueOf(list), func(val interface{}) {
+		if val == nil {
+			panic(fmt.Sprintf("Unexpected nil in %#v", list))
+		}
+		if first {
+			first = false
+		} else {
+			buf.WriteString(", ")
+		}
+		switch val := val.(type) {
+		case string:
+			buf.WriteString(val)
+		case cpp.Parameter:
+			n, t := val.NameAndType()
+			buf.WriteString(format(n, t))
+		default:
+			panic(fmt.Sprintf("Invalid RenderParams arg %#v", val))
+		}
+	})
+
+	return buf.String()
+}
+
+func calleeParam(n string, t cpp.Type) string {
 	if t.Kind == cpp.TypeKinds.Array || t.Kind == cpp.TypeKinds.Struct {
 		if !t.Nullable {
 			if t.IsResource {
@@ -63,7 +97,7 @@ func calleeParam(t cpp.Type, n string) string {
 	return fmt.Sprintf("%s %s", t.String(), n)
 }
 
-func forwardParam(t cpp.Type, n string) string {
+func forwardParam(n string, t cpp.Type) string {
 	if t.Kind == cpp.TypeKinds.Array || t.Kind == cpp.TypeKinds.Struct {
 		if t.IsResource && !t.Nullable {
 			return fmt.Sprintf("std::move(%s)", n)
@@ -72,10 +106,6 @@ func forwardParam(t cpp.Type, n string) string {
 		return fmt.Sprintf("std::move(%s)", n)
 	}
 	return n
-}
-
-func initParam(t cpp.Type, n string) string {
-	return n + "(" + forwardParam(t, n) + ")"
 }
 
 func closeHandles(argumentName string, argumentValue string, argumentType cpp.Type, pointer bool, nullable bool, access bool, mutableAccess bool) string {
@@ -152,35 +182,48 @@ var utilityFuncs = template.FuncMap{
 		n, t := member.NameAndType()
 		return closeHandles(n, n, t, t.WirePointer, t.WirePointer, access, mutableAccess)
 	},
-	"Params": func(params []cpp.Parameter) string {
-		return formatParams(params, "", func(t cpp.Type, n string) string {
+	"RenderParams": func(params ...interface{}) string {
+		return renderParams(func(n string, t cpp.Type) string {
 			return fmt.Sprintf("%s %s", t.String(), n)
-		})
+		}, params)
 	},
-	"CalleeParams": func(params []cpp.Parameter) string {
-		return formatParams(params, "", calleeParam)
+	"RenderCalleeParams": func(params ...interface{}) string {
+		return renderParams(calleeParam, params)
 	},
-	"CalleeCommaParams": func(params []cpp.Parameter) string {
-		return formatParams(params, ", ", calleeParam)
+	"RenderForwardParams": func(params ...interface{}) string {
+		return renderParams(forwardParam, params)
 	},
-	"ForwardParams": func(params []cpp.Parameter) string {
-		return formatParams(params, "", forwardParam)
-	},
-	"ForwardCommaParams": func(params []cpp.Parameter) string {
-		return formatParams(params, ",", forwardParam)
-	},
-	"ParamsNoTypedChannels": func(params []cpp.Parameter) string {
-		return formatParams(params, "", func(t cpp.Type, n string) string {
+	"RenderParamsNoTypedChannels": func(params ...interface{}) string {
+		return renderParams(func(n string, t cpp.Type) string {
 			return fmt.Sprintf("%s %s", t.WireNoTypedChannels(), n)
-		})
+		}, params)
 	},
-	"ParamMoveNames": func(params []cpp.Parameter) string {
-		return formatParams(params, "", func(t cpp.Type, n string) string {
+	"RenderParamMoveNames": func(params ...interface{}) string {
+		return renderParams(func(n string, t cpp.Type) string {
 			return fmt.Sprintf("std::move(%s)", n)
-		})
+		}, params)
 	},
-	"InitMessage": func(params []cpp.Parameter) string {
-		return formatParams(params, ": ", initParam)
+	"RenderParamsMoveNamesNoTypedChannels": func(params ...interface{}) string {
+		return renderParams(func(n string, t cpp.Type) string {
+			if t.Kind == cpp.TypeKinds.Protocol || t.Kind == cpp.TypeKinds.Request {
+				return fmt.Sprintf("std::move(%s.channel())", n)
+			} else {
+				return fmt.Sprintf("std::move(%s)", n)
+			}
+		}, params)
+	},
+	"RenderInitMessage": func(params ...interface{}) string {
+		s := renderParams(func(n string, t cpp.Type) string {
+			return n + "(" + forwardParam(n, t) + ")"
+		}, params)
+		if len(s) == 0 {
+			return ""
+		}
+		return ": " + s
+	},
+	// List is a helper to return a list of its arguments.
+	"List": func(items ...interface{}) []interface{} {
+		return items
 	},
 }
 
@@ -188,33 +231,35 @@ func NewGenerator() *Generator {
 	tmpls := template.New("LLCPPTemplates").
 		Funcs(cpp.MergeFuncMaps(cpp.CommonTemplateFuncs, utilityFuncs))
 	templates := []string{
+		fileHeaderTmpl,
+		fileSourceTmpl,
 		fragmentBitsTmpl,
-		fragmentClientTmpl,
 		fragmentClientAsyncMethodsTmpl,
 		fragmentClientSyncMethodsTmpl,
 		fragmentConstTmpl,
 		fragmentEnumTmpl,
 		fragmentEventSenderTmpl,
 		fragmentMethodRequestTmpl,
-		fragmentMethodResponseTmpl,
 		fragmentMethodResponseContextTmpl,
+		fragmentMethodResponseTmpl,
 		fragmentMethodResultTmpl,
 		fragmentMethodUnownedResultTmpl,
-		fragmentProtocolTmpl,
+		fragmentProtocolCallerTmpl,
+		fragmentProtocolClientImplTmpl,
 		fragmentProtocolDetailsTmpl,
 		fragmentProtocolDispatcherTmpl,
 		fragmentProtocolEventHandlerTmpl,
 		fragmentProtocolInterfaceTmpl,
-		fragmentReplyManagedTmpl,
+		fragmentProtocolSyncClientTmpl,
+		fragmentProtocolTmpl,
 		fragmentReplyCallerAllocateTmpl,
+		fragmentReplyManagedTmpl,
 		fragmentServiceTmpl,
 		fragmentStructTmpl,
 		fragmentSyncEventHandlerTmpl,
 		fragmentSyncRequestCallerAllocateTmpl,
 		fragmentTableTmpl,
 		fragmentUnionTmpl,
-		fileHeaderTmpl,
-		fileSourceTmpl,
 		testBaseTmpl,
 	}
 	for _, t := range templates {

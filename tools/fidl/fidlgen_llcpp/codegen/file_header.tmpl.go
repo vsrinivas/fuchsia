@@ -218,7 +218,7 @@ const fileHeaderTmpl = `
         {{- range .TwoWayMethods }}
             {{ template "MethodResponseContextDeclaration" . }}
         {{- end }}
-        {{ template "ClientDeclaration" . }}
+        {{ template "ProtocolClientImplDeclaration" . }}
         {{ "" }}
         {{ template "EventSenderDeclaration" . }}
         {{ "" }}

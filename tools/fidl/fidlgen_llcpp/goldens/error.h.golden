@@ -898,7 +898,7 @@ class ::fidl::WireServer<::fidl_test_error::Example>
     ::fidl::Result Reply(::fidl_test_error::wire::ExampleFooResult result);
     ::fidl::Result ReplySuccess(int64_t y);
     ::fidl::Result ReplyError(uint32_t error);
-    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer,
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer,
                          ::fidl_test_error::wire::ExampleFooResult result);
     ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int64_t y);
 

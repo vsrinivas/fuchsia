@@ -5,34 +5,25 @@
 package codegen
 
 const fragmentReplyManagedTmpl = `
-{{- define "ReplyManagedMethodSignature" -}}
-Reply({{ .ResponseArgs | CalleeParams }})
-{{- end }}
-
 {{- define "ReplyManagedMethodDefinition" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 ::fidl::Result
-{{ .WireCompleterBase.NoLeading }}::
-    {{- template "ReplyManagedMethodSignature" . }} {
+{{ .WireCompleterBase.NoLeading }}::Reply({{ RenderCalleeParams .ResponseArgs }}) {
   ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response{
-    {{- .ResponseArgs | ForwardParams -}}
+    {{- RenderForwardParams .ResponseArgs -}}
   };
   return {{ .WireCompleterBase }}::SendReply(&_response.GetOutgoingMessage());
 }
 {{- EndifFuchsia -}}
 {{- end }}
 
-{{- define "ReplyManagedResultSuccessMethodSignature" -}}
-ReplySuccess({{ .Result.ValueMembers | CalleeParams }})
-{{- end }}
 
 {{- define "ReplyManagedResultSuccessMethodDefinition" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 ::fidl::Result
-{{ .WireCompleterBase.NoLeading }}::
-    {{- template "ReplyManagedResultSuccessMethodSignature" . }} {
+{{ .WireCompleterBase.NoLeading }}::ReplySuccess({{ RenderCalleeParams .Result.ValueMembers }}) {
   {{ .Result.ValueStructDecl }} _response;
   {{- range .Result.ValueMembers }}
   _response.{{ .Name }} = std::move({{ .Name }});
@@ -44,16 +35,11 @@ ReplySuccess({{ .Result.ValueMembers | CalleeParams }})
 {{- EndifFuchsia -}}
 {{- end }}
 
-{{- define "ReplyManagedResultErrorMethodSignature" -}}
-ReplyError({{ .Result.ErrorDecl }} error)
-{{- end }}
-
 {{- define "ReplyManagedResultErrorMethodDefinition" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 ::fidl::Result
-{{ .WireCompleterBase.NoLeading }}::
-    {{- template "ReplyManagedResultErrorMethodSignature" . }} {
+{{ .WireCompleterBase.NoLeading }}::ReplyError({{ .Result.ErrorDecl }} error) {
   return Reply({{ .Result.ResultDecl }}::WithErr(
       ::fidl::ObjectView<{{ .Result.ErrorDecl }}>::FromExternal(&error)));
 }

@@ -4,6 +4,8 @@
 
 package codegen
 
+// fragmentMethodResultTmpl contains the definition for
+// fidl::WireResult<Method>.
 const fragmentMethodResultTmpl = `
 {{- define "MethodResultDeclaration" }}
 {{- EnsureNamespace "" }}
@@ -11,13 +13,12 @@ template<>
 class {{ .WireResult }} final : public ::fidl::Result {
 	public:
 	 explicit {{ .WireResult.Self }}(
-		 ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
-		 {{- .RequestArgs | CalleeCommaParams }});
+		 {{ RenderCalleeParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
+		                       .RequestArgs }});
    {{- if .HasResponse }}
 	 {{ .WireResult.Self }}(
-		 ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
-		 {{- .RequestArgs | CalleeCommaParams }},
-		 zx_time_t _deadline);
+		{{ RenderCalleeParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
+		                      .RequestArgs "zx_time_t _deadline"}});
    {{- end }}
 	 explicit {{ .WireResult.Self }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
 	 {{ .WireResult.Self }}({{ .WireResult.Self }}&&) = delete;
@@ -70,11 +71,11 @@ class {{ .WireResult }} final : public ::fidl::Result {
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 {{ .WireResult }}::{{ .WireResult.Self }}(
-    ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
-    {{- .RequestArgs | CalleeCommaParams }})
+    {{- RenderCalleeParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
+                          .RequestArgs }})
    {
-  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(zx_txid_t(0)
-    {{- .RequestArgs | ForwardCommaParams -}});
+  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
+	  {{- RenderForwardParams "zx_txid_t(0)" .RequestArgs }});
   {{- if .HasResponse }}
   _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(
       _client,
@@ -89,12 +90,11 @@ class {{ .WireResult }} final : public ::fidl::Result {
   {{- if .HasResponse }}
 
 {{ .WireResult }}::{{ .WireResult.Self }}(
-    ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
-    {{- .RequestArgs | CalleeCommaParams -}}
-    , zx_time_t _deadline)
+    {{- RenderCalleeParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
+                           .RequestArgs "zx_time_t _deadline" }})
    {
-  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(zx_txid_t(0)
-    {{- .RequestArgs | ForwardCommaParams -}});
+  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
+	  {{- RenderForwardParams "zx_txid_t(0)" .RequestArgs }});
   _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(
       _client,
       bytes_.data(),

@@ -5,33 +5,21 @@
 package codegen
 
 const fragmentReplyCallerAllocateTmpl = `
-{{- define "ReplyCallerAllocateMethodSignature" -}}
-Reply(::fidl::BufferSpan _backing_buffer {{- if .ResponseArgs }}, {{ end }}
-      {{ .ResponseArgs | CalleeParams }})
-{{- end }}
-
 {{- define "ReplyCallerAllocateMethodDefinition" }}
 {{- IfdefFuchsia -}}
-::fidl::Result {{ .WireCompleterBase.NoLeading }}::
-{{- template "ReplyCallerAllocateMethodSignature" . }} {
+::fidl::Result {{ .WireCompleterBase.NoLeading }}::Reply(
+      {{- RenderCalleeParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) {
   {{ .WireResponse }}::UnownedEncodedMessage _response(
-    _backing_buffer.data, _backing_buffer.capacity
-  {{- .ResponseArgs | ForwardCommaParams -}}
-  );
+      {{ RenderForwardParams "_buffer.data" "_buffer.capacity" .ResponseArgs }});
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 {{- EndifFuchsia -}}
 {{- end }}
 
-{{- define "ReplyCallerAllocateResultSuccessMethodSignature" -}}
-ReplySuccess(::fidl::BufferSpan _buffer {{- if .Result.ValueMembers }}, {{ end }}
-             {{ .Result.ValueMembers | CalleeParams }})
-{{- end }}
-
 {{- define "ReplyCallerAllocateResultSuccessMethodDefinition" }}
 {{- IfdefFuchsia -}}
-::fidl::Result {{ .WireCompleterBase.NoLeading }}::
-{{- template "ReplyCallerAllocateResultSuccessMethodSignature" . }} {
+::fidl::Result {{ .WireCompleterBase.NoLeading }}::ReplySuccess(
+      {{- RenderCalleeParams "::fidl::BufferSpan _buffer" .Result.ValueMembers }}) {
   {{ .Result.ValueStructDecl }} response;
   {{- range .Result.ValueMembers }}
   response.{{ .Name }} = std::move({{ .Name }});

@@ -655,7 +655,7 @@ class ::fidl::WireServer<::fidl_test_inheritance::Super>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(int64_t y);
-    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer, int64_t y);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t y);
 
    protected:
     using ::fidl::CompleterBase::CompleterBase;
@@ -1316,7 +1316,7 @@ class ::fidl::WireServer<::fidl_test_inheritance::Sub>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(int64_t y);
-    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer, int64_t y);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t y);
 
    protected:
     using ::fidl::CompleterBase::CompleterBase;

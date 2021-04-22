@@ -1253,7 +1253,7 @@ class ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(const ::fidl_test_emptystruct::wire::Empty& e);
-    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer,
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer,
                          const ::fidl_test_emptystruct::wire::Empty& e);
 
    protected:

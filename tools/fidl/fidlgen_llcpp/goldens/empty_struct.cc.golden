@@ -555,11 +555,10 @@ fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::dispatch_message(
 #ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
     SendAndReceiveCompleterBase::Reply(
-        ::fidl::BufferSpan _backing_buffer,
+        ::fidl::BufferSpan _buffer,
         const ::fidl_test_emptystruct::wire::Empty& e) {
   ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
-      UnownedEncodedMessage _response(_backing_buffer.data,
-                                      _backing_buffer.capacity, e);
+      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, e);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__

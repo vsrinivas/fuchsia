@@ -4,6 +4,8 @@
 
 package codegen
 
+// fragmentMethodRequestTmpl contains the definition for
+// fidl::WireRequest<Method>.
 const fragmentMethodRequestTmpl = `
 {{- define "MethodRequestDeclaration" }}
 {{- EnsureNamespace "" }}
@@ -17,8 +19,8 @@ struct {{ .WireRequest }} final {
     {{- end }}
 
   {{- if .RequestArgs }}
-  explicit {{ .WireRequest.Self }}(zx_txid_t _txid {{- .RequestArgs | CalleeCommaParams }})
-  {{ .RequestArgs | InitMessage }} {
+  explicit {{ .WireRequest.Self }}({{ RenderCalleeParams "zx_txid_t _txid" .RequestArgs }})
+  {{ RenderInitMessage .RequestArgs }} {
     _InitHeader(_txid);
   }
   {{- end }}
@@ -52,11 +54,11 @@ struct {{ .WireRequest }} final {
 
   class UnownedEncodedMessage final {
   public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size, zx_txid_t _txid
-    {{- .RequestArgs | CalleeCommaParams }})
+  UnownedEncodedMessage(
+    {{- RenderCalleeParams "uint8_t* _backing_buffer" "uint32_t _backing_buffer_size" "zx_txid_t _txid" .RequestArgs }})
     : message_(::fidl::OutgoingMessage::ConstructorArgs{
-        .iovecs = iovecs_,
-        .iovec_capacity = ::fidl::internal::IovecBufferSize,
+      .iovecs = iovecs_,
+      .iovec_capacity = ::fidl::internal::IovecBufferSize,
   {{- if gt .Request.MaxHandles 0 }}
         .handles = handles_,
         .handle_capacity = std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
@@ -69,9 +71,7 @@ struct {{ .WireRequest }} final {
         message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
       return;
     }
-    FIDL_ALIGNDECL {{ .WireRequest.Self }} _request(_txid
-      {{- .RequestArgs | ForwardCommaParams -}}
-    );
+    FIDL_ALIGNDECL {{ .WireRequest.Self }} _request({{ RenderForwardParams "_txid" .RequestArgs }});
     message_.Encode<{{ .WireRequest.Self }}>(&_request);
   }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
@@ -122,10 +122,8 @@ struct {{ .WireRequest }} final {
 
   class OwnedEncodedMessage final {
   public:
-    explicit OwnedEncodedMessage(zx_txid_t _txid
-      {{- .RequestArgs | CalleeCommaParams }})
-      : message_(backing_buffer_.data(), backing_buffer_.size(), _txid
-      {{- .RequestArgs | ForwardCommaParams }}) {}
+    explicit OwnedEncodedMessage({{- RenderCalleeParams "zx_txid_t _txid" .RequestArgs }})
+      : message_({{ RenderForwardParams "backing_buffer_.data()" "backing_buffer_.size()" "_txid" .RequestArgs }}) {}
     explicit OwnedEncodedMessage({{ .WireRequest.Self }}* request)
       : message_(backing_buffer_.data(), backing_buffer_.size(), request) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;

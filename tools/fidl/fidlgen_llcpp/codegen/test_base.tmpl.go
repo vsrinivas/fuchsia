@@ -28,8 +28,8 @@ class {{ .TestBase.Name }} : public {{ .WireInterface }} {
   {{- range .Methods }}
     {{- if .HasRequest }}
     virtual void {{ .Name }}(
-        {{- .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end -}}
-        {{ .WireCompleter }}::Sync& completer) override { NotImplemented_("{{ .Name }}", completer); }
+        {{- RenderParams .RequestArgs (printf "%s::Sync& completer" .WireCompleter) }})
+          override { NotImplemented_("{{ .Name }}", completer); }
     {{- end }}
   {{- end }}
 };

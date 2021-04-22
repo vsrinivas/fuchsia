@@ -10,18 +10,6 @@ const fragmentProtocolTmpl = `
 class {{ .Name }};
 {{- end }}
 
-{{- define "ForwardMessageParamsUnwrapTypedChannels" -}}
-  {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}} std::move(
-      {{- if or (eq .Type.Kind TypeKinds.Protocol) (eq .Type.Kind TypeKinds.Request) -}}
-        {{ $param.Name }}.channel()
-      {{- else -}}
-        {{ $param.Name }}
-      {{- end -}}
-    )
-  {{- end -}}
-{{- end }}
-
 
 {{- define "ClientAllocationComment" -}}
 {{- if SyncCallTotalStackSize . }} Allocates {{ SyncCallTotalStackSize . }} bytes of {{ "" }}
@@ -77,131 +65,11 @@ class {{ .Name }} final {
   {{- template "MethodUnownedResultDeclaration" . }}
 {{- end }}
 
-{{- EnsureNamespace "::" }}
-
-// Methods to make a sync FIDL call directly on an unowned channel or a
-// const reference to a |fidl::ClientEnd<{{ .WireType }}>|,
-// avoiding setting up a client.
-template<>
-class {{ .WireCaller }} final {
- public:
-  explicit {{ .WireCaller.Self }}(::fidl::UnownedClientEnd<{{ . }}> client_end) :
-    client_end_(client_end) {}
-{{ "" }}
-  {{- /* Client-calling functions do not apply to events. */}}
-  {{- range .ClientMethods -}}
-    {{- .Docs }}
-    //{{ template "ClientAllocationComment" . }}
-    static {{ .WireResult }} {{ .Name }}(
-        ::fidl::UnownedClientEnd<{{ .Protocol }}> _client_end
-        {{- .RequestArgs | CalleeCommaParams }}) {
-      return {{ .WireResult }}(_client_end
-        {{- .RequestArgs | ForwardCommaParams -}}
-      );
-    }
-
-    {{- .Docs }}
-    //{{ template "ClientAllocationComment" . }}
-    {{ .WireResult }} {{ .Name }}({{- .RequestArgs | CalleeParams }}) && {
-      return {{ .WireResult }}(client_end_
-        {{- .RequestArgs | ForwardCommaParams -}}
-      );
-    }
-{{ "" }}
-    {{- if or .RequestArgs .ResponseArgs }}
-      {{- .Docs }}
-      // Caller provides the backing storage for FIDL message via request and response buffers.
-      static {{ .WireUnownedResult }} {{ .Name }}({{ template "StaticCallSyncRequestCallerAllocateMethodArguments" . }}) {
-        return {{ .WireUnownedResult }}(_client_end
-          {{- if .RequestArgs -}}
-            , _request_buffer.data, _request_buffer.capacity
-          {{- end -}}
-            {{- .RequestArgs | ForwardCommaParams -}}
-          {{- if .HasResponse -}}
-            , _response_buffer.data, _response_buffer.capacity
-          {{- end -}});
-      }
-
-      {{- .Docs }}
-      // Caller provides the backing storage for FIDL message via request and response buffers.
-      {{ .WireUnownedResult }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArguments" . }}) && {
-        return {{ .WireUnownedResult }}(client_end_
-          {{- if .RequestArgs -}}
-            , _request_buffer.data, _request_buffer.capacity
-          {{- end -}}
-            {{- .RequestArgs | ForwardCommaParams -}}
-          {{- if .HasResponse -}}
-            , _response_buffer.data, _response_buffer.capacity
-          {{- end -}});
-      }
-
-    {{- end }}
-{{ "" }}
-  {{- end }}
- private:
-  ::fidl::UnownedClientEnd<{{ . }}> client_end_;
-};
-
+{{- template "ProtocolCallerDeclaration" . }}
 {{- template "ProtocolEventHandlerDeclaration" . }}
+{{- template "ProtocolSyncClientDeclaration" . }}
+{{- template "ProtocolInterfaceDeclaration" . }}
 
-template<>
-class {{ .WireSyncClient }} final {
-  public:
-   WireSyncClient() = default;
-
-   explicit WireSyncClient(::fidl::ClientEnd<{{ . }}> client_end)
-       : client_end_(std::move(client_end)) {}
-
-   ~WireSyncClient() = default;
-   WireSyncClient(WireSyncClient&&) = default;
-   WireSyncClient& operator=(WireSyncClient&&) = default;
-
-   const ::fidl::ClientEnd<{{ . }}>& client_end() const { return client_end_; }
-   ::fidl::ClientEnd<{{ . }}>& client_end() { return client_end_; }
-
-   const ::zx::channel& channel() const { return client_end_.channel(); }
-   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-{{ "" }}
-   {{- /* Client-calling functions do not apply to events. */}}
-   {{- range .ClientMethods -}}
-   {{- .Docs }}
-   //{{ template "ClientAllocationComment" . }}
-   {{ .WireResult }} {{ .Name }}({{ .RequestArgs | CalleeParams }}) {
-     return {{ .WireResult }}(this->client_end()
-       {{- .RequestArgs | ForwardCommaParams -}});
-   }
-{{ "" }}
-     {{- if or .RequestArgs .ResponseArgs }}
-       {{- .Docs }}
-   // Caller provides the backing storage for FIDL message via request and response buffers.
-   {{ .WireUnownedResult }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArguments" . }}) {
-     return {{ .WireUnownedResult }}(this->client_end()
-       {{- if .RequestArgs -}}
-         , _request_buffer.data, _request_buffer.capacity
-       {{- end -}}
-         {{- .RequestArgs | ForwardCommaParams -}}
-       {{- if .HasResponse -}}
-         , _response_buffer.data, _response_buffer.capacity
-       {{- end -}});
-   }
-     {{- end }}
-{{ "" }}
-   {{- end }}
-   {{- if .Events }}
-   // Handle all possible events defined in this protocol.
-   // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-   // method defined in |SyncEventHandler|. The return status of the handler function is folded with
-   // any transport-level errors and returned.
-   ::fidl::Result HandleOneEvent({{ .WireSyncEventHandler  }}& event_handler) {
-     return event_handler.HandleOneEvent(client_end_);
-   }
-   {{- end }}
-  private:
-    ::fidl::ClientEnd<{{ . }}> client_end_;
-};
-
-
-  {{- template "ProtocolInterfaceDeclaration" . }}
 {{- end }}
 
 {{- define "ProtocolTraits" -}}
@@ -272,7 +140,7 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
     {{- template "ClientAsyncRequestManagedMethodDefinition" . }}
   {{- end }}
 {{- end }}
-{{ template "ClientDispatchDefinition" . }}
+{{ template "ProtocolClientImplDefinition" . }}
 {{ "" }}
 
 {{- if .Events }}

@@ -17,7 +17,7 @@ extern {{ .Decorator }} {{ .Type }} {{ .Name }};
 
 {{- define "ConstDefinition" }}
 {{- if .Extern }}
-{{ EnsureNamespace "::" }}
+{{ EnsureNamespace "" }}
 {{ .Decorator }} {{ .Type }} {{ . }} = {{ .Value }};
 {{- end }}
 {{- end }}

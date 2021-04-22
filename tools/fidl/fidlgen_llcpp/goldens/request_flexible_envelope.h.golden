@@ -1593,7 +1593,7 @@ class ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>
     ::fidl::Result Reply(
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f);
     ::fidl::Result Reply(
-        ::fidl::BufferSpan _backing_buffer,
+        ::fidl::BufferSpan _buffer,
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f);
 
    protected:
@@ -1638,7 +1638,7 @@ class ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>
     ::fidl::Result Reply(
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo f);
     ::fidl::Result Reply(
-        ::fidl::BufferSpan _backing_buffer,
+        ::fidl::BufferSpan _buffer,
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo f);
 
    protected:

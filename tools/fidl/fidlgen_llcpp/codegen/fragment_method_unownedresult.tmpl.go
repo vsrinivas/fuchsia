@@ -4,21 +4,23 @@
 
 package codegen
 
+// fragmentMethodUnownedResultTmpl contains the definition for
+// fidl::WireUnownedResult<Method>.
 const fragmentMethodUnownedResultTmpl = `
 {{- define "MethodUnownedResultDeclaration" }}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireUnownedResult }} final : public ::fidl::Result {
 	public:
-	 explicit {{ .WireUnownedResult.Self }}(
-		 ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
-	   {{- if .RequestArgs -}}
-		 , uint8_t* _request_bytes, uint32_t _request_byte_capacity
-	   {{- end -}}
-	   {{- .RequestArgs | CalleeCommaParams }}
-	   {{- if .HasResponse -}}
-		 , uint8_t* _response_bytes, uint32_t _response_byte_capacity
-	   {{- end -}});
+    {{- $args := (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol) }}
+    {{- if .RequestArgs }}
+      {{ $args = (List $args "uint8_t* _request_bytes" "uint32_t _request_byte_capacity") }}
+    {{- end }}
+    {{- $args = (List $args .RequestArgs) }}
+    {{- if .HasResponse }}
+        {{- $args = (List $args "uint8_t* _response_bytes" "uint32_t _response_byte_capacity") }}
+    {{- end }}
+     explicit {{ .WireUnownedResult.Self }}({{ RenderCalleeParams $args}});
 	 explicit {{ .WireUnownedResult.Self }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
 	 {{ .WireUnownedResult.Self }}({{ .WireUnownedResult.Self }}&&) = delete;
 	 {{ .WireUnownedResult.Self }}(const {{ .WireUnownedResult.Self }}&) = delete;
@@ -65,30 +67,31 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
 {{- define "MethodUnownedResultDefinition" }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
-{{ .WireUnownedResult }}::{{ .WireUnownedResult.Self }}(
-  ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
-  {{- if .RequestArgs -}}
-  , uint8_t* _request_bytes, uint32_t _request_byte_capacity
-  {{- end -}}
-  {{- .RequestArgs | CalleeCommaParams }}
+{{ $args := (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol) }}
+{{- if .RequestArgs }}
+  {{- $args = (List $args "uint8_t* _request_bytes" "uint32_t _request_byte_capacity") }}
+{{- end }}
+{{- $args = (List $args .RequestArgs) }}
+{{- if .HasResponse }}
+    {{- $args = (List $args "uint8_t* _response_bytes" "uint32_t _response_byte_capacity") }}
+{{- end -}}
+{{ .WireUnownedResult }}::{{ .WireUnownedResult.Self }}({{ RenderCalleeParams $args }})
   {{- if .HasResponse }}
-  , uint8_t* _response_bytes, uint32_t _response_byte_capacity)
-    : bytes_(_response_bytes) {
-  {{- else }}
-  ) {
+    : bytes_(_response_bytes)
   {{- end }}
+  {
   {{- if .RequestArgs -}}
   ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> _request(
-      _request_bytes, _request_byte_capacity, 0
+    {{- RenderForwardParams "_request_bytes" "_request_byte_capacity" "0" .RequestArgs }});
   {{- else -}}
-  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(zx_txid_t(0)
+    ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
+        {{- RenderForwardParams "zx_txid_t(0)" .RequestArgs }});
   {{- end -}}
-    {{- .RequestArgs | ForwardCommaParams -}});
   {{- if .HasResponse }}
-  _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(_client, _response_bytes,
-                                                          _response_byte_capacity);
+      _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(_client, _response_bytes,
+                                                              _response_byte_capacity);
   {{- else }}
-  _request.GetOutgoingMessage().Write(_client);
+    _request.GetOutgoingMessage().Write(_client);
   {{- end }}
   status_ = _request.status();
   error_ = _request.error();

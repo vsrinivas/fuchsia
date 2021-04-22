@@ -1755,7 +1755,7 @@ class ::fidl::WireServer<::fidl_test_protocolrequest::Parent>
     ::fidl::Result Reply(
         ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c);
     ::fidl::Result Reply(
-        ::fidl::BufferSpan _backing_buffer,
+        ::fidl::BufferSpan _buffer,
         ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c);
 
    protected:
@@ -1796,7 +1796,7 @@ class ::fidl::WireServer<::fidl_test_protocolrequest::Parent>
     ::fidl::Result Reply(
         ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r);
     ::fidl::Result Reply(
-        ::fidl::BufferSpan _backing_buffer,
+        ::fidl::BufferSpan _buffer,
         ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r);
 
    protected:

@@ -5,16 +5,8 @@
 package codegen
 
 const fragmentEventSenderTmpl = `
-{{- define "SendEventManagedMethodSignature" -}}
-{{ .Name }}({{ .ResponseArgs | CalleeParams }}) const
-{{- end }}
-
-{{- define "SendEventCallerAllocateMethodSignature" -}}
-{{ .Name }}(::fidl::BufferSpan _buffer, {{ .ResponseArgs | CalleeParams }}) const
-{{- end }}
-
 {{- define "EventSenderDeclaration" }}
-{{ EnsureNamespace "::" }}
+{{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 // |EventSender| owns a server endpoint of a channel speaking
 // the {{ .Name }} protocol, and can send events in that protocol.
@@ -40,13 +32,13 @@ class {{ .WireEventSender }} {
   {{- /* Events have no "request" part of the call; they are unsolicited. */}}
   {{- range .Events }}
     {{- .Docs }}
-    zx_status_t {{ template "SendEventManagedMethodSignature" . }};
+    zx_status_t {{ .Name }}({{ RenderCalleeParams .ResponseArgs }}) const;
 
     {{- if .ResponseArgs }}
 {{ "" }}
     {{- .Docs }}
     // Caller provides the backing storage for FIDL message via response buffers.
-    zx_status_t {{ template "SendEventCallerAllocateMethodSignature" . }};
+    zx_status_t {{ .Name }}({{ RenderCalleeParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const;
     {{- end }}
 {{ "" }}
   {{- end }}
@@ -60,9 +52,9 @@ class {{ .WireWeakEventSender }} {
  public:
   {{- range .Events }}
     {{- .Docs }}
-    zx_status_t {{ template "SendEventManagedMethodSignature" . }} {
+    zx_status_t {{ .Name }}({{ RenderCalleeParams .ResponseArgs }}) const {
       if (auto _binding = binding_.lock()) {
-        return _binding->event_sender().{{ .Name }}({{ .ResponseArgs | ParamMoveNames }});
+        return _binding->event_sender().{{ .Name }}({{ RenderParamMoveNames .ResponseArgs }});
       }
       return ZX_ERR_CANCELED;
     }
@@ -71,9 +63,9 @@ class {{ .WireWeakEventSender }} {
 {{ "" }}
     {{- .Docs }}
   // Caller provides the backing storage for FIDL message via response buffers.
-  zx_status_t {{ template "SendEventCallerAllocateMethodSignature" . }} {
+  zx_status_t {{ .Name }}({{ RenderCalleeParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const {
     if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().{{ .Name }}(std::move(_buffer), {{ .ResponseArgs | ParamMoveNames }});
+      return _binding->event_sender().{{ .Name }}({{ RenderParamMoveNames "std::move(_buffer)" .ResponseArgs }});
     }
     return ZX_ERR_CANCELED;
   }
@@ -96,10 +88,9 @@ class {{ .WireWeakEventSender }} {
 {{- IfdefFuchsia -}}
   {{- range .Events }}
     {{- /* Managed */}}
-zx_status_t {{ $.WireEventSender.NoLeading }}::
-{{- template "SendEventManagedMethodSignature" . }} {
+zx_status_t {{ $.WireEventSender.NoLeading }}::{{ .Name }}({{ RenderCalleeParams .ResponseArgs }}) const {
   ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response{
-      {{- .ResponseArgs | ForwardParams -}}
+      {{- RenderForwardParams .ResponseArgs -}}
   };
   _response.Write(server_end_);
   return _response.status();
@@ -107,12 +98,9 @@ zx_status_t {{ $.WireEventSender.NoLeading }}::
     {{- /* Caller-allocated */}}
     {{- if .ResponseArgs }}
 {{ "" }}
-zx_status_t {{ $.WireEventSender.NoLeading }}::
-{{- template "SendEventCallerAllocateMethodSignature" . }} {
+zx_status_t {{ $.WireEventSender.NoLeading }}::{{ .Name }}({{ RenderCalleeParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const {
   ::fidl::UnownedEncodedMessage<{{ .WireResponse }}> _response(
-      _buffer.data, _buffer.capacity
-      {{- .ResponseArgs | ForwardCommaParams -}}
-  );
+      {{- RenderForwardParams "_buffer.data" "_buffer.capacity" .ResponseArgs }});
   _response.Write(server_end_);
   return _response.status();
 }

@@ -699,7 +699,7 @@ class ::fidl::WireServer<::fidl_test_transitivedependenciescompose::Top>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(const ::bottom::wire::Foo& foo);
-    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer,
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer,
                          const ::bottom::wire::Foo& foo);
 
    protected:

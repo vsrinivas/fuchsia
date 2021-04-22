@@ -322,10 +322,9 @@ fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::AddCompleterBase::Reply(
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::AddCompleterBase::Reply(
-    ::fidl::BufferSpan _backing_buffer, int32_t sum) {
+    ::fidl::BufferSpan _buffer, int32_t sum) {
   ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>::
-      UnownedEncodedMessage _response(_backing_buffer.data,
-                                      _backing_buffer.capacity, sum);
+      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, sum);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__

@@ -1900,7 +1900,7 @@ class ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(::zx::socket&& h);
-    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer, ::zx::socket&& h);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::zx::socket&& h);
 
    protected:
     using ::fidl::CompleterBase::CompleterBase;
@@ -3735,7 +3735,7 @@ class ::fidl::WireServer<::fidl_test_protocols::Transitional>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(int64_t y);
-    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer, int64_t y);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t y);
 
    protected:
     using ::fidl::CompleterBase::CompleterBase;
@@ -5954,7 +5954,7 @@ class ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(int64_t result);
-    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer, int64_t result);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t result);
 
    protected:
     using ::fidl::CompleterBase::CompleterBase;
@@ -6029,7 +6029,7 @@ class ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(::zx::socket&& b);
-    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer, ::zx::socket&& b);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::zx::socket&& b);
 
    protected:
     using ::fidl::CompleterBase::CompleterBase;
@@ -9299,8 +9299,7 @@ class ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(::fidl::StringView ret);
-    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer,
-                         ::fidl::StringView ret);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::fidl::StringView ret);
 
    protected:
     using ::fidl::CompleterBase::CompleterBase;
@@ -9406,8 +9405,7 @@ class ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(::fidl::StringView ret);
-    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer,
-                         ::fidl::StringView ret);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::fidl::StringView ret);
 
    protected:
     using ::fidl::CompleterBase::CompleterBase;
@@ -11178,7 +11176,7 @@ class ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>
     ::fidl::Result ReplySuccess(int64_t a, int64_t b, int64_t c);
     ::fidl::Result ReplyError(uint32_t error);
     ::fidl::Result Reply(
-        ::fidl::BufferSpan _backing_buffer,
+        ::fidl::BufferSpan _buffer,
         ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult
             result);
     ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int64_t a,
@@ -11228,7 +11226,7 @@ class ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>
     ::fidl::Result ReplySuccess();
     ::fidl::Result ReplyError(uint32_t error);
     ::fidl::Result Reply(
-        ::fidl::BufferSpan _backing_buffer,
+        ::fidl::BufferSpan _buffer,
         ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult
             result);
     ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer);
@@ -11276,7 +11274,7 @@ class ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>
     ::fidl::Result ReplySuccess();
     ::fidl::Result ReplyError(::fidl_test_protocols::wire::ErrorEnun error);
     ::fidl::Result Reply(
-        ::fidl::BufferSpan _backing_buffer,
+        ::fidl::BufferSpan _buffer,
         ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result);
     ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer);
 

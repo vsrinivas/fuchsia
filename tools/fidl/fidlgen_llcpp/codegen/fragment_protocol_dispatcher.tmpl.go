@@ -4,6 +4,8 @@
 
 package codegen
 
+// fragmentProtocolDispatcherTmpl contains the definition for
+// fidl::internal::WireDispatcher<Protocol>.
 const fragmentProtocolDispatcherTmpl = `
 {{- define "ProtocolDispatcherDeclaration" }}
 {{- IfdefFuchsia }}

@@ -4,6 +4,8 @@
 
 package codegen
 
+// fragmentMethodResponseTmpl contains the definition for
+// fidl::WireResponse<Method>.
 const fragmentMethodResponseTmpl = `
 {{- define "MethodResponseDeclaration" }}
 {{- EnsureNamespace "" }}
@@ -17,8 +19,8 @@ struct {{ .WireResponse }} final {
     {{- end }}
 
   {{- if .ResponseArgs }}
-  explicit {{ .WireResponse.Self }}({{ .ResponseArgs | CalleeParams }})
-  {{ .ResponseArgs | InitMessage }} {
+  explicit {{ .WireResponse.Self }}({{ RenderCalleeParams .ResponseArgs }})
+  {{ RenderInitMessage .ResponseArgs }} {
   _InitHeader();
   }
   {{- end }}
@@ -46,8 +48,7 @@ struct {{ .WireResponse }} final {
 
   class UnownedEncodedMessage final {
    public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size
-    {{- .ResponseArgs | CalleeCommaParams }})
+  UnownedEncodedMessage({{- RenderCalleeParams "uint8_t* _backing_buffer" "uint32_t _backing_buffer_size" .ResponseArgs }})
     : message_(::fidl::OutgoingMessage::ConstructorArgs{
         .iovecs = iovecs_,
         .iovec_capacity = ::fidl::internal::IovecBufferSize,
@@ -59,7 +60,7 @@ struct {{ .WireResponse }} final {
         .backing_buffer_capacity = _backing_buffer_size,
       }) {
     FIDL_ALIGNDECL {{ .WireResponse.Self }} _response{
-    {{- .ResponseArgs | ForwardParams -}}
+    {{- RenderForwardParams .ResponseArgs -}}
     };
     if (_backing_buffer_size < sizeof({{ .WireResponse.Self }})) {
       ::fidl::internal::OutgoingMessageResultSetter::SetResult(
@@ -116,9 +117,8 @@ struct {{ .WireResponse }} final {
 
   class OwnedEncodedMessage final {
    public:
-  explicit OwnedEncodedMessage({{ .ResponseArgs | CalleeParams }})
-    : message_(backing_buffer_.data(), backing_buffer_.size()
-    {{- .ResponseArgs | ForwardCommaParams }}) {}
+  explicit OwnedEncodedMessage({{ RenderCalleeParams .ResponseArgs }})
+    : message_({{ RenderForwardParams "backing_buffer_.data()" "backing_buffer_.size()" .ResponseArgs }}) {}
   explicit OwnedEncodedMessage({{ .WireResponse }}* response)
     : message_(backing_buffer_.data(), backing_buffer_.size(), response) {}
   OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;

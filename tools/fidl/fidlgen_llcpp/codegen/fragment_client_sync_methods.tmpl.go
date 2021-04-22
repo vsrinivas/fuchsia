@@ -7,19 +7,19 @@ package codegen
 const fragmentClientSyncMethodsTmpl = `
 {{- define "ClientSyncRequestCallerAllocateMethodDefinition" }}
 {{ EnsureNamespace "" }}
+{{- $base_args := (printf "::fidl::UnownedClientEnd<%s>(_channel->handle())" .Protocol) }}
+{{- if .RequestArgs }}
+  {{- $base_args = (List $base_args "_request_buffer.data" "_request_buffer.capacity") }}
+{{- end }}
+{{- $base_args = (List $base_args .RequestArgs) }}
+
   {{- if .HasResponse }}
 {{- IfdefFuchsia -}}
 {{ .WireUnownedResult }}
 {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync(
      {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return {{ .WireUnownedResult }}(
-      ::fidl::UnownedClientEnd<{{ .Protocol }}>(_channel->handle())
-    {{- if .RequestArgs -}}
-      , _request_buffer.data, _request_buffer.capacity
-    {{- end -}}
-      {{- .RequestArgs | ForwardCommaParams -}},
-      _response_buffer.data, _response_buffer.capacity);
+    return {{ .WireUnownedResult }}({{ RenderForwardParams $base_args "_response_buffer.data" "_response_buffer.capacity" }});
   }
   return {{ .WireUnownedResult }}(
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -30,12 +30,7 @@ const fragmentClientSyncMethodsTmpl = `
 ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res = {{ .WireUnownedResult }}(
-      ::fidl::UnownedClientEnd<{{ .Protocol }}>(_channel->handle())
-    {{- if .RequestArgs -}}
-      , _request_buffer.data, _request_buffer.capacity
-    {{- end }}
-      {{- .RequestArgs | ForwardCommaParams -}});
+    auto _res = {{ .WireUnownedResult }}({{ RenderForwardParams $base_args }});
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -50,12 +45,11 @@ const fragmentClientSyncMethodsTmpl = `
   {{- if .HasResponse }}
 {{- IfdefFuchsia -}}
 {{ .WireResult }}
-{{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync({{ .RequestArgs | CalleeParams }}) {
+{{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync({{ RenderCalleeParams .RequestArgs }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return {{ .WireResult }}(
-      ::fidl::UnownedClientEnd<{{ .Protocol }}>(_channel->handle())
-      {{- .RequestArgs | ForwardCommaParams -}}
-    );
+      {{- RenderForwardParams (printf "::fidl::UnownedClientEnd<%s>(_channel->handle())" .Protocol)
+                              .RequestArgs }});
   }
   return {{ .WireResult }}(
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -63,13 +57,11 @@ const fragmentClientSyncMethodsTmpl = `
 {{- EndifFuchsia -}}
   {{- else }}
 {{- IfdefFuchsia -}}
-::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
-    {{ .RequestArgs | CalleeParams }}) {
+::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}({{ RenderCalleeParams .RequestArgs }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = {{ .WireResult }}(
-      ::fidl::UnownedClientEnd<{{ .Protocol }}>(_channel->handle())
-      {{- .RequestArgs | ForwardCommaParams -}}
-    );
+      {{- RenderForwardParams (printf "::fidl::UnownedClientEnd<%s>(_channel->handle())" .Protocol)
+                              .RequestArgs }});
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);

@@ -239,7 +239,7 @@ public:
      emulated handles for C++. */}}
 {{- define "TableDefinition" }}
 {{ if .IsResourceType }}
-{{ EnsureNamespace "::" }}
+{{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 void {{ . }}::_CloseHandles() {
   {{- range .Members }}

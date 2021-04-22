@@ -1570,7 +1570,7 @@ class ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(int32_t sum);
-    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer, int32_t sum);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer, int32_t sum);
 
    protected:
     using ::fidl::CompleterBase::CompleterBase;

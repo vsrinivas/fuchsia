@@ -4383,7 +4383,7 @@ class ::fidl::WireServer<::fidl_test_union::TestProtocol>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(::fidl_test_union::wire::StrictBoundedXUnion xu);
-    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer,
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer,
                          ::fidl_test_union::wire::StrictBoundedXUnion xu);
 
    protected:
@@ -4430,7 +4430,7 @@ class ::fidl::WireServer<::fidl_test_union::TestProtocol>
     // Because the reply status is identical to the unbinding status, it can be
     // safely ignored.
     ::fidl::Result Reply(::fidl_test_union::wire::OlderSimpleUnion xu);
-    ::fidl::Result Reply(::fidl::BufferSpan _backing_buffer,
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer,
                          ::fidl_test_union::wire::OlderSimpleUnion xu);
 
    protected:

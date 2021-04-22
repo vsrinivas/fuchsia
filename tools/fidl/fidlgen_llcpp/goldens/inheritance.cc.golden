@@ -296,10 +296,9 @@ fidl::WireInterface<::fidl_test_inheritance::Super>::dispatch_message(
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireServer<::fidl_test_inheritance::Super>::FooCompleterBase::Reply(
-    ::fidl::BufferSpan _backing_buffer, int64_t y) {
+    ::fidl::BufferSpan _buffer, int64_t y) {
   ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>::
-      UnownedEncodedMessage _response(_backing_buffer.data,
-                                      _backing_buffer.capacity, y);
+      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, y);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
@@ -607,9 +606,9 @@ fidl::WireInterface<::fidl_test_inheritance::Sub>::dispatch_message(
 #ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireServer<::fidl_test_inheritance::Sub>::FooCompleterBase::Reply(
-    ::fidl::BufferSpan _backing_buffer, int64_t y) {
+    ::fidl::BufferSpan _buffer, int64_t y) {
   ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>::UnownedEncodedMessage
-      _response(_backing_buffer.data, _backing_buffer.capacity, y);
+      _response(_buffer.data, _buffer.capacity, y);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__

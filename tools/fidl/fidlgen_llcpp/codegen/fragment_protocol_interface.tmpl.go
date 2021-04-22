@@ -5,7 +5,7 @@
 package codegen
 
 // fragmentProtocolInterfaceTmpl contains the definition for
-// fidl::WireInterface<Protocol> and fidl::WireRawChannelInterface<Protocol>
+// fidl::WireInterface<Protocol> and fidl::WireRawChannelInterface<Protocol>.
 const fragmentProtocolInterfaceTmpl = `
 {{- define "ProtocolInterfaceDeclaration" }}
 {{ "" }}
@@ -35,15 +35,16 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
     // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
     //
     // Because the reply status is identical to the unbinding status, it can be safely ignored.
-    ::fidl::Result {{ template "ReplyManagedMethodSignature" . }};
+    ::fidl::Result Reply({{ RenderCalleeParams .ResponseArgs }});
         {{- if .Result }}
-    ::fidl::Result {{ template "ReplyManagedResultSuccessMethodSignature" . }};
-    ::fidl::Result {{ template "ReplyManagedResultErrorMethodSignature" . }};
+    ::fidl::Result ReplySuccess({{ RenderCalleeParams .Result.ValueMembers }});
+    ::fidl::Result ReplyError({{ .Result.ErrorDecl }} error);
         {{- end }}
         {{- if .ResponseArgs }}
-    ::fidl::Result {{ template "ReplyCallerAllocateMethodSignature" . }};
+    ::fidl::Result Reply({{ RenderCalleeParams "::fidl::BufferSpan _buffer" .ResponseArgs }});
           {{- if .Result }}
-    ::fidl::Result {{ template "ReplyCallerAllocateResultSuccessMethodSignature" . }};
+    ::fidl::Result ReplySuccess(
+        {{- RenderCalleeParams "::fidl::BufferSpan _buffer" .Result.ValueMembers }});
           {{- end }}
         {{- end }}
 
@@ -104,11 +105,11 @@ class {{ .WireInterface }} : public ::fidl::internal::IncomingMessageDispatcher 
 
   {{- .Docs }}
   virtual void {{ .Name }}(
-      {{- .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end -}}
+      {{- RenderParams .RequestArgs (printf "%s::Sync& _completer" .WireCompleter.Self)  }})
       {{- if .Transitional -}}
-        {{ .Name }}Completer::Sync& _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+        { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
       {{- else -}}
-        {{ .Name }}Completer::Sync& _completer) = 0;
+        = 0;
       {{- end }}
 {{ "" }}
     {{- end }}
@@ -143,21 +144,19 @@ template<>
 {{ "" }}
       {{- if .ShouldEmitTypedChannelCascadingInheritance }}
     virtual void {{ .Name }}(
-        {{- .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end -}}
-        {{ .Name }}Completer::Sync& _completer) final {
-      {{ .Name }}({{ template "ForwardMessageParamsUnwrapTypedChannels" .RequestArgs }}
-        {{- if .RequestArgs }}, {{ end -}} _completer);
+            {{- RenderParams .RequestArgs (printf "%s::Sync& _completer" .WireCompleter) }}) final {
+          {{ .Name }}({{ RenderParamsMoveNamesNoTypedChannels .RequestArgs "_completer" }});
     }
 
     // TODO(fxbug.dev/65212): Overriding this method is discouraged since it
     // uses raw channels instead of |fidl::ClientEnd| and |fidl::ServerEnd|.
     // Please move to overriding the typed channel overload above instead.
     virtual void {{ .Name }}(
-      {{- .RequestArgs | ParamsNoTypedChannels }}{{ if .RequestArgs }}, {{ end -}}
+      {{- RenderParamsNoTypedChannels .RequestArgs (printf "%s::Sync& _completer" .WireCompleter) }})
         {{- if .Transitional -}}
-          {{ .WireCompleter }}::Sync& _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+          { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
         {{- else -}}
-          {{ .WireCompleter }}::Sync& _completer) = 0;
+          = 0;
         {{- end }}
 {{ "" }}
       {{- end }}

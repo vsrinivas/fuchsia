@@ -4,8 +4,8 @@
 
 package codegen
 
-const fragmentClientTmpl = `
-{{- define "ClientDeclaration" }}
+const fragmentProtocolClientImplTmpl = `
+{{- define "ProtocolClientImplDeclaration" }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 template<>
@@ -21,7 +21,9 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
     {{- end }}
   // Asynchronous variant of |{{ $.Name }}.{{ .Name }}()|.
   // {{ template "AsyncClientAllocationComment" . }}
-  ::fidl::Result {{ .Name }}({{ template "ClientAsyncRequestManagedMethodArguments" . }});
+  ::fidl::Result {{ .Name }}(
+        {{ RenderCalleeParams .RequestArgs
+                        (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }});
 {{ "" }}
 
     {{- /* Async caller-allocate flavor */}}
@@ -33,7 +35,15 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
-  ::fidl::Result {{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }});
+  ::fidl::Result {{ .Name }}(
+        {{- if .RequestArgs }}
+          {{ RenderCalleeParams "::fidl::BufferSpan _request_buffer"
+                          .RequestArgs
+                          (printf "%s* _context" .WireResponseContext) }}
+        {{- else }}
+          {{ .WireResponseContext }}* _context
+        {{- end -}}
+    );
 {{ "" }}
 
     {{- /* Sync managed flavor */}}
@@ -43,7 +53,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
     {{- end }}
   // Synchronous variant of |{{ $.Name }}.{{ .Name }}()|.
   // {{- template "ClientAllocationComment" . }}
-  {{ .WireResult }} {{ .Name }}_Sync({{ .RequestArgs | CalleeParams }});
+  {{ .WireResult }} {{ .Name }}_Sync({{ RenderCalleeParams .RequestArgs }});
 
     {{- /* Sync caller-allocate flavor */}}
     {{- if or .RequestArgs .ResponseArgs }}
@@ -69,7 +79,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
   //
     {{- end }}
   // {{- template "ClientAllocationComment" . }}
-  ::fidl::Result {{ .Name }}({{ .RequestArgs | CalleeParams }});
+  ::fidl::Result {{ .Name }}({{ RenderCalleeParams .RequestArgs }});
 
     {{- /* Caller-allocate flavor */}}
     {{- if .RequestArgs }}
@@ -100,7 +110,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
 {{- EndifFuchsia -}}
 {{- end }}
 
-{{- define "ClientDispatchDefinition" }}
+{{- define "ProtocolClientImplDefinition" }}
 {{ EnsureNamespace ""}}
 {{- IfdefFuchsia -}}
 std::optional<::fidl::UnbindInfo> {{ .WireClientImpl.NoLeading }}::DispatchEvent(fidl_incoming_msg_t* msg) {

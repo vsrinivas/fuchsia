@@ -144,7 +144,7 @@ struct {{ .Name }} {
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "StructDefinition" }}
-{{ EnsureNamespace "::" }}
+{{ EnsureNamespace "" }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 void {{ . }}::_CloseHandles() {
