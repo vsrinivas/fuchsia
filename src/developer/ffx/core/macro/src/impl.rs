@@ -277,7 +277,7 @@ fn generate_known_proxy(
                 let output_fut = Ident::new(&format!("{}_fut", factory_name), Span::call_site());
                 let output_fut_res =
                     Ident::new(&format!("{}_fut_res", factory_name), Span::call_site());
-                let implementation = quote! { let #output_fut = #factory_name(); };
+                let implementation = quote! { let #output_fut = injector.#factory_name(); };
                 let testing =
                     generate_fake_test_proxy_method(pat_ident.ident.clone(), proxy_type_path);
                 let arg = match proxy_wrapper_type {
@@ -371,7 +371,7 @@ fn generate_proxy_from_selector(
         async {
             // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
             use futures::TryFutureExt;
-            remote_factory().await?
+            injector.remote_factory().await?
             .connect(#selector, #server_end.into_channel())
             .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
                 fidl_result
@@ -425,10 +425,7 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
     } = parse_arguments(input.sig.inputs.clone(), &proxies)?;
 
     let mut outer_args: Punctuated<_, Token!(,)> = Punctuated::new();
-    outer_args.push(quote! {daemon_factory: D});
-    outer_args.push(quote! {remote_factory: R});
-    outer_args.push(quote! {fastboot_factory: F});
-    outer_args.push(quote! {is_experiment: E});
+    outer_args.push(quote! {injector: I});
     outer_args.push(quote! {#cmd});
 
     let implementation = if proxies_to_generate.len() > 0 {
@@ -446,7 +443,7 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
 
     let gated_impl = if let Some(key) = proxies.experiment_key {
         quote! {
-            if is_experiment(#key).await {
+            if injector.is_experiment(#key).await {
                 #implementation
             } else {
                 println!("This is an experimental subcommand.  To enable this subcommand run 'ffx config set {} true'", #key);
@@ -459,27 +456,7 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
 
     let res = quote! {
         #input
-        pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
-            #outer_args
-        ) -> anyhow::Result<()>
-            where
-            D: Fn() -> DFut,
-            DFut: std::future::Future<
-                Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
-            >,
-            R: Fn() -> RFut,
-            RFut: std::future::Future<
-                Output = anyhow::Result<
-                    fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
-                >,
-            >,
-            E: Fn(&'static str) -> EFut,
-            EFut: std::future::Future<Output = bool>,
-            F: Fn() -> FFut,
-            FFut: std::future::Future<
-                Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
-            >,
-        {
+        pub async fn ffx_plugin_impl<I: ffx_core::Injector>(#outer_args) -> anyhow::Result<()> {
             #gated_impl
         }
 

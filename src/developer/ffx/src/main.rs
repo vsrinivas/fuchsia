@@ -6,8 +6,9 @@ use {
     analytics::{add_crash_event, get_notice},
     anyhow::{anyhow, Context, Result},
     async_once::Once,
+    async_trait::async_trait,
     ffx_core::metrics::{add_fx_launch_event, init_metrics_svc},
-    ffx_core::{ffx_bail, ffx_error, FfxError},
+    ffx_core::{ffx_bail, ffx_error, FfxError, Injector},
     ffx_daemon::{get_daemon_proxy_single_link, is_daemon_running},
     ffx_lib_args::{from_env, Ffx},
     ffx_lib_sub_command::Subcommand,
@@ -16,8 +17,8 @@ use {
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async::TimeoutExt,
     futures::{Future, FutureExt},
-    lazy_static::lazy_static,
     ring::digest::{Context as ShaContext, Digest, SHA256},
+    std::default::Default,
     std::error::Error,
     std::fs::File,
     std::io::{BufReader, Read},
@@ -80,14 +81,78 @@ rebooting the device or flashing the device into a running state.";
 const DAEMON_CONNECTION_ISSUE: &str = "\
 Timed out waiting on the Daemon.\nRun `ffx doctor` for further diagnostics";
 
-lazy_static! {
-    static ref DAEMON_ONCE: Once<DaemonProxy> = Once::new();
+struct Injection {
+    daemon_once: Once<DaemonProxy>,
 }
 
-// This could get called multiple times by the plugin system via multiple threads - so make sure
-// the spawning only happens one thread at a time.
-async fn get_daemon_proxy() -> Result<DaemonProxy> {
-    DAEMON_ONCE.get_or_try_init(init_daemon_proxy()).await.map(|proxy| proxy.clone())
+impl Default for Injection {
+    fn default() -> Self {
+        Self { daemon_once: Once::new() }
+    }
+}
+
+#[async_trait]
+impl Injector for Injection {
+    // This could get called multiple times by the plugin system via multiple threads - so make sure
+    // the spawning only happens one thread at a time.
+    async fn daemon_factory(&self) -> Result<DaemonProxy> {
+        self.daemon_once.get_or_try_init(init_daemon_proxy()).await.map(|proxy| proxy.clone())
+    }
+
+    async fn fastboot_factory(&self) -> Result<FastbootProxy> {
+        let daemon_proxy = self.daemon_factory().await?;
+        let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
+        let app: Ffx = argh::from_env();
+        let result = timeout(
+            proxy_timeout().await?,
+            daemon_proxy.get_fastboot(
+                app.target().await?.as_ref().map(|s| s.as_str()),
+                fastboot_server_end,
+            ),
+        )
+        .await
+        .context("timeout")?
+        .context("connecting to Fastboot")?;
+
+        match result {
+            Ok(_) => Ok(fastboot_proxy),
+            Err(DaemonError::NonFastbootDevice) => Err(ffx_error!(NON_FASTBOOT_MSG).into()),
+            Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
+            Err(DaemonError::TargetNotFound) => Err(ffx_error!(TARGET_NOT_FOUND_MSG).into()),
+            Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
+            Err(e) => Err(anyhow!("unexpected failure connecting to Fastboot: {:?}", e)),
+        }
+    }
+
+    async fn remote_factory(&self) -> Result<RemoteControlProxy> {
+        let daemon_proxy = self.daemon_factory().await?;
+        let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
+        let app: Ffx = argh::from_env();
+
+        let result = timeout(
+            proxy_timeout().await?,
+            daemon_proxy.get_remote_control(
+                app.target().await?.as_ref().map(|s| s.as_str()),
+                remote_server_end,
+            ),
+        )
+        .await
+        .context("timeout")?
+        .context("connecting to target via daemon")?;
+
+        match result {
+            Ok(_) => Ok(remote_proxy),
+            Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
+            Err(DaemonError::TargetNotFound) => Err(ffx_error!(TARGET_NOT_FOUND_MSG).into()),
+            Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
+            Err(DaemonError::TargetInFastboot) => Err(ffx_error!(TARGET_IN_FASTBOOT).into()),
+            Err(e) => Err(anyhow!("unexpected failure connecting to RCS: {:?}", e)),
+        }
+    }
+
+    async fn is_experiment(&self, key: &str) -> bool {
+        ffx_config::get(key).await.unwrap_or(false)
+    }
 }
 
 async fn init_daemon_proxy() -> Result<DaemonProxy> {
@@ -180,59 +245,6 @@ where
     }
 }
 
-async fn get_fastboot_proxy() -> Result<FastbootProxy> {
-    let daemon_proxy = get_daemon_proxy().await?;
-    let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
-    let app: Ffx = argh::from_env();
-    let result = timeout(
-        proxy_timeout().await?,
-        daemon_proxy
-            .get_fastboot(app.target().await?.as_ref().map(|s| s.as_str()), fastboot_server_end),
-    )
-    .await
-    .context("timeout")?
-    .context("connecting to Fastboot")?;
-
-    match result {
-        Ok(_) => Ok(fastboot_proxy),
-        Err(DaemonError::NonFastbootDevice) => Err(ffx_error!(NON_FASTBOOT_MSG).into()),
-        Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
-        Err(DaemonError::TargetNotFound) => Err(ffx_error!(TARGET_NOT_FOUND_MSG).into()),
-        Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
-        Err(e) => Err(anyhow!("unexpected failure connecting to Fastboot: {:?}", e)),
-    }
-}
-
-async fn get_remote_proxy() -> Result<RemoteControlProxy> {
-    let daemon_proxy = get_daemon_proxy().await?;
-    let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
-    let app: Ffx = argh::from_env();
-
-    let result = timeout(
-        proxy_timeout().await?,
-        daemon_proxy.get_remote_control(
-            app.target().await?.as_ref().map(|s| s.as_str()),
-            remote_server_end,
-        ),
-    )
-    .await
-    .context("timeout")?
-    .context("connecting to target via daemon")?;
-
-    match result {
-        Ok(_) => Ok(remote_proxy),
-        Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
-        Err(DaemonError::TargetNotFound) => Err(ffx_error!(TARGET_NOT_FOUND_MSG).into()),
-        Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
-        Err(DaemonError::TargetInFastboot) => Err(ffx_error!(TARGET_IN_FASTBOOT).into()),
-        Err(e) => Err(anyhow!("unexpected failure connecting to RCS: {:?}", e)),
-    }
-}
-
-async fn is_experiment_subcommand_on(key: &'static str) -> bool {
-    ffx_config::get(key).await.unwrap_or(false)
-}
-
 fn is_daemon(subcommand: &Option<Subcommand>) -> bool {
     if let Some(Subcommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
         subcommand: ffx_daemon_plugin_sub_command::Subcommand::FfxDaemonStart(_),
@@ -311,14 +323,7 @@ async fn run() -> Result<()> {
     });
 
     let command_start = Instant::now();
-    let res = ffx_lib_suite::ffx_plugin_impl(
-        get_daemon_proxy,
-        get_remote_proxy,
-        get_fastboot_proxy,
-        is_experiment_subcommand_on,
-        app,
-    )
-    .await;
+    let res = ffx_lib_suite::ffx_plugin_impl(Injection::default(), app).await;
     let command_done = Instant::now();
     log::info!("Command completed. Success: {}", res.is_ok());
 
