@@ -52,7 +52,6 @@ class Vdec1 : public DecoderCore {
   Owner* owner_;
   bool powered_on_ = false;
   bool decoding_started_ = false;
-  zx::time powerup_deadline_;
 };
 
 }  // namespace amlogic_decoder

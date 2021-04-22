@@ -102,9 +102,6 @@ zx_status_t Vdec1::LoadFirmware(InternalBuffer& buffer) {
 
 void Vdec1::PowerOn() {
   ZX_DEBUG_ASSERT(!powered_on_);
-  // See Vdec1::PowerOff for an explanation of why this delay is needed.
-  zx::nanosleep(powerup_deadline_);
-
   // Make sure that the clocks are ungated before we apply power, and reset the
   // DOS unit.  In the past, we have seen a rare issue on ~3 devices where, a
   // failure to have the clocks running before the DOS unit was powered up and
@@ -253,11 +250,6 @@ void Vdec1::PowerOff() {
     temp.WriteTo(mmio()->aobus);
   }
   owner_->GateClocks();
-
-  // If AoRtiGenPwrSleep0 is cleared (due to poweron) too soon after it's set then the bus will lock
-  // up (causing a watchdog reboot) as soon as VDEC is un-isolated from it. This delay seems to be
-  // long enough to avoid that problem - 1 ms works most of the time, but not always.
-  powerup_deadline_ = zx::deadline_after(zx::msec(2));
 }
 
 void Vdec1::StartDecoding() {
