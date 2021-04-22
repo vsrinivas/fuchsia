@@ -4,10 +4,12 @@
 
 #include "src/media/audio/audio_core/audio_renderer.h"
 
+#include <fuchsia/media/audio/cpp/fidl.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "fuchsia/media/audio/cpp/fidl.h"
+#include <string>
+
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/stream_usage.h"
@@ -126,6 +128,42 @@ void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
   cleanup.cancel();
 }
 
+// To eliminate audible pops from discontinuity-on-pause, ramp down to silence, then pause.
+constexpr bool kEnableRampDownOnPause = true;
+constexpr float kFinalRampDownGainDb = fuchsia::media::audio::MUTED_GAIN_DB;
+constexpr zx::duration kRampDownOnPauseDuration = zx::msec(5);
+constexpr zx::duration kAdditionalDelayBeforePauseDuration = zx::msec(5);
+
+void AudioRenderer::PauseInternal(PauseCallback callback) {
+  // As a short-term workaround until time-stamped Play/Pause/Gain commands are in place, start the
+  // ramp-down immediately, and post a delayed task for the actual Pause.
+  if constexpr (kEnableRampDownOnPause) {
+    auto prev_gain_db = stream_gain_db_;
+    // Start ramping to kFinalRampDownGainDb. Post a task to Pause (delayed longer than ramp-down).
+    // On receiving the Pause callback, restore stream gain to its original value.
+    // Use internal SetGain/SetGainWithRamp versions, to avoid gain notifications.
+    PostStreamGainMute({.ramp = GainRamp{kFinalRampDownGainDb, kRampDownOnPauseDuration,
+                                         fuchsia::media::audio::RampType::SCALE_LINEAR}});
+
+    auto pause_callback = [this, prev_gain_db, client_callback = std::move(callback)](
+                              int64_t ref_time, int64_t media_time) {
+      if (client_callback != nullptr) {
+        client_callback(ref_time, media_time);
+      }
+      PostStreamGainMute({.gain_db = prev_gain_db});
+    };
+
+    // We add a shared self-reference, in case renderer is unbound before/during the delayed task.
+    context().threading_model().FidlDomain().PostDelayedTask(
+        [this, self = shared_from_this(), callback = std::move(pause_callback)]() mutable {
+          BaseRenderer::PauseInternal(std::move(callback));
+        },
+        kRampDownOnPauseDuration + kAdditionalDelayBeforePauseDuration);
+  } else {
+    BaseRenderer::PauseInternal(std::move(callback));
+  }
+}
+
 void AudioRenderer::BindGainControl(
     fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) {
   TRACE_DURATION("audio", "AudioRenderer::BindGainControl");
@@ -171,13 +209,14 @@ void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
       });
 }
 
-constexpr bool kLogSetGainMuteRamp = true;
+constexpr bool kLogSetGainMuteRampCalls = false;
+constexpr bool kLogSetGainMuteRampActions = true;
 void AudioRenderer::PostStreamGainMute(StreamGainCommand gain_command) {
   context().link_matrix().ForEachDestLink(
       *this, [this, gain_command](LinkMatrix::LinkHandle link) mutable {
         FX_CHECK(link.mix_domain) << "Renderer dest link should have a defined mix_domain";
 
-        if constexpr (kLogSetGainMuteRamp) {
+        if constexpr (kLogSetGainMuteRampActions) {
           // TODO(fxbug.dev/51049) Swap this logging for inspect or other real-time gain observation
           std::stringstream stream;
           stream << static_cast<const void*>(this) << " (mixer "
@@ -222,6 +261,9 @@ void AudioRenderer::PostStreamGainMute(StreamGainCommand gain_command) {
 // output gain, if the mixer topology is single-tier) is "dest" gain.
 void AudioRenderer::SetGain(float gain_db) {
   TRACE_DURATION("audio", "AudioRenderer::SetGain");
+  if constexpr (kLogSetGainMuteRampCalls) {
+    FX_LOGS(INFO) << __FUNCTION__ << "(" << gain_db << " dB)";
+  }
 
   // Before setting stream_gain_db_, always perform this range check.
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
@@ -231,8 +273,7 @@ void AudioRenderer::SetGain(float gain_db) {
     return;
   }
 
-  FX_LOGS(DEBUG) << __FUNCTION__ << "(" << gain_db << " dB)";
-  PostStreamGainMute({gain_db, std::nullopt, std::nullopt});
+  PostStreamGainMute({.gain_db = gain_db});
 
   stream_gain_db_ = gain_db;
   reporter().SetGain(gain_db);
@@ -244,6 +285,10 @@ void AudioRenderer::SetGain(float gain_db) {
 void AudioRenderer::SetGainWithRamp(float gain_db, int64_t duration_ns,
                                     fuchsia::media::audio::RampType ramp_type) {
   TRACE_DURATION("audio", "AudioRenderer::SetGainWithRamp");
+  if constexpr (kLogSetGainMuteRampCalls) {
+    FX_LOGS(INFO) << __FUNCTION__ << "(to " << gain_db << " dB over " << duration_ns / 1000
+                  << " usec)";
+  }
 
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
@@ -253,8 +298,7 @@ void AudioRenderer::SetGainWithRamp(float gain_db, int64_t duration_ns,
   }
 
   zx::duration duration = zx::nsec(duration_ns);
-  FX_LOGS(DEBUG) << __FUNCTION__ << "(" << gain_db << " dB, " << duration.to_usecs() << " usec)";
-  PostStreamGainMute({std::nullopt, GainRamp{gain_db, duration, ramp_type}, std::nullopt});
+  PostStreamGainMute({.ramp = GainRamp{gain_db, duration, ramp_type}});
 
   stream_gain_db_ = gain_db;
   reporter().SetGainWithRamp(gain_db, duration, ramp_type);
@@ -266,13 +310,16 @@ void AudioRenderer::SetGainWithRamp(float gain_db, int64_t duration_ns,
 // object. Renderer gain/mute is pre-mix and hence is the Source component in the Gain object.
 void AudioRenderer::SetMute(bool mute) {
   TRACE_DURATION("audio", "AudioRenderer::SetMute");
+  if constexpr (kLogSetGainMuteRampCalls) {
+    FX_LOGS(INFO) << __FUNCTION__ << "(" << mute << ")";
+  }
   // Only do the work if the request represents a change in state.
   FX_LOGS(DEBUG) << " (mute: " << mute << ")";
   if (mute_ == mute) {
     return;
   }
 
-  PostStreamGainMute({std::nullopt, std::nullopt, mute});
+  PostStreamGainMute({.mute = mute});
 
   mute_ = mute;
   reporter().SetMute(mute);
@@ -281,7 +328,8 @@ void AudioRenderer::SetMute(bool mute) {
 
 void AudioRenderer::NotifyGainMuteChanged() {
   TRACE_DURATION("audio", "AudioRenderer::NotifyGainMuteChanged");
-  // TODO(mpuryear): consider whether GainControl events should be disable-able, like MinLeadTime.
+  // TODO(mpuryear): consider whether GainControl events should be disable-able, like
+  // MinLeadTime.
   FX_LOGS(DEBUG) << " (" << stream_gain_db_ << " dB, mute: " << mute_ << ")";
 
   for (auto& gain_binding : gain_control_bindings_.bindings()) {

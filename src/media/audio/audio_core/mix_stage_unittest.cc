@@ -569,7 +569,11 @@ TEST_F(MixStageTest, MixMultipleInputs) {
   }
 }
 
-TEST_F(MixStageTest, MixWithDestGain) {
+// When mixing streams, a buffer's gain_db is set, based on the largest of its inputs. Each input's
+// gain_db is determined by ITS input's gain_db, plus its dest_gain.
+//
+// Validate that source_gain is NOT incorporated in these calculations.
+TEST_F(MixStageTest, BufferGainDbDoesNotIncludeSourceGain) {
   // Set timeline rate to match our format.
   auto timeline_function = TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
@@ -587,7 +591,44 @@ TEST_F(MixStageTest, MixWithDestGain) {
 
   // The buffer should return the union of the usage mask, and the largest of the input gains.
   input1->set_usage_mask(StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA)}));
-  input1->set_gain_db(0.0);
+  input1->set_gain_db(1.0);
+  mixer1->bookkeeping().gain.SetSourceGain(-160);
+  input2->set_usage_mask(
+      StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));
+  input2->set_gain_db(0.0);
+  mixer2->bookkeeping().gain.SetSourceGain(-15);
+  {
+    auto buf = mix_stage_->ReadLock(Fixed(0), kRequestedFrames);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->usage_mask(), StreamUsageMask({
+                                     StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
+                                     StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION),
+                                 }));
+    // Dest gain is unchanged for both inputs, so only input1|input2 gains are compared.
+    EXPECT_FLOAT_EQ(buf->gain_db(), 1.0);
+  }
+}
+
+// Validate that dest_gain is appropriately incorporated and the correct (max) value is returned.
+TEST_F(MixStageTest, BufferGainDbIncludesDestGain) {
+  // Set timeline rate to match our format.
+  auto timeline_function = TimelineFunction(
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
+
+  auto input1 =
+      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(), PAGE_SIZE);
+  input1->timeline_function()->Update(timeline_function);
+  auto input2 =
+      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(), PAGE_SIZE);
+  input2->timeline_function()->Update(timeline_function);
+  auto mixer1 = mix_stage_->AddInput(input1);
+  auto mixer2 = mix_stage_->AddInput(input2);
+
+  constexpr uint32_t kRequestedFrames = 48;
+
+  // The buffer should return the union of the usage mask, and the largest of the input gains.
+  input1->set_usage_mask(StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA)}));
+  input1->set_gain_db(1.0);
   mixer1->bookkeeping().gain.SetDestGain(-160);
   input2->set_usage_mask(
       StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));

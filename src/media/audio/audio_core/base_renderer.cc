@@ -672,13 +672,35 @@ void BaseRenderer::Pause(PauseCallback callback) {
     return;
   }
 
-  auto ref_now = clock_->Read().get();
+  if (IsPlaying()) {
+    PauseInternal(std::move(callback));
+  } else {
+    FX_LOGS(WARNING) << "Renderer::Pause called when not playing";
+    if (callback != nullptr) {
+      // Return the previously-reported timestamp values, to preserve idempotency.
+      if (pause_reference_time_.has_value() && pause_media_time_.has_value()) {
+        callback(pause_reference_time_->get(), pause_media_time_->get());
+      } else {
+        callback(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
+      }
+    }
+  }
+
+  // Things went well, cancel the cleanup hook.
+  cleanup.cancel();
+}
+
+void BaseRenderer::PauseInternal(PauseCallback callback) {
+  TRACE_DURATION("audio", "BaseRenderer::PauseInternal");
+  pause_reference_time_ = clock_->Read();
+
   // Update our reference clock to fractional frame transformation, keeping it 1st order continuous.
-  pause_time_frac_frames_ = Fixed::FromRaw(reference_clock_to_fractional_frames_->Apply(ref_now));
+  pause_time_frac_frames_ =
+      Fixed::FromRaw(reference_clock_to_fractional_frames_->Apply(pause_reference_time_->get()));
   pause_time_frac_frames_valid_ = true;
 
   reference_clock_to_fractional_frames_->Update(
-      TimelineFunction(pause_time_frac_frames_.raw_value(), ref_now, {0, 1}));
+      TimelineFunction(pause_time_frac_frames_.raw_value(), pause_reference_time_->get(), {0, 1}));
 
   // If we do not know the pts_to_frac_frames relationship yet, compute one.
   if (!pts_to_frac_frames_valid_) {
@@ -686,25 +708,18 @@ void BaseRenderer::Pause(PauseCallback callback) {
     ComputePtsToFracFrames(0);
   }
 
-  // If the user requested a callback, figure out the media time that we paused at and report back.
-  FX_LOGS(DEBUG) << ". Actual (ref: " << ref_now << ", media: "
-                 << pts_to_frac_frames_.ApplyInverse(pause_time_frac_frames_.raw_value()) << ")";
+  pause_media_time_ =
+      zx::time(pts_to_frac_frames_.ApplyInverse(pause_time_frac_frames_.raw_value()));
 
-  if (callback != nullptr) {
-    int64_t paused_media_time =
-        pts_to_frac_frames_.ApplyInverse(pause_time_frac_frames_.raw_value());
-    callback(ref_now, paused_media_time);
-  }
+  // If the user requested a callback, figure out the media time that we paused at and report back.
+  FX_LOGS(DEBUG) << ". Actual (ref: " << pause_reference_time_->get()
+                 << ", media: " << pause_media_time_->get() << ")";
 
   ReportStop();
 
-  // Things went well, cancel the cleanup hook.
-  cleanup.cancel();
-}
-
-void BaseRenderer::PauseNoReply() {
-  TRACE_DURATION("audio", "BaseRenderer::PauseNoReply");
-  Pause(nullptr);
+  if (callback != nullptr) {
+    callback(pause_reference_time_->get(), pause_media_time_->get());
+  }
 }
 
 void BaseRenderer::ReportStart() {

@@ -25,7 +25,7 @@ struct GainRamp {
   fuchsia::media::audio::RampType ramp_type;
 };
 
-// A command to realize gain changes on connected links.
+// A command to realize gain changes (potentially multiple in tight succession) on connected links.
 struct StreamGainCommand {
   // Gain to be set immediately, in decibels.
   std::optional<float> gain_db;
@@ -68,6 +68,8 @@ class AudioRenderer : public BaseRenderer,
   void ReportStart() final;
   void ReportStop() final;
   void Shutdown() final;
+  // Needed for ramped Pause transitions
+  void PauseInternal(PauseCallback callback) final;
 
   // |media::audio::StreamVolume|
   fuchsia::media::Usage GetStreamUsage() const final;

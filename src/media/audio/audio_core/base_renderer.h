@@ -55,12 +55,12 @@ class BaseRenderer : public AudioObject,
   void EndOfStream() final;
   void DiscardAllPackets(DiscardAllPacketsCallback callback) final;
   void DiscardAllPacketsNoReply() final;
-  void Play(int64_t reference_time, int64_t media_time, PlayCallback callback) final;
-  void PlayNoReply(int64_t reference_time, int64_t media_time) final;
-  void Pause(PauseCallback callback) final;
-  void PauseNoReply() final;
   void EnableMinLeadTimeEvents(bool enabled) final;
   void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
+  void Play(int64_t reference_time, int64_t media_time, PlayCallback callback) final;
+  void PlayNoReply(int64_t ref_time, int64_t med_time) final;
+  void Pause(PauseCallback callback) final;
+  void PauseNoReply() final { Pause(nullptr); }
 
   AudioClock& reference_clock() { return *clock_; }
 
@@ -79,11 +79,14 @@ class BaseRenderer : public AudioObject,
   virtual void ReportStart();
   virtual void ReportStop();
   virtual void Shutdown();
+  // Overridden by children that need to intercept Pause. They should still call up to this.
+  virtual void PauseInternal(PauseCallback callback);
 
   // Hook called when the minimum clock lead time requirement changes.
   void ReportNewMinLeadTime();
 
   bool IsOperating();
+  bool IsPlaying() const { return state_ == State::Playing; }
 
   void InvalidateConfiguration() { config_validated_ = false; }
 
@@ -128,6 +131,9 @@ class BaseRenderer : public AudioObject,
 
   enum class State { Playing, Paused };
   State state_ = State::Paused;
+
+  std::optional<zx::time> pause_reference_time_ = std::nullopt;
+  std::optional<zx::time> pause_media_time_ = std::nullopt;
 
   // Minimum Clock Lead Time state
   bool min_lead_time_events_enabled_ = false;
