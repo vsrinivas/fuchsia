@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be found
 # in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
+import("//build/fidl/fidl.gni")
 
-banjo("ddk.hw.wlan.wlaninfo") {
-  fidl_only = true
-  sources = [ "wlaninfo.banjo" ]
-  deps = [ "//sdk/banjo/ddk.hw.wlan.ieee80211" ]
+fidl("ddk.hw.wlan.wlaninfo") {
+  sources = [ "wlaninfo.fidl" ]
+  public_deps = [ "//sdk/banjo/ddk.hw.wlan.ieee80211" ]
+  excluded_checks = [ "wrong-prefix-for-platform-source-library" ]
 }

@@ -53,7 +53,7 @@ const uint32 WLAN_MSDU_MAX_LEN = 2304;
 /// section, but not in a dedicated section.
 const uint32 WLAN_IE_BODY_MAX_LEN = 255;
 
-const uint32 WLAN_VIE_MAX_LEN = 510;  // max length for two elements (WPA and WSC)
+const uint32 WLAN_VIE_MAX_LEN = 510; // max length for two elements (WPA and WSC)
 
 struct WlanifBssDescription {
     array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH bssid;
@@ -701,7 +701,6 @@ protocol WlanifImpl {
 
     // Data operations
     [Async]
-    DataQueueTx(uint32 options, [InOut] fuchsia.hardware.ethernet.EthernetNetbuf netbuf) ->
-               (zx.status status, [Mutable] fuchsia.hardware.ethernet.EthernetNetbuf netbuf);
-
+    DataQueueTx(uint32 options, [InOut] fuchsia.hardware.ethernet.EthernetNetbuf netbuf)
+        -> (zx.status status, [Mutable] fuchsia.hardware.ethernet.EthernetNetbuf netbuf);
 };

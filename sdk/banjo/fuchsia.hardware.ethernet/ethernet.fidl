@@ -58,7 +58,6 @@ protocol EthernetIfc {
     Status(uint32 status) -> ();
 
     Recv([Buffer] vector<uint8> data, uint32 flags) -> ();
-
 };
 
 struct EthDevMetadata {
