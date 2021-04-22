@@ -163,7 +163,7 @@ public:
   {{- if .Response.IsResource }}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
-      PrimaryObject()->_CloseHandles();
+    PrimaryObject()->_CloseHandles();
     }
   }
   {{- end }}

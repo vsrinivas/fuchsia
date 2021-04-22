@@ -9,7 +9,6 @@ import("//build/test.gni")
 group("integration") {
   testonly = true
   deps = [
-    ":fidl_llcpp_dispatcher_handle_ownership_tests",
     ":fidl_llcpp_flexible_tests",
     ":fidl_llcpp_gen_api_tests",
     ":fidl_llcpp_handle_raii_tests",
@@ -17,29 +16,6 @@ group("integration") {
     ":fidl_llcpp_protocol_tests",
     ":fidl_llcpp_transitional_tests",
   ]
-}
-
-fidl("llcpptest.dispatcher.handle.ownership.test") {
-  visibility = [ "//src/lib/fidl/llcpp/tests/*" ]
-  sources = [ "dispatcher_handle_ownership.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
-}
-
-test("fidl_llcpp_dispatcher_handle_ownership_tests_bin") {
-  output_name = "fidl_llcpp_dispatcher_handle_ownership_tests"
-  sources = [ "dispatcher_handle_ownership_test.cc" ]
-  deps = [
-    ":llcpptest.dispatcher.handle.ownership.test_llcpp",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/async-loop",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-fuchsia_unittest_package("fidl_llcpp_dispatcher_handle_ownership_tests") {
-  deps = [ ":fidl_llcpp_dispatcher_handle_ownership_tests_bin" ]
 }
 
 test("fidl_llcpp_gen_api_tests_bin") {

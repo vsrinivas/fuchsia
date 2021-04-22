@@ -32,11 +32,11 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
     : ::fidl::internal::ResponseContext({{ .OrdinalName }}) {}
 
 zx_status_t {{ .WireResponseContext.NoLeading }}::OnRawReply(fidl_incoming_msg_t* msg) {
-  ::fidl::DecodedMessage<{{ .WireResponse }}> decoded{msg};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  zx_status_t status = fidl_decode_msg({{ .WireResponse }}::Type, msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
   }
-  OnReply(decoded.PrimaryObject());
+  OnReply(reinterpret_cast<{{ .WireResponse }}*>(msg->bytes));
   return ZX_OK;
 }
 {{- EndifFuchsia }}

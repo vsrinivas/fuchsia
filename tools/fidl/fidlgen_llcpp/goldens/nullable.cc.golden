@@ -122,13 +122,15 @@ fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add_Sync(
 zx_status_t fidl::WireResponseContext<
     ::fidl_test_nullable::SimpleProtocol::Add>::OnRawReply(fidl_incoming_msg_t*
                                                                msg) {
-  ::fidl::DecodedMessage<
-      ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>
-      decoded{msg};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  zx_status_t status = fidl_decode_msg(
+      ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>::Type,
+      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
   }
-  OnReply(decoded.PrimaryObject());
+  OnReply(reinterpret_cast<
+          ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>*>(
+      msg->bytes));
   return ZX_OK;
 }
 #endif  // __Fuchsia__
@@ -153,6 +155,7 @@ fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add(
         ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>*
             response) override {
       cb_(response);
+
       delete this;
     }
 
@@ -207,19 +210,22 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
           ::fidl_test_nullable::kSimpleProtocol_Add_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            ::fidl::DecodedMessage<
-                ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>>
-                decoded{msg};
-            if (unlikely(!decoded.ok())) {
-              return decoded.status();
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_nullable::SimpleProtocol::Add>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
             }
-            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::
                 AddCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol>*>(
                 interface)
-                ->Add(primary, completer);
+                ->Add(reinterpret_cast<::fidl::WireRequest<
+                          ::fidl_test_nullable::SimpleProtocol::Add>*>(
+                          msg->bytes),
+                      completer);
             return ZX_OK;
           },
       },
@@ -257,19 +263,21 @@ fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::dispatch_message(
           ::fidl_test_nullable::kSimpleProtocol_Add_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            ::fidl::DecodedMessage<
-                ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>>
-                decoded{msg};
-            if (unlikely(!decoded.ok())) {
-              return decoded.status();
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<
+                    ::fidl_test_nullable::SimpleProtocol::Add>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
             }
-            auto* primary = decoded.PrimaryObject();
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_nullable::SimpleProtocol::Add>*>(msg->bytes);
             ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::
                 AddCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireInterface<::fidl_test_nullable::SimpleProtocol>*>(
                 interface)
-                ->Add(std::move(primary->a), std::move(primary->b), completer);
+                ->Add(std::move(message->a), std::move(message->b), completer);
             return ZX_OK;
           },
       },

@@ -70,11 +70,6 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
   //
   // |msg| references the incoming message in encoded form.
   //
-  // Ownership of bytes referenced by |msg| stays with the caller.
-  // The callee should not access the bytes in |msg| once this method returns.
-  //
-  // Ownership of handles referenced by |msg| is transferred to the callee.
-  //
   // If |OnRawReply| returns |ZX_OK|, that indicates decoding was successful,
   // and |OnRawReply| has invoked the user response handler. Ownership of this
   // object has been transferred to the user.

@@ -39,6 +39,9 @@ The request and callback are allocated on the heap.
 
     void OnReply({{ .WireResponse }}* response) override {
       cb_(response);
+      {{ if and .HasResponse .Response.IsResource }}
+      response->_CloseHandles();
+      {{ end }}
       delete this;
     }
 

@@ -140,19 +140,24 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
           ::fidl_test_placementofattributes::kExampleProtocol_Method_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            ::fidl::DecodedMessage<::fidl::WireRequest<
-                ::fidl_test_placementofattributes::ExampleProtocol::Method>>
-                decoded{msg};
-            if (unlikely(!decoded.ok())) {
-              return decoded.status();
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<::fidl_test_placementofattributes::
+                                        ExampleProtocol::Method>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
             }
-            auto* primary = decoded.PrimaryObject();
             ::fidl::WireServer<
                 ::fidl_test_placementofattributes::ExampleProtocol>::
                 MethodCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
                 ::fidl_test_placementofattributes::ExampleProtocol>*>(interface)
-                ->Method(primary, completer);
+                ->Method(
+                    reinterpret_cast<
+                        ::fidl::WireRequest<::fidl_test_placementofattributes::
+                                                ExampleProtocol::Method>*>(
+                        msg->bytes),
+                    completer);
             return ZX_OK;
           },
       },
@@ -193,19 +198,22 @@ fidl::WireServer<::fidl_test_placementofattributes::ExampleProtocol>::
           ::fidl_test_placementofattributes::kExampleProtocol_Method_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            ::fidl::DecodedMessage<::fidl::WireRequest<
-                ::fidl_test_placementofattributes::ExampleProtocol::Method>>
-                decoded{msg};
-            if (unlikely(!decoded.ok())) {
-              return decoded.status();
+            zx_status_t status = fidl_decode_msg(
+                ::fidl::WireRequest<::fidl_test_placementofattributes::
+                                        ExampleProtocol::Method>::Type,
+                msg, nullptr);
+            if (unlikely(status != ZX_OK)) {
+              return status;
             }
-            auto* primary = decoded.PrimaryObject();
+            auto message = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_placementofattributes::ExampleProtocol::Method>*>(
+                msg->bytes);
             ::fidl::WireServer<
                 ::fidl_test_placementofattributes::ExampleProtocol>::
                 MethodCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireInterface<
                 ::fidl_test_placementofattributes::ExampleProtocol>*>(interface)
-                ->Method(std::move(primary->arg), completer);
+                ->Method(std::move(message->arg), completer);
             return ZX_OK;
           },
       },

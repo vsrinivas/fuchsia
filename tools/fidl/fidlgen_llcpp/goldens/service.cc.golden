@@ -64,15 +64,16 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
           ::fidl_test_service::kSecondProtocol_MethodOnSecond_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            auto* primary = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_service::SecondProtocol::MethodOnSecond>*>(
-                msg->bytes);
             ::fidl::WireServer<::fidl_test_service::SecondProtocol>::
                 MethodOnSecondCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_service::SecondProtocol>*>(
                 interface)
-                ->MethodOnSecond(primary, completer);
+                ->MethodOnSecond(
+                    reinterpret_cast<::fidl::WireRequest<
+                        ::fidl_test_service::SecondProtocol::MethodOnSecond>*>(
+                        msg->bytes),
+                    completer);
             return ZX_OK;
           },
       },
@@ -216,15 +217,16 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
           ::fidl_test_service::kFirstProtocol_MethodOnFirst_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            auto* primary = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_service::FirstProtocol::MethodOnFirst>*>(
-                msg->bytes);
             ::fidl::WireServer<::fidl_test_service::FirstProtocol>::
                 MethodOnFirstCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_service::FirstProtocol>*>(
                 interface)
-                ->MethodOnFirst(primary, completer);
+                ->MethodOnFirst(
+                    reinterpret_cast<::fidl::WireRequest<
+                        ::fidl_test_service::FirstProtocol::MethodOnFirst>*>(
+                        msg->bytes),
+                    completer);
             return ZX_OK;
           },
       },

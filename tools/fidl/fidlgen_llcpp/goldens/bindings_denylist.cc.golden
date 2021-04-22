@@ -88,14 +88,16 @@ fidl::internal::WireClientImpl<
 zx_status_t fidl::WireResponseContext<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
         LibfuzzerNeedsNonemptyProtocol>::OnRawReply(fidl_incoming_msg_t* msg) {
-  ::fidl::DecodedMessage<
+  zx_status_t status = fidl_decode_msg(
       ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                               LibfuzzerNeedsNonemptyProtocol>>
-      decoded{msg};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+                               LibfuzzerNeedsNonemptyProtocol>::Type,
+      msg, nullptr);
+  if (unlikely(status != ZX_OK)) {
+    return status;
   }
-  OnReply(decoded.PrimaryObject());
+  OnReply(reinterpret_cast<::fidl::WireResponse<
+              ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                  LibfuzzerNeedsNonemptyProtocol>*>(msg->bytes));
   return ZX_OK;
 }
 #endif  // __Fuchsia__
@@ -125,6 +127,7 @@ zx_status_t fidl::WireResponseContext<
                  ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                      LibfuzzerNeedsNonemptyProtocol>* response) override {
       cb_(response);
+
       delete this;
     }
 
@@ -183,15 +186,16 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
               kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            auto* primary = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                    LibfuzzerNeedsNonemptyProtocol>*>(msg->bytes);
             ::fidl::WireServer<
                 ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
                 LibfuzzerNeedsNonemptyProtocolCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
                 ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>*>(interface)
-                ->LibfuzzerNeedsNonemptyProtocol(primary, completer);
+                ->LibfuzzerNeedsNonemptyProtocol(
+                    reinterpret_cast<::fidl::WireRequest<
+                        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                            LibfuzzerNeedsNonemptyProtocol>*>(msg->bytes),
+                    completer);
             return ZX_OK;
           },
       },

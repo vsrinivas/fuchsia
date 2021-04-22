@@ -64,14 +64,18 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
         reinterpret_cast<fidl_message_header_t*>(msg->bytes);
     switch (hdr->ordinal) {
       case ::fidl_test_doccomments::kInterface_OnEvent_Ordinal: {
-        ::fidl::DecodedMessage<
-            ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>
-            decoded{msg};
-        if (!decoded.ok()) {
-          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
-                                    decoded.status()};
+        const char* error_message;
+        zx_status_t status = fidl_decode_etc(
+            ::fidl::WireResponse<
+                ::fidl_test_doccomments::Interface::OnEvent>::Type,
+            msg->bytes, msg->num_bytes, msg->handles, msg->num_handles,
+            &error_message);
+        if (status != ZX_OK) {
+          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
         }
-        event_handler_->OnEvent(decoded.PrimaryObject());
+        event_handler_->OnEvent(
+            reinterpret_cast<::fidl::WireResponse<
+                ::fidl_test_doccomments::Interface::OnEvent>*>(msg->bytes));
         return std::nullopt;
       }
       default:
@@ -167,14 +171,15 @@ fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>::HandleOneEvent(
           ::fidl_test_doccomments::kInterface_Method_Ordinal,
           [](void* interface, fidl_incoming_msg_t* msg,
              ::fidl::Transaction* txn) {
-            auto* primary = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_doccomments::Interface::Method>*>(msg->bytes);
             ::fidl::WireServer<::fidl_test_doccomments::Interface>::
                 MethodCompleter::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_doccomments::Interface>*>(
                 interface)
-                ->Method(primary, completer);
+                ->Method(reinterpret_cast<::fidl::WireRequest<
+                             ::fidl_test_doccomments::Interface::Method>*>(
+                             msg->bytes),
+                         completer);
             return ZX_OK;
           },
       },
