@@ -32,8 +32,7 @@ TEST(BookkeepingTest, Defaults) {
   EXPECT_FALSE(bookkeeping.gain.IsRamping());
 }
 
-// Upon Reset, Bookkeeping should clear position modulo and gain ramp. It should also clear its
-// historical dest and source frame counters.
+// Upon Reset, Bookkeeping should clear position modulo. It does not complete in-progress ramps.
 TEST(BookkeepingTest, Reset) {
   StubMixer mixer;
   auto& bookkeeping = mixer.bookkeeping();
@@ -47,9 +46,9 @@ TEST(BookkeepingTest, Reset) {
 
   EXPECT_EQ(bookkeeping.rate_modulo(), 5ull);
   EXPECT_EQ(bookkeeping.denominator(), 7ull);
-  EXPECT_EQ(bookkeeping.source_pos_modulo, 0ull);
+  EXPECT_TRUE(bookkeeping.gain.IsRamping());
 
-  EXPECT_FALSE(bookkeeping.gain.IsRamping());
+  EXPECT_EQ(bookkeeping.source_pos_modulo, 0ull);
 }
 
 }  // namespace

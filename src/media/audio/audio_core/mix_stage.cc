@@ -442,12 +442,12 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
           mixer.Mix(buf, dest_frames_left, &dest_offset, source_buffer.payload(),
                     source_buffer.length().Floor(), &source_offset, cur_mix_job_.accumulate);
       cur_mix_job_.usages_mixed.insert_all(source_buffer.usage_mask());
-      // The gain for the stream will be any previously applied gain combined with any additional
-      // gain that will be applied at this stage. In terms of the applied gain of the mixed stream,
-      // we consider that to be the max gain of any single source stream.
-      float stream_gain_db =
-          Gain::CombineGains(source_buffer.gain_db(), bookkeeping.gain.GetGainDb());
-      cur_mix_job_.applied_gain_db = std::max(cur_mix_job_.applied_gain_db, stream_gain_db);
+      // The gain for the stream will be any previously applied usage gain combined with any
+      // additional gain that will be applied at this stage. In terms of the applied gain of the
+      // mixed stream, we consider that to be the max gain of any single source stream.
+      float usage_gain_db =
+          Gain::CombineGains(source_buffer.gain_db(), bookkeeping.gain.GetDestGainDb());
+      cur_mix_job_.applied_gain_db = std::max(cur_mix_job_.applied_gain_db, usage_gain_db);
     }
 
     // If source is ramping, advance that ramp by the amount of dest that was just mixed.

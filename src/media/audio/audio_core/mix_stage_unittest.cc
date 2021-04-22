@@ -569,7 +569,7 @@ TEST_F(MixStageTest, MixMultipleInputs) {
   }
 }
 
-TEST_F(MixStageTest, MixWithSourceGain) {
+TEST_F(MixStageTest, MixWithDestGain) {
   // Set timeline rate to match our format.
   auto timeline_function = TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
@@ -588,11 +588,11 @@ TEST_F(MixStageTest, MixWithSourceGain) {
   // The buffer should return the union of the usage mask, and the largest of the input gains.
   input1->set_usage_mask(StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA)}));
   input1->set_gain_db(0.0);
-  mixer1->bookkeeping().gain.SetSourceGain(-160);
+  mixer1->bookkeeping().gain.SetDestGain(-160);
   input2->set_usage_mask(
       StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));
   input2->set_gain_db(0.0);
-  mixer2->bookkeeping().gain.SetSourceGain(-15);
+  mixer2->bookkeeping().gain.SetDestGain(-15);
   {
     auto buf = mix_stage_->ReadLock(Fixed(0), kRequestedFrames);
     ASSERT_TRUE(buf);

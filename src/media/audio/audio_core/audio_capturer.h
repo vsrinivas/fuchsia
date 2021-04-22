@@ -62,7 +62,6 @@ class AudioCapturer : public BaseCapturer,
   }
 
   // |media::audio::StreamVolume|
-  bool GetStreamMute() const final;
   fuchsia::media::Usage GetStreamUsage() const final;
   void RealizeVolume(VolumeCommand volume_command) final;
 

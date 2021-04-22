@@ -87,8 +87,6 @@ class BaseRenderer : public AudioObject,
 
   void InvalidateConfiguration() { config_validated_ = false; }
 
-  float stream_gain_db_ = 0.0;
-
   // Minimum Lead Time state
   zx::duration min_lead_time_;
 

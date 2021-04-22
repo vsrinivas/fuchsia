@@ -197,12 +197,8 @@ class Mixer {
     // fractional value of the source_offset unit to advance, for each dest frame.
     uint64_t source_pos_modulo = 0;
 
-    // This method resets the local position accounting (including gain ramping), but not the
-    // long-running positions. This is called upon a source discontinuity.
-    void Reset() {
-      source_pos_modulo = 0;
-      gain.CompleteSourceRamp();
-    }
+    // This method resets the local position accounting, but not gain-ramping.
+    void Reset() { source_pos_modulo = 0; }
 
     void SetRateModuloAndDenominator(uint64_t rate_mod, uint64_t denom,
                                      SourceInfo* info = nullptr) {

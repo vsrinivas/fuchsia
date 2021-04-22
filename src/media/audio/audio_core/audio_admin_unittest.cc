@@ -74,7 +74,6 @@ class MockStreamVolume : public StreamVolume {
 
   // |StreamVolume|
   fuchsia::media::Usage GetStreamUsage() const final { return fidl::Clone(usage_); }
-  bool GetStreamMute() const final { return false; }  // Not reflective of policy.
   void RealizeVolume(VolumeCommand volume_command) final { ++volume_update_count_; }
 
   size_t volume_update_count() { return volume_update_count_; }

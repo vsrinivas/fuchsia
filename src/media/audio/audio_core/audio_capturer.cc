@@ -184,8 +184,6 @@ void AudioCapturer::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
   }
 }
 
-bool AudioCapturer::GetStreamMute() const { return mute_; }
-
 fuchsia::media::Usage AudioCapturer::GetStreamUsage() const {
   // We should only be calling these from the StreamVolumeManager. We don't register LOOPBACK
   // capturers with the StreamVolumeManager since those capturers do not have a compatible usage.

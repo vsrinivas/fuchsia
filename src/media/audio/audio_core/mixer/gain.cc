@@ -211,6 +211,7 @@ void Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
       << "Output clock must be running! Numerator of dest_frames/ref_tick is zero";
 
   // Compose the ramp, in pieces
+  RecalculateGainScale();
   TimelineRate output_to_local = destination_frames_per_reference_tick.Inverse();
 
   // If the source side is ramping, calculate that component
@@ -272,23 +273,33 @@ Gain::AScale Gain::GetGainScale() {
     return kMuteScale;
   }
 
-  // If nothing changed, return the previously-computed amplitude scale value.
+  RecalculateGainScale();
+
+  return combined_gain_scale_;
+}
+
+// From different gain_db components, calculate gain-scale for this object.
+// Mute is accounted for separately.
+void Gain::RecalculateGainScale() {
+  TRACE_DURATION("audio", "Gain::RecalculateGainScale");
+
+  // If nothing changed, our previously-computed amplitude scale value is accurate.
   if ((current_source_gain_db_ == target_source_gain_db_) &&
       (current_dest_gain_db_ == target_dest_gain_db_)) {
-    return combined_gain_scale_;
+    return;
   }
 
-  // Something changed. Cache the vals so the above check can eliminate unneeded DbToScale calls.
-  // This means that in every case below we must also set the corresponding combined_gain_scale_.
+  // Something changed. Calculate combined_gain_scale_ but also cache the vals so that next time,
+  // the above check can eliminate unneeded DbToScale calls.
   current_source_gain_db_ = target_source_gain_db_;
   current_dest_gain_db_ = target_dest_gain_db_;
 
-  // We can avoid DbToScale calls with a few quick checks for Unity, Min and Max.
+  // We avoid DbToScale calls, with checks for Unity, Min and Max.
   //
   // If sum of the source and dest cancel each other, the combined is kUnityScale.
-  if ((current_dest_gain_db_ + current_source_gain_db_) == kUnityGainDb) {
+  if (current_dest_gain_db_ + current_source_gain_db_ == kUnityGainDb) {
     combined_gain_scale_ = kUnityScale;
-  } else if ((current_source_gain_db_ <= kMinGainDb) || (current_dest_gain_db_ <= kMinGainDb)) {
+  } else if (current_source_gain_db_ <= kMinGainDb || current_dest_gain_db_ <= kMinGainDb) {
     // If source or dest are at the mute point, then silence the stream.
     combined_gain_scale_ = kMuteScale;
   } else {
@@ -303,7 +314,6 @@ Gain::AScale Gain::GetGainScale() {
       combined_gain_scale_ = DbToScale(effective_gain_db);
     }
   }
-  return combined_gain_scale_;
 }
 
 }  // namespace media::audio

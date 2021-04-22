@@ -37,7 +37,6 @@ struct VolumeCommand {
 class StreamVolume {
  public:
   virtual fuchsia::media::Usage GetStreamUsage() const = 0;
-  virtual bool GetStreamMute() const = 0;
 
   // Returns true if this stream should receive volume commands that factor in
   // transient loudness adjustments made by audio policy, such as ducking.
