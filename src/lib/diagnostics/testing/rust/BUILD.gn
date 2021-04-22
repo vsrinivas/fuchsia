@@ -51,7 +51,7 @@ fuchsia_component("emitter-for-test") {
   testonly = true
   deps = [
     ":emitter-bin",
-    "//src/lib/diagnostics/inspect/rust:inspect_test_component",
+    "//src/lib/diagnostics/inspect/runtime/rust:inspect_test_component",
   ]
   manifest = "meta/emitter-for-test.cmx"
 }
@@ -64,6 +64,7 @@ rustc_binary("emitter-bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

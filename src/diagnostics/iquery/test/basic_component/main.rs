@@ -31,7 +31,7 @@ async fn main() -> Result<(), Error> {
     component::health().set_ok();
 
     let mut fs = ServiceFs::new();
-    inspector.serve(&mut fs)?;
+    inspect_runtime::serve(&inspector, &mut fs)?;
     fs.take_and_serve_directory_handle()?;
     if opt.with_logs {
         info!("Is great to have!");

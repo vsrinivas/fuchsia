@@ -22,7 +22,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let mut service_fs = ServiceFs::new_local();
 
     // Initialize inspect
-    component::inspector().serve(&mut service_fs)?;
+    inspect_runtime::serve(component::inspector(), &mut service_fs)?;
     component::health().set_starting_up();
 
     // Add services here. E.g:

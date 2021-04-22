@@ -410,7 +410,7 @@ async fn inner_main() -> Result<()> {
 
     // Required call to serve the inspect tree
     let inspector = inspect::component::inspector();
-    inspector.serve(&mut fs)?;
+    inspect_runtime::serve(inspector, &mut fs)?;
 
     // Construct the server, and begin serving.
     let config: json::Value =

@@ -277,7 +277,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         .add_fidl_service(repo_cb)
         .add_fidl_service(rewrite_cb);
 
-    inspector.serve(&mut fs)?;
+    inspect_runtime::serve(&inspector, &mut fs)?;
 
     fs.take_and_serve_directory_handle()?;
 

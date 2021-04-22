@@ -44,7 +44,7 @@ pub async fn main() -> Result<(), anyhow::Error> {
     let mut service_fs = ServiceFs::new_local();
     service_fs.take_and_serve_directory_handle()?;
 
-    inspector().serve(&mut service_fs)?;
+    inspect_runtime::serve(inspector(), &mut service_fs)?;
     health().set_starting_up();
     let stats = LogManagerStats::default().with_inspect(inspector().root(), "log_stats")?;
 

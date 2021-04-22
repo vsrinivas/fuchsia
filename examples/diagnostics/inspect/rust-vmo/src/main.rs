@@ -61,7 +61,7 @@ async fn main() -> Result<(), Error> {
     let _properties = build_hierarchy(inspector.root(), vmo_size);
 
     let mut fs = ServiceFs::new();
-    inspector.serve(&mut fs)?;
+    inspect_runtime::serve(&inspector, &mut fs)?;
     fs.take_and_serve_directory_handle()?;
 
     fs.collect::<()>().await;

@@ -119,7 +119,7 @@ async fn main_inner() -> Result<(), Error> {
     }
 
     let mut fs = ServiceFs::new();
-    inspector.serve(&mut fs)?;
+    inspect_runtime::serve(&inspector, &mut fs)?;
     fs.take_and_serve_directory_handle()?;
     fs.dir("svc")
         .add_fidl_service(IncomingService::PackageCache)

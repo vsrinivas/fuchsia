@@ -103,7 +103,7 @@ async fn main() {
                     .context("Sending new client to Active Session service")?)
             });
         });
-    inspector.serve(&mut server).expect("Serving inspect");
+    inspect_runtime::serve(&inspector, &mut server).expect("Serving inspect");
 
     server.take_and_serve_directory_handle().expect("To serve Media Session services");
     server.collect::<()>().await;

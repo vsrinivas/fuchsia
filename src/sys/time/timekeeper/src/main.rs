@@ -127,7 +127,7 @@ async fn main() -> Result<(), Error> {
         CobaltDiagnostics::new(cobalt_experiment, &primary_track, &monitor_track),
     ));
     let mut fs = ServiceFs::new();
-    diagnostics::INSPECTOR.serve(&mut fs)?;
+    inspect_runtime::serve(&diagnostics::INSPECTOR, &mut fs)?;
 
     info!("connecting to real time clock");
     let optional_rtc = match RtcImpl::only_device() {

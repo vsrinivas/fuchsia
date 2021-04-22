@@ -74,7 +74,7 @@ async fn main() -> Result<(), Error> {
     info!("{:?}", cfg);
     let mut fs = ServiceFs::new_local();
     let inspector = Inspector::new_with_size(inspect::VMO_SIZE_BYTES);
-    inspector.serve(&mut fs)?;
+    inspect_runtime::serve(&inspector, &mut fs)?;
     let inspect_tree = Arc::new(inspect::WlanstackTree::new(inspector));
     fs.dir("svc").add_fidl_service(IncomingServices::Device);
 

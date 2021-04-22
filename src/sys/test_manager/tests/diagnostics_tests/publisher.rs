@@ -20,7 +20,7 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init()?;
     info!("Started diagnostics publisher");
     let mut fs = ServiceFs::new();
-    component::inspector().serve(&mut fs)?;
+    inspect_runtime::serve(component::inspector(), &mut fs)?;
     component::health().set_ok();
     fs.take_and_serve_directory_handle()?;
     fasync::Task::spawn(fs.collect::<()>()).detach();

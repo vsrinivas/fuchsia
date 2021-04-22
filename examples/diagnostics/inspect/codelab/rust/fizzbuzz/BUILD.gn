@@ -10,6 +10,7 @@ rustc_binary("bin") {
 
   deps = [
     "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect-rustc",
+    "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",

@@ -21,6 +21,7 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     ":fidl-rustc",
+    "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

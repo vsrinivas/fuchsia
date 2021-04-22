@@ -36,7 +36,7 @@ async fn main() {
         std::process::exit(1);
     }
 
-    if let Err(e) = inspector.serve(&mut fs) {
+    if let Err(e) = inspect_runtime::serve(&inspector, &mut fs) {
         // Almost nothing should be fatal to the system-updater if we can help it.
         fx_log_warn!("Couldn't serve inspect: {:#}", anyhow!(e));
     }

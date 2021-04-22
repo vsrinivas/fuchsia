@@ -724,8 +724,7 @@ impl BuiltinEnvironment {
             });
         }
 
-        component::inspector()
-            .serve(&mut service_fs)
+        inspect_runtime::serve(component::inspector(), &mut service_fs)
             .map_err(|err| ModelError::Inspect { err })
             .unwrap_or_else(|err| {
                 warn!("Failed to serve inspect: {:?}", err);

@@ -232,7 +232,7 @@ fn main() -> Result<(), Error> {
     });
 
     // Serves the Inspect Tree at the standard location "/diagnostics/fuchsia.inspect.Tree"
-    inspector.serve(&mut fs)?;
+    inspect_runtime::serve(&inspector, &mut fs)?;
 
     fs.take_and_serve_directory_handle()?;
 

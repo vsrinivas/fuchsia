@@ -387,8 +387,7 @@ impl App {
     fn start_services(self: &mut App) -> Result<(), Error> {
         let mut fs = component::server::ServiceFs::new_local();
 
-        fuchsia_inspect::component::inspector()
-            .serve(&mut fs)
+        inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)
             .unwrap_or_else(|e| println!("Unable to start inspect support: {}", e));
 
         self.strategy.start_services(self.sender.clone(), &mut fs)?;

@@ -39,7 +39,7 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
     let inspector = fuchsia_inspect::Inspector::new();
-    if let Err(e) = inspector.serve(&mut fs) {
+    if let Err(e) = inspect_runtime::serve(&inspector, &mut fs) {
         warn!("Could not serve inspect: {}", e);
     }
 

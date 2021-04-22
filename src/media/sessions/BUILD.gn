@@ -34,6 +34,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//src/lib/async-utils",
+    "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl_table_validation",

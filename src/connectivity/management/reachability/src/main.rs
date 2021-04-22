@@ -40,7 +40,7 @@ fn main() -> Result<(), anyhow::Error> {
     let mut fs = fs.take_and_serve_directory_handle()?;
 
     let inspector = component::inspector();
-    let () = inspector.serve(&mut fs)?;
+    let () = inspect_runtime::serve(&inspector, &mut fs)?;
 
     let mut monitor = Monitor::new(Box::new(IcmpPinger::new(request_tx, response_rx)))?;
     let () = monitor.set_inspector(inspector);

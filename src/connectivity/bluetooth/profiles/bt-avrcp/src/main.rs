@@ -49,7 +49,7 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
     let inspect = inspect::Inspector::new();
-    inspect.serve(&mut fs)?;
+    inspect_runtime::serve(&inspect, &mut fs)?;
 
     let mut peer_manager = PeerManager::new(profile_proxy);
     if let Err(e) = peer_manager.iattach(inspect.root(), "peers") {

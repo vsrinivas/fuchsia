@@ -27,7 +27,7 @@ async fn main() -> Result<(), Error> {
     info!("starting up...");
 
     // [START part_1_serve_inspect]
-    component::inspector().serve(&mut fs)?;
+    inspect_runtime::serve(component::inspector(), &mut fs)?;
     // [END part_1_serve_inspect]
 
     // Create a version string. We use record_ rather than create_ to tie the lifecyle of the

@@ -217,7 +217,7 @@ struct ConfigValues {
 pub async fn main(args: CommandLine) -> Result<(), Error> {
     let mut service_fs = ServiceFs::new();
     service_fs.take_and_serve_directory_handle()?;
-    inspect::component::inspector().serve(&mut service_fs)?;
+    inspect_runtime::serve(inspect::component::inspector(), &mut service_fs)?;
     fasync::Task::spawn(async move {
         service_fs.collect::<()>().await;
     })
@@ -258,7 +258,7 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
     // our upsert registration.
     // TODO(fxbug.dev/67806): Remove this once Upsert returns when the operation is complete.
     inspect::component::health().set_starting_up();
-    if mode == Mode::Production{
+    if mode == Mode::Production {
         fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(30).into())).await;
     }
     inspect::component::health().set_ok();

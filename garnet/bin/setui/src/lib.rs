@@ -364,7 +364,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         let service_dir;
         if runtime == Runtime::Service {
             // Initialize inspect.
-            component::inspector().serve(&mut fs).ok();
+            inspect_runtime::serve(component::inspector(), &mut fs).ok();
 
             service_dir = fs.dir("svc");
         } else {

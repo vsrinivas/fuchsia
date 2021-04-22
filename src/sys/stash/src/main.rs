@@ -99,7 +99,7 @@ fn main() -> Result<(), Error> {
 
             let mut fs = ServiceFs::new();
             inspect::component::health().set_starting_up();
-            inspect::component::inspector().serve(&mut fs)?;
+            inspect_runtime::serve(inspect::component::inspector(), &mut fs)?;
             fs.dir("svc").add_fidl_service_at(name, |stream| {
                 stash_server(store_manager.clone(), !opts.secure_mode, stream)
             });

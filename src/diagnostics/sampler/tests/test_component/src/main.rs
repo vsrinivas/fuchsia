@@ -20,7 +20,7 @@ fn main() {
 
     let mut fs = ServiceFs::new();
     let inspector = component::inspector();
-    inspector.serve(&mut fs).unwrap();
+    inspect_runtime::serve(inspector, &mut fs).unwrap();
 
     fs.dir("svc").add_fidl_service(move |stream| serve_sampler_test_controller(stream));
 

@@ -4,20 +4,18 @@
 
 //! Implementation of the `fuchsia.inspect.Tree` protocol server.
 
-use {
-    crate::{reader::ReadableTree, Inspector},
-    anyhow::{Context as _, Error},
-    fidl,
-    fidl_fuchsia_inspect::{
-        TreeContent, TreeNameIteratorRequest, TreeNameIteratorRequestStream, TreeRequest,
-        TreeRequestStream,
-    },
-    fidl_fuchsia_mem::Buffer,
-    fuchsia_async as fasync,
-    fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES,
-    futures::{TryFutureExt, TryStreamExt},
-    tracing::error,
+use anyhow::{Context as _, Error};
+use fidl;
+use fidl_fuchsia_inspect::{
+    TreeContent, TreeNameIteratorRequest, TreeNameIteratorRequestStream, TreeRequest,
+    TreeRequestStream,
 };
+use fidl_fuchsia_mem::Buffer;
+use fuchsia_async as fasync;
+use fuchsia_inspect::{reader::ReadableTree, Inspector};
+use fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES;
+use futures::{TryFutureExt, TryStreamExt};
+use tracing::error;
 
 /// Optional settings for serving `fuchsia.inspect.Tree`
 #[derive(Default, Clone)]
@@ -123,19 +121,17 @@ fn spawn_tree_name_iterator_server(values: Vec<String>, mut stream: TreeNameIter
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::{
-            assert_inspect_tree,
-            reader::{DiagnosticsHierarchy, PartialNodeHierarchy},
-            Inspector,
-        },
-        fidl_fuchsia_inspect::{
-            TreeMarker, TreeNameIteratorMarker, TreeNameIteratorProxy, TreeProxy,
-        },
-        futures::FutureExt,
-        std::convert::TryFrom,
+    use super::*;
+    use fidl_fuchsia_inspect::{
+        TreeMarker, TreeNameIteratorMarker, TreeNameIteratorProxy, TreeProxy,
     };
+    use fuchsia_inspect::{
+        assert_inspect_tree,
+        reader::{DiagnosticsHierarchy, PartialNodeHierarchy},
+        Inspector,
+    };
+    use futures::FutureExt;
+    use std::convert::TryFrom;
 
     #[fuchsia::test]
     async fn get_contents() -> Result<(), Error> {

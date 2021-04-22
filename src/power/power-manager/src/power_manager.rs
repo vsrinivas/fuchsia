@@ -46,7 +46,7 @@ impl PowerManager {
 
         // Required call to serve the inspect tree
         let inspector = component::inspector();
-        inspector.serve(&mut fs)?;
+        inspect_runtime::serve(inspector, &mut fs)?;
 
         // Create the nodes according to the config file
         let node_futures = FuturesUnordered::new();

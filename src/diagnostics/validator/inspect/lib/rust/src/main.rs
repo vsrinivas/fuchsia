@@ -23,6 +23,7 @@ use {
     fuchsia_syslog as syslog,
     fuchsia_zircon::HandleBased,
     futures::prelude::*,
+    inspect_runtime::service,
     log::*,
     std::collections::HashMap,
     std::sync::Arc,

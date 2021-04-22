@@ -120,7 +120,7 @@ fn main() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new();
     let inspector = Inspector::new();
-    inspector.serve(&mut fs)?;
+    inspect_runtime::serve(&inspector, &mut fs)?;
 
     let account_manager = Arc::new(
         AccountManager::<AccountHandlerConnectionImpl>::new(

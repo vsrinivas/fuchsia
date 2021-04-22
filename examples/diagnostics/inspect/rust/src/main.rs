@@ -161,7 +161,7 @@ fn main() -> Result<(), Error> {
     let inspector = inspect::Inspector::new();
 
     // Serves the Inspect Tree at the standard location "/diagnostics/fuchsia.inspect.Tree"
-    inspector.serve(&mut fs)?;
+    inspect_runtime::serve(&inspector, &mut fs)?;
 
     // Create a CEO |Employee| nested underneath the |root_object|.
     // The name "reporting_tree" will appear as a child of the root object.

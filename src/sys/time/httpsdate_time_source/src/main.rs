@@ -46,7 +46,7 @@ async fn main() -> Result<(), Error> {
     let (cobalt, cobalt_sender_fut) = CobaltDiagnostics::new();
     let diagnostics = CompositeDiagnostics::new(inspect, cobalt);
 
-    fuchsia_inspect::component::inspector().serve(&mut fs)?;
+    inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)?;
 
     let sampler = HttpsSamplerImpl::new(REQUEST_URI.parse()?);
 

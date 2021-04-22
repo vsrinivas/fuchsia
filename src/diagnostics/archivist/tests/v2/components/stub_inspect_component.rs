@@ -14,7 +14,7 @@ use {
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     component::health().set_ok();
-    component::inspector().serve(&mut fs)?;
+    inspect_runtime::serve(component::inspector(), &mut fs)?;
     fs.take_and_serve_directory_handle()?;
     fs.collect::<()>().await;
     Ok(())

@@ -186,10 +186,10 @@ async fn main() -> Result<(), Error> {
         // adds it as remote in ServiceFs. However, if we try to add the VMO file and the other
         // service in the ServiceFs, an exception occurs. This is purely a workaround for
         // ServiceFS and for the test purpose. A regular component wouldn't do this. It would
-        // just do `inspector.serve(&mut fs);`.
-        inspect::service::spawn_tree_server(
+        // just do `inspect_runtime::serve(inspector, &mut fs);`.
+        inspect_runtime::service::spawn_tree_server(
             inspector_clone.clone(),
-            inspect::service::TreeServerSettings::default(),
+            inspect_runtime::service::TreeServerSettings::default(),
             stream,
         );
     });

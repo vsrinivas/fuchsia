@@ -66,7 +66,7 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
     // Add a persistence fidl service for each service defined in the config files.
     spawn_persist_services(config, &mut fs);
     fs.take_and_serve_directory_handle()?;
-    on_error!(inspector.serve(&mut fs), "Error initializing Inspect: {}")?;
+    on_error!(inspect_runtime::serve(&inspector, &mut fs), "Error initializing Inspect: {}")?;
 
     // Before serving previous data, wait the arg-provided seconds for the /cache directory to
     // stabilize. Note: We're already accepting persist requess. If we receive a request, store

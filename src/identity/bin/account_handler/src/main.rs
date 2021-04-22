@@ -79,7 +79,7 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let inspector = Inspector::new();
     let mut fs = ServiceFs::new();
-    inspector.serve(&mut fs)?;
+    inspect_runtime::serve(&inspector, &mut fs)?;
 
     // TODO(dnordstrom): Find a testable way to inject global capabilities.
     let context = connect_to_service::<AccountHandlerContextMarker>()

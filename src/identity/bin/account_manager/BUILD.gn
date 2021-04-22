@@ -30,6 +30,7 @@ rustc_binary("bin") {
     "//src/identity/fidl:account-transfer-rustc",
     "//src/identity/lib/account_common",
     "//src/identity/lib/token_manager",
+    "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

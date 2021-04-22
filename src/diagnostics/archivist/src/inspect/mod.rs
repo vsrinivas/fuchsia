@@ -475,7 +475,7 @@ mod tests {
             }
             .boxed()
         });
-        inspector.serve(&mut fs).expect("failed to serve inspector");
+        inspect_runtime::serve(&inspector, &mut fs).expect("failed to serve inspector");
 
         // Create a connection to the ServiceFs.
         let (h0, h1) = zx::Channel::create().unwrap();
@@ -593,7 +593,7 @@ mod tests {
         // One is an inspect file, and one is not.
         let mut fs = ServiceFs::new();
         let inspector = inspector_for_reader_test();
-        inspector.serve(&mut fs).expect("failed to serve inspector");
+        inspect_runtime::serve(&inspector, &mut fs).expect("failed to serve inspector");
 
         // Create a connection to the ServiceFs.
         let (h0, h1) = zx::Channel::create().unwrap();

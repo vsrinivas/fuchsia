@@ -19,7 +19,7 @@ async fn main() {
     root.record_int("other_int", 7);
 
     let mut fs = ServiceFs::new();
-    component::inspector().serve(&mut fs).unwrap();
+    inspect_runtime::serve(component::inspector(), &mut fs).unwrap();
 
     fs.take_and_serve_directory_handle().unwrap();
 

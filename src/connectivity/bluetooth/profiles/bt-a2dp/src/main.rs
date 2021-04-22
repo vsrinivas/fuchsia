@@ -517,7 +517,7 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
     let inspect = inspect::Inspector::new();
-    inspect.serve(&mut fs)?;
+    inspect_runtime::serve(&inspect, &mut fs)?;
 
     // The absolute volume relay is only needed if A2DP Sink is requested.
     let _abs_vol_relay = if config.enable_sink {

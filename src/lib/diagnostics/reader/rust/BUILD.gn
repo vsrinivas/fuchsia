@@ -48,6 +48,6 @@ fuchsia_unittest_package("diagnostics-reader-tests") {
   manifest = "meta/diagnostics-reader-unittest.cmx"
   deps = [
     ":lib_test",
-    "//src/lib/diagnostics/inspect/rust:inspect_test_component",
+    "//src/lib/diagnostics/inspect/runtime/rust:inspect_test_component",
   ]
 }

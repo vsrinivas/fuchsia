@@ -77,7 +77,7 @@ pub fn serve(service_fs: &mut ServiceFs<impl ServiceObjTrait>) -> Result<(), Err
         }
         .boxed()
     });
-    component::inspector().serve(service_fs)?;
+    inspect_runtime::serve(component::inspector(), service_fs)?;
     Ok(())
 }
 

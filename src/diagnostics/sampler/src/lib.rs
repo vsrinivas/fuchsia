@@ -32,7 +32,7 @@ pub async fn main(opt: Args) -> Result<(), Error> {
     // Serve inspect.
     let mut service_fs = ServiceFs::new();
     service_fs.take_and_serve_directory_handle()?;
-    inspect::component::inspector().serve(&mut service_fs)?;
+    inspect_runtime::serve(inspect::component::inspector(), &mut service_fs)?;
     fasync::Task::spawn(async move {
         service_fs.collect::<()>().await;
     })

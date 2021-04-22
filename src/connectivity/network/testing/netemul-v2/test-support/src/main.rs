@@ -74,7 +74,7 @@ async fn main() -> Result<(), Error> {
         });
         data_clone
     };
-    let () = inspector.serve(&mut fs).context("error serving inspect")?;
+    let () = inspect_runtime::serve(inspector, &mut fs).context("error serving inspect")?;
 
     let _: &mut ServiceFsDir<'_, _> = fs.dir("svc").add_fidl_service(|s: CounterRequestStream| s);
     let _: &mut ServiceFs<_> =

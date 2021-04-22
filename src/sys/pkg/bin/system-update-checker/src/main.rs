@@ -100,7 +100,7 @@ async fn main_inner() -> Result<(), Error> {
             IncomingServices::ChannelControl(stream, Arc::clone(&channel_handler_clone))
         });
 
-    inspector.serve(&mut fs)?;
+    inspect_runtime::serve(&inspector, &mut fs)?;
 
     fs.take_and_serve_directory_handle().context("ServiceFs::take_and_serve_directory_handle")?;
     futures.push(

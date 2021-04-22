@@ -1062,7 +1062,7 @@ async fn main() -> Result<(), Error> {
     let inspector = fuchsia_inspect::component::inspector();
     let _state_inspect_node = add_config_state_inspect(inspector.root(), config_state.clone());
     let _query_stats_inspect_node = add_query_stats_inspect(inspector.root(), stats.clone());
-    let () = inspector.serve(&mut fs)?;
+    let () = inspect_runtime::serve(inspector, &mut fs)?;
 
     let routes =
         fuchsia_component::client::connect_to_service::<fidl_fuchsia_net_routes::StateMarker>()

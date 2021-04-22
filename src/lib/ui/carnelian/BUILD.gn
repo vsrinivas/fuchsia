@@ -39,6 +39,7 @@ rustc_library("carnelian") {
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/graphics/lib/compute/mold",
     "//src/graphics/lib/compute/spinel-rs-sys",
+    "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
