@@ -911,7 +911,7 @@ impl StylusDevice {
             let entry = entry?;
             let entry_path = entry.path();
             let path = entry_path.to_str().expect("bad path");
-            let mut device = Self::open_input_device(path)?;
+            let device = Self::open_input_device(path)?;
             if let Ok(hid::DeviceIds { vendor_id: 0x00002d1f, product_id, .. }) =
                 device.get_device_ids(zx::Time::INFINITE)
             {
