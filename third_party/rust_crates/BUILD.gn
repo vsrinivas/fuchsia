@@ -663,6 +663,12 @@ if (!(current_os == "fuchsia")) {
 }
 
 if (!(current_os == "fuchsia")) {
+  group("shared_child") {
+    deps = [ ":shared_child-v0_3_5" ]
+  }
+}
+
+if (!(current_os == "fuchsia")) {
   group("signal-hook") {
     deps = [ ":signal-hook-v0_3_8" ]
   }
@@ -8439,6 +8445,33 @@ rust_library("sharded-slab-v0_0_9") {
   ]
 }
 
+rust_library("shared_child-v0_3_5") {
+  crate_name = "shared_child"
+  crate_root = "//third_party/rust_crates/vendor/shared_child/src/lib.rs"
+  output_name = "shared_child-ea65da9e08c8af24"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  if (!false) {
+    deps += [ ":libc-v0_2_88" ]
+  }
+  if (false) {
+    deps += [ ":winapi-v0_3_9" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=ea65da9e08c8af24",
+    "-Cextra-filename=-ea65da9e08c8af24",
+  ]
+}
+
 rust_library("signal-hook-v0_1_17") {
   crate_name = "signal_hook"
   crate_root = "//third_party/rust_crates/vendor/signal-hook-0.1.17/src/lib.rs"
@@ -10865,6 +10898,7 @@ rust_library("winapi-v0_3_9") {
     "--cfg=feature=\"shlobj\"",
     "--cfg=feature=\"sspi\"",
     "--cfg=feature=\"std\"",
+    "--cfg=feature=\"synchapi\"",
     "--cfg=feature=\"sysinfoapi\"",
     "--cfg=feature=\"timezoneapi\"",
     "--cfg=feature=\"winbase\"",

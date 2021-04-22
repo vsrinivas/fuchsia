@@ -1115,6 +1115,7 @@ dependencies = [
  "serde_json5",
  "serde_repr",
  "serial_test",
+ "shared_child",
  "signal-hook 0.3.8",
  "simplelog",
  "slab",
@@ -3191,6 +3192,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06d5a3f5166fb5b42a5439f2eee8b9de149e235961e3eb21c5808fc3ea17ff3e"
 dependencies = [
  "lazy_static",
+]
+
+[[package]]
+name = "shared_child"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6be9f7d5565b1483af3e72975e2dee33879b3b86bd48c0929fccf6585d79e65a"
+dependencies = [
+ "libc",
+ "winapi",
 ]
 
 [[package]]
