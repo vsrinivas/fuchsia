@@ -85,6 +85,7 @@ class FakeGoldfishDevice : public fuchsia::hardware::goldfish::testing::PipeDevi
   }
 
   void CloseAll() { bindings_.CloseAll(); }
+  size_t GetBindingsSize() { return bindings_.size(); }
 
  private:
   fidl::BindingSet<fuchsia::hardware::goldfish::PipeDevice> bindings_;
@@ -96,9 +97,9 @@ TEST_F(LoaderUnittest, GoldfishDevice) {
   LoaderApp app(context.get());
 
   vfs::PseudoDir root;
-  FakeGoldfishDevice magma_device;
+  FakeGoldfishDevice goldfish_device;
   const char* kDeviceNodeName = "dev";
-  root.AddEntry(kDeviceNodeName, std::make_unique<vfs::Service>(magma_device.GetHandler()));
+  root.AddEntry(kDeviceNodeName, std::make_unique<vfs::Service>(goldfish_device.GetHandler()));
   fidl::InterfaceHandle<fuchsia::io::Directory> pkg_dir;
   async::Loop vfs_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   vfs_loop.StartThread("vfs-loop");
@@ -116,9 +117,18 @@ TEST_F(LoaderUnittest, GoldfishDevice) {
   RunLoopUntil([&device_ptr]() { return device_ptr->icd_count() > 0; });
   EXPECT_EQ(1u, app.device_count());
 
-  async::PostTask(vfs_loop.dispatcher(), [&magma_device]() { magma_device.CloseAll(); });
+  async::PostTask(vfs_loop.dispatcher(), [&]() {
+    // The request to connect to the goldfish device may still be pending.
+    // Remove the "dev" entry to ensure that pending requests are canceled and
+    // aren't passed on the FakeGoldfishDevice.
+    EXPECT_EQ(ZX_OK, root.RemoveEntry(kDeviceNodeName));
+    goldfish_device.CloseAll();
+  });
+  // Wait until the loader detects that the goldfish device has gone away.
   RunLoopUntil([&app]() { return app.device_count() == 0; });
   EXPECT_EQ(0u, app.device_count());
 
   close(dir_fd);
+  vfs_loop.Shutdown();
+  EXPECT_EQ(0u, goldfish_device.GetBindingsSize());
 }
