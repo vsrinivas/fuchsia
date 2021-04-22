@@ -7,13 +7,21 @@ library fidl.rust.test.external;
 using zx;
 
 protocol SendHandleProtocol {
-    SendHandle(zx.handle:<EVENT, zx.rights.TRANSFER> h);
+    SendHandleReducedRights(zx.handle:<EVENT, zx.rights.TRANSFER> h);
+    SendHandleSameRights(zx.handle:<EVENT> h);
 };
 
 protocol EchoHandleProtocol {
-    EchoHandle(zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.DUPLICATE> h) -> (zx.handle:<EVENT, zx.rights.TRANSFER> h);
+    EchoHandleRequestResponseReducedRights(zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.DUPLICATE> h) -> (zx.handle:<EVENT, zx.rights.TRANSFER> h);
+
+    EchoHandleRequestReducedRights(zx.handle:<EVENT, zx.rights.TRANSFER> h) -> (zx.handle:<EVENT> h);
+    EchoHandleRequestSameRights(zx.handle:<EVENT> h) -> (zx.handle:<EVENT> h);
+
+    EchoHandleResponseReducedRights(zx.handle:<EVENT> h) -> (zx.handle:<EVENT, zx.rights.TRANSFER> h);
+    EchoHandleResponseSameRights(zx.handle:<EVENT> h) -> (zx.handle:<EVENT> h);
 };
 
 protocol PushEventProtocol {
-    -> PushEvent(zx.handle:<EVENT, zx.rights.TRANSFER> h);
+    -> PushEventReducedRights(zx.handle:<EVENT, zx.rights.TRANSFER> h);
+    -> PushEventSameRights(zx.handle:<EVENT> h);
 };
