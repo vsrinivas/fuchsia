@@ -11,8 +11,8 @@ class TldsProvider {
 
   // Creates the TldsModel Once when the simple browser is initiated.
   Future<String> loadIanaTldsList() async {
-    final response =
-        await http.get('http://data.iana.org/TLD/tlds-alpha-by-domain.txt');
+    final response = await http
+        .get(Uri.parse('http://data.iana.org/TLD/tlds-alpha-by-domain.txt'));
 
     if (response.statusCode == 200) {
       log.info('Successfully loaded a TLD list from iana.org');
