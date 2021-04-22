@@ -31,16 +31,3 @@ Builds on [core](#core).
 A system that software developers can use to get work done.
 
 Builds on [terminal](#terminal).
-
-## Speaker
-
-A modular, ephemeral system for devices that have audio input and output. Lacks
-a graphical user interface.
-
-Builds on [core](#core).
-
-## Router
-
-A system for routing network traffic over wireless networks.
-
-Builds on [core](#core).
