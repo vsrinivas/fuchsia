@@ -11,8 +11,8 @@ be accessed by downstream clients.
 ## Cloud storage layout
 
 Artifacts specific to a build e.g. images are uploaded to a unique namespace
-according to a given `-uuid`. Artifacts which may be shared across builds, e.g.
-blobs, debug binaries, etc. are uploaded to a shared namespace. The precise
+according to a unique `-namespace`. Artifacts which may be shared across builds,
+e.g. blobs, debug binaries, etc. are uploaded to a shared namespace. The precise
 layout is documented in [cmd/up.go](cmd/up.go).
 
 ## Deduplication
