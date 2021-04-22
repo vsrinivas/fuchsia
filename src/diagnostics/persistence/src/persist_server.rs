@@ -38,7 +38,7 @@ impl PersistServer {
         let mut persisters = HashMap::new();
         for (tag, entry) in tags.into_iter() {
             let inspect_fetcher = InspectFetcher::create(INSPECT_SERVICE_PATH, entry.selectors)?;
-            let backoff = zx::Duration::from_seconds(entry.repeat_seconds);
+            let backoff = zx::Duration::from_seconds(entry.min_seconds_between_fetch);
             let fetcher = Fetcher::new(FetcherArgs {
                 source: inspect_fetcher,
                 backoff,

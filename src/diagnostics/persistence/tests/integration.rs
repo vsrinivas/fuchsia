@@ -83,7 +83,8 @@ async fn diagnostics_persistence_integration() {
         after: None,
     });
     // Verify that the backoff mechanism works by observing the time between first and second
-    // persistence. The duration should be the same as "repeat_seconds" in test_config.persist.
+    // persistence. The duration should be the same as "min_seconds_between_fetch" in
+    // test_config.persist.
     let backoff_time = Time::get_monotonic() + Duration::from_seconds(1);
     diagnostics_persistence_service.persist("test-component-metric").await.unwrap();
     expect_file_change(FileChange {

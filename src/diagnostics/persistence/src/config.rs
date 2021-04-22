@@ -32,7 +32,7 @@ pub struct TaggedPersist {
     /// of the selectors' data.
     pub max_bytes: usize,
     /// Persistence requests will be throttled to this. Requests received early will be delayed.
-    pub repeat_seconds: i64,
+    pub min_seconds_between_fetch: i64,
 }
 
 const CONFIG_GLOB: &str = "/config/data/*.persist";
@@ -80,36 +80,36 @@ mod test {
     fn verify_insert_logic() {
         let mut config = HashMap::new();
         let taga_servab = "[{tag: 'tag-a', service_name: 'serv-a', max_bytes: 10, \
-                           repeat_seconds: 31, selectors: ['foo', 'bar']}, \
+                           min_seconds_between_fetch: 31, selectors: ['foo', 'bar']}, \
                            {tag: 'tag-a', service_name: 'serv-b', max_bytes: 20, \
-                           repeat_seconds: 32, selectors: ['baz']}, ]";
+                           min_seconds_between_fetch: 32, selectors: ['baz']}, ]";
         let tagb_servb = "[{tag: 'tag-b', service_name: 'serv-b', max_bytes: 30, \
-                          repeat_seconds: 33, selectors: ['quux']}]";
+                          min_seconds_between_fetch: 33, selectors: ['quux']}]";
         // Numbers not allowed in names
         let bad_tag = "[{tag: 'tag-b1', service_name: 'serv-b', max_bytes: 30, \
-                       repeat_seconds: 33, selectors: ['quux']}]";
+                       min_seconds_between_fetch: 33, selectors: ['quux']}]";
         // Underscores not allowed in names
         let bad_serv = "[{tag: 'tag-b', service_name: 'serv_b', max_bytes: 30, \
-                        repeat_seconds: 33, selectors: ['quux']}]";
+                        min_seconds_between_fetch: 33, selectors: ['quux']}]";
         let persist_aa = TaggedPersist {
             tag: "tag-a".to_string(),
             service_name: "serv-a".to_string(),
             max_bytes: 10,
-            repeat_seconds: 31,
+            min_seconds_between_fetch: 31,
             selectors: vec!["foo".to_string(), "bar".to_string()],
         };
         let persist_ba = TaggedPersist {
             tag: "tag-a".to_string(),
             service_name: "serv-b".to_string(),
             max_bytes: 20,
-            repeat_seconds: 32,
+            min_seconds_between_fetch: 32,
             selectors: vec!["baz".to_string()],
         };
         let persist_bb = TaggedPersist {
             tag: "tag-b".to_string(),
             service_name: "serv-b".to_string(),
             max_bytes: 30,
-            repeat_seconds: 33,
+            min_seconds_between_fetch: 33,
             selectors: vec!["quux".to_string()],
         };
 
