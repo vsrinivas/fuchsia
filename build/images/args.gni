@@ -118,9 +118,6 @@ declare_args() {
   # Example value: "//build/images/recovery"
   recovery_label = "//build/images/zedboot"
 
-  #TODO(comfoltey) remove obsolete label override_recovery_label
-  override_recovery_label = ""
-
   # List of paths to board-specific tools to include in the build output.
   #
   # Most development tools can just be used in-tree and do not need to be
