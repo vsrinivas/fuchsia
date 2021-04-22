@@ -3,6 +3,7 @@
 
 #include "src/media/audio/audio_core/audio_renderer.h"
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmo.h>

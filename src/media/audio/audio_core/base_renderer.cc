@@ -514,13 +514,19 @@ void BaseRenderer::DiscardAllPacketsNoReply() {
   DiscardAllPackets(nullptr);
 }
 
-void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallback callback) {
+void BaseRenderer::Play(int64_t reference_time, int64_t media_time, PlayCallback callback) {
+  PlayInternal(zx::time(reference_time), zx::time(media_time), std::move(callback));
+}
+
+void BaseRenderer::PlayInternal(zx::time reference_time, zx::time media_time,
+                                PlayCallback callback) {
   TRACE_DURATION("audio", "BaseRenderer::Play");
   FX_LOGS(DEBUG) << "Request (ref: "
-                 << (_reference_time == fuchsia::media::NO_TIMESTAMP ? -1 : _reference_time)
-                 << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time)
+                 << (reference_time.get() == fuchsia::media::NO_TIMESTAMP ? -1
+                                                                          : reference_time.get())
+                 << ", media: "
+                 << (media_time.get() == fuchsia::media::NO_TIMESTAMP ? -1 : media_time.get())
                  << ")";
-  zx::time reference_time(_reference_time);
 
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
@@ -583,7 +589,7 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
   // transitioning to operational mode.
   Fixed frac_frame_media_time;
 
-  if (media_time == fuchsia::media::NO_TIMESTAMP) {
+  if (media_time.get() == fuchsia::media::NO_TIMESTAMP) {
     // Are we resuming from pause?
     if (pause_time_frac_frames_valid_) {
       frac_frame_media_time = pause_time_frac_frames_;
@@ -598,21 +604,21 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
       ComputePtsToFracFrames(0);
     }
 
-    media_time = pts_to_frac_frames_.ApplyInverse(frac_frame_media_time.raw_value());
+    media_time = zx::time{pts_to_frac_frames_.ApplyInverse(frac_frame_media_time.raw_value())};
   } else {
     // If we do not know the pts_to_frac_frames relationship yet, compute one.
     if (!pts_to_frac_frames_valid_) {
-      ComputePtsToFracFrames(media_time);
+      ComputePtsToFracFrames(media_time.get());
       frac_frame_media_time = next_frac_frame_pts_;
     } else {
-      frac_frame_media_time = Fixed::FromRaw(pts_to_frac_frames_.Apply(media_time));
+      frac_frame_media_time = Fixed::FromRaw(pts_to_frac_frames_.Apply(media_time.get()));
     }
     // Sanity check media_time: ensure we have enough headroom to not overflow.
     if (over_or_underflow(frac_frame_media_time.raw_value()) ||
         timeline_function_overflows(pts_to_frac_frames_.Inverse(),
                                     frac_frame_media_time.raw_value(),
                                     kMaxRendererFrames.raw_value())) {
-      FX_LOGS(ERROR) << "Overflow in Play: media_time too large: " << media_time;
+      FX_LOGS(ERROR) << "Overflow in Play: media_time too large: " << media_time.get();
       return;
     }
   }
@@ -636,31 +642,23 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
   if (timeline_function_overflows(ref_clock_to_frac_frames.Inverse(),
                                   frac_frame_media_time.raw_value(),
                                   kMaxRendererFrames.raw_value())) {
-    FX_LOGS(ERROR) << "Underflow in Play: media_time too small: " << media_time;
+    FX_LOGS(ERROR) << "Underflow in Play: media_time too small: " << media_time.get();
     return;
   }
 
-  FX_LOGS(DEBUG) << "Actual: (ref: " << reference_time.get() << ", media: " << media_time << ")";
+  FX_LOGS(DEBUG) << "Actual: (ref: " << reference_time.get() << ", media: " << media_time.get()
+                 << ")";
   FX_LOGS(DEBUG) << "frac_frame_media_time: " << ffl::String::DecRational << frac_frame_media_time;
 
   // If the user requested a callback, invoke it now.
   if (callback != nullptr) {
-    callback(reference_time.get(), media_time);
+    callback(reference_time.get(), media_time.get());
   }
 
   ReportStart();
 
   // Things went well, cancel the cleanup hook.
   cleanup.cancel();
-}
-
-void BaseRenderer::PlayNoReply(int64_t reference_time, int64_t media_time) {
-  TRACE_DURATION("audio", "BaseRenderer::PlayNoReply");
-  FX_LOGS(DEBUG) << " (ref: "
-                 << (reference_time == fuchsia::media::NO_TIMESTAMP ? -1 : reference_time)
-                 << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time)
-                 << ")";
-  Play(reference_time, media_time, nullptr);
 }
 
 void BaseRenderer::Pause(PauseCallback callback) {

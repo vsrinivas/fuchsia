@@ -172,7 +172,8 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
   // Start one renderer for each input and have each renderer play their inputs simulaneously,
   // then validate that the captured output matches the given expected_output.
   void RunTest(std::vector<AudioBuffer<ASF::SIGNED_16>> inputs,
-               AudioBuffer<ASF::SIGNED_16> expected_output) {
+               AudioBuffer<ASF::SIGNED_16> expected_output,
+               zx::duration delay_before_data = zx::msec(0)) {
     FX_CHECK(inputs.size() > 0);
 
     // The output device, renderers, and capturer can each store exactly 1s of audio data.
@@ -248,7 +249,8 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
     // the actual time may be off by a fractional frame.
     auto [packet_it, frame] = *first_output_frame;
     auto first_output_time = zx::time(packet_it->pts) + zx::nsec(ns_per_frame.Scale(frame));
-    EXPECT_LT(std::abs((start_time - first_output_time).get()), ns_per_frame.Scale(1))
+    EXPECT_LT(std::abs((start_time - first_output_time + delay_before_data).get()),
+              ns_per_frame.Scale(1))
         << "first frame output at unexpected time:"
         << "\n  expected time = " << start_time.get()
         << "\n       got time = " << first_output_time.get()
@@ -280,25 +282,37 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
 
 TEST_F(AudioLoopbackPipelineTest, OneRenderer) {
   // With one renderer, the output should match exactly.
-  auto num_frames = 3 * kPacketFrames;
-  auto input = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames, 0x40);
-  RunTest({input}, input);
+  auto num_padding_frames = kPacketFrames;
+  auto num_signal_frames = 3 * kPacketFrames;
+
+  auto input = GenerateSilentAudio<ASF::SIGNED_16>(format_, num_padding_frames);
+  auto signal = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_signal_frames, 0x40);
+  input.Append(AudioBufferSlice(&signal));
+
+  RunTest({input}, signal, kPacketLength);
 }
 
 TEST_F(AudioLoopbackPipelineTest, TwoRenderers) {
   // With two renderers, the output should mix the two inputs.
-  auto num_frames = 3 * kPacketFrames;
-  auto input0 = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames, 0x40);
-  auto input1 = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames, 0x1000);
+  auto num_padding_frames = kPacketFrames;
+  auto num_signal_frames = 3 * kPacketFrames;
 
-  AudioBuffer<ASF::SIGNED_16> out(format_, num_frames);
+  auto input0 = GenerateSilentAudio<ASF::SIGNED_16>(format_, num_padding_frames);
+  auto signal0 = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_signal_frames, 0x40);
+  input0.Append(AudioBufferSlice(&signal0));
+
+  auto input1 = GenerateSilentAudio<ASF::SIGNED_16>(format_, num_padding_frames);
+  auto signal1 = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_signal_frames, 0x1000);
+  input1.Append(AudioBufferSlice(&signal1));
+
+  AudioBuffer<ASF::SIGNED_16> out(format_, num_signal_frames);
   for (int64_t f = 0; f < out.NumFrames(); f++) {
     for (int32_t c = 0; c < format_.channels(); c++) {
-      out.samples()[out.SampleIndex(f, c)] = input0.SampleAt(f, c) + input1.SampleAt(f, c);
+      out.samples()[out.SampleIndex(f, c)] = signal0.SampleAt(f, c) + signal1.SampleAt(f, c);
     }
   }
 
-  RunTest({input0, input1}, out);
+  RunTest({input0, input1}, out, kPacketLength);
 }
 
 // Although these tests don't look at packet data, they look at timestamps and rely on
