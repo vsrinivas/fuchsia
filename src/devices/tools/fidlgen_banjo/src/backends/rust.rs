@@ -352,13 +352,15 @@ impl<'a, W: io::Write> Backend<'a, W> for RustBackend<'a, W> {
             primary_namespace = ir.name.0,
         ))?;
 
-        self.w.write_fmt(format_args!(
-            include_str!("templates/rust/body.rs"),
-            enum_decls = self.codegen_enum_decl(&decl_order, &ir)?,
-            constant_decls = self.codegen_const_decl(&decl_order, &ir)?,
-            struct_decls = self.codegen_struct_decl(&decl_order, &ir)?,
-            union_decls = self.codegen_union_decl(&decl_order, &ir)?,
-        ))?;
+        if ir.name.0 != "zx" {
+            self.w.write_fmt(format_args!(
+                include_str!("templates/rust/body.rs"),
+                enum_decls = self.codegen_enum_decl(&decl_order, &ir)?,
+                constant_decls = self.codegen_const_decl(&decl_order, &ir)?,
+                struct_decls = self.codegen_struct_decl(&decl_order, &ir)?,
+                union_decls = self.codegen_union_decl(&decl_order, &ir)?,
+            ))?;
+        }
 
         Ok(())
     }
