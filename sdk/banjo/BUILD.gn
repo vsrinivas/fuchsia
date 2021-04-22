@@ -17,7 +17,6 @@ python_host_test("analyze_deps_test") {
 }
 
 _all_libraries_deps = [
-  "fuchsia.hardware.audio",
   "fuchsia.hardware.audiotypes",
   "fuchsia.hardware.badblock",
   "fuchsia.hardware.block",

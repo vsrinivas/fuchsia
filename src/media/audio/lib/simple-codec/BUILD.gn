@@ -18,6 +18,7 @@ zx_library("simple-codec") {
     "simple-codec-server.cc",
   ]
   public_deps = [
+    "//sdk/banjo/fuchsia.hardware.audio:fuchsia.hardware.audio_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.audio",
     "//src/lib/ddktl",
     "//zircon/public/lib/zx",
@@ -29,8 +30,6 @@ zx_library("simple-codec") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.audio",
-
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/sync",

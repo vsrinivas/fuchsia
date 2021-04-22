@@ -20,7 +20,7 @@ driver_module("fragment") {
   deps = [
     ":fragment-bind",
     "//sdk/banjo/fuchsia.hardware.amlogiccanvas:fuchsia.hardware.amlogiccanvas_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.audio",
+    "//sdk/banjo/fuchsia.hardware.audio:fuchsia.hardware.audio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.buttons",
     "//sdk/banjo/fuchsia.hardware.camera.sensor:fuchsia.hardware.camera.sensor_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
@@ -79,7 +79,7 @@ driver_module("fragment.proxy") {
   deps = [
     ":fragment-proxy-bind",
     "//sdk/banjo/fuchsia.hardware.amlogiccanvas:fuchsia.hardware.amlogiccanvas_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.audio",
+    "//sdk/banjo/fuchsia.hardware.audio:fuchsia.hardware.audio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.buttons",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.dsi",

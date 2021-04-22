@@ -52,7 +52,7 @@ The DAI protocol is defined in FIDL at
 Because the FDF does not currently provide a way to directly get a FIDL channel
 for communication, we define a way to get a channel through
 [Banjo](/docs/development/drivers/tutorials/banjo-tutorial.md) at
-[fuchsia.hardware.audio](/sdk/banjo/fuchsia.hardware.audio/audio.banjo).
+[fuchsia.hardware.audio](/sdk/banjo/fuchsia.hardware.audio/audio.fidl).
 
 Direct connection to a DAI protocol server is provided by
 [dai_connect.fidl](/sdk/fidl/fuchsia.hardware.audio/dai_connect.fidl).
