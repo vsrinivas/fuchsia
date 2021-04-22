@@ -72,6 +72,7 @@ template("_dart_snapshot_invocation") {
           path = rebase_path(app_path, root_build_dir)
         },
       ]
+      snapshot_path = [ snapshot ]
     }
   }
 }

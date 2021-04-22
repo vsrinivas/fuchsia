@@ -62,14 +62,33 @@ protoc_path = get_label_info(protoc_label, "root_out_dir") + "/protoc"
 proto_gen_target = dart_library_target_name + "_generate_bindings"
 copy_pubspec_target = dart_library_target_name + "_copy_pubspec"
 
+generated_file("protoc_gen_dart_snapshot_info") {
+  outputs = [ "$target_gen_dir/${target_name}.snapshot_info" ]
+  data_keys = [ "snapshot_path" ]
+  deps = [ protoc_gen_dart_label ]
+}
+
 # This target runs the protoc tool to generate dart sources
 action(proto_gen_target) {
   visibility = [ ":*" ]
 
-  hermetic_deps = false
+  plugin_path = get_label_info(protoc_gen_dart_label, "root_out_dir") +
+                "/dart-tools/protoc_gen_dart"
+
+  # dart snapshot dependency information.
+  depfile = "$target_gen_dir/${target_name}.d"
+  snapshot_info_target = ":protoc_gen_dart_snapshot_info"
+  snapshot_info_files = get_target_outputs(snapshot_info_target)
+  snapshot_info_file = snapshot_info_files[0]
+  response_file_contents = proto_output_filepaths
+
   script = "//build/secondary/third_party/protobuf/protoc_wrapper.py"
   sources = proto_input_filepaths
-  inputs = [ protoc_path ] + proto_input_filepaths
+  inputs = [
+             protoc_path,
+             plugin_path,
+             snapshot_info_file,
+           ] + proto_input_filepaths
   outputs = proto_output_filepaths
 
   args = [
@@ -86,13 +105,19 @@ action(proto_gen_target) {
 
     # the dart bindings generator
     "--plugin",
-    rebase_path(get_label_info(protoc_gen_dart_label, "root_out_dir") +
-                    "/dart-tools/protoc_gen_dart",
-                root_build_dir),
+    rebase_path(plugin_path, root_build_dir),
 
     # output path of where bindings are generated
     "--plugin-out-dir",
     rebase_path(package_gen_dir, root_build_dir),
+
+    # plugin dependency information
+    "--plugin-depfile",
+    rebase_path(depfile, root_build_dir),
+    "--plugin-depfile-deps",
+    rebase_path(snapshot_info_file, root_build_dir),
+    "--plugin-depfile-outputs",
+    "{{response_file_name}}",
   ]
 
   # the proto files themselves
@@ -100,9 +125,13 @@ action(proto_gen_target) {
 
   deps = [
     # dart plugin for the protobuf compiler
-    # protobuf compiler
     protoc_gen_dart_label,
+
+    # protobuf compiler
     protoc_label,
+
+    # snapshot information for the dart plugin
+    snapshot_info_target,
   ]
 }
 
