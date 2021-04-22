@@ -267,12 +267,20 @@ void AudioDeviceManager::OnPlugStateChanged(const std::shared_ptr<AudioDevice>& 
 
   // Update our bookkeeping for device's plug state. If no change, we're done.
   if (!device->UpdatePlugState(plugged, plug_time)) {
+    // TODO(fxbug.dev/73947): remove after debugging
+    FX_LOGS(INFO) << "Ignoring OnPlugStateChanged event (no change): "
+                  << (device->is_input() ? "input" : "output") << " '" << device->name()
+                  << "', plugged=" << plugged << ", t=" << plug_time.get();
     return;
   }
 
   // If the device is not yet activated, we should not be changing routes.
   bool activated = devices_.find(device->token()) != devices_.end();
   if (!activated) {
+    // TODO(fxbug.dev/73947): remove after debugging
+    FX_LOGS(INFO) << "Ignoring OnPlugStateChanged event (not activated): "
+                  << (device->is_input() ? "input" : "output") << " '" << device->name()
+                  << "', plugged=" << plugged << ", t=" << plug_time.get();
     return;
   }
 
@@ -383,7 +391,7 @@ void AudioDeviceManager::OnDeviceUnplugged(const std::shared_ptr<AudioDevice>& d
   TRACE_DURATION("audio", "AudioDeviceManager::OnDeviceUnplugged");
   FX_DCHECK(device);
   FX_LOGS(INFO) << "Unplugged " << (device->is_input() ? "input" : "output") << " '"
-                << device->name() << "'";
+                << device->name() << "' at t=" << plug_time.get();
 
   device->UpdatePlugState(/*plugged=*/false, plug_time);
 
@@ -398,7 +406,7 @@ void AudioDeviceManager::OnDevicePlugged(const std::shared_ptr<AudioDevice>& dev
   TRACE_DURATION("audio", "AudioDeviceManager::OnDevicePlugged");
   FX_DCHECK(device);
   FX_LOGS(INFO) << "Plugged " << (device->is_input() ? "input" : "output") << " '" << device->name()
-                << "'";
+                << "' at t=" << plug_time.get();
 
   device->UpdatePlugState(/*plugged=*/true, plug_time);
 
