@@ -211,11 +211,6 @@ class System {
         'System.clockGetMonotonic() is not implemented on this platform.');
   }
 
-  static int clockGet(int clockId) {
-    throw UnimplementedError(
-        'System.timeGet() is not implemented on this platform.');
-  }
-
   // System operations.
   static int connectToService(String path, Handle channel) {
     throw UnimplementedError(
