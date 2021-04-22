@@ -39,8 +39,8 @@ def main():
     # Remove any existing outputs. Manually removing all subdirectories and
     # files instead of using shutil.rmtree, to avoid registering spurious reads
     # on stale subdirectories.
-    if os.path.exits(args.out_dir):
-        for root, dirs, files in os.walk(gopath_src, topdown=False):
+    if os.path.exists(args.out_dir):
+        for root, dirs, files in os.walk(args.out_dir, topdown=False):
             for file in files:
                 os.unlink(os.path.join(root, file))
             for dir in dirs:
