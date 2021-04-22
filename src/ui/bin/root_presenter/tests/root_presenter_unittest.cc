@@ -23,6 +23,7 @@
 #include "src/ui/bin/root_presenter/presentation.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_injector_registry.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_keyboard_focus_controller.h"
+#include "src/ui/bin/root_presenter/tests/fakes/fake_view.h"
 
 namespace root_presenter {
 namespace {
@@ -180,6 +181,43 @@ class RootPresenterTest : public gtest::RealLoopFixture,
 
   fuchsia::ui::views::ViewToken view_token_;
 };
+
+TEST_F(RootPresenterTest, TestSceneSetup) {
+  // Present a fake view.
+  fuchsia::ui::scenic::ScenicPtr scenic =
+      context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+  testing::FakeView fake_view(context_provider_.context(), std::move(scenic));
+  root_presenter()->PresentView(fake_view.view_holder_token(), nullptr);
+
+  // Run until the view is attached to the scene.
+  RunLoopUntil([&fake_view]() {
+    const auto& view_events = fake_view.events();
+    for (const auto& event : view_events) {
+      // We're looking for the view attached event, so skip any events that are
+      // not gfx events.
+      if (event.Which() != fuchsia::ui::scenic::Event::Tag::kGfx) {
+        continue;
+      }
+
+      const auto& gfx_event = event.gfx();
+
+      // Skip events that aren't "view attached".
+      if (gfx_event.Which() != fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene) {
+        continue;
+      }
+
+      const auto& view_attached_event = gfx_event.view_attached_to_scene();
+
+      // The view id in the event should match the id of the view resource the
+      // fake view owns.
+      if (view_attached_event.view_id == fake_view.view_id()) {
+        return true;
+      }
+    }
+
+    return false;
+  });
+}
 
 TEST_F(RootPresenterTest, SinglePresentView_ShouldSucceed) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();

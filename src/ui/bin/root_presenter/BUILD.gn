@@ -81,6 +81,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.media.sounds",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.recovery.ui",
+    "//sdk/fidl/fuchsia.ui.accessibility.view",
     "//sdk/fidl/fuchsia.ui.brightness",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",

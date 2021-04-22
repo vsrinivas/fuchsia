@@ -16,6 +16,8 @@ source_set("fakes") {
     "fake_scenic.h",
     "fake_session.cc",
     "fake_session.h",
+    "fake_view.cc",
+    "fake_view.h",
   ]
 
   deps = [
@@ -23,8 +25,12 @@ source_set("fakes") {
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.ui.keyboard.focus",
     "//sdk/fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/ui/base_view",
+    "//src/ui/scenic/lib/gfx",
   ]
 }
