@@ -24,7 +24,7 @@ driver_module("usb-cdc-function") {
   sources = [ "cdc-eth-function.cc" ]
   deps = [
     ":usb_cdc_bind",
-    "//sdk/banjo/fuchsia.hardware.ethernet",
+    "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.function:fuchsia.hardware.usb.function_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",

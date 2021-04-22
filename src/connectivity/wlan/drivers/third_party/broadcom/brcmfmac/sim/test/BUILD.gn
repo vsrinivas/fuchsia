@@ -19,7 +19,7 @@ source_set("sim_test") {
   sources = [ "sim_test.cc" ]
   public = [ "sim_test.h" ]
   public_deps = [
-    "//sdk/banjo/ddk.hw.wlan.ieee80211",
+    "//sdk/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
@@ -36,7 +36,7 @@ executable("active_scan_test") {
   sources = [ "active_scan_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
@@ -168,7 +168,7 @@ executable("cc_test") {
   sources = [ "cc_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
@@ -185,7 +185,7 @@ executable("channel_switch_test") {
   sources = [ "channel_switch_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
@@ -217,8 +217,8 @@ executable("create_softap_test") {
   sources = [ "create_softap_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
-    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
@@ -237,8 +237,8 @@ executable("data_frame_test") {
   sources = [ "data_frame_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
-    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/lib/common/cpp:common",
@@ -254,9 +254,9 @@ executable("disassoc_test") {
   sources = [ "disassoc_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/ddk.hw.wlan.ieee80211",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
-    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211_banjo_cpp",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/lib/common/cpp:common",
@@ -272,8 +272,8 @@ executable("dynamic_if_test") {
   sources = [ "dynamic_if_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
-    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
@@ -291,7 +291,7 @@ executable("err_inject_test") {
   sources = [ "err_inject_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/lib/common/cpp:common",
@@ -310,7 +310,7 @@ executable("escan_params_test") {
   sources = [ "escan_params_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/devices/testing/fake_ddk",
@@ -325,8 +325,8 @@ executable("firmware_config_test") {
   sources = [ "firmware_config_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
-    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
@@ -358,7 +358,7 @@ executable("ifc_query_test") {
   sources = [ "ifc_query_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
@@ -373,7 +373,7 @@ executable("iovar_test") {
   sources = [ "iovar_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
@@ -390,7 +390,7 @@ executable("lifecycle_test") {
   testonly = true
   sources = [ "lifecycle_test.cc" ]
   deps = [
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
@@ -411,7 +411,7 @@ executable("mfg_test") {
   ]
   public = [ "sim_test.h" ]
   public_deps = [
-    "//sdk/banjo/ddk.hw.wlan.ieee80211",
+    "//sdk/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
@@ -421,7 +421,7 @@ executable("mfg_test") {
     "//zircon/system/public",
   ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
@@ -546,9 +546,9 @@ executable("timeout_test") {
   sources = [ "timeout_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/ddk.hw.wlan.ieee80211",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
-    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211_banjo_cpp",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/broadcom",

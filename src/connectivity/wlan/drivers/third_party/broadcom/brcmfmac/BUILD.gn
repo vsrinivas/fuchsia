@@ -79,7 +79,7 @@ source_set("linuxisms") {
     "//zircon/system/ulib/sync",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.ethernet",
+    "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//zircon/system/public",
   ]
 }
@@ -176,8 +176,8 @@ source_set("core") {
   deps = [
     ":debug",
     ":timer",
-    "//sdk/banjo/ddk.hw.wlan.ieee80211",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211_banjo_cpp",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect",
     "//src/connectivity/wlan/lib/common/cpp:common",
@@ -188,7 +188,7 @@ source_set("core") {
   public_deps = [
     ":linuxisms",
     "//garnet/lib/wlan/protocol",
-    "//sdk/banjo/fuchsia.hardware.ethernet",
+    "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.factory.wlan:fuchsia.factory.wlan_llcpp",
     "//sdk/fidl/fuchsia.wlan.common",

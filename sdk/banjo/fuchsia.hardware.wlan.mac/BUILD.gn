@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.wlan.mac") {
+  fidl_only = true
   disable_verification = true
   sources = [ "mac.banjo" ]
   deps = [

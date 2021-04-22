@@ -211,10 +211,10 @@ template("fidl_adapter") {
 
       output_dir = "$target_out_dir/banjo"
 
-      non_rust_deps = [
-        ":$rust_fidlgen_target_name",
-        ":$rust_verification_target_name",
-      ]
+      non_rust_deps = [ ":$rust_fidlgen_target_name" ]
+      if (verify) {
+        non_rust_deps += [ ":$rust_verification_target_name" ]
+      }
 
       deps = [
         "//src/lib/fuchsia-async",

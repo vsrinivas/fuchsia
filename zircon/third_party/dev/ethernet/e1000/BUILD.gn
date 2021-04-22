@@ -47,7 +47,7 @@ driver_module("e1000") {
   ]
   deps = [
     ":e1000_bind",
-    "//sdk/banjo/fuchsia.hardware.ethernet",
+    "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pci",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",

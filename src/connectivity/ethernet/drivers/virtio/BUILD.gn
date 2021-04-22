@@ -20,9 +20,9 @@ source_set("virtio_ethernet_lib") {
     "ethernet.cc",
     "ethernet_driver.cc",
   ]
-  deps = [
+  public_deps = [
     ":virtio_ethernet_bind",
-    "//sdk/banjo/fuchsia.hardware.ethernet",
+    "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/dev-operation",
     "//src/lib/ddktl",

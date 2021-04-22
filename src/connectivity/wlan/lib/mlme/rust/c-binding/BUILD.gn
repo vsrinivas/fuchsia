@@ -12,8 +12,8 @@ rustc_staticlib("wlan-mlme-c") {
   edition = "2018"
 
   deps = [
-    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info-rustc",
-    "//sdk/banjo/fuchsia.hardware.wlan.mac:fuchsia.hardware.wlan.mac-rustc",
+    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_rust",
+    "//sdk/banjo/fuchsia.hardware.wlan.mac:fuchsia.hardware.wlan.mac_banjo_rust",
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/mlme/rust:wlan-mlme",
@@ -28,7 +28,7 @@ rustc_staticlib("wlan-mlme-c") {
   ]
   non_rust_deps = [
     "//garnet/lib/wlan/protocol",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
   ]
 
   public = [ "bindings.h" ]

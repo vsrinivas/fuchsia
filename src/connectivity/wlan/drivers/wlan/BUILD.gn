@@ -32,8 +32,8 @@ driver_module("wlan_driver") {
 
   deps = [
     ":wlan_bind",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
-    "//sdk/banjo/fuchsia.hardware.ethernet",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",

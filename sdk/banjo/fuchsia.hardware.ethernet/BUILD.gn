@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.ethernet") {
+  fidl_only = true
   sources = [ "ethernet.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }
