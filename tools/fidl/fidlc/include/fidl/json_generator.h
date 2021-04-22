@@ -133,8 +133,33 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(const flat::Library* library);
 
  private:
+  enum TypeKind {
+    kConcrete,
+    kParameterized,
+  };
+  void GenerateTypeAndFromTypeAlias(TypeKind parent_type_kind, const flat::TypeConstructor& value,
+                                    Position position = Position::kSubsequent);
   void GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& value,
                                     Position position = Position::kSubsequent);
+
+  // This is a generator for the builtin generics: array, vector, and request.
+  // The "type" argument is the resolved type of the parameterized type to be
+  // generated, and the "type_ctor" argument is the de-aliased constructor for
+  // that type.  For example, consider the following FIDL
+  //
+  //   alias Foo = vector<bool>:5;
+  //
+  //   struct Example {
+  //     bar Foo?;
+  //   };
+  //
+  // When GenerateParameterizedType is called for Example.bar, the "type" will
+  // be a nullable vector of size 5, but the de-aliased constructor passed in
+  // will be the underlying type for just Foo, in this is case "vector<bool:5>."
+  void GenerateParameterizedType(TypeKind parent_type_kind, const flat::Type* type,
+                                 const flat::TypeConstructor& value,
+                                 Position position = Position::kSubsequent);
+  void GenerateExperimentalMaybeFromTypeAlias(const flat::TypeConstructor& value);
   void GenerateRequest(const std::string& prefix, const flat::Struct& value);
   void GenerateDeclarationsEntry(int count, const flat::Name& name, std::string_view decl_kind);
   void GenerateDeclarationsMember(const flat::Library* library,

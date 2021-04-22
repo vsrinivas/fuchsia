@@ -157,6 +157,8 @@ void JSONGenerator::Generate(const flat::Type* value) {
         break;
       }
       case flat::Type::Kind::kVector: {
+        // This code path should only be exercised if the type is "bytes." All
+        // other handling of kVector is handled in GenerateParameterizedType.
         auto type = static_cast<const flat::VectorType*>(value);
         GenerateObjectMember("element_type", type->element_type);
         if (*type->element_count < flat::Size::Max())
@@ -181,13 +183,6 @@ void JSONGenerator::Generate(const flat::Type* value) {
         GenerateObjectMember("nullable", type->nullability);
         break;
       }
-      case flat::Type::Kind::kRequestHandle: {
-        auto type = static_cast<const flat::RequestHandleType*>(value);
-        GenerateObjectMember("subtype", type->protocol_type->name);
-        // TODO(fxbug.dev/43803): Add required and optional rights.
-        GenerateObjectMember("nullable", type->nullability);
-        break;
-      }
       case flat::Type::Kind::kPrimitive: {
         auto type = static_cast<const flat::PrimitiveType*>(value);
         GenerateObjectMember("subtype", type->name);
@@ -198,6 +193,9 @@ void JSONGenerator::Generate(const flat::Type* value) {
         GenerateObjectMember("identifier", type->name);
         GenerateObjectMember("nullable", type->nullability);
         break;
+      }
+      default: {
+        assert(false && "expected non-parameterized type (neither array<T>, vector<T>, nor request<P>)");
       }
     }
   });
@@ -274,8 +272,7 @@ void JSONGenerator::Generate(const flat::Enum& value) {
     // GenerateTypeAndFromTypeAlias here.
     GenerateObjectMember("type", value.type->name);
     if (value.subtype_ctor->from_type_alias)
-      GenerateObjectMember("experimental_maybe_from_type_alias",
-                           value.subtype_ctor->from_type_alias.value());
+      GenerateExperimentalMaybeFromTypeAlias(*value.subtype_ctor);
     GenerateObjectMember("members", value.members);
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
     if (value.strictness == types::Strictness::kFlexible) {
@@ -331,9 +328,88 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
 
 void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& value,
                                                  Position position) {
-  GenerateObjectMember("type", value.type, position);
+  GenerateTypeAndFromTypeAlias(TypeKind::kConcrete, value, position);
+}
+
+bool ShouldExposeTypeAliasOfParametrizedType(const flat::Type& type) {
+  // TODO(fxbug.dev/68667): The last of these three conditionals will need to
+  //  change slightly for the new syntax once client and server ends are added.
+  return type.kind == flat::Type::Kind::kArray || type.kind == flat::Type::Kind::kVector || type.kind == flat::Type::Kind::kRequestHandle;
+}
+
+void JSONGenerator::GenerateTypeAndFromTypeAlias(TypeKind parent_type_kind,
+                                                 const flat::TypeConstructor& value,
+                                                 Position position) {
+  if (fidl::ShouldExposeTypeAliasOfParametrizedType(*value.type)) {
+    if (value.from_type_alias) {
+      auto alias_decl = value.from_type_alias.value().decl;
+      auto type_alias = static_cast<const flat::TypeAlias*>(alias_decl);
+      GenerateParameterizedType(parent_type_kind, value.type, *type_alias->partial_type_ctor,
+                                position);
+    } else {
+      GenerateParameterizedType(parent_type_kind, value.type, value, position);
+    }
+    GenerateExperimentalMaybeFromTypeAlias(value);
+    return;
+  }
+
+  std::string key = parent_type_kind == TypeKind::kConcrete ? "type" : "element_type";
+  GenerateObjectMember(key, value.type, position);
+  GenerateExperimentalMaybeFromTypeAlias(value);
+}
+
+void JSONGenerator::GenerateExperimentalMaybeFromTypeAlias(const flat::TypeConstructor& value) {
   if (value.from_type_alias)
     GenerateObjectMember("experimental_maybe_from_type_alias", value.from_type_alias.value());
+}
+
+void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const flat::Type* type,
+                                              const flat::TypeConstructor& type_ctor,
+                                              Position position) {
+  std::string key = parent_type_kind == TypeKind::kConcrete ? "type" : "element_type";
+
+  // Special case: type "bytes" is a builtin alias, so it will have no
+  // user-specified arg type.
+  if (!type_ctor.maybe_arg_type_ctor) {
+    GenerateObjectMember(key, type, position);
+    return;
+  }
+
+  GenerateObjectPunctuation(position);
+  EmitObjectKey(key);
+  GenerateObject([&]() {
+    GenerateObjectMember("kind", NameFlatTypeKind(type->kind), Position::kFirst);
+
+    switch (type->kind) {
+      case flat::Type::Kind::kArray: {
+        auto array_type = static_cast<const flat::ArrayType*>(type);
+        GenerateTypeAndFromTypeAlias(TypeKind::kParameterized, *type_ctor.maybe_arg_type_ctor);
+        GenerateObjectMember("element_count", array_type->element_count->value);
+        break;
+      }
+      case flat::Type::Kind::kVector: {
+        auto vector_type = static_cast<const flat::VectorType*>(type);
+        GenerateTypeAndFromTypeAlias(TypeKind::kParameterized, *type_ctor.maybe_arg_type_ctor);
+        if (*vector_type->element_count < flat::Size::Max())
+          GenerateObjectMember("maybe_element_count", vector_type->element_count->value);
+        GenerateObjectMember("nullable", vector_type->nullability);
+        break;
+      }
+      case flat::Type::Kind::kRequestHandle: {
+        auto request_type = static_cast<const flat::RequestHandleType*>(type);
+        GenerateObjectMember("subtype", request_type->protocol_type->name);
+        if (type_ctor.maybe_arg_type_ctor != nullptr) {
+          GenerateExperimentalMaybeFromTypeAlias(*type_ctor.maybe_arg_type_ctor);
+        }
+        // TODO(fxbug.dev/43803): Add required and optional rights.
+        GenerateObjectMember("nullable", request_type->nullability);
+        break;
+      }
+      default: {
+        assert(false && "expected parameterized type (either array<T>, vector<T>, or request<P>)");
+      }
+    }
+  });
 }
 
 void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struct& value) {

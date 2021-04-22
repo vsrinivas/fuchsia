@@ -59,6 +59,11 @@
               "kind": "primitive",
               "subtype": "uint64"
             },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/U64",
+              "args": [],
+              "nullable": false
+            },
             "maybe_element_count": 1,
             "nullable": false
           },
@@ -80,6 +85,11 @@
             "element_type": {
               "kind": "primitive",
               "subtype": "uint64"
+            },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/U64",
+              "args": [],
+              "nullable": false
             },
             "element_count": 1
           },
@@ -103,6 +113,11 @@
               "element_type": {
                 "kind": "primitive",
                 "subtype": "uint64"
+              },
+              "experimental_maybe_from_type_alias": {
+                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "args": [],
+                "nullable": false
               },
               "maybe_element_count": 1,
               "nullable": false
@@ -130,6 +145,11 @@
                 "kind": "primitive",
                 "subtype": "uint64"
               },
+              "experimental_maybe_from_type_alias": {
+                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "args": [],
+                "nullable": false
+              },
               "element_count": 1
             },
             "nullable": false
@@ -154,6 +174,11 @@
               "element_type": {
                 "kind": "primitive",
                 "subtype": "uint64"
+              },
+              "experimental_maybe_from_type_alias": {
+                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "args": [],
+                "nullable": false
               },
               "maybe_element_count": 1,
               "nullable": false
@@ -180,6 +205,11 @@
               "element_type": {
                 "kind": "primitive",
                 "subtype": "uint64"
+              },
+              "experimental_maybe_from_type_alias": {
+                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "args": [],
+                "nullable": false
               },
               "element_count": 1
             },
@@ -234,6 +264,11 @@
               },
               "nullable": true
             },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/Vector",
+              "args": [],
+              "nullable": false
+            },
             "nullable": false
           },
           "name": "v2",
@@ -258,6 +293,11 @@
                 "subtype": "uint64"
               },
               "nullable": true
+            },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/Vector",
+              "args": [],
+              "nullable": false
             },
             "element_count": 4
           },
@@ -310,6 +350,11 @@
               },
               "element_count": 1
             },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfArray",
+              "args": [],
+              "nullable": false
+            },
             "nullable": false
           },
           "name": "a2",
@@ -335,6 +380,11 @@
               },
               "element_count": 1
             },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfArray",
+              "args": [],
+              "nullable": false
+            },
             "element_count": 4
           },
           "name": "a3",
@@ -353,6 +403,11 @@
           "type": {
             "kind": "request",
             "subtype": "fidl.test.experimentalmaybefromtypealias/MyProtocol",
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfProtocol",
+              "args": [],
+              "nullable": false
+            },
             "nullable": false
           },
           "name": "p1",
@@ -373,6 +428,11 @@
             "element_type": {
               "kind": "request",
               "subtype": "fidl.test.experimentalmaybefromtypealias/MyProtocol",
+              "experimental_maybe_from_type_alias": {
+                "name": "fidl.test.experimentalmaybefromtypealias/AliasOfProtocol",
+                "args": [],
+                "nullable": false
+              },
               "nullable": false
             },
             "nullable": false
@@ -395,6 +455,11 @@
             "element_type": {
               "kind": "request",
               "subtype": "fidl.test.experimentalmaybefromtypealias/MyProtocol",
+              "experimental_maybe_from_type_alias": {
+                "name": "fidl.test.experimentalmaybefromtypealias/AliasOfProtocol",
+                "args": [],
+                "nullable": false
+              },
               "nullable": false
             },
             "element_count": 4
@@ -442,6 +507,11 @@
               "subtype": "fidl.test.experimentalmaybefromtypealias/MyProtocol",
               "nullable": true
             },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfRequest",
+              "args": [],
+              "nullable": false
+            },
             "nullable": false
           },
           "name": "r2",
@@ -463,6 +533,11 @@
               "kind": "request",
               "subtype": "fidl.test.experimentalmaybefromtypealias/MyProtocol",
               "nullable": true
+            },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfRequest",
+              "args": [],
+              "nullable": false
             },
             "element_count": 4
           },
@@ -515,6 +590,11 @@
               },
               "nullable": false
             },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfBytes",
+              "args": [],
+              "nullable": false
+            },
             "nullable": false
           },
           "name": "b2",
@@ -538,6 +618,11 @@
                 "kind": "primitive",
                 "subtype": "uint8"
               },
+              "nullable": false
+            },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfBytes",
+              "args": [],
               "nullable": false
             },
             "element_count": 4
@@ -583,6 +668,11 @@
               "kind": "string",
               "nullable": false
             },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfString",
+              "args": [],
+              "nullable": false
+            },
             "nullable": false
           },
           "name": "s2",
@@ -602,6 +692,11 @@
             "kind": "array",
             "element_type": {
               "kind": "string",
+              "nullable": false
+            },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfString",
+              "args": [],
               "nullable": false
             },
             "element_count": 4
@@ -624,6 +719,11 @@
             "element_type": {
               "kind": "primitive",
               "subtype": "uint64"
+            },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/U64",
+              "args": [],
+              "nullable": false
             },
             "maybe_element_count": 2,
             "nullable": false
@@ -654,7 +754,17 @@
                 "kind": "primitive",
                 "subtype": "uint64"
               },
+              "experimental_maybe_from_type_alias": {
+                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "args": [],
+                "nullable": false
+              },
               "maybe_element_count": 2,
+              "nullable": false
+            },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfVectorContainingAliasOfVector",
+              "args": [],
               "nullable": false
             },
             "maybe_element_count": 3,
@@ -681,7 +791,17 @@
                 "kind": "primitive",
                 "subtype": "uint64"
               },
+              "experimental_maybe_from_type_alias": {
+                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "args": [],
+                "nullable": false
+              },
               "maybe_element_count": 2,
+              "nullable": false
+            },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfVectorContainingAliasOfVector",
+              "args": [],
               "nullable": false
             },
             "element_count": 3
@@ -704,6 +824,11 @@
             "element_type": {
               "kind": "primitive",
               "subtype": "uint64"
+            },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/U64",
+              "args": [],
+              "nullable": false
             },
             "element_count": 2
           },
@@ -733,7 +858,17 @@
                 "kind": "primitive",
                 "subtype": "uint64"
               },
+              "experimental_maybe_from_type_alias": {
+                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "args": [],
+                "nullable": false
+              },
               "element_count": 2
+            },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray",
+              "args": [],
+              "nullable": false
             },
             "maybe_element_count": 3,
             "nullable": false
@@ -759,7 +894,17 @@
                 "kind": "primitive",
                 "subtype": "uint64"
               },
+              "experimental_maybe_from_type_alias": {
+                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "args": [],
+                "nullable": false
+              },
               "element_count": 2
+            },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray",
+              "args": [],
+              "nullable": false
             },
             "element_count": 3
           },
@@ -779,6 +924,11 @@
           "type": {
             "kind": "request",
             "subtype": "fidl.test.experimentalmaybefromtypealias/MyProtocol",
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfProtocol",
+              "args": [],
+              "nullable": false
+            },
             "nullable": false
           },
           "experimental_maybe_from_type_alias": {
@@ -804,6 +954,16 @@
             "element_type": {
               "kind": "request",
               "subtype": "fidl.test.experimentalmaybefromtypealias/MyProtocol",
+              "experimental_maybe_from_type_alias": {
+                "name": "fidl.test.experimentalmaybefromtypealias/AliasOfProtocol",
+                "args": [],
+                "nullable": false
+              },
+              "nullable": false
+            },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfRequestContainingAliasOfProtocol",
+              "args": [],
               "nullable": false
             },
             "maybe_element_count": 3,
@@ -827,6 +987,16 @@
             "element_type": {
               "kind": "request",
               "subtype": "fidl.test.experimentalmaybefromtypealias/MyProtocol",
+              "experimental_maybe_from_type_alias": {
+                "name": "fidl.test.experimentalmaybefromtypealias/AliasOfProtocol",
+                "args": [],
+                "nullable": false
+              },
+              "nullable": false
+            },
+            "experimental_maybe_from_type_alias": {
+              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfRequestContainingAliasOfProtocol",
+              "args": [],
               "nullable": false
             },
             "element_count": 3
