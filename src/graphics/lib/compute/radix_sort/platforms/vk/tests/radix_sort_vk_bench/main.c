@@ -39,8 +39,6 @@
 #include "intel_gen8_u64_rodata.h"
 #include "nvidia_sm35_u32_rodata.h"
 #include "nvidia_sm35_u64_rodata.h"
-#include "nvidia_sm70_u32_rodata.h"
-#include "nvidia_sm70_u64_rodata.h"
 
 #endif
 
@@ -214,8 +212,6 @@ static struct rs_name_target const rs_named_targets[] = {
   { .name = "intel_gen8_u64",   .header = intel_gen8_u64_rodata   },
   { .name = "nvidia_sm35_u32",  .header = nvidia_sm35_u32_rodata  },
   { .name = "nvidia_sm35_u64",  .header = nvidia_sm35_u64_rodata  },
-  { .name = "nvidia_sm70_u32",  .header = nvidia_sm70_u32_rodata  },
-  { .name = "nvidia_sm70_u64",  .header = nvidia_sm70_u64_rodata  },
 };
 // clang-format on
 

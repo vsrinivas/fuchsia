@@ -52,8 +52,6 @@ graphics_compute_vulkan_executable("radix-sort-vk-bench") {
         "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/intel/gen8/u64:intel_gen8_u64_rodata",
         "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/nvidia/sm35/u32:nvidia_sm35_u32_rodata",
         "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/nvidia/sm35/u64:nvidia_sm35_u64_rodata",
-        "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/nvidia/sm70/u32:nvidia_sm70_u32_rodata",
-        "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/nvidia/sm70/u64:nvidia_sm70_u64_rodata",
       ]
     } else {
       #
@@ -70,8 +68,6 @@ graphics_compute_vulkan_executable("radix-sort-vk-bench") {
         "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/intel/gen8/u64:intel_gen8_u64",
         "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/nvidia/sm35/u32:nvidia_sm35_u32",
         "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/nvidia/sm35/u64:nvidia_sm35_u64",
-        "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/nvidia/sm70/u32:nvidia_sm70_u32",
-        "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors/nvidia/sm70/u64:nvidia_sm70_u64",
       ]
     }
   }
