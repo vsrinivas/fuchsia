@@ -208,7 +208,10 @@ class AppModel {
       clustersModel.currentCluster,
       clustersModel.fullscreenStoryNotifier,
       peekNotifier,
-    ]).addListener(onCancel);
+    ]).addListener(() {
+      onCancel();
+      overviewVisibility.value = !hasStories;
+    });
 
     alertsModel.addListener(onAlertChanged);
 
@@ -345,7 +348,6 @@ class AppModel {
     statusVisibility.value = false;
     helpVisibility.value = false;
     recentsVisibility.value = false;
-    overviewVisibility.value = !hasStories;
   }
 
   /// Called when the user wants to delete the story.

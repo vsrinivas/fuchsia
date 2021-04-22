@@ -18,7 +18,8 @@ void main() {
   ErmineDriver ermine;
   Input input;
 
-  const keyDuration = Duration(milliseconds: 100);
+  const keyPressedDuration = Duration(milliseconds: 100);
+  const keyReleasedDuration = Duration(milliseconds: 200);
   const keyExecution = Duration(seconds: 2);
 
   setUpAll(() async {
@@ -47,7 +48,23 @@ void main() {
   Future<void> launchTerminal() async {
     await ermine.launch(terminalUrl);
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: keyExecution);
-    await ermine.waitForView(terminalUrl);
+    // Verify terminal is launched and has focus.
+    expect(
+        await ermine.waitFor(() async {
+          final view = await ermine.waitForView(terminalUrl);
+          return view['focused'] == true;
+        }),
+        isTrue);
+    // Verify terminal is displaying a prompt.
+    expect(
+        await ermine.waitFor(() async {
+          final snapshot = await Inspect(sl4f).snapshotRoot('terminal.cmx');
+          if (snapshot != null) {
+            return snapshot['grid'].toString().endsWith('\$');
+          }
+          return false;
+        }),
+        isTrue);
     await ermine.driver.waitForAbsent(find.byValueKey('overview'));
   }
 
@@ -63,7 +80,7 @@ void main() {
     // Shortcut Meta + Esc should toggle back to Home screen.
     await ermine.twoKeyShortcut(Key.leftMeta, Key.escape);
     await ermine.driver.waitForAbsent(find.byValueKey('overview'));
-  }, skip: true);
+  });
 
   test('Toggle Ask using shortcut', () async {
     // Launch terminal. This should display Home screen with terminal view.
@@ -78,7 +95,7 @@ void main() {
     // Shortcut Alt + Space should hide Ask box.
     await ermine.twoKeyShortcut(Key.leftAlt, Key.space);
     await ermine.driver.waitForAbsent(find.byType('Ask'));
-  }, skip: true);
+  });
 
   test('Toggle QuickSettings using shortcut', () async {
     // Launch terminal. This should display Home screen with terminal view.
@@ -92,8 +109,8 @@ void main() {
 
     // Shortcut Escape should hide QuickSettings.
     await input.keyEvents([
-      KeyEvent(Key.escape, keyDuration, KeyEventType.pressed),
-      KeyEvent(Key.escape, keyDuration, KeyEventType.released),
+      KeyEvent(Key.escape, keyPressedDuration, KeyEventType.pressed),
+      KeyEvent(Key.escape, keyReleasedDuration, KeyEventType.released),
     ]);
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: keyExecution);
     await ermine.driver.waitForAbsent(find.byType('Status'));
@@ -111,8 +128,8 @@ void main() {
 
     // Shortcut Escape should hide keyboard help.
     await input.keyEvents([
-      KeyEvent(Key.escape, keyDuration, KeyEventType.pressed),
-      KeyEvent(Key.escape, keyDuration, KeyEventType.released),
+      KeyEvent(Key.escape, keyPressedDuration, KeyEventType.pressed),
+      KeyEvent(Key.escape, keyReleasedDuration, KeyEventType.released),
     ]);
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: keyExecution);
     await ermine.driver.waitForAbsent(find.byValueKey('keyboardHelp'));

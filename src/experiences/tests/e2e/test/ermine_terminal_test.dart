@@ -75,7 +75,7 @@ void main() {
       String result;
       final snapshot = await Inspect(sl4f).snapshotRoot('terminal.cmx');
       if (snapshot != null) {
-        return snapshot['grid'].toString();
+        result = snapshot['grid'].toString();
       }
       return result;
     });

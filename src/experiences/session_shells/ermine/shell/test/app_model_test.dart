@@ -197,18 +197,6 @@ void main() {
     verify(story.restore()).called(1);
   });
 
-  test('Should hide Overview if stores are present', () async {
-    when(clustersModel.hasStories).thenReturn(false);
-
-    appModel.onCancel();
-    expect(appModel.overviewVisibility.value, true);
-
-    when(clustersModel.hasStories).thenReturn(true);
-
-    appModel.onCancel();
-    expect(appModel.overviewVisibility.value, false);
-  });
-
   test('Should not go fullscreen if no story is in focus.', () async {
     appModel.onFullscreen();
     expect(appModel.isFullscreen, false);
