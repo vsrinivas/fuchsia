@@ -10,7 +10,11 @@
 
 namespace media::audio::test {
 
+#ifdef NDEBUG
 constexpr zx::duration kLoopTimeout = zx::sec(10);
+#else
+constexpr zx::duration kLoopTimeout = zx::sec(30);
+#endif
 
 void TestFixture::TearDown() {
   ExpectNoUnexpectedErrors("during TearDown");
