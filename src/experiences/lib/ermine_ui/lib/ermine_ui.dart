@@ -7,6 +7,7 @@ export 'ui_components/button/bordered_button.dart';
 export 'ui_components/button/button.dart';
 export 'ui_components/button/filled_button.dart';
 export 'ui_components/button/text_only_button.dart';
+export 'ui_components/inputs/text_field.dart';
 export 'ui_components/loading_indicator/loading_indicator.dart';
 export 'ui_components/toggles/checkbox.dart';
 export 'ui_components/toggles/radio.dart';

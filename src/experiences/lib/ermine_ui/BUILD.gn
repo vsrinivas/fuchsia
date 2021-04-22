@@ -16,6 +16,8 @@ dart_library("ermine_ui") {
     "ui_components/button/filled_button.dart",
     "ui_components/button/layout.dart",
     "ui_components/button/text_only_button.dart",
+    "ui_components/inputs/layout.dart",
+    "ui_components/inputs/text_field.dart",
     "ui_components/loading_indicator/layout.dart",
     "ui_components/loading_indicator/loading_indicator.dart",
     "ui_components/toggles/checkbox.dart",
@@ -37,6 +39,7 @@ flutter_test("ermine_ui_unittests") {
     "filled_button_test.dart",
     "loading_indicator_test.dart",
     "radio_test.dart",
+    "text_field_test.dart",
     "text_only_button_test.dart",
   ]
 
