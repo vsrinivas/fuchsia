@@ -79,8 +79,24 @@ async fn main() -> Result<(), Error> {
         connect_to_service::<NetstackMarker>().context("failed to connect to netstack")?;
     let filter = connect_to_service::<FilterMarker>().context("failed to connect to netfilter")?;
     let log = connect_to_service::<LogMarker>().context("failed to connect to netstack log")?;
+    let controller = connect_to_service::<neighbor::ControllerMarker>()
+        .context("failed to connect to neighbor controller")?;
+    let view = connect_to_service::<neighbor::ViewMarker>()
+        .context("failed to connect to neighbor view")?;
 
-    match command.cmd {
+    do_root(command, stack, netstack, filter, log, controller, view).await
+}
+
+async fn do_root(
+    Command { cmd }: Command,
+    stack: StackProxy,
+    netstack: NetstackProxy,
+    filter: FilterProxy,
+    log: LogProxy,
+    controller: neighbor::ControllerProxy,
+    view: neighbor::ViewProxy,
+) -> Result<(), Error> {
+    match cmd {
         CommandEnum::If(If { if_cmd: cmd }) => {
             do_if(cmd, &stack, &netstack).await.context("failed during if command")
         }
@@ -109,7 +125,7 @@ async fn main() -> Result<(), Error> {
             do_dhcp(cmd, netstack).await.context("failed during dhcp command")
         }
         CommandEnum::Neigh(Neigh { neigh_cmd: cmd }) => {
-            do_neigh(cmd).await.context("failed during neigh command")
+            do_neigh(cmd, controller, view).await.context("failed during neigh command")
         }
     }
 }
@@ -577,46 +593,42 @@ fn visit_inspect_object(
     }
 }
 
-async fn do_neigh(cmd: opts::NeighEnum) -> Result<(), Error> {
+async fn do_neigh(
+    cmd: opts::NeighEnum,
+    controller: neighbor::ControllerProxy,
+    view: neighbor::ViewProxy,
+) -> Result<(), Error> {
     match cmd {
         NeighEnum::Add(NeighAdd { interface, ip, mac }) => {
-            let controller = connect_to_service::<neighbor::ControllerMarker>()
-                .context("failed to connect to neighbor controller")?;
             let () = do_neigh_add(interface, ip.into(), mac.into(), controller)
                 .await
                 .context("failed during neigh add command")?;
             info!("Added entry ({}, {}) for interface {}", ip, mac, interface);
         }
         NeighEnum::Clear(NeighClear { interface, ip_version }) => {
-            let controller = connect_to_service::<neighbor::ControllerMarker>()
-                .context("failed to connect to neighbor controller")?;
             let () = do_neigh_clear(interface, ip_version, controller)
                 .await
                 .context("failed during neigh clear command")?;
             info!("Cleared entries for interface {}", interface);
         }
         NeighEnum::Del(NeighDel { interface, ip }) => {
-            let controller = connect_to_service::<neighbor::ControllerMarker>()
-                .context("failed to connect to neighbor controller")?;
             let () = do_neigh_del(interface, ip.into(), controller)
                 .await
                 .context("failed during neigh del command")?;
             info!("Deleted entry {} for interface {}", ip, interface);
         }
         NeighEnum::List(NeighList {}) => {
-            let () = print_neigh_entries(false /* watch_for_changes */)
+            let () = print_neigh_entries(false /* watch_for_changes */, view)
                 .await
                 .context("error listing neighbor entries")?;
         }
         NeighEnum::Watch(NeighWatch {}) => {
-            let () = print_neigh_entries(true /* watch_for_changes */)
+            let () = print_neigh_entries(true /* watch_for_changes */, view)
                 .await
                 .context("error watching for changes to the neighbor table")?;
         }
         NeighEnum::Config(NeighConfig { neigh_config_cmd }) => match neigh_config_cmd {
             NeighConfigEnum::Get(NeighGetConfig { interface, ip_version }) => {
-                let view = connect_to_service::<neighbor::ViewMarker>()
-                    .context("failed to connect to neighbor view")?;
                 let () = print_neigh_config(interface, ip_version, view)
                     .await
                     .context("failed during neigh config get command")?;
@@ -650,8 +662,6 @@ async fn do_neigh(cmd: opts::NeighEnum) -> Result<(), Error> {
                     max_reachability_confirmations,
                     ..neighbor::UnreachabilityConfig::EMPTY
                 };
-                let controller = connect_to_service::<neighbor::ControllerMarker>()
-                    .context("failed to connect to neighbor controller")?;
                 let () = update_neigh_config(interface, ip_version, updates, controller)
                     .await
                     .context("failed during neigh config update command")?;
@@ -702,9 +712,10 @@ async fn do_neigh_del(
         .context("error removing neighbor entry")
 }
 
-async fn print_neigh_entries(watch_for_changes: bool) -> Result<(), Error> {
-    let view = connect_to_service::<neighbor::ViewMarker>()
-        .context("failed to connect to neighbor view")?;
+async fn print_neigh_entries(
+    watch_for_changes: bool,
+    view: neighbor::ViewProxy,
+) -> Result<(), Error> {
     let (it_client, it_server) =
         fidl::endpoints::create_endpoints::<neighbor::EntryIteratorMarker>()
             .context("error creating channel for entry iterator")?;
