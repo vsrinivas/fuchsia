@@ -26,7 +26,7 @@ driver_module("bt-hci-broadcom") {
   sources = [ "bt-hci-broadcom.c" ]
   deps = [
     ":bcm_hci_bind",
-    "//sdk/banjo/fuchsia.hardware.bt.hci",
+    "//sdk/banjo/fuchsia.hardware.bt.hci:fuchsia.hardware.bt.hci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.bt.vendor",
     "//sdk/banjo/fuchsia.hardware.serialimpl.async",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c",
@@ -50,7 +50,7 @@ test("bt-hci-broadcom-test-bin") {
   sources = [ "bt-hci-broadcom-test.c" ]
   deps = [
     ":bcm_hci_bind",
-    "//sdk/banjo/fuchsia.hardware.bt.hci",
+    "//sdk/banjo/fuchsia.hardware.bt.hci:fuchsia.hardware.bt.hci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.bt.vendor",
     "//sdk/banjo/fuchsia.hardware.serialimpl.async",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c",
