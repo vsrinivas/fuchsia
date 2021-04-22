@@ -241,6 +241,25 @@ void DebugAdapterContext::DidCreateProcess(Process* process, bool autoattached_t
   dap_->send(event);
 }
 
+void DebugAdapterContext::WillDestroyProcess(Process* process, DestroyReason reason, int exit_code,
+                                             uint64_t timestamp) {
+  dap::ExitedEvent exit_event;            // Sent when process exits.
+  dap::TerminatedEvent terminated_event;  // Sent when process is detached.
+  switch (reason) {
+    case ProcessObserver::DestroyReason::kExit:
+      exit_event.exitCode = exit_code;
+      dap_->send(exit_event);
+      break;
+    case ProcessObserver::DestroyReason::kDetach:
+      dap_->send(terminated_event);
+      break;
+    case ProcessObserver::DestroyReason::kKill:
+      exit_event.exitCode = -1;
+      dap_->send(exit_event);
+      break;
+  }
+}
+
 Target* DebugAdapterContext::GetCurrentTarget() {
   auto targets = session()->system().GetTargets();
   if (targets.size() > 0) {

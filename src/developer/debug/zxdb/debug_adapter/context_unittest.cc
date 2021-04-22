@@ -4,6 +4,9 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/shared/zx_status.h"
+#include "src/developer/debug/zxdb/client/mock_remote_api.h"
+#include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/debug_adapter/context_test.h"
 
 namespace zxdb {
@@ -141,6 +144,90 @@ TEST_F(DebugAdapterContextTest, DisconnectRequest) {
   auto got = response.get();
   EXPECT_FALSE(got.error);
   EXPECT_TRUE(request_received);
+}
+
+TEST_F(DebugAdapterContextTest, ExitedEvent) {
+  bool event_received = false;
+
+  client().registerHandler([&event_received](const dap::ExitedEvent& arg) {
+    EXPECT_EQ(arg.exitCode, 20);
+    event_received = true;
+  });
+
+  InitializeDebugging();
+
+  InjectProcess(kProcessKoid);
+  // Receive process started event in client.
+  RunClient();
+
+  InjectThread(kProcessKoid, kThreadKoid);
+  // Receive thread started event in client.
+  RunClient();
+
+  // Detach from target
+  auto targets = session().system().GetTargetImpls();
+  ASSERT_EQ(targets.size(), 1u);
+  targets[0]->OnProcessExiting(20,0);
+
+  // Run client to receive event.
+  RunClient();
+  EXPECT_TRUE(event_received);
+}
+
+namespace {
+
+class ProcessDetachRemoteAPI : public MockRemoteAPI {
+ public:
+  void Detach(const debug_ipc::DetachRequest& request,
+              fit::callback<void(const Err&, debug_ipc::DetachReply)> cb) override {
+    debug_ipc::DetachReply reply;
+    reply.status = debug_ipc::kZxOk;
+
+    cb(Err(), reply);
+  }
+};
+
+class ProcessDetachTest : public DebugAdapterContextTest {
+ public:
+  ProcessDetachRemoteAPI* remote_api() const { return remote_api_; }
+
+ protected:
+  std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() override {
+    auto remote_api = std::make_unique<ProcessDetachRemoteAPI>();
+    remote_api_ = remote_api.get();
+    return remote_api;
+  }
+
+ private:
+  ProcessDetachRemoteAPI* remote_api_;
+};
+
+}  // namespace
+
+TEST_F(ProcessDetachTest, TerminatedEvent) {
+  bool event_received = false;
+
+  client().registerHandler(
+      [&event_received](const dap::TerminatedEvent& arg) { event_received = true; });
+
+  InitializeDebugging();
+
+  InjectProcess(kProcessKoid);
+  // Receive process started event in client.
+  RunClient();
+
+  InjectThread(kProcessKoid, kThreadKoid);
+  // Receive thread started event in client.
+  RunClient();
+
+  // Detach from target
+  auto targets = session().system().GetTargetImpls();
+  ASSERT_EQ(targets.size(), 1u);
+  targets[0]->Detach([](const fxl::WeakPtr<Target>& target, const Err& err) {});
+
+  // Run client to receive event.
+  RunClient();
+  EXPECT_TRUE(event_received);
 }
 
 }  // namespace zxdb
