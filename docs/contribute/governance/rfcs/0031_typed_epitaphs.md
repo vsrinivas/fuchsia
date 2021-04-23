@@ -68,7 +68,7 @@ bindings code, generated code, ergonomics), typed epitaphs are quite high on the
 complexity spectrum, and their usefulness is quite low. That tradeoff didn't
 exactly made us jump for joy.
 
-## Where do we go from here?
+### Where do we go from here? {#terminal-interaction}
 
 _This section represents the author's opinion (pascallouis@google.com)._
 
