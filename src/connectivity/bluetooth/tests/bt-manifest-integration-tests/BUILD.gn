@@ -1,0 +1,107 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("bt_rfcomm_smoke_test_bin") {
+  output_name = "bt_rfcomm_smoke_test"
+  edition = "2018"
+  source_root = "src/bt_rfcomm_smoke_test.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "src/bt_rfcomm_smoke_test.rs" ]
+}
+
+fuchsia_test_component("bt-rfcomm-smoke-test-component") {
+  manifest = "meta/bt-rfcomm-smoke-test.cml"
+  deps = [ ":bt_rfcomm_smoke_test_bin" ]
+}
+
+fuchsia_test_package("bt-rfcomm-smoke-test") {
+  test_components = [ ":bt-rfcomm-smoke-test-component" ]
+  deps = [ "//src/connectivity/bluetooth/profiles/bt-rfcomm:component-v2" ]
+}
+
+rustc_test("bt_avrcp_smoke_test_bin") {
+  output_name = "bt_avrcp_smoke_test"
+  edition = "2018"
+  source_root = "src/bt_avrcp_smoke_test.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.avrcp.test:fuchsia.bluetooth.avrcp.test-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/lib/fuchsia-component-test",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "src/bt_avrcp_smoke_test.rs" ]
+}
+
+fuchsia_test_component("bt-avrcp-smoke-test-component") {
+  manifest = "meta/bt-avrcp-smoke-test.cml"
+  deps = [ ":bt_avrcp_smoke_test_bin" ]
+}
+
+fuchsia_test_package("bt-avrcp-smoke-test") {
+  test_components = [ ":bt-avrcp-smoke-test-component" ]
+  deps = [ "//src/connectivity/bluetooth/profiles/bt-avrcp:component-v2" ]
+}
+
+rustc_test("bt_avrcp_target_smoke_test_bin") {
+  output_name = "bt_avrcp_target_smoke_test"
+  edition = "2018"
+  source_root = "src/bt_avrcp_target_smoke_test.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp-rustc",
+    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
+    "//src/connectivity/bluetooth/fidl:component-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "src/bt_avrcp_target_smoke_test.rs" ]
+}
+
+fuchsia_test_component("bt-avrcp-target-smoke-test-component") {
+  manifest = "meta/bt-avrcp-target-smoke-test.cml"
+  deps = [ ":bt_avrcp_target_smoke_test_bin" ]
+}
+
+fuchsia_test_package("bt-avrcp-target-smoke-test") {
+  test_components = [ ":bt-avrcp-target-smoke-test-component" ]
+  deps =
+      [ "//src/connectivity/bluetooth/profiles/bt-avrcp-target:component-v2" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":bt-avrcp-smoke-test",
+    ":bt-avrcp-target-smoke-test",
+    ":bt-rfcomm-smoke-test",
+  ]
+}
