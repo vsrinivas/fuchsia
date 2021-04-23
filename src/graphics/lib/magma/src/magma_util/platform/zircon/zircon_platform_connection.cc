@@ -129,7 +129,8 @@ bool ZirconPlatformConnection::AsyncTaskHandler(async_dispatcher_t* dispatcher, 
   return DRETF(false, "Unhandled notification type: %lu", task->notification.type);
 }
 
-void ZirconPlatformConnection::EnableFlowControl(EnableFlowControlCompleter::Sync& completer) {
+void ZirconPlatformConnection::EnableFlowControl(EnableFlowControlRequestView request,
+                                                 EnableFlowControlCompleter::Sync& completer) {
   flow_control_enabled_ = true;
 }
 
@@ -159,86 +160,86 @@ void ZirconPlatformConnection::FlowControl(uint64_t size) {
   }
 }
 
-void ZirconPlatformConnection::ImportBuffer(::zx::vmo buffer,
+void ZirconPlatformConnection::ImportBuffer(ImportBufferRequestView request,
                                             ImportBufferCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection - ImportBuffer");
   uint64_t size = 0;
-  buffer.get_size(&size);
+  request->buffer.get_size(&size);
   FlowControl(size);
 
   uint64_t buffer_id;
-  if (!delegate_->ImportBuffer(buffer.release(), &buffer_id))
+  if (!delegate_->ImportBuffer(request->buffer.release(), &buffer_id))
     SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
 }
 
-void ZirconPlatformConnection::ReleaseBuffer(uint64_t buffer_id,
+void ZirconPlatformConnection::ReleaseBuffer(ReleaseBufferRequestView request,
                                              ReleaseBufferCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: ReleaseBuffer");
   FlowControl();
 
-  if (!delegate_->ReleaseBuffer(buffer_id))
+  if (!delegate_->ReleaseBuffer(request->buffer_id))
     SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
 }
 
-void ZirconPlatformConnection::ImportObject(zx::handle handle, uint32_t object_type,
+void ZirconPlatformConnection::ImportObject(ImportObjectRequestView request,
                                             ImportObjectCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: ImportObject");
   FlowControl();
 
-  if (!delegate_->ImportObject(handle.release(), static_cast<PlatformObject::Type>(object_type)))
+  if (!delegate_->ImportObject(request->object.release(),
+                               static_cast<PlatformObject::Type>(request->object_type)))
     SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
 }
 
-void ZirconPlatformConnection::ReleaseObject(uint64_t object_id, uint32_t object_type,
+void ZirconPlatformConnection::ReleaseObject(ReleaseObjectRequestView request,
                                              ReleaseObjectCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: ReleaseObject");
   FlowControl();
 
-  if (!delegate_->ReleaseObject(object_id, static_cast<PlatformObject::Type>(object_type)))
+  if (!delegate_->ReleaseObject(request->object_id,
+                                static_cast<PlatformObject::Type>(request->object_type)))
     SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
 }
 
-void ZirconPlatformConnection::CreateContext(uint32_t context_id,
+void ZirconPlatformConnection::CreateContext(CreateContextRequestView request,
                                              CreateContextCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: CreateContext");
   FlowControl();
 
-  magma::Status status = delegate_->CreateContext(context_id);
+  magma::Status status = delegate_->CreateContext(request->context_id);
   if (!status.ok())
     SetError(&completer, status.get());
 }
 
-void ZirconPlatformConnection::DestroyContext(uint32_t context_id,
+void ZirconPlatformConnection::DestroyContext(DestroyContextRequestView request,
                                               DestroyContextCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: DestroyContext");
   FlowControl();
 
-  magma::Status status = delegate_->DestroyContext(context_id);
+  magma::Status status = delegate_->DestroyContext(request->context_id);
   if (!status.ok())
     SetError(&completer, status.get());
 }
 
 void ZirconPlatformConnection::ExecuteCommandBufferWithResources(
-    uint32_t context_id, fuchsia_gpu_magma::wire::CommandBuffer fidl_command_buffer,
-    ::fidl::VectorView<fuchsia_gpu_magma::wire::Resource> fidl_resources,
-    ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores,
+    ExecuteCommandBufferWithResourcesRequestView request,
     ExecuteCommandBufferWithResourcesCompleter::Sync& completer) {
   FlowControl();
 
   auto command_buffer = std::make_unique<magma_system_command_buffer>();
 
   *command_buffer = {
-      .resource_count = static_cast<uint32_t>(fidl_resources.count()),
-      .batch_buffer_resource_index = fidl_command_buffer.batch_buffer_resource_index,
-      .batch_start_offset = fidl_command_buffer.batch_start_offset,
-      .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.count()),
-      .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.count()),
+      .resource_count = static_cast<uint32_t>(request->resources.count()),
+      .batch_buffer_resource_index = request->command_buffer.batch_buffer_resource_index,
+      .batch_start_offset = request->command_buffer.batch_start_offset,
+      .wait_semaphore_count = static_cast<uint32_t>(request->wait_semaphores.count()),
+      .signal_semaphore_count = static_cast<uint32_t>(request->signal_semaphores.count()),
   };
 
   std::vector<magma_system_exec_resource> resources;
-  resources.reserve(fidl_resources.count());
+  resources.reserve(request->resources.count());
 
-  for (auto& resource : fidl_resources) {
+  for (auto& resource : request->resources) {
     resources.push_back({
         resource.buffer,
         resource.offset,
@@ -248,88 +249,86 @@ void ZirconPlatformConnection::ExecuteCommandBufferWithResources(
 
   // Merge semaphores into one vector
   std::vector<uint64_t> semaphores;
-  semaphores.reserve(wait_semaphores.count() + signal_semaphores.count());
+  semaphores.reserve(request->wait_semaphores.count() + request->signal_semaphores.count());
 
-  for (uint64_t semaphore_id : wait_semaphores) {
+  for (uint64_t semaphore_id : request->wait_semaphores) {
     semaphores.push_back(semaphore_id);
   }
-  for (uint64_t semaphore_id : signal_semaphores) {
+  for (uint64_t semaphore_id : request->signal_semaphores) {
     semaphores.push_back(semaphore_id);
   }
 
   magma::Status status = delegate_->ExecuteCommandBufferWithResources(
-      context_id, std::move(command_buffer), std::move(resources), std::move(semaphores));
+      request->context_id, std::move(command_buffer), std::move(resources), std::move(semaphores));
 
   if (!status)
     SetError(&completer, status.get());
 }
 
 void ZirconPlatformConnection::ExecuteImmediateCommands(
-    uint32_t context_id, ::fidl::VectorView<uint8_t> command_data_vec,
-    ::fidl::VectorView<uint64_t> semaphore_vec,
+    ExecuteImmediateCommandsRequestView request,
     ExecuteImmediateCommandsCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: ExecuteImmediateCommands");
   FlowControl();
 
   magma::Status status = delegate_->ExecuteImmediateCommands(
-      context_id, command_data_vec.count(), command_data_vec.mutable_data(), semaphore_vec.count(),
-      semaphore_vec.mutable_data());
+      request->context_id, request->command_data.count(), request->command_data.mutable_data(),
+      request->semaphores.count(), request->semaphores.mutable_data());
   if (!status)
     SetError(&completer, status.get());
 }
 
 // Deprecated, errors are sent as epitaph on channel close
-void ZirconPlatformConnection::GetError(GetErrorCompleter::Sync& completer) {
+void ZirconPlatformConnection::GetError(GetErrorRequestView request,
+                                        GetErrorCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: GetError");
   completer.Reply(MAGMA_STATUS_OK);
 }
 
-void ZirconPlatformConnection::Sync(SyncCompleter::Sync& completer) {
+void ZirconPlatformConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: Sync");
   completer.Reply();
 }
 
-void ZirconPlatformConnection::MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
-                                            uint64_t page_offset, uint64_t page_count,
-                                            uint64_t flags,
+void ZirconPlatformConnection::MapBufferGpu(MapBufferGpuRequestView request,
                                             MapBufferGpuCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: MapBufferGpuFIDL");
   FlowControl();
 
-  magma::Status status = delegate_->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, flags);
+  magma::Status status =
+      delegate_->MapBufferGpu(request->buffer_id, request->gpu_va, request->page_offset,
+                              request->page_count, request->flags);
   if (!status.ok())
     SetError(&completer, status.get());
 }
 
-void ZirconPlatformConnection::UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
+void ZirconPlatformConnection::UnmapBufferGpu(UnmapBufferGpuRequestView request,
                                               UnmapBufferGpuCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: UnmapBufferGpuFIDL");
   FlowControl();
 
-  magma::Status status = delegate_->UnmapBufferGpu(buffer_id, gpu_va);
+  magma::Status status = delegate_->UnmapBufferGpu(request->buffer_id, request->gpu_va);
   if (!status.ok())
     SetError(&completer, status.get());
 }
 
-void ZirconPlatformConnection::CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
-                                            uint64_t page_count,
+void ZirconPlatformConnection::CommitBuffer(CommitBufferRequestView request,
                                             CommitBufferCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: CommitBufferFIDL");
   FlowControl();
 
-  magma::Status status = delegate_->CommitBuffer(buffer_id, page_offset, page_count);
+  magma::Status status =
+      delegate_->CommitBuffer(request->buffer_id, request->page_offset, request->page_count);
   if (!status.ok())
     SetError(&completer, status.get());
 }
 
-void ZirconPlatformConnection::BufferRangeOp(uint64_t buffer_id,
-                                             fuchsia_gpu_magma::wire::BufferOp op, uint64_t start,
-                                             uint64_t length,
+void ZirconPlatformConnection::BufferRangeOp(BufferRangeOpRequestView request,
                                              BufferRangeOpCompleter::Sync& completer) {
-  DLOG("ZirconPlatformConnection:::BufferOp %d", static_cast<uint32_t>(op));
+  DLOG("ZirconPlatformConnection:::BufferOp %d", static_cast<uint32_t>(request->op));
   FlowControl();
   uint32_t buffer_op;
-  switch (op) {
+  switch (request->op) {
     case fuchsia_gpu_magma::wire::BufferOp::kPopulateTables:
       buffer_op = MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES;
       break;
@@ -340,7 +339,8 @@ void ZirconPlatformConnection::BufferRangeOp(uint64_t buffer_id,
       SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
       return;
   }
-  magma::Status status = delegate_->BufferRangeOp(buffer_id, buffer_op, start, length);
+  magma::Status status = delegate_->BufferRangeOp(request->buffer_id, buffer_op,
+                                                  request->start_bytes, request->length);
 
   if (!status) {
     SetError(&completer, status.get());
@@ -348,37 +348,42 @@ void ZirconPlatformConnection::BufferRangeOp(uint64_t buffer_id,
 }
 
 void ZirconPlatformConnection::AccessPerformanceCounters(
-    zx::event event, AccessPerformanceCountersCompleter::Sync& completer) {
+    AccessPerformanceCountersRequestView request,
+    AccessPerformanceCountersCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection:::AccessPerformanceCounters");
   FlowControl();
 
-  magma::Status status =
-      delegate_->AccessPerformanceCounters(magma::PlatformHandle::Create(event.release()));
+  magma::Status status = delegate_->AccessPerformanceCounters(
+      magma::PlatformHandle::Create(request->access_token.release()));
   if (!status) {
     SetError(&completer, status.get());
   }
 }
 
 void ZirconPlatformConnection::IsPerformanceCounterAccessEnabled(
+    IsPerformanceCounterAccessEnabledRequestView request,
     IsPerformanceCounterAccessEnabledCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection:::IsPerformanceCounterAccessEnabled");
   completer.Reply(delegate_->IsPerformanceCounterAccessEnabled());
 }
 
 void ZirconPlatformConnection::EnablePerformanceCounters(
-    ::fidl::VectorView<uint64_t> counters, EnablePerformanceCountersCompleter::Sync& completer) {
+    EnablePerformanceCountersRequestView request,
+    EnablePerformanceCountersCompleter::Sync& completer) {
   FlowControl();
-  magma::Status status = delegate_->EnablePerformanceCounters(counters.data(), counters.count());
+  magma::Status status =
+      delegate_->EnablePerformanceCounters(request->counters.data(), request->counters.count());
   if (!status) {
     SetError(&completer, status.get());
   }
 }
 
 void ZirconPlatformConnection::CreatePerformanceCounterBufferPool(
-    uint64_t pool_id, zx::channel event_channel,
+    CreatePerformanceCounterBufferPoolRequestView request,
     CreatePerformanceCounterBufferPoolCompleter::Sync& completer) {
   FlowControl();
-  auto pool = std::make_unique<ZirconPlatformPerfCountPool>(pool_id, std::move(event_channel));
+  auto pool = std::make_unique<ZirconPlatformPerfCountPool>(request->pool,
+                                                            request->event_channel.TakeChannel());
   magma::Status status = delegate_->CreatePerformanceCounterBufferPool(std::move(pool));
   if (!status) {
     SetError(&completer, status.get());
@@ -386,21 +391,22 @@ void ZirconPlatformConnection::CreatePerformanceCounterBufferPool(
 }
 
 void ZirconPlatformConnection::ReleasePerformanceCounterBufferPool(
-    uint64_t pool_id, ReleasePerformanceCounterBufferPoolCompleter::Sync& completer) {
+    ReleasePerformanceCounterBufferPoolRequestView request,
+    ReleasePerformanceCounterBufferPoolCompleter::Sync& completer) {
   FlowControl();
-  magma::Status status = delegate_->ReleasePerformanceCounterBufferPool(pool_id);
+  magma::Status status = delegate_->ReleasePerformanceCounterBufferPool(request->pool);
   if (!status) {
     SetError(&completer, status.get());
   }
 }
 
 void ZirconPlatformConnection::AddPerformanceCounterBufferOffsetsToPool(
-    uint64_t pool_id, fidl::VectorView<fuchsia_gpu_magma::wire::BufferOffset> offsets,
+    AddPerformanceCounterBufferOffsetsToPoolRequestView request,
     AddPerformanceCounterBufferOffsetsToPoolCompleter::Sync& completer) {
   FlowControl();
-  for (auto& offset : offsets) {
+  for (auto& offset : request->offsets) {
     magma::Status status = delegate_->AddPerformanceCounterBufferOffsetToPool(
-        pool_id, offset.buffer_id, offset.offset, offset.size);
+        request->pool, offset.buffer_id, offset.offset, offset.size);
     if (!status) {
       SetError(&completer, status.get());
     }
@@ -408,28 +414,31 @@ void ZirconPlatformConnection::AddPerformanceCounterBufferOffsetsToPool(
 }
 
 void ZirconPlatformConnection::RemovePerformanceCounterBufferFromPool(
-    uint64_t pool_id, uint64_t buffer_id,
+    RemovePerformanceCounterBufferFromPoolRequestView request,
     RemovePerformanceCounterBufferFromPoolCompleter::Sync& completer) {
   FlowControl();
-  magma::Status status = delegate_->RemovePerformanceCounterBufferFromPool(pool_id, buffer_id);
+  magma::Status status =
+      delegate_->RemovePerformanceCounterBufferFromPool(request->pool, request->buffer_id);
   if (!status) {
     SetError(&completer, status.get());
   }
 }
 
 void ZirconPlatformConnection::DumpPerformanceCounters(
-    uint64_t pool_id, uint32_t trigger_id, DumpPerformanceCountersCompleter::Sync& completer) {
+    DumpPerformanceCountersRequestView request, DumpPerformanceCountersCompleter::Sync& completer) {
   FlowControl();
-  magma::Status status = delegate_->DumpPerformanceCounters(pool_id, trigger_id);
+  magma::Status status = delegate_->DumpPerformanceCounters(request->pool, request->trigger_id);
   if (!status) {
     SetError(&completer, status.get());
   }
 }
 
 void ZirconPlatformConnection::ClearPerformanceCounters(
-    ::fidl::VectorView<uint64_t> counters, ClearPerformanceCountersCompleter::Sync& completer) {
+    ClearPerformanceCountersRequestView request,
+    ClearPerformanceCountersCompleter::Sync& completer) {
   FlowControl();
-  magma::Status status = delegate_->ClearPerformanceCounters(counters.data(), counters.count());
+  magma::Status status =
+      delegate_->ClearPerformanceCounters(request->counters.data(), request->counters.count());
   if (!status) {
     SetError(&completer, status.get());
   }

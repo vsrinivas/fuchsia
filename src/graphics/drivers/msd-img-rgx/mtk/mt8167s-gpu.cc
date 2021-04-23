@@ -9,11 +9,11 @@
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
-#include <lib/ddk/hw/reg.h>
 #include <lib/zx/clock.h>
 
 #include <iterator>
@@ -377,12 +377,12 @@ zx_status_t Mt8167sGpu::Bind() {
   return DdkAdd("mt8167s-gpu");
 }
 
-void Mt8167sGpu::Query2(uint64_t query_id, Query2Completer::Sync& _completer) {
+void Mt8167sGpu::Query2(Query2RequestView request, Query2Completer::Sync& _completer) {
   DLOG("Mt8167sGpu::Query");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
   uint64_t result;
-  switch (query_id) {
+  switch (request->query_id) {
     case MAGMA_QUERY_DEVICE_ID:
       result = magma_system_device_->GetDeviceId();
       break;
@@ -394,38 +394,38 @@ void Mt8167sGpu::Query2(uint64_t query_id, Query2Completer::Sync& _completer) {
 #endif
       break;
     default:
-      magma::Status status = magma_system_device_->Query(query_id, &result);
+      magma::Status status = magma_system_device_->Query(request->query_id, &result);
       if (!status.ok()) {
         _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
         return;
       }
   }
-  DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, query_id, result);
+  DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, request->query_id, result);
 
   _completer.ReplySuccess(result);
 }
 
-void Mt8167sGpu::QueryReturnsBuffer(uint64_t query_id,
+void Mt8167sGpu::QueryReturnsBuffer(QueryReturnsBufferRequestView request,
                                     QueryReturnsBufferCompleter::Sync& _completer) {
   DLOG("Mt8167sGpu::QueryReturnsBuffer");
   std::lock_guard<std::mutex> lock(magma_mutex_);
   zx_handle_t result;
-  magma::Status status = magma_system_device_->QueryReturnsBuffer(query_id, &result);
+  magma::Status status = magma_system_device_->QueryReturnsBuffer(request->query_id, &result);
   if (!status.ok()) {
     _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
     return;
   }
-  DLOG("query extended query_id 0x%" PRIx64 " returning 0x%x", query_id, result);
+  DLOG("query extended query_id 0x%" PRIx64 " returning 0x%x", request->query_id, result);
 
   _completer.ReplySuccess(zx::vmo(result));
 }
 
-void Mt8167sGpu::Connect(uint64_t client_id, ConnectCompleter::Sync& _completer) {
+void Mt8167sGpu::Connect(ConnectRequestView request, ConnectCompleter::Sync& _completer) {
   DLOG("Mt8167sGpu::Connect");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
   auto connection =
-      MagmaSystemDevice::Open(magma_system_device_, client_id, /*thread_profile*/ nullptr);
+      MagmaSystemDevice::Open(magma_system_device_, request->client_id, /*thread_profile*/ nullptr);
   if (!connection) {
     _completer.Close(ZX_ERR_INTERNAL);
     return;
@@ -437,19 +437,20 @@ void Mt8167sGpu::Connect(uint64_t client_id, ConnectCompleter::Sync& _completer)
   magma_system_device_->StartConnectionThread(std::move(connection));
 }
 
-void Mt8167sGpu::DumpState(uint32_t dump_type, DumpStateCompleter::Sync& _completer) {
+void Mt8167sGpu::DumpState(DumpStateRequestView request, DumpStateCompleter::Sync& _completer) {
   DLOG("Mt8167sGpu::DumpState");
   std::lock_guard<std::mutex> lock(magma_mutex_);
-  if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
-                    MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
-    DLOG("Invalid dump type %x", dump_type);
+  if (request->dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
+                             MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
+    DLOG("Invalid dump type %x", request->dump_type);
     return;
   }
   if (magma_system_device_)
-    magma_system_device_->DumpStatus(dump_type);
+    magma_system_device_->DumpStatus(request->dump_type);
 }
 
-void Mt8167sGpu::TestRestart(TestRestartCompleter::Sync& _completer) {
+void Mt8167sGpu::TestRestart(TestRestartRequestView request,
+                             TestRestartCompleter::Sync& _completer) {
   DLOG("Mt8167sGpu::TestRestart");
 #if MAGMA_TEST_DRIVER
   std::lock_guard<std::mutex> lock(magma_mutex_);
@@ -460,7 +461,8 @@ void Mt8167sGpu::TestRestart(TestRestartCompleter::Sync& _completer) {
 #endif
 }
 
-void Mt8167sGpu::GetUnitTestStatus(GetUnitTestStatusCompleter::Sync& _completer) {
+void Mt8167sGpu::GetUnitTestStatus(GetUnitTestStatusRequestView request,
+                                   GetUnitTestStatusCompleter::Sync& _completer) {
   _completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 

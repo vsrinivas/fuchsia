@@ -93,7 +93,7 @@ class Controller : public ControllerParent,
                    public ddk::DisplayControllerInterfaceProtocol<Controller>,
                    public ddk::DisplayCaptureInterfaceProtocol<Controller>,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER>,
-                   private fidl::WireRawChannelInterface<fuchsia_hardware_display::Provider> {
+                   private fidl::WireServer<fuchsia_hardware_display::Provider> {
  public:
   Controller(zx_device_t* parent);
   ~Controller();
@@ -177,9 +177,9 @@ class Controller : public ControllerParent,
   void PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) __TA_EXCLUDES(mtx());
   void PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info);
 
-  void OpenVirtconController(zx::channel device, zx::channel controller,
+  void OpenVirtconController(OpenVirtconControllerRequestView request,
                              OpenVirtconControllerCompleter::Sync& _completer) override;
-  void OpenController(zx::channel device, zx::channel controller,
+  void OpenController(OpenControllerRequestView request,
                       OpenControllerCompleter::Sync& _completer) override;
 
   inspect::Inspector inspector_;

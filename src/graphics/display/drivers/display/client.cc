@@ -68,7 +68,7 @@ void DisplayConfig::InitializeInspect(inspect::Node* parent) {
       node_.CreateBool("pending_apply_layer_change", pending_apply_layer_change_);
 }
 
-void Client::ImportVmoImage(fhd::wire::ImageConfig image_config, ::zx::vmo vmo, int32_t offset,
+void Client::ImportVmoImage(ImportVmoImageRequestView request,
                             ImportVmoImageCompleter::Sync& _completer) {
   if (!single_buffer_framebuffer_stride_) {
     _completer.Reply(ZX_ERR_INVALID_ARGS, 0);
@@ -76,15 +76,15 @@ void Client::ImportVmoImage(fhd::wire::ImageConfig image_config, ::zx::vmo vmo, 
   }
 
   image_t dc_image;
-  dc_image.height = image_config.height;
-  dc_image.width = image_config.width;
-  dc_image.pixel_format = image_config.pixel_format;
-  dc_image.type = image_config.type;
+  dc_image.height = request->image_config.height;
+  dc_image.width = request->image_config.width;
+  dc_image.pixel_format = request->image_config.pixel_format;
+  dc_image.type = request->image_config.type;
 
   zx::vmo dup_vmo;
-  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+  zx_status_t status = request->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
   if (status == ZX_OK) {
-    status = controller_->dc()->ImportVmoImage(&dc_image, std::move(dup_vmo), offset);
+    status = controller_->dc()->ImportVmoImage(&dc_image, std::move(dup_vmo), request->offset);
   }
 
   if (status != ZX_OK) {
@@ -93,8 +93,9 @@ void Client::ImportVmoImage(fhd::wire::ImageConfig image_config, ::zx::vmo vmo, 
   }
   if (status == ZX_OK) {
     fbl::AllocChecker ac;
-    auto image = fbl::AdoptRef(new (&ac) Image(controller_, dc_image, std::move(vmo), is_vc_,
-                                               single_buffer_framebuffer_stride_, &proxy_->node()));
+    auto image =
+        fbl::AdoptRef(new (&ac) Image(controller_, dc_image, std::move(request->vmo), is_vc_,
+                                      single_buffer_framebuffer_stride_, &proxy_->node()));
     if (!ac.check()) {
       controller_->dc()->ReleaseImage(&dc_image);
       _completer.Reply(ZX_ERR_NO_MEMORY, 0);
@@ -107,9 +108,8 @@ void Client::ImportVmoImage(fhd::wire::ImageConfig image_config, ::zx::vmo vmo, 
   }
 }
 
-void Client::ImportImage(fhd::wire::ImageConfig image_config, uint64_t collection_id,
-                         uint32_t index, ImportImageCompleter::Sync& _completer) {
-  auto it = collection_map_.find(collection_id);
+void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::Sync& _completer) {
+  auto it = collection_map_.find(request->collection_id);
   if (it == collection_map_.end()) {
     _completer.Reply(ZX_ERR_INVALID_ARGS, 0);
     return;
@@ -123,12 +123,13 @@ void Client::ImportImage(fhd::wire::ImageConfig image_config, uint64_t collectio
   }
 
   image_t dc_image = {};
-  dc_image.height = image_config.height;
-  dc_image.width = image_config.width;
-  dc_image.pixel_format = image_config.pixel_format;
-  dc_image.type = image_config.type;
+  dc_image.height = request->image_config.height;
+  dc_image.width = request->image_config.width;
+  dc_image.pixel_format = request->image_config.pixel_format;
+  dc_image.type = request->image_config.type;
 
-  zx_status_t status = controller_->dc()->ImportImage(&dc_image, collection.channel().get(), index);
+  zx_status_t status =
+      controller_->dc()->ImportImage(&dc_image, collection.channel().get(), request->index);
   if (status != ZX_OK) {
     _completer.Reply(status, 0);
     return;
@@ -147,7 +148,7 @@ void Client::ImportImage(fhd::wire::ImageConfig image_config, uint64_t collectio
     }
     sysmem::wire::BufferCollectionInfo2& info = res->buffer_collection_info;
 
-    if (!info.settings.has_image_format_constraints || index >= info.buffer_count) {
+    if (!info.settings.has_image_format_constraints || request->index >= info.buffer_count) {
       _completer.Reply(ZX_ERR_OUT_OF_RANGE, 0);
       return;
     }
@@ -158,7 +159,7 @@ void Client::ImportImage(fhd::wire::ImageConfig image_config, uint64_t collectio
       _completer.Reply(ZX_ERR_INVALID_ARGS, 0);
       return;
     }
-    vmo = std::move(info.buffers[index].vmo);
+    vmo = std::move(info.buffers[request->index].vmo);
     stride = minimum_row_bytes / ZX_PIXEL_FORMAT_BYTES(dc_image.pixel_format);
   }
 
@@ -179,8 +180,9 @@ void Client::ImportImage(fhd::wire::ImageConfig image_config, uint64_t collectio
   _completer.Reply(0, image_id);
 }
 
-void Client::ReleaseImage(uint64_t image_id, ReleaseImageCompleter::Sync& _completer) {
-  auto image = images_.find(image_id);
+void Client::ReleaseImage(ReleaseImageRequestView request,
+                          ReleaseImageCompleter::Sync& _completer) {
+  auto image = images_.find(request->image_id);
   if (!image.IsValid()) {
     return;
   }
@@ -190,16 +192,16 @@ void Client::ReleaseImage(uint64_t image_id, ReleaseImageCompleter::Sync& _compl
   }
 }
 
-void Client::ImportEvent(::zx::event event, uint64_t id, ImportEventCompleter::Sync& _completer) {
-  if (id == INVALID_ID) {
+void Client::ImportEvent(ImportEventRequestView request, ImportEventCompleter::Sync& _completer) {
+  if (request->id == INVALID_ID) {
     zxlogf(ERROR, "Cannot import events with an invalid ID #%i", INVALID_ID);
     TearDown();
-  } else if (fences_.ImportEvent(std::move(event), id) != ZX_OK) {
+  } else if (fences_.ImportEvent(std::move(request->event), request->id) != ZX_OK) {
     TearDown();
   }
 }
 
-void Client::ImportBufferCollection(uint64_t collection_id, ::zx::channel collection_token,
+void Client::ImportBufferCollection(ImportBufferCollectionRequestView request,
                                     ImportBufferCollectionCompleter::Sync& _completer) {
   if (!sysmem_allocator_.channel()) {
     _completer.Reply(ZX_ERR_NOT_SUPPORTED);
@@ -207,7 +209,7 @@ void Client::ImportBufferCollection(uint64_t collection_id, ::zx::channel collec
   }
 
   // TODO: Switch to .contains() when C++20.
-  if (collection_map_.count(collection_id)) {
+  if (collection_map_.count(request->collection_id)) {
     _completer.Reply(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -219,13 +221,13 @@ void Client::ImportBufferCollection(uint64_t collection_id, ::zx::channel collec
   if (is_vc_) {
     zx::channel vc_token_server, vc_token_client;
     zx::channel::create(0, &vc_token_server, &vc_token_client);
-    if (fidl::WireCall<sysmem::BufferCollectionToken>(zx::unowned_channel(collection_token))
+    if (fidl::WireCall<sysmem::BufferCollectionToken>(request->collection_token.borrow().channel())
             .Duplicate(UINT32_MAX, std::move(vc_token_server))
             .error()) {
       _completer.Reply(ZX_ERR_INTERNAL);
       return;
     }
-    if (fidl::WireCall<sysmem::BufferCollectionToken>(zx::unowned_channel(collection_token))
+    if (fidl::WireCall<sysmem::BufferCollectionToken>(request->collection_token.borrow().channel())
             .Sync()
             .error()) {
       _completer.Reply(ZX_ERR_INTERNAL);
@@ -245,21 +247,22 @@ void Client::ImportBufferCollection(uint64_t collection_id, ::zx::channel collec
   zx::channel collection_server, collection_client;
   zx::channel::create(0, &collection_server, &collection_client);
   if (sysmem_allocator_
-          .BindSharedCollection(std::move(collection_token), std::move(collection_server))
+          .BindSharedCollection(request->collection_token.TakeChannel(),
+                                std::move(collection_server))
           .error()) {
     _completer.Reply(ZX_ERR_INTERNAL);
     return;
   }
 
-  collection_map_[collection_id] =
+  collection_map_[request->collection_id] =
       Collections{fidl::WireSyncClient<sysmem::BufferCollection>(std::move(collection_client)),
                   fidl::WireSyncClient<sysmem::BufferCollection>(std::move(vc_collection))};
   _completer.Reply(ZX_OK);
 }
 
-void Client::ReleaseBufferCollection(uint64_t collection_id,
+void Client::ReleaseBufferCollection(ReleaseBufferCollectionRequestView request,
                                      ReleaseBufferCollectionCompleter::Sync& _completer) {
-  auto it = collection_map_.find(collection_id);
+  auto it = collection_map_.find(request->collection_id);
   if (it == collection_map_.end()) {
     return;
   }
@@ -272,18 +275,18 @@ void Client::ReleaseBufferCollection(uint64_t collection_id,
 }
 
 void Client::SetBufferCollectionConstraints(
-    uint64_t collection_id, fhd::wire::ImageConfig config,
+    SetBufferCollectionConstraintsRequestView request,
     SetBufferCollectionConstraintsCompleter::Sync& _completer) {
-  auto it = collection_map_.find(collection_id);
+  auto it = collection_map_.find(request->collection_id);
   if (it == collection_map_.end()) {
     _completer.Reply(ZX_ERR_INVALID_ARGS);
     return;
   }
   image_t dc_image;
-  dc_image.height = config.height;
-  dc_image.width = config.width;
-  dc_image.pixel_format = config.pixel_format;
-  dc_image.type = config.type;
+  dc_image.height = request->config.height;
+  dc_image.width = request->config.width;
+  dc_image.pixel_format = request->config.pixel_format;
+  dc_image.type = request->config.type;
 
   zx_status_t status = controller_->dc()->SetBufferCollectionConstraints(
       &dc_image, it->second.driver.channel().get());
@@ -304,7 +307,7 @@ void Client::SetBufferCollectionConstraints(
     constraints.image_format_constraints_count = 1;
     sysmem::wire::ImageFormatConstraints& image_constraints =
         constraints.image_format_constraints[0];
-    switch (config.pixel_format) {
+    switch (request->config.pixel_format) {
       case ZX_PIXEL_FORMAT_RGB_x888:
       case ZX_PIXEL_FORMAT_ARGB_8888:
         image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgra32;
@@ -338,11 +341,12 @@ void Client::SetBufferCollectionConstraints(
   _completer.Reply(status);
 }
 
-void Client::ReleaseEvent(uint64_t id, ReleaseEventCompleter::Sync& _completer) {
-  fences_.ReleaseEvent(id);
+void Client::ReleaseEvent(ReleaseEventRequestView request,
+                          ReleaseEventCompleter::Sync& _completer) {
+  fences_.ReleaseEvent(request->id);
 }
 
-void Client::CreateLayer(CreateLayerCompleter::Sync& _completer) {
+void Client::CreateLayer(CreateLayerRequestView request, CreateLayerCompleter::Sync& _completer) {
   if (layers_.size() == kMaxLayers) {
     _completer.Reply(ZX_ERR_NO_RESOURCES, 0);
     return;
@@ -362,42 +366,42 @@ void Client::CreateLayer(CreateLayerCompleter::Sync& _completer) {
   _completer.Reply(ZX_OK, layer_id);
 }
 
-void Client::DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync& _completer) {
-  auto layer = layers_.find(layer_id);
+void Client::DestroyLayer(DestroyLayerRequestView request,
+                          DestroyLayerCompleter::Sync& _completer) {
+  auto layer = layers_.find(request->layer_id);
   if (!layer.IsValid()) {
-    zxlogf(ERROR, "Tried to destroy invalid layer %ld", layer_id);
+    zxlogf(ERROR, "Tried to destroy invalid layer %ld", request->layer_id);
     TearDown();
     return;
   }
   if (layer->in_use()) {
-    zxlogf(ERROR, "Destroyed layer %ld which was in use", layer_id);
+    zxlogf(ERROR, "Destroyed layer %ld which was in use", request->layer_id);
     TearDown();
     return;
   }
 
-  layers_.erase(layer_id);
+  layers_.erase(request->layer_id);
 }
 
-void Client::ImportGammaTable(uint64_t gamma_table_id, ::fidl::Array<float, 256> r,
-                              ::fidl::Array<float, 256> g, ::fidl::Array<float, 256> b,
+void Client::ImportGammaTable(ImportGammaTableRequestView request,
                               ImportGammaTableCompleter::Sync& _completer) {
   fbl::AllocChecker ac;
-  auto gt = fbl::AdoptRef(new (&ac) GammaTables(r, g, b));
+  auto gt = fbl::AdoptRef(new (&ac) GammaTables(request->r, request->g, request->b));
   if (!ac.check()) {
     zxlogf(ERROR, "%s failed!\n", __func__);
     return;
   }
-  gamma_table_map_[gamma_table_id] = std::move(gt);
+  gamma_table_map_[request->gamma_table_id] = std::move(gt);
 }
 
-void Client::ReleaseGammaTable(uint64_t gamma_table_id,
+void Client::ReleaseGammaTable(ReleaseGammaTableRequestView request,
                                ReleaseGammaTableCompleter::Sync& _completer) {
-  gamma_table_map_.erase(gamma_table_id);
+  gamma_table_map_.erase(request->gamma_table_id);
 }
 
-void Client::SetDisplayMode(uint64_t display_id, fhd::wire::Mode mode,
+void Client::SetDisplayMode(SetDisplayModeRequestView request,
                             SetDisplayModeCompleter::Sync& _completer) {
-  auto config = configs_.find(display_id);
+  auto config = configs_.find(request->display_id);
   if (!config.IsValid()) {
     return;
   }
@@ -405,13 +409,13 @@ void Client::SetDisplayMode(uint64_t display_id, fhd::wire::Mode mode,
   fbl::AutoLock lock(controller_->mtx());
   const fbl::Vector<edid::timing_params_t>* edid_timings;
   const display_params_t* params;
-  controller_->GetPanelConfig(display_id, &edid_timings, &params);
+  controller_->GetPanelConfig(request->display_id, &edid_timings, &params);
 
   if (edid_timings) {
     for (auto timing : *edid_timings) {
-      if (timing.horizontal_addressable == mode.horizontal_resolution &&
-          timing.vertical_addressable == mode.vertical_resolution &&
-          timing.vertical_refresh_e2 == mode.refresh_rate_e2) {
+      if (timing.horizontal_addressable == request->mode.horizontal_resolution &&
+          timing.vertical_addressable == request->mode.vertical_resolution &&
+          timing.vertical_refresh_e2 == request->mode.refresh_rate_e2) {
         Controller::PopulateDisplayMode(timing, &config->pending_.mode);
         pending_config_valid_ = false;
         config->display_config_change_ = true;
@@ -426,41 +430,42 @@ void Client::SetDisplayMode(uint64_t display_id, fhd::wire::Mode mode,
   TearDown();
 }
 
-void Client::SetDisplayColorConversion(uint64_t display_id, ::fidl::Array<float, 3> preoffsets,
-                                       ::fidl::Array<float, 9> coefficients,
-                                       ::fidl::Array<float, 3> postoffsets,
+void Client::SetDisplayColorConversion(SetDisplayColorConversionRequestView request,
                                        SetDisplayColorConversionCompleter::Sync& _completer) {
-  auto config = configs_.find(display_id);
+  auto config = configs_.find(request->display_id);
   if (!config.IsValid()) {
     return;
   }
 
   config->pending_.cc_flags = 0;
-  if (!isnan(preoffsets[0])) {
+  if (!isnan(request->preoffsets[0])) {
     config->pending_.cc_flags |= COLOR_CONVERSION_PREOFFSET;
-    memcpy(config->pending_.cc_preoffsets, preoffsets.data(), sizeof(preoffsets.data_));
-    static_assert(sizeof(preoffsets) == sizeof(config->pending_.cc_preoffsets), "");
+    memcpy(config->pending_.cc_preoffsets, request->preoffsets.data(),
+           sizeof(request->preoffsets.data_));
+    static_assert(sizeof(request->preoffsets) == sizeof(config->pending_.cc_preoffsets), "");
   }
 
-  if (!isnan(coefficients[0])) {
+  if (!isnan(request->coefficients[0])) {
     config->pending_.cc_flags |= COLOR_CONVERSION_COEFFICIENTS;
-    memcpy(config->pending_.cc_coefficients, coefficients.data(), sizeof(coefficients.data_));
-    static_assert(sizeof(coefficients) == sizeof(config->pending_.cc_coefficients), "");
+    memcpy(config->pending_.cc_coefficients, request->coefficients.data(),
+           sizeof(request->coefficients.data_));
+    static_assert(sizeof(request->coefficients) == sizeof(config->pending_.cc_coefficients), "");
   }
 
-  if (!isnan(postoffsets[0])) {
+  if (!isnan(request->postoffsets[0])) {
     config->pending_.cc_flags |= COLOR_CONVERSION_POSTOFFSET;
-    memcpy(config->pending_.cc_postoffsets, postoffsets.data(), sizeof(postoffsets.data_));
-    static_assert(sizeof(postoffsets) == sizeof(config->pending_.cc_postoffsets), "");
+    memcpy(config->pending_.cc_postoffsets, request->postoffsets.data(),
+           sizeof(request->postoffsets.data_));
+    static_assert(sizeof(request->postoffsets) == sizeof(config->pending_.cc_postoffsets), "");
   }
 
   config->display_config_change_ = true;
   pending_config_valid_ = false;
 }
 
-void Client::SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids,
+void Client::SetDisplayLayers(SetDisplayLayersRequestView request,
                               SetDisplayLayersCompleter::Sync& _completer) {
-  auto config = configs_.find(display_id);
+  auto config = configs_.find(request->display_id);
   if (!config.IsValid()) {
     return;
   }
@@ -468,10 +473,10 @@ void Client::SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> 
   config->pending_layer_change_ = true;
   config->pending_layer_change_property_.Set(true);
   config->pending_layers_.clear();
-  for (uint64_t i = layer_ids.count() - 1; i != UINT64_MAX; i--) {
-    auto layer = layers_.find(layer_ids[i]);
+  for (uint64_t i = request->layer_ids.count() - 1; i != UINT64_MAX; i--) {
+    auto layer = layers_.find(request->layer_ids[i]);
     if (!layer.IsValid()) {
-      zxlogf(ERROR, "Unknown layer %lu", layer_ids[i]);
+      zxlogf(ERROR, "Unknown layer %lu", request->layer_ids[i]);
       TearDown();
       return;
     }
@@ -481,18 +486,18 @@ void Client::SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> 
       return;
     }
   }
-  config->pending_.layer_count = static_cast<int32_t>(layer_ids.count());
+  config->pending_.layer_count = static_cast<int32_t>(request->layer_ids.count());
   pending_config_valid_ = false;
 }
 
-void Client::SetDisplayGammaTable(uint64_t display_id, uint64_t gamma_table_id,
+void Client::SetDisplayGammaTable(SetDisplayGammaTableRequestView request,
                                   SetDisplayGammaTableCompleter::Sync& _completer) {
-  auto config = configs_.find(display_id);
+  auto config = configs_.find(request->display_id);
   if (!config.IsValid()) {
     return;
   }
 
-  auto gamma_table = gamma_table_map_.find(gamma_table_id);
+  auto gamma_table = gamma_table_map_.find(request->gamma_table_id);
   if (gamma_table == gamma_table_map_.end()) {
     zxlogf(ERROR, "Invalid Gamma Table\n");
     TearDown();
@@ -513,110 +518,109 @@ void Client::SetDisplayGammaTable(uint64_t display_id, uint64_t gamma_table_id,
   pending_config_valid_ = false;
 }
 
-void Client::SetLayerPrimaryConfig(uint64_t layer_id, fhd::wire::ImageConfig image_config,
+void Client::SetLayerPrimaryConfig(SetLayerPrimaryConfigRequestView request,
                                    SetLayerPrimaryConfigCompleter::Sync& /*_completer*/) {
-  auto layer = layers_.find(layer_id);
+  auto layer = layers_.find(request->layer_id);
   if (!layer.IsValid()) {
     zxlogf(ERROR, "SetLayerPrimaryConfig on invalid layer");
     TearDown();
     return;
   }
 
-  layer->SetPrimaryConfig(image_config);
+  layer->SetPrimaryConfig(request->image_config);
   pending_config_valid_ = false;
   // no Reply defined
 }
 
-void Client::SetLayerPrimaryPosition(uint64_t layer_id, fhd::wire::Transform transform,
-                                     fhd::wire::Frame src_frame, fhd::wire::Frame dest_frame,
+void Client::SetLayerPrimaryPosition(SetLayerPrimaryPositionRequestView request,
                                      SetLayerPrimaryPositionCompleter::Sync& /*_completer*/) {
-  auto layer = layers_.find(layer_id);
+  auto layer = layers_.find(request->layer_id);
   if (!layer.IsValid() || layer->pending_type() != LAYER_TYPE_PRIMARY) {
     zxlogf(ERROR, "SetLayerPrimaryPosition on invalid layer");
     TearDown();
     return;
   }
-  if (transform > fhd::wire::Transform::kRot90ReflectY) {
-    zxlogf(ERROR, "Invalid transform %hhu", static_cast<uint8_t>(transform));
+  if (request->transform > fhd::wire::Transform::kRot90ReflectY) {
+    zxlogf(ERROR, "Invalid transform %hhu", static_cast<uint8_t>(request->transform));
     TearDown();
     return;
   }
-  layer->SetPrimaryPosition(transform, src_frame, dest_frame);
+  layer->SetPrimaryPosition(request->transform, request->src_frame, request->dest_frame);
   pending_config_valid_ = false;
   // no Reply defined
 }
 
-void Client::SetLayerPrimaryAlpha(uint64_t layer_id, fhd::wire::AlphaMode mode, float val,
+void Client::SetLayerPrimaryAlpha(SetLayerPrimaryAlphaRequestView request,
                                   SetLayerPrimaryAlphaCompleter::Sync& /*_completer*/) {
-  auto layer = layers_.find(layer_id);
+  auto layer = layers_.find(request->layer_id);
   if (!layer.IsValid() || layer->pending_type() != LAYER_TYPE_PRIMARY) {
     zxlogf(ERROR, "SetLayerPrimaryAlpha on invalid layer");
     TearDown();
     return;
   }
 
-  if (mode > fhd::wire::AlphaMode::kHwMultiply || (!isnan(val) && (val < 0 || val > 1))) {
-    zxlogf(ERROR, "Invalid args %hhu %f", static_cast<uint8_t>(mode), val);
+  if (request->mode > fhd::wire::AlphaMode::kHwMultiply ||
+      (!isnan(request->val) && (request->val < 0 || request->val > 1))) {
+    zxlogf(ERROR, "Invalid args %hhu %f", static_cast<uint8_t>(request->mode), request->val);
     TearDown();
     return;
   }
-  layer->SetPrimaryAlpha(mode, val);
+  layer->SetPrimaryAlpha(request->mode, request->val);
   pending_config_valid_ = false;
   // no Reply defined
 }
 
-void Client::SetLayerCursorConfig(uint64_t layer_id, fhd::wire::ImageConfig image_config,
+void Client::SetLayerCursorConfig(SetLayerCursorConfigRequestView request,
                                   SetLayerCursorConfigCompleter::Sync& /*_completer*/) {
-  auto layer = layers_.find(layer_id);
+  auto layer = layers_.find(request->layer_id);
   if (!layer.IsValid()) {
     zxlogf(ERROR, "SetLayerCursorConfig on invalid layer");
     TearDown();
     return;
   }
 
-  layer->SetCursorConfig(image_config);
+  layer->SetCursorConfig(request->image_config);
   pending_config_valid_ = false;
   // no Reply defined
 }
 
-void Client::SetLayerCursorPosition(uint64_t layer_id, int32_t x, int32_t y,
+void Client::SetLayerCursorPosition(SetLayerCursorPositionRequestView request,
                                     SetLayerCursorPositionCompleter::Sync& /*_completer*/) {
-  auto layer = layers_.find(layer_id);
+  auto layer = layers_.find(request->layer_id);
   if (!layer.IsValid() || layer->pending_type() != LAYER_TYPE_CURSOR) {
     zxlogf(ERROR, "SetLayerCursorPosition on invalid layer");
     TearDown();
     return;
   }
 
-  layer->SetCursorPosition(x, y);
+  layer->SetCursorPosition(request->x, request->y);
   // no Reply defined
 }
 
-void Client::SetLayerColorConfig(uint64_t layer_id, uint32_t pixel_format,
-                                 ::fidl::VectorView<uint8_t> color_bytes,
+void Client::SetLayerColorConfig(SetLayerColorConfigRequestView request,
                                  SetLayerColorConfigCompleter::Sync& /*_completer*/) {
-  auto layer = layers_.find(layer_id);
+  auto layer = layers_.find(request->layer_id);
   if (!layer.IsValid()) {
     zxlogf(ERROR, "SetLayerColorConfig on invalid layer");
     return;
   }
 
-  if (color_bytes.count() != ZX_PIXEL_FORMAT_BYTES(pixel_format)) {
+  if (request->color_bytes.count() != ZX_PIXEL_FORMAT_BYTES(request->pixel_format)) {
     zxlogf(ERROR, "SetLayerColorConfig with invalid color bytes");
     TearDown();
     return;
   }
 
-  layer->SetColorConfig(pixel_format, std::move(color_bytes));
+  layer->SetColorConfig(request->pixel_format, std::move(request->color_bytes));
   pending_config_valid_ = false;
   // no Reply defined
 }
 
-void Client::SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_event_id,
-                           uint64_t signal_event_id, SetLayerImageCompleter::Sync& /*_completer*/) {
-  auto layer = layers_.find(layer_id);
+void Client::SetLayerImage(SetLayerImageRequestView request,
+                           SetLayerImageCompleter::Sync& /*_completer*/) {
+  auto layer = layers_.find(request->layer_id);
   if (!layer.IsValid()) {
-    zxlogf(ERROR, "SetLayerImage ordinal with invalid layer %lu", layer_id);
+    zxlogf(ERROR, "SetLayerImage ordinal with invalid layer %lu", request->layer_id);
     TearDown();
     return;
   }
@@ -625,7 +629,7 @@ void Client::SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_e
     TearDown();
     return;
   }
-  auto image = images_.find(image_id);
+  auto image = images_.find(request->image_id);
   if (!image.IsValid() || !image->Acquire()) {
     zxlogf(ERROR, "SetLayerImage ordinal with %s image", !image.IsValid() ? "invl" : "busy");
     TearDown();
@@ -641,17 +645,17 @@ void Client::SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_e
     return;
   }
 
-  layer->SetImage(image.CopyPointer(), wait_event_id, signal_event_id);
+  layer->SetImage(image.CopyPointer(), request->wait_event_id, request->signal_event_id);
   // no Reply defined
 }
 
-void Client::CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) {
+void Client::CheckConfig(CheckConfigRequestView request, CheckConfigCompleter::Sync& _completer) {
   fhd::wire::ConfigResult res;
   std::vector<fhd::wire::ClientCompositionOp> ops;
 
   pending_config_valid_ = CheckConfig(&res, &ops);
 
-  if (discard) {
+  if (request->discard) {
     // Go through layers and release any pending resources they claimed
     for (auto& layer : layers_) {
       layer.DiscardChanges();
@@ -684,7 +688,8 @@ void Client::CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) {
   _completer.Reply(res, ::fidl::VectorView<fhd::wire::ClientCompositionOp>::FromExternal(ops));
 }
 
-void Client::ApplyConfig(ApplyConfigCompleter::Sync& /*_completer*/) {
+void Client::ApplyConfig(ApplyConfigRequestView request,
+                         ApplyConfigCompleter::Sync& /*_completer*/) {
   if (!pending_config_valid_) {
     pending_config_valid_ = CheckConfig(nullptr, nullptr);
     if (!pending_config_valid_) {
@@ -778,22 +783,25 @@ void Client::ApplyConfig(ApplyConfigCompleter::Sync& /*_completer*/) {
   // no Reply defined
 }
 
-void Client::EnableVsync(bool enable, EnableVsyncCompleter::Sync& /*_completer*/) {
-  proxy_->EnableVsync(enable);
+void Client::EnableVsync(EnableVsyncRequestView request,
+                         EnableVsyncCompleter::Sync& /*_completer*/) {
+  proxy_->EnableVsync(request->enable);
   // no Reply defined
 }
 
-void Client::SetVirtconMode(uint8_t mode, SetVirtconModeCompleter::Sync& /*_completer*/) {
+void Client::SetVirtconMode(SetVirtconModeRequestView request,
+                            SetVirtconModeCompleter::Sync& /*_completer*/) {
   if (!is_vc_) {
     zxlogf(ERROR, "Illegal non-virtcon ownership");
     TearDown();
     return;
   }
-  controller_->SetVcMode(mode);
+  controller_->SetVcMode(request->mode);
   // no Reply defined
 }
 
-void Client::GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync& _completer) {
+void Client::GetSingleBufferFramebuffer(GetSingleBufferFramebufferRequestView request,
+                                        GetSingleBufferFramebufferCompleter::Sync& _completer) {
   zx::vmo vmo;
   uint32_t stride = 0;
   zx_status_t status = controller_->dc()->GetSingleBufferFramebuffer(&vmo, &stride);
@@ -801,12 +809,12 @@ void Client::GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Syn
   _completer.Reply(status, std::move(vmo), stride);
 }
 
-void Client::IsCaptureSupported(IsCaptureSupportedCompleter::Sync& _completer) {
+void Client::IsCaptureSupported(IsCaptureSupportedRequestView request,
+                                IsCaptureSupportedCompleter::Sync& _completer) {
   _completer.ReplySuccess(controller_->dc_capture() != nullptr);
 }
 
-void Client::ImportImageForCapture(fhd::wire::ImageConfig image_config, uint64_t collection_id,
-                                   uint32_t index,
+void Client::ImportImageForCapture(ImportImageForCaptureRequestView request,
                                    ImportImageForCaptureCompleter::Sync& _completer) {
   // Ensure display driver supports/implements capture.
   if (controller_->dc_capture() == nullptr) {
@@ -815,7 +823,7 @@ void Client::ImportImageForCapture(fhd::wire::ImageConfig image_config, uint64_t
   }
 
   // Ensure a previously imported collection id is being used for import.
-  auto it = collection_map_.find(collection_id);
+  auto it = collection_map_.find(request->collection_id);
   if (it == collection_map_.end()) {
     _completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
@@ -833,7 +841,7 @@ void Client::ImportImageForCapture(fhd::wire::ImageConfig image_config, uint64_t
   // capture start/release.
   image_t capture_image = {};
   zx_status_t status = controller_->dc_capture()->ImportImageForCapture(
-      collection.channel().get(), index, &capture_image.handle);
+      collection.channel().get(), request->index, &capture_image.handle);
   if (status == ZX_OK) {
     auto release_image = fit::defer([this, &capture_image]() {
       controller_->dc_capture()->ReleaseCapture(capture_image.handle);
@@ -855,7 +863,7 @@ void Client::ImportImageForCapture(fhd::wire::ImageConfig image_config, uint64_t
   }
 }
 
-void Client::StartCapture(uint64_t signal_event_id, uint64_t image_id,
+void Client::StartCapture(StartCaptureRequestView request,
                           StartCaptureCompleter::Sync& _completer) {
   // Ensure display driver supports/implements capture.
   if (controller_->dc_capture() == nullptr) {
@@ -870,21 +878,21 @@ void Client::StartCapture(uint64_t signal_event_id, uint64_t image_id,
   }
 
   // Ensure we have a capture fence for the request signal event.
-  auto signal_fence = fences_.GetFence(signal_event_id);
+  auto signal_fence = fences_.GetFence(request->signal_event_id);
   if (signal_fence == nullptr) {
     _completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
 
   // Ensure we are capturing into a valid image buffer
-  auto image = capture_images_.find(image_id);
+  auto image = capture_images_.find(request->image_id);
   if (!image.IsValid()) {
     zxlogf(ERROR, "Invalid Capture Image ID requested for capture");
     _completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
 
-  capture_fence_id_ = signal_event_id;
+  capture_fence_id_ = request->signal_event_id;
   auto status = controller_->dc_capture()->StartCapture(image->info().handle);
   if (status == ZX_OK) {
     fbl::AutoLock lock(controller_->mtx());
@@ -895,10 +903,11 @@ void Client::StartCapture(uint64_t signal_event_id, uint64_t image_id,
   }
 
   // keep track of currently active capture image
-  current_capture_image_ = image_id;  // Is this right?
+  current_capture_image_ = request->image_id;  // Is this right?
 }
 
-void Client::ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync& _completer) {
+void Client::ReleaseCapture(ReleaseCaptureRequestView request,
+                            ReleaseCaptureCompleter::Sync& _completer) {
   // Ensure display driver supports/implements capture
   if (controller_->dc_capture() == nullptr) {
     _completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
@@ -906,7 +915,7 @@ void Client::ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync& _c
   }
 
   // Ensure we are releasing a valid image buffer
-  auto image = capture_images_.find(image_id);
+  auto image = capture_images_.find(request->image_id);
   if (!image.IsValid()) {
     zxlogf(ERROR, "Invalid Capture Image ID requested for release");
     _completer.ReplyError(ZX_ERR_INVALID_ARGS);
@@ -914,7 +923,7 @@ void Client::ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync& _c
   }
 
   // Make sure we are not releasing an active capture.
-  if (current_capture_image_ == image_id) {
+  if (current_capture_image_ == request->image_id) {
     // we have an active capture. Release it when capture is completed
     zxlogf(WARNING, "Capture is active. Will release after capture is complete");
     pending_capture_release_image_ = current_capture_image_;
@@ -925,7 +934,8 @@ void Client::ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync& _c
   _completer.ReplySuccess();
 }
 
-void Client::SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCompleter::Sync& _completer) {
+void Client::SetMinimumRgb(SetMinimumRgbRequestView request,
+                           SetMinimumRgbCompleter::Sync& _completer) {
   if (controller_->dc_clamp_rgb() == nullptr) {
     _completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
     return;
@@ -934,9 +944,9 @@ void Client::SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCompleter::Sync& _c
     _completer.ReplyError(ZX_ERR_NOT_CONNECTED);
     return;
   }
-  auto status = controller_->dc_clamp_rgb()->SetMinimumRgb(minimum_rgb);
+  auto status = controller_->dc_clamp_rgb()->SetMinimumRgb(request->minimum_rgb);
   if (status == ZX_OK) {
-    client_minimum_rgb_ = minimum_rgb;
+    client_minimum_rgb_ = request->minimum_rgb;
     _completer.ReplySuccess();
   } else {
     _completer.ReplyError(status);
@@ -1484,9 +1494,10 @@ void Client::CleanUpCaptureImage(uint64_t id) {
   }
 }
 
-void Client::AcknowledgeVsync(uint64_t cookie, AcknowledgeVsyncCompleter::Sync& _completer) {
-  acked_cookie_ = cookie;
-  zxlogf(TRACE, "Cookie %ld Acked\n", cookie);
+void Client::AcknowledgeVsync(AcknowledgeVsyncRequestView request,
+                              AcknowledgeVsyncCompleter::Sync& _completer) {
+  acked_cookie_ = request->cookie;
+  zxlogf(TRACE, "Cookie %ld Acked\n", request->cookie);
 }
 
 fit::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_status_t> Client::Init(

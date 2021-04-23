@@ -22,7 +22,7 @@
 namespace goldfish {
 
 // An instance of this class serves a Pipe connection.
-class Pipe : public fidl::WireInterface<fuchsia_hardware_goldfish::Pipe> {
+class Pipe : public fidl::WireServer<fuchsia_hardware_goldfish::Pipe> {
  public:
   using OnBindFn = fit::function<void(Pipe*)>;
   using OnCloseFn = fit::function<void(Pipe*)>;
@@ -45,24 +45,24 @@ class Pipe : public fidl::WireInterface<fuchsia_hardware_goldfish::Pipe> {
     zx_paddr_t phys;
   };
 
-  // |fidl::WireInterface<fuchsia_hardware_goldfish::Pipe>|
-  void SetBufferSize(uint64_t size, SetBufferSizeCompleter::Sync& completer) override;
+  // |fidl::WireServer<fuchsia_hardware_goldfish::Pipe>|
+  void SetBufferSize(SetBufferSizeRequestView request,
+                     SetBufferSizeCompleter::Sync& completer) override;
 
-  // |fidl::WireInterface<fuchsia_hardware_goldfish::Pipe>|
-  void SetEvent(::zx::event event, SetEventCompleter::Sync& completer) override;
+  // |fidl::WireServer<fuchsia_hardware_goldfish::Pipe>|
+  void SetEvent(SetEventRequestView request, SetEventCompleter::Sync& completer) override;
 
-  // |fidl::WireInterface<fuchsia_hardware_goldfish::Pipe>|
-  void GetBuffer(GetBufferCompleter::Sync& completer) override;
+  // |fidl::WireServer<fuchsia_hardware_goldfish::Pipe>|
+  void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) override;
 
-  // |fidl::WireInterface<fuchsia_hardware_goldfish::Pipe>|
-  void Read(uint64_t count, uint64_t offset, ReadCompleter::Sync& completer) override;
+  // |fidl::WireServer<fuchsia_hardware_goldfish::Pipe>|
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override;
 
-  // |fidl::WireInterface<fuchsia_hardware_goldfish::Pipe>|
-  void Write(uint64_t count, uint64_t offset, WriteCompleter::Sync& completer) override;
+  // |fidl::WireServer<fuchsia_hardware_goldfish::Pipe>|
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override;
 
-  // |fidl::WireInterface<fuchsia_hardware_goldfish::Pipe>|
-  void DoCall(uint64_t count, uint64_t offset, uint64_t read_count, uint64_t read_offset,
-              DoCallCompleter::Sync& completer) override;
+  // |fidl::WireServer<fuchsia_hardware_goldfish::Pipe>|
+  void DoCall(DoCallRequestView request, DoCallCompleter::Sync& completer) override;
 
   zx_status_t TransferLocked(int32_t cmd, int32_t wake_cmd, zx_signals_t state_clr,
                              zx_paddr_t paddr, size_t count, zx_paddr_t read_paddr,

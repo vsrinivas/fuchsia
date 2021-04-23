@@ -60,15 +60,14 @@ zx_status_t DsiDwBase::Bind() {
   return status;
 }
 
-void DsiDwBase::SendCmd(fuchsia_hardware_dsi::wire::MipiDsiCmd cmd,
-                        ::fidl::VectorView<uint8_t> txdata, SendCmdCompleter::Sync& _completer) {
+void DsiDwBase::SendCmd(SendCmdRequestView request, SendCmdCompleter::Sync& _completer) {
   zx_status_t status = ZX_OK;
   // TODO(payamm): We don't support READ at the moment. READ is complicated because it consumes
   // additional cycles required to get info from the LCD. This may cause issues if the command is
   // issued during the last line of a frame. If we want to support READ, we would want to properly
   // stop VIDEO, switch to COMMAND mode and perform the read. For now, we will not support it.
   fidl::VectorView<uint8_t> rsp_data(nullptr, 0);
-  status = dsidw_->SendCommand(cmd, txdata, rsp_data);
+  status = dsidw_->SendCommand(request->cmd, request->txdata, rsp_data);
   if (status != ZX_OK) {
     _completer.ReplyError(status);
   }

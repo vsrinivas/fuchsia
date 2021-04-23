@@ -48,21 +48,22 @@ DeviceLocalHeap::DeviceLocalHeap(Control* control) : Heap(control, kTag) {}
 
 DeviceLocalHeap::~DeviceLocalHeap() = default;
 
-void DeviceLocalHeap::AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync& completer) {
+void DeviceLocalHeap::AllocateVmo(AllocateVmoRequestView request,
+                                  AllocateVmoCompleter::Sync& completer) {
   zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(size, 0, &vmo);
+  zx_status_t status = zx::vmo::create(request->size, 0, &vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "[%s] zx::vmo::create() failed - size: %lu status: %d", kTag, size, status);
+    zxlogf(ERROR, "[%s] zx::vmo::create() failed - size: %lu status: %d", kTag, request->size,
+           status);
     completer.Reply(status, zx::vmo{});
   } else {
     completer.Reply(ZX_OK, std::move(vmo));
   }
 }
 
-void DeviceLocalHeap::CreateResource(::zx::vmo vmo,
-                                     fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings,
+void DeviceLocalHeap::CreateResource(CreateResourceRequestView request,
                                      CreateResourceCompleter::Sync& completer) {
-  uint64_t id = control()->RegisterBufferHandle(vmo);
+  uint64_t id = control()->RegisterBufferHandle(request->vmo);
   if (id == ZX_KOID_INVALID) {
     completer.Reply(ZX_ERR_INVALID_ARGS, 0u);
   } else {
@@ -70,8 +71,9 @@ void DeviceLocalHeap::CreateResource(::zx::vmo vmo,
   }
 }
 
-void DeviceLocalHeap::DestroyResource(uint64_t id, DestroyResourceCompleter::Sync& completer) {
-  control()->FreeBufferHandle(id);
+void DeviceLocalHeap::DestroyResource(DestroyResourceRequestView request,
+                                      DestroyResourceCompleter::Sync& completer) {
+  control()->FreeBufferHandle(request->id);
   completer.Reply();
 }
 

@@ -186,10 +186,11 @@ HostVisibleHeap::HostVisibleHeap(Control* control) : Heap(control, kTag) {}
 
 HostVisibleHeap::~HostVisibleHeap() = default;
 
-void HostVisibleHeap::AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync& completer) {
-  TRACE_DURATION("gfx", "HostVisibleHeap::AllocateVmo", "size", size);
+void HostVisibleHeap::AllocateVmo(AllocateVmoRequestView request,
+                                  AllocateVmoCompleter::Sync& completer) {
+  TRACE_DURATION("gfx", "HostVisibleHeap::AllocateVmo", "size", request->size);
 
-  auto result = control()->address_space_child()->AllocateBlock(size);
+  auto result = control()->address_space_child()->AllocateBlock(request->size);
   if (!result.ok()) {
     zxlogf(ERROR, "[%s] AllocateBlock FIDL call failed: status %d", kTag, result.status());
     completer.Reply(result.status(), zx::vmo{});
@@ -215,7 +216,7 @@ void HostVisibleHeap::AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync& com
 
   zx::vmo vmo = std::move(result.value().vmo);
   zx::vmo child;
-  zx_status_t status = vmo.create_child(ZX_VMO_CHILD_SLICE, /*offset=*/0u, size, &child);
+  zx_status_t status = vmo.create_child(ZX_VMO_CHILD_SLICE, /*offset=*/0u, request->size, &child);
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] zx_vmo_create_child failed: %d", kTag, status);
     completer.Close(status);
@@ -255,35 +256,37 @@ void HostVisibleHeap::DeallocateVmo(zx_koid_t koid) {
   }
 }
 
-void HostVisibleHeap::CreateResource(::zx::vmo vmo,
-                                     fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings,
+void HostVisibleHeap::CreateResource(CreateResourceRequestView request,
                                      CreateResourceCompleter::Sync& completer) {
   using fuchsia_hardware_goldfish::wire::ColorBufferFormatType;
   using fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params;
   using fuchsia_sysmem2::wire::PixelFormatType;
 
-  ZX_DEBUG_ASSERT(vmo.is_valid());
+  ZX_DEBUG_ASSERT(request->vmo.is_valid());
 
-  zx_status_t status = CheckSingleBufferSettings(buffer_settings);
+  zx_status_t status = CheckSingleBufferSettings(request->buffer_settings);
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] Invalid single buffer settings", kTag);
     completer.Reply(status, 0u);
     return;
   }
 
-  bool is_image = buffer_settings.has_image_format_constraints();
+  bool is_image = request->buffer_settings.has_image_format_constraints();
   TRACE_DURATION(
       "gfx", "HostVisibleHeap::CreateResource", "type", is_image ? "image" : "buffer",
-      "image:width", is_image ? buffer_settings.image_format_constraints().min_coded_width() : 0,
-      "image:height", is_image ? buffer_settings.image_format_constraints().min_coded_height() : 0,
+      "image:width",
+      is_image ? request->buffer_settings.image_format_constraints().min_coded_width() : 0,
+      "image:height",
+      is_image ? request->buffer_settings.image_format_constraints().min_coded_height() : 0,
       "image:format",
-      is_image ? static_cast<int>(buffer_settings.image_format_constraints().pixel_format().type())
+      is_image ? static_cast<int>(
+                     request->buffer_settings.image_format_constraints().pixel_format().type())
                : 0,
-      "buffer:size", is_image ? 0 : buffer_settings.buffer_settings().size_bytes());
+      "buffer:size", is_image ? 0 : request->buffer_settings.buffer_settings().size_bytes());
 
   // Get |paddr| of the |Block| to use in Buffer create params.
   zx_info_vmo_t vmo_info;
-  status = vmo.get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr);
+  status = request->vmo.get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] zx_object_get_info failed: status %d", kTag, status);
     completer.Close(status);
@@ -303,7 +306,7 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
 
   // Duplicate VMO to create ColorBuffer/Buffer.
   zx::vmo vmo_dup;
-  status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
+  status = request->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] zx_handle_duplicate failed: %d", kTag, status);
     completer.Close(status);
@@ -311,7 +314,7 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
   }
 
   // Register buffer handle for VMO.
-  uint64_t id = control()->RegisterBufferHandle(vmo);
+  uint64_t id = control()->RegisterBufferHandle(request->vmo);
   if (id == ZX_KOID_INVALID) {
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
@@ -324,7 +327,7 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
   if (is_image) {
     fidl::FidlAllocator allocator;
     // ColorBuffer creation.
-    auto create_params = GetCreateColorBuffer2Params(allocator, buffer_settings, paddr);
+    auto create_params = GetCreateColorBuffer2Params(allocator, request->buffer_settings, paddr);
     if (create_params.is_error()) {
       completer.Reply(create_params.error(), 0u);
       return;
@@ -351,7 +354,7 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
   } else {
     fidl::FidlAllocator allocator;
     // Data buffer creation.
-    auto create_params = GetCreateBuffer2Params(allocator, buffer_settings, paddr);
+    auto create_params = GetCreateBuffer2Params(allocator, request->buffer_settings, paddr);
 
     // Create actual data buffer and map physical address |paddr| to
     // address of the buffer's host memory.
@@ -378,7 +381,7 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
   // supporting zx_vmo_write, we map it and fill the mapped memory address
   // with zero.
   uint64_t vmo_size;
-  status = vmo.get_size(&vmo_size);
+  status = request->vmo.get_size(&vmo_size);
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] zx_vmo_get_size failed: %d", kTag, status);
     completer.Close(status);
@@ -386,7 +389,8 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
   }
 
   zx_paddr_t addr;
-  status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, /*vmar_offset=*/0u, vmo,
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, /*vmar_offset=*/0u,
+                                      request->vmo,
                                       /*vmo_offset=*/0u, vmo_size, &addr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] zx_vmar_map failed: %d", kTag, status);
@@ -408,10 +412,11 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
   completer.Reply(ZX_OK, id);
 }
 
-void HostVisibleHeap::DestroyResource(uint64_t id, DestroyResourceCompleter::Sync& completer) {
+void HostVisibleHeap::DestroyResource(DestroyResourceRequestView request,
+                                      DestroyResourceCompleter::Sync& completer) {
   // This destroys the color buffer associated with |id| and frees the color
   // buffer handle |id|.
-  control()->FreeBufferHandle(id);
+  control()->FreeBufferHandle(request->id);
   completer.Reply();
 }
 

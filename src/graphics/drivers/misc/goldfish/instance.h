@@ -28,15 +28,15 @@ using InstanceType = ddk::Device<Instance, ddk::Messageable, ddk::Closable>;
 // an instance of this class will be created to service a new channel
 // to the virtual device.
 class Instance : public InstanceType,
-                 public fidl::WireRawChannelInterface<fuchsia_hardware_goldfish::PipeDevice> {
+                 public fidl::WireServer<fuchsia_hardware_goldfish::PipeDevice> {
  public:
   explicit Instance(zx_device_t* parent);
   ~Instance();
 
   zx_status_t Bind();
 
-  // |fidl::WireInterface<fuchsia_hardware_goldfish::PipeDevice>|
-  void OpenPipe(zx::channel pipe_request, OpenPipeCompleter::Sync& completer) override;
+  // |fidl::WireServer<fuchsia_hardware_goldfish::PipeDevice>|
+  void OpenPipe(OpenPipeRequestView request, OpenPipeCompleter::Sync& completer) override;
 
   // Device protocol implementation.
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);

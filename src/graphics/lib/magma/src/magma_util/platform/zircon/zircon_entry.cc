@@ -40,7 +40,7 @@ using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
 using DdkDeviceType = ddk::Device<GpuDevice, ddk::Messageable, ddk::Unbindable, ddk::Initializable>;
 
-class GpuDevice : public fidl::WireInterface<fuchsia_gpu_magma::Device>,
+class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::Device>,
                   public DdkDeviceType,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_GPU> {
  public:
@@ -67,9 +67,9 @@ class GpuDevice : public fidl::WireInterface<fuchsia_gpu_magma::Device>,
     return MAGMA_STATUS_OK;
   }
 
-  void Query2(uint64_t query_id, Query2Completer::Sync& _completer) override {
+  void Query2(Query2RequestView request, Query2Completer::Sync& _completer) override {
     uint64_t result;
-    magma::Status status = Query(query_id, &result);
+    magma::Status status = Query(request->query_id, &result);
     if (!status.ok()) {
       _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
       return;
@@ -91,10 +91,10 @@ class GpuDevice : public fidl::WireInterface<fuchsia_gpu_magma::Device>,
     return MAGMA_STATUS_OK;
   }
 
-  void QueryReturnsBuffer(uint64_t query_id,
+  void QueryReturnsBuffer(QueryReturnsBufferRequestView request,
                           QueryReturnsBufferCompleter::Sync& _completer) override {
     zx::vmo buffer;
-    magma::Status status = QueryReturnsBuffer(query_id, &buffer);
+    magma::Status status = QueryReturnsBuffer(request->query_id, &buffer);
     if (!status.ok()) {
       _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
       return;
@@ -102,7 +102,7 @@ class GpuDevice : public fidl::WireInterface<fuchsia_gpu_magma::Device>,
     _completer.ReplySuccess(std::move(buffer));
   }
 
-  void Connect(uint64_t client_id, ConnectCompleter::Sync& _completer) override {
+  void Connect(ConnectRequestView request, ConnectCompleter::Sync& _completer) override {
     DLOG("GpuDevice::Connect");
 
     // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
@@ -125,8 +125,8 @@ class GpuDevice : public fidl::WireInterface<fuchsia_gpu_magma::Device>,
       }
     }
 
-    auto connection =
-        MagmaSystemDevice::Open(this->magma_system_device_, client_id, std::move(thread_profile));
+    auto connection = MagmaSystemDevice::Open(this->magma_system_device_, request->client_id,
+                                              std::move(thread_profile));
 
     if (!connection) {
       DLOG("MagmaSystemDevice::Open failed");
@@ -140,20 +140,20 @@ class GpuDevice : public fidl::WireInterface<fuchsia_gpu_magma::Device>,
     this->magma_system_device_->StartConnectionThread(std::move(connection));
   }
 
-  void DumpState(uint32_t dump_type, DumpStateCompleter::Sync& _completer) override {
+  void DumpState(DumpStateRequestView request, DumpStateCompleter::Sync& _completer) override {
     DLOG("GpuDevice::DumpState");
-    if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
-                      MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
-      DLOG("Invalid dump type %d", dump_type);
+    if (request->dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
+                               MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
+      DLOG("Invalid dump type %d", request->dump_type);
       return;
     }
 
     std::unique_lock<std::mutex> lock(this->magma_mutex_);
     if (this->magma_system_device_)
-      this->magma_system_device_->DumpStatus(dump_type);
+      this->magma_system_device_->DumpStatus(request->dump_type);
   }
 
-  void GetIcdList(GetIcdListCompleter::Sync& completer) override {
+  void GetIcdList(GetIcdListRequestView request, GetIcdListCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
     std::vector<msd_icd_info_t> msd_icd_infos;
     this->magma_system_device_->GetIcdList(&msd_icd_infos);
@@ -172,7 +172,8 @@ class GpuDevice : public fidl::WireInterface<fuchsia_gpu_magma::Device>,
     completer.Reply(fidl::VectorView<fuchsia_gpu_magma::wire::IcdInfo>::FromExternal(icd_infos));
   }
 
-  void TestRestart(TestRestartCompleter::Sync& _completer) override {
+  void TestRestart(TestRestartRequestView request,
+                   TestRestartCompleter::Sync& _completer) override {
 #if MAGMA_TEST_DRIVER
     DLOG("GpuDevice::TestRestart");
     std::unique_lock<std::mutex> lock(this->magma_mutex_);
@@ -188,7 +189,8 @@ class GpuDevice : public fidl::WireInterface<fuchsia_gpu_magma::Device>,
 #endif
   }
 
-  void GetUnitTestStatus(GetUnitTestStatusCompleter::Sync& _completer) override {
+  void GetUnitTestStatus(GetUnitTestStatusRequestView request,
+                         GetUnitTestStatusCompleter::Sync& _completer) override {
 #if MAGMA_TEST_DRIVER
     DLOG("GpuDevice::GetUnitTestStatus");
     std::unique_lock<std::mutex> lock(this->magma_mutex_);

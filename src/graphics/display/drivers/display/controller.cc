@@ -985,14 +985,16 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
   return task.release()->Post(loop_.dispatcher());
 }
 
-void Controller::OpenVirtconController(zx::channel device, zx::channel controller,
+void Controller::OpenVirtconController(OpenVirtconControllerRequestView request,
                                        OpenVirtconControllerCompleter::Sync& _completer) {
-  _completer.Reply(CreateClient(true /* is_vc */, std::move(device), std::move(controller)));
+  _completer.Reply(
+      CreateClient(/*is_vc=*/true, std::move(request->device), request->controller.TakeChannel()));
 }
 
-void Controller::OpenController(zx::channel device, zx::channel controller,
+void Controller::OpenController(OpenControllerRequestView request,
                                 OpenControllerCompleter::Sync& _completer) {
-  _completer.Reply(CreateClient(false /* is_vc */, std::move(device), std::move(controller)));
+  _completer.Reply(
+      CreateClient(/*is_vc=*/false, std::move(request->device), request->controller.TakeChannel()));
 }
 
 zx_status_t Controller::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {

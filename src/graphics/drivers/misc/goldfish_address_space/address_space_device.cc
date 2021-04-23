@@ -286,14 +286,14 @@ zx_status_t AddressSpaceChildDriver::Bind() {
   return DdkAdd("address-space", DEVICE_ADD_INSTANCE);
 }
 
-void AddressSpaceChildDriver::AllocateBlock(uint64_t size,
+void AddressSpaceChildDriver::AllocateBlock(AllocateBlockRequestView request,
                                             AllocateBlockCompleter::Sync& completer) {
-  TRACE_DURATION("gfx", "Instance::FidlAllocateBlock", "size", size);
+  TRACE_DURATION("gfx", "Instance::FidlAllocateBlock", "size", request->size);
 
   uint64_t offset;
-  uint32_t result = device_->AllocateBlock(&size, &offset);
+  uint32_t result = device_->AllocateBlock(&request->size, &offset);
   if (result) {
-    zxlogf(ERROR, "%s: failed to allocate block: %lu %d", kTag, size, result);
+    zxlogf(ERROR, "%s: failed to allocate block: %lu %d", kTag, request->size, result);
     completer.Reply(ZX_ERR_INTERNAL, 0, zx::vmo());
     return;
   }
@@ -303,7 +303,7 @@ void AddressSpaceChildDriver::AllocateBlock(uint64_t size,
   zx_paddr_t paddr;
   zx::pmt pmt;
   zx::vmo vmo;
-  zx_status_t status = device_->PinBlock(offset, size, &paddr, &pmt, &vmo);
+  zx_status_t status = device_->PinBlock(offset, request->size, &paddr, &pmt, &vmo);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to pin block: %d", kTag, status);
     completer.Close(status);
@@ -311,24 +311,24 @@ void AddressSpaceChildDriver::AllocateBlock(uint64_t size,
   }
 
   deallocate_block.cancel();
-  allocated_blocks_.try_emplace(paddr, offset, size, std::move(pmt));
+  allocated_blocks_.try_emplace(paddr, offset, request->size, std::move(pmt));
   completer.Reply(ZX_OK, paddr, std::move(vmo));
 }
 
-void AddressSpaceChildDriver::DeallocateBlock(uint64_t paddr,
+void AddressSpaceChildDriver::DeallocateBlock(DeallocateBlockRequestView request,
                                               DeallocateBlockCompleter::Sync& completer) {
-  TRACE_DURATION("gfx", "Instance::FidlDeallocateBlock", "paddr", paddr);
+  TRACE_DURATION("gfx", "Instance::FidlDeallocateBlock", "paddr", request->paddr);
 
-  auto it = allocated_blocks_.find(paddr);
+  auto it = allocated_blocks_.find(request->paddr);
   if (it == allocated_blocks_.end()) {
-    zxlogf(ERROR, "%s: invalid block: %lu", kTag, paddr);
+    zxlogf(ERROR, "%s: invalid block: %lu", kTag, request->paddr);
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
 
   uint32_t result = device_->DeallocateBlock(it->second.offset);
   if (result) {
-    zxlogf(ERROR, "%s: failed to deallocate block: %lu %d", kTag, paddr, result);
+    zxlogf(ERROR, "%s: failed to deallocate block: %lu %d", kTag, request->paddr, result);
     completer.Reply(ZX_ERR_INTERNAL);
     return;
   }
@@ -337,17 +337,18 @@ void AddressSpaceChildDriver::DeallocateBlock(uint64_t paddr,
   completer.Reply(ZX_OK);
 }
 
-void AddressSpaceChildDriver::ClaimSharedBlock(uint64_t offset, uint64_t size,
+void AddressSpaceChildDriver::ClaimSharedBlock(ClaimSharedBlockRequestView request,
                                                ClaimSharedBlockCompleter::Sync& completer) {
-  auto end = offset + size;
+  auto end = request->offset + request->size;
   for (const auto& entry : claimed_blocks_) {
     auto entry_start = entry.second.offset;
     auto entry_end = entry.second.offset + entry.second.size;
-    if ((offset >= entry_start && offset < entry_end) || (end > entry_start && end <= entry_end)) {
+    if ((request->offset >= entry_start && request->offset < entry_end) ||
+        (end > entry_start && end <= entry_end)) {
       zxlogf(ERROR,
              "%s: tried to claim region [0x%llx 0x%llx) which overlaps existing region [0x%llx "
              "0x%llx). %d\n",
-             kTag, (unsigned long long)offset, (unsigned long long)size,
+             kTag, (unsigned long long)request->offset, (unsigned long long)request->size,
              (unsigned long long)entry_start, (unsigned long long)entry_end, ZX_ERR_INVALID_ARGS);
       completer.Reply(ZX_ERR_INVALID_ARGS, zx::vmo());
       return;
@@ -357,39 +358,37 @@ void AddressSpaceChildDriver::ClaimSharedBlock(uint64_t offset, uint64_t size,
   zx_paddr_t paddr;
   zx::pmt pmt;
   zx::vmo vmo;
-  zx_status_t status = device_->PinBlock(offset, size, &paddr, &pmt, &vmo);
+  zx_status_t status = device_->PinBlock(request->offset, request->size, &paddr, &pmt, &vmo);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to pin block: %d", kTag, status);
     completer.Close(status);
     return;
   }
 
-  claimed_blocks_.try_emplace(offset, offset, size, std::move(pmt));
+  claimed_blocks_.try_emplace(request->offset, request->offset, request->size, std::move(pmt));
   completer.Reply(ZX_OK, std::move(vmo));
 };
 
-void AddressSpaceChildDriver::UnclaimSharedBlock(uint64_t offset,
+void AddressSpaceChildDriver::UnclaimSharedBlock(UnclaimSharedBlockRequestView request,
                                                  UnclaimSharedBlockCompleter::Sync& completer) {
-  auto it = claimed_blocks_.find(offset);
+  auto it = claimed_blocks_.find(request->offset);
   if (it == claimed_blocks_.end()) {
     zxlogf(ERROR,
            "%s: tried to erase region at 0x%llx but there is no such region with that offset: %d\n",
-           kTag, (unsigned long long)offset, ZX_ERR_INVALID_ARGS);
+           kTag, (unsigned long long)request->offset, ZX_ERR_INVALID_ARGS);
     completer.Reply(ZX_ERR_INVALID_ARGS);
     return;
   }
 
-  claimed_blocks_.erase(offset);
+  claimed_blocks_.erase(request->offset);
   completer.Reply(ZX_OK);
 };
 
-void AddressSpaceChildDriver::Ping(
-    fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverPingMessage ping,
-    PingCompleter::Sync& completer) {
+void AddressSpaceChildDriver::Ping(PingRequestView request, PingCompleter::Sync& completer) {
   using fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverPingMessage;
   AddressSpaceChildDriverPingMessage* output =
       reinterpret_cast<AddressSpaceChildDriverPingMessage*>(io_buffer_.virt());
-  *output = ping;
+  *output = request->ping;
   output->offset += dma_region_paddr_;
   device_->ChildDriverPing(handle_);
 

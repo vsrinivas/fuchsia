@@ -32,9 +32,8 @@ using ChildDriverType = ddk::Device<AddressSpaceChildDriver, ddk::Messageable>;
 class AddressSpaceDevice
     : public DeviceType,
       public ddk::GoldfishAddressSpaceProtocol<AddressSpaceDevice, ddk::base_protocol>,
-      public fidl::WireRawChannelInterface<fuchsia_hardware_goldfish::AddressSpaceDevice> {
-  using fidl::WireRawChannelInterface<
-      fuchsia_hardware_goldfish::AddressSpaceDevice>::OpenChildDriver;
+      public fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceDevice> {
+  using fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceDevice>::OpenChildDriver;
 
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
@@ -61,10 +60,10 @@ class AddressSpaceDevice
         std::move(request));
   }
 
-  // |fidl::WireInterface<fuchsia_hardware_goldfish::AddressSpaceDevice>|
-  void OpenChildDriver(fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType type,
-                       zx::channel request, OpenChildDriverCompleter::Sync& completer) override {
-    zx_status_t result = OpenChildDriver(type, std::move(request));
+  // |fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceDevice>|
+  void OpenChildDriver(OpenChildDriverRequestView request,
+                       OpenChildDriverCompleter::Sync& completer) override {
+    zx_status_t result = OpenChildDriver(request->type, request->req.TakeChannel());
     completer.Close(result);
   }
 
@@ -91,7 +90,7 @@ class AddressSpaceDevice
 
 class AddressSpaceChildDriver
     : public ChildDriverType,
-      public fidl::WireInterface<fuchsia_hardware_goldfish::AddressSpaceChildDriver> {
+      public fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceChildDriver> {
  public:
   explicit AddressSpaceChildDriver(
       fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType type, AddressSpaceDevice* device,
@@ -109,14 +108,16 @@ class AddressSpaceChildDriver
 
   zx_status_t Bind();
 
-  // |fidl::WireInterface<fuchsia_hardware_goldfish::AddressSpaceChildDriver>|
-  void AllocateBlock(uint64_t size, AllocateBlockCompleter::Sync& completer) override;
-  void DeallocateBlock(uint64_t paddr, DeallocateBlockCompleter::Sync& completer) override;
-  void ClaimSharedBlock(uint64_t offset, uint64_t size,
+  // |fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceChildDriver>|
+  void AllocateBlock(AllocateBlockRequestView request,
+                     AllocateBlockCompleter::Sync& completer) override;
+  void DeallocateBlock(DeallocateBlockRequestView request,
+                       DeallocateBlockCompleter::Sync& completer) override;
+  void ClaimSharedBlock(ClaimSharedBlockRequestView request,
                         ClaimSharedBlockCompleter::Sync& completer) override;
-  void UnclaimSharedBlock(uint64_t offset, UnclaimSharedBlockCompleter::Sync& completer) override;
-  void Ping(fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverPingMessage ping,
-            PingCompleter::Sync& completer) override;
+  void UnclaimSharedBlock(UnclaimSharedBlockRequestView request,
+                          UnclaimSharedBlockCompleter::Sync& completer) override;
+  void Ping(PingRequestView request, PingCompleter::Sync& completer) override;
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();

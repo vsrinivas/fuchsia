@@ -169,10 +169,11 @@ zx_status_t SyncDevice::GoldfishSyncCreateTimeline(zx::channel request) {
   return status;
 }
 
-void SyncDevice::CreateTimeline(zx::channel request, CreateTimelineCompleter::Sync& completer) {
+void SyncDevice::CreateTimeline(CreateTimelineRequestView request,
+                                CreateTimelineCompleter::Sync& completer) {
   fbl::RefPtr<SyncTimeline> timeline = fbl::MakeRefCounted<SyncTimeline>(this);
   timelines_.push_back(timeline);
-  timeline->Bind(std::move(request));
+  timeline->Bind(request->timeline_req.TakeChannel());
   completer.Reply();
 }
 
@@ -337,14 +338,14 @@ void SyncTimeline::OnClose(fidl::UnbindInfo info, zx::channel channel) {
   }
 }
 
-void SyncTimeline::TriggerHostWait(uint64_t host_glsync_handle, uint64_t host_syncthread_handle,
-                                   zx::eventpair event, TriggerHostWaitCompleter::Sync& completer) {
+void SyncTimeline::TriggerHostWait(TriggerHostWaitRequestView request,
+                                   TriggerHostWaitCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Sync::GuestCommand::TriggerHostWait", "timeline", this, "glsync",
-                 host_glsync_handle, "syncthread", host_syncthread_handle);
-  CreateFence(std::move(event));
+                 request->host_glsync_handle, "syncthread", request->host_syncthread_handle);
+  CreateFence(std::move(request->event));
   parent_device_->SendGuestCommand({.host_command = CMD_TRIGGER_HOST_WAIT,
-                                    .glsync_handle = host_glsync_handle,
-                                    .thread_handle = host_syncthread_handle,
+                                    .glsync_handle = request->host_glsync_handle,
+                                    .thread_handle = request->host_syncthread_handle,
                                     .guest_timeline_handle = reinterpret_cast<uint64_t>(this)});
 }
 

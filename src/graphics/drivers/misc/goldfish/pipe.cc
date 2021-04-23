@@ -115,8 +115,8 @@ void Pipe::Init() {
 
 void Pipe::Bind(zx::channel server_request) {
   using PipeProtocol = fuchsia_hardware_goldfish::Pipe;
-  using PipeInterface = fidl::WireInterface<PipeProtocol>;
-  auto on_unbound = [this](PipeInterface*, fidl::UnbindInfo info, fidl::ServerEnd<PipeProtocol>) {
+  using PipeServer = fidl::WireServer<PipeProtocol>;
+  auto on_unbound = [this](PipeServer*, fidl::UnbindInfo info, fidl::ServerEnd<PipeProtocol>) {
     switch (info.reason) {
       case fidl::UnbindInfo::kUnbind:
       case fidl::UnbindInfo::kPeerClosed:
@@ -141,24 +141,25 @@ void Pipe::Bind(zx::channel server_request) {
       std::make_unique<fidl::ServerBindingRef<fuchsia_hardware_goldfish::Pipe>>(std::move(binding));
 }
 
-void Pipe::SetBufferSize(uint64_t size, SetBufferSizeCompleter::Sync& completer) {
-  TRACE_DURATION("gfx", "Pipe::SetBufferSize", "size", size);
+void Pipe::SetBufferSize(SetBufferSizeRequestView request,
+                         SetBufferSizeCompleter::Sync& completer) {
+  TRACE_DURATION("gfx", "Pipe::SetBufferSize", "size", request->size);
 
   fbl::AutoLock lock(&lock_);
 
-  zx_status_t status = SetBufferSizeLocked(size);
+  zx_status_t status = SetBufferSizeLocked(request->size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "[%s] Pipe::SetBufferSize() failed to create buffer: %lu", kTag, size);
+    zxlogf(ERROR, "[%s] Pipe::SetBufferSize() failed to create buffer: %lu", kTag, request->size);
     completer.Close(status);
   } else {
     completer.Reply(status);
   }
 }
 
-void Pipe::SetEvent(zx::event event, SetEventCompleter::Sync& completer) {
+void Pipe::SetEvent(SetEventRequestView request, SetEventCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Pipe::SetEvent");
 
-  if (!event.is_valid()) {
+  if (!request->event.is_valid()) {
     zxlogf(ERROR, "[%s] Pipe::SetEvent() invalid event", kTag);
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
@@ -166,7 +167,7 @@ void Pipe::SetEvent(zx::event event, SetEventCompleter::Sync& completer) {
 
   fbl::AutoLock lock(&lock_);
 
-  zx_status_t status = pipe_.SetEvent(id_, std::move(event));
+  zx_status_t status = pipe_.SetEvent(id_, std::move(request->event));
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] SetEvent failed: %d", kTag, status);
     completer.Close(ZX_ERR_INTERNAL);
@@ -176,7 +177,7 @@ void Pipe::SetEvent(zx::event event, SetEventCompleter::Sync& completer) {
   completer.Close(ZX_OK);
 }
 
-void Pipe::GetBuffer(GetBufferCompleter::Sync& completer) {
+void Pipe::GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Pipe::GetBuffer");
 
   fbl::AutoLock lock(&lock_);
@@ -191,51 +192,56 @@ void Pipe::GetBuffer(GetBufferCompleter::Sync& completer) {
   }
 }
 
-void Pipe::Read(uint64_t count, uint64_t offset, ReadCompleter::Sync& completer) {
-  TRACE_DURATION("gfx", "Pipe::Read", "count", count);
+void Pipe::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+  TRACE_DURATION("gfx", "Pipe::Read", "count", request->count);
 
   fbl::AutoLock lock(&lock_);
 
-  if ((offset + count) > buffer_.size || (offset + count) < offset) {
+  if ((request->offset + request->count) > buffer_.size ||
+      (request->offset + request->count) < request->offset) {
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
 
   size_t actual;
-  zx_status_t status = TransferLocked(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
-                                      fuchsia_hardware_goldfish::wire::kSignalReadable,
-                                      buffer_.phys + offset, count, 0, 0, &actual);
+  zx_status_t status =
+      TransferLocked(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
+                     fuchsia_hardware_goldfish::wire::kSignalReadable,
+                     buffer_.phys + request->offset, request->count, 0, 0, &actual);
   completer.Reply(status, actual);
 }
 
-void Pipe::Write(uint64_t count, uint64_t offset, WriteCompleter::Sync& completer) {
-  TRACE_DURATION("gfx", "Pipe::Write", "count", count);
+void Pipe::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
+  TRACE_DURATION("gfx", "Pipe::Write", "count", request->count);
 
   fbl::AutoLock lock(&lock_);
 
-  if ((offset + count) > buffer_.size || (offset + count) < offset) {
+  if ((request->offset + request->count) > buffer_.size ||
+      (request->offset + request->count) < request->offset) {
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
 
   size_t actual;
-  zx_status_t status = TransferLocked(PIPE_CMD_CODE_WRITE, PIPE_CMD_CODE_WAKE_ON_WRITE,
-                                      fuchsia_hardware_goldfish::wire::kSignalWritable,
-                                      buffer_.phys + offset, count, 0, 0, &actual);
+  zx_status_t status =
+      TransferLocked(PIPE_CMD_CODE_WRITE, PIPE_CMD_CODE_WAKE_ON_WRITE,
+                     fuchsia_hardware_goldfish::wire::kSignalWritable,
+                     buffer_.phys + request->offset, request->count, 0, 0, &actual);
   completer.Reply(status, actual);
 }
 
-void Pipe::DoCall(uint64_t count, uint64_t offset, uint64_t read_count, uint64_t read_offset,
-                  DoCallCompleter::Sync& completer) {
-  TRACE_DURATION("gfx", "Pipe::DoCall", "count", count, "read_count", read_count);
+void Pipe::DoCall(DoCallRequestView request, DoCallCompleter::Sync& completer) {
+  TRACE_DURATION("gfx", "Pipe::DoCall", "count", request->count, "read_count", request->read_count);
 
   fbl::AutoLock lock(&lock_);
 
-  if ((offset + count) > buffer_.size || (offset + count) < offset) {
+  if ((request->offset + request->count) > buffer_.size ||
+      (request->offset + request->count) < request->offset) {
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
-  if ((read_offset + read_count) > buffer_.size || (read_offset + read_count) < read_offset) {
+  if ((request->read_offset + request->read_count) > buffer_.size ||
+      (request->read_offset + request->read_count) < request->read_offset) {
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -244,23 +250,23 @@ void Pipe::DoCall(uint64_t count, uint64_t offset, uint64_t read_count, uint64_t
   uint32_t wake_signal = 0u;
   zx_paddr_t read_paddr = 0u, write_paddr = 0u;
   // Set write command, signal and offset.
-  if (count) {
-    cmd = read_count ? PIPE_CMD_CODE_CALL : PIPE_CMD_CODE_WRITE;
+  if (request->count) {
+    cmd = request->read_count ? PIPE_CMD_CODE_CALL : PIPE_CMD_CODE_WRITE;
     wake_cmd = PIPE_CMD_CODE_WAKE_ON_WRITE;
     wake_signal = PIPE_CMD_CODE_WAKE_ON_WRITE;
-    write_paddr = buffer_.phys + offset;
+    write_paddr = buffer_.phys + request->offset;
   }
   // Set read command, signal and offset.
-  if (read_count) {
-    cmd = count ? PIPE_CMD_CODE_CALL : PIPE_CMD_CODE_READ;
+  if (request->read_count) {
+    cmd = request->count ? PIPE_CMD_CODE_CALL : PIPE_CMD_CODE_READ;
     wake_cmd = PIPE_CMD_CODE_WAKE_ON_READ;
     wake_signal = PIPE_CMD_CODE_WAKE_ON_READ;
-    read_paddr = buffer_.phys + read_offset;
+    read_paddr = buffer_.phys + request->read_offset;
   }
 
   size_t actual = 0u;
-  zx_status_t status = TransferLocked(cmd, wake_cmd, wake_signal, write_paddr, count, read_paddr,
-                                      read_count, &actual);
+  zx_status_t status = TransferLocked(cmd, wake_cmd, wake_signal, write_paddr, request->count,
+                                      read_paddr, request->read_count, &actual);
 
   completer.Reply(status, actual);
 }

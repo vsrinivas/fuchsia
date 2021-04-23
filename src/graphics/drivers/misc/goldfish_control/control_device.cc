@@ -417,10 +417,9 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
       fidl::WireResponse<ControlDevice::CreateColorBuffer2>(ZX_OK, hw_address_page_offset));
 }
 
-void Control::CreateColorBuffer2(
-    zx::vmo vmo, fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params,
-    CreateColorBuffer2Completer::Sync& completer) {
-  auto result = CreateColorBuffer2(std::move(vmo), std::move(create_params));
+void Control::CreateColorBuffer2(CreateColorBuffer2RequestView request,
+                                 CreateColorBuffer2Completer::Sync& completer) {
+  auto result = CreateColorBuffer2(std::move(request->vmo), std::move(request->create_params));
   if (result.is_ok()) {
     completer.Reply(result.value().res, result.value().hw_address_page_offset);
   } else {
@@ -510,11 +509,11 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
       ControlDeviceCreateBuffer2Response{.hw_address_page_offset = hw_address_page_offset}));
 }
 
-void Control::CreateBuffer2(zx::vmo vmo,
-                            fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params,
+void Control::CreateBuffer2(CreateBuffer2RequestView request,
                             CreateBuffer2Completer::Sync& completer) {
   fidl::FidlAllocator allocator;
-  auto result = CreateBuffer2(allocator, std::move(vmo), std::move(create_params));
+  auto result =
+      CreateBuffer2(allocator, std::move(request->vmo), std::move(request->create_params));
   if (result.is_ok()) {
     completer.Reply(result.take_value());
   } else {
@@ -522,8 +521,9 @@ void Control::CreateBuffer2(zx::vmo vmo,
   }
 }
 
-void Control::CreateSyncFence(zx::eventpair event, CreateSyncFenceCompleter::Sync& completer) {
-  zx_status_t status = GoldfishControlCreateSyncFence(std::move(event));
+void Control::CreateSyncFence(CreateSyncFenceRequestView request,
+                              CreateSyncFenceCompleter::Sync& completer) {
+  zx_status_t status = GoldfishControlCreateSyncFence(std::move(request->event));
   if (status != ZX_OK) {
     completer.ReplyError(status);
   } else {
@@ -531,10 +531,11 @@ void Control::CreateSyncFence(zx::eventpair event, CreateSyncFenceCompleter::Syn
   }
 }
 
-void Control::GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& completer) {
+void Control::GetBufferHandle(GetBufferHandleRequestView request,
+                              GetBufferHandleCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Control::FidlGetBufferHandle");
 
-  zx_koid_t koid = GetKoidForVmo(vmo);
+  zx_koid_t koid = GetKoidForVmo(request->vmo);
   if (koid == ZX_KOID_INVALID) {
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
@@ -569,14 +570,15 @@ void Control::GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& compl
   completer.Reply(ZX_OK, handle, handle_type);
 }
 
-void Control::GetBufferHandleInfo(zx::vmo vmo, GetBufferHandleInfoCompleter::Sync& completer) {
+void Control::GetBufferHandleInfo(GetBufferHandleInfoRequestView request,
+                                  GetBufferHandleInfoCompleter::Sync& completer) {
   using fuchsia_hardware_goldfish::wire::BufferHandleType;
   using fuchsia_hardware_goldfish::wire::ControlDeviceGetBufferHandleInfoResponse;
   using fuchsia_hardware_goldfish::wire::ControlDeviceGetBufferHandleInfoResult;
 
   TRACE_DURATION("gfx", "Control::FidlGetBufferHandleInfo");
 
-  zx_koid_t koid = GetKoidForVmo(vmo);
+  zx_koid_t koid = GetKoidForVmo(request->vmo);
   if (koid == ZX_KOID_INVALID) {
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;

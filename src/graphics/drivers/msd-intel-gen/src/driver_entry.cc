@@ -42,14 +42,14 @@ static int magma_stop(sysdrv_device_t* dev);
 
 using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
-struct sysdrv_device_t : public fidl::WireInterface<fuchsia_gpu_magma::Device> {
+struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
  public:
-  void Query2(uint64_t query_id, Query2Completer::Sync& _completer) override {
+  void Query2(Query2RequestView request, Query2Completer::Sync& _completer) override {
     DLOG("sysdrv_device_t::Query2");
     DASSERT(this->magma_system_device);
 
     uint64_t result;
-    switch (query_id) {
+    switch (request->query_id) {
       case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
 #if MAGMA_TEST_DRIVER
         result = 1;
@@ -58,36 +58,37 @@ struct sysdrv_device_t : public fidl::WireInterface<fuchsia_gpu_magma::Device> {
 #endif
         break;
       default:
-        magma::Status status = this->magma_system_device->Query(query_id, &result);
+        magma::Status status = this->magma_system_device->Query(request->query_id, &result);
         if (!status.ok()) {
           _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
           return;
         }
     }
-    DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, query_id, result);
+    DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, request->query_id, result);
 
     _completer.ReplySuccess(result);
   }
 
-  void QueryReturnsBuffer(uint64_t query_id,
+  void QueryReturnsBuffer(QueryReturnsBufferRequestView request,
                           QueryReturnsBufferCompleter::Sync& _completer) override {
     DLOG("sysdrv_device_t::QueryReturnsBuffer");
 
     zx_handle_t result;
-    magma::Status status = this->magma_system_device->QueryReturnsBuffer(query_id, &result);
+    magma::Status status =
+        this->magma_system_device->QueryReturnsBuffer(request->query_id, &result);
     if (!status.ok()) {
       _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
       return;
     }
-    DLOG("query extended query_id 0x%" PRIx64 " returning 0x%x", query_id, result);
+    DLOG("query extended query_id 0x%" PRIx64 " returning 0x%x", request->query_id, result);
     _completer.ReplySuccess(zx::vmo(result));
   }
 
-  void Connect(uint64_t client_id, ConnectCompleter::Sync& _completer) override {
+  void Connect(ConnectRequestView request, ConnectCompleter::Sync& _completer) override {
     DLOG("sysdrv_device_t::Connect");
 
-    auto connection =
-        MagmaSystemDevice::Open(this->magma_system_device, client_id, /*thread_profile*/ nullptr);
+    auto connection = MagmaSystemDevice::Open(this->magma_system_device, request->client_id,
+                                              /*thread_profile*/ nullptr);
 
     if (!connection) {
       DLOG("MagmaSystemDevice::Open failed");
@@ -101,20 +102,20 @@ struct sysdrv_device_t : public fidl::WireInterface<fuchsia_gpu_magma::Device> {
     this->magma_system_device->StartConnectionThread(std::move(connection));
   }
 
-  void DumpState(uint32_t dump_type, DumpStateCompleter::Sync& _completer) override {
+  void DumpState(DumpStateRequestView request, DumpStateCompleter::Sync& _completer) override {
     DLOG("sysdrv_device_t::DumpState");
-    if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
-                      MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
-      DLOG("Invalid dump type %d", dump_type);
+    if (request->dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
+                               MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
+      DLOG("Invalid dump type %d", request->dump_type);
       return;
     }
 
     std::unique_lock<std::mutex> lock(this->magma_mutex);
     if (this->magma_system_device)
-      this->magma_system_device->DumpStatus(dump_type);
+      this->magma_system_device->DumpStatus(request->dump_type);
   }
 
-  void GetIcdList(GetIcdListCompleter::Sync& completer) override {
+  void GetIcdList(GetIcdListRequestView request, GetIcdListCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
     std::vector<msd_icd_info_t> msd_icd_infos;
     this->magma_system_device->GetIcdList(&msd_icd_infos);
@@ -133,7 +134,8 @@ struct sysdrv_device_t : public fidl::WireInterface<fuchsia_gpu_magma::Device> {
     completer.Reply(fidl::VectorView<fuchsia_gpu_magma::wire::IcdInfo>::FromExternal(icd_infos));
   }
 
-  void TestRestart(TestRestartCompleter::Sync& _completer) override {
+  void TestRestart(TestRestartRequestView request,
+                   TestRestartCompleter::Sync& _completer) override {
 #if MAGMA_TEST_DRIVER
     DLOG("sysdrv_device_t::TestRestart");
     std::unique_lock<std::mutex> lock(this->magma_mutex);
@@ -149,7 +151,8 @@ struct sysdrv_device_t : public fidl::WireInterface<fuchsia_gpu_magma::Device> {
 #endif
   }
 
-  void GetUnitTestStatus(GetUnitTestStatusCompleter::Sync& _completer) override {
+  void GetUnitTestStatus(GetUnitTestStatusRequestView request,
+                         GetUnitTestStatusCompleter::Sync& _completer) override {
     DLOG("sysdrv_device_t::GetUnitTestStatus");
     _completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }

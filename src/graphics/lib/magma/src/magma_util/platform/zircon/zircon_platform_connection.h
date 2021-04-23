@@ -43,7 +43,7 @@ inline void CopyNotification(const msd_notification_t* src, msd_notification_t* 
   }
 }
 
-class ZirconPlatformConnection : public fidl::WireRawChannelInterface<fuchsia_gpu_magma::Primary>,
+class ZirconPlatformConnection : public fidl::WireServer<fuchsia_gpu_magma::Primary>,
                                  public PlatformConnection {
  public:
   struct AsyncWait : public async_wait {
@@ -137,59 +137,63 @@ class ZirconPlatformConnection : public fidl::WireRawChannelInterface<fuchsia_gp
 
   bool AsyncTaskHandler(async_dispatcher_t* dispatcher, AsyncTask* task, zx_status_t status);
 
-  void ImportBuffer(::zx::vmo buffer, ImportBufferCompleter::Sync& _completer) override;
-  void ReleaseBuffer(uint64_t buffer_id, ReleaseBufferCompleter::Sync& _completer) override;
-  void ImportObject(zx::handle handle, uint32_t object_type,
+  void ImportBuffer(ImportBufferRequestView request,
+                    ImportBufferCompleter::Sync& _completer) override;
+  void ReleaseBuffer(ReleaseBufferRequestView request,
+                     ReleaseBufferCompleter::Sync& _completer) override;
+  void ImportObject(ImportObjectRequestView request,
                     ImportObjectCompleter::Sync& _completer) override;
-  void ReleaseObject(uint64_t object_id, uint32_t object_type,
+  void ReleaseObject(ReleaseObjectRequestView request,
                      ReleaseObjectCompleter::Sync& _completer) override;
-  void CreateContext(uint32_t context_id, CreateContextCompleter::Sync& _completer) override;
-  void DestroyContext(uint32_t context_id, DestroyContextCompleter::Sync& _completer) override;
+  void CreateContext(CreateContextRequestView request,
+                     CreateContextCompleter::Sync& _completer) override;
+  void DestroyContext(DestroyContextRequestView request,
+                      DestroyContextCompleter::Sync& _completer) override;
   void ExecuteCommandBufferWithResources(
-      uint32_t context_id, fuchsia_gpu_magma::wire::CommandBuffer fidl_command_buffer,
-      ::fidl::VectorView<fuchsia_gpu_magma::wire::Resource> fidl_resources,
-      ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores,
+      ExecuteCommandBufferWithResourcesRequestView request,
       ExecuteCommandBufferWithResourcesCompleter::Sync& _completer) override;
-  void ExecuteImmediateCommands(uint32_t context_id, ::fidl::VectorView<uint8_t> command_data_vec,
-                                ::fidl::VectorView<uint64_t> semaphore_vec,
+  void ExecuteImmediateCommands(ExecuteImmediateCommandsRequestView request,
                                 ExecuteImmediateCommandsCompleter::Sync& _completer) override;
-  void GetError(GetErrorCompleter::Sync& _completer) override;
-  void Sync(SyncCompleter::Sync& _completer) override;
-  void MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
-                    uint64_t flags, MapBufferGpuCompleter::Sync& _completer) override;
-  void UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
+  void GetError(GetErrorRequestView request, GetErrorCompleter::Sync& _completer) override;
+  void Sync(SyncRequestView request, SyncCompleter::Sync& _completer) override;
+  void MapBufferGpu(MapBufferGpuRequestView request,
+                    MapBufferGpuCompleter::Sync& _completer) override;
+  void UnmapBufferGpu(UnmapBufferGpuRequestView request,
                       UnmapBufferGpuCompleter::Sync& _completer) override;
-  void CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count,
+  void CommitBuffer(CommitBufferRequestView request,
                     CommitBufferCompleter::Sync& _completer) override;
-  void BufferRangeOp(uint64_t buffer_id, fuchsia_gpu_magma::wire::BufferOp op, uint64_t start,
-                     uint64_t length, BufferRangeOpCompleter::Sync& completer) override;
-  void AccessPerformanceCounters(zx::event event,
+  void BufferRangeOp(BufferRangeOpRequestView request,
+                     BufferRangeOpCompleter::Sync& completer) override;
+  void AccessPerformanceCounters(AccessPerformanceCountersRequestView request,
                                  AccessPerformanceCountersCompleter::Sync& completer) override;
   void IsPerformanceCounterAccessEnabled(
+      IsPerformanceCounterAccessEnabledRequestView request,
       IsPerformanceCounterAccessEnabledCompleter::Sync& completer) override;
 
-  void EnableFlowControl(EnableFlowControlCompleter::Sync& _completer) override;
+  void EnableFlowControl(EnableFlowControlRequestView request,
+                         EnableFlowControlCompleter::Sync& _completer) override;
 
   std::pair<uint64_t, uint64_t> GetFlowControlCounts() override {
     return {messages_consumed_, bytes_imported_};
   }
 
-  void EnablePerformanceCounters(::fidl::VectorView<uint64_t> counters,
+  void EnablePerformanceCounters(EnablePerformanceCountersRequestView request,
                                  EnablePerformanceCountersCompleter::Sync& completer) override;
   void CreatePerformanceCounterBufferPool(
-      uint64_t pool_id, zx::channel event_channel,
+      CreatePerformanceCounterBufferPoolRequestView request,
       CreatePerformanceCounterBufferPoolCompleter::Sync& completer) override;
   void ReleasePerformanceCounterBufferPool(
-      uint64_t pool_id, ReleasePerformanceCounterBufferPoolCompleter::Sync& completer) override;
+      ReleasePerformanceCounterBufferPoolRequestView request,
+      ReleasePerformanceCounterBufferPoolCompleter::Sync& completer) override;
   void AddPerformanceCounterBufferOffsetsToPool(
-      uint64_t pool_id, fidl::VectorView<fuchsia_gpu_magma::wire::BufferOffset> offsets,
+      AddPerformanceCounterBufferOffsetsToPoolRequestView request,
       AddPerformanceCounterBufferOffsetsToPoolCompleter::Sync& completer) override;
   void RemovePerformanceCounterBufferFromPool(
-      uint64_t pool_id, uint64_t buffer_id,
+      RemovePerformanceCounterBufferFromPoolRequestView request,
       RemovePerformanceCounterBufferFromPoolCompleter::Sync& completer) override;
-  void DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id,
+  void DumpPerformanceCounters(DumpPerformanceCountersRequestView request,
                                DumpPerformanceCountersCompleter::Sync& completer) override;
-  void ClearPerformanceCounters(::fidl::VectorView<uint64_t> counters,
+  void ClearPerformanceCounters(ClearPerformanceCountersRequestView request,
                                 ClearPerformanceCountersCompleter::Sync& completer) override;
 
   // Epitaph will be sent on the given completer if provided, else on the server binding.

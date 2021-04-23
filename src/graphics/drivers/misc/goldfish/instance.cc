@@ -47,32 +47,34 @@ zx_status_t Instance::Bind() {
   return DdkAdd("pipe", DEVICE_ADD_INSTANCE);
 }
 
-void Instance::OpenPipe(zx::channel pipe_request, OpenPipeCompleter::Sync& completer) {
-  if (!pipe_request.is_valid()) {
+void Instance::OpenPipe(OpenPipeRequestView request, OpenPipeCompleter::Sync& completer) {
+  if (!request->pipe_request.is_valid()) {
     zxlogf(ERROR, "%s: invalid channel", kTag);
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
 
   // Create and bind pipe to client thread.
-  async::PostTask(client_loop_.dispatcher(), [this, request = std::move(pipe_request)]() mutable {
-    auto pipe = std::make_unique<Pipe>(parent(), client_loop_.dispatcher(), /* OnBind */ nullptr,
-                                       /* OnClose */ [this](Pipe* pipe_ptr) {
-                                         // We know |pipe_ptr| is still alive because |pipe_ptr| is
-                                         // still in |pipes_|.
-                                         ZX_DEBUG_ASSERT(pipes_.find(pipe_ptr) != pipes_.end());
-                                         pipes_.erase(pipe_ptr);
-                                       });
+  async::PostTask(
+      client_loop_.dispatcher(), [this, pipe_request = std::move(request->pipe_request)]() mutable {
+        auto pipe =
+            std::make_unique<Pipe>(parent(), client_loop_.dispatcher(), /* OnBind */ nullptr,
+                                   /* OnClose */ [this](Pipe* pipe_ptr) {
+                                     // We know |pipe_ptr| is still alive because |pipe_ptr| is
+                                     // still in |pipes_|.
+                                     ZX_DEBUG_ASSERT(pipes_.find(pipe_ptr) != pipes_.end());
+                                     pipes_.erase(pipe_ptr);
+                                   });
 
-    auto pipe_ptr = pipe.get();
-    pipes_.insert({pipe_ptr, std::move(pipe)});
+        auto pipe_ptr = pipe.get();
+        pipes_.insert({pipe_ptr, std::move(pipe)});
 
-    pipe_ptr->Bind(std::move(request));
-    // Init() must be called after Bind() as it can cause an asynchronous
-    // failure. The pipe will be cleaned up later by the error handler in
-    // the event of a failure.
-    pipe_ptr->Init();
-  });
+        pipe_ptr->Bind(pipe_request.TakeChannel());
+        // Init() must be called after Bind() as it can cause an asynchronous
+        // failure. The pipe will be cleaned up later by the error handler in
+        // the event of a failure.
+        pipe_ptr->Init();
+      });
 
   completer.Close(ZX_OK);
 }

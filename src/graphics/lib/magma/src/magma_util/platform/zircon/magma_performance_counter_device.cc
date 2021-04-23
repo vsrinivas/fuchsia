@@ -41,6 +41,7 @@ zx_status_t MagmaPerformanceCounterDevice::DdkMessage(fidl_incoming_msg_t* msg, 
 }
 
 void MagmaPerformanceCounterDevice::GetPerformanceCountToken(
+    GetPerformanceCountTokenRequestView request,
     GetPerformanceCountTokenCompleter::Sync& completer) {
   zx::event event_duplicate;
   zx_status_t status = event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_duplicate);

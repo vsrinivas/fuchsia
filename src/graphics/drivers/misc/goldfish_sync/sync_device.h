@@ -44,7 +44,7 @@ class SyncTimeline;
 
 class SyncDevice : public SyncDeviceType,
                    public ddk::GoldfishSyncProtocol<SyncDevice, ddk::base_protocol>,
-                   public fidl::WireRawChannelInterface<fuchsia_hardware_goldfish::SyncDevice> {
+                   public fidl::WireServer<fuchsia_hardware_goldfish::SyncDevice> {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -61,8 +61,9 @@ class SyncDevice : public SyncDeviceType,
   // |ddk.protocol.goldfish.sync|
   zx_status_t GoldfishSyncCreateTimeline(zx::channel request);
 
-  // |fidl::WireInterface<fuchsia_hardware_goldfish::Sync>|
-  void CreateTimeline(zx::channel request, CreateTimelineCompleter::Sync& completer) override;
+  // |fidl::WireServer<fuchsia_hardware_goldfish::Sync>|
+  void CreateTimeline(CreateTimelineRequestView request,
+                      CreateTimelineCompleter::Sync& completer) override;
 
   // Send guest->host command to sync device and notify the device.
   // Used only by |SyncTimeline|.
@@ -132,7 +133,7 @@ class SyncDevice : public SyncDeviceType,
 class SyncTimeline : public fbl::RefCounted<SyncTimeline>,
                      public fbl::DoublyLinkedListable<fbl::RefPtr<SyncTimeline>,
                                                       fbl::NodeOptions::AllowRemoveFromContainer>,
-                     public fidl::WireInterface<fuchsia_hardware_goldfish::SyncTimeline> {
+                     public fidl::WireServer<fuchsia_hardware_goldfish::SyncTimeline> {
  public:
   explicit SyncTimeline(SyncDevice* parent);
   ~SyncTimeline();
@@ -140,9 +141,9 @@ class SyncTimeline : public fbl::RefCounted<SyncTimeline>,
   zx_status_t Bind(zx::channel request);
   void OnClose(fidl::UnbindInfo info, zx::channel channel);
 
-  // |fidl::WireInterface<fuchsia_hardware_goldfish::SyncTimeline>|
-  void TriggerHostWait(uint64_t host_glsync_handle, uint64_t host_syncthread_handle,
-                       zx::eventpair event, TriggerHostWaitCompleter::Sync& completer) override;
+  // |fidl::WireServer<fuchsia_hardware_goldfish::SyncTimeline>|
+  void TriggerHostWait(TriggerHostWaitRequestView request,
+                       TriggerHostWaitCompleter::Sync& completer) override;
 
   // Create a new sync fence using given |event| and add it to the |fences_|
   // set.

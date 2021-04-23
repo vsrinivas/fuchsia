@@ -26,7 +26,7 @@ using DeviceType = ddk::Device<NoHardwareGpu, ddk::Messageable>;
 
 class NoHardwareGpu : public DeviceType,
                       public ImgSysDevice,
-                      public fidl::WireInterface<fuchsia_gpu_magma::Device> {
+                      public fidl::WireServer<fuchsia_gpu_magma::Device> {
  public:
   NoHardwareGpu(zx_device_t* parent) : DeviceType(parent) {}
 
@@ -38,14 +38,15 @@ class NoHardwareGpu : public DeviceType,
   // DDKTL method that dispatches FIDL messages from clients.
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
-  void Query2(uint64_t query_id, Query2Completer::Sync& _completer) override;
-  void QueryReturnsBuffer(uint64_t query_id,
+  void Query2(Query2RequestView request, Query2Completer::Sync& _completer) override;
+  void QueryReturnsBuffer(QueryReturnsBufferRequestView request,
                           QueryReturnsBufferCompleter::Sync& _completer) override;
-  void Connect(uint64_t client_id, ConnectCompleter::Sync& _completer) override;
-  void DumpState(uint32_t dump_type, DumpStateCompleter::Sync& _completer) override;
-  void TestRestart(TestRestartCompleter::Sync& _completer) override;
-  void GetUnitTestStatus(GetUnitTestStatusCompleter::Sync& _completer) override;
-  void GetIcdList(GetIcdListCompleter::Sync& completer) override {
+  void Connect(ConnectRequestView request, ConnectCompleter::Sync& _completer) override;
+  void DumpState(DumpStateRequestView request, DumpStateCompleter::Sync& _completer) override;
+  void TestRestart(TestRestartRequestView request, TestRestartCompleter::Sync& _completer) override;
+  void GetUnitTestStatus(GetUnitTestStatusRequestView request,
+                         GetUnitTestStatusCompleter::Sync& _completer) override;
+  void GetIcdList(GetIcdListRequestView request, GetIcdListCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

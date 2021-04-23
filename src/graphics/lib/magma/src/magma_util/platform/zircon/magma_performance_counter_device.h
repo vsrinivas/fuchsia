@@ -17,7 +17,7 @@ class MagmaPerformanceCounterDevice;
 using DdkPerfCountDeviceType = ddk::Device<MagmaPerformanceCounterDevice, ddk::Messageable>;
 
 class MagmaPerformanceCounterDevice
-    : public fidl::WireInterface<fuchsia_gpu_magma::PerformanceCounterAccess>,
+    : public fidl::WireServer<fuchsia_gpu_magma::PerformanceCounterAccess>,
       public DdkPerfCountDeviceType,
       public ddk::EmptyProtocol<ZX_PROTOCOL_GPU_PERFORMANCE_COUNTERS> {
  public:
@@ -36,7 +36,8 @@ class MagmaPerformanceCounterDevice
 
   zx_koid_t GetEventKoid();
 
-  void GetPerformanceCountToken(GetPerformanceCountTokenCompleter::Sync& completer) override;
+  void GetPerformanceCountToken(GetPerformanceCountTokenRequestView request,
+                                GetPerformanceCountTokenCompleter::Sync& completer) override;
 
   // This is the access token that will be given to PerformanceCounterAccess clients, and which the
   // MSD will compare against to validate access permissions.

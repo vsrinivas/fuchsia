@@ -75,12 +75,12 @@ zx_status_t NoHardwareGpu::Bind() {
   return DdkAdd("msd-img-rgx-no-hardware");
 }
 
-void NoHardwareGpu::Query2(uint64_t query_id, Query2Completer::Sync& _completer) {
+void NoHardwareGpu::Query2(Query2RequestView request, Query2Completer::Sync& _completer) {
   DLOG("NoHardwareGpu::Query");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
   uint64_t result;
-  switch (query_id) {
+  switch (request->query_id) {
     case MAGMA_QUERY_DEVICE_ID:
       result = magma_system_device_->GetDeviceId();
       break;
@@ -88,25 +88,25 @@ void NoHardwareGpu::Query2(uint64_t query_id, Query2Completer::Sync& _completer)
       result = 1;
       break;
     default: {
-      magma::Status status = magma_system_device_->Query(query_id, &result);
+      magma::Status status = magma_system_device_->Query(request->query_id, &result);
       if (!status.ok()) {
         _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
         return;
       }
     }
   }
-  DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, query_id, result);
+  DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, request->query_id, result);
 
   _completer.ReplySuccess(result);
 }
 
-void NoHardwareGpu::QueryReturnsBuffer(uint64_t query_id,
+void NoHardwareGpu::QueryReturnsBuffer(QueryReturnsBufferRequestView request,
                                        QueryReturnsBufferCompleter::Sync& _completer) {
   DLOG("NoHardwareGpu::QueryReturnsBuffer");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
   zx_handle_t result;
-  switch (query_id) {
+  switch (request->query_id) {
     case no_hardware_testing::kDummyQueryId: {
       auto buffer = magma::PlatformBuffer::Create(4096, "query-buffer");
       if (!buffer) {
@@ -125,24 +125,24 @@ void NoHardwareGpu::QueryReturnsBuffer(uint64_t query_id,
       break;
     }
     default: {
-      magma::Status status = magma_system_device_->QueryReturnsBuffer(query_id, &result);
+      magma::Status status = magma_system_device_->QueryReturnsBuffer(request->query_id, &result);
       if (!status.ok()) {
         _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
         return;
       }
     }
   }
-  DLOG("query query_id 0x%" PRIx64 " returning 0x%x", query_id, result);
+  DLOG("query query_id 0x%" PRIx64 " returning 0x%x", request->query_id, result);
 
   _completer.ReplySuccess(zx::vmo(result));
 }
 
-void NoHardwareGpu::Connect(uint64_t client_id, ConnectCompleter::Sync& _completer) {
+void NoHardwareGpu::Connect(ConnectRequestView request, ConnectCompleter::Sync& _completer) {
   DLOG("NoHardwareGpu::Connect");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
   auto connection =
-      MagmaSystemDevice::Open(magma_system_device_, client_id, /*thread_profile*/ nullptr);
+      MagmaSystemDevice::Open(magma_system_device_, request->client_id, /*thread_profile*/ nullptr);
 
   if (!connection) {
     _completer.Close(ZX_ERR_INTERNAL);
@@ -155,20 +155,21 @@ void NoHardwareGpu::Connect(uint64_t client_id, ConnectCompleter::Sync& _complet
   magma_system_device_->StartConnectionThread(std::move(connection));
 }
 
-void NoHardwareGpu::DumpState(uint32_t dump_type, DumpStateCompleter::Sync& _completer) {
+void NoHardwareGpu::DumpState(DumpStateRequestView request, DumpStateCompleter::Sync& _completer) {
   DLOG("NoHardwareGpu::DumpState");
   std::lock_guard<std::mutex> lock(magma_mutex_);
-  if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
-                    MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
-    DLOG("Invalid dump type %x", dump_type);
+  if (request->dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
+                             MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
+    DLOG("Invalid dump type %x", request->dump_type);
     return;
   }
 
   if (magma_system_device_)
-    magma_system_device_->DumpStatus(dump_type);
+    magma_system_device_->DumpStatus(request->dump_type);
 }
 
-void NoHardwareGpu::TestRestart(TestRestartCompleter::Sync& _completer) {
+void NoHardwareGpu::TestRestart(TestRestartRequestView request,
+                                TestRestartCompleter::Sync& _completer) {
   DLOG("NoHardwareGpu::TestRestart");
   std::lock_guard<std::mutex> lock(magma_mutex_);
   StopMagma();
@@ -177,7 +178,8 @@ void NoHardwareGpu::TestRestart(TestRestartCompleter::Sync& _completer) {
   }
 }
 
-void NoHardwareGpu::GetUnitTestStatus(GetUnitTestStatusCompleter::Sync& _completer) {
+void NoHardwareGpu::GetUnitTestStatus(GetUnitTestStatusRequestView request,
+                                      GetUnitTestStatusCompleter::Sync& _completer) {
   _completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 

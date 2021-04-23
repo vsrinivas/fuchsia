@@ -54,14 +54,13 @@ namespace fidl_dsi = fuchsia_hardware_dsi;
 using DeviceTypeBase = ddk::Device<DsiDwBase, ddk::Unbindable, ddk::Messageable>;
 class DsiDwBase : public DeviceTypeBase,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_DSI_BASE>,
-                  public fidl::WireInterface<fuchsia_hardware_dsi::DsiBase> {
+                  public fidl::WireServer<fuchsia_hardware_dsi::DsiBase> {
  public:
   DsiDwBase(zx_device_t* parent, DsiDw* dsidw) : DeviceTypeBase(parent), dsidw_(dsidw) {}
   zx_status_t Bind();
 
   // FIDL
-  void SendCmd(fuchsia_hardware_dsi::wire::MipiDsiCmd cmd, ::fidl::VectorView<uint8_t> txdata,
-               SendCmdCompleter::Sync& _completer) override;
+  void SendCmd(SendCmdRequestView request, SendCmdCompleter::Sync& _completer) override;
 
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();

@@ -43,8 +43,9 @@ inline constexpr int64_t ms_to_ns(int64_t ms) { return ms * 1000000ull; }
 
 #if defined(__Fuchsia__)
 class FakePerfCountAccessServer
-    : public fidl::WireInterface<fuchsia_gpu_magma::PerformanceCounterAccess> {
-  void GetPerformanceCountToken(GetPerformanceCountTokenCompleter::Sync& completer) override {
+    : public fidl::WireServer<fuchsia_gpu_magma::PerformanceCounterAccess> {
+  void GetPerformanceCountToken(GetPerformanceCountTokenRequestView request,
+                                GetPerformanceCountTokenCompleter::Sync& completer) override {
     zx::event event;
     zx::event::create(0, &event);
     completer.Reply(std::move(event));

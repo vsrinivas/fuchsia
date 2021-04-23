@@ -20,26 +20,27 @@
 namespace goldfish {
 
 class Control;
-using HeapInterface = fidl::WireInterface<fuchsia_sysmem2::Heap>;
+using HeapServer = fidl::WireServer<fuchsia_sysmem2::Heap>;
 
 // LLCPP synchronous server of a goldfish device-local Fuchsia sysmem Heap
 // interface.
 //
 // Each Heap service runs on its own thread and has its own async loop.
-class Heap : public HeapInterface, public fbl::DoublyLinkedListable<std::unique_ptr<Heap>> {
+class Heap : public HeapServer, public fbl::DoublyLinkedListable<std::unique_ptr<Heap>> {
  public:
-  // |fidl::WireInterface<fuchsia_sysmem2::Heap>|
   ~Heap() override;
 
-  // |fidl::WireInterface<fuchsia_sysmem2::Heap>|
-  void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync& completer) override = 0;
+  // |fidl::WireServer<fuchsia_sysmem2::Heap>|
+  void AllocateVmo(AllocateVmoRequestView request,
+                   AllocateVmoCompleter::Sync& completer) override = 0;
 
-  // |fidl::WireInterface<fuchsia_sysmem2::Heap>|
-  void CreateResource(::zx::vmo vmo, fuchsia_sysmem2::wire::SingleBufferSettings buffer_settings,
+  // |fidl::WireServer<fuchsia_sysmem2::Heap>|
+  void CreateResource(CreateResourceRequestView request,
                       CreateResourceCompleter::Sync& completer) override = 0;
 
-  // |fidl::WireInterface<fuchsia_sysmem2::Heap>|
-  void DestroyResource(uint64_t id, DestroyResourceCompleter::Sync& completer) override = 0;
+  // |fidl::WireServer<fuchsia_sysmem2::Heap>|
+  void DestroyResource(DestroyResourceRequestView request,
+                       DestroyResourceCompleter::Sync& completer) override = 0;
 
   // Bind the server to a FIDL channel.
   // The server should not be bound to any channel when Bind() is called.
