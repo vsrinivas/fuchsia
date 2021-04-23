@@ -141,7 +141,7 @@ static void ns16550a_uart_init_early(const void* driver_data, uint32_t length) {
   pdev_register_uart(&uart_ops);
 }
 
-LK_PDEV_INIT(ns16550_uart_init_early, KDRV_NS16550A_UART, ns16550a_uart_init_early,
+LK_PDEV_INIT(ns16550a_uart_init_early, KDRV_NS16550A_UART, ns16550a_uart_init_early,
              LK_INIT_LEVEL_PLATFORM_EARLY)
 LK_PDEV_INIT(ns16550a_uart_init, KDRV_NS16550A_UART, ns16550a_uart_init, LK_INIT_LEVEL_PLATFORM)
 
