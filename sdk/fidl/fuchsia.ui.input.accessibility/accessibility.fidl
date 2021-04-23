@@ -23,7 +23,7 @@ enum EventHandling {
 /// screen coordinates as well as some metadata about the event type.
 table PointerEvent {
     /// Time the event was delivered. The time is in nanoseconds and corresponds
-    /// to the uptime of the machine.
+    /// to the monotonic time as determined by the zx_clock_get_monotonic syscall.
     1: uint64 event_time;
     /// ID of the device that captured this event.
     2: uint32 device_id;

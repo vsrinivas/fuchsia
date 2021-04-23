@@ -31,7 +31,7 @@ enum KeyboardEventPhase {
 /// DEPRECATED: Will be removed in favor of `fuchsia.ui.input.KeyEvent`.
 struct KeyboardEvent {
     /// Time the event was delivered. The time is in nanoseconds and corresponds
-    /// to the uptime of the machine.
+    /// to the monotonic time as determined by the zx_clock_get_monotonic syscall.
     uint64 event_time;
 
     uint32 device_id;
@@ -114,7 +114,7 @@ enum PointerEventPhase {
 /// At any point after the initial ADD, a transition to CANCEL is also possible.
 struct PointerEvent {
     /// Time the event was delivered. The time is in nanoseconds and corresponds
-    /// to the uptime of the machine.
+    /// to the monotonic time as determined by the zx_clock_get_monotonic syscall.
     uint64 event_time;
 
     uint32 device_id;
@@ -146,7 +146,7 @@ struct PointerEvent {
 
 struct FocusEvent {
     /// Time the event was delivered. The time is in nanoseconds and corresponds
-    /// to the uptime of the machine.
+    /// to the monotonic time as determined by the zx_clock_get_monotonic syscall.
     uint64 event_time;
 
     /// Whether the view has gained input focused or not.
