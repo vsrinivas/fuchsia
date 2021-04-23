@@ -128,7 +128,7 @@ fuchsia_package_with_single_component("pkg-diagnostics-bridge") {
     "//build/validate:non_production_tag",
     "//src/developer/remote-control/diagnostics-bridge",
   ]
-  manifest = "diagnostics-bridge/meta/diagnostics-bridge.cml"
+  manifest = "diagnostics-bridge/meta/remote-diagnostics-bridge.cml"
 }
 
 fuchsia_component("remote-control-component") {
