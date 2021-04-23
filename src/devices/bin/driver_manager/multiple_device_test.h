@@ -16,7 +16,7 @@
 #include "coordinator_test_utils.h"
 #include "src/devices/lib/log/log.h"
 
-class MockFshostAdminServer final : public fidl::WireInterface<fuchsia_fshost::Admin> {
+class MockFshostAdminServer final : public fidl::WireServer<fuchsia_fshost::Admin> {
  public:
   MockFshostAdminServer() : has_been_shutdown_(false) {}
 
@@ -37,7 +37,7 @@ class MockFshostAdminServer final : public fidl::WireInterface<fuchsia_fshost::A
     return fidl::Client<fuchsia_fshost::Admin>(std::move(client), dispatcher);
   }
 
-  void Shutdown(ShutdownCompleter::Sync& completer) override {
+  void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override {
     has_been_shutdown_ = true;
     completer.Reply();
   }

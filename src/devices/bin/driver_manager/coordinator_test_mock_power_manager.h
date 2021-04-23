@@ -8,11 +8,9 @@
 #include <fuchsia/power/manager/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 
-class MockPowerManager
-    : public fidl::WireRawChannelInterface<fuchsia_power_manager::DriverManagerRegistration> {
+class MockPowerManager : public fidl::WireServer<fuchsia_power_manager::DriverManagerRegistration> {
  public:
-  void Register(zx::channel system_state_transition, zx::channel dir,
-                RegisterCompleter::Sync& completer) override {
+  void Register(RegisterRequestView request, RegisterCompleter::Sync& completer) override {
     sync_completion_signal(&register_called_);
     completer.ReplySuccess();
   }

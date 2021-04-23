@@ -808,31 +808,25 @@ int Device::RunCompatibilityTests() {
 #undef TEST_LOGF
 
 // TODO(fxb/74654): Implement support for string properties.
-void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controller_client,
-                       ::fuchsia_device_manager::wire::DevicePropertyList property_list,
-                       ::fidl::StringView name_view, uint32_t protocol_id,
-                       ::fidl::StringView driver_path_view, ::fidl::StringView args_view,
-                       fuchsia_device_manager::wire::AddDeviceConfig device_add_config,
-                       bool has_init, ::zx::vmo inspect, ::zx::channel client_remote,
-                       AddDeviceCompleter::Sync& completer) {
+void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& completer) {
   auto parent = fbl::RefPtr(this);
-  std::string_view name(name_view.data(), name_view.size());
-  std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
-  std::string_view args(args_view.data(), args_view.size());
+  std::string_view name(request->name.data(), request->name.size());
+  std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
+  std::string_view args(request->args.data(), request->args.size());
 
-  bool invisible = static_cast<bool>(device_add_config &
+  bool invisible = static_cast<bool>(request->device_add_config &
                                      fuchsia_device_manager::wire::AddDeviceConfig::kInvisible);
   bool skip_autobind = static_cast<bool>(
-      device_add_config & fuchsia_device_manager::wire::AddDeviceConfig::kSkipAutobind);
+      request->device_add_config & fuchsia_device_manager::wire::AddDeviceConfig::kSkipAutobind);
 
   fbl::RefPtr<Device> device;
   zx_status_t status = parent->coordinator->AddDevice(
-      parent, std::move(device_controller_client), std::move(coordinator),
-      property_list.props.data(), property_list.props.count(), name, protocol_id, driver_path, args,
-      invisible, skip_autobind, has_init, kEnableAlwaysInit, std::move(inspect),
-      std::move(client_remote), &device);
-  if (device != nullptr &&
-      (device_add_config & fuchsia_device_manager::wire::AddDeviceConfig::kAllowMultiComposite)) {
+      parent, request->device_controller.TakeChannel(), request->coordinator.TakeChannel(),
+      request->property_list.props.data(), request->property_list.props.count(), name,
+      request->protocol_id, driver_path, args, invisible, skip_autobind, request->has_init,
+      kEnableAlwaysInit, std::move(request->inspect), std::move(request->client_remote), &device);
+  if (device != nullptr && (request->device_add_config &
+                            fuchsia_device_manager::wire::AddDeviceConfig::kAllowMultiComposite)) {
     device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   }
   uint64_t local_id = device != nullptr ? device->local_id() : 0;
@@ -849,16 +843,15 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
   }
 }
 
-void Device::PublishMetadata(::fidl::StringView device_path, uint32_t key,
-                             ::fidl::VectorView<uint8_t> data,
+void Device::PublishMetadata(PublishMetadataRequestView request,
                              PublishMetadataCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   char path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
-  ZX_ASSERT(device_path.size() <= fuchsia_device_manager_DEVICE_PATH_MAX);
-  memcpy(path, device_path.data(), device_path.size());
-  path[device_path.size()] = 0;
-  zx_status_t status = dev->coordinator->PublishMetadata(dev, path, key, data.data(),
-                                                         static_cast<uint32_t>(data.count()));
+  ZX_ASSERT(request->device_path.size() <= fuchsia_device_manager_DEVICE_PATH_MAX);
+  memcpy(path, request->device_path.data(), request->device_path.size());
+  path[request->device_path.size()] = 0;
+  zx_status_t status = dev->coordinator->PublishMetadata(
+      dev, path, request->key, request->data.data(), static_cast<uint32_t>(request->data.count()));
   fuchsia_device_manager::wire::CoordinatorPublishMetadataResult response;
   if (status != ZX_OK) {
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
@@ -872,15 +865,17 @@ void Device::PublishMetadata(::fidl::StringView device_path, uint32_t key,
   }
 }
 
-void Device::ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync& completer) {
+void Device::ScheduleRemove(ScheduleRemoveRequestView request,
+                            ScheduleRemoveCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
 
   VLOGF(1, "Scheduling remove of device %p '%s'", dev.get(), dev->name().data());
 
-  dev->coordinator->ScheduleDriverHostRequestedRemove(dev, unbind_self);
+  dev->coordinator->ScheduleDriverHostRequestedRemove(dev, request->unbind_self);
 }
 
-void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& completer) {
+void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenRequestView request,
+                                    ScheduleUnbindChildrenCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
 
   VLOGF(1, "Scheduling unbind of children for device %p '%s'", dev.get(), dev->name().data());
@@ -888,7 +883,7 @@ void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& compl
   dev->coordinator->ScheduleDriverHostRequestedUnbindChildren(dev);
 }
 
-void Device::MakeVisible(MakeVisibleCompleter::Sync& completer) {
+void Device::MakeVisible(MakeVisibleRequestView request, MakeVisibleCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   fuchsia_device_manager::wire::CoordinatorMakeVisibleResult response;
   if (dev->coordinator->InSuspend()) {
@@ -909,9 +904,9 @@ void Device::MakeVisible(MakeVisibleCompleter::Sync& completer) {
   completer.Reply(std::move(response));
 }
 
-void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter::Sync& completer) {
+void Device::BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
-  std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
+  std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
 
   fuchsia_device_manager::wire::CoordinatorBindDeviceResult response;
   if (dev->coordinator->InSuspend()) {
@@ -936,7 +931,8 @@ void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter
   }
 }
 
-void Device::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
+void Device::GetTopologicalPath(GetTopologicalPathRequestView request,
+                                GetTopologicalPathCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   char path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
   zx_status_t status;
@@ -955,12 +951,12 @@ void Device::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
   completer.Reply(std::move(response));
 }
 
-void Device::LoadFirmware(::fidl::StringView fw_path_view, LoadFirmwareCompleter::Sync& completer) {
+void Device::LoadFirmware(LoadFirmwareRequestView request, LoadFirmwareCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
 
   char fw_path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
-  memcpy(fw_path, fw_path_view.data(), fw_path_view.size());
-  fw_path[fw_path_view.size()] = 0;
+  memcpy(fw_path, request->fw_path.data(), request->fw_path.size());
+  fw_path[request->fw_path.size()] = 0;
   fuchsia_device_manager::wire::CoordinatorLoadFirmwareResult response;
 
   zx::vmo vmo;
@@ -982,12 +978,13 @@ void Device::LoadFirmware(::fidl::StringView fw_path_view, LoadFirmwareCompleter
   completer.Reply(std::move(response));
 }
 
-void Device::GetMetadata(uint32_t key, GetMetadataCompleter::Sync& completer) {
+void Device::GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   uint8_t data[fuchsia_device_manager_METADATA_BYTES_MAX];
   size_t actual = 0;
   fuchsia_device_manager::wire::CoordinatorGetMetadataResult response;
-  zx_status_t status = dev->coordinator->GetMetadata(dev, key, data, sizeof(data), &actual);
+  zx_status_t status =
+      dev->coordinator->GetMetadata(dev, request->key, data, sizeof(data), &actual);
   if (status != ZX_OK) {
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
@@ -1001,11 +998,12 @@ void Device::GetMetadata(uint32_t key, GetMetadataCompleter::Sync& completer) {
   completer.Reply(std::move(response));
 }
 
-void Device::GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync& completer) {
+void Device::GetMetadataSize(GetMetadataSizeRequestView request,
+                             GetMetadataSizeCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   size_t size;
   fuchsia_device_manager::wire::CoordinatorGetMetadataSizeResult response;
-  zx_status_t status = dev->coordinator->GetMetadataSize(dev, key, &size);
+  zx_status_t status = dev->coordinator->GetMetadataSize(dev, request->key, &size);
   if (status != ZX_OK) {
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
@@ -1018,11 +1016,10 @@ void Device::GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync& compl
   completer.Reply(std::move(response));
 }
 
-void Device::AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data,
-                         AddMetadataCompleter::Sync& completer) {
+void Device::AddMetadata(AddMetadataRequestView request, AddMetadataCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
-  zx_status_t status =
-      dev->coordinator->AddMetadata(dev, key, data.data(), static_cast<uint32_t>(data.count()));
+  zx_status_t status = dev->coordinator->AddMetadata(dev, request->key, request->data.data(),
+                                                     static_cast<uint32_t>(request->data.count()));
   fuchsia_device_manager::wire::CoordinatorAddMetadataResult response;
   if (status != ZX_OK) {
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
@@ -1035,7 +1032,7 @@ void Device::AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data,
     completer.Reply(std::move(response));
   }
 }
-void Device::RunCompatibilityTests(int64_t hook_wait_time,
+void Device::RunCompatibilityTests(RunCompatibilityTestsRequestView request,
                                    RunCompatibilityTestsCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   fbl::RefPtr<Device>& real_parent = dev;
@@ -1043,7 +1040,7 @@ void Device::RunCompatibilityTests(int64_t hook_wait_time,
   if (dev->flags & DEV_CTX_PROXY) {
     real_parent = dev->parent();
   }
-  zx::duration test_time = zx::nsec(hook_wait_time);
+  zx::duration test_time = zx::nsec(request->hook_wait_time);
   real_parent->set_test_time(test_time);
   real_parent->set_test_reply_required(true);
   status = real_parent->DriverCompatibilityTest();
@@ -1060,12 +1057,12 @@ void Device::RunCompatibilityTests(int64_t hook_wait_time,
   }
 }
 
-void Device::AddCompositeDevice(::fidl::StringView name_view,
-                                fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc,
+void Device::AddCompositeDevice(AddCompositeDeviceRequestView request,
                                 AddCompositeDeviceCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
-  std::string_view name(name_view.data(), name_view.size());
-  zx_status_t status = this->coordinator->AddCompositeDevice(dev, name, std::move(comp_desc));
+  std::string_view name(request->name.data(), request->name.size());
+  zx_status_t status =
+      this->coordinator->AddCompositeDevice(dev, name, std::move(request->comp_desc));
   fuchsia_device_manager::wire::CoordinatorAddCompositeDeviceResult response;
   if (status != ZX_OK) {
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));

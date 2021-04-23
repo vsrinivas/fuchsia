@@ -159,7 +159,7 @@ class TxnForwarder : public fidl::Transaction {
   zx_status_t status_ = ZX_OK;
 };
 
-class DevfsFidlServer : public fidl::WireInterface<fio::DirectoryAdmin> {
+class DevfsFidlServer : public fidl::WireServer<fio::DirectoryAdmin> {
  public:
   explicit DevfsFidlServer(DcIostate* iostate) : owner_(iostate) {}
 
@@ -167,59 +167,55 @@ class DevfsFidlServer : public fidl::WireInterface<fio::DirectoryAdmin> {
   void set_current_dispatcher(async_dispatcher_t* dispatcher) { current_dispatcher_ = dispatcher; }
   void clear_current_dispatcher() { current_dispatcher_ = nullptr; }
 
-  void Clone(uint32_t flags, fidl::ServerEnd<fio::Node> object,
-             CloneCompleter::Sync& completer) override;
-  void Close(CloseCompleter::Sync& completer) override;
-  void Describe(DescribeCompleter::Sync& completer) override;
-  void Sync(SyncCompleter::Sync& completer) override { completer.Reply(ZX_ERR_NOT_SUPPORTED); }
-  void GetAttr(GetAttrCompleter::Sync& completer) override;
-  void SetAttr(uint32_t flags, fio::wire::NodeAttributes attributes,
-               SetAttrCompleter::Sync& completer) override {
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override;
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
+  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override;
+  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Open(uint32_t flags, uint32_t mode, fidl::StringView path, fidl::ServerEnd<fio::Node> object,
-            OpenCompleter::Sync& completer) override;
-  void AddInotifyFilter(fidl::StringView path, fuchsia_io2::wire::InotifyWatchMask filters,
-                        uint32_t watch_descriptor, zx::socket socket,
+  void Open(OpenRequestView request, OpenCompleter::Sync& completer) override;
+  void AddInotifyFilter(AddInotifyFilterRequestView request,
                         AddInotifyFilterCompleter::Sync& completer) override {}
-  void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) override {
+  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
-  void Unlink2(fidl::StringView name, fuchsia_io2::wire::UnlinkOptions options,
-               Unlink2Completer::Sync& completer) override {
+  void Unlink2(Unlink2RequestView request, Unlink2Completer::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) override;
-  void Rewind(RewindCompleter::Sync& completer) override;
-  void GetToken(GetTokenCompleter::Sync& completer) override {
+  void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) override;
+  void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) override;
+  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::handle());
   }
-  void Rename(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
-              RenameCompleter::Sync& completer) override {
+  void Rename(RenameRequestView request, RenameCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
-  void Link(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
-            LinkCompleter::Sync& completer) override {
+  void Link(LinkRequestView request, LinkCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
-  void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
-             WatchCompleter::Sync& completer) override;
-  void Mount(fidl::ClientEnd<fio::Directory> remote, MountCompleter::Sync& completer) override {
+  void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override;
+  void Mount(MountRequestView request, MountCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
-  void MountAndCreate(fidl::ClientEnd<fio::Directory> remote, fidl::StringView name, uint32_t flags,
+  void MountAndCreate(MountAndCreateRequestView request,
                       MountAndCreateCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
-  void Unmount(UnmountCompleter::Sync& completer) override {
+  void Unmount(UnmountRequestView request, UnmountCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
-  void UnmountNode(UnmountNodeCompleter::Sync& completer) override {
+  void UnmountNode(UnmountNodeRequestView request, UnmountNodeCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, fidl::ClientEnd<fio::Directory>());
   }
-  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) override;
-  void GetDevicePath(GetDevicePathCompleter::Sync& completer) override {
+  void QueryFilesystem(QueryFilesystemRequestView request,
+                       QueryFilesystemCompleter::Sync& completer) override;
+  void GetDevicePath(GetDevicePathRequestView request,
+                     GetDevicePathCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, fidl::StringView());
   }
 
@@ -812,57 +808,57 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
   return result == fidl::DispatchResult::kNotFound ? ZX_ERR_NOT_SUPPORTED : transaction.GetStatus();
 }
 
-void DevfsFidlServer::Open(uint32_t flags, uint32_t mode, fidl::StringView path,
-                           fidl::ServerEnd<fio::Node> object, OpenCompleter::Sync& completer) {
-  if (path.size() <= fio::wire::kMaxPath) {
+void DevfsFidlServer::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
+  if (request->path.size() <= fio::wire::kMaxPath) {
     fbl::StringBuffer<fio::wire::kMaxPath + 1> terminated_path;
-    terminated_path.Append(path.data(), path.size());
-    devfs_open(owner_->devnode_, current_dispatcher_, object.TakeChannel().release(),
-               terminated_path.data(), flags);
+    terminated_path.Append(request->path.data(), request->path.size());
+    devfs_open(owner_->devnode_, current_dispatcher_, request->object.TakeChannel().release(),
+               terminated_path.data(), request->flags);
   }
 }
 
-void DevfsFidlServer::Clone(uint32_t flags, fidl::ServerEnd<fio::Node> object,
-                            CloneCompleter::Sync& completer) {
-  if (flags & ZX_FS_FLAG_CLONE_SAME_RIGHTS) {
-    flags |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
+void DevfsFidlServer::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
+  if (request->flags & ZX_FS_FLAG_CLONE_SAME_RIGHTS) {
+    request->flags |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
   }
   char path[] = ".";
-  devfs_open(owner_->devnode_, current_dispatcher_, object.TakeChannel().release(), path,
-             flags | ZX_FS_FLAG_NOREMOTE);
+  devfs_open(owner_->devnode_, current_dispatcher_, request->object.TakeChannel().release(), path,
+             request->flags | ZX_FS_FLAG_NOREMOTE);
 }
 
-void DevfsFidlServer::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
+void DevfsFidlServer::QueryFilesystem(QueryFilesystemRequestView request,
+                                      QueryFilesystemCompleter::Sync& completer) {
   fio::wire::FilesystemInfo info;
   strlcpy(reinterpret_cast<char*>(info.name.data()), "devfs", fio::wire::kMaxFsNameBuffer);
   completer.Reply(ZX_OK, fidl::ObjectView<fio::wire::FilesystemInfo>::FromExternal(&info));
 }
 
-void DevfsFidlServer::Watch(uint32_t mask, uint32_t options, zx::channel watcher,
-                            WatchCompleter::Sync& completer) {
+void DevfsFidlServer::Watch(WatchRequestView request, WatchCompleter::Sync& completer) {
   zx_status_t status;
-  if (mask & (~fio::wire::kWatchMaskAll) || options != 0) {
+  if (request->mask & (~fio::wire::kWatchMaskAll) || request->options != 0) {
     status = ZX_ERR_INVALID_ARGS;
   } else {
-    status = devfs_watch(owner_->devnode_, std::move(watcher), mask);
+    status = devfs_watch(owner_->devnode_, std::move(request->watcher), request->mask);
   }
   completer.Reply(status);
 }
 
-void DevfsFidlServer::Rewind(RewindCompleter::Sync& completer) {
+void DevfsFidlServer::Rewind(RewindRequestView request, RewindCompleter::Sync& completer) {
   owner_->readdir_ino_ = 0;
   completer.Reply(ZX_OK);
 }
 
-void DevfsFidlServer::ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) {
-  if (max_bytes > fio::wire::kMaxBuf) {
+void DevfsFidlServer::ReadDirents(ReadDirentsRequestView request,
+                                  ReadDirentsCompleter::Sync& completer) {
+  if (request->max_bytes > fio::wire::kMaxBuf) {
     completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
     return;
   }
 
   uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
-  zx_status_t status = devfs_readdir(owner_->devnode_, &owner_->readdir_ino_, data, max_bytes);
+  zx_status_t status =
+      devfs_readdir(owner_->devnode_, &owner_->readdir_ino_, data, request->max_bytes);
   if (status >= 0) {
     actual = status;
     status = ZX_OK;
@@ -870,7 +866,7 @@ void DevfsFidlServer::ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync
   completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
 }
 
-void DevfsFidlServer::GetAttr(GetAttrCompleter::Sync& completer) {
+void DevfsFidlServer::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
   uint32_t mode;
   if (devnode_is_dir(owner_->devnode_)) {
     mode = V_TYPE_DIR | V_IRUSR | V_IWUSR;
@@ -886,14 +882,14 @@ void DevfsFidlServer::GetAttr(GetAttrCompleter::Sync& completer) {
   completer.Reply(ZX_OK, attributes);
 }
 
-void DevfsFidlServer::Describe(DescribeCompleter::Sync& completer) {
+void DevfsFidlServer::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
   fio::wire::NodeInfo node_info;
   fio::wire::DirectoryObject directory;
   node_info.set_directory(fidl::ObjectView<fio::wire::DirectoryObject>::FromExternal(&directory));
   completer.Reply(std::move(node_info));
 }
 
-void DevfsFidlServer::Close(CloseCompleter::Sync& completer) {
+void DevfsFidlServer::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 

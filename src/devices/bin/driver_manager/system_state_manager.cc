@@ -37,14 +37,14 @@ zx_status_t SystemStateManager::Create(async_dispatcher_t* dispatcher, Coordinat
 }
 
 void SystemStateManager::SetTerminationSystemState(
-    statecontrol_fidl::wire::SystemPowerState state,
+    SetTerminationSystemStateRequestView request,
     SetTerminationSystemStateCompleter::Sync& completer) {
-  if (state == statecontrol_fidl::wire::SystemPowerState::kFullyOn) {
+  if (request->state == statecontrol_fidl::wire::SystemPowerState::kFullyOn) {
     LOGF(INFO, "Invalid termination state");
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
-  LOGF(INFO, "Setting shutdown system state to %d", state);
-  dev_coord_->set_shutdown_system_state(state);
+  LOGF(INFO, "Setting shutdown system state to %d", request->state);
+  dev_coord_->set_shutdown_system_state(request->state);
   completer.ReplySuccess();
 }

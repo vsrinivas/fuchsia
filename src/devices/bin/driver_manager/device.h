@@ -94,7 +94,7 @@ struct DeviceAllDevicesListTag {};
 
 class Device
     : public fbl::RefCounted<Device>,
-      public fidl::WireRawChannelInterface<fuchsia_device_manager::Coordinator>,
+      public fidl::WireServer<fuchsia_device_manager::Coordinator>,
       public AsyncLoopRefCountedRpcHandler<Device>,
       public fbl::ContainableBaseClasses<
           fbl::TaggedDoublyLinkedListable<Device*, internal::DeviceChildListTag>,
@@ -105,30 +105,26 @@ class Device
   using DriverHostListTag = internal::DeviceDriverHostListTag;
   using AllDevicesListTag = internal::DeviceAllDevicesListTag;
 
-  void AddDevice(::zx::channel coordinator, ::zx::channel device_controller,
-                 ::fuchsia_device_manager::wire::DevicePropertyList property_list,
-                 ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path,
-                 ::fidl::StringView args,
-                 fuchsia_device_manager::wire::AddDeviceConfig device_add_config, bool has_init,
-                 ::zx::vmo inspect, ::zx::channel client_remote,
-                 AddDeviceCompleter::Sync& _completer) override;
-  void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync& _completer) override;
-  void AddCompositeDevice(::fidl::StringView name,
-                          fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc,
+  void AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& _completer) override;
+  void ScheduleRemove(ScheduleRemoveRequestView request,
+                      ScheduleRemoveCompleter::Sync& _completer) override;
+  void AddCompositeDevice(AddCompositeDeviceRequestView request,
                           AddCompositeDeviceCompleter::Sync& _completer) override;
-  void PublishMetadata(::fidl::StringView device_path, uint32_t key,
-                       ::fidl::VectorView<uint8_t> data,
+  void PublishMetadata(PublishMetadataRequestView request,
                        PublishMetadataCompleter::Sync& _completer) override;
-  void MakeVisible(MakeVisibleCompleter::Sync& _completer) override;
-  void BindDevice(::fidl::StringView driver_path, BindDeviceCompleter::Sync& _completer) override;
-  void GetTopologicalPath(GetTopologicalPathCompleter::Sync& _completer) override;
-  void LoadFirmware(::fidl::StringView fw_path, LoadFirmwareCompleter::Sync& _completer) override;
-  void GetMetadata(uint32_t key, GetMetadataCompleter::Sync& _completer) override;
-  void GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync& _completer) override;
-  void AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data,
-                   AddMetadataCompleter::Sync& _completer) override;
-  void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& _completer) override;
-  void RunCompatibilityTests(int64_t hook_wait_time,
+  void MakeVisible(MakeVisibleRequestView request, MakeVisibleCompleter::Sync& _completer) override;
+  void BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& _completer) override;
+  void GetTopologicalPath(GetTopologicalPathRequestView request,
+                          GetTopologicalPathCompleter::Sync& _completer) override;
+  void LoadFirmware(LoadFirmwareRequestView request,
+                    LoadFirmwareCompleter::Sync& _completer) override;
+  void GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& _completer) override;
+  void GetMetadataSize(GetMetadataSizeRequestView request,
+                       GetMetadataSizeCompleter::Sync& _completer) override;
+  void AddMetadata(AddMetadataRequestView request, AddMetadataCompleter::Sync& _completer) override;
+  void ScheduleUnbindChildren(ScheduleUnbindChildrenRequestView request,
+                              ScheduleUnbindChildrenCompleter::Sync& _completer) override;
+  void RunCompatibilityTests(RunCompatibilityTestsRequestView request,
                              RunCompatibilityTestsCompleter::Sync& _completer) override;
 
   // This iterator provides access to a list of devices that does not provide

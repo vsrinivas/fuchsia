@@ -252,9 +252,11 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &controller_client_end, &controller_server_end));
     TestTransaction transaction(driver.close);
     {
-      fidl::WireInterface<frunner::ComponentRunner>::StartCompleter::Sync completer(&transaction);
-      static_cast<fidl::WireInterface<frunner::ComponentRunner>*>(driver_runner)
-          ->Start(std::move(start_info), std::move(controller_server_end), completer);
+      fidl::WireServer<frunner::ComponentRunner>::StartCompleter::Sync completer(&transaction);
+      fidl::WireRequest<frunner::ComponentRunner::Start> request(0, start_info,
+                                                                 std::move(controller_server_end));
+      static_cast<fidl::WireServer<frunner::ComponentRunner>*>(driver_runner)
+          ->Start(&request, completer);
     }
     loop().RunUntilIdle();
     return controller_client_end;

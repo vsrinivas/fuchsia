@@ -1596,9 +1596,9 @@ uint32_t Coordinator::GetSuspendFlagsFromSystemPowerState(
   }
 }
 
-void Coordinator::GetBindRules(::fidl::StringView driver_path_view,
+void Coordinator::GetBindRules(GetBindRulesRequestView request,
                                GetBindRulesCompleter::Sync& completer) {
-  std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
+  std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
   const Driver* driver = LibnameToDriver(driver_path);
   if (driver == nullptr) {
     completer.ReplyError(ZX_ERR_NOT_FOUND);
@@ -1657,9 +1657,8 @@ void Coordinator::GetBindRules(::fidl::StringView driver_path_view,
   }
 }
 
-void Coordinator::Register(fuchsia_pkg::wire::PackageUrl driver_url,
-                           RegisterCompleter::Sync& completer) {
-  std::string driver_url_str(driver_url.url.data(), driver_url.url.size());
+void Coordinator::Register(RegisterRequestView request, RegisterCompleter::Sync& completer) {
+  std::string driver_url_str(request->package_url.url.data(), request->package_url.url.size());
   zx_status_t status = LoadEphemeralDriver(&package_resolver_, driver_url_str);
   if (status != ZX_OK) {
     LOGF(ERROR, "Could not load '%s'", driver_url_str.c_str());
@@ -1686,10 +1685,10 @@ zx_status_t Coordinator::LoadEphemeralDriver(internal::PackageResolverInterface*
   return ZX_OK;
 }
 
-void Coordinator::GetDeviceProperties(::fidl::StringView device_path,
+void Coordinator::GetDeviceProperties(GetDevicePropertiesRequestView request,
                                       GetDevicePropertiesCompleter::Sync& completer) {
   fbl::RefPtr<Device> device;
-  zx_status_t status = devfs_walk(root_device_->devnode(), device_path.data(), &device);
+  zx_status_t status = devfs_walk(root_device_->devnode(), request->device_path.data(), &device);
   if (status != ZX_OK) {
     completer.ReplyError(status);
     return;
@@ -1759,7 +1758,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
 
   const auto system_state_manager_register = [this](zx::channel request) {
     auto status = fidl::BindSingleInFlightOnly<
-        fidl::WireInterface<fuchsia_device_manager::SystemStateTransition>>(
+        fidl::WireServer<fuchsia_device_manager::SystemStateTransition>>(
         dispatcher_, std::move(request), std::make_unique<SystemStateManager>(this));
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
@@ -1780,7 +1779,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
 
   const auto bind_debugger = [this](zx::channel request) {
     auto status =
-        fidl::BindSingleInFlightOnly<fidl::WireInterface<fuchsia_device_manager::BindDebugger>>(
+        fidl::BindSingleInFlightOnly<fidl::WireServer<fuchsia_device_manager::BindDebugger>>(
             dispatcher_, std::move(request), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
@@ -1797,8 +1796,8 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
 
   const auto driver_host_dev = [this](zx::channel request) {
     auto status = fidl::BindSingleInFlightOnly<
-        fidl::WireInterface<fuchsia_device_manager::DriverHostDevelopment>>(
-        dispatcher_, std::move(request), this);
+        fidl::WireServer<fuchsia_device_manager::DriverHostDevelopment>>(dispatcher_,
+                                                                         std::move(request), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
            fidl::DiscoverableProtocolName<fuchsia_device_manager::DriverHostDevelopment>,
@@ -1816,7 +1815,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   if (config_.enable_ephemeral) {
     const auto driver_registrar = [this](zx::channel request) {
       driver_registrar_binding_ =
-          fidl::BindServer<fidl::WireInterface<fuchsia_driver_registrar::DriverRegistrar>>(
+          fidl::BindServer<fidl::WireServer<fuchsia_driver_registrar::DriverRegistrar>>(
               dispatcher_, std::move(request), this);
       return ZX_OK;
     };
@@ -1876,9 +1875,9 @@ std::string Coordinator::GetFragmentDriverPath() const {
   return config_.path_prefix + "driver/fragment.so";
 }
 
-void Coordinator::RestartDriverHosts(fidl::StringView driver_path_view,
+void Coordinator::RestartDriverHosts(RestartDriverHostsRequestView request,
                                      RestartDriverHostsCompleter::Sync& completer) {
-  std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
+  std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
 
   // Find devices containing the driver.
   for (auto& dev : devices_) {

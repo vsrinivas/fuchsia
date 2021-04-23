@@ -14,7 +14,7 @@
 namespace devmgr {
 using SuspendCallback = fit::callback<void(zx_status_t)>;
 class ComponentLifecycleServer final
-    : public fidl::WireInterface<fuchsia_process_lifecycle::Lifecycle> {
+    : public fidl::WireServer<fuchsia_process_lifecycle::Lifecycle> {
  public:
   explicit ComponentLifecycleServer(Coordinator* dev_coord, SuspendCallback callback)
       : dev_coord_(dev_coord), suspend_callback_(std::move(callback)) {}
@@ -22,7 +22,7 @@ class ComponentLifecycleServer final
   static zx_status_t Create(async_dispatcher_t* dispatcher, Coordinator* dev_coord,
                             zx::channel chan, SuspendCallback callback);
 
-  void Stop(StopCompleter::Sync& completer) override;
+  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
 
  private:
   Coordinator* dev_coord_;

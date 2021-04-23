@@ -152,9 +152,9 @@ struct CoordinatorConfig {
   std::vector<fbl::String> eager_fallback_drivers;
 };
 
-class Coordinator : public fidl::WireInterface<device_manager_fidl::BindDebugger>,
-                    public fidl::WireInterface<device_manager_fidl::DriverHostDevelopment>,
-                    public fidl::WireInterface<fuchsia_driver_registrar::DriverRegistrar> {
+class Coordinator : public fidl::WireServer<device_manager_fidl::BindDebugger>,
+                    public fidl::WireServer<device_manager_fidl::DriverHostDevelopment>,
+                    public fidl::WireServer<fuchsia_driver_registrar::DriverRegistrar> {
  public:
   Coordinator(const Coordinator&) = delete;
   Coordinator& operator=(const Coordinator&) = delete;
@@ -242,7 +242,7 @@ class Coordinator : public fidl::WireInterface<device_manager_fidl::BindDebugger
 
   // Implementation of fuchsia::device::manager::DriverHostDevelopment FIDL protocol.
   // Restart all Driver Hosts containing a driver specified by |driver_path|.
-  void RestartDriverHosts(fidl::StringView driver_path,
+  void RestartDriverHosts(RestartDriverHostsRequestView request,
                           RestartDriverHostsCompleter::Sync& completer) override;
 
   void DmMexec(zx::vmo kernel, zx::vmo bootdata);
@@ -382,14 +382,13 @@ class Coordinator : public fidl::WireInterface<device_manager_fidl::BindDebugger
                                   bool autobind);
 
   // Bind debugger interface
-  void GetBindRules(::fidl::StringView driver_path,
+  void GetBindRules(GetBindRulesRequestView request,
                     GetBindRulesCompleter::Sync& completer) override;
-  void GetDeviceProperties(::fidl::StringView name,
+  void GetDeviceProperties(GetDevicePropertiesRequestView request,
                            GetDevicePropertiesCompleter::Sync& completer) override;
 
   // Driver registrar interface
-  void Register(fuchsia_pkg::wire::PackageUrl driver_url,
-                RegisterCompleter::Sync& completer) override;
+  void Register(RegisterRequestView request, RegisterCompleter::Sync& completer) override;
 
   void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                   const zx_packet_signal_t* signal);

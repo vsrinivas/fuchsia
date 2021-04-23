@@ -115,11 +115,13 @@ zx::status<> DriverComponent::WatchDriver(async_dispatcher_t* dispatcher) {
   return zx::make_status(status);
 }
 
-void DriverComponent::Stop(DriverComponent::StopCompleter::Sync& completer) {
+void DriverComponent::Stop(StopRequestView request,
+                           DriverComponent::StopCompleter::Sync& completer) {
   UnbindAndReset(node_ref_);
 }
 
-void DriverComponent::Kill(DriverComponent::KillCompleter::Sync& completer) {}
+void DriverComponent::Kill(KillRequestView request,
+                           DriverComponent::KillCompleter::Sync& completer) {}
 
 void DriverComponent::OnPeerClosed(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                    zx_status_t status, const zx_packet_signal_t* signal) {
@@ -264,7 +266,7 @@ void Node::Remove() {
   }
 }
 
-void Node::Remove(RemoveCompleter::Sync& completer) {
+void Node::Remove(RemoveRequestView request, RemoveCompleter::Sync& completer) {
   // When NodeController::Remove() is called, we unbind the Node. This causes
   // the Node server to then call Node::Remove().
   //
@@ -274,14 +276,13 @@ void Node::Remove(RemoveCompleter::Sync& completer) {
   UnbindAndReset(node_ref_);
 }
 
-void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeController> controller,
-                    fidl::ServerEnd<fdf::Node> node, AddChildCompleter::Sync& completer) {
-  if (!args.has_name()) {
+void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) {
+  if (!request->args.has_name()) {
     LOGF(ERROR, "Failed to add Node, a name must be provided");
     completer.ReplyError(fdf::wire::NodeError::kNameMissing);
     return;
   }
-  auto name = args.name().get();
+  auto name = request->args.name().get();
   if (name.find('.') != std::string_view::npos) {
     LOGF(ERROR, "Failed to add Node '%.*s', name must not contain '.'", name.size(), name.data());
     completer.ReplyError(fdf::wire::NodeError::kNameInvalid);
@@ -297,10 +298,10 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
   }
   auto child = std::make_unique<Node>(this, driver_binder_, dispatcher_, name);
 
-  if (args.has_offers()) {
-    child->offers_.reserve(args.offers().count());
+  if (request->args.has_offers()) {
+    child->offers_.reserve(request->args.offers().count());
     std::unordered_set<std::string_view> names;
-    for (auto& offer : args.offers()) {
+    for (auto& offer : request->args.offers()) {
       auto inserted = names.emplace(offer.data(), offer.size()).second;
       if (!inserted) {
         LOGF(ERROR, "Failed to add Node '%.*s', offer '%.*s' already exists", name.size(),
@@ -312,10 +313,10 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
     }
   }
 
-  if (args.has_symbols()) {
-    child->symbols_.reserve(args.symbols().count());
+  if (request->args.has_symbols()) {
+    child->symbols_.reserve(request->args.symbols().count());
     std::unordered_set<std::string_view> names;
-    for (auto& symbol : args.symbols()) {
+    for (auto& symbol : request->args.symbols()) {
       if (!symbol.has_name()) {
         LOGF(ERROR, "Failed to add Node '%.*s', a symbol is missing a name", name.size(),
              name.data());
@@ -342,16 +343,14 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
     }
   }
 
-  auto bind_controller = fidl::BindServer<fidl::WireInterface<fdf::NodeController>>(
-      dispatcher_, std::move(controller), child.get());
+  auto bind_controller = fidl::BindServer<fidl::WireServer<fdf::NodeController>>(
+      dispatcher_, std::move(request->controller), child.get());
   child->set_controller_ref(std::move(bind_controller));
 
-  if (node.is_valid()) {
-    auto bind_node = fidl::BindServer<fidl::WireInterface<fdf::Node>>(
-        dispatcher_, std::move(node), child.get(),
-        [](fidl::WireInterface<fdf::Node>* node, auto, auto) {
-          static_cast<Node*>(node)->Remove();
-        });
+  if (request->node.is_valid()) {
+    auto bind_node = fidl::BindServer<fidl::WireServer<fdf::Node>>(
+        dispatcher_, std::move(request->node), child.get(),
+        [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
     child->set_node_ref(std::move(bind_node));
     children_.push_back(std::move(child));
     completer.ReplySuccess();
@@ -366,7 +365,7 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
       children_.push_back(std::move(child));
       completer.ReplySuccess();
     };
-    driver_binder_->Bind(child_ptr, std::move(args), std::move(callback));
+    driver_binder_->Bind(child_ptr, std::move(request->args), std::move(callback));
   }
 }
 
@@ -417,10 +416,8 @@ zx::status<> DriverRunner::StartDriver(Node* node, std::string_view url) {
   return zx::ok();
 }
 
-void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
-                         fidl::ServerEnd<frunner::ComponentController> controller,
-                         StartCompleter::Sync& completer) {
-  std::string url(start_info.resolved_url().get());
+void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& completer) {
+  std::string url(request->start_info.resolved_url().get());
   auto it = driver_args_.find(url);
   if (it == driver_args_.end()) {
     LOGF(ERROR, "Failed to start driver '%.*s', unknown request for driver", url.size(),
@@ -434,7 +431,7 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
 
   // Launch a driver host, or use an existing driver host.
   DriverHostComponent* driver_host;
-  if (start_args::ProgramValue(start_info.program(), "colocate").value_or("") == "true") {
+  if (start_args::ProgramValue(request->start_info.program(), "colocate").value_or("") == "true") {
     if (driver_args.node == &root_node_) {
       LOGF(ERROR, "Failed to start driver '%.*s', root driver cannot colocate", url.size(),
            url.data());
@@ -469,10 +466,11 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
     completer.Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto start = driver_host->Start(std::move(endpoints->client), driver_args.node->offers(),
-                                  std::move(symbols), std::move(start_info.resolved_url()),
-                                  std::move(start_info.program()), std::move(start_info.ns()),
-                                  std::move(start_info.outgoing_dir()), std::move(*exposed_dir));
+  auto start = driver_host->Start(
+      std::move(endpoints->client), driver_args.node->offers(), std::move(symbols),
+      std::move(request->start_info.resolved_url()), std::move(request->start_info.program()),
+      std::move(request->start_info.ns()), std::move(request->start_info.outgoing_dir()),
+      std::move(*exposed_dir));
   if (start.is_error()) {
     completer.Close(start.error_value());
     return;
@@ -482,7 +480,7 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
   auto driver = std::make_unique<DriverComponent>(std::move(driver_args.exposed_dir),
                                                   std::move(start.value()));
   auto bind_driver = fidl::BindServer<DriverComponent>(
-      dispatcher_, std::move(controller), driver.get(),
+      dispatcher_, std::move(request->controller), driver.get(),
       [this, name = driver_args.node->TopoName(), collection = DriverCollection(url)](
           DriverComponent* driver, auto, auto) {
         drivers_.erase(*driver);
@@ -511,9 +509,9 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
   }
 
   // Bind the Node associated with the driver.
-  auto bind_node = fidl::BindServer<fidl::WireInterface<fdf::Node>>(
+  auto bind_node = fidl::BindServer<fidl::WireServer<fdf::Node>>(
       dispatcher_, std::move(endpoints->server), driver_args.node,
-      [](fidl::WireInterface<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
+      [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
   driver_args.node->set_node_ref(bind_node);
   driver->set_node_ref(std::move(bind_node));
   drivers_.push_back(std::move(driver));

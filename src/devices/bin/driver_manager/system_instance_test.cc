@@ -46,37 +46,35 @@ zx_status_t get_root_job(zx::job* root_job) {
   return ZX_OK;
 }
 
-class FakeBootArgsServer final : public fidl::WireInterface<fboot::Arguments> {
+class FakeBootArgsServer final : public fidl::WireServer<fboot::Arguments> {
  public:
   FakeBootArgsServer() : values_() {}
 
   void SetBool(std::string key, bool value) { values_.insert_or_assign(key, value); }
 
-  // fidl::WireInterface<fuchsia_boot::Arguments> methods:
-  void GetString(::fidl::StringView key, GetStringCompleter::Sync& completer) {
+  // fidl::WireServer<fuchsia_boot::Arguments> methods:
+  void GetString(GetStringRequestView request, GetStringCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetStrings(::fidl::VectorView<::fidl::StringView> keys,
-                  GetStringsCompleter::Sync& completer) {
+  void GetStrings(GetStringsRequestView request, GetStringsCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetBool(::fidl::StringView key, bool defaultval, GetBoolCompleter::Sync& completer) {
-    bool result = defaultval;
-    auto value = values_.find(std::string(key.data()));
+  void GetBool(GetBoolRequestView request, GetBoolCompleter::Sync& completer) override {
+    bool result = request->defaultval;
+    auto value = values_.find(std::string(request->key.data()));
     if (value != values_.end()) {
       result = value->second;
     }
     completer.Reply(result);
   }
 
-  void GetBools(::fidl::VectorView<fboot::wire::BoolPair> keys,
-                GetBoolsCompleter::Sync& completer) {
+  void GetBools(GetBoolsRequestView request, GetBoolsCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Collect(::fidl::StringView prefix, CollectCompleter::Sync& completer) {
+  void Collect(CollectRequestView request, CollectCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

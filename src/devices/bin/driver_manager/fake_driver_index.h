@@ -9,7 +9,7 @@
 #include <lib/fit/function.h>
 #include <lib/zx/status.h>
 
-class FakeDriverIndex final : public fidl::WireInterface<fuchsia_driver_framework::DriverIndex> {
+class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::DriverIndex> {
  public:
   struct MatchResult {
     std::string url;
@@ -31,9 +31,8 @@ class FakeDriverIndex final : public fidl::WireInterface<fuchsia_driver_framewor
     return zx::ok(std::move(endpoints->client));
   }
 
-  void MatchDriver(fuchsia_driver_framework::wire::NodeAddArgs args,
-                   MatchDriverCompleter::Sync& completer) override {
-    auto match = match_callback_(std::move(args));
+  void MatchDriver(MatchDriverRequestView request, MatchDriverCompleter::Sync& completer) override {
+    auto match = match_callback_(request->args);
     if (match.status_value() != ZX_OK) {
       completer.ReplyError(match.status_value());
       return;
