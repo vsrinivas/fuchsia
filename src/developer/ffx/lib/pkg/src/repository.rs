@@ -10,9 +10,11 @@ use {
 
 mod file_system;
 mod manager;
+mod server;
 
 pub use file_system::FileSystemRepository;
 pub use manager::RepositoryManager;
+pub use server::{RepositoryServer, RepositoryServerBuilder};
 
 #[derive(Debug)]
 pub enum Error {
