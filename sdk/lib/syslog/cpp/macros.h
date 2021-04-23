@@ -44,6 +44,8 @@ WEAK bool FlushRecord(LogBuffer* buffer);
 
 WEAK bool HasStructuredBackend();
 
+#undef WEAK
+
 template <typename... Args>
 constexpr size_t ArgsSize(Args... args) {
   return sizeof...(args);
