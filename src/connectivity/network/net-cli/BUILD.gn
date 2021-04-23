@@ -4,13 +4,12 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 
-rustc_binary("bin") {
-  name = "net"
+rustc_library("lib") {
+  name = "net_cli"
   with_unit_tests = true
   edition = "2018"
-
-  source_root = "src/lib.rs"
 
   deps = [
     "//garnet/lib/rust/io_util",
@@ -56,6 +55,28 @@ rustc_binary("bin") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
+rustc_binary("bin") {
+  name = "net"
+  edition = "2018"
+
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
+    "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor-rustc",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "src/main.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
 fuchsia_shell_package("net-cli") {
   deps = [
     ":bin",
@@ -65,7 +86,7 @@ fuchsia_shell_package("net-cli") {
 }
 
 fuchsia_unittest_package("net-cli-tests") {
-  deps = [ ":bin_test" ]
+  deps = [ ":lib_test" ]
 }
 
 group("tests") {

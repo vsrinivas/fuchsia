@@ -7,20 +7,16 @@ use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_inspect_deprecated as inspect;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_ext as net_ext;
-use fidl_fuchsia_net_filter::{FilterMarker, FilterProxy};
+use fidl_fuchsia_net_filter::FilterProxy;
 use fidl_fuchsia_net_neighbor as neighbor;
 use fidl_fuchsia_net_neighbor_ext as neighbor_ext;
-use fidl_fuchsia_net_stack::{
-    self as netstack, InterfaceInfo, LogMarker, LogProxy, StackMarker, StackProxy,
-};
+use fidl_fuchsia_net_stack::{self as netstack, InterfaceInfo, LogProxy, StackProxy};
 use fidl_fuchsia_net_stack_ext::{self as pretty, exec_fidl as stack_fidl, FidlReturn};
-use fidl_fuchsia_netstack::{NetstackMarker, NetstackProxy};
-use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fidl_fuchsia_netstack::NetstackProxy;
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use glob::glob;
-use log::{info, Level, Log, Metadata, Record, SetLoggerError};
+use log::info;
 use netfilter::FidlReturn as FilterFidlReturn;
 use prettytable::{cell, format, row, Row, Table};
 use std::fs::File;
@@ -28,6 +24,7 @@ use std::os::unix::io::AsRawFd;
 use std::str::FromStr;
 
 mod opts;
+pub use opts::Command;
 
 use crate::opts::*;
 
@@ -37,57 +34,11 @@ macro_rules! filter_fidl {
     };
 }
 
-/// Logger which prints levels at or below info to stdout and levels at or
-/// above warn to stderr.
-struct Logger;
-
-const LOG_LEVEL: Level = Level::Info;
-
-impl Log for Logger {
-    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
-        metadata.level() <= LOG_LEVEL
-    }
-
-    fn log(&self, record: &Record<'_>) {
-        if self.enabled(record.metadata()) {
-            match record.metadata().level() {
-                Level::Trace | Level::Debug | Level::Info => println!("{}", record.args()),
-                Level::Warn | Level::Error => eprintln!("{}", record.args()),
-            }
-        }
-    }
-
-    fn flush(&self) {}
-}
-
-static LOGGER: Logger = Logger;
-
-fn logger_init() -> Result<(), SetLoggerError> {
-    log::set_logger(&LOGGER).map(|()| log::set_max_level(LOG_LEVEL.to_level_filter()))
-}
-
 fn add_row(t: &mut Table, row: Row) {
     let _: &mut Row = t.add_row(row);
 }
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
-    let () = logger_init()?;
-    let command: Command = argh::from_env();
-    let stack = connect_to_service::<StackMarker>().context("failed to connect to netstack")?;
-    let netstack =
-        connect_to_service::<NetstackMarker>().context("failed to connect to netstack")?;
-    let filter = connect_to_service::<FilterMarker>().context("failed to connect to netfilter")?;
-    let log = connect_to_service::<LogMarker>().context("failed to connect to netstack log")?;
-    let controller = connect_to_service::<neighbor::ControllerMarker>()
-        .context("failed to connect to neighbor controller")?;
-    let view = connect_to_service::<neighbor::ViewMarker>()
-        .context("failed to connect to neighbor view")?;
-
-    do_root(command, stack, netstack, filter, log, controller, view).await
-}
-
-async fn do_root(
+pub async fn do_root(
     Command { cmd }: Command,
     stack: StackProxy,
     netstack: NetstackProxy,
