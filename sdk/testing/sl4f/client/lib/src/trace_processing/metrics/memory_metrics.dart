@@ -5,7 +5,6 @@
 import 'package:logging/logging.dart';
 
 import '../metrics_results.dart';
-import '../time_delta.dart';
 import '../trace_model.dart';
 import 'common.dart';
 
@@ -26,18 +25,14 @@ class _Results {
 }
 
 _Results _memoryMetrics(Model model, bool excludeBandwidth) {
-  final duration = getTotalTraceDuration(model);
-  if (duration < TimeDelta.fromMilliseconds(1100)) {
-    _log.info(
-        'Trace duration (${duration.toMilliseconds()} milliseconds) is too short to provide Memory information');
-    return null;
-  }
-
   final memoryMonitorEvents =
       filterEvents(getAllEvents(model), category: 'memory_monitor');
   if (memoryMonitorEvents.isEmpty) {
+    final duration = getTotalTraceDuration(model);
     _log.warning(
-        'Missing category "memory_monitor" events in trace. No memory data is extracted.');
+        'Could not find any `memory_monitor` events. Perhaps the trace '
+        'duration (${duration.toMilliseconds()} milliseconds) is too short or '
+        'the category "memory_monitor" is missing.');
     return null;
   }
   final totalMemory =
@@ -51,6 +46,13 @@ _Results _memoryMetrics(Model model, bool excludeBandwidth) {
   }
   final allocatedMemoryEvents =
       filterEventsTyped<CounterEvent>(memoryMonitorEvents, name: 'allocated');
+  if (allocatedMemoryEvents.isEmpty) {
+    final duration = getTotalTraceDuration(model);
+    _log.warning(
+        'Could not find any allocated memory events. Perhaps the trace '
+        'duration (${duration.toMilliseconds()} milliseconds) is too short.');
+    return null;
+  }
   final vmoMemoryValues =
       getArgValuesFromEvents<num>(allocatedMemoryEvents, 'vmo')
           .map((v) => v.toDouble());
@@ -78,6 +80,13 @@ _Results _memoryMetrics(Model model, bool excludeBandwidth) {
   final bandwidthUsageEvents = filterEventsTyped<CounterEvent>(
       memoryMonitorEvents,
       name: 'bandwidth_usage');
+  if (bandwidthUsageEvents.isEmpty) {
+    final duration = getTotalTraceDuration(model);
+    _log.warning(
+        'Could not find any allocated memory events. Perhaps the trace '
+        'duration (${duration.toMilliseconds()} milliseconds) is too short.');
+    return null;
+  }
   final cpuBandwidthValues =
       getArgValuesFromEvents<num>(bandwidthUsageEvents, 'cpu')
           .map((v) => v.toDouble());

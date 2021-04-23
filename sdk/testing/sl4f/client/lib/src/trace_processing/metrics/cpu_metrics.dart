@@ -5,7 +5,6 @@
 import 'package:logging/logging.dart';
 
 import '../metrics_results.dart';
-import '../time_delta.dart';
 import '../trace_model.dart';
 import 'common.dart';
 
@@ -21,12 +20,6 @@ const _aggregateMetricsOnly = 'aggregateMetricsOnly';
 
 List<TestCaseResults> cpuMetricsProcessor(
     Model model, Map<String, dynamic> extraArgs) {
-  final duration = getTotalTraceDuration(model);
-  if (duration < TimeDelta.fromMilliseconds(1100)) {
-    _log.info(
-        'Trace duration (${duration.toMilliseconds()} milliseconds) is too short to provide CPU information');
-    return [];
-  }
   List<double> cpuPercentages = getArgValuesFromEvents<num>(
           filterEventsTyped<CounterEvent>(getAllEvents(model),
               category: 'system_metrics_logger', name: 'cpu_usage'),
@@ -42,6 +35,13 @@ List<TestCaseResults> cpuMetricsProcessor(
             'average_cpu_percentage')
         .map((x) => x.toDouble())
         .toList();
+  }
+  if (cpuPercentages.isEmpty) {
+    final duration = getTotalTraceDuration(model);
+    _log.info('No cpu usage measurements are present. Perhaps the trace '
+        'duration (${duration.toMilliseconds()} milliseconds) is too '
+        'short to provide cpu usage information');
+    return [];
   }
   _log.info('Average CPU Load: ${computeMean(cpuPercentages)}');
   final List<TestCaseResults> testCaseResults = [];
