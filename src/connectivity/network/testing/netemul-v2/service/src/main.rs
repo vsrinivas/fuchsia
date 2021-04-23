@@ -15,22 +15,27 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_component_test::{
         builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-        Moniker,
+        mock::{Mock, MockHandles},
+        Moniker, RealmInstance,
     },
     futures::{channel::mpsc, FutureExt as _, SinkExt as _, StreamExt as _, TryStreamExt as _},
     log::{debug, error, info},
     pin_utils::pin_mut,
     std::collections::HashMap,
-    std::sync::atomic::{AtomicU64, Ordering},
+    std::sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
 };
 
 type Result<T = (), E = anyhow::Error> = std::result::Result<T, E>;
 
 const REALM_COLLECTION_NAME: &str = "netemul";
+const NETEMUL_SERVICES_COMPONENT_NAME: &str = "netemul-services";
 
 struct ManagedRealm {
     server_end: ServerEnd<ManagedRealmMarker>,
-    realm: fuchsia_component_test::RealmInstance,
+    realm: RealmInstance,
 }
 
 impl ManagedRealm {
@@ -38,11 +43,24 @@ impl ManagedRealm {
         server_end: ServerEnd<ManagedRealmMarker>,
         options: RealmOptions,
         prefix: &str,
+        network_realm: Arc<RealmInstance>,
     ) -> Result<ManagedRealm> {
         let RealmOptions { name, children, .. } = options;
         let mut exposed_services = HashMap::new();
         let mut components_using_all = Vec::new();
         let mut builder = RealmBuilder::new().await.context("error creating new realm builder")?;
+
+        let _: &mut RealmBuilder = builder
+            .add_component(
+                NETEMUL_SERVICES_COMPONENT_NAME,
+                ComponentSource::Mock(Mock::new(move |mock_handles: MockHandles| {
+                    Box::pin(run_netemul_services(mock_handles, network_realm.clone()))
+                })),
+            )
+            .await
+            .with_context(|| {
+                format!("failed to add {} component", NETEMUL_SERVICES_COMPONENT_NAME)
+            })?;
         for ChildDef { url, name, exposes, uses, .. } in children.unwrap_or_default() {
             let url = url.ok_or(anyhow!("no url provided"))?;
             let name = name.ok_or(anyhow!("no name provided"))?;
@@ -92,46 +110,25 @@ impl ManagedRealm {
                         // Route all built-in netemul services to the child.
                         // TODO(https://fxbug.dev/72992): route netemul-provided `/dev`.
                         // TODO(https://fxbug.dev/72403): route netemul-provided `SyncManager`.
-                        // TODO(https://fxbug.dev/72402): route netemul-provided `NetworkContext`.
-                        let _: &mut RealmBuilder = builder
-                            .add_route(CapabilityRoute {
-                                capability: Capability::protocol(
-                                    flogger::LogSinkMarker::SERVICE_NAME,
-                                ),
-                                source: RouteEndpoint::AboveRoot,
-                                targets: vec![RouteEndpoint::component(&name)],
-                            })
-                            .with_context(|| {
-                                format!(
-                                    "error adding route exposing '{}' to component '{}'",
-                                    flogger::LogSinkMarker::SERVICE_NAME,
-                                    name
-                                )
-                            })?;
+                        let () = route_log_sink_to_component(&mut builder, &name)?;
+                        let () = route_network_context_to_component(&mut builder, &name)?;
                         let () = components_using_all.push(name);
                     }
                     ChildUses::Capabilities(caps) => {
                         for cap in caps {
                             match cap {
                                 fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
-                                    let _: &mut RealmBuilder = builder
-                                        .add_route(CapabilityRoute {
-                                            capability: Capability::protocol(
-                                                flogger::LogSinkMarker::SERVICE_NAME,
-                                            ),
-                                            source: RouteEndpoint::AboveRoot,
-                                            targets: vec![RouteEndpoint::component(&name)],
-                                        })
-                                        .with_context(|| {
-                                            format!(
-                                                "error adding route exposing '{}' to component \
-                                                '{}'",
-                                                flogger::LogSinkMarker::SERVICE_NAME,
-                                                name,
-                                            )
-                                        })?;
+                                    let () = route_log_sink_to_component(&mut builder, &name)?;
                                 }
-                                _ => todo!(),
+                                fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}) => {
+                                    let () =
+                                        route_network_context_to_component(&mut builder, &name)?;
+                                }
+                                fnetemul::Capability::NetemulSyncManager(fnetemul::Empty {}) => {
+                                    todo!()
+                                }
+                                fnetemul::Capability::NetemulDevfs(fnetemul::Empty {}) => todo!(),
+                                fnetemul::Capability::ChildDep(fnetemul::ChildDep {}) => todo!(),
                             }
                         }
                     }
@@ -152,7 +149,7 @@ impl ManagedRealm {
                     })
                     .with_context(|| {
                         format!(
-                            "error adding route exposing '{}' from component '{}' to component \
+                            "error adding route offering '{}' from component '{}' to component \
                             '{}'",
                             service, source, component,
                         )
@@ -233,6 +230,64 @@ impl ManagedRealm {
     }
 }
 
+fn route_log_sink_to_component(builder: &mut RealmBuilder, component: &str) -> Result {
+    let _: &mut RealmBuilder = builder
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol(flogger::LogSinkMarker::SERVICE_NAME),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component(component)],
+        })
+        .with_context(|| {
+            format!(
+                "error adding route offering '{}' to component '{}'",
+                flogger::LogSinkMarker::SERVICE_NAME,
+                component
+            )
+        })?;
+    Ok(())
+}
+
+fn route_network_context_to_component(builder: &mut RealmBuilder, component: &str) -> Result {
+    let _: &mut RealmBuilder = builder
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol(fnetemul_network::NetworkContextMarker::SERVICE_NAME),
+            source: RouteEndpoint::component(NETEMUL_SERVICES_COMPONENT_NAME),
+            targets: vec![RouteEndpoint::component(component)],
+        })
+        .with_context(|| {
+            format!(
+                "error adding route offering '{}' to component '{}'",
+                fnetemul_network::NetworkContextMarker::SERVICE_NAME,
+                component
+            )
+        })?;
+    Ok(())
+}
+
+async fn run_netemul_services(
+    mock_handles: MockHandles,
+    network_realm: impl std::ops::Deref<Target = RealmInstance> + 'static,
+) -> Result {
+    let mut fs = ServiceFs::new();
+    let _: &mut ServiceFsDir<'_, _> = fs
+        .dir("svc")
+        .add_service_at(fnetemul_network::NetworkContextMarker::SERVICE_NAME, |channel| {
+            Some(ServerEnd::<fnetemul_network::NetworkContextMarker>::new(channel))
+        });
+    let _: &mut ServiceFs<_> = fs.serve_connection(mock_handles.outgoing_dir.into_channel())?;
+    let () = fs
+        .for_each_concurrent(None, |server_end| {
+            futures::future::ready(
+                network_realm
+                    .root
+                    .connect_request_to_protocol_at_exposed_dir(server_end)
+                    .unwrap_or_else(|e| error!("failed to open protocol in directory: {:?}", e)),
+            )
+        })
+        .await;
+    Ok(())
+}
+
 const NETWORK_CONTEXT_COMPONENT_NAME: &str = "network-context";
 const ISOLATED_DEVMGR_COMPONENT_NAME: &str = "isolated-devmgr";
 const NETWORK_TUN_COMPONENT_NAME: &str = "network-tun";
@@ -254,9 +309,7 @@ async fn get_this_package_name() -> Result<String> {
     Ok(name)
 }
 
-async fn setup_network_realm(
-    sandbox_name: impl std::fmt::Display,
-) -> Result<fuchsia_component_test::RealmInstance> {
+async fn setup_network_realm(sandbox_name: impl std::fmt::Display) -> Result<RealmInstance> {
     let pkg = get_this_package_name().await?;
     let package_url = |component_name: &str| {
         format!("fuchsia-pkg://fuchsia.com/{}#meta/{}.cm", pkg, component_name)
@@ -305,7 +358,7 @@ async fn setup_network_realm(
         })
         .with_context(|| {
             format!(
-                "error adding route exposing directory 'dev' from component '{}' to '{}'",
+                "error adding route offering directory 'dev' from component '{}' to '{}'",
                 ISOLATED_DEVMGR_COMPONENT_NAME, NETWORK_CONTEXT_COMPONENT_NAME
             )
         })?
@@ -316,7 +369,7 @@ async fn setup_network_realm(
         })
         .with_context(|| {
             format!(
-                "error adding route exposing capability '{}' from component '{}'",
+                "error adding route offering capability '{}' from component '{}'",
                 fnet_tun::ControlMarker::SERVICE_NAME,
                 NETWORK_CONTEXT_COMPONENT_NAME
             )
@@ -328,7 +381,7 @@ async fn setup_network_realm(
         })
         .with_context(|| {
             format!(
-                "error adding route exposing capability '{}' to components",
+                "error adding route offering capability '{}' to components",
                 fprocess::LauncherMarker::SERVICE_NAME,
             )
         })?
@@ -343,7 +396,7 @@ async fn setup_network_realm(
         })
         .with_context(|| {
             format!(
-                "error adding route exposing capability '{}' to components",
+                "error adding route offering capability '{}' to components",
                 flogger::LogSinkMarker::SERVICE_NAME,
             )
         })?;
@@ -363,8 +416,9 @@ async fn handle_sandbox(
     let realm_index = AtomicU64::new(0);
     // TODO(https://fxbug.dev/74534): define only one instance of `network-context` and associated
     // components, and do routing statically, once we no longer need `isolated-devmgr`.
-    let network_realm =
-        setup_network_realm(&sandbox_name).await.context("failed to setup network realm")?;
+    let network_realm = Arc::new(
+        setup_network_realm(&sandbox_name).await.context("failed to setup network realm")?,
+    );
     let sandbox_fut = stream.try_for_each_concurrent(None, |request| {
         let mut tx = tx.clone();
         let sandbox_name = &sandbox_name;
@@ -376,7 +430,7 @@ async fn handle_sandbox(
                 SandboxRequest::CreateRealm { realm, options, control_handle: _ } => {
                     let index = realm_index.fetch_add(1, Ordering::SeqCst);
                     let prefix = format!("{}{}", sandbox_name, index);
-                    match ManagedRealm::create(realm, options, &prefix)
+                    match ManagedRealm::create(realm, options, &prefix, network_realm.clone())
                         .await
                         .context("failed to create ManagedRealm")
                     {
@@ -803,6 +857,10 @@ mod tests {
         // These services are aliased instances of the `fuchsia.netemul.test.Counter` service
         // (configured in the component manifest), so there is no actual `CounterAMarker` type, for
         // example, from which we could extract its `SERVICE_NAME`.
+        //
+        // TODO(https://fxbug.dev/72043): once we allow duplicate service names, verify that we can
+        // also disambiguate services by specifying the component moniker of the component exposing
+        // the service, in addition to the A/B aliasing used here.
         const COUNTER_A_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterA";
         const COUNTER_B_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterB";
 
@@ -866,6 +924,40 @@ mod tests {
                     .await
                     .expect("fuchsia.netemul.test/CounterB.increment call failed"),
                 1,
+            );
+        })
+        .await
+    }
+
+    #[fuchsia::test]
+    async fn child_uses_all_netemul_services() {
+        with_sandbox("child_uses_all_netemul_services", |sandbox| async move {
+            let realm = TestRealm::new(
+                &sandbox,
+                fnetemul::RealmOptions {
+                    children: Some(vec![fnetemul::ChildDef {
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
+                        uses: Some(fnetemul::ChildUses::All(fnetemul::Empty {})),
+                        ..fnetemul::ChildDef::EMPTY
+                    }]),
+                    ..fnetemul::RealmOptions::EMPTY
+                },
+            );
+            let counter = realm.connect_to_service::<CounterMarker>();
+            let (network_context, server_end) =
+                fidl::endpoints::create_proxy::<fnetemul_network::NetworkContextMarker>()
+                    .expect("failed to create network context proxy");
+            let () = counter
+                .connect_to_service(
+                    fnetemul_network::NetworkContextMarker::SERVICE_NAME,
+                    server_end.into_channel(),
+                )
+                .expect("failed to connect to network context through counter");
+            matches::assert_matches!(
+                network_context.setup(&mut Vec::new().iter_mut()).await,
+                Ok((zx::sys::ZX_OK, Some(_setup_handle)))
             );
         })
         .await
@@ -964,5 +1056,48 @@ mod tests {
             test.map(|()| info!("test complete")),
         )
         .await;
+    }
+
+    #[fuchsia::test]
+    async fn network_context_used_by_child() {
+        with_sandbox("network_context_used_by_child", |sandbox| async move {
+            let realm = TestRealm::new(
+                &sandbox,
+                fnetemul::RealmOptions {
+                    children: Some(vec![
+                        fnetemul::ChildDef {
+                            url: Some(COUNTER_PACKAGE_URL.to_string()),
+                            name: Some("counter-with-network-context".to_string()),
+                            exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
+                            uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                                fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                                fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}),
+                            ])),
+                            ..fnetemul::ChildDef::EMPTY
+                        },
+                        // TODO(https://fxbug.dev/74868): when we can allow ERROR logs for routing
+                        // errors, add a child component that does not `use` NetworkContext, and
+                        // verify that we cannot get at NetworkContext through it. It should result
+                        // in a zx::Status::UNAVAILABLE error.
+                    ]),
+                    ..fnetemul::RealmOptions::EMPTY
+                },
+            );
+            let counter = realm.connect_to_service::<CounterMarker>();
+            let (network_context, server_end) =
+                fidl::endpoints::create_proxy::<fnetemul_network::NetworkContextMarker>()
+                    .expect("failed to create network context proxy");
+            let () = counter
+                .connect_to_service(
+                    fnetemul_network::NetworkContextMarker::SERVICE_NAME,
+                    server_end.into_channel(),
+                )
+                .expect("failed to connect to network context through counter");
+            matches::assert_matches!(
+                network_context.setup(&mut Vec::new().iter_mut()).await,
+                Ok((zx::sys::ZX_OK, Some(_setup_handle)))
+            );
+        })
+        .await
     }
 }

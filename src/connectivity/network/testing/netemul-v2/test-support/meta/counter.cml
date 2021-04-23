@@ -16,6 +16,7 @@
     use: [
         {
             protocol: [
+                "fuchsia.netemul.network.NetworkContext",
                 "fuchsia.netemul.test.CounterA",
                 "fuchsia.netemul.test.CounterB",
             ],

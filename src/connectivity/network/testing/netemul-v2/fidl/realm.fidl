@@ -25,10 +25,10 @@ union Capability {
     1: Empty netemul_devfs;
     /// The synchronization manager offered by netemul, shared between all the
     /// managed realms in a given sandbox.
-    2: Empty netemul_network_sync;
+    2: Empty netemul_sync_manager;
     /// The network context offered by netemul, shared between all the managed
     /// realms in a given sandbox.
-    3: Empty netemul_network_ctx;
+    3: Empty netemul_network_context;
     /// The [`fuchsia.logger/LogSink`] offered by netemul.
     ///
     /// Decorates logs produced by components in the managed realm and forwards
