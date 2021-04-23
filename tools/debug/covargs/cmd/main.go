@@ -274,6 +274,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	modules := []symbolize.FileCloser{}
 	moduleSet := make(map[string]struct{})
 	files := make(chan symbolize.FileCloser)
+	malformedModules := make(chan string)
 	s := make(chan struct{}, jobs)
 	var wg sync.WaitGroup
 	for _, entry := range entries {
@@ -312,6 +313,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 					if err != nil {
 						logger.Warningf(ctx, "module %s returned err %v:\n%s", module, err, string(data))
 						file.Close()
+						malformedModules <- module
 					} else {
 						files <- file
 					}
@@ -323,12 +325,24 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	}
 	go func() {
 		wg.Wait()
+		close(malformedModules)
 		close(files)
+	}()
+	var malformed []string
+	go func() {
+		for m := range malformedModules {
+			malformed = append(malformed, m)
+		}
 	}()
 	for f := range files {
 		modules = append(modules, f)
 		// Make sure we close all modules in the case of error
 		defer f.Close()
+	}
+
+	// Write the malformed modules to a file in order to keep track of the tests affected by fxbug.dev/74189.
+	if err := ioutil.WriteFile(filepath.Join(tempDir, "malformed_binaries.txt"), []byte(strings.Join(malformed, "\n")), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to write malformed binaries to a file: %w", err)
 	}
 
 	// Make the llvm-cov response file
