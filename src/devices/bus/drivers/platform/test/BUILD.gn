@@ -187,7 +187,7 @@ driver_module("test-goldfish-sync") {
   sources = [ "test/goldfish_sync.cc" ]
   deps = [
     ":test-goldfish-sync-bind",
-    "//sdk/banjo/fuchsia.hardware.goldfish.sync",
+    "//sdk/banjo/fuchsia.hardware.goldfish.sync:fuchsia.hardware.goldfish.sync_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//src/devices/lib/driver",
@@ -366,7 +366,7 @@ driver_module("test-composite") {
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.goldfish.addressspace:fuchsia.hardware.goldfish.addressspace_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.goldfish.sync",
+    "//sdk/banjo/fuchsia.hardware.goldfish.sync:fuchsia.hardware.goldfish.sync_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",

@@ -22,7 +22,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.block.partition",
   "fuchsia.hardware.block.volume",
   "fuchsia.hardware.display.controller",
-  "fuchsia.hardware.goldfish.sync",
   "fuchsia.hardware.gpu.mali",
   "fuchsia.hardware.hidbus",
   "fuchsia.hardware.hiddevice",
