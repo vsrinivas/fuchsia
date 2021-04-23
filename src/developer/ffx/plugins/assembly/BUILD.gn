@@ -10,5 +10,16 @@ ffx_plugin("ffx_assembly") {
   sources = [
     "src/args.rs",
     "src/lib.rs",
+    "src/operations.rs",
+    "src/operations/image.rs",
+    "src/operations/vbmeta.rs",
+  ]
+  args_deps = []
+  deps = [
+    "//src/lib/assembly/vbmeta",
+    "//src/lib/zerocopy",
+    "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
   ]
 }

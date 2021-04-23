@@ -8,7 +8,71 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "assembly", description = "Assemble images")]
 pub struct AssemblyCommand {
-    /// a value to assemble into a message
-    #[argh(option)]
-    pub value: String,
+    /// the assembly operation to perform
+    #[argh(subcommand)]
+    pub op_class: OperationClass,
 }
+
+/// This is the set of top-level operations within the `ffx assembly` plugin
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand)]
+pub enum OperationClass {
+    VBMeta(VBMetaArgs),
+    Image(ImageArgs),
+}
+
+/// vbmeta operations
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "vbmeta")]
+pub struct VBMetaArgs {
+    /// the vbmeta operation to perform
+    #[argh(subcommand)]
+    pub operation: VBMetaOperation,
+}
+
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand)]
+pub enum VBMetaOperation {
+    Sign(SignArgs),
+}
+
+/// create and sign a vbmeta image.
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "sign")]
+pub struct SignArgs {
+    /// the name of the image being signed
+    #[argh(option)]
+    pub name: String,
+
+    /// the path to the image to sign
+    #[argh(option)]
+    pub image_path: String,
+
+    /// the path to the PEM file containing the signing key to use.
+    #[argh(option)]
+    pub key: String,
+
+    /// the path to the metadata file for the signing key.
+    #[argh(option)]
+    pub key_metadata: String,
+
+    /// the file containing salt for the vbmeta signing operation.
+    ///
+    /// This is only to be used as part of testing the vbmeta signing operation,
+    /// and must be a path to a file that contains a 64-char hex string of bytes.
+    #[argh(option)]
+    pub salt_file: Option<String>,
+
+    /// descriptors for additional partitions to include, as paths to json files
+    #[argh(option)]
+    pub additional_descriptor: Vec<String>,
+
+    /// the output file to write the vbmeta image to.
+    #[argh(option)]
+    pub output: String,
+}
+
+/// perform the assembly of images
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "image")]
+pub struct ImageArgs {}
