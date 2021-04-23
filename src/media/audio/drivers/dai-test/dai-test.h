@@ -24,7 +24,7 @@ using DaiTestDeviceType = ddk::Device<DaiTest, ddk::Messageable>;
 
 class DaiTest : public DaiTestDeviceType,
                 public ddk::internal::base_protocol,
-                public fidl::WireRawChannelInterface<fuchsia_hardware_audio::Device>,
+                public fidl::WireServer<fuchsia_hardware_audio::Device>,
                 public ::fuchsia::hardware::audio::StreamConfig {
  public:
   explicit DaiTest(zx_device_t* parent, bool is_input);
@@ -39,7 +39,7 @@ class DaiTest : public DaiTestDeviceType,
 
  private:
   // FIDL LLCPP methods for fuchsia.hardware.audio.Device.
-  void GetChannel(GetChannelCompleter::Sync& completer) override;
+  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
 
   // FIDL HLCPP methods for fuchsia.hardware.audio.StreamConfig.
   void GetProperties(GetPropertiesCallback callback) override;

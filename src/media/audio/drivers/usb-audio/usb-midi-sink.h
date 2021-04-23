@@ -23,7 +23,7 @@ using UsbMidiSinkBase = ddk::Device<UsbMidiSink, ddk::Unbindable, ddk::Openable,
                                     ddk::Writable, ddk::Messageable>;
 
 class UsbMidiSink : public UsbMidiSinkBase,
-                    public fidl::WireInterface<fuchsia_hardware_midi::Device>,
+                    public fidl::WireServer<fuchsia_hardware_midi::Device>,
                     public ddk::EmptyProtocol<ZX_PROTOCOL_MIDI> {
  public:
   using UsbDevice = ::usb::UsbDevice;
@@ -46,7 +46,7 @@ class UsbMidiSink : public UsbMidiSinkBase,
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // FIDL methods.
-  void GetInfo(GetInfoCompleter::Sync& completer) final;
+  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) final;
 
  private:
   zx_status_t Init(int index, const usb_interface_descriptor_t* intf,

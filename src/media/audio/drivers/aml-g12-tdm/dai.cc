@@ -58,10 +58,9 @@ void AmlG12TdmDai::InitDaiFormats() {
       ZX_ASSERT(0);  // Not supported.
   }
 }
-void AmlG12TdmDai::Connect(::fidl::ServerEnd<fuchsia_hardware_audio::Dai> dai_protocol,
-                           ConnectCompleter::Sync& completer) {
+void AmlG12TdmDai::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
   ::fidl::InterfaceRequest<::fuchsia::hardware::audio::Dai> dai;
-  dai.set_channel(dai_protocol.TakeChannel());
+  dai.set_channel(request->dai_protocol.TakeChannel());
   dai_binding_.emplace(this, std::move(dai), loop_.dispatcher());
 }
 

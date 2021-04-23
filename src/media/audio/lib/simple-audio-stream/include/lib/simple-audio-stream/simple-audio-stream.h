@@ -60,14 +60,14 @@ class SimpleAudioStream;
 using SimpleAudioStreamBase =
     ddk::Device<SimpleAudioStream, ddk::Messageable, ddk::Suspendable, ddk::Unbindable>;
 
-// The SimpleAudioStream server (thread compatible) implements fidl::WireInterface<Device> and
-// fidl::WireInterface<RingBuffer>.
+// The SimpleAudioStream server (thread compatible) implements fidl::WireServer<Device> and
+// fidl::WireServer<RingBuffer>.
 // All this is serialized in the single threaded SimpleAudioStream's dispatcher().
 class SimpleAudioStream : public SimpleAudioStreamBase,
                           public SimpleAudioStreamProtocol,
                           public fbl::RefCounted<SimpleAudioStream>,
-                          public fidl::WireInterface<audio_fidl::Device>,
-                          public fidl::WireInterface<audio_fidl::RingBuffer> {
+                          public fidl::WireServer<audio_fidl::Device>,
+                          public fidl::WireServer<audio_fidl::RingBuffer> {
  public:
   // Create
   //
@@ -318,16 +318,16 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     friend class fbl::RefPtr<Channel>;
   };
 
-  // StreamChannel (thread compatible) implements fidl::WireInterface<StreamConfig> so the server
+  // StreamChannel (thread compatible) implements fidl::WireServer<StreamConfig> so the server
   // for a StreamConfig channel is a StreamChannel instead of a SimpleAudioStream (as is the case
   // for Device and RingBuffer channels), this way we can track which StreamConfig channel for plug
   // detect and gain changes notifications.
   // In some methods, we pass "this" (StreamChannel*) to SimpleAudioStream that
   // gets managed in SimpleAudioStream.
   // All this is serialized in the single threaded SimpleAudioStream's dispatcher().
-  // All the fidl::WireInterface<StreamConfig> methods are forwarded to SimpleAudioStream.
+  // All the fidl::WireServer<StreamConfig> methods are forwarded to SimpleAudioStream.
   class StreamChannel : public Channel,
-                        public fidl::WireInterface<audio_fidl::StreamConfig>,
+                        public fidl::WireServer<audio_fidl::StreamConfig>,
                         public fbl::DoublyLinkedListable<fbl::RefPtr<StreamChannel>> {
    public:
     // Does not take ownership of stream, which must refer to a valid SimpleAudioStream that
@@ -338,26 +338,28 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     ~StreamChannel() = default;
 
     // fuchsia hardware audio Stream Interface.
-    virtual void GetProperties(GetPropertiesCompleter::Sync& completer) override {
+    void GetProperties(GetPropertiesRequestView request,
+                       GetPropertiesCompleter::Sync& completer) override {
       stream_.GetProperties(completer);
     }
-    virtual void GetSupportedFormats(GetSupportedFormatsCompleter::Sync& completer) override {
+    void GetSupportedFormats(GetSupportedFormatsRequestView request,
+                             GetSupportedFormatsCompleter::Sync& completer) override {
       stream_.GetSupportedFormats(completer);
     }
-    virtual void WatchGainState(WatchGainStateCompleter::Sync& completer) override {
+    void WatchGainState(WatchGainStateRequestView request,
+                        WatchGainStateCompleter::Sync& completer) override {
       stream_.WatchGainState(this, completer);
     }
-    virtual void WatchPlugState(WatchPlugStateCompleter::Sync& completer) override {
+    void WatchPlugState(WatchPlugStateRequestView request,
+                        WatchPlugStateCompleter::Sync& completer) override {
       stream_.WatchPlugState(this, completer);
     }
-    virtual void SetGain(audio_fidl::wire::GainState target_state,
-                         SetGainCompleter::Sync& completer) override {
-      stream_.SetGain(std::move(target_state), completer);
+    void SetGain(SetGainRequestView request, SetGainCompleter::Sync& completer) override {
+      stream_.SetGain(request->target_state, completer);
     }
-    virtual void CreateRingBuffer(audio_fidl::wire::Format format,
-                                  fidl::ServerEnd<audio_fidl::RingBuffer> ring_buffer,
-                                  CreateRingBufferCompleter::Sync& completer) override {
-      stream_.CreateRingBuffer(this, std::move(format), std::move(ring_buffer), completer);
+    void CreateRingBuffer(CreateRingBufferRequestView request,
+                          CreateRingBufferCompleter::Sync& completer) override {
+      stream_.CreateRingBuffer(this, request->format, std::move(request->ring_buffer), completer);
     }
 
    private:
@@ -385,16 +387,17 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   zx_status_t PublishInternal();
 
   // fuchsia hardware audio Device Interface
-  void GetChannel(GetChannelCompleter::Sync& completer) override;
+  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
 
   // fuchsia hardware audio RingBuffer Interface
-  virtual void GetProperties(GetPropertiesCompleter::Sync& completer) override;
-  virtual void GetVmo(
-      uint32_t min_frames, uint32_t notifications_per_ring,
-      fidl::WireInterface<audio_fidl::RingBuffer>::GetVmoCompleter::Sync& completer) override;
-  virtual void Start(StartCompleter::Sync& completer) override;
-  virtual void Stop(StopCompleter::Sync& completer) override;
-  virtual void WatchClockRecoveryPositionInfo(
+  void GetProperties(GetPropertiesRequestView request,
+                     GetPropertiesCompleter::Sync& completer) override;
+  void GetVmo(GetVmoRequestView request,
+              fidl::WireServer<audio_fidl::RingBuffer>::GetVmoCompleter::Sync& completer) override;
+  void Start(StartRequestView request, StartCompleter::Sync& completer) override;
+  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
+  void WatchClockRecoveryPositionInfo(
+      WatchClockRecoveryPositionInfoRequestView request,
       WatchClockRecoveryPositionInfoCompleter::Sync& completer) override;
 
   // fuchsia hardware audio Stream Interface (forwarded from StreamChannel)

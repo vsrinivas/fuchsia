@@ -5,6 +5,7 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/clock.h>
@@ -13,8 +14,6 @@
 
 #include <memory>
 #include <utility>
-
-#include <lib/ddk/metadata.h>
 
 #include "src/media/audio/drivers/dai-test/dai_test_bind.h"
 
@@ -71,7 +70,7 @@ void DaiTest::GetProperties(GetPropertiesCallback callback) {
   callback(std::move(prop));
 }
 
-void DaiTest::GetChannel(GetChannelCompleter::Sync& completer) {
+void DaiTest::GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) {
   zx::channel channel_remote, channel_local;
   auto status = zx::channel::create(0, &channel_local, &channel_remote);
   if (status != ZX_OK) {

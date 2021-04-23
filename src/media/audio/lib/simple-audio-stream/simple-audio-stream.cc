@@ -205,7 +205,8 @@ void SimpleAudioStream::DdkSuspend(ddk::SuspendTxn txn) {
   txn.Reply(ZX_OK, txn.requested_state());
 }
 
-void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync& completer) {
+void SimpleAudioStream::GetChannel(GetChannelRequestView request,
+                                   GetChannelCompleter::Sync& completer) {
   fbl::AutoLock channel_lock(&channel_lock_);
   if (shutting_down_) {
     return completer.Close(ZX_ERR_BAD_STATE);
@@ -228,15 +229,15 @@ void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync& completer) {
   auto stream_channel = StreamChannel::Create<StreamChannel>(this);
   // We keep alive all channels in stream_channels_ (protected by channel_lock_).
   stream_channels_.push_back(stream_channel);
-  fidl::OnUnboundFn<fidl::WireInterface<audio_fidl::StreamConfig>> on_unbound =
-      [this, stream_channel](fidl::WireInterface<audio_fidl::StreamConfig>*, fidl::UnbindInfo,
+  fidl::OnUnboundFn<fidl::WireServer<audio_fidl::StreamConfig>> on_unbound =
+      [this, stream_channel](fidl::WireServer<audio_fidl::StreamConfig>*, fidl::UnbindInfo,
                              fidl::ServerEnd<fuchsia_hardware_audio::StreamConfig>) {
         ScopedToken t(domain_token());
         fbl::AutoLock channel_lock(&channel_lock_);
         this->DeactivateStreamChannel(stream_channel.get());
       };
 
-  fidl::BindServer<fidl::WireInterface<audio_fidl::StreamConfig>>(
+  fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfig>>(
       dispatcher(), std::move(stream_channel_local), stream_channel.get(), std::move(on_unbound));
 
   if (privileged) {
@@ -290,7 +291,7 @@ void SimpleAudioStream::DeactivateRingBufferChannel(const Channel* channel) {
 void SimpleAudioStream::CreateRingBuffer(
     StreamChannel* channel, audio_fidl::wire::Format format,
     fidl::ServerEnd<audio_fidl::RingBuffer> ring_buffer,
-    fidl::WireInterface<audio_fidl::StreamConfig>::CreateRingBufferCompleter::Sync& completer) {
+    fidl::WireServer<audio_fidl::StreamConfig>::CreateRingBufferCompleter::Sync& completer) {
   ScopedToken t(domain_token());
   zx::channel rb_channel_local;
   zx::channel rb_channel_remote;
@@ -403,16 +404,16 @@ void SimpleAudioStream::CreateRingBuffer(
 
     rb_channel_ = Channel::Create<Channel>();
 
-    fidl::OnUnboundFn<fidl::WireInterface<audio_fidl::RingBuffer>> on_unbound =
-        [this](fidl::WireInterface<audio_fidl::RingBuffer>*, fidl::UnbindInfo,
+    fidl::OnUnboundFn<fidl::WireServer<audio_fidl::RingBuffer>> on_unbound =
+        [this](fidl::WireServer<audio_fidl::RingBuffer>*, fidl::UnbindInfo,
                fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer>) {
           ScopedToken t(domain_token());
           fbl::AutoLock channel_lock(&channel_lock_);
           this->DeactivateRingBufferChannel(rb_channel_.get());
         };
 
-    fidl::BindServer<fidl::WireInterface<audio_fidl::RingBuffer>>(
-        dispatcher(), std::move(ring_buffer), this, std::move(on_unbound));
+    fidl::BindServer<fidl::WireServer<audio_fidl::RingBuffer>>(dispatcher(), std::move(ring_buffer),
+                                                               this, std::move(on_unbound));
   }
 }
 
@@ -460,6 +461,7 @@ void SimpleAudioStream::WatchPlugState(StreamChannel* channel,
 }
 
 void SimpleAudioStream::WatchClockRecoveryPositionInfo(
+    WatchClockRecoveryPositionInfoRequestView request,
     WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
   fbl::AutoLock position_lock(&position_lock_);
   position_request_time_.Set(zx::clock::get_monotonic().get());
@@ -520,7 +522,7 @@ void SimpleAudioStream::SetGain(audio_fidl::wire::GainState target_state,
 }
 
 void SimpleAudioStream::GetProperties(
-    fidl::WireInterface<audio_fidl::StreamConfig>::GetPropertiesCompleter::Sync& completer) {
+    fidl::WireServer<audio_fidl::StreamConfig>::GetPropertiesCompleter::Sync& completer) {
   ScopedToken t(domain_token());
   fidl::FidlAllocator allocator;
   audio_fidl::wire::StreamProperties stream_properties(allocator);
@@ -554,7 +556,7 @@ void SimpleAudioStream::GetProperties(
 }
 
 void SimpleAudioStream::GetSupportedFormats(
-    fidl::WireInterface<audio_fidl::StreamConfig>::GetSupportedFormatsCompleter::Sync& completer) {
+    fidl::WireServer<audio_fidl::StreamConfig>::GetSupportedFormatsCompleter::Sync& completer) {
   ScopedToken t(domain_token());
 
   // Build formats compatible with FIDL from a vector of audio_stream_format_range_t.
@@ -624,7 +626,8 @@ void SimpleAudioStream::GetSupportedFormats(
 }
 
 // Ring Buffer GetProperties.
-void SimpleAudioStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
+void SimpleAudioStream::GetProperties(GetPropertiesRequestView request,
+                                      GetPropertiesCompleter::Sync& completer) {
   ScopedToken t(domain_token());
   fidl::FidlAllocator allocator;
   audio_fidl::wire::RingBufferProperties ring_buffer_properties(allocator);
@@ -634,10 +637,9 @@ void SimpleAudioStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
   completer.Reply(std::move(ring_buffer_properties));
 }
 
-void SimpleAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
-                               GetVmoCompleter::Sync& completer) {
+void SimpleAudioStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& completer) {
   ScopedToken t(domain_token());
-  frames_requested_.Set(min_frames);
+  frames_requested_.Set(request->min_frames);
 
   if (rb_started_) {
     completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
@@ -646,8 +648,8 @@ void SimpleAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_r
 
   uint32_t num_ring_buffer_frames = 0;
   audio_proto::RingBufGetBufferReq req = {};
-  req.min_ring_buffer_frames = min_frames;
-  req.notifications_per_ring = notifications_per_ring;
+  req.min_ring_buffer_frames = request->min_frames;
+  req.notifications_per_ring = request->clock_recovery_notifications_per_ring;
   zx::vmo buffer;
   auto status = GetBuffer(req, &num_ring_buffer_frames, &buffer);
   if (status != ZX_OK) {
@@ -669,7 +671,7 @@ void SimpleAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_r
   completer.ReplySuccess(num_ring_buffer_frames, std::move(buffer));
 }
 
-void SimpleAudioStream::Start(StartCompleter::Sync& completer) {
+void SimpleAudioStream::Start(StartRequestView request, StartCompleter::Sync& completer) {
   ScopedToken t(domain_token());
 
   uint64_t start_time = 0;
@@ -688,7 +690,7 @@ void SimpleAudioStream::Start(StartCompleter::Sync& completer) {
   completer.Reply(start_time);
 }
 
-void SimpleAudioStream::Stop(StopCompleter::Sync& completer) {
+void SimpleAudioStream::Stop(StopRequestView request, StopCompleter::Sync& completer) {
   ScopedToken t(domain_token());
   if (!rb_started_) {
     zxlogf(ERROR, "Could not stop %s\n", __PRETTY_FUNCTION__);

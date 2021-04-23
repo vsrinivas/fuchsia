@@ -151,7 +151,7 @@ zx_status_t UsbMidiSink::DdkWrite(const void* data, size_t length, zx_off_t offs
   return status;
 }
 
-void UsbMidiSink::GetInfo(GetInfoCompleter::Sync& completer) {
+void UsbMidiSink::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
   fuchsia_hardware_midi::wire::Info info = {
       .is_sink = true,
       .is_source = false,

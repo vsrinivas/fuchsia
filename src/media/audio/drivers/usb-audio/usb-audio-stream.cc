@@ -218,7 +218,8 @@ void UsbAudioStream::ReleaseRingBufferLocked() {
   ring_buffer_vmo_.reset();
 }
 
-void UsbAudioStream::GetChannel(GetChannelCompleter::Sync& completer) {
+void UsbAudioStream::GetChannel(GetChannelRequestView request,
+                                GetChannelCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
   if (shutting_down_) {
     return completer.Close(ZX_ERR_BAD_STATE);
@@ -244,14 +245,14 @@ void UsbAudioStream::GetChannel(GetChannelCompleter::Sync& completer) {
     return;
   }
   stream_channels_.push_back(stream_channel);
-  fidl::OnUnboundFn<fidl::WireInterface<audio_fidl::StreamConfig>> on_unbound =
-      [this, stream_channel](fidl::WireInterface<audio_fidl::StreamConfig>*, fidl::UnbindInfo,
+  fidl::OnUnboundFn<fidl::WireServer<audio_fidl::StreamConfig>> on_unbound =
+      [this, stream_channel](fidl::WireServer<audio_fidl::StreamConfig>*, fidl::UnbindInfo,
                              fidl::ServerEnd<fuchsia_hardware_audio::StreamConfig>) {
         fbl::AutoLock channel_lock(&lock_);
         this->DeactivateStreamChannelLocked(stream_channel.get());
       };
 
-  fidl::BindServer<fidl::WireInterface<audio_fidl::StreamConfig>>(
+  fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfig>>(
       loop_.dispatcher(), std::move(stream_channel_local), stream_channel.get(),
       std::move(on_unbound));
 
@@ -521,14 +522,14 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
   // bind it to us.
   rb_channel_ = Channel::Create<Channel>();
 
-  fidl::OnUnboundFn<fidl::WireInterface<audio_fidl::RingBuffer>> on_unbound =
-      [this](fidl::WireInterface<audio_fidl::RingBuffer>*, fidl::UnbindInfo,
+  fidl::OnUnboundFn<fidl::WireServer<audio_fidl::RingBuffer>> on_unbound =
+      [this](fidl::WireServer<audio_fidl::RingBuffer>*, fidl::UnbindInfo,
              fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer>) {
         fbl::AutoLock lock(&lock_);
         this->DeactivateRingBufferChannelLocked(rb_channel_.get());
       };
 
-  fidl::BindServer<fidl::WireInterface<audio_fidl::RingBuffer>>(
+  fidl::BindServer<fidl::WireServer<audio_fidl::RingBuffer>>(
       loop_.dispatcher(), std::move(ring_buffer), this, std::move(on_unbound));
 }
 
@@ -567,6 +568,7 @@ void UsbAudioStream::WatchGainState(StreamChannel* channel,
 }
 
 void UsbAudioStream::WatchClockRecoveryPositionInfo(
+    WatchClockRecoveryPositionInfoRequestView request,
     WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
   fbl::AutoLock req_lock(&req_lock_);
   position_completer_ = completer.ToAsync();
@@ -654,7 +656,8 @@ void UsbAudioStream::GetProperties(StreamChannel::GetPropertiesCompleter::Sync& 
   completer.Reply(std::move(stream_properties));
 }
 
-void UsbAudioStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
+void UsbAudioStream::GetProperties(GetPropertiesRequestView request,
+                                   GetPropertiesCompleter::Sync& completer) {
   fidl::FidlAllocator allocator;
   audio_fidl::wire::RingBufferProperties ring_buffer_properties(allocator);
   ring_buffer_properties.set_fifo_depth(allocator, fifo_bytes_);
@@ -664,8 +667,7 @@ void UsbAudioStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
   completer.Reply(std::move(ring_buffer_properties));
 }
 
-void UsbAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
-                            GetVmoCompleter::Sync& completer) {
+void UsbAudioStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& completer) {
   zx::vmo client_rb_handle;
   uint32_t map_flags, client_rights;
 
@@ -696,14 +698,14 @@ void UsbAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   // as the virtual fifo depth.
   ZX_DEBUG_ASSERT(frame_size_ && ((fifo_bytes_ % frame_size_) == 0));
   ZX_DEBUG_ASSERT(fifo_bytes_ && ((fifo_bytes_ % fifo_bytes_) == 0));
-  ring_buffer_size_ = min_frames;
+  ring_buffer_size_ = request->min_frames;
   ring_buffer_size_ *= frame_size_;
   if (ring_buffer_size_ < fifo_bytes_)
     ring_buffer_size_ = fbl::round_up(fifo_bytes_, frame_size_);
 
   // Set up our state for generating notifications.
-  if (notifications_per_ring) {
-    bytes_per_notification_ = ring_buffer_size_ / notifications_per_ring;
+  if (request->clock_recovery_notifications_per_ring) {
+    bytes_per_notification_ = ring_buffer_size_ / request->clock_recovery_notifications_per_ring;
   } else {
     bytes_per_notification_ = 0;
   }
@@ -747,7 +749,7 @@ void UsbAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring
   completer.ReplySuccess(num_ring_buffer_frames, std::move(client_rb_handle));
 }
 
-void UsbAudioStream::Start(StartCompleter::Sync& completer) {
+void UsbAudioStream::Start(StartRequestView request, StartCompleter::Sync& completer) {
   fbl::AutoLock req_lock(&req_lock_);
 
   if (ring_buffer_state_ != RingBufferState::STOPPED) {
@@ -801,7 +803,7 @@ void UsbAudioStream::Start(StartCompleter::Sync& completer) {
   *start_completer_ = completer.ToAsync();
 }
 
-void UsbAudioStream::Stop(StopCompleter::Sync& completer) {
+void UsbAudioStream::Stop(StopRequestView request, StopCompleter::Sync& completer) {
   fbl::AutoLock req_lock(&req_lock_);
 
   // TODO(johngro): Fix this to use the cancel transaction capabilities added

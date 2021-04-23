@@ -143,7 +143,7 @@ zx_status_t UsbMidiSource::DdkRead(void* data, size_t len, zx_off_t off, size_t*
   return status;
 }
 
-void UsbMidiSource::GetInfo(GetInfoCompleter::Sync& completer) {
+void UsbMidiSource::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
   fuchsia_hardware_midi::wire::Info info = {
       .is_sink = false,
       .is_source = true,

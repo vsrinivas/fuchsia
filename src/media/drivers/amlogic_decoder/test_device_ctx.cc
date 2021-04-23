@@ -21,7 +21,7 @@ namespace test {
 class AmlogicTestDevice;
 using DdkDeviceType = ddk::Device<AmlogicTestDevice, ddk::Messageable>;
 
-class AmlogicTestDevice : public fidl::WireInterface<fuchsia_hardware_mediacodec::Tester>,
+class AmlogicTestDevice : public fidl::WireServer<fuchsia_hardware_mediacodec::Tester>,
                           public DdkDeviceType {
  public:
   AmlogicTestDevice(zx_device_t* parent) : DdkDeviceType(parent) {}
@@ -34,14 +34,14 @@ class AmlogicTestDevice : public fidl::WireInterface<fuchsia_hardware_mediacodec
     return transaction.Status();
   }
 
-  void SetOutputDirectoryHandle(zx::channel handle,
+  void SetOutputDirectoryHandle(SetOutputDirectoryHandleRequestView request,
                                 SetOutputDirectoryHandleCompleter::Sync& completer) override {
     fdio_ns_t* ns;
     zx_status_t status = fdio_ns_get_installed(&ns);
-    status = fdio_ns_bind(ns, "/tmp", handle.release());
+    status = fdio_ns_bind(ns, "/tmp", request->handle.release());
     fprintf(stderr, "NS bind: %d\n", status);
   }
-  void RunTests(RunTestsCompleter::Sync& completer) override {
+  void RunTests(RunTestsRequestView request, RunTestsCompleter::Sync& completer) override {
     TestSupport::set_parent_device(parent());
     if (!TestSupport::RunAllTests()) {
       DECODE_ERROR("Tests failed, failing to initialize");

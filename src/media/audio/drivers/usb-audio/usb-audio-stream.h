@@ -44,14 +44,14 @@ struct AudioStreamProtocol : public ddk::internal::base_protocol {
 class UsbAudioStream;
 using UsbAudioStreamBase = ddk::Device<UsbAudioStream, ddk::Messageable, ddk::Unbindable>;
 
-// UsbAudioStream implements fidl::WireInterface<Device> and RingBuffer::Interface.
+// UsbAudioStream implements WireServer<Device> and WireServer<RingBuffer>.
 // All this is serialized in the single threaded UsbAudioStream's dispatcher() in loop_.
 class UsbAudioStream : public UsbAudioStreamBase,
                        public AudioStreamProtocol,
                        public fbl::RefCounted<UsbAudioStream>,
                        public fbl::DoublyLinkedListable<fbl::RefPtr<UsbAudioStream>>,
-                       public fidl::WireInterface<fuchsia_hardware_audio::Device>,
-                       public fidl::WireInterface<fuchsia_hardware_audio::RingBuffer> {
+                       public fidl::WireServer<fuchsia_hardware_audio::Device>,
+                       public fidl::WireServer<fuchsia_hardware_audio::RingBuffer> {
  public:
   class Channel : public fbl::RefCounted<Channel> {
    public:
@@ -70,16 +70,16 @@ class UsbAudioStream : public UsbAudioStreamBase,
    private:
     friend class fbl::RefPtr<Channel>;
   };
-  // StreamChannel (thread compatible) implements fidl::WireInterface<StreamConfig> so the server
+  // StreamChannel (thread compatible) implements fidl::WireServer<StreamConfig> so the server
   // for a StreamConfig channel is a StreamChannel instead of a UsbAudioStream (as is the case for
   // Device and RingBuffer channels), this way we can track which StreamConfig channel for gain
   // changes notifications.
   // In some methods, we pass "this" (StreamChannel*) to UsbAudioStream that
   // gets managed in UsbAudioStream.
   // All this is serialized in the single threaded UsbAudioStream's dispatcher() in loop_.
-  // All the fidl::WireInterface<StreamConfig> methods are forwarded to UsbAudioStream.
+  // All the fidl::WireServer<StreamConfig> methods are forwarded to UsbAudioStream.
   class StreamChannel : public Channel,
-                        public fidl::WireInterface<fuchsia_hardware_audio::StreamConfig>,
+                        public fidl::WireServer<fuchsia_hardware_audio::StreamConfig>,
                         public fbl::DoublyLinkedListable<fbl::RefPtr<StreamChannel>> {
    public:
     // Does not take ownership of stream, which must refer to a valid UsbAudioStream that outlives
@@ -90,26 +90,29 @@ class UsbAudioStream : public UsbAudioStreamBase,
     ~StreamChannel() = default;
 
     // fuchsia hardware audio Stream Interface.
-    void GetProperties(GetPropertiesCompleter::Sync& completer) override {
+    void GetProperties(GetPropertiesRequestView request,
+                       GetPropertiesCompleter::Sync& completer) override {
       stream_.GetProperties(completer);
     }
-    void GetSupportedFormats(GetSupportedFormatsCompleter::Sync& completer) override {
+    void GetSupportedFormats(GetSupportedFormatsRequestView request,
+                             GetSupportedFormatsCompleter::Sync& completer) override {
       stream_.GetSupportedFormats(completer);
     }
-    void WatchGainState(WatchGainStateCompleter::Sync& completer) override {
+    void WatchGainState(WatchGainStateRequestView request,
+                        WatchGainStateCompleter::Sync& completer) override {
       stream_.WatchGainState(this, completer);
     }
-    void WatchPlugState(WatchPlugStateCompleter::Sync& completer) override {
+    void WatchPlugState(WatchPlugStateRequestView request,
+                        WatchPlugStateCompleter::Sync& completer) override {
       stream_.WatchPlugState(this, completer);
     }
-    void SetGain(fuchsia_hardware_audio::wire::GainState target_state,
-                 SetGainCompleter::Sync& completer) override {
-      stream_.SetGain(std::move(target_state), completer);
+    void SetGain(SetGainRequestView request, SetGainCompleter::Sync& completer) override {
+      stream_.SetGain(std::move(request->target_state), completer);
     }
-    void CreateRingBuffer(fuchsia_hardware_audio::wire::Format format,
-                          ::fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer> ring_buffer,
+    void CreateRingBuffer(CreateRingBufferRequestView request,
                           CreateRingBufferCompleter::Sync& completer) override {
-      stream_.CreateRingBuffer(this, std::move(format), std::move(ring_buffer), completer);
+      stream_.CreateRingBuffer(this, std::move(request->format), std::move(request->ring_buffer),
+                               completer);
     }
 
    private:
@@ -170,15 +173,16 @@ class UsbAudioStream : public UsbAudioStreamBase,
   void ReleaseRingBufferLocked() __TA_REQUIRES(lock_);
 
   // Device FIDL implementation
-  void GetChannel(GetChannelCompleter::Sync& completer) override;
+  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
 
   // fuchsia hardware audio RingBuffer Interface
-  void GetProperties(GetPropertiesCompleter::Sync& completer) override;
-  void GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
-              GetVmoCompleter::Sync& completer) override;
-  void Start(StartCompleter::Sync& completer) override;
-  void Stop(StopCompleter::Sync& completer) override;
+  void GetProperties(GetPropertiesRequestView request,
+                     GetPropertiesCompleter::Sync& completer) override;
+  void GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& completer) override;
+  void Start(StartRequestView request, StartCompleter::Sync& completer) override;
+  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
   void WatchClockRecoveryPositionInfo(
+      WatchClockRecoveryPositionInfoRequestView request,
       WatchClockRecoveryPositionInfoCompleter::Sync& completer) override;
 
   // fuchsia hardware audio Stream Interface (forwarded from StreamChannel)

@@ -54,13 +54,14 @@ zx_status_t DeviceCtx::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return ddk_transaction.Status();
 }
 
-void DeviceCtx::GetCodecFactory(zx::channel request, GetCodecFactoryCompleter::Sync& completer) {
-  device_fidl()->ConnectChannelBoundCodecFactory(std::move(request));
+void DeviceCtx::GetCodecFactory(GetCodecFactoryRequestView request,
+                                GetCodecFactoryCompleter::Sync& completer) {
+  device_fidl()->ConnectChannelBoundCodecFactory(std::move(request->request));
 }
-void DeviceCtx::SetAuxServiceDirectory(fidl::ClientEnd<fuchsia_io::Directory> directory,
+void DeviceCtx::SetAuxServiceDirectory(SetAuxServiceDirectoryRequestView request,
                                        SetAuxServiceDirectoryCompleter::Sync& completer) {
   driver_->SetAuxServiceDirectory(
-      fidl::InterfaceHandle<fuchsia::io::Directory>(directory.TakeChannel()));
+      fidl::InterfaceHandle<fuchsia::io::Directory>(request->service_directory.TakeChannel()));
 }
 
 CodecMetrics& DeviceCtx::metrics() { return driver_->metrics(); }

@@ -37,7 +37,7 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
                      public ddk::DaiProtocol<AmlG12TdmDai, ddk::base_protocol>,
                      public ::fuchsia::hardware::audio::RingBuffer,
                      public ::fuchsia::hardware::audio::Dai,
-                     public fidl::WireInterface<fuchsia_hardware_audio::DaiConnect> {
+                     public fidl::WireServer<fuchsia_hardware_audio::DaiConnect> {
  public:
   explicit AmlG12TdmDai(zx_device_t* parent);
 
@@ -53,8 +53,7 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
 
  private:
   // FIDL LLCPP method for fuchsia.hardware.audio.DaiConnect.
-  void Connect(::fidl::ServerEnd<::fuchsia_hardware_audio::Dai> dai_protocol,
-               ConnectCompleter::Sync& completer) override;
+  void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
 
   // FIDL HLCPP methods for fuchsia.hardware.audio.Dai.
   void Reset(ResetCallback callback) override;
