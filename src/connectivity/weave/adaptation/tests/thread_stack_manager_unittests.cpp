@@ -64,8 +64,8 @@ constexpr char kTestV4AddrStr[] = "1.2.3.4";
 constexpr char kTestV6AddrStr[] = "0102:0304:0506:0708:090A:0B0C:0D0E:0F00";
 constexpr char kTestV4AddrBad[] = "4.3.2.1";
 constexpr char kTestV6AddrBad[] = "0A0B:0C0D:0E0F:0001:0203:0405:0607:0809";
-constexpr char kTestV4AddrVal[] = { 1, 2, 3, 4 };
-constexpr char kTestV6AddrVal[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0 };
+constexpr char kTestV4AddrVal[] = {1, 2, 3, 4};
+constexpr char kTestV6AddrVal[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0};
 
 // The required size of a buffer supplied to GetPrimary802154MACAddress.
 constexpr size_t k802154MacAddressBufSize =
@@ -247,17 +247,11 @@ class FakeThreadLegacy : public fuchsia::lowpan::thread::testing::LegacyJoining_
     }
   }
 
-  void SetReturnStatus(zx_status_t return_status) {
-    return_status_ = return_status;
-  }
+  void SetReturnStatus(zx_status_t return_status) { return_status_ = return_status; }
 
-  const CallList& calls() {
-    return calls_;
-  }
+  const CallList& calls() { return calls_; }
 
-  void SetBindingSet(fidl::BindingSet<LegacyJoining>* bindings) {
-    bindings_ = bindings;
-  }
+  void SetBindingSet(fidl::BindingSet<LegacyJoining>* bindings) { bindings_ = bindings; }
 
  private:
   CallList calls_;
@@ -267,9 +261,7 @@ class FakeThreadLegacy : public fuchsia::lowpan::thread::testing::LegacyJoining_
 
 class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_TestBase {
  public:
-  FakeLowpanLookup() {
-    thread_legacy_.SetBindingSet(&thread_legacy_bindings_);
-  }
+  FakeLowpanLookup() { thread_legacy_.SetBindingSet(&thread_legacy_bindings_); }
 
   void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
 
@@ -294,8 +286,8 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
     }
 
     if (protocols.has_thread_legacy_joining()) {
-      thread_legacy_bindings_.AddBinding(&thread_legacy_, std::move(*protocols.mutable_thread_legacy_joining()),
-                                         dispatcher_);
+      thread_legacy_bindings_.AddBinding(
+          &thread_legacy_, std::move(*protocols.mutable_thread_legacy_joining()), dispatcher_);
     }
 
     result.set_response(response);
@@ -332,8 +324,8 @@ class FakeNetRoutes : public fuchsia::net::routes::testing::State_TestBase {
     if (dest.is_ipv4()) {
       static_assert(sizeof(dest.ipv4().addr) == sizeof(kTestV4AddrVal));
       if (std::memcmp(dest.ipv4().addr.data(), kTestV4AddrVal, sizeof(kTestV4AddrVal)) == 0) {
-        State_Resolve_Response response(Resolved::WithDirect(std::move(
-            Destination().set_address(std::move(dest)))));
+        State_Resolve_Response response(
+            Resolved::WithDirect(std::move(Destination().set_address(std::move(dest)))));
         result.set_response(std::move(response));
       } else {
         result.set_err(ZX_ERR_ADDRESS_UNREACHABLE);
@@ -341,8 +333,8 @@ class FakeNetRoutes : public fuchsia::net::routes::testing::State_TestBase {
     } else {
       static_assert(sizeof(dest.ipv6().addr) == sizeof(kTestV6AddrVal));
       if (std::memcmp(dest.ipv6().addr.data(), kTestV6AddrVal, sizeof(kTestV6AddrVal)) == 0) {
-        State_Resolve_Response response(Resolved::WithDirect(std::move(
-            Destination().set_address(std::move(dest)))));
+        State_Resolve_Response response(
+            Resolved::WithDirect(std::move(Destination().set_address(std::move(dest)))));
         result.set_response(std::move(response));
       } else {
         result.set_err(ZX_ERR_ADDRESS_UNREACHABLE);
@@ -368,7 +360,7 @@ class OverridableThreadConfigurationManagerDelegate : public ConfigurationManage
 
   bool IsThreadEnabled() override { return is_thread_enabled_; }
   WEAVE_ERROR GetThreadJoinableDuration(uint32_t* duration) override {
-    if (!join_duration_){
+    if (!join_duration_) {
       return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
     }
 
