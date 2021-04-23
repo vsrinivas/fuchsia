@@ -81,13 +81,17 @@ ${CIPD} create \
     -tag "toybox_git_revision:${TOYBOX_GIT_HASH}" \
     -tag "dash_git_revision:${DASH_GIT_HASH}"
 
-INSTANCE_ID=$(${CIPD} describe \
+# Fetch the instance ID of the just-created CIPD package. If more than one
+# matches our tags, use the most recent one.
+INSTANCE_ID=$(${CIPD} search \
     "${CIPD_PATH}" \
-    -version "kernel_git_revision:${LINUX_GIT_HASH}" \
-    -version "tests_git_revision:${TESTS_GIT_HASH}" \
-    -version "toybox_git_revision:${TOYBOX_GIT_HASH}" \
-    -version "dash_git_revision:${DASH_GIT_HASH}" \
-    | grep -oP "Instance ID: *\K\w+(?=$)" )
+    -tag "kernel_git_revision:${LINUX_GIT_HASH}" \
+    -tag "tests_git_revision:${TESTS_GIT_HASH}" \
+    -tag "toybox_git_revision:${TOYBOX_GIT_HASH}" \
+    -tag "dash_git_revision:${DASH_GIT_HASH}" \
+    | grep -v 'Instances:' \
+    | cut -d ':' -f 2 \
+    | head -1)
 
 echo "Kernel git revision: ${LINUX_GIT_HASH}"
 echo "Tests git revision: ${TESTS_GIT_HASH}"
