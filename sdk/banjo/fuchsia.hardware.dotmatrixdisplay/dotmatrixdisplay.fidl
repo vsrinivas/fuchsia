@@ -8,8 +8,8 @@ using zx;
 
 /// This describes the format for each pixel in the screen.
 enum PixelFormat : uint32 {
-   /// Pixels have on or off value (0 or 1). There is one bit per pixel.
-   MONOCHROME = 0;
+    /// Pixels have on or off value (0 or 1). There is one bit per pixel.
+    MONOCHROME = 0;
 };
 
 /// Describes the layout of the pixels within the screen vector.
@@ -42,5 +42,5 @@ protocol DotmatrixDisplay {
     /// Get the configuration to display the screen.
     GetConfig() -> (DotmatrixDisplayConfig config);
     /// Set the screen memory. Calling this function will update the display.
-    SetScreen(vector<uint8> screen_buffer) -> (zx.status s);
+    SetScreen(vector<uint8>:MAX screen_buffer) -> (zx.status s);
 };

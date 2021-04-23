@@ -23,7 +23,7 @@ driver_module("ssd1306_driver") {
   sources = [ "ssd1306.cc" ]
   deps = [
     ":ssd1306-bind",
-    "//sdk/banjo/fuchsia.hardware.dotmatrixdisplay",
+    "//sdk/banjo/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/fidl/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_c",
     "//src/devices/i2c/lib/device-protocol-i2c",
@@ -53,7 +53,7 @@ test("ssd1306-test") {
 
   deps = [
     ":ssd1306-bind",
-    "//sdk/banjo/fuchsia.hardware.dotmatrixdisplay",
+    "//sdk/banjo/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/fidl/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_c",
     "//src/devices/i2c/lib/device-protocol-i2c",
