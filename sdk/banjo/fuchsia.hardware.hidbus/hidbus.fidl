@@ -49,7 +49,7 @@ protocol HidbusIfc {
     /// Timestamp should be whenever the report was created. Ideally it should
     /// come from the driver's IRQ callback. If the driver doesn't have
     /// something like that it should fill this with `zx_clock_get_monotonic()`
-    IoQueue([Buffer] vector<uint8> buf, zx.time timestamp) -> ();
+    IoQueue([Buffer] vector<uint8>:MAX buf, zx.time timestamp) -> ();
 };
 
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
@@ -63,9 +63,9 @@ protocol Hidbus {
     Start(HidbusIfc ifc) -> (zx.status s);
     /// Stop the hidbus device. Safe to call if the hidbus is already stopped.
     Stop() -> ();
-    GetDescriptor(HidDescriptionType desc_type) -> (zx.status s, [Buffer] vector<uint8> data);
-    GetReport(HidReportType rpt_type, uint8 rpt_id) -> (zx.status s, [Buffer] vector<uint8> data);
-    SetReport(HidReportType rpt_type, uint8 rpt_id, [Buffer] vector<uint8> data) -> (zx.status s);
+    GetDescriptor(HidDescriptionType desc_type) -> (zx.status s, [Buffer] vector<uint8>:MAX data);
+    GetReport(HidReportType rpt_type, uint8 rpt_id) -> (zx.status s, [Buffer] vector<uint8>:MAX data);
+    SetReport(HidReportType rpt_type, uint8 rpt_id, [Buffer] vector<uint8>:MAX data) -> (zx.status s);
     GetIdle(uint8 rpt_id) -> (zx.status s, uint8 duration);
     SetIdle(uint8 rpt_id, uint8 duration) -> (zx.status s);
     GetProtocol() -> (zx.status s, HidProtocol protocol);

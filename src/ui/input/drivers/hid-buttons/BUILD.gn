@@ -35,7 +35,7 @@ source_set("common") {
     ":hid-buttons-bind",
     "//sdk/banjo/fuchsia.hardware.buttons:fuchsia.hardware.buttons_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.hidbus",
+    "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
     "//sdk/fidl/fuchsia.buttons:fuchsia.buttons_llcpp",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
