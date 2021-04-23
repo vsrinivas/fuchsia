@@ -80,7 +80,6 @@ std::map<std::string, std::map<std::string, std::set<std::string>>> allowed_meth
     {"fuchsia.device.manager", {{"DeviceController", {"CompleteRemoval", "Unbind"}}}},
     {"fuchsia.hardware.power.statecontrol",
      {{"Admin", {"Poweroff", "Reboot", "RebootToBootloader", "RebootToRecovery", "SuspendToRam"}}}},
-    {"fuchsia.io", {{"Node", {"Describe", "OnOpen", "Open"}}}},
 });
 
 bool MethodAlwaysAllowed(const flat::Protocol::Method& method) {
