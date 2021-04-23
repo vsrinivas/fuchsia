@@ -54,6 +54,8 @@ struct TestFilesystemOptions {
   uint64_t device_block_size = 0;
   uint64_t device_block_count = 0;
   uint64_t fvm_slice_size = 0;
+  // Only supported for blobfs for now.
+  uint64_t num_inodes = 0;
   const Filesystem* filesystem = nullptr;
   // By default the ram-disk we create is filled with a non-zero value (so that we don't
   // inadvertently depend on it), but that won't work for very large ram-disks (they will trigger

@@ -55,6 +55,9 @@ typedef struct mkfs_options {
   int sectors_per_cluster;
   // Format blobfs should store blobs in.  The valid values are "padded" and "compact".
   const char* blob_layout_format;
+  // The initial number of inodes to allocate space for. If 0, a default is used. Only supported
+  // for blobfs.
+  uint64_t num_inodes;
 } mkfs_options_t;
 
 __EXPORT

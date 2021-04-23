@@ -66,6 +66,13 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
     argv.push_back(options->blob_layout_format);
   }
 
+  std::string inodes_str;
+  if (options->num_inodes > 0) {
+    argv.push_back("--num_inodes");
+    inodes_str = std::to_string(options->num_inodes);
+    argv.push_back(inodes_str.c_str());
+  }
+
   argv.push_back("mkfs");
   argv.push_back(nullptr);
 

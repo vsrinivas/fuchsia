@@ -157,6 +157,18 @@ std::optional<int> ParseInt(const char* str) {
   return static_cast<int>(ret);
 }
 
+std::optional<int> ParseUint64(const char* str) {
+  char* pend;
+  unsigned long ret = strtoul(str, &pend, 10);
+  if (*pend != '\0') {
+    return std::nullopt;
+  }
+  if (ret > std::numeric_limits<uint64_t>::max()) {
+    return std::nullopt;
+  }
+  return uint64_t{ret};
+}
+
 int usage() {
   fprintf(
       stderr,
@@ -177,6 +189,8 @@ int usage() {
       "         -b|--blob_layout_format [padded|compact]\n"
       "                                    The format blobfs should use to store blobs.  Only\n"
       "                                    valid for mkfs.\n"
+      "         -i|--num_inodes n          The initial number of inodes to allocate space for.\n"
+      "                                    Only valid for mkfs.\n"
       "         -s|--sandbox_decompression Run blob decompression in a sandboxed component.\n"
       "         -h|--help                  Display this message\n"
       "\n"
@@ -205,12 +219,13 @@ zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
         {"compression_level", required_argument, nullptr, 'l'},
         {"eviction_policy", required_argument, nullptr, 'e'},
         {"blob_layout_format", required_argument, nullptr, 'b'},
+        {"num_inodes", required_argument, nullptr, 'i'},
         {"sandbox_decompression", no_argument, nullptr, 's'},
         {"help", no_argument, nullptr, 'h'},
         {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "vrmc:l:e:h", opts, &opt_index);
+    int c = getopt_long(argc, argv, "vrmc:l:i:e:h", opts, &opt_index);
 
     if (c < 0) {
       break;
@@ -238,6 +253,15 @@ zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
           return zx::error(usage());
         }
         options.mount_options.compression_settings.compression_level = level;
+        break;
+      }
+      case 'i': {
+        std::optional<uint64_t> num_inodes = ParseUint64(optarg);
+        if (!num_inodes || *num_inodes == 0) {
+          fprintf(stderr, "Invalid argument for --num_inodes: %s\n", optarg);
+          return zx::error(usage());
+        }
+        options.mkfs_options.num_inodes = *num_inodes;
         break;
       }
       case 'e': {

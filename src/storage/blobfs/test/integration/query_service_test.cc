@@ -63,7 +63,7 @@ class QueryServiceTest : public BlobfsWithFvmTest {
     EXPECT_GE(info.used_bytes(), expected_bytes);
     EXPECT_LE(info.used_bytes(), info.total_bytes());
 
-    EXPECT_GE(info.total_nodes(), kBlobfsDefaultInodeCount);
+    EXPECT_GE(info.total_nodes(), expected_nodes);
     EXPECT_EQ((info.total_nodes() * sizeof(Inode)) % slice_size, 0ul);
     EXPECT_EQ(info.used_nodes(), expected_nodes);
 

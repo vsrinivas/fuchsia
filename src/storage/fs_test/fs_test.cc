@@ -375,6 +375,7 @@ TestFilesystemOptions TestFilesystemOptions::DefaultBlobfs() {
                                .device_block_size = 512,
                                .device_block_count = 196'608,
                                .fvm_slice_size = 32'768,
+                               .num_inodes = 512,  // blobfs can grow as needed.
                                .filesystem = &BlobfsFilesystem::SharedInstance()};
 }
 
@@ -382,6 +383,7 @@ TestFilesystemOptions TestFilesystemOptions::BlobfsWithoutFvm() {
   TestFilesystemOptions blobfs_with_no_fvm = TestFilesystemOptions::DefaultBlobfs();
   blobfs_with_no_fvm.description = "BlobfsWithoutFvm";
   blobfs_with_no_fvm.use_fvm = false;
+  blobfs_with_no_fvm.num_inodes = 2048;
   return blobfs_with_no_fvm;
 }
 
@@ -614,6 +616,7 @@ class BlobfsInstance : public FilesystemInstance {
       mkfs_options.blob_layout_format =
           blobfs::GetBlobLayoutFormatCommandLineArg(options.blob_layout_format.value());
     }
+    mkfs_options.num_inodes = options.num_inodes;
     return FsFormat(device_path_, DISK_FORMAT_BLOBFS, mkfs_options);
   }
 
