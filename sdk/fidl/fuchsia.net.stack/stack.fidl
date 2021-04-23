@@ -20,13 +20,6 @@ alias device_path = string:255;
 /// A list of interface descriptors.
 alias interface_list = vector<InterfaceInfo>:255;
 
-enum PresenceStatus {
-    /// The interface is added.
-    ADDED = 1;
-    /// The interface is removed.
-    REMOVED = 2;
-};
-
 enum PhysicalStatus {
     /// The link is not attached to the medium.
     DOWN = 1;
@@ -39,12 +32,6 @@ enum AdministrativeStatus {
     DISABLED = 1;
     /// The interface is administratively enabled.
     ENABLED = 2;
-};
-
-union InterfaceStatus {
-    1: PresenceStatus presence;
-    2: PhysicalStatus physical;
-    3: AdministrativeStatus administrative;
 };
 
 struct InterfaceInfo {
@@ -105,14 +92,6 @@ struct ForwardingEntry {
 
     /// The destination that will receive the forwarded packet.
     ForwardingDestination destination;
-};
-
-struct InterfaceStatusChange {
-    /// The opaque identifier of the device that had its status change.
-    fuchsia.net.interface_id id;
-
-    /// The new status.
-    InterfaceStatus status;
 };
 
 enum Error {
@@ -222,11 +201,6 @@ protocol Stack {
 
     /// Get a [`fuchsia.net.name/DnsServerWatcher`].
     GetDnsServerWatcher(request<fuchsia.net.name.DnsServerWatcher> watcher);
-
-    // Events
-
-    /// A status change event is triggered whenever an interface's status changes.
-    -> OnInterfaceStatusChange(InterfaceStatusChange info);
 };
 
 [Discoverable]
