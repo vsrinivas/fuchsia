@@ -20,6 +20,7 @@ use {
     crate::paths::get_default_user_file_path,
     analytics::{is_opted_in, set_opt_in_status},
     anyhow::{anyhow, bail, Context, Result},
+    serde_json::Value,
     std::{
         convert::{From, TryFrom, TryInto},
         fs::File,
@@ -28,7 +29,6 @@ use {
 };
 
 pub use config_macros::FfxConfigBacked;
-pub use serde_json::Value;
 
 pub mod api;
 pub mod constants;
@@ -392,9 +392,6 @@ mod test {
         )
         .await
         .unwrap();
-
-        // Error from incorrect type set in the config.
-        assert!(empty_config_struct.other_value().await.is_err());
 
         // This should just compile and drop without panicking is all.
         let _ignore = TestEmptyBackedStruct {};

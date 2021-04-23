@@ -49,7 +49,7 @@ pub struct Daemon {
 // This is just for mocking config values for unit testing.
 #[async_trait]
 trait ConfigReader: Send + Sync {
-    async fn get(&self, q: &str) -> Result<ffx_config::Value, ffx_config::api::ConfigError>;
+    async fn get(&self, q: &str) -> Result<Option<String>>;
 }
 
 #[derive(Default)]
@@ -57,8 +57,8 @@ struct DefaultConfigReader {}
 
 #[async_trait]
 impl ConfigReader for DefaultConfigReader {
-    async fn get(&self, q: &str) -> Result<ffx_config::Value, ffx_config::api::ConfigError> {
-        ffx_config::get(q).await
+    async fn get(&self, q: &str) -> Result<Option<String>> {
+        Ok(ffx_config::get(q).await?)
     }
 }
 
@@ -94,12 +94,8 @@ impl DaemonEventHandler {
                 let t_clone = target.clone();
                 let autoconnect_fut = async move {
                     if let Some(cr) = cr.upgrade() {
-                        let n = cr.get("target.default").await.ok();
-                        if let Some(n) = n {
-                            if n.as_str()
-                                .and_then(|n| nodename.as_ref().map(|x| x == n))
-                                .unwrap_or(false)
-                            {
+                        if let Some(s) = cr.get("target.default").await.ok().flatten() {
+                            if nodename.as_ref().map(|x| x == &s).unwrap_or(false) {
                                 log::trace!(
                                     "Doing autoconnect for default target: {}",
                                     nodename.as_ref().map(|x| x.as_str()).unwrap_or("<unknown>")
@@ -1001,9 +997,9 @@ mod test {
 
     #[async_trait]
     impl ConfigReader for FakeConfigReader {
-        async fn get(&self, q: &str) -> Result<ffx_config::Value, ffx_config::api::ConfigError> {
+        async fn get(&self, q: &str) -> Result<Option<String>> {
             assert_eq!(q, self.query_expected);
-            Ok(ffx_config::Value::String(self.value.clone()))
+            Ok(Some(self.value.clone()))
         }
     }
 

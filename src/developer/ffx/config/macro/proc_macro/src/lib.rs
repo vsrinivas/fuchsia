@@ -120,15 +120,6 @@ impl<'a> FfxConfigField<'a> {
 
 impl<'a> quote::ToTokens for FfxConfigField<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let general_err = quote! { anyhow::anyhow!("invalid JSON value from config") };
-        let conversion = match self.value_type {
-            ConfigValueType::StringType => quote! {
-                v.as_str().ok_or(#general_err)?.to_owned()
-            },
-            ConfigValueType::FloatType => quote! {
-                v.as_f64().ok_or(#general_err)?
-            },
-        };
         let return_type = &self.value_type;
         let func_name = &self.func_name;
         let config_key = &self.key;
@@ -136,13 +127,13 @@ impl<'a> quote::ToTokens for FfxConfigField<'a> {
             Some(default) => (
                 quote! { #return_type },
                 quote! { t },
-                quote! { #conversion },
+                quote! { v },
                 quote! { <#return_type as std::str::FromStr>::from_str(#default)? },
             ),
             None => (
                 quote! { Option<#return_type> },
                 quote! { Some(t) },
-                quote! { Some(#conversion) },
+                quote! { Some(v) },
                 quote! { None },
             ),
         };
@@ -152,7 +143,7 @@ impl<'a> quote::ToTokens for FfxConfigField<'a> {
                 Ok(if let Some(t) = field {
                     #top_level_return
                 } else {
-                    let cfg_value: Option<ffx_config::Value> = ffx_config::get(#config_key).await.ok();
+                    let cfg_value: Option<#return_type> = ffx_config::get(#config_key).await?;
                     if let Some(v) = cfg_value {
                         #conversion_res
                     } else {

@@ -46,9 +46,8 @@ async fn list_impl<W: Write>(
                 }
                 _ => {
                     let formatter = Box::<dyn TargetFormatter>::try_from((cmd.format, r))?;
-                    let v: Option<ffx_config::Value> = ffx_config::get("target.default").await.ok();
-                    let default = v.as_ref().map(|s| s.as_str()).flatten();
-                    writeln!(writer, "{}", formatter.lines(default).join("\n"))?;
+                    let default: Option<String> = ffx_config::get("target.default").await?;
+                    writeln!(writer, "{}", formatter.lines(default.as_deref()).join("\n"))?;
                 }
             };
             Ok(())

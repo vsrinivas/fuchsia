@@ -332,6 +332,31 @@ impl TryFrom<ConfigValue> for f64 {
     }
 }
 
+impl ValueStrategy for Option<f64> {
+    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a T,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        flatten(next)
+    }
+
+    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
+        match query.select {
+            SelectMode::First => Ok(()),
+            SelectMode::All => Err(anyhow!(ADDITIVE_RETURN_ERR).into()),
+        }
+    }
+}
+
+impl TryFrom<ConfigValue> for Option<f64> {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        Ok(value.0.and_then(|v| {
+            v.as_f64().or_else(|| if let Value::String(s) = v { s.parse().ok() } else { None })
+        }))
+    }
+}
+
 /// Merge's `Value` b into `Value` a.
 pub fn merge(a: &mut Value, b: &Value) {
     match (a, b) {
