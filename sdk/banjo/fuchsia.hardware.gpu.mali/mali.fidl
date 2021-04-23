@@ -35,5 +35,4 @@ protocol ArmMali {
     /// StartExitProtectedMode. The RESET_COMPLETED bit in the GPU_IRQ_RAWSTAT
     /// register must be set while this is called.
     FinishExitProtectedMode() -> (zx.status status);
-
 };
