@@ -116,9 +116,9 @@ test_fvm_data_partition = {
 test_fvm_blob_partition = {
   type = "blob"
   dep = ":test_blob.blk"
-  minimum_inodes = blobfs_minimum_inodes
-  minimum_data_bytes = blobfs_minimum_data_bytes
-  maximum_bytes = blobfs_maximum_bytes
+  minimum_inodes = blobfs_product_minimum_inodes
+  minimum_data_bytes = blobfs_product_minimum_data_bytes
+  maximum_bytes = blobfs_product_maximum_bytes
 }
 
 generate_fvm("test_fvm.sparse.blk") {
