@@ -155,8 +155,8 @@ class Lp8556Device : public DeviceType,
   // brightness is set to maximum from bootloader if the persistent brightness sticky register is
   // not set.
   double brightness_ = 1.0;
-  uint16_t scale_ = 1.0;
-  uint16_t calibrated_scale_ = UINT16_MAX;
+  uint16_t scale_ = {};
+  uint16_t calibrated_scale_ = {};
   bool power_ = true;
   uint8_t cfg2_;
   std::optional<double> max_absolute_brightness_nits_;
