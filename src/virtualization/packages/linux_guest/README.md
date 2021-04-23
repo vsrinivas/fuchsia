@@ -6,7 +6,7 @@ See `src/virtualization/docs/README.md` for more general information.
 
 Repeat each of the following steps for ARCH=x64 and ARCH=arm64.
 
-Run the script to build Linux:
+Run the script to fetch the remote branch `machina-4.18` and build Linux:
 ```
 $ ./src/virtualization/packages/linux_guest/mklinux.sh \
   -l /tmp/linux/source \
@@ -15,8 +15,9 @@ $ ./src/virtualization/packages/linux_guest/mklinux.sh \
   ${ARCH}
 ```
 
-Note: `-b` specifies the branch of zircon_guest to use. You can modify this
-value if you need a different version or omit it to use a local version.
+Note: `-b` specifies the branch of `zircon_guest` to use. You can modify
+this value if you need a different version or omit it to use a local
+version.
 
 Build the sysroot:
 ```
@@ -38,9 +39,8 @@ $ ./src/virtualization/packages/linux_guest/mktests.sh \
 ```
 
 Ensure that `linux_guest` is working correctly. Then upload the images
-to CIPD. There is a `cipd` binary at `.jiri_root/bin/cipd` which can be
-run via `fx cipd`, and `cipd auth-login` must be executed once before
-running the following commands.
+to CIPD using `fx cipd`, as described below. `fx cipd auth-login` must
+be executed once before running the following commands.
 
 Use the git revision hash from
 `zircon-guest.googlesource.com/third_party/ linux` as the
@@ -57,15 +57,16 @@ $ fx cipd create \
   -tag "tests_git_revision:<git revision>"
 ```
 
-Then update `garnet/tools/cipd_internal.ensure` to point to the new
-version using the instance ID of the package you created. You can find
-the instance ID with CIPD like so:
+Then update `integration/fuchsia/prebuilts` to point to the new version using
+the instance ID of the package you created. The instance ID is printed in the
+output of the `create` command, but if you missed it, you can find the instance
+ID with CIPD like so:
 
 ```
-$ fx cipd describe \
+$ fx cipd search \
   fuchsia_internal/linux/linux_guest-<version>-${ARCH} \
-  -version "kernel_git_revision:<git revision>" \
-  -version "tests_git_revision:<git revision>"
+  -tag "kernel_git_revision:<git revision>" \
+  -tag "tests_git_revision:<git revision>"
 ```
 
 ## Updating the Linux kernel version
