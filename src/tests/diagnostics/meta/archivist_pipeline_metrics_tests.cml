@@ -1,0 +1,17 @@
+{
+    include: [ "src/sys/test_runners/inspect/default.shard.cml" ],
+    program: {
+        accessor: "ALL",
+        timeout_seconds: "30",
+        cases: [
+            // Archivist reports metrics for feedback pipeline.
+            "bootstrap/archivist:root/all_archive_accessor:*",
+
+            // Archivist reports metrics for feedback pipeline.
+            "bootstrap/archivist:root/feedback_archive_accessor:*",
+
+            // Archivist reports metrics for legacy metrics pipeline.
+            "bootstrap/archivist:root/legacy_metrics_archive_accessor:*",
+        ],
+    },
+}
