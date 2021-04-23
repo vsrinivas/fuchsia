@@ -549,6 +549,8 @@ fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>::
 }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
 void ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
                              NoResponseMethod>::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(
@@ -560,6 +562,9 @@ void ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
                              NoResponseMethod>::_CloseHandles() {
   h.reset();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 void ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
                              ResponseMethod>::_InitHeader(zx_txid_t _txid) {
@@ -572,6 +577,9 @@ void ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
                              ResponseMethod>::_CloseHandles() {
   h.reset();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 void ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::
                               ResponseMethod>::_InitHeader() {
@@ -584,6 +592,9 @@ void ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::
                               ResponseMethod>::_CloseHandles() {
   h.reset();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 void ::fidl::WireResponse<
     ::fidl_test_protocols::HandleRightsProtocol::AnEvent>::_InitHeader() {
@@ -595,6 +606,7 @@ void ::fidl::WireResponse<
     ::fidl_test_protocols::HandleRightsProtocol::AnEvent>::_CloseHandles() {
   h.reset();
 }
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -2371,6 +2383,8 @@ void ::fidl::WireResponse<
                        ::fidl_test_protocols::kChannelProtocol_MethodB_Ordinal);
 }
 
+#ifdef __Fuchsia__
+
 void ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
     _InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(
@@ -2381,12 +2395,15 @@ void ::fidl::WireRequest<
     ::fidl_test_protocols::ChannelProtocol::TakeHandle>::_CloseHandles() {
   h.reset();
 }
+#endif  // __Fuchsia__
 
 void ::fidl::WireResponse<
     ::fidl_test_protocols::ChannelProtocol::TakeHandle>::_InitHeader() {
   fidl_init_txn_header(
       &_hdr, 0, ::fidl_test_protocols::kChannelProtocol_TakeHandle_Ordinal);
 }
+
+#ifdef __Fuchsia__
 
 void ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>::
     _InitHeader(zx_txid_t _txid) {
@@ -2399,6 +2416,9 @@ void ::fidl::WireRequest<
     ::fidl_test_protocols::ChannelProtocol::MutateSocket>::_CloseHandles() {
   a.reset();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 void ::fidl::WireResponse<
     ::fidl_test_protocols::ChannelProtocol::MutateSocket>::_InitHeader() {
@@ -2410,6 +2430,7 @@ void ::fidl::WireResponse<
     ::fidl_test_protocols::ChannelProtocol::MutateSocket>::_CloseHandles() {
   b.reset();
 }
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 

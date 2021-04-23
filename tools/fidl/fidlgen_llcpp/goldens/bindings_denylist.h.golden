@@ -13,6 +13,7 @@
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/optional.h>
 
@@ -29,7 +30,6 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 
@@ -484,6 +484,8 @@ struct ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
  private:
   void _InitHeader();
 };
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                              LibfuzzerNeedsNonemptyProtocol>
@@ -677,8 +679,6 @@ class ::fidl::internal::WireCaller<
   ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
       client_end_;
 };
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
@@ -718,8 +718,6 @@ class ::fidl::WireSyncEventHandler<
           ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
           client_end);
 };
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
     final {
@@ -850,6 +848,8 @@ class ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
                                           ::fidl::Transaction* txn) final;
 };
 
+#endif  // __Fuchsia__
+
 namespace fidl_test_bindingsdenylist {
 class OnlyCppAndDeps final {
   OnlyCppAndDeps() = delete;
@@ -893,6 +893,8 @@ struct ::fidl::internal::WireServerDispatcher<
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a
 // |fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>|, avoiding
@@ -910,8 +912,6 @@ class ::fidl::internal::WireCaller<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
   ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
       client_end_;
 };
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::fidl_test_bindingsdenylist::OnlyCppAndDeps> {
@@ -949,8 +949,6 @@ class ::fidl::WireSyncEventHandler<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
       ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
           client_end);
 };
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
     final {
@@ -1018,6 +1016,8 @@ class ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
   ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
                                           ::fidl::Transaction* txn) final;
 };
+
+#endif  // __Fuchsia__
 
 namespace fidl_test_bindingsdenylist {
 namespace wire {

@@ -5,12 +5,21 @@
 #ifndef LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 #define LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 
+#ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <zircon/fidl.h>
+#endif  // __Fuchsia__
 
 namespace fidl {
 
+template <typename FidlMethod>
+struct WireRequest;
+
+template <typename FidlMethod>
+struct WireResponse;
+
+#ifdef __Fuchsia__
 // SyncClient owns a client endpoint and exposes synchronous FIDL calls.
 template <typename FidlProtocol>
 class WireSyncClient;
@@ -47,12 +56,6 @@ class WireRawChannelInterface;
 // EventSender owns a server endpoint and exposes methods for sending events.
 template <typename FidlProtocol>
 class WireEventSender;
-
-template <typename FidlMethod>
-struct WireRequest;
-
-template <typename FidlMethod>
-struct WireResponse;
 
 template <typename FidlMethod>
 class WireResponseContext;
@@ -146,6 +149,7 @@ fidl::DispatchResult WireTryDispatch(fidl::WireServer<FidlProtocol>* impl, fidl_
                                      fidl::Transaction* txn) {
   return fidl::internal::WireServerDispatcher<FidlProtocol>::TryDispatch(impl, msg, txn);
 }
+#endif  // __Fuchsia__
 
 }  // namespace fidl
 

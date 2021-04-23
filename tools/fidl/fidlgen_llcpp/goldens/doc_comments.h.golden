@@ -13,6 +13,7 @@
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/optional.h>
 
@@ -29,7 +30,6 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 
@@ -1181,6 +1181,8 @@ struct ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent> final {
  private:
   void _InitHeader();
 };
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> final
     : public ::fidl::Result {
@@ -1245,8 +1247,6 @@ class ::fidl::internal::WireCaller<::fidl_test_doccomments::Interface> final {
  private:
   ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client_end_;
 };
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::fidl_test_doccomments::Interface> {
@@ -1288,8 +1288,6 @@ class ::fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>
   ::fidl::Result HandleOneEvent(
       ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client_end);
 };
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::WireSyncClient<::fidl_test_doccomments::Interface> final {
  public:
@@ -1404,6 +1402,8 @@ class ::fidl::WireInterface<::fidl_test_doccomments::Interface>
   ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
                                           ::fidl::Transaction* txn) final;
 };
+
+#endif  // __Fuchsia__
 
 namespace fidl_test_doccomments {
 

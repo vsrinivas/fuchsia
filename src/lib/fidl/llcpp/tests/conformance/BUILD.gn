@@ -13,6 +13,8 @@ group("conformance") {
     ":fidl_llcpp_conformance_tests",
     ":fidl_llcpp_conformance_tests_bin($host_toolchain)",
     ":fidl_llcpp_manual_conformance_tests",
+    ":fidl_llcpp_request_response_tests",
+    ":fidl_llcpp_request_response_tests_bin($host_toolchain)",
   ]
 }
 
@@ -63,6 +65,18 @@ test("fidl_llcpp_manual_conformance_tests_bin") {
 
 fuchsia_unittest_package("fidl_llcpp_manual_conformance_tests") {
   deps = [ ":fidl_llcpp_manual_conformance_tests_bin" ]
+}
+
+test("fidl_llcpp_request_response_tests_bin") {
+  sources = [ "request_response_test.cc" ]
+  deps = [
+    "//src/lib/fidl/llcpp/tests/wire_types:fidl.llcpp.types.test_llcpp",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("fidl_llcpp_request_response_tests") {
+  deps = [ ":fidl_llcpp_request_response_tests_bin" ]
 }
 
 source_set("conformance_utils") {

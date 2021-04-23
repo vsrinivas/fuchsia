@@ -13,6 +13,7 @@
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/optional.h>
 
@@ -29,7 +30,6 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
@@ -763,6 +763,8 @@ struct ::fidl::internal::WireServerDispatcher<
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::WireRequest<
     ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>
@@ -835,19 +837,16 @@ struct ::fidl::WireRequest<
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
     template <typename ChannelLike>
     void Write(ChannelLike&& client) {
       message_.Write(std::forward<ChannelLike>(client));
     }
-#endif  // __Fuchsia__
+
    private:
     ::fidl::internal::IovecBuffer iovecs_;
     zx_handle_disposition_t
@@ -868,21 +867,18 @@ struct ::fidl::WireRequest<
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
-#ifdef __Fuchsia__
     template <typename ChannelLike>
     void Write(ChannelLike&& client) {
       message_.Write(std::forward<ChannelLike>(client));
     }
-#endif  // __Fuchsia__
+
    private:
     ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
     UnownedEncodedMessage message_;
@@ -926,6 +922,10 @@ struct ::fidl::WireRequest<
  private:
   void _InitHeader(zx_txid_t _txid);
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::WireRequest<
     ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>
@@ -1000,19 +1000,16 @@ struct ::fidl::WireRequest<
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
     template <typename ChannelLike>
     void Write(ChannelLike&& client) {
       message_.Write(std::forward<ChannelLike>(client));
     }
-#endif  // __Fuchsia__
+
    private:
     ::fidl::internal::IovecBuffer iovecs_;
     zx_handle_disposition_t
@@ -1033,21 +1030,18 @@ struct ::fidl::WireRequest<
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
-#ifdef __Fuchsia__
     template <typename ChannelLike>
     void Write(ChannelLike&& client) {
       message_.Write(std::forward<ChannelLike>(client));
     }
-#endif  // __Fuchsia__
+
    private:
     ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
     UnownedEncodedMessage message_;
@@ -1091,6 +1085,10 @@ struct ::fidl::WireRequest<
  private:
   void _InitHeader(zx_txid_t _txid);
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::WireResponse<
     ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>
@@ -1162,19 +1160,16 @@ struct ::fidl::WireResponse<
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
     template <typename ChannelLike>
     void Write(ChannelLike&& client) {
       message_.Write(std::forward<ChannelLike>(client));
     }
-#endif  // __Fuchsia__
+
    private:
     ::fidl::internal::IovecBuffer iovecs_;
     zx_handle_disposition_t
@@ -1198,21 +1193,18 @@ struct ::fidl::WireResponse<
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
-#ifdef __Fuchsia__
     template <typename ChannelLike>
     void Write(ChannelLike&& client) {
       message_.Write(std::forward<ChannelLike>(client));
     }
-#endif  // __Fuchsia__
+
    private:
     ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
     UnownedEncodedMessage message_;
@@ -1260,6 +1252,10 @@ struct ::fidl::WireResponse<
  private:
   void _InitHeader();
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::WireResponse<
     ::fidl_test_protocols::HandleRightsProtocol::AnEvent>
@@ -1329,19 +1325,16 @@ struct ::fidl::WireResponse<
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
     template <typename ChannelLike>
     void Write(ChannelLike&& client) {
       message_.Write(std::forward<ChannelLike>(client));
     }
-#endif  // __Fuchsia__
+
    private:
     ::fidl::internal::IovecBuffer iovecs_;
     zx_handle_disposition_t
@@ -1364,21 +1357,18 @@ struct ::fidl::WireResponse<
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
-#ifdef __Fuchsia__
     template <typename ChannelLike>
     void Write(ChannelLike&& client) {
       message_.Write(std::forward<ChannelLike>(client));
     }
-#endif  // __Fuchsia__
+
    private:
     ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
     UnownedEncodedMessage message_;
@@ -1425,6 +1415,10 @@ struct ::fidl::WireResponse<
  private:
   void _InitHeader();
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::WireResult<
     ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>
@@ -1724,8 +1718,6 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::HandleRightsProtocol>
   ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>
       client_end_;
 };
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::fidl_test_protocols::HandleRightsProtocol> {
@@ -1765,8 +1757,6 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>
       ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>
           client_end);
 };
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::HandleRightsProtocol>
     final {
@@ -1964,6 +1954,8 @@ class ::fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>
   ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
                                           ::fidl::Transaction* txn) final;
 };
+
+#endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
 namespace wire {
@@ -2485,6 +2477,8 @@ struct ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>
  private:
   void _InitHeader(zx_txid_t _txid);
 };
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::WireResult<::fidl_test_protocols::DiscoverableProtocol::Method>
     final : public ::fidl::Result {
@@ -2551,8 +2545,6 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::DiscoverableProtocol>
   ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
       client_end_;
 };
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::fidl_test_protocols::DiscoverableProtocol> {
@@ -2589,8 +2581,6 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocols::DiscoverableProtocol>
       ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
           client_end);
 };
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::DiscoverableProtocol>
     final {
@@ -2689,6 +2679,8 @@ class ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>
   ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
                                           ::fidl::Transaction* txn) final;
 };
+
+#endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
 __LOCAL extern "C" const fidl_type_t
@@ -3355,6 +3347,8 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event> final {
  private:
   void _InitHeader();
 };
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::WireResult<::fidl_test_protocols::Transitional::Request> final
     : public ::fidl::Result {
@@ -3592,8 +3586,6 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::Transitional> final {
  private:
   ::fidl::UnownedClientEnd<::fidl_test_protocols::Transitional> client_end_;
 };
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::fidl_test_protocols::Transitional> {
@@ -3632,8 +3624,6 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>
   ::fidl::Result HandleOneEvent(
       ::fidl::UnownedClientEnd<::fidl_test_protocols::Transitional> client_end);
 };
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::Transitional> final {
  public:
@@ -3820,6 +3810,8 @@ class ::fidl::WireInterface<::fidl_test_protocols::Transitional>
   ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
                                           ::fidl::Transaction* txn) final;
 };
+
+#endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
 __LOCAL extern "C" const fidl_type_t
@@ -4509,6 +4501,8 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>
  private:
   void _InitHeader();
 };
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>
     final {
@@ -4580,19 +4574,16 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
     template <typename ChannelLike>
     void Write(ChannelLike&& client) {
       message_.Write(std::forward<ChannelLike>(client));
     }
-#endif  // __Fuchsia__
+
    private:
     ::fidl::internal::IovecBuffer iovecs_;
     zx_handle_disposition_t
@@ -4613,21 +4604,18 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
-#ifdef __Fuchsia__
     template <typename ChannelLike>
     void Write(ChannelLike&& client) {
       message_.Write(std::forward<ChannelLike>(client));
     }
-#endif  // __Fuchsia__
+
    private:
     ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
     UnownedEncodedMessage message_;
@@ -4671,6 +4659,8 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>
  private:
   void _InitHeader(zx_txid_t _txid);
 };
+#endif  // __Fuchsia__
+
 template <>
 struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>
     final {
@@ -4817,6 +4807,8 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>
  private:
   void _InitHeader();
 };
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>
     final {
@@ -4890,19 +4882,16 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
     template <typename ChannelLike>
     void Write(ChannelLike&& client) {
       message_.Write(std::forward<ChannelLike>(client));
     }
-#endif  // __Fuchsia__
+
    private:
     ::fidl::internal::IovecBuffer iovecs_;
     zx_handle_disposition_t
@@ -4923,21 +4912,18 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
-#ifdef __Fuchsia__
     template <typename ChannelLike>
     void Write(ChannelLike&& client) {
       message_.Write(std::forward<ChannelLike>(client));
     }
-#endif  // __Fuchsia__
+
    private:
     ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
     UnownedEncodedMessage message_;
@@ -4981,6 +4967,10 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>
  private:
   void _InitHeader(zx_txid_t _txid);
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 struct ::fidl::WireResponse<
     ::fidl_test_protocols::ChannelProtocol::MutateSocket>
@@ -5050,19 +5040,16 @@ struct ::fidl::WireResponse<
     UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
     template <typename ChannelLike>
     void Write(ChannelLike&& client) {
       message_.Write(std::forward<ChannelLike>(client));
     }
-#endif  // __Fuchsia__
+
    private:
     ::fidl::internal::IovecBuffer iovecs_;
     zx_handle_disposition_t
@@ -5085,21 +5072,18 @@ struct ::fidl::WireResponse<
     OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
     const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
-#ifdef __Fuchsia__
     template <typename ChannelLike>
     void Write(ChannelLike&& client) {
       message_.Write(std::forward<ChannelLike>(client));
     }
-#endif  // __Fuchsia__
+
    private:
     ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
     UnownedEncodedMessage message_;
@@ -5146,6 +5130,10 @@ struct ::fidl::WireResponse<
  private:
   void _InitHeader();
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodA> final
     : public ::fidl::Result {
@@ -5748,8 +5736,6 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::ChannelProtocol>
  private:
   ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol> client_end_;
 };
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::fidl_test_protocols::ChannelProtocol> {
@@ -5789,8 +5775,6 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>
       ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>
           client_end);
 };
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol> final {
  public:
@@ -6106,6 +6090,8 @@ class ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>
   ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
                                           ::fidl::Transaction* txn) final;
 };
+
+#endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
 __LOCAL extern "C" const fidl_type_t
@@ -8044,6 +8030,8 @@ struct ::fidl::WireResponse<
  private:
   void _InitHeader();
 };
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::WireResult<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>
@@ -8999,8 +8987,6 @@ class ::fidl::internal::WireCaller<
   ::fidl::UnownedClientEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>
       client_end_;
 };
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::fidl_test_protocols::WithAndWithoutRequestResponse> {
@@ -9048,8 +9034,6 @@ class ::fidl::WireSyncEventHandler<
           ::fidl_test_protocols::WithAndWithoutRequestResponse>
           client_end);
 };
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::WireSyncClient<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>
@@ -9514,6 +9498,8 @@ class ::fidl::WireInterface<
   ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
                                           ::fidl::Transaction* txn) final;
 };
+
+#endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
 __LOCAL extern "C" const fidl_type_t
@@ -10488,6 +10474,8 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
  private:
   void _InitHeader();
 };
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::WireResult<
     ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
@@ -11021,8 +11009,6 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::WithErrorSyntax>
  private:
   ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax> client_end_;
 };
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::fidl_test_protocols::WithErrorSyntax> {
@@ -11059,8 +11045,6 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocols::WithErrorSyntax>
       ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>
           client_end);
 };
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
  public:
@@ -11348,6 +11332,8 @@ class ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>
                                           ::fidl::Transaction* txn) final;
 };
 
+#endif  // __Fuchsia__
+
 namespace fidl {
 
 template <>
@@ -11368,6 +11354,8 @@ template <>
 struct IsFidlMessage<::fidl::WireRequest<
     ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>
     : public std::true_type {};
+#ifdef __Fuchsia__
+
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>) ==
@@ -11377,6 +11365,7 @@ static_assert(
     offsetof(::fidl::WireRequest<
                  ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>,
              h) == 16);
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<::fidl::WireRequest<
@@ -11386,6 +11375,8 @@ template <>
 struct IsFidlMessage<::fidl::WireRequest<
     ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
     : public std::true_type {};
+#ifdef __Fuchsia__
+
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>) ==
@@ -11395,6 +11386,7 @@ static_assert(
     offsetof(::fidl::WireRequest<
                  ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>,
              h) == 16);
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<::fidl::WireResponse<
@@ -11404,6 +11396,8 @@ template <>
 struct IsFidlMessage<::fidl::WireResponse<
     ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
     : public std::true_type {};
+#ifdef __Fuchsia__
+
 static_assert(
     sizeof(::fidl::WireResponse<
            ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>) ==
@@ -11413,6 +11407,7 @@ static_assert(
     offsetof(::fidl::WireResponse<
                  ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>,
              h) == 16);
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<
@@ -11422,6 +11417,8 @@ template <>
 struct IsFidlMessage<
     ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::AnEvent>>
     : public std::true_type {};
+#ifdef __Fuchsia__
+
 static_assert(
     sizeof(::fidl::WireResponse<
            ::fidl_test_protocols::HandleRightsProtocol::AnEvent>) ==
@@ -11431,6 +11428,7 @@ static_assert(
     offsetof(::fidl::WireResponse<
                  ::fidl_test_protocols::HandleRightsProtocol::AnEvent>,
              h) == 16);
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<
@@ -11694,6 +11692,8 @@ template <>
 struct IsFidlMessage<
     ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>>
     : public std::true_type {};
+#ifdef __Fuchsia__
+
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_protocols::ChannelProtocol::TakeHandle>) ==
@@ -11703,6 +11703,7 @@ static_assert(
     offsetof(
         ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>,
         h) == 16);
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<
@@ -11726,6 +11727,8 @@ template <>
 struct IsFidlMessage<
     ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>>
     : public std::true_type {};
+#ifdef __Fuchsia__
+
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_protocols::ChannelProtocol::MutateSocket>) ==
@@ -11735,6 +11738,7 @@ static_assert(
     offsetof(::fidl::WireRequest<
                  ::fidl_test_protocols::ChannelProtocol::MutateSocket>,
              a) == 16);
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<
@@ -11744,6 +11748,8 @@ template <>
 struct IsFidlMessage<
     ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MutateSocket>>
     : public std::true_type {};
+#ifdef __Fuchsia__
+
 static_assert(
     sizeof(::fidl::WireResponse<
            ::fidl_test_protocols::ChannelProtocol::MutateSocket>) ==
@@ -11753,6 +11759,7 @@ static_assert(
     offsetof(::fidl::WireResponse<
                  ::fidl_test_protocols::ChannelProtocol::MutateSocket>,
              b) == 16);
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<::fidl::WireRequest<

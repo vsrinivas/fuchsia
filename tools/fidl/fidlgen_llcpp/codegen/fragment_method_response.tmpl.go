@@ -9,6 +9,9 @@ package codegen
 const fragmentMethodResponseTmpl = `
 {{- define "MethodResponseDeclaration" }}
 {{- EnsureNamespace "" }}
+{{- if .Response.IsResource }}
+{{- IfdefFuchsia -}}
+{{- end }}
 template<>
 struct {{ .WireResponse }} final {
   FIDL_ALIGNDECL
@@ -182,6 +185,9 @@ public:
  private:
   void _InitHeader();
 };
+{{- if .Response.IsResource }}
+{{- EndifFuchsia -}}
+{{- end }}
 {{- end }}
 
 
@@ -189,6 +195,9 @@ public:
 
 {{- define "MethodResponseDefinition" }}
   {{- EnsureNamespace "" }}
+{{- if .Response.IsResource }}
+{{- IfdefFuchsia -}}
+{{- end }}
   void {{ .WireResponse }}::_InitHeader() {
     fidl_init_txn_header(&_hdr, 0, {{ .OrdinalName }});
   }
@@ -200,5 +209,8 @@ public:
       {{- end }}
     }
   {{- end }}
+{{- if .Response.IsResource }}
+{{- EndifFuchsia -}}
+{{- end }}
 {{- end }}
 `

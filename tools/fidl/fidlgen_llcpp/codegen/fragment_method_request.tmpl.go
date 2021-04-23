@@ -9,6 +9,9 @@ package codegen
 const fragmentMethodRequestTmpl = `
 {{- define "MethodRequestDeclaration" }}
 {{- EnsureNamespace "" }}
+{{- if .Request.IsResource }}
+{{- IfdefFuchsia -}}
+{{- end }}
 template<>
 struct {{ .WireRequest }} final {
   FIDL_ALIGNDECL
@@ -187,6 +190,9 @@ struct {{ .WireRequest }} final {
   private:
     void _InitHeader(zx_txid_t _txid);
 };
+{{- if .Request.IsResource }}
+{{- EndifFuchsia -}}
+{{- end }}
 {{- end }}
 
 
@@ -195,6 +201,9 @@ struct {{ .WireRequest }} final {
 {{- define "MethodRequestDefinition" }}
   {{- EnsureNamespace "" }}
 
+{{- if .Request.IsResource }}
+{{- IfdefFuchsia -}}
+{{- end }}
   void {{ .WireRequest }}::_InitHeader(zx_txid_t _txid) {
     fidl_init_txn_header(&_hdr, _txid, {{ .OrdinalName }});
   }
@@ -206,5 +215,8 @@ struct {{ .WireRequest }} final {
       {{- end }}
     }
   {{- end }}
+{{- if .Request.IsResource }}
+{{- EndifFuchsia -}}
+{{- end }}
 {{- end }}
 `

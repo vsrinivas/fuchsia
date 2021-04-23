@@ -60,6 +60,7 @@ class {{ .Name }} final {
   {{- end }}
 {{- end }}
 
+{{- IfdefFuchsia -}}
 {{- range .ClientMethods -}}
   {{- template "MethodResultDeclaration" . }}
   {{- template "MethodUnownedResultDeclaration" . }}
@@ -69,6 +70,7 @@ class {{ .Name }} final {
 {{- template "ProtocolEventHandlerDeclaration" . }}
 {{- template "ProtocolSyncClientDeclaration" . }}
 {{- template "ProtocolInterfaceDeclaration" . }}
+{{- EndifFuchsia -}}
 
 {{- end }}
 
@@ -82,10 +84,16 @@ template <>
 struct IsFidlType<{{ .WireRequest }}> : public std::true_type {};
 template <>
 struct IsFidlMessage<{{ .WireRequest }}> : public std::true_type {};
+{{- if .Request.IsResource }}
+{{- IfdefFuchsia -}}
+{{- end }}
 static_assert(sizeof({{ .WireRequest }})
     == {{ .WireRequest }}::PrimarySize);
 {{- range $index, $param := .RequestArgs }}
 static_assert(offsetof({{ $method.WireRequest }}, {{ $param.Name }}) == {{ $param.Offset }});
+{{- end }}
+{{- if .Request.IsResource }}
+{{- EndifFuchsia -}}
 {{- end }}
 {{- end }}
 {{- if .HasResponse }}
@@ -94,10 +102,16 @@ template <>
 struct IsFidlType<{{ .WireResponse }}> : public std::true_type {};
 template <>
 struct IsFidlMessage<{{ .WireResponse }}> : public std::true_type {};
+{{- if .Response.IsResource }}
+{{- IfdefFuchsia -}}
+{{- end }}
 static_assert(sizeof({{ .WireResponse }})
     == {{ .WireResponse }}::PrimarySize);
 {{- range $index, $param := .ResponseArgs }}
 static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $param.Offset }});
+{{- end }}
+{{- if .Response.IsResource }}
+{{- EndifFuchsia -}}
 {{- end }}
 {{- end }}
 {{- end }}

@@ -750,6 +750,8 @@ void ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::
                        ::fidl_test_protocolrequest::kParent_GetChild_Ordinal);
 }
 
+#ifdef __Fuchsia__
+
 void ::fidl::WireResponse<
     ::fidl_test_protocolrequest::Parent::GetChild>::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0,
@@ -760,6 +762,7 @@ void ::fidl::WireResponse<
     ::fidl_test_protocolrequest::Parent::GetChild>::_CloseHandles() {
   c.reset();
 }
+#endif  // __Fuchsia__
 
 void ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>::
     _InitHeader(zx_txid_t _txid) {
@@ -767,6 +770,8 @@ void ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>::
       &_hdr, _txid,
       ::fidl_test_protocolrequest::kParent_GetChildRequest_Ordinal);
 }
+
+#ifdef __Fuchsia__
 
 void ::fidl::WireResponse<
     ::fidl_test_protocolrequest::Parent::GetChildRequest>::_InitHeader() {
@@ -778,6 +783,9 @@ void ::fidl::WireResponse<
     ::fidl_test_protocolrequest::Parent::GetChildRequest>::_CloseHandles() {
   r.reset();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 void ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>::
     _InitHeader(zx_txid_t _txid) {
@@ -789,6 +797,9 @@ void ::fidl::WireRequest<
     ::fidl_test_protocolrequest::Parent::TakeChild>::_CloseHandles() {
   c.reset();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 void ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::
                              TakeChildRequest>::_InitHeader(zx_txid_t _txid) {
@@ -801,6 +812,7 @@ void ::fidl::WireRequest<
     ::fidl_test_protocolrequest::Parent::TakeChildRequest>::_CloseHandles() {
   r.reset();
 }
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
