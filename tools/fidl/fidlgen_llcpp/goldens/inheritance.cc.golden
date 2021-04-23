@@ -285,9 +285,7 @@ fidl::WireInterface<::fidl_test_inheritance::Super>::dispatch_message(
   return ::fidl::WireServer<::fidl_test_inheritance::Super>::FooCompleterBase::
       SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireServer<::fidl_test_inheritance::Super>::FooCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, int64_t y) {
@@ -589,9 +587,7 @@ fidl::WireInterface<::fidl_test_inheritance::Sub>::dispatch_message(
   return ::fidl::WireServer<::fidl_test_inheritance::Sub>::FooCompleterBase::
       SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireServer<::fidl_test_inheritance::Sub>::FooCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, int64_t y) {

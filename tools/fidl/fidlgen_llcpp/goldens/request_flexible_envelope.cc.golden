@@ -621,9 +621,7 @@ fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
       RequestStrictResponseFlexibleCompleterBase::SendReply(
           &_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
     RequestStrictResponseFlexibleCompleterBase::Reply(
         ::fidl::BufferSpan _buffer,
@@ -647,9 +645,7 @@ fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>::
       RequestFlexibleResponseStrictCompleterBase::SendReply(
           &_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
     RequestFlexibleResponseStrictCompleterBase::Reply(
         ::fidl::BufferSpan _buffer,

@@ -293,9 +293,7 @@ fidl::WireServer<::fidl_test_transitivedependenciescompose::Top>::
   return ::fidl::WireServer<::fidl_test_transitivedependenciescompose::Top>::
       GetFooCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireServer<::fidl_test_transitivedependenciescompose::Top>::
     GetFooCompleterBase::Reply(::fidl::BufferSpan _buffer,

@@ -151,24 +151,9 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{ template "ProtocolDispatcherDefinition" . }}
 
 {{- if .Methods }}
-{{ "" }}
   {{- range .TwoWayMethods -}}
-{{ "" }}
-    {{- template "ReplyManagedMethodDefinition" . }}
-    {{- if .Result }}
-      {{- template "ReplyManagedResultSuccessMethodDefinition" . }}
-      {{- template "ReplyManagedResultErrorMethodDefinition" . }}
-    {{- end }}
-    {{- if .ResponseArgs }}
-{{ "" }}
-      {{- template "ReplyCallerAllocateMethodDefinition" . }}
-      {{- if .Result }}
-        {{- template "ReplyCallerAllocateResultSuccessMethodDefinition" . }}
-      {{- end }}
-    {{- end }}
-{{ "" }}
+    {{- template "MethodCompleterBaseDefinition" . }}
   {{- end }}
-{{ "" }}
 
   {{- range .Methods }}
 

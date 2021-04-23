@@ -531,9 +531,7 @@ fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::dispatch_message(
   return ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
       SendAndReceiveCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
     SendAndReceiveCompleterBase::Reply(
         ::fidl::BufferSpan _buffer,

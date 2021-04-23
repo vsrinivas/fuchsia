@@ -289,9 +289,6 @@ fidl::WireServer<::fidl_test_error::Example>::FooCompleterBase::Reply(
   return ::fidl::WireServer<::fidl_test_error::Example>::FooCompleterBase::
       SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<
     ::fidl_test_error::Example>::FooCompleterBase::ReplySuccess(int64_t y) {
   ::fidl_test_error::wire::ExampleFooResponse _response;
@@ -301,17 +298,13 @@ fidl::WireServer<::fidl_test_error::Example>::FooCompleterBase::Reply(
       ::fidl::ObjectView<::fidl_test_error::wire::ExampleFooResponse>::
           FromExternal(&_response)));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<
     ::fidl_test_error::Example>::FooCompleterBase::ReplyError(uint32_t error) {
   return Reply(::fidl_test_error::wire::ExampleFooResult::WithErr(
       ::fidl::ObjectView<uint32_t>::FromExternal(&error)));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireServer<::fidl_test_error::Example>::FooCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
@@ -320,15 +313,11 @@ fidl::WireServer<::fidl_test_error::Example>::FooCompleterBase::Reply(
       _response(_buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireServer<::fidl_test_error::Example>::FooCompleterBase::ReplySuccess(
     ::fidl::BufferSpan _buffer, int64_t y) {
   ::fidl_test_error::wire::ExampleFooResponse response;
   response.y = std::move(y);
-
   return Reply(
       std::move(_buffer),
       ::fidl_test_error::wire::ExampleFooResult::WithResponse(

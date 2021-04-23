@@ -537,9 +537,7 @@ fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>::
   return ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
       ResponseMethodCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::
     ResponseMethodCompleterBase::Reply(::fidl::BufferSpan _buffer,
                                        ::zx::socket&& h) {
@@ -1297,9 +1295,7 @@ fidl::WireInterface<::fidl_test_protocols::Transitional>::dispatch_message(
   return ::fidl::WireServer<::fidl_test_protocols::Transitional>::
       RequestCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::Transitional>::
     RequestCompleterBase::Reply(::fidl::BufferSpan _buffer, int64_t y) {
   ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>::
@@ -2311,9 +2307,7 @@ fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
   return ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::
       MethodBCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::
     MethodBCompleterBase::Reply(::fidl::BufferSpan _buffer, int64_t result) {
   ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>::
@@ -2342,9 +2336,7 @@ fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
   return ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::
       MutateSocketCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::
     MutateSocketCompleterBase::Reply(::fidl::BufferSpan _buffer,
                                      ::zx::socket&& b) {
@@ -3855,9 +3847,7 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
       NoRequestWithResponseCompleterBase::SendReply(
           &_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
     NoRequestWithResponseCompleterBase::Reply(::fidl::BufferSpan _buffer,
@@ -3897,9 +3887,7 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
       WithRequestWithResponseCompleterBase::SendReply(
           &_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
     WithRequestWithResponseCompleterBase::Reply(::fidl::BufferSpan _buffer,
@@ -4749,9 +4737,6 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
   return ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
       ResponseAsStructCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
     ResponseAsStructCompleterBase::ReplySuccess(int64_t a, int64_t b,
                                                 int64_t c) {
@@ -4768,18 +4753,14 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
                                      WithErrorSyntaxResponseAsStructResponse>::
                   FromExternal(&_response)));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
     ResponseAsStructCompleterBase::ReplyError(uint32_t error) {
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
           WithErr(::fidl::ObjectView<uint32_t>::FromExternal(&error)));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
     ResponseAsStructCompleterBase::Reply(
         ::fidl::BufferSpan _buffer,
@@ -4790,9 +4771,6 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
     ResponseAsStructCompleterBase::ReplySuccess(::fidl::BufferSpan _buffer,
                                                 int64_t a, int64_t b,
@@ -4801,7 +4779,6 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
   response.a = std::move(a);
   response.b = std::move(b);
   response.c = std::move(c);
-
   return Reply(
       std::move(_buffer),
       ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
@@ -4823,9 +4800,6 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
   return ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
       ErrorAsPrimitiveCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsPrimitiveCompleterBase::ReplySuccess() {
   ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse
@@ -4838,18 +4812,14 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
                                      WithErrorSyntaxErrorAsPrimitiveResponse>::
                   FromExternal(&_response)));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsPrimitiveCompleterBase::ReplyError(uint32_t error) {
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
           WithErr(::fidl::ObjectView<uint32_t>::FromExternal(&error)));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsPrimitiveCompleterBase::Reply(
         ::fidl::BufferSpan _buffer,
@@ -4860,13 +4830,9 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsPrimitiveCompleterBase::ReplySuccess(::fidl::BufferSpan _buffer) {
   ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse response;
-
   return Reply(
       std::move(_buffer),
       ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
@@ -4887,9 +4853,6 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
   return ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
       ErrorAsEnumCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsEnumCompleterBase::ReplySuccess() {
   ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse _response;
@@ -4901,9 +4864,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
                                      WithErrorSyntaxErrorAsEnumResponse>::
                   FromExternal(&_response)));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsEnumCompleterBase::ReplyError(
         ::fidl_test_protocols::wire::ErrorEnun error) {
@@ -4912,9 +4873,7 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
           ::fidl::ObjectView<
               ::fidl_test_protocols::wire::ErrorEnun>::FromExternal(&error)));
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsEnumCompleterBase::Reply(
         ::fidl::BufferSpan _buffer,
@@ -4923,13 +4882,9 @@ fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsEnumCompleterBase::ReplySuccess(::fidl::BufferSpan _buffer) {
   ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse response;
-
   return Reply(
       std::move(_buffer),
       ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::

@@ -322,9 +322,7 @@ fidl::WireServer<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
       GetFooCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result
 fidl::WireServer<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     GetFooCompleterBase::Reply(::fidl::BufferSpan _buffer,

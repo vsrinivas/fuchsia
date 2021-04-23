@@ -710,9 +710,7 @@ fidl::WireInterface<::fidl_test_protocolrequest::Parent>::dispatch_message(
   return ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
       GetChildCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocolrequest::Parent>::
     GetChildCompleterBase::Reply(
         ::fidl::BufferSpan _buffer,
@@ -734,9 +732,7 @@ fidl::WireInterface<::fidl_test_protocolrequest::Parent>::dispatch_message(
   return ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
       GetChildRequestCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 ::fidl::Result fidl::WireServer<::fidl_test_protocolrequest::Parent>::
     GetChildRequestCompleterBase::Reply(
         ::fidl::BufferSpan _buffer,
