@@ -213,11 +213,14 @@ impl ProcessLauncher {
                         if job_info.exited {
                             job_message =
                                 format!(", job has exited (retcode {})", job_info.return_code);
+                        } else if job_info.return_code != 0 {
+                            job_message =
+                                format!(", job is exiting (retcode {})", job_info.return_code);
                         } else {
                             // If the job has not exited, then the BAD_STATE error was unexpected
                             // and indicates a bug somewhere.
                             log_level = Level::Error;
-                            job_message = format!(", job has not exited");
+                            job_message = format!(", job has not exited (retcode 0)");
                         }
                     }
                     Err(status) => {
