@@ -24,7 +24,7 @@ use {
         TimekeeperTimeSourceEventsMetricDimensionEventType as TimeSourceEvent,
         TimekeeperTrackEventsMetricDimensionEventType as TrackEvent,
         REAL_TIME_CLOCK_EVENTS_METRIC_ID, TIMEKEEPER_CLOCK_CORRECTION_METRIC_ID,
-        TIMEKEEPER_FREQUENCY_ESTIMATE_METRIC_ID, TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
+        TIMEKEEPER_FREQUENCY_ABS_ESTIMATE_METRIC_ID, TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
         TIMEKEEPER_MONITOR_DIFFERENCE_METRIC_ID, TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID,
         TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID, TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
     },
@@ -33,6 +33,9 @@ use {
 
 /// The period duration in micros. This field is required for Cobalt 1.0 EVENT_COUNT but not used.
 const PERIOD_DURATION: i64 = 0;
+
+/// The number of parts in a million.
+const ONE_MILLION: i64 = 1_000_000;
 
 /// A connection to the real Cobalt service.
 pub struct CobaltDiagnostics {
@@ -93,11 +96,14 @@ impl CobaltDiagnostics {
             2 => Iteration::Second,
             _ => Iteration::Subsequent,
         };
+        // Frequency arrives as a deviation in ppm from a 1Hz clock which can be positive or
+        // negative, but to keep the events we report to cobalt positive we output an absolute
+        // utc parts per million monotonic parts.
         self.sender.lock().log_event_count(
-            TIMEKEEPER_FREQUENCY_ESTIMATE_METRIC_ID,
+            TIMEKEEPER_FREQUENCY_ABS_ESTIMATE_METRIC_ID,
             (iteration, Into::<CobaltTrack>::into(track), self.experiment),
             PERIOD_DURATION,
-            rate_adjust_ppm as i64,
+            rate_adjust_ppm as i64 + ONE_MILLION,
         );
     }
 
@@ -441,14 +447,14 @@ mod test {
         assert_eq!(
             mpsc_receiver.next().await,
             Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_FREQUENCY_ESTIMATE_METRIC_ID,
+                metric_id: time_metrics_registry::TIMEKEEPER_FREQUENCY_ABS_ESTIMATE_METRIC_ID,
                 event_codes: vec![
                     Iteration::Subsequent as u32,
                     CobaltTrack::Primary as u32,
                     TEST_EXPERIMENT as u32
                 ],
                 component: None,
-                payload: event_count_payload(-4),
+                payload: event_count_payload(1_000_000 - 4),
             })
         );
 
