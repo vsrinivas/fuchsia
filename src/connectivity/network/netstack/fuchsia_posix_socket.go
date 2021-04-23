@@ -1168,6 +1168,11 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 		backlog = 0
 	}
 
+	// Accept one more than the configured listen backlog to keep in parity with
+	// Linux. Ref, because of missing equality check here:
+	// https://github.com/torvalds/linux/blob/7acac4b3196/include/net/sock.h#L937
+	backlog++
+
 	if err := eps.ep.Listen(int(backlog)); err != nil {
 		return socket.StreamSocketListenResultWithErr(tcpipErrorToCode(err)), nil
 	}

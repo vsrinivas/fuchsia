@@ -6,7 +6,7 @@ cloud.google.com/go/internal
 cloud.google.com/go/internal/optional
 cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
-# cloud.google.com/go/storage v1.14.0
+# cloud.google.com/go/storage v1.15.0
 ## explicit
 cloud.google.com/go/storage
 # github.com/creack/pty v1.1.11
@@ -109,7 +109,7 @@ go.uber.org/atomic
 # go.uber.org/multierr v1.6.0
 ## explicit
 go.uber.org/multierr
-# golang.org/x/crypto v0.0.0-20210415154028-4f45737414dc
+# golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
 ## explicit
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
@@ -138,7 +138,7 @@ golang.org/x/lint/golint
 ## explicit
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20210420210106-798c2154c571
+# golang.org/x/net v0.0.0-20210421230115-4e50805a0758
 ## explicit
 golang.org/x/net/bpf
 golang.org/x/net/context
@@ -163,7 +163,7 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20210420205809-ac73e9fd8988
+# golang.org/x/sys v0.0.0-20210421221651-33663a62ff08
 ## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
@@ -205,7 +205,6 @@ gonum.org/v1/gonum/mathext/internal/amos
 gonum.org/v1/gonum/mathext/internal/cephes
 gonum.org/v1/gonum/mathext/internal/gonum
 # google.golang.org/api v0.45.0
-## explicit
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
 google.golang.org/api/internal
@@ -231,7 +230,7 @@ google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20210420162539-3c870d7478d2
+# google.golang.org/genproto v0.0.0-20210422153429-2279cbceda62
 ## explicit
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/iam/v1
@@ -332,7 +331,7 @@ google.golang.org/protobuf/types/pluginpb
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
-# gvisor.dev/gvisor v0.0.0-20210422011406-483350ae7073
+# gvisor.dev/gvisor v0.0.0-20210422233819-263d3a106bd7
 ## explicit
 gvisor.dev/gvisor/pkg/gohacks
 gvisor.dev/gvisor/pkg/goid
