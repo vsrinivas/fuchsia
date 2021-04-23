@@ -115,12 +115,22 @@ source_set("path") {
 
 source_set("io-interfaces") {
   public = [
+    "bounded_writer.h",
     "reader.h",
     "writer.h",
   ]
   public_deps = [
     "//sdk/lib/fit-promise",
     "//zircon/public/lib/fbl",
+  ]
+}
+
+source_set("io-interfaces-test") {
+  testonly = true
+  sources = [ "bounded_writer_test.cc" ]
+  deps = [
+    ":io-interfaces",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -209,6 +219,7 @@ group("tests") {
     ":block-utils-test",
     ":fd-io-test",
     ":guid-test",
+    ":io-interfaces-test",
     ":lz4-compression-test",
     ":lz4-decompress-reader-test",
   ]

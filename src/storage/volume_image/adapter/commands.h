@@ -28,6 +28,7 @@ namespace storage::volume_image {
 enum class Command {
   kCreate,
   kCreateSparse,
+  kPave,
   kUnsupported,
 };
 
@@ -77,7 +78,7 @@ struct PartitionParams {
 };
 
 struct CreateParams {
-  // Returns arguments from |index| as a |CreateParam| instance. Validation is done by the
+  // Returns arguments from |arguments| as a |CreateParam| instance. Validation is done by the
   // |CreateParam| consumers.
   static fit::result<CreateParams, std::string> FromArguments(
       fbl::Span<std::string_view> arguments);
@@ -114,6 +115,56 @@ struct CreateParams {
 
 // Creates an fvm image according to |params| and |options|.
 fit::result<void, std::string> Create(const CreateParams& params);
+
+enum class TargetType {
+  // Device is a Memory Techonology Device. (Raw Nand)
+  kMtd,
+
+  // Device is a block device.
+  kBlockDevice,
+
+  // Path points towards a file or character device.
+  kFile,
+};
+
+struct PaveParams {
+  // Returns arguments from |arguments| as a |PaveParams| instance. Validation is done by the
+  // |PaveParams| consumers.
+  static fit::result<PaveParams, std::string> FromArguments(fbl::Span<std::string_view> arguments);
+
+  // Sparse image path.
+  std::string input_path;
+
+  // Protocol to use on the FD of |target_path|.
+  TargetType type;
+
+  // Path to be paved.
+  std::string output_path;
+
+  // Embedded output.
+  // The contents are written into an embedded image, this just enforced
+  // a maximum size and strict bound checking when writing. If the image would
+  // exceed the provided length at any point, it will be treated as a hard failure.
+  bool is_output_embedded = false;
+
+  // When in an embedded output, this is the starting point of the image.
+  std::optional<uint64_t> offset;
+
+  // When set provides a hard maximum on the generated image 'expanded' size, that is
+  // a sparse image when paved, cannot exceed such length. This consists on a limit
+  // to the metadata and allocated slices size.
+  std::optional<uint64_t> length;
+
+  // Maximum number of bad blocks in the underlying MTD device.
+  // This is required parameter for |type| = |kMtdDevice|.
+  std::optional<uint64_t> max_bad_blocks;
+
+  // Pave options for the source image.
+  FvmOptions fvm_options;
+};
+
+// Given an input sparse fvm image, it will write the expanded contents to the path.
+fit::result<void, std::string> Pave(const PaveParams& params);
 
 }  // namespace storage::volume_image
 

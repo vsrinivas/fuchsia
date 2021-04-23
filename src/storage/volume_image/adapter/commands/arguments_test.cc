@@ -331,5 +331,93 @@ TEST(ArgumentTest, CreateParamsFromSparseRegressionCheck) {
   EXPECT_EQ(minfs_partition.options.min_inode_count.value(), 600000u);
 }
 
+TEST(ArgumentTest, PaveParamsFromArgsIsOk) {
+  std::array<std::string_view, 9> kArgs = {
+      "fvm", "test_fvm.blk",    "pave", "--sparse", "my_sparse_image", "--length",
+      "10M", "--max-disk-size", "25G",
+  };
+
+  auto pave_params_or = PaveParams::FromArguments(kArgs);
+  ASSERT_TRUE(pave_params_or.is_ok()) << pave_params_or.error();
+  auto pave_params = pave_params_or.take_value();
+
+  EXPECT_EQ(pave_params.output_path, kArgs[1]);
+  EXPECT_EQ(pave_params.input_path, kArgs[4]);
+  EXPECT_EQ(pave_params.length.value(), 10 * kMega);
+  EXPECT_EQ(pave_params.fvm_options.target_volume_size.value(), 10 * kMega);
+  EXPECT_EQ(pave_params.fvm_options.max_volume_size.value(), 25 * kGiga);
+  EXPECT_EQ(pave_params.type, TargetType::kFile);
+  EXPECT_FALSE(pave_params.is_output_embedded);
+  EXPECT_FALSE(pave_params.offset.has_value());
+  EXPECT_FALSE(pave_params.max_bad_blocks.has_value());
+}
+
+TEST(ArgumentTest, PaveParamsFromArgsWithDiskTypeIsOk) {
+  std::array<std::string_view, 13> kArgs = {
+      "fvm",
+      "test_fvm.blk",
+      "pave",
+      "--sparse",
+      "my_sparse_image",
+      "--length",
+      "10M",
+      "--max-disk-size",
+      "25G",
+      "--max-bad-blocks",
+      "25",
+      "--disk-type",
+      "mtd",
+  };
+  {
+    auto pave_params_or = PaveParams::FromArguments(kArgs);
+    ASSERT_TRUE(pave_params_or.is_ok()) << pave_params_or.error();
+    auto pave_params = pave_params_or.take_value();
+
+    EXPECT_EQ(pave_params.output_path, kArgs[1]);
+    EXPECT_EQ(pave_params.input_path, kArgs[4]);
+    EXPECT_EQ(pave_params.length.value(), 10 * kMega);
+    EXPECT_EQ(pave_params.fvm_options.target_volume_size.value(), 10 * kMega);
+    EXPECT_EQ(pave_params.fvm_options.max_volume_size.value(), 25 * kGiga);
+    EXPECT_EQ(pave_params.type, TargetType::kMtd);
+    EXPECT_EQ(pave_params.max_bad_blocks.value(), 25u);
+    EXPECT_FALSE(pave_params.is_output_embedded);
+    EXPECT_FALSE(pave_params.offset.has_value());
+  }
+
+  {
+    kArgs.back() = "file";
+    auto pave_params_or = PaveParams::FromArguments(kArgs);
+    ASSERT_TRUE(pave_params_or.is_ok()) << pave_params_or.error();
+    auto pave_params = pave_params_or.take_value();
+
+    EXPECT_EQ(pave_params.output_path, kArgs[1]);
+    EXPECT_EQ(pave_params.input_path, kArgs[4]);
+    EXPECT_EQ(pave_params.length.value(), 10 * kMega);
+    EXPECT_EQ(pave_params.fvm_options.target_volume_size.value(), 10 * kMega);
+    EXPECT_EQ(pave_params.fvm_options.max_volume_size.value(), 25 * kGiga);
+    EXPECT_EQ(pave_params.max_bad_blocks.value(), 25u);
+    EXPECT_EQ(pave_params.type, TargetType::kFile);
+    EXPECT_FALSE(pave_params.is_output_embedded);
+    EXPECT_FALSE(pave_params.offset.has_value());
+  }
+
+  {
+    kArgs.back() = "block_device";
+    auto pave_params_or = PaveParams::FromArguments(kArgs);
+    ASSERT_TRUE(pave_params_or.is_ok()) << pave_params_or.error();
+    auto pave_params = pave_params_or.take_value();
+
+    EXPECT_EQ(pave_params.output_path, kArgs[1]);
+    EXPECT_EQ(pave_params.input_path, kArgs[4]);
+    EXPECT_EQ(pave_params.length.value(), 10 * kMega);
+    EXPECT_EQ(pave_params.fvm_options.target_volume_size.value(), 10 * kMega);
+    EXPECT_EQ(pave_params.fvm_options.max_volume_size.value(), 25 * kGiga);
+    EXPECT_EQ(pave_params.type, TargetType::kBlockDevice);
+    EXPECT_EQ(pave_params.max_bad_blocks.value(), 25u);
+    EXPECT_FALSE(pave_params.is_output_embedded);
+    EXPECT_FALSE(pave_params.offset.has_value());
+  }
+}
+
 }  // namespace
 }  // namespace storage::volume_image

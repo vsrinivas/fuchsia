@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/block/volume/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
@@ -22,6 +23,7 @@
 #include <string_view>
 
 #include <block-client/cpp/remote-block-device.h>
+#include <fbl/unique_fd.h>
 #include <fs-management/admin.h>
 #include <fs-management/format.h>
 #include <fs-management/fvm.h>
@@ -29,10 +31,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
-#include <sdk/lib/fdio/include/lib/fdio/fdio.h>
 
-#include "fbl/unique_fd.h"
-#include "fuchsia/hardware/block/volume/c/fidl.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/fvm/format.h"

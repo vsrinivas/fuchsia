@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/result.h>
 #include <string.h>
 #include <unistd.h>
@@ -17,7 +18,6 @@
 
 #include <fbl/unique_fd.h>
 
-#include "lib/fit/defer.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/volume_image/adapter/blobfs_partition.h"
 #include "src/storage/volume_image/adapter/commands.h"
@@ -30,6 +30,7 @@
 #include "src/storage/volume_image/fvm/options.h"
 #include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/partition.h"
+#include "src/storage/volume_image/utils/bounded_writer.h"
 #include "src/storage/volume_image/utils/fd_reader.h"
 #include "src/storage/volume_image/utils/fd_writer.h"
 #include "src/storage/volume_image/utils/lz4_compressor.h"
@@ -49,26 +50,6 @@ class ZeroReader final : public Reader {
     memset(buffer.data(), '0', buffer.size());
     return fit::ok();
   }
-};
-
-class BoundedWriter final : public Writer {
- public:
-  BoundedWriter(std::unique_ptr<Writer> writer, uint64_t offset, uint64_t length)
-      : offset_(offset), length_(length), writer_(std::move(writer)) {}
-
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
-    if (offset + buffer.size() > length_) {
-      return fit::error("BoundedWriter::Write out of bounds. offset: " + std::to_string(offset) +
-                        " byte_cout: " + std::to_string(buffer.size()) +
-                        " max_size: " + std::to_string(length_) + ".");
-    }
-    return writer_->Write(offset_ + offset, buffer);
-  }
-
- private:
-  uint64_t offset_ = 0;
-  uint64_t length_ = 0;
-  std::unique_ptr<Writer> writer_;
 };
 
 fit::result<Partition, std::string> ProcessPartition(const PartitionParams& params,

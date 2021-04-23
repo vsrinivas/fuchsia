@@ -219,7 +219,7 @@ fit::result<CreateParams, std::string> CreateParams::FromArguments(
   // Create takes an output path, and is of the form:
   // bin output_path create/sparse args
   if (arguments.size() < 3) {
-    return fit::error("Not enough arguments for 'create' command.");
+    return fit::error("Not enough arguments for 'create' or 'sparse' command.");
   }
 
   CreateParams params;
@@ -292,10 +292,66 @@ fit::result<CreateParams, std::string> CreateParams::FromArguments(
   return fit::ok(params);
 }
 
+fit::result<PaveParams, std::string> PaveParams::FromArguments(
+    fbl::Span<std::string_view> arguments) {
+  PaveParams params;
+  if (arguments.size() < 3) {
+    return fit::error("Not enough arguments for 'pave' command.");
+  }
+  auto command = CommandFromString(arguments[2]);
+  if (command != Command::kPave) {
+    return fit::error("Pave must be invoked with comman 'pave'.");
+  }
+
+  params.output_path = arguments[1];
+
+  if (auto result = GetSizeArgumentValue(arguments, "--offset", params.offset); result.is_error()) {
+    return result.take_error_result();
+  }
+  params.is_output_embedded = params.offset.has_value();
+
+  if (auto result = GetSizeArgumentValue(arguments, "--length", params.length); result.is_error()) {
+    return result.take_error_result();
+  }
+  params.fvm_options.target_volume_size = params.length;
+
+  if (auto result =
+          GetSizeArgumentValue(arguments, "--max-disk-size", params.fvm_options.max_volume_size);
+      result.is_error()) {
+    return result.take_error_result();
+  }
+
+  if (auto result = GetArgumentValue(arguments, "--sparse", params.input_path); result.is_error()) {
+    return result.take_error_result();
+  }
+
+  std::optional<std::string> target_type;
+  if (auto result = GetArgumentValue(arguments, "--disk-type", target_type); result.is_error()) {
+    return result.take_error_result();
+  }
+
+  if (auto result = GetSizeArgumentValue(arguments, "--max-bad-blocks", params.max_bad_blocks);
+      result.is_error()) {
+    return result.take_error_result();
+  }
+
+  // Default is |File|.
+  if (!target_type.has_value() || target_type.value() == "file") {
+    params.type = TargetType::kFile;
+  } else if (target_type.value() == "mtd") {
+    params.type = TargetType::kMtd;
+  } else if (target_type.value() == "block_device") {
+    params.type = TargetType::kBlockDevice;
+  }
+
+  return fit::ok(params);
+}
+
 Command CommandFromString(std::string_view command_str) {
-  static constexpr std::array<std::pair<std::string_view, Command>, 2> kCommandStringToCommand = {
+  static constexpr std::array<std::pair<std::string_view, Command>, 3> kCommandStringToCommand = {
       std::make_pair("create", Command::kCreate),
       std::make_pair("sparse", Command::kCreateSparse),
+      std::make_pair("pave", Command::kPave),
   };
   for (const auto [str, command] : kCommandStringToCommand) {
     if (str == command_str) {

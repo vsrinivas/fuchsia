@@ -61,6 +61,7 @@ source_set("commands") {
   sources = [
     "commands/arguments.cc",
     "commands/create.cc",
+    "commands/pave.cc",
   ]
   public = [ "commands.h" ]
 
@@ -74,10 +75,12 @@ source_set("commands") {
     ":blobfs-partition",
     ":empty-partition",
     ":minfs-partition",
+    ":mtd-writer",
     "//src/storage/fvm",
     "//src/storage/volume_image/fvm:fvm-descriptor",
     "//src/storage/volume_image/fvm:fvm-image-extend",
     "//src/storage/volume_image/fvm:fvm-sparse-image",
+    "//src/storage/volume_image/utils:block-io",
     "//src/storage/volume_image/utils:fd-io",
     "//src/storage/volume_image/utils:lz4-compression",
   ]
@@ -89,12 +92,12 @@ source_set("mtd-writer") {
   public_deps = [
     "//sdk/lib/fit-promise",
     "//src/storage/volume_image/ftl:ftl-io",
+    "//src/storage/volume_image/utils:block-io",
   ]
 
   if (current_os == "linux") {
     sources = [ "mtd_writer_linux.cc" ]
     deps += [
-      "//src/storage/volume_image/utils:block-io",
       "//zircon/public/lib/safemath",
       "//zircon/system/ulib/ftl-mtd",
       "//zircon/system/ulib/mtd",
@@ -210,6 +213,41 @@ compiled_action("test-fvm-sparse-image-gen") {
   ]
 }
 
+test_fvm_sparse_small_image_label =
+    ":test-fvm-sparse-small-image-gen($default_toolchain)"
+test_fvm_sparse_small_image_path =
+    get_label_info(test_fvm_sparse_small_image_label, "target_out_dir") +
+    "/test_fvm_small.sparse.blk"
+compiled_action("test-fvm-sparse-small-image-gen") {
+  testonly = true
+  visibility = [ ":*" ]
+  tool = "//src/storage/bin/fvm"
+  inputs = [
+    test_minfs_image_path,
+    test_blob_image_path,
+  ]
+  outputs = [ test_fvm_sparse_small_image_path ]
+  args = [
+    rebase_path(test_fvm_sparse_small_image_path, root_build_dir),
+    "sparse",
+    "--compress",
+    "lz4",
+    "--slice",
+    "32k",
+    "--blob",
+    rebase_path(test_blob_image_path, root_build_dir),
+    "--data",
+    rebase_path(test_minfs_image_path, root_build_dir),
+    "--reserve-slices",
+    "4",
+  ]
+
+  deps = [
+    ":test-blobfs-image-gen",
+    ":test-minfs-image-gen",
+  ]
+}
+
 config("test-image-path") {
   if (is_host) {
     output_path =
@@ -227,11 +265,13 @@ host_test_data("host-test-images") {
   sources = [
     test_blob_image_path,
     test_fvm_sparse_image_path,
+    test_fvm_sparse_small_image_path,
     test_minfs_image_path,
   ]
   deps = [
     ":test-blobfs-image-gen($default_toolchain)",
     ":test-fvm-sparse-image-gen($default_toolchain)",
+    ":test-fvm-sparse-small-image-gen($default_toolchain)",
     ":test-minfs-image-gen($default_toolchain)",
   ]
   outputs = [ "$root_out_dir/adapter_test_images/{{source_file_part}}" ]
@@ -242,12 +282,14 @@ resource("adapter-test-images") {
   sources = [
     "$target_out_dir/test_blobfs.blk",
     "$target_out_dir/test_fvm.sparse.blk",
+    "$target_out_dir/test_fvm_small.sparse.blk",
     "$target_out_dir/test_minfs.blk",
   ]
   outputs = [ "data/test_images/{{source_file_part}}" ]
   deps = [
     ":test-blobfs-image-gen",
     ":test-fvm-sparse-image-gen",
+    ":test-fvm-sparse-small-image-gen",
     ":test-minfs-image-gen",
   ]
 }
@@ -258,6 +300,7 @@ source_set("adapter-tests") {
     "blobfs_partition_test.cc",
     "commands/arguments_test.cc",
     "commands/create_test.cc",
+    "commands/pave_test.cc",
     "empty_partition_test.cc",
     "minfs_partition_test.cc",
   ]

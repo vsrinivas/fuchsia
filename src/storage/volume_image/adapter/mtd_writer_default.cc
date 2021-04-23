@@ -7,7 +7,8 @@
 namespace storage::volume_image {
 
 fit::result<std::unique_ptr<Writer>, std::string> CreateMtdWriter(std::string_view path,
-                                                                  const MtdParams& params) {
+                                                                  const MtdParams& params,
+                                                                  FtlHandle* handle) {
   return fit::error("MtdWriter is only supported for linux platform.");
 }
 
