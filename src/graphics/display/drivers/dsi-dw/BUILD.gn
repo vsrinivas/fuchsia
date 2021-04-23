@@ -23,7 +23,7 @@ source_set("common_srcs") {
   sources = [ "dsi-dw.cc" ]
   public_deps = [
     ":dsi_dw_bind",
-    "//sdk/banjo/fuchsia.hardware.dsi",
+    "//sdk/banjo/fuchsia.hardware.dsi:fuchsia.hardware.dsi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.dsiimpl",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c",
