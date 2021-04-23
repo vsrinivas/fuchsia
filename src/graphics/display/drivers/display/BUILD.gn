@@ -44,7 +44,7 @@ source_set("shared") {
     ":display_bind",
     "//sdk/banjo/fuchsia.hardware.audiotypes",
     "//sdk/banjo/fuchsia.hardware.display.capture:fuchsia.hardware.display.capture_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.display.clamprgb",
+    "//sdk/banjo/fuchsia.hardware.display.clamprgb:fuchsia.hardware.display.clamprgb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.display.controller",
     "//sdk/banjo/fuchsia.hardware.i2cimpl",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",

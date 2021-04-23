@@ -15,4 +15,3 @@ protocol DisplayClampRgbImpl {
     /// Set the minimum value of rgb channels. Value range [0 255] inclusive
     SetMinimumRgb(uint8 minimum_rgb) -> (zx.status s);
 };
-
