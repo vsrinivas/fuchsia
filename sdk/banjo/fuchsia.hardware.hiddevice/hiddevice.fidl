@@ -46,7 +46,7 @@ protocol HidDevice {
     /// report is an error. This should be used most frequently to get FEATURE reports,
     /// since most devices will send normal INPUT reports through the Listener API.
     GetReport(HidReportType rpt_type, uint8 rpt_id) -> (zx.status s, vector<uint8>:HID_MAX_REPORT_LEN
-            report);
+                                                        report);
 
     /// Set a given report. Only FEATURE and OUTPUT type reports can be set. Setting an INPUT
     /// report is an error.
