@@ -4,6 +4,7 @@
 
 #include <fuchsia/update/verify/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -12,7 +13,6 @@
 
 #include <gtest/gtest.h>
 
-#include "lib/fidl/llcpp/connect_service.h"
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 
 namespace blobfs {

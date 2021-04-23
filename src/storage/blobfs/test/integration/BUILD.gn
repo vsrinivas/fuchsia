@@ -1,0 +1,340 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+import("//src/storage/testing/isolated_devmgr.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":blobfs-integration-package",
+    ":blobfs-large-integration-package",
+  ]
+}
+
+static_library("blobfs_integration_fixtures") {
+  testonly = true
+  sources = [
+    "blobfs_fixtures.cc",
+    "fdio_test.cc",
+    "fdio_test.h",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/storage/fs_management",
+  ]
+  public_deps = [
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/storage/blobfs",
+    "//src/storage/blobfs/test:test_utils",
+    "//src/storage/fs_test",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+test("external_decompressor_integration") {
+  sources = [ "external_decompressor_test.cc" ]
+  deps = [
+    ":blobfs_integration_fixtures",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
+    "//src/storage/blobfs",
+    "//src/storage/blobfs:fuchsia.blobfs.internal",
+    "//src/storage/blobfs/test:test_utils",
+    "//third_party/googletest:gtest",
+    "//third_party/zstd",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/id_allocator",
+  ]
+}
+
+fuchsia_unittest_component("external-decompressor-integration") {
+  manifest = "meta/external_decompressor_integration.cml"
+  deps = [ ":external_decompressor_integration" ]
+}
+
+fuchsia_unittest_component("external-decompressor-runner") {
+  manifest = "meta/external_decompressor_runner.cml"
+}
+
+test("blobfs_integration") {
+  output_name = "blobfs_integration_test"
+
+  # We need some extra system flags that the _ALL_SOURCE define exposes.
+  configs += [ "//build/config:all_source" ]
+
+  sources = [ "blobfs_integration_test.cc" ]
+  deps = [
+    ":blobfs_integration_fixtures",
+    "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
+    "//src/storage/blobfs",
+    "//src/storage/fs_test",
+    "//src/storage/fvm",
+    "//src/storage/lib/utils:topological_path",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+storage_isolated_devmgr_unittest_v2_component("blobfs-integration") {
+  executable_path = "test/blobfs_integration_test"
+  deps = [ ":blobfs_integration" ]
+}
+
+test("blobfs_mount") {
+  output_name = "blobfs_mount_test"
+
+  # We need some extra system flags that the _ALL_SOURCE define exposes.
+  configs += [ "//build/config:all_source" ]
+
+  sources = [ "mount_test.cc" ]
+  deps = [
+    ":blobfs_integration_fixtures",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
+    "//src/storage/blobfs",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/block-client:fake-device",
+  ]
+}
+
+storage_isolated_devmgr_unittest_v2_component("blobfs-mount") {
+  executable_path = "test/blobfs_mount_test"
+  deps = [ ":blobfs_mount" ]
+}
+
+test("blobfs_query_service") {
+  output_name = "blobfs_query_service_test"
+
+  # We need some extra system flags that the _ALL_SOURCE define exposes.
+  configs += [ "//build/config:all_source" ]
+
+  sources = [ "query_service_test.cc" ]
+  deps = [
+    ":blobfs_integration_fixtures",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/storage/blobfs",
+    "//src/storage/fvm",
+    "//src/storage/lib/utils:topological_path",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fdio-caller",
+  ]
+}
+
+storage_isolated_devmgr_unittest_v2_component("blobfs-query-service") {
+  executable_path = "test/blobfs_query_service_test"
+  deps = [ ":blobfs_query_service" ]
+}
+
+test("blobfs_sync") {
+  output_name = "blobfs_sync_test"
+
+  # We need some extra system flags that the _ALL_SOURCE define exposes.
+  configs += [ "//build/config:all_source" ]
+
+  sources = [ "sync_test.cc" ]
+  deps = [
+    ":blobfs_integration_fixtures",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
+    "//src/storage/blobfs",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/block-client:fake-device",
+  ]
+}
+
+storage_isolated_devmgr_unittest_v2_component("blobfs-sync") {
+  executable_path = "test/blobfs_sync_test"
+  deps = [ ":blobfs_sync" ]
+}
+
+test("blobfs_superblock") {
+  output_name = "blobfs_superblock_test"
+
+  # We need some extra system flags that the _ALL_SOURCE define exposes.
+  configs += [ "//build/config:all_source" ]
+
+  sources = [ "superblock_test.cc" ]
+  deps = [
+    ":blobfs_integration_fixtures",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/storage/blobfs",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+storage_isolated_devmgr_unittest_v2_component("blobfs-superblock") {
+  executable_path = "test/blobfs_superblock_test"
+  deps = [ ":blobfs_superblock" ]
+}
+
+test("blobfs_verifier_service") {
+  output_name = "blobfs_verifier_service_test"
+
+  # We need some extra system flags that the _ALL_SOURCE define exposes.
+  configs += [ "//build/config:all_source" ]
+
+  sources = [ "verifier_service_test.cc" ]
+  deps = [
+    ":blobfs_integration_fixtures",
+    "//sdk/fidl/fuchsia.update:fuchsia.update_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+storage_isolated_devmgr_unittest_v2_component("blobfs-verifier-service") {
+  executable_path = "test/blobfs_verifier_service_test"
+  deps = [ ":blobfs_verifier_service" ]
+}
+
+test("executable_mount") {
+  testonly = true
+  sources = [ "executable_mount_test.cc" ]
+  deps = [
+    ":blobfs_integration_fixtures",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/id_allocator",
+  ]
+}
+
+fuchsia_component("executable-mount") {
+  testonly = true
+  manifest = "meta/executable_mount_test.cmx"
+  deps = [ ":executable_mount" ]
+}
+
+template("blobfs_large_integration_test") {
+  test_name = target_name
+  component_name = "${target_name}-component"
+
+  test(test_name) {
+    output_name = invoker.target_name
+    sources = invoker.sources
+
+    deps = [
+      ":blobfs_integration_fixtures",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+      "//sdk/lib/fdio",
+      "//src/lib/fxl/test:gtest_main",
+      "//src/storage/blobfs",
+      "//src/storage/blobfs/test:test_utils",
+      "//src/storage/fs_test",
+      "//src/storage/fvm",
+      "//src/storage/memfs",
+      "//third_party/googletest:gtest",
+      "//zircon/system/ulib/async-loop",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/fdio-caller",
+    ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(component_name) {
+    executable_path = "test/$test_name"
+    component_name = test_name
+    deps = [ ":$test_name" ]
+  }
+}
+
+blobfs_large_integration_test("blobfs-fragmentation") {
+  sources = [ "large/fragmentation.cc" ]
+}
+
+blobfs_large_integration_test("blobfs-max-reservation") {
+  sources = [ "large/max_reservation.cc" ]
+}
+
+blobfs_large_integration_test("blobfs-no-space") {
+  sources = [ "large/no_space.cc" ]
+}
+
+blobfs_large_integration_test("blobfs-use-second-bitmap") {
+  sources = [ "large/use_second_bitmap.cc" ]
+}
+
+fuchsia_test_package("blobfs-large-integration-package") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  package_name = "blobfs-large-integration"
+  test_components = [
+    ":blobfs-fragmentation-component",
+    ":blobfs-max-reservation-component",
+    ":blobfs-no-space-component",
+    ":blobfs-use-second-bitmap-component",
+  ]
+  deps = [ "//src/storage/bin/blobfs" ]
+}
+
+fuchsia_test_package("blobfs-integration-package") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  package_name = "blobfs-integration"
+  test_components = [
+    ":blobfs-integration",
+    ":blobfs-mount",
+    ":blobfs-query-service",
+    ":blobfs-sync",
+    ":blobfs-superblock",
+    ":blobfs-verifier-service",
+    ":executable-mount",
+    ":external-decompressor-runner",
+  ]
+  deps = [
+    ":external-decompressor-integration",
+    "//src/storage/bin/blobfs",
+    "//src/storage/blobfs:decompressor-sandbox",
+  ]
+}

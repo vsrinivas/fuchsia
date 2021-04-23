@@ -29,6 +29,7 @@ static_library("blobfs") {
   friend = [
     ":decompressor_impl",
     "test:*",
+    "test/integration:*",
   ]
   visibility = [
     "//src/storage/*",

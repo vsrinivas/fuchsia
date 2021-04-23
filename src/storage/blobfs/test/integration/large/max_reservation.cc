@@ -10,7 +10,6 @@
 
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
-#include "src/storage/fvm/format.h"
 
 namespace blobfs {
 namespace {

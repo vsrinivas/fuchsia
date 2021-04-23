@@ -9,13 +9,11 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
-#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/service/cpp/reader.h>
 
 #include <fs-management/admin.h>
 
-#include "lib/fidl/llcpp/connect_service.h"
 #include "src/storage/blobfs/mkfs.h"
 
 namespace blobfs {
