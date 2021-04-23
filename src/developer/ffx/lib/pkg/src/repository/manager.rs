@@ -30,4 +30,11 @@ impl RepositoryManager {
     pub fn get(&self, repo_name: &str) -> Option<ArcRepository> {
         self.repositories.read().get(repo_name).map(|repo| Arc::clone(repo))
     }
+
+    /// Iterate through all [Repositories](Repository)
+    pub fn repositories<'a>(&'a self) -> impl std::iter::Iterator<Item = ArcRepository> + 'a {
+        let mut ret = self.repositories.read().values().map(Arc::clone).collect::<Vec<_>>();
+        ret.sort_unstable_by_key(|x| x.name().to_owned());
+        ret.into_iter()
+    }
 }
