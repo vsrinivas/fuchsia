@@ -91,6 +91,7 @@ pub fn dispatch_syscall(
         exit_group[1],
         fstat[2],
         fstatfs[2],
+        getcwd[2],
         getegid[0],
         geteuid[0],
         getgid[0],

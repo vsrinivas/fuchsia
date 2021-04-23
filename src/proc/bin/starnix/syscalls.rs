@@ -9,7 +9,7 @@ use io_util::directory;
 use io_util::node::OpenError;
 use log::{info, warn};
 use std::convert::TryInto;
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use zerocopy::AsBytes;
 
 use crate::block_on;
@@ -404,6 +404,22 @@ pub fn sys_gettimeofday(
         warn!("NOT_IMPLEMENTED: gettimeofday does not implement tz argument");
     }
     return Ok(SUCCESS);
+}
+
+pub fn sys_getcwd(
+    ctx: &ThreadContext,
+    buf: UserAddress,
+    size: usize,
+) -> Result<SyscallResult, Errno> {
+    // TODO: We should get the cwd from the file system context.
+    let cwd = CString::new("/").unwrap();
+
+    let bytes = cwd.as_bytes_with_nul();
+    if bytes.len() > size {
+        return Err(ERANGE);
+    }
+    ctx.process.write_memory(buf, bytes)?;
+    return Ok(bytes.len().into());
 }
 
 pub fn sys_unknown(_ctx: &ThreadContext, syscall_number: u64) -> Result<SyscallResult, Errno> {
