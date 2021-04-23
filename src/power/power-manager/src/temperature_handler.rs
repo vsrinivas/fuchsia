@@ -333,7 +333,7 @@ pub mod tests {
         let get_temperature = move || sensor_temperature_clone.get();
         let node = setup_test_node(get_temperature, zx::Duration::from_millis(500));
 
-        let mut run = move |duration_ms| {
+        let run = move |executor: &mut fasync::Executor, duration_ms: i64| {
             executor.set_fake_time(executor.now() + zx::Duration::from_millis(duration_ms));
 
             let poll =
@@ -347,15 +347,15 @@ pub mod tests {
 
         // When advancing longer than the cache duration, we'll always poll the sensor.
         sensor_temperature.set(Celsius(20.0));
-        assert_eq!(run(1000), Celsius(20.0));
+        assert_eq!(run(&mut executor, 1000), Celsius(20.0));
         sensor_temperature.set(Celsius(21.0));
-        assert_eq!(run(1000), Celsius(21.0));
+        assert_eq!(run(&mut executor, 1000), Celsius(21.0));
 
         // If insufficient time has passed, we'll see the cached value.
         sensor_temperature.set(Celsius(22.0));
-        assert_eq!(run(200), Celsius(21.0));
-        assert_eq!(run(200), Celsius(21.0));
-        assert_eq!(run(200), Celsius(22.0));
+        assert_eq!(run(&mut executor, 200), Celsius(21.0));
+        assert_eq!(run(&mut executor, 200), Celsius(21.0));
+        assert_eq!(run(&mut executor, 200), Celsius(22.0));
 
         Ok(())
     }

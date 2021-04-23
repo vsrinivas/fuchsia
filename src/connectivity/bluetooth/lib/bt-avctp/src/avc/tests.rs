@@ -48,11 +48,11 @@ pub(crate) fn setup_peer() -> (Peer, Channel) {
     (peer, remote)
 }
 
-fn setup_stream_test() -> (CommandStream, Peer, Channel, fasync::Executor) {
+fn setup_stream_test() -> (fasync::Executor, CommandStream, Peer, Channel) {
     let exec = fasync::Executor::new().expect("failed to create an executor");
     let (peer, remote) = setup_peer();
     let stream = peer.take_command_stream();
-    (stream, peer, remote, exec)
+    (exec, stream, peer, remote)
 }
 
 pub(crate) fn recv_remote(remote: &Channel) -> result::Result<Vec<u8>, zx::Status> {
@@ -85,14 +85,14 @@ fn next_request(stream: &mut CommandStream, exec: &mut fasync::Executor) -> Comm
 
 #[test]
 fn closed_peer_ends_request_stream() {
-    let (stream, _, _, _) = setup_stream_test();
+    let (_exec, stream, _, _) = setup_stream_test();
     let collected = block_on(stream.collect::<Vec<Result<Command>>>());
     assert_eq!(0, collected.len());
 }
 
 #[test]
 fn send_stop_avc_passthrough_command_timeout() {
-    let (_stream, peer, channel, mut exec) = setup_stream_test();
+    let (mut exec, _stream, peer, channel) = setup_stream_test();
     let mut cmd_fut = Box::pin(peer.send_avc_passthrough_command(&[69, 0]));
     let poll_ret: Poll<Result<CommandResponse>> = exec.run_until_stalled(&mut cmd_fut);
     assert!(poll_ret.is_pending());
@@ -117,7 +117,7 @@ fn send_stop_avc_passthrough_command_timeout() {
 
 #[test]
 fn send_stop_avc_passthrough_command() {
-    let (_stream, peer, channel, mut exec) = setup_stream_test();
+    let (mut exec, _stream, peer, channel) = setup_stream_test();
     let mut cmd_fut = Box::pin(peer.send_avc_passthrough_command(&[69, 0]));
     let poll_ret: Poll<Result<CommandResponse>> = exec.run_until_stalled(&mut cmd_fut);
     assert!(poll_ret.is_pending());
@@ -158,7 +158,7 @@ fn send_stop_avc_passthrough_command() {
 
 #[test]
 fn receive_register_notification_command() {
-    let (mut stream, _peer, channel, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _peer, channel) = setup_stream_test();
     let notif_command_packet = &[
         0x00, // TxLabel 0, Single 0, Command 0, Ipid 0,
         0x11, // AV PROFILE
@@ -209,7 +209,7 @@ fn receive_register_notification_command() {
 
 #[test]
 fn receive_unit_info() {
-    let (mut stream, _peer, channel, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _peer, channel) = setup_stream_test();
     let command_packet = &[
         0x00, // TxLabel 0, Single 0, Command 0, Ipid 0,
         0x11, // AV PROFILE
@@ -243,7 +243,7 @@ fn receive_unit_info() {
 
 #[test]
 fn receive_subunit_info() {
-    let (mut stream, _peer, channel, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _peer, channel) = setup_stream_test();
     let command_packet = &[
         0x00, // TxLabel 0, Single 0, Command 0, Ipid 0,
         0x11, // AV PROFILE

@@ -349,10 +349,10 @@ mod tests {
 
         // The Session should open a new RFCOMM channel for the provided `user_dlci`, and
         // the Channel should be relayed to the profile client.
-        match exec.run_until_stalled(&mut profile_client_fut) {
+        let () = match exec.run_until_stalled(&mut profile_client_fut) {
             Poll::Ready(Some(Ok(bredr::ConnectionReceiverRequest::Connected { .. }))) => {}
             x => panic!("Expected connection but got {:?}", x),
-        }
+        };
     }
 
     #[fasync::run_singlethreaded(test)]

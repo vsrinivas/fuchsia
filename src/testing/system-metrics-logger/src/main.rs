@@ -247,13 +247,20 @@ mod tests {
     }
 
     struct Runner {
-        executor: fasync::Executor,
         server_task: fasync::Task<()>,
         proxy: fsysmetrics::SystemMetricsLoggerProxy,
 
         cpu_stats: Rc<RefCell<CpuStats>>,
 
         _stats_task: fasync::Task<()>,
+
+        // Fields are dropped in declaration order. Always drop executor last because we hold other
+        // zircon objects tied to the executor in this struct, and those can't outlive the executor.
+        //
+        // See
+        // - https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/struct.Executor.html
+        // - https://doc.rust-lang.org/reference/destructors.html.
+        executor: fasync::Executor,
     }
 
     impl Runner {

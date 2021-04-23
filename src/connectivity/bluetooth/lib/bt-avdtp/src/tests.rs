@@ -22,11 +22,11 @@ pub(crate) fn setup_peer() -> (Peer, Channel) {
     (peer, remote)
 }
 
-fn setup_stream_test() -> (RequestStream, Peer, Channel, fasync::Executor) {
+fn setup_stream_test() -> (fasync::Executor, RequestStream, Peer, Channel) {
     let exec = fasync::Executor::new().expect("failed to create an executor");
     let (peer, remote) = setup_peer();
     let stream = peer.take_request_stream();
-    (stream, peer, remote, exec)
+    (exec, stream, peer, remote)
 }
 
 fn next_request(stream: &mut RequestStream, exec: &mut fasync::Executor) -> Request {
@@ -112,14 +112,14 @@ const CMD_DISCOVER: &'static [u8] = &[
 
 #[test]
 fn closed_peer_ends_request_stream() {
-    let (stream, _, _, _) = setup_stream_test();
+    let (_exec, stream, _, _) = setup_stream_test();
     let collected = block_on(stream.collect::<Vec<Result<Request>>>());
     assert_eq!(0, collected.len());
 }
 
 #[test]
 fn command_not_supported_response() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     // TxLabel 4, SecurityControl, which is not implemented
     assert!(remote.as_ref().write(&[0x40, 0x0B, 0x40, 0x00, 0x00]).is_ok());
@@ -137,7 +137,7 @@ fn command_not_supported_response() {
 
 #[test]
 fn requests_are_queued_if_they_arrive_early() {
-    let (stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, stream, _, remote) = setup_stream_test();
     assert!(remote.as_ref().write(&CMD_DISCOVER).is_ok());
     let mut collected = Vec::<Request>::new();
 
@@ -153,7 +153,7 @@ fn requests_are_queued_if_they_arrive_early() {
 
 #[test]
 fn responds_with_same_tx_id() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     assert!(remote.as_ref().write(&CMD_DISCOVER).is_ok());
 
@@ -185,7 +185,7 @@ fn responds_with_same_tx_id() {
 
 #[test]
 fn invalid_signal_id_responds_error() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     // This is TxLabel 4, Signal Id 0b110000, which is invalid.
     assert!(remote.as_ref().write(&[0x40, 0x30]).is_ok());
@@ -288,7 +288,7 @@ macro_rules! incoming_cmd_length_fail_test {
     ($test_name:ident, $signal_value:expr, $length:expr) => {
         #[test]
         fn $test_name() {
-            let (mut stream, _, remote, mut exec) = setup_stream_test();
+            let (mut exec, mut stream, _, remote) = setup_stream_test();
 
             // TxLabel 4, signal value, no params
             let mut incoming_cmd = vec![0x40, $signal_value];
@@ -320,7 +320,7 @@ incoming_cmd_length_fail_test!(discover_invalid_length_two, *CMD_DISCOVER_VALUE,
 
 #[test]
 fn discover_event_responder_send_works() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     assert!(remote.as_ref().write(&CMD_DISCOVER).is_ok());
 
@@ -344,7 +344,7 @@ fn discover_event_responder_send_works() {
 
 #[test]
 fn discover_event_responder_reject_works() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     assert!(remote.as_ref().write(&CMD_DISCOVER).is_ok());
 
@@ -461,7 +461,7 @@ incoming_cmd_length_fail_test!(get_capabilities_too_long, *CMD_GET_CAPABILITIES_
 
 #[test]
 fn get_capabilities_event_responder_send_works() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     assert!(remote.as_ref().write(&CMD_GET_CAPABILITIES).is_ok());
 
@@ -518,7 +518,7 @@ fn get_capabilities_event_responder_send_works() {
 
 #[test]
 fn get_capabilities_responder_reject_works() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     assert!(remote.as_ref().write(&CMD_GET_CAPABILITIES).is_ok());
 
@@ -647,7 +647,7 @@ incoming_cmd_length_fail_test!(get_all_capabilities_too_long, *CMD_GET_ALL_CAPAB
 
 #[test]
 fn get_all_capabilities_event_responder_send_works() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     assert!(remote.as_ref().write(&CMD_GET_ALL_CAPABILITIES).is_ok());
 
@@ -704,7 +704,7 @@ fn get_all_capabilities_event_responder_send_works() {
 
 #[test]
 fn get_all_capabilities_responder_reject_works() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     assert!(remote.as_ref().write(&CMD_GET_ALL_CAPABILITIES).is_ok());
 
@@ -833,7 +833,7 @@ incoming_cmd_length_fail_test!(get_configuration_too_long, *CMD_GET_CONFIGURATIO
 
 #[test]
 fn get_configuration_event_responder_send_works() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     assert!(remote.as_ref().write(&CMD_GET_CONFIGURATION).is_ok());
 
@@ -890,7 +890,7 @@ fn get_configuration_event_responder_send_works() {
 
 #[test]
 fn get_configuration_responder_reject_works() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     assert!(remote.as_ref().write(&CMD_GET_CONFIGURATION).is_ok());
 
@@ -1158,7 +1158,7 @@ macro_rules! seid_event_responder_send_test {
     ($test_name:ident, $variant:ident, $signal_value:expr, $command_var:ident) => {
         #[test]
         fn $test_name() {
-            let (mut stream, _, remote, mut exec) = setup_stream_test();
+            let (mut exec, mut stream, _, remote) = setup_stream_test();
 
             assert!(remote.as_ref().write(&$command_var).is_ok());
 
@@ -1186,7 +1186,7 @@ macro_rules! seids_event_responder_send_test {
     ($test_name:ident, $variant:ident, $signal_value:expr, $command_var:ident) => {
         #[test]
         fn $test_name() {
-            let (mut stream, _, remote, mut exec) = setup_stream_test();
+            let (mut exec, mut stream, _, remote) = setup_stream_test();
 
             assert!(remote.as_ref().write(&$command_var).is_ok());
 
@@ -1217,7 +1217,7 @@ macro_rules! seid_event_responder_reject_test {
     ($test_name:ident, $variant:ident, $signal_value:expr, $command_var:ident) => {
         #[test]
         fn $test_name() {
-            let (mut stream, _, remote, mut exec) = setup_stream_test();
+            let (mut exec, mut stream, _, remote) = setup_stream_test();
 
             assert!(remote.as_ref().write(&$command_var).is_ok());
 
@@ -1245,7 +1245,7 @@ macro_rules! stream_event_responder_reject_test {
     ($test_name:ident, $variant:ident, $signal_value:expr, $command_var:ident) => {
         #[test]
         fn $test_name() {
-            let (mut stream, _, remote, mut exec) = setup_stream_test();
+            let (mut exec, mut stream, _, remote) = setup_stream_test();
 
             assert!(remote.as_ref().write(&$command_var).is_ok());
 
@@ -1390,7 +1390,7 @@ fn expect_config_recv_cap_okay(
     remote_seid: StreamEndpointId,
     capability: ServiceCapability,
 ) {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     let txlabel_mask = cmd[0] & 0xF0;
 
@@ -1422,7 +1422,7 @@ incoming_cmd_length_fail_test!(set_config_length_too_short, 0x03, 2);
 
 #[test]
 fn set_configuration_invalid_media_transport_format() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     // TxLabel (4), ResponseReject, Signal, Relevant Cap (Media Transport),
     // BadMediaTransportFormat
@@ -1453,7 +1453,7 @@ fn set_config_event_responder_send_works() {
 
 #[test]
 fn set_config_event_responder_reject_works() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     let set_config_cmd = &[
         0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
@@ -1607,7 +1607,7 @@ fn set_config_error_response() {
 
 #[test]
 fn set_config_bad_reporting_format() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     // TxLabel (4), ResponseReject, Signal, Relevant Cap (Reporting), BadPayloadFormat
     let rsp = &[0x43, 0x03, 0x02, 0x18];
@@ -1638,7 +1638,7 @@ fn set_config_reporting_ok() {
 
 #[test]
 fn set_config_bad_content_protection_format() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     // TxLabel (4), ResponseReject, Signal, Relevant Cap (CP), BadCpFormat
     let rsp = &[0x43, 0x03, 0x04, 0x27];
@@ -1691,7 +1691,7 @@ fn build_recovery_cmd(recovery_type: u8, mrws: u8, mnmp: u8) -> [u8; 9] {
 
 #[test]
 fn set_config_bad_recovery_type() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     // TxLabel (4), Signal, Relevant Cap (Recovery), BadRecoveryType
     let rsp = &[0x43, 0x03, 0x03, 0x22];
@@ -1709,7 +1709,7 @@ fn set_config_bad_recovery_type() {
 
 #[test]
 fn set_config_bad_recovery_format() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     let cmd = &[
         0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
@@ -1753,7 +1753,7 @@ fn set_config_recovery_ok() {
 
 #[test]
 fn set_config_bad_media_codec_format() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     let cmd = &[
         0x40, 0x03, 0x04, 0x08, // TxLabel 4, Signal, ACP (1) and INT (2) SEID
@@ -1805,7 +1805,7 @@ incoming_cmd_length_fail_test!(reconfigure_length_too_short, 0x05, 1);
 
 #[test]
 fn reconfigure_invalid_capabilities() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     let cmd = &[
         0x40, 0x05, 0x04, // TxLabel 4, Signal, ACP (1) SEID
@@ -1820,7 +1820,7 @@ fn reconfigure_invalid_capabilities() {
 
 #[test]
 fn reconfig_event_responder_send_works() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     let reconfigure_cmd = &[
         0x40, 0x05, 0x04, // TxLabel 4, Signal, ACP (1) SEID
@@ -1855,7 +1855,7 @@ fn reconfig_event_responder_send_works() {
 
 #[test]
 fn reconfig_event_responder_reject_works() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     let reconfigure_cmd = &[
         0x40, 0x05, 0x04, // TxLabel 4, Signal, ACP (1) SEID
@@ -2182,7 +2182,7 @@ incoming_cmd_length_fail_test!(delay_report_too_long, *CMD_DELAY_REPORT_VALUE, 4
 
 #[test]
 fn delay_report_event_responder_send_works() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     assert!(remote.as_ref().write(&CMD_DELAY_REPORT).is_ok());
 
@@ -2208,7 +2208,7 @@ fn delay_report_event_responder_send_works() {
 
 #[test]
 fn delay_report_responder_reject_works() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _, remote) = setup_stream_test();
 
     assert!(remote.as_ref().write(&CMD_DELAY_REPORT).is_ok());
 

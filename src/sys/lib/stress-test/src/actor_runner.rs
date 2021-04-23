@@ -7,10 +7,13 @@ use {
         actor::{Actor, ActorError},
         counter::CounterTx,
     },
-    fuchsia_async::Task,
-    futures::lock::Mutex,
+    fuchsia_async::{Task, Time, Timer},
+    futures::{
+        future::{AbortHandle, Abortable, Aborted},
+        lock::Mutex,
+    },
     log::debug,
-    std::{sync::Arc, thread::sleep, time::Duration},
+    std::{sync::Arc, time::Duration},
 };
 
 /// The thread that runs an actor indefinitely
@@ -39,8 +42,13 @@ impl ActorRunner {
 
     /// Run the actor on a new thread indefinitely for the given generation.
     /// The runner will stop if the actor requests an environment reset.
-    pub fn run(self, counter_tx: CounterTx, generation: u64) -> Task<(ActorRunner, u64)> {
-        Task::blocking(async move {
+    pub fn run(
+        self,
+        counter_tx: CounterTx,
+        generation: u64,
+    ) -> (Task<Result<(ActorRunner, u64), Aborted>>, AbortHandle) {
+        let (abort_handle, abort_registration) = AbortHandle::new_pair();
+        let fut = async move {
             let mut local_count: u64 = 0;
             loop {
                 if let Some(delay) = self.delay {
@@ -48,7 +56,7 @@ impl ActorRunner {
                         "[{}][{}][{}] Sleeping for {:?}",
                         generation, self.name, local_count, delay
                     );
-                    sleep(delay);
+                    Timer::new(Time::after(delay.into())).await;
                 }
 
                 debug!("[{}][{}][{}] Performing...", generation, self.name, local_count);
@@ -81,6 +89,7 @@ impl ActorRunner {
 
                 local_count += 1;
             }
-        })
+        };
+        (Task::blocking(Abortable::new(fut, abort_registration)), abort_handle)
     }
 }

@@ -95,12 +95,18 @@ mod tests {
 
     /// Holds all of the boilerplate required for testing RegulatoryManager.
     struct TestContext<S: Stream<Item = Result<(), Error>> + Send + Unpin> {
-        executor: fasync::Executor,
         iface_manager: Arc<Mutex<StubIfaceManager<S>>>,
         regulatory_manager: RegulatoryManager<StubIfaceManager<S>>,
         regulatory_region_requests: RegulatoryRegionWatcherRequestStream,
         regulatory_sender: oneshot::Sender<()>,
         regulatory_receiver: oneshot::Receiver<()>,
+        // Fields are dropped in declaration order. Always drop executor last because we hold other
+        // zircon objects tied to the executor in this struct, and those can't outlive the executor.
+        //
+        // See
+        // - https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/struct.Executor.html
+        // - https://doc.rust-lang.org/reference/destructors.html.
+        executor: fasync::Executor,
     }
 
     impl<S> TestContext<S>
@@ -238,7 +244,7 @@ mod tests {
     }
 
     #[test]
-    fn does_not_propogate_null_update() {
+    fn does_not_propagate_null_update() {
         let mut context = TestContext::new(make_default_stub_iface_manager());
         let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);

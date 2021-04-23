@@ -3727,7 +3727,7 @@ mod tests {
     }
 
     fn run_service_test_with_unit_return(
-        mut exec: fuchsia_async::Executor,
+        exec: &mut fuchsia_async::Executor,
         network_selector: Arc<NetworkSelector>,
         iface_manager: IfaceManagerService,
         req: IfaceManagerRequest,
@@ -4226,7 +4226,7 @@ mod tests {
         drop(test_values.device_service_stream);
 
         run_service_test_with_unit_return(
-            exec,
+            &mut exec,
             test_values.network_selector,
             iface_manager,
             req,
@@ -4250,7 +4250,7 @@ mod tests {
         let req = IfaceManagerRequest::RemoveIface(req);
 
         run_service_test_with_unit_return(
-            exec,
+            &mut exec,
             test_values.network_selector,
             iface_manager,
             req,

@@ -4,10 +4,11 @@
 
 use {
     crate::shutdown_mocks::{new_mocks_provider, Admin, Signal},
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fuchsia_async as fasync,
     fuchsia_component_test::{builder::*, mock},
     futures::{channel::mpsc, future, StreamExt},
+    matches::assert_matches,
 };
 
 mod shutdown_mocks;
@@ -128,10 +129,12 @@ async fn power_manager_present_reboot_system_update() -> Result<(), Error> {
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
-    let reason = fstatecontrol::RebootReason::SystemUpdate;
-    shim_statecontrol.reboot(reason).await?.unwrap();
+    shim_statecontrol.reboot(fstatecontrol::RebootReason::SystemUpdate).await?.unwrap();
     let res = recv_signals.next().await;
-    assert_eq!(res, Some(Signal::Statecontrol(Admin::Reboot(reason))));
+    assert_matches!(
+        res,
+        Some(Signal::Statecontrol(Admin::Reboot(fstatecontrol::RebootReason::SystemUpdate)))
+    );
     Ok(())
 }
 
@@ -142,10 +145,12 @@ async fn power_manager_present_reboot_session_failure() -> Result<(), Error> {
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
-    let reason = fstatecontrol::RebootReason::SessionFailure;
-    shim_statecontrol.reboot(reason).await?.unwrap();
+    shim_statecontrol.reboot(fstatecontrol::RebootReason::SessionFailure).await?.unwrap();
     let res = recv_signals.next().await;
-    assert_eq!(res, Some(Signal::Statecontrol(Admin::Reboot(reason))));
+    assert_matches!(
+        res,
+        Some(Signal::Statecontrol(Admin::Reboot(fstatecontrol::RebootReason::SessionFailure)))
+    );
     Ok(())
 }
 
@@ -158,7 +163,7 @@ async fn power_manager_present_reboot_to_bootloader() -> Result<(), Error> {
 
     shim_statecontrol.reboot_to_bootloader().await?.unwrap();
     let res = recv_signals.next().await;
-    assert_eq!(res, Some(Signal::Statecontrol(Admin::RebootToBootloader)));
+    assert_matches!(res, Some(Signal::Statecontrol(Admin::RebootToBootloader)));
     Ok(())
 }
 
@@ -171,7 +176,7 @@ async fn power_manager_present_reboot_to_recovery() -> Result<(), Error> {
 
     shim_statecontrol.reboot_to_recovery().await?.unwrap();
     let res = recv_signals.next().await;
-    assert_eq!(res, Some(Signal::Statecontrol(Admin::RebootToRecovery)));
+    assert_matches!(res, Some(Signal::Statecontrol(Admin::RebootToRecovery)));
     Ok(())
 }
 
@@ -184,7 +189,7 @@ async fn power_manager_present_poweroff() -> Result<(), Error> {
 
     shim_statecontrol.poweroff().await?.unwrap();
     let res = recv_signals.next().await;
-    assert_eq!(res, Some(Signal::Statecontrol(Admin::Poweroff)));
+    assert_matches!(res, Some(Signal::Statecontrol(Admin::Poweroff)));
     Ok(())
 }
 
@@ -197,7 +202,7 @@ async fn power_manager_present_suspend_to_ram() -> Result<(), Error> {
 
     shim_statecontrol.suspend_to_ram().await?.unwrap();
     let res = recv_signals.next().await;
-    assert_eq!(res, Some(Signal::Statecontrol(Admin::SuspendToRam)));
+    assert_matches!(res, Some(Signal::Statecontrol(Admin::SuspendToRam)));
     Ok(())
 }
 
@@ -215,13 +220,11 @@ async fn power_manager_missing_poweroff() -> Result<(), Error> {
             "the shutdown shim should close the channel when manual shutdown driving is complete",
         );
     });
-    assert_eq!(
-        recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
-        vec![
-            Signal::DeviceManager(fstatecontrol::SystemPowerState::Poweroff),
-            Signal::Sys2Shutdown
-        ]
+    assert_matches!(
+        recv_signals.next().await,
+        Some(Signal::DeviceManager(fstatecontrol::SystemPowerState::Poweroff))
     );
+    assert_matches!(recv_signals.next().await, Some(Signal::Sys2Shutdown(_)));
     Ok(())
 }
 
@@ -239,10 +242,12 @@ async fn power_manager_missing_reboot_system_update() -> Result<(), Error> {
             "the shutdown shim should close the channel when manual shutdown driving is complete",
         );
     });
-    assert_eq!(
-        recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
-        vec![Signal::DeviceManager(fstatecontrol::SystemPowerState::Reboot), Signal::Sys2Shutdown,]
+
+    assert_matches!(
+        recv_signals.next().await,
+        Some(Signal::DeviceManager(fstatecontrol::SystemPowerState::Reboot))
     );
+    assert_matches!(recv_signals.next().await, Some(Signal::Sys2Shutdown(_)));
     Ok(())
 }
 
@@ -253,18 +258,28 @@ async fn power_manager_missing_mexec() -> Result<(), Error> {
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
-    let mexec_task = fasync::Task::spawn(async move { shim_statecontrol.mexec().await });
-    assert_eq!(
-        recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
-        vec![Signal::DeviceManager(fstatecontrol::SystemPowerState::Mexec), Signal::Sys2Shutdown,]
+    let mexec_fut = shim_statecontrol.mexec();
+    assert_matches!(
+        recv_signals.next().await,
+        Some(Signal::DeviceManager(fstatecontrol::SystemPowerState::Mexec))
     );
+
+    // Shutdown responder must be kept alive for us to observe mexec to completion.
+    let _shutdown_responder = match recv_signals.next().await {
+        Some(Signal::Sys2Shutdown(responder)) => responder,
+        o => panic!("unexpected signal {:?}", o),
+    };
 
     // Dropping the shutdown_shim will cause the shim to be destroyed, which will trigger its
     // stop event, which the shim watches for to know when to return for an mexec
     drop(realm_instance);
 
     // Mexec should actually return the call when it's done
-    mexec_task.await?.map_err(|e| format_err!("mexec call failed: {:?}", e))?;
+    mexec_fut
+        .await
+        .context("FIDL error")?
+        .map_err(|e| format_err!("mexec call failed: {:?}", e))?;
+
     Ok(())
 }
 
@@ -281,13 +296,12 @@ async fn power_manager_not_present_poweroff() -> Result<(), Error> {
         );
     })
     .detach();
-    assert_eq!(
-        recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
-        vec![
-            Signal::DeviceManager(fstatecontrol::SystemPowerState::Poweroff),
-            Signal::Sys2Shutdown
-        ]
+
+    assert_matches!(
+        recv_signals.next().await,
+        Some(Signal::DeviceManager(fstatecontrol::SystemPowerState::Poweroff))
     );
+    assert_matches!(recv_signals.next().await, Some(Signal::Sys2Shutdown(_)));
     Ok(())
 }
 
@@ -304,10 +318,12 @@ async fn power_manager_not_present_reboot() -> Result<(), Error> {
         );
     })
     .detach();
-    assert_eq!(
-        recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
-        vec![Signal::DeviceManager(fstatecontrol::SystemPowerState::Reboot), Signal::Sys2Shutdown,]
+
+    assert_matches!(
+        recv_signals.next().await,
+        Some(Signal::DeviceManager(fstatecontrol::SystemPowerState::Reboot))
     );
+    assert_matches!(recv_signals.next().await, Some(Signal::Sys2Shutdown(_)));
     Ok(())
 }
 
@@ -318,17 +334,27 @@ async fn power_manager_not_present_mexec() -> Result<(), Error> {
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
-    let mexec_task = fasync::Task::spawn(shim_statecontrol.mexec());
-    assert_eq!(
-        recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
-        vec![Signal::DeviceManager(fstatecontrol::SystemPowerState::Mexec), Signal::Sys2Shutdown,]
+    let mexec_fut = shim_statecontrol.mexec();
+
+    assert_matches!(
+        recv_signals.next().await,
+        Some(Signal::DeviceManager(fstatecontrol::SystemPowerState::Mexec))
     );
+    // Shutdown responder must be kept alive for us to observe mexec to completion.
+    let _shutdown_responder = match recv_signals.next().await {
+        Some(Signal::Sys2Shutdown(responder)) => responder,
+        o => panic!("unexpected signal {:?}", o),
+    };
 
     // Dropping the shutdown_shim will cause the shim to be destroyed, which will trigger its
     // stop event, which the shim watches for to know when to return for an mexec
     drop(realm_instance);
 
     // Mexec should actually return the call when it's done
-    mexec_task.await?.map_err(|e| format_err!("error returned on mexec call: {:?}", e))?;
+    mexec_fut
+        .await
+        .context("FIDL error")?
+        .map_err(|e| format_err!("error returned on mexec call: {:?}", e))?;
+
     Ok(())
 }

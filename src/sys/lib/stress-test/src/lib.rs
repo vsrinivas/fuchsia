@@ -9,9 +9,13 @@ mod actor_runner;
 mod counter;
 
 use {
-    crate::{actor_runner::ActorRunner, counter::start_counter, environment::Environment},
-    fuchsia_async::{Task, TimeoutExt},
-    futures::future::{select, select_all, Either},
+    crate::{counter::start_counter, environment::Environment},
+    fuchsia_async::{Time, Timer},
+    futures::{
+        future::{select, Aborted, Either},
+        stream::FuturesUnordered,
+        StreamExt,
+    },
     log::{error, info, set_logger, set_max_level, LevelFilter},
     rand::{rngs::SmallRng, FromEntropy, Rng},
     std::{
@@ -84,76 +88,83 @@ pub async fn run_test<E: 'static + Environment>(mut env: E) {
     }
 
     // Extract the data from the environment
+    // Defaults:
+    // - target_operations: 2^64
+    // - timeout_secs: 24 hours
     let target_operations = env.target_operations().unwrap_or(u64::MAX);
-    let timeout_secs = env.timeout_seconds();
+    let timeout_secs = Duration::from_secs(env.timeout_seconds().unwrap_or(24 * 60 * 60));
 
     // Start the counter thread
     // The counter thread keeps track of the global operation count.
     // Each actor will send a message to the counter thread when an operation is completed.
     // When the target operation count is hit, the counter task exits.
-    let (mut counter_task, counter_tx) = start_counter(target_operations);
+    let (counter_task, counter_tx) = start_counter(target_operations);
+
+    // Create a timeout task
+    let timeout = Timer::new(Time::after(timeout_secs.into()));
+    let mut test_end = select(counter_task, timeout);
 
     // A monotonically increasing counter representing the current generation.
     // On every environment reset, the generation is incremented.
     let mut generation: u64 = 0;
 
     // Start all the runners
-    let mut runner_tasks: Vec<Task<(ActorRunner, u64)>> =
-        env.actor_runners().into_iter().map(|r| r.run(counter_tx.clone(), generation)).collect();
+    let (mut runner_tasks, mut runner_abort): (FuturesUnordered<_>, Vec<_>) =
+        env.actor_runners().into_iter().map(|r| r.run(counter_tx.clone(), generation)).unzip();
 
-    let test_loop = async move {
-        loop {
-            let joined_runners = select_all(runner_tasks.drain(..));
+    loop {
+        // Wait for one of the runners, counter task or timer to return
+        let either = select(test_end, runner_tasks.next()).await;
+        match either {
+            Either::Left((test_end_either, _next)) => {
+                let reason = match test_end_either {
+                    Either::Left(..) => "operation count",
+                    Either::Right(..) => "timeout",
+                };
 
-            // Wait for one of the runners or the counter task to return
-            let either = select(counter_task, joined_runners).await;
-            match either {
-                Either::Left(_) => {
-                    // The counter task returned.
-                    // The target operation count was hit.
-                    // The test has completed.
-                    info!("Test completed {} operations!", target_operations);
-                    break;
+                // The counter/timer task returned.
+                // The target operation count was hit or the timer expired.
+                // The test has completed.
+                info!("Stress test has completed because of {}!", reason);
+                for abort in runner_abort {
+                    abort.abort();
                 }
-                Either::Right((((runner, runner_generation), _, mut other_runner_tasks), task)) => {
-                    // Normally, actor runners run indefinitely.
-                    // However, one of the actor runners has returned.
-                    // This is because an actor has requested an environment reset.
+                // We don't care if tasks finished or were aborted, but we want them not running
+                // anymore before we return.
+                //
+                // Runaway threads can cause problems if they're using objects from the main
+                // executor, and it's generally a good idea to clean up after ourselves here.
+                let () = runner_tasks.map(|_: Result<_, Aborted>| ()).collect().await;
+                break;
+            }
+            Either::Right((None, _counter_task)) => {
+                info!("No runners to operate");
+                break;
+            }
+            Either::Right((Some(result), task)) => {
+                let (runner, runner_generation) = result.expect("no tasks have been aborted");
+                // Normally, actor runners run indefinitely.
+                // However, one of the actor runners has returned.
+                // This is because an actor has requested an environment reset.
 
-                    // Move the counter task back
-                    counter_task = task;
+                // Move the counter/timer back
+                test_end = task;
 
-                    // Did the runner request a reset at the current generation?
-                    if runner_generation == generation {
-                        // Reset the environment
-                        info!("Resetting environment");
-                        env.reset().await;
+                // Did the runner request a reset at the current generation?
+                if runner_generation == generation {
+                    // Reset the environment
+                    info!("Resetting environment");
+                    env.reset().await;
 
-                        // Advance the generation
-                        generation += 1;
-                    }
-
-                    // Restart this runner with the current generation
-                    let task = runner.run(counter_tx.clone(), generation);
-                    other_runner_tasks.push(task);
-
-                    // Move the runner tasks back
-                    runner_tasks = other_runner_tasks;
+                    // Advance the generation
+                    generation += 1;
                 }
+
+                // Restart this runner with the current generation
+                let (task, abort) = runner.run(counter_tx.clone(), generation);
+                runner_tasks.push(task);
+                runner_abort.push(abort);
             }
         }
-    };
-
-    if let Some(timeout_secs) = timeout_secs {
-        // Put a timeout on the test loop.
-        // Users can ask a stress test to run as many operations as it can within
-        // a certain time limit. Hence it is not an error for this timeout to be hit.
-        test_loop
-            .on_timeout(Duration::from_secs(timeout_secs), move || {
-                info!("Test completed after {} seconds!", timeout_secs);
-            })
-            .await;
-    } else {
-        test_loop.await;
     }
 }

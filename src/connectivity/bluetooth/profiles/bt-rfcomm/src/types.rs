@@ -367,13 +367,13 @@ pub(crate) mod tests {
         assert_matches!(res, Ok(()));
 
         // We expect the connected request to be relayed to the client.
-        match exec.run_until_stalled(&mut server.next()) {
+        let () = match exec.run_until_stalled(&mut server.next()) {
             Poll::Ready(Some(Ok(bredr::ConnectionReceiverRequest::Connected {
                 peer_id, ..
             }))) => {
                 assert_eq!(peer_id, id.into());
             }
             x => panic!("Expected ready but got: {:?}", x),
-        }
+        };
     }
 }

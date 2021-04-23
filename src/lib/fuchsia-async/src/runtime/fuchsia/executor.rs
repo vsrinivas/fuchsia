@@ -287,6 +287,14 @@ where
 }
 
 /// A port-based executor for Fuchsia OS.
+///
+/// Having an `Executor` in scope allows the creation and polling of zircon objects, such as
+/// [`fuchsia_async::Channel`].
+///
+/// # Panics
+///
+/// `Executor` will panic on drop if any zircon objects attached to it are still alive. In other
+/// words, zircon objects backed by an `Executor` must be dropped before it.
 // NOTE: intentionally does not implement `Clone`.
 pub struct Executor {
     inner: Arc<Inner>,
@@ -806,6 +814,48 @@ fn is_defunct_timer(timer: Option<&TimeWaker>) -> bool {
 
 impl Drop for Executor {
     fn drop(&mut self) {
+        // Notes about the lifecycle of an Executor.
+        //
+        // a) The Executor stands as the only way to run a reactor based on a Fuchsia port, but the
+        // lifecycle of the port itself is not currently tied to it. Executor vends clones of its
+        // inner Arc structure to all receivers, so we don't have a type-safe way of ensuring that
+        // the port is dropped alongside the Executor as it should.
+        // TODO(https://fxbug.dev/75075): Ensure the port goes away with the executor.
+        //
+        // b) The Executor's lifetime is also tied to the thread-local variable pointing to the
+        // "current" executor being set, and that's unset when the executor is dropped.
+        //
+        // Point (a) is related to "what happens if I use a receiver after the executor is dropped",
+        // and point (b) is related to "what happens when I try to create a new receiver when there
+        // is no executor".
+        //
+        // Tokio, for example, encodes the lifetime of the reactor separately from the thread-local
+        // storage [1]. And the reactor discourages usage of strong references to it by vending weak
+        // references to it [2] instead of strong.
+        //
+        // There are pros and cons to both strategies. For (a), tokio encourages (but doesn't
+        // enforce [3]) type-safety by vending weak pointers, but those add runtime overhead when
+        // upgrading pointers. For (b) the difference mostly stand for "when is it safe to use IO
+        // objects/receivers". Tokio says it's only safe to use them whenever a guard is in scope.
+        // Fuchsia-async says it's safe to use them when a fuchsia_async::Executor is still in scope
+        // in that thread.
+        //
+        // This acts as a prelude to the panic encoded in Executor::drop when receivers haven't
+        // unregistered themselves when the executor drops. The choice to panic was made based on
+        // patterns in fuchsia-async that may come to change:
+        //
+        // - Executor vends strong references to itself and those references are *stored* by most
+        // receiver implementations (as opposed to reached out on TLS every time).
+        // - Fuchsia-async objects return zx::Status on wait calls, there isn't an appropriate and
+        // easy to understand error to return when polling on an extinct executor.
+        // - All receivers are implemented in this crate and well-known.
+        //
+        // [1]: https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Runtime.html#method.enter
+        // [2]: https://github.com/tokio-rs/tokio/blob/b42f21ec3e212ace25331d0c13889a45769e6006/tokio/src/signal/unix/driver.rs#L35
+        // [3]: by returning an upgraded Arc, tokio trusts callers to not "use it for too long", an
+        // opaque non-clone-copy-or-send guard would be stronger than this. See:
+        // https://github.com/tokio-rs/tokio/blob/b42f21ec3e212ace25331d0c13889a45769e6006/tokio/src/io/driver/mod.rs#L297
+
         // Done flag must be set before dropping packet receivers
         // so that future receivers that attempt to deregister themselves
         // know that it's okay if their entries are already missing.
@@ -813,9 +863,6 @@ impl Drop for Executor {
 
         // Wake the threads so they can kill themselves.
         self.join_all();
-
-        // Drop all of the packet receivers
-        self.inner.receivers.lock().clear();
 
         // Drop all tasks
         self.inner.active_tasks.lock().clear();
@@ -825,6 +872,32 @@ impl Drop for Executor {
 
         // Synthetic main task marked completed
         self.inner.collector.task_completed(MAIN_TASK_ID);
+
+        // Do not allow any receivers to outlive the executor. That's very likely a bug waiting to
+        // happen. See discussion above.
+        //
+        // If you're here because you hit this panic check your code for:
+        //
+        // - A struct that contains a fuchsia_async::Executor NOT in the last position (last
+        // position gets dropped last: https://doc.rust-lang.org/reference/destructors.html).
+        //
+        // - A function scope that contains a fuchsia_async::Executor NOT in the first position
+        // (first position in function scope gets dropped last:
+        // https://doc.rust-lang.org/reference/destructors.html?highlight=scope#drop-scopes).
+        //
+        // - A function that holds a `fuchsia_async::Executor` in scope and whose last statement
+        // contains a temporary (temporaries are dropped after the function scope:
+        // https://doc.rust-lang.org/reference/destructors.html#temporary-scopes). This usually
+        // looks like a `match` statement at the end of the function without a semicolon.
+        //
+        // - Storing channel and FIDL objects in static variables.
+        //
+        // - fuchsia_async::Task::blocking calls that detach or move channels or FIDL objects to the
+        // main thread.
+        assert!(
+            self.inner.receivers.lock().mapping.is_empty(),
+            "receivers must not outlive their executor"
+        );
 
         // Remove the thread-local executor set in `new`.
         EHandle::rm_local();
@@ -966,10 +1039,6 @@ struct PacketReceiverMap<T> {
 impl<T> PacketReceiverMap<T> {
     fn new() -> Self {
         Self { next_key: 0, mapping: HashMap::new() }
-    }
-
-    fn clear(&mut self) {
-        self.mapping.clear()
     }
 
     fn get(&self, key: usize) -> Option<&T> {
@@ -1464,10 +1533,6 @@ mod tests {
         // Still doesn't reuse IDs after one is removed
         map.remove(1);
         assert_eq!(map.insert(e1), 2);
-
-        // Still doesn't reuse IDs after map is cleared
-        map.clear();
-        assert_eq!(map.insert(e1), 3);
     }
 
     #[test]

@@ -277,15 +277,21 @@ impl Simulator {
 
 /// Coordinates execution of tests of ThermalPolicy.
 struct ThermalPolicyTest<'a> {
-    executor: fasync::Executor,
     time: Seconds,
     thermal_policy: Rc<ThermalPolicy>,
     policy_futures: FuturesUnordered<LocalBoxFuture<'a, ()>>,
     sim: Rc<RefCell<Simulator>>,
+    // Fields are dropped in declaration order. Always drop executor last because we hold other
+    // zircon objects tied to the executor in this struct, and those can't outlive the executor.
+    //
+    // See
+    // - https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/struct.Executor.html
+    // - https://doc.rust-lang.org/reference/destructors.html.
+    executor: fasync::Executor,
 }
 
 impl<'a> ThermalPolicyTest<'a> {
-    /// Iniitalizes a new ThermalPolicyTest.
+    /// Initializes a new ThermalPolicyTest.
     fn new(sim_params: SimulatorParams, policy_params: ThermalPolicyParams) -> Self {
         {
             let p = &sim_params.cpu_params;

@@ -397,7 +397,7 @@ mod tests {
         }
     }
 
-    fn test_get_first_sme(iface_list: &[MacRole]) -> Result<fidl_sme::ClientSmeProxy, Error> {
+    fn test_get_first_sme(iface_list: &[MacRole]) -> Result<(), Error> {
         let (mut exec, proxy, mut req_stream) =
             crate::tests::setup_fake_service::<DeviceServiceMarker>();
         let fut = get_first_sme(&proxy);
@@ -428,7 +428,8 @@ mod tests {
             }
         }
 
-        exec.run_singlethreaded(&mut fut)
+        let _proxy = exec.run_singlethreaded(&mut fut)?;
+        Ok(())
     }
 
     fn test_disconnect_all(iface_list: &[(MacRole, StatusResponse)]) -> Result<(), Error> {
@@ -727,10 +728,10 @@ mod tests {
         // pass in that we expect this to succeed
         send_sme_proxy_response(&mut exec, &mut next_device_service_req, zx::Status::OK);
 
-        match exec.run_until_stalled(&mut fut) {
+        let () = match exec.run_until_stalled(&mut fut) {
             Poll::Ready(Ok(_)) => (),
             _ => panic!("Expected a status response"),
-        }
+        };
     }
 
     fn send_sme_proxy_response(

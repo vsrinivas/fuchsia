@@ -12,15 +12,8 @@ use {
     fuchsia_component_test::{builder::*, mock},
     fuchsia_syslog::macros::*,
     fuchsia_zircon as zx,
-    futures::{channel::mpsc, lock::Mutex, StreamExt, TryFutureExt, TryStreamExt},
-    lazy_static::lazy_static,
-    std::sync::Arc,
+    futures::{channel::mpsc, StreamExt, TryFutureExt, TryStreamExt},
 };
-
-lazy_static! {
-    static ref IGNORED_RESPONDERS: Arc<Mutex<Vec<fsys::SystemControllerShutdownResponder>>> =
-        Arc::new(Mutex::new(vec![]));
-}
 
 pub fn new_mocks_provider() -> (ComponentSource, mpsc::UnboundedReceiver<Signal>) {
     let (send_signals, recv_signals) = mpsc::unbounded();
@@ -76,11 +69,11 @@ pub enum Admin {
     SuspendToRam,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum Signal {
     Statecontrol(Admin),
     DeviceManager(fstatecontrol::SystemPowerState),
-    Sys2Shutdown,
+    Sys2Shutdown(fsys::SystemControllerShutdownResponder),
 }
 
 async fn run_statecontrol_admin(
@@ -170,10 +163,9 @@ async fn run_sys2_system_controller(
         match stream.try_next().await? {
             Some(fsys::SystemControllerRequest::Shutdown { responder }) => {
                 fx_log_info!("Shutdown called");
-                send_signals.unbounded_send(Signal::Sys2Shutdown)?;
-                // The shim should never observe this call returning, as it only returns once all
-                // components are shut down, which includes the shim.
-                IGNORED_RESPONDERS.lock().await.push(responder);
+                // Send the responder out with the signal.
+                // The responder keeps the current request and the request stream alive.
+                send_signals.unbounded_send(Signal::Sys2Shutdown(responder))?;
             }
             _ => (),
         }

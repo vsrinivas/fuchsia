@@ -7,13 +7,14 @@ use {super::util::*, crate::FONTS_SMALL_CM};
 // Add new tests here so we don't overload component manager with requests (58150)
 #[fasync::run_singlethreaded(test)]
 async fn test_get_typefaces_by_family() {
-    test_get_typefaces_by_family_basic().await.unwrap();
-    test_get_typefaces_by_family_alias().await.unwrap();
-    test_get_typefaces_by_family_not_found().await.unwrap();
+    let factory = ProviderFactory::new();
+    test_get_typefaces_by_family_basic(&factory).await.unwrap();
+    test_get_typefaces_by_family_alias(&factory).await.unwrap();
+    test_get_typefaces_by_family_not_found(&factory).await.unwrap();
 }
 
-async fn test_get_typefaces_by_family_basic() -> Result<(), Error> {
-    let font_provider = get_provider(FONTS_SMALL_CM).await?;
+async fn test_get_typefaces_by_family_basic(factory: &ProviderFactory) -> Result<(), Error> {
+    let font_provider = factory.get_provider(FONTS_SMALL_CM).await?;
     let mut family = fonts::FamilyName { name: String::from("Roboto") };
 
     let response = font_provider.get_typefaces_by_family(&mut family).await?;
@@ -26,8 +27,8 @@ async fn test_get_typefaces_by_family_basic() -> Result<(), Error> {
     Ok(())
 }
 
-async fn test_get_typefaces_by_family_alias() -> Result<(), Error> {
-    let font_provider = get_provider(FONTS_SMALL_CM).await?;
+async fn test_get_typefaces_by_family_alias(factory: &ProviderFactory) -> Result<(), Error> {
+    let font_provider = factory.get_provider(FONTS_SMALL_CM).await?;
     let mut family = fonts::FamilyName { name: String::from("Material Design Icons") };
     let mut alias = fonts::FamilyName { name: String::from("MaterialIcons") };
 
@@ -43,8 +44,8 @@ async fn test_get_typefaces_by_family_alias() -> Result<(), Error> {
     Ok(())
 }
 
-async fn test_get_typefaces_by_family_not_found() -> Result<(), Error> {
-    let font_provider = get_provider(FONTS_SMALL_CM).await?;
+async fn test_get_typefaces_by_family_not_found(factory: &ProviderFactory) -> Result<(), Error> {
+    let font_provider = factory.get_provider(FONTS_SMALL_CM).await?;
     let mut family = fonts::FamilyName { name: String::from("NoSuchFont") };
     let response = font_provider.get_typefaces_by_family(&mut family).await?;
     assert_eq!(response.unwrap_err(), fonts_exp::Error::NotFound);

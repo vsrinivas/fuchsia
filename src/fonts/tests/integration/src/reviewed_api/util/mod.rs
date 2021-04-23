@@ -14,6 +14,8 @@ pub use {
     fuchsia_zircon::AsHandleRef,
 };
 
+pub type ProviderFactory = util::TypedProviderFactory<fonts::ProviderMarker>;
+
 #[macro_export]
 macro_rules! assert_buf_eq {
     ($typeface_info_a:ident, $typeface_info_b:ident) => {
@@ -26,10 +28,6 @@ macro_rules! assert_buf_eq {
             $typeface_info_b
         )
     };
-}
-
-pub async fn get_provider(fonts_cm: &'static str) -> Result<fonts::ProviderProxy, Error> {
-    util::get_provider::<fonts::ProviderMarker>(fonts_cm).await
 }
 
 #[derive(Debug, Eq, PartialEq)]

@@ -18,11 +18,11 @@ pub(crate) fn setup_peer() -> (Peer, Channel) {
     (peer, remote)
 }
 
-fn setup_stream_test() -> (CommandStream, Peer, Channel, fasync::Executor) {
+fn setup_stream_test() -> (fasync::Executor, CommandStream, Peer, Channel) {
     let exec = fasync::Executor::new().expect("failed to create an executor");
     let (peer, remote) = setup_peer();
     let stream = peer.take_command_stream();
-    (stream, peer, remote, exec)
+    (exec, stream, peer, remote)
 }
 
 pub(crate) fn recv_remote(remote: &Channel) -> result::Result<Vec<u8>, zx::Status> {
@@ -106,14 +106,14 @@ fn can_only_take_stream_once() {
 
 #[test]
 fn closed_peer_ends_request_stream() {
-    let (stream, _, _, _) = setup_stream_test();
+    let (_exec, stream, _, _) = setup_stream_test();
     let collected = block_on(stream.collect::<Vec<Result<Command>>>());
     assert_eq!(0, collected.len());
 }
 
 #[test]
 fn send_command_receive_response() {
-    let (_stream, peer, socket, mut exec) = setup_stream_test();
+    let (mut exec, _stream, peer, socket) = setup_stream_test();
 
     // sending random payload.
     let mut command_stream =
@@ -159,7 +159,7 @@ fn send_command_receive_response() {
 
 #[test]
 fn receive_command_send_response() {
-    let (mut stream, _peer, socket, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _peer, socket) = setup_stream_test();
     let notif_command_packet = &[
         0x00, // TxLabel 0, Single 0, Command 0, Ipid 0,
         0x11, // AV PROFILE
@@ -219,7 +219,7 @@ fn receive_command_send_response() {
 
 #[test]
 fn receive_command_too_short_is_dropped() {
-    let (mut stream, _peer, socket, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _peer, socket) = setup_stream_test();
     let notif_command_packet = &[
         // No payload. Only a command
         0x00, // TxLabel 0, Single 0, Command 0, Ipid 0,
@@ -235,7 +235,7 @@ fn receive_command_too_short_is_dropped() {
 
 #[test]
 fn receive_invalid_is_dropped() {
-    let (mut stream, _peer, socket, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _peer, socket) = setup_stream_test();
     let notif_command_packet = &[0];
     assert!(socket.as_ref().write(notif_command_packet).is_ok());
 
@@ -246,7 +246,7 @@ fn receive_invalid_is_dropped() {
 
 #[test]
 fn invalid_profile_id_response() {
-    let (mut stream, _peer, socket, mut exec) = setup_stream_test();
+    let (mut exec, mut stream, _peer, socket) = setup_stream_test();
     let notif_command_packet = &[
         // command for wrong profile id
         0x03, // TxLabel 0, Single 0, Response 1, Ipid 1,

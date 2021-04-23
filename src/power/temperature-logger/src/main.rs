@@ -457,7 +457,6 @@ mod tests {
 
     // Helper struct for managing test state.
     struct Runner {
-        executor: fasync::Executor,
         server_task: fasync::Task<()>,
         proxy: fthermal::TemperatureLoggerProxy,
 
@@ -468,6 +467,14 @@ mod tests {
 
         // Driver tasks are never used but must remain in scope.
         _driver_tasks: Vec<fasync::Task<()>>,
+
+        // Fields are dropped in declaration order. Always drop executor last because we hold other
+        // zircon objects tied to the executor in this struct, and those can't outlive the executor.
+        //
+        // See
+        // - https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/struct.Executor.html
+        // - https://doc.rust-lang.org/reference/destructors.html.
+        executor: fasync::Executor,
     }
 
     impl Runner {

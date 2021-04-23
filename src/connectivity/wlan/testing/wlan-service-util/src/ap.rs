@@ -222,7 +222,7 @@ mod tests {
         responder.send(status.into_raw()).expect("fake sme proxy response: send failed")
     }
 
-    fn test_get_first_sme(iface_list: &[MacRole]) -> Result<fidl_sme::ApSmeProxy, Error> {
+    fn test_get_first_sme(iface_list: &[MacRole]) -> Result<(), Error> {
         let (mut exec, proxy, mut req_stream) =
             crate::tests::setup_fake_service::<DeviceServiceMarker>();
         let fut = get_first_sme(&proxy);
@@ -252,7 +252,8 @@ mod tests {
             }
         }
 
-        exec.run_singlethreaded(&mut fut)
+        let _proxy = exec.run_singlethreaded(&mut fut)?;
+        Ok(())
     }
     // iface list contains an AP and a client. Test should pass
     #[test]

@@ -68,12 +68,11 @@ where
 pub struct TestController<'test_refs> {
     exec: Executor,
     client: Pin<Box<dyn Future<Output = ()> + 'test_refs>>,
-    drop_checks: bool,
 }
 
 impl<'test_refs> TestController<'test_refs> {
     fn new(exec: Executor, client: Pin<Box<dyn Future<Output = ()> + 'test_refs>>) -> Self {
-        Self { exec, client, drop_checks: true }
+        Self { exec, client }
     }
 
     /// Runs the client test code until it is stalled.  Will panic if the test code runs to
@@ -91,17 +90,6 @@ impl<'test_refs> TestController<'test_refs> {
         assert_eq!(res, Poll::Pending, "Test was not expected to complete");
     }
 
-    /// Runs the client test code until it is stalled and then dropps the controller.  The test
-    /// will not execute any more - only useful in case when stalling in the test is expected.
-    /// Generally this is a bad idea, as there is no controll over where exactly the test is
-    /// stalled making it easy to miss bugs.
-    pub fn run_until_stalled_and_forget(mut self) {
-        let res = self.exec.run_until_stalled(&mut self.client);
-        assert_eq!(res, Poll::Pending, "Test was not expected to complete");
-
-        self.drop_checks = false;
-    }
-
     /// Runs the client test code to completion.  As this will consume the controller, this method
     /// can only be called last.  Note that the controller will effectively run this methods for
     /// you when it is dropped, if you do not do it explicitly.
@@ -113,11 +101,8 @@ impl<'test_refs> TestController<'test_refs> {
 impl<'test_refs> Drop for TestController<'test_refs> {
     fn drop(&mut self) {
         // See `run_until_stalled` above the a comment about timeouts.
-
-        if self.drop_checks {
-            let res = self.exec.run_until_stalled(&mut self.client);
-            assert_eq!(res, Poll::Ready(()), "Test did not complete");
-        }
+        let res = self.exec.run_until_stalled(&mut self.client);
+        assert_eq!(res, Poll::Ready(()), "Test did not complete");
     }
 }
 

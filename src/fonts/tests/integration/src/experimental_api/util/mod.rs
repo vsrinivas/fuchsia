@@ -13,9 +13,7 @@ pub use {
     futures::lock::Mutex,
 };
 
-pub async fn get_provider(fonts_cm: &'static str) -> Result<fonts_exp::ProviderProxy, Error> {
-    util::get_provider::<fonts_exp::ProviderMarker>(fonts_cm).await
-}
+pub type ProviderFactory = util::TypedProviderFactory<fonts_exp::ProviderMarker>;
 
 pub fn roboto_info(id: u32, weight: u16) -> fonts_exp::TypefaceInfo {
     fonts_exp::TypefaceInfo {

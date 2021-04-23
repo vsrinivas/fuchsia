@@ -9,12 +9,12 @@ use super::{read_only, read_only_const, read_only_static, read_write, write_only
 // Macros are exported into the root of the crate.
 use crate::{
     assert_close, assert_event, assert_get_attr, assert_get_buffer, assert_get_buffer_err,
-    assert_no_event, assert_read, assert_read_at, assert_read_at_err, assert_read_err,
-    assert_read_fidl_err_closed, assert_seek, assert_seek_err, assert_truncate,
-    assert_truncate_err, assert_vmo_content, assert_write, assert_write_at, assert_write_at_err,
-    assert_write_err, assert_write_fidl_err_closed, clone_as_file_assert_err,
-    clone_get_proxy_assert, clone_get_vmo_file_proxy_assert_err,
-    clone_get_vmo_file_proxy_assert_ok, report_invalid_vmo_content,
+    assert_read, assert_read_at, assert_read_at_err, assert_read_err, assert_read_fidl_err_closed,
+    assert_seek, assert_seek_err, assert_truncate, assert_truncate_err, assert_vmo_content,
+    assert_write, assert_write_at, assert_write_at_err, assert_write_err,
+    assert_write_fidl_err_closed, clone_as_file_assert_err, clone_get_proxy_assert,
+    clone_get_vmo_file_proxy_assert_err, clone_get_vmo_file_proxy_assert_ok,
+    report_invalid_vmo_content,
 };
 
 use crate::{
@@ -110,17 +110,16 @@ fn read_only_read_no_status() {
 
     test_server_client(OPEN_RIGHT_READABLE, simple_read_only(b"Read only test"), |proxy| {
         async move {
+            use futures::{FutureExt as _, StreamExt as _};
             // Make sure `open()` call is complete, before we start checking.
             check_event_recv.await.unwrap();
-            assert_no_event!(proxy);
-            // NOTE: logic added after `assert_no_event!` will not currently be run. this test will
-            // need to be updated after fxbug.dev/33709 is completed.
+            matches::assert_matches!(proxy.take_event_stream().next().now_or_never(), None);
         }
     })
     .coordinator(|mut controller| {
         controller.run_until_stalled();
         check_event_send.send(()).unwrap();
-        controller.run_until_stalled_and_forget();
+        controller.run_until_complete();
     })
     .run();
 }

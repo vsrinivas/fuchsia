@@ -1089,10 +1089,10 @@ mod tests {
         assert!(exec.run_until_stalled(&mut handle_fut).is_ready());
 
         // The search request should be relayed directly to the Profile Server.
-        match exec.run_until_stalled(&mut profile_requests.next()) {
+        let () = match exec.run_until_stalled(&mut profile_requests.next()) {
             Poll::Ready(Some(Ok(bredr::ProfileRequest::Search { .. }))) => {}
             x => panic!("Expected search request, got: {:?}", x),
-        }
+        };
     }
 
     /// This test validates that client ConnectSco requests are relayed directly upstream.
@@ -1108,10 +1108,10 @@ mod tests {
         assert!(exec.run_until_stalled(&mut handle_fut).is_ready());
 
         // The connect request should be relayed directly to the Profile Server.
-        match exec.run_until_stalled(&mut profile_requests.next()) {
+        let () = match exec.run_until_stalled(&mut profile_requests.next()) {
             Poll::Ready(Some(Ok(bredr::ProfileRequest::ConnectSco { .. }))) => {}
             x => panic!("Expected search request, got: {:?}", x),
-        }
+        };
     }
 
     /// This tests validates that 1) The call to Profile.Advertise correctly registers upstream and

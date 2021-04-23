@@ -12,12 +12,13 @@ use {
 // Add new tests here so we don't overload component manager with requests (58150)
 #[fasync::run_singlethreaded(test)]
 async fn test_get_font_family_info() {
-    test_get_font_family_info_basic().await.unwrap();
-    test_get_font_family_info_aliases().await.unwrap();
+    let factory = ProviderFactory::new();
+    test_get_font_family_info_basic(&factory).await.unwrap();
+    test_get_font_family_info_aliases(&factory).await.unwrap();
 }
 
-async fn test_get_font_family_info_basic() -> Result<(), Error> {
-    let font_provider = get_provider(FONTS_SMALL_CM).await?;
+async fn test_get_font_family_info_basic(factory: &ProviderFactory) -> Result<(), Error> {
+    let font_provider = factory.get_provider(FONTS_SMALL_CM).await?;
 
     let font_family_info = font_provider
         .get_font_family_info(&mut fonts::FamilyName { name: "materialicons".to_string() })
@@ -31,8 +32,8 @@ async fn test_get_font_family_info_basic() -> Result<(), Error> {
     Ok(())
 }
 
-async fn test_get_font_family_info_aliases() -> Result<(), Error> {
-    let font_provider = get_provider(FONTS_ALIASED_CM).await?;
+async fn test_get_font_family_info_aliases(factory: &ProviderFactory) -> Result<(), Error> {
+    let font_provider = factory.get_provider(FONTS_ALIASED_CM).await?;
 
     let known_aliases =
         vec!["AlphaSans", "alpha sans", "Alpha Sans Condensed", "Alpha Sans Hebrew"];
