@@ -21,7 +21,6 @@ namespace fio = fuchsia_io;
 
 namespace fs {
 namespace {
-constexpr uint64_t kVmoFileBlksize = PAGE_SIZE;
 
 zx_rights_t GetVmoRightsForAccessMode(fs::Rights fs_rights) {
   zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP;
@@ -61,7 +60,7 @@ zx_status_t VmoFile::GetAttributes(VnodeAttributes* attr) {
   }
   attr->inode = fio::wire::kInoUnknown;
   attr->content_size = length_;
-  attr->storage_size = fbl::round_up(attr->content_size, kVmoFileBlksize);
+  attr->storage_size = fbl::round_up(attr->content_size, zx_system_get_page_size());
   attr->link_count = 1;
   return ZX_OK;
 }
@@ -146,9 +145,10 @@ zx_status_t VmoFile::DuplicateVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* 
 }
 
 zx_status_t VmoFile::CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset) {
-  size_t clone_offset = fbl::round_down(offset_, static_cast<size_t>(PAGE_SIZE));
+  size_t clone_offset = fbl::round_down(offset_, static_cast<size_t>(zx_system_get_page_size()));
   size_t clone_length =
-      fbl::round_up(offset_ + length_, static_cast<size_t>(PAGE_SIZE)) - clone_offset;
+      fbl::round_up(offset_ + length_, static_cast<size_t>(zx_system_get_page_size())) -
+      clone_offset;
 
   if (!(rights & ZX_RIGHT_WRITE)) {
     // Use a shared clone for read-only content.

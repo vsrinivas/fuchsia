@@ -159,7 +159,7 @@ class BufferedPseudoFile : public PseudoFile {
 // buffer size used by the intended clients.
 //
 // As a conservative guideline, we recommend using |BufferedPseudoFile| instead for content larger
-// than |PAGE_SIZE|.
+// than the system page size.
 //
 // In read mode, the pseudo-file invokes its read handler each time |Read()| is called with a seek
 // offset of 0, returning at most as many bytes as the client requested and discarding the remainder

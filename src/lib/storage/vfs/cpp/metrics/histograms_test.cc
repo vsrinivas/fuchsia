@@ -114,7 +114,7 @@ TEST_F(HistogramsTest, InvalidOptionsReturnsHistogramCount) {
 
 TEST_F(HistogramsTest, SizeIsMultipleOfPageSize) {
   Histograms histograms = Histograms(&inspector_.GetRoot());
-  ASSERT_EQ(Histograms::Size() % PAGE_SIZE, 0);
+  ASSERT_EQ(Histograms::Size() % zx_system_get_page_size(), 0);
 }
 
 }  // namespace

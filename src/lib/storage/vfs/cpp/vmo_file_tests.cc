@@ -19,10 +19,10 @@ namespace {
 using VnodeOptions = fs::VnodeConnectionOptions;
 using VnodeInfo = fs::VnodeRepresentation;
 
-constexpr size_t VMO_SIZE = PAGE_SIZE * 3u;
-constexpr size_t PAGE_0 = 0u;
-constexpr size_t PAGE_1 = PAGE_SIZE;
-constexpr size_t PAGE_2 = PAGE_SIZE * 2u;
+const size_t VMO_SIZE = zx_system_get_page_size() * 3u;
+const size_t PAGE_0 = 0u;
+const size_t PAGE_1 = zx_system_get_page_size();
+const size_t PAGE_2 = zx_system_get_page_size() * 2u;
 
 zx_koid_t GetKoid(zx_handle_t handle) {
   zx_info_handle_basic_t info;
@@ -67,9 +67,9 @@ void CreateVmoABC(zx::vmo* out_vmo) {
   zx_status_t status = zx::vmo::create(VMO_SIZE, 0u, out_vmo);
   ASSERT_EQ(ZX_OK, status);
 
-  FillVmo(*out_vmo, PAGE_0, PAGE_SIZE, 'A');
-  FillVmo(*out_vmo, PAGE_1, PAGE_SIZE, 'B');
-  FillVmo(*out_vmo, PAGE_2, PAGE_SIZE, 'C');
+  FillVmo(*out_vmo, PAGE_0, zx_system_get_page_size(), 'A');
+  FillVmo(*out_vmo, PAGE_1, zx_system_get_page_size(), 'B');
+  FillVmo(*out_vmo, PAGE_2, zx_system_get_page_size(), 'C');
 }
 
 TEST(VmoFile, Constructor) {
@@ -78,10 +78,10 @@ TEST(VmoFile, Constructor) {
 
   // default parameters
   {
-    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, PAGE_SIZE);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, zx_system_get_page_size());
     EXPECT_EQ(abc.get(), file->vmo_handle());
     EXPECT_EQ(0u, file->offset());
-    EXPECT_EQ(PAGE_SIZE, file->length());
+    EXPECT_EQ(zx_system_get_page_size(), file->length());
     EXPECT_FALSE(file->is_writable());
     EXPECT_EQ(fs::VmoFile::VmoSharing::DUPLICATE, file->vmo_sharing());
   }
@@ -153,7 +153,7 @@ TEST(VmoFile, Read) {
 
   // empty read of non-empty file
   {
-    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, PAGE_SIZE);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, zx_system_get_page_size());
     size_t actual = UINT64_MAX;
     EXPECT_EQ(ZX_OK, file->Read(data, 0u, 0u, &actual));
     EXPECT_EQ(0u, actual);
@@ -215,9 +215,9 @@ TEST(VmoFile, Read) {
     size_t actual = UINT64_MAX;
     EXPECT_EQ(ZX_OK, file->Read(data, VMO_SIZE, 0u, &actual));
     EXPECT_EQ(VMO_SIZE, actual);
-    CheckData(data, PAGE_0, PAGE_SIZE, 'A');
-    CheckData(data, PAGE_1, PAGE_SIZE, 'B');
-    CheckData(data, PAGE_2, PAGE_SIZE, 'C');
+    CheckData(data, PAGE_0, zx_system_get_page_size(), 'A');
+    CheckData(data, PAGE_1, zx_system_get_page_size(), 'B');
+    CheckData(data, PAGE_2, zx_system_get_page_size(), 'C');
   }
 }
 
@@ -230,13 +230,13 @@ TEST(VmoFile, Write) {
 
   // empty write of non-empty file
   {
-    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, PAGE_SIZE, true);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, zx_system_get_page_size(), true);
     size_t actual = UINT64_MAX;
     EXPECT_EQ(ZX_OK, file->Write(data, 0u, 0u, &actual));
     EXPECT_EQ(0u, actual);
-    CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A');
-    CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B');
-    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
+    CheckVmo(abc, PAGE_0, zx_system_get_page_size(), 'A');
+    CheckVmo(abc, PAGE_1, zx_system_get_page_size(), 'B');
+    CheckVmo(abc, PAGE_2, zx_system_get_page_size(), 'C');
   }
 
   // non-empty write of empty file
@@ -252,9 +252,9 @@ TEST(VmoFile, Write) {
     size_t actual = UINT64_MAX;
     EXPECT_EQ(ZX_OK, file->Write(data, 0u, 10u, &actual));
     EXPECT_EQ(0u, actual);
-    CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A');
-    CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B');
-    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
+    CheckVmo(abc, PAGE_0, zx_system_get_page_size(), 'A');
+    CheckVmo(abc, PAGE_1, zx_system_get_page_size(), 'B');
+    CheckVmo(abc, PAGE_2, zx_system_get_page_size(), 'C');
   }
 
   // non-empty write at end of file
@@ -270,9 +270,9 @@ TEST(VmoFile, Write) {
     size_t actual = UINT64_MAX;
     EXPECT_EQ(ZX_OK, file->Write(data, 0u, 11u, &actual));
     EXPECT_EQ(0u, actual);
-    CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A');
-    CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B');
-    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
+    CheckVmo(abc, PAGE_0, zx_system_get_page_size(), 'A');
+    CheckVmo(abc, PAGE_1, zx_system_get_page_size(), 'B');
+    CheckVmo(abc, PAGE_2, zx_system_get_page_size(), 'C');
   }
 
   // non-empty write beyond end of file
@@ -288,10 +288,10 @@ TEST(VmoFile, Write) {
     size_t actual = UINT64_MAX;
     EXPECT_EQ(ZX_OK, file->Write(data, 11u, 1u, &actual));
     EXPECT_EQ(9u, actual);
-    CheckVmo(abc, PAGE_0, PAGE_SIZE - 2u, 'A');
+    CheckVmo(abc, PAGE_0, zx_system_get_page_size() - 2u, 'A');
     CheckVmo(abc, PAGE_1 - 2u, 9u, '!');
-    CheckVmo(abc, PAGE_1 + 7u, PAGE_SIZE - 7u, 'B');
-    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
+    CheckVmo(abc, PAGE_1 + 7u, zx_system_get_page_size() - 7u, 'B');
+    CheckVmo(abc, PAGE_2, zx_system_get_page_size(), 'C');
   }
 
   // full write
@@ -310,23 +310,24 @@ TEST(VmoFile, Getattr) {
 
   // read-only
   {
-    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, PAGE_SIZE * 3u + 117u);
+    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, zx_system_get_page_size() * 3u + 117u);
     fs::VnodeAttributes attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE | V_IRUSR, attr.mode);
-    EXPECT_EQ(PAGE_SIZE * 3u + 117u, attr.content_size);
-    EXPECT_EQ(4u * PAGE_SIZE, attr.storage_size);
+    EXPECT_EQ(zx_system_get_page_size() * 3u + 117u, attr.content_size);
+    EXPECT_EQ(4u * zx_system_get_page_size(), attr.storage_size);
     EXPECT_EQ(1u, attr.link_count);
   }
 
   // writable
   {
-    auto file = fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, PAGE_SIZE * 3u + 117u, true);
+    auto file =
+        fbl::MakeRefCounted<fs::VmoFile>(abc, 0u, zx_system_get_page_size() * 3u + 117u, true);
     fs::VnodeAttributes attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE | V_IRUSR | V_IWUSR, attr.mode);
-    EXPECT_EQ(PAGE_SIZE * 3u + 117u, attr.content_size);
-    EXPECT_EQ(4u * PAGE_SIZE, attr.storage_size);
+    EXPECT_EQ(zx_system_get_page_size() * 3u + 117u, attr.content_size);
+    EXPECT_EQ(4u * zx_system_get_page_size(), attr.storage_size);
     EXPECT_EQ(1u, attr.link_count);
   }
 }
@@ -389,10 +390,10 @@ TEST(VmoFile, GetNodeInfo) {
 
     FillVmo(vmo, PAGE_1 - 5u, 23u, '!');
 
-    CheckVmo(abc, 0u, PAGE_SIZE - 5u, 'A');
+    CheckVmo(abc, 0u, zx_system_get_page_size() - 5u, 'A');
     CheckVmo(abc, PAGE_1 - 5u, 23u, '!');
-    CheckVmo(abc, PAGE_1 + 18u, PAGE_SIZE - 18u, 'B');
-    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
+    CheckVmo(abc, PAGE_1 + 18u, zx_system_get_page_size() - 18u, 'B');
+    CheckVmo(abc, PAGE_2, zx_system_get_page_size(), 'C');
   }
 
   // sharing = VmoSharing::DUPLICATE, write only
@@ -415,10 +416,10 @@ TEST(VmoFile, GetNodeInfo) {
 
     FillVmo(vmo, PAGE_1 - 5u, 23u, '!');
 
-    CheckVmo(abc, 0u, PAGE_SIZE - 5u, 'A');
+    CheckVmo(abc, 0u, zx_system_get_page_size() - 5u, 'A');
     CheckVmo(abc, PAGE_1 - 5u, 23u, '!');
-    CheckVmo(abc, PAGE_1 + 18u, PAGE_SIZE - 18u, 'B');
-    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
+    CheckVmo(abc, PAGE_1 + 18u, zx_system_get_page_size() - 18u, 'B');
+    CheckVmo(abc, PAGE_2, zx_system_get_page_size(), 'C');
   }
 
   // sharing = VmoSharing::CLONE_COW, read only
@@ -440,11 +441,11 @@ TEST(VmoFile, GetNodeInfo) {
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
     EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ, GetRights(vmo.get()));
-    EXPECT_EQ(PAGE_SIZE - 5u, memory.offset);
+    EXPECT_EQ(zx_system_get_page_size() - 5u, memory.offset);
     EXPECT_EQ(23u, memory.length);
 
-    CheckVmo(vmo, PAGE_SIZE - 5u, 5u, 'B');
-    CheckVmo(vmo, PAGE_SIZE, 18u, 'C');
+    CheckVmo(vmo, zx_system_get_page_size() - 5u, 5u, 'B');
+    CheckVmo(vmo, zx_system_get_page_size(), 18u, 'C');
   }
 
   // sharing = VmoSharing::CLONE_COW, read-write
@@ -463,17 +464,17 @@ TEST(VmoFile, GetNodeInfo) {
     EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
     EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
               GetRights(vmo.get()));
-    EXPECT_EQ(PAGE_SIZE - 5u, memory.offset);
+    EXPECT_EQ(zx_system_get_page_size() - 5u, memory.offset);
     EXPECT_EQ(23u, memory.length);
 
-    CheckVmo(vmo, PAGE_SIZE - 5u, 5u, 'B');
-    CheckVmo(vmo, PAGE_SIZE, 18u, 'C');
+    CheckVmo(vmo, zx_system_get_page_size() - 5u, 5u, 'B');
+    CheckVmo(vmo, zx_system_get_page_size(), 18u, 'C');
 
-    FillVmo(vmo, PAGE_SIZE - 5u, 23u, '!');
+    FillVmo(vmo, zx_system_get_page_size() - 5u, 23u, '!');
 
-    CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A');
-    CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B');
-    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
+    CheckVmo(abc, PAGE_0, zx_system_get_page_size(), 'A');
+    CheckVmo(abc, PAGE_1, zx_system_get_page_size(), 'B');
+    CheckVmo(abc, PAGE_2, zx_system_get_page_size(), 'C');
   }
 
   // sharing = VmoSharing::CLONE_COW, write only
@@ -491,14 +492,14 @@ TEST(VmoFile, GetNodeInfo) {
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
     EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_WRITE, GetRights(vmo.get()));
-    EXPECT_EQ(PAGE_SIZE - 5u, memory.offset);
+    EXPECT_EQ(zx_system_get_page_size() - 5u, memory.offset);
     EXPECT_EQ(23u, memory.length);
 
-    FillVmo(vmo, PAGE_SIZE - 5u, 23u, '!');
+    FillVmo(vmo, zx_system_get_page_size() - 5u, 23u, '!');
 
-    CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A');
-    CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B');
-    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
+    CheckVmo(abc, PAGE_0, zx_system_get_page_size(), 'A');
+    CheckVmo(abc, PAGE_1, zx_system_get_page_size(), 'B');
+    CheckVmo(abc, PAGE_2, zx_system_get_page_size(), 'C');
   }
 }
 

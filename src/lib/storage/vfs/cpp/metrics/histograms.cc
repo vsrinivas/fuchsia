@@ -562,7 +562,7 @@ uint64_t Histograms::Size() {
   return fbl::round_up(HistogramOffsets::End<EventInfo<Event::kInvalidEvent>>() *
                            ((kHistogramBuckets * sizeof(uint64_t) + kApproximateNameLength) +
                             strlen(Histograms::kHistComponent)),
-                       static_cast<uint64_t>(PAGE_SIZE));
+                       static_cast<uint64_t>(zx_system_get_page_size()));
 }
 
 }  // namespace fs_metrics

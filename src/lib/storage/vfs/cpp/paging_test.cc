@@ -281,7 +281,7 @@ TEST_F(PagingTest, Read) {
 
   // Map the data and validate the result can be read.
   zx_vaddr_t mapped_addr = 0;
-  size_t mapped_len = RoundUp<uint64_t>(kFile1Size, PAGE_SIZE);
+  size_t mapped_len = RoundUp<uint64_t>(kFile1Size, zx_system_get_page_size());
   ASSERT_EQ(ZX_OK,
             zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0, vmo, 0, mapped_len, &mapped_addr));
   ASSERT_TRUE(mapped_addr);
