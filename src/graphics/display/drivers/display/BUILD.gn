@@ -43,7 +43,7 @@ source_set("shared") {
   public_deps = [
     ":display_bind",
     "//sdk/banjo/fuchsia.hardware.audiotypes",
-    "//sdk/banjo/fuchsia.hardware.display.capture",
+    "//sdk/banjo/fuchsia.hardware.display.capture:fuchsia.hardware.display.capture_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.display.clamprgb",
     "//sdk/banjo/fuchsia.hardware.display.controller",
     "//sdk/banjo/fuchsia.hardware.i2cimpl",

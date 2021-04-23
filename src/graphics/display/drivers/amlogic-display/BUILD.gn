@@ -36,7 +36,7 @@ source_set("common_srcs") {
   public_deps = [
     ":amlogic_display_bind",
     "//sdk/banjo/fuchsia.hardware.amlogiccanvas:fuchsia.hardware.amlogiccanvas_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.display.capture",
+    "//sdk/banjo/fuchsia.hardware.display.capture:fuchsia.hardware.display.capture_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.display.clamprgb",
     "//sdk/banjo/fuchsia.hardware.display.controller",
     "//sdk/banjo/fuchsia.hardware.dsiimpl",

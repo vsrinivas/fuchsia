@@ -10,7 +10,7 @@ alias ZxUnownedHandle = uint32;
 
 [Transport = "Banjo", BanjoLayout = "ddk-interface"]
 protocol DisplayCaptureInterface {
-  OnCaptureComplete() -> ();
+    OnCaptureComplete() -> ();
 };
 
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
