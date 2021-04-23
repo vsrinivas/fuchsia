@@ -183,7 +183,7 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
 }
 
 zx_status_t ReadFileToVmo(fbl::unique_fd payload_fd, fuchsia_mem::wire::Buffer* payload) {
-  constexpr size_t VmoSize = fbl::round_up(1LU << 20, ZX_PAGE_SIZE);
+  const size_t VmoSize = fbl::round_up(1LU << 20, zx_system_get_page_size());
   fzl::ResizeableVmoMapper mapper;
   zx_status_t status;
   if ((status = mapper.CreateAndMap(VmoSize, "partition-pave")) != ZX_OK) {

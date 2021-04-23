@@ -53,7 +53,7 @@ class PayloadStreamerTest : public zxtest::Test {
 
 TEST_F(PayloadStreamerTest, RegisterVmo) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   auto result = client_->RegisterVmo(std::move(vmo));
   ASSERT_OK(result.status());
   EXPECT_OK(result.value().status);
@@ -61,12 +61,12 @@ TEST_F(PayloadStreamerTest, RegisterVmo) {
 
 TEST_F(PayloadStreamerTest, RegisterMultipleVmo) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   {
     auto result = client_->RegisterVmo(std::move(vmo));
     ASSERT_OK(result.status());
     EXPECT_OK(result.value().status);
-    ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   }
   {
     auto result = client_->RegisterVmo(std::move(vmo));
@@ -89,7 +89,7 @@ TEST_F(PayloadStreamerTest, ReadNoVmoRegistered) {
 
 TEST_F(PayloadStreamerTest, ReadData) {
   zx::vmo vmo, dup;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
   auto register_result = client_->RegisterVmo(std::move(dup));
   ASSERT_OK(register_result.status());
@@ -107,7 +107,7 @@ TEST_F(PayloadStreamerTest, ReadData) {
 
 TEST_F(PayloadStreamerTest, ReadEof) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   auto register_result = client_->RegisterVmo(std::move(vmo));
   ASSERT_OK(register_result.status());
   EXPECT_OK(register_result.value().status);
