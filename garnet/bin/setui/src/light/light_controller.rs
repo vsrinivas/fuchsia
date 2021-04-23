@@ -84,7 +84,19 @@ impl controller::Handle for LightController {
             Request::OnButton(ButtonType::MicrophoneMute(state)) => {
                 Some(self.on_mic_mute(state).await)
             }
-            Request::SetLightGroupValue(name, state) => Some(self.set(name, state).await),
+            Request::SetLightGroupValue(name, state) => {
+                // Validate state contains valid float numbers.
+                for light_state in &state {
+                    if !light_state.is_finite() {
+                        return Some(Err(ControllerError::InvalidArgument(
+                            SettingType::Light,
+                            "state".into(),
+                            format!("{:?}", light_state).into(),
+                        )));
+                    }
+                }
+                Some(self.set(name, state).await)
+            }
             Request::Get => {
                 // Read all light values from underlying fuchsia.hardware.light before returning a
                 // value to ensure we have the latest light state.

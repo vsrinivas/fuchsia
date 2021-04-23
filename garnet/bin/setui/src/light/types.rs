@@ -106,6 +106,12 @@ pub struct LightState {
     pub value: Option<LightValue>,
 }
 
+impl LightState {
+    pub(crate) fn is_finite(&self) -> bool {
+        (self.value).as_ref().map_or(true, |val| val.is_finite())
+    }
+}
+
 impl From<fidl_fuchsia_settings::LightState> for LightState {
     fn from(src: fidl_fuchsia_settings::LightState) -> Self {
         LightState { value: src.value.map(LightValue::from) }
@@ -126,6 +132,16 @@ pub enum LightValue {
     Brightness(f64),
     Rgb(ColorRgb),
     Simple(bool),
+}
+
+impl LightValue {
+    pub(crate) fn is_finite(&self) -> bool {
+        match self {
+            LightValue::Brightness(brightness) => brightness.is_finite(),
+            LightValue::Rgb(color_rgb) => color_rgb.is_finite(),
+            LightValue::Simple(_) => true,
+        }
+    }
 }
 
 impl From<fidl_fuchsia_settings::LightValue> for LightValue {
@@ -167,6 +183,12 @@ pub struct ColorRgb {
     pub red: f32,
     pub green: f32,
     pub blue: f32,
+}
+
+impl ColorRgb {
+    pub(crate) fn is_finite(&self) -> bool {
+        self.red.is_finite() && self.green.is_finite() && self.blue.is_finite()
+    }
 }
 
 impl From<fidl_fuchsia_ui_types::ColorRgb> for ColorRgb {

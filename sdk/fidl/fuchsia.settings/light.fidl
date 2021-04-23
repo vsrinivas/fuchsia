@@ -32,7 +32,9 @@ union LightValue {
     1: bool on;
 
     /// Lights with LightType.BRIGHTNESS will have this value, a floating point
-    /// value 0.0 to 1.0 inclusive, where 0.0 means the light is off.
+    /// value 0.0 to 1.0 inclusive, where 0.0 means the light is off. Not a
+    /// number (NaN), infinity or negative infinity will cause SetLightGroup to
+    /// fail with INVALID_VALUE.
     2: float64 brightness;
 
     /// Lights with LightType.RGB will have this value.
