@@ -34,7 +34,7 @@ std::pair<int, int> init_tty() {
                    .GetWindowSize();
 
     if (wsz.status() != ZX_OK || wsz->status != ZX_OK) {
-      FX_LOGS(WARNING) << "Unable to determine shell geometry, defaulting to 80x24";
+      std::cerr << "Warning: Unable to determine shell geometry, defaulting to 80x24.\n";
     } else {
       cols = wsz->size.width;
       rows = wsz->size.height;
@@ -47,7 +47,7 @@ std::pair<int, int> init_tty() {
                       .ClrSetFeature(0, fpty::wire::kFeatureRaw);
 
     if (result.status() != ZX_OK || result->status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to set FEATURE_RAW, some features may not work.";
+      std::cerr << "Warning: Failed to set FEATURE_RAW, some features may not work.\n";
     }
 
     fdio_unsafe_release(io);
@@ -63,7 +63,7 @@ void reset_tty() {
                       .ClrSetFeature(fpty::wire::kFeatureRaw, 0);
 
     if (result.status() != ZX_OK || result->status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to reset FEATURE_RAW";
+      std::cerr << "Failed to reset FEATURE_RAW.\n";
     }
 
     fdio_unsafe_release(io);
@@ -80,7 +80,7 @@ class ConsoleIn {
     if (fcntl(STDIN_FILENO, F_GETFD) != -1) {
       fd_waiter_.Wait(fit::bind_member(this, &ConsoleIn::HandleStdin), STDIN_FILENO, POLLIN);
     } else {
-      FX_LOGS(ERROR) << "Unable to start the async output loop";
+      std::cerr << "Unable to start the async output loop.\n";
       return false;
     }
 
@@ -100,7 +100,7 @@ class ConsoleIn {
     msg_out.mutable_data_message()->set_stream(vm_tools::vsh::STDIN_STREAM);
     msg_out.mutable_data_message()->set_data(buf, actual);
     if (!vsh::SendMessage(*sink_, msg_out)) {
-      FX_LOGS(ERROR) << "Failed to send stdin";
+      std::cerr << "Failed to send stdin.\n";
       return;
     }
 
@@ -127,7 +127,7 @@ class ConsoleOut {
     wait_.set_trigger(ZX_SOCKET_READABLE);
     auto status = wait_.Begin(loop_->dispatcher());
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Unable to start the async input loop";
+      std::cerr << "Unable to start the async input loop.\n";
       return false;
     }
 
@@ -182,13 +182,13 @@ class ConsoleOut {
             if (msg_in.status_message().status() == vm_tools::vsh::EXITED) {
               exit(msg_in.status_message().code());
             } else {
-              FX_LOGS(ERROR) << "vsh did not complete successfully.";
+              std::cerr << "vsh did not complete successfully.\n";
               exit(-1);
             }
           }
           break;
         default:
-          FX_LOGS(WARNING) << "Unhandled HostMessage received.";
+          std::cerr << "Unhandled HostMessage received.\n";
       }
     }
 
@@ -232,20 +232,20 @@ static bool init_shell(const zx::socket& usock) {
   (*env)["LXD_UNPRIVILEGED_ONLY"] = "true";
 
   if (!vsh::SendMessage(usock, conn_req)) {
-    FX_LOGS(ERROR) << "Failed to send connection request";
+    std::cerr << "Failed to send connection request.\n";
     return false;
   }
 
   // No use setting up the async message handling if we haven't even
   // connected properly. Block on connection response.
   if (!vsh::RecvMessage(usock, &conn_resp)) {
-    FX_LOGS(ERROR) << "Failed to receive response from vshd, giving up after one try";
+    std::cerr << "Failed to receive response from vshd, giving up after one try.\n";
     return false;
   }
 
   if (conn_resp.status() != vm_tools::vsh::READY) {
-    FX_LOGS(ERROR) << "Server was unable to set up connection properly: "
-                   << conn_resp.description();
+    std::cerr << "Server was unable to set up connection properly: " << conn_resp.description()
+              << '\n';
     return false;
   }
 
@@ -256,7 +256,7 @@ static bool init_shell(const zx::socket& usock) {
   msg_out.mutable_resize_message()->set_cols(cols);
   msg_out.mutable_resize_message()->set_rows(rows);
   if (!vsh::SendMessage(usock, msg_out)) {
-    FX_LOGS(ERROR) << "Failed to send window resize message";
+    std::cerr << "Failed to send window resize message.\n";
     return false;
   }
 
@@ -272,7 +272,7 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
   std::vector<fuchsia::virtualization::EnvironmentInfo> env_infos;
   manager->List(&env_infos);
   if (env_infos.empty()) {
-    FX_LOGS(ERROR) << "Unable to find any environments.";
+    std::cerr << "Unable to find any environments.\n";
     return;
   }
   env_id = o_env_id.value_or(env_infos[0].id);
@@ -282,7 +282,7 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
   std::vector<fuchsia::virtualization::InstanceInfo> instances;
   realm->ListInstances(&instances);
   if (instances.empty()) {
-    FX_LOGS(ERROR) << "Unable to find any instances in environment " << env_id;
+    std::cerr << "Unable to find any instances in environment " << env_id << '\n';
     return;
   }
   cid = o_cid.value_or(instances[0].cid);
@@ -290,12 +290,12 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
   // Verify the environment and instance specified exist
   if (std::find_if(env_infos.begin(), env_infos.end(),
                    [env_id](auto ei) { return ei.id == env_id; }) == env_infos.end()) {
-    FX_LOGS(ERROR) << "No existing environment with id " << env_id;
+    std::cerr << "No existing environment with id " << env_id << '\n';
     return;
   }
   if (std::find_if(instances.begin(), instances.end(), [cid](auto in) { return in.cid == cid; }) ==
       instances.end()) {
-    FX_LOGS(ERROR) << "No existing instances in env " << env_id << " with cid " << cid;
+    std::cerr << "No existing instances in env " << env_id << " with cid " << cid << '\n';
     return;
   }
 
@@ -306,12 +306,12 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
   zx::socket socket, remote_socket;
   zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create socket: " << zx_status_get_string(status);
+    std::cerr << "Failed to create socket: " << zx_status_get_string(status) << '\n';
     return;
   }
   vsock_endpoint->Connect(cid, port, std::move(remote_socket), &status);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to connect: " << zx_status_get_string(status);
+    std::cerr << "Failed to connect: " << zx_status_get_string(status) << '\n';
     return;
   }
 
@@ -319,7 +319,7 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
   // interface. The vshd service is hopefully on the other end of this pipe.
   // We communicate with the service via protobuf messages.
   if (!init_shell(socket)) {
-    FX_LOGS(ERROR) << "vsh SetupConnection failed.";
+    std::cerr << "vsh SetupConnection failed.";
     return;
   }
 
@@ -332,7 +332,7 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
   msg_out.mutable_data_message()->set_data(
       "function stretch() { lxc exec stretch -- login -f machina ; } \n\n");
   if (!vsh::SendMessage(socket, msg_out)) {
-    FX_LOGS(WARNING) << "Failed to inject helper function";
+    std::cerr << "Warning: Failed to inject helper function.\n";
   }
 
   // Set up the I/O loops
@@ -341,11 +341,11 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
 
   bool success = true;
   if (!i.Start()) {
-    FX_LOGS(ERROR) << "Problem starting ConsoleIn loop";
+    std::cerr << "Problem starting ConsoleIn loop.\n";
     success = false;
   }
   if (!o.Start()) {
-    FX_LOGS(ERROR) << "Problem starting ConsoleOut loop";
+    std::cerr << "Problem starting ConsoleOut loop.\n";
     success = false;
   }
 

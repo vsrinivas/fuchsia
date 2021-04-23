@@ -14,6 +14,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <poll.h>
 
+#include <iostream>
+
 #include "src/lib/fsl/socket/socket_drainer.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
 
@@ -42,7 +44,7 @@ class InputReader {
       wait_.Begin(async_get_default_dispatcher());  // ignore errors
       return;
     } else if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Error " << status << " writing to socket";
+      std::cerr << "Error " << status << " writing to socket.\n";
       return;
     }
     WaitForKeystroke();
@@ -134,7 +136,7 @@ void handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
   zx::socket socket;
   guest->GetSerial(&socket);
   if (!socket) {
-    FX_LOGS(ERROR) << "Failed to open serial port";
+    std::cerr << "Failed to open serial port.\n";
     return;
   }
   SerialConsole console(loop);
