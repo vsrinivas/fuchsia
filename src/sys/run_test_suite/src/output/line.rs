@@ -25,7 +25,7 @@ impl<W: Write> WriteLine for W {
     }
 }
 
-impl WriteLine for Box<dyn WriteLine + Send> {
+impl WriteLine for Box<dyn WriteLine + Send + Sync> {
     fn write_line_segments(&mut self, segments: &[&str]) -> Result<(), Error> {
         self.as_mut().write_line_segments(segments)
     }

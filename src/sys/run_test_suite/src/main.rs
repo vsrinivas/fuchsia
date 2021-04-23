@@ -97,6 +97,7 @@ async fn main() {
         log_opts,
         std::num::NonZeroU16::new(count).unwrap(),
         filter_ansi,
+        None,
     )
     .await
     {

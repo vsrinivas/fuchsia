@@ -56,4 +56,8 @@ pub struct TestCommand {
     /// when set, the test will fail if any log with a higher severity is emitted.
     #[argh(option)]
     pub max_severity_logs: Option<Severity>,
+
+    /// when set, output test results to the specified directory.
+    #[argh(option)]
+    pub experimental_output_directory: Option<String>,
 }

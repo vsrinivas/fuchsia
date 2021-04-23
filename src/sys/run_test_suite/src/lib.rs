@@ -14,19 +14,21 @@ use {
     fidl_fuchsia_test_manager::HarnessProxy,
     fuchsia_async as fasync,
     futures::{channel::mpsc, join, prelude::*, stream::LocalBoxStream},
-    std::collections::HashSet,
+    std::collections::{HashMap, HashSet},
     std::fmt,
-    std::io::{self},
+    std::io,
+    std::path::PathBuf,
     test_executor::{LogStream, TestEvent, TestRunOptions},
 };
 
 pub mod diagnostics;
-pub mod writer;
+pub mod output;
 
 pub use test_executor::DisabledTestHandling;
-pub use writer::WriteLine;
 
-#[derive(PartialEq, Debug)]
+use output::{AnsiFilterWriter, ArtifactType, CaseReporter, RunReporter, SuiteReporter, WriteLine};
+
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Outcome {
     Passed,
     Failed,
@@ -104,6 +106,7 @@ async fn run_test_for_invocations<W: WriteLine>(
     run_options: TestRunOptions,
     timeout: Option<std::num::NonZeroU32>,
     writer: &mut W,
+    suite_reporter: SuiteReporter<'_>,
 ) -> Result<RunResult, anyhow::Error> {
     let mut timeout = match timeout {
         Some(timeout) => futures::future::Either::Left(
@@ -117,8 +120,13 @@ async fn run_test_for_invocations<W: WriteLine>(
     let (sender, mut recv) = mpsc::channel(1);
     let mut outcome = Outcome::Passed;
 
+    struct TestCaseAndStdout<'a> {
+        case_reporter: CaseReporter<'a>,
+        stdout: Option<Box<dyn 'static + WriteLine + Send + Sync>>,
+    }
+
     let mut test_cases_in_progress = HashSet::new();
-    let mut test_cases_executed = HashSet::new();
+    let mut test_cases_executed = HashMap::new();
     let mut test_cases_passed = HashSet::new();
     let mut test_cases_failed = HashSet::new();
     let mut successful_completion = false;
@@ -146,22 +154,30 @@ async fn run_test_for_invocations<W: WriteLine>(
                 if let Some(test_event) = test_event {
                     match test_event {
                         TestEvent::TestCaseStarted { test_case_name } => {
-                            if test_cases_executed.contains(&test_case_name) {
+                            if test_cases_executed.contains_key(&test_case_name) {
                                 return Err(anyhow::anyhow!("test case: '{}' started twice", test_case_name));
                             }
                             writer.write_line(&format!("[RUNNING]\t{}", test_case_name))
                                 .expect("Cannot write logs");
-                            test_cases_in_progress.insert(test_case_name.clone());
-                            test_cases_executed.insert(test_case_name);
+                            test_cases_in_progress.insert(
+                                test_case_name.clone()
+                            );
+                            let case_reporter = suite_reporter.new_case(&test_case_name)?;
+                            test_cases_executed.insert(
+                                test_case_name,
+                                TestCaseAndStdout {
+                                    case_reporter,
+                                    stdout: None
+                                }
+                            );
                         }
                         TestEvent::TestCaseFinished { test_case_name, result } => {
-                            if !test_cases_in_progress.contains(&test_case_name) {
+                            if !test_cases_in_progress.remove(&test_case_name) {
                                 return Err(anyhow::anyhow!(
                                     "test case: '{}' was never started, still got a finish event",
                                     test_case_name
                                 ));
                             }
-                            test_cases_in_progress.remove(&test_case_name);
                             let result_str = match result {
                                 test_executor::TestResult::Passed => {
                                     test_cases_passed.insert(test_case_name.clone());
@@ -181,8 +197,14 @@ async fn run_test_for_invocations<W: WriteLine>(
                                     "ERROR"
                                 }
                             };
+                            let reporter = match test_cases_executed.get_mut(&test_case_name) {
+                                Some(reporter) => reporter,
+                                None => return Err(anyhow::anyhow!(
+                                    "test case: '{}' was never started, still got a finish event"))
+                            };
                             writer.write_line(&format!("[{}]\t{}", result_str, test_case_name))
                                 .expect("Cannot write logs");
+                            reporter.case_reporter.outcome(&result.into())?;
                         }
                         TestEvent::ExcessiveDuration { test_case_name, duration } => {
                             writer.write_line(&format!("[duration - {}]:\tStill running after {:?} seconds",
@@ -190,20 +212,30 @@ async fn run_test_for_invocations<W: WriteLine>(
                                 .expect("Cannot write logs");
                         }
                         TestEvent::StdoutMessage { test_case_name, mut msg } => {
-                            if !test_cases_executed.contains(&test_case_name) {
-                                return Err(anyhow::anyhow!(
+                            let mut test_case = match test_cases_executed.get_mut(&test_case_name) {
+                                Some(case) => case,
+                                None => return Err(anyhow::anyhow!(
                                     "test case: '{}' was never started, still got a log",
                                     test_case_name
-                                ));
-                            }
+                                )),
+                            };
                             // check if last byte is newline and remove it as we are already
                             // printing a newline.
                             if msg.ends_with("\n") {
                                 msg.truncate(msg.len()-1)
                             }
-                            // TODO(anmittal): buffer by newline or something else.
-                            writer.write_line(&format!("[output - {}]:\n{}", test_case_name, msg)).expect("Cannot write logs");
-
+                            writer.write_line(&format!("[output - {}]:\n{}", test_case_name, msg))
+                                .expect("Cannot write logs");
+                            match test_case.stdout.as_mut() {
+                                None => {
+                                    let mut stdout = test_case.case_reporter.new_artifact(&ArtifactType::Stdout)?;
+                                    stdout.write_line(&msg)?;
+                                    test_case.stdout = Some(stdout);
+                                }
+                                Some(stdout) => {
+                                    stdout.write_line(&msg)?;
+                                }
+                            }
                         }
                         TestEvent::Finish => {
                             successful_completion = true;
@@ -232,13 +264,17 @@ async fn run_test_for_invocations<W: WriteLine>(
         }
     }
 
-    let mut test_cases_executed: Vec<String> = test_cases_executed.into_iter().collect();
+    let mut test_cases_executed: Vec<String> =
+        test_cases_executed.into_iter().map(|(case_name, _)| case_name).collect();
     let mut test_cases_passed: Vec<String> = test_cases_passed.into_iter().collect();
     let mut test_cases_failed: Vec<String> = test_cases_failed.into_iter().collect();
 
     test_cases_executed.sort();
     test_cases_passed.sort();
     test_cases_failed.sort();
+
+    suite_reporter.outcome(&outcome.into())?;
+    suite_reporter.record()?;
 
     Ok(RunResult {
         outcome,
@@ -254,11 +290,21 @@ pub struct TestStreams<'a> {
     pub logs: LogStream,
 }
 
+impl<'a> TestStreams<'a> {
+    fn into_log_and_result(
+        self,
+    ) -> (LogStream, LocalBoxStream<'a, Result<RunResult, anyhow::Error>>) {
+        let Self { results, logs } = self;
+        (logs, results)
+    }
+}
+
 /// Runs the test `count` number of times, and writes logs to writer.
-pub async fn run_test<'a, W: WriteLine + Send>(
+pub async fn run_test<'a, W: output::WriteLine>(
     test_params: TestParams,
     count: u16,
     writer: &'a mut W,
+    run_reporter: &'a mut RunReporter,
 ) -> Result<TestStreams<'a>, anyhow::Error> {
     let run_options = TestRunOptions {
         disabled_tests: test_params.disabled_tests(),
@@ -266,7 +312,7 @@ pub async fn run_test<'a, W: WriteLine + Send>(
         arguments: test_params.test_args.clone(),
     };
 
-    struct FoldArgs<'a, W: WriteLine> {
+    struct FoldArgs<'a, W: output::WriteLine> {
         current_count: u16,
         count: u16,
         suite_instance: test_executor::SuiteInstance,
@@ -274,6 +320,7 @@ pub async fn run_test<'a, W: WriteLine + Send>(
         test_params: TestParams,
         run_options: TestRunOptions,
         writer: &'a mut W,
+        run_reporter: &'a mut RunReporter,
     }
 
     let mut suite_instance = test_executor::SuiteInstance::new(test_executor::SuiteInstanceOpts {
@@ -292,6 +339,7 @@ pub async fn run_test<'a, W: WriteLine + Send>(
         test_params,
         run_options,
         writer,
+        run_reporter,
     };
 
     let results = stream::try_unfold(args, move |mut args| async move {
@@ -319,6 +367,7 @@ pub async fn run_test<'a, W: WriteLine + Send>(
             args.run_options.clone(),
             args.test_params.timeout,
             args.writer,
+            args.run_reporter.new_suite(&args.test_params.test_url)?,
         )
         .await
         .or_else(|err| {
@@ -390,25 +439,33 @@ pub async fn run_tests_and_get_outcome(
     log_opts: diagnostics::LogCollectionOptions,
     count: std::num::NonZeroU16,
     filter_ansi: bool,
+    record_directory: Option<PathBuf>,
 ) -> Outcome {
     let test_url = test_params.test_url.clone();
     println!("\nRunning test '{}'", &test_url);
 
-    let mut stdout_for_results: Box<dyn WriteLine + Send> = match filter_ansi {
-        true => Box::new(writer::AnsiFilterWriter::new(io::stdout())),
+    let mut stdout_for_results: Box<dyn WriteLine + Send + Sync> = match filter_ansi {
+        true => Box::new(AnsiFilterWriter::new(io::stdout())),
         false => Box::new(io::stdout()),
     };
-    let streams = match run_test(test_params, count.get(), &mut stdout_for_results).await {
-        Ok(s) => s,
-        Err(e) => {
-            println!("Test suite encountered error trying to run tests: {:?}", e);
-            return Outcome::Error;
-        }
+    let mut reporter = match (filter_ansi, record_directory) {
+        (true, Some(dir)) => RunReporter::new_ansi_filtered(dir),
+        (false, Some(dir)) => RunReporter::new(dir),
+        (_, None) => RunReporter::new_noop(),
     };
 
-    let (log_stream, result_stream) = (streams.logs, streams.results);
-    let mut stdout_for_logs: Box<dyn WriteLine + Send> = match filter_ansi {
-        true => Box::new(writer::AnsiFilterWriter::new(io::stdout())),
+    let streams =
+        match run_test(test_params, count.get(), &mut stdout_for_results, &mut reporter).await {
+            Ok(s) => s,
+            Err(e) => {
+                println!("Test suite encountered error trying to run tests: {:?}", e);
+                return Outcome::Error;
+            }
+        };
+
+    let (log_stream, result_stream) = streams.into_log_and_result();
+    let mut stdout_for_logs: Box<dyn WriteLine + Send + Sync> = match filter_ansi {
+        true => Box::new(AnsiFilterWriter::new(io::stdout())),
         false => Box::new(io::stdout()),
     };
     let log_collection_fut = diagnostics::collect_logs(log_stream, &mut stdout_for_logs, log_opts);
@@ -438,6 +495,14 @@ pub async fn run_tests_and_get_outcome(
                 println!("Failing this test. See: https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity");
             }
         },
+    }
+
+    let report_result = match reporter.outcome(&test_outcome.into()) {
+        Ok(()) => reporter.record(),
+        Err(e) => Err(e),
+    };
+    if let Err(e) = report_result {
+        println!("Failed to record results: {:?}", e);
     }
 
     test_outcome

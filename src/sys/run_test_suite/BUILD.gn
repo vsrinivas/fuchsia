@@ -30,6 +30,7 @@ rustc_library("lib") {
     "//src/lib/test_executor/rust:test_executor",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:vte",
@@ -43,7 +44,10 @@ rustc_library("lib") {
   sources = [
     "src/diagnostics.rs",
     "src/lib.rs",
-    "src/writer.rs",
+    "src/output/directory.rs",
+    "src/output/line.rs",
+    "src/output/mod.rs",
+    "src/output/noop.rs",
   ]
 }
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::writer,
+    crate::output,
     anyhow::Error,
     diagnostics_data::{LogsData, Severity},
     futures::{Stream, TryStreamExt},
@@ -52,7 +52,7 @@ pub async fn collect_logs<S, W>(
     options: LogCollectionOptions,
 ) -> Result<LogCollectionOutcome, Error>
 where
-    W: writer::WriteLine,
+    W: output::WriteLine,
     S: Stream<Item = Result<LogsData, Error>> + Unpin,
 {
     let mut restricted_logs = vec![];

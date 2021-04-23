@@ -6,7 +6,7 @@ use diagnostics_data::Severity;
 use fidl_fuchsia_test_manager::{HarnessMarker, HarnessProxy};
 use futures::prelude::*;
 use regex::Regex;
-use run_test_suite_lib::{diagnostics, Outcome, RunResult, TestParams};
+use run_test_suite_lib::{diagnostics, output, Outcome, RunResult, TestParams};
 use std::io::Write;
 use std::str::from_utf8;
 
@@ -72,7 +72,8 @@ async fn run_test_once<W: Write + Send>(
     writer: &mut W,
 ) -> Result<RunTestResult, anyhow::Error> {
     let (log_stream, test_result) = {
-        let streams = run_test_suite_lib::run_test(test_params, 1, writer).await?;
+        let mut reporter = output::RunReporter::new_noop();
+        let streams = run_test_suite_lib::run_test(test_params, 1, writer, &mut reporter).await?;
         let mut results = streams.results.collect::<Vec<_>>().await;
         assert_eq!(results.len(), 1, "{:?}", results);
         (streams.logs, results.pop().unwrap())
@@ -170,6 +171,7 @@ log3 for Example.Test3
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_passing_v2_test_multiple_times() {
     let mut output: Vec<u8> = vec![];
+    let mut reporter = output::RunReporter::new_noop();
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
@@ -178,6 +180,7 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
                 harness),
             10, &mut output,
+            &mut reporter
         )
     .await.expect("run test");
     let run_results = streams.results.collect::<Vec<_>>().await;
@@ -407,6 +410,7 @@ log3 for Example.Test3
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_failing_v2_test_multiple_times() {
     let mut output: Vec<u8> = vec![];
+    let mut reporter = output::RunReporter::new_noop();
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
@@ -414,7 +418,7 @@ async fn launch_and_test_failing_v2_test_multiple_times() {
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
                 harness),
-            10, &mut output
+            10, &mut output, &mut reporter
         )
     .await.expect("run test");
     let run_results = streams.results.collect::<Vec<_>>().await;
@@ -580,6 +584,7 @@ async fn test_timeout() {
 // when a test times out, we should not run it again.
 async fn test_timeout_multiple_times() {
     let mut output: Vec<u8> = vec![];
+    let mut reporter = output::RunReporter::new_noop();
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
@@ -588,8 +593,9 @@ async fn test_timeout_multiple_times() {
         harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(1);
-    let streams =
-        run_test_suite_lib::run_test(test_params, 10, &mut output).await.expect("run test");
+    let streams = run_test_suite_lib::run_test(test_params, 10, &mut output, &mut reporter)
+        .await
+        .expect("run test");
     let mut run_results = streams.results.collect::<Vec<_>>().await;
     assert_eq!(run_results.len(), 1);
     let run_result = run_results.pop().unwrap().unwrap();
@@ -717,7 +723,8 @@ async fn test_logging_ansi() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_logging_filter_ansi() {
     let mut output: Vec<u8> = vec![];
-    let mut ansi_filter = run_test_suite_lib::writer::AnsiFilterWriter::new(&mut output);
+    let mut ansi_filter = output::AnsiFilterWriter::new(&mut output);
+    let mut reporter = output::RunReporter::new_noop();
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
@@ -732,7 +739,9 @@ async fn test_logging_filter_ansi() {
     };
 
     let (log_stream, test_result) = {
-        let streams = run_test_suite_lib::run_test(test_params, 1, &mut ansi_filter).await.unwrap();
+        let streams = run_test_suite_lib::run_test(test_params, 1, &mut ansi_filter, &mut reporter)
+            .await
+            .unwrap();
         let mut results = streams.results.collect::<Vec<_>>().await;
         assert_eq!(results.len(), 1, "{:?}", results);
         (streams.logs, results.pop().unwrap().unwrap())

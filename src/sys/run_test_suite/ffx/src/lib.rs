@@ -42,6 +42,7 @@ pub async fn test(
             },
             count,
             cmd.filter_ansi,
+            cmd.experimental_output_directory.map(Into::into),
         )
         .await
         {
