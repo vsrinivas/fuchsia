@@ -7,6 +7,6 @@
 
 #include <lib/sys/cpp/component_context.h>
 
-void handle_list(sys::ComponentContext* context);
+zx_status_t handle_list(sys::ComponentContext* context);
 
 #endif  // SRC_VIRTUALIZATION_BIN_GUEST_LIST_H_

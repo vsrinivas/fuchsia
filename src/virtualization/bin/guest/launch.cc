@@ -10,14 +10,15 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/guest/serial.h"
 
-void handle_launch(int argc, const char** argv, async::Loop* loop,
-                   fuchsia::virtualization::GuestConfig cfg, sys::ComponentContext* context) {
+zx_status_t handle_launch(int argc, const char** argv, async::Loop* loop,
+                          fuchsia::virtualization::GuestConfig cfg,
+                          sys::ComponentContext* context) {
   // Create environment.
   fuchsia::virtualization::ManagerPtr manager;
   zx_status_t status = context->svc()->Connect(manager.NewRequest());
   if (status != ZX_OK) {
     printf("Failed to connect to guest manager: %s\n", zx_status_get_string(status));
-    return;
+    return status;
   }
   fuchsia::virtualization::RealmPtr realm;
   manager->Create(argv[0], realm.NewRequest());
@@ -31,8 +32,9 @@ void handle_launch(int argc, const char** argv, async::Loop* loop,
   SerialConsole console(loop);
   guest->GetSerial([&console](zx::socket socket) { console.Start(std::move(socket)); });
   guest.set_error_handler([&loop](zx_status_t status) {
-    printf("Connection to guest closed: %s\n", zx_status_get_string(status));
+    fprintf(stderr, "Connection to guest closed: %s\n", zx_status_get_string(status));
     loop->Quit();
   });
-  loop->Run();
+
+  return loop->Run();
 }

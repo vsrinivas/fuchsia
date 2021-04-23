@@ -10,7 +10,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 
-void handle_launch(int argc, const char** argv, async::Loop* loop,
-                   fuchsia::virtualization::GuestConfig cfg, sys::ComponentContext* context);
+zx_status_t handle_launch(int argc, const char** argv, async::Loop* loop,
+                          fuchsia::virtualization::GuestConfig cfg, sys::ComponentContext* context);
 
 #endif  // SRC_VIRTUALIZATION_BIN_GUEST_LAUNCH_H_

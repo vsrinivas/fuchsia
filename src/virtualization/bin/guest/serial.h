@@ -30,7 +30,7 @@ class SerialConsole {
   std::unique_ptr<OutputWriter> output_writer_;
 };
 
-void handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
-                   sys::ComponentContext* context);
+zx_status_t handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
+                          sys::ComponentContext* context);
 
 #endif  // SRC_VIRTUALIZATION_BIN_GUEST_SERIAL_H_

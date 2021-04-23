@@ -13,11 +13,13 @@
 #include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
 #include <poll.h>
+#include <zircon/status.h>
 
 #include <iostream>
 
 #include "src/lib/fsl/socket/socket_drainer.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
+#include "src/virtualization/bin/guest/services.h"
 
 // Reads bytes from stdin and writes them to a socket provided by the guest.
 // These bytes are generally delivered to emulated serial devices (ex:
@@ -121,25 +123,24 @@ void SerialConsole::Start(zx::socket socket) {
   output_writer_->Start(std::move(socket));
 }
 
-void handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
-                   sys::ComponentContext* context) {
-  // Connect to environment.
-  fuchsia::virtualization::ManagerSyncPtr manager;
-  context->svc()->Connect(manager.NewRequest());
-  fuchsia::virtualization::RealmSyncPtr env_ptr;
-  manager->Connect(env_id, env_ptr.NewRequest());
-
-  fuchsia::virtualization::GuestSyncPtr guest;
-  env_ptr->ConnectToInstance(cid, guest.NewRequest());
+zx_status_t handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
+                          sys::ComponentContext* context) {
+  // Connect to the guest.
+  zx::status<fuchsia::virtualization::GuestSyncPtr> guest = ConnectToGuest(context, env_id, cid);
+  if (guest.is_error()) {
+    return guest.error_value();
+  }
 
   // Open the serial service of the guest and process IO.
   zx::socket socket;
-  guest->GetSerial(&socket);
-  if (!socket) {
-    std::cerr << "Failed to open serial port.\n";
-    return;
+  zx_status_t status = guest->GetSerial(&socket);
+  if (status != ZX_OK) {
+    std::cerr << "Failed to open serial port: " << zx_status_get_string(status) << ".\n";
+    return status;
   }
+
   SerialConsole console(loop);
   console.Start(std::move(socket));
-  loop->Run();
+
+  return loop->Run();
 }

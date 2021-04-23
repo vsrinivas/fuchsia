@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <poll.h>
 #include <unistd.h>
@@ -19,6 +20,7 @@
 
 #include "src/lib/fsl/socket/socket_drainer.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
+#include "src/virtualization/bin/guest/services.h"
 #include "src/virtualization/lib/vsh/util.h"
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/vsh.pb.h"
 
@@ -263,27 +265,40 @@ static bool init_shell(const zx::socket& usock) {
   return true;
 }
 
-void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
-                std::optional<uint32_t> o_port, async::Loop* loop, sys::ComponentContext* context) {
+zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
+                       std::optional<uint32_t> o_port, async::Loop* loop,
+                       sys::ComponentContext* context) {
   uint32_t env_id, cid, port = o_port.value_or(vsh::kVshPort);
 
-  fuchsia::virtualization::ManagerSyncPtr manager;
-  context->svc()->Connect(manager.NewRequest());
+  // Connect to the manager.
+  zx::status<fuchsia::virtualization::ManagerSyncPtr> manager = ConnectToManager(context);
+  if (manager.is_error()) {
+    return manager.error_value();
+  }
+
   std::vector<fuchsia::virtualization::EnvironmentInfo> env_infos;
-  manager->List(&env_infos);
+  zx_status_t status = manager->List(&env_infos);
+  if (status != ZX_OK) {
+    std::cerr << "Could not fetch list of environments: " << zx_status_get_string(status) << ".\n";
+    return status;
+  }
   if (env_infos.empty()) {
     std::cerr << "Unable to find any environments.\n";
-    return;
+    return ZX_ERR_NOT_FOUND;
   }
   env_id = o_env_id.value_or(env_infos[0].id);
 
   fuchsia::virtualization::RealmSyncPtr realm;
   manager->Connect(env_id, realm.NewRequest());
   std::vector<fuchsia::virtualization::InstanceInfo> instances;
-  realm->ListInstances(&instances);
+  status = realm->ListInstances(&instances);
+  if (status != ZX_OK) {
+    std::cerr << "Could not fetch list of instances: " << zx_status_get_string(status) << ".\n";
+    return status;
+  }
   if (instances.empty()) {
     std::cerr << "Unable to find any instances in environment " << env_id << '\n';
-    return;
+    return ZX_ERR_NOT_FOUND;
   }
   cid = o_cid.value_or(instances[0].cid);
 
@@ -291,12 +306,12 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
   if (std::find_if(env_infos.begin(), env_infos.end(),
                    [env_id](auto ei) { return ei.id == env_id; }) == env_infos.end()) {
     std::cerr << "No existing environment with id " << env_id << '\n';
-    return;
+    return ZX_ERR_NOT_FOUND;
   }
   if (std::find_if(instances.begin(), instances.end(), [cid](auto in) { return in.cid == cid; }) ==
       instances.end()) {
     std::cerr << "No existing instances in env " << env_id << " with cid " << cid << '\n';
-    return;
+    return ZX_ERR_NOT_FOUND;
   }
 
   fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint;
@@ -304,15 +319,15 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
 
   // Open a socket to the guest's vsock port where vshd should be listening
   zx::socket socket, remote_socket;
-  zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
+  status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
   if (status != ZX_OK) {
     std::cerr << "Failed to create socket: " << zx_status_get_string(status) << '\n';
-    return;
+    return status;
   }
   vsock_endpoint->Connect(cid, port, std::move(remote_socket), &status);
   if (status != ZX_OK) {
     std::cerr << "Failed to connect: " << zx_status_get_string(status) << '\n';
-    return;
+    return status;
   }
 
   // Now |socket| is a zircon socket plumbed to a port on the guest's vsock
@@ -320,8 +335,10 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
   // We communicate with the service via protobuf messages.
   if (!init_shell(socket)) {
     std::cerr << "vsh SetupConnection failed.";
-    return;
+    return ZX_ERR_INTERNAL;
   }
+  // Reset the TTY when the connection closes.
+  auto cleanup = fit::defer([]() { reset_tty(); });
 
   // Directly inject some helper functions for connecting to container.
   // This sleep below is to give bash some time to start after being `exec`d.
@@ -339,19 +356,14 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
   ConsoleIn i(loop, zx::unowned_socket(socket));
   ConsoleOut o(loop, zx::unowned_socket(socket));
 
-  bool success = true;
   if (!i.Start()) {
     std::cerr << "Problem starting ConsoleIn loop.\n";
-    success = false;
+    return ZX_ERR_INTERNAL;
   }
   if (!o.Start()) {
     std::cerr << "Problem starting ConsoleOut loop.\n";
-    success = false;
+    return ZX_ERR_INTERNAL;
   }
 
-  if (success) {
-    loop->Run();
-  }
-
-  reset_tty();
+  return loop->Run();
 }

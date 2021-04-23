@@ -17,6 +17,8 @@ executable("bin") {
     "main.cc",
     "serial.cc",
     "serial.h",
+    "services.cc",
+    "services.h",
     "socat.cc",
     "socat.h",
     "vshc.cc",
