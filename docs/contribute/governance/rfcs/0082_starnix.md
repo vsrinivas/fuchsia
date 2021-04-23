@@ -160,8 +160,10 @@ from Linux semantics, we run a risk that some Linux binary will notice the
 divergence and behave improperly.
 
 To be able to discuss this design principle more easily, we say that `starnix`
-implements Linux _as she is spoke_, which is to say with all the beauty,
-ugliness, coincidences, and quirks of a real Linux system.
+implements Linux
+[_as she is spoke_](https://en.wikipedia.org/wiki/English_as_She_Is_Spoke),
+which is to say with all the beauty, ugliness, coincidences, and quirks of a
+real Linux system.
 
 In some cases, implementing the Linux interfaces as she is spoke will require
 adding functionality to a Fuchsia service to provide the require semantics. For
