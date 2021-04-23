@@ -41,6 +41,8 @@ macro_rules! maybe_return {
     };
 }
 
+const MAX_INSPECT_SIZE : usize = 2 * 1024 * 1024 /* 2MB */;
+
 /// Provides stats for all components running in the system.
 pub struct ComponentTreeStats<T: RuntimeStatsSource> {
     /// Map from a moniker of a component running in the system to its stats.
@@ -129,7 +131,7 @@ impl<T: 'static + RuntimeStatsSource + Send + Sync> ComponentTreeStats<T> {
     }
 
     async fn write_measurements_to_inspect(self: &Arc<Self>) -> inspect::Inspector {
-        let inspector = inspect::Inspector::new();
+        let inspector = inspect::Inspector::new_with_size(MAX_INSPECT_SIZE);
         let components = inspector.root().create_child("components");
         let task_count = self.write_measurements(&components).await;
         inspector.root().record_uint("task_count", task_count);

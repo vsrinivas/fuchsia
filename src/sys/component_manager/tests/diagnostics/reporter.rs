@@ -50,7 +50,7 @@ async fn main() {
                 task_count: 3u64,
                 inspect_stats: {
                     current_size: 4096u64,
-                    maximum_size: 262144u64,
+                    maximum_size: 2097152u64,
                     total_dynamic_children: 0u64,
                 },
                 components: {
