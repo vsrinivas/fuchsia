@@ -12,5 +12,6 @@ source_set("focus") {
     "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/lib/sys/cpp",
     "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
+    "//zircon/system/ulib/inspect",
   ]
 }

@@ -12,6 +12,7 @@
 
 #include <unordered_map>
 
+#include "lib/inspect/cpp/inspect.h"
 #include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace focus {
@@ -31,7 +32,8 @@ enum class FocusChangeStatus {
 // Class for tracking focus state.
 class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry {
  public:
-  FocusManager() : focus_chain_listener_registry_(this) {}
+  FocusManager(inspect::Node inspect_node = inspect::Node());
+  FocusManager(FocusManager&& other) = delete;  // Disallow moving.
 
   void Publish(sys::ComponentContext& component_context);
 
@@ -61,11 +63,14 @@ class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry
   void RepairFocus();
 
   // Transfers focus to |koid| and generates the new focus chain.
-  //  - |koid| must be either be allowed to receive focus and must exist in the current view tree
-  // snapshot.
+  //  - |koid| must be allowed to receive focus and must exist in the current view tree snapshot.
   //  - If the |snapshot_| is empty, then |koid| is allowed to be ZX_KOID_INVALID and will generate
   // an empty focus_chain_.
   void SetFocus(zx_koid_t koid);
+
+  // Replaces the focus chain with a new one. And if the new focus chain is different from the old
+  // one it also sends it out to all listeners.
+  void SetFocusChain(std::vector<zx_koid_t> new_focus_chain);
 
   // Dispatches the current focus chain to all registered listeners.
   void DispatchFocusChain();
@@ -83,6 +88,9 @@ class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry
   fidl::Binding<fuchsia::ui::focus::FocusChainListenerRegistry> focus_chain_listener_registry_;
   uint64_t next_focus_chain_listener_id_ = 0;
   std::unordered_map<uint64_t, fuchsia::ui::focus::FocusChainListenerPtr> focus_chain_listeners_;
+
+  inspect::Node inspect_node_;
+  inspect::LazyNode lazy_;
 };
 
 }  // namespace focus

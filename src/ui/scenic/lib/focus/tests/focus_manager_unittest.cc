@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/focus/focus_manager.h"
 
+#include <lib/fit/single_threaded_executor.h>
+#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 
@@ -373,6 +375,59 @@ TEST_F(FocusChainTest, SameSnapshotTopologyTwice_ShouldNotSendNewFocusChain) {
   focus_manager.OnNewViewTreeSnapshot(FourNodeSnapshotWithViewRefs());
   RunLoopUntilIdle();
   EXPECT_EQ(num_focus_chains_received_, 1u);
+}
+
+class FocusManagerInspectTest : public gtest::TestLoopFixture {
+ public:
+  FocusManagerInspectTest()
+      : inspector_(), focus_manager_(inspector_.GetRoot().CreateChild("focus_manager")) {}
+
+  std::vector<uint64_t> GetInspectFocusChain() {
+    auto hierarchy = ReadHierarchyFromInspector();
+    FX_CHECK(hierarchy);
+    auto focus_manager = hierarchy.value().GetByPath({"focus_manager"});
+    FX_CHECK(focus_manager);
+    auto focus_chain = focus_manager->node().get_property<inspect::UintArrayValue>("focus_chain");
+    FX_CHECK(focus_chain);
+    return focus_chain->value();
+  }
+
+  fit::result<inspect::Hierarchy> ReadHierarchyFromInspector() {
+    fit::result<inspect::Hierarchy> result;
+    fit::single_threaded_executor exec;
+    exec.schedule_task(
+        inspect::ReadFromInspector(inspector_).then([&](fit::result<inspect::Hierarchy>& res) {
+          result = std::move(res);
+        }));
+    exec.run();
+
+    return result;
+  }
+
+  inspect::Inspector inspector_;
+  FocusManager focus_manager_;
+};
+
+// Tree topology:
+//     A
+//     |
+//     B
+//     |
+//     C
+TEST_F(FocusManagerInspectTest, InspectTest) {
+  focus_manager_.OnNewViewTreeSnapshot(ThreeNodeSnapshot());
+
+  // Move focus to "C".
+  EXPECT_EQ(focus_manager_.RequestFocus(kNodeA, kNodeC), FocusChangeStatus::kAccept);
+  EXPECT_THAT(GetInspectFocusChain(), testing::ElementsAre(kNodeA, kNodeB, kNodeC));
+
+  // Move focus to "B".
+  EXPECT_EQ(focus_manager_.RequestFocus(kNodeA, kNodeB), FocusChangeStatus::kAccept);
+  EXPECT_THAT(GetInspectFocusChain(), testing::ElementsAre(kNodeA, kNodeB));
+
+  // Move focus to "A"
+  EXPECT_EQ(focus_manager_.RequestFocus(kNodeA, kNodeA), FocusChangeStatus::kAccept);
+  EXPECT_THAT(GetInspectFocusChain(), testing::ElementsAre(kNodeA));
 }
 
 }  // namespace focus::test

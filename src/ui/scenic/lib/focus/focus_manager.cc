@@ -8,6 +8,22 @@
 
 namespace focus {
 
+FocusManager::FocusManager(inspect::Node inspect_node)
+    : focus_chain_listener_registry_(this), inspect_node_(std::move(inspect_node)) {
+  // Track the focus chain in inspect.
+  lazy_ = inspect_node_.CreateLazyValues("values", [this] {
+    inspect::Inspector inspector;
+
+    auto array = inspector.GetRoot().CreateUintArray("focus_chain", focus_chain_.size());
+    for (size_t i = 0; i < focus_chain_.size(); i++) {
+      array.Set(i, focus_chain_[i]);
+    }
+    inspector.emplace(std::move(array));
+
+    return fit::make_ok_promise(std::move(inspector));
+  });
+}
+
 void FocusManager::Publish(sys::ComponentContext& component_context) {
   component_context.outgoing()->AddPublicService<FocusChainListenerRegistry>(
       [this](fidl::InterfaceRequest<FocusChainListenerRegistry> request) {
@@ -100,23 +116,21 @@ void FocusManager::RepairFocus() {
     return;
   }
 
-  const auto previous_focus_chain = focus_chain_;
+  std::vector<zx_koid_t> new_focus_chain = focus_chain_;
 
   // See if there's any place where the old focus chain breaks a parent-child relationship, and
   // truncate from there.
   // Note: Start at i = 1 so we can compare with i - 1.
-  for (size_t child_index = 1; child_index < focus_chain_.size(); ++child_index) {
-    const zx_koid_t child = focus_chain_.at(child_index);
-    const zx_koid_t parent = focus_chain_.at(child_index - 1);
+  for (size_t child_index = 1; child_index < new_focus_chain.size(); ++child_index) {
+    const zx_koid_t child = new_focus_chain.at(child_index);
+    const zx_koid_t parent = new_focus_chain.at(child_index - 1);
     if (snapshot_->view_tree.count(child) == 0 || snapshot_->view_tree.at(child).parent != parent) {
-      focus_chain_.erase(focus_chain_.begin() + child_index, focus_chain_.end());
+      new_focus_chain.erase(new_focus_chain.begin() + child_index, new_focus_chain.end());
       break;
     }
   }
 
-  if (focus_chain_ != previous_focus_chain) {
-    DispatchFocusChain();
-  }
+  SetFocusChain(std::move(new_focus_chain));
 }
 
 void FocusManager::SetFocus(zx_koid_t koid) {
@@ -126,17 +140,21 @@ void FocusManager::SetFocus(zx_koid_t koid) {
     FX_DCHECK(snapshot_->view_tree.at(koid).is_focusable);
   }
 
-  const auto previous_focus_chain = std::move(focus_chain_);
+  std::vector<zx_koid_t> new_focus_chain;
 
   // Regenerate chain.
-  focus_chain_.clear();
   while (koid != ZX_KOID_INVALID) {
-    focus_chain_.emplace_back(koid);
+    new_focus_chain.emplace_back(koid);
     koid = snapshot_->view_tree.at(koid).parent;
   }
-  std::reverse(focus_chain_.begin(), focus_chain_.end());
+  std::reverse(new_focus_chain.begin(), new_focus_chain.end());
 
-  if (focus_chain_ != previous_focus_chain) {
+  SetFocusChain(std::move(new_focus_chain));
+}
+
+void FocusManager::SetFocusChain(std::vector<zx_koid_t> new_focus_chain) {
+  if (new_focus_chain != focus_chain_) {
+    focus_chain_ = std::move(new_focus_chain);
     DispatchFocusChain();
   }
 }
