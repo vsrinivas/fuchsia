@@ -199,7 +199,7 @@ void DeviceInterface::NetworkDeviceIfcSnoop(const rx_buffer_t* rx_list, size_t r
   // ever in place.
 }
 
-void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
+void DeviceInterface::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
   LOG_TRACE("network-device: GetInfo");
   netdev::wire::Info info{
       .class_ = static_cast<netdev::wire::DeviceClass>(device_info_.device_class),
@@ -249,17 +249,16 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
   completer.Reply(std::move(info));
 }
 
-void DeviceInterface::GetStatus(GetStatusCompleter::Sync& completer) {
+void DeviceInterface::GetStatus(GetStatusRequestView request, GetStatusCompleter::Sync& completer) {
   status_t status;
   device_.GetStatus(&status);
   WithWireStatus([&completer](netdev::wire::Status wire_status) { completer.Reply(wire_status); },
                  status);
 }
 
-void DeviceInterface::OpenSession(::fidl::StringView session_name,
-                                  netdev::wire::SessionInfo session_info,
+void DeviceInterface::OpenSession(OpenSessionRequestView request,
                                   OpenSessionCompleter::Sync& completer) {
-  zx::status response = OpenSession(std::move(session_name), std::move(session_info));
+  zx::status response = OpenSession(request->session_name, std::move(request->session_info));
   if (response.is_error()) {
     completer.ReplyError(response.error_value());
   } else {
@@ -268,8 +267,7 @@ void DeviceInterface::OpenSession(::fidl::StringView session_name,
   }
 }
 
-void DeviceInterface::GetStatusWatcher(fidl::ServerEnd<netdev::StatusWatcher> watcher,
-                                       uint32_t buffer,
+void DeviceInterface::GetStatusWatcher(GetStatusWatcherRequestView request,
                                        GetStatusWatcherCompleter::Sync& _completer) {
   {
     fbl::AutoLock teardown_lock(&teardown_lock_);
@@ -280,12 +278,12 @@ void DeviceInterface::GetStatusWatcher(fidl::ServerEnd<netdev::StatusWatcher> wa
   }
 
   fbl::AllocChecker ac;
-  auto n_watcher = fbl::make_unique_checked<StatusWatcher>(&ac, buffer);
+  auto n_watcher = fbl::make_unique_checked<StatusWatcher>(&ac, request->buffer);
   if (!ac.check()) {
     return;
   }
   zx_status_t status =
-      n_watcher->Bind(dispatcher_, std::move(watcher), [this](StatusWatcher* watcher) {
+      n_watcher->Bind(dispatcher_, std::move(request->watcher), [this](StatusWatcher* watcher) {
         bool watchers_empty;
         teardown_lock_.Acquire();
         {

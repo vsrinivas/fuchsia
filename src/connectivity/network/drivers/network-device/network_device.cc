@@ -100,16 +100,15 @@ void NetworkDevice::DdkRelease() {
   delete this;
 }
 
-void NetworkDevice::GetDevice(fidl::ServerEnd<fuchsia_hardware_network::Device> device,
-                              GetDeviceCompleter::Sync& _completer) {
+void NetworkDevice::GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) {
   ZX_ASSERT_MSG(device_, "Can't serve device if not bound to parent implementation");
-  device_->Bind(std::move(device));
+  device_->Bind(std::move(request->device));
 }
 
-void NetworkDevice::GetMacAddressing(fidl::ServerEnd<fuchsia_hardware_network::MacAddressing> mac,
+void NetworkDevice::GetMacAddressing(GetMacAddressingRequestView request,
                                      GetMacAddressingCompleter::Sync& _completer) {
   if (mac_) {
-    mac_->Bind(loop_.dispatcher(), std::move(mac));
+    mac_->Bind(loop_.dispatcher(), std::move(request->mac));
   }
 }
 

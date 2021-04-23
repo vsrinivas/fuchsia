@@ -63,7 +63,7 @@ std::string GetNewFirmwareVersion();
 #endif
 
 class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Messageable>,
-                      public fidl::WireInterface<fuchsia_lowpan_spinel::DeviceSetup> {
+                      public fidl::WireServer<fuchsia_lowpan_spinel::DeviceSetup> {
  public:
   explicit OtRadioDevice(zx_device_t* device);
 
@@ -120,8 +120,7 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Me
   } thrd_status_ = {false, false};
 
   // FIDL request handlers
-  void SetChannel(fidl::ServerEnd<fuchsia_lowpan_spinel::Device> request,
-                  SetChannelCompleter::Sync& _completer) override;
+  void SetChannel(SetChannelRequestView request, SetChannelCompleter::Sync& _completer) override;
 
   thrd_t thread_;
   async::Loop loop_;
@@ -131,7 +130,7 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Me
   uint16_t spi_tx_buffer_len_ = 0;
   uint8_t spi_tx_buffer_[kMaxFrameSize];
 
-  class LowpanSpinelDeviceFidlImpl : public fidl::WireInterface<fuchsia_lowpan_spinel::Device> {
+  class LowpanSpinelDeviceFidlImpl : public fidl::WireServer<fuchsia_lowpan_spinel::Device> {
    public:
     LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio);
     void Bind(async_dispatcher_t* dispatcher,
@@ -139,11 +138,12 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Me
 
    private:
     // FIDL request handlers
-    void Open(OpenCompleter::Sync& completer);
-    void Close(CloseCompleter::Sync& completer);
-    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync& completer);
-    void SendFrame(::fidl::VectorView<uint8_t> data, SendFrameCompleter::Sync& completer);
-    void ReadyToReceiveFrames(uint32_t number_of_frames,
+    void Open(OpenRequestView request, OpenCompleter::Sync& completer);
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer);
+    void GetMaxFrameSize(GetMaxFrameSizeRequestView request,
+                         GetMaxFrameSizeCompleter::Sync& completer);
+    void SendFrame(SendFrameRequestView request, SendFrameCompleter::Sync& completer);
+    void ReadyToReceiveFrames(ReadyToReceiveFramesRequestView request,
                               ReadyToReceiveFramesCompleter::Sync& completer);
 
     OtRadioDevice& ot_radio_obj_;

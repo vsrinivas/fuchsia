@@ -108,16 +108,17 @@ class ClientState {
 //
 // `MacClientInstance` keeps the state associated with the client and is responsible for fulfilling
 // FIDL requests.
-class MacClientInstance : public fidl::WireInterface<netdev::MacAddressing>,
+class MacClientInstance : public fidl::WireServer<netdev::MacAddressing>,
                           public fbl::DoublyLinkedListable<std::unique_ptr<MacClientInstance>> {
  public:
   explicit MacClientInstance(MacInterface* parent, mode_t default_mode);
 
-  void GetUnicastAddress(GetUnicastAddressCompleter::Sync& _completer) override;
-  void SetMode(netdev::wire::MacFilterMode mode, SetModeCompleter::Sync& _completer) override;
-  void AddMulticastAddress(MacAddress address,
+  void GetUnicastAddress(GetUnicastAddressRequestView request,
+                         GetUnicastAddressCompleter::Sync& _completer) override;
+  void SetMode(SetModeRequestView request, SetModeCompleter::Sync& _completer) override;
+  void AddMulticastAddress(AddMulticastAddressRequestView request,
                            AddMulticastAddressCompleter::Sync& _completer) override;
-  void RemoveMulticastAddress(MacAddress address,
+  void RemoveMulticastAddress(RemoveMulticastAddressRequestView request,
                               RemoveMulticastAddressCompleter::Sync& _completer) override;
   // Binds the client instance to serve FIDL requests from the provided request channel.
   // All requests will be operated on the provided dispatcher.

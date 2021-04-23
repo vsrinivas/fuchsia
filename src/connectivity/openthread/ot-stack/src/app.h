@@ -85,17 +85,18 @@ class OtStackApp : public fidl::WireSyncEventHandler<fidl_spinel::Device> {
   void DisconnectDevice();
   void Shutdown();
 
-  class LowpanSpinelDeviceFidlImpl : public fidl::WireInterface<fidl_spinel::Device> {
+  class LowpanSpinelDeviceFidlImpl : public fidl::WireServer<fidl_spinel::Device> {
    public:
     explicit LowpanSpinelDeviceFidlImpl(OtStackApp& ot_stack_app);
 
    private:
     // FIDL request handlers
-    void Open(OpenCompleter::Sync& completer) override;
-    void Close(CloseCompleter::Sync& completer) override;
-    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync& completer) override;
-    void SendFrame(::fidl::VectorView<uint8_t> data, SendFrameCompleter::Sync& completer) override;
-    void ReadyToReceiveFrames(uint32_t number_of_frames,
+    void Open(OpenRequestView request, OpenCompleter::Sync& completer) override;
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
+    void GetMaxFrameSize(GetMaxFrameSizeRequestView request,
+                         GetMaxFrameSizeCompleter::Sync& completer) override;
+    void SendFrame(SendFrameRequestView request, SendFrameCompleter::Sync& completer) override;
+    void ReadyToReceiveFrames(ReadyToReceiveFramesRequestView request,
                               ReadyToReceiveFramesCompleter::Sync& completer) override;
 
     OtStackApp& app_;

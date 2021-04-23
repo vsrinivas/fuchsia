@@ -49,7 +49,7 @@ using DeviceType = ddk::Device<FakeUsbAx88179Function, ddk::Unbindable, ddk::Mes
 class FakeUsbAx88179Function : public DeviceType,
                                public ddk::UsbFunctionInterfaceProtocol<FakeUsbAx88179Function>,
                                public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_ASIX_FUNCTION>,
-                               public fidl::WireInterface<fuchsia_hardware_ax88179::Hooks> {
+                               public fidl::WireServer<fuchsia_hardware_ax88179::Hooks> {
  public:
   explicit FakeUsbAx88179Function(zx_device_t* parent) : DeviceType(parent), function_(parent) {}
 
@@ -71,7 +71,7 @@ class FakeUsbAx88179Function : public DeviceType,
   zx_status_t UsbFunctionInterfaceSetInterface(uint8_t interface, uint8_t alt_setting);
 
   // Hooks:
-  void SetOnline(bool online, SetOnlineCompleter::Sync& completer) override;
+  void SetOnline(SetOnlineRequestView request, SetOnlineCompleter::Sync& completer) override;
 
  private:
   void RequestQueue(usb_request_t* req, const usb_request_complete_callback_t* completion);
@@ -96,13 +96,14 @@ class FakeUsbAx88179Function : public DeviceType,
   bool configured_ = false;
 };
 
-void FakeUsbAx88179Function::SetOnline(bool online, SetOnlineCompleter::Sync& completer) {
+void FakeUsbAx88179Function::SetOnline(SetOnlineRequestView request,
+                                       SetOnlineCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
 
   constexpr size_t kInterruptRequestSize = 8;
   uint8_t status[kInterruptRequestSize];
   memset(&status, 0, sizeof(status));
-  status[2] = online;
+  status[2] = request->online;
 
   usb_request_complete_callback_t complete = {
       .callback = [](void* ctx, usb_request_t* req) {},

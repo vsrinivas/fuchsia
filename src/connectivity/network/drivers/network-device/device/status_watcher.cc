@@ -70,7 +70,8 @@ StatusWatcher::~StatusWatcher() {
   ZX_ASSERT_MSG(!binding_.has_value(), "Tried to destroy StatusWatcher without unbinding");
 }
 
-void StatusWatcher::WatchStatus(WatchStatusCompleter::Sync& completer) {
+void StatusWatcher::WatchStatus(WatchStatusRequestView request,
+                                WatchStatusCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
   if (queue_.empty()) {
     if (pending_txn_.has_value()) {

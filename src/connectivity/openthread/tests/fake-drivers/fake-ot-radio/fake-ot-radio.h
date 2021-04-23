@@ -36,7 +36,7 @@ constexpr uint32_t kBitMaskHigherFourBits = 0xF0;
 constexpr uint32_t kBitMaskLowerFourBits = 0x0F;
 
 class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable, ddk::Messageable>,
-                          public fidl::WireInterface<fuchsia_lowpan_spinel::DeviceSetup> {
+                          public fidl::WireServer<fuchsia_lowpan_spinel::DeviceSetup> {
  public:
   explicit FakeOtRadioDevice(zx_device_t* device);
 
@@ -55,8 +55,7 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
 
  private:
   // FIDL request handlers
-  void SetChannel(fidl::ServerEnd<fuchsia_lowpan_spinel::Device> request,
-                  SetChannelCompleter::Sync& _completer) override;
+  void SetChannel(SetChannelRequestView request, SetChannelCompleter::Sync& _completer) override;
   // Loop
   zx_status_t RadioThread();
   uint32_t GetTimeoutMs();
@@ -68,7 +67,7 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
   static uint8_t ValidateSpinelHeaderAndGetTid(const uint8_t* data, uint32_t len);
 
   // Nested class for FIDL implementation
-  class LowpanSpinelDeviceFidlImpl : public fidl::WireInterface<fuchsia_lowpan_spinel::Device> {
+  class LowpanSpinelDeviceFidlImpl : public fidl::WireServer<fuchsia_lowpan_spinel::Device> {
    public:
     explicit LowpanSpinelDeviceFidlImpl(FakeOtRadioDevice& ot_radio);
     void Bind(async_dispatcher_t* dispatcher,
@@ -76,11 +75,12 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
 
    private:
     // FIDL request handlers
-    void Open(OpenCompleter::Sync& completer) override;
-    void Close(CloseCompleter::Sync& completer) override;
-    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync& completer) override;
-    void SendFrame(::fidl::VectorView<uint8_t> data, SendFrameCompleter::Sync& completer) override;
-    void ReadyToReceiveFrames(uint32_t number_of_frames,
+    void Open(OpenRequestView request, OpenCompleter::Sync& completer) override;
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
+    void GetMaxFrameSize(GetMaxFrameSizeRequestView request,
+                         GetMaxFrameSizeCompleter::Sync& completer) override;
+    void SendFrame(SendFrameRequestView request, SendFrameCompleter::Sync& completer) override;
+    void ReadyToReceiveFrames(ReadyToReceiveFramesRequestView request,
                               ReadyToReceiveFramesCompleter::Sync& completer) override;
 
     FakeOtRadioDevice& ot_radio_obj_;

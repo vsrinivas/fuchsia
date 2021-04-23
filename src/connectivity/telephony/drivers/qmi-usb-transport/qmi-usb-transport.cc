@@ -262,8 +262,8 @@ zx_status_t Device::CloseQmiChannel() {
   return ret_val;
 }
 
-void Device::SetChannel(::zx::channel transport, SetChannelCompleter::Sync& completer) {
-  zx_status_t set_channel_res = SetChannelToDevice(transport.release());
+void Device::SetChannel(SetChannelRequestView request, SetChannelCompleter::Sync& completer) {
+  zx_status_t set_channel_res = SetChannelToDevice(request->transport.release());
   if (set_channel_res == ZX_OK) {
     completer.ReplySuccess();
     zx_status_t status = SetAsyncWait();
@@ -275,14 +275,14 @@ void Device::SetChannel(::zx::channel transport, SetChannelCompleter::Sync& comp
   }
 }
 
-void Device::SetNetwork(bool connected, SetNetworkCompleter::Sync& completer) {
-  QmiUpdateOnlineStatus(connected);
+void Device::SetNetwork(SetNetworkRequestView request, SetNetworkCompleter::Sync& completer) {
+  QmiUpdateOnlineStatus(request->connected);
   completer.Reply();
 }
 
-void Device::SetSnoopChannel(::fidl::ClientEnd<fuchsia_telephony_snoop::Publisher> interface,
+void Device::SetSnoopChannel(SetSnoopChannelRequestView request,
                              SetSnoopChannelCompleter::Sync& completer) {
-  zx_status_t set_snoop_res = SetSnoopChannelToDevice(std::move(interface));
+  zx_status_t set_snoop_res = SetSnoopChannelToDevice(std::move(request->interface));
   if (set_snoop_res == ZX_OK) {
     completer.ReplySuccess();
   } else {

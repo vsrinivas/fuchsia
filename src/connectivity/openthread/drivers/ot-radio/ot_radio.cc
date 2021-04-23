@@ -46,7 +46,8 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(
       fidl::BindServer(dispatcher, std::move(channel), this, std::move(on_unbound));
 }
 
-void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer) {
+void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request,
+                                                     OpenCompleter::Sync& completer) {
   zx_status_t res = ot_radio_obj_.Reset();
   if (res == ZX_OK) {
     zxlogf(DEBUG, "open succeed, returning");
@@ -64,7 +65,8 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& comple
   }
 }
 
-void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync& completer) {
+void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Close(CloseRequestView request,
+                                                      CloseCompleter::Sync& completer) {
   zx_status_t res = ot_radio_obj_.AssertResetPin();
   if (res == ZX_OK) {
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_OFF;
@@ -77,15 +79,15 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync& comp
 }
 
 void OtRadioDevice::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
-    GetMaxFrameSizeCompleter::Sync& completer) {
+    GetMaxFrameSizeRequestView request, GetMaxFrameSizeCompleter::Sync& completer) {
   completer.Reply(kMaxFrameSize);
 }
 
-void OtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uint8_t> data,
+void OtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(SendFrameRequestView request,
                                                           SendFrameCompleter::Sync& completer) {
   if (ot_radio_obj_.power_status_ == OT_SPINEL_DEVICE_OFF) {
     (*ot_radio_obj_.fidl_binding_)->OnError(lowpan_spinel_fidl::wire::Error::kClosed, false);
-  } else if (data.count() > kMaxFrameSize) {
+  } else if (request->data.count() > kMaxFrameSize) {
     (*ot_radio_obj_.fidl_binding_)
         ->OnError(lowpan_spinel_fidl::wire::Error::kOutboundFrameTooLarge, false);
   } else if (ot_radio_obj_.outbound_allowance_ == 0) {
@@ -96,7 +98,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uin
     completer.Close(ZX_ERR_IO_OVERRUN);
   } else {
     // All good, send out the frame.
-    zx_status_t res = ot_radio_obj_.RadioPacketTx(data.begin(), data.count());
+    zx_status_t res = ot_radio_obj_.RadioPacketTx(request->data.begin(), request->data.count());
     if (res != ZX_OK) {
       zxlogf(ERROR, "Error in handling send frame req: %s", zx_status_get_string(res));
     } else {
@@ -112,9 +114,9 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uin
 }
 
 void OtRadioDevice::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
-    uint32_t number_of_frames, ReadyToReceiveFramesCompleter::Sync& completer) {
-  zxlogf(DEBUG, "ot-radio: allow to receive %u frame", number_of_frames);
-  ot_radio_obj_.inbound_allowance_ += number_of_frames;
+    ReadyToReceiveFramesRequestView request, ReadyToReceiveFramesCompleter::Sync& completer) {
+  zxlogf(DEBUG, "ot-radio: allow to receive %u frame", request->number_of_frames);
+  ot_radio_obj_.inbound_allowance_ += request->number_of_frames;
   if (ot_radio_obj_.inbound_allowance_ > 0 && ot_radio_obj_.spinel_framer_.get()) {
     ot_radio_obj_.spinel_framer_->SetInboundAllowanceStatus(true);
     if (ot_radio_obj_.interrupt_is_asserted_) {
@@ -135,19 +137,19 @@ zx_status_t OtRadioDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn)
   return transaction.Status();
 }
 
-void OtRadioDevice::SetChannel(fidl::ServerEnd<fuchsia_lowpan_spinel::Device> request,
+void OtRadioDevice::SetChannel(SetChannelRequestView request,
                                SetChannelCompleter::Sync& completer) {
   if (fidl_impl_obj_ != nullptr) {
     zxlogf(ERROR, "ot-radio: channel already set");
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);
     return;
   }
-  if (!request.is_valid()) {
+  if (!request->req.is_valid()) {
     completer.ReplyError(ZX_ERR_BAD_HANDLE);
     return;
   }
   fidl_impl_obj_ = std::make_unique<LowpanSpinelDeviceFidlImpl>(*this);
-  fidl_impl_obj_->Bind(loop_.dispatcher(), std::move(request));
+  fidl_impl_obj_->Bind(loop_.dispatcher(), std::move(request->req));
   completer.ReplySuccess();
 }
 

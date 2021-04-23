@@ -16,7 +16,7 @@ namespace Fuchsia {
 
 /// Handler for all fuchsia.lowpan.bootstrap/Thread FIDL protocol calls. Registers as a
 /// public service with the ComponentContext and handles incoming connections.
-class BootstrapThreadImpl : public fidl::WireInterface<fuchsia_lowpan_bootstrap::Thread> {
+class BootstrapThreadImpl : public fidl::WireServer<fuchsia_lowpan_bootstrap::Thread> {
  public:
   // Construct a new instance of |BootstrapThreadImpl|.
   explicit BootstrapThreadImpl();
@@ -32,7 +32,7 @@ class BootstrapThreadImpl : public fidl::WireInterface<fuchsia_lowpan_bootstrap:
                    cpp17::optional<const fbl::RefPtr<fs::PseudoDir>> svc_dir);
 
   // Implementation of the fuchsia.lowpan.bootstrap.Thread interface.
-  void ImportSettings(fuchsia_mem::wire::Buffer thread_settings_json,
+  void ImportSettings(ImportSettingsRequestView request,
                       ImportSettingsCompleter::Sync& completer) override;
 
  private:

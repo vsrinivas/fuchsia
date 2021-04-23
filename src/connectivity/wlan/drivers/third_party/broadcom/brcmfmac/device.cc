@@ -67,23 +67,25 @@ zx_status_t Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 
 void Device::DdkRelease() { delete this; }
 
-void Device::Get(int32_t iface_idx, int32_t cmd, ::fidl::VectorView<uint8_t> request,
-                 GetCompleter::Sync& _completer) {
-  BRCMF_DBG(INFO, "brcmfmac: Device::Get cmd: %d len: %lu\n", cmd, request.count());
-  zx_status_t status = brcmf_send_cmd_to_firmware(brcmf_pub_.get(), iface_idx, cmd,
-                                                  (void*)request.data(), request.count(), false);
+void Device::Get(GetRequestView request, GetCompleter::Sync& _completer) {
+  BRCMF_DBG(INFO, "brcmfmac: Device::Get cmd: %d len: %lu\n", request->cmd,
+            request->request.count());
+  zx_status_t status =
+      brcmf_send_cmd_to_firmware(brcmf_pub_.get(), request->iface_idx, request->cmd,
+                                 (void*)request->request.data(), request->request.count(), false);
   if (status == ZX_OK) {
-    _completer.ReplySuccess(std::move(request));
+    _completer.ReplySuccess(request->request);
   } else {
     _completer.ReplyError(status);
   }
 }
 
-void Device::Set(int32_t iface_idx, int32_t cmd, ::fidl::VectorView<uint8_t> request,
-                 SetCompleter::Sync& _completer) {
-  BRCMF_DBG(INFO, "brcmfmac: Device::Set cmd: %d len: %lu\n", cmd, request.count());
-  zx_status_t status = brcmf_send_cmd_to_firmware(brcmf_pub_.get(), iface_idx, cmd,
-                                                  (void*)request.data(), request.count(), true);
+void Device::Set(SetRequestView request, SetCompleter::Sync& _completer) {
+  BRCMF_DBG(INFO, "brcmfmac: Device::Set cmd: %d len: %lu\n", request->cmd,
+            request->request.count());
+  zx_status_t status =
+      brcmf_send_cmd_to_firmware(brcmf_pub_.get(), request->iface_idx, request->cmd,
+                                 (void*)request->request.data(), request->request.count(), true);
   if (status == ZX_OK) {
     _completer.ReplySuccess();
   } else {

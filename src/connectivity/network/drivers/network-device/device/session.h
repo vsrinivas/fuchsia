@@ -39,7 +39,7 @@ struct RefCountedFifo : public fbl::RefCounted<RefCountedFifo> {
 // It is invalid to destroy a Session that has outstanding buffers, that is, buffers that are
 // currently owned by the interface's Rx or Tx queues.
 class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
-                public fidl::WireInterface<netdev::Session> {
+                public fidl::WireServer<netdev::Session> {
  public:
   ~Session() override;
   // Creates a new session with the provided parameters.
@@ -62,8 +62,8 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   bool ShouldTakeOverPrimary(const Session* current_primary) const;
 
   // FIDL interface implementation:
-  void SetPaused(bool paused, SetPausedCompleter::Sync& _completer) override;
-  void Close(CloseCompleter::Sync& _completer) override;
+  void SetPaused(SetPausedRequestView request, SetPausedCompleter::Sync& _completer) override;
+  void Close(CloseRequestView request, CloseCompleter::Sync& _completer) override;
 
   // Sets the return code for a tx descriptor.
   void MarkTxReturnResult(uint16_t descriptor, zx_status_t status);

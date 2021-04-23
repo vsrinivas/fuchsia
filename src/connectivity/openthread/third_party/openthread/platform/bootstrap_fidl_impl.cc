@@ -76,11 +76,12 @@ void BootstrapThreadImpl::CloseBinding(zx_status_t close_binding_status,
   }
 }
 
-void BootstrapThreadImpl::ImportSettings(fuchsia_mem::wire::Buffer thread_settings_json,
+void BootstrapThreadImpl::ImportSettings(ImportSettingsRequestView request,
                                          ImportSettingsCompleter::Sync& completer) {
   std::string data;
 
-  fsl::SizedVmo sized_vmo(std::move(thread_settings_json.vmo), thread_settings_json.size);
+  fsl::SizedVmo sized_vmo(std::move(request->thread_settings_json.vmo),
+                          request->thread_settings_json.size);
 
   if (!fsl::StringFromVmo(sized_vmo, &data)) {
     FX_LOGS(ERROR) << "Failed to get data from VMO.";

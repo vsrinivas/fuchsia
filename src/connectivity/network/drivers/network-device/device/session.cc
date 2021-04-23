@@ -490,26 +490,26 @@ void Session::ResumeTx() {
   }
 }
 
-void Session::SetPaused(bool paused, SetPausedCompleter::Sync& _completer) {
-  bool old = paused_.exchange(paused);
-  if (paused != old) {
+void Session::SetPaused(SetPausedRequestView request, SetPausedCompleter::Sync& _completer) {
+  bool old = paused_.exchange(request->paused);
+  if (request->paused != old) {
     // NOTE: SetPaused is served from the same thread as we operate the Tx FIFO on, so we can
     // ensure that the Tx FIFO will not be running until we return from here. If that changes, we
     // need to split the paused boolean into two signals to prevent a race.
-    if (paused) {
+    if (request->paused) {
       parent_->SessionStopped(this);
     } else {
       parent_->SessionStarted(this);
     }
 
-    if (!paused) {
+    if (!request->paused) {
       // If we're unpausing a session, signal that we want to resume Tx:
       ResumeTx();
     }
   }
 }
 
-void Session::Close(CloseCompleter::Sync& _completer) { Kill(); }
+void Session::Close(CloseRequestView request, CloseCompleter::Sync& _completer) { Kill(); }
 
 void Session::MarkTxReturnResult(uint16_t descriptor_index, zx_status_t status) {
   ZX_ASSERT(descriptor_index < descriptor_count_);

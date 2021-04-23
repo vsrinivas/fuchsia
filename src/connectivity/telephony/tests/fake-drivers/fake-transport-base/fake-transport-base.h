@@ -28,7 +28,7 @@ typedef enum {
 } DevicePacketEnum;
 
 // TODO (jiamingw): change the name of FIDL protocol in next CL.
-class Device : fidl::WireInterface<fuchsia_hardware_telephony_transport::Qmi> {
+class Device : fidl::WireServer<fuchsia_hardware_telephony_transport::Qmi> {
  public:
   explicit Device(zx_device_t* device);
 
@@ -66,9 +66,9 @@ class Device : fidl::WireInterface<fuchsia_hardware_telephony_transport::Qmi> {
   zx_device_t*& GetTelDevPtr() { return tel_dev_; }
 
  private:
-  void SetChannel(::zx::channel transport, SetChannelCompleter::Sync& completer) override;
-  void SetNetwork(bool connected, SetNetworkCompleter::Sync& completer) override;
-  void SetSnoopChannel(::fidl::ClientEnd<fuchsia_telephony_snoop::Publisher> interface,
+  void SetChannel(SetChannelRequestView request, SetChannelCompleter::Sync& completer) override;
+  void SetNetwork(SetNetworkRequestView request, SetNetworkCompleter::Sync& completer) override;
+  void SetSnoopChannel(SetSnoopChannelRequestView request,
                        SetSnoopChannelCompleter::Sync& completer) override;
 
   zx::channel ctrl_channel_;

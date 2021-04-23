@@ -194,15 +194,15 @@ void MacInterface::Teardown(fit::callback<void()> callback) {
   }
 }
 
-void MacClientInstance::GetUnicastAddress(GetUnicastAddressCompleter::Sync& completer) {
+void MacClientInstance::GetUnicastAddress(GetUnicastAddressRequestView request,
+                                          GetUnicastAddressCompleter::Sync& completer) {
   MacAddress addr{};
   parent_->impl_.GetAddress(addr.octets.data());
   completer.Reply(addr);
 }
 
-void MacClientInstance::SetMode(netdev::wire::MacFilterMode mode,
-                                SetModeCompleter::Sync& completer) {
-  mode_t resolved_mode = parent_->ConvertMode(mode);
+void MacClientInstance::SetMode(SetModeRequestView request, SetModeCompleter::Sync& completer) {
+  mode_t resolved_mode = parent_->ConvertMode(request->mode);
   if (resolved_mode != 0) {
     fbl::AutoLock lock(&parent_->lock_);
     state_.filter_mode = resolved_mode;
@@ -213,14 +213,14 @@ void MacClientInstance::SetMode(netdev::wire::MacFilterMode mode,
   }
 }
 
-void MacClientInstance::AddMulticastAddress(MacAddress address,
+void MacClientInstance::AddMulticastAddress(AddMulticastAddressRequestView request,
                                             AddMulticastAddressCompleter::Sync& completer) {
-  if ((address.octets[0] & kMacMulticast) == 0) {
+  if ((request->address.octets[0] & kMacMulticast) == 0) {
     completer.Reply(ZX_ERR_INVALID_ARGS);
   } else {
     fbl::AutoLock lock(&parent_->lock_);
     if (state_.addresses.size() < MAX_MAC_FILTER) {
-      state_.addresses.insert(ClientState::Addr{address});
+      state_.addresses.insert(ClientState::Addr{request->address});
       parent_->Consolidate();
       completer.Reply(ZX_OK);
     } else {
@@ -229,13 +229,13 @@ void MacClientInstance::AddMulticastAddress(MacAddress address,
   }
 }
 
-void MacClientInstance::RemoveMulticastAddress(MacAddress address,
+void MacClientInstance::RemoveMulticastAddress(RemoveMulticastAddressRequestView request,
                                                RemoveMulticastAddressCompleter::Sync& completer) {
-  if ((address.octets[0] & kMacMulticast) == 0) {
+  if ((request->address.octets[0] & kMacMulticast) == 0) {
     completer.Reply(ZX_ERR_INVALID_ARGS);
   } else {
     fbl::AutoLock lock(&parent_->lock_);
-    state_.addresses.erase(ClientState::Addr{address});
+    state_.addresses.erase(ClientState::Addr{request->address});
     parent_->Consolidate();
     completer.Reply(ZX_OK);
   }

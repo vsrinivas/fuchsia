@@ -23,7 +23,7 @@ enum class DeviceStatus { STARTING, STARTED, STOPPING, STOPPED };
 
 enum class PendingDeviceOperation { NONE, START, STOP };
 
-class DeviceInterface : public fidl::WireInterface<netdev::Device>,
+class DeviceInterface : public fidl::WireServer<netdev::Device>,
                         public ddk::NetworkDeviceIfcProtocol<DeviceInterface>,
                         public ::network::NetworkDeviceInterface {
  public:
@@ -100,11 +100,10 @@ class DeviceInterface : public fidl::WireInterface<netdev::Device>,
   zx::status<std::pair<uint8_t, DataVmoStore::StoredVmo*>> RegisterDataVmo(zx::vmo vmo);
 
   // Fidl protocol implementation.
-  void GetInfo(GetInfoCompleter::Sync& completer) override;
-  void GetStatus(GetStatusCompleter::Sync& completer) override;
-  void OpenSession(::fidl::StringView session_name, netdev::wire::SessionInfo session_info,
-                   OpenSessionCompleter::Sync& completer) override;
-  void GetStatusWatcher(fidl::ServerEnd<netdev::StatusWatcher> watcher, uint32_t buffer,
+  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
+  void GetStatus(GetStatusRequestView request, GetStatusCompleter::Sync& completer) override;
+  void OpenSession(OpenSessionRequestView request, OpenSessionCompleter::Sync& completer) override;
+  void GetStatusWatcher(GetStatusWatcherRequestView request,
                         GetStatusWatcherCompleter::Sync& completer) override;
 
   // Serves the OpenSession FIDL handle method synchronously.

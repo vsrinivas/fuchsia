@@ -45,13 +45,12 @@ class WlantapDriver {
   std::unique_ptr<async::Loop> loop_;
 };
 
-struct WlantapCtl : fidl::WireRawChannelInterface<wlantap::WlantapCtl> {
+struct WlantapCtl : fidl::WireServer<wlantap::WlantapCtl> {
   WlantapCtl(WlantapDriver* driver) : driver_(driver) {}
 
   static void DdkRelease(void* ctx) { delete static_cast<WlantapCtl*>(ctx); }
 
-  void CreatePhy(wlantap::wire::WlantapPhyConfig config, ::zx::channel proxy,
-                 CreatePhyCompleter::Sync& completer) override {
+  void CreatePhy(CreatePhyRequestView request, CreatePhyCompleter::Sync& completer) override {
     zx_status_t status;
 
     async_dispatcher_t* loop;
@@ -63,7 +62,7 @@ struct WlantapCtl : fidl::WireRawChannelInterface<wlantap::WlantapCtl> {
     // Convert to HLCPP by transiting through fidl bytes.
     auto phy_config = ::fuchsia::wlan::tap::WlantapPhyConfig::New();
     {
-      fidl::OwnedEncodedMessage<wlantap::wire::WlantapPhyConfig> encoded(&config);
+      fidl::OwnedEncodedMessage<wlantap::wire::WlantapPhyConfig> encoded(&request->config);
       if (!encoded.ok()) {
         completer.Reply(encoded.status());
         return;
@@ -81,8 +80,8 @@ struct WlantapCtl : fidl::WireRawChannelInterface<wlantap::WlantapCtl> {
       ::fuchsia::wlan::tap::WlantapPhyConfig::Decode(&dec, phy_config.get(), /* offset = */ 0);
     }
 
-    if ((status = wlan::CreatePhy(device_, std::move(proxy), std::move(phy_config), loop)) !=
-        ZX_OK) {
+    if ((status = wlan::CreatePhy(device_, request->proxy.TakeChannel(), std::move(phy_config),
+                                  loop)) != ZX_OK) {
       completer.Reply(status);
     } else {
       completer.Reply(ZX_OK);

@@ -103,7 +103,8 @@ void OtStackApp::UpdateClientInboundAllowance() {
   FX_LOGS(DEBUG) << "ot-stack: updated client_inbound_allowance_:" << client_inbound_allowance_;
 }
 
-void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer) {
+void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request,
+                                                  OpenCompleter::Sync& completer) {
   if (!app_.connected_to_device_) {
     FX_LOGS(ERROR) << "ot-radio not connected when client called Open()";
     completer.ReplyError(fidl_spinel::wire::Error::kUnspecified);
@@ -126,7 +127,8 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer
   completer.ReplySuccess();
 }
 
-void OtStackApp::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync& completer) {
+void OtStackApp::LowpanSpinelDeviceFidlImpl::Close(CloseRequestView request,
+                                                   CloseCompleter::Sync& completer) {
   if (!app_.connected_to_device_) {
     FX_LOGS(ERROR) << "ot-radio not connected";
     completer.ReplyError(fidl_spinel::wire::Error::kUnspecified);
@@ -144,7 +146,7 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync& complet
 }
 
 void OtStackApp::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
-    GetMaxFrameSizeCompleter::Sync& completer) {
+    GetMaxFrameSizeRequestView request, GetMaxFrameSizeCompleter::Sync& completer) {
   if (!app_.connected_to_device_) {
     FX_LOGS(ERROR) << "ot-stack: ot-radio not connected";
     app_.Shutdown();
@@ -166,7 +168,7 @@ void OtStackApp::PushFrameToOtLib() {
   client_outbound_queue_.pop_front();
 }
 
-void OtStackApp::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uint8_t> data,
+void OtStackApp::LowpanSpinelDeviceFidlImpl::SendFrame(SendFrameRequestView request,
                                                        SendFrameCompleter::Sync& completer) {
   if (!app_.connected_to_device_) {
     FX_LOGS(ERROR) << "ot-radio not connected";
@@ -175,17 +177,17 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uint8_
   FX_LOGS(DEBUG) << "ot-stack: SendFrame() received";
   app_.UpdateClientOutboundAllowance();
   // Invoke ot-lib
-  app_.client_outbound_queue_.emplace_back(data.cbegin(), data.cend());
+  app_.client_outbound_queue_.emplace_back(request->data.cbegin(), request->data.cend());
   async::PostTask(app_.loop_.dispatcher(), [this]() { this->app_.PushFrameToOtLib(); });
 }
 
 void OtStackApp::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
-    uint32_t number_of_frames, ReadyToReceiveFramesCompleter::Sync& completer) {
+    ReadyToReceiveFramesRequestView request, ReadyToReceiveFramesCompleter::Sync& completer) {
   if (!app_.connected_to_device_) {
     FX_LOGS(ERROR) << "ot-radio not connected";
     return;
   }
-  app_.HandleClientReadyToReceiveFrames(number_of_frames);
+  app_.HandleClientReadyToReceiveFrames(request->number_of_frames);
 }
 
 OtStackApp::OtStackCallBackImpl::OtStackCallBackImpl(OtStackApp& app) : app_(app) {}

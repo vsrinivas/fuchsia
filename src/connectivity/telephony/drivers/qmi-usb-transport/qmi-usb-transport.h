@@ -117,7 +117,7 @@ struct IpPktHdr {
 constexpr std::array<uint8_t, kMacAddrLen> kFakeMacAddr = {0x02, 0x47, 0x4f, 0x4f, 0x47, 0x4c};
 
 class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Messageable>,
-               fidl::WireInterface<fuchsia_hardware_telephony_transport::Qmi> {
+               fidl::WireServer<fuchsia_hardware_telephony_transport::Qmi> {
  public:
   explicit Device(zx_device_t* parent);
 
@@ -182,9 +182,9 @@ class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Messageable>,
 
  private:
   // FIDL interface implementation
-  void SetChannel(::zx::channel transport, SetChannelCompleter::Sync& _completer) override;
-  void SetNetwork(bool connected, SetNetworkCompleter::Sync& _completer) override;
-  void SetSnoopChannel(::fidl::ClientEnd<fuchsia_telephony_snoop::Publisher> interface,
+  void SetChannel(SetChannelRequestView request, SetChannelCompleter::Sync& _completer) override;
+  void SetNetwork(SetNetworkRequestView request, SetNetworkCompleter::Sync& _completer) override;
+  void SetSnoopChannel(SetSnoopChannelRequestView request,
                        SetSnoopChannelCompleter::Sync& _completer) override;
 
   // Ethernet

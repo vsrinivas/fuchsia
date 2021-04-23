@@ -34,7 +34,7 @@ void WithWireStatus(F fn, status_t status) {
 }
 
 class StatusWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<StatusWatcher>>,
-                      public fidl::WireInterface<netdev::StatusWatcher> {
+                      public fidl::WireServer<netdev::StatusWatcher> {
  public:
   explicit StatusWatcher(uint32_t max_queue);
   ~StatusWatcher() override;
@@ -46,7 +46,7 @@ class StatusWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<StatusWat
   void PushStatus(const status_t& status);
 
  private:
-  void WatchStatus(WatchStatusCompleter::Sync& _completer) override;
+  void WatchStatus(WatchStatusRequestView request, WatchStatusCompleter::Sync& _completer) override;
 
   fbl::Mutex lock_;
   uint32_t max_queue_;
