@@ -38,7 +38,8 @@ enum AudioStreamSettingSource {
 
 table Volume {
     /// The volume level ranged [0.0, 1.0]. The level maps to a dbfs value from a volume
-    /// curve in the setting service.
+    /// curve in the setting service. Not a number (NaN), infinity or negative infinity
+    /// will cause SetVolume to fail with INVALID_VALUE.
     1: float32 level;
 
     /// True if the volume should be muted. If this is true, then the volume is silent,

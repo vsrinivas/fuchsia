@@ -233,7 +233,19 @@ impl controller::Handle for AudioController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::Restore => Some(self.volume.lock().await.restore().await.map(|_| None)),
-            Request::SetVolume(volume) => Some(self.volume.lock().await.set_volume(volume).await),
+            Request::SetVolume(volume) => {
+                // Validate volume contains valid volume level numbers.
+                for audio_stream in &volume {
+                    if !audio_stream.has_finite_volume_level() {
+                        return Some(Err(ControllerError::InvalidArgument(
+                            SettingType::Audio,
+                            "stream".into(),
+                            format!("{:?}", audio_stream).into(),
+                        )));
+                    }
+                }
+                Some(self.volume.lock().await.set_volume(volume).await)
+            }
             Request::Get => {
                 Some(self.volume.lock().await.get_info().await.map(|info| Some(info.into())))
             }

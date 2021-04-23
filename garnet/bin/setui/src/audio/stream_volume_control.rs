@@ -56,6 +56,10 @@ impl StreamVolumeControl {
         early_exit_action: Option<ExitAction>,
         publisher: Option<Publisher>,
     ) -> Result<Self, ControllerError> {
+        // Stream input should be valid. Input comes from restore should be valid
+        // and from set request has the validation.
+        assert!(stream.has_finite_volume_level());
+
         let mut control = StreamVolumeControl {
             stored_stream: stream,
             proxy: None,
@@ -71,6 +75,9 @@ impl StreamVolumeControl {
 
     pub async fn set_volume(&mut self, stream: AudioStream) -> Result<(), ControllerError> {
         assert_eq!(self.stored_stream.stream_type, stream.stream_type);
+        // Stream input should be valid. Input comes from restore should be valid
+        // and from set request has the validation.
+        assert!(stream.has_finite_volume_level());
 
         // Try to create and bind a new VolumeControl.
         if self.proxy.is_none() {

@@ -29,6 +29,12 @@ pub struct AudioStream {
     pub user_volume_muted: bool,
 }
 
+impl AudioStream {
+    pub(crate) fn has_finite_volume_level(&self) -> bool {
+        self.user_volume_level.is_finite()
+    }
+}
+
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct AudioInputInfo {
     pub mic_mute: bool,
