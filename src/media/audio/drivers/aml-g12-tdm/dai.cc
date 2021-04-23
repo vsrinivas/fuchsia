@@ -4,6 +4,7 @@
 #include "dai.h"
 
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fit/result.h>
@@ -15,7 +16,6 @@
 #include <optional>
 #include <utility>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 
 #include "src/media/audio/drivers/aml-g12-tdm/aml_tdm_dai_bind.h"
@@ -224,7 +224,7 @@ zx_status_t AmlG12TdmDai::InitBuffer(size_t size) {
   aml_audio_->Stop();
   // Make sure that all reads/writes have gone through.
 #if defined(__aarch64__)
-  asm __volatile__("dsb sy");
+  __asm__ volatile("dsb sy" : : : "memory");
 #endif
   auto status = bti_.release_quarantine();
   if (status != ZX_OK) {

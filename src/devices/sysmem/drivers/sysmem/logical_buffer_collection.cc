@@ -171,7 +171,7 @@ void BarrierAfterFlush() {
   // instead of LD or ST because section B2.3.5 says that the barrier needs both
   // read and write access types to be effective with regards to cache
   // operations.
-  asm __volatile__("dsb sy");
+  __asm__ volatile("dsb sy" : : : "memory");
 #elif defined(__x86_64__)
   // This is here just in case we both (a) don't need to flush cache on x86 due to cache coherent
   // DMA (CLFLUSH not needed), and (b) we have code using non-temporal stores or "string

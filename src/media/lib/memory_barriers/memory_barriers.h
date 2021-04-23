@@ -15,7 +15,7 @@ inline void BarrierAfterFlush() {
   // instead of LD or ST because section B2.3.5 says that the barrier needs both
   // read and write access types to be effective with regards to cache
   // operations.
-  asm __volatile__("dsb sy");
+  __asm__ volatile("dsb sy" : : : "memory");
 #elif defined(__x86_64__)
   // This is here just in case we both (a) don't need to flush cache on x86 due to cache coherent
   // DMA (CLFLUSH not needed), and (b) we have code using non-temporal stores or "string
@@ -43,7 +43,7 @@ inline void BarrierBeforeInvalidate() {
   // instead of LD or ST because section B2.3.5 says that the barrier needs both
   // read and write access types to be effective with regards to cache
   // operations.
-  asm __volatile__("dsb sy");
+  __asm__ volatile("dsb sy" : : : "memory");
 #elif defined(__x86_64__)
   // This mfence may not be necessary due to cache coherent DMA on x86.
   asm __volatile__("mfence");
@@ -64,7 +64,7 @@ inline void BarrierBeforeRelease() {
   // instead of ST because we're not sure about the next operation on the
   // buffer, and LD isn't used because the caller may have determined that the
   // buffer can be released in several ways.
-  asm __volatile__("dsb sy");
+  __asm__ volatile("dsb sy" : : : "memory");
 #elif defined(__x86_64__)
   // This mfence may not be necessary.
   asm __volatile__("mfence");

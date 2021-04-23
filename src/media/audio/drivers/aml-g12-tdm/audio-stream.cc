@@ -502,7 +502,7 @@ zx_status_t AmlG12TdmStream::InitBuffer(size_t size) {
   aml_audio_->Stop();
   // Make sure that all reads/writes have gone through.
 #if defined(__aarch64__)
-  asm __volatile__("dsb sy");
+  __asm__ volatile("dsb sy" : : : "memory");
 #endif
   auto status = bti_.release_quarantine();
   if (status != ZX_OK) {
