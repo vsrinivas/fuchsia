@@ -631,6 +631,7 @@ config("Wno-conversion") {
     "//src/graphics/lib/compute/spinel/*",
     "//src/graphics/lib/compute/svg/*",
     "//src/graphics/lib/compute/tests/*",
+    "//src/graphics/lib/magma/tests/integration:*",
     "//src/graphics/lib/magma/tests/unit_tests:*",
     "//src/graphics/tests/common",
     "//src/graphics/tests/goldfish_benchmark/*",
