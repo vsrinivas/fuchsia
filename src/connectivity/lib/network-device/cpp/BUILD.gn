@@ -15,10 +15,11 @@ source_set("client") {
   deps = [ "//sdk/lib/fit-promise" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.network",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fzl",
   ]
@@ -31,16 +32,12 @@ executable("cpp-test") {
 
   deps = [
     ":client",
-    "//sdk/fidl/fuchsia.net.tun",
+    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun_llcpp",
     "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/lib/testing/predicates",
-    "//zircon/public/lib/fbl",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

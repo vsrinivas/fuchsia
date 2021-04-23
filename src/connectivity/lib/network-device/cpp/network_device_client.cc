@@ -9,6 +9,7 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 #include <zircon/device/network.h>
 #include <zircon/status.h>
 
@@ -26,32 +27,44 @@ constexpr zx_signals_t kFifoWaitReads = ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED;
 constexpr zx_signals_t kFifoWaitWrites = ZX_FIFO_WRITABLE;
 }  // namespace
 
-NetworkDeviceClient::NetworkDeviceClient(fidl::InterfaceHandle<netdev::Device> handle,
+NetworkDeviceClient::NetworkDeviceClient(fidl::ClientEnd<netdev::Device> handle,
                                          async_dispatcher_t* dispatcher)
-    : dispatcher_(dispatcher) {
-  if (dispatcher_ == nullptr) {
-    dispatcher_ = async_get_default_dispatcher();
+    : dispatcher_([dispatcher]() {
+        if (dispatcher != nullptr) {
+          return dispatcher;
+        }
+        return async_get_default_dispatcher();
+      }()),
+      device_handler_(std::make_shared<EventHandler<netdev::Device>>([this](fidl::UnbindInfo info) {
+        if (info.status != ZX_OK) {
+          FX_LOGS(ERROR) << "device handler error " << zx_status_get_string(info.status);
+          ErrorTeardown(info.status);
+        }
+      })),
+      device_(std::move(handle), dispatcher_, device_handler_),
+      executor_(std::make_unique<async::Executor>(dispatcher_)) {}
+
+NetworkDeviceClient::~NetworkDeviceClient() {
+  device_handler_->Cancel();
+  device_ = {};
+  if (session_.is_valid()) {
+    session_handler_->Cancel();
+    session_ = {};
   }
-  ZX_ASSERT(dispatcher_);
-  device_.Bind(std::move(handle), dispatcher_);
-  device_.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(ERROR) << "device handler error " << zx_status_get_string(status);
-    ErrorTeardown(status);
-  });
-  executor_ = std::make_unique<async::Executor>(dispatcher_);
 }
 
-NetworkDeviceClient::~NetworkDeviceClient() = default;
-
-SessionConfig NetworkDeviceClient::DefaultSessionConfig(const netdev::Info& dev_info) {
-  SessionConfig config;
-  config.rx_frames = dev_info.rx_types;
-  config.descriptor_length = sizeof(buffer_descriptor_t);
-  config.tx_descriptor_count = dev_info.tx_depth;
-  config.rx_descriptor_count = dev_info.rx_depth;
-  config.options = netdev::SessionFlags::PRIMARY;
-  config.buffer_length = std::min(kDefaultBufferLength, dev_info.max_buffer_length);
-  config.buffer_stride = config.buffer_length;
+SessionConfig NetworkDeviceClient::DefaultSessionConfig(const netdev::wire::Info& dev_info) {
+  const uint32_t buffer_length = std::min(kDefaultBufferLength, dev_info.max_buffer_length);
+  SessionConfig config = {
+      .buffer_length = buffer_length,
+      .buffer_stride = buffer_length,
+      .descriptor_length = sizeof(buffer_descriptor_t),
+      .rx_descriptor_count = dev_info.rx_depth,
+      .tx_descriptor_count = dev_info.tx_depth,
+      .options = netdev::wire::SessionFlags::kPrimary,
+  };
+  std::copy(std::begin(dev_info.rx_types), std::end(dev_info.rx_types),
+            std::back_inserter(config.rx_frames));
   if (config.buffer_stride % dev_info.buffer_alignment != 0) {
     // align back:
     config.buffer_stride -= (config.buffer_stride % dev_info.buffer_alignment);
@@ -71,43 +84,51 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
     return;
   }
   session_running_ = true;
-  fit::bridge<netdev::Info, void> bridge;
-  device_->GetInfo(bridge.completer.bind());
+  fit::bridge<fuchsia_hardware_network::wire::Info, void> bridge;
+  device_->GetInfo([res = std::move(bridge.completer)](
+                       fidl::WireResponse<netdev::Device::GetInfo>* response) mutable {
+    res.complete_ok(response->info);
+  });
   auto prom =
       bridge.consumer.promise()
           .or_else([]() { return fit::error(ZX_ERR_INTERNAL); })
-          .and_then([this, cfg = std::move(config_factory)](
-                        netdev::Info& info) -> fit::result<netdev::SessionInfo, zx_status_t> {
-            session_config_ = cfg(info);
-            device_info_ = std::move(info);
-            zx_status_t status;
-            if ((status = PrepareSession()) != ZX_OK) {
-              return fit::error(status);
-            }
-            netdev::SessionInfo sessionInfo;
-            if ((status = MakeSessionInfo(&sessionInfo)) != ZX_OK) {
-              return fit::error(status);
-            }
-
-            return fit::ok(std::move(sessionInfo));
-          })
-          .and_then([this, name](netdev::SessionInfo& sessionInfo) {
+          .and_then(
+              [this, cfg = std::move(config_factory)](fuchsia_hardware_network::wire::Info& info)
+                  -> fit::result<netdev::wire::SessionInfo, zx_status_t> {
+                session_config_ = cfg(info);
+                device_info_ = info;
+                zx_status_t status;
+                if ((status = PrepareSession()) != ZX_OK) {
+                  return fit::error(status);
+                }
+                return MakeSessionInfo();
+              })
+          .and_then([this, name](netdev::wire::SessionInfo& sessionInfo) {
             fit::bridge<void, zx_status_t> bridge;
             device_->OpenSession(
-                name, std::move(sessionInfo),
+                fidl::StringView::FromExternal(name), std::move(sessionInfo),
                 [this, res = std::move(bridge.completer)](
-                    netdev::Device_OpenSession_Result result) mutable {
-                  if (result.is_err()) {
-                    res.complete_error(result.err());
-                  } else {
-                    rx_fifo_ = std::move(result.response().fifos.rx);
-                    tx_fifo_ = std::move(result.response().fifos.tx);
-                    session_.Bind(std::move(result.response().session), dispatcher_);
-                    session_.set_error_handler([this](zx_status_t status) {
-                      FX_LOGS(ERROR) << "Session closed with " << zx_status_get_string(status);
-                      ErrorTeardown(status);
-                    });
-                    res.complete_ok();
+                    fidl::WireResponse<netdev::Device::OpenSession>* response) mutable {
+                  netdev::wire::DeviceOpenSessionResult& result = response->result;
+                  switch (result.which()) {
+                    case netdev::wire::DeviceOpenSessionResult::Tag::kErr:
+                      res.complete_error(result.err());
+                      break;
+                    case netdev::wire::DeviceOpenSessionResult::Tag::kResponse:
+                      netdev::wire::DeviceOpenSessionResponse& response = result.mutable_response();
+                      session_handler_ = std::make_shared<EventHandler<netdev::Session>>(
+                          [this](fidl::UnbindInfo info) {
+                            if (info.status != ZX_OK) {
+                              FX_LOGS(ERROR)
+                                  << "session handler error " << zx_status_get_string(info.status);
+                              ErrorTeardown(info.status);
+                            }
+                          });
+                      session_.Bind(std::move(response.session), dispatcher_, session_handler_);
+                      rx_fifo_ = std::move(response.fifos.rx);
+                      tx_fifo_ = std::move(response.fifos.tx);
+                      res.complete_ok();
+                      break;
                   }
                 });
             return bridge.consumer.promise();
@@ -129,6 +150,22 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
             }
           });
   fit::schedule_for_consumer(executor_.get(), std::move(prom));
+}
+
+template <class T>
+NetworkDeviceClient::EventHandler<T>::EventHandler(fit::callback<void(fidl::UnbindInfo)> callback)
+    : callback_(std::move(callback)) {}
+
+template <class T>
+void NetworkDeviceClient::EventHandler<T>::Unbound(fidl::UnbindInfo info) {
+  if (callback_) {
+    callback_(info);
+  }
+}
+
+template <class T>
+void NetworkDeviceClient::EventHandler<T>::Cancel() {
+  callback_ = nullptr;
 }
 
 zx_status_t NetworkDeviceClient::PrepareSession() {
@@ -194,7 +231,7 @@ zx_status_t NetworkDeviceClient::PrepareSession() {
 }
 
 zx_status_t NetworkDeviceClient::SetPaused(bool paused) {
-  if (!session_.is_bound()) {
+  if (!session_.is_valid()) {
     return ZX_ERR_BAD_STATE;
   }
   session_->SetPaused(paused);
@@ -202,7 +239,7 @@ zx_status_t NetworkDeviceClient::SetPaused(bool paused) {
 }
 
 zx_status_t NetworkDeviceClient::KillSession() {
-  if (!session_.is_bound()) {
+  if (!session_.is_valid()) {
     return ZX_ERR_BAD_STATE;
   }
   // Cancel all the waits so we stop fetching frames.
@@ -214,36 +251,47 @@ zx_status_t NetworkDeviceClient::KillSession() {
   return ZX_OK;
 }
 
-class NetworkDeviceClient::StatusWatchHandle NetworkDeviceClient::WatchStatus(
-    StatusCallback callback, uint32_t buffer) {
-  fidl::InterfaceHandle<netdev::StatusWatcher> watcher;
-  device_->GetStatusWatcher(watcher.NewRequest(), buffer);
-  return StatusWatchHandle(std::move(watcher), std::move(callback));
+zx::status<std::unique_ptr<NetworkDeviceClient::StatusWatchHandle>>
+NetworkDeviceClient::WatchStatus(StatusCallback callback, uint32_t buffer) {
+  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+  fidl::Result result = device_->GetStatusWatcher(std::move(endpoints->server), buffer);
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  return zx::ok(std::unique_ptr<StatusWatchHandle>(
+      new StatusWatchHandle(std::move(endpoints->client), dispatcher_, std::move(callback))));
 }
 
-zx_status_t NetworkDeviceClient::MakeSessionInfo(netdev::SessionInfo* session_info) {
-  zx_status_t status;
-  if ((status = data_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &session_info->data)) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to duplicate data VMO: " << zx_status_get_string(status);
-    return status;
-  }
-  if ((status = descriptors_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &session_info->descriptors)) !=
-      ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to duplicate descriptors VMO: " << zx_status_get_string(status);
-    return status;
-  }
-  session_info->options = session_config_.options;
-
+fit::result<netdev::wire::SessionInfo, zx_status_t> NetworkDeviceClient::MakeSessionInfo() {
   uint64_t descriptor_length_words = session_config_.descriptor_length / sizeof(uint64_t);
   ZX_DEBUG_ASSERT_MSG(descriptor_length_words <= std::numeric_limits<uint8_t>::max(),
                       "session descriptor length %ld (%ld words) overflows uint8_t",
                       session_config_.descriptor_length, descriptor_length_words);
-  session_info->descriptor_length = static_cast<uint8_t>(descriptor_length_words);
-  session_info->rx_frames = session_config_.rx_frames;
-  session_info->descriptor_count = descriptor_count_;
-  session_info->descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION;
 
-  return ZX_OK;
+  netdev::wire::SessionInfo session_info = {
+      .descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION,
+      .descriptor_length = static_cast<uint8_t>(descriptor_length_words),
+      .descriptor_count = descriptor_count_,
+      .options = session_config_.options,
+      .rx_frames =
+          fidl::VectorView<netdev::wire::FrameType>::FromExternal(session_config_.rx_frames),
+  };
+
+  zx_status_t status;
+  if ((status = data_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &session_info.data)) != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to duplicate data VMO: " << zx_status_get_string(status);
+    return fit::error(status);
+  }
+  if ((status = descriptors_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &session_info.descriptors)) !=
+      ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to duplicate descriptors VMO: " << zx_status_get_string(status);
+    return fit::error(status);
+  }
+
+  return fit::ok(std::move(session_info));
 }
 
 buffer_descriptor_t* NetworkDeviceClient::descriptor(uint16_t idx) {
@@ -262,7 +310,7 @@ void NetworkDeviceClient::ResetRxDescriptor(buffer_descriptor_t* descriptor) {
   descriptor->nxt = 0xFFFF;
   descriptor->tail_length = 0;
   descriptor->head_length = 0;
-  descriptor->info_type = static_cast<uint32_t>(netdev::InfoType::NO_INFO);
+  descriptor->info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
   descriptor->data_length = session_config_.buffer_length;
   descriptor->inbound_flags = 0;
   descriptor->return_flags = 0;
@@ -274,7 +322,7 @@ void NetworkDeviceClient::ResetTxDescriptor(buffer_descriptor_t* descriptor) {
   descriptor->nxt = 0xFFFF;
   descriptor->tail_length = device_info_.min_tx_buffer_tail;
   descriptor->head_length = device_info_.min_tx_buffer_head;
-  descriptor->info_type = static_cast<uint32_t>(netdev::InfoType::NO_INFO);
+  descriptor->info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
   descriptor->data_length = session_config_.buffer_length - device_info_.min_tx_buffer_head -
                             device_info_.min_tx_buffer_tail;
   descriptor->inbound_flags = 0;
@@ -363,7 +411,7 @@ void NetworkDeviceClient::ErrorTeardown(zx_status_t err) {
   data_vmo_.reset();
   descriptors_.Unmap();
   descriptors_vmo_.reset();
-  session_.Unbind();
+  session_ = {};
   if (err_callback_) {
     err_callback_(err);
   }
@@ -599,16 +647,16 @@ uint32_t NetworkDeviceClient::BufferData::len() const {
   return c;
 }
 
-netdev::FrameType NetworkDeviceClient::BufferData::frame_type() const {
-  return static_cast<netdev::FrameType>(part(0).desc_->frame_type);
+netdev::wire::FrameType NetworkDeviceClient::BufferData::frame_type() const {
+  return static_cast<netdev::wire::FrameType>(part(0).desc_->frame_type);
 }
 
-void NetworkDeviceClient::BufferData::SetFrameType(netdev::FrameType type) {
+void NetworkDeviceClient::BufferData::SetFrameType(netdev::wire::FrameType type) {
   part(0).desc_->frame_type = static_cast<uint8_t>(type);
 }
 
-netdev::InfoType NetworkDeviceClient::BufferData::info_type() const {
-  return static_cast<netdev::InfoType>(part(0).desc_->frame_type);
+netdev::wire::InfoType NetworkDeviceClient::BufferData::info_type() const {
+  return static_cast<netdev::wire::InfoType>(part(0).desc_->frame_type);
 }
 
 uint32_t NetworkDeviceClient::BufferData::inbound_flags() const {
@@ -619,7 +667,7 @@ uint32_t NetworkDeviceClient::BufferData::return_flags() const {
   return part(0).desc_->return_flags;
 }
 
-void NetworkDeviceClient::BufferData::SetTxRequest(netdev::TxFlags tx_flags) {
+void NetworkDeviceClient::BufferData::SetTxRequest(netdev::wire::TxFlags tx_flags) {
   part(0).desc_->inbound_flags = static_cast<uint32_t>(tx_flags);
 }
 
@@ -745,8 +793,8 @@ size_t NetworkDeviceClient::BufferRegion::PadTo(size_t size) {
 }
 
 void NetworkDeviceClient::StatusWatchHandle::Watch() {
-  watcher_->WatchStatus([this](netdev::Status status) {
-    callback_(std::move(status));
+  watcher_->WatchStatus([this](fidl::WireResponse<netdev::StatusWatcher::WatchStatus>* response) {
+    callback_(std::move(response->device_status));
     // Watch again, we only stop watching when StatusWatchHandle is destroyed.
     Watch();
   });

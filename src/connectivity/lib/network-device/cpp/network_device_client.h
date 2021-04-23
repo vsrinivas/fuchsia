@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_LIB_NETWORK_DEVICE_CPP_NETWORK_DEVICE_CLIENT_H_
 #define SRC_CONNECTIVITY_LIB_NETWORK_DEVICE_CPP_NETWORK_DEVICE_CLIENT_H_
 
-#include <fuchsia/hardware/network/cpp/fidl.h>
+#include <fuchsia/hardware/network/llcpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -19,7 +19,7 @@
 namespace network {
 namespace client {
 
-namespace netdev = fuchsia::hardware::network;
+namespace netdev = fuchsia_hardware_network;
 
 // Configuration for sessions opened by a `NetworkDeviceClient`.
 struct SessionConfig {
@@ -34,9 +34,9 @@ struct SessionConfig {
   // Number of tx descriptors to allocate.
   uint16_t tx_descriptor_count;
   // Session flags.
-  netdev::SessionFlags options;
+  netdev::wire::SessionFlags options;
   // Types of rx frames to subscribe to.
-  std::vector<netdev::FrameType> rx_frames;
+  std::vector<netdev::wire::FrameType> rx_frames;
 };
 
 // A client for `fuchsia.hardware.network/Device`.
@@ -47,20 +47,20 @@ class NetworkDeviceClient {
   class StatusWatchHandle;
 
   // Creates a default session configuration with the given device information.
-  static SessionConfig DefaultSessionConfig(const netdev::Info& dev_info);
+  static SessionConfig DefaultSessionConfig(const netdev::wire::Info& dev_info);
   // Creates a client that will bind to `handle` using `dispatcher`.
   //
   // If `dispatcher` is `nullptr`, the default dispatcher for the current thread will be used.
   // All the `NetworkDeviceClient` callbacks are called on the dispatcher.
-  explicit NetworkDeviceClient(fidl::InterfaceHandle<netdev::Device> handle,
+  explicit NetworkDeviceClient(fidl::ClientEnd<netdev::Device> handle,
                                async_dispatcher_t* dispatcher = nullptr);
   ~NetworkDeviceClient();
 
   using OpenSessionCallback = fit::function<void(zx_status_t)>;
-  using SessionConfigFactory = fit::function<SessionConfig(const netdev::Info&)>;
+  using SessionConfigFactory = fit::function<SessionConfig(const netdev::wire::Info&)>;
   using RxCallback = fit::function<void(Buffer buffer)>;
-  using ErrorCallback = fit::function<void(zx_status_t err)>;
-  using StatusCallback = fit::function<void(netdev::Status)>;
+  using ErrorCallback = fit::function<void(zx_status_t)>;
+  using StatusCallback = fit::function<void(netdev::wire::Status)>;
   // Opens a new session with `name` and invokes `callback` when done.
   //
   // `config_factory` is called to create a `SessionConfig` from a `fuchsia.hardware.network/Info`,
@@ -93,7 +93,7 @@ class NetworkDeviceClient {
   // `buffer` is transitioned to an invalid state on success.
   [[nodiscard]] zx_status_t Send(Buffer* buffer);
 
-  bool HasSession() { return session_.is_bound(); }
+  bool HasSession() { return session_.is_valid(); }
 
   // Creates an asynchronous handler for status changes.
   //
@@ -101,9 +101,10 @@ class NetworkDeviceClient {
   // `StatusWatchHandle` is in scope.
   // `buffer` is the number of changes buffered by the network device, according to the
   // `fuchsia.hardware.network.Device` protocol.
-  StatusWatchHandle WatchStatus(StatusCallback callback, uint32_t buffer = 1);
+  zx::status<std::unique_ptr<NetworkDeviceClient::StatusWatchHandle>> WatchStatus(
+      StatusCallback callback, uint32_t buffer = 1);
 
-  const netdev::Info& device_info() const { return device_info_; }
+  const netdev::wire::Info& device_info() const { return device_info_; }
 
   // Allocates a transmit buffer.
   //
@@ -173,13 +174,13 @@ class NetworkDeviceClient {
     // The total length, in bytes, of the buffer.
     uint32_t len() const;
 
-    netdev::FrameType frame_type() const;
-    netdev::InfoType info_type() const;
+    netdev::wire::FrameType frame_type() const;
+    netdev::wire::InfoType info_type() const;
     uint32_t inbound_flags() const;
     uint32_t return_flags() const;
 
-    void SetFrameType(netdev::FrameType type);
-    void SetTxRequest(netdev::TxFlags tx_flags);
+    void SetFrameType(netdev::wire::FrameType type);
+    void SetTxRequest(netdev::wire::TxFlags tx_flags);
 
     // Writes up to `len` bytes from `src` into the buffer, returning the number of bytes written.
     size_t Write(const void* src, size_t len);
@@ -208,7 +209,7 @@ class NetworkDeviceClient {
 
    private:
     uint32_t parts_count_ = 0;
-    std::array<BufferRegion, netdev::MAX_DESCRIPTOR_CHAIN> parts_{};
+    std::array<BufferRegion, netdev::wire::kMaxDescriptorChain> parts_{};
 
     FXL_DISALLOW_COPY_AND_ASSIGN(BufferData);
   };
@@ -248,23 +249,40 @@ class NetworkDeviceClient {
 
   // An RAII object that triggers a callback on NetworkDevice status changes.
   class StatusWatchHandle {
+   public:
+    StatusWatchHandle(const StatusWatchHandle&) = delete;
+    StatusWatchHandle(StatusWatchHandle&&) = delete;
+
    protected:
     friend NetworkDeviceClient;
 
-    StatusWatchHandle(fidl::InterfaceHandle<netdev::StatusWatcher> watcher, StatusCallback callback)
-        : watcher_(watcher.Bind()), callback_(std::move(callback)) {
+    StatusWatchHandle(fidl::ClientEnd<netdev::StatusWatcher> watcher,
+                      async_dispatcher_t* dispatcher, StatusCallback callback)
+        : watcher_(std::move(watcher), dispatcher), callback_(std::move(callback)) {
       Watch();
     }
 
    private:
     void Watch();
-    netdev::StatusWatcherPtr watcher_;
+    fidl::Client<netdev::StatusWatcher> watcher_;
     StatusCallback callback_;
   };
 
  private:
+  template <class T>
+  class EventHandler : public fidl::WireAsyncEventHandler<T> {
+   public:
+    explicit EventHandler(fit::callback<void(fidl::UnbindInfo)>);
+
+    void Unbound(fidl::UnbindInfo) override;
+    void Cancel();
+
+   private:
+    fit::callback<void(fidl::UnbindInfo)> callback_;
+  };
+
   zx_status_t PrepareSession();
-  zx_status_t MakeSessionInfo(netdev::SessionInfo* session_info);
+  fit::result<netdev::wire::SessionInfo, zx_status_t> MakeSessionInfo();
   zx_status_t PrepareDescriptors();
   buffer_descriptor_t* descriptor(uint16_t idx);
   void* data(uint64_t offset);
@@ -280,7 +298,7 @@ class NetworkDeviceClient {
                 const zx_packet_signal_t* signal);
   void RxSignal(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                 const zx_packet_signal_t* signal);
-  void ErrorTeardown(zx_status_t err);
+  void ErrorTeardown(zx_status_t);
 
   bool session_running_ = false;
   RxCallback rx_callback_;
@@ -294,9 +312,11 @@ class NetworkDeviceClient {
   fzl::VmoMapper descriptors_;
   zx::fifo rx_fifo_;
   zx::fifo tx_fifo_;
-  netdev::DevicePtr device_;
-  netdev::SessionPtr session_;
-  netdev::Info device_info_;
+  std::shared_ptr<EventHandler<netdev::Device>> device_handler_;
+  fidl::Client<netdev::Device> device_;
+  std::shared_ptr<EventHandler<netdev::Session>> session_handler_;
+  fidl::Client<netdev::Session> session_;
+  netdev::wire::Info device_info_;
   // rx descriptors ready to be sent back to the device.
   std::vector<uint16_t> rx_out_queue_;
   // tx descriptors available to be written.

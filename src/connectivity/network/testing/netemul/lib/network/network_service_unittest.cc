@@ -1083,7 +1083,9 @@ TEST_F(NetworkServiceTest, HybridNetworkDevice) {
   EthernetClient eth_cli(dispatcher(), conn_eth.ethernet().Bind());
   fidl::InterfaceHandle<fuchsia::hardware::network::Device> device;
   conn_netdev.network_device().Bind()->GetDevice(device.NewRequest());
-  network::client::NetworkDeviceClient netdev_cli(std::move(device));
+  // TODO(https://fxbug.dev/72980): Use more ergonomic conversion.
+  network::client::NetworkDeviceClient netdev_cli(
+      fidl::ClientEnd<fuchsia_hardware_network::Device>(device.TakeChannel()));
   bool ok = false;
 
   // Configure both ethernet clients.
@@ -1103,8 +1105,8 @@ TEST_F(NetworkServiceTest, HybridNetworkDevice) {
   {
     bool netdev_online = false;
     auto watcher =
-        netdev_cli.WatchStatus([&netdev_online](fuchsia::hardware::network::Status status) {
-          if (static_cast<bool>(status.flags() & fuchsia::hardware::network::StatusFlags::ONLINE)) {
+        netdev_cli.WatchStatus([&netdev_online](fuchsia_hardware_network::wire::Status status) {
+          if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
             netdev_online = true;
           }
         });
@@ -1142,7 +1144,7 @@ TEST_F(NetworkServiceTest, HybridNetworkDevice) {
   // Send data from netdev to eth.
   auto tx = netdev_cli.AllocTx();
   ASSERT_TRUE(tx.is_valid());
-  tx.data().SetFrameType(fuchsia::hardware::network::FrameType::ETHERNET);
+  tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
   ASSERT_EQ(tx.data().Write(test_buff1, TEST_BUF_SIZE), TEST_BUF_SIZE);
   ASSERT_OK(tx.Send());
   WAIT_FOR_OK_AND_RESET(rx_eth);
@@ -1197,10 +1199,14 @@ TEST_F(NetworkServiceTest, DualNetworkDevice) {
   // Create both clients.
   fidl::InterfaceHandle<fuchsia::hardware::network::Device> device1;
   conn1.network_device().Bind()->GetDevice(device1.NewRequest());
-  network::client::NetworkDeviceClient cli1(std::move(device1));
+  // TODO(https://fxbug.dev/72980): Use more ergonomic conversion.
+  network::client::NetworkDeviceClient cli1(
+      fidl::ClientEnd<fuchsia_hardware_network::Device>(device1.TakeChannel()));
   fidl::InterfaceHandle<fuchsia::hardware::network::Device> device2;
   conn2.network_device().Bind()->GetDevice(device2.NewRequest());
-  network::client::NetworkDeviceClient cli2(std::move(device2));
+  // TODO(https://fxbug.dev/72980): Use more ergonomic conversion.
+  network::client::NetworkDeviceClient cli2(
+      fidl::ClientEnd<fuchsia_hardware_network::Device>(device2.TakeChannel()));
   bool ok = false;
 
   // Configure both ethernet clients.
@@ -1221,13 +1227,13 @@ TEST_F(NetworkServiceTest, DualNetworkDevice) {
   {
     bool online1 = false;
     bool online2 = false;
-    auto watcher1 = cli1.WatchStatus([&online1](fuchsia::hardware::network::Status status) {
-      if (static_cast<bool>(status.flags() & fuchsia::hardware::network::StatusFlags::ONLINE)) {
+    auto watcher1 = cli1.WatchStatus([&online1](fuchsia_hardware_network::wire::Status status) {
+      if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
         online1 = true;
       }
     });
-    auto watcher2 = cli2.WatchStatus([&online2](fuchsia::hardware::network::Status status) {
-      if (static_cast<bool>(status.flags() & fuchsia::hardware::network::StatusFlags::ONLINE)) {
+    auto watcher2 = cli2.WatchStatus([&online2](fuchsia_hardware_network::wire::Status status) {
+      if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
         online2 = true;
       }
     });
@@ -1264,7 +1270,7 @@ TEST_F(NetworkServiceTest, DualNetworkDevice) {
   {
     auto tx = cli2.AllocTx();
     ASSERT_TRUE(tx.is_valid());
-    tx.data().SetFrameType(fuchsia::hardware::network::FrameType::ETHERNET);
+    tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
     ASSERT_EQ(tx.data().Write(test_buff1, TEST_BUF_SIZE), TEST_BUF_SIZE);
     ASSERT_OK(tx.Send());
     WAIT_FOR_OK_AND_RESET(rx1);
@@ -1274,7 +1280,7 @@ TEST_F(NetworkServiceTest, DualNetworkDevice) {
   {
     auto tx = cli1.AllocTx();
     ASSERT_TRUE(tx.is_valid());
-    tx.data().SetFrameType(fuchsia::hardware::network::FrameType::ETHERNET);
+    tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
     ASSERT_EQ(tx.data().Write(test_buff2, TEST_BUF_SIZE), TEST_BUF_SIZE);
     ASSERT_OK(tx.Send());
     WAIT_FOR_OK_AND_RESET(rx2);
@@ -1287,7 +1293,7 @@ TEST_F(NetworkServiceTest, DualNetworkDevice) {
   {
     auto tx = cli1.AllocTx();
     ASSERT_TRUE(tx.is_valid());
-    tx.data().SetFrameType(fuchsia::hardware::network::FrameType::ETHERNET);
+    tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
     ASSERT_EQ(tx.data().Write(test_buff2, TEST_BUF_SIZE), TEST_BUF_SIZE);
     ASSERT_OK(tx.Send());
   }
