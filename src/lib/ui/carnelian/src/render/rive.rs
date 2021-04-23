@@ -25,46 +25,23 @@ struct CachedRaster {
     was_used: bool,
 }
 
+#[derive(Debug)]
 pub struct RenderCache {
     cached_rasters: HashMap<NonZeroU64, CachedRaster>,
     tag: NonZeroU64,
     pub rasters: Vec<(Raster, Style)>,
 }
 
-#[derive(Debug)]
-pub struct Renderer<'c> {
-    context: &'c Context,
-    cached_rasters: HashMap<NonZeroU64, CachedRaster>,
-    tag: NonZeroU64,
-    rasters: Vec<(Raster, Style)>,
-}
-
-impl<'c> Renderer<'c> {
-    pub fn new(context: &'c Context) -> Self {
+impl RenderCache {
+    pub fn new() -> Self {
         Self {
-            context,
             cached_rasters: HashMap::new(),
             tag: NonZeroU64::new(1).unwrap(),
             rasters: Vec::new(),
         }
     }
 
-    pub fn from_cache(context: &'c Context, cache: RenderCache) -> Self {
-        Self {
-            context,
-            cached_rasters: cache.cached_rasters,
-            tag: cache.tag,
-            rasters: cache.rasters,
-        }
-    }
-
-    pub fn tag(&mut self) -> NonZeroU64 {
-        let tag = self.tag;
-        self.tag = NonZeroU64::new(tag.get().checked_add(1).unwrap_or(1)).unwrap();
-        tag
-    }
-
-    pub fn reset(&mut self) {
+    fn reset(&mut self) {
         let cached_rasters = self
             .cached_rasters
             .drain()
@@ -79,8 +56,23 @@ impl<'c> Renderer<'c> {
         self.rasters.clear();
     }
 
-    pub fn dismantle(self) -> RenderCache {
-        RenderCache { cached_rasters: self.cached_rasters, tag: self.tag, rasters: self.rasters }
+    pub fn with_renderer(&mut self, context: &Context, f: impl FnOnce(&mut Renderer<'_>)) {
+        self.reset();
+        f(&mut Renderer { context, cache: self });
+    }
+}
+
+#[derive(Debug)]
+pub struct Renderer<'c> {
+    context: &'c Context,
+    cache: &'c mut RenderCache,
+}
+
+impl<'c> Renderer<'c> {
+    pub fn tag(&mut self) -> NonZeroU64 {
+        let tag = self.cache.tag;
+        self.cache.tag = NonZeroU64::new(tag.get().checked_add(1).unwrap_or(1)).unwrap();
+        tag
     }
 }
 
@@ -144,7 +136,7 @@ impl rive::Renderer for Renderer<'_> {
         let raster = match path
             .user_tag
             .get()
-            .and_then(|tag| self.cached_rasters.get_mut(&tag))
+            .and_then(|tag| self.cache.cached_rasters.get_mut(&tag))
             .and_then(|cached_raster| {
                 if cached_raster.was_used {
                     return None;
@@ -183,7 +175,7 @@ impl rive::Renderer for Renderer<'_> {
                     let tag = self.tag();
 
                     path.user_tag.set(Some(tag));
-                    self.cached_rasters.insert(
+                    self.cache.cached_rasters.insert(
                         tag,
                         CachedRaster { raster: raster.clone(), inverted_transform, was_used: true },
                     );
@@ -244,6 +236,6 @@ impl rive::Renderer for Renderer<'_> {
             }
         };
 
-        self.rasters.push((raster, style));
+        self.cache.rasters.push((raster, style));
     }
 }

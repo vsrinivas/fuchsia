@@ -10,9 +10,8 @@ use crate::{
     },
     geometry::IntPoint,
     render::{
-        rive::RenderCache as RiveRenderCache, rive::Renderer as RiveRenderer, BlendMode,
-        Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear, Raster, RenderExt,
-        Shed, Style,
+        rive::RenderCache as RiveRenderCache, BlendMode, Composition, Context as RenderContext,
+        Fill, FillRule, Layer, PreClear, Raster, RenderExt, Shed, Style,
     },
     Coord, Point, Rect, Size, ViewAssistantContext,
 };
@@ -391,7 +390,7 @@ pub struct RiveFacet {
     file: rive::File,
     animations: Vec<(LinearAnimationInstance, bool)>,
     last_presentation_time: Option<Time>,
-    render_cache: Option<RiveRenderCache>,
+    render_cache: RiveRenderCache,
 }
 
 impl RiveFacet {
@@ -417,7 +416,14 @@ impl RiveFacet {
             }
         }
 
-        Self { location, size, file, animations, last_presentation_time: None, render_cache: None }
+        Self {
+            location,
+            size,
+            file,
+            animations,
+            last_presentation_time: None,
+            render_cache: RiveRenderCache::new(),
+        }
     }
 }
 
@@ -451,32 +457,25 @@ impl Facet for RiveFacet {
             }
         }
 
-        let mut renderer = if let Some(render_cache) = self.render_cache.take() {
-            RiveRenderer::from_cache(render_context, render_cache)
-        } else {
-            RiveRenderer::new(render_context)
-        };
-
-        renderer.reset();
-
-        artboard_ref.advance(elapsed);
-        artboard_ref.draw(
-            &mut renderer,
-            layout::align(
-                Fit::Contain,
-                Alignment::center(),
-                Aabb::new(0.0, 0.0, self.size.width as f32, self.size.height as f32),
-                artboard.as_ref().bounds(),
-            ),
-        );
+        let width = self.size.width as f32;
+        let height = self.size.height as f32;
+        self.render_cache.with_renderer(render_context, |renderer| {
+            artboard_ref.advance(elapsed);
+            artboard_ref.draw(
+                renderer,
+                layout::align(
+                    Fit::Contain,
+                    Alignment::center(),
+                    Aabb::new(0.0, 0.0, width, height),
+                    artboard.as_ref().bounds(),
+                ),
+            );
+        });
 
         let location = self.location;
-        let render_cache = renderer.dismantle();
-        layer_group.replace_all(render_cache.rasters.iter().rev().map(|(raster, style)| Layer {
-            raster: raster.clone().translate(location.to_vector().to_i32()),
-            style: *style,
+        layer_group.replace_all(self.render_cache.rasters.iter().rev().map(|(raster, style)| {
+            Layer { raster: raster.clone().translate(location.to_vector().to_i32()), style: *style }
         }));
-        self.render_cache = Some(render_cache);
 
         Ok(())
     }
