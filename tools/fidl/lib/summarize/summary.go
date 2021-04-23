@@ -66,7 +66,7 @@ func (s *summarizer) addUnions(unions []fidlgen.Union) {
 				continue
 			}
 			s.addElement(newMember(
-				st.Name, m.Name, m.Type, fidlgen.UnionDeclType))
+				st.Name, m.Name, m.Type, fidlgen.UnionDeclType, nil))
 		}
 		s.addElement(
 			newAggregateWithStrictness(
@@ -82,7 +82,7 @@ func (s *summarizer) addTables(tables []fidlgen.Table) {
 				// Disregard reserved members
 				continue
 			}
-			s.addElement(newMember(st.Name, m.Name, m.Type, fidlgen.TableDeclType))
+			s.addElement(newMember(st.Name, m.Name, m.Type, fidlgen.TableDeclType, nil))
 		}
 		s.addElement(newAggregate(st.Name, st.Resourceness, fidlgen.TableDeclType))
 	}
@@ -97,7 +97,7 @@ func (s *summarizer) addStructs(structs []fidlgen.Struct) {
 		}
 		for _, m := range st.Members {
 			s.addElement(newMember(
-				st.Name, m.Name, m.Type, fidlgen.StructDeclType))
+				st.Name, m.Name, m.Type, fidlgen.StructDeclType, m.MaybeDefaultValue))
 		}
 		s.addElement(newAggregate(st.Name, st.Resourceness, fidlgen.StructDeclType))
 	}

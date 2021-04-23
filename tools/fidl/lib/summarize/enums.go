@@ -18,7 +18,9 @@ type enum struct {
 func (s *summarizer) addEnums(enums []fidlgen.Enum) {
 	for _, e := range enums {
 		for _, m := range e.Members {
-			s.addElement(newIsMember(e.Name, m.Name, fidlgen.EnumDeclType))
+			// Avoid pointer aliasing on m.
+			v := m.Value
+			s.addElement(newIsMember(e.Name, m.Name, fidlgen.EnumDeclType, &v))
 		}
 		s.addElement(
 			enum{

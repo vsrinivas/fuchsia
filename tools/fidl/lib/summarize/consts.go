@@ -13,10 +13,13 @@ const aConstType Kind = "const"
 // addConsts obtains the API elements present in the constants.
 func (s *summarizer) addConsts(consts []fidlgen.Const) {
 	for _, c := range consts {
+		// Avoid pointer aliasing on c.
+		v := c.Value
 		s.addElement(
 			aConst{
-				named: named{name: Name(c.Name)},
-				aType: c.Type,
+				named:             named{name: Name(c.Name)},
+				aType:             c.Type,
+				maybeDefaultValue: &v,
 			})
 	}
 }
@@ -25,7 +28,8 @@ func (s *summarizer) addConsts(consts []fidlgen.Const) {
 type aConst struct {
 	named
 	notMember
-	aType fidlgen.Type
+	aType             fidlgen.Type
+	maybeDefaultValue *fidlgen.Constant
 }
 
 // String implements Element
@@ -37,5 +41,6 @@ func (c aConst) Serialize() ElementStr {
 	e := c.named.Serialize()
 	e.Kind = Kind(aConstType)
 	e.Decl = Decl(fidlTypeString(c.aType))
+	e.Value = fidlConstToValue(c.maybeDefaultValue)
 	return e
 }

@@ -46,16 +46,19 @@ func (l named) Name() Name {
 type isMember struct {
 	named
 	parentType fidlgen.DeclType
+	maybeValue *fidlgen.Constant
 }
 
 // newIsMember creates a new element that represents a member.
 func newIsMember(
 	parentName fidlgen.EncodedCompoundIdentifier,
 	name fidlgen.Identifier,
-	parentType fidlgen.DeclType) isMember {
+	parentType fidlgen.DeclType,
+	maybeDefaultValue *fidlgen.Constant) isMember {
 	return isMember{
 		named:      named{parent: parentName, name: Name(name)},
 		parentType: parentType,
+		maybeValue: maybeDefaultValue,
 	}
 }
 
@@ -67,6 +70,7 @@ func (i isMember) String() string {
 func (i isMember) Serialize() ElementStr {
 	e := i.named.Serialize()
 	e.Kind = Kind(fmt.Sprintf("%v/member", i.parentType))
+	e.Value = fidlConstToValue(i.maybeValue)
 	return e
 }
 
@@ -145,9 +149,10 @@ func newMember(
 	parentName fidlgen.EncodedCompoundIdentifier,
 	name fidlgen.Identifier,
 	memberType fidlgen.Type,
-	declType fidlgen.DeclType) member {
+	declType fidlgen.DeclType,
+	maybeDefaultValue *fidlgen.Constant) member {
 	return member{
-		m:          newIsMember(parentName, name, declType),
+		m:          newIsMember(parentName, name, declType, maybeDefaultValue),
 		memberType: memberType,
 	}
 }

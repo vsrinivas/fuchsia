@@ -202,7 +202,11 @@ func (r *Report) compare(before, after *summarize.ElementStr) {
 		return
 	}
 	switch after.Kind {
-	case "const", "struct/member", "table/member", "union/member":
+	case "const", "struct/member", "table/member", "union/member", "bits/member", "enum/member":
+		// While the code today does not distinguish between specific types of API breaks,
+		// the ones currently possible are:
+		// 1. type change (possible for all)
+		// 2. value change (not possible for table/member, and union/member).
 		ret.Conclusion = APIBreaking
 	case "bits", "enum":
 		switch {

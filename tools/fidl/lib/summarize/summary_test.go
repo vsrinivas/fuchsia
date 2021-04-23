@@ -54,8 +54,8 @@ library l;
 const int8 OFFSET = -33;
 const bool ENABLED_FLAG = true;
 `,
-			expected: `const l/ENABLED_FLAG bool
-const l/OFFSET int8
+			expected: `const l/ENABLED_FLAG bool true
+const l/OFFSET int8 -33
 library l
 `,
 		},
@@ -67,8 +67,8 @@ library l;
 const bool ENABLED_FLAG = true;
 const int8 OFFSET = -33;
 `,
-			expected: `const l/ENABLED_FLAG bool
-const l/OFFSET int8
+			expected: `const l/ENABLED_FLAG bool true
+const l/OFFSET int8 -33
 library l
 `,
 		},
@@ -79,8 +79,8 @@ library l;
 const uint16 ANSWER = 42;
 const uint16 ANSWER_IN_BINARY = 0b101010;
 `,
-			expected: `const l/ANSWER uint16
-const l/ANSWER_IN_BINARY uint16
+			expected: `const l/ANSWER uint16 42
+const l/ANSWER_IN_BINARY uint16 42
 library l
 `,
 		},
@@ -99,16 +99,16 @@ const string USERNAME = "squeenze";
 const float32 MIN_TEMP = -273.15;
 const float64 CONVERSION_FACTOR = 1.41421358;
 `,
-			expected: `const l/ANSWER uint16
-const l/ANSWER_IN_BINARY uint16
-const l/CONVERSION_FACTOR float64
-const l/DIAMOND uint64
-const l/ENABLED_FLAG bool
-const l/FUCHSIA uint64
-const l/MIN_TEMP float32
-const l/OFFSET int8
-const l/POPULATION_USA_2018 uint32
-const l/USERNAME string
+			expected: `const l/ANSWER uint16 42
+const l/ANSWER_IN_BINARY uint16 42
+const l/CONVERSION_FACTOR float64 1.41421
+const l/DIAMOND uint64 1746410393481133080
+const l/ENABLED_FLAG bool true
+const l/FUCHSIA uint64 4054509061583223046
+const l/MIN_TEMP float32 -273.15
+const l/OFFSET int8 -33
+const l/POPULATION_USA_2018 uint32 330000000
+const l/USERNAME string "squeenze"
 library l
 `,
 		},
@@ -121,8 +121,8 @@ strict bits Bits1 {
   BIT2 = 0x02;
 };
 `,
-			expected: `bits/member l/Bits1.BIT1
-bits/member l/Bits1.BIT2
+			expected: `bits/member l/Bits1.BIT1 1
+bits/member l/Bits1.BIT2 2
 strict bits l/Bits1 uint32
 library l
 `,
@@ -140,11 +140,11 @@ strict bits Bits2 {
   BIT2 = 0x02;
 };
 `,
-			expected: `bits/member l/Bits1.BIT1
-bits/member l/Bits1.BIT2
+			expected: `bits/member l/Bits1.BIT1 1
+bits/member l/Bits1.BIT2 2
 strict bits l/Bits1 uint32
-bits/member l/Bits2.BIT1
-bits/member l/Bits2.BIT2
+bits/member l/Bits2.BIT1 1
+bits/member l/Bits2.BIT2 2
 strict bits l/Bits2 uint32
 library l
 `,
@@ -158,8 +158,8 @@ flexible bits Bits : uint8 {
   BIT2 = 0x02;
 };
 `,
-			expected: `bits/member l/Bits.BIT1
-bits/member l/Bits.BIT2
+			expected: `bits/member l/Bits.BIT1 1
+bits/member l/Bits.BIT2 2
 flexible bits l/Bits uint8
 library l
 `,
@@ -183,15 +183,15 @@ strict enum Vessel {
     JUG = 3;
 };
 `,
-			expected: `enum/member l/Beverage.COFFEE
-enum/member l/Beverage.TEA
-enum/member l/Beverage.WATER
-enum/member l/Beverage.WHISKEY
+			expected: `enum/member l/Beverage.COFFEE 1
+enum/member l/Beverage.TEA 2
+enum/member l/Beverage.WATER 0
+enum/member l/Beverage.WHISKEY 3
 flexible enum l/Beverage uint8
-enum/member l/Vessel.BOWL
-enum/member l/Vessel.CUP
-enum/member l/Vessel.JUG
-enum/member l/Vessel.TUREEN
+enum/member l/Vessel.BOWL 1
+enum/member l/Vessel.CUP 0
+enum/member l/Vessel.JUG 3
+enum/member l/Vessel.TUREEN 2
 strict enum l/Vessel uint32
 library l
 `,
@@ -206,6 +206,27 @@ struct S {
 `,
 			expected: `struct/member l/S.x float32
 struct l/S
+library l
+`,
+		},
+		{
+			name: "struct with an element with default value",
+			fidl: `
+library l;
+const string VALUE = "booyah!";
+struct S {
+  float32 x = 0.314159;
+  string foo = "huzzah";
+  bool bar = true;
+  string baz = VALUE;
+};
+`,
+			expected: `struct/member l/S.bar bool true
+struct/member l/S.baz string "booyah!"
+struct/member l/S.foo string "huzzah"
+struct/member l/S.x float32 0.314159
+struct l/S
+const l/VALUE string "booyah!"
 library l
 `,
 		},
@@ -560,12 +581,14 @@ const bool ENABLED_FLAG = true;
   {
     "name": "l/ENABLED_FLAG",
     "kind": "const",
-    "declaration": "bool"
+    "declaration": "bool",
+    "value": "true"
   },
   {
     "name": "l/OFFSET",
     "kind": "const",
-    "declaration": "int8"
+    "declaration": "int8",
+    "value": "-33"
   },
   {
     "name": "l",
@@ -586,11 +609,13 @@ strict bits Bits1 {
 			expected: `[
   {
     "name": "l/Bits1.BIT1",
-    "kind": "bits/member"
+    "kind": "bits/member",
+    "value": "1"
   },
   {
     "name": "l/Bits1.BIT2",
-    "kind": "bits/member"
+    "kind": "bits/member",
+    "value": "2"
   },
   {
     "name": "l/Bits1",
@@ -621,11 +646,13 @@ strict bits Bits2 {
 			expected: `[
   {
     "name": "l/Bits1.BIT1",
-    "kind": "bits/member"
+    "kind": "bits/member",
+    "value": "1"
   },
   {
     "name": "l/Bits1.BIT2",
-    "kind": "bits/member"
+    "kind": "bits/member",
+    "value": "2"
   },
   {
     "name": "l/Bits1",
@@ -635,11 +662,13 @@ strict bits Bits2 {
   },
   {
     "name": "l/Bits2.BIT1",
-    "kind": "bits/member"
+    "kind": "bits/member",
+    "value": "1"
   },
   {
     "name": "l/Bits2.BIT2",
-    "kind": "bits/member"
+    "kind": "bits/member",
+    "value": "2"
   },
   {
     "name": "l/Bits2",
@@ -666,11 +695,13 @@ flexible bits Bits : uint8 {
 			expected: `[
   {
     "name": "l/Bits.BIT1",
-    "kind": "bits/member"
+    "kind": "bits/member",
+    "value": "1"
   },
   {
     "name": "l/Bits.BIT2",
-    "kind": "bits/member"
+    "kind": "bits/member",
+    "value": "2"
   },
   {
     "name": "l/Bits",
@@ -707,19 +738,23 @@ strict enum Vessel {
 			expected: `[
   {
     "name": "l/Beverage.COFFEE",
-    "kind": "enum/member"
+    "kind": "enum/member",
+    "value": "1"
   },
   {
     "name": "l/Beverage.TEA",
-    "kind": "enum/member"
+    "kind": "enum/member",
+    "value": "2"
   },
   {
     "name": "l/Beverage.WATER",
-    "kind": "enum/member"
+    "kind": "enum/member",
+    "value": "0"
   },
   {
     "name": "l/Beverage.WHISKEY",
-    "kind": "enum/member"
+    "kind": "enum/member",
+    "value": "3"
   },
   {
     "name": "l/Beverage",
@@ -729,19 +764,23 @@ strict enum Vessel {
   },
   {
     "name": "l/Vessel.BOWL",
-    "kind": "enum/member"
+    "kind": "enum/member",
+    "value": "1"
   },
   {
     "name": "l/Vessel.CUP",
-    "kind": "enum/member"
+    "kind": "enum/member",
+    "value": "0"
   },
   {
     "name": "l/Vessel.JUG",
-    "kind": "enum/member"
+    "kind": "enum/member",
+    "value": "3"
   },
   {
     "name": "l/Vessel.TUREEN",
-    "kind": "enum/member"
+    "kind": "enum/member",
+    "value": "2"
   },
   {
     "name": "l/Vessel",
@@ -773,6 +812,60 @@ struct S {
   {
     "name": "l/S",
     "kind": "struct"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "struct with an element with default value",
+			fidl: `
+library l;
+const string VALUE = "booyah!";
+struct S {
+  float32 x = 0.314159;
+  string foo = "huzzah";
+  bool bar = true;
+  string baz = VALUE;
+};
+`,
+			expected: `[
+  {
+    "name": "l/S.bar",
+    "kind": "struct/member",
+    "declaration": "bool",
+    "value": "true"
+  },
+  {
+    "name": "l/S.baz",
+    "kind": "struct/member",
+    "declaration": "string",
+    "value": "booyah!"
+  },
+  {
+    "name": "l/S.foo",
+    "kind": "struct/member",
+    "declaration": "string",
+    "value": "huzzah"
+  },
+  {
+    "name": "l/S.x",
+    "kind": "struct/member",
+    "declaration": "float32",
+    "value": "0.314159"
+  },
+  {
+    "name": "l/S",
+    "kind": "struct"
+  },
+  {
+    "name": "l/VALUE",
+    "kind": "const",
+    "declaration": "string",
+    "value": "booyah!"
   },
   {
     "name": "l",

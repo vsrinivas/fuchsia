@@ -49,7 +49,7 @@ type method struct {
 // newMethod creates a new protocol method element.
 func newMethod(parent fidlgen.EncodedCompoundIdentifier, m fidlgen.Method) method {
 	return method{
-		membership: newIsMember(parent, m.Name, fidlgen.ProtocolDeclType),
+		membership: newIsMember(parent, m.Name, fidlgen.ProtocolDeclType /* default value */, nil),
 		method:     m,
 	}
 }

@@ -87,8 +87,8 @@ const string FOO = "fuzzy";
 			expected: `
 api_diff:
 - name: l/FOO
-  before: "const l/FOO int32"
-  after: "const l/FOO string"
+  before: "const l/FOO int32 32"
+  after: "const l/FOO string \"fuzzy\""
   conclusion: APIBreaking
 `,
 		},
@@ -104,7 +104,7 @@ library l;
 			expected: `
 api_diff:
 - name: l/FOO
-  before: "const l/FOO int32"
+  before: "const l/FOO int32 32"
   conclusion: APIBreaking
 `,
 		},
@@ -120,8 +120,26 @@ const string FOO = "fuzzy";
 			expected: `
 api_diff:
 - name: l/FOO
-  after: "const l/FOO string"
+  after: "const l/FOO string \"fuzzy\""
   conclusion: SourceCompatible
+`,
+		},
+		{
+			name: "const value change",
+			before: `
+library l;
+const int32 FOO = 32;
+`,
+			after: `
+library l;
+const int32 FOO = 42;
+`,
+			expected: `
+api_diff:
+- name: l/FOO
+  before: "const l/FOO int32 32"
+  after: "const l/FOO int32 42"
+  conclusion: APIBreaking
 `,
 		},
 
@@ -144,7 +162,7 @@ flexible bits Bits {
 			expected: `
 api_diff:
 - name: l/Bits.BIT2
-  after: "bits/member l/Bits.BIT2"
+  after: "bits/member l/Bits.BIT2 2"
   conclusion: SourceCompatible
 `,
 		},
@@ -166,7 +184,7 @@ bits Bits {
 			expected: `
 api_diff:
 - name: l/Bits.BIT2
-  after: "bits/member l/Bits.BIT2"
+  after: "bits/member l/Bits.BIT2 2"
   conclusion: SourceCompatible
 `,
 		},
@@ -188,7 +206,7 @@ bits Bits {
 			expected: `
 api_diff:
 - name: l/Bits.BIT2
-  before: "bits/member l/Bits.BIT2"
+  before: "bits/member l/Bits.BIT2 2"
   conclusion: APIBreaking
 `,
 		},
@@ -206,7 +224,7 @@ bits Bits {
 			expected: `
 api_diff:
 - name: l/Bits.BIT1
-  after: "bits/member l/Bits.BIT1"
+  after: "bits/member l/Bits.BIT1 1"
   conclusion: SourceCompatible
 - name: l/Bits
   after: "strict bits l/Bits uint32"
@@ -227,7 +245,7 @@ library l;
 			expected: `
 api_diff:
 - name: l/Bits.BIT1
-  before: "bits/member l/Bits.BIT1"
+  before: "bits/member l/Bits.BIT1 1"
   conclusion: APIBreaking
 - name: l/Bits
   before: "strict bits l/Bits uint32"
@@ -344,6 +362,28 @@ api_diff:
   conclusion: APIBreaking
 `,
 		},
+		{
+			name: "bits value change",
+			before: `
+library l;
+flexible bits Bits {
+  BIT1 = 0x01;
+};
+`,
+			after: `
+library l;
+flexible bits Bits {
+  BIT1 = 0x02;
+};
+`,
+			expected: `
+api_diff:
+- name: l/Bits.BIT1
+  before: "bits/member l/Bits.BIT1 1"
+  after: "bits/member l/Bits.BIT1 2"
+  conclusion: APIBreaking
+`,
+		},
 
 		// enum
 		{
@@ -360,7 +400,7 @@ enum Enum {
 			expected: `
 api_diff:
 - name: l/Enum.WATER
-  after: "enum/member l/Enum.WATER"
+  after: "enum/member l/Enum.WATER 1"
   conclusion: SourceCompatible
 - name: l/Enum
   after: "strict enum l/Enum uint32"
@@ -385,7 +425,7 @@ flexible enum Enum {
 			expected: `
 api_diff:
 - name: l/Enum.FIRE
-  after: "enum/member l/Enum.FIRE"
+  after: "enum/member l/Enum.FIRE 2"
   conclusion: SourceCompatible
 `,
 		},
@@ -407,7 +447,7 @@ strict enum Enum {
 			expected: `
 api_diff:
 - name: l/Enum.FIRE
-  after: "enum/member l/Enum.FIRE"
+  after: "enum/member l/Enum.FIRE 2"
   conclusion: APIBreaking
 `,
 		},
@@ -429,7 +469,7 @@ enum Enum {
 			expected: `
 api_diff:
 - name: l/Enum.FIRE
-  before: "enum/member l/Enum.FIRE"
+  before: "enum/member l/Enum.FIRE 2"
   conclusion: APIBreaking
 `,
 		},
@@ -496,6 +536,28 @@ api_diff:
 - name: l/Enum
   before: "strict enum l/Enum uint32"
   after: "strict enum l/Enum uint8"
+  conclusion: APIBreaking
+`,
+		},
+		{
+			name: "enum value change",
+			before: `
+library l;
+enum Enum {
+  WATER = 1;
+};
+`,
+			after: `
+library l;
+enum Enum {
+  WATER = 2;
+};
+`,
+			expected: `
+api_diff:
+- name: l/Enum.WATER
+  before: "enum/member l/Enum.WATER 1"
+  after: "enum/member l/Enum.WATER 2"
   conclusion: APIBreaking
 `,
 		},
@@ -627,6 +689,28 @@ api_diff:
 - name: l/Struct.foo
   before: "struct/member l/Struct.foo int32"
   after: "struct/member l/Struct.foo string"
+  conclusion: APIBreaking
+`,
+		},
+		{
+			name: "struct default value change",
+			before: `
+library l;
+struct Struct {
+  int32 foo = 1;
+};
+`,
+			after: `
+library l;
+struct Struct {
+  int32 foo = 2;
+};
+`,
+			expected: `
+api_diff:
+- name: l/Struct.foo
+  before: "struct/member l/Struct.foo int32 1"
+  after: "struct/member l/Struct.foo int32 2"
   conclusion: APIBreaking
 `,
 		},

@@ -17,8 +17,8 @@ type bits struct {
 // addBits adds the API elements associated with the bits declarations.
 func (s *summarizer) addBits(allBits []fidlgen.Bits) {
 	for _, b := range allBits {
-		for _, m := range b.Members {
-			s.addElement(newIsMember(b.Name, m.Name, fidlgen.BitsDeclType))
+		for i := range b.Members {
+			s.addElement(newIsMember(b.Name, b.Members[i].Name, fidlgen.BitsDeclType, &b.Members[i].Value))
 		}
 		s.addElement(
 			bits{

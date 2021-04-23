@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // Strictness is whether an aggregate is strict or flexible.
@@ -43,6 +45,32 @@ type Decl string
 // Name is the fully qualified name of the element.
 type Name string
 
+// Value is a string-serialized value of the element.
+// Since for the time being the typed value is not necessary, this is quite
+// enough to pipe the element value through where needed.
+type Value string
+
+// fidlConstToValue converts the fidlgen view of a constant value to
+// summary's Value.
+func fidlConstToValue(fc *fidlgen.Constant) Value {
+	if fc == nil {
+		return Value("")
+	}
+	switch fc.Kind {
+	case fidlgen.IdentifierConstant:
+		return Value(fc.Value)
+	case fidlgen.LiteralConstant:
+		switch fc.Literal.Kind {
+		case fidlgen.NumericLiteral, fidlgen.TrueLiteral, fidlgen.FalseLiteral, fidlgen.StringLiteral:
+			return Value(fc.Literal.Value)
+		default:
+			panic(fmt.Sprintf("unhandled default value: %+v", fc))
+		}
+	default:
+		panic(fmt.Sprintf("unhandled default value kind: %+v:", fc))
+	}
+}
+
 // ElementStr is a generic stringly-typed view of an Element. The aim is to
 // keep the structure as flat as possible, and omit fields which have no
 // bearing to the Kind of element represented.
@@ -52,6 +80,7 @@ type ElementStr struct {
 	Decl         `json:"declaration,omitempty"`
 	Strictness   `json:"strictness,omitempty"`
 	Resourceness `json:"resourceness,omitempty"`
+	Value        `json:"value,omitempty"`
 }
 
 func (e ElementStr) String() string {
@@ -65,6 +94,15 @@ func (e ElementStr) String() string {
 	p = append(p, string(e.Kind), string(e.Name))
 	if e.Decl != "" {
 		p = append(p, string(e.Decl))
+	}
+	if e.Value != "" {
+		if e.Decl == "string" {
+			// Quote strings to disambiguate between "foo" and " foo", for
+			// example.
+			p = append(p, fmt.Sprintf("%q", e.Value))
+		} else {
+			p = append(p, string(e.Value))
+		}
 	}
 	return strings.Join(p, " ")
 }
