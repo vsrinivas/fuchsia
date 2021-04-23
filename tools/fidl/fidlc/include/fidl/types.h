@@ -14,7 +14,7 @@ namespace types {
 // this. Eventually, zx_rights_t will be generated from a fidl
 // declaration. This is currently tested by fidl-compiler's
 // TypesTests' rights test.
-using Rights = uint32_t;
+using RightsWrappedType = uint32_t;
 
 enum struct Nullability {
   kNullable,

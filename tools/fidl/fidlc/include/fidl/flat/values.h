@@ -5,6 +5,8 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VALUES_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VALUES_H_
 
+#include "../types.h"
+
 namespace fidl {
 namespace flat {
 
@@ -220,6 +222,7 @@ struct NumericConstantValue final : ConstantValue {
 };
 
 using Size = NumericConstantValue<uint32_t>;
+using HandleRights = NumericConstantValue<types::RightsWrappedType>;
 
 struct BoolConstantValue final : ConstantValue {
   BoolConstantValue(bool value) : ConstantValue(ConstantValue::Kind::kBool), value(value) {}

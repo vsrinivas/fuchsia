@@ -26,7 +26,7 @@ std::string NameLibraryCHeader(const std::vector<std::string_view>& library_name
 std::string NamePrimitiveCType(types::PrimitiveSubtype subtype);
 std::string NamePrimitiveIntegerCConstantMacro(types::PrimitiveSubtype type);
 std::string NameHandleSubtype(types::HandleSubtype subtype);
-std::string NameHandleRights(types::Rights rights);
+std::string NameHandleRights(types::RightsWrappedType rights);
 std::string NameHandleZXObjType(types::HandleSubtype subtype);
 
 std::string NameRawLiteralKind(raw::Literal::Kind kind);
@@ -54,7 +54,7 @@ std::string NameFieldsAltField(std::string_view name, uint32_t field_num);
 
 std::string NameCodedName(const flat::Name& name);
 std::string NameCodedNullableName(const flat::Name& name);
-std::string NameCodedHandle(types::HandleSubtype subtype, types::Rights rights,
+std::string NameCodedHandle(types::HandleSubtype subtype, types::RightsWrappedType rights,
                             types::Nullability nullability);
 std::string NameCodedProtocolHandle(std::string_view protocol_name, types::Nullability nullability);
 std::string NameCodedRequestHandle(std::string_view protocol_name, types::Nullability nullability);

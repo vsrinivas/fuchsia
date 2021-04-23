@@ -560,7 +560,7 @@ class TypeTemplate {
     const Type* arg_type;
     const std::optional<uint32_t>& obj_type;
     const std::optional<types::HandleSubtype>& handle_subtype;
-    const Constant* handle_rights;
+    const HandleRights* handle_rights;
     const Size* size;
     const types::Nullability nullability;
   };
@@ -589,7 +589,7 @@ class Typespace {
 
   bool Create(const flat::Name& name, const Type* arg_type, const std::optional<uint32_t>& obj_type,
               const std::optional<types::HandleSubtype>& handle_subtype,
-              const Constant* handle_rights, const Size* size, types::Nullability nullability,
+              const HandleRights* handle_rights, const Size* size, types::Nullability nullability,
               const Type** out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias);
 
@@ -611,7 +611,7 @@ class Typespace {
   bool CreateNotOwned(const flat::Name& name, const Type* arg_type,
                       const std::optional<uint32_t>& obj_type,
                       const std::optional<types::HandleSubtype>& handle_subtype,
-                      const Constant* handle_rights, const Size* size,
+                      const HandleRights* handle_rights, const Size* size,
                       types::Nullability nullability, std::unique_ptr<Type>* out_type,
                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias);
 
@@ -931,7 +931,7 @@ class Library {
   bool VerifyTypeCategory(TypeConstructor* type, AllowedCategories category);
 
   ConstantValue::Kind ConstantValuePrimitiveKind(const types::PrimitiveSubtype primitive_subtype);
-  bool ResolveHandleRightsConstant(TypeConstructor* type_ctor);
+  bool ResolveHandleRightsConstant(TypeConstructor* type_ctor, const HandleRights** out_rights);
   bool ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor, uint32_t* out_obj_type,
                                       types::HandleSubtype* out_subtype);
   bool ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size);

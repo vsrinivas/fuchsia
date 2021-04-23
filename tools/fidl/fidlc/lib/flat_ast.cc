@@ -309,7 +309,7 @@ std::vector<std::reference_wrapper<const Union::Member>> Union::MembersSortedByX
 bool Typespace::Create(const flat::Name& name, const Type* arg_type,
                        const std::optional<uint32_t>& obj_type,
                        const std::optional<types::HandleSubtype>& handle_subtype,
-                       const Constant* handle_rights, const Size* size,
+                       const HandleRights* handle_rights, const Size* size,
                        types::Nullability nullability, const Type** out_type,
                        std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) {
   std::unique_ptr<Type> type;
@@ -324,7 +324,7 @@ bool Typespace::Create(const flat::Name& name, const Type* arg_type,
 bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
                                const std::optional<uint32_t>& obj_type,
                                const std::optional<types::HandleSubtype>& handle_subtype,
-                               const Constant* handle_rights, const Size* size,
+                               const HandleRights* handle_rights, const Size* size,
                                types::Nullability nullability, std::unique_ptr<Type>* out_type,
                                std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) {
   // TODO(pascallouis): lookup whether we've already created the type, and
@@ -410,7 +410,7 @@ class BytesTypeTemplate final : public TypeTemplate {
       return Fail(ErrCannotBeParameterized, args.span);
     const Size* size = args.size;
     if (size == nullptr)
-      size = &max_size;
+      size = &kMaxSize;
 
     *out_type = std::make_unique<VectorType>(name_, &uint8_type_, size, args.nullability);
     return true;
@@ -422,8 +422,10 @@ class BytesTypeTemplate final : public TypeTemplate {
   const PrimitiveType kUint8Type = PrimitiveType(kUint8TypeName, types::PrimitiveSubtype::kUint8);
 
   const PrimitiveType uint8_type_;
-  Size max_size = Size::Max();
+  const static Size kMaxSize;
 };
+
+const Size BytesTypeTemplate::kMaxSize = Size::Max();
 
 class ArrayTypeTemplate final : public TypeTemplate {
  public:
@@ -463,15 +465,17 @@ class VectorTypeTemplate final : public TypeTemplate {
       return Fail(ErrMustBeParameterized, args.span);
     const Size* size = args.size;
     if (size == nullptr)
-      size = &max_size;
+      size = &kMaxSize;
 
     *out_type = std::make_unique<VectorType>(name_, args.arg_type, size, args.nullability);
     return true;
   }
 
  private:
-  Size max_size = Size::Max();
+  const static Size kMaxSize;
 };
+
+const Size VectorTypeTemplate::kMaxSize = Size::Max();
 
 class StringTypeTemplate final : public TypeTemplate {
  public:
@@ -487,23 +491,22 @@ class StringTypeTemplate final : public TypeTemplate {
       return Fail(ErrCannotBeParameterized, args.span);
     const Size* size = args.size;
     if (size == nullptr)
-      size = &max_size;
+      size = &kMaxSize;
 
     *out_type = std::make_unique<StringType>(name_, size, args.nullability);
     return true;
   }
 
  private:
-  Size max_size = Size::Max();
+  const static Size kMaxSize;
 };
+
+const Size StringTypeTemplate::kMaxSize = Size::Max();
 
 class HandleTypeTemplate final : public TypeTemplate {
  public:
   HandleTypeTemplate(Typespace* typespace, Reporter* reporter)
-      : TypeTemplate(Name::CreateIntrinsic("handle"), typespace, reporter) {
-    same_rights = std::make_unique<Constant>(Constant::Kind::kSynthesized, SourceSpan());
-    same_rights->ResolveTo(std::make_unique<NumericConstantValue<uint32_t>>(kHandleSameRights));
-  }
+      : TypeTemplate(Name::CreateIntrinsic("handle"), typespace, reporter) {}
 
   bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
@@ -517,9 +520,9 @@ class HandleTypeTemplate final : public TypeTemplate {
     // these hardcoded defaults.
     auto obj_type = args.obj_type.value_or(static_cast<uint32_t>(types::HandleSubtype::kHandle));
     auto handle_subtype = args.handle_subtype.value_or(types::HandleSubtype::kHandle);
-    const Constant* handle_rights = args.handle_rights;
+    const HandleRights* handle_rights = args.handle_rights;
     if (handle_rights == nullptr)
-      handle_rights = same_rights.get();
+      handle_rights = &kSameRights;
 
     *out_type = std::make_unique<HandleType>(name_, obj_type, handle_subtype, handle_rights,
                                              args.nullability);
@@ -527,8 +530,10 @@ class HandleTypeTemplate final : public TypeTemplate {
   }
 
  private:
-  std::unique_ptr<Constant> same_rights;
+  const static HandleRights kSameRights;
 };
+
+const HandleRights HandleTypeTemplate::kSameRights = HandleRights(kHandleSameRights);
 
 class RequestTypeTemplate final : public TypeTemplate {
  public:
@@ -553,11 +558,6 @@ class RequestTypeTemplate final : public TypeTemplate {
     *out_type = std::make_unique<RequestHandleType>(name_, protocol_type, args.nullability);
     return true;
   }
-
- private:
-  // TODO(pascallouis): Make Min/Max an actual value on NumericConstantValue
-  // class, to simply write &Size::Max() above.
-  Size max_size = Size::Max();
 };
 
 class TypeDeclTypeTemplate final : public TypeTemplate {
@@ -683,9 +683,13 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
       nullability = args.nullability;
     }
 
+    const HandleRights* rights = nullptr;
+    if (decl_->partial_type_ctor->handle_rights) {
+      rights = static_cast<const HandleRights*>(&decl_->partial_type_ctor->handle_rights->Value());
+    }
+
     if (!typespace_->CreateNotOwned(decl_->partial_type_ctor->name, arg_type, obj_type,
-                                    handle_subtype, decl_->partial_type_ctor->handle_rights.get(),
-                                    size, nullability, out_type, nullptr))
+                                    handle_subtype, rights, size, nullability, out_type, nullptr))
       return false;
     if (out_from_type_alias)
       *out_from_type_alias = TypeConstructor::FromTypeAlias(decl_, args.arg_type, args.size,
@@ -4041,13 +4045,14 @@ bool Library::CompileTypeConstructorAllowing(TypeConstructor* type_ctor,
   }
   std::optional<uint32_t> obj_type = type_ctor->handle_obj_type_resolved;
 
-  if (type_ctor->handle_rights)
-    if (!ResolveHandleRightsConstant(type_ctor))
+  const HandleRights* rights = nullptr;
+  if (type_ctor->handle_rights) {
+    if (!ResolveHandleRightsConstant(type_ctor, &rights))
       return Fail(ErrCouldNotResolveHandleRights);
+  }
 
-  if (!typespace_->Create(type_ctor->name, maybe_arg_type, obj_type, handle_subtype,
-                          type_ctor->handle_rights.get(), size, type_ctor->nullability,
-                          &type_ctor->type, &type_ctor->from_type_alias))
+  if (!typespace_->Create(type_ctor->name, maybe_arg_type, obj_type, handle_subtype, rights, size,
+                          type_ctor->nullability, &type_ctor->type, &type_ctor->from_type_alias))
     return false;
 
   // postcondition: compilation sets the Type of the TypeConstructor
@@ -4083,7 +4088,8 @@ bool Library::VerifyTypeCategory(TypeConstructor* type_ctor, AllowedCategories c
   return true;
 }
 
-bool Library::ResolveHandleRightsConstant(TypeConstructor* type_ctor) {
+bool Library::ResolveHandleRightsConstant(TypeConstructor* type_ctor,
+                                          const HandleRights** out_rights) {
   Decl* handle_decl = LookupDeclByName(type_ctor->name);
   if (!handle_decl || handle_decl->kind != Decl::Kind::kResource) {
     return Fail(ErrHandleSubtypeNotResource, type_ctor->name.span(), type_ctor->name);
@@ -4107,6 +4113,9 @@ bool Library::ResolveHandleRightsConstant(TypeConstructor* type_ctor) {
   const Type* rights_type = rights_property->type_ctor.get()->type;
   if (!ResolveConstant(type_ctor->handle_rights.get(), rights_type)) {
     return false;
+  }
+  if (out_rights) {
+    *out_rights = static_cast<const HandleRights*>(&type_ctor->handle_rights->Value());
   }
   return true;
 }

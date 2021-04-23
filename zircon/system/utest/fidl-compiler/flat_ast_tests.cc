@@ -15,12 +15,13 @@ namespace {
 
 using fidl::SourceSpan;
 using fidl::flat::Constant;
+using fidl::flat::HandleRights;
 using fidl::flat::HandleType;
 using fidl::flat::Name;
 using fidl::flat::NumericConstantValue;
 using fidl::types::HandleSubtype;
 using fidl::types::Nullability;
-using fidl::types::Rights;
+using fidl::types::RightsWrappedType;
 
 TEST(FlatAstTests, GoodImplicitAssumptions) {
   // Preconditions to unit test cases: if these change, we need to rewrite the tests themselves.
@@ -31,19 +32,21 @@ TEST(FlatAstTests, GoodImplicitAssumptions) {
 TEST(FlatAstTests, GoodCompareHandles) {
   auto name_not_important = Name::CreateIntrinsic("ignore");
   auto rights1Constant = std::make_unique<Constant>(Constant::Kind::kLiteral, SourceSpan());
-  rights1Constant->ResolveTo(std::make_unique<NumericConstantValue<Rights>>(1));
+  rights1Constant->ResolveTo(std::make_unique<HandleRights>(1));
+  auto rights1Value = static_cast<const HandleRights*>(&rights1Constant->Value());
   auto rights2Constant = std::make_unique<Constant>(Constant::Kind::kLiteral, SourceSpan());
-  rights2Constant->ResolveTo(std::make_unique<NumericConstantValue<Rights>>(2));
+  rights2Constant->ResolveTo(std::make_unique<HandleRights>(2));
+  auto rights2Value = static_cast<const HandleRights*>(&rights2Constant->Value());
   HandleType nonnullable_channel_rights1(name_not_important, 4, HandleSubtype::kChannel,
-                                         rights1Constant.get(), Nullability::kNonnullable);
-  HandleType nullable_channel_rights1(name_not_important, 4, HandleSubtype::kChannel,
-                                      rights1Constant.get(), Nullability::kNullable);
-  HandleType nonnullable_event_rights1(name_not_important, 5, HandleSubtype::kEvent,
-                                       rights1Constant.get(), Nullability::kNonnullable);
-  HandleType nullable_event_rights1(name_not_important, 5, HandleSubtype::kEvent,
-                                    rights1Constant.get(), Nullability::kNullable);
-  HandleType nullable_event_rights2(name_not_important, 5, HandleSubtype::kEvent,
-                                    rights2Constant.get(), Nullability::kNullable);
+                                         rights1Value, Nullability::kNonnullable);
+  HandleType nullable_channel_rights1(name_not_important, 4, HandleSubtype::kChannel, rights1Value,
+                                      Nullability::kNullable);
+  HandleType nonnullable_event_rights1(name_not_important, 5, HandleSubtype::kEvent, rights1Value,
+                                       Nullability::kNonnullable);
+  HandleType nullable_event_rights1(name_not_important, 5, HandleSubtype::kEvent, rights1Value,
+                                    Nullability::kNullable);
+  HandleType nullable_event_rights2(name_not_important, 5, HandleSubtype::kEvent, rights2Value,
+                                    Nullability::kNullable);
 
   // Comparison is nullability, then type.
   EXPECT_TRUE(nullable_channel_rights1 < nonnullable_channel_rights1);

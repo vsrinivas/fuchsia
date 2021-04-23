@@ -179,7 +179,7 @@ void JSONGenerator::Generate(const flat::Type* value) {
         GenerateObjectMember("subtype", type->subtype);
         GenerateObjectMember(
             "rights",
-            static_cast<const flat::NumericConstantValue<uint32_t>&>(type->rights->Value()).value);
+            static_cast<const flat::NumericConstantValue<uint32_t>*>(type->rights)->value);
         GenerateObjectMember("nullable", type->nullability);
         break;
       }
@@ -195,7 +195,8 @@ void JSONGenerator::Generate(const flat::Type* value) {
         break;
       }
       default: {
-        assert(false && "expected non-parameterized type (neither array<T>, vector<T>, nor request<P>)");
+        assert(false &&
+               "expected non-parameterized type (neither array<T>, vector<T>, nor request<P>)");
       }
     }
   });
@@ -334,7 +335,8 @@ void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& va
 bool ShouldExposeTypeAliasOfParametrizedType(const flat::Type& type) {
   // TODO(fxbug.dev/68667): The last of these three conditionals will need to
   //  change slightly for the new syntax once client and server ends are added.
-  return type.kind == flat::Type::Kind::kArray || type.kind == flat::Type::Kind::kVector || type.kind == flat::Type::Kind::kRequestHandle;
+  return type.kind == flat::Type::Kind::kArray || type.kind == flat::Type::Kind::kVector ||
+         type.kind == flat::Type::Kind::kRequestHandle;
 }
 
 void JSONGenerator::GenerateTypeAndFromTypeAlias(TypeKind parent_type_kind,

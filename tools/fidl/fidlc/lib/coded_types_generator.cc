@@ -5,6 +5,7 @@
 #include "fidl/coded_types_generator.h"
 
 #include "fidl/coded_ast.h"
+#include "fidl/flat/values.h"
 #include "fidl/names.h"
 #include "fidl/types.h"
 
@@ -148,8 +149,8 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       auto iter = handle_type_map_.find(handle_type);
       if (iter != handle_type_map_.end())
         return iter->second;
-      types::Rights rights = static_cast<const flat::NumericConstantValue<types::Rights>&>(
-          handle_type->rights->Value());
+      types::RightsWrappedType rights =
+          *static_cast<const flat::HandleRights*>(handle_type->rights);
       auto name = NameCodedHandle(handle_type->subtype, rights, handle_type->nullability);
       auto coded_handle_type = std::make_unique<coded::HandleType>(
           std::move(name), handle_type->subtype, rights, handle_type->nullability);

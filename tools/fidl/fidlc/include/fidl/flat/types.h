@@ -132,7 +132,7 @@ struct StringType final : public Type {
 
 struct HandleType final : public Type {
   HandleType(const Name& name, uint32_t obj_type, types::HandleSubtype subtype,
-             const Constant* rights, types::Nullability nullability)
+             const HandleRights* rights, types::Nullability nullability)
       : Type(name, Kind::kHandle, nullability),
         obj_type(obj_type),
         subtype(subtype),
@@ -140,19 +140,20 @@ struct HandleType final : public Type {
 
   const uint32_t obj_type;
   const types::HandleSubtype subtype;
-  const Constant* rights;
+  const HandleRights* rights;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
   Comparison Compare(const Type& other) const override {
     const auto& other_handle_type = *static_cast<const HandleType*>(&other);
     auto rights_val =
-        static_cast<const flat::NumericConstantValue<types::Rights>&>(rights->Value());
-    auto other_rights_val = static_cast<const flat::NumericConstantValue<types::Rights>&>(
-        other_handle_type.rights->Value());
+        static_cast<const flat::NumericConstantValue<types::RightsWrappedType>*>(rights);
+    auto other_rights_val =
+        static_cast<const flat::NumericConstantValue<types::RightsWrappedType>*>(
+            other_handle_type.rights);
     return Type::Compare(other_handle_type)
         .Compare(subtype, other_handle_type.subtype)
-        .Compare(rights_val, other_rights_val);
+        .Compare(*rights_val, *other_rights_val);
   }
 };
 

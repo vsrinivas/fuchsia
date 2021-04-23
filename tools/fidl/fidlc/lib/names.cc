@@ -176,7 +176,7 @@ std::string NameHandleSubtype(types::HandleSubtype subtype) {
   }
 }
 
-std::string NameHandleRights(types::Rights rights) { return std::to_string(rights); }
+std::string NameHandleRights(types::RightsWrappedType rights) { return std::to_string(rights); }
 
 std::string NameRawLiteralKind(raw::Literal::Kind kind) {
   switch (kind) {
@@ -543,7 +543,7 @@ std::string NameCodedNullableName(const flat::Name& name) {
   return nullable_name.str();
 }
 
-std::string NameCodedHandle(types::HandleSubtype subtype, types::Rights rights,
+std::string NameCodedHandle(types::HandleSubtype subtype, types::RightsWrappedType rights,
                             types::Nullability nullability) {
   std::string name("Handle");
   name += NameHandleSubtype(subtype);

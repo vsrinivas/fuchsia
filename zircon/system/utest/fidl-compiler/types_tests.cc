@@ -124,7 +124,7 @@ TEST(TypesTests, HandleSubtype) {
 
 // Check that fidl's types.h and zircon/types.h's rights types stay in
 // sync, until the latter is generated.
-TEST(TypesTests, Rights) { static_assert(sizeof(types::Rights) == sizeof(zx_rights_t)); }
+TEST(TypesTests, Rights) { static_assert(sizeof(types::RightsWrappedType) == sizeof(zx_rights_t)); }
 
 }  // namespace flat
 }  // namespace fidl
