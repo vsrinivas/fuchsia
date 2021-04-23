@@ -292,10 +292,18 @@ impl TryFrom<PolicyParameters> for Transform {
         #[allow(unreachable_patterns)]
         Ok(match src {
             PolicyParameters::Max(Volume { volume, .. }) => {
-                Transform::Max(volume.ok_or_else(|| "missing max volume")?)
+                if volume.map_or(false, |val| !val.is_finite()) {
+                    return Err("max volume is not a finite number");
+                } else {
+                    Transform::Max(volume.ok_or_else(|| "missing max volume")?)
+                }
             }
             PolicyParameters::Min(Volume { volume, .. }) => {
-                Transform::Min(volume.ok_or_else(|| "missing min volume")?)
+                if volume.map_or(false, |val| !val.is_finite()) {
+                    return Err("min volume is not a finite number");
+                } else {
+                    Transform::Min(volume.ok_or_else(|| "missing min volume")?)
+                }
             }
             _ => return Err("unknown policy parameter"),
         })
@@ -381,6 +389,18 @@ mod tests {
     fn parameter_to_transform_missing_arguments() {
         let max_params = PolicyParameters::Max(Volume { volume: None, ..Volume::EMPTY });
         let min_params = PolicyParameters::Min(Volume { volume: None, ..Volume::EMPTY });
+
+        assert_matches!(Transform::try_from(max_params), Err(_));
+        assert_matches!(Transform::try_from(min_params), Err(_));
+    }
+
+    /// Verifies that using `TryFrom` to convert a `PolicyParameters` into a `Transform` will fail
+    /// if the source did not have a finite number.
+    #[test]
+    fn parameter_to_transform_invalid_arguments() {
+        let max_params =
+            PolicyParameters::Max(Volume { volume: Some(f32::NEG_INFINITY), ..Volume::EMPTY });
+        let min_params = PolicyParameters::Min(Volume { volume: Some(f32::NAN), ..Volume::EMPTY });
 
         assert_matches!(Transform::try_from(max_params), Err(_));
         assert_matches!(Transform::try_from(min_params), Err(_));

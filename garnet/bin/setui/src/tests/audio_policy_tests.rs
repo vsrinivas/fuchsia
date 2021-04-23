@@ -179,6 +179,22 @@ async fn add_and_verify_max_volume_policy(input_volume_limit: f32, actual_volume
     }
 }
 
+/// Adds a max volume transform with the given invalid volume limit (INF, NEG_INF, NAN) to the
+/// policy service, and expect errors.
+async fn add_invalid_volume_policy_and_expect_error(input_volume_limit: f32) {
+    let target = AudioStreamType::Media;
+
+    // Add the max volume transform.
+    let env = create_test_environment().await;
+    env.policy_service
+        .add_policy(
+            &mut policy_fidl::Target::Stream(target.into()),
+            &mut Transform::Max(input_volume_limit).into(),
+        )
+        .await
+        .expect_err("max volume is not a finite number");
+}
+
 async fn remove_policy(env: &TestEnvironment, policy_id: u32) {
     env.policy_service
         .remove_policy(policy_id)
@@ -358,12 +374,18 @@ async fn test_policy_add_policy_clamps_volume_limits() {
     add_and_verify_max_volume_policy(-0.0, min_volume).await;
     add_and_verify_max_volume_policy(-0.1, min_volume).await;
     add_and_verify_max_volume_policy(f32::MIN, min_volume).await;
-    add_and_verify_max_volume_policy(f32::NEG_INFINITY, min_volume).await;
 
     // Values above the maximum volume level are clamped to the maximum volume level.
     add_and_verify_max_volume_policy(1.1, max_volume).await;
     add_and_verify_max_volume_policy(f32::MAX, max_volume).await;
-    add_and_verify_max_volume_policy(f32::INFINITY, max_volume).await;
+}
+
+// Tests that invalid volume limits specified in transform parameters throw errors
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_policy_add_policy_invalid_volume_limits() {
+    add_invalid_volume_policy_and_expect_error(f32::INFINITY).await;
+    add_invalid_volume_policy_and_expect_error(f32::NEG_INFINITY).await;
+    add_invalid_volume_policy_and_expect_error(f32::NAN).await;
 }
 
 // Tests that removing and added policy transform works and the removed policy is gone
