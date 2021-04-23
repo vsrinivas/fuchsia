@@ -196,15 +196,26 @@ func TestDebugBinaryUploads(t *testing.T) {
 		}
 	}
 
+	expectedIDToLabelMap := map[string]string{
+		"prebuiltA": "//prebuilt",
+		"prebuiltB": "//prebuilt",
+		"first":     "//first",
+		"second":    "//second",
+		"third":     "//third",
+	}
+
 	expectedIDs := []string{"first", "prebuiltA"}
 
-	actualUploads, actualIDs, err := debugBinaryUploads(context.Background(), m, "DEBUG_NAMESPACE", "BUILDID_NAMESPACE")
+	actualUploads, actualIDToLabelMap, actualIDs, err := debugBinaryUploads(context.Background(), m, "DEBUG_NAMESPACE", "BUILDID_NAMESPACE")
 	if err != nil {
 		t.Fatalf("failed to generate debug binary uploads: %v", err)
 	}
 	opts := cmpopts.SortSlices(func(a, b Upload) bool { return a.Destination < b.Destination })
 	if diff := cmp.Diff(expectedUploads, actualUploads, opts); diff != "" {
 		t.Fatalf("unexpected debug binary uploads (-want +got):\n%s", diff)
+	}
+	if diff := cmp.Diff(expectedIDToLabelMap, actualIDToLabelMap, opts); diff != "" {
+		t.Fatalf("unexpected build ID to label map (-want +got):\n%s", diff)
 	}
 	if diff := cmp.Diff(expectedIDs, actualIDs); diff != "" {
 		t.Fatalf("unexpected build IDs (-want +got):\n%s", diff)

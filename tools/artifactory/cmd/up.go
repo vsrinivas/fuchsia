@@ -11,6 +11,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/md5"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"hash"
@@ -57,7 +58,12 @@ const (
 
 	// A record of all of the fuchsia debug symbols processed.
 	// This is eventually consumed by crash reporting infrastructure.
+	// TODO(fxbug.dev/75356): Have the crash reporting infrastructure
+	// consume build-ids.json instead.
 	buildIDsTxt = "build-ids.txt"
+
+	// A mapping of build ids to binary labels.
+	buildIDsToLabelsManifestName = "build-ids.json"
 
 	// The blobs manifest. TODO(fxbug.dev/60322) remove this.
 	blobManifestName = "blobs.json"
@@ -111,6 +117,7 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   │   └── <debug binaries in debuginfod format>
 │   │   ├── builds
 │   │   │   ├── $NAMESPACE
+│   │   │   │   ├── build-ids.json
 │   │   │   │   ├── build-ids.txt
 │   │   │   │   ├── jiri.snapshot
 │   │   │   │   ├── objs_to_refresh_ttl.txt
@@ -277,7 +284,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	}
 	files = append(files, tools...)
 
-	debugBinaries, buildIDs, err := artifactory.DebugBinaryUploads(ctx, m, debugDirName, buildidDirName)
+	debugBinaries, buildIDsToLabels, buildIDs, err := artifactory.DebugBinaryUploads(ctx, m, debugDirName, buildidDirName)
 	if err != nil {
 		return err
 	}
@@ -290,6 +297,14 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	files = append(files, artifactory.Upload{
 		Source:      buildIDManifest,
 		Destination: path.Join(buildsNamespaceDir, buildIDsTxt),
+	})
+	buildIDsToLabelsJson, err := json.MarshalIndent(buildIDsToLabels, "", "  ")
+	if err != nil {
+		return err
+	}
+	files = append(files, artifactory.Upload{
+		Contents:    buildIDsToLabelsJson,
+		Destination: path.Join(buildsNamespaceDir, buildIDsToLabelsManifestName),
 	})
 
 	snapshot, err := artifactory.JiriSnapshotUpload(m, buildsNamespaceDir)
