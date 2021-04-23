@@ -137,7 +137,7 @@ driver_module("test-goldfish-address-space") {
   sources = [ "test/goldfish_address_space.cc" ]
   deps = [
     ":test-goldfish-address-space-bind",
-    "//sdk/banjo/fuchsia.hardware.goldfish.addressspace",
+    "//sdk/banjo/fuchsia.hardware.goldfish.addressspace:fuchsia.hardware.goldfish.addressspace_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//src/devices/lib/driver",
@@ -364,7 +364,7 @@ driver_module("test-composite") {
   deps = [
     ":test-composite-bind",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.goldfish.addressspace",
+    "//sdk/banjo/fuchsia.hardware.goldfish.addressspace:fuchsia.hardware.goldfish.addressspace_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
     "//sdk/banjo/fuchsia.hardware.goldfish.sync",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
