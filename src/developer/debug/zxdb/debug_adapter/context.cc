@@ -17,6 +17,8 @@
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_pause.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_scopes.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_stacktrace.h"
+#include "src/developer/debug/zxdb/debug_adapter/handlers/request_step_in.h"
+#include "src/developer/debug/zxdb/debug_adapter/handlers/request_step_out.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_threads.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_variables.h"
 #include "src/developer/debug/zxdb/debug_adapter/server.h"
@@ -118,6 +120,20 @@ void DebugAdapterContext::Init() {
       });
 
   dap_->registerHandler(
+      [this](const dap::StepInRequest& req,
+             std::function<void(dap::ResponseOrError<dap::StepInResponse>)> callback) {
+        DEBUG_LOG(DebugAdapter) << "StepInRequest received";
+        OnRequestStepIn(this, req, callback);
+      });
+
+  dap_->registerHandler(
+      [this](const dap::StepOutRequest& req,
+             std::function<void(dap::ResponseOrError<dap::StepOutResponse>)> callback) {
+        DEBUG_LOG(DebugAdapter) << "StepOutRequest received";
+        OnRequestStepOut(this, req, callback);
+      });
+
+  dap_->registerHandler(
       [this](const dap::StackTraceRequest& req,
              std::function<void(dap::ResponseOrError<dap::StackTraceResponse>)> callback) {
         DEBUG_LOG(DebugAdapter) << "StackTraceRequest received";
@@ -153,8 +169,7 @@ void DebugAdapterContext::Init() {
 }
 
 void DebugAdapterContext::OnStreamReadable() {
-  auto payload = dap_->getPayload();
-  if (payload) {
+  while (auto payload = dap_->getPayload()) {
     payload();
   }
 }
