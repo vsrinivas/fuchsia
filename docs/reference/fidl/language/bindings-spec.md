@@ -360,6 +360,14 @@ the wire format data, or as errors from the underlying transport mechanism (for
 example, an error obtained from calling `zx_channel_write`). These errors MAY
 consist of the error status, as well as any other diagnostics information.
 
+## Iovec Support
+
+Bindings may optionally use the vectorized `zx_channel_write_etc` and
+`zx_channel_call_etc` syscalls. When these are used, the first iovec entry MUST
+be present and large enough to hold the FIDL
+[transactional message header](/docs/reference/fidl/language/wire-format#transactional-messages)
+(16 bytes).
+
 ### Attributes
 
 Bindings MUST support the following [attributes][attributes]:
