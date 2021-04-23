@@ -19,16 +19,17 @@
 // zx_vmo_create_contiguous.  This is primarily important so we know whether we
 // need to call COMMIT on it to get the pages to exist.
 static bool is_allocated_contiguous(size_t size, uint32_t flags) {
-  return (flags & IO_BUFFER_CONTIG) && size > PAGE_SIZE;
+  return (flags & IO_BUFFER_CONTIG) && size > zx_system_get_page_size();
 }
 
 static zx_status_t pin_contig_buffer(zx_handle_t bti, zx_handle_t vmo, size_t size,
                                      zx_paddr_t* phys, zx_handle_t* pmt) {
   uint32_t options = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE;
-  if (size > PAGE_SIZE) {
+  if (size > zx_system_get_page_size()) {
     options |= ZX_BTI_CONTIGUOUS;
   }
-  return zx_bti_pin(bti, options, vmo, 0, DDK_ROUNDUP(size, PAGE_SIZE), phys, 1, pmt);
+  return zx_bti_pin(bti, options, vmo, 0, DDK_ROUNDUP(size, zx_system_get_page_size()), phys, 1,
+                    pmt);
 }
 
 static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t bti_handle,
@@ -199,12 +200,14 @@ zx_status_t io_buffer_physmap(io_buffer_t* buffer) {
     return ZX_ERR_BAD_STATE;
   }
 
+  const size_t kPageSize = zx_system_get_page_size();
+
   // zx_bti_pin returns whole pages, so take into account unaligned vmo
   // offset and length when calculating the amount of pages returned
-  uint64_t page_offset = DDK_ROUNDDOWN(buffer->offset, PAGE_SIZE);
+  uint64_t page_offset = DDK_ROUNDDOWN(buffer->offset, kPageSize);
   // The buffer size is the vmo size from offset 0.
   uint64_t page_length = buffer->size - page_offset;
-  uint64_t pages = DDK_ROUNDUP(page_length, PAGE_SIZE) / PAGE_SIZE;
+  uint64_t pages = DDK_ROUNDUP(page_length, kPageSize) / kPageSize;
 
   zx_paddr_t* paddrs = malloc(pages * sizeof(zx_paddr_t));
   if (paddrs == NULL) {
@@ -225,9 +228,9 @@ zx_status_t io_buffer_physmap(io_buffer_t* buffer) {
     // If this is a contiguous io-buffer, just populate the page array
     // ourselves.
     for (size_t i = 0; i < pages; ++i) {
-      paddrs[i] = buffer->phys + page_offset + i * PAGE_SIZE;
+      paddrs[i] = buffer->phys + page_offset + i * kPageSize;
     }
-    paddrs[0] += buffer->offset & (PAGE_SIZE - 1);
+    paddrs[0] += buffer->offset & (kPageSize - 1);
   }
   buffer->phys_list = paddrs;
   buffer->phys_count = pages;
@@ -238,11 +241,12 @@ zx_status_t io_buffer_physmap_range(io_buffer_t* buffer, zx_off_t offset, size_t
                                     size_t phys_count, zx_paddr_t* physmap, zx_handle_t* pmt) {
   // TODO(teisenbe): We need to figure out how to integrate lifetime
   // management of this pin into the io_buffer API...
-  const size_t sub_offset = offset & (PAGE_SIZE - 1);
+  const size_t kPageSize = zx_system_get_page_size();
+  const size_t sub_offset = offset & (kPageSize - 1);
   const size_t pin_offset = offset - sub_offset;
-  const size_t pin_length = DDK_ROUNDUP(length + sub_offset, PAGE_SIZE);
+  const size_t pin_length = DDK_ROUNDUP(length + sub_offset, kPageSize);
 
-  if (pin_length / PAGE_SIZE != phys_count) {
+  if (pin_length / kPageSize != phys_count) {
     return ZX_ERR_INVALID_ARGS;
   }
 

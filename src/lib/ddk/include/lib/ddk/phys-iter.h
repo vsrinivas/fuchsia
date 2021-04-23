@@ -50,7 +50,7 @@ typedef struct {
 
 // Initializes a phys_iter_t for iterating over physical memory.
 // max_length is the maximum length of a range returned by phys_iter_next()
-// max_length must be either a positive multiple of PAGE_SIZE, or zero for no limit.
+// max_length must be either a positive multiple of the system page size, or zero for no limit.
 void phys_iter_init(phys_iter_t* iter, const phys_iter_buffer_t* buf, size_t max_length);
 
 // Returns the next physical address and length for the iterator up to size max_length.

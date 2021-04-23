@@ -18,14 +18,14 @@ TEST(PhyIterTests, EmptyIteratorTest) {
 }
 
 TEST(PhyIterTests, SimpleIterationTest) {
-  constexpr zx_paddr_t kPhysList[] = {
-      2 * ZX_PAGE_SIZE,
+  const zx_paddr_t kPhysList[] = {
+      2 * zx_system_get_page_size(),
   };
 
   const phys_iter_buffer_t kIterBuffer = {
       .phys = kPhysList,
       .phys_count = std::size(kPhysList),
-      .length = ZX_PAGE_SIZE,
+      .length = zx_system_get_page_size(),
       .vmo_offset = 0,
       .sg_list = nullptr,
       .sg_count = 0,
@@ -37,8 +37,8 @@ TEST(PhyIterTests, SimpleIterationTest) {
 
   EXPECT_TRUE(iter != end);
   auto [paddr, size] = *iter;
-  EXPECT_EQ(paddr, 2 * ZX_PAGE_SIZE);
-  EXPECT_EQ(size, ZX_PAGE_SIZE);
+  EXPECT_EQ(paddr, 2 * zx_system_get_page_size());
+  EXPECT_EQ(size, zx_system_get_page_size());
 
   ++iter;
   EXPECT_TRUE(iter == end);
@@ -46,24 +46,24 @@ TEST(PhyIterTests, SimpleIterationTest) {
   size_t count = 0;
   for (auto [paddr, size] : phys_iter) {
     ++count;
-    EXPECT_EQ(paddr, 2 * ZX_PAGE_SIZE);
-    EXPECT_EQ(size, ZX_PAGE_SIZE);
+    EXPECT_EQ(paddr, 2 * zx_system_get_page_size());
+    EXPECT_EQ(size, zx_system_get_page_size());
   }
   EXPECT_EQ(count, 1);
 }
 
 TEST(PhyIterTests, ContiguousTest) {
-  constexpr zx_paddr_t kPhysList[] = {
-      0 * ZX_PAGE_SIZE,
-      1 * ZX_PAGE_SIZE,
-      2 * ZX_PAGE_SIZE,
-      3 * ZX_PAGE_SIZE,
+  const zx_paddr_t kPhysList[] = {
+      0 * zx_system_get_page_size(),
+      1 * zx_system_get_page_size(),
+      2 * zx_system_get_page_size(),
+      3 * zx_system_get_page_size(),
   };
 
   const phys_iter_buffer_t kIterBuffer = {
       .phys = kPhysList,
       .phys_count = std::size(kPhysList),
-      .length = 4 * ZX_PAGE_SIZE,
+      .length = 4 * zx_system_get_page_size(),
       .vmo_offset = 0,
       .sg_list = nullptr,
       .sg_count = 0,
@@ -76,24 +76,24 @@ TEST(PhyIterTests, ContiguousTest) {
   EXPECT_TRUE(iter != end);
   auto [paddr, size] = *iter;
   EXPECT_EQ(paddr, 0);
-  EXPECT_EQ(size, 4 * ZX_PAGE_SIZE);
+  EXPECT_EQ(size, 4 * zx_system_get_page_size());
 
   ++iter;
   EXPECT_TRUE(iter == end);
 }
 
 TEST(PhyIterTests, DiscontiguousTest) {
-  constexpr zx_paddr_t kPhysList[] = {
-      1 * ZX_PAGE_SIZE,
-      3 * ZX_PAGE_SIZE,
-      4 * ZX_PAGE_SIZE,
-      7 * ZX_PAGE_SIZE,
+  const zx_paddr_t kPhysList[] = {
+      1 * zx_system_get_page_size(),
+      3 * zx_system_get_page_size(),
+      4 * zx_system_get_page_size(),
+      7 * zx_system_get_page_size(),
   };
 
   const phys_iter_buffer_t kIterBuffer = {
       .phys = kPhysList,
       .phys_count = std::size(kPhysList),
-      .length = 4 * ZX_PAGE_SIZE,
+      .length = 4 * zx_system_get_page_size(),
       .vmo_offset = 0,
       .sg_list = nullptr,
       .sg_count = 0,
@@ -106,24 +106,24 @@ TEST(PhyIterTests, DiscontiguousTest) {
   {
     EXPECT_TRUE(iter != end);
     auto [paddr, size] = *iter;
-    EXPECT_EQ(paddr, ZX_PAGE_SIZE);
-    EXPECT_EQ(size, ZX_PAGE_SIZE);
+    EXPECT_EQ(paddr, zx_system_get_page_size());
+    EXPECT_EQ(size, zx_system_get_page_size());
   }
 
   {
     ++iter;
     EXPECT_TRUE(iter != end);
     auto [paddr, size] = *iter;
-    EXPECT_EQ(paddr, 3 * ZX_PAGE_SIZE);
-    EXPECT_EQ(size, 2 * ZX_PAGE_SIZE);
+    EXPECT_EQ(paddr, 3 * zx_system_get_page_size());
+    EXPECT_EQ(size, 2 * zx_system_get_page_size());
   }
 
   {
     ++iter;
     EXPECT_TRUE(iter != end);
     auto [paddr, size] = *iter;
-    EXPECT_EQ(paddr, 7 * ZX_PAGE_SIZE);
-    EXPECT_EQ(size, ZX_PAGE_SIZE);
+    EXPECT_EQ(paddr, 7 * zx_system_get_page_size());
+    EXPECT_EQ(size, zx_system_get_page_size());
   }
 
   ++iter;
@@ -131,15 +131,15 @@ TEST(PhyIterTests, DiscontiguousTest) {
 }
 
 TEST(PhyIterTests, UnalignedTest) {
-  constexpr zx_paddr_t kPhysList[] = {
-      2 * ZX_PAGE_SIZE,
-      4 * ZX_PAGE_SIZE,
+  const zx_paddr_t kPhysList[] = {
+      2 * zx_system_get_page_size(),
+      4 * zx_system_get_page_size(),
   };
 
   const phys_iter_buffer_t kIterBuffer = {
       .phys = kPhysList,
       .phys_count = std::size(kPhysList),
-      .length = 2 * ZX_PAGE_SIZE - 7,
+      .length = 2 * zx_system_get_page_size() - 7,
       .vmo_offset = 7,
       .sg_list = nullptr,
       .sg_count = 0,
@@ -152,16 +152,16 @@ TEST(PhyIterTests, UnalignedTest) {
   {
     EXPECT_TRUE(iter != end);
     auto [paddr, size] = *iter;
-    EXPECT_EQ(paddr, 2 * ZX_PAGE_SIZE + 7);
-    EXPECT_EQ(size, ZX_PAGE_SIZE - 7);
+    EXPECT_EQ(paddr, 2 * zx_system_get_page_size() + 7);
+    EXPECT_EQ(size, zx_system_get_page_size() - 7);
   }
 
   {
     ++iter;
     EXPECT_TRUE(iter != end);
     auto [paddr, size] = *iter;
-    EXPECT_EQ(paddr, 4 * ZX_PAGE_SIZE);
-    EXPECT_EQ(size, ZX_PAGE_SIZE);
+    EXPECT_EQ(paddr, 4 * zx_system_get_page_size());
+    EXPECT_EQ(size, zx_system_get_page_size());
   }
 
   ++iter;
@@ -169,21 +169,21 @@ TEST(PhyIterTests, UnalignedTest) {
 }
 
 TEST(PhyIterTests, ScatterGatherTest) {
-  constexpr zx_paddr_t kPhysList[] = {
-      1 * ZX_PAGE_SIZE,
-      3 * ZX_PAGE_SIZE,
-      4 * ZX_PAGE_SIZE,
-      7 * ZX_PAGE_SIZE,
+  const zx_paddr_t kPhysList[] = {
+      1 * zx_system_get_page_size(),
+      3 * zx_system_get_page_size(),
+      4 * zx_system_get_page_size(),
+      7 * zx_system_get_page_size(),
   };
 
-  constexpr phys_iter_sg_entry_t kScatterGatherList[] = {
+  const phys_iter_sg_entry_t kScatterGatherList[] = {
       {10, 1024},
       // Cross contiguous pages.
-      {2 * ZX_PAGE_SIZE, ZX_PAGE_SIZE},
+      {2 * zx_system_get_page_size(), zx_system_get_page_size()},
       // Cross contiguous pages with offset and non-page size.
-      {ZX_PAGE_SIZE + 10, ZX_PAGE_SIZE + 10},
+      {zx_system_get_page_size() + 10, zx_system_get_page_size() + 10},
       // Cross nont-contiguous pages and overflow over end.
-      {2 * ZX_PAGE_SIZE, 2 * ZX_PAGE_SIZE + 15},
+      {2 * zx_system_get_page_size(), 2 * zx_system_get_page_size() + 15},
   };
 
   const phys_iter_buffer_t kIterBuffer = {
@@ -202,7 +202,7 @@ TEST(PhyIterTests, ScatterGatherTest) {
   {
     EXPECT_TRUE(iter != end);
     auto [paddr, size] = *iter;
-    EXPECT_EQ(paddr, ZX_PAGE_SIZE + 1024);
+    EXPECT_EQ(paddr, zx_system_get_page_size() + 1024);
     EXPECT_EQ(size, 10);
   }
 
@@ -210,32 +210,32 @@ TEST(PhyIterTests, ScatterGatherTest) {
     ++iter;
     EXPECT_TRUE(iter != end);
     auto [paddr, size] = *iter;
-    EXPECT_EQ(paddr, 3 * ZX_PAGE_SIZE);
-    EXPECT_EQ(size, 2 * ZX_PAGE_SIZE);
+    EXPECT_EQ(paddr, 3 * zx_system_get_page_size());
+    EXPECT_EQ(size, 2 * zx_system_get_page_size());
   }
 
   {
     ++iter;
     EXPECT_TRUE(iter != end);
     auto [paddr, size] = *iter;
-    EXPECT_EQ(paddr, 3 * ZX_PAGE_SIZE + 10);
-    EXPECT_EQ(size, ZX_PAGE_SIZE + 10);
+    EXPECT_EQ(paddr, 3 * zx_system_get_page_size() + 10);
+    EXPECT_EQ(size, zx_system_get_page_size() + 10);
   }
 
   {
     ++iter;
     EXPECT_TRUE(iter != end);
     auto [paddr, size] = *iter;
-    EXPECT_EQ(paddr, 4 * ZX_PAGE_SIZE + 15);
-    EXPECT_EQ(size, ZX_PAGE_SIZE - 15);
+    EXPECT_EQ(paddr, 4 * zx_system_get_page_size() + 15);
+    EXPECT_EQ(size, zx_system_get_page_size() - 15);
   }
 
   {
     ++iter;
     EXPECT_TRUE(iter != end);
     auto [paddr, size] = *iter;
-    EXPECT_EQ(paddr, 7 * ZX_PAGE_SIZE);
-    EXPECT_EQ(size, ZX_PAGE_SIZE);
+    EXPECT_EQ(paddr, 7 * zx_system_get_page_size());
+    EXPECT_EQ(size, zx_system_get_page_size());
   }
 
   ++iter;

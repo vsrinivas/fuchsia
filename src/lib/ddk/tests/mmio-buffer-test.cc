@@ -37,7 +37,7 @@ zx::vmo DuplicateVmo(const zx::vmo& vmo) {
 }
 
 TEST(MmioBuffer, CInit) {
-  const size_t vmo_sz = PAGE_SIZE;
+  const size_t vmo_sz = zx_system_get_page_size();
   zx::vmo vmo = CreateVmo(vmo_sz);
   mmio_buffer_t mb = {};
 
@@ -72,7 +72,7 @@ TEST(MmioBuffer, CInit) {
 }
 
 TEST(MmioBuffer, CppLifecycle) {
-  const size_t vmo_sz = PAGE_SIZE;
+  const size_t vmo_sz = zx_system_get_page_size();
   zx::vmo vmo = CreateVmo(vmo_sz);
   MMIO_PTR volatile uint8_t* ptr = nullptr;
   {
@@ -89,7 +89,7 @@ TEST(MmioBuffer, CppLifecycle) {
 }
 
 TEST(MmioBuffer, AlreadyMapped) {
-  const size_t vmo_sz = PAGE_SIZE;
+  const size_t vmo_sz = zx_system_get_page_size();
   zx::vmo vmo = CreateVmo(vmo_sz);
   mmio_buffer_t mb1 = {};
   mmio_buffer_t mb2 = {};
@@ -106,7 +106,7 @@ TEST(MmioBuffer, AlreadyMapped) {
 }
 
 TEST(MmioBuffer, AlreadySetVmoCachePolicy) {
-  const size_t vmo_sz = PAGE_SIZE;
+  const size_t vmo_sz = zx_system_get_page_size();
   uint32_t policy = ZX_CACHE_POLICY_UNCACHED_DEVICE;
   zx::vmo vmo = CreateVmoWithPolicy(vmo_sz, policy);
   mmio_buffer_t mb1 = {};

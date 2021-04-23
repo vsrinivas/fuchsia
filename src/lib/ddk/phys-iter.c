@@ -6,12 +6,13 @@
 #include <string.h>
 #include <sys/param.h>
 #include <zircon/assert.h>
+#include <zircon/syscalls.h>
 
 // Returns the buffer offset of the start of the current segment being iterated over.
 static size_t segment_offset(phys_iter_t* iter) {
   // The physical pages list begins with the page containing buf->vmo_offset,
   // while the stored segment_offset is relative to the buffer vmo offset.
-  return (iter->buf.vmo_offset & (PAGE_SIZE - 1)) + iter->segment_offset;
+  return (iter->buf.vmo_offset & (zx_system_get_page_size() - 1)) + iter->segment_offset;
 }
 
 // Initializes the iterator for the next segment to iterate over.
@@ -39,9 +40,9 @@ static bool init_next_sg_entry(phys_iter_t* iter) {
   iter->offset = 0;
   // iter->page is index of page containing the next segment start offset.
   // and iter->last_page is index of page containing the segment offset + segment->length
-  iter->page = iter->buf.phys_count == 1 ? 0 : segment_offset(iter) / PAGE_SIZE;
+  iter->page = iter->buf.phys_count == 1 ? 0 : segment_offset(iter) / zx_system_get_page_size();
   if (iter->segment_length > 0) {
-    iter->last_page = (iter->segment_length + segment_offset(iter) - 1) / PAGE_SIZE;
+    iter->last_page = (iter->segment_length + segment_offset(iter) - 1) / zx_system_get_page_size();
     iter->last_page = MIN(iter->last_page, iter->buf.phys_count - 1);
   } else {
     iter->last_page = 0;
@@ -52,7 +53,7 @@ static bool init_next_sg_entry(phys_iter_t* iter) {
 void phys_iter_init(phys_iter_t* iter, const phys_iter_buffer_t* buf, size_t max_length) {
   memset(iter, 0, sizeof(phys_iter_t));
   memcpy(&iter->buf, buf, sizeof(phys_iter_buffer_t));
-  ZX_DEBUG_ASSERT(max_length % PAGE_SIZE == 0);
+  ZX_DEBUG_ASSERT(max_length % zx_system_get_page_size() == 0);
   if (max_length == 0) {
     max_length = UINT64_MAX;
   }
@@ -85,10 +86,11 @@ size_t phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
   const zx_off_t offset = iter->offset;
   const size_t max_length = iter->max_length;
   const size_t length = iter->segment_length;
+  const size_t kPageSize = zx_system_get_page_size();
 
   size_t remaining = length - offset;
   const zx_paddr_t* phys_addrs = buf->phys;
-  size_t align_adjust = segment_offset(iter) & (PAGE_SIZE - 1);
+  size_t align_adjust = segment_offset(iter) & (kPageSize - 1);
   zx_paddr_t phys = phys_addrs[iter->page];
   size_t return_length = 0;
 
@@ -110,11 +112,11 @@ size_t phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
     // we will make sure the range ends on a page boundary so we don't need to worry about
     // alignment for subsequent iterations.
     *out_paddr = phys + align_adjust;
-    return_length = MIN(PAGE_SIZE - align_adjust, remaining);
+    return_length = MIN(kPageSize - align_adjust, remaining);
     remaining -= return_length;
     iter->page++;
 
-    if (iter->page > iter->last_page || phys + PAGE_SIZE != phys_addrs[iter->page]) {
+    if (iter->page > iter->last_page || phys + kPageSize != phys_addrs[iter->page]) {
       phys_iter_increment(iter, return_length);
       return return_length;
     }
@@ -128,7 +130,7 @@ size_t phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
 
   // loop through physical addresses looking for discontinuities
   while (remaining > 0 && iter->page <= iter->last_page) {
-    const size_t increment = MIN(PAGE_SIZE, remaining);
+    const size_t increment = MIN(kPageSize, remaining);
     if (return_length + increment > max_length) {
       break;
     }
@@ -141,7 +143,7 @@ size_t phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
     }
 
     zx_paddr_t next = phys_addrs[iter->page];
-    if (phys + PAGE_SIZE != next) {
+    if (phys + kPageSize != next) {
       break;
     }
     phys = next;
