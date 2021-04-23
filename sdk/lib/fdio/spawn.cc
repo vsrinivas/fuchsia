@@ -55,8 +55,8 @@ namespace fprocess = fuchsia_process;
 // than define a separate arbitrary limit.
 #define FDIO_SPAWN_MAX_INTERPRETER_LINE_LEN \
   (fprocess::wire::kMaxResolveNameSize + FDIO_RESOLVE_PREFIX_LEN)
-static_assert(FDIO_SPAWN_MAX_INTERPRETER_LINE_LEN < PAGE_SIZE,
-              "max #! interpreter line length must be less than page size");
+static_assert(FDIO_SPAWN_MAX_INTERPRETER_LINE_LEN < ZX_MIN_PAGE_SIZE,
+              "max #! interpreter line length must be less than smallest page size");
 
 #define FDIO_SPAWN_LAUNCH_HANDLE_EXECUTABLE ((size_t)0u)
 #define FDIO_SPAWN_LAUNCH_HANDLE_JOB ((size_t)1u)
@@ -233,9 +233,9 @@ static zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
   bool handled_resolve = false;
   bool handled_shebang = false;
   for (size_t depth = 0; true; ++depth) {
-    // VMO sizes are page aligned and MAX_INTERPRETER_LINE_LEN < PAGE_SIZE (asserted above), so
-    // there's no use in checking VMO size explicitly here. Either the read fails because the VMO is
-    // zero-sized, and we handle it, or sizeof(line) < vmo_size.
+    // VMO sizes are page aligned and MAX_INTERPRETER_LINE_LEN < ZX_MIN_PAGE_SIZE (asserted above),
+    // so there's no use in checking VMO size explicitly here. Either the read fails because the VMO
+    // is zero-sized, and we handle it, or sizeof(line) < vmo_size.
     char line[FDIO_SPAWN_MAX_INTERPRETER_LINE_LEN];
     memset(line, 0, sizeof(line));
     zx_status_t status = executable->read(line, 0, sizeof(line));

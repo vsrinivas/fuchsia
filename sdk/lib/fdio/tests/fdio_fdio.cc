@@ -52,7 +52,7 @@ TEST(FDIOTest, CreateSocket) {
 }
 
 TEST(FDIOTest, CreateVMO) {
-  const size_t kSize = ZX_PAGE_SIZE;
+  const size_t kSize = zx_system_get_page_size();
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(kSize, 0, &vmo));
 

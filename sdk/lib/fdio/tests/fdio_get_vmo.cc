@@ -42,7 +42,7 @@ struct Context {
   bool supports_read_at;
   bool supports_seek;
   bool supports_get_buffer;
-  size_t content_size;  // Must be <= ZX_PAGE_SIZE.
+  size_t content_size;  // Must be <= zx_system_get_page_size().
   uint32_t last_flags;
 };
 class TestServer final : public fidl::WireInterface<fuchsia_io::File> {
@@ -81,7 +81,7 @@ class TestServer final : public fidl::WireInterface<fuchsia_io::File> {
     completer.Reply(ZX_OK, {
                                .id = 5,
                                .content_size = context->content_size,
-                               .storage_size = ZX_PAGE_SIZE,
+                               .storage_size = zx_system_get_page_size(),
                                .link_count = 1,
                            });
   }
@@ -101,13 +101,13 @@ class TestServer final : public fidl::WireInterface<fuchsia_io::File> {
       return;
     }
     size_t actual = std::min(count, context->content_size - offset);
-    uint8_t buffer[ZX_PAGE_SIZE];
-    zx_status_t status = context->vmo.read(buffer, offset, actual);
+    std::vector<uint8_t> buffer(zx_system_get_page_size());
+    zx_status_t status = context->vmo.read(buffer.data(), offset, actual);
     if (status != ZX_OK) {
       completer.Reply(status, fidl::VectorView<uint8_t>());
       return;
     }
-    completer.Reply(ZX_OK, fidl::VectorView<uint8_t>::FromExternal(buffer, actual));
+    completer.Reply(ZX_OK, fidl::VectorView<uint8_t>::FromExternal(buffer.data(), actual));
   }
 
   void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) override {}
@@ -156,7 +156,7 @@ class TestServer final : public fidl::WireInterface<fuchsia_io::File> {
         // preserves EXECUTE.
         options |= ZX_VMO_CHILD_NO_WRITE;
       }
-      status = context->vmo.create_child(options, 0, ZX_PAGE_SIZE, &result);
+      status = context->vmo.create_child(options, 0, zx_system_get_page_size(), &result);
       if (status != ZX_OK) {
         completer.Reply(status, nullptr);
         return;
@@ -193,15 +193,15 @@ zx_rights_t get_rights(const zx::object_base& handle) {
 
 bool vmo_starts_with(const zx::vmo& vmo, const char* string) {
   size_t length = strlen(string);
-  if (length > ZX_PAGE_SIZE) {
+  if (length > zx_system_get_page_size()) {
     return false;
   }
-  char buffer[ZX_PAGE_SIZE];
-  zx_status_t status = vmo.read(buffer, 0, sizeof(buffer));
+  std::vector<char> buffer(zx_system_get_page_size());
+  zx_status_t status = vmo.read(buffer.data(), 0, buffer.size());
   if (status != ZX_OK) {
     return false;
   }
-  return strncmp(string, buffer, length) == 0;
+  return strncmp(string, buffer.data(), length) == 0;
 }
 
 void create_context_vmo(size_t size, zx::vmo* out_vmo) {
@@ -224,7 +224,7 @@ TEST(GetVMOTest, Remote) {
   context.is_vmofile = false;
   context.content_size = 43;
   context.supports_get_buffer = true;
-  create_context_vmo(ZX_PAGE_SIZE, &context.vmo);
+  create_context_vmo(zx_system_get_page_size(), &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
   ASSERT_OK(fidl::BindSingleInFlightOnly(dispatcher, std::move(endpoints->server),
@@ -293,7 +293,7 @@ TEST(GetVMOTest, VMOFile) {
   context.content_size = 43;
   context.is_vmofile = true;
   context.supports_seek = true;
-  create_context_vmo(ZX_PAGE_SIZE, &context.vmo);
+  create_context_vmo(zx_system_get_page_size(), &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
   ASSERT_OK(fidl::BindSingleInFlightOnly(dispatcher, std::move(endpoints->server),
@@ -346,7 +346,7 @@ TEST(MmapFileTest, ProtExecWorks) {
   context.is_vmofile = false;
   context.content_size = 43;
   context.supports_get_buffer = true;
-  create_context_vmo(ZX_PAGE_SIZE, &context.vmo);
+  create_context_vmo(zx_system_get_page_size(), &context.vmo);
   ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
   ASSERT_OK(fidl::BindSingleInFlightOnly(dispatcher, std::move(endpoints->server),
