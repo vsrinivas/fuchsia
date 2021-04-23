@@ -14,6 +14,7 @@
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
 #include <string.h>
+#include <zircon/threads.h>
 
 #include <limits>
 #include <memory>
@@ -25,14 +26,11 @@
 
 #include "ddktl/suspend-txn.h"
 #include "optee-client.h"
-#include "optee-device-info.h"
 #include "optee-util.h"
 #include "src/devices/tee/drivers/optee/optee-bind.h"
 #include "src/devices/tee/drivers/optee/tee-smc.h"
 
 namespace optee {
-
-namespace fuchsia_tee = fuchsia_tee;
 
 static bool IsOpteeApi(const tee_smc::TrustedOsCallUidResult& returned_uid) {
   return returned_uid.uid_0_3 == kOpteeApiUid_0 && returned_uid.uid_4_7 == kOpteeApiUid_1 &&
@@ -316,6 +314,13 @@ zx_status_t OpteeController::Bind() {
     return status;
   }
 
+  thrd_t optee_thread;
+  status = loop_.StartThread("optee-thread", &optee_thread);
+  if (status != ZX_OK) {
+    LOG(ERROR, "could not start optee thread");
+    return status;
+  }
+
   // TODO(http://fxbug.dev/13562): The below deadline profile is currently defined by the strictest
   // latency requirements of the trusted app workloads (media decryption). This is intended to be
   // temporary, as it is not ideal for all trusted applications and we should revisit once the TA
@@ -326,7 +331,8 @@ zx_status_t OpteeController::Bind() {
   if (status != ZX_OK) {
     LOG(WARNING, "could not get deadline profile");
   } else {
-    status = zx::thread::self()->set_profile(std::move(profile), 0);
+    status =
+        zx::unowned_thread(thrd_get_zx_handle(optee_thread))->set_profile(std::move(profile), 0);
     if (status != ZX_OK) {
       LOG(WARNING, "could not set profile");
     }
@@ -353,7 +359,8 @@ zx_status_t OpteeController::DdkOpen(zx_device_t** out_dev, uint32_t flags) {
 }
 
 void OpteeController::DdkSuspend(ddk::SuspendTxn txn) {
-  // All operations should have been halted when the child devices were suspended.
+  loop_.Quit();
+  loop_.JoinThreads();
   shared_memory_manager_ = nullptr;
   zx_status_t status = pmt_.unpin();
   ZX_DEBUG_ASSERT(status == ZX_OK);
@@ -386,22 +393,8 @@ void OpteeController::ConnectToDeviceInfo(
     [[maybe_unused]] ConnectToDeviceInfoCompleter::Sync& _completer) {
   ZX_DEBUG_ASSERT(device_info_request.is_valid());
 
-  // Create a new `OpteeDeviceInfo` device and hand off client communication to it.
-  auto device_info = std::make_unique<OpteeDeviceInfo>(this);
-
-  // Add a child `OpteeDeviceInfo` instance device and have it immediately start serving
-  // `device_info_request`.
-  zx_status_t status =
-      device_info->DdkAdd(ddk::DeviceAddArgs("optee-client")
-                              .set_flags(DEVICE_ADD_INSTANCE)
-                              .set_client_remote(device_info_request.TakeChannel()));
-  if (status != ZX_OK) {
-    LOG(ERROR, "failed to create device info child");
-    return;
-  }
-
-  // devmgr is now in charge of the memory for `device_info`
-  [[maybe_unused]] auto device_info_ptr = device_info.release();
+  fidl::BindServer<fidl::WireInterface<fuchsia_tee::DeviceInfo>>(
+      loop_.dispatcher(), std::move(device_info_request), this);
 }
 
 void OpteeController::ConnectToApplication(
@@ -419,21 +412,25 @@ zx_status_t OpteeController::ConnectToApplicationInternal(
   ZX_DEBUG_ASSERT(application_request.is_valid());
 
   // Create a new `OpteeClient` device and hand off client communication to it.
-  auto client = std::make_unique<OpteeClient>(this, std::move(service_provider), application_uuid);
+  fidl::BindServer(
+      loop_.dispatcher(), std::move(application_request),
+      std::make_unique<OpteeClient>(this, std::move(service_provider), application_uuid));
 
-  // Add a child `OpteeClient` device instance and have it immediately start serving
-  // `device_request`
-  zx_status_t status = client->DdkAdd(ddk::DeviceAddArgs("optee-client")
-                                          .set_flags(DEVICE_ADD_INSTANCE)
-                                          .set_client_remote(application_request.TakeChannel()));
-  if (status != ZX_OK) {
-    LOG(ERROR, "failed to create device info child (status: %d)", status);
-    return status;
-  }
-
-  // devmgr is now in charge of the memory for `client`
-  [[maybe_unused]] auto client_ptr = client.release();
   return ZX_OK;
+}
+
+void OpteeController::GetOsInfo(GetOsInfoCompleter::Sync& completer) {
+  fidl::FidlAllocator allocator;
+  fuchsia_tee::wire::OsRevision os_rev(allocator);
+  os_rev.set_major(allocator, os_revision().major);
+  os_rev.set_minor(allocator, os_revision().minor);
+
+  fuchsia_tee::wire::OsInfo os_info(allocator);
+  os_info.set_uuid(allocator, kOpteeOsUuid);
+  os_info.set_revision(allocator, std::move(os_rev));
+  os_info.set_is_global_platform_compliant(allocator, true);
+
+  completer.Reply(std::move(os_info));
 }
 
 OpteeController::CallResult OpteeController::CallWithMessage(const optee::Message& message,

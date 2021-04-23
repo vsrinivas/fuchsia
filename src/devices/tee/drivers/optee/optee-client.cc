@@ -264,47 +264,16 @@ static inline zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpenDirectory(
 
 namespace optee {
 
-zx_status_t OpteeClient::DdkClose(uint32_t flags) {
-  // Because each client instance should map to just one client and the client has closed, this
-  // instance can safely shut down.
-  Shutdown();
-  return ZX_OK;
-}
+OpteeClient::~OpteeClient() {
+  std::vector<uint32_t> sessions_to_close{open_sessions_.begin(), open_sessions_.end()};
 
-void OpteeClient::DdkRelease() { delete this; }
-
-void OpteeClient::DdkSuspend(ddk::SuspendTxn txn) {
-  Shutdown();
-  txn.Reply(ZX_OK, txn.requested_state());
-}
-
-void OpteeClient::DdkUnbind(ddk::UnbindTxn txn) { Shutdown(); }
-
-void OpteeClient::Shutdown() {
-  if (controller_ != nullptr) {
-    // Try and cleanly close all sessions
-    std::vector<uint32_t> session_ids(open_sessions_.size());
-    session_ids.assign(open_sessions_.begin(), open_sessions_.end());
-
-    for (uint32_t id : session_ids) {
-      // Regardless of CloseSession response, continue closing all other sessions
-      __UNUSED zx_status_t status = CloseSession(id);
-    }
+  // Try and cleanly close all sessions
+  for (uint32_t id : sessions_to_close) {
+    LOG(WARNING, "Closing session that was left open by client. uuid: %s session_id: %" PRIu32,
+        application_uuid_.ToString().c_str(), id);
+    // Regardless of CloseSession response, continue closing all other sessions
+    __UNUSED zx_status_t status = CloseSession(id);
   }
-
-  // For sanity's sake, mark the controller_ as null to ensure that nothing else gets called.
-  controller_ = nullptr;
-}
-
-zx_status_t OpteeClient::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  if (controller_ == nullptr) {
-    return ZX_ERR_PEER_CLOSED;
-  }
-  DdkTransaction transaction(txn);
-
-  fidl::WireDispatch<fuchsia_tee::Application>(this, msg, &transaction);
-
-  return transaction.Status();
 }
 
 void OpteeClient::OpenSession2(

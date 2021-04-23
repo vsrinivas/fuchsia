@@ -11,6 +11,7 @@
 #include <fuchsia/hardware/tee/cpp/banjo.h>
 #include <fuchsia/hardware/tee/llcpp/fidl.h>
 #include <fuchsia/tee/manager/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl/llcpp/server_end.h>
@@ -34,8 +35,6 @@
 
 namespace optee {
 
-namespace fuchsia_hardware_tee = fuchsia_hardware_tee;
-
 class OpteeClient;
 class OpteeDeviceInfo;
 
@@ -58,7 +57,6 @@ class OpteeControllerBase {
   virtual SharedMemoryManager::ClientMemoryPool* client_pool() const = 0;
   virtual zx_status_t RpmbConnectServer(
       fidl::ServerEnd<fuchsia_hardware_rpmb::Rpmb> server) const = 0;
-  virtual const GetOsRevisionResult& os_revision() const = 0;
   virtual zx_device_t* GetDevice() const = 0;
 };
 
@@ -68,9 +66,11 @@ using DeviceType = ddk::Device<OpteeController, ddk::Messageable, ddk::Openable,
 class OpteeController : public OpteeControllerBase,
                         public DeviceType,
                         public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
+                        public fidl::WireInterface<fuchsia_tee::DeviceInfo>,
                         public fidl::WireInterface<fuchsia_hardware_tee::DeviceConnector> {
  public:
-  explicit OpteeController(zx_device_t* parent) : DeviceType(parent) {}
+  explicit OpteeController(zx_device_t* parent)
+      : DeviceType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   OpteeController(const OpteeController&) = delete;
   OpteeController& operator=(const OpteeController&) = delete;
@@ -95,6 +95,9 @@ class OpteeController : public OpteeControllerBase,
                             fidl::ClientEnd<fuchsia_tee_manager::Provider> service_provider,
                             fidl::ServerEnd<fuchsia_tee::Application> application_request,
                             ConnectToApplicationCompleter::Sync& _completer) override;
+
+  // `DeviceInfo` FIDL protocol
+  void GetOsInfo(GetOsInfoCompleter::Sync& completer) override;
 
   CallResult CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) override;
 
@@ -122,12 +125,15 @@ class OpteeController : public OpteeControllerBase,
     return ZX_OK;
   }
 
-  const GetOsRevisionResult& os_revision() const override { return os_revision_; }
+  const GetOsRevisionResult& os_revision() const { return os_revision_; }
 
   // Should only be used for testing.
   const zx::pmt& pmt() const { return pmt_; }
 
  private:
+  static constexpr fuchsia_tee::wire::Uuid kOpteeOsUuid = {
+      0x486178E0, 0xE7F8, 0x11E3, {0xBC, 0x5E, 0x00, 0x02, 0xA5, 0xD5, 0xC5, 0x1B}};
+
   zx_status_t ValidateApiUid() const;
   zx_status_t ValidateApiRevision() const;
   zx_status_t GetOsRevision();
@@ -140,6 +146,7 @@ class OpteeController : public OpteeControllerBase,
       fidl::ServerEnd<fuchsia_tee::Application> application_request);
 
   ddk::PDev pdev_;
+  async::Loop loop_;
   ddk::SysmemProtocolClient sysmem_;
   ddk::RpmbProtocolClient rpmb_protocol_client_ = {};
   zx::resource secure_monitor_;

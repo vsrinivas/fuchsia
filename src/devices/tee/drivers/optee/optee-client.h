@@ -19,23 +19,11 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <ddktl/device.h>
-#include <ddktl/protocol/empty-protocol.h>
 #include <fbl/intrusive_double_list.h>
-#include <fbl/intrusive_hash_table.h>
 
-#include "ddktl/suspend-txn.h"
 #include "optee-controller.h"
 
 namespace optee {
-
-namespace fuchsia_tee = fuchsia_tee;
-
-class OpteeClient;
-
-using OpteeClientBase =
-    ddk::Device<OpteeClient, ddk::Closable, ddk::Messageable, ddk::Suspendable, ddk::Unbindable>;
-using OpteeClientProtocol = ddk::EmptyProtocol<ZX_PROTOCOL_TEE>;
 
 // The Optee driver allows for simultaneous access from different processes. The OpteeClient object
 // is a distinct device instance for each client connection. This allows for per-instance state to
@@ -43,28 +31,18 @@ using OpteeClientProtocol = ddk::EmptyProtocol<ZX_PROTOCOL_TEE>;
 // allocated shared memory buffers and sessions that were created by that client without interfering
 // with other active clients.
 
-class OpteeClient : public OpteeClientBase,
-                    public OpteeClientProtocol,
-                    public fidl::WireInterface<fuchsia_tee::Application> {
+class OpteeClient : public fidl::WireInterface<fuchsia_tee::Application> {
  public:
-  explicit OpteeClient(OpteeControllerBase* controller,
-                       fidl::ClientEnd<fuchsia_tee_manager::Provider> provider,
-                       Uuid application_uuid)
-      : OpteeClientBase(controller->GetDevice()),
-        controller_(controller),
+  OpteeClient(OpteeControllerBase* controller,
+              fidl::ClientEnd<fuchsia_tee_manager::Provider> provider, Uuid application_uuid)
+      : controller_(controller),
         provider_(std::move(provider)),
         application_uuid_(std::move(application_uuid)) {}
 
+  ~OpteeClient() override;
+
   OpteeClient(const OpteeClient&) = delete;
   OpteeClient& operator=(const OpteeClient&) = delete;
-
-  zx_status_t DdkClose(uint32_t flags);
-  void DdkRelease();
-  void DdkSuspend(ddk::SuspendTxn txn);
-  void DdkUnbind(ddk::UnbindTxn txn);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
-
-  void Shutdown();
 
   // `fuchsia.tee.Application` FIDL Handlers
   void OpenSession2(fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,

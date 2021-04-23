@@ -18,7 +18,6 @@ source_set("optee_lib") {
   sources = [
     "optee-client.cc",
     "optee-controller.cc",
-    "optee-device-info.cc",
     "optee-message.cc",
     "optee-util.cc",
     "shared-memory.cc",
@@ -39,6 +38,7 @@ source_set("optee_lib") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/region-alloc",
   ]
 

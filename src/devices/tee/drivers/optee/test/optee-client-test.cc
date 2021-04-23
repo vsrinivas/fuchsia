@@ -19,6 +19,7 @@
 #include <lib/fake_ddk/fidl-helper.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
 #include <stdlib.h>
 
@@ -40,6 +41,13 @@ constexpr fuchsia_tee::wire::Uuid kOpteeOsUuid = {
 
 class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
  public:
+  static const size_t kMaxParamCount = 4;
+
+  struct MessageRaw {
+    MessageHeader hdr;
+    MessageParam params[kMaxParamCount];
+  };
+
   OpteeClientTestBase() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     ASSERT_OK(loop_.StartThread());
 
@@ -66,8 +74,7 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
     auto [client_end, server_end] = std::move(endpoints.value());
     optee_client_.reset(new OpteeClient(this, fidl::ClientEnd<fuchsia_tee_manager::Provider>(),
                                         optee::Uuid{kOpteeOsUuid}));
-    fidl::BindServer<fidl::WireInterface<fuchsia_tee::Application>>(
-        loop_.dispatcher(), std::move(server_end), optee_client_.get());
+    fidl::BindServer(loop_.dispatcher(), std::move(server_end), optee_client_.get());
     optee_client_fidl_ = fidl::WireSyncClient<fuchsia_tee::Application>(std::move(client_end));
   }
 
@@ -83,8 +90,6 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
     return ZX_ERR_UNAVAILABLE;
   };
 
-  const GetOsRevisionResult &os_revision() const override { return os_revision_; };
-
   zx_device_t *GetDevice() const override { return fake_ddk::kFakeParent; };
 
   void SetUp() override {}
@@ -92,7 +97,6 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
   void TearDown() override {}
 
  protected:
-  GetOsRevisionResult os_revision_{1, 0, 0, 0, 0};
   std::unique_ptr<SharedMemoryManager> shared_memory_manager_;
 
   zx::bti fake_bti_;
@@ -105,6 +109,74 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
   fidl::WireSyncClient<fuchsia_tee::Application> optee_client_fidl_;
   async::Loop loop_;
 };
+
+class OpteeClientTest : public OpteeClientTestBase {
+ public:
+  OpteeClientTest() {}
+
+  CallResult CallWithMessage(const optee::Message &message, RpcHandler rpc_handler) override {
+    size_t offset = message.paddr() - shared_memory_paddr_;
+
+    MessageHeader *hdr = reinterpret_cast<MessageHeader *>(shared_memory_vaddr_ + offset);
+    hdr->return_origin = TEEC_ORIGIN_TEE;
+    hdr->return_code = TEEC_SUCCESS;
+
+    switch (hdr->command) {
+      case Message::Command::kOpenSession: {
+        hdr->session_id = next_session_id_++;
+        open_sessions_.insert(hdr->session_id);
+        break;
+      }
+      case Message::Command::kCloseSession: {
+        EXPECT_EQ(open_sessions_.erase(hdr->session_id), 1u);
+        break;
+      }
+      default:
+        hdr->return_code = TEEC_ERROR_NOT_IMPLEMENTED;
+    }
+
+    return CallResult{.return_code = kReturnOk};
+  };
+
+  const std::set<uint32_t> &open_sessions() const { return open_sessions_; }
+
+ private:
+  uint32_t next_session_id_ = 1;
+  std::set<uint32_t> open_sessions_;
+};
+
+TEST_F(OpteeClientTest, OpenSessionsClosedOnClientUnbind) {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_tee::Application>();
+  ASSERT_TRUE(endpoints.is_ok());
+  auto [client_end, server_end] = std::move(endpoints.value());
+  auto optee_client = std::make_unique<OpteeClient>(
+      this, fidl::ClientEnd<fuchsia_tee_manager::Provider>(), optee::Uuid{kOpteeOsUuid});
+
+  sync_completion_t unbound = {};
+
+  fidl::BindServer(
+      loop_.dispatcher(), std::move(server_end), optee_client.get(),
+      [&unbound](OpteeClient *, fidl::UnbindInfo, fidl::ServerEnd<fuchsia_tee::Application>) {
+        sync_completion_signal(&unbound);
+      });
+
+  {
+    fidl::WireSyncClient<fuchsia_tee::Application> fidl_client(std::move(client_end));
+    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
+    auto res = fidl_client.OpenSession2(std::move(parameter_set));
+    EXPECT_OK(res.status());
+    ASSERT_FALSE(open_sessions().empty());
+  }  // ~WireSyncClient will close the channel, so just wait until it has been unbound and then we
+     // can destroy the client
+
+  sync_completion_wait(&unbound, ZX_TIME_INFINITE);
+
+  ASSERT_FALSE(open_sessions().empty());
+
+  optee_client = nullptr;
+
+  EXPECT_TRUE(open_sessions().empty());
+}
 
 class FakeRpmb : public fidl::WireInterface<frpmb::Rpmb> {
  public:
@@ -146,7 +218,6 @@ class FakeRpmb : public fidl::WireInterface<frpmb::Rpmb> {
 
 class OpteeClientTestRpmb : public OpteeClientTestBase {
  public:
-  static const size_t kMaxParamCount = 4;
   static const size_t kMaxFramesSize = 4096;
   const size_t kMessageSize = 160;
 
@@ -154,11 +225,6 @@ class OpteeClientTestRpmb : public OpteeClientTestBase {
   const int kDefaultCommand = 1;
 
   static constexpr uint8_t kMarker[] = {0xd, 0xe, 0xa, 0xd, 0xb, 0xe, 0xe, 0xf};
-
-  struct MessageRaw {
-    MessageHeader hdr;
-    MessageParam params[kMaxParamCount];
-  };
 
   OpteeClientTestRpmb() : rpmb_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     ASSERT_OK(rpmb_loop_.StartThread());
