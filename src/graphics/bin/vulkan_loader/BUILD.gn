@@ -16,14 +16,23 @@ source_set("app") {
     "goldfish_device.cc",
     "goldfish_device.h",
     "gpu_device.h",
+    "icd_component.cc",
+    "icd_component.h",
+    "icd_list.cc",
+    "icd_list.h",
+    "icd_runner.cc",
+    "icd_runner.h",
     "magma_device.cc",
     "magma_device.h",
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.component.runner",
     "//sdk/fidl/fuchsia.gpu.magma",
     "//sdk/fidl/fuchsia.hardware.goldfish",
+    "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/sys/inspect/cpp",
+    "//src/lib/json_parser",
   ]
   deps = [
     "//sdk/fidl/fuchsia.io",
@@ -33,8 +42,11 @@ source_set("app") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/storage/vfs/cpp",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
   ]
 }
 executable("bin") {
@@ -46,6 +58,7 @@ executable("bin") {
     ":app",
     "//sdk/fidl/fuchsia.gpu.magma",
     "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.process.lifecycle",
     "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",

@@ -14,12 +14,21 @@
             path: "/pkg/bin",
         },
         {
-            // /dev directory is always empty. It's used for both dev-gpu and
-            // dev-goldfish-pipe just to ensure that the DeviceWatcher starts up
-            // successfully.
+            // /dev directory is always empty. It's used for device paths that
+            // aren't required by the vulkan loader.
             directory: "dev",
             rights: [ "rw*" ],
             path: "/dev",
+        },
+        {
+            directory: "dev-gpu",
+            rights: [ "rw*" ],
+            path: "/dev-gpu",
+        },
+        {
+            directory: "dev-goldfish-pipe",
+            rights: [ "rw*" ],
+            path: "/dev-goldfish-pipe",
         },
     ],
     expose: [
@@ -30,15 +39,13 @@
             rights: [ "rx*" ],
         },
         {
-            directory: "dev",
+            directory: "dev-gpu",
             from: "self",
-            as: "dev-gpu",
             rights: [ "rw*" ],
         },
         {
-            directory: "dev",
+            directory: "dev-goldfish-pipe",
             from: "self",
-            as: "dev-goldfish-pipe",
             rights: [ "rw*" ],
         },
         {

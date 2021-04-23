@@ -11,6 +11,7 @@
 #include <string>
 
 #include "src/graphics/bin/vulkan_loader/gpu_device.h"
+#include "src/graphics/bin/vulkan_loader/icd_list.h"
 #include "src/lib/fxl/macros.h"
 
 class LoaderApp;
@@ -20,11 +21,14 @@ class GoldfishDevice : public GpuDevice {
   static std::unique_ptr<GoldfishDevice> Create(LoaderApp* app, int dir_fd, std::string name,
                                                 inspect::Node* parent);
 
+  const IcdList& icd_list() const override { return icd_list_; }
+
  private:
   explicit GoldfishDevice(LoaderApp* app) : GpuDevice(app) {}
 
   bool Initialize(int dir_fd, std::string name, inspect::Node* parent);
 
+  IcdList icd_list_;
   fuchsia::hardware::goldfish::PipeDevicePtr device_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(GoldfishDevice);

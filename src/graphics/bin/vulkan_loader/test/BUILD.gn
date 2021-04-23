@@ -90,12 +90,24 @@ fuchsia_component("vulkan_loader_unittest") {
   manifest = "meta/vulkan_loader_unittest.cml"
 }
 
+resource("metadata") {
+  sources = [ "metadata.json" ]
+  outputs = [ "data/test_metadata/metadata.json" ]
+}
+
+fuchsia_component("test_vulkan_driver") {
+  testonly = true
+  manifest = "meta/test_vulkan_driver.cml"
+  deps = [ ":metadata" ]
+}
+
 fuchsia_test_package("vulkan_loader_tests") {
   test_components = [
     ":vulkan_loader_test",
     ":vulkan_loader_unittest",
   ]
   deps = [
+    ":test_vulkan_driver",
     ":vulkan_loader_test_driver",
     ":vulkan_loader_test_lib_provider",
     ":vulkan_loader_unittest_driver",

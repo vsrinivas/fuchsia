@@ -7,4 +7,10 @@
     program: {
         binary: "bin/vulkan_loader_unittest",
     },
+    use: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
 }

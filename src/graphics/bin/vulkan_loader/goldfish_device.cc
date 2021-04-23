@@ -22,6 +22,7 @@ std::unique_ptr<GoldfishDevice> GoldfishDevice::Create(LoaderApp* app, int dir_f
 
 bool GoldfishDevice::Initialize(int dir_fd, std::string name, inspect::Node* parent) {
   node() = parent->CreateChild("goldfish-" + name);
+  auto pending_action_token = app()->GetPendingActionToken();
   fdio_t* dir_fdio = fdio_unsafe_fd_to_io(dir_fd);
   if (!dir_fdio) {
     FX_LOGS(ERROR) << "Failed to get fdio_t";
@@ -49,10 +50,10 @@ bool GoldfishDevice::Initialize(int dir_fd, std::string name, inspect::Node* par
 
   IcdData data;
   data.node = node().CreateChild("0");
-  data.node.CreateString("component_url",
-                         "fuchsia-pkg://fuchsia.com/libvulkan_goldfish#meta/vulkan.cmx",
-                         &data.values);
+  std::string component_url = "fuchsia-pkg://fuchsia.com/libvulkan_goldfish#meta/vulkan.cm";
+  data.node.CreateString("component_url", component_url, &data.values);
 
+  icd_list_.Add(app()->CreateIcdComponent(component_url));
   icds().push_back(std::move(data));
   return true;
 }

@@ -18,7 +18,9 @@
 
 #include "src/graphics/bin/vulkan_loader/app.h"
 #include "src/graphics/bin/vulkan_loader/goldfish_device.h"
+#include "src/graphics/bin/vulkan_loader/icd_component.h"
 #include "src/graphics/bin/vulkan_loader/magma_device.h"
+#include "src/lib/json_parser/json_parser.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 class LoaderUnittest : public gtest::RealLoopFixture {};
@@ -47,7 +49,7 @@ class FakeMagmaDevice : public fuchsia::gpu::magma::testing::Device_TestBase {
 TEST_F(LoaderUnittest, MagmaDevice) {
   inspect::Inspector inspector;
   auto context = sys::ComponentContext::Create();
-  LoaderApp app(context.get());
+  LoaderApp app(context.get(), dispatcher());
 
   vfs::PseudoDir root;
   FakeMagmaDevice magma_device;
@@ -94,7 +96,7 @@ class FakeGoldfishDevice : public fuchsia::hardware::goldfish::testing::PipeDevi
 TEST_F(LoaderUnittest, GoldfishDevice) {
   inspect::Inspector inspector;
   auto context = sys::ComponentContext::Create();
-  LoaderApp app(context.get());
+  LoaderApp app(context.get(), dispatcher());
 
   vfs::PseudoDir root;
   FakeGoldfishDevice goldfish_device;
@@ -131,4 +133,38 @@ TEST_F(LoaderUnittest, GoldfishDevice) {
   close(dir_fd);
   vfs_loop.Shutdown();
   EXPECT_EQ(0u, goldfish_device.GetBindingsSize());
+}
+
+TEST(Icd, BadManifest) {
+  json::JSONParser parser;
+  auto good_doc = parser.ParseFromString(R"({
+    "file_path": "bin/pkg-server",
+    "library_path": "pkg-server2",
+    "version": 1
+})",
+                                         "test1");
+  EXPECT_TRUE(IcdComponent::ValidateMetadataJson("a", good_doc));
+
+  auto bad_doc1 = parser.ParseFromString(R"({
+    "file_path": "bin/pkg-server",
+    "library_path": "pkg-server2",
+    "version": 2
+})",
+                                         "tests2");
+  EXPECT_FALSE(IcdComponent::ValidateMetadataJson("b", bad_doc1));
+
+  auto bad_doc2 = parser.ParseFromString(R"({
+    "library_path": "pkg-server2",
+    "version": 1
+})",
+                                         "test3");
+  EXPECT_FALSE(IcdComponent::ValidateMetadataJson("c", bad_doc2));
+
+  auto bad_doc3 = parser.ParseFromString(R"({
+    "file_path": "bin/pkg-server",
+    "library_path": 1,
+    "version": 1
+})",
+                                         "tests4");
+  EXPECT_FALSE(IcdComponent::ValidateMetadataJson("d", bad_doc3));
 }

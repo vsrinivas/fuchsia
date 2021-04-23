@@ -10,11 +10,14 @@
 #include <cstdint>
 #include <vector>
 
+class IcdList;
 class LoaderApp;
 
 class GpuDevice {
  public:
   virtual ~GpuDevice() = default;
+
+  virtual const IcdList& icd_list() const = 0;
 
   uint64_t icd_count() { return icds_.size(); }
 
