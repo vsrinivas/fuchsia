@@ -75,6 +75,9 @@ var additionalSkipDirs = []string{
 	"src/experiences/bin/simple_browser_internationalization/lib/localization",
 	"src/experiences/session_shells/ermine/internationalization/lib/localization",
 
+	// Skip flutter generated / cache directory
+	"third_party/dart-pkg/git/flutter/bin/cache",
+
 	// Skip "_latest" directories
 	"prebuilt/third_party/chromedriver_latest",
 	"prebuilt/third_party/chromium_tests_latest",
