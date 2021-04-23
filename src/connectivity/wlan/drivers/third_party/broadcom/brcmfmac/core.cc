@@ -740,7 +740,7 @@ void brcmf_dev_reset(brcmf_pub* drvr) {
 void brcmf_detach(brcmf_pub* drvr) {
   BRCMF_DBG(TRACE, "Enter");
 
-  if (drvr == NULL) {
+  if (drvr == nullptr) {
     return;
   }
   /* stop firmware event handling */

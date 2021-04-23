@@ -43,6 +43,9 @@
 
 #define BRCMF_FW_NAME_LEN 256
 
+/* The retry limit for clmload file loading during driver re-initialization */
+#define CLMLOAD_RETRY_LIMIT 3
+
 // Disable features
 static int brcmf_feature_disable;
 
@@ -107,7 +110,25 @@ zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp, std::string_view clm_
                                            sizeof(*dload_data) + chunk_len, &fw_err)) != ZX_OK) {
       BRCMF_ERR("clmload failed at offset %zu: %s, fw err %s", offset, zx_status_get_string(status),
                 brcmf_fil_get_errstr(fw_err));
-      return status;
+      if (!ifp->drvr->drvr_resetting.load()) {
+        return status;
+      }
+
+      for (uint16_t retry = 0; retry < CLMLOAD_RETRY_LIMIT; retry++) {
+        BRCMF_DBG(INFO, "Retrying clmload, %u times left after this one.",
+                  CLMLOAD_RETRY_LIMIT - retry - 1);
+        // Delay the retry to wait for firmware ready.
+        zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
+        if ((status = brcmf_fil_iovar_data_set(
+                 ifp, "clmload", dload_data, sizeof(*dload_data) + chunk_len, &fw_err)) == ZX_OK) {
+          break;
+        }
+      }
+      if (status != ZX_OK) {
+        BRCMF_DBG(INFO, "All Retry clmload failed at offset %zu: %s, fw err %s", offset,
+                  zx_status_get_string(status), brcmf_fil_get_errstr(fw_err));
+        return status;
+      }
     }
 
     dload_data->flag &= ~DL_BEGIN;

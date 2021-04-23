@@ -3256,6 +3256,7 @@ void brcmf_if_stop(net_device* ndev) {
   std::lock_guard<std::shared_mutex> guard(ndev->if_proto_lock);
   ndev->if_proto.ops = nullptr;
   ndev->if_proto.ctx = nullptr;
+  BRCMF_IFDBG(WLANIF, ndev, "wlanif interface stopped");
 }
 
 void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
@@ -6099,7 +6100,6 @@ zx_status_t brcmf_clear_states(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_cfg80211_vif* client_vif = drvr->iflist[0]->vif;
   struct net_device* client = client_vif->wdev.netdev;
   struct net_device* softap = cfg_to_softap_ndev(cfg);
-  zx_status_t err = ZX_OK;
 
   // Stop all interfaces.
   brcmf_if_stop(client);
@@ -6113,15 +6113,15 @@ zx_status_t brcmf_clear_states(struct brcmf_cfg80211_info* cfg) {
   cfg->connect_timer->Stop();
 
   // Clear all driver scan states.
-  if ((err = brcmf_abort_scanning(cfg)) != ZX_OK)
-    return err;
-
+  brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
   brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
 
   // Clear connect and disconnect states for primary iface.
+  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &client_vif->sme_state);
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &client_vif->sme_state);
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &client_vif->sme_state);
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &client_vif->sme_state);
 
+  // Always return ZX_OK.
   return ZX_OK;
 }

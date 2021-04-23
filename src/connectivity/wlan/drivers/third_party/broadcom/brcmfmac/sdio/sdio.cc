@@ -761,12 +761,23 @@ static inline bool brcmf_sdio_valid_shared_address(uint32_t addr) {
   return !(addr == 0 || ((~addr >> 16) & 0xffff) == (addr & 0xffff));
 }
 
-static zx_status_t brcmf_sdio_readshared(struct brcmf_sdio* bus, struct sdpcm_shared* sh) {
+static zx_status_t __brcmf_sdio_sharedrw(struct brcmf_sdio* bus, struct sdpcm_shared* sh,
+                                         bool write) {
   uint32_t addr = 0;
   zx_status_t rv;
   uint32_t shaddr = 0;
-  struct sdpcm_shared_le sh_le;
-  uint32_t addr_le = 0;
+
+  if (write) {
+    if (sh == nullptr) {
+      BRCMF_ERR("Input sdpcm pointer doesn't exist");
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if ((sh->flags & SDPCM_SHARED_VERSION_MASK) > SDPCM_SHARED_VERSION) {
+      BRCMF_ERR("sdpcm shared version unsupported: dhd %d dongle %d", SDPCM_SHARED_VERSION,
+                sh->flags & SDPCM_SHARED_VERSION_MASK);
+      return ZX_ERR_WRONG_TYPE;
+    }
+  }
 
   sdio_claim_host(bus->sdiodev->func1);
   brcmf_sdio_bus_sleep(bus, false, false);
@@ -779,7 +790,7 @@ static zx_status_t brcmf_sdio_readshared(struct brcmf_sdio* bus, struct sdpcm_sh
   if (!bus->ci->rambase && brcmf_chip_sr_capable(bus->ci)) {
     shaddr -= bus->ci->srsize;
   }
-  rv = brcmf_sdiod_ramrw(bus->sdiodev, false, shaddr, (uint8_t*)&addr_le, 4);
+  rv = brcmf_sdiod_ramrw(bus->sdiodev, false, shaddr, (uint8_t*)&addr, 4);
   if (rv != ZX_OK) {
     goto fail;
   }
@@ -788,7 +799,6 @@ static zx_status_t brcmf_sdio_readshared(struct brcmf_sdio* bus, struct sdpcm_sh
    * Check if addr is valid.
    * NVRAM length at the end of memory should have been overwritten.
    */
-  addr = addr_le;
   if (!brcmf_sdio_valid_shared_address(addr)) {
     BRCMF_ERR("invalid sdpcm_shared address 0x%08X", addr);
     rv = ZX_ERR_INVALID_ARGS;
@@ -797,27 +807,15 @@ static zx_status_t brcmf_sdio_readshared(struct brcmf_sdio* bus, struct sdpcm_sh
 
   BRCMF_DBG(INFO, "sdpcm_shared address 0x%08X", addr);
 
-  /* Read hndrte_shared structure */
-  rv = brcmf_sdiod_ramrw(bus->sdiodev, false, addr, (uint8_t*)&sh_le,
-                         sizeof(struct sdpcm_shared_le));
+  /* Read or write hndrte_shared structure */
+  rv = brcmf_sdiod_ramrw(bus->sdiodev, write, addr, (uint8_t*)sh, sizeof(struct sdpcm_shared_le));
   if (rv != ZX_OK) {
     goto fail;
   }
 
   sdio_release_host(bus->sdiodev->func1);
 
-  /* Endianness */
-  sh->flags = sh_le.flags;
-  sh->trap_addr = sh_le.trap_addr;
-  sh->assert_exp_addr = sh_le.assert_exp_addr;
-  sh->assert_file_addr = sh_le.assert_file_addr;
-  sh->assert_line = sh_le.assert_line;
-#if !defined(NDEBUG)
-  sh->console_addr = sh_le.console_addr;
-#endif  // !defined(NDEBUG)
-  sh->msgtrace_addr = sh_le.msgtrace_addr;
-
-  if ((sh->flags & SDPCM_SHARED_VERSION_MASK) > SDPCM_SHARED_VERSION) {
+  if (!write && (sh->flags & SDPCM_SHARED_VERSION_MASK) > SDPCM_SHARED_VERSION) {
     BRCMF_ERR("sdpcm shared version unsupported: dhd %d dongle %d", SDPCM_SHARED_VERSION,
               sh->flags & SDPCM_SHARED_VERSION_MASK);
     return ZX_ERR_WRONG_TYPE;
@@ -825,16 +823,25 @@ static zx_status_t brcmf_sdio_readshared(struct brcmf_sdio* bus, struct sdpcm_sh
   return ZX_OK;
 
 fail:
-  BRCMF_ERR("unable to obtain sdpcm_shared info: rv=%d (addr=0x%x)", rv, addr);
+  BRCMF_ERR("unable to %s sdpcm_shared info: rv=%d (addr=0x%x)", write ? "write" : "read", rv,
+            addr);
   sdio_release_host(bus->sdiodev->func1);
   return rv;
+}
+
+static zx_status_t brcmf_sdio_shared_read(struct brcmf_sdio* bus, struct sdpcm_shared* sh) {
+  return __brcmf_sdio_sharedrw(bus, sh, false);
+}
+
+static zx_status_t brcmf_sdio_shared_write(struct brcmf_sdio* bus, struct sdpcm_shared* sh) {
+  return __brcmf_sdio_sharedrw(bus, sh, true);
 }
 
 #if !defined(NDEBUG)
 static void brcmf_sdio_get_console_addr(struct brcmf_sdio* bus) {
   struct sdpcm_shared sh;
 
-  if (brcmf_sdio_readshared(bus, &sh) == ZX_OK) {
+  if (brcmf_sdio_shared_read(bus, &sh) == ZX_OK) {
     bus->console_addr = sh.console_addr;
   }
 }
@@ -2626,7 +2633,7 @@ static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
   zx_status_t error;
   struct sdpcm_shared sh;
 
-  error = brcmf_sdio_readshared(bus, &sh);
+  error = brcmf_sdio_shared_read(bus, &sh);
 
   if (error != ZX_OK) {
     return error;
@@ -2640,6 +2647,15 @@ static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
 
   if (sh.flags & SDPCM_SHARED_TRAP) {
     BRCMF_ERR("firmware trap in dongle");
+
+    sh.flags &= (~SDPCM_SHARED_TRAP);
+    // Clean up the share memory before triggering a recovery.
+    error = brcmf_sdio_shared_write(bus, &sh);
+    if (error != ZX_OK) {
+      BRCMF_ERR("Write shared failed -- error: %s", zx_status_get_string(error));
+      return error;
+    }
+
     error = bus->sdiodev->drvr->recovery_trigger->firmware_crash_.Inc();
     if (error != ZX_OK) {
       BRCMF_ERR("Increase recovery trigger condition failed -- error: %s",
@@ -3180,7 +3196,8 @@ zx_status_t brcmf_sdio_recovery(struct brcmf_bus* bus) TA_NO_THREAD_SAFETY_ANALY
   // Lock the firmware reload mutex for this function so that no interrupt will be handled in
   // the middle of it.
   drvr->fw_reloading.lock();
-
+  // Close sdiod, so that no more data operation can proceed during during firmware reload.
+  brcmf_sdiod_change_state(sdiod, BRCMF_SDIOD_DOWN);
   // Sdio clean-ups
   brcmf_sdio_reset(sdiod->bus);
 
@@ -3779,8 +3796,8 @@ zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
     brcmf_sdiod_func1_wb(sdiodev, SBSDIO_FUNC1_CHIPCLKCSR, saveclk, &err);
   }
 
-  err = brcmf_sdio_readshared(bus, &sh);
-  BRCMF_DBG(TEMP, "Readshared returned %d", err);
+  err = brcmf_sdio_shared_read(bus, &sh);
+  BRCMF_DBG(TEMP, "Read shared returned %d", err);
 
 #if !defined(NDEBUG)
   bus->console_addr = sh.console_addr;
@@ -3791,7 +3808,7 @@ zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
 
   if (err == ZX_OK) {
     /* Allow full data communication using DPC from now on. */
-    brcmf_sdiod_change_state(bus->sdiodev, BRCMF_SDIOD_DATA);
+    brcmf_sdiod_change_state(sdiod, BRCMF_SDIOD_DATA);
     // TODO(fxbug.dev/29365): The next line was added to enable watchdog to take effect immediately,
     // since it currently handles all interrupt conditions. This may or may not make the
     // previous call to brcmf_sdio_wd_timer() unnecessary; that call apparently had no effect

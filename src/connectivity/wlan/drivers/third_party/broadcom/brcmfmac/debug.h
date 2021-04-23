@@ -37,11 +37,11 @@
 
 #define BRCMF_DBG_UNFILTERED BRCMF_INFO
 
-#define BRCMF_DBG(filter, fmt, ...)                                \
-  do {                                                             \
-    if (BRCMF_IS_ON(filter)) {                                     \
-      BRCMF_DBG_UNFILTERED(fmt, ##__VA_ARGS__);                    \
-    }                                                              \
+#define BRCMF_DBG(filter, fmt, ...)             \
+  do {                                          \
+    if (BRCMF_IS_ON(filter)) {                  \
+      BRCMF_DBG_UNFILTERED(fmt, ##__VA_ARGS__); \
+    }                                           \
   } while (0)
 
 #define BRCMF_DBG_EVENT(ifp, event_msg, REASON_FMT, reason_formatter) \
