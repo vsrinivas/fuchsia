@@ -5,6 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
+    "disk_inspector:tests",
     "paver:tests",
     "watchdog:tests",
   ]

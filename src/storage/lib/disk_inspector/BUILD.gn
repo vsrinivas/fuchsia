@@ -2,7 +2,41 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+import("//build/test.gni")
 import("//build/unification/zx_library.gni")
+
+test("disk_inspector_unit") {
+  testonly = true
+  sources = [
+    "basic_types_test.cc",
+    "command_test.cc",
+    "disk_primitive_test.cc",
+    "disk_struct_test.cc",
+    "inspector_transaction_handler_test.cc",
+    "loader_test.cc",
+    "type_utils_test.cc",
+  ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/storage/lib/disk_inspector",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/block-client",
+    "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/storage/buffer",
+    "//zircon/system/ulib/storage/operation",
+  ]
+}
+
+fuchsia_unittest_package("disk-inspector-unit") {
+  deps = [ ":disk_inspector_unit" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":disk-inspector-unit" ]
+}
 
 if (is_fuchsia) {
   zx_library("disk_inspector") {

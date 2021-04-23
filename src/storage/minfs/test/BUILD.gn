@@ -41,6 +41,7 @@ test("minfs_unit") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
     "//src/storage/fvm",
+    "//src/storage/lib/disk_inspector",
     "//src/storage/minfs",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -54,7 +55,6 @@ test("minfs_unit") {
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
-    "//zircon/system/ulib/disk_inspector",
     "//zircon/third_party/ulib/cksum",
   ]
 }

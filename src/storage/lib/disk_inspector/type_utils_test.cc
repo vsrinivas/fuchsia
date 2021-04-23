@@ -6,7 +6,7 @@
 
 #include <disk_inspector/disk_struct.h>
 #include <disk_inspector/supported_types.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace disk_inspector {
 namespace {

@@ -4,8 +4,10 @@
 
 #include "disk_inspector/loader.h"
 
+#include <cstring>
+
+#include <gtest/gtest.h>
 #include <storage/buffer/array_buffer.h>
-#include <zxtest/zxtest.h>
 
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 
@@ -48,13 +50,11 @@ class MockTransactionHandler : public fs::TransactionHandler {
   }
 
   void ValidateOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) {
-    ASSERT_NOT_NULL(mock_device_);
-    ASSERT_GE(buffer->capacity(), operation.vmo_offset + operation.length,
-              "Operation goes past input buffer length\n");
-    ASSERT_GE(mock_device_->capacity(), operation.dev_offset + operation.length,
-              "Operation goes past device buffer length\n");
+    ASSERT_NE(nullptr, mock_device_);
+    ASSERT_GE(buffer->capacity(), operation.vmo_offset + operation.length);
+    ASSERT_GE(mock_device_->capacity(), operation.dev_offset + operation.length);
 
-    ASSERT_NE(operation.type, storage::OperationType::kTrim, "Trim operation is not supported\n");
+    ASSERT_NE(operation.type, storage::OperationType::kTrim);
   }
 
  private:
@@ -74,14 +74,14 @@ TEST(InspectorLoader, RunReadOperation) {
 
   storage::ArrayBuffer client_buffer(block_length, kTestBlockSize);
   memset(client_buffer.Data(0), 'd', client_buffer.capacity() * device.BlockSize());
-  ASSERT_OK(loader.RunReadOperation(&client_buffer, 0, 0, 1));
-  ASSERT_OK(loader.RunReadOperation(&client_buffer, 2, 2, 1));
+  ASSERT_EQ(ZX_OK, loader.RunReadOperation(&client_buffer, 0, 0, 1));
+  ASSERT_EQ(ZX_OK, loader.RunReadOperation(&client_buffer, 2, 2, 1));
 
   storage::ArrayBuffer expected(block_length, kTestBlockSize);
   memset(expected.Data(0), 'a', expected.BlockSize());
   memset(expected.Data(1), 'd', expected.BlockSize());
   memset(expected.Data(2), 'c', expected.BlockSize());
-  EXPECT_BYTES_EQ(client_buffer.Data(0), expected.Data(0), kTestBlockSize * block_length);
+  EXPECT_EQ(0, std::memcmp(client_buffer.Data(0), expected.Data(0), kTestBlockSize * block_length));
 }
 
 TEST(InspectorLoader, RunReadOperationBufferSizeAssertFail) {
@@ -92,11 +92,8 @@ TEST(InspectorLoader, RunReadOperationBufferSizeAssertFail) {
   Loader loader(&handler);
 
   storage::ArrayBuffer client_buffer(0, kTestBlockSize);
-  ASSERT_DEATH(([&] {
-                 // Buffer too small. Should assert crash here.
-                 loader.RunReadOperation(&client_buffer, 0, 0, block_length);
-               }),
-               "Failed to crash on buffer too small\n");
+  // Buffer too small.
+  ASSERT_EQ(ZX_ERR_BUFFER_TOO_SMALL, loader.RunReadOperation(&client_buffer, 0, 0, block_length));
 }
 
 TEST(InspectorLoader, RunWriteOperation) {
@@ -112,14 +109,14 @@ TEST(InspectorLoader, RunWriteOperation) {
 
   storage::ArrayBuffer client_buffer(block_length, kTestBlockSize);
   memset(client_buffer.Data(0), 'd', client_buffer.capacity() * device.BlockSize());
-  ASSERT_OK(loader.RunWriteOperation(&client_buffer, 0, 0, 1));
-  ASSERT_OK(loader.RunWriteOperation(&client_buffer, 2, 2, 1));
+  ASSERT_EQ(ZX_OK, loader.RunWriteOperation(&client_buffer, 0, 0, 1));
+  ASSERT_EQ(ZX_OK, loader.RunWriteOperation(&client_buffer, 2, 2, 1));
 
   storage::ArrayBuffer expected(block_length, kTestBlockSize);
   memset(expected.Data(0), 'd', expected.BlockSize());
   memset(expected.Data(1), 'b', expected.BlockSize());
   memset(expected.Data(2), 'd', expected.BlockSize());
-  EXPECT_BYTES_EQ(device.Data(0), expected.Data(0), kTestBlockSize * block_length);
+  EXPECT_EQ(0, std::memcmp(device.Data(0), expected.Data(0), kTestBlockSize * block_length));
 }
 
 TEST(InspectorLoader, RunWriteOperationBufferSizeAssertFail) {
@@ -130,11 +127,8 @@ TEST(InspectorLoader, RunWriteOperationBufferSizeAssertFail) {
   Loader loader(&handler);
 
   storage::ArrayBuffer client_buffer(0, kTestBlockSize);
-  ASSERT_DEATH(([&] {
-                 // Buffer too small. Should assert crash here.
-                 loader.RunWriteOperation(&client_buffer, 0, 0, block_length);
-               }),
-               "Failed to crash on buffer too small\n");
+  // Buffer too small.
+  ASSERT_EQ(ZX_ERR_BUFFER_TOO_SMALL, loader.RunReadOperation(&client_buffer, 0, 0, block_length));
 }
 
 }  // namespace

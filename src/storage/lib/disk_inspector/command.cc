@@ -46,9 +46,8 @@ fit::result<ParsedCommand, zx_status_t> ParseCommand(const std::vector<std::stri
   ParsedCommand parsed_args;
   parsed_args.name = args[0];
   if (command.fields.size() != args.size() - 1) {
-    FX_LOGS(ERROR) << "Number of arguments provided(" << args.size() - 1
-                   << ") does not match number of arguments needed(" << command.fields.size()
-                   << ")";
+    FX_LOGS(INFO) << "Number of arguments provided(" << args.size() - 1
+                  << ") does not match number of arguments needed(" << command.fields.size() << ")";
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
   for (uint32_t i = 0; i < command.fields.size(); ++i) {
@@ -64,15 +63,15 @@ fit::result<ParsedCommand, zx_status_t> ParseCommand(const std::vector<std::stri
         char* endptr;
         uint64_t value = std::strtoull(args[i + 1].c_str(), &endptr, 10);
         if (*endptr != '\0') {
-          FX_LOGS(ERROR) << "Argument " << field.name
-                         << " cannot be converted to uint64 (value: " << args[i] << ")";
+          FX_LOGS(INFO) << "Argument " << field.name
+                        << " cannot be converted to uint64 (value: " << args[i] << ")";
           return fit::error(ZX_ERR_INVALID_ARGS);
         }
         parsed_args.uint64_fields[field.name] = value;
         break;
       }
       default: {
-        FX_LOGS(ERROR) << "Command parsing reached unknown ArgType.";
+        FX_LOGS(INFO) << "Command parsing reached unknown ArgType.";
         return fit::error(ZX_ERR_NOT_SUPPORTED);
       }
     }

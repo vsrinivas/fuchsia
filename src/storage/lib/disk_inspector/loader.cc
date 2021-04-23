@@ -10,7 +10,9 @@ namespace disk_inspector {
 
 zx_status_t Loader::RunReadOperation(storage::BlockBuffer* buffer, uint64_t buffer_offset,
                                      uint64_t dev_offset, uint64_t length) const {
-  ZX_ASSERT(buffer->capacity() - buffer_offset >= length);
+  if (buffer->capacity() - buffer_offset < length) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
   storage::Operation operation{
       .type = storage::OperationType::kRead,
       .vmo_offset = buffer_offset,
@@ -22,7 +24,9 @@ zx_status_t Loader::RunReadOperation(storage::BlockBuffer* buffer, uint64_t buff
 
 zx_status_t Loader::RunWriteOperation(storage::BlockBuffer* buffer, uint64_t buffer_offset,
                                       uint64_t dev_offset, uint64_t length) const {
-  ZX_ASSERT(buffer->capacity() - buffer_offset >= length);
+  if (buffer->capacity() - buffer_offset < length) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
   storage::Operation operation{
       .type = storage::OperationType::kWrite,
       .vmo_offset = buffer_offset,

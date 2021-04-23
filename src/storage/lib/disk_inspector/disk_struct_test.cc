@@ -5,7 +5,7 @@
 #include "disk_inspector/disk_struct.h"
 
 #include <disk_inspector/type_utils.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace disk_inspector {
 namespace {
@@ -66,7 +66,7 @@ TEST(DiskStructTest, WriteUint8Field) {
   TestStruct test_struct;
   uint8_t result = 42;
   std::unique_ptr<DiskStruct> disk_struct = BuildTestStruct();
-  ASSERT_OK(disk_struct->WriteField(&test_struct, {"uint8"}, {0}, std::to_string(result)));
+  ASSERT_EQ(ZX_OK, disk_struct->WriteField(&test_struct, {"uint8"}, {0}, std::to_string(result)));
   EXPECT_EQ(test_struct.uint8, result);
 }
 
@@ -74,7 +74,7 @@ TEST(DiskStructTest, WriteUint16Field) {
   TestStruct test_struct;
   uint16_t result = 42;
   std::unique_ptr<DiskStruct> disk_struct = BuildTestStruct();
-  ASSERT_OK(disk_struct->WriteField(&test_struct, {"uint16"}, {0}, std::to_string(result)));
+  ASSERT_EQ(ZX_OK, disk_struct->WriteField(&test_struct, {"uint16"}, {0}, std::to_string(result)));
   EXPECT_EQ(test_struct.uint16, result);
 }
 
@@ -82,7 +82,7 @@ TEST(DiskStructTest, WriteUint32Field) {
   TestStruct test_struct;
   uint32_t result = 42;
   std::unique_ptr<DiskStruct> disk_struct = BuildTestStruct();
-  ASSERT_OK(disk_struct->WriteField(&test_struct, {"uint32"}, {0}, std::to_string(result)));
+  ASSERT_EQ(ZX_OK, disk_struct->WriteField(&test_struct, {"uint32"}, {0}, std::to_string(result)));
   EXPECT_EQ(test_struct.uint32, result);
 }
 
@@ -90,7 +90,7 @@ TEST(DiskStructTest, WriteUint64Field) {
   TestStruct test_struct;
   uint64_t result = 42;
   std::unique_ptr<DiskStruct> disk_struct = BuildTestStruct();
-  ASSERT_OK(disk_struct->WriteField(&test_struct, {"uint64"}, {0}, std::to_string(result)));
+  ASSERT_EQ(ZX_OK, disk_struct->WriteField(&test_struct, {"uint64"}, {0}, std::to_string(result)));
   EXPECT_EQ(test_struct.uint64, result);
 }
 
@@ -98,8 +98,8 @@ TEST(DiskStructTest, WriteFieldOfStructField) {
   TestStruct test_struct;
   uint8_t result = 42;
   std::unique_ptr<DiskStruct> disk_struct = BuildTestStruct();
-  ASSERT_OK(disk_struct->WriteField(&test_struct, {"child_test_struct", "child_uint8"}, {0, 0},
-                                    std::to_string(result)));
+  ASSERT_EQ(ZX_OK, disk_struct->WriteField(&test_struct, {"child_test_struct", "child_uint8"},
+                                           {0, 0}, std::to_string(result)));
   EXPECT_EQ(test_struct.child_test_struct.child_uint8, result);
 }
 
@@ -108,8 +108,8 @@ TEST(DiskStructTest, WriteUint8ArrayFieldElement) {
   uint8_t result = 42;
   uint64_t index = element_count - 1;
   std::unique_ptr<DiskStruct> disk_struct = BuildTestStruct();
-  ASSERT_OK(
-      disk_struct->WriteField(&test_struct, {"uint8_array"}, {index}, std::to_string(result)));
+  ASSERT_EQ(ZX_OK, disk_struct->WriteField(&test_struct, {"uint8_array"}, {index},
+                                           std::to_string(result)));
   EXPECT_EQ(test_struct.uint8_array[index], result);
 }
 
@@ -118,8 +118,8 @@ TEST(DiskStructTest, WriteUint16ArrayFieldElement) {
   uint16_t result = 42;
   uint64_t index = element_count - 1;
   std::unique_ptr<DiskStruct> disk_struct = BuildTestStruct();
-  ASSERT_OK(
-      disk_struct->WriteField(&test_struct, {"uint16_array"}, {index}, std::to_string(result)));
+  ASSERT_EQ(ZX_OK, disk_struct->WriteField(&test_struct, {"uint16_array"}, {index},
+                                           std::to_string(result)));
   EXPECT_EQ(test_struct.uint16_array[index], result);
 }
 
@@ -128,8 +128,8 @@ TEST(DiskStructTest, WriteUint32ArrayFieldElement) {
   uint32_t result = 42;
   uint64_t index = element_count - 1;
   std::unique_ptr<DiskStruct> disk_struct = BuildTestStruct();
-  ASSERT_OK(
-      disk_struct->WriteField(&test_struct, {"uint32_array"}, {index}, std::to_string(result)));
+  ASSERT_EQ(ZX_OK, disk_struct->WriteField(&test_struct, {"uint32_array"}, {index},
+                                           std::to_string(result)));
   EXPECT_EQ(test_struct.uint32_array[index], result);
 }
 
@@ -138,8 +138,8 @@ TEST(DiskStructTest, WriteUint64ArrayFieldElement) {
   uint64_t result = 42;
   uint64_t index = element_count - 1;
   std::unique_ptr<DiskStruct> disk_struct = BuildTestStruct();
-  ASSERT_OK(
-      disk_struct->WriteField(&test_struct, {"uint64_array"}, {index}, std::to_string(result)));
+  ASSERT_EQ(ZX_OK, disk_struct->WriteField(&test_struct, {"uint64_array"}, {index},
+                                           std::to_string(result)));
   EXPECT_EQ(test_struct.uint64_array[index], result);
 }
 
@@ -148,8 +148,8 @@ TEST(DiskStructTest, WriteFieldOfStructArrayFieldElement) {
   uint8_t result = 42;
   uint64_t index = element_count - 1;
   std::unique_ptr<DiskStruct> disk_struct = BuildTestStruct();
-  ASSERT_OK(disk_struct->WriteField(&test_struct, {"child_test_struct_array", "child_uint8"},
-                                    {index, 0}, std::to_string(result)));
+  ASSERT_EQ(ZX_OK, disk_struct->WriteField(&test_struct, {"child_test_struct_array", "child_uint8"},
+                                           {index, 0}, std::to_string(result)));
   EXPECT_EQ(test_struct.child_test_struct_array[index].child_uint8, result);
 }
 

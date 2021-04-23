@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_DISK_INSPECTOR_DISK_PRIMITIVE_H_
-#define ZIRCON_SYSTEM_ULIB_DISK_INSPECTOR_DISK_PRIMITIVE_H_
+#ifndef SRC_STORAGE_LIB_DISK_INSPECTOR_DISK_PRIMITIVE_H_
+#define SRC_STORAGE_LIB_DISK_INSPECTOR_DISK_PRIMITIVE_H_
 
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
@@ -27,7 +27,7 @@ zx_status_t StringToUint(const std::string& string, T* out) {
   char* endptr;
   uint64_t value = std::strtoull(string.c_str(), &endptr, 0);
   if (*endptr != '\0' || value > std::numeric_limits<T>::max()) {
-    FX_LOGS(ERROR) << "String " << string << " cannot be converted to unsigned int.";
+    FX_LOGS(INFO) << "String " << string << " cannot be converted to unsigned int.";
     return ZX_ERR_INVALID_ARGS;
   }
   *out = static_cast<T>(value);
@@ -84,4 +84,4 @@ class Primitive : public DiskObj {
 
 }  // namespace disk_inspector
 
-#endif  // ZIRCON_SYSTEM_ULIB_DISK_INSPECTOR_DISK_PRIMITIVE_H_
+#endif  // SRC_STORAGE_LIB_DISK_INSPECTOR_DISK_PRIMITIVE_H_

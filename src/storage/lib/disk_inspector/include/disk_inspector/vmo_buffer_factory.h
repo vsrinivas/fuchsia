@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DISK_INSPECTOR_VMO_BUFFER_FACTORY_H_
-#define DISK_INSPECTOR_VMO_BUFFER_FACTORY_H_
+#ifndef SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_VMO_BUFFER_FACTORY_H_
+#define SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_VMO_BUFFER_FACTORY_H_
 
 #include <lib/fit/result.h>
 #include <zircon/types.h>
@@ -42,4 +42,4 @@ class VmoBufferFactory : public BufferFactory {
 
 }  // namespace disk_inspector
 
-#endif  // DISK_INSPECTOR_VMO_BUFFER_FACTORY_H_
+#endif  // SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_VMO_BUFFER_FACTORY_H_

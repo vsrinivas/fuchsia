@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DISK_INSPECTOR_LOADER_H_
-#define DISK_INSPECTOR_LOADER_H_
+#ifndef SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_LOADER_H_
+#define SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_LOADER_H_
 
 #include <storage/buffer/block_buffer.h>
 
@@ -34,4 +34,4 @@ class Loader {
 };
 }  // namespace disk_inspector
 
-#endif  // DISK_INSPECTOR_LOADER_H_
+#endif  // SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_LOADER_H_

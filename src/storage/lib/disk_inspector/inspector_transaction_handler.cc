@@ -26,8 +26,8 @@ zx_status_t InspectorTransactionHandler::Create(std::unique_ptr<block_client::Bl
     return status;
   }
   if (info.block_size == 0 || block_size % info.block_size != 0) {
-    FX_LOGS(ERROR) << "fs block size: " << block_size
-                   << " not multiple of underlying block size: " << info.block_size;
+    FX_LOGS(INFO) << "fs block size: " << block_size
+                  << " not multiple of underlying block size: " << info.block_size;
     return ZX_ERR_NOT_SUPPORTED;
   }
   out->reset(new InspectorTransactionHandler(std::move(device), info, block_size));

@@ -4,7 +4,7 @@
 
 #include "disk_inspector/command.h"
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace disk_inspector {
 namespace {
@@ -18,7 +18,7 @@ TEST(CommandTest, PrintCommand) {
                      },
                      "test",
                      nullptr};
-  EXPECT_STR_EQ(PrintCommand(command), "command [field1] [field2] [field3]");
+  EXPECT_EQ(PrintCommand(command), "command [field1] [field2] [field3]");
 }
 
 TEST(CommandTest, PrintCommands) {
@@ -64,7 +64,7 @@ command3 [field1] [field2] [field3]
 
 )""";
 
-  EXPECT_STR_EQ(PrintCommandList(commands).c_str(), expected.c_str());
+  EXPECT_EQ(PrintCommandList(commands), expected);
 }
 
 TEST(CommandTest, ParseCommand) {
@@ -85,10 +85,10 @@ TEST(CommandTest, ParseCommand) {
   ASSERT_FALSE(parsed.uint64_fields.find("field2") == parsed.uint64_fields.end());
   ASSERT_FALSE(parsed.uint64_fields.find("field3") == parsed.uint64_fields.end());
   ASSERT_FALSE(parsed.string_fields.find("field4") == parsed.string_fields.end());
-  EXPECT_STR_EQ(parsed.string_fields["field1"], "testing");
-  EXPECT_EQ(parsed.uint64_fields["field2"], 123);
-  EXPECT_EQ(parsed.uint64_fields["field3"], 42);
-  EXPECT_STR_EQ(parsed.string_fields["field4"], "hello");
+  EXPECT_STREQ(parsed.string_fields["field1"].c_str(), "testing");
+  EXPECT_EQ(parsed.uint64_fields["field2"], 123ul);
+  EXPECT_EQ(parsed.uint64_fields["field3"], 42ul);
+  EXPECT_STREQ(parsed.string_fields["field4"].c_str(), "hello");
 }
 
 TEST(CommandTest, ParseCommandInvalidArgumentNumberFail) {

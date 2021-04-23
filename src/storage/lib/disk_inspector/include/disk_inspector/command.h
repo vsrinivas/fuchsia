@@ -4,8 +4,8 @@
 
 // This file contains apis needed for inspection of on-disk data structures.
 
-#ifndef DISK_INSPECTOR_COMMAND_H_
-#define DISK_INSPECTOR_COMMAND_H_
+#ifndef SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_COMMAND_H_
+#define SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_COMMAND_H_
 
 #include <lib/fit/result.h>
 #include <zircon/types.h>
@@ -80,4 +80,4 @@ fit::result<ParsedCommand, zx_status_t> ParseCommand(const std::vector<std::stri
 
 }  // namespace disk_inspector
 
-#endif  // DISK_INSPECTOR_COMMAND_H_
+#endif  // SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_COMMAND_H_

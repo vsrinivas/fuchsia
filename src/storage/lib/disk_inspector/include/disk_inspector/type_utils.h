@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DISK_INSPECTOR_TYPE_UTILS_H_
-#define DISK_INSPECTOR_TYPE_UTILS_H_
+#ifndef SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_TYPE_UTILS_H_
+#define SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_TYPE_UTILS_H_
 
 #include <disk_inspector/disk_struct.h>
 #include <disk_inspector/supported_types.h>
@@ -58,4 +58,4 @@ constexpr FieldType GetFieldType<uint64_t>() {
   object->AddField(#field, disk_inspector::FieldType::kDiskStruct, offsetof(struct, field), count, \
                    field_disk_struct);
 
-#endif  // DISK_INSPECTOR_TYPE_UTILS_H_
+#endif  // SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_TYPE_UTILS_H_
