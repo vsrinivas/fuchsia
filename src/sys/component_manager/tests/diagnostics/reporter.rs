@@ -83,7 +83,7 @@ async fn main() {
         inspect_stats: {
             current_size: 4096u64,
             maximum_size: 262144u64,
-            total_dynamic_children: 0u64,
+            total_dynamic_children: 3u64,
         }
     });
 

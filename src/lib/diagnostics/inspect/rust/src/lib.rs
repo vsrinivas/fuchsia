@@ -214,20 +214,12 @@ impl Inspector {
 
     /// Write stats about this inspector under a node of the given `name` under root.
     pub fn write_stats_to(&self, node: &Node) {
-        // We set the value after creating the objects so that they are taken into account when
-        // fetching the stats.
-        let current_size = node.create_uint("current_size", 0);
-        let maximum_size = node.create_uint("maximum_size", 0);
-        let total_dynamic_children = node.create_uint("total_dynamic_children", 0);
-
         if let Some(stats) = self.stats() {
-            current_size.set(stats.current_size as u64);
-            maximum_size.set(stats.maximum_size as u64);
-            total_dynamic_children.set(stats.total_dynamic_children as u64);
-
-            node.record(current_size);
-            node.record(maximum_size);
-            node.record(total_dynamic_children);
+            // We set the value after creating the objects so that they are taken into account when
+            // fetching the stats.
+            node.record_uint("current_size", stats.current_size as u64);
+            node.record_uint("maximum_size", stats.maximum_size as u64);
+            node.record_uint("total_dynamic_children", stats.total_dynamic_children as u64);
         }
     }
 
