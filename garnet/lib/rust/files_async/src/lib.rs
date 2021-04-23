@@ -82,7 +82,7 @@ impl From<u8> for DirentKind {
 }
 
 /// A directory entry.
-#[derive(Eq, Ord, PartialOrd, PartialEq, Debug)]
+#[derive(Clone, Eq, Ord, PartialOrd, PartialEq, Debug)]
 pub struct DirEntry {
     /// The name of this node.
     pub name: String,
@@ -265,7 +265,11 @@ pub async fn dir_contains_with_timeout(
     Ok(readdir_with_timeout(&dir, timeout).await?.iter().any(|e| e.name == name))
 }
 
-fn parse_dir_entries(mut buf: &[u8]) -> Vec<Result<DirEntry, DecodeDirentError>> {
+/// Parses the buffer returned by a read_dirents FIDL call.
+///
+/// Returns either an error or a parsed entry for each entry in the supplied buffer (see
+/// read_dirents for the format of this buffer).
+pub fn parse_dir_entries(mut buf: &[u8]) -> Vec<Result<DirEntry, DecodeDirentError>> {
     #[repr(C, packed)]
     struct Dirent {
         /// The inode number of the entry.

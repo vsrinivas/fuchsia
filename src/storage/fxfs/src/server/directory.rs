@@ -39,7 +39,7 @@ use {
         common::send_on_open_with_error,
         directory::{
             connection::{io1::DerivedConnection, util::OpenDirectory},
-            dirents_sink::{self, Sink},
+            dirents_sink::{self, AppendResult, Sink},
             entry::{DirectoryEntry, EntryInfo},
             entry_container::{AsyncGetEntry, Directory, MutableDirectory},
             mutable::connection::io1::MutableConnection,
@@ -341,10 +341,69 @@ impl Directory for FxDirectory {
 
     async fn read_dirents<'a>(
         &'a self,
-        _pos: &'a TraversalPosition,
-        sink: Box<dyn Sink>,
+        pos: &'a TraversalPosition,
+        mut sink: Box<dyn Sink>,
     ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status> {
-        // TODO(jfsulliv): Implement
+        if let TraversalPosition::End = pos {
+            return Ok((TraversalPosition::End, sink.seal()));
+        } else if let TraversalPosition::Index(_) = pos {
+            // The VFS should never send this to us, since we never return it here.
+            return Err(Status::BAD_STATE);
+        }
+
+        let store = self.volume.store();
+        let fs = store.filesystem();
+        let _read_guard =
+            fs.read_lock(&[LockKey::object(store.store_object_id(), self.object_id())]).await;
+        if self.is_deleted.load(Ordering::Relaxed) {
+            return Ok((TraversalPosition::End, sink.seal()));
+        }
+
+        let starting_name = match pos {
+            TraversalPosition::Start => {
+                // Synthesize a "." entry if we're at the start of the stream.
+                match sink
+                    .append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY), ".")
+                {
+                    AppendResult::Ok(new_sink) => sink = new_sink,
+                    AppendResult::Sealed(sealed) => {
+                        // Note that the VFS should have yielded an error since the first entry
+                        // didn't fit. This is defensive in case the VFS' behaviour changes, so that
+                        // we return a reasonable value.
+                        return Ok((TraversalPosition::Start, sealed));
+                    }
+                }
+                ""
+            }
+            TraversalPosition::Name(name) => name,
+            _ => unreachable!(),
+        };
+
+        let layer_set = self.directory.object_store().tree().layer_set();
+        let mut merger = layer_set.merger();
+        let mut iter =
+            self.directory.iter_from(&mut merger, starting_name).await.map_err(map_to_status)?;
+        while let Some((name, object_id, object_descriptor)) = iter.get() {
+            let entry_type = match object_descriptor {
+                ObjectDescriptor::File => fio::DIRENT_TYPE_FILE,
+                ObjectDescriptor::Directory => fio::DIRENT_TYPE_DIRECTORY,
+                ObjectDescriptor::Volume(_) => return Err(Status::IO_DATA_INTEGRITY),
+            };
+            let info = EntryInfo::new(object_id, entry_type);
+            match sink.append(&info, name) {
+                AppendResult::Ok(new_sink) => sink = new_sink,
+                AppendResult::Sealed(sealed) => {
+                    // We did *not* add the current entry to the sink (e.g. because the sink was
+                    // full), so mark |name| as the next position so that it's the first entry we
+                    // process on a subsequent call of read_dirents.
+                    // Note that entries inserted between the previous entry and this entry before
+                    // the next call to read_dirents would not be included in the results (but
+                    // there's no requirement to include them anyways).
+                    return Ok((TraversalPosition::Name(name.to_owned()), sealed));
+                }
+            }
+            iter.advance().await.map_err(map_to_status)?;
+        }
         Ok((TraversalPosition::End, sink.seal()))
     }
 
@@ -386,10 +445,11 @@ mod tests {
         anyhow::Error,
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_io::{
-            DirectoryMarker, SeekOrigin, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_CREATE,
-            OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE,
-            OPEN_RIGHT_WRITABLE,
+            DirectoryMarker, DirectoryProxy, SeekOrigin, MAX_BUF, MODE_TYPE_DIRECTORY,
+            MODE_TYPE_FILE, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY,
+            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
+        files_async::{DirEntry, DirentKind},
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
         io_util::{read_file_bytes, write_file_bytes},
@@ -1055,6 +1115,162 @@ mod tests {
             writer.await;
             deleter.await;
         }
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_readdir() -> Result<(), Error> {
+        let device = Arc::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let root_volume = root_volume(&filesystem).await?;
+        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let dir = vol.root().clone();
+
+        let (root_proxy, dir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+        dir.open(
+            ExecutionScope::new(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(dir_server_end.into_channel()),
+        );
+
+        let open_dir = || {
+            open_dir_validating(
+                &root_proxy,
+                OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                MODE_TYPE_DIRECTORY,
+                "foo",
+            )
+        };
+        let dir_proxy = open_dir().await.expect("Open dir failed");
+
+        let files = ["eenie", "meenie", "minie", "moe"];
+        for file in &files {
+            let file_proxy =
+                open_file_validating(&dir_proxy, OPEN_FLAG_CREATE, MODE_TYPE_FILE, file)
+                    .await
+                    .expect("Create file failed");
+            file_proxy.close().await.expect("close failed");
+        }
+        let dirs = ["fee", "fi", "fo", "fum"];
+        for dir in &dirs {
+            let proxy = open_dir_validating(&dir_proxy, OPEN_FLAG_CREATE, MODE_TYPE_DIRECTORY, dir)
+                .await
+                .expect("Create dir failed");
+            proxy.close().await.expect("close failed");
+        }
+
+        let readdir = |dir: DirectoryProxy| async move {
+            let status = dir.rewind().await.expect("FIDL call failed");
+            Status::ok(status).expect("rewind failed");
+            let (status, buf) = dir.read_dirents(MAX_BUF).await.expect("FIDL call failed");
+            Status::ok(status).expect("read_dirents failed");
+            let mut entries = vec![];
+            for res in files_async::parse_dir_entries(&buf) {
+                entries.push(res.expect("Failed to parse entry"));
+            }
+            entries
+        };
+
+        let mut expected_entries =
+            vec![DirEntry { name: ".".to_owned(), kind: DirentKind::Directory }];
+        expected_entries.extend(
+            files.iter().map(|&name| DirEntry { name: name.to_owned(), kind: DirentKind::File }),
+        );
+        expected_entries.extend(
+            dirs.iter()
+                .map(|&name| DirEntry { name: name.to_owned(), kind: DirentKind::Directory }),
+        );
+        expected_entries.sort_unstable();
+        assert_eq!(expected_entries, readdir(dir_proxy).await);
+
+        // Remove an entry.
+        let dir_proxy = open_dir().await.expect("Open dir failed");
+        Status::ok(
+            dir_proxy
+                .unlink(&expected_entries.pop().unwrap().name)
+                .await
+                .expect("FIDL call failed"),
+        )
+        .expect("unlink failed");
+
+        assert_eq!(expected_entries, readdir(dir_proxy).await);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_readdir_multiple_calls() -> Result<(), Error> {
+        let device = Arc::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let root_volume = root_volume(&filesystem).await?;
+        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let dir = vol.root().clone();
+
+        let (root_proxy, dir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+        dir.open(
+            ExecutionScope::new(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(dir_server_end.into_channel()),
+        );
+
+        let dir_proxy = open_dir_validating(
+            &root_proxy,
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            "foo",
+        )
+        .await
+        .expect("Create dir failed");
+
+        let files = ["a", "b"];
+        for file in &files {
+            let file_proxy =
+                open_file_validating(&dir_proxy, OPEN_FLAG_CREATE, MODE_TYPE_FILE, file)
+                    .await
+                    .expect("Create file failed");
+            file_proxy.close().await.expect("close failed");
+        }
+
+        // TODO(jfsulliv): Magic number; can we get this from io.fidl?
+        const DIRENT_SIZE: u64 = 10; // inode: u64, size: u8, kind: u8
+        const BUFFER_SIZE: u64 = DIRENT_SIZE + 2; // Enough space for a 2-byte name.
+
+        let parse_entries = |buf| {
+            let mut entries = vec![];
+            for res in files_async::parse_dir_entries(buf) {
+                entries.push(res.expect("Failed to parse entry"));
+            }
+            entries
+        };
+
+        let expected_entries = vec![
+            DirEntry { name: ".".to_owned(), kind: DirentKind::Directory },
+            DirEntry { name: "a".to_owned(), kind: DirentKind::File },
+        ];
+        let (status, buf) =
+            dir_proxy.read_dirents(2 * BUFFER_SIZE).await.expect("FIDL call failed");
+        Status::ok(status).expect("read_dirents failed");
+        assert_eq!(expected_entries, parse_entries(&buf));
+
+        let expected_entries = vec![DirEntry { name: "b".to_owned(), kind: DirentKind::File }];
+        let (status, buf) =
+            dir_proxy.read_dirents(2 * BUFFER_SIZE).await.expect("FIDL call failed");
+        Status::ok(status).expect("read_dirents failed");
+        assert_eq!(expected_entries, parse_entries(&buf));
+
+        // Subsequent calls yield nothing.
+        let expected_entries: Vec<DirEntry> = vec![];
+        let (status, buf) =
+            dir_proxy.read_dirents(2 * BUFFER_SIZE).await.expect("FIDL call failed");
+        Status::ok(status).expect("read_dirents failed");
+        assert_eq!(expected_entries, parse_entries(&buf));
 
         Ok(())
     }

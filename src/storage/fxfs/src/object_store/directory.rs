@@ -171,7 +171,22 @@ impl Directory {
         &self,
         merger: &'a mut Merger<'b, ObjectKey, ObjectValue>,
     ) -> Result<DirectoryIterator<'a, 'b>, Error> {
-        let mut iter = merger.seek(Bound::Included(&ObjectKey::child(self.object_id, ""))).await?;
+        self.iter_from(merger, "").await
+    }
+
+    /// Like "iter", but seeks from a specific filename (inclusive).  Example usage:
+    ///
+    ///   let layer_set = dir.object_store().tree().layer_set();
+    ///   let mut merger = layer_set.merger();
+    ///   let mut iter = dir.iter_from(&mut merger, "foo").await?;
+    ///
+    pub async fn iter_from<'a, 'b>(
+        &self,
+        merger: &'a mut Merger<'b, ObjectKey, ObjectValue>,
+        from: &str,
+    ) -> Result<DirectoryIterator<'a, 'b>, Error> {
+        let mut iter =
+            merger.seek(Bound::Included(&ObjectKey::child(self.object_id, from))).await?;
         // Skip deleted entries.
         // TODO(csuter): Remove this once we've developed a filtering iterator.
         loop {
