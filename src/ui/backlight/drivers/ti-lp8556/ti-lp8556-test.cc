@@ -272,6 +272,15 @@ TEST_F(Lp8556DeviceTest, InitOverwriteBrightnessRegisters) {
 }
 
 TEST_F(Lp8556DeviceTest, ReadDefaultCurrentScale) {
+  TiLp8556Metadata kDeviceMetadata = {
+      .panel_id = 0,
+      .allow_set_current_scale = true,
+      .register_count = 0,
+  };
+
+  fake_ddk::Bind ddk;
+  ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
+
   mock_i2c_.ExpectWrite({kCfg2Reg})
       .ExpectReadStop({kCfg2Default})
       .ExpectWrite({kCurrentLsbReg})
@@ -284,8 +293,8 @@ TEST_F(Lp8556DeviceTest, ReadDefaultCurrentScale) {
 
   fidl::WireSyncClient<fuchsia_hardware_backlight::Device> backlight_client(client());
   auto result = backlight_client.GetNormalizedBrightnessScale();
-  EXPECT_TRUE(result.ok());
-  EXPECT_FALSE(result.value().result.is_err());
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result.value().result.is_response());
   EXPECT_TRUE(
       FloatNear(result.value().result.response().scale, static_cast<double>(0xe05) / 0xfff));
 
@@ -294,6 +303,15 @@ TEST_F(Lp8556DeviceTest, ReadDefaultCurrentScale) {
 }
 
 TEST_F(Lp8556DeviceTest, SetCurrentScale) {
+  TiLp8556Metadata kDeviceMetadata = {
+      .panel_id = 0,
+      .allow_set_current_scale = true,
+      .register_count = 0,
+  };
+
+  fake_ddk::Bind ddk;
+  ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
+
   mock_i2c_.ExpectWrite({kCfg2Reg})
       .ExpectReadStop({kCfg2Default})
       .ExpectWrite({kCurrentLsbReg})
@@ -311,12 +329,12 @@ TEST_F(Lp8556DeviceTest, SetCurrentScale) {
 
   auto set_result =
       backlight_client.SetNormalizedBrightnessScale(static_cast<double>(0x2ab) / 0xfff);
-  EXPECT_TRUE(set_result.ok());
-  EXPECT_FALSE(set_result.value().result.is_err());
+  ASSERT_TRUE(set_result.ok());
+  EXPECT_TRUE(set_result.value().result.is_response());
 
   auto get_result = backlight_client.GetNormalizedBrightnessScale();
-  EXPECT_TRUE(get_result.ok());
-  EXPECT_FALSE(get_result.value().result.is_err());
+  ASSERT_TRUE(get_result.ok());
+  ASSERT_TRUE(get_result.value().result.is_response());
   EXPECT_TRUE(
       FloatNear(get_result.value().result.response().scale, static_cast<double>(0x2ab) / 0xfff));
 
@@ -325,7 +343,14 @@ TEST_F(Lp8556DeviceTest, SetCurrentScale) {
 }
 
 TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
+  TiLp8556Metadata kDeviceMetadata = {
+      .panel_id = 0,
+      .allow_set_current_scale = true,
+      .register_count = 0,
+  };
+
   fake_ddk::Bind ddk;
+  ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
 
   constexpr double kMaxBrightnessInNits = 350.0;
   ddk.SetMetadata(DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS, &kMaxBrightnessInNits,

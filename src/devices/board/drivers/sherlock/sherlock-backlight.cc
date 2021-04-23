@@ -45,6 +45,11 @@ constexpr double kMaxBrightnessInNits = 350.0;
 
 TiLp8556Metadata kDeviceMetadata = {
     .panel_id = 0,
+#ifdef FACTORY_BUILD
+    .allow_set_current_scale = true,
+#else
+    .allow_set_current_scale = false,
+#endif  // FACTORY_BUILD
     .registers =
         {
             // Registers

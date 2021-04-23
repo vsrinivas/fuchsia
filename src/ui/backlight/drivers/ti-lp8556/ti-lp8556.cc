@@ -234,6 +234,11 @@ void Lp8556Device::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::S
 
 void Lp8556Device::SetNormalizedBrightnessScale(
     double scale, SetNormalizedBrightnessScaleCompleter::Sync& completer) {
+  if (!metadata_.allow_set_current_scale) {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+
   scale = std::clamp(scale, 0.0, 1.0);
 
   zx_status_t status = SetCurrentScale(static_cast<uint16_t>(scale * kBrightnessRegMaxValue));
@@ -246,7 +251,11 @@ void Lp8556Device::SetNormalizedBrightnessScale(
 
 void Lp8556Device::GetNormalizedBrightnessScale(
     GetNormalizedBrightnessScaleCompleter::Sync& completer) {
-  completer.ReplySuccess(static_cast<double>(scale_) / kBrightnessRegMaxValue);
+  if (!metadata_.allow_set_current_scale) {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  } else {
+    completer.ReplySuccess(static_cast<double>(scale_) / kBrightnessRegMaxValue);
+  }
 }
 
 void Lp8556Device::GetPowerWatts(GetPowerWattsCompleter::Sync& completer) {

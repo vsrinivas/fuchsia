@@ -47,6 +47,7 @@ constexpr double kMaxBrightnessInNits = 250.0;
 zx_status_t Nelson::BacklightInit() {
   TiLp8556Metadata kDeviceMetadata = {
       .panel_id = uint8_t(GetDisplayId()),
+      .allow_set_current_scale = false,
       .register_count = 0,
   };
 

@@ -167,7 +167,7 @@ class Lp8556Device : public DeviceType,
   inspect::UintProperty calibrated_scale_property_;
   inspect::BoolProperty power_property_;
   inspect::DoubleProperty max_absolute_brightness_nits_property_;
-  TiLp8556Metadata metadata_ = {};
+  TiLp8556Metadata metadata_ = {.allow_set_current_scale = false};
   double backlight_power_ = 0;
   double max_current_ = 0.0;
 };

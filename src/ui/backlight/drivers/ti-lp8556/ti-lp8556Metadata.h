@@ -9,6 +9,7 @@
 
 struct TiLp8556Metadata {
   uint8_t panel_id;
+  bool allow_set_current_scale;
   uint8_t registers[256 * 2];
   uint32_t register_count;  // Refers to the number of both registers and values listed in the
                             // registers field.
