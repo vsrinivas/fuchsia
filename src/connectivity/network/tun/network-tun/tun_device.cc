@@ -19,21 +19,25 @@ namespace tun {
 namespace {
 template <typename F>
 void WithWireState(F fn, InternalState& state) {
-  fidl::FidlAllocator alloc;
+  fuchsia_net_tun::wire::InternalState::Frame_ frame;
+  fuchsia_net_tun::wire::InternalState wire_state(
+      fidl::ObjectView<fuchsia_net_tun::wire::InternalState::Frame_>::FromExternal(&frame));
+  wire_state.set_has_session(fidl::ObjectView<bool>::FromExternal(&state.has_session));
 
-  fuchsia_net_tun::wire::InternalState wire_state;
-  wire_state.Allocate(alloc);
-  wire_state.set_has_session(alloc, state.has_session);
-
+  fuchsia_net_tun::wire::MacState::Frame_ frame_mac;
+  fuchsia_net_tun::wire::MacState wire_mac(
+      fidl::ObjectView<fuchsia_net_tun::wire::MacState::Frame_>::FromExternal(&frame_mac));
+  fidl::VectorView<fuchsia_net::wire::MacAddress> multicast_filters;
   if (state.mac.has_value()) {
     MacState& mac = state.mac.value();
-    fuchsia_net_tun::wire::MacState wire_mac;
-    wire_mac.Allocate(alloc);
-    wire_mac.set_mode(alloc, mac.mode);
-    fidl::VectorView multicast_filters =
+    wire_mac.set_mode(
+        fidl::ObjectView<fuchsia_hardware_network::wire::MacFilterMode>::FromExternal(&mac.mode));
+    multicast_filters =
         fidl::VectorView<fuchsia_net::wire::MacAddress>::FromExternal(mac.multicast_filters);
-    wire_mac.set_multicast_filters(alloc, multicast_filters);
-    wire_state.set_mac(alloc, wire_mac);
+    wire_mac.set_multicast_filters(
+        fidl::ObjectView<fidl::VectorView<fuchsia_net::wire::MacAddress>>::FromExternal(
+            &multicast_filters));
+    wire_state.set_mac(fidl::ObjectView<fuchsia_net_tun::wire::MacState>::FromExternal(&wire_mac));
   }
 
   fn(std::move(wire_state));
@@ -168,15 +172,17 @@ void TunDevice::RunReadFrame() {
       } else if (data.empty()) {
         FX_LOG(WARNING, "tun", "Ignoring empty tx buffer");
       } else {
-        fidl::FidlAllocator alloc;
-        fuchsia_net_tun::wire::Frame frame;
-        frame.Allocate(alloc);
+        fuchsia_net_tun::wire::Frame::Frame_ fidl_frame;
+        fuchsia_net_tun::wire::Frame frame(
+            fidl::ObjectView<fuchsia_net_tun::wire::Frame::Frame_>::FromExternal(&fidl_frame));
         fidl::VectorView data_view = fidl::VectorView<uint8_t>::FromExternal(data);
-        frame.set_data(alloc, data_view);
-        frame.set_frame_type(alloc, buff->frame_type());
+        frame.set_data(fidl::ObjectView<fidl::VectorView<uint8_t>>::FromExternal(&data_view));
+        netdev::wire::FrameType frame_type = buff->frame_type();
+        frame.set_frame_type(fidl::ObjectView<netdev::wire::FrameType>::FromExternal(&frame_type));
         std::optional meta = buff->TakeMetadata();
         if (meta.has_value()) {
-          frame.set_meta(alloc, meta.value());
+          frame.set_meta(
+              fidl::ObjectView<fuchsia_net_tun::wire::FrameMetadata>::FromExternal(&meta.value()));
         }
         pending_read_frame_.front().ReplySuccess(std::move(frame));
         pending_read_frame_.pop();

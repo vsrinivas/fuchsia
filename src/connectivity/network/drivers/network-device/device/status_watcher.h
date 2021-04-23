@@ -21,22 +21,17 @@
 
 namespace network::internal {
 
-/// A helper class to build FIDL fuchsia.hardware.network.Status from the banjo status definition
-/// `status_t``.
-class FidlStatus {
- public:
-  explicit FidlStatus(const status_t& status) {
-    status_.Allocate(allocator_);
-    status_.set_flags(allocator_, netdev::wire::StatusFlags::TruncatingUnknown(status.flags))
-        .set_mtu(allocator_, status.mtu);
-  }
+template <typename F>
+void WithWireStatus(F fn, status_t status) {
+  netdev::wire::Status::Frame_ frame;
+  netdev::wire::Status wire_status(
+      fidl::ObjectView<netdev::wire::Status::Frame_>::FromExternal(&frame));
+  netdev::wire::StatusFlags flags = netdev::wire::StatusFlags::TruncatingUnknown(status.flags);
+  wire_status.set_flags(fidl::ObjectView<netdev::wire::StatusFlags>::FromExternal(&flags));
+  wire_status.set_mtu(fidl::ObjectView<uint32_t>::FromExternal(&status.mtu));
 
-  netdev::wire::Status&& Take() { return std::move(status_); }
-
- private:
-  fidl::FidlAllocator<128> allocator_;
-  netdev::wire::Status status_;
-};
+  fn(wire_status);
+}
 
 class StatusWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<StatusWatcher>>,
                       public fidl::WireInterface<netdev::StatusWatcher> {

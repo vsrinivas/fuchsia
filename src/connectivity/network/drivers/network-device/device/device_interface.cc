@@ -252,7 +252,8 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
 void DeviceInterface::GetStatus(GetStatusCompleter::Sync& completer) {
   status_t status;
   device_.GetStatus(&status);
-  completer.Reply(FidlStatus(status).Take());
+  WithWireStatus([&completer](netdev::wire::Status wire_status) { completer.Reply(wire_status); },
+                 status);
 }
 
 void DeviceInterface::OpenSession(::fidl::StringView session_name,

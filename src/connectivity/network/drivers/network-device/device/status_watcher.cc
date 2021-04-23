@@ -77,9 +77,10 @@ void StatusWatcher::WatchStatus(WatchStatusCompleter::Sync& completer) {
       if (last_observed_.has_value()) {
         // Complete the last pending transaction with the old value and retain the new completer as
         // an async transaction.
-        FidlStatus fidl(*last_observed_);
-        pending_txn_->Reply(fidl.Take());
-        pending_txn_ = completer.ToAsync();
+        WithWireStatus(
+            [completer = std::move(std::exchange(pending_txn_, completer.ToAsync()).value())](
+                netdev::wire::Status wire_status) mutable { completer.Reply(wire_status); },
+            last_observed_.value());
       } else {
         // If we already have a pending transaction that hasn't been resolved and we don't have a
         // last observed value to give to it (meaning whoever created `StatusWatcher` scheduled it
@@ -91,10 +92,10 @@ void StatusWatcher::WatchStatus(WatchStatusCompleter::Sync& completer) {
       pending_txn_ = completer.ToAsync();
     }
   } else {
-    status_t status = queue_.front();
+    const status_t status = queue_.front();
     queue_.pop();
-    FidlStatus fidl(status);
-    completer.Reply(fidl.Take());
+    WithWireStatus([&completer](netdev::wire::Status wire_status) { completer.Reply(wire_status); },
+                   status);
     last_observed_ = status;
   }
 }
@@ -113,10 +114,10 @@ void StatusWatcher::PushStatus(const status_t& status) {
   }
 
   if (pending_txn_.has_value() && queue_.empty()) {
-    FidlStatus fidl(status);
+    WithWireStatus([completer = std::move(std::exchange(pending_txn_, std::nullopt).value())](
+                       netdev::wire::Status wire_status) mutable { completer.Reply(wire_status); },
+                   status);
     last_observed_ = status;
-    pending_txn_->Reply(fidl.Take());
-    pending_txn_.reset();
   } else {
     queue_.push(status);
     // limit the queue to max_queue_
