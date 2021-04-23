@@ -46,7 +46,7 @@ const Volume::Version Volume::kDefaultVersion = Volume::kAES256_XTS_SHA256;
 // MB may be in flight at once.  The device's max_transfer_size will be capped at 1/4 of this value.
 __EXPORT
 const uint32_t Volume::kBufferSize = 1U << 24;
-static_assert(Volume::kBufferSize % PAGE_SIZE == 0, "kBufferSize must be page aligned");
+static_assert(Volume::kBufferSize % ZX_MAX_PAGE_SIZE == 0, "kBufferSize must be page aligned");
 
 namespace {
 
