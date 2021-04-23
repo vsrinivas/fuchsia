@@ -1,6 +1,6 @@
 {% set rfcid = "RFC-0000" %}
 {% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
-# {{ rfc.name }} - {{ rfc.title }}
+# {{ rfc.name }}: {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
 <!-- This should begin with an H2 element (for example, ## Summary).-->

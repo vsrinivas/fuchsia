@@ -1,6 +1,6 @@
 {% set rfcid = "RFC-0052" %}
 {% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
-# {{ rfc.name }} - {{ rfc.title }}
+# {{ rfc.name }}: {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-052.

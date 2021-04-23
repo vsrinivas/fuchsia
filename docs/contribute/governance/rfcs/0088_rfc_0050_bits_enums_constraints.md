@@ -1,6 +1,6 @@
 {% set rfcid = "RFC-0087" %}
 {% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
-# {{ rfc.name }} - {{ rfc.title }}
+# {{ rfc.name }}: {{ rfc.title }}
 <!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
 ## Rejection rationale
