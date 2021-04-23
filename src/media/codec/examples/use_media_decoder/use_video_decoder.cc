@@ -959,7 +959,8 @@ void VideoDecoderRunner::Run() {
         uint32_t uv_height = (raw->primary_display_height_pixels + 1) / 2;
         uint32_t uv_stride = i420_stride / 2;
         std::unique_ptr<uint8_t[]> i420_bytes;
-        if (kVerifySecureOutput || !params_.is_secure_output) {
+        if (!params_.test_params->skip_formatting_output_pixels &&
+            (kVerifySecureOutput || !params_.is_secure_output)) {
           i420_bytes = std::make_unique<uint8_t[]>(
               i420_stride * raw->primary_display_height_pixels + uv_stride * uv_height * 2);
           switch (raw->fourcc) {

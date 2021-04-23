@@ -94,6 +94,9 @@ struct UseVideoDecoderTestParams final {
 
     if (print_fps != kDefaultPrintFps) {
       printf("print_fps: %u\n", print_fps);
+      if (print_fps && !skip_formatting_output_pixels) {
+        printf("Consider also setting skip_formatting_output_pixels");
+      }
     }
 
     if (print_fps_modulus != kDefaultPrintFpsModulus) {
@@ -107,18 +110,6 @@ struct UseVideoDecoderTestParams final {
 
     if (require_sw != kDefaultRequireSw) {
       printf("require_sw: %u\n", require_sw);
-    }
-
-    if (frame_num_gaps != kDefaultFrameNumGaps) {
-      printf("frame_num_gaps: %u\n", frame_num_gaps);
-    }
-
-    if (min_expected_output_frame_count != kDefaultMinExpectedOutputFrameCount) {
-      printf("min_expected_ouput_frame_count: %d\n", min_expected_output_frame_count);
-    }
-
-    if (golden_sha256 != kDefaultGoldenSha256) {
-      printf("golden_sha256: %s\n", golden_sha256);
     }
 
     if (per_frame_golden_sha256 != kDefaultPerFrameGoldenSha256) {
@@ -137,6 +128,24 @@ struct UseVideoDecoderTestParams final {
       printf("frame_to_compare set\n");
       // avoid recursion beyond 2
       ZX_ASSERT(!compare_to_sw_decode);
+    }
+
+    if (frame_num_gaps != kDefaultFrameNumGaps) {
+      printf("frame_num_gaps: %u\n", frame_num_gaps);
+    }
+
+    if (min_expected_output_frame_count != kDefaultMinExpectedOutputFrameCount) {
+      printf("min_expected_ouput_frame_count: %d\n", min_expected_output_frame_count);
+    }
+
+    if (golden_sha256 != kDefaultGoldenSha256) {
+      printf("golden_sha256: %s\n", golden_sha256);
+    }
+
+    if (skip_formatting_output_pixels != kDefaultSkipFormattingOutputPixels) {
+      printf("skip_formatting_output_pixels: %u\n", skip_formatting_output_pixels);
+      ZX_ASSERT(skip_formatting_output_pixels);
+      ZX_ASSERT(!golden_sha256 && !per_frame_golden_sha256);
     }
 
     magic_validated_ = kPrivateMagicValidated;
@@ -279,6 +288,9 @@ struct UseVideoDecoderTestParams final {
   // stride == width.
   static constexpr char* kDefaultGoldenSha256 = nullptr;
   const char* golden_sha256 = kDefaultGoldenSha256;
+
+  static constexpr bool kDefaultSkipFormattingOutputPixels = false;
+  bool skip_formatting_output_pixels = kDefaultSkipFormattingOutputPixels;
 
  private:
   // Private copy, assign, or move.  None of this prevents aggregate initialization.

@@ -170,46 +170,51 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
     timestamps.push_back({has_timestamp_ish, timestamp_ish});
     if (i420_data) {
       got_output_data = true;
-      SHA256_Update(&sha256_ctx, i420_data, width * height * 3 / 2);
-      std::string sha256_so_far = GetSha256SoFar(&sha256_ctx);
-      LOGF("frame_index: %u SHA256 so far: %s", frame_index, sha256_so_far.c_str());
-      if (test_params->per_frame_golden_sha256) {
-        ZX_ASSERT(test_params->per_frame_golden_sha256[frame_index]);
-        std::string expected_sha256(test_params->per_frame_golden_sha256[frame_index]);
-        if (sha256_so_far != expected_sha256) {
-          LOGF("does not match per_frame_golden_sha256 - actual: %s expected %s",
-               sha256_so_far.c_str(), expected_sha256.c_str());
-          if (test_params->compare_to_sw_decode && !test_params->require_sw) {
-            // Grade sherlock video decoder's paper.
+      if (test_params->golden_sha256 || test_params->per_frame_golden_sha256) {
+        SHA256_Update(&sha256_ctx, i420_data, width * height * 3 / 2);
+        std::string sha256_so_far = GetSha256SoFar(&sha256_ctx);
+        LOGF("frame_index: %u SHA256 so far: %s", frame_index, sha256_so_far.c_str());
+        if (test_params->per_frame_golden_sha256) {
+          ZX_ASSERT(test_params->per_frame_golden_sha256[frame_index]);
+          std::string expected_sha256(test_params->per_frame_golden_sha256[frame_index]);
+          if (sha256_so_far != expected_sha256) {
+            LOGF("does not match per_frame_golden_sha256 - actual: %s expected %s",
+                 sha256_so_far.c_str(), expected_sha256.c_str());
+            if (test_params->compare_to_sw_decode && !test_params->require_sw) {
+              // Grade sherlock video decoder's paper.
 
-            UseVideoDecoderTestParams sw_decode_test_params = test_params->Clone();
+              UseVideoDecoderTestParams sw_decode_test_params = test_params->Clone();
 
-            sw_decode_test_params.compare_to_sw_decode = false;
-            sw_decode_test_params.require_sw = true;
-            sw_decode_test_params.loop_stream_count =
-                UseVideoDecoderTestParams::kDefaultLoopStreamCount;
+              sw_decode_test_params.compare_to_sw_decode = false;
+              sw_decode_test_params.require_sw = true;
+              sw_decode_test_params.loop_stream_count =
+                  UseVideoDecoderTestParams::kDefaultLoopStreamCount;
 
-            FrameToCompare frame_to_compare{
-                .data = i420_data,
-                .ordinal = frame_index,
-                .width = width,
-                .height = height,
-            };
-            sw_decode_test_params.frame_to_compare = &frame_to_compare;
+              FrameToCompare frame_to_compare{
+                  .data = i420_data,
+                  .ordinal = frame_index,
+                  .width = width,
+                  .height = height,
+              };
+              sw_decode_test_params.frame_to_compare = &frame_to_compare;
 
-            LOGF(
-                "\n\n\n######## RECURSIVELY CALLING use_video_decoder_test TO GET EXPECTED FRAME; "
-                "TEST WILL FAIL AFTER COMPARING FRAMES AND FINISHING UP ########\n\n\n");
-            if (0 != use_video_decoder_test(input_file_path, expected_frame_count,
-                                            use_video_decoder, is_secure_output, is_secure_input,
-                                            min_output_buffer_count, &sw_decode_test_params)) {
-              emit_frame_failure_seen = true;
+              LOGF(
+                  "\n\n\n######## RECURSIVELY CALLING use_video_decoder_test TO GET EXPECTED "
+                  "FRAME; "
+                  "TEST WILL FAIL AFTER COMPARING FRAMES AND FINISHING UP ########\n\n\n");
+              if (0 != use_video_decoder_test(input_file_path, expected_frame_count,
+                                              use_video_decoder, is_secure_output, is_secure_input,
+                                              min_output_buffer_count, &sw_decode_test_params)) {
+                emit_frame_failure_seen = true;
+              }
             }
+            emit_frame_failure_seen = true;
+            LOGF("finished handling sha256 mis-match (%s)",
+                 test_params->frame_to_compare ? "inner" : "outer");
           }
-          emit_frame_failure_seen = true;
-          LOGF("finished handling sha256 mis-match (%s)",
-               test_params->frame_to_compare ? "inner" : "outer");
         }
+      } else {
+        LOGF("frame_index: %u", frame_index);
       }
       if (test_params->frame_to_compare &&
           (frame_index == test_params->frame_to_compare->ordinal)) {
@@ -388,15 +393,17 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   }
 
   if (got_output_data) {
-    std::string actual_sha256 = GetSha256SoFar(&sha256_ctx);
-    printf("Done decoding - computed sha256 is: %s\n", actual_sha256.c_str());
-    if (test_params->golden_sha256 != UseVideoDecoderTestParams::kDefaultGoldenSha256) {
-      if (strcmp(actual_sha256.c_str(), test_params->golden_sha256)) {
-        printf("The sha256 doesn't match - expected: %s actual: %s\n", test_params->golden_sha256,
-               actual_sha256.c_str());
-        return -1;
+    if (test_params->golden_sha256) {
+      std::string actual_sha256 = GetSha256SoFar(&sha256_ctx);
+      printf("Done decoding - computed sha256 is: %s\n", actual_sha256.c_str());
+      if (test_params->golden_sha256 != UseVideoDecoderTestParams::kDefaultGoldenSha256) {
+        if (strcmp(actual_sha256.c_str(), test_params->golden_sha256)) {
+          printf("The sha256 doesn't match - expected: %s actual: %s\n", test_params->golden_sha256,
+                 actual_sha256.c_str());
+          return -1;
+        }
+        printf("The computed sha256 matches golden sha256.  Yay!\n");
       }
-      printf("The computed sha256 matches golden sha256.  Yay!\n");
     }
   } else if (is_secure_output) {
     printf("Can't check output data sha256 because output is secure.\n");
