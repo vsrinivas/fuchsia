@@ -124,8 +124,7 @@ TEST(ModuleSymbols, OffEnd) {
 
   // Check an address far past the end of the test module.
   std::vector<Location> addrs = setup.symbols()->ResolveInputLocation(
-      symbol_context,
-      InputLocation(kLoadAddress + 0x1000000000));
+      symbol_context, InputLocation(kLoadAddress + 0x1000000000));
   ASSERT_EQ(1u, addrs.size());
 
   // It should not have a matching symbol (the last ELF symbol in the module shouldn't match it
@@ -144,6 +143,10 @@ TEST(ModuleSymbols, LineDetailsForAddress) {
   auto file_matches = setup.symbols()->FindFileMatches("line_lookup_symbol_test.cc");
   ASSERT_EQ(1u, file_matches.size());
   const std::string file_name = file_matches[0];
+
+  // The file name should be canonical and lack any redundant "." or "..".
+  EXPECT_EQ("../../src/developer/debug/zxdb/symbols/test_data/line_lookup_symbol_test.cc",
+            file_name);
 
   // Get address of line 28 which is a normal line with code on both sides.
   int const kLineToQuery = 28;

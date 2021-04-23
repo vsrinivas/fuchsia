@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "src/developer/debug/zxdb/common/file_util.h"
 
 namespace zxdb {
 
@@ -40,8 +41,9 @@ std::optional<std::string> LineTableImpl::GetFileNameByIndex(uint64_t file_id) c
 
   std::string result;
   if (line_table_->getFileNameByIndex(
-          file_id, "", llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, result))
-    return std::optional<std::string>(std::move(result));
+          file_id, "", llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, result)) {
+    return std::optional<std::string>(NormalizePath(result));
+  }
   return std::nullopt;
 }
 

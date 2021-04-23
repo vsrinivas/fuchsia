@@ -274,7 +274,8 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
     compilation_dir.clear();
   }
 
-  LineDetails result(FileLine(file_name, compilation_dir, rows[first_row_index].Line));
+  LineDetails result(
+      FileLine(NormalizePath(file_name), compilation_dir, rows[first_row_index].Line));
 
   // Add entries for each row. The last row doesn't count because it should be
   // an end_sequence marker to provide the ending size of the previous entry.

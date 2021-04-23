@@ -178,6 +178,11 @@ TEST(DwarfSymbolFactory, InlinedFunction) {
   // declared.
   EXPECT_EQ("my_ns::InlinedFunction", inline_func->GetFullName());
 
+  // Check the declaration location. This mostly verifies that the path name is relative to the
+  // build directory and that there aren't any unnecessary "." or "..".
+  EXPECT_EQ("../../src/developer/debug/zxdb/symbols/test_data/type_test.cc",
+            inline_func->decl_line().file());
+
   // The containing block of the inline function should be the calling function. Note that the
   // objects may not be the same.
   ASSERT_TRUE(inline_func->containing_block());

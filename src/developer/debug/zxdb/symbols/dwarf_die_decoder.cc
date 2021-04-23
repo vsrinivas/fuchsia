@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/symbols/const_value.h"
 
 namespace zxdb {
@@ -88,6 +89,7 @@ void DwarfDieDecoder::AddLineTableFile(llvm::dwarf::Attribute attribute,
     line_table->getFileNameByIndex(form.getAsUnsignedConstant().getValue(), "",
                                    llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
                                    output->getValue());
+    output->getValue() = NormalizePath(output->getValue());
   });
 }
 
@@ -138,8 +140,9 @@ void DwarfDieDecoder::AddFile(llvm::dwarf::Attribute attribute,
     std::string file_name;
     if (line_table->getFileNameByIndex(
             *file_index, "", llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-            file_name))
-      *output = std::move(file_name);
+            file_name)) {
+      *output = NormalizePath(file_name);
+    }
   });
 }
 

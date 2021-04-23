@@ -44,4 +44,26 @@ TEST(FileUtil, CatPathComponents) {
   EXPECT_EQ("a/b/", CatPathComponents("a/", "b/"));
 }
 
+TEST(FileUtil, CanonicalizePath) {
+  EXPECT_EQ("", NormalizePath(""));
+  EXPECT_EQ("foo/bar.txt", NormalizePath("foo/bar.txt"));
+  EXPECT_EQ(".", NormalizePath("."));
+  EXPECT_EQ("foo/bar", NormalizePath("foo//bar"));
+  EXPECT_EQ("/foo", NormalizePath("//foo"));
+  EXPECT_EQ("bar", NormalizePath("foo/..//bar"));
+  EXPECT_EQ("../bar", NormalizePath("foo/../../bar"));
+  EXPECT_EQ("/foo", NormalizePath("/../foo"));  // Don't go above the root dir.
+  EXPECT_EQ("/foo", NormalizePath("/../foo"));  // Don't go above the root dir.
+  EXPECT_EQ("../foo", NormalizePath("../foo"));
+  EXPECT_EQ("..", NormalizePath(".."));
+  EXPECT_EQ(".", NormalizePath("./././."));
+  EXPECT_EQ("../../..", NormalizePath("../../.."));
+
+  // The implementation of this is std::filesystem which isn't consistent here about whether
+  // trailing slashes are preserved. It would be nice if the "../" case preserved the trailing
+  // slash for consistency, but this behavior should be fine for our needs.
+  EXPECT_EQ("..", NormalizePath("../"));
+  EXPECT_EQ("/foo/bar/", NormalizePath("/foo/bar/"));
+}
+
 }  // namespace zxdb

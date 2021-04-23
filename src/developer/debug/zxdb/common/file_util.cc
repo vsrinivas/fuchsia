@@ -41,6 +41,10 @@ std::string CatPathComponents(const std::string& first, const std::string& secon
   return result;
 }
 
+std::string NormalizePath(const std::string& path) {
+  return std::filesystem::path(path).lexically_normal();
+}
+
 std::time_t GetFileModificationTime(const std::string& path) {
   std::error_code ec;
   std::filesystem::file_time_type last_write = std::filesystem::last_write_time(path, ec);
