@@ -38,6 +38,7 @@ rustc_library("carnelian") {
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/graphics/lib/compute/mold",
+    "//src/graphics/lib/compute/rive-rs",
     "//src/graphics/lib/compute/spinel-rs-sys",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
@@ -113,6 +114,7 @@ rustc_library("carnelian") {
     "src/render/generic/spinel/path.rs",
     "src/render/generic/spinel/raster.rs",
     "src/render/mod.rs",
+    "src/render/rive.rs",
     "src/render/shed.rs",
     "src/view.rs",
     "src/view/strategies.rs",
@@ -296,6 +298,25 @@ rustc_binary("svg") {
   ]
 }
 
+rustc_binary("rive") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "examples/rive.rs"
+  sources = [ "examples/rive.rs" ]
+  deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/trace/rust:trace-provider",
+    "//src/lib/ui/carnelian",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/testing/fidl:placeholders-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:euclid",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
 test_package("carnelian-render-tests") {
   deps = [ ":carnelian_test" ]
 
@@ -415,6 +436,14 @@ resource("static_sheds") {
   outputs = [ "data/static/{{source_file_part}}" ]
 }
 
+resource("static_rives") {
+  sources = [
+    "examples/static/juice.riv",
+    "examples/static/knight.riv",
+  ]
+  outputs = [ "data/static/{{source_file_part}}" ]
+}
+
 resource("virtcon_config") {
   sources = [ "config/virtcon_config.toml" ]
   outputs = [ "data/config/carnelian.toml" ]
@@ -490,6 +519,10 @@ carnelian_examples = [
   {
     name = "svg"
     additional_deps = [ ":static_sheds" ]
+  },
+  {
+    name = "rive"
+    additional_deps = [ ":static_rives" ]
   },
 ]
 

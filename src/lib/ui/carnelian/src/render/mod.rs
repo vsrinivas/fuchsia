@@ -4,6 +4,7 @@
 
 mod dynamic;
 pub mod generic;
+pub mod rive;
 mod shed;
 
 pub use dynamic::*;

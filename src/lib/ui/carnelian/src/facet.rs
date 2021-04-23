@@ -10,17 +10,25 @@ use crate::{
     },
     geometry::IntPoint,
     render::{
-        BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear, Raster,
-        RenderExt, Shed, Style,
+        rive::RenderCache as RiveRenderCache, rive::Renderer as RiveRenderer, BlendMode,
+        Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear, Raster, RenderExt,
+        Shed, Style,
     },
     Coord, Point, Rect, Size, ViewAssistantContext,
 };
 use anyhow::{bail, Error};
 use euclid::{default::Transform2D, point2, size2, vec2};
-use fuchsia_zircon::{AsHandleRef, Event, Signals};
+use fuchsia_zircon::{self as zx, AsHandleRef, Event, Signals, Time};
+use rive_rs::{
+    self as rive,
+    animation::{LinearAnimation, LinearAnimationInstance},
+    layout::{self, Alignment, Fit},
+    math::Aabb,
+};
 use std::{
     any::Any,
     collections::{BTreeMap, HashMap},
+    fs,
     path::PathBuf,
     sync::atomic::{AtomicUsize, Ordering},
 };
@@ -36,6 +44,10 @@ pub struct SetTextMessage {
 
 pub struct SetLocationMessage {
     pub location: Point,
+}
+
+pub struct SetSizeMessage {
+    pub size: Size,
 }
 
 pub trait Facet {
@@ -365,6 +377,122 @@ impl Facet for ShedFacet {
     fn handle_message(&mut self, msg: Box<dyn Any>) {
         if let Some(set_location) = msg.downcast_ref::<SetLocationMessage>() {
             self.location = set_location.location;
+        }
+    }
+}
+
+pub struct ToggleAnimationMessage {
+    pub index: usize,
+}
+
+pub struct RiveFacet {
+    location: Point,
+    size: Size,
+    file: rive::File,
+    animations: Vec<(LinearAnimationInstance, bool)>,
+    last_presentation_time: Option<Time>,
+    render_cache: Option<RiveRenderCache>,
+}
+
+impl RiveFacet {
+    pub fn new(
+        path: PathBuf,
+        location: Point,
+        size: Size,
+        initial_animations: impl IntoIterator<Item = usize>,
+    ) -> Self {
+        let buffer = fs::read(path).expect("failed to open .riv file");
+        let mut reader = rive::BinaryReader::new(&buffer);
+        let file = rive::File::import(&mut reader).expect("failed to import .riv file");
+        let artboard = file.artboard().unwrap();
+        let artboard_ref = artboard.as_ref();
+        artboard_ref.advance(0.0);
+        let mut animations: Vec<(LinearAnimationInstance, bool)> = artboard_ref
+            .animations::<LinearAnimation>()
+            .map(|animation| (LinearAnimationInstance::new(animation), false))
+            .collect();
+        for index in initial_animations.into_iter() {
+            if index < animations.len() {
+                animations[index].1 = true;
+            }
+        }
+
+        Self { location, size, file, animations, last_presentation_time: None, render_cache: None }
+    }
+}
+
+impl Facet for RiveFacet {
+    fn update_layers(
+        &mut self,
+        _size: Size,
+        layer_group: &mut LayerGroup,
+        render_context: &mut RenderContext,
+    ) -> Result<(), Error> {
+        let presentation_time = zx::Time::get_monotonic();
+        let elapsed = if let Some(last_presentation_time) = self.last_presentation_time {
+            const NANOS_PER_SECOND: f32 = 1_000_000_000.0;
+            (presentation_time - last_presentation_time).into_nanos() as f32 / NANOS_PER_SECOND
+        } else {
+            0.0
+        };
+        self.last_presentation_time = Some(presentation_time);
+
+        let artboard = self.file.artboard().unwrap();
+        let artboard_ref = artboard.as_ref();
+
+        for (animation_instance, is_animating) in self.animations.iter_mut() {
+            if *is_animating {
+                animation_instance.advance(elapsed);
+                animation_instance.apply(artboard.clone(), 1.0);
+            }
+            if animation_instance.is_done() {
+                animation_instance.reset();
+                *is_animating = false;
+            }
+        }
+
+        let mut renderer = if let Some(render_cache) = self.render_cache.take() {
+            RiveRenderer::from_cache(render_context, render_cache)
+        } else {
+            RiveRenderer::new(render_context)
+        };
+
+        renderer.reset();
+
+        artboard_ref.advance(elapsed);
+        artboard_ref.draw(
+            &mut renderer,
+            layout::align(
+                Fit::Contain,
+                Alignment::center(),
+                Aabb::new(0.0, 0.0, self.size.width as f32, self.size.height as f32),
+                artboard.as_ref().bounds(),
+            ),
+        );
+
+        let location = self.location;
+        let render_cache = renderer.dismantle();
+        layer_group.replace_all(render_cache.rasters.iter().rev().map(|(raster, style)| Layer {
+            raster: raster.clone().translate(location.to_vector().to_i32()),
+            style: *style,
+        }));
+        self.render_cache = Some(render_cache);
+
+        Ok(())
+    }
+
+    fn handle_message(&mut self, msg: Box<dyn Any>) {
+        if let Some(set_location) = msg.downcast_ref::<SetLocationMessage>() {
+            self.location = set_location.location;
+        }
+        if let Some(set_size) = msg.downcast_ref::<SetSizeMessage>() {
+            self.size = set_size.size;
+        }
+        if let Some(toggle_animation) = msg.downcast_ref::<ToggleAnimationMessage>() {
+            let i = toggle_animation.index;
+            if i < self.animations.len() {
+                self.animations[i].1 = !self.animations[i].1;
+            }
         }
     }
 }
