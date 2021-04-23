@@ -89,8 +89,8 @@ INSTANCE_ID=$(${CIPD} describe \
     -version "dash_git_revision:${DASH_GIT_HASH}" \
     | grep -oP "Instance ID: *\K\w+(?=$)" )
 
-echo "Kernel git revision: ${LINUX GIT HASH}"
-echo "Tests git revision: ${TESTS GIT HASH}"
-echo "Toybox git revision: ${TOYBOX GIT HASH}"
-echo "Dash git revision: ${DASH GIT HASH}"
+echo "Kernel git revision: ${LINUX_GIT_HASH}"
+echo "Tests git revision: ${TESTS_GIT_HASH}"
+echo "Toybox git revision: ${TOYBOX_GIT_HASH}"
+echo "Dash git revision: ${DASH_GIT_HASH}"
 echo "Instance ID: ${INSTANCE_ID}"
