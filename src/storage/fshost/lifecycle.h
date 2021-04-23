@@ -16,14 +16,14 @@ namespace devmgr {
 
 class FsManager;
 
-class LifecycleServer final : public fidl::WireInterface<fuchsia_process_lifecycle::Lifecycle> {
+class LifecycleServer final : public fidl::WireServer<fuchsia_process_lifecycle::Lifecycle> {
  public:
   explicit LifecycleServer(FsManager* fs_manager) : fs_manager_(fs_manager) {}
 
   static zx_status_t Create(async_dispatcher_t* dispatcher, FsManager* fs_manager,
                             fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> chan);
 
-  void Stop(StopCompleter::Sync& completer) override;
+  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
 
  private:
   FsManager* fs_manager_;

@@ -41,13 +41,14 @@ std::unique_ptr<cobalt_client::Collector> MakeCollector() {
 }
 
 class FakeDriverManagerAdmin final
-    : public fidl::WireInterface<fuchsia_device_manager::Administrator> {
+    : public fidl::WireServer<fuchsia_device_manager::Administrator> {
  public:
-  void Suspend(uint32_t flags, SuspendCompleter::Sync& completer) override {
+  void Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) override {
     completer.Reply(ZX_OK);
   }
 
   void UnregisterSystemStorageForShutdown(
+      UnregisterSystemStorageForShutdownRequestView request,
       UnregisterSystemStorageForShutdownCompleter::Sync& completer) override {
     unregister_was_called_ = true;
     completer.Reply(ZX_OK);
@@ -138,55 +139,52 @@ TEST(FsManagerTestCase, LifecycleStop) {
   EXPECT_TRUE(driver_admin.UnregisterWasCalled());
 }
 
-class MockDirectoryAdminOpener : public fidl::WireInterface<fio::DirectoryAdmin> {
+class MockDirectoryAdminOpener : public fidl::WireServer<fio::DirectoryAdmin> {
  public:
-  void Open(uint32_t flags, uint32_t mode, fidl::StringView path, fidl::ServerEnd<fio::Node> object,
-            OpenCompleter::Sync& completer) override {
-    saved_open_flags = flags;
+  void Open(OpenRequestView request, OpenCompleter::Sync& completer) override {
+    saved_open_flags = request->flags;
     saved_open_count += 1;
-    saved_path = path.get();
+    saved_path = request->path.get();
   }
 
   // Below here are a pile of stubs that aren't called in this test. Only Open() above is used.
 
   // fuchsia.io/Node:
-  void Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> object,
-             CloneCompleter::Sync& completer) override {}
-  void Close(CloseCompleter::Sync& completer) override {}
-  void Describe(DescribeCompleter::Sync& completer) override {}
-  void Sync(SyncCompleter::Sync& completer) override {}
-  void GetAttr(GetAttrCompleter::Sync& completer) override {}
-  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
-               SetAttrCompleter::Sync& completer) override {}
-  void NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) override {}
-  void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& completer) override {}
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {}
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {}
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {}
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {}
+  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {}
+  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {}
+  void NodeGetFlags(NodeGetFlagsRequestView request,
+                    NodeGetFlagsCompleter::Sync& completer) override {}
+  void NodeSetFlags(NodeSetFlagsRequestView request,
+                    NodeSetFlagsCompleter::Sync& completer) override {}
 
   // fuchsia.io/Directory:
-  void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) override {}
-  void Unlink2(fidl::StringView name, fuchsia_io2::wire::UnlinkOptions options,
-               Unlink2Completer::Sync& completer) override {}
-  void ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sync& completer) override {}
-  void Rewind(RewindCompleter::Sync& completer) override {}
-  void GetToken(GetTokenCompleter::Sync& completer) override {}
-  void Rename(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
-              RenameCompleter::Sync& completer) override {}
-  void Link(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
-            LinkCompleter::Sync& completer) override {}
-  void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
-             WatchCompleter::Sync& completer) override {}
-  void AddInotifyFilter(fidl::StringView path, fuchsia_io2::wire::InotifyWatchMask filters,
-                        uint32_t watch_descriptor, zx::socket socket,
+  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override {}
+  void Unlink2(Unlink2RequestView request, Unlink2Completer::Sync& completer) override {}
+  void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) override {
+  }
+  void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) override {}
+  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override {}
+  void Rename(RenameRequestView request, RenameCompleter::Sync& completer) override {}
+  void Link(LinkRequestView request, LinkCompleter::Sync& completer) override {}
+  void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override {}
+  void AddInotifyFilter(AddInotifyFilterRequestView request,
                         AddInotifyFilterCompleter::Sync& completer) override {}
 
   // fuchsia.io/DirectoryAdmin:
-  void Mount(fidl::ClientEnd<fuchsia_io::Directory> remote,
-             MountCompleter::Sync& completer) override {}
-  void MountAndCreate(fidl::ClientEnd<fuchsia_io::Directory> remote, fidl::StringView name,
-                      uint32_t flags, MountAndCreateCompleter::Sync& completer) override {}
-  void Unmount(UnmountCompleter::Sync& completer) override {}
-  void UnmountNode(UnmountNodeCompleter::Sync& completer) override {}
-  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) override {}
-  void GetDevicePath(GetDevicePathCompleter::Sync& completer) override {}
+  void Mount(MountRequestView request, MountCompleter::Sync& completer) override {}
+  void MountAndCreate(MountAndCreateRequestView request,
+                      MountAndCreateCompleter::Sync& completer) override {}
+  void Unmount(UnmountRequestView request, UnmountCompleter::Sync& completer) override {}
+  void UnmountNode(UnmountNodeRequestView request, UnmountNodeCompleter::Sync& completer) override {
+  }
+  void QueryFilesystem(QueryFilesystemRequestView request,
+                       QueryFilesystemCompleter::Sync& completer) override {}
+  void GetDevicePath(GetDevicePathRequestView request,
+                     GetDevicePathCompleter::Sync& completer) override {}
 
   // Test fields used for validation.
   uint32_t saved_open_flags = 0;

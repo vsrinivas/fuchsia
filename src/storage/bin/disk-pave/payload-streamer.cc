@@ -26,23 +26,24 @@ PayloadStreamer::~PayloadStreamer() {
   }
 }
 
-void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& completer) {
+void PayloadStreamer::RegisterVmo(RegisterVmoRequestView request,
+                                  RegisterVmoCompleter::Sync& completer) {
   if (vmo_) {
     completer.Reply(ZX_ERR_ALREADY_BOUND);
     return;
   }
 
-  auto status = mapper_.Map(vmo, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  auto status = mapper_.Map(request->vmo, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
     completer.Reply(status);
     return;
   }
 
-  vmo_ = std::move(vmo);
+  vmo_ = std::move(request->vmo);
   completer.Reply(ZX_OK);
 }
 
-void PayloadStreamer::ReadData(ReadDataCompleter::Sync& completer) {
+void PayloadStreamer::ReadData(ReadDataRequestView request, ReadDataCompleter::Sync& completer) {
   fuchsia_paver::wire::ReadResult result = {};
   if (!vmo_) {
     zx_status_t status = ZX_ERR_BAD_STATE;

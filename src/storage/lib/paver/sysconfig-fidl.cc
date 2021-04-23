@@ -48,7 +48,7 @@ void Sysconfig::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
   fidl::BindSingleInFlightOnly(dispatcher, std::move(server), std::move(sysconfig));
 }
 
-void Sysconfig::Read(ReadCompleter::Sync& completer) {
+void Sysconfig::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   LOG("Reading sysconfig-data partition.\n");
 
   auto status_get_partition_size = partitioner_->GetPartitionSize();
@@ -76,19 +76,21 @@ void Sysconfig::Read(ReadCompleter::Sync& completer) {
   LOG("Completed successfully\n");
 }
 
-void Sysconfig::Write(fuchsia_mem::wire::Buffer payload, WriteCompleter::Sync& completer) {
+void Sysconfig::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   LOG("Writing sysconfig-data partition.\n");
 
-  if (auto status = partitioner_->Write(payload.vmo, payload.size); status.is_error()) {
+  if (auto status = partitioner_->Write(request->payload.vmo, request->payload.size);
+      status.is_error()) {
     ERROR("Error writing to sysconfig partition. %s, %lu, \n", status.status_string(),
-          payload.size);
+          request->payload.size);
     completer.Reply(status.error_value());
   }
   completer.Reply(ZX_OK);
   LOG("Completed successfully\n");
 }
 
-void Sysconfig::GetPartitionSize(GetPartitionSizeCompleter::Sync& completer) {
+void Sysconfig::GetPartitionSize(GetPartitionSizeRequestView request,
+                                 GetPartitionSizeCompleter::Sync& completer) {
   LOG("Getting sysconfig-data partition size.\n");
 
   auto status_get_partition_size = partitioner_->GetPartitionSize();
@@ -102,7 +104,7 @@ void Sysconfig::GetPartitionSize(GetPartitionSizeCompleter::Sync& completer) {
   LOG("Completed successfully\n");
 }
 
-void Sysconfig::Flush(FlushCompleter::Sync& completer) {
+void Sysconfig::Flush(FlushRequestView request, FlushCompleter::Sync& completer) {
   LOG("Flushing sysconfig-data partition\n")
 
   if (auto status = partitioner_->Flush(); status.is_error()) {
@@ -113,7 +115,7 @@ void Sysconfig::Flush(FlushCompleter::Sync& completer) {
   LOG("Completed successfully\n");
 }
 
-void Sysconfig::Wipe(WipeCompleter::Sync& completer) {
+void Sysconfig::Wipe(WipeRequestView request, WipeCompleter::Sync& completer) {
   LOG("Wiping sysconfig-data partition\n")
   auto get_ptn_size_status = partitioner_->GetPartitionSize();
   if (get_ptn_size_status.is_error()) {

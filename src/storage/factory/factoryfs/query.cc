@@ -24,33 +24,33 @@ QueryService::QueryService(async_dispatcher_t* dispatcher, Factoryfs* factoryfs,
       factoryfs_(factoryfs),
       runner_(runner) {}
 
-void QueryService::GetInfo(FilesystemInfoQuery query, GetInfoCompleter::Sync& completer) {
+void QueryService::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
   static_assert(sizeof(kFsName) < fuchsia_fs::wire::kMaxFsNameLength, "Factoryfs name too long");
 
   fidl::FidlAllocator allocator;
   fuchsia_fs::wire::FilesystemInfo filesystem_info(allocator);
 
-  if (query & FilesystemInfoQuery::kTotalBytes) {
+  if (request->query & FilesystemInfoQuery::kTotalBytes) {
     // Account for 1 block for superblock.
     uint64_t num_blocks =
         1 + factoryfs_->Info().data_blocks + factoryfs_->Info().directory_ent_blocks;
     filesystem_info.set_total_bytes(allocator, num_blocks * factoryfs_->Info().block_size);
   }
 
-  if (query & FilesystemInfoQuery::kUsedBytes) {
+  if (request->query & FilesystemInfoQuery::kUsedBytes) {
     filesystem_info.set_used_bytes(allocator,
                                    factoryfs_->Info().data_blocks * factoryfs_->Info().block_size);
   }
 
-  if (query & FilesystemInfoQuery::kTotalNodes) {
+  if (request->query & FilesystemInfoQuery::kTotalNodes) {
     filesystem_info.set_total_nodes(allocator, factoryfs_->Info().directory_entries);
   }
 
-  if (query & FilesystemInfoQuery::kUsedNodes) {
+  if (request->query & FilesystemInfoQuery::kUsedNodes) {
     filesystem_info.set_used_nodes(allocator, factoryfs_->Info().directory_entries);
   }
 
-  if (query & FilesystemInfoQuery::kFsId) {
+  if (request->query & FilesystemInfoQuery::kFsId) {
     zx::event fs_id;
     zx_status_t status = factoryfs_->GetFsId(&fs_id);
     if (status != ZX_OK) {
@@ -60,25 +60,25 @@ void QueryService::GetInfo(FilesystemInfoQuery query, GetInfoCompleter::Sync& co
     filesystem_info.set_fs_id(allocator, std::move(fs_id));
   }
 
-  if (query & FilesystemInfoQuery::kBlockSize) {
+  if (request->query & FilesystemInfoQuery::kBlockSize) {
     filesystem_info.set_block_size(allocator, kFactoryfsBlockSize);
   }
 
-  if (query & FilesystemInfoQuery::kMaxNodeNameSize) {
+  if (request->query & FilesystemInfoQuery::kMaxNodeNameSize) {
     filesystem_info.set_max_node_name_size(allocator, kFactoryfsMaxNameSize);
   }
 
-  if (query & FilesystemInfoQuery::kFsType) {
+  if (request->query & FilesystemInfoQuery::kFsType) {
     filesystem_info.set_fs_type(allocator, fuchsia_fs::wire::FsType::kFactoryfs);
   }
 
-  if (query & FilesystemInfoQuery::kName) {
+  if (request->query & FilesystemInfoQuery::kName) {
     fidl::StringView name(kFsName);
     filesystem_info.set_name(allocator, std::move(name));
   }
 
   char name_buf[fuchsia_io2::wire::kMaxPathLength];
-  if (query & FilesystemInfoQuery::kDevicePath) {
+  if (request->query & FilesystemInfoQuery::kDevicePath) {
     size_t name_len;
     zx_status_t status =
         factoryfs_->Device().GetDevicePath(fuchsia_io2::wire::kMaxPathLength, name_buf, &name_len);
@@ -95,9 +95,9 @@ void QueryService::GetInfo(FilesystemInfoQuery query, GetInfoCompleter::Sync& co
   completer.ReplySuccess(std::move(filesystem_info));
 }
 
-void QueryService::IsNodeInFilesystem(zx::event token,
+void QueryService::IsNodeInFilesystem(IsNodeInFilesystemRequestView request,
                                       IsNodeInFilesystemCompleter::Sync& completer) {
-  completer.Reply(runner_->IsTokenAssociatedWithVnode(std::move(token)));
+  completer.Reply(runner_->IsTokenAssociatedWithVnode(std::move(request->token)));
 }
 
 }  // namespace factoryfs

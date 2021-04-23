@@ -39,7 +39,7 @@ StreamFileConnection::StreamFileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> 
                                            VnodeConnectionOptions options)
     : FileConnection(vfs, std::move(vnode), protocol, options), stream_(std::move(stream)) {}
 
-void StreamFileConnection::Read(uint64_t count, ReadCompleter::Sync& completer) {
+void StreamFileConnection::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileRead] options: ", options());
 
   if (options().flags.node_reference) {
@@ -50,7 +50,7 @@ void StreamFileConnection::Read(uint64_t count, ReadCompleter::Sync& completer) 
     completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
     return;
   }
-  if (count > fio::wire::kMaxBuf) {
+  if (request->count > fio::wire::kMaxBuf) {
     completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
     return;
   }
@@ -58,15 +58,14 @@ void StreamFileConnection::Read(uint64_t count, ReadCompleter::Sync& completer) 
   size_t actual = 0;
   zx_iovec_t vector = {
       .buffer = data,
-      .capacity = count,
+      .capacity = request->count,
   };
   zx_status_t status = stream_.readv(0, &vector, 1, &actual);
-  ZX_DEBUG_ASSERT(actual <= count);
+  ZX_DEBUG_ASSERT(actual <= request->count);
   completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
 }
 
-void StreamFileConnection::ReadAt(uint64_t count, uint64_t offset,
-                                  ReadAtCompleter::Sync& completer) {
+void StreamFileConnection::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileReadAt] options: ", options());
 
   if (options().flags.node_reference) {
@@ -77,7 +76,7 @@ void StreamFileConnection::ReadAt(uint64_t count, uint64_t offset,
     completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
     return;
   }
-  if (count > fio::wire::kMaxBuf) {
+  if (request->count > fio::wire::kMaxBuf) {
     completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
     return;
   }
@@ -86,14 +85,14 @@ void StreamFileConnection::ReadAt(uint64_t count, uint64_t offset,
 
   zx_iovec_t vector = {
       .buffer = data,
-      .capacity = count,
+      .capacity = request->count,
   };
-  zx_status_t status = stream_.readv_at(0, offset, &vector, 1, &actual);
-  ZX_DEBUG_ASSERT(actual <= count);
+  zx_status_t status = stream_.readv_at(0, request->offset, &vector, 1, &actual);
+  ZX_DEBUG_ASSERT(actual <= request->count);
   completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
 }
 
-void StreamFileConnection::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) {
+void StreamFileConnection::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileWrite] options: ", options());
 
   if (options().flags.node_reference) {
@@ -106,20 +105,19 @@ void StreamFileConnection::Write(fidl::VectorView<uint8_t> data, WriteCompleter:
   }
   size_t actual = 0u;
   zx_iovec_t vector = {
-      .buffer = data.mutable_data(),
-      .capacity = data.count(),
+      .buffer = request->data.mutable_data(),
+      .capacity = request->data.count(),
   };
   uint32_t writev_options = options().flags.append ? ZX_STREAM_APPEND : 0;
   zx_status_t status = stream_.writev(writev_options, &vector, 1, &actual);
-  ZX_DEBUG_ASSERT(actual <= data.count());
+  ZX_DEBUG_ASSERT(actual <= request->data.count());
   if (status == ZX_OK) {
     vnode()->DidModifyStream();
   }
   completer.Reply(status, actual);
 }
 
-void StreamFileConnection::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
-                                   WriteAtCompleter::Sync& completer) {
+void StreamFileConnection::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileWriteAt] options: ", options());
 
   if (options().flags.node_reference) {
@@ -132,19 +130,18 @@ void StreamFileConnection::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offs
   }
   size_t actual = 0;
   zx_iovec_t vector = {
-      .buffer = data.mutable_data(),
-      .capacity = data.count(),
+      .buffer = request->data.mutable_data(),
+      .capacity = request->data.count(),
   };
-  zx_status_t status = stream_.writev_at(0, offset, &vector, 1, &actual);
-  ZX_DEBUG_ASSERT(actual <= data.count());
+  zx_status_t status = stream_.writev_at(0, request->offset, &vector, 1, &actual);
+  ZX_DEBUG_ASSERT(actual <= request->data.count());
   if (status == ZX_OK) {
     vnode()->DidModifyStream();
   }
   completer.Reply(status, actual);
 }
 
-void StreamFileConnection::Seek(int64_t offset, fuchsia_io::wire::SeekOrigin start,
-                                SeekCompleter::Sync& completer) {
+void StreamFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileSeek] options: ", options());
 
   if (options().flags.node_reference) {
@@ -153,7 +150,8 @@ void StreamFileConnection::Seek(int64_t offset, fuchsia_io::wire::SeekOrigin sta
   }
 
   zx_off_t seek = 0u;
-  zx_status_t status = stream_.seek(static_cast<zx_stream_seek_origin_t>(start), offset, &seek);
+  zx_status_t status =
+      stream_.seek(static_cast<zx_stream_seek_origin_t>(request->start), request->offset, &seek);
   completer.Reply(status, seek);
 }
 

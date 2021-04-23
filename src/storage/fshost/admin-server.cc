@@ -25,7 +25,7 @@ fbl::RefPtr<fs::Service> AdminServer::Create(devmgr::FsManager* fs_manager,
       });
 }
 
-void AdminServer::Shutdown(ShutdownCompleter::Sync& completer) {
+void AdminServer::Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) {
   FX_LOGS(INFO) << "received shutdown command over admin interface";
   fs_manager_->Shutdown([completer = completer.ToAsync()](zx_status_t status) mutable {
     if (status != ZX_OK) {

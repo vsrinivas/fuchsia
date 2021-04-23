@@ -38,7 +38,7 @@ RemoteFileConnection::RemoteFileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> 
                                            VnodeProtocol protocol, VnodeConnectionOptions options)
     : FileConnection(vfs, std::move(vnode), protocol, options) {}
 
-void RemoteFileConnection::Read(uint64_t count, ReadCompleter::Sync& completer) {
+void RemoteFileConnection::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileRead] options: ", options());
 
   if (options().flags.node_reference) {
@@ -49,22 +49,21 @@ void RemoteFileConnection::Read(uint64_t count, ReadCompleter::Sync& completer) 
     completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
     return;
   }
-  if (count > fio::wire::kMaxBuf) {
+  if (request->count > fio::wire::kMaxBuf) {
     completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
     return;
   }
   uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
-  zx_status_t status = vnode()->Read(data, count, offset_, &actual);
+  zx_status_t status = vnode()->Read(data, request->count, offset_, &actual);
   if (status == ZX_OK) {
-    ZX_DEBUG_ASSERT(actual <= count);
+    ZX_DEBUG_ASSERT(actual <= request->count);
     offset_ += actual;
   }
   completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
 }
 
-void RemoteFileConnection::ReadAt(uint64_t count, uint64_t offset,
-                                  ReadAtCompleter::Sync& completer) {
+void RemoteFileConnection::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileReadAt] options: ", options());
 
   if (options().flags.node_reference) {
@@ -75,20 +74,20 @@ void RemoteFileConnection::ReadAt(uint64_t count, uint64_t offset,
     completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
     return;
   }
-  if (count > fio::wire::kMaxBuf) {
+  if (request->count > fio::wire::kMaxBuf) {
     completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
     return;
   }
   uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
-  zx_status_t status = vnode()->Read(data, count, offset, &actual);
+  zx_status_t status = vnode()->Read(data, request->count, request->offset, &actual);
   if (status == ZX_OK) {
-    ZX_DEBUG_ASSERT(actual <= count);
+    ZX_DEBUG_ASSERT(actual <= request->count);
   }
   completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
 }
 
-void RemoteFileConnection::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) {
+void RemoteFileConnection::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileWrite] options: ", options());
 
   if (options().flags.node_reference) {
@@ -103,22 +102,21 @@ void RemoteFileConnection::Write(fidl::VectorView<uint8_t> data, WriteCompleter:
   zx_status_t status;
   if (options().flags.append) {
     size_t end = 0u;
-    status = vnode()->Append(data.data(), data.count(), &end, &actual);
+    status = vnode()->Append(request->data.data(), request->data.count(), &end, &actual);
     if (status == ZX_OK) {
       offset_ = end;
     }
   } else {
-    status = vnode()->Write(data.data(), data.count(), offset_, &actual);
+    status = vnode()->Write(request->data.data(), request->data.count(), offset_, &actual);
     if (status == ZX_OK) {
       offset_ += actual;
     }
   }
-  ZX_DEBUG_ASSERT(actual <= data.count());
+  ZX_DEBUG_ASSERT(actual <= request->data.count());
   completer.Reply(status, actual);
 }
 
-void RemoteFileConnection::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
-                                   WriteAtCompleter::Sync& completer) {
+void RemoteFileConnection::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileWriteAt] options: ", options());
 
   if (options().flags.node_reference) {
@@ -130,13 +128,13 @@ void RemoteFileConnection::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offs
     return;
   }
   size_t actual = 0;
-  zx_status_t status = vnode()->Write(data.data(), data.count(), offset, &actual);
-  ZX_DEBUG_ASSERT(actual <= data.count());
+  zx_status_t status =
+      vnode()->Write(request->data.data(), request->data.count(), request->offset, &actual);
+  ZX_DEBUG_ASSERT(actual <= request->data.count());
   completer.Reply(status, actual);
 }
 
-void RemoteFileConnection::Seek(int64_t offset, fuchsia_io::wire::SeekOrigin start,
-                                SeekCompleter::Sync& completer) {
+void RemoteFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileSeek] options: ", options());
 
   if (options().flags.node_reference) {
@@ -149,17 +147,17 @@ void RemoteFileConnection::Seek(int64_t offset, fuchsia_io::wire::SeekOrigin sta
     return completer.Close(r);
   }
   size_t n;
-  switch (start) {
+  switch (request->start) {
     case fio::wire::SeekOrigin::kStart:
-      if (offset < 0) {
+      if (request->offset < 0) {
         completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
         return;
       }
-      n = offset;
+      n = request->offset;
       break;
     case fio::wire::SeekOrigin::kCurrent:
-      n = offset_ + offset;
-      if (offset < 0) {
+      n = offset_ + request->offset;
+      if (request->offset < 0) {
         // if negative seek
         if (n > offset_) {
           // wrapped around. attempt to seek before start
@@ -176,8 +174,8 @@ void RemoteFileConnection::Seek(int64_t offset, fuchsia_io::wire::SeekOrigin sta
       }
       break;
     case fio::wire::SeekOrigin::kEnd:
-      n = attr.content_size + offset;
-      if (offset < 0) {
+      n = attr.content_size + request->offset;
+      if (request->offset < 0) {
         // if negative seek
         if (n > attr.content_size) {
           // wrapped around. attempt to seek before start

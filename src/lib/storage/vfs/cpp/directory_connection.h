@@ -19,7 +19,7 @@ namespace fs {
 namespace internal {
 
 class DirectoryConnection final : public Connection,
-                                  public fidl::WireInterface<fuchsia_io::DirectoryAdmin> {
+                                  public fidl::WireServer<fuchsia_io::DirectoryAdmin> {
  public:
   // Refer to documentation for |Connection::Connection|.
   DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
@@ -32,50 +32,44 @@ class DirectoryConnection final : public Connection,
   // |fuchsia.io/Node| operations.
   //
 
-  void Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> object,
-             CloneCompleter::Sync& completer) final;
-  void Close(CloseCompleter::Sync& completer) final;
-  void Describe(DescribeCompleter::Sync& completer) final;
-  void Sync(SyncCompleter::Sync& completer) final;
-  void GetAttr(GetAttrCompleter::Sync& completer) final;
-  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
-               SetAttrCompleter::Sync& completer) final;
-  void NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) final;
-  void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& completer) final;
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final;
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final;
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final;
+  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
+  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
+  void NodeGetFlags(NodeGetFlagsRequestView request, NodeGetFlagsCompleter::Sync& completer) final;
+  void NodeSetFlags(NodeSetFlagsRequestView request, NodeSetFlagsCompleter::Sync& completer) final;
 
   //
   // |fuchsia.io/Directory| operations.
   //
 
-  void Open(uint32_t flags, uint32_t mode, fidl::StringView path,
-            fidl::ServerEnd<fuchsia_io::Node> object, OpenCompleter::Sync& completer) final;
-  void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) final;
-  void Unlink2(fidl::StringView name, fuchsia_io2::wire::UnlinkOptions options,
-               Unlink2Completer::Sync& completer) final;
-  void ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sync& completer) final;
-  void Rewind(RewindCompleter::Sync& completer) final;
-  void GetToken(GetTokenCompleter::Sync& completer) final;
-  void Rename(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
-              RenameCompleter::Sync& completer) final;
-  void Link(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
-            LinkCompleter::Sync& completer) final;
-  void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
-             WatchCompleter::Sync& completer) final;
-  void AddInotifyFilter(fidl::StringView path, fuchsia_io2::wire::InotifyWatchMask filters,
-                        uint32_t watch_descriptor, zx::socket socket,
+  void Open(OpenRequestView request, OpenCompleter::Sync& completer) final;
+  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) final;
+  void Unlink2(Unlink2RequestView request, Unlink2Completer::Sync& completer) final;
+  void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) final;
+  void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) final;
+  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) final;
+  void Rename(RenameRequestView request, RenameCompleter::Sync& completer) final;
+  void Link(LinkRequestView request, LinkCompleter::Sync& completer) final;
+  void Watch(WatchRequestView request, WatchCompleter::Sync& completer) final;
+  void AddInotifyFilter(AddInotifyFilterRequestView request,
                         AddInotifyFilterCompleter::Sync& completer) final {}
 
   //
   // |fuchsia.io/DirectoryAdmin| operations.
   //
 
-  void Mount(fidl::ClientEnd<fuchsia_io::Directory> remote, MountCompleter::Sync& completer) final;
-  void MountAndCreate(fidl::ClientEnd<fuchsia_io::Directory> remote, fidl::StringView name,
-                      uint32_t flags, MountAndCreateCompleter::Sync& completer) final;
-  void Unmount(UnmountCompleter::Sync& completer) final;
-  void UnmountNode(UnmountNodeCompleter::Sync& completer) final;
-  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) final;
-  void GetDevicePath(GetDevicePathCompleter::Sync& completer) final;
+  void Mount(MountRequestView request, MountCompleter::Sync& completer) final;
+  void MountAndCreate(MountAndCreateRequestView request,
+                      MountAndCreateCompleter::Sync& completer) final;
+  void Unmount(UnmountRequestView request, UnmountCompleter::Sync& completer) final;
+  void UnmountNode(UnmountNodeRequestView request, UnmountNodeCompleter::Sync& completer) final;
+  void QueryFilesystem(QueryFilesystemRequestView request,
+                       QueryFilesystemCompleter::Sync& completer) final;
+  void GetDevicePath(GetDevicePathRequestView request,
+                     GetDevicePathCompleter::Sync& completer) final;
 
   // Directory cookie for readdir operations.
   fs::VdirCookie dircookie_;

@@ -14,7 +14,7 @@
 
 namespace disk_pave {
 
-class PayloadStreamer : public fidl::WireInterface<fuchsia_paver::PayloadStream> {
+class PayloadStreamer : public fidl::WireServer<fuchsia_paver::PayloadStream> {
  public:
   PayloadStreamer(fidl::ServerEnd<fuchsia_paver::PayloadStream> server_end, fbl::unique_fd payload);
   ~PayloadStreamer();
@@ -24,9 +24,9 @@ class PayloadStreamer : public fidl::WireInterface<fuchsia_paver::PayloadStream>
   PayloadStreamer(PayloadStreamer&&) = delete;
   PayloadStreamer& operator=(PayloadStreamer&&) = delete;
 
-  void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& completer);
+  void RegisterVmo(RegisterVmoRequestView request, RegisterVmoCompleter::Sync& completer) override;
 
-  void ReadData(ReadDataCompleter::Sync& completer);
+  void ReadData(ReadDataRequestView request, ReadDataCompleter::Sync& completer) override;
 
  private:
   fbl::unique_fd payload_;

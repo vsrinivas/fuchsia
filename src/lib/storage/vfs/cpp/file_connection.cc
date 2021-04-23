@@ -38,12 +38,11 @@ FileConnection::FileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, Vnode
                                VnodeConnectionOptions options)
     : Connection(vfs, std::move(vnode), protocol, options, FidlProtocol::Create<fio::File>(this)) {}
 
-void FileConnection::Clone(uint32_t clone_flags, fidl::ServerEnd<fio::Node> object,
-                           CloneCompleter::Sync& completer) {
-  Connection::NodeClone(clone_flags, std::move(object));
+void FileConnection::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
+  Connection::NodeClone(request->flags, std::move(request->object));
 }
 
-void FileConnection::Close(CloseCompleter::Sync& completer) {
+void FileConnection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   auto result = Connection::NodeClose();
   if (result.is_error()) {
     completer.Reply(result.error());
@@ -52,7 +51,7 @@ void FileConnection::Close(CloseCompleter::Sync& completer) {
   }
 }
 
-void FileConnection::Describe(DescribeCompleter::Sync& completer) {
+void FileConnection::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
   auto result = Connection::NodeDescribe();
   if (result.is_error()) {
     return completer.Close(result.error());
@@ -61,13 +60,13 @@ void FileConnection::Describe(DescribeCompleter::Sync& completer) {
                         [&](fio::wire::NodeInfo&& info) { completer.Reply(std::move(info)); });
 }
 
-void FileConnection::Sync(SyncCompleter::Sync& completer) {
+void FileConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
   Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
     completer.Reply(sync_status);
   });
 }
 
-void FileConnection::GetAttr(GetAttrCompleter::Sync& completer) {
+void FileConnection::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
   auto result = Connection::NodeGetAttr();
   if (result.is_error()) {
     completer.Reply(result.error(), fio::wire::NodeAttributes());
@@ -76,9 +75,8 @@ void FileConnection::GetAttr(GetAttrCompleter::Sync& completer) {
   }
 }
 
-void FileConnection::SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
-                             SetAttrCompleter::Sync& completer) {
-  auto result = Connection::NodeSetAttr(flags, attributes);
+void FileConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
+  auto result = Connection::NodeSetAttr(request->flags, request->attributes);
   if (result.is_error()) {
     completer.Reply(result.error());
   } else {
@@ -86,7 +84,8 @@ void FileConnection::SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes at
   }
 }
 
-void FileConnection::NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) {
+void FileConnection::NodeGetFlags(NodeGetFlagsRequestView request,
+                                  NodeGetFlagsCompleter::Sync& completer) {
   auto result = Connection::NodeNodeGetFlags();
   if (result.is_error()) {
     completer.Reply(result.error(), 0);
@@ -95,8 +94,9 @@ void FileConnection::NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) {
   }
 }
 
-void FileConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& completer) {
-  auto result = Connection::NodeNodeSetFlags(flags);
+void FileConnection::NodeSetFlags(NodeSetFlagsRequestView request,
+                                  NodeSetFlagsCompleter::Sync& completer) {
+  auto result = Connection::NodeNodeSetFlags(request->flags);
   if (result.is_error()) {
     completer.Reply(result.error());
   } else {
@@ -104,7 +104,7 @@ void FileConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& c
   }
 }
 
-void FileConnection::Truncate(uint64_t length, TruncateCompleter::Sync& completer) {
+void FileConnection::Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileTruncate] options: ", options());
 
   if (options().flags.node_reference) {
@@ -116,40 +116,41 @@ void FileConnection::Truncate(uint64_t length, TruncateCompleter::Sync& complete
     return;
   }
 
-  zx_status_t status = vnode()->Truncate(length);
+  zx_status_t status = vnode()->Truncate(request->length);
   completer.Reply(status);
 }
 
-void FileConnection::GetFlags(GetFlagsCompleter::Sync& completer) {
+void FileConnection::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
   uint32_t flags = options().ToIoV1Flags() & (kStatusFlags | ZX_FS_RIGHTS);
   completer.Reply(ZX_OK, flags);
 }
 
-void FileConnection::SetFlags(uint32_t flags, SetFlagsCompleter::Sync& completer) {
-  auto options = VnodeConnectionOptions::FromIoV1Flags(flags);
+void FileConnection::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
+  auto options = VnodeConnectionOptions::FromIoV1Flags(request->flags);
   set_append(options.flags.append);
   completer.Reply(ZX_OK);
 }
 
-void FileConnection::GetBuffer(uint32_t flags, GetBufferCompleter::Sync& completer) {
+void FileConnection::GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileGetBuffer] our options: ", options(),
-                        ", incoming flags: ", ZxFlags(flags));
+                        ", incoming flags: ", ZxFlags(request->flags));
 
   if (options().flags.node_reference) {
     completer.Reply(ZX_ERR_BAD_HANDLE, nullptr);
-  } else if ((flags & fio::wire::kVmoFlagPrivate) && (flags & fio::wire::kVmoFlagExact)) {
+  } else if ((request->flags & fio::wire::kVmoFlagPrivate) &&
+             (request->flags & fio::wire::kVmoFlagExact)) {
     completer.Reply(ZX_ERR_INVALID_ARGS, nullptr);
-  } else if ((options().flags.append) && (flags & fio::wire::kVmoFlagWrite)) {
+  } else if ((options().flags.append) && (request->flags & fio::wire::kVmoFlagWrite)) {
     completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
-  } else if (!options().rights.write && (flags & fio::wire::kVmoFlagWrite)) {
+  } else if (!options().rights.write && (request->flags & fio::wire::kVmoFlagWrite)) {
     completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
-  } else if (!options().rights.execute && (flags & fio::wire::kVmoFlagExec)) {
+  } else if (!options().rights.execute && (request->flags & fio::wire::kVmoFlagExec)) {
     completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
   } else if (!options().rights.read) {
     completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
   } else {
     fuchsia_mem::wire::Buffer buffer;
-    zx_status_t status = vnode()->GetVmo(flags, &buffer.vmo, &buffer.size);
+    zx_status_t status = vnode()->GetVmo(request->flags, &buffer.vmo, &buffer.size);
     completer.Reply(status, status == ZX_OK
                                 ? fidl::ObjectView<fuchsia_mem::wire::Buffer>::FromExternal(&buffer)
                                 : nullptr);

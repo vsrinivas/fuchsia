@@ -17,7 +17,7 @@ namespace devmgr {
 
 class FsManager;
 
-class AdminServer final : public fidl::WireInterface<fuchsia_fshost::Admin> {
+class AdminServer final : public fidl::WireServer<fuchsia_fshost::Admin> {
  public:
   AdminServer(devmgr::FsManager* fs_manager) : fs_manager_(fs_manager) {}
 
@@ -27,7 +27,7 @@ class AdminServer final : public fidl::WireInterface<fuchsia_fshost::Admin> {
                                          async_dispatcher* dispatcher);
 
   // Implementation of the Shutdown method from the FIDL protocol.
-  void Shutdown(ShutdownCompleter::Sync& completer) override;
+  void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override;
 
  private:
   devmgr::FsManager* fs_manager_;

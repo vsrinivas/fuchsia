@@ -28,8 +28,7 @@ HealthCheckService::HealthCheckService(async_dispatcher_t* dispatcher, Blobfs& b
           }),
       blobfs_(blobfs) {}
 
-void HealthCheckService::Verify(fuv::wire::VerifyOptions options,
-                                VerifyCompleter::Sync& completer) {
+void HealthCheckService::Verify(VerifyRequestView request, VerifyCompleter::Sync& completer) {
   constexpr size_t kMaxBytesToVerify = 1024 * 1024;
   size_t bytes_verified = 0;
   zx_status_t status = blobfs_.Cache().ForAllOpenNodes([&](fbl::RefPtr<CacheNode> node) {

@@ -21,7 +21,7 @@ zx_status_t LifecycleServer::Create(async_dispatcher_t* dispatcher, devmgr::FsMa
   return ZX_OK;
 }
 
-void LifecycleServer::Stop(StopCompleter::Sync& completer) {
+void LifecycleServer::Stop(StopRequestView request, StopCompleter::Sync& completer) {
   FX_LOGS(INFO) << "received shutdown command over lifecycle interface";
   fs_manager_->Shutdown([completer = completer.ToAsync()](zx_status_t status) mutable {
     if (status != ZX_OK) {

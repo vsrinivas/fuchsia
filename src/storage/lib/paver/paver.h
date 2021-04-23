@@ -22,22 +22,21 @@
 
 namespace paver {
 
-class Paver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver> {
-  using fidl::WireRawChannelInterface<fuchsia_paver::Paver>::FindSysconfig;
-  using fidl::WireRawChannelInterface<fuchsia_paver::Paver>::UseBlockDevice;
-
+class Paver : public fidl::WireServer<fuchsia_paver::Paver> {
  public:
-  void FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync& completer) override;
+  void FindDataSink(FindDataSinkRequestView request,
+                    FindDataSinkCompleter::Sync& completer) override;
 
-  void UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink,
+  void UseBlockDevice(UseBlockDeviceRequestView request,
                       UseBlockDeviceCompleter::Sync& completer) override;
 
   void UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink);
 
-  void FindBootManager(zx::channel boot_manager,
+  void FindBootManager(FindBootManagerRequestView request,
                        FindBootManagerCompleter::Sync& completer) override;
 
-  void FindSysconfig(zx::channel sysconfig, FindSysconfigCompleter::Sync& completer) override;
+  void FindSysconfig(FindSysconfigRequestView request,
+                     FindSysconfigCompleter::Sync& completer) override;
 
   void FindSysconfig(zx::channel sysconfig);
 
@@ -100,7 +99,7 @@ class DataSinkImpl {
   std::unique_ptr<DevicePartitioner> partitioner_;
 };
 
-class DataSink : public fidl::WireRawChannelInterface<fuchsia_paver::DataSink> {
+class DataSink : public fidl::WireServer<fuchsia_paver::DataSink> {
  public:
   DataSink(fbl::unique_fd devfs_root, std::unique_ptr<DevicePartitioner> partitioner)
       : sink_(std::move(devfs_root), std::move(partitioner)) {}
@@ -110,36 +109,36 @@ class DataSink : public fidl::WireRawChannelInterface<fuchsia_paver::DataSink> {
                    fidl::ClientEnd<fuchsia_io::Directory> svc_root, zx::channel server,
                    std::shared_ptr<Context> context);
 
-  void ReadAsset(fuchsia_paver::wire::Configuration configuration, fuchsia_paver::wire::Asset asset,
-                 ReadAssetCompleter::Sync& completer) override;
+  void ReadAsset(ReadAssetRequestView request, ReadAssetCompleter::Sync& completer) override;
 
-  void WriteAsset(fuchsia_paver::wire::Configuration configuration,
-                  fuchsia_paver::wire::Asset asset, fuchsia_mem::wire::Buffer payload,
-                  WriteAssetCompleter::Sync& completer) override {
-    completer.Reply(sink_.WriteAsset(configuration, asset, std::move(payload)).status_value());
+  void WriteAsset(WriteAssetRequestView request, WriteAssetCompleter::Sync& completer) override {
+    completer.Reply(
+        sink_.WriteAsset(request->configuration, request->asset, std::move(request->payload))
+            .status_value());
   }
 
-  void WriteFirmware(fuchsia_paver::wire::Configuration configuration, fidl::StringView type,
-                     fuchsia_mem::wire::Buffer payload,
+  void WriteFirmware(WriteFirmwareRequestView request,
                      WriteFirmwareCompleter::Sync& completer) override;
 
-  void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync& completer) override {
-    completer.Reply(sink_.WriteVolumes(std::move(payload_stream)).status_value());
+  void WriteVolumes(WriteVolumesRequestView request,
+                    WriteVolumesCompleter::Sync& completer) override {
+    completer.Reply(sink_.WriteVolumes(request->payload.TakeChannel()).status_value());
   }
 
-  void WriteBootloader(fuchsia_mem::wire::Buffer payload,
+  void WriteBootloader(WriteBootloaderRequestView request,
                        WriteBootloaderCompleter::Sync& completer) override {
-    completer.Reply(sink_.WriteBootloader(std::move(payload)).status_value());
+    completer.Reply(sink_.WriteBootloader(std::move(request->payload)).status_value());
   }
 
-  void WriteDataFile(fidl::StringView filename, fuchsia_mem::wire::Buffer payload,
+  void WriteDataFile(WriteDataFileRequestView request,
                      WriteDataFileCompleter::Sync& completer) override {
-    completer.Reply(sink_.WriteDataFile(std::move(filename), std::move(payload)).status_value());
+    completer.Reply(
+        sink_.WriteDataFile(request->filename, std::move(request->payload)).status_value());
   }
 
-  void WipeVolume(WipeVolumeCompleter::Sync& completer) override;
+  void WipeVolume(WipeVolumeRequestView request, WipeVolumeCompleter::Sync& completer) override;
 
-  void Flush(FlushCompleter::Sync& completer) override {
+  void Flush(FlushRequestView request, FlushCompleter::Sync& completer) override {
     completer.Reply(sink_.partitioner()->Flush().status_value());
   }
 
@@ -147,7 +146,7 @@ class DataSink : public fidl::WireRawChannelInterface<fuchsia_paver::DataSink> {
   DataSinkImpl sink_;
 };
 
-class DynamicDataSink : public fidl::WireRawChannelInterface<fuchsia_paver::DynamicDataSink> {
+class DynamicDataSink : public fidl::WireServer<fuchsia_paver::DynamicDataSink> {
  public:
   DynamicDataSink(fbl::unique_fd devfs_root, std::unique_ptr<DevicePartitioner> partitioner)
       : sink_(std::move(devfs_root), std::move(partitioner)) {}
@@ -156,40 +155,42 @@ class DynamicDataSink : public fidl::WireRawChannelInterface<fuchsia_paver::Dyna
                    fidl::ClientEnd<fuchsia_io::Directory> svc_root, zx::channel block_device,
                    zx::channel server, std::shared_ptr<Context> context);
 
-  void InitializePartitionTables(InitializePartitionTablesCompleter::Sync& completer) override;
+  void InitializePartitionTables(InitializePartitionTablesRequestView request,
+                                 InitializePartitionTablesCompleter::Sync& completer) override;
 
-  void WipePartitionTables(WipePartitionTablesCompleter::Sync& completer) override;
+  void WipePartitionTables(WipePartitionTablesRequestView request,
+                           WipePartitionTablesCompleter::Sync& completer) override;
 
-  void ReadAsset(fuchsia_paver::wire::Configuration configuration, fuchsia_paver::wire::Asset asset,
-                 ReadAssetCompleter::Sync& completer) override;
+  void ReadAsset(ReadAssetRequestView request, ReadAssetCompleter::Sync& completer) override;
 
-  void WriteAsset(fuchsia_paver::wire::Configuration configuration,
-                  fuchsia_paver::wire::Asset asset, fuchsia_mem::wire::Buffer payload,
-                  WriteAssetCompleter::Sync& completer) override {
-    completer.Reply(sink_.WriteAsset(configuration, asset, std::move(payload)).status_value());
+  void WriteAsset(WriteAssetRequestView request, WriteAssetCompleter::Sync& completer) override {
+    completer.Reply(
+        sink_.WriteAsset(request->configuration, request->asset, std::move(request->payload))
+            .status_value());
   }
 
-  void WriteFirmware(fuchsia_paver::wire::Configuration configuration, fidl::StringView type,
-                     fuchsia_mem::wire::Buffer payload,
+  void WriteFirmware(WriteFirmwareRequestView request,
                      WriteFirmwareCompleter::Sync& completer) override;
 
-  void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync& completer) override {
-    completer.Reply(sink_.WriteVolumes(std::move(payload_stream)).status_value());
+  void WriteVolumes(WriteVolumesRequestView request,
+                    WriteVolumesCompleter::Sync& completer) override {
+    completer.Reply(sink_.WriteVolumes(request->payload.TakeChannel()).status_value());
   }
 
-  void WriteBootloader(fuchsia_mem::wire::Buffer payload,
+  void WriteBootloader(WriteBootloaderRequestView request,
                        WriteBootloaderCompleter::Sync& completer) override {
-    completer.Reply(sink_.WriteBootloader(std::move(payload)).status_value());
+    completer.Reply(sink_.WriteBootloader(std::move(request->payload)).status_value());
   }
 
-  void WriteDataFile(fidl::StringView filename, fuchsia_mem::wire::Buffer payload,
+  void WriteDataFile(WriteDataFileRequestView request,
                      WriteDataFileCompleter::Sync& completer) override {
-    completer.Reply(sink_.WriteDataFile(std::move(filename), std::move(payload)).status_value());
+    completer.Reply(
+        sink_.WriteDataFile(request->filename, std::move(request->payload)).status_value());
   }
 
-  void WipeVolume(WipeVolumeCompleter::Sync& completer) override;
+  void WipeVolume(WipeVolumeRequestView request, WipeVolumeCompleter::Sync& completer) override;
 
-  void Flush(FlushCompleter::Sync& completer) override {
+  void Flush(FlushRequestView request, FlushCompleter::Sync& completer) override {
     completer.Reply(sink_.partitioner()->Flush().status_value());
   }
 
@@ -197,7 +198,7 @@ class DynamicDataSink : public fidl::WireRawChannelInterface<fuchsia_paver::Dyna
   DataSinkImpl sink_;
 };
 
-class BootManager : public fidl::WireInterface<fuchsia_paver::BootManager> {
+class BootManager : public fidl::WireServer<fuchsia_paver::BootManager> {
  public:
   BootManager(std::unique_ptr<abr::Client> abr_client,
               fidl::ClientEnd<fuchsia_io::Directory> svc_root)
@@ -207,23 +208,25 @@ class BootManager : public fidl::WireInterface<fuchsia_paver::BootManager> {
                    fidl::ClientEnd<fuchsia_io::Directory> svc_root,
                    std::shared_ptr<Context> context, zx::channel server);
 
-  void QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync& completer) override;
+  void QueryCurrentConfiguration(QueryCurrentConfigurationRequestView request,
+                                 QueryCurrentConfigurationCompleter::Sync& completer) override;
 
-  void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync& completer) override;
+  void QueryActiveConfiguration(QueryActiveConfigurationRequestView request,
+                                QueryActiveConfigurationCompleter::Sync& completer) override;
 
-  void QueryConfigurationStatus(fuchsia_paver::wire::Configuration configuration,
+  void QueryConfigurationStatus(QueryConfigurationStatusRequestView request,
                                 QueryConfigurationStatusCompleter::Sync& completer) override;
 
-  void SetConfigurationActive(fuchsia_paver::wire::Configuration configuration,
+  void SetConfigurationActive(SetConfigurationActiveRequestView request,
                               SetConfigurationActiveCompleter::Sync& completer) override;
 
-  void SetConfigurationUnbootable(fuchsia_paver::wire::Configuration configuration,
+  void SetConfigurationUnbootable(SetConfigurationUnbootableRequestView request,
                                   SetConfigurationUnbootableCompleter::Sync& completer) override;
 
-  void SetConfigurationHealthy(fuchsia_paver::wire::Configuration configuration,
+  void SetConfigurationHealthy(SetConfigurationHealthyRequestView request,
                                SetConfigurationHealthyCompleter::Sync& completer) override;
 
-  void Flush(FlushCompleter::Sync& completer) override {
+  void Flush(FlushRequestView request, FlushCompleter::Sync& completer) override {
     completer.Reply(abr_client_->Flush().status_value());
   }
 

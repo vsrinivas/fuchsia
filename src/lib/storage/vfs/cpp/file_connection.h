@@ -20,7 +20,7 @@ namespace fs {
 
 namespace internal {
 
-class FileConnection : public Connection, public fidl::WireInterface<fuchsia_io::File> {
+class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::File> {
  public:
   // Refer to documentation for |Connection::Connection|.
   FileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
@@ -33,25 +33,23 @@ class FileConnection : public Connection, public fidl::WireInterface<fuchsia_io:
   // |fuchsia.io/Node| operations.
   //
 
-  void Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> object,
-             CloneCompleter::Sync& completer) final;
-  void Close(CloseCompleter::Sync& completer) final;
-  void Describe(DescribeCompleter::Sync& completer) final;
-  void Sync(SyncCompleter::Sync& completer) final;
-  void GetAttr(GetAttrCompleter::Sync& completer) final;
-  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
-               SetAttrCompleter::Sync& completer) final;
-  void NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) final;
-  void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& completer) final;
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final;
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final;
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final;
+  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
+  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
+  void NodeGetFlags(NodeGetFlagsRequestView request, NodeGetFlagsCompleter::Sync& completer) final;
+  void NodeSetFlags(NodeSetFlagsRequestView request, NodeSetFlagsCompleter::Sync& completer) final;
 
   //
   // |fuchsia.io/File| operations.
   //
 
-  void Truncate(uint64_t length, TruncateCompleter::Sync& completer) final;
-  void GetFlags(GetFlagsCompleter::Sync& completer) final;
-  void SetFlags(uint32_t flags, SetFlagsCompleter::Sync& completer) final;
-  void GetBuffer(uint32_t flags, GetBufferCompleter::Sync& completer) final;
+  void Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) final;
+  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
+  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
+  void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) final;
 };
 
 }  // namespace internal

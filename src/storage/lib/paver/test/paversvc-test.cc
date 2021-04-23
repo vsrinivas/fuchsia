@@ -179,31 +179,28 @@ constexpr fuchsia_hardware_nand_RamNandInfo
             .export_partition_map = true,
 };
 
-class FakeBootArgs : public fidl::WireInterface<fuchsia_boot::Arguments> {
+class FakeBootArgs : public fidl::WireServer<fuchsia_boot::Arguments> {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
     return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
-  void GetString(::fidl::StringView arg, GetStringCompleter::Sync& completer) override {
+  void GetString(GetStringRequestView request, GetStringCompleter::Sync& completer) override {
     completer.Reply(fidl::StringView::FromExternal(arg_response_));
   }
 
   // Stubs
-  void GetStrings(::fidl::VectorView<::fidl::StringView> names,
-                  GetStringsCompleter::Sync& completer) override {}
-  void GetBool(::fidl::StringView name, bool defaultval,
-               GetBoolCompleter::Sync& completer) override {
-    if (strncmp(name.data(), "astro.sysconfig.abr-wear-leveling",
+  void GetStrings(GetStringsRequestView request, GetStringsCompleter::Sync& completer) override {}
+  void GetBool(GetBoolRequestView request, GetBoolCompleter::Sync& completer) override {
+    if (strncmp(request->key.data(), "astro.sysconfig.abr-wear-leveling",
                 sizeof("astro.sysconfig.abr-wear-leveling")) == 0) {
       completer.Reply(astro_sysconfig_abr_wear_leveling_);
     } else {
-      completer.Reply(defaultval);
+      completer.Reply(request->defaultval);
     }
   }
-  void GetBools(::fidl::VectorView<fuchsia_boot::wire::BoolPair> name,
-                GetBoolsCompleter::Sync& completer) override {}
-  void Collect(::fidl::StringView name, CollectCompleter::Sync& completer) override {}
+  void GetBools(GetBoolsRequestView request, GetBoolsCompleter::Sync& completer) override {}
+  void Collect(CollectRequestView request, CollectCompleter::Sync& completer) override {}
 
   void SetAstroSysConfigAbrWearLeveling(bool opt) { astro_sysconfig_abr_wear_leveling_ = opt; }
 

@@ -33,13 +33,11 @@ class RemoteFileConnection final : public FileConnection {
   // |fuchsia.io/File| operations.
   //
 
-  void Read(uint64_t count, ReadCompleter::Sync& completer) final;
-  void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync& completer) final;
-  void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) final;
-  void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
-               WriteAtCompleter::Sync& completer) final;
-  void Seek(int64_t offset, fuchsia_io::wire::SeekOrigin start,
-            SeekCompleter::Sync& completer) final;
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
+  void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) final;
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
+  void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) final;
+  void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
 
   // Current seek offset.
   size_t offset_ = 0;

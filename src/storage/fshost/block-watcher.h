@@ -67,14 +67,14 @@ class BlockWatcher {
   std::thread thread_;
 };
 
-class BlockWatcherServer final : public fidl::WireInterface<fuchsia_fshost::BlockWatcher> {
+class BlockWatcherServer final : public fidl::WireServer<fuchsia_fshost::BlockWatcher> {
  public:
   // Creates a new fs::Service backed by a new BlockWatcherServer, to be inserted into
   // a pseudo fs. |watcher| is unowned and must outlive the returned instance.
   static fbl::RefPtr<fs::Service> Create(async_dispatcher* dispatcher, BlockWatcher& watcher);
 
-  void Pause(PauseCompleter::Sync& completer) override;
-  void Resume(ResumeCompleter::Sync& completer) override;
+  void Pause(PauseRequestView request, PauseCompleter::Sync& completer) override;
+  void Resume(ResumeRequestView request, ResumeCompleter::Sync& completer) override;
 
  private:
   explicit BlockWatcherServer(BlockWatcher& watcher) : watcher_(watcher) {}

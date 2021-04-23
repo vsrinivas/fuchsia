@@ -20,7 +20,7 @@ TEST(StreamReaderTest, InvalidChannel) {
   ASSERT_NOT_OK(paver::StreamReader::Create(zx::channel()));
 }
 
-class FakePayloadStream : public fidl::WireInterface<fuchsia_paver::PayloadStream> {
+class FakePayloadStream : public fidl::WireServer<fuchsia_paver::PayloadStream> {
  public:
   FakePayloadStream() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
     zx::channel server;
@@ -53,7 +53,7 @@ class FakePayloadStream : public fidl::WireInterface<fuchsia_paver::PayloadStrea
     completer.Reply(std::move(result));
   }
 
-  void ReadData(ReadDataCompleter::Sync& completer) {
+  void ReadData(ReadDataRequestView request, ReadDataCompleter::Sync& completer) override {
     if (!vmo_) {
       fuchsia_paver::wire::ReadResult result;
       zx_status_t status = ZX_ERR_BAD_STATE;
@@ -71,8 +71,8 @@ class FakePayloadStream : public fidl::WireInterface<fuchsia_paver::PayloadStrea
     }
   }
 
-  void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& completer) {
-    vmo_ = std::move(vmo);
+  void RegisterVmo(RegisterVmoRequestView request, RegisterVmoCompleter::Sync& completer) override {
+    vmo_ = std::move(request->vmo);
     completer.Reply(ZX_OK);
   }
 

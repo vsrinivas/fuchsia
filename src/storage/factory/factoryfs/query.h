@@ -14,14 +14,14 @@
 
 namespace factoryfs {
 
-class QueryService final : public fidl::WireInterface<fuchsia_fs::Query>, public fs::Service {
+class QueryService final : public fidl::WireServer<fuchsia_fs::Query>, public fs::Service {
  public:
   QueryService(async_dispatcher_t* dispatcher, Factoryfs* factoryfs, Runner* runner);
 
-  void GetInfo(fuchsia_fs::wire::FilesystemInfoQuery query,
-               GetInfoCompleter::Sync& completer) final;
+  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) final;
 
-  void IsNodeInFilesystem(zx::event token, IsNodeInFilesystemCompleter::Sync& completer) final;
+  void IsNodeInFilesystem(IsNodeInFilesystemRequestView request,
+                          IsNodeInFilesystemCompleter::Sync& completer) final;
 
  private:
   const Factoryfs* const factoryfs_;

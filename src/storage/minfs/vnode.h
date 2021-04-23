@@ -57,7 +57,7 @@ class Minfs;
 class VnodeMinfs : public fs::Vnode,
                    public fbl::SinglyLinkedListable<VnodeMinfs*>,
                    public fbl::Recyclable<VnodeMinfs>,
-                   fidl::WireInterface<fuchsia_minfs::Minfs> {
+                   fidl::WireServer<fuchsia_minfs::Minfs> {
 #else
 class VnodeMinfs : public fs::Vnode,
                    public fbl::SinglyLinkedListable<VnodeMinfs*>,
@@ -176,10 +176,13 @@ class VnodeMinfs : public fs::Vnode,
   virtual void CancelPendingWriteback() = 0;
 
   // Minfs FIDL interface.
-  void GetMetrics(GetMetricsCompleter::Sync& completer) final;
-  void ToggleMetrics(bool enabled, ToggleMetricsCompleter::Sync& completer) final;
-  void GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) final;
-  void GetMountState(GetMountStateCompleter::Sync& completer) final;
+  void GetMetrics(GetMetricsRequestView request, GetMetricsCompleter::Sync& completer) final;
+  void ToggleMetrics(ToggleMetricsRequestView request,
+                     ToggleMetricsCompleter::Sync& completer) final;
+  void GetAllocatedRegions(GetAllocatedRegionsRequestView request,
+                           GetAllocatedRegionsCompleter::Sync& completer) final;
+  void GetMountState(GetMountStateRequestView request,
+                     GetMountStateCompleter::Sync& completer) final;
 
   // Returns a copy of unowned vmo.
   zx::unowned_vmo vmo() const { return zx::unowned_vmo(vmo_.get()); }

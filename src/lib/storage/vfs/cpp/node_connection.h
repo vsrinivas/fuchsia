@@ -20,7 +20,7 @@ namespace fs {
 
 namespace internal {
 
-class NodeConnection final : public Connection, public fidl::WireInterface<fuchsia_io::Node> {
+class NodeConnection final : public Connection, public fidl::WireServer<fuchsia_io::Node> {
  public:
   // Refer to documentation for |Connection::Connection|.
   NodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
@@ -33,16 +33,14 @@ class NodeConnection final : public Connection, public fidl::WireInterface<fuchs
   // |fuchsia.io/Node| operations.
   //
 
-  void Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> object,
-             CloneCompleter::Sync& completer) final;
-  void Close(CloseCompleter::Sync& completer) final;
-  void Describe(DescribeCompleter::Sync& completer) final;
-  void Sync(SyncCompleter::Sync& completer) final;
-  void GetAttr(GetAttrCompleter::Sync& completer) final;
-  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
-               SetAttrCompleter::Sync& completer) final;
-  void NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) final;
-  void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& completer) final;
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final;
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final;
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final;
+  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
+  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
+  void NodeGetFlags(NodeGetFlagsRequestView request, NodeGetFlagsCompleter::Sync& completer) final;
+  void NodeSetFlags(NodeSetFlagsRequestView request, NodeSetFlagsCompleter::Sync& completer) final;
 };
 
 }  // namespace internal
