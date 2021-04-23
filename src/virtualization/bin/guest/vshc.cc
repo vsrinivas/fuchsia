@@ -24,7 +24,7 @@
 
 namespace fpty = fuchsia_hardware_pty;
 
-std::pair<int, int> init_tty(void) {
+std::pair<int, int> init_tty() {
   int cols = 80;
   int rows = 24;
 
@@ -56,7 +56,7 @@ std::pair<int, int> init_tty(void) {
   return {cols, rows};
 }
 
-void reset_tty(void) {
+void reset_tty() {
   if (isatty(STDIN_FILENO)) {
     fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
     auto result = fidl::WireCall<fpty::Device>(zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
@@ -76,7 +76,7 @@ class ConsoleIn {
   ConsoleIn(async::Loop* loop, zx::unowned_socket&& socket)
       : loop_(loop), sink_(std::move(socket)), fd_waiter_(loop->dispatcher()) {}
 
-  bool Start(void) {
+  bool Start() {
     if (fcntl(STDIN_FILENO, F_GETFD) != -1) {
       fd_waiter_.Wait(fit::bind_member(this, &ConsoleIn::HandleStdin), STDIN_FILENO, POLLIN);
     } else {
@@ -122,7 +122,7 @@ class ConsoleOut {
         msg_size_(sizeof(uint32_t)),
         bytes_left_(msg_size_) {}
 
-  bool Start(void) {
+  bool Start() {
     wait_.set_object(source_->get());
     wait_.set_trigger(ZX_SOCKET_READABLE);
     auto status = wait_.Begin(loop_->dispatcher());
@@ -271,7 +271,7 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
   context->svc()->Connect(manager.NewRequest());
   std::vector<fuchsia::virtualization::EnvironmentInfo> env_infos;
   manager->List(&env_infos);
-  if (env_infos.size() == 0) {
+  if (env_infos.empty()) {
     FX_LOGS(ERROR) << "Unable to find any environments.";
     return;
   }
@@ -281,7 +281,7 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
   manager->Connect(env_id, realm.NewRequest());
   std::vector<fuchsia::virtualization::InstanceInfo> instances;
   realm->ListInstances(&instances);
-  if (instances.size() == 0) {
+  if (instances.empty()) {
     FX_LOGS(ERROR) << "Unable to find any instances in environment " << env_id;
     return;
   }
