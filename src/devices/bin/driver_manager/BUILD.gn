@@ -3,12 +3,30 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/cpp/cpp_fuzzer.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":driver-manager-tests" ]
+  deps = [
+    ":driver-manager-fuzzers",
+    ":driver-manager-tests",
+  ]
+}
+
+source_set("manifest_parser") {
+  sources = [
+    "manifest_parser.cc",
+    "manifest_parser.h",
+  ]
+  public_deps = [
+    "//sdk/lib/fdio",
+    "//src/devices/lib/log",
+    "//src/lib/json_parser",
+    "//src/lib/pkg_url",
+    "//zircon/public/lib/zxc",
+  ]
 }
 
 # Common source files and dependencies between :coordinator and :test
@@ -58,6 +76,7 @@ source_set("lib") {
 
   public_deps = [
     ":driver_runner",
+    ":manifest_parser",
     "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
@@ -234,6 +253,20 @@ source_set("driver_runner") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
+executable("manifest_parser_test") {
+  testonly = true
+  sources = [ "manifest_parser_test.cc" ]
+
+  deps = [
+    ":manifest_parser",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_component("manifest_parser_test_component") {
+  deps = [ ":manifest_parser_test" ]
+}
+
 executable("driver_runner_test") {
   testonly = true
   sources = [ "driver_runner_test.cc" ]
@@ -262,6 +295,15 @@ fuchsia_unittest_component("driver-runner-test") {
   deps = [ ":driver_runner_test" ]
 }
 
+cpp_fuzzer("manifest-parser-fuzzer") {
+  sources = [ "manifest_parser_fuzzer.cc" ]
+  deps = [ ":manifest_parser" ]
+}
+
+fuzzers_package("driver-manager-fuzzers") {
+  cpp_fuzzers = [ ":manifest-parser-fuzzer" ]
+}
+
 fuchsia_test_package("driver-manager-tests") {
   test_specs = {
     log_settings = {
@@ -273,6 +315,7 @@ fuchsia_test_package("driver-manager-tests") {
     ":driver-host-loader-service-test",
     ":driver-manager-test",
     ":driver-runner-test",
+    ":manifest_parser_test_component",
   ]
 }
 
