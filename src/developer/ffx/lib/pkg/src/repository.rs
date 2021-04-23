@@ -5,16 +5,20 @@
 use {
     bytes::Bytes,
     futures::Stream,
-    std::{io, pin::Pin},
+    std::{io, path::PathBuf, pin::Pin},
 };
 
+mod file_system;
 mod manager;
 
+pub use file_system::FileSystemRepository;
 pub use manager::RepositoryManager;
 
 #[derive(Debug)]
 pub enum Error {
     NotFound,
+    InvalidPath(PathBuf),
+    Io(io::Error),
     Other(anyhow::Error),
 }
 
@@ -23,7 +27,7 @@ impl From<std::io::Error> for Error {
         if err.kind() == std::io::ErrorKind::NotFound {
             Error::NotFound
         } else {
-            Error::Other(err.into())
+            Error::Io(err)
         }
     }
 }
