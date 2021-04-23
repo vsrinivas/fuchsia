@@ -17,7 +17,7 @@ zx_library("mipi-dsi") {
     "//zircon/public/lib/zxc",
   ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.dsiimpl",
+    "//sdk/banjo/fuchsia.hardware.dsiimpl:fuchsia.hardware.dsiimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.dsi:fuchsia.hardware.dsi_llcpp",
     "//sdk/lib/fit",
     "//zircon/public/lib/fbl",

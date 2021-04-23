@@ -61,7 +61,7 @@ struct DsiConfig {
     DisplaySetting display_setting;
     VideoMode video_mode_type;
     ColorCode color_coding;
-    [Buffer, Mutable] vector<uint8> vendor_config;
+    [Buffer, Mutable] vector<uint8>:MAX vendor_config;
 };
 
 /// This is the generic MIPI-DSI command structure
@@ -70,10 +70,10 @@ struct MipiDsiCmd {
     uint8 dsi_data_type;
 
     // TX Direction
-    vector<uint8> pld_data;
+    vector<uint8>:MAX pld_data;
 
     // RX Direction
-    [Mutable] vector<uint8> rsp_data;
+    [Mutable] vector<uint8>:MAX rsp_data;
 
     uint32 flags;
 };
@@ -90,7 +90,7 @@ protocol DsiImpl {
     /// This function is used to change modes between Video and Command.
     SetMode(DsiMode mode) -> ();
     /// This function is used to send a MIPI-DSI command through the DSI block
-    SendCmd(vector<MipiDsiCmd> cmd) -> (zx.status s);
+    SendCmd(vector<MipiDsiCmd>:MAX cmd) -> (zx.status s);
     /// This function return true if the DSI block is powered on and not in reset
     IsPoweredUp() -> (bool on);
     /// This function resets the DSI IP block
