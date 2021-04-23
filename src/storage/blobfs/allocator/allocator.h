@@ -24,7 +24,7 @@
 #include <id_allocator/id_allocator.h>
 #include <storage/buffer/vmoid_registry.h>
 
-#include "src/lib/storage/vfs/cpp/transaction/legacy_transaction_handler.h"
+#include "src/lib/storage/vfs/cpp/transaction/device_transaction_handler.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
 #include "src/storage/blobfs/allocator/node_reserver.h"
 #include "src/storage/blobfs/common.h"
@@ -90,7 +90,7 @@ class Allocator : private ExtentReserver, private NodeReserverInterface, public 
   // blocking read transaction.
   //
   // It is unsafe to call this method while any nodes or blocks are reserved.
-  zx_status_t ResetFromStorage(fs::ReadTxn txn);
+  zx_status_t ResetFromStorage(fs::DeviceTransactionHandler& transaction_handler);
 
   // Provides a read-only view into the block map.
   const zx::vmo& GetBlockMapVmo() const;

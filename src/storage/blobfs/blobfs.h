@@ -98,21 +98,11 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   //
   // Allows transmitting read and write transactions directly to the underlying storage.
 
-  uint32_t FsBlockSize() const final { return kBlobfsBlockSize; }
-
-  uint32_t DeviceBlockSize() const final { return block_info_.block_size; }
-
   uint64_t BlockNumberToDevice(uint64_t block_num) const final {
     return block_num * kBlobfsBlockSize / block_info_.block_size;
   }
 
   block_client::BlockDevice* GetDevice() final { return block_device_.get(); }
-
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
-    TRACE_DURATION("blobfs", "Blobfs::Transaction", "count", count);
-    return block_device_->FifoTransaction(requests, count);
-  }
-
   ////////////////
   // TransactionManager's SpaceManager interface.
   //

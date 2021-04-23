@@ -4,8 +4,6 @@
 
 #include "replay_tree.h"
 
-#include "src/lib/storage/vfs/cpp/transaction/writeback.h"
-
 namespace fs {
 namespace internal {
 

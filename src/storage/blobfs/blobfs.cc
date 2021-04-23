@@ -271,7 +271,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
 
   fs->allocator_ = std::make_unique<Allocator>(fs.get(), std::move(block_map), std::move(node_map),
                                                std::move(nodes_bitmap));
-  if ((status = fs->allocator_->ResetFromStorage(fs::ReadTxn(fs.get()))) != ZX_OK) {
+  if ((status = fs->allocator_->ResetFromStorage(*fs)) != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to load bitmaps: " << status;
     return zx::error(status);
   }
@@ -869,9 +869,7 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
   pager_ = nullptr;
 
   // Flushes the underlying block device.
-  fs::WriteTxn sync_txn(this);
-  sync_txn.EnqueueFlush();
-  sync_txn.Transact();
+  this->Flush();
 
   // If we have not initialized allocator, skip updating fragmentation metrics as it depends on
   // in-memoery inode table.

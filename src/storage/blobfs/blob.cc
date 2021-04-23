@@ -37,7 +37,6 @@
 #include "src/lib/digest/node-digest.h"
 #include "src/lib/storage/vfs/cpp/journal/data_streamer.h"
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
-#include "src/lib/storage/vfs/cpp/transaction/writeback.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/storage/blobfs/blob_data_producer.h"
 #include "src/storage/blobfs/blob_layout.h"

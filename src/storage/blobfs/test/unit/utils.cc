@@ -35,7 +35,7 @@ void VerifySizeBlockAligned(BlockDevice* device, size_t size, uint64_t offset,
 
 }  // namespace
 
-zx_status_t MockTransactionManager::Transaction(block_fifo_request_t* requests, size_t count) {
+zx_status_t MockTransactionManager::FifoTransaction(block_fifo_request_t* requests, size_t count) {
   fbl::AutoLock lock(&lock_);
 
   if (transaction_callback_) {

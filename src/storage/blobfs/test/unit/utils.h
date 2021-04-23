@@ -35,7 +35,7 @@ using block_client::BlockDevice;
 // WritebackQueue, Journal). Allows vmos to be attached/detached and a customized callback to be
 // invoked on transaction completion.
 // This class is thread-safe.
-class MockTransactionManager : public TransactionManager {
+class MockTransactionManager : public TransactionManager, public block_client::BlockDevice {
  public:
   MockTransactionManager() = default;
   ~MockTransactionManager() = default;
@@ -46,20 +46,13 @@ class MockTransactionManager : public TransactionManager {
     transaction_callback_ = std::move(callback);
   }
 
-  uint32_t FsBlockSize() const final { return kBlockSize; }
-
-  uint32_t DeviceBlockSize() const final { return kBlockSize; }
-
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
-  block_client::BlockDevice* GetDevice() final { return nullptr; }
-
+  block_client::BlockDevice* GetDevice() final { return this; }
   zx_status_t RunOperation(const storage::Operation& operation,
                            storage::BlockBuffer* buffer) final {
     return ZX_OK;
   }
-
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override;
 
   const Superblock& Info() const final { return superblock_; }
 
@@ -79,6 +72,33 @@ class MockTransactionManager : public TransactionManager {
     ZX_ASSERT(false);
     return nullptr;
   }
+
+  // block_client::BlockDevice interfaces.
+  zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const final {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // FIFO protocol.
+  zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
+
+  zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) const final {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t VolumeQuery(fuchsia_hardware_block_volume_VolumeInfo* out_info) const final {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
+                                fuchsia_hardware_block_volume_VsliceRange* out_ranges,
+                                size_t* out_ranges_count) const final {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_status_t VolumeExtend(uint64_t offset, uint64_t length) final { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t VolumeShrink(uint64_t offset, uint64_t length) final { return ZX_ERR_NOT_SUPPORTED; }
 
  private:
   BlobfsMetrics metrics_{false};

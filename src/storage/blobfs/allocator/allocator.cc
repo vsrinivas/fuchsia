@@ -22,6 +22,7 @@
 #include <storage/buffer/owned_vmoid.h>
 
 #include "src/lib/storage/vfs/cpp/trace.h"
+#include "src/lib/storage/vfs/cpp/transaction/device_transaction_handler.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
 #include "src/storage/blobfs/allocator/node_reserver.h"
 #include "src/storage/blobfs/common.h"
@@ -59,7 +60,7 @@ bool Allocator::CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
   return allocated;
 }
 
-zx_status_t Allocator::ResetFromStorage(fs::ReadTxn txn) {
+zx_status_t Allocator::ResetFromStorage(fs::DeviceTransactionHandler& transaction_handler) {
   ZX_DEBUG_ASSERT(ReservedBlockCount() == 0);
   ZX_DEBUG_ASSERT(ReservedNodeCount() == 0);
 
@@ -91,10 +92,23 @@ zx_status_t Allocator::ResetFromStorage(fs::ReadTxn txn) {
   }
 
   const auto info = space_manager_->Info();
-  txn.Enqueue(block_map_vmoid.get(), 0, BlockMapStartBlock(info), BlockMapBlocks(info));
-  txn.Enqueue(node_map_vmoid.get(), 0, NodeMapStartBlock(info), NodeMapBlocks(info));
+  std::vector<storage::BufferedOperation> operations;
+  operations.push_back({.vmoid = block_map_vmoid.get(),
+                        .op = {
+                            .type = storage::OperationType::kRead,
+                            .vmo_offset = 0,
+                            .dev_offset = BlockMapStartBlock(info),
+                            .length = BlockMapBlocks(info),
+                        }});
+  operations.push_back({.vmoid = node_map_vmoid.get(),
+                        .op = {
+                            .type = storage::OperationType::kRead,
+                            .vmo_offset = 0,
+                            .dev_offset = NodeMapStartBlock(info),
+                            .length = NodeMapBlocks(info),
+                        }});
 
-  return txn.Transact();
+  return transaction_handler.RunRequests(operations);
 }
 
 const zx::vmo& Allocator::GetBlockMapVmo() const { return block_map_.StorageUnsafe()->GetVmo(); }

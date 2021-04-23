@@ -400,7 +400,7 @@ void ResetSizeHelper(uint64_t before_blocks, uint64_t before_nodes, uint64_t aft
   transaction_manager.MutableInfo().data_block_count = after_blocks;
 
   // ResetFromStorage invokes resizing of node and block maps.
-  ASSERT_EQ(allocator.ResetFromStorage(fs::ReadTxn(&transaction_manager)), ZX_OK);
+  ASSERT_EQ(allocator.ResetFromStorage(transaction_manager), ZX_OK);
 
   CheckNodeMapSize(&allocator, after_nodes);
   CheckBlockMapSize(&allocator, after_blocks);
@@ -497,7 +497,7 @@ TEST(AllocatorTest, ResetFromStorageTest) {
     return ZX_OK;
   });
 
-  ASSERT_EQ(allocator.ResetFromStorage(fs::ReadTxn(&transaction_manager)), ZX_OK);
+  ASSERT_EQ(allocator.ResetFromStorage(transaction_manager), ZX_OK);
 
   CompareData(&bitmap_data[0], allocator.GetBlockMapVmo(), kDeviceBlockSize);
   CompareData(&bitmap_data[0], allocator.GetNodeMapVmo(), kDeviceBlockSize);
@@ -507,7 +507,7 @@ TEST(AllocatorTest, ResetFromStorageTest) {
   transaction_manager.MutableInfo().inode_count *= 2;
 
   RandomizeData(&bitmap_data[0], kDeviceBlockSize);
-  ASSERT_EQ(allocator.ResetFromStorage(fs::ReadTxn(&transaction_manager)), ZX_OK);
+  ASSERT_EQ(allocator.ResetFromStorage(transaction_manager), ZX_OK);
 
   CompareData(&bitmap_data[0], allocator.GetBlockMapVmo(), kDeviceBlockSize);
   CompareData(&bitmap_data[0], allocator.GetNodeMapVmo(), kDeviceBlockSize);

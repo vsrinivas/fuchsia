@@ -15,12 +15,14 @@
 
 #include <algorithm>
 #include <memory>
+#include <vector>
 
 #include <fbl/string_buffer.h>
 #include <storage/buffer/owned_vmoid.h>
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/storage/vfs/cpp/trace.h"
+#include "src/lib/storage/vfs/cpp/transaction/buffered_operations_builder.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/blob_verifier.h"
 #include "src/storage/blobfs/common.h"
@@ -30,6 +32,7 @@
 #include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/iterator/block_iterator.h"
+#include "storage/operation/operation.h"
 
 namespace blobfs {
 
@@ -439,8 +442,6 @@ zx::status<uint64_t> BlobLoader::LoadBlocks(uint32_t node_index, uint32_t block_
     return zx::error(status);
   }
 
-  fs::ReadTxn txn(txn_manager_);
-
   const uint64_t kDataStart = DataStartBlock(txn_manager_->Info());
   auto block_iter = block_iter_provider_->BlockIteratorByNodeIndex(node_index);
   if (block_iter.is_error()) {
@@ -450,18 +451,26 @@ zx::status<uint64_t> BlobLoader::LoadBlocks(uint32_t node_index, uint32_t block_
     FX_LOGS(ERROR) << "Failed to seek to starting block: " << zx_status_get_string(status);
     return zx::error(status);
   }
+  std::vector<storage::BufferedOperation> operations;
 
   status = StreamBlocks(&block_iter.value(), block_count,
                         [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                          txn.Enqueue(vmoid.get(), vmo_offset - block_offset,
-                                      kDataStart + dev_offset, length);
+                          operations.push_back({.vmoid = vmoid.get(),
+                                                .op = {
+                                                    .type = storage::OperationType::kRead,
+                                                    .vmo_offset = vmo_offset - block_offset,
+                                                    .dev_offset = kDataStart + dev_offset,
+                                                    .length = length,
+                                                }});
                           return ZX_OK;
                         });
+
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to stream blocks: " << zx_status_get_string(status);
     return zx::error(status);
   }
-  if ((status = txn.Transact()) != ZX_OK) {
+  status = txn_manager_->RunRequests(operations);
+  if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to flush read transaction: " << zx_status_get_string(status);
     return zx::error(status);
   }

@@ -13,7 +13,7 @@
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
-#include "src/lib/storage/vfs/cpp/transaction/legacy_transaction_handler.h"
+#include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 #include "src/storage/factory/factoryfs/format.h"
 
 namespace factoryfs {
@@ -29,7 +29,7 @@ using TransactionCallback =
 
 using block_client::BlockDevice;
 
-class MockTransactionManager : public fs::LegacyTransactionHandler {
+class MockTransactionManager : public fs::TransactionHandler {
  public:
   MockTransactionManager() = default;
   ~MockTransactionManager() = default;
@@ -40,20 +40,16 @@ class MockTransactionManager : public fs::LegacyTransactionHandler {
     transaction_callback_ = std::move(callback);
   }
 
-  uint32_t FsBlockSize() const final { return kBlockSize; }
-
-  uint32_t DeviceBlockSize() const final { return kBlockSize; }
-
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
-
-  block_client::BlockDevice* GetDevice() final { return nullptr; }
 
   zx_status_t RunOperation(const storage::Operation& operation,
                            storage::BlockBuffer* buffer) final {
     return ZX_OK;
   }
 
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override;
+  zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   const Superblock& Info() const { return superblock_; }
 

@@ -10,7 +10,6 @@
 #include <storage/buffer/vmoid_registry.h>
 
 #include "src/lib/storage/vfs/cpp/journal/journal.h"
-#include "src/lib/storage/vfs/cpp/transaction/writeback.h"
 
 namespace fs {
 namespace {

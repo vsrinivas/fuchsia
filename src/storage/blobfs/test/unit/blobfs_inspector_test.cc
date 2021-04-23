@@ -14,7 +14,6 @@
 
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/lib/storage/vfs/cpp/journal/initializer.h"
-#include "src/lib/storage/vfs/cpp/transaction/legacy_transaction_handler.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/format.h"
@@ -24,7 +23,7 @@ namespace {
 
 constexpr uint64_t kBlockCount = 1 << 10;
 
-class FakeTransactionHandler : public fs::LegacyTransactionHandler {
+class FakeTransactionHandler : public fs::TransactionHandler {
  public:
   explicit FakeTransactionHandler(std::unique_ptr<storage::ArrayBuffer> fake_device)
       : fake_device_(std::move(fake_device)) {}
@@ -32,9 +31,6 @@ class FakeTransactionHandler : public fs::LegacyTransactionHandler {
   FakeTransactionHandler(FakeTransactionHandler&&) = default;
   FakeTransactionHandler& operator=(const FakeTransactionHandler&) = delete;
   FakeTransactionHandler& operator=(FakeTransactionHandler&&) = default;
-
-  // TransactionHandler interface:
-  uint32_t FsBlockSize() const final { return fake_device_->BlockSize(); }
 
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
@@ -56,11 +52,7 @@ class FakeTransactionHandler : public fs::LegacyTransactionHandler {
     return ZX_OK;
   }
 
-  uint32_t DeviceBlockSize() const final { return fake_device_->BlockSize(); }
-
-  block_client::BlockDevice* GetDevice() final { return nullptr; }
-
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
+  zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations) override {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

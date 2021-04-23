@@ -15,12 +15,12 @@
 #include <storage/buffer/vmoid_registry.h>
 #include <storage/operation/operation.h>
 
-#include "src/lib/storage/vfs/cpp/transaction/legacy_transaction_handler.h"
+#include "src/lib/storage/vfs/cpp/transaction/device_transaction_handler.h"
 
 namespace disk_inspector {
 
-// Vmo-based implementation of TransactionHandler for use with disk-inspect application.
-class InspectorTransactionHandler : public fs::LegacyTransactionHandler,
+// Vmo-based implementation of DeviceTransactionHandler for use with disk-inspect application.
+class InspectorTransactionHandler : public fs::DeviceTransactionHandler,
                                     public storage::VmoidRegistry {
  public:
   static zx_status_t Create(std::unique_ptr<block_client::BlockDevice> device, uint32_t block_size,
@@ -32,7 +32,7 @@ class InspectorTransactionHandler : public fs::LegacyTransactionHandler,
   InspectorTransactionHandler& operator=(InspectorTransactionHandler&&) = delete;
   ~InspectorTransactionHandler() override = default;
 
-  // fs::TransactionHandler interface:
+  // fs::DeviceTransactionHandler interface:
   uint64_t BlockNumberToDevice(uint64_t block_num) const final;
   block_client::BlockDevice* GetDevice() final { return device_.get(); }
 
@@ -45,12 +45,8 @@ class InspectorTransactionHandler : public fs::LegacyTransactionHandler,
                                        fuchsia_hardware_block_BlockInfo info, uint32_t block_size)
       : device_(std::move(device)), info_(info), block_size_(block_size) {}
 
-  // TransactionHandler interface scheduled for removal:
-  uint32_t FsBlockSize() const final { return block_size_; }
-  uint32_t DeviceBlockSize() const final { return info_.block_size; }
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  uint32_t FsBlockSize() const { return block_size_; }
+  uint32_t DeviceBlockSize() const { return info_.block_size; }
 
   std::unique_ptr<block_client::BlockDevice> device_;
   fuchsia_hardware_block_BlockInfo info_ = {};

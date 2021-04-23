@@ -10,7 +10,7 @@
 #endif
 
 #include "src/lib/storage/vfs/cpp/journal/journal.h"
-#include "src/lib/storage/vfs/cpp/transaction/legacy_transaction_handler.h"
+#include "src/lib/storage/vfs/cpp/transaction/device_transaction_handler.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/allocator/allocator.h"
 #include "src/storage/blobfs/metrics.h"
@@ -27,7 +27,7 @@ enum class EnqueueType {
 };
 
 // An interface which controls access to the underlying storage.
-class TransactionManager : public fs::LegacyTransactionHandler, public SpaceManager {
+class TransactionManager : public fs::DeviceTransactionHandler, public SpaceManager {
  public:
   virtual ~TransactionManager() = default;
   virtual BlobfsMetrics* Metrics() = 0;

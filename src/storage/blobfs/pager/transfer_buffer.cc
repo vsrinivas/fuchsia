@@ -54,7 +54,6 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  fs::ReadTxn txn(txn_manager_);
   auto block_iter = block_iter_provider_->BlockIteratorByNodeIndex(info.identifier);
   if (block_iter.is_error()) {
     return block_iter.take_error();
@@ -75,12 +74,18 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
     return zx::error(status);
   }
 
+  std::vector<storage::BufferedOperation> operations;
   // Enqueue operations to read in the required blocks to the transfer buffer.
   const uint64_t data_start = DataStartBlock(txn_manager_->Info());
   status = StreamBlocks(&block_iter.value(), block_count,
                         [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                          txn.Enqueue(vmoid_.get(), vmo_offset - start_block,
-                                      dev_offset + data_start, length);
+                          operations.push_back({.vmoid = vmoid_.get(),
+                                                .op = {
+                                                    .type = storage::OperationType::kRead,
+                                                    .vmo_offset = vmo_offset - start_block,
+                                                    .dev_offset = dev_offset + data_start,
+                                                    .length = length,
+                                                }});
                           return ZX_OK;
                         });
   if (status != ZX_OK) {
@@ -89,7 +94,7 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
   }
 
   // Issue the read.
-  status = txn.Transact();
+  status = txn_manager_->RunRequests(operations);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to transact read operations: " << zx_status_get_string(status);
     return zx::error(status);

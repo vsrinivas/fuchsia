@@ -13,7 +13,6 @@
 
 #include "entry_view.h"
 #include "format_assertions.h"
-#include "src/lib/storage/vfs/cpp/transaction/writeback.h"
 #include "storage/operation/unbuffered_operation.h"
 
 namespace fs {

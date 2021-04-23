@@ -14,9 +14,7 @@ static_library("transaction") {
   public = [
     "buffered_operations_builder.h",
     "device_transaction_handler.h",
-    "legacy_transaction_handler.h",
     "transaction_handler.h",
-    "writeback.h",
   ]
 
   public_deps = [
@@ -34,10 +32,8 @@ static_library("transaction") {
   if (is_fuchsia) {
     sources += [
       "device_transaction_handler.cc",
-      "legacy_transaction_handler.cc",
       "trace.cc",
       "trace.h",
-      "writeback.cc",
     ]
 
     public_deps += [ "//zircon/system/ulib/block-client" ]
@@ -66,7 +62,6 @@ test("fs-transaction-test") {
   sources = [
     "buffered_operations_builder_test.cc",
     "device_transaction_handler_test.cc",
-    "writeback_test.cc",
   ]
 }
 
