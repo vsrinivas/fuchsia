@@ -5,9 +5,13 @@
 #include "src/ui/scenic/lib/focus/focus_manager.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace focus::test {
 
@@ -77,6 +81,39 @@ std::shared_ptr<const view_tree::Snapshot> FourNodeSnapshot() {
   view_tree[kNodeB] = ViewNode{.parent = kNodeA, .children = {kNodeD}};
   view_tree[kNodeC] = ViewNode{.parent = kNodeA};
   view_tree[kNodeD] = ViewNode{.parent = kNodeB};
+
+  return snapshot;
+}
+
+// Creates a snapshot with the following four-node topology, with valid ViewRefs for each node:
+//      A
+//    /   \
+//   B     C
+//   |
+//   D
+static std::shared_ptr<const view_tree::Snapshot> FourNodeSnapshotWithViewRefs() {
+  auto snapshot = std::make_shared<view_tree::Snapshot>();
+
+  snapshot->root = kNodeA;
+  auto& view_tree = snapshot->view_tree;
+  {
+    auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+    view_tree[kNodeA] = ViewNode{
+        .parent = ZX_KOID_INVALID, .children = {kNodeB, kNodeC}, .view_ref = std::move(view_ref)};
+  }
+  {
+    auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+    view_tree[kNodeB] =
+        ViewNode{.parent = kNodeA, .children = {kNodeD}, .view_ref = std::move(view_ref)};
+  }
+  {
+    auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+    view_tree[kNodeC] = ViewNode{.parent = kNodeA, .view_ref = std::move(view_ref)};
+  }
+  {
+    auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+    view_tree[kNodeD] = ViewNode{.parent = kNodeB, .view_ref = std::move(view_ref)};
+  }
 
   return snapshot;
 }
@@ -239,6 +276,103 @@ TEST(FocusManagerTest, ViewRemoval_ShouldShortenFocusChain) {
 
   focus_manager.OnNewViewTreeSnapshot(std::make_shared<view_tree::Snapshot>());
   EXPECT_TRUE(focus_manager.focus_chain().empty());
+}
+
+class FocusChainTest : public gtest::TestLoopFixture,
+                       public fuchsia::ui::focus::FocusChainListener {
+ public:
+  FocusChainTest() : focus_listener_(this) {}
+
+  void OnFocusChange(
+      fuchsia::ui::focus::FocusChain new_focus_chain,
+      fuchsia::ui::focus::FocusChainListener::OnFocusChangeCallback callback) override {
+    num_focus_chains_received_++;
+    last_received_chain_.clear();
+    if (new_focus_chain.has_focus_chain()) {
+      for (const auto& view_ref : new_focus_chain.focus_chain()) {
+        last_received_chain_.push_back(utils::ExtractKoid(view_ref));
+      }
+    }
+
+    callback();
+  }
+
+  void RegisterFocusListener(FocusManager& focus_manager) {
+    fidl::InterfaceHandle<FocusChainListener> listener_handle;
+    focus_listener_.Bind(listener_handle.NewRequest());
+    focus_manager.Register(std::move(listener_handle));
+  }
+
+  std::vector<zx_koid_t> last_received_chain_;
+  uint32_t num_focus_chains_received_ = 0;
+
+ private:
+  fidl::Binding<fuchsia::ui::focus::FocusChainListener> focus_listener_;
+};
+
+TEST_F(FocusChainTest, RegisterBeforeSceneSetup_ShouldReturnEmptyFocusChain) {
+  FocusManager focus_manager;
+
+  RegisterFocusListener(focus_manager);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(last_received_chain_.empty());
+}
+
+// Topology:
+//      A
+//    /   \
+//   B     C
+//   |
+//   D
+TEST_F(FocusChainTest, RegisterAfterSceneSetup_ShouldReturnNonEmptyFocusChain) {
+  FocusManager focus_manager;
+
+  // New view tree should set the focus to root.
+  focus_manager.OnNewViewTreeSnapshot(FourNodeSnapshotWithViewRefs());
+  RegisterFocusListener(focus_manager);
+  RunLoopUntilIdle();
+  EXPECT_EQ(num_focus_chains_received_, 1u);
+  EXPECT_EQ(last_received_chain_.size(), 1u);
+}
+
+// Topology:
+//          A
+//        /   \
+//    -> B     C
+//       |
+//       D
+TEST_F(FocusChainTest, NewSnapshotAfterRegister_ShouldReturnNewFocusChain) {
+  FocusManager focus_manager;
+
+  RegisterFocusListener(focus_manager);
+  RunLoopUntilIdle();
+  EXPECT_EQ(num_focus_chains_received_, 1u);
+  EXPECT_TRUE(last_received_chain_.empty());
+
+  focus_manager.OnNewViewTreeSnapshot(FourNodeSnapshotWithViewRefs());
+  RunLoopUntilIdle();
+  EXPECT_EQ(num_focus_chains_received_, 2u);
+  EXPECT_EQ(last_received_chain_.size(), 1u);
+}
+
+// Topology:
+//     A           A
+//   /   \       /   \
+//  B     C  -> B     C
+//  |           |
+//  D           D
+TEST_F(FocusChainTest, SameSnapshotTopologyTwice_ShouldNotSendNewFocusChain) {
+  FocusManager focus_manager;
+
+  focus_manager.OnNewViewTreeSnapshot(FourNodeSnapshotWithViewRefs());
+  RegisterFocusListener(focus_manager);
+  RunLoopUntilIdle();
+  EXPECT_EQ(num_focus_chains_received_, 1u);
+
+  //
+  focus_manager.OnNewViewTreeSnapshot(FourNodeSnapshotWithViewRefs());
+  RunLoopUntilIdle();
+  EXPECT_EQ(num_focus_chains_received_, 1u);
 }
 
 }  // namespace focus::test

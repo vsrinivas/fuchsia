@@ -14,8 +14,11 @@ executable("focus_test_bin") {
   testonly = true
   sources = [ "focus_manager_unittest.cc" ]
   deps = [
+    "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/scenic/lib/focus",
+    "//src/ui/scenic/lib/utils",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

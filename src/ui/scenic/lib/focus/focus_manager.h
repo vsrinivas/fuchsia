@@ -5,6 +5,13 @@
 #ifndef SRC_UI_SCENIC_LIB_FOCUS_FOCUS_MANAGER_H_
 #define SRC_UI_SCENIC_LIB_FOCUS_FOCUS_MANAGER_H_
 
+#include <fuchsia/ui/focus/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/sys/cpp/component_context.h>
+
+#include <unordered_map>
+
 #include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace focus {
@@ -22,8 +29,12 @@ enum class FocusChangeStatus {
 };
 
 // Class for tracking focus state.
-class FocusManager final {
+class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry {
  public:
+  FocusManager() : focus_chain_listener_registry_(this) {}
+
+  void Publish(sys::ComponentContext& component_context);
+
   // Request focus transfer to the proposed ViewRef's KOID |request|, on the behalf of |requestor|.
   // Return kAccept if successful.
   // - If |requestor| is not authorized to focus |request|, return error.
@@ -33,6 +44,10 @@ class FocusManager final {
 
   // Saves the new snapshot and updates the focus chain accordingly.
   void OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapshot> snapshot);
+
+  // |fuchsia.ui.focus.FocusChainListenerRegistry|
+  void Register(
+      fidl::InterfaceHandle<fuchsia::ui::focus::FocusChainListener> focus_chain_listener) override;
 
   const std::vector<zx_koid_t>& focus_chain() { return focus_chain_; }
 
@@ -52,10 +67,22 @@ class FocusManager final {
   // an empty focus_chain_.
   void SetFocus(zx_koid_t koid);
 
+  // Dispatches the current focus chain to all registered listeners.
+  void DispatchFocusChain();
+  // Dispatches the current focus chain to |listener|.
+  void DispatchFocusChainTo(const fuchsia::ui::focus::FocusChainListenerPtr& listener);
+
+  fuchsia::ui::views::ViewRef CloneViewRefOf(zx_koid_t koid) const;
+  fuchsia::ui::focus::FocusChain CloneFocusChain() const;
+
   std::vector<zx_koid_t> focus_chain_;
 
   std::shared_ptr<const view_tree::Snapshot> snapshot_ =
       std::make_shared<const view_tree::Snapshot>();
+
+  fidl::Binding<fuchsia::ui::focus::FocusChainListenerRegistry> focus_chain_listener_registry_;
+  uint64_t next_focus_chain_listener_id_ = 0;
+  std::unordered_map<uint64_t, fuchsia::ui::focus::FocusChainListenerPtr> focus_chain_listeners_;
 };
 
 }  // namespace focus

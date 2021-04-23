@@ -8,6 +8,13 @@
 
 namespace focus {
 
+void FocusManager::Publish(sys::ComponentContext& component_context) {
+  component_context.outgoing()->AddPublicService<FocusChainListenerRegistry>(
+      [this](fidl::InterfaceRequest<FocusChainListenerRegistry> request) {
+        focus_chain_listener_registry_.Bind(std::move(request));
+      });
+}
+
 FocusChangeStatus FocusManager::RequestFocus(zx_koid_t requestor, zx_koid_t request) {
   // Invalid requestor.
   if (snapshot_->view_tree.count(requestor) == 0) {
@@ -47,12 +54,53 @@ void FocusManager::OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapsh
   RepairFocus();
 }
 
+void FocusManager::Register(
+    fidl::InterfaceHandle<fuchsia::ui::focus::FocusChainListener> focus_chain_listener) {
+  const uint64_t id = next_focus_chain_listener_id_++;
+  fuchsia::ui::focus::FocusChainListenerPtr new_listener;
+  new_listener.Bind(std::move(focus_chain_listener));
+  new_listener.set_error_handler([this, id](zx_status_t) { focus_chain_listeners_.erase(id); });
+  const auto [_, success] = focus_chain_listeners_.emplace(id, std::move(new_listener));
+  FX_DCHECK(success);
+
+  // Dispatch current chain on register.
+  DispatchFocusChainTo(focus_chain_listeners_.at(id));
+}
+
+void FocusManager::DispatchFocusChainTo(const fuchsia::ui::focus::FocusChainListenerPtr& listener) {
+  listener->OnFocusChange(CloneFocusChain(), [] { /* No flow control yet. */ });
+}
+
+void FocusManager::DispatchFocusChain() {
+  for (auto& [_, listener] : focus_chain_listeners_) {
+    DispatchFocusChainTo(listener);
+  }
+}
+
+fuchsia::ui::views::ViewRef FocusManager::CloneViewRefOf(zx_koid_t koid) const {
+  FX_DCHECK(snapshot_->view_tree.count(koid) != 0)
+      << "all views in the focus chain must exist in the view tree";
+  fuchsia::ui::views::ViewRef clone;
+  fidl::Clone(snapshot_->view_tree.at(koid).view_ref, &clone);
+  return clone;
+}
+
+fuchsia::ui::focus::FocusChain FocusManager::CloneFocusChain() const {
+  fuchsia::ui::focus::FocusChain full_copy{};
+  for (const zx_koid_t koid : focus_chain_) {
+    full_copy.mutable_focus_chain()->push_back(CloneViewRefOf(koid));
+  }
+  return full_copy;
+}
+
 void FocusManager::RepairFocus() {
   // Old root no longer valid -> move focus to new root.
   if (focus_chain_.empty() || snapshot_->root != focus_chain_.front()) {
     SetFocus(snapshot_->root);
     return;
   }
+
+  const auto previous_focus_chain = focus_chain_;
 
   // See if there's any place where the old focus chain breaks a parent-child relationship, and
   // truncate from there.
@@ -65,6 +113,10 @@ void FocusManager::RepairFocus() {
       break;
     }
   }
+
+  if (focus_chain_ != previous_focus_chain) {
+    DispatchFocusChain();
+  }
 }
 
 void FocusManager::SetFocus(zx_koid_t koid) {
@@ -74,6 +126,8 @@ void FocusManager::SetFocus(zx_koid_t koid) {
     FX_DCHECK(snapshot_->view_tree.at(koid).is_focusable);
   }
 
+  const auto previous_focus_chain = std::move(focus_chain_);
+
   // Regenerate chain.
   focus_chain_.clear();
   while (koid != ZX_KOID_INVALID) {
@@ -81,6 +135,10 @@ void FocusManager::SetFocus(zx_koid_t koid) {
     koid = snapshot_->view_tree.at(koid).parent;
   }
   std::reverse(focus_chain_.begin(), focus_chain_.end());
+
+  if (focus_chain_ != previous_focus_chain) {
+    DispatchFocusChain();
+  }
 }
 
 }  // namespace focus
