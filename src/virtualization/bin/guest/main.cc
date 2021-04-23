@@ -57,7 +57,7 @@ static bool read_guest_cfg(int argc, const char** argv, fuchsia::virtualization:
 }
 
 static bool parse_args(int argc, const char** argv, async::Loop* loop,
-                       sys::ComponentContext* context, fit::closure* func) {
+                       sys::ComponentContext* context, fit::function<zx_status_t()>* func) {
   if (argc < 1) {
     return false;
   }
@@ -71,8 +71,8 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     } else if (!parse_number(argv[3], "number of pages", &num_pages)) {
       return false;
     }
-    *func = [env_id, cid, num_pages, context]() {
-      handle_balloon(env_id, cid, num_pages, context);
+    *func = [env_id, cid, num_pages, context]() -> zx_status_t {
+      return handle_balloon(env_id, cid, num_pages, context);
     };
   } else if (cmd_view == "balloon-stats" && argc == 3) {
     uint32_t env_id, cid;
@@ -81,16 +81,19 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     } else if (!parse_number(argv[2], "context ID", &cid)) {
       return false;
     }
-    *func = [env_id, cid, context]() { handle_balloon_stats(env_id, cid, context); };
+    *func = [env_id, cid, context]() -> zx_status_t {
+      return handle_balloon_stats(env_id, cid, context);
+    };
   } else if (cmd_view == "launch" && argc >= 2) {
-    *func = [argc, argv, loop, context]() mutable {
+    *func = [argc, argv, loop, context]() mutable -> zx_status_t {
       fuchsia::virtualization::GuestConfig cfg;
-      if (read_guest_cfg(argc, argv, &cfg)) {
-        handle_launch(argc - 1, argv + 1, loop, std::move(cfg), context);
+      if (!read_guest_cfg(argc, argv, &cfg)) {
+        return ZX_ERR_INVALID_ARGS;
       }
+      return handle_launch(argc - 1, argv + 1, loop, std::move(cfg), context);
     };
   } else if (cmd_view == "list") {
-    *func = [context]() { handle_list(context); };
+    *func = [context]() -> zx_status_t { return handle_list(context); };
   } else if (cmd_view == "serial" && argc == 3) {
     uint32_t env_id, cid;
     if (!parse_number(argv[1], "environment ID", &env_id)) {
@@ -98,7 +101,9 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     } else if (!parse_number(argv[2], "context ID", &cid)) {
       return false;
     }
-    *func = [env_id, cid, loop, context]() { handle_serial(env_id, cid, loop, context); };
+    *func = [env_id, cid, loop, context]() -> zx_status_t {
+      return handle_serial(env_id, cid, loop, context);
+    };
   } else if (cmd_view == "socat" && argc == 4) {
     uint32_t env_id, cid, port;
     if (!parse_number(argv[1], "environment ID", &env_id)) {
@@ -108,8 +113,8 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     } else if (!parse_number(argv[3], "port", &port)) {
       return false;
     }
-    *func = [env_id, cid, port, loop, context]() {
-      handle_socat_connect(env_id, cid, port, loop, context);
+    *func = [env_id, cid, port, loop, context]() -> zx_status_t {
+      return handle_socat_connect(env_id, cid, port, loop, context);
     };
   } else if (cmd_view == "socat-listen" && argc == 3) {
     uint32_t env_id, host_port;
@@ -118,8 +123,8 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     } else if (!parse_number(argv[2], "host port", &host_port)) {
       return false;
     }
-    *func = [env_id, host_port, loop, context]() {
-      handle_socat_listen(env_id, host_port, loop, context);
+    *func = [env_id, host_port, loop, context]() -> zx_status_t {
+      return handle_socat_listen(env_id, host_port, loop, context);
     };
   } else if (cmd_view == "vsh" && (argc >= 1 && argc <= 4)) {
     std::optional<uint32_t> env_id, cid, port;
@@ -145,7 +150,9 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
       return false;
     }
 
-    *func = [env_id, cid, port, loop, context]() { handle_vsh(env_id, cid, port, loop, context); };
+    *func = [env_id, cid, port, loop, context]() -> zx_status_t {
+      return handle_vsh(env_id, cid, port, loop, context);
+    };
   } else {
     return false;
   }
@@ -153,7 +160,7 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
 }
 
 int main(int argc, const char** argv) {
-  fit::closure func;
+  fit::function<zx_status_t()> func;
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
@@ -171,6 +178,5 @@ int main(int argc, const char** argv) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  func();
-  return 0;
+  return func() == ZX_OK ? 0 : 1;
 }
