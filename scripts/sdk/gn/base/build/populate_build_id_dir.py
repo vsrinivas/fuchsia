@@ -52,7 +52,7 @@ def populate_build_id_dir(ids_txt_path, output_dir, build_id_dirs, filenames):
 
         # Exclude stripped binaries (indicated by their lack of symbol tables).
         readelf_args = ['readelf', '-S', symbol_source_path]
-        readelf_output = subprocess.check_output(readelf_args)
+        readelf_output = subprocess.check_output(readelf_args, universal_newlines=True)
         if not '.symtab' in readelf_output:
             continue
 
