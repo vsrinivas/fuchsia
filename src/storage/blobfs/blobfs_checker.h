@@ -27,8 +27,9 @@ class BlobfsChecker {
     bool strict = false;
   };
 
-  explicit BlobfsChecker(std::unique_ptr<Blobfs> blobfs) : BlobfsChecker(std::move(blobfs), {}) {}
-  explicit BlobfsChecker(std::unique_ptr<Blobfs> blobfs, Options option);
+  // The Blobfs pointer must outlive this class.
+  explicit BlobfsChecker(Blobfs* blobfs) : BlobfsChecker(blobfs, {}) {}
+  explicit BlobfsChecker(Blobfs* blobfs, Options option);
 
   BlobfsChecker(const BlobfsChecker&) = delete;
   BlobfsChecker& operator=(const BlobfsChecker&) = delete;
@@ -39,10 +40,8 @@ class BlobfsChecker {
   // Returns true if the filesystem is valid.
   bool Check();
 
-  std::unique_ptr<Blobfs> TakeBlobfs() { return std::move(blobfs_); }
-
  private:
-  std::unique_ptr<Blobfs> blobfs_;
+  Blobfs* blobfs_;  // Non-owning.
   uint32_t alloc_inodes_ = 0;
   uint32_t alloc_blocks_ = 0;
   uint32_t inode_blocks_ = 0;

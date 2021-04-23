@@ -88,6 +88,11 @@ class BlobfsTestAtRevision : public BlobfsTestSetup, public testing::Test {
     srand(testing::UnitTest::GetInstance()->random_seed());
   }
 
+  void TearDown() final {
+    // Process any pending notifications before tearing down blobfs (necessary for paged vmos).
+    loop().RunUntilIdle();
+  }
+
  protected:
   virtual MountOptions GetMountOptions() const { return MountOptions(); }
 
@@ -288,6 +293,9 @@ TEST_F(FsckAtEndOfEveryTransactionTest, FsckAtEndOfEveryTransaction) {
     EXPECT_EQ(file->Close(), ZX_OK);
   }
   EXPECT_EQ(root_node->Unlink(info->path + 1, false), ZX_OK);
+
+  blobfs()->Sync([loop = &loop()](zx_status_t) { loop->Quit(); });
+  loop().Run();
 }
 
 #endif  // !defined(NDEBUG)

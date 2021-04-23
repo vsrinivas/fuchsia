@@ -1020,6 +1020,15 @@ void Blob::ActivateLowMemory() {
   std::lock_guard lock(mutex_);
 
   // We shouldn't be putting the blob into a low-memory state while it is still mapped.
+  //
+  // It is common for tests to trigger this assert during Blobfs tear-down. This will happen when
+  // the "no clones" message was not delivered before destruction. This can happen if the test code
+  // kept a vmo reference, but can also happen when there are no clones because the delivery of this
+  // message depends on running the message loop which is easy to skip in a test.
+  //
+  // Often, the solution is to call RunUntilIdle() on the loop after the test code has cleaned up
+  // its mappings but before deleting Blobfs. This will allow the pending notifications to be
+  // delivered.
   ZX_ASSERT_MSG(!has_clones(), "Cannot put blob in low memory state as its mapped via clones.");
 
 #if !defined(ENABLE_BLOBFS_NEW_PAGER)

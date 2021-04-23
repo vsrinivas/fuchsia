@@ -13,10 +13,17 @@
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/blobfs_checker.h"
 #include "src/storage/blobfs/iterator/extent_iterator.h"
+#include "src/storage/blobfs/vfs_types.h"
 #include "zircon/errors.h"
 
 namespace blobfs {
 
+// To run Fsck we mount Blobfs on the given BlockDevice. This requires a dispatcher. This function
+// may be called in different contexts where there might not be an easily known dispatcher or none
+// set up.
+//
+// To make this uniform from the caller's perspective, Blobfs is run on a new thread with a
+// dedicated dispatcher.
 zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, const MountOptions& options) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   if (zx_status_t status = loop.StartThread(); status != ZX_OK) {
@@ -24,19 +31,35 @@ zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, const MountO
     return status;
   }
 
-  auto blobfs_or = Blobfs::Create(loop.dispatcher(), std::move(device), nullptr, options);
+  auto vfs = std::make_unique<VfsType>(loop.dispatcher());
+#if ENABLE_BLOBFS_NEW_PAGER
+  if (auto status = vfs->Init(); status.is_error())
+    return status.error_value();
+#endif
+
+  auto blobfs_or = Blobfs::Create(loop.dispatcher(), std::move(device), vfs.get(), options);
   if (blobfs_or.is_error()) {
     FX_LOGS(ERROR) << "Cannot create filesystem for checking: " << blobfs_or.status_string();
     return blobfs_or.status_value();
   }
+  Blobfs* blobfs = blobfs_or.value().get();
 
-  BlobfsChecker::Options checker_options;
-  if (blobfs_or->writability() == Writability::ReadOnlyDisk) {
-    checker_options.repair = false;
-  }
-  return BlobfsChecker(std::move(blobfs_or.value()), checker_options).Check()
-             ? ZX_OK
-             : ZX_ERR_IO_DATA_INTEGRITY;
+  sync_completion_t completion;
+  zx_status_t result = ZX_OK;
+
+  async::PostTask(
+      loop.dispatcher(), [dispatcher = loop.dispatcher(), blobfs, &result, &completion]() mutable {
+        BlobfsChecker::Options checker_options;
+        if (blobfs->writability() == Writability::ReadOnlyDisk) {
+          checker_options.repair = false;
+        }
+        result = BlobfsChecker(blobfs, checker_options).Check() ? ZX_OK : ZX_ERR_IO_DATA_INTEGRITY;
+        sync_completion_signal(&completion);
+      });
+
+  sync_completion_wait(&completion, ZX_TIME_INFINITE);
+
+  return result;
 }
 
 }  // namespace blobfs

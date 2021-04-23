@@ -128,7 +128,6 @@ class BlobfsCheckerTest : public testing::Test {
   }
 
   Blobfs* blobfs() { return setup_.blobfs(); }
-  std::unique_ptr<Blobfs> TakeBlobfs() { return setup_.TakeBlobfs(); }
 
   void CorruptNode(fit::callback<void(Inode& node)> corrupt_fn,
                    std::unique_ptr<BlockDevice>* device_out) {
@@ -149,8 +148,7 @@ class BlobfsCheckerTest : public testing::Test {
     file.reset();
     root.reset();
 
-    // Unmount.
-    auto device = Blobfs::Destroy(TakeBlobfs());
+    auto device = setup_.Unmount();
 
     storage::VmoBuffer buffer;
     ASSERT_EQ(buffer.Initialize(device.get(), 1, kBlobfsBlockSize, "test_buffer"), ZX_OK);
@@ -228,8 +226,7 @@ class BlobfsCheckerTest : public testing::Test {
     file.reset();
     root.reset();
 
-    // Unmount.
-    auto device = Blobfs::Destroy(TakeBlobfs());
+    auto device = setup_.Unmount();
 
     storage::VmoBuffer buffer;
     ASSERT_EQ(buffer.Initialize(device.get(), 1, kBlobfsBlockSize, "test_buffer"), ZX_OK);
@@ -264,7 +261,7 @@ class BlobfsCheckerTest : public testing::Test {
 };
 
 TEST_F(BlobfsCheckerTest, TestEmpty) {
-  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_TRUE(checker.Check());
 }
 
@@ -276,7 +273,7 @@ TEST_F(BlobfsCheckerTest, TestNonEmpty) {
   }
   EXPECT_EQ(Sync(), ZX_OK);
 
-  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_TRUE(checker.Check());
 }
 
@@ -291,7 +288,7 @@ TEST_F(BlobfsCheckerTest, TestInodeWithUnallocatedBlock) {
   Extent e(1, 1);
   blobfs()->GetAllocator()->FreeBlocks(e);
 
-  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(checker.Check());
 }
 
@@ -307,7 +304,7 @@ TEST_F(BlobfsCheckerTest, TestAllocatedBlockCountTooHigh) {
   superblock.alloc_block_count++;
   ASSERT_EQ(UpdateSuperblock(superblock), ZX_OK);
 
-  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(checker.Check());
 }
 
@@ -323,14 +320,14 @@ TEST_F(BlobfsCheckerTest, TestAllocatedBlockCountTooLow) {
   superblock.alloc_block_count = 2;
   UpdateSuperblock(superblock);
 
-  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(checker.Check());
 }
 
 TEST_F(BlobfsCheckerTest, TestFewerThanMinimumBlocksAllocated) {
   Extent e(0, 1);
   blobfs()->GetAllocator()->FreeBlocks(e);
-  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(checker.Check());
 }
 
@@ -344,7 +341,7 @@ TEST_F(BlobfsCheckerTest, TestAllocatedInodeCountTooHigh) {
   superblock.alloc_inode_count++;
   UpdateSuperblock(superblock);
 
-  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(checker.Check());
 }
 
@@ -360,7 +357,7 @@ TEST_F(BlobfsCheckerTest, TestAllocatedInodeCountTooLow) {
   superblock.alloc_inode_count = 2;
   UpdateSuperblock(superblock);
 
-  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(checker.Check());
 }
 
@@ -379,7 +376,7 @@ TEST_F(BlobfsCheckerTest, TestCorruptBlobs) {
   }
   EXPECT_EQ(Sync(), ZX_OK);
 
-  BlobfsChecker checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(checker.Check());
 }
 
@@ -396,10 +393,10 @@ TEST_F(BlobfsCheckerTest, CorruptReserved) {
   CorruptNode([](Inode& node) { node.reserved = 1; }, &device);
   ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
 
-  BlobfsChecker strict_checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker strict_checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(strict_checker.Check());
 
-  BlobfsChecker checker(strict_checker.TakeBlobfs());
+  BlobfsChecker checker(blobfs());
   EXPECT_TRUE(checker.Check());
 }
 
@@ -408,10 +405,10 @@ TEST_F(BlobfsCheckerTest, CorruptFlags) {
   CorruptNode([](Inode& node) { node.header.flags |= ~kBlobFlagMaskValid; }, &device);
   ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
 
-  BlobfsChecker strict_checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker strict_checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(strict_checker.Check());
 
-  BlobfsChecker checker(strict_checker.TakeBlobfs());
+  BlobfsChecker checker(blobfs());
   EXPECT_TRUE(checker.Check());
 }
 
@@ -420,10 +417,10 @@ TEST_F(BlobfsCheckerTest, CorruptVersion) {
   CorruptNode([](Inode& node) { node.header.version = kBlobNodeVersion + 1; }, &device);
   ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
 
-  BlobfsChecker strict_checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker strict_checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(strict_checker.Check());
 
-  BlobfsChecker checker(strict_checker.TakeBlobfs());
+  BlobfsChecker checker(blobfs());
   EXPECT_TRUE(checker.Check());
 }
 
@@ -434,10 +431,10 @@ TEST_F(BlobfsCheckerTest, CorruptFlagsInExtentContainer) {
       &device);
   ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
 
-  BlobfsChecker strict_checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker strict_checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(strict_checker.Check());
 
-  BlobfsChecker checker(strict_checker.TakeBlobfs());
+  BlobfsChecker checker(blobfs());
   EXPECT_TRUE(checker.Check());
 }
 
@@ -452,10 +449,10 @@ TEST_F(BlobfsCheckerTest, CorruptNextNodeInInode) {
       &device);
   ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
 
-  BlobfsChecker strict_checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker strict_checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(strict_checker.Check());
 
-  BlobfsChecker checker(strict_checker.TakeBlobfs());
+  BlobfsChecker checker(blobfs());
   EXPECT_TRUE(checker.Check());
 }
 
@@ -471,10 +468,10 @@ TEST_F(BlobfsCheckerTest, CorruptNextNodeInExtentContainer) {
       {}, &device);
   ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
 
-  BlobfsChecker strict_checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker strict_checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(strict_checker.Check());
 
-  BlobfsChecker checker(strict_checker.TakeBlobfs());
+  BlobfsChecker checker(blobfs());
   EXPECT_TRUE(checker.Check());
 }
 
@@ -511,10 +508,10 @@ TEST_F(BlobfsCheckerTest, CorruptUnallocatedNode) {
 
   ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
 
-  BlobfsChecker strict_checker(TakeBlobfs(), BlobfsChecker::Options{.strict = true});
+  BlobfsChecker strict_checker(blobfs(), BlobfsChecker::Options{.strict = true});
   EXPECT_FALSE(strict_checker.Check());
 
-  BlobfsChecker checker(strict_checker.TakeBlobfs());
+  BlobfsChecker checker(blobfs());
   EXPECT_TRUE(checker.Check());
 }
 

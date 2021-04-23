@@ -9,6 +9,7 @@
 
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/mkfs.h"
+#include "src/storage/blobfs/test/blobfs_test_setup.h"
 
 namespace blobfs {
 namespace {
@@ -21,20 +22,20 @@ zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
   options.writability = Writability::ReadOnlyFilesystem;
   options.metrics = false;
 
-  auto blobfs_or = Blobfs::Create(nullptr, std::move(device), nullptr, options);
-  return blobfs_or.status_value();
+  BlobfsTestSetup setup;
+  return setup.Mount(std::move(device), options);
 }
 
 void CheckDefaultInodeCount(std::unique_ptr<BlockDevice> device) {
-  auto blobfs_or = Blobfs::Create(nullptr, std::move(device));
-  ASSERT_TRUE(blobfs_or.is_ok());
-  ASSERT_GE(blobfs_or->Info().inode_count, kBlobfsDefaultInodeCount);
+  BlobfsTestSetup setup;
+  ASSERT_EQ(ZX_OK, setup.Mount(std::move(device)));
+  ASSERT_GE(setup.blobfs()->Info().inode_count, kBlobfsDefaultInodeCount);
 }
 
 void CheckDefaultJournalBlocks(std::unique_ptr<BlockDevice> device) {
-  auto blobfs_or = Blobfs::Create(nullptr, std::move(device));
-  ASSERT_TRUE(blobfs_or.is_ok());
-  ASSERT_GE(blobfs_or->Info().journal_block_count, kDefaultJournalBlocks);
+  BlobfsTestSetup setup;
+  ASSERT_EQ(ZX_OK, setup.Mount(std::move(device)));
+  ASSERT_GE(setup.blobfs()->Info().journal_block_count, kDefaultJournalBlocks);
 }
 
 // Formatting filesystems should fail on devices that cannot be written.
@@ -231,8 +232,8 @@ TEST(FormatFilesystemTest, DeviceNotWritableAutoConvertReadonly) {
   mount_options.writability = Writability::Writable;
   mount_options.metrics = false;
 
-  auto blobfs_or = Blobfs::Create(nullptr, std::move(device), nullptr, mount_options);
-  ASSERT_EQ(blobfs_or.status_value(), ZX_ERR_ACCESS_DENIED);
+  BlobfsTestSetup setup;
+  ASSERT_EQ(ZX_ERR_ACCESS_DENIED, setup.Mount(std::move(device), mount_options));
 }
 
 // Validates that a formatted filesystem mounted as writable with a journal cannot be mounted on a
@@ -249,8 +250,8 @@ TEST(FormatFilesystemTest, FormatDeviceWithJournalCannotAutoConvertReadonly) {
   options.writability = Writability::Writable;
   options.metrics = false;
 
-  auto blobfs_or = Blobfs::Create(nullptr, std::move(device), nullptr, options);
-  ASSERT_EQ(blobfs_or.status_value(), ZX_ERR_ACCESS_DENIED);
+  BlobfsTestSetup setup;
+  ASSERT_EQ(ZX_ERR_ACCESS_DENIED, setup.Mount(std::move(device), options));
 }
 
 // After formatting a filesystem with block size valid block size N, mounting on

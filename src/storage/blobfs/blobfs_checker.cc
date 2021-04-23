@@ -193,8 +193,8 @@ bool BlobfsChecker::Check() {
   return valid;
 }
 
-BlobfsChecker::BlobfsChecker(std::unique_ptr<Blobfs> blobfs, Options options)
-    : blobfs_(std::move(blobfs)), options_(options) {}
+BlobfsChecker::BlobfsChecker(Blobfs* blobfs, Options options)
+    : blobfs_(blobfs), options_(options) {}
 
 #ifdef __Fuchsia__
 zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device, bool repair) {

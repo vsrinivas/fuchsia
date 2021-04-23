@@ -14,7 +14,7 @@
 
 namespace blobfs {
 
-zx_status_t Fsck(std::unique_ptr<Blobfs> blob);
+zx_status_t Fsck(Blobfs* blobfs);
 
 }  // namespace blobfs
 

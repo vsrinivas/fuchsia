@@ -281,7 +281,7 @@ zx_status_t BlobfsCreator::Fsck() {
     return status;
   }
 
-  return blobfs::Fsck(std::move(vn));
+  return blobfs::Fsck(vn.get());
 }
 
 zx_status_t BlobfsCreator::UsedDataSize() {

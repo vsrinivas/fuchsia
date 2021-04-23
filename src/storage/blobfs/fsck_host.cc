@@ -11,8 +11,8 @@
 
 namespace blobfs {
 
-zx_status_t Fsck(std::unique_ptr<Blobfs> blob) {
-  return BlobfsChecker(std::move(blob)).Check() ? ZX_OK : ZX_ERR_IO_DATA_INTEGRITY;
+zx_status_t Fsck(Blobfs* blobfs) {
+  return BlobfsChecker(blobfs).Check() ? ZX_OK : ZX_ERR_IO_DATA_INTEGRITY;
 }
 
 }  // namespace blobfs
