@@ -77,6 +77,10 @@ impl From<StackPortId> for PortId {
     }
 }
 impl PortId {
+    pub const fn new(id: u64) -> Self {
+        Self(id)
+    }
+
     /// Performs the conversion to `u64`, some FIDL interfaces need the ID as a `u64`.
     pub fn to_u64(self) -> u64 {
         self.0
@@ -890,8 +894,8 @@ impl NetCfg {
                     .filter(|r| !r.target.address.is_loopback())
                     .collect(),
             ),
-            _ => {
-                info!("no entries present in forwarding table.");
+            Err(e) => {
+                warn!("no entries present in forwarding table: {:?}", e);
                 None
             }
         }

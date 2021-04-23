@@ -11,12 +11,12 @@ pub use ping::{ping_fut, IcmpPinger, Pinger};
 use {
     fidl_fuchsia_hardware_network, fidl_fuchsia_net_interfaces as fnet_interfaces,
     fidl_fuchsia_net_interfaces_ext::{self as fnet_interfaces_ext},
+    fuchsia_async as fasync,
     fuchsia_inspect::Inspector,
-    fuchsia_zircon::{self as zx},
     inspect::InspectInfo,
     net_types::ScopeableAddress as _,
     network_manager_core::{address::LifIpAddr, error, hal},
-    std::collections::{HashMap, HashSet},
+    std::collections::HashMap,
 };
 
 const IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS: &str = "8.8.8.8";
@@ -93,12 +93,6 @@ pub enum PortType {
     Loopback,
 }
 
-impl Default for PortType {
-    fn default() -> Self {
-        PortType::Ethernet
-    }
-}
-
 impl From<fnet_interfaces::DeviceClass> for PortType {
     fn from(device_class: fnet_interfaces::DeviceClass) -> Self {
         match device_class {
@@ -114,155 +108,222 @@ impl From<fnet_interfaces::DeviceClass> for PortType {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-struct Time(zx::Time);
-impl Default for Time {
-    fn default() -> Self {
-        Time(zx::Time::get_monotonic())
-    }
+/// A trait for types containing reachability state that should be compared without the timestamp.
+trait StateEq {
+    /// Returns true iff `self` and `other` have equivalent reachability state.
+    fn compare_state(&self, other: &Self) -> bool;
 }
 
 /// `StateEvent` records a state and the time it was reached.
-#[derive(Default, Debug, Clone, Copy)]
+// NB PartialEq is derived only for tests to avoid unintentionally making a comparison that
+// includes the timestamp.
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(test, derive(PartialEq))]
 struct StateEvent {
     /// `state` is the current reachability state.
     state: State,
-    /// `time` of the last `state` update.
-    time: Time,
+    /// The time of this event.
+    time: fasync::Time,
 }
 
-impl From<State> for StateEvent {
-    fn from(state: State) -> Self {
-        StateEvent { state, ..Default::default() }
+impl StateEvent {
+    /// Overwrite `self` with `other` if the state is different, returning the previous and current
+    /// values (which may be equal).
+    fn update(&mut self, other: Self) -> Delta<Self> {
+        let previous = Some(*self);
+        if self.state != other.state {
+            *self = other;
+        }
+        Delta { previous, current: *self }
     }
 }
 
-impl PartialEq for StateEvent {
-    fn eq(&self, other: &Self) -> bool {
-        // Only compare the state, ignoring the time.
-        self.state == other.state
+impl StateEq for StateEvent {
+    fn compare_state(&self, &Self { state, time: _ }: &Self) -> bool {
+        self.state == state
     }
 }
 
-impl PartialEq<State> for StateEvent {
-    fn eq(&self, other: &State) -> bool {
-        self.state == *other
-    }
+#[derive(Clone, Debug, PartialEq)]
+struct Delta<T> {
+    current: T,
+    previous: Option<T>,
 }
-impl PartialEq<StateEvent> for State {
-    fn eq(&self, other: &StateEvent) -> bool {
-        *self == other.state
+
+impl<T: StateEq> Delta<T> {
+    fn change_observed(&self) -> bool {
+        match &self.previous {
+            Some(previous) => !previous.compare_state(&self.current),
+            None => true,
+        }
     }
 }
 
-/// `NetworkInfo` keeps information about a network.
-#[derive(Default, Debug, PartialEq, Clone, Copy)]
-struct NetworkInfo {
-    /// `is_default` indicates the default route is via this network.
-    is_default: bool,
-    /// `is_l3` indicates L3 is configured.
-    is_l3: bool,
-    /// `state` is the current reachability state.
-    state: StateEvent,
-    /// `previous_state` is the previous reachability state.
-    previous_state: StateEvent,
+// NB PartialEq is derived only for tests to avoid unintentionally making a comparison that
+// includes the timestamp in `StateEvent`.
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+struct StateDelta {
+    port: IpVersions<Delta<StateEvent>>,
+    system: IpVersions<Delta<SystemState>>,
 }
 
-/// `ReachabilityInfo` is the information related to an iinterface.
-#[derive(Debug, PartialEq, Clone)]
-pub struct ReachabilityInfo {
-    /// `port_type` is the type of port.
-    port_type: PortType,
-    /// `name` is the interface name.
-    name: String,
-    /// per IP version reachability information.
-    info: HashMap<Proto, NetworkInfo>,
+#[derive(Clone, Default, Debug, PartialEq)]
+struct IpVersions<T> {
+    ipv4: T,
+    ipv6: T,
 }
 
-impl ReachabilityInfo {
-    fn new(port_type: PortType, name: &str, v4: NetworkInfo, v6: NetworkInfo) -> Self {
-        let mut info = HashMap::new();
-        info.insert(Proto::IPv4, v4);
-        info.insert(Proto::IPv6, v6);
-        ReachabilityInfo { port_type, name: name.to_string(), info }
-    }
-    fn get(&self, proto: Proto) -> &NetworkInfo {
-        // it exists by construction.
-        self.info.get(&proto).unwrap()
-    }
-    fn get_mut(&mut self, proto: Proto) -> &mut NetworkInfo {
-        // it exists by construction.
-        self.info.get_mut(&proto).unwrap()
-    }
-}
-
-impl Default for ReachabilityInfo {
-    fn default() -> Self {
-        ReachabilityInfo::new(
-            PortType::default(),
-            "",
-            NetworkInfo::default(),
-            NetworkInfo::default(),
-        )
+impl<T> IpVersions<T> {
+    fn with_version<F: FnMut(Proto, &T)>(&self, mut f: F) {
+        let () = f(Proto::IPv4, &self.ipv4);
+        let () = f(Proto::IPv6, &self.ipv6);
     }
 }
 
 type Id = hal::PortId;
-/// `StateInfo` keeps the reachability state.
-#[derive(Debug, Default)]
-struct StateInfo(HashMap<Id, ReachabilityInfo>);
 
-impl StateInfo {
-    /// gets the reachability info associated with an interface.
-    fn get(&self, id: Id) -> Option<&ReachabilityInfo> {
-        self.0.get(&id)
-    }
+// NB PartialEq is derived only for tests to avoid unintentionally making a comparison that
+// includes the timestamp in `StateEvent`.
+#[derive(Copy, Clone, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+struct SystemState {
+    id: Id,
+    state: StateEvent,
+}
 
-    /// Updates the reachability info associated with an interface if it has changed.
-    /// Returns a set with the IP version that had reachability state change.
-    fn update_on_change(&mut self, id: Id, new: &mut ReachabilityInfo) -> HashSet<Proto> {
-        let mut updated = HashSet::new();
-        match self.0.get(&id) {
-            Some(old) => {
-                if fix_state_on_change(&old.get(Proto::IPv4), new.get_mut(Proto::IPv4)) {
-                    updated.insert(Proto::IPv4);
-                }
-                if fix_state_on_change(&old.get(Proto::IPv6), new.get_mut(Proto::IPv6)) {
-                    updated.insert(Proto::IPv6);
-                }
-                if !updated.is_empty() {
-                    // Something changed, update.
-                    self.0.insert(id, new.clone());
-                }
-            }
-            None => {
-                self.0.insert(id, new.clone());
-                updated.insert(Proto::IPv4);
-                updated.insert(Proto::IPv6);
-            }
-        };
-        updated
+impl SystemState {
+    fn max(self, other: Self) -> Self {
+        if other.state.state > self.state.state {
+            other
+        } else {
+            self
+        }
     }
 }
 
-// If there has been a state change, saves the previous state and returns true.
-// If there was no change, restores state time and return false.
-fn fix_state_on_change(old: &NetworkInfo, new: &mut NetworkInfo) -> bool {
-    if old.state == new.state {
-        // Keep the old time as state did not change.
-        new.state.time = old.state.time;
-        new.previous_state = old.previous_state;
-        return false;
+impl StateEq for SystemState {
+    fn compare_state(&self, &Self { id, state: StateEvent { state, time: _ } }: &Self) -> bool {
+        self.id == id && self.state.state == state
     }
-    new.previous_state = old.state;
-    true
+}
+
+/// `StateInfo` keeps the reachability state.
+// NB PartialEq is derived only for tests to avoid unintentionally making a comparison that
+// includes the timestamp in `StateEvent`.
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(test, derive(PartialEq))]
+struct StateInfo {
+    /// Mapping from interface ID to reachability information.
+    per_interface: HashMap<Id, IpVersions<StateEvent>>,
+    /// Interface IDs with the best reachability state per IP version.
+    system: IpVersions<Option<Id>>,
+}
+
+impl StateInfo {
+    /// Get the reachability info associated with an interface.
+    fn get(&self, id: Id) -> Option<&IpVersions<StateEvent>> {
+        self.per_interface.get(&id)
+    }
+
+    /// Get the system-wide IPv4 reachability info.
+    fn get_system_ipv4(&self) -> Option<SystemState> {
+        self.system.ipv4.map(|id| SystemState {
+            id,
+            state: self
+                .get(id)
+                .expect(&format!("inconsistent system IPv4 state: no interface with ID {:?}", id))
+                .ipv4,
+        })
+    }
+
+    /// Get the system-wide IPv6 reachability info.
+    fn get_system_ipv6(&self) -> Option<SystemState> {
+        self.system.ipv6.map(|id| SystemState {
+            id,
+            state: self
+                .get(id)
+                .expect(&format!("inconsistent system IPv6 state: no interface with ID {:?}", id))
+                .ipv6,
+        })
+    }
+
+    /// Report the duration of the current state for each interface and each protocol.
+    fn report(&self) {
+        let time = fasync::Time::now();
+        debug!("system reachability state IPv4 {:?}", self.get_system_ipv4());
+        debug!("system reachability state IPv6 {:?}", self.get_system_ipv6());
+        for (id, IpVersions { ipv4, ipv6 }) in self.per_interface.iter() {
+            debug!(
+                "reachability state {:?} IPv4 {:?} with duration {:?}",
+                id,
+                ipv4,
+                time - ipv4.time
+            );
+            debug!(
+                "reachability state {:?} IPv6 {:?} with duration {:?}",
+                id,
+                ipv6,
+                time - ipv6.time
+            );
+        }
+    }
+
+    /// Update interface `id` with its new reachability info.
+    ///
+    /// Returns the protocols and their new reachability states iff a change was observed.
+    fn update(&mut self, id: Id, new_reachability: IpVersions<StateEvent>) -> StateDelta {
+        let IpVersions { ipv4: new_ipv4_state, ipv6: new_ipv6_state } = new_reachability;
+
+        let previous_system_ipv4 = self.get_system_ipv4();
+        let previous_system_ipv6 = self.get_system_ipv6();
+        let port = match self.per_interface.entry(id) {
+            std::collections::hash_map::Entry::Occupied(mut occupied) => {
+                let IpVersions { ipv4: ipv4_state, ipv6: ipv6_state } = occupied.get_mut();
+                IpVersions {
+                    ipv4: ipv4_state.update(new_ipv4_state),
+                    ipv6: ipv6_state.update(new_ipv6_state),
+                }
+            }
+            std::collections::hash_map::Entry::Vacant(vacant) => {
+                vacant.insert(new_reachability);
+                IpVersions {
+                    ipv4: Delta { previous: None, current: new_ipv4_state },
+                    ipv6: Delta { previous: None, current: new_ipv6_state },
+                }
+            }
+        };
+
+        let IpVersions { ipv4: system_ipv4, ipv6: system_ipv6 } = self.per_interface.iter().fold(
+            IpVersions {
+                ipv4: SystemState { id, state: new_ipv4_state },
+                ipv6: SystemState { id, state: new_ipv6_state },
+            },
+            |IpVersions { ipv4: system_ipv4, ipv6: system_ipv6 },
+             (&id, &IpVersions { ipv4, ipv6 })| {
+                IpVersions {
+                    ipv4: system_ipv4.max(SystemState { id, state: ipv4 }),
+                    ipv6: system_ipv6.max(SystemState { id, state: ipv6 }),
+                }
+            },
+        );
+
+        self.system = IpVersions { ipv4: Some(system_ipv4.id), ipv6: Some(system_ipv6.id) };
+
+        StateDelta {
+            port,
+            system: IpVersions {
+                ipv4: Delta { previous: previous_system_ipv4, current: system_ipv4 },
+                ipv6: Delta { previous: previous_system_ipv6, current: system_ipv6 },
+            },
+        }
+    }
 }
 
 /// `Monitor` monitors the reachability state.
 pub struct Monitor {
     hal: hal::NetCfg,
-    interface_state: StateInfo,
-    system_state: HashMap<Proto, (Id, NetworkInfo)>,
+    state: StateInfo,
     stats: Stats,
     pinger: Box<dyn Pinger>,
     inspector: Option<&'static Inspector>,
@@ -276,15 +337,8 @@ impl Monitor {
         let hal = hal::NetCfg::new()?;
         Ok(Monitor {
             hal,
-            interface_state: Default::default(),
+            state: Default::default(),
             stats: Default::default(),
-            system_state: [
-                (Proto::IPv4, (Id::from(0), NetworkInfo::default())),
-                (Proto::IPv6, (Id::from(0), NetworkInfo::default())),
-            ]
-            .iter()
-            .cloned()
-            .collect(),
             pinger,
             inspector: None,
             system_node: None,
@@ -292,44 +346,10 @@ impl Monitor {
         })
     }
 
-    /// `stats` returns monitoring service statistic counters.
-    pub fn stats(&self) -> &Stats {
-        &self.stats
-    }
-
     /// Reports all information.
-    pub fn report_state(&mut self) {
-        debug!("reachability state IPv4 {:?}", self.system_state[&Proto::IPv4]);
-        debug!("reachability state IPv6 {:?}", self.system_state[&Proto::IPv4]);
-        debug!("reachability stats {:?}", self.stats());
-        self.report_state_duration_for_all();
-    }
-
-    // Reports current state duration for all interfaces.
-    fn report_state_duration_for_all(&mut self) {
-        debug!("report_state_duration_for_all");
-    }
-
-    fn report_system_updated(&mut self, updated: HashSet<Proto>) {
-        for v in updated {
-            let state = &self.system_state.get(&v).unwrap().1;
-            info!("report_system_updated {:?} {:?}", v, state);
-            log_state(self.system_node.as_mut(), v, state.state.state);
-        }
-    }
-
-    fn report_updated(&mut self, id: Id, updated: HashSet<Proto>) {
-        // Get node, if not present create it with proper name.
-        let info = match self.interface_state.get(id) {
-            None => return,
-            Some(info) => info.clone(),
-        };
-        let name = info.name.clone();
-        for v in updated {
-            let state = &info.get(v);
-            info!("report_updated {:?}: {:?} {:?}", id, v, state);
-            log_state(self.interface_node(id, &name), v, state.state.state);
-        }
+    pub fn report_state(&self) {
+        self.state.report();
+        debug!("reachability stats {:?}", self.stats);
     }
 
     /// Returns an interface watcher client proxy.
@@ -359,17 +379,39 @@ impl Monitor {
     }
 
     /// Update state based on the new reachability info.
-    pub fn update_state(&mut self, id: Id, mut new_info: ReachabilityInfo) {
-        let updated = self.interface_state.update_on_change(id, &mut new_info);
-        if !updated.is_empty() {
-            // Count number of state updates.
-            *self.stats.state_updates.entry(id).or_insert(0) += 1;
+    fn update_state(&mut self, id: Id, name: &str, reachability: IpVersions<StateEvent>) {
+        let StateDelta { port, system } = self.state.update(id, reachability);
 
-            let system_updated =
-                update_system_state(id, &updated, &mut self.system_state, &self.interface_state.0);
-            let () = self.report_system_updated(system_updated);
-            let () = self.report_updated(id, updated);
-        }
+        let () = port.with_version(|proto, delta| {
+            if delta.change_observed() {
+                let &Delta { previous, current } = delta;
+                if let Some(previous) = previous {
+                    info!(
+                        "interface updated {:?} {:?} current: {:?} previous: {:?}",
+                        id, proto, current, previous
+                    );
+                } else {
+                    info!("new interface {:?} {:?}: {:?}", id, proto, current);
+                }
+                let () = log_state(self.interface_node(id, name), proto, current.state);
+                *self.stats.state_updates.entry(id).or_insert(0) += 1;
+            }
+        });
+
+        let () = system.with_version(|proto, delta| {
+            if delta.change_observed() {
+                let &Delta { previous, current } = delta;
+                if let Some(previous) = previous {
+                    info!(
+                        "system updated {:?} current: {:?}, previous: {:?}",
+                        proto, current, previous,
+                    );
+                } else {
+                    info!("initial system state {:?}: {:?}", proto, current);
+                }
+                let () = log_state(self.system_node.as_mut(), proto, current.state.state);
+            }
+        });
     }
 
     /// Compute the reachability state of an interface.
@@ -377,25 +419,27 @@ impl Monitor {
     /// The interface may have been recently-discovered, or the properties of a known interface may
     /// have changed.
     pub async fn compute_state(&mut self, properties: &fnet_interfaces_ext::Properties) {
-        if let Some(info) =
-            compute_state(properties, self.hal.routes().await, &mut *self.pinger).await
-        {
+        // TODO(https://fxbug.dev/75079) Get the route table ourselves.
+        let routes = self.hal.routes().await.unwrap_or_else(|| {
+            error!("failed to get route table");
+            Vec::new()
+        });
+        if let Some(info) = compute_state(properties, &routes, &mut *self.pinger).await {
             let id = Id::from(properties.id);
-            let () = self.update_state(id, info);
+            let () = self.update_state(id, &properties.name, info);
         }
     }
 
     /// Handle an interface removed event.
     pub fn handle_interface_removed(
         &mut self,
-        fnet_interfaces_ext::Properties { id, .. }: fnet_interfaces_ext::Properties,
+        fnet_interfaces_ext::Properties { id, name, .. }: fnet_interfaces_ext::Properties,
     ) {
-        if let Some(mut info) = self.interface_state.get(id.into()).cloned() {
-            for info in info.info.values_mut() {
-                info.previous_state = StateEvent::default();
-                info.state = State::Removed.into();
-            }
-            let () = self.update_state(id.into(), info);
+        let time = fasync::Time::now();
+        if let Some(mut reachability) = self.state.get(id.into()).cloned() {
+            reachability.ipv4 = StateEvent { state: State::Removed, time };
+            reachability.ipv6 = StateEvent { state: State::Removed, time };
+            let () = self.update_state(id.into(), &name, reachability);
         }
     }
 }
@@ -406,111 +450,61 @@ fn log_state(info: Option<&mut InspectInfo>, proto: Proto, state: State) {
     });
 }
 
-fn update_system_state(
-    id: Id,
-    updated: &HashSet<Proto>,
-    system_state: &mut HashMap<Proto, (Id, NetworkInfo)>,
-    interfaces: &HashMap<Id, ReachabilityInfo>,
-) -> HashSet<Proto> {
-    let mut changed = HashSet::new();
-    for proto in updated {
-        let (s_id, s_info) = system_state.get(&proto).unwrap();
-        let info = interfaces.get(&id).unwrap().get(*proto);
-
-        if s_info.state.state < info.state.state {
-            let mut new_info = *info;
-            new_info.previous_state = s_info.state;
-            system_state.insert(*proto, (id, new_info));
-            changed.insert(*proto);
-        } else if *s_id == id && s_info.state.state > info.state.state {
-            let (id, info) = interfaces
-                .iter()
-                .max_by(|x, y| x.1.get(*proto).state.state.cmp(&y.1.get(*proto).state.state))
-                .unwrap();
-            let mut new_info = *info.get(*proto);
-            new_info.previous_state = s_info.state;
-            system_state.insert(*proto, (*id, new_info));
-            changed.insert(*proto);
-        }
-    }
-    changed
-}
-
 /// `compute_state` processes an event and computes the reachability based on the event and
 /// system observations.
 async fn compute_state(
     &fnet_interfaces_ext::Properties {
-        id,
-        ref name,
+        id: _,
+        name: _,
         device_class,
         online,
         ref addresses,
         has_default_ipv4_route: _,
         has_default_ipv6_route: _,
     }: &fnet_interfaces_ext::Properties,
-    routes: Option<Vec<hal::Route>>,
+    routes: &[hal::Route],
     pinger: &mut dyn Pinger,
-) -> Option<ReachabilityInfo> {
-    let id = Id::from(id);
-    let port_type = PortType::from(device_class);
+) -> Option<IpVersions<StateEvent>> {
+    if PortType::from(device_class) == PortType::Loopback {
+        return None;
+    }
+
     let (v4_addrs, v6_addrs): (Vec<_>, _) = addresses
         .iter()
         .map(|fnet_interfaces_ext::Address { addr }| LifIpAddr::from(addr))
         .partition(|addr| addr.is_ipv4());
 
-    if port_type == PortType::Loopback {
-        return None;
-    }
-
-    let mut info = ReachabilityInfo::new(
-        port_type,
-        name,
-        NetworkInfo {
-            is_l3: !v4_addrs.is_empty(),
-            state: if online { State::Up } else { State::Down }.into(),
-            ..Default::default()
-        },
-        NetworkInfo {
-            is_l3: !v6_addrs.is_empty(),
-            state: if online { State::Up } else { State::Down }.into(),
-            ..Default::default()
-        },
-    );
-
     if !online {
-        return Some(info);
+        return Some(IpVersions {
+            ipv4: StateEvent { state: State::Down, time: fasync::Time::now() },
+            ipv6: StateEvent { state: State::Down, time: fasync::Time::now() },
+        });
     }
 
-    // packet reception is network layer independent.
-    if !packet_count_increases(id) {
-        // TODO(dpradilla): add active probing here.
-        // No packets seen, but interface is up.
-        return Some(info);
-    }
+    // TODO(https://fxbug.dev/74517) Check if packet count has increased, and if so upgrade the state to
+    // LinkLayerUp.
 
-    info.get_mut(Proto::IPv4).state = State::LinkLayerUp.into();
-    info.get_mut(Proto::IPv6).state = State::LinkLayerUp.into();
-
-    // TODO(fxbug.dev/65581) Parallelize the following two calls for IPv4 and IPv6 respectively
+    // TODO(https://fxbug.dev/65581) Parallelize the following two calls for IPv4 and IPv6 respectively
     // when the ping logic is implemented in Rust and async.
-    info.get_mut(Proto::IPv4).state = network_layer_state(
-        v4_addrs,
-        &routes,
-        &info.get(Proto::IPv4),
-        pinger,
-        IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS,
-    )
-    .await;
-    info.get_mut(Proto::IPv6).state = network_layer_state(
-        v6_addrs,
-        &routes,
-        &info.get(Proto::IPv6),
-        pinger,
-        IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS,
-    )
-    .await;
-
-    Some(info)
+    let ipv4 = StateEvent {
+        state: if v4_addrs.is_empty() {
+            State::Up
+        } else {
+            network_layer_state(v4_addrs, routes, pinger, IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS)
+                .await
+        },
+        time: fasync::Time::now(),
+    };
+    let ipv6 = StateEvent {
+        state: if v6_addrs.is_empty() {
+            State::Up
+        } else {
+            network_layer_state(v6_addrs, routes, pinger, IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS)
+                .await
+        },
+        time: fasync::Time::now(),
+    };
+    Some(IpVersions { ipv4, ipv6 })
 }
 
 // `local_routes` traverses `route_table` to find routes that use a gateway local to `address`
@@ -526,45 +520,17 @@ fn local_routes<'a>(address: &LifIpAddr, route_table: &'a [hal::Route]) -> Vec<&
     local_routes
 }
 
-// TODO(dpradilla): implement.
-// `has_local_neighbors` checks for local neighbors.
-fn has_local_neighbors() -> bool {
-    true
-}
-
-// TODO(dpradilla): implement.
-// `packet_count_increases` verifies packet counts are going up.
-fn packet_count_increases(_: hal::PortId) -> bool {
-    true
-}
-
 // `network_layer_state` determines the L3 reachability state.
 async fn network_layer_state(
     addresses: impl IntoIterator<Item = LifIpAddr>,
-    routes: &Option<Vec<hal::Route>>,
-    info: &NetworkInfo,
+    routes: &[hal::Route],
     p: &mut dyn Pinger,
     ping_address: &str,
-) -> StateEvent {
-    // This interface is not configured for L3, Nothing to check.
-    if !info.is_l3 {
-        return info.state;
-    }
-
-    if info.state.state != State::LinkLayerUp || !has_local_neighbors() {
-        return info.state;
-    }
-
-    let route_table = match routes {
-        Some(r) => r,
-        None => {
-            return if addresses.into_iter().count() > 0 { State::Local.into() } else { info.state }
-        }
-    };
-
+) -> State {
+    // TODO(https://fxbug.dev/36242) Check neighbor reachability and upgrade state to Local.
     let mut gateway_reachable = false;
     'outer: for a in addresses {
-        for r in local_routes(&a, &route_table) {
+        for r in local_routes(&a, routes) {
             if let Some(gw_ip) = r.gateway {
                 let gw_url = match gw_ip {
                     std::net::IpAddr::V4(_) => gw_ip.to_string(),
@@ -590,13 +556,13 @@ async fn network_layer_state(
         }
     }
     if !gateway_reachable {
-        return State::Local.into();
+        return State::Local;
     }
 
     if !p.ping(ping_address).await {
-        return State::Gateway.into();
+        return State::Gateway;
     }
-    State::Internet.into()
+    return State::Internet;
 }
 
 #[cfg(test)]
@@ -606,252 +572,34 @@ mod tests {
         async_trait::async_trait,
         fuchsia_async as fasync,
         net_declare::{fidl_subnet, std_ip},
-        std::net::{IpAddr, Ipv4Addr, Ipv6Addr},
+        std::{
+            net::{IpAddr, Ipv4Addr, Ipv6Addr},
+            task::Poll,
+        },
     };
 
     const ETHERNET_INTERFACE_NAME: &str = "eth1";
+    const ID1: Id = crate::hal::PortId::new(1);
+    const ID2: Id = crate::hal::PortId::new(2);
 
-    #[test]
-    fn test_has_local_neighbors() {
-        assert_eq!(has_local_neighbors(), true);
+    // A trait for writing helper constructors.
+    //
+    // Note that this trait differs from `std::convert::From` only in name, but will almost always
+    // contain shortcuts that would be too surprising for an actual `From` implementation.
+    trait Construct<T> {
+        fn construct(_: T) -> Self;
     }
 
-    #[test]
-    fn test_packet_count_increases() {
-        assert_eq!(packet_count_increases(hal::PortId::from(1)), true);
-    }
-
-    #[test]
-    fn state_info_get() {
-        let s = StateInfo::default();
-        let id = Id::from(5);
-        assert_eq!(s.get(id), None, "no interfaces");
-
-        let s = StateInfo([(Id::from(4), ReachabilityInfo::default())].iter().cloned().collect());
-        let id = Id::from(5);
-        assert_eq!(s.get(id), None, "desired interface not present");
-
-        let s = StateInfo(
-            [
-                (Id::from(6), ReachabilityInfo::default()),
-                (Id::from(5), ReachabilityInfo::default()),
-            ]
-            .iter()
-            .cloned()
-            .collect(),
-        );
-        let id = Id::from(5);
-        assert_eq!(s.get(id), Some(&ReachabilityInfo::default()), "desired interface present");
-    }
-
-    #[test]
-    fn state_info_update_on_change() {
-        // verify all state times are in agreement.
-        fn verify_time(info: ReachabilityInfo, want: ReachabilityInfo) -> (bool, String) {
-            if info.info[&Proto::IPv4].state.time != want.info[&Proto::IPv4].state.time {
-                return (
-                    false,
-                    format!(
-                        "IPv4 time is incorrect {:?} != {:?}",
-                        info.info[&Proto::IPv4].state,
-                        want.info[&Proto::IPv4].state,
-                    ),
-                );
-            };
-            if info.info[&Proto::IPv4].previous_state.time
-                != want.info[&Proto::IPv4].previous_state.time
-            {
-                return (
-                    false,
-                    format!(
-                        "IPv4 previous time is incorrect {:?} != {:?}",
-                        info.info[&Proto::IPv4].previous_state,
-                        want.info[&Proto::IPv4].previous_state
-                    ),
-                );
-            };
-            if info.info[&Proto::IPv6].state.time != want.info[&Proto::IPv6].state.time {
-                return (
-                    false,
-                    format!(
-                        "IPv6 time is incorrect {:?} != {:?}",
-                        info.info[&Proto::IPv6].state,
-                        want.info[&Proto::IPv6].state
-                    ),
-                );
-            };
-            if info.info[&Proto::IPv6].previous_state.time
-                != want.info[&Proto::IPv6].previous_state.time
-            {
-                return (
-                    false,
-                    format!(
-                        "IPv6 previous time is incorrect {:?} != {:?}",
-                        info.info[&Proto::IPv6].previous_state,
-                        want.info[&Proto::IPv6].previous_state
-                    ),
-                );
-            };
-            (true, "ok".to_string())
+    impl Construct<State> for StateEvent {
+        fn construct(state: State) -> Self {
+            Self { state, time: fasync::Time::INFINITE }
         }
-
-        let mut s = StateInfo::default();
-        let id = Id::from(5);
-        let mut info = ReachabilityInfo::new(
-            PortType::Ethernet,
-            ETHERNET_INTERFACE_NAME,
-            NetworkInfo {
-                is_default: false,
-                is_l3: true,
-                state: StateEvent { state: State::Local, time: Time(zx::Time::from_nanos(10000)) },
-                previous_state: StateEvent {
-                    state: State::None,
-                    time: Time(zx::Time::from_nanos(10000)),
-                },
-            },
-            NetworkInfo {
-                is_default: false,
-                is_l3: false,
-                state: StateEvent {
-                    state: State::LinkLayerUp,
-                    time: Time(zx::Time::from_nanos(10000)),
-                },
-                previous_state: StateEvent {
-                    state: State::None,
-                    time: Time(zx::Time::from_nanos(10000)),
-                },
-            },
-        );
-        let want = info.clone();
-
-        let updated = s.update_on_change(id, &mut info);
-        assert_eq!(
-            updated,
-            [Proto::IPv4, Proto::IPv6].iter().cloned().collect(),
-            "as nothing was there previously, both have changed."
-        );
-        assert_eq!(info, want, "no previous state, just add it");
-        let (result, message) = verify_time(info, want);
-        assert!(result, "{}", message);
-
-        let mut info = ReachabilityInfo::new(
-            PortType::Ethernet,
-            ETHERNET_INTERFACE_NAME,
-            NetworkInfo {
-                is_default: false,
-                is_l3: true,
-                state: StateEvent {
-                    state: State::Internet,
-                    time: Time(zx::Time::from_nanos(20000)),
-                },
-                ..Default::default()
-            },
-            NetworkInfo {
-                is_default: false,
-                is_l3: false,
-                state: State::LinkLayerUp.into(),
-                ..Default::default()
-            },
-        );
-
-        let want = ReachabilityInfo::new(
-            PortType::Ethernet,
-            ETHERNET_INTERFACE_NAME,
-            NetworkInfo {
-                is_default: false,
-                is_l3: true,
-                state: StateEvent {
-                    state: State::Internet,
-                    time: Time(zx::Time::from_nanos(20000)),
-                },
-                previous_state: StateEvent {
-                    state: State::Local,
-                    time: Time(zx::Time::from_nanos(10000)),
-                },
-            },
-            NetworkInfo {
-                is_default: false,
-                is_l3: false,
-                state: StateEvent {
-                    state: State::LinkLayerUp,
-                    time: Time(zx::Time::from_nanos(10000)),
-                },
-                previous_state: StateEvent {
-                    state: State::None,
-                    time: Time(zx::Time::from_nanos(10000)),
-                },
-            },
-        );
-
-        let updated = s.update_on_change(id, &mut info);
-        assert_eq!(updated, [Proto::IPv4].iter().cloned().collect(), "An IPv4 change.");
-        assert_eq!(info, want, "IPv4 has now a previouse state, IPv6 has not changed.");
-        let (result, message) = verify_time(info, want);
-        assert!(result, "{}", message);
     }
 
-    #[test]
-    fn test_fix_state_on_change_no_change() {
-        let old = NetworkInfo {
-            is_l3: true,
-            state: StateEvent {
-                state: State::LinkLayerUp,
-                time: Time(zx::Time::from_nanos(10000)),
-            },
-            ..Default::default()
-        };
-        let mut new = NetworkInfo {
-            is_l3: true,
-            state: StateEvent {
-                state: State::LinkLayerUp,
-                time: Time(zx::Time::from_nanos(20000)),
-            },
-            ..Default::default()
-        };
-        let has_changed = fix_state_on_change(&old, &mut new);
-        assert_eq!(has_changed, false, "no change is seen");
-        assert_eq!(old, new, "all fields must be same as before (except time)");
-        assert_eq!(
-            Time(zx::Time::from_nanos(10000)),
-            new.state.time,
-            "time should be same as original"
-        );
-    }
-
-    #[test]
-    fn test_fix_state_on_change_change() {
-        let old = NetworkInfo {
-            is_l3: true,
-            state: StateEvent {
-                state: State::LinkLayerUp,
-                time: Time(zx::Time::from_nanos(10000)),
-            },
-            ..Default::default()
-        };
-        let mut new = NetworkInfo {
-            is_l3: true,
-            state: StateEvent { state: State::Local, time: Time(zx::Time::from_nanos(20000)) },
-            ..Default::default()
-        };
-        let has_changed = fix_state_on_change(&old, &mut new);
-        let want = NetworkInfo {
-            is_l3: true,
-            state: new.state.clone(),
-            previous_state: old.state.clone(),
-            ..Default::default()
-        };
-        assert_eq!(has_changed, true, "change is seen");
-        assert_eq!(new, want, "all fields ");
-        assert_eq!(
-            Time(zx::Time::from_nanos(20000)),
-            new.state.time,
-            "time should be time of change"
-        );
-        assert_eq!(
-            Time(zx::Time::from_nanos(10000)),
-            new.previous_state.time,
-            "previous time should be time of previous event."
-        );
+    impl Construct<StateEvent> for IpVersions<StateEvent> {
+        fn construct(state: StateEvent) -> Self {
+            Self { ipv4: state, ipv6: state }
+        }
     }
 
     #[test]
@@ -887,13 +635,13 @@ mod tests {
             hal::Route {
                 gateway: Some("1.2.3.1".parse().unwrap()),
                 metric: None,
-                port_id: Some(hal::PortId::from(1)),
+                port_id: Some(ID1),
                 target: LifIpAddr { address: "0.0.0.0".parse().unwrap(), prefix: 0 },
             },
             hal::Route {
                 gateway: None,
                 metric: None,
-                port_id: Some(hal::PortId::from(1)),
+                port_id: Some(ID1),
                 target: LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 24 },
             },
         ];
@@ -901,7 +649,7 @@ mod tests {
         let want_route = &hal::Route {
             gateway: Some("1.2.3.1".parse().unwrap()),
             metric: None,
-            port_id: Some(hal::PortId::from(1)),
+            port_id: Some(ID1),
             target: LifIpAddr { address: "0.0.0.0".parse().unwrap(), prefix: 0 },
         };
 
@@ -914,19 +662,19 @@ mod tests {
             hal::Route {
                 gateway: Some("1.2.3.1".parse().unwrap()),
                 metric: None,
-                port_id: Some(hal::PortId::from(1)),
+                port_id: Some(ID1),
                 target: LifIpAddr { address: "0.0.0.0".parse().unwrap(), prefix: 0 },
             },
             hal::Route {
                 gateway: None,
                 metric: None,
-                port_id: Some(hal::PortId::from(1)),
+                port_id: Some(ID1),
                 target: LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 24 },
             },
             hal::Route {
                 gateway: None,
                 metric: None,
-                port_id: Some(hal::PortId::from(1)),
+                port_id: Some(ID1),
                 target: LifIpAddr { address: "2.2.3.0".parse().unwrap(), prefix: 24 },
             },
         ];
@@ -1003,13 +751,13 @@ mod tests {
             hal::Route {
                 gateway: Some(net1_gateway.parse().unwrap()),
                 metric: None,
-                port_id: Some(hal::PortId::from(1)),
+                port_id: Some(ID1),
                 target: unspecified_addr,
             },
             hal::Route {
                 gateway: None,
                 metric: None,
-                port_id: Some(hal::PortId::from(1)),
+                port_id: Some(ID1),
                 target: LifIpAddr { address: net1.parse().unwrap(), prefix },
             },
         ];
@@ -1017,34 +765,27 @@ mod tests {
             hal::Route {
                 gateway: Some(net2_gateway.parse().unwrap()),
                 metric: None,
-                port_id: Some(hal::PortId::from(1)),
+                port_id: Some(ID1),
                 target: unspecified_addr,
             },
             hal::Route {
                 gateway: None,
                 metric: None,
-                port_id: Some(hal::PortId::from(1)),
+                port_id: Some(ID1),
                 target: LifIpAddr { address: net1.parse().unwrap(), prefix },
             },
             hal::Route {
                 gateway: None,
                 metric: None,
-                port_id: Some(hal::PortId::from(1)),
+                port_id: Some(ID1),
                 target: LifIpAddr { address: net2.parse().unwrap(), prefix },
             },
         ];
-        let network_info = NetworkInfo {
-            is_default: false,
-            is_l3: true,
-            state: State::LinkLayerUp.into(),
-            ..Default::default()
-        };
 
         assert_eq!(
             network_layer_state(
                 std::iter::once(address),
-                &Some(route_table.clone()),
-                &network_info,
+                &route_table,
                 &mut FakePing {
                     gateway_urls: vec![net1_gateway],
                     gateway_response: true,
@@ -1060,8 +801,7 @@ mod tests {
         assert_eq!(
             network_layer_state(
                 std::iter::once(address),
-                &Some(route_table.clone()),
-                &network_info,
+                &route_table,
                 &mut FakePing {
                     gateway_urls: vec![net1_gateway],
                     gateway_response: true,
@@ -1077,8 +817,7 @@ mod tests {
         assert_eq!(
             network_layer_state(
                 std::iter::once(address),
-                &Some(route_table.clone()),
-                &network_info,
+                &route_table,
                 &mut FakePing {
                     gateway_urls: vec![net1_gateway],
                     gateway_response: false,
@@ -1093,22 +832,8 @@ mod tests {
 
         assert_eq!(
             network_layer_state(
-                std::iter::once(address),
-                &None,
-                &network_info,
-                &mut FakePing::default(),
-                ping_url,
-            )
-            .await,
-            State::Local,
-            "No routes"
-        );
-
-        assert_eq!(
-            network_layer_state(
                 std::iter::empty(),
-                &Some(route_table_2),
-                &network_info,
+                &route_table_2,
                 &mut FakePing::default(),
                 ping_url,
             )
@@ -1118,11 +843,10 @@ mod tests {
         );
     }
 
-    #[fasync::run_until_stalled(test)]
-    async fn test_compute_state() {
-        let id = hal::PortId::from(1);
+    #[test]
+    fn test_compute_state() {
         let properties = fnet_interfaces_ext::Properties {
-            id: id.to_u64(),
+            id: ID1.to_u64(),
             name: ETHERNET_INTERFACE_NAME.to_string(),
             device_class: fnet_interfaces::DeviceClass::Device(
                 fidl_fuchsia_hardware_network::DeviceClass::Ethernet,
@@ -1135,39 +859,60 @@ mod tests {
                 fnet_interfaces_ext::Address { addr: fidl_subnet!("123::4/64") },
             ],
         };
-        let route_table = vec![
+        let route_table = &[
             hal::Route {
                 gateway: Some(std_ip!("1.2.3.1")),
                 metric: None,
-                port_id: Some(id),
+                port_id: Some(ID1),
                 target: LifIpAddr { address: IpAddr::V4(Ipv4Addr::UNSPECIFIED), prefix: 0 },
             },
             hal::Route {
                 gateway: Some(std_ip!("123::1")),
                 metric: None,
-                port_id: Some(id),
+                port_id: Some(ID1),
                 target: LifIpAddr { address: IpAddr::V6(Ipv6Addr::UNSPECIFIED), prefix: 0 },
             },
         ];
-        let route_table2 = vec![
+        let route_table2 = &[
             hal::Route {
                 gateway: Some(std_ip!("2.2.3.1")),
                 metric: None,
-                port_id: Some(id),
+                port_id: Some(ID1),
                 target: LifIpAddr { address: IpAddr::V4(Ipv4Addr::UNSPECIFIED), prefix: 0 },
             },
             hal::Route {
                 gateway: Some(std_ip!("223::1")),
                 metric: None,
-                port_id: Some(id),
+                port_id: Some(ID1),
                 target: LifIpAddr { address: IpAddr::V6(Ipv6Addr::UNSPECIFIED), prefix: 0 },
             },
         ];
 
         const NON_ETHERNET_INTERFACE_NAME: &str = "test01";
-        let got = compute_state(
+
+        let mut exec =
+            fasync::Executor::new_with_fake_time().expect("failed to create fake-time executor");
+        let time = fasync::Time::from_nanos(1_000_000_000);
+        let () = exec.set_fake_time(time.into());
+
+        fn run_compute_state(
+            exec: &mut fasync::Executor,
+            properties: &fnet_interfaces_ext::Properties,
+            routes: &[hal::Route],
+            pinger: &mut dyn Pinger,
+        ) -> Result<Option<IpVersions<StateEvent>>, anyhow::Error> {
+            let fut = compute_state(&properties, routes, pinger);
+            futures::pin_mut!(fut);
+            match exec.run_until_stalled(&mut fut) {
+                Poll::Ready(got) => Ok(got),
+                Poll::Pending => Err(anyhow::anyhow!("compute_state blocked unexpectedly")),
+            }
+        }
+
+        let got = run_compute_state(
+            &mut exec,
             &fnet_interfaces_ext::Properties {
-                id: 1,
+                id: ID1.to_u64(),
                 name: NON_ETHERNET_INTERFACE_NAME.to_string(),
                 device_class: fnet_interfaces::DeviceClass::Device(
                     fidl_fuchsia_hardware_network::DeviceClass::Unknown,
@@ -1177,792 +922,143 @@ mod tests {
                 has_default_ipv6_route: false,
                 addresses: vec![],
             },
-            None,
+            &[],
             &mut FakePing::default(),
         )
-        .await;
-        assert_eq!(
-            got,
-            Some(ReachabilityInfo::new(
-                PortType::Unknown,
-                NON_ETHERNET_INTERFACE_NAME,
-                NetworkInfo { state: State::Down.into(), ..Default::default() },
-                NetworkInfo { state: State::Down.into(), ..Default::default() },
-            )),
-            "not an ethernet interface, no addresses, interface down"
+        .expect(
+            "error calling compute_state with non-ethernet interface, no addresses, interface down",
         );
+        assert_eq!(got, Some(IpVersions::construct(StateEvent { state: State::Down, time })));
 
-        let got = compute_state(
+        let got = run_compute_state(
+            &mut exec,
             &fnet_interfaces_ext::Properties { online: false, ..properties.clone() },
-            None,
+            &[],
             &mut FakePing::default(),
         )
-        .await;
-        let want = Some(ReachabilityInfo::new(
-            PortType::Ethernet,
-            ETHERNET_INTERFACE_NAME,
-            NetworkInfo { is_l3: true, state: State::Down.into(), ..Default::default() },
-            NetworkInfo { is_l3: true, state: State::Down.into(), ..Default::default() },
-        ));
-        assert_eq!(got, want, "ethernet interface, address configured, interface down");
+        .expect("error calling compute_state, want Down state");
+        let want =
+            Some(IpVersions::<StateEvent>::construct(StateEvent { state: State::Down, time }));
+        assert_eq!(got, want);
 
-        let got = compute_state(
+        let got = run_compute_state(
+            &mut exec,
             &fnet_interfaces_ext::Properties {
                 has_default_ipv4_route: false,
                 has_default_ipv6_route: false,
                 ..properties.clone()
             },
-            None,
+            &[],
             &mut FakePing::default(),
         )
-        .await;
-        let want = Some(ReachabilityInfo::new(
-            PortType::Ethernet,
-            ETHERNET_INTERFACE_NAME,
-            NetworkInfo { is_l3: true, state: State::Local.into(), ..Default::default() },
-            NetworkInfo { is_l3: true, state: State::Local.into(), ..Default::default() },
-        ));
-        assert_eq!(got, want, "ethernet interface, address configured, interface up");
+        .expect("error calling compute_state, want Local state due to no default routes");
+        let want =
+            Some(IpVersions::<StateEvent>::construct(StateEvent { state: State::Local, time }));
+        assert_eq!(got, want);
 
-        let got = compute_state(&properties, Some(route_table2), &mut FakePing::default()).await;
-        let want = Some(ReachabilityInfo::new(
-            PortType::Ethernet,
-            ETHERNET_INTERFACE_NAME,
-            NetworkInfo { is_l3: true, state: State::Local.into(), ..Default::default() },
-            NetworkInfo { is_l3: true, state: State::Local.into(), ..Default::default() },
-        ));
-        assert_eq!(
-            got, want,
-            "ethernet interface, address configured, interface up, no local gateway"
-        );
+        let got = run_compute_state(&mut exec, &properties, route_table2, &mut FakePing::default())
+            .expect(
+                "error calling compute_state, want Local state due to no matching default route",
+            );
+        let want =
+            Some(IpVersions::<StateEvent>::construct(StateEvent { state: State::Local, time }));
+        assert_eq!(got, want);
 
-        let got = compute_state(
+        let got = run_compute_state(
+            &mut exec,
             &properties,
-            Some(route_table.clone()),
+            route_table,
             &mut FakePing {
                 gateway_urls: vec!["1.2.3.1", "123::1"],
                 gateway_response: true,
                 internet_response: false,
             },
         )
-        .await;
-        let want = Some(ReachabilityInfo::new(
-            PortType::Ethernet,
-            ETHERNET_INTERFACE_NAME,
-            NetworkInfo { is_l3: true, state: State::Gateway.into(), ..Default::default() },
-            NetworkInfo { is_l3: true, state: State::Gateway.into(), ..Default::default() },
-        ));
-        assert_eq!(
-            got, want,
-            "ethernet interface, address configured, interface up, with local gateway"
-        );
+        .expect("error calling compute_state, want Gateway state");
+        let want =
+            Some(IpVersions::<StateEvent>::construct(StateEvent { state: State::Gateway, time }));
+        assert_eq!(got, want);
 
-        let got = compute_state(
+        let got = run_compute_state(
+            &mut exec,
             &properties,
-            Some(route_table.clone()),
+            route_table,
             &mut FakePing {
                 gateway_urls: vec!["1.2.3.1", "123::1"],
                 gateway_response: true,
                 internet_response: true,
             },
         )
-        .await;
-        let want = Some(ReachabilityInfo::new(
-            PortType::Ethernet,
-            ETHERNET_INTERFACE_NAME,
-            NetworkInfo { is_l3: true, state: State::Internet.into(), ..Default::default() },
-            NetworkInfo { is_l3: true, state: State::Internet.into(), ..Default::default() },
-        ));
-        assert_eq!(
-            got, want,
-            "ethernet interface, address configured, interface up, with internet"
-        );
+        .expect("error calling compute_state, want Internet state");
+        let want =
+            Some(IpVersions::<StateEvent>::construct(StateEvent { state: State::Internet, time }));
+        assert_eq!(got, want);
     }
 
     #[test]
-    fn test_update_system_state() {
-        let updated: HashSet<Proto> = [Proto::IPv4].iter().cloned().collect();
-        let mut system_state: HashMap<Proto, (Id, NetworkInfo)> = [
-            (
-                Proto::IPv4,
-                (
-                    Id::from(0),
-                    NetworkInfo {
-                        is_default: false,
-                        is_l3: true,
-                        state: StateEvent {
-                            state: State::None,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                        previous_state: StateEvent {
-                            state: State::None,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                    },
-                ),
-            ),
-            (
-                Proto::IPv6,
-                (
-                    Id::from(0),
-                    NetworkInfo {
-                        is_default: false,
-                        is_l3: true,
-                        state: StateEvent {
-                            state: State::None,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                        previous_state: StateEvent {
-                            state: State::None,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                    },
-                ),
-            ),
-        ]
-        .iter()
-        .cloned()
-        .collect();
-        let mut interfaces: HashMap<Id, ReachabilityInfo> = [
-            (
-                Id::from(1),
-                ReachabilityInfo::new(
-                    PortType::Ethernet,
-                    ETHERNET_INTERFACE_NAME,
-                    NetworkInfo {
-                        is_default: false,
-                        is_l3: true,
-                        state: StateEvent {
-                            state: State::Down,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                        previous_state: StateEvent {
-                            state: State::None,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                    },
-                    NetworkInfo {
-                        is_default: false,
-                        is_l3: false,
-                        state: StateEvent {
-                            state: State::Down,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                        previous_state: StateEvent {
-                            state: State::None,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                    },
-                ),
-            ),
-            (
-                Id::from(3),
-                ReachabilityInfo::new(
-                    PortType::Ethernet,
-                    ETHERNET_INTERFACE_NAME,
-                    NetworkInfo {
-                        is_default: false,
-                        is_l3: true,
-                        state: StateEvent {
-                            state: State::None,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                        previous_state: StateEvent {
-                            state: State::None,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                    },
-                    NetworkInfo {
-                        is_default: false,
-                        is_l3: false,
-                        state: StateEvent {
-                            state: State::None,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                        previous_state: StateEvent {
-                            state: State::None,
-                            time: Time(zx::Time::from_nanos(0)),
-                        },
-                    },
-                ),
-            ),
-        ]
-        .iter()
-        .cloned()
-        .collect();
-        update_system_state(Id::from(1), &updated, &mut system_state, &interfaces);
-        assert_eq!(
-            system_state,
-            [
-                (
-                    Proto::IPv4,
-                    (
-                        Id::from(1),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::Down,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                        },
-                    ),
-                ),
-                (
-                    Proto::IPv6,
-                    (
-                        Id::from(0),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                        },
-                    ),
-                ),
-            ]
-            .iter()
-            .cloned()
-            .collect(),
-            "port 1 is down"
-        );
+    fn test_state_info_update() {
+        fn update_delta(port: Delta<StateEvent>, system: Delta<SystemState>) -> StateDelta {
+            StateDelta {
+                port: IpVersions { ipv4: port.clone(), ipv6: port },
+                system: IpVersions { ipv4: system.clone(), ipv6: system },
+            }
+        }
 
-        interfaces.insert(
-            Id::from(2),
-            ReachabilityInfo::new(
-                PortType::Ethernet,
-                ETHERNET_INTERFACE_NAME,
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: true,
-                    state: StateEvent { state: State::Up, time: Time(zx::Time::from_nanos(20000)) },
-                    previous_state: StateEvent {
-                        state: State::None,
-                        time: Time(zx::Time::from_nanos(0)),
-                    },
-                },
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: false,
-                    state: StateEvent {
-                        state: State::Local,
-                        time: Time(zx::Time::from_nanos(200000)),
-                    },
-                    previous_state: StateEvent {
-                        state: State::None,
-                        time: Time(zx::Time::from_nanos(0)),
-                    },
-                },
-            ),
+        let if1_local_event = StateEvent::construct(State::Local);
+        let if1_local = IpVersions::<StateEvent>::construct(if1_local_event);
+        // Post-update the system state should be Local due to interface 1.
+        let mut state = StateInfo::default();
+        let want = update_delta(
+            Delta { previous: None, current: if1_local_event },
+            Delta { previous: None, current: SystemState { id: ID1, state: if1_local_event } },
         );
-        update_system_state(Id::from(2), &updated, &mut system_state, &interfaces);
-        assert_eq!(
-            system_state,
-            [
-                (
-                    Proto::IPv4,
-                    (
-                        Id::from(2),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::Up,
-                                time: Time(zx::Time::from_nanos(10000)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::Down,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                        },
-                    ),
-                ),
-                (
-                    Proto::IPv6,
-                    (
-                        Id::from(0),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                        },
-                    ),
-                ),
-            ]
-            .iter()
-            .cloned()
-            .collect(),
-            "port 2 is up"
-        );
+        assert_eq!(state.update(ID1, if1_local.clone()), want);
+        let want_state = StateInfo {
+            per_interface: std::iter::once((ID1, if1_local.clone())).collect::<HashMap<_, _>>(),
+            system: IpVersions { ipv4: Some(ID1), ipv6: Some(ID1) },
+        };
+        assert_eq!(state, want_state);
 
-        interfaces.insert(
-            Id::from(3),
-            ReachabilityInfo::new(
-                PortType::Ethernet,
-                ETHERNET_INTERFACE_NAME,
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: true,
-                    state: StateEvent {
-                        state: State::Internet,
-                        time: Time(zx::Time::from_nanos(30000)),
-                    },
-                    previous_state: StateEvent {
-                        state: State::None,
-                        time: Time(zx::Time::from_nanos(0)),
-                    },
-                },
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: false,
-                    state: StateEvent { state: State::None, time: Time(zx::Time::from_nanos(0)) },
-                    previous_state: StateEvent {
-                        state: State::None,
-                        time: Time(zx::Time::from_nanos(0)),
-                    },
-                },
-            ),
+        let if2_gateway_event = StateEvent::construct(State::Gateway);
+        let if2_gateway = IpVersions::<StateEvent>::construct(if2_gateway_event);
+        // Pre-update, the system state is Local due to interface 1; post-update the system state
+        // will be Gateway due to interface 2.
+        let want = update_delta(
+            Delta { previous: None, current: if2_gateway_event },
+            Delta {
+                previous: Some(SystemState { id: ID1, state: if1_local_event }),
+                current: SystemState { id: ID2, state: if2_gateway_event },
+            },
         );
-        update_system_state(Id::from(3), &updated, &mut system_state, &interfaces);
-        assert_eq!(
-            system_state,
-            [
-                (
-                    Proto::IPv4,
-                    (
-                        Id::from(3),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::Internet,
-                                time: Time(zx::Time::from_nanos(30000)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::Up,
-                                time: Time(zx::Time::from_nanos(20000)),
-                            },
-                        },
-                    ),
-                ),
-                (
-                    Proto::IPv6,
-                    (
-                        Id::from(0),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                        },
-                    ),
-                ),
-            ]
-            .iter()
-            .cloned()
-            .collect(),
-            "port 3 internet"
-        );
+        assert_eq!(state.update(ID2, if2_gateway.clone()), want);
+        let want_state = StateInfo {
+            per_interface: [(ID1, if1_local.clone()), (ID2, if2_gateway.clone())]
+                .iter()
+                .cloned()
+                .collect::<HashMap<_, _>>(),
+            system: IpVersions { ipv4: Some(ID2), ipv6: Some(ID2) },
+        };
+        assert_eq!(state, want_state);
 
-        interfaces.insert(
-            Id::from(1),
-            ReachabilityInfo::new(
-                PortType::Ethernet,
-                ETHERNET_INTERFACE_NAME,
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: true,
-                    state: StateEvent {
-                        state: State::Local,
-                        time: Time(zx::Time::from_nanos(40000)),
-                    },
-                    previous_state: StateEvent {
-                        state: State::Up,
-                        time: Time(zx::Time::from_nanos(10000)),
-                    },
-                },
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: false,
-                    state: StateEvent {
-                        state: State::Internet,
-                        time: Time(zx::Time::from_nanos(200000)),
-                    },
-                    previous_state: StateEvent {
-                        state: State::None,
-                        time: Time(zx::Time::from_nanos(0)),
-                    },
-                },
-            ),
+        let if2_removed_event = StateEvent::construct(State::Removed);
+        let if2_removed = IpVersions::<StateEvent>::construct(if2_removed_event);
+        // Pre-update, the system state is Gateway due to interface 2; post-update the system state
+        // will be Local due to interface 1.
+        let want = update_delta(
+            Delta { previous: Some(if2_gateway_event), current: if2_removed_event },
+            Delta {
+                previous: Some(SystemState { id: ID2, state: if2_gateway_event }),
+                current: SystemState { id: ID1, state: if1_local_event },
+            },
         );
-        update_system_state(Id::from(1), &updated, &mut system_state, &interfaces);
-        assert_eq!(
-            system_state,
-            [
-                (
-                    Proto::IPv4,
-                    (
-                        Id::from(3),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::Internet,
-                                time: Time(zx::Time::from_nanos(30000)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::Up,
-                                time: Time(zx::Time::from_nanos(20000)),
-                            },
-                        },
-                    ),
-                ),
-                (
-                    Proto::IPv6,
-                    (
-                        Id::from(0),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                        },
-                    ),
-                ),
-            ]
-            .iter()
-            .cloned()
-            .collect(),
-            "port 1 local"
-        );
-
-        interfaces.insert(
-            Id::from(3),
-            ReachabilityInfo::new(
-                PortType::Ethernet,
-                ETHERNET_INTERFACE_NAME,
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: true,
-                    state: StateEvent {
-                        state: State::Down,
-                        time: Time(zx::Time::from_nanos(50000)),
-                    },
-                    previous_state: StateEvent {
-                        state: State::Up,
-                        time: Time(zx::Time::from_nanos(10000)),
-                    },
-                },
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: false,
-                    state: StateEvent { state: State::None, time: Time(zx::Time::from_nanos(0)) },
-                    previous_state: StateEvent {
-                        state: State::None,
-                        time: Time(zx::Time::from_nanos(0)),
-                    },
-                },
-            ),
-        );
-        update_system_state(Id::from(3), &updated, &mut system_state, &interfaces);
-        assert_eq!(
-            system_state,
-            [
-                (
-                    Proto::IPv4,
-                    (
-                        Id::from(1),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::Local,
-                                time: Time(zx::Time::from_nanos(40000)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::Internet,
-                                time: Time(zx::Time::from_nanos(30000)),
-                            },
-                        },
-                    ),
-                ),
-                (
-                    Proto::IPv6,
-                    (
-                        Id::from(0),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                        },
-                    ),
-                ),
-            ]
-            .iter()
-            .cloned()
-            .collect(),
-            "port 3 down"
-        );
-
-        interfaces.insert(
-            Id::from(3),
-            ReachabilityInfo::new(
-                PortType::Ethernet,
-                ETHERNET_INTERFACE_NAME,
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: true,
-                    state: StateEvent {
-                        state: State::Gateway,
-                        time: Time(zx::Time::from_nanos(60000)),
-                    },
-                    previous_state: StateEvent {
-                        state: State::Up,
-                        time: Time(zx::Time::from_nanos(10000)),
-                    },
-                },
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: false,
-                    state: StateEvent { state: State::None, time: Time(zx::Time::from_nanos(0)) },
-                    previous_state: StateEvent {
-                        state: State::None,
-                        time: Time(zx::Time::from_nanos(0)),
-                    },
-                },
-            ),
-        );
-        update_system_state(Id::from(3), &updated, &mut system_state, &interfaces);
-        assert_eq!(
-            system_state,
-            [
-                (
-                    Proto::IPv4,
-                    (
-                        Id::from(3),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::Gateway,
-                                time: Time(zx::Time::from_nanos(60000)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::Local,
-                                time: Time(zx::Time::from_nanos(40000)),
-                            },
-                        },
-                    ),
-                ),
-                (
-                    Proto::IPv6,
-                    (
-                        Id::from(0),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                        },
-                    ),
-                ),
-            ]
-            .iter()
-            .cloned()
-            .collect(),
-            "port 3 gateway"
-        );
-
-        interfaces.insert(
-            Id::from(3),
-            ReachabilityInfo::new(
-                PortType::Ethernet,
-                ETHERNET_INTERFACE_NAME,
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: true,
-                    state: StateEvent {
-                        state: State::Internet,
-                        time: Time(zx::Time::from_nanos(70000)),
-                    },
-                    previous_state: StateEvent {
-                        state: State::Gateway,
-                        time: Time(zx::Time::from_nanos(60000)),
-                    },
-                },
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: false,
-                    state: StateEvent { state: State::None, time: Time(zx::Time::from_nanos(0)) },
-                    previous_state: StateEvent {
-                        state: State::None,
-                        time: Time(zx::Time::from_nanos(0)),
-                    },
-                },
-            ),
-        );
-        update_system_state(Id::from(3), &updated, &mut system_state, &interfaces);
-        assert_eq!(
-            system_state,
-            [
-                (
-                    Proto::IPv4,
-                    (
-                        Id::from(3),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::Internet,
-                                time: Time(zx::Time::from_nanos(70000)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::Gateway,
-                                time: Time(zx::Time::from_nanos(60000)),
-                            },
-                        },
-                    ),
-                ),
-                (
-                    Proto::IPv6,
-                    (
-                        Id::from(0),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                        },
-                    ),
-                ),
-            ]
-            .iter()
-            .cloned()
-            .collect(),
-            "port 3 internet"
-        );
-
-        interfaces.insert(
-            Id::from(3),
-            ReachabilityInfo::new(
-                PortType::Ethernet,
-                ETHERNET_INTERFACE_NAME,
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: true,
-                    state: StateEvent {
-                        state: State::Removed,
-                        time: Time(zx::Time::from_nanos(80000)),
-                    },
-                    previous_state: StateEvent {
-                        state: State::Internet,
-                        time: Time(zx::Time::from_nanos(70000)),
-                    },
-                },
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: false,
-                    state: StateEvent { state: State::None, time: Time(zx::Time::from_nanos(0)) },
-                    previous_state: StateEvent {
-                        state: State::None,
-                        time: Time(zx::Time::from_nanos(0)),
-                    },
-                },
-            ),
-        );
-        update_system_state(Id::from(3), &updated, &mut system_state, &interfaces);
-        assert_eq!(
-            system_state,
-            [
-                (
-                    Proto::IPv4,
-                    (
-                        Id::from(1),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::Local,
-                                time: Time(zx::Time::from_nanos(40000)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::Internet,
-                                time: Time(zx::Time::from_nanos(30000)),
-                            },
-                        },
-                    ),
-                ),
-                (
-                    Proto::IPv6,
-                    (
-                        Id::from(0),
-                        NetworkInfo {
-                            is_default: false,
-                            is_l3: true,
-                            state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                            previous_state: StateEvent {
-                                state: State::None,
-                                time: Time(zx::Time::from_nanos(0)),
-                            },
-                        },
-                    ),
-                ),
-            ]
-            .iter()
-            .cloned()
-            .collect(),
-            "port 3 removed"
-        );
+        assert_eq!(state.update(ID2, if2_removed.clone()), want);
+        let want_state = StateInfo {
+            per_interface: [(ID1, if1_local.clone()), (ID2, if2_removed.clone())]
+                .iter()
+                .cloned()
+                .collect::<HashMap<_, _>>(),
+            system: IpVersions { ipv4: Some(ID1), ipv6: Some(ID1) },
+        };
+        assert_eq!(state, want_state);
     }
 }
