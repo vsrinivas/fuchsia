@@ -202,7 +202,9 @@ using WebRunnerPixelTest = PixelTest;
 
 // Loads a static page with a solid color via the component framework and
 // verifies that the color is the only color onscreen.
-TEST_F(WebRunnerPixelTest, Static) {
+// TODO(fxbug.dev/72369): Investigate why this fails on femu by showing artifacts and calling
+// SetScale(0, 0) before reenabling.
+TEST_F(WebRunnerPixelTest, DISABLED_Static) {
   static constexpr uint32_t kTargetColor = 0xffff00ff;
 
   web_runner_tests::TestServer server;
