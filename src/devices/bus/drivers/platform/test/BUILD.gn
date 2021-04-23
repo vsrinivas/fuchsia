@@ -162,7 +162,7 @@ driver_module("test-goldfish-pipe") {
   sources = [ "test/goldfish_pipe.cc" ]
   deps = [
     ":test-goldfish-pipe-bind",
-    "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
+    "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//src/devices/lib/driver",
@@ -365,7 +365,7 @@ driver_module("test-composite") {
     ":test-composite-bind",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.goldfish.addressspace:fuchsia.hardware.goldfish.addressspace_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
+    "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.goldfish.sync",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c",

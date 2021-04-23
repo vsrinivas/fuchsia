@@ -18,7 +18,7 @@ common_deps = [
   ":goldfish_control_composite-bind",
   "//sdk/banjo/fuchsia.hardware.goldfish.addressspace:fuchsia.hardware.goldfish.addressspace_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.goldfish.control:fuchsia.hardware.goldfish.control_banjo_cpp",
-  "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
+  "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.goldfish.sync",
   "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
   "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
