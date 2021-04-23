@@ -880,5 +880,61 @@ TEST(FvmDescriptorTest, WriteBlockImageOOBRegressionTest) {
   ASSERT_TRUE(write_result.is_ok()) << write_result.is_error();
 }
 
+// Added due Off By one in certain configurations on unfilled mappings.
+TEST(FvmDescriptorTest, WriteBlockImagesOffByOneRegressionTest) {
+  constexpr uint64_t kSliceSize = 32u * (1u << 10);
+  constexpr uint64_t kImageSize = 500u * (1u << 20);
+
+  auto options = ValidOptions();
+  options.slice_size = kSliceSize;
+  options.target_volume_size = kImageSize;
+
+  std::string_view kSerializedVolumeImage = R"(
+    {
+      "volume": {
+        "magic":11602964,
+        "instance_guid":"00000000-0000-0000-0000-000000000000",
+        "type_guid":"2967380E-134C-4CBB-B6DA-17E7CE1CA45D",
+        "name":"blob",
+        "block_size":8192,
+        "encryption_type":"ENCRYPTION_TYPE_NONE"
+      },
+      "address": {
+        "magic":12526821592682033285,
+        "mappings":[
+          {
+            "source":0,
+            "target":0,
+            "count":16384,
+            "options":{
+              "ADDRESS_MAP_OPTION_FILL":0
+              }
+          },
+          {
+            "source":16384,
+            "target":536870912,
+            "count":8192,
+            "size":98304
+          }
+        ]
+      }
+    }
+    )";
+
+  auto partition_or =
+      Partition::Create(kSerializedVolumeImage, std::make_unique<FakeReader>(&GetContents<1>));
+  ASSERT_TRUE(partition_or.is_ok()) << partition_or.error();
+
+  FvmDescriptor::Builder builder;
+  auto descriptor_or =
+      builder.SetOptions(options).AddPartition(std::move(partition_or.value())).Build();
+  ASSERT_TRUE(descriptor_or.is_ok());
+
+  FakeWriter writer;
+  writer.data().reserve(4u << 20);
+  auto write_result = descriptor_or.value().WriteBlockImage(writer);
+  ASSERT_TRUE(write_result.is_ok()) << write_result.is_error();
+}
+
 }  // namespace
 }  // namespace storage::volume_image

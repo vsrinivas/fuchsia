@@ -193,6 +193,22 @@ TEST(MtdWriterTest, WriteFvmIsOk) {
   page_buffer.resize(handle.instance().page_size());
 
   auto actual_reader = handle.MakeReader();
+
+  // RawNand and Files treat unwritten ranges differently. While a file will zero fill the skipped
+  // range, raw nand sees 0xFF or better said, a cleanly formatted FTL, with an unwritten, which
+  // mean unmapped block device block(nand device page) will assume 0xFF.
+  // The values below were extracted from the fvm metadata.
+  std::vector<uint8_t> empty_slices = {29, 31};
+  std::vector<uint8_t> empty_page;
+  empty_page.resize(handle.instance().page_size(), 0xFF);
+
+  // Read back the fvm header to calculate the slice offsets.
+  fvm::Header header = {};
+  ASSERT_TRUE(
+      ReadUnalignedBlock(0, fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(header)),
+                         page_buffer, *actual_reader)
+          .is_ok());
+
   while (read_bytes < expected_image_reader.length()) {
     uint64_t bytes_to_read = buffer.size();
     if (bytes_to_read > expected_image_reader.length() - read_bytes) {
@@ -207,7 +223,19 @@ TEST(MtdWriterTest, WriteFvmIsOk) {
                            page_buffer, *actual_reader);
     ASSERT_TRUE(actual_result.is_ok()) << actual_result.error();
 
-    EXPECT_TRUE(memcmp(buffer.data(), actual_buffer.data(), bytes_to_read) == 0);
+    bool is_empty = false;
+    for (auto slice : empty_slices) {
+      if (read_bytes >= header.GetSliceDataOffset(slice) &&
+          read_bytes + bytes_to_read <= header.GetSliceDataOffset(slice + 1)) {
+        is_empty = true;
+        EXPECT_TRUE(memcmp(actual_buffer.data(), empty_page.data(), bytes_to_read) == 0);
+        break;
+      }
+    }
+
+    if (!is_empty) {
+      EXPECT_TRUE(memcmp(buffer.data(), actual_buffer.data(), bytes_to_read) == 0);
+    }
     read_bytes += bytes_to_read;
   }
 }

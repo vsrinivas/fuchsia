@@ -274,7 +274,7 @@ fit::result<void, std::string> FvmDescriptor::WriteBlockImage(Writer& writer) co
         }
 
         // Skip all allocated slices that are not backed by data if we dont need to fill.
-        if (slice > data_slice_count && !fill_value.has_value()) {
+        if (slice >= data_slice_count && !fill_value.has_value()) {
           current_physical_slice += slice_count - data_slice_count;
           break;
         }
@@ -292,6 +292,8 @@ fit::result<void, std::string> FvmDescriptor::WriteBlockImage(Writer& writer) co
       }
     }
   }
+  // Account for slice zero.
+  ZX_ASSERT(slices.size() + 1 == current_physical_slice);
   return fit::ok();
 }
 
