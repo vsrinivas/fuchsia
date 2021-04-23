@@ -73,6 +73,26 @@ impl MockHandles {
         )?;
         Ok(S::Proxy::from_channel(node_proxy.into_channel().unwrap()))
     }
+
+    /// Clones a directory from the mock's namespace.
+    ///
+    /// Note that this function only works on exact matches from the namespace. For example if the
+    /// namespace had a `data` entry in it, and the caller wished to open the subdirectory at
+    /// `data/assets`, then this function should be called with the argument `data` and the
+    /// returned `DirectoryProxy` would then be used to open the subdirectory `assets`. In this
+    /// scenario, passing `data/assets` in its entirety to this function would fail.
+    ///
+    /// ```
+    /// let data_dir = mock_handles.clone_from_namespace("data")?;
+    /// let assets_dir = io_util::open_directory(&data_dir, Path::new("assets"), ...)?;
+    /// ```
+    pub fn clone_from_namespace(&self, directory_name: &str) -> Result<fio::DirectoryProxy, Error> {
+        let dir_proxy = self.namespace.get(&format!("/{}", directory_name)).ok_or(format_err!(
+            "the mock's namespace doesn't have a /{} directory",
+            directory_name
+        ))?;
+        io_util::clone_directory(dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
+    }
 }
 
 impl From<ftrb::MockComponentStartInfo> for MockHandles {
@@ -184,7 +204,52 @@ mod tests {
         fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_component_runner as fcrunner,
         fuchsia_component::server as fserver,
         futures::{channel::oneshot, StreamExt},
+        maplit::hashmap,
+        vfs::{
+            directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+            file::vmo::asynchronous::read_only_static, path::Path as VfsPath, pseudo_directory,
+        },
     };
+
+    #[fasync::run_until_stalled(test)]
+    async fn mock_handles_clone_from_namespace() {
+        let dir_name = "data";
+        let file_name = "example_file";
+        let file_contents = "example contents";
+
+        let (_outgoing_dir_client_end, outgoing_dir_server_end) = create_endpoints().unwrap();
+
+        let data_dir = pseudo_directory!(
+            file_name => read_only_static(file_contents.to_string().into_bytes()),
+        );
+
+        let (data_dir_proxy, data_dir_server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
+        data_dir.open(
+            ExecutionScope::new(),
+            fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            VfsPath::empty(),
+            data_dir_server_end.into_channel().into(),
+        );
+
+        let mock_handles = MockHandles {
+            namespace: hashmap! {
+                format!("/{}", dir_name) => data_dir_proxy,
+            },
+            outgoing_dir: outgoing_dir_server_end,
+        };
+
+        let data_dir_clone =
+            mock_handles.clone_from_namespace("data").expect("failed to clone from namespace");
+
+        let file_proxy =
+            io_util::open_file(&data_dir_clone, Path::new(file_name), fio::OPEN_RIGHT_READABLE)
+                .expect("failed to open file");
+        assert_eq!(
+            file_contents,
+            &io_util::read_file(&file_proxy).await.expect("failed to read file")
+        );
+    }
 
     #[fasync::run_until_stalled(test)]
     async fn mocks_are_run() {
