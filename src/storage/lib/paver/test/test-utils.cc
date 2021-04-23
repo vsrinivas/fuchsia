@@ -100,6 +100,9 @@ FakePartitionClient::FakePartitionClient(size_t block_count, size_t block_size)
   }
 }
 
+FakePartitionClient::FakePartitionClient(size_t block_count)
+    : FakePartitionClient(block_count, zx_system_get_page_size()) {}
+
 zx::status<size_t> FakePartitionClient::GetBlockSize() { return zx::ok(block_size_); }
 
 zx::status<size_t> FakePartitionClient::GetPartitionSize() { return zx::ok(partition_size_); }

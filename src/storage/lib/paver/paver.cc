@@ -96,7 +96,8 @@ bool CheckIfSame(PartitionClient* partition, const zx::vmo& vmo, size_t payload_
                  size_t block_size) {
   const size_t payload_size_aligned = fbl::round_up(payload_size, block_size);
   zx::vmo read_vmo;
-  auto status = zx::vmo::create(fbl::round_up(payload_size_aligned, ZX_PAGE_SIZE), 0, &read_vmo);
+  auto status =
+      zx::vmo::create(fbl::round_up(payload_size_aligned, zx_system_get_page_size()), 0, &read_vmo);
   if (status != ZX_OK) {
     ERROR("Failed to create VMO: %s\n", zx_status_get_string(status));
     return false;
@@ -239,8 +240,8 @@ zx::status<fuchsia_mem::wire::Buffer> PartitionRead(const DevicePartitioner& par
   const uint64_t partition_size = status2.value();
 
   zx::vmo vmo;
-  if (auto status =
-          zx::make_status(zx::vmo::create(fbl::round_up(partition_size, ZX_PAGE_SIZE), 0, &vmo));
+  if (auto status = zx::make_status(
+          zx::vmo::create(fbl::round_up(partition_size, zx_system_get_page_size()), 0, &vmo));
       status.is_error()) {
     ERROR("Error creating vmo for \"%s\": %s\n", spec.ToString().c_str(), status.status_string());
     return status.take_error();
@@ -378,7 +379,8 @@ zx::status<> PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload
       }
       // Grow VMO if it's too small.
       if (vmo_size < payload_size + remaining_bytes) {
-        const auto new_size = fbl::round_up(payload_size + remaining_bytes, ZX_PAGE_SIZE);
+        const auto new_size =
+            fbl::round_up(payload_size + remaining_bytes, zx_system_get_page_size());
         status = zx::make_status(payload_vmo.set_size(new_size));
         if (status.is_error()) {
           ERROR("Couldn't grow vmo for \"%s\"\n", spec.ToString().c_str());

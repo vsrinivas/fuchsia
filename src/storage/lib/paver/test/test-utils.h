@@ -116,7 +116,8 @@ class FakeDevicePartitioner : public paver::DevicePartitioner {
 // Used for testing.
 class FakePartitionClient : public paver::BlockDevicePartitionClient {
  public:
-  FakePartitionClient(size_t block_count, size_t block_size = PAGE_SIZE);
+  FakePartitionClient(size_t block_count, size_t block_size);
+  explicit FakePartitionClient(size_t block_count);
 
   zx::status<size_t> GetBlockSize();
   zx::status<size_t> GetPartitionSize();

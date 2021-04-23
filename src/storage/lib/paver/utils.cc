@@ -210,8 +210,8 @@ zx::status<> WipeBlockPartition(const fbl::unique_fd& devfs_root, std::optional<
   // Rely on vmos being 0 initialized.
   zx::vmo vmo;
   {
-    auto status =
-        zx::make_status(zx::vmo::create(fbl::round_up(block_size, ZX_PAGE_SIZE), 0, &vmo));
+    auto status = zx::make_status(
+        zx::vmo::create(fbl::round_up(block_size, zx_system_get_page_size()), 0, &vmo));
     if (status.is_error()) {
       ERROR("Warning: Could not create vmo: %s\n", status.status_string());
       return status.take_error();

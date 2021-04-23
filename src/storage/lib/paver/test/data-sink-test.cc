@@ -33,7 +33,7 @@ class MockUserPager {
 
   void CreatePayloadPaged(size_t num_pages, fuchsia_mem::wire::Buffer* out) {
     zx::vmo vmo;
-    size_t vmo_size = num_pages * ZX_PAGE_SIZE;
+    size_t vmo_size = num_pages * zx_system_get_page_size();
 
     // Create a vmo backed by |pager_|.
     page_request_handler_.CreateVmo(loop_.dispatcher(), zx::unowned_pager(pager_.get()), 0,
@@ -57,7 +57,7 @@ class MockUserPager {
     // Create a vmo and fill it with a predictable pattern that can be verified later.
     zx::vmo vmo;
     fzl::VmoMapper mapper;
-    size_t vmo_size = fbl::round_up(request->length, ZX_PAGE_SIZE);
+    size_t vmo_size = fbl::round_up(request->length, zx_system_get_page_size());
     ASSERT_OK(mapper.CreateAndMap(vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
     memset(mapper.start(), kData, mapper.size());
     mapper.Unmap();
@@ -87,7 +87,7 @@ class MockPartitionClient : public FakePartitionClient {
     // |PartitionClient::Write()| was called.
     zx_info_vmo_t info;
     EXPECT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
-    EXPECT_EQ(info.committed_bytes, kPageCount * ZX_PAGE_SIZE);
+    EXPECT_EQ(info.committed_bytes, kPageCount * zx_system_get_page_size());
 
     // Issue the operation to write out the vmo to the partition.
     EXPECT_OK(FakePartitionClient::Write(vmo, vmo_size));

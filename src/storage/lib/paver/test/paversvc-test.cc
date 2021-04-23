@@ -265,7 +265,8 @@ class PaverServiceTest : public zxtest::Test {
   void ValidateWritten(const fuchsia_mem::wire::Buffer& buf, size_t num_pages) {
     ASSERT_GE(buf.size, num_pages * kPageSize);
     fzl::VmoMapper mapper;
-    ASSERT_OK(mapper.Map(buf.vmo, 0, fbl::round_up(num_pages * kPageSize, ZX_PAGE_SIZE),
+    ASSERT_OK(mapper.Map(buf.vmo, 0,
+                         fbl::round_up(num_pages * kPageSize, zx_system_get_page_size()),
                          ZX_VM_PERM_READ));
     const uint8_t* start = reinterpret_cast<uint8_t*>(mapper.start());
     for (size_t i = 0; i < num_pages * kPageSize; i++) {

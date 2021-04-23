@@ -79,8 +79,8 @@ zx::status<std::unique_ptr<abr::Client>> AbrPartitionClient::Create(
   size_t block_size = status.value();
 
   zx::vmo vmo;
-  if (auto status =
-          zx::make_status(zx::vmo::create(fbl::round_up(block_size, ZX_PAGE_SIZE), 0, &vmo));
+  if (auto status = zx::make_status(
+          zx::vmo::create(fbl::round_up(block_size, zx_system_get_page_size()), 0, &vmo));
       status.is_error()) {
     return status.take_error();
   }
