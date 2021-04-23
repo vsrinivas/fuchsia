@@ -323,21 +323,28 @@ struct StringType : public Type {
   const types::Nullability nullability;
 };
 
+enum struct MemcpyCompatibility {
+  kCannotMemcpy,
+  kCanMemcpy,
+};
+
 struct VectorType : public Type {
   VectorType(std::string name, const Type* element_type, uint32_t max_count, uint32_t element_size,
-             types::Nullability nullability)
+             types::Nullability nullability, MemcpyCompatibility element_memcpy_compatibility)
       // Note: vectors have is_noop = false, but there is the potential to optimize this in the
       // future.
       : Type(Kind::kVector, std::move(name), 16u, true, false),
         element_type(element_type),
         max_count(max_count),
         element_size(element_size),
-        nullability(nullability) {}
+        nullability(nullability),
+        element_memcpy_compatibility(element_memcpy_compatibility) {}
 
   const Type* const element_type;
   const uint32_t max_count;
   const uint32_t element_size;
   const types::Nullability nullability;
+  const MemcpyCompatibility element_memcpy_compatibility;
 };
 
 }  // namespace coded

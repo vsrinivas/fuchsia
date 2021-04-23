@@ -7,6 +7,7 @@
 
 #include <map>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "coded_ast.h"
@@ -91,6 +92,10 @@ class CodedTypesGenerator {
   std::map<flat::Name::Key, std::unique_ptr<coded::Type>> named_coded_types_;
   std::vector<std::unique_ptr<coded::Type>> coded_types_;
 };
+
+// Compute if a type is "memcpy-compatible", in that it can safely be memcpy'd during encode.
+// This means that the type doesn't contain pointers, padding, envelopes or handles.
+coded::MemcpyCompatibility ComputeMemcpyCompatibility(const flat::Type* type);
 
 }  // namespace fidl
 

@@ -10,13 +10,13 @@ __LOCAL extern const struct FidlCodedStruct fidl_test_typealiases_ExampleOfUseOf
 
 static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedVector Vector4294967295nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector4294967295nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
 
-static const struct FidlCodedVector Vector9nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=9u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector9nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=9u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
 
-static const struct FidlCodedVector Vector5nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=5u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector5nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=5u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
 
-static const struct FidlCodedVector Vector5nonnullable28someotherlibrary_ReferenceMeTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&someotherlibrary_ReferenceMeTable), .max_count=5u, .element_size=1u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector5nonnullable28someotherlibrary_ReferenceMeTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&someotherlibrary_ReferenceMeTable), .max_count=5u, .element_size=1u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
 
 static const struct FidlCodedHandle Handlechannel2147483648nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 

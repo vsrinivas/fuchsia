@@ -42,12 +42,21 @@ zx_status_t FidlHandleInfoCloseMany(const zx_handle_info_t* handle_infos, size_t
 // uint32 field in a struct is elided.
 
 typedef bool FidlNullability;
-static const bool kFidlNullability_Nonnullable = false;
-static const bool kFidlNullability_Nullable = true;
+static const FidlNullability kFidlNullability_Nonnullable = false;
+static const FidlNullability kFidlNullability_Nullable = true;
 
 typedef bool FidlStrictness;
-static const bool kFidlStrictness_Flexible = false;
-static const bool kFidlStrictness_Strict = true;
+static const FidlStrictness kFidlStrictness_Flexible = false;
+static const FidlStrictness kFidlStrictness_Strict = true;
+
+typedef bool FidlIsResource;
+static const FidlIsResource kFidlIsResource_Resource = true;
+static const FidlIsResource kFidlIsResource_NotResource = false;
+
+// Indicates if encoding an object of a given type might involve mutations.
+typedef bool FidlMemcpyCompatibility;
+static const FidlMemcpyCompatibility kFidlMemcpyCompatibility_CannotMemcpy = false;
+static const FidlMemcpyCompatibility kFidlMemcpyCompatibility_CanMemcpy = true;
 
 // TODO(fxbug.dev/42792): Remove either this FidlAlign function or the FIDL_ALIGN macro in
 // zircon/fidl.h.
@@ -111,10 +120,6 @@ static const FidlStructElementType kFidlStructElementType_Field = (uint8_t)1u;
 static const FidlStructElementType kFidlStructElementType_Padding64 = (uint8_t)2u;
 static const FidlStructElementType kFidlStructElementType_Padding32 = (uint8_t)3u;
 static const FidlStructElementType kFidlStructElementType_Padding16 = (uint8_t)4u;
-
-typedef bool FidlIsResource;
-static const FidlIsResource kFidlIsResource_Resource = true;
-static const FidlIsResource kFidlIsResource_NotResource = false;
 
 struct FidlStructElementHeader {
   FidlStructElementType element_type;
@@ -429,12 +434,13 @@ struct FidlCodedString FIDL_INTERNAL_INHERIT_TYPE_T {
   FIDL_INTERNAL_DELETE_DEFAULT_CONSTRUCTOR(FidlCodedString)
 };
 
-// Note that |max_count * element_size| is guaranteed to fit into a uint32_t. Unlike other types,
-// the |element| pointer may be null. This occurs when the element type contains no interesting
-// bits (i.e. pointers or handles).
+// Note that:
+// - |max_count * element_size| is guaranteed to fit into a uint32_t.
+// - |element| will always be non-null.
 struct FidlCodedVector FIDL_INTERNAL_INHERIT_TYPE_T {
   const FidlTypeTag tag;
   const FidlNullability nullable;
+  const FidlMemcpyCompatibility element_memcpy_compatibility;
   const uint32_t max_count;
   const uint32_t element_size;
   const fidl_type_t* const element;

@@ -52,13 +52,13 @@ __LOCAL extern const struct FidlCodedXUnion fidl_test_union_XUnionContainingEmpt
 
 static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedVector Vector4294967295nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector4294967295nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
 
-static const struct FidlCodedVector Vector10nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint8Table), .max_count=10u, .element_size=1u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector10nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint8Table), .max_count=10u, .element_size=1u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
 
 static const struct FidlCodedString String16nonnullableTable = {.tag=kFidlTypeString, .max_size=16u, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedVector Vector4294967295nonnullable19String16nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String16nonnullableTable), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector4294967295nonnullable19String16nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String16nonnullableTable), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
 
 __LOCAL extern const struct FidlCodedStruct fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
 const struct FidlCodedStruct fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest"};

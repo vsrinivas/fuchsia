@@ -6,61 +6,61 @@
 __LOCAL extern const struct FidlCodedStruct fidl_test_experimentalmaybefromtypealias_TestingTable;
 
 
-static const struct FidlCodedVector Vector1nonnullable6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint64Table), .max_count=1u, .element_size=8u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector1nonnullable6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint64Table), .max_count=1u, .element_size=8u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
 
 static const struct FidlCodedArray Array8_6uint64Table __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&fidl_internal_kUint64Table), .array_size=8u, .element_size=8u};
 
-static const struct FidlCodedVector Vector4294967295nonnullable25Vector1nonnullable6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Vector1nonnullable6uint64Table), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector4294967295nonnullable25Vector1nonnullable6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Vector1nonnullable6uint64Table), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
 
-static const struct FidlCodedVector Vector4294967295nonnullable14Array8_6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Array8_6uint64Table), .max_count=4294967295u, .element_size=8u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector4294967295nonnullable14Array8_6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Array8_6uint64Table), .max_count=4294967295u, .element_size=8u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
 
 static const struct FidlCodedArray Array64_25Vector1nonnullable6uint64Table __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&Vector1nonnullable6uint64Table), .array_size=64u, .element_size=16u};
 
 static const struct FidlCodedArray Array32_14Array8_6uint64Table __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&Array8_6uint64Table), .array_size=32u, .element_size=8u};
 
-static const struct FidlCodedVector Vector4294967295nullable6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint64Table), .max_count=4294967295u, .element_size=8u, .nullable=kFidlNullability_Nullable};
+static const struct FidlCodedVector Vector4294967295nullable6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint64Table), .max_count=4294967295u, .element_size=8u, .nullable=kFidlNullability_Nullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
 
-static const struct FidlCodedVector Vector4294967295nonnullable31Vector4294967295nullable6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Vector4294967295nullable6uint64Table), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector4294967295nonnullable31Vector4294967295nullable6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Vector4294967295nullable6uint64Table), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
 
 static const struct FidlCodedArray Array64_31Vector4294967295nullable6uint64Table __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&Vector4294967295nullable6uint64Table), .array_size=64u, .element_size=16u};
 
 static const struct FidlCodedHandle Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedVector Vector4294967295nonnullable71Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnonnullableTable), .max_count=4294967295u, .element_size=4u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector4294967295nonnullable71Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnonnullableTable), .max_count=4294967295u, .element_size=4u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
 
 static const struct FidlCodedArray Array16_71Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnonnullableTable __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnonnullableTable), .array_size=16u, .element_size=4u};
 
 static const struct FidlCodedHandle Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nullable};
 
-static const struct FidlCodedVector Vector4294967295nonnullable68Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnullableTable), .max_count=4294967295u, .element_size=4u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector4294967295nonnullable68Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnullableTable), .max_count=4294967295u, .element_size=4u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
 
 static const struct FidlCodedArray Array16_68Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnullableTable __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnullableTable), .array_size=16u, .element_size=4u};
 
-static const struct FidlCodedVector Vector4294967295nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint8Table), .max_count=4294967295u, .element_size=1u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector4294967295nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint8Table), .max_count=4294967295u, .element_size=1u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
 
-static const struct FidlCodedVector Vector4294967295nonnullable33Vector4294967295nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Vector4294967295nonnullable5uint8Table), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector4294967295nonnullable33Vector4294967295nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Vector4294967295nonnullable5uint8Table), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
 
 static const struct FidlCodedArray Array64_33Vector4294967295nonnullable5uint8Table __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&Vector4294967295nonnullable5uint8Table), .array_size=64u, .element_size=16u};
 
 static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedVector Vector4294967295nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector4294967295nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
 
 static const struct FidlCodedArray Array64_27String4294967295nonnullableTable __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .array_size=64u, .element_size=16u};
 
-static const struct FidlCodedVector Vector2nonnullable6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint64Table), .max_count=2u, .element_size=8u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector2nonnullable6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint64Table), .max_count=2u, .element_size=8u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
 
-static const struct FidlCodedVector Vector3nonnullable25Vector2nonnullable6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Vector2nonnullable6uint64Table), .max_count=3u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector3nonnullable25Vector2nonnullable6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Vector2nonnullable6uint64Table), .max_count=3u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
 
 static const struct FidlCodedArray Array48_25Vector2nonnullable6uint64Table __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&Vector2nonnullable6uint64Table), .array_size=48u, .element_size=16u};
 
 static const struct FidlCodedArray Array16_6uint64Table __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&fidl_internal_kUint64Table), .array_size=16u, .element_size=8u};
 
-static const struct FidlCodedVector Vector3nonnullable15Array16_6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Array16_6uint64Table), .max_count=3u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector3nonnullable15Array16_6uint64Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Array16_6uint64Table), .max_count=3u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
 
 static const struct FidlCodedArray Array48_15Array16_6uint64Table __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&Array16_6uint64Table), .array_size=48u, .element_size=16u};
 
-static const struct FidlCodedVector Vector3nonnullable71Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnonnullableTable), .max_count=3u, .element_size=4u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector3nonnullable71Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnonnullableTable), .max_count=3u, .element_size=4u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
 
 static const struct FidlCodedArray Array12_71Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnonnullableTable __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&Request51fidl_test_experimentalmaybefromtypealias_MyProtocolnonnullableTable), .array_size=12u, .element_size=4u};
 

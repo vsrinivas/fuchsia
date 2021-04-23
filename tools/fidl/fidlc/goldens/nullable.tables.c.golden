@@ -18,7 +18,7 @@ __LOCAL extern const struct FidlCodedStruct fidl_test_nullable_Int32WrapperTable
 
 static const struct FidlCodedStructPointer Pointer31fidl_test_nullable_Int32WrapperTable = {.tag=kFidlTypeStructPointer, .struct_type=&fidl_test_nullable_Int32WrapperTable};
 
-static const struct FidlCodedVector Vector4294967295nullable5int32Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kInt32Table), .max_count=4294967295u, .element_size=4u, .nullable=kFidlNullability_Nullable};
+static const struct FidlCodedVector Vector4294967295nullable5int32Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kInt32Table), .max_count=4294967295u, .element_size=4u, .nullable=kFidlNullability_Nullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
 
 static const struct FidlCodedString String4294967295nullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nullable};
 
