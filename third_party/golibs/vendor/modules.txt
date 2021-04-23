@@ -332,7 +332,7 @@ google.golang.org/protobuf/types/pluginpb
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
-# gvisor.dev/gvisor v0.0.0-20210420205020-03fd0836497d
+# gvisor.dev/gvisor v0.0.0-20210422011406-483350ae7073
 ## explicit
 gvisor.dev/gvisor/pkg/gohacks
 gvisor.dev/gvisor/pkg/goid

@@ -15,6 +15,7 @@ import (
 	"os"
 	"runtime"
 	"sync"
+	"syscall/zx"
 	"testing"
 	"time"
 
@@ -278,7 +279,7 @@ func TestClient_WritePacket(t *testing.T) {
 		t.Fatalf("failed to start client %s", err)
 	}
 
-	if err := linkEndpoint.WritePacket(stack.RouteInfo{}, nil, header.IPv4ProtocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
+	if err := linkEndpoint.WritePacket(stack.RouteInfo{}, header.IPv4ProtocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
 		ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
 	})); err != nil {
 		t.Fatalf("WritePacket failed: %s", err)
@@ -323,7 +324,6 @@ func TestWritePacket(t *testing.T) {
 	r.RemoteLinkAddress = tcpip.LinkAddress(otherMac.Octets[:])
 	if err := linkEndpoint.WritePacket(
 		r,
-		nil,
 		protocol,
 		stack.NewPacketBuffer(stack.PacketBufferOptions{
 			ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
@@ -337,10 +337,10 @@ func TestWritePacket(t *testing.T) {
 		t.Fatalf("failed to read frame from tun device: %s", err)
 	}
 	if readFrameResult.Which() == tun.DeviceReadFrameResultErr {
-		t.Fatalf("failed to read frame from tun: %v", readFrameResult.Err)
+		t.Fatalf("failed to read frame from tun: %s", zx.Status(readFrameResult.Err))
 	}
 	if readFrameResult.Response.Frame.FrameType != network.FrameTypeEthernet {
-		t.Errorf("unexpected response frame type: got %v, want: %v", readFrameResult.Response.Frame.FrameType, network.FrameTypeEthernet)
+		t.Errorf("unexpected response frame type: got %d, want: %d", readFrameResult.Response.Frame.FrameType, network.FrameTypeEthernet)
 	}
 	data := readFrameResult.Response.Frame.Data
 
@@ -358,7 +358,7 @@ func TestWritePacket(t *testing.T) {
 		return b
 	}()
 	if !bytes.Equal(data, expect) {
-		t.Fatalf("delivered packet mismatch. Wanted %v,  got: %v", expect, data)
+		t.Fatalf("delivered packet mismatch. Wanted %x,  got: %x", expect, data)
 	}
 
 	if err := tunDev.Close(); err != nil {
@@ -406,7 +406,7 @@ func TestReceivePacket(t *testing.T) {
 			t.Fatalf("WriteFrame failed: %s", err)
 		}
 		if status.Which() == tun.DeviceWriteFrameResultErr {
-			t.Fatalf("unexpected error on WriteFrame: %v", status)
+			t.Fatalf("unexpected error on WriteFrame: %s", zx.Status(status.Err))
 		}
 	}
 	// First test that if we send something smaller than the minimum Ethernet frame size will not get dispatched.
@@ -414,7 +414,7 @@ func TestReceivePacket(t *testing.T) {
 	select {
 	case <-time.After(200 * time.Millisecond):
 	case args := <-dispatcher:
-		t.Fatalf("unexpected packet received: %v", args)
+		t.Fatalf("unexpected packet received: %#v", args)
 	}
 
 	ethFields := header.EthernetFields{
@@ -518,7 +518,7 @@ func TestSetPromiscuousMode(t *testing.T) {
 	// device. That might not be true once we have fine grained multicast filter
 	// control.
 	if !state.MacPresent || state.Mac.Mode != network.MacFilterModeMulticastPromiscuous {
-		t.Fatalf("unexpected initial state %v, expected state.Mac.Mode=%v", state, state.Mac.Mode)
+		t.Fatalf("unexpected initial state %+v, expected state.Mac.Mode=%s", state, state.Mac.Mode)
 	}
 
 	// Set promiscuous mode to true and check that the mode changed with
@@ -531,7 +531,7 @@ func TestSetPromiscuousMode(t *testing.T) {
 		t.Fatalf("failed to get tun device state: %s", err)
 	}
 	if !state.MacPresent || state.Mac.Mode != network.MacFilterModePromiscuous {
-		t.Fatalf("unexpected state after setting promiscuous mode ON %+v, expected state.Mac.Mode=%v", state, network.MacFilterModePromiscuous)
+		t.Fatalf("unexpected state after setting promiscuous mode ON %+v, expected state.Mac.Mode=%s", state, network.MacFilterModePromiscuous)
 	}
 
 	// Set promiscuous mode to false and check that the mode changed with
@@ -544,7 +544,7 @@ func TestSetPromiscuousMode(t *testing.T) {
 		t.Fatalf("failed to get tun device state: %s", err)
 	}
 	if !state.MacPresent || state.Mac.Mode != network.MacFilterModeMulticastPromiscuous {
-		t.Fatalf("unexpected state after setting promiscuous mode OFF %+v, expected state.Mac.Mode=%v", state, network.MacFilterModeMulticastPromiscuous)
+		t.Fatalf("unexpected state after setting promiscuous mode OFF %+v, expected state.Mac.Mode=%s", state, network.MacFilterModeMulticastPromiscuous)
 	}
 }
 
@@ -729,8 +729,8 @@ func TestPairExchangePackets(t *testing.T) {
 
 	send := func(endpoint stack.LinkEndpoint, prefix byte, errs chan error) {
 		for i := uint16(0); i < packetCount; i++ {
-			if err := endpoint.WritePacket(stack.RouteInfo{}, nil, header.IPv4ProtocolNumber, makeTestPacket(prefix, i)); err != nil {
-				errs <- fmt.Errorf("WritePacket error: %v", err)
+			if err := endpoint.WritePacket(stack.RouteInfo{}, header.IPv4ProtocolNumber, makeTestPacket(prefix, i)); err != nil {
+				errs <- fmt.Errorf("WritePacket error: %s", err)
 				return
 			}
 		}

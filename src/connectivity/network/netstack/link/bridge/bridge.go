@@ -137,12 +137,12 @@ func (ep *Endpoint) LinkAddress() tcpip.LinkAddress {
 	return ep.linkAddress
 }
 
-func (ep *Endpoint) WritePacket(r stack.RouteInfo, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
+func (ep *Endpoint) WritePacket(r stack.RouteInfo, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
 	for _, l := range ep.links {
 		// We need to clone the packet buffer because each bridged endpoint may try
 		// to set the packet buffer's link header, but the header may only be set
 		// once for the lifetime of a packet buffer.
-		if err := l.WritePacket(r, gso, protocol, pkt.Clone()); err != nil {
+		if err := l.WritePacket(r, protocol, pkt.Clone()); err != nil {
 			return err
 		}
 	}
@@ -151,7 +151,7 @@ func (ep *Endpoint) WritePacket(r stack.RouteInfo, gso *stack.GSO, protocol tcpi
 
 // WritePackets returns the number of packets in hdrs that were successfully
 // written to all links.
-func (ep *Endpoint) WritePackets(r stack.RouteInfo, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
+func (ep *Endpoint) WritePackets(r stack.RouteInfo, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
 	if len(ep.links) == 0 {
 		return 0, nil
 	}
@@ -167,7 +167,7 @@ func (ep *Endpoint) WritePackets(r stack.RouteInfo, gso *stack.GSO, pkts stack.P
 		for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
 			pktsList.PushBack(pkt.Clone())
 		}
-		i, err := l.WritePackets(r, gso, pktsList, protocol)
+		i, err := l.WritePackets(r, pktsList, protocol)
 		if err != nil {
 			return 0, err
 		}
@@ -267,7 +267,7 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 			// We need to clone the packet buffers because each bridged endpoint may try
 			// to set the packet buffers' link header, but the header may only be set
 			// once for the lifetime of a packet buffer.
-			l.WritePacket(r, nil, protocol, pkt.Clone())
+			l.WritePacket(r, protocol, pkt.Clone())
 		}
 	}
 }
