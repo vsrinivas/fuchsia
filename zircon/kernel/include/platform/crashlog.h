@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_PLATFORM_CRASHLOG_H_
 #define ZIRCON_KERNEL_INCLUDE_PLATFORM_CRASHLOG_H_
 
+#include <stdio.h>
 #include <sys/types.h>
 #include <zircon/boot/crash-reason.h>
 #include <zircon/compiler.h>
@@ -28,19 +29,17 @@ bool platform_has_ram_crashlog();
  */
 extern void (*platform_stow_crashlog)(zircon_crash_reason_t reason, const void* log, size_t len);
 
-/* If len == 0, return the length of the last crashlog (or 0 if none).
- * Otherwise call func() to return the last crashlog to the caller,
- * returning the length the last crashlog.
+/* Recover the crashlog, fprintf'ing its contents into the FILE |tgt|
+ * provided by the caller, then return the length of the recovered
+ * crashlog.
  *
- * func() may be called as many times as necessary (adjusting off)
- * to return the crashlog in segments.  There will not be gaps,
- * but the individual segments may range from 1 byte to the full
- * length requested, depending on the limitations of the underlying
- * storage model.
+ * It is safe to call this function more than once.  Users may compute
+ * the length of the crashlog without rendering it by passing nullptr
+ * for |tgt|.  The length of the rendered log is guaranteed to stay
+ * constant between calls.
+ *
  */
-extern size_t (*platform_recover_crashlog)(size_t len, void* cookie,
-                                           void (*func)(const void* data, size_t off, size_t len,
-                                                        void* cookie));
+extern size_t (*platform_recover_crashlog)(FILE* tgt);
 
 /* Either enable or disable periodic updates of the crashlog uptime. */
 extern void (*platform_enable_crashlog_uptime_updates)(bool enabled);

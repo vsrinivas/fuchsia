@@ -403,16 +403,20 @@ __NO_ASAN static void efi_stow_crashlog(zircon_crash_reason_t, const void* log, 
   }
 }
 
-size_t efi_recover_crashlog(size_t len, void* cookie,
-                            void (*func)(const void* data, size_t, size_t len, void* cookie)) {
+size_t efi_recover_crashlog(FILE* tgt) {
   if (last_crashlog == nullptr) {
     return 0;
   }
 
-  if (len != 0) {
-    func(last_crashlog, 0, last_crashlog_len, cookie);
+  // If the user actually supplied a target, copy the crashlog into it.
+  // Otherwise, just return the length which would have been needed to hold the
+  // entire log.
+  if (tgt != nullptr) {
+    const int written = tgt->Write(ktl::string_view{static_cast<const char*>(last_crashlog), last_crashlog_len});
+    return (written < 0) ? 0 : written;
+  } else {
+    return last_crashlog_len;
   }
-  return last_crashlog_len;
 }
 
 void platform_init_crashlog(void) {

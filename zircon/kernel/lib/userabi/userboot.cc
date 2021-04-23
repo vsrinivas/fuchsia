@@ -43,6 +43,31 @@
 #include <lib/crypto/entropy/quality_test.h>
 #endif
 
+namespace {
+class VmoBuffer {
+ public:
+  explicit VmoBuffer(fbl::RefPtr<VmObjectPaged> vmo) : size_(vmo->size()), vmo_(ktl::move(vmo)) {}
+
+  int Write(const ktl::string_view str) {
+    const size_t todo = ktl::min(str.size(), size_ - offset_);
+
+    if (zx_status_t res = vmo_->Write(str.data(), offset_, todo); res != ZX_OK) {
+      DEBUG_ASSERT(static_cast<int>(res) < 0);
+      return res;
+    }
+
+    offset_ += todo;
+    DEBUG_ASSERT(todo <= ktl::numeric_limits<int>::max());
+    return static_cast<int>(todo);
+  }
+
+ private:
+  size_t offset_{0};
+  size_t size_;
+  const fbl::RefPtr<VmObjectPaged> vmo_;
+};
+}  // namespace
+
 static_assert(userboot::kCmdlineMax == Cmdline::kCmdlineMax);
 
 HandleOwner get_resource_handle(zx_rsrc_kind_t kind) {
@@ -184,14 +209,9 @@ HandleOwner get_job_handle() {
   return Handle::Dup(GetRootJobHandle(), JobDispatcher::default_rights());
 }
 
-void clog_to_vmo(const void* data, size_t off, size_t len, void* cookie) {
-  VmObject* vmo = static_cast<VmObject*>(cookie);
-  vmo->Write(data, off, len);
-}
-
 // Converts platform crashlog into a VMO
 zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out, size_t* out_size) {
-  size_t size = platform_recover_crashlog(0, NULL, NULL);
+  size_t size = platform_recover_crashlog(nullptr);
   fbl::RefPtr<VmObjectPaged> crashlog_vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, size, &crashlog_vmo);
 
@@ -200,7 +220,9 @@ zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out, size_t* out_size) {
   }
 
   if (size) {
-    platform_recover_crashlog(size, crashlog_vmo.get(), clog_to_vmo);
+    VmoBuffer vmo_buffer{crashlog_vmo};
+    FILE vmo_file = FILE{&vmo_buffer};
+    platform_recover_crashlog(&vmo_file);
   }
 
   crashlog_vmo->set_name(kCrashlogVmoName, sizeof(kCrashlogVmoName) - 1);

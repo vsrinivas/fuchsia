@@ -29,6 +29,12 @@ DECLARE_SINGLETON_SPINLOCK(uptime_updater_lock);
 Timer uptime_updater_timer TA_GUARDED(uptime_updater_lock::Get());
 bool uptime_updater_enabled TA_GUARDED(uptime_updater_lock::Get()) = false;
 
+FILE NULL_FILE = FILE{[](void*, ktl::string_view str) -> int {
+                        DEBUG_ASSERT(str.size() <= ktl::numeric_limits<int>::max());
+                        return static_cast<int>(str.size());
+                      },
+                      nullptr};
+
 // Make sure we print the crashlog status to the klog only once, no matter how
 // many times recover_crashlog is called.
 ktl::atomic<bool> crashlog_status_printed_to_klog{false};
@@ -49,9 +55,13 @@ void default_platform_stow_crashlog(zircon_crash_reason_t reason, const void* lo
                     current_time());
 }
 
-size_t default_platform_recover_crashlog(size_t len, void* cookie,
-                                         void (*func)(const void* data, size_t off, size_t len,
-                                                      void* cookie)) {
+size_t default_platform_recover_crashlog(FILE* tgt) {
+  // If the user didn't supply a target FILE to render to, use the NULL_FILE
+  // instead so that we compute a proper length for them as we go.
+  if (tgt == nullptr) {
+    tgt = &NULL_FILE;
+  }
+
   // If we failed to recover any crashlog, simply report the size as 0.
   ZbiHwRebootReason hw_reason = platform_hw_reboot_reason();
   const char* str_hw_reason;
@@ -97,10 +107,10 @@ size_t default_platform_recover_crashlog(size_t len, void* cookie,
     return 0;
   }
 
-  // OK, we have a log.  Render the "preamble" of the log into a local stack
-  // buffer as part of computing the final size.  Currently, the log is expected
-  // to be nothing but text, so we need to take the structured information we
-  // have access to and put it into string form.  This includes:
+  // OK, we have a log.  Currently, the log is expected to be nothing but text,
+  // so we need to take the structured information we have access to and put it
+  // into string form.  This includes:
+  //
   // 1) The uptime estimate
   // 2) The "software" reboot reason.
   // 3) The "hardware" reboot reason (only if given to us by the bootloader).
@@ -113,8 +123,6 @@ size_t default_platform_recover_crashlog(size_t len, void* cookie,
   // much more structured form.
   const recovered_ram_crashlog_t& rlog = recovered_log;
   const char* str_reason;
-  char preamble[256];
-  size_t offset = 0;
   switch (rlog.reason) {
     case ZirconCrashReason::Unknown:
       // If we rebooted spontaneously, check to see if we have some more details
@@ -163,45 +171,31 @@ size_t default_platform_recover_crashlog(size_t len, void* cookie,
   }
 
   // First line must give the reboot reason, and be followed by two newlines.
-  DEBUG_ASSERT(offset <= sizeof(preamble));
-  offset += snprintf(preamble + offset, sizeof(preamble) - offset, "ZIRCON REBOOT REASON (%s)\n\n",
-                     str_reason);
+  size_t written = 0;
+  written += fprintf(tgt, "ZIRCON REBOOT REASON (%s)\n\n", str_reason);
 
   // Uptime estimate comes next with a newline between the tag and the actual number
-  DEBUG_ASSERT(offset <= sizeof(preamble));
-  offset += snprintf(preamble + offset, sizeof(preamble) - offset, "UPTIME (ms)\n%ld\n",
-                     rlog.uptime / ZX_MSEC(1));
+  written += fprintf(tgt, "UPTIME (ms)\n%ld\n", rlog.uptime / ZX_MSEC(1));
 
   // After this, we are basically just free form text.
-  DEBUG_ASSERT(offset <= sizeof(preamble));
   if (str_hw_reason != nullptr) {
-    offset += snprintf(preamble + offset, sizeof(preamble) - offset, "HW REBOOT REASON (%s)\n",
-                       str_hw_reason);
+    written += fprintf(tgt, "HW REBOOT REASON (%s)\n", str_hw_reason);
   } else {
-    offset += snprintf(preamble + offset, sizeof(preamble) - offset, "HW REBOOT REASON (0x%08x)\n",
-                       static_cast<uint32_t>(hw_reason));
+    written += fprintf(tgt, "HW REBOOT REASON (0x%08x)\n", static_cast<uint32_t>(hw_reason));
   }
 
   if (rlog.payload_valid == false) {
-    DEBUG_ASSERT(offset <= sizeof(preamble));
-    offset +=
-        snprintf(preamble + offset, sizeof(preamble) - offset,
-                 "WARNING - The following crashlog payload failed length/CRC sanity checks and may "
-                 "contain errors!\n");
+    written += fprintf(tgt,
+                       "WARNING - The following crashlog payload failed length/CRC sanity checks "
+                       "and may contain errors!\n");
   }
 
-  // If the user passed us a length of zero, then they just want us to tell them
-  // the size of a rendered log.  Don't make any callbacks if this is the case.
-  if (len != 0) {
-    DEBUG_ASSERT(offset <= sizeof(preamble));
-    func(preamble, 0, offset, cookie);
-    if (rlog.payload && rlog.payload_len) {
-      func(rlog.payload, offset, rlog.payload_len, cookie);
-    }
+  if (rlog.payload && rlog.payload_len) {
+    tgt->Write(ktl::string_view{static_cast<const char*>(rlog.payload), rlog.payload_len});
   }
 
   // Report the total length.
-  return offset + rlog.payload_len;
+  return written + rlog.payload_len;
 }
 
 void update_uptime_locked() TA_REQ(uptime_updater_lock::Get()) {
@@ -243,9 +237,7 @@ void default_platform_enable_crashlog_uptime_updates(bool enabled) {
 
 void (*platform_stow_crashlog)(zircon_crash_reason_t reason, const void* log,
                                size_t len) = default_platform_stow_crashlog;
-size_t (*platform_recover_crashlog)(size_t len, void* cookie,
-                                    void (*func)(const void* data, size_t off, size_t len,
-                                                 void* cookie)) = default_platform_recover_crashlog;
+size_t (*platform_recover_crashlog)(FILE*) = default_platform_recover_crashlog;
 void (*platform_enable_crashlog_uptime_updates)(bool enabled) =
     default_platform_enable_crashlog_uptime_updates;
 
