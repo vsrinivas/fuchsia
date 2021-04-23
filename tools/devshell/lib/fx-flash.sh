@@ -69,7 +69,7 @@ function fx-flash {
 
     if is_feature_enabled "legacy_fastboot"; then
       fx-warn "Using legacy flash method via 'fastboot'"
-      fx-warn "Use 'fx --disable=legacy_fastboot flash' to use the new method"
+      fx-warn "To use the current ffx-based flash method, don't use the flag '--enable=legacy_fastboot' and unset the 'FUCHSIA_DISABLED_legacy_fastboot' environment variable."
 
       "./flash.sh" "${flash_args[@]}" "${fastboot_args[@]}"
     else

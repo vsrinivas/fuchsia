@@ -62,7 +62,7 @@ if [[ "\$1" == "devices" ]]; then
   echo "97300YCABZZ5AA	fastboot"
 fi
 INPUT
-  BT_EXPECT ${fx} flash --no-build
+  BT_EXPECT ${fx} --enable=legacy_fastboot flash --no-build
   source "${flash_script}.mock_state"
   BT_EXPECT [[ "${BT_MOCK_ARGS[1]}" == "--ssh-key="*".ssh/fuchsia_authorized_keys" ]]
 }
@@ -73,7 +73,7 @@ if [[ "\$1" == "devices" ]]; then
   echo "97300YCABZZ5AA	fastboot"
 fi
 INPUT
-  BT_EXPECT ${fx} --disable=legacy_fastboot flash --no-build
+  BT_EXPECT ${fx} flash --no-build
   btf::expect-mock-args "${ffx}.mock_state" "ffx" "target" "flash" "${BT_TEMP_DIR}/out/default/flash.json" "fuchsia" "--oem-stage" "add-staged-bootloader-file ssh.authorized_keys,${BT_TEMP_DIR}/.ssh/fuchsia_authorized_keys"
 }
 
@@ -85,7 +85,7 @@ if [[ "\$1" == "devices" ]]; then
   echo "97300YCABZZ5AA	fastboot"
 fi
 INPUT
-  BT_EXPECT ${fx} flash --no-build 2>/dev/null
+  BT_EXPECT ${fx} --enable=legacy_fastboot flash --no-build 2>/dev/null
   source "${flash_script}.mock_state"
   btf::expect-mock-args "${flash_script}" --recovery
 }
@@ -98,12 +98,12 @@ if [[ "\$1" == "devices" ]]; then
   echo "97300YCABZZ5AA	fastboot"
 fi
 INPUT
-  BT_EXPECT ${fx} --disable=legacy_fastboot flash --no-build 2>/dev/null
+  BT_EXPECT ${fx} flash --no-build 2>/dev/null
   btf::expect-mock-args "${ffx}.mock_state" "ffx" "target" "flash" "${BT_TEMP_DIR}/out/default/flash.json" "recovery"
 }
 
 TEST_fx_flash_with_serial() {
-  BT_EXPECT ${fx} flash -s 12345
+  BT_EXPECT ${fx} --enable=legacy_fastboot flash -s 12345
   source "${flash_script}.mock_state"
   btf::expect-mock-args "${flash_script}" \
     "--ssh-key=${BT_TEMP_DIR}/.ssh/fuchsia_authorized_keys" \
@@ -111,7 +111,7 @@ TEST_fx_flash_with_serial() {
 }
 
 TEST_fx_flash_with_serial_with_ffx() {
-  BT_EXPECT ${fx} --disable=legacy_fastboot flash -s 12345
+  BT_EXPECT ${fx} flash -s 12345
   btf::expect-mock-args "${ffx}.mock_state" "ffx" -t 12345 "target" "flash" "${BT_TEMP_DIR}/out/default/flash.json" "fuchsia" "--oem-stage" "add-staged-bootloader-file ssh.authorized_keys,${BT_TEMP_DIR}/.ssh/fuchsia_authorized_keys"
 }
 
