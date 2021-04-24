@@ -57,7 +57,7 @@ impl UCalendar {
         cal_type: sys::UCalendarType,
     ) -> Result<UCalendar, common::Error> {
         let mut status = common::Error::OK_CODE;
-        let asciiz_locale = ffi::CString::new(locale).map_err(|e| common::Error::wrapper(e))?;
+        let asciiz_locale = ffi::CString::new(locale).map_err(common::Error::wrapper)?;
         // Requires that zone_id contains a valid Unicode character representation with known
         // beginning and length.  asciiz_locale must be a pointer to a valid C string.  The first
         // condition is assumed to be satisfied by ustring::UChar, and the second should be
@@ -223,7 +223,7 @@ pub fn get_default_time_zone() -> Result<String, common::Error> {
     // Preflight the time zone first.
     let time_zone_length = unsafe {
         assert!(common::Error::is_ok(status));
-        versioned_function!(ucal_getDefaultTimeZone)(0 as *mut sys::UChar, 0, &mut status)
+        versioned_function!(ucal_getDefaultTimeZone)(std::ptr::null_mut(), 0, &mut status)
     } as usize;
     common::Error::ok_preflight(status)?;
 

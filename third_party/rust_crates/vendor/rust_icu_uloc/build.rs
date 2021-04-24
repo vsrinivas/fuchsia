@@ -1,4 +1,3 @@
-#![feature(try_trait)]
 // Copyright 2020 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,7 +55,7 @@ mod inner {
                 .output()
                 .with_context(|| format!("could not execute command: {}", self.name))?;
             let result = String::from_utf8(output.stdout)
-                .with_context(|| format!("could not convert output to UTF8"))?;
+                .with_context(|| "could not convert output to UTF8")?;
             Ok(result.trim().to_string())
         }
     }
@@ -77,14 +76,14 @@ mod inner {
         pub fn version(&mut self) -> Result<String> {
             self.rep
                 .run(&["--modversion", "icu-i18n"])
-                .with_context(|| format!("while getting ICU version; is icu-config in $PATH?"))
+                .with_context(|| "while getting ICU version; is icu-config in $PATH?")
         }
 
         /// Returns the config major number.  For example, will return "64" for
         /// version "64.2"
         pub fn version_major() -> Result<String> {
             let version = ICUConfig::new().version()?;
-            let components = version.split(".");
+            let components = version.split('.');
             let last = components
                 .take(1)
                 .last()

@@ -15,22 +15,125 @@
 use {
     rust_icu_common as common,
     rust_icu_common::buffered_string_method_with_retry,
+    rust_icu_sys as sys,
     rust_icu_sys::versioned_function,
     rust_icu_sys::*,
-    rust_icu_sys as sys,
     rust_icu_uenum::Enumeration,
     std::{
         cmp::Ordering,
+        collections::HashMap,
         convert::{From, TryFrom, TryInto},
-        ffi,
+        ffi, fmt,
         os::raw,
-        fmt,
     },
 };
 
 /// Maximum length of locale supported by uloc.h.
 /// See `ULOC_FULLNAME_CAPACITY`.
 const LOCALE_CAPACITY: usize = 158;
+
+/// [ULocMut] is a mutable companion to [ULoc].
+///
+/// It has methods that allow one to create a different [ULoc] by adding and
+/// removing keywords to the locale identifier.  You can only creates a `ULocMut`
+/// by converting from an existing `ULoc` by calling `ULocMut::from`.  And once
+/// you are done changing it, you can only convert it back with `ULoc::from`.
+///
+/// [ULocMut] is not meant to have comprehensive coverage of mutation options.
+/// They may be added as necessary.
+#[derive(Debug, Clone)]
+pub struct ULocMut {
+    base: ULoc,
+    unicode_keyvalues: HashMap<String, String>,
+    other_keyvalues: HashMap<String, String>,
+}
+
+impl From<ULoc> for ULocMut {
+    /// Turns [ULoc] into [ULocMut], which can be mutated.
+    fn from(l: ULoc) -> Self {
+        let all_keywords = l.keywords();
+        let mut unicode_keyvalues: HashMap<String, String> = HashMap::new();
+        let mut other_keyvalues: HashMap<String, String> = HashMap::new();
+        for kw in all_keywords {
+            // Despite the many unwraps below, none should be triggered, since we know
+            // that the keywords come from the list of keywords that already exist.
+            let ukw = to_unicode_locale_key(&kw);
+            match ukw {
+                None => {
+                    let v = l.keyword_value(&kw).unwrap().unwrap();
+                    other_keyvalues.insert(kw, v);
+                }
+                Some(u) => {
+                    let v = l.unicode_keyword_value(&u).unwrap().unwrap();
+                    unicode_keyvalues.insert(u, v);
+                }
+            }
+        }
+        let base = l.base_name();
+        ULocMut {
+            base,
+            unicode_keyvalues,
+            other_keyvalues,
+        }
+    }
+}
+
+impl From<ULocMut> for ULoc {
+    // Creates an [ULoc] from [ULocMut].
+    fn from(lm: ULocMut) -> Self {
+        // Assemble the unicode extension.
+        let mut unicode_extensions_vec = lm
+            .unicode_keyvalues
+            .iter()
+            .map(|(k, v)| format!("{}-{}", k, v))
+            .collect::<Vec<String>>();
+        unicode_extensions_vec.sort();
+        let unicode_extensions: String = unicode_extensions_vec
+            .join("-");
+        let unicode_extension: String = if unicode_extensions.len() > 0 {
+            vec!["u-".to_string(), unicode_extensions]
+                .into_iter()
+                .collect()
+        } else {
+            "".to_string()
+        };
+        // Assemble all other extensions.
+        let mut all_extensions: Vec<String> = lm
+            .other_keyvalues
+            .iter()
+            .map(|(k, v)| format!("{}-{}", k, v))
+            .collect();
+        if unicode_extension.len() > 0 {
+            all_extensions.push(unicode_extension);
+        }
+        all_extensions.sort();
+        let extension_string = all_extensions.join("-");
+        let everything = vec![lm.base.repr, extension_string].join("-");
+        ULoc::for_language_tag(&everything).unwrap()
+    }
+}
+
+impl ULocMut {
+    /// Sets the specified unicode extension keyvalue.  Only valid keys can be set,
+    /// inserting an invalid extension key does not change [ULocMut].
+    pub fn set_unicode_keyvalue(&mut self, key: &str, value: &str) -> Option<String> {
+        if let None = to_unicode_locale_key(key) {
+            return None;
+        }
+        self.unicode_keyvalues
+            .insert(key.to_string(), value.to_string())
+    }
+
+    /// Removes the specified unicode extension keyvalue.  Only valid keys can
+    /// be removed, attempting to remove an invalid extension key does not
+    /// change [ULocMut].
+    pub fn remove_unicode_keyvalue(&mut self, key: &str) -> Option<String> {
+        if let None = to_unicode_locale_key(key) {
+            return None;
+        }
+        self.unicode_keyvalues.remove(key)
+    }
+}
 
 /// A representation of a Unicode locale.
 ///
@@ -252,10 +355,18 @@ impl ULoc {
             Some(value)
         }
     }
+
+    /// Implements `uloc_getBaseName` from ICU4C.
+    pub fn base_name(self) -> Self {
+        let result = self
+            .call_buffered_string_method(versioned_function!(uloc_getBaseName))
+            .expect("should be able to produce a shorter locale");
+        ULoc::try_from(&result[..]).expect("should be able to convert to locale")
+    }
 }
 
 /// This implementation is based on ULocale.compareTo from ICU4J.
-/// See https://github.com/unicode-org/icu/blob/master/icu4j/main/classes/core/src/com/ibm/icu/util/ULocale.java
+/// See https://github.com/unicode-org/icu/blob/%6d%61%73%74%65%72/icu4j/main/classes/core/src/com/ibm/icu/util/ULocale.java
 impl Ord for ULoc {
     fn cmp(&self, other: &Self) -> Ordering {
         /// Compare corresponding keywords from two `ULoc`s. If the keywords match, compare the
@@ -564,6 +675,19 @@ mod tests {
     }
 
     #[test]
+    fn test_keywords_nounicode() -> Result<(), Error> {
+        let loc = ULoc::for_language_tag("az-Cyrl-AZ-u-ca-hebrew-t-it-x-whatever")?;
+        let keywords: Vec<String> = loc.keywords().collect();
+        assert_eq!(
+            keywords,
+            vec!["calendar".to_string(), "t".to_string(), "x".to_string(),]
+        );
+        assert_eq!(loc.keyword_value("t")?.unwrap(), "it");
+        assert_eq!(loc.keyword_value("x")?.unwrap(), "whatever");
+        Ok(())
+    }
+
+    #[test]
     fn test_keywords_empty() -> Result<(), Error> {
         let loc = ULoc::for_language_tag("az-Cyrl-AZ")?;
         let keywords: Vec<String> = loc.keywords().collect();
@@ -669,7 +793,7 @@ mod tests {
     }
 
     // This tests verifies buggy behavior which is fixed since ICU version 67.1
-    #[cfg(not(feature="icu_version_67_plus"))]
+    #[cfg(not(feature = "icu_version_67_plus"))]
     #[test]
     fn test_accept_language_exact_match() {
         let accept_list: Result<Vec<_>, _> = vec!["es_ES", "ar_EG", "fr_FR"]
@@ -695,7 +819,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature="icu_version_67_plus")]
+    #[cfg(feature = "icu_version_67_plus")]
     #[test]
     fn test_accept_language_exact_match() {
         let accept_list: Result<Vec<_>, _> = vec!["es_ES", "ar_EG", "fr_FR"]
@@ -762,6 +886,68 @@ mod tests {
         assert_eq!(str_to_cstring("abc"), ffi::CString::new("abc")?);
         assert_eq!(str_to_cstring("abc\0def"), ffi::CString::new("abc")?);
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_base_name() -> Result<(), Error> {
+        assert_eq!(
+            ULoc::try_from("en-u-tz-uslax-x-foo")?.base_name(),
+            ULoc::try_from("en")?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_uloc_mut() -> Result<(), Error> {
+        let loc = ULoc::for_language_tag("en-t-it-u-tz-uslax-x-foo")?;
+        let loc_mut = ULocMut::from(loc);
+        let loc = ULoc::from(loc_mut);
+        assert_eq!(ULoc::for_language_tag("en-t-it-u-tz-uslax-x-foo")?, loc);
+        Ok(())
+    }
+
+    #[test]
+    fn test_uloc_mut_changes() -> Result<(), Error> {
+        let loc = ULoc::for_language_tag("en-t-it-u-tz-uslax-x-foo")?;
+        let mut loc_mut = ULocMut::from(loc);
+        loc_mut.remove_unicode_keyvalue("tz");
+        let loc = ULoc::from(loc_mut);
+        assert_eq!(ULoc::for_language_tag("en-t-it-x-foo")?, loc);
+
+        let loc = ULoc::for_language_tag("en-u-tz-uslax")?;
+        let mut loc_mut = ULocMut::from(loc);
+        loc_mut.remove_unicode_keyvalue("tz");
+        let loc = ULoc::from(loc_mut);
+        assert_eq!(ULoc::for_language_tag("en")?, loc);
+        Ok(())
+    }
+
+    #[test]
+    fn test_uloc_mut_overrides() -> Result<(), Error> {
+        let loc = ULoc::for_language_tag("en-t-it-u-tz-uslax-x-foo")?;
+        let mut loc_mut = ULocMut::from(loc);
+        loc_mut.set_unicode_keyvalue("tz", "usnyc");
+        let loc = ULoc::from(loc_mut);
+        assert_eq!(ULoc::for_language_tag("en-t-it-u-tz-usnyc-x-foo")?, loc);
+
+        let loc = ULoc::for_language_tag("en-t-it-u-tz-uslax-x-foo")?;
+        let mut loc_mut = ULocMut::from(loc);
+        loc_mut.set_unicode_keyvalue("tz", "usnyc");
+        loc_mut.set_unicode_keyvalue("nu", "arabic");
+        let loc = ULoc::from(loc_mut);
+        assert_eq!(ULoc::for_language_tag("en-t-it-u-nu-arabic-tz-usnyc-x-foo")?, loc);
+        assert_eq!(ULoc::for_language_tag("en-t-it-u-tz-usnyc-nu-arabic-x-foo")?, loc);
+        Ok(())
+    }
+
+    #[test]
+    fn test_uloc_mut_add_unicode_extension() -> Result<(), Error> {
+        let loc = ULoc::for_language_tag("en-t-it-x-foo")?;
+        let mut loc_mut = ULocMut::from(loc);
+        loc_mut.set_unicode_keyvalue("tz", "usnyc");
+        let loc = ULoc::from(loc_mut);
+        assert_eq!(ULoc::for_language_tag("en-t-it-u-tz-usnyc-x-foo")?, loc);
         Ok(())
     }
 }

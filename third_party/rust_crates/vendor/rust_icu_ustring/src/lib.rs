@@ -158,7 +158,7 @@ impl TryFrom<&str> for crate::UChar {
         unsafe {
             assert!(common::Error::is_ok(status));
             versioned_function!(u_strFromUTF8)(
-                0 as *mut sys::UChar,
+                std::ptr::null_mut(),
                 0,
                 &mut dest_length,
                 rust_string.as_ptr() as *const raw::c_char,
@@ -207,7 +207,7 @@ impl TryFrom<&UChar> for String {
         unsafe {
             assert!(common::Error::is_ok(status));
             versioned_function!(u_strToUTF8)(
-                0 as *mut raw::c_char,
+                std::ptr::null_mut(),
                 0,
                 &mut dest_length,
                 u.rep.as_ptr(),
@@ -276,6 +276,10 @@ impl crate::UChar {
     /// Does *not* take ownership of the buffer that was passed in.
     ///
     /// **DO NOT USE UNLESS YOU HAVE NO OTHER CHOICE.**
+    ///
+    /// # Safety
+    ///
+    /// `rep` must point to an initialized sequence of at least `len` `UChar`s.
     pub unsafe fn clone_from_raw_parts(rep: *mut sys::UChar, len: i32) -> crate::UChar {
         assert!(len >= 0);
         // Always works for len: i32 >= 0.
@@ -309,6 +313,11 @@ impl crate::UChar {
         self.rep.len()
     }
 
+    /// Returns whether the string is empty.
+    pub fn is_empty(&self) -> bool {
+        self.rep.is_empty()
+    }
+
     /// Returns the underlying representation as a mutable C representation.  Caller MUST ensure
     /// that the representation won't be reallocated as result of adding anything to it, and that
     /// it is correctly sized, or bad things will happen.
@@ -322,7 +331,6 @@ impl crate::UChar {
     pub fn resize(&mut self, new_size: usize) {
         self.rep.resize(new_size, 0);
     }
-
 }
 
 #[cfg(test)]

@@ -20,32 +20,49 @@
     unused_imports
 )]
 
-#[cfg(all(feature="icu_version_in_env", feature="icu_config"))]
+#[cfg(all(feature = "icu_version_in_env", feature = "icu_config"))]
 compile_error!(
-    "Features `icu_version_in_env` and `icu_config` are not compatible." +
-    " Choose at most one of them.");
+    "Features `icu_version_in_env` and `icu_config` are not compatible."
+        + " Choose at most one of them."
+);
 
-#[cfg(all(feature="icu_config", not(feature="use-bindgen")))]
+#[cfg(all(feature = "icu_config", not(feature = "use-bindgen")))]
 compile_error!("Feature `icu_config` is useless without the feature `use-bindgen`");
 
 // This feature combination is not inherrently a problem; we had no use case that
 // required it just yet.
-#[cfg(all(not(feature="renaming"), not(feature="use-bindgen")))]
+#[cfg(all(not(feature = "renaming"), not(feature = "use-bindgen")))]
 compile_error!("You must use `renaming` when not using `use-bindgen`");
 
-#[cfg(feature="use-bindgen")]
+#[cfg(feature = "use-bindgen")]
 include!(concat!(env!("OUT_DIR"), "/macros.rs"));
-#[cfg(all(feature="use-bindgen",feature="icu_config",not(feature="icu_version_in_env")))]
+#[cfg(all(
+    feature = "use-bindgen",
+    feature = "icu_config",
+    not(feature = "icu_version_in_env")
+))]
 include!(concat!(env!("OUT_DIR"), "/lib.rs"));
 
-#[cfg(not(feature="use-bindgen"))]
+#[cfg(not(feature = "use-bindgen"))]
 include!("../bindgen/macros.rs");
 
-#[cfg(all(not(feature="use-bindgen"),not(feature="icu_version_in_env"),not(feature="icu_config")))]
+#[cfg(all(
+    not(feature = "use-bindgen"),
+    not(feature = "icu_version_in_env"),
+    not(feature = "icu_config")
+))]
 include!("../bindgen/lib.rs");
 
-#[cfg(all(not(feature="use-bindgen"),feature="icu_version_in_env",not(feature="icu_config")))]
-include!(concat!("../bindgen/lib_", env!("RUST_ICU_MAJOR_VERSION_NUMBER"), ".rs"));
+#[cfg(all(
+    not(feature = "use-bindgen"),
+    feature = "icu_version_in_env",
+    not(feature = "icu_config")
+))]
+include!(concat!(
+    "../bindgen/lib_",
+    env!("RUST_ICU_MAJOR_VERSION_NUMBER"),
+    ".rs"
+));
 
 // Add the ability to print the error code, so that it can be reported in
 // aggregated errors.
@@ -62,4 +79,3 @@ extern crate libc;
 #[link(name = "icui18n", kind = "dylib")]
 #[link(name = "icuuc", kind = "dylib")]
 extern "C" {}
-

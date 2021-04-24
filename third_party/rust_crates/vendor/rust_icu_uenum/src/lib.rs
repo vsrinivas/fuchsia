@@ -75,7 +75,7 @@ impl TryFrom<&[&str]> for Enumeration {
         // https://unicode-org.atlassian.net/browse/ICU-20918
         assert!(!rep.is_null());
         Ok(Enumeration {
-            rep: rep,
+            rep,
             raw: Some(raw),
         })
     }
@@ -257,7 +257,7 @@ mod tests {
         let mut results = vec![];
         for result in e {
             let elem = result.expect("no error");
-            count = count + 1;
+            count += 1;
             results.push(elem);
         }
         assert_eq!(count, 3, "results: {:?}", results);

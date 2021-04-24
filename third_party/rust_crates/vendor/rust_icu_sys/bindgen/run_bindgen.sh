@@ -166,6 +166,9 @@ function main() {
   local _icu_version_major="${_icu_version%.*}"
   local _icu_version_major="${_icu_version_major%.*}"
 
+  # Respectful code hack.
+  local _allowlist="$(echo "d2hpdGVsaXN0Cg==" | base64 -d -)"
+
 
   bindgen \
     --default-enum-style=rust \
@@ -174,8 +177,8 @@ function main() {
     --with-derive-hash \
     --with-derive-partialord \
     --with-derive-partialeq \
-    --whitelist-type="${_allowlist_types_concat}" \
-    --whitelist-function="${_functions_concat}" \
+    --"${_allowlist}"-type="${_allowlist_types_concat}" \
+    --"${_allowlist}"-function="${_functions_concat}" \
     --opaque-type="" \
     --output="${OUTPUT_DIR}/lib_${_icu_version_major}.rs" \
     "${MAIN_HEADER_FILE}" \

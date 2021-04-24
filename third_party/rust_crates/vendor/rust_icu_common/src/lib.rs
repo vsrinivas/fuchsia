@@ -69,11 +69,11 @@ impl Error {
     /// This error check explicitly ignores the buffer overflow error when reporting whether it
     /// contains an error condition.
     ///
-    /// Preflight calls to ICU libraries do a dummy scan of the input to determine the buffer sizes
-    /// required on the output in case of conversion calls such as `ucal_strFromUTF8`.  The way
-    /// this call is made is to offer a zero-capacity buffer (which could be pointed to by a `NULL`
-    /// pointer), and then call the respective function.  The function will compute the buffer
-    /// size, but will also return a bogus buffer overflow error.
+    /// Preflight calls to ICU libraries do a read-only scan of the input to determine the buffer
+    /// sizes required on the output in case of conversion calls such as `ucal_strFromUTF8`.  The
+    /// way this call is made is to offer a zero-capacity buffer (which could be pointed to by a
+    /// `NULL` pointer), and then call the respective function.  The function will compute the
+    /// buffer size, but will also return a bogus buffer overflow error.
     pub fn ok_preflight(status: sys::UErrorCode) -> Result<(), Self> {
         if status > Self::OK_CODE && status != sys::UErrorCode::U_BUFFER_OVERFLOW_ERROR {
             Err(Error::Sys(status))
@@ -105,11 +105,11 @@ impl Error {
     /// This error check explicitly ignores the buffer overflow error when reporting whether it
     /// contains an error condition.
     ///
-    /// Preflight calls to ICU libraries do a dummy scan of the input to determine the buffer sizes
-    /// required on the output in case of conversion calls such as `ucal_strFromUTF8`.  The way
-    /// this call is made is to offer a zero-capacity buffer (which could be pointed to by a `NULL`
-    /// pointer), and then call the respective function.  The function will compute the buffer
-    /// size, but will also return a bogus buffer overflow error.
+    /// Preflight calls to ICU libraries do a read-only scan of the input to determine the buffer
+    /// sizes required on the output in case of conversion calls such as `ucal_strFromUTF8`.  The
+    /// way this call is made is to offer a zero-capacity buffer (which could be pointed to by a
+    /// `NULL` pointer), and then call the respective function.  The function will compute the
+    /// buffer size, but will also return a bogus buffer overflow error.
     pub fn is_preflight_err(&self) -> bool {
         // We may expand the set of error codes that are exempt from error checks in preflight.
         self.is_err() && !self.is_code(sys::UErrorCode::U_BUFFER_OVERFLOW_ERROR)
@@ -310,10 +310,10 @@ macro_rules! buffered_string_method_with_retry {
 ///
 /// ```c++ ignore
 /// int32_t unum_formatDouble(
-///     const UNumberFormat* fmt, 
-///     double number, 
-///     UChar* result, 
-///     int32_t result_length, 
+///     const UNumberFormat* fmt,
+///     double number,
+///     UChar* result,
+///     int32_t result_length,
 ///     UFieldPosition* pos,
 ///     UErrorCode *status)
 /// ```
@@ -387,7 +387,7 @@ macro_rules! format_ustring_for_type{
 /// );
 /// ```
 ///
-/// which then becomes: 
+/// which then becomes:
 ///
 /// ```rust ignore
 /// impl _ {
@@ -436,7 +436,7 @@ macro_rules! generalized_fallible_getter{
 /// );
 /// ```
 ///
-/// which then becomes: 
+/// which then becomes:
 ///
 /// ```rust ignore
 /// impl _ {
@@ -494,6 +494,11 @@ impl CStringVec {
     pub fn len(&self) -> usize {
         self.rep.len()
     }
+
+    /// Returns whether the vector is empty.
+    pub fn is_empty(&self) -> bool {
+        self.rep.is_empty()
+    }
 }
 
 #[cfg(test)]
@@ -546,11 +551,7 @@ mod tests {
             },
         ];
         for test in tests {
-            assert!(
-                parse_ok(test.clone()).is_ok(),
-                "for test: {:?}",
-                test.clone()
-            );
+            assert!(parse_ok(test).is_ok(), "for test: {:?}", test.clone());
         }
     }
 
@@ -577,11 +578,7 @@ mod tests {
             },
         ];
         for test in tests {
-            assert!(
-                parse_ok(test.clone()).is_err(),
-                "for test: {:?}",
-                test.clone()
-            );
+            assert!(parse_ok(test).is_err(), "for test: {:?}", test.clone());
         }
     }
 }
@@ -607,3 +604,4 @@ pub fn parse_ok(e: sys::UParseError) -> Result<(), crate::Error> {
     }
     Ok(())
 }
+

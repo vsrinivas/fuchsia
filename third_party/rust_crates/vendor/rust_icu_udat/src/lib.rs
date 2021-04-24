@@ -28,6 +28,7 @@ use {
 };
 
 /// Implements `UDateFormat`
+#[derive(Debug)]
 pub struct UDateFormat {
     // Internal C representation of UDateFormat.  It is owned by this type and
     // must be dropped by calling `udat_close`.
@@ -124,6 +125,13 @@ impl UDateFormat {
         let mut status = common::Error::OK_CODE;
         let asciiz = loc.as_c_str();
 
+        // If the timezone is empty, short-circuit it to default.
+        let (tz_id_ptr, tz_id_len): (*const rust_icu_sys::UChar, i32) = if tz_id.len() == 0 {
+            (std::ptr::null(), 0i32)
+        } else {
+            (tz_id.as_c_ptr(), tz_id.len() as i32)
+        };
+
         // Requires that all pointers be valid. Should be guaranteed by all
         // objects passed into this function.
         let date_format = unsafe {
@@ -132,8 +140,8 @@ impl UDateFormat {
                 time_style,
                 date_style,
                 asciiz.as_ptr(),
-                tz_id.as_c_ptr(),
-                tz_id.len() as i32,
+                tz_id_ptr,
+                tz_id_len,
                 pattern.as_c_ptr(),
                 pattern.len() as i32,
                 &mut status,
@@ -251,6 +259,72 @@ impl UDateFormat {
 mod tests {
     use super::*;
 
+    /// Restores the timezone once its scope ends.
+    struct RestoreTimezone {
+        timezone_to_restore: String,
+    }
+
+    impl Drop for RestoreTimezone {
+        fn drop(&mut self) {
+            RestoreTimezone::set_default_time_zone(&self.timezone_to_restore).unwrap();
+        }
+    }
+
+    impl RestoreTimezone {
+        /// Set the timezone to the requested one, and restores to whatever the timezone
+        /// was before the set once the struct goes out of scope.
+        fn new(set_timezone: &str) -> Self {
+            let timezone_to_restore =
+                RestoreTimezone::get_default_time_zone().expect("could get old time zone");
+            RestoreTimezone::set_default_time_zone(set_timezone).expect("set timezone");
+            RestoreTimezone {
+                timezone_to_restore,
+            }
+        }
+
+        // The two methods below are lifted from `rust_icu_ucal` to not introduce
+        // a circular dependency.
+
+        fn set_default_time_zone(zone_id: &str) -> Result<(), common::Error> {
+            let mut status = common::Error::OK_CODE;
+            let mut zone_id_uchar = ustring::UChar::try_from(zone_id)?;
+            zone_id_uchar.make_z();
+            // Requires zone_id_uchar to be a valid pointer until the function returns.
+            unsafe {
+                assert!(common::Error::is_ok(status));
+                versioned_function!(ucal_setDefaultTimeZone)(zone_id_uchar.as_c_ptr(), &mut status);
+            };
+            common::Error::ok_or_warning(status)
+        }
+
+        fn get_default_time_zone() -> Result<String, common::Error> {
+            let mut status = common::Error::OK_CODE;
+
+            // Preflight the time zone first.
+            let time_zone_length = unsafe {
+                assert!(common::Error::is_ok(status));
+                versioned_function!(ucal_getDefaultTimeZone)(std::ptr::null_mut(), 0, &mut status)
+            } as usize;
+            common::Error::ok_preflight(status)?;
+
+            // Should this capacity include the terminating \u{0}?
+            let mut status = common::Error::OK_CODE;
+            let mut uchar = ustring::UChar::new_with_capacity(time_zone_length);
+
+            // Requires that uchar is a valid buffer.  Should be guaranteed by the constructor above.
+            unsafe {
+                assert!(common::Error::is_ok(status));
+                versioned_function!(ucal_getDefaultTimeZone)(
+                    uchar.as_mut_c_ptr(),
+                    time_zone_length as i32,
+                    &mut status,
+                )
+            };
+            common::Error::ok_or_warning(status)?;
+            String::try_from(&uchar)
+        }
+    }
+
     #[test]
     fn test_format_default_calendar() -> Result<(), common::Error> {
         #[derive(Debug)]
@@ -288,6 +362,15 @@ mod tests {
                 date: 100000.0,
                 expected:
                     "среда, 31. децембар 1969. 16:01:40 Северноамеричко пацифичко стандардно време",
+                calendar: None,
+            },
+            Test {
+                name: "Serbian default, with empty timezone defaults to system.",
+                locale: "sr-RS",
+                timezone: "",
+                date: 100000.0,
+                expected:
+                    "четвртак, 01. јануар 1970. 00:01:40 Координисано универзално време",
                 calendar: None,
             },
             Test {
@@ -349,11 +432,12 @@ mod tests {
                 calendar: None,
             },
         ];
+        let _restore_timezone = RestoreTimezone::new("UTC");
         for t in tests {
             let loc = uloc::ULoc::try_from(t.locale)?;
             let tz_id = ustring::UChar::try_from(t.timezone)?;
 
-            let mut fmt = UDateFormat::new_with_styles(
+            let mut fmt = super::UDateFormat::new_with_styles(
                 sys::UDateFormatStyle::UDAT_FULL,
                 sys::UDateFormatStyle::UDAT_FULL,
                 &loc,
@@ -365,7 +449,11 @@ mod tests {
 
             let fmt = fmt;
             let actual = fmt.format(t.date)?;
-            assert_eq!(actual, t.expected, "(left==actual; right==expected)\n\ttest: {:?}", t);
+            assert_eq!(
+                actual, t.expected,
+                "(left==actual; right==expected)\n\ttest: {:?}",
+                t
+            );
         }
         Ok(())
     }
@@ -399,7 +487,7 @@ mod tests {
         let tz_id = ustring::UChar::try_from("America/New_York")?;
         for t in tests {
             let pattern = ustring::UChar::try_from(t.pattern)?;
-            let fmt = UDateFormat::new_with_pattern(&loc, &tz_id, &pattern)?;
+            let fmt = super::UDateFormat::new_with_pattern(&loc, &tz_id, &pattern)?;
             let actual = fmt.format(t.date)?;
             assert_eq!(
                 actual, t.expected,
@@ -437,7 +525,7 @@ mod tests {
 
         for test in tests {
             let pattern = ustring::UChar::try_from(test.pattern)?;
-            let format = UDateFormat::new_with_pattern(&loc, &tz_id, &pattern)?;
+            let format = super::UDateFormat::new_with_pattern(&loc, &tz_id, &pattern)?;
             let actual = format.parse(test.input)?;
             assert_eq!(
                 actual, test.expected,

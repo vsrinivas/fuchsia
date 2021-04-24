@@ -1,4 +1,3 @@
-#![feature(try_trait)]
 // Copyright 2019 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -149,7 +148,7 @@ mod inner {
                 .output()
                 .with_context(|| format!("could not execute command: {}", self.name))?;
             let result = String::from_utf8(output.stdout)
-                .with_context(|| format!("could not convert output to UTF8"))?;
+                .with_context(|| "could not convert output to UTF8")?;
             Ok(result.trim().to_string())
         }
     }
@@ -170,14 +169,14 @@ mod inner {
         fn prefix(&mut self) -> Result<String> {
             self.rep
                 .run(&["--variable=prefix", "icu-i18n"])
-                .with_context(|| format!("could not get config prefix"))
+                .with_context(|| "could not get config prefix")
         }
 
         /// Obtains the default library path for the libraries.
         fn libdir(&mut self) -> Result<String> {
             self.rep
                 .run(&["--variable=libdir", "icu-i18n"])
-                .with_context(|| format!("could not get library directory"))
+                .with_context(|| "could not get library directory")
         }
 
         /// Obtains the needed flags for the linker.
@@ -186,7 +185,7 @@ mod inner {
             let result = self
                 .rep
                 .run(&["--libs", "icu-i18n"])
-                .with_context(|| format!("could not get the ld flags"))?;
+                .with_context(|| "could not get the ld flags")?;
             Ok(result.replace("-L", "-L ").replace("-l", "-l "))
         }
 
@@ -194,14 +193,14 @@ mod inner {
         fn cppflags(&mut self) -> Result<String> {
             self.rep
                 .run(&["--cflags", "icu-i18n"])
-                .with_context(|| format!("while getting the cpp flags"))
+                .with_context(|| "while getting the cpp flags")
         }
 
         /// Obtains the major-minor version number for the library. Returns a string like `64.2`.
         fn version(&mut self) -> Result<String> {
             self.rep
                 .run(&["--modversion", "icu-i18n"])
-                .with_context(|| format!("while getting ICU version; is icu-config in $PATH?"))
+                .with_context(|| "while getting ICU version; is icu-config in $PATH?")
         }
 
         fn install_dir(&mut self) -> Result<String> {
@@ -212,7 +211,7 @@ mod inner {
         /// version "64.2"
         fn version_major() -> Result<String> {
             let version = ICUConfig::new().version()?;
-            let components = version.split(".");
+            let components = version.split('.');
             let last = components
                 .take(1)
                 .last()
@@ -235,23 +234,34 @@ mod inner {
     /// Generates a wrapper header that includes all headers of interest for binding.
     ///
     /// This is the recommended way to bind complex libraries at the moment.  Returns
-    /// the full path of the generated wrapper header file.
-    fn generate_wrapper_header(
-        out_dir_path: &Path,
-        bindgen_source_modules: &Vec<&str>,
-        include_path: &Path,
-    ) -> String {
+    /// the relative path of the generated wrapper header file with respect to some
+    /// path from the include dir path (`-I`).
+    fn generate_wrapper_header(out_dir_path: &Path, bindgen_source_modules: &[&str]) -> String {
         let wrapper_path = out_dir_path.join("wrapper.h");
         let mut wrapper_file = File::create(&wrapper_path).unwrap();
         wrapper_file
-            .write_all(b"/* Generated file, do not edit. */ \n")
+            .write_all(
+                concat!(
+                    "/* Generated file, do not edit. */ \n",
+                    "/* Assumes correct -I flag to the compiler is passed. */\n"
+                )
+                .as_bytes(),
+            )
             .unwrap();
         let includes = bindgen_source_modules
             .iter()
+            .copied()
             .map(|f| {
-                let file_path = include_path.join(format!("{}.h", f));
-                let file_path_str = format!("#include \"{}\"\n", file_path.to_str().unwrap());
-                println!("include-file: '{}'", file_path.to_str().unwrap());
+                std::path::PathBuf::new()
+                    .join("unicode")
+                    .join(format!("{}.h", f))
+                    .to_str()
+                    .unwrap()
+                    .to_string()
+            })
+            .map(|f| {
+                let file_path_str = format!("#include \"{}\"\n", f);
+                println!("include-file: '{}'", f);
                 file_path_str
             })
             .collect::<String>();
@@ -300,11 +310,12 @@ mod inner {
         let ld_flags = ICUConfig::new()
             .ldflags()
             .with_context(|| "could not prepare bindgen builder")?;
-        let builder = builder.clang_arg(&ld_flags);
+        let builder = builder.clang_arg(ld_flags);
         let cpp_flags = ICUConfig::new()
             .cppflags()
             .with_context(|| "could not prepare bindgen builder")?;
         let builder = builder.clang_arg(cpp_flags);
+        let builder = builder.detect_include_paths(true);
 
         let bindings = builder
             .generate()
@@ -314,7 +325,7 @@ mod inner {
         let output_file = output_file_path.to_str().unwrap();
         bindings
             .write_to_file(output_file)
-            .with_context(|| format!("while writing output"))?;
+            .with_context(|| "while writing output")?;
         Ok(())
     }
 
@@ -364,7 +375,7 @@ macro_rules! versioned_function {{
             );
             macro_file
                 .write_all(&to_write.into_bytes())
-                .with_context(|| format!("while writing macros.rs with renaming"))
+                .with_context(|| "while writing macros.rs with renaming")
         } else {
             // The library names have not been renamed, generating an empty macro
             println!("renaming: false");
@@ -385,23 +396,23 @@ macro_rules! versioned_function {{
                     .to_string()
                     .into_bytes(),
                 )
-                .with_context(|| format!("while writing macros.rs without renaming"))
+                .with_context(|| "while writing macros.rs without renaming")
         }
     }
 
     /// Copies the featuers set in `Cargo.toml` into the build script.  Not sure
     /// why, but the features seem *ignored* when `build.rs` is used.
     pub fn copy_features() -> Result<()> {
-        if let Some(_) = env::var_os("CARGO_FEATURE_RENAMING") {
+        if env::var_os("CARGO_FEATURE_RENAMING").is_some() {
             println!("cargo:rustc-cfg=feature=\"renaming\"");
         }
-        if let Some(_) = env::var_os("CARGO_FEATURE_USE_BINDGEN") {
+        if env::var_os("CARGO_FEATURE_USE_BINDGEN").is_some() {
             println!("cargo:rustc-cfg=feature=\"use-bindgen\"");
         }
-        if let Some(_) = env::var_os("CARGO_FEATURE_ICU_CONFIG") {
+        if env::var_os("CARGO_FEATURE_ICU_CONFIG").is_some() {
             println!("cargo:rustc-cfg=feature=\"icu_config\"");
         }
-        if let Some(_) = env::var_os("CARGO_FEATURE_ICU_VERSION_IN_ENV") {
+        if env::var_os("CARGO_FEATURE_ICU_VERSION_IN_ENV").is_some() {
             println!("cargo:rustc-cfg=feature=\"icu_version_in_env\"");
         }
         let version_major = ICUConfig::version_major_int()?;
@@ -421,22 +432,16 @@ macro_rules! versioned_function {{
     pub fn icu_config_autodetect() -> Result<()> {
         println!("icu-version: {}", ICUConfig::new().version()?);
         println!("icu-cppflags: {}", ICUConfig::new().cppflags()?);
+        println!("icu-ldflags: {}", ICUConfig::new().ldflags()?);
         println!("icu-has-renaming: {}", has_renaming()?);
 
         // The path to the directory where cargo will add the output artifacts.
         let out_dir = env::var("OUT_DIR").unwrap();
         let out_dir_path = Path::new(&out_dir);
 
-        // The path where all unicode headers can be found.
-        let include_dir_path = Path::new(&ICUConfig::new().prefix()?)
-            .join("include")
-            .join("unicode");
-
-        let header_file =
-            generate_wrapper_header(&out_dir_path, &BINDGEN_SOURCE_MODULES, &include_dir_path);
-        run_bindgen(&header_file, out_dir_path)
-            .with_context(|| format!("while running bindgen"))?;
-        run_renamegen(out_dir_path).with_context(|| format!("while running renamegen"))?;
+        let header_file = generate_wrapper_header(&out_dir_path, &BINDGEN_SOURCE_MODULES);
+        run_bindgen(&header_file, out_dir_path).with_context(|| "while running bindgen")?;
+        run_renamegen(out_dir_path).with_context(|| "while running renamegen")?;
 
         println!("cargo:install-dir={}", ICUConfig::new().install_dir()?);
 
@@ -452,7 +457,7 @@ macro_rules! versioned_function {{
 fn main() -> Result<(), anyhow::Error> {
     std::env::set_var("RUST_BACKTRACE", "full");
     inner::copy_features()?;
-    if let None = std::env::var_os("CARGO_FEATURE_ICU_CONFIG") {
+    if std::env::var_os("CARGO_FEATURE_ICU_CONFIG").is_none() {
         return Ok(());
     }
     inner::icu_config_autodetect()?;

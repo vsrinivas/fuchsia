@@ -2,9 +2,9 @@
 
 Item       | Description
 ---------- | -----------
-ICU 64..67 | [![Test status](https://github.com/google/rust_icu/workflows/Test/badge.svg)](https://github.com/google/rust_icu/workflows/Test/badge.svg)
+ICU 63..68 | [![Test status](https://github.com/google/rust_icu/workflows/Test/badge.svg)](https://github.com/google/rust_icu/workflows/Test/badge.svg)
 Source     | https://github.com/google/rust_icu
-README     | https://github.com/google/rust_icu/blob/master/README.md
+README     | https://github.com/google/rust_icu/blob/main/README.md
 Coverage   | [View report](/coverage/report.md)
 Docs       | https://docs.rs/crate/rust_icu
 
@@ -100,15 +100,20 @@ The limitations we know of today are as follows:
 
 # Compatibility
 
-Up to 3 minor releases of `rust_icu` are tested for each major release, and
-automated tests are executed for all ICU library versions of interest, in all
-feature combinations of interest.
+The compatibility guarantee is as follows:
 
-`rust_icu` version   | ICU 63.x | ICU 64.2 | ICU 65.1 | ICU 66.0.1 | ICU 67.1 | ICU 68.1
------------------- | -------- | -------- | -------- | ---------- | -------- | --------
-0.2                |    ✅    |    ✅    |    ✅    |    ✅      |    ✅    |    ✅
-0.3                |    ✅    |    ✅    |    ✅    |    ✅      |    ✅    |    ✅
-0.4                |    ✅    |    ✅    |    ✅    |    ✅      |    ✅    |    ✅
+1. Up to 3 minor releases of `rust_icu` are tested for each major release
+2. Automated tests are executed for last three major ICU library versions in all
+   feature combinations of interest.
+3. Automated tests are executed for the ICU library version in use by the docs.rs
+   system (so the documentation could be built).
+
+`rust_icu` version   | ICU 63.x | ICU 64.2 | ICU 65.1 | ICU 66.0.1 | ICU 67.1 | ICU 68.1 | ICU 69.1
+-------------------- | -------- | -------- | -------- | ---------- | -------- | -------- | --------
+0.2                  |    ✅    |    ✅    |    ✅    |    ✅      |    ✅    |    ✅    | 
+0.3                  |    ✅    |    ✅    |    ✅    |    ✅      |    ✅    |    ✅    |
+0.4                  |    ✅    |    ✅    |    ✅    |    ✅      |    ✅    |    ✅    |
+0.5                  |    ✅    |          |          |            |    ✅    |    ✅    |    ✅    
 
 > Prior to a 1.0.0 release, API versions that only differ in the patch version
 > number (0.x.**y**) only should be compatible.
@@ -123,7 +128,7 @@ development environment will use the same settings, we opted to offer certain
 features (below) as configuration options.
 
 While our intention is to keep the list of features below up to date with the
-[actual list in `Cargo.toml`](https://github.com/google/rust_icu/blob/master/Cargo.toml),
+[actual list in `Cargo.toml`](https://github.com/google/rust_icu/blob/main/Cargo.toml),
 the list may periodically go out of date.
 
 To use any of the features, you will need to activate the feature in *all* the
@@ -154,18 +159,9 @@ Feature              | Default? | Description
     Install from https://rustup.rs. Used to set toolchain defaults. This will
     install `cargo` as well.
 
-*   `rust` nightly toolchain
+* Clang
 
-    Two options exist here:
-
-    1.  Set the global default: `rustup toolchain set nightly`
-
-    2.  Set the default toolchain just for `rust_icu`. Go to the directory you
-        cloned `rust_icu` into, then issue:
-
-    ```
-    rustup override set nightly
-    ```
+    You must have [Clang](https://clang.llvm.org/) installed to access the right headers.
 
 *   The ICU library development environmnet
 
@@ -347,7 +343,7 @@ These are the assumptions made in the making of this library:
 ## ICU installation instructions
 
 These instructions follow the "out-of-tree" build instructions from
-[the ICU repository](https://github.com/unicode-org/icu/blob/master/icu4c/readme.html).
+[the ICU repository](https://github.com/unicode-org/icu/blob/%6d%61%73%74%65%72/icu4c/readme.html).
 
 ### Assumptions
 
