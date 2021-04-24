@@ -103,7 +103,7 @@ class OutgoingMessage : public ::fidl::Result {
     size_t size() const { return bytes_.size(); }
 
    private:
-    explicit CopiedBytes(OutgoingMessage& msg);
+    explicit CopiedBytes(const OutgoingMessage& msg);
 
     std::vector<uint8_t> bytes_;
 
@@ -111,7 +111,7 @@ class OutgoingMessage : public ::fidl::Result {
   };
 
   // Create a heap-allocated contiguous copy of the bytes in this message.
-  CopiedBytes CopyBytes() { return CopiedBytes(*this); }
+  CopiedBytes CopyBytes() const { return CopiedBytes(*this); }
 
   // Release the handles to prevent them to be closed by CloseHandles. This method is only useful
   // when interfacing with low-level channel operations which consume the handles.

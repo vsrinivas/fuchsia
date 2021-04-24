@@ -187,7 +187,7 @@ void OutgoingMessage::CallImpl(const fidl_type_t* response_type, zx_handle_t cha
 }
 #endif
 
-OutgoingMessage::CopiedBytes::CopiedBytes(OutgoingMessage& msg) {
+OutgoingMessage::CopiedBytes::CopiedBytes(const OutgoingMessage& msg) {
   uint32_t byte_count = 0;
   for (uint32_t i = 0; i < msg.iovec_actual(); ++i) {
     byte_count += msg.iovecs()[i].capacity;
