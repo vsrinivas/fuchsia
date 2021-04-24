@@ -601,7 +601,7 @@ void JobDispatcher::GetInfo(zx_info_job_t* info) const {
 
   Guard<Mutex> guard{get_lock()};
   info->return_code = return_code_;
-  info->exited = (state_ == State::DEAD);
+  info->exited = (state_ == State::DEAD) || (state_ == State::KILLING);
   info->kill_on_oom = kill_on_oom_;
   info->debugger_attached = debug_exceptionate_.HasValidChannel();
 }

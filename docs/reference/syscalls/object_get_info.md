@@ -183,6 +183,10 @@ typedef struct zx_info_job {
 } zx_info_job_t;
 ```
 
+Note that |exited| will immediately report that the job has exited following a
+|zx_task_kill| or equivalent (e.g. an OOM kill), but child jobs and processes
+may still be in the process of exiting.
+
 ### ZX_INFO_PROCESS (a.k.a. ZX_INFO_PROCESS_V1)
 
 *handle* type: **Process**
@@ -209,6 +213,9 @@ typedef struct zx_info_process {
 } zx_info_process_t;
 ```
 
+Note that |exited| will immediately report that the process has exited following
+a |zx_task_kill|, but child threads may still be in the process of exiting.
+
 ### ZX_INFO_PROCESS_V2
 
 *handle* type: **Process**
@@ -233,6 +240,10 @@ typedef struct zx_info_process_v2 {
     uint32_t flags;
 } zx_info_process_v2_t;
 ```
+
+Note that |flags| will immediately report that the process has exited (i.e. it
+will contain ZX_INFO_PROCESS_FLAG_EXITED) following a |zx_task_kill|, but child
+threads may still be in the process of exiting.
 
 ### ZX_INFO_PROCESS_THREADS
 
