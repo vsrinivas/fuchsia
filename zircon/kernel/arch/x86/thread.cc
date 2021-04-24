@@ -52,31 +52,29 @@ void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
   frame->rip = entry_point;
 
   // initialize the saved extended register state
-  vaddr_t buf = ROUNDUP(((vaddr_t)t->arch().extended_register_buffer), 64);
-  __UNUSED size_t overhead = buf - (vaddr_t)t->arch().extended_register_buffer;
-  DEBUG_ASSERT(sizeof(t->arch().extended_register_buffer) - overhead >=
-               x86_extended_register_size());
-  t->arch().extended_register_state = (vaddr_t*)buf;
-  x86_extended_register_init_state(t->arch().extended_register_state);
+  arch_thread& arch = t->arch();
+  x86_extended_register_init_state(arch.extended_register_buffer);
+  DEBUG_ASSERT(
+      IS_ALIGNED(&arch.extended_register_buffer, alignof(decltype(arch.extended_register_buffer))));
 
   // set the stack pointer
-  t->arch().sp = (vaddr_t)frame;
+  arch.sp = (vaddr_t)frame;
 #if __has_feature(safe_stack)
   DEBUG_ASSERT(IS_ALIGNED(t->stack().unsafe_top(), 16));
-  t->arch().unsafe_sp = t->stack().unsafe_top();
+  arch.unsafe_sp = t->stack().unsafe_top();
 #endif
 
   // initialize the fs, gs and kernel bases to 0.
-  t->arch().fs_base = 0;
-  t->arch().gs_base = 0;
+  arch.fs_base = 0;
+  arch.gs_base = 0;
 
   // Initialize the debug registers to a valid initial state.
-  t->arch().track_debug_state = false;
-  for (size_t i = 0; i < 4; i++) {
-    t->arch().debug_state.dr[i] = 0;
+  arch.track_debug_state = false;
+  for (auto& dr: arch.debug_state.dr) {
+    dr = 0; // set dr0-dr3
   }
-  t->arch().debug_state.dr6 = X86_DR6_MASK;
-  t->arch().debug_state.dr7 = X86_DR7_MASK;
+  arch.debug_state.dr6 = X86_DR6_MASK;
+  arch.debug_state.dr7 = X86_DR7_MASK;
 }
 
 void arch_thread_construct_first(Thread* t) {
@@ -266,7 +264,7 @@ void arch_context_switch(Thread* oldthread, Thread* newthread) {
     // Nothing left to save for |oldthread|, so just restore |newthread|.  Technically, we could
     // skip restoring here since we know a higher layer will restore before leaving the kernel.  We
     // restore anyway to so we don't leave |oldthread|'s state lingering in the hardware registers.
-    x86_extended_register_restore_state(newthread->arch().extended_register_state);
+    x86_extended_register_restore_state(newthread->arch().extended_register_buffer);
     x86_debug_restore_state(newthread);
     x86_segment_selector_restore_state(newthread);
   }
@@ -286,7 +284,7 @@ void arch_context_switch(Thread* oldthread, Thread* newthread) {
 }
 
 void arch_save_user_state(Thread* thread) {
-  x86_extended_register_save_state(thread->arch().extended_register_state);
+  x86_extended_register_save_state(thread->arch().extended_register_buffer);
   // Not saving debug state because the arch_thread_t's debug state is authoritative.
   x86_segment_selector_save_state(thread);
 }
@@ -294,7 +292,7 @@ void arch_save_user_state(Thread* thread) {
 void arch_restore_user_state(Thread* thread) {
   x86_segment_selector_restore_state(thread);
   x86_debug_restore_state(thread);
-  x86_extended_register_restore_state(thread->arch().extended_register_state);
+  x86_extended_register_restore_state(thread->arch().extended_register_buffer);
 }
 
 void arch_set_suspended_general_regs(struct Thread* thread, GeneralRegsSource source, void* gregs) {

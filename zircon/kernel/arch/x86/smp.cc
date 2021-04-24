@@ -85,17 +85,19 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
   for (unsigned int i = 0; i < count; ++i) {
     // TODO(johngro): Clean this up when we fix fxbug.dev/33473.  Users should not be directly
     // calloc'ing and initializing thread structures.
-    Thread* thread = static_cast<Thread*>(calloc(1, sizeof(Thread)));
+    Thread* thread = static_cast<Thread*>(memalign(alignof(Thread), sizeof(Thread)));
     if (!thread) {
       status = ZX_ERR_NO_MEMORY;
       goto cleanup_all;
     }
+    memset(thread, 0, sizeof(Thread));
     init_thread_struct(thread, "");
 
     status = thread->stack().Init();
     if (status != ZX_OK) {
       goto cleanup_all;
     }
+
     bootstrap_data->per_cpu[i].kstack_base = thread->stack().base();
     bootstrap_data->per_cpu[i].thread = thread;
   }

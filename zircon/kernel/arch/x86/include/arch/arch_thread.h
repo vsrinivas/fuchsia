@@ -51,9 +51,9 @@ struct arch_thread {
     iframe_t *iframe;
   } suspended_general_regs;
 
-  /* Buffer to save fpu and extended register (e.g., PT) state */
-  void *extended_register_state;
-  uint8_t extended_register_buffer[X86_MAX_EXTENDED_REGISTER_SIZE + 64];
+  // Buffer to save fpu and extended register (e.g., PT) state.
+  // xsaves instruction requires the target buffer be 64 byte aligned.
+  alignas(64) uint8_t extended_register_buffer[X86_MAX_EXTENDED_REGISTER_SIZE];
 
   // If non-NULL, address to return to on page fault. Additionally the
   // X86_PFR_RUN_FAULT_HANDLER_BIT controls whether the fault handler is invoked or not. If not

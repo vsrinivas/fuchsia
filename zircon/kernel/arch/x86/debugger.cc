@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/zircon-internal/macros.h>
 #include <string.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/debug.h>
@@ -11,7 +12,6 @@
 
 #include <arch/debugger.h>
 #include <arch/regs.h>
-#include <lib/zircon-internal/macros.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
@@ -49,16 +49,14 @@ namespace {
     COPY_REG(out, in, r15);       \
   } while (0)
 
-void x86_fill_in_gregs_from_syscall(zx_thread_state_general_regs_t* out,
-                                    const syscall_regs_t* in) {
+void x86_fill_in_gregs_from_syscall(zx_thread_state_general_regs_t* out, const syscall_regs_t* in) {
   COPY_COMMON_REGS(out, in);
   out->rip = in->rip;
   out->rsp = in->rsp;
   out->rflags = in->rflags;
 }
 
-void x86_fill_in_syscall_from_gregs(syscall_regs_t* out,
-                                    const zx_thread_state_general_regs_t* in) {
+void x86_fill_in_syscall_from_gregs(syscall_regs_t* out, const zx_thread_state_general_regs_t* in) {
   COPY_COMMON_REGS(out, in);
   out->rip = in->rip;
   out->rsp = in->rsp;
@@ -141,7 +139,7 @@ zx_status_t x86_get_set_vector_regs(Thread* thread, zx_thread_state_vector_regs*
   uint32_t comp_size = 0;
   x86_xsave_legacy_area* save =
       static_cast<x86_xsave_legacy_area*>(x86_get_extended_register_state_component(
-          thread->arch().extended_register_state, X86_XSAVE_STATE_INDEX_SSE, mark_present,
+          thread->arch().extended_register_buffer, X86_XSAVE_STATE_INDEX_SSE, mark_present,
           &comp_size));
   DEBUG_ASSERT(save);  // Legacy getter should always succeed.
 
@@ -162,7 +160,8 @@ zx_status_t x86_get_set_vector_regs(Thread* thread, zx_thread_state_vector_regs*
   // AVX grows the registers to 256 bits each. Optional.
   constexpr int kYmmHighSize = 16;  // Additional bytes in each register.
   uint8_t* ymm_highbits = static_cast<uint8_t*>(x86_get_extended_register_state_component(
-      thread->arch().extended_register_state, X86_XSAVE_STATE_INDEX_AVX, mark_present, &comp_size));
+      thread->arch().extended_register_buffer, X86_XSAVE_STATE_INDEX_AVX, mark_present,
+      &comp_size));
   if (ymm_highbits) {
     DEBUG_ASSERT(comp_size == kYmmHighSize * kNumSSERegs);
     for (int i = 0; i < kNumSSERegs; i++) {
@@ -319,7 +318,7 @@ zx_status_t arch_get_fp_regs(Thread* thread, zx_thread_state_fp_regs* out) {
   uint32_t comp_size = 0;
   x86_xsave_legacy_area* save =
       static_cast<x86_xsave_legacy_area*>(x86_get_extended_register_state_component(
-          thread->arch().extended_register_state, X86_XSAVE_STATE_INDEX_X87, false, &comp_size));
+          thread->arch().extended_register_buffer, X86_XSAVE_STATE_INDEX_X87, false, &comp_size));
   DEBUG_ASSERT(save);  // Legacy getter should always succeed.
 
   out->fcw = save->fcw;
@@ -341,7 +340,7 @@ zx_status_t arch_set_fp_regs(Thread* thread, const zx_thread_state_fp_regs* in) 
   uint32_t comp_size = 0;
   x86_xsave_legacy_area* save =
       static_cast<x86_xsave_legacy_area*>(x86_get_extended_register_state_component(
-          thread->arch().extended_register_state, X86_XSAVE_STATE_INDEX_X87, true, &comp_size));
+          thread->arch().extended_register_buffer, X86_XSAVE_STATE_INDEX_X87, true, &comp_size));
   DEBUG_ASSERT(save);  // Legacy getter should always succeed.
 
   save->fcw = in->fcw;

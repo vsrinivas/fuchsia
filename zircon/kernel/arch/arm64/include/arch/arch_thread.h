@@ -34,9 +34,10 @@ static_assert(((KERNEL_ASPACE_BASE >> ARM64_DFR_RUN_FAULT_HANDLER_BIT) & 1) == 1
 __BEGIN_CDECLS
 
 struct fpstate {
+  // align the save state on a 16 byte offset to optimally handle vector load/stores
+  alignas(16) uint64_t regs[64];
   uint32_t fpcr;
   uint32_t fpsr;
-  uint64_t regs[64];
 };
 
 struct arm64_percpu;

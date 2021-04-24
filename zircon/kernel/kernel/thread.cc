@@ -242,12 +242,15 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
   unsigned int flags = 0;
 
   if (!t) {
-    t = static_cast<Thread*>(malloc(sizeof(Thread)));
+    t = static_cast<Thread*>(memalign(alignof(Thread), sizeof(Thread)));
     if (!t) {
       return nullptr;
     }
     flags |= THREAD_FLAG_FREE_STRUCT;
   }
+
+  // assert that t is at least as aligned as the Thread is supposed to be
+  DEBUG_ASSERT(IS_ALIGNED(t, alignof(Thread)));
 
   init_thread_struct(t, name);
 
@@ -1311,6 +1314,7 @@ void Thread::Current::BecomeIdle() {
 void Thread::SecondaryCpuInitEarly() {
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(stack_.base() != 0);
+  DEBUG_ASSERT(IS_ALIGNED(this, alignof(Thread)));
 
   // At this point, the CPU isn't far enough along to allow threads to block. Set blocking
   // disallowed until to catch bugs where code might block before we're ready.
