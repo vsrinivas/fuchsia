@@ -962,68 +962,14 @@ int main(int argc, char** argv) {
     }
     printf("%" PRIu64 "\n", size);
   } else if (!strcmp(command, "pave")) {
-    char* input_type = argv[i];
-    char* input_path = argv[i + 1];
-
-    if (strcmp(input_type, "--sparse")) {
-      fprintf(stderr, "pave command only accepts --sparse input option\n");
-      usage();
+    auto pave_params_or = storage::volume_image::PaveParams::FromArguments(arguments);
+    if (pave_params_or.is_error()) {
+      std::cout << "Failed to parse pave params. " << pave_params_or.error() << std::endl;
       return -1;
     }
 
-    std::unique_ptr<SparseContainer> sparseData;
-    if (SparseContainer::CreateExisting(input_path, &sparseData) != ZX_OK) {
-      return -1;
-    }
-
-    std::unique_ptr<fvm::host::FileWrapper> wrapper;
-
-    if (disk_type == DiskType::File) {
-      std::unique_ptr<fvm::host::UniqueFdWrapper> unique_fd_wrapper;
-      if (fvm::host::UniqueFdWrapper::Open(path, O_CREAT | O_WRONLY, 0644, &unique_fd_wrapper) !=
-          ZX_OK) {
-        return -1;
-      }
-
-      wrapper = std::move(unique_fd_wrapper);
-    } else if (disk_type == DiskType::Mtd) {
-      zx_status_t status =
-          CreateFileWrapperFromMtd(path, safemath::saturated_cast<uint32_t>(offset),
-                                   safemath::saturated_cast<uint32_t>(max_bad_blocks), &wrapper);
-
-      if (status != ZX_OK) {
-        return -1;
-      }
-
-      // The byte offset into the output file is handled by CreateFileWrapperFromMtd.
-      offset = 0;
-
-      // Length may be 0 at this point if the user did not specify a size.
-      // Use all of the space reported by the FTL in this case.
-      if (length == 0) {
-        length = wrapper->Size();
-      }
-    } else if (disk_type == DiskType::BlockDevice) {
-      std::unique_ptr<fvm::host::BlockDeviceFdWrapper> block_device_fd_wrapper;
-      if (fvm::host::BlockDeviceFdWrapper::Open(path, O_CREAT | O_WRONLY, 0644,
-                                                &block_device_fd_wrapper) != ZX_OK) {
-        fprintf(stderr, "BlockDeviceFd open failed: %s\n", strerror(errno));
-        return -1;
-      }
-
-      wrapper = std::move(block_device_fd_wrapper);
-
-      // Length may be 0 at this point if the user did not specify a size.
-      // Get the partition size to calculate length.
-      if (length == 0) {
-        length = wrapper->Size();
-      }
-    } else {
-      fprintf(stderr, "Unknown disk type\n");
-      return -1;
-    }
-
-    if (sparseData->Pave(std::move(wrapper), offset, length) != ZX_OK) {
+    if (auto result = storage::volume_image::Pave(pave_params_or.value()); result.is_error()) {
+      std::cout << "Failed to pave. " << result.error() << std::endl;
       return -1;
     }
   } else {
