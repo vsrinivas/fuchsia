@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use byteorder::BigEndian;
-use zerocopy::AsBytes;
+use zerocopy::{AsBytes, FromBytes};
 
 type U32 = zerocopy::U32<BigEndian>;
 type U64 = zerocopy::U64<BigEndian>;
@@ -23,8 +23,9 @@ fn get_release_string() -> String {
     format!("avbtool {}.{}.{}", AVB_VERSION_MAJOR, AVB_VERSION_MINOR, AVB_VERSION_SUB)
 }
 
-#[derive(AsBytes, Debug)]
+#[derive(AsBytes, FromBytes, Debug, PartialEq)]
 #[repr(C, packed)]
+#[allow(missing_docs)]
 pub struct Header {
     magic: [u8; 4],
     pub min_avb_version_major: U32,

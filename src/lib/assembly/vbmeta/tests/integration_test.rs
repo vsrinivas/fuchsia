@@ -24,5 +24,5 @@ fn avbtool_comparison() {
     let descriptors = vec![descriptor];
 
     let vbmeta = VBMeta::try_new(descriptors, key).unwrap();
-    assert_eq!(vbmeta.bytes, EXPECTED_VBMETA);
+    assert_eq!(vbmeta.as_bytes(), EXPECTED_VBMETA);
 }

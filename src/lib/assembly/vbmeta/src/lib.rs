@@ -12,6 +12,7 @@ mod key;
 mod test;
 mod vbmeta;
 
-pub use descriptor::{HashDescriptor, Salt, SaltError};
+pub use descriptor::{builder::RawHashDescriptorBuilder, HashDescriptor, Salt, SaltError};
+pub use header::Header;
 pub use key::{Key, KeyError, SignFailure, Signature, SIGNATURE_SIZE};
 pub use vbmeta::VBMeta;
