@@ -171,9 +171,15 @@ template("ffx_plugin") {
              ]
       non_rust_deps = [ "//third_party/boringssl" ]
 
+      # If the args library has tests enabled, enable them in the library.
       if (defined(invoker.args_with_unit_tests) &&
           invoker.args_with_unit_tests == true) {
         with_unit_tests = true
+
+        # And pass in the test_deps if they have been specified for the plugin.
+        if (defined(invoker.test_deps)) {
+          test_deps = invoker.test_deps
+        }
       }
       forward_variables_from(invoker,
                              "*",
@@ -185,6 +191,7 @@ template("ffx_plugin") {
                                "non_rust_deps",
                                "target_name",
                                "with_unit_tests",
+                               "test_deps",
                              ])
     }
     if (defined(invoker.args_with_unit_tests) &&
