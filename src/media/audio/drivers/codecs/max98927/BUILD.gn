@@ -26,7 +26,7 @@ driver_module("max98927") {
   sources = [ "max98927.cc" ]
   deps = [
     ":max98927_bind",
-    "//sdk/banjo/fuchsia.hardware.i2c",
+    "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pci",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/driver",

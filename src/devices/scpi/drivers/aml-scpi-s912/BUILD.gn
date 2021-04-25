@@ -42,7 +42,7 @@ driver_module("aml-scpi-s912.mailbox") {
     ":aml-mailbox-s912-bind",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.i2c",
+    "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.mailbox",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",

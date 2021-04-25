@@ -12,7 +12,7 @@ const uint32 I2C_MAX_TOTAL_TRANSFER = 4096;
 
 /// See `Transact` below for usage.
 struct I2cOp {
-    [Buffer] vector<uint8> data;
+    [Buffer] vector<uint8>:MAX data;
     bool is_read;
     bool stop;
 };
@@ -27,7 +27,7 @@ protocol I2c {
     /// The results of the operations are returned asynchronously via the transact_cb.
     /// The cookie parameter can be used to pass your own private data to the transact_cb callback.
     [Async]
-    Transact(vector<I2cOp> op) -> (zx.status status, vector<I2cOp> op);
+    Transact(vector<I2cOp>:MAX op) -> (zx.status status, vector<I2cOp>:MAX op);
     /// Returns the maximum transfer size for read and write operations on the channel.
     GetMaxTransferSize() -> (zx.status s, uint64 size);
     GetInterrupt(uint32 flags) -> (zx.status s, zx.handle:INTERRUPT irq);

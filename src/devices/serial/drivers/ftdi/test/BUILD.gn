@@ -36,7 +36,7 @@ source_set("common") {
     "../ftdi-mpsse.cc",
   ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.i2c",
+    "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2cimpl",
     "//sdk/banjo/fuchsia.hardware.serial",
     "//sdk/banjo/fuchsia.hardware.serialimpl",

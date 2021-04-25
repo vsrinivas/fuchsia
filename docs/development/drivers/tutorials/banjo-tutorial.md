@@ -23,7 +23,7 @@ and the protocol user.
 ## A simple example
 
 As a first step, let's take a look at a relatively simple Banjo specification.
-This is the file [`//sdk/banjo/fuchsia.hardware.i2c/i2c.banjo`](/sdk/banjo/fuchsia.hardware.i2c/i2c.banjo):
+This is the file [`//sdk/banjo/fuchsia.hardware.i2c/i2c.fidl`](/sdk/banjo/fuchsia.hardware.i2c/i2c.fidl):
 
 > Note that the line numbers in the code samples throughout this tutorial are not part of the files.
 
