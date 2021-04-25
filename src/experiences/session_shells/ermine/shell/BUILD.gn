@@ -7,7 +7,6 @@ import("//build/dart/fidl_move.gni")
 import("//build/fidl/fidl.gni")
 import("//build/flutter/flutter_app.gni")
 import("//build/flutter/test.gni")
-import("//build/package.gni")
 import("//build/testing/flutter_driver.gni")
 import("//src/lib/icu/tools/static_icu_data.gni")
 
