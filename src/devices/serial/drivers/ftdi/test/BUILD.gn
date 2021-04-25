@@ -12,7 +12,7 @@ test("ftdi-i2c-test") {
   include_dirs = [ ".." ]
   deps = [
     ":common",
-    "//sdk/banjo/fuchsia.hardware.i2cimpl",
+    "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.serialimpl",
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
@@ -37,7 +37,7 @@ source_set("common") {
   ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.i2cimpl",
+    "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.serial",
     "//sdk/banjo/fuchsia.hardware.serialimpl",
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
