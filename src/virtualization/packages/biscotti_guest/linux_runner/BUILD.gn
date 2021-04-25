@@ -2,12 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//build/components.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
 
 extras_image = "$target_out_dir/linux/extras.img"
+resource("extras_img") {
+  sources = [ extras_image ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
 declare_args() {
   # Default values for the guest network configuration.
@@ -97,6 +100,7 @@ action("icd_manifest") {
 
 romfs_image("extras") {
   deps = [
+    ":extras_img",
     ":icd_manifest",
     "//src/lib/vulkan:vulkan_headers_and_loader(${linux_lib_toolchain})",
   ]
@@ -147,7 +151,7 @@ executable("bin") {
   deps = [ ":lib" ]
 }
 
-package("linux_runner") {
+fuchsia_package_with_single_component("linux_runner") {
   if (linux_runner_extras_tests) {
     testonly = true
   }
@@ -157,24 +161,7 @@ package("linux_runner") {
     ":extras",
   ]
 
-  binaries = [
-    {
-      name = "linux_runner"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/linux_runner.cmx")
-      dest = "linux_runner.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = extras_image
-      dest = "extras.img"
-    },
-  ]
+  manifest = "meta/linux_runner.cmx"
 }
 
 executable("linux_runner_unittests") {
@@ -193,14 +180,10 @@ executable("linux_runner_unittests") {
   ]
 }
 
-test_package("linux_runner_tests") {
+fuchsia_unittest_package("linux_runner_tests") {
   deps = [ ":linux_runner_unittests" ]
 
-  tests = [
-    {
-      name = "linux_runner_unittests"
-      environments = basic_envs
-      disabled = true
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }

@@ -79,7 +79,8 @@ class ScopedMemfs {
   const char* path_;
 };
 
-class LinuxRunnerGuestTest : public gtest::TestLoopFixture {
+// Disabled due to flakes, see: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=69299
+class DISABLED_LinuxRunnerGuestTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
     TestLoopFixture::SetUp();
@@ -118,7 +119,7 @@ class LinuxRunnerGuestTest : public gtest::TestLoopFixture {
   std::unique_ptr<ScopedMemfs> data_;
 };
 
-TEST_F(LinuxRunnerGuestTest, ConnectToStartupListener) {
+TEST_F(DISABLED_LinuxRunnerGuestTest, ConnectToStartupListener) {
   StartGuest();
   zx::handle handle;
   zx_status_t status = guest_manager()->GuestVsock()->ConnectToHost(
@@ -133,7 +134,7 @@ TEST_F(LinuxRunnerGuestTest, ConnectToStartupListener) {
 
 // If a stateful image partition does not exist on device; one shall be created
 // as part of the guest creation.
-TEST_F(LinuxRunnerGuestTest, CreateEmptyStatefulPartition) {
+TEST_F(DISABLED_LinuxRunnerGuestTest, CreateEmptyStatefulPartition) {
   // Verify no image exists.
   struct stat st = {};
   ASSERT_EQ(-1, stat(kStatefulImagePath, &st)) << "Stateful image already exists";
@@ -159,7 +160,7 @@ TEST_F(LinuxRunnerGuestTest, CreateEmptyStatefulPartition) {
 // - Moving the SetUp and TearDown logic to the start and end of each test
 //   function
 // - Probably others to be discovered...
-TEST_F(LinuxRunnerGuestTest, DISABLED_ReuseExistingStatefulParition) {
+TEST_F(DISABLED_LinuxRunnerGuestTest, ReuseExistingStatefulParition) {
   // Use a different size here to verify we don't go though the partition create
   // logic, which will create a full-size image.
   static constexpr auto image_size = 1024;
