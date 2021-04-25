@@ -14,11 +14,14 @@
 
 # shellcheck source=/dev/null
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
-set -e
 
 # Fills $FX_DEVICE_NAME, $FX_DEVICE_ADDR, $FX_SSH_ADDR, and $FX_SSH_PORT if
 # there is one device currently attached.
 fx-export-device-address
+
+# Addresses are exported before set -e, so that if address resolution fails,
+# FX_DEVICE_NAME is still populated, which FDT will use to discover later.
+set -e
 
 PREBUILT_DIR="$FUCHSIA_DIR/prebuilt/gui_tools"
 DOWNLOAD_DIR="$FUCHSIA_DIR/prebuilt/gui_tools/download"
