@@ -31,8 +31,6 @@ fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(zx_pixel_form
     case ZX_PIXEL_FORMAT_BGR_888x:
     case ZX_PIXEL_FORMAT_ABGR_8888:
       return fuchsia::sysmem::PixelFormatType::R8G8B8A8;
-    case ZX_PIXEL_FORMAT_NV12:
-      return fuchsia::sysmem::PixelFormatType::NV12;
   }
   FX_CHECK(false) << "Unsupported Zircon pixel format: " << format;
   return fuchsia::sysmem::PixelFormatType::INVALID;
@@ -65,47 +63,13 @@ bool DisplayCompositor::ImportBufferCollection(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
   FX_DCHECK(display_controller_);
+  auto sync_token = token.BindSync();
 
   // Create a duped renderer token.
-  auto sync_token = token.BindSync();
   fuchsia::sysmem::BufferCollectionTokenSyncPtr renderer_token;
   zx_status_t status =
       sync_token->Duplicate(std::numeric_limits<uint32_t>::max(), renderer_token.NewRequest());
   FX_DCHECK(status == ZX_OK);
-
-  // Create attach token for display.
-  // TODO(fxbug.dev/74423): Replace with prunable token when it is available.
-  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_sync_ptr;
-  sysmem_allocator->BindSharedCollection(std::move(sync_token),
-                                         buffer_collection_sync_ptr.NewRequest());
-  status = buffer_collection_sync_ptr->Sync();
-  FX_DCHECK(status == ZX_OK);
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr attach_token;
-  status = buffer_collection_sync_ptr->AttachToken(ZX_RIGHT_SAME_RIGHTS, attach_token.NewRequest());
-  FX_DCHECK(status == ZX_OK);
-  status = buffer_collection_sync_ptr->Close();
-  FX_DCHECK(status == ZX_OK);
-
-  // Duplicate attach token to check later if attach token can be used in the allocated buffers.
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
-  status =
-      attach_token->Duplicate(std::numeric_limits<uint32_t>::max(), display_token.NewRequest());
-  FX_DCHECK(status == ZX_OK);
-  fuchsia::sysmem::BufferCollectionSyncPtr attach_token_sync_ptr;
-  sysmem_allocator->BindSharedCollection(std::move(attach_token),
-                                         attach_token_sync_ptr.NewRequest());
-  status = attach_token_sync_ptr->Sync();
-  FX_DCHECK(status == ZX_OK);
-  {
-    // Intentionally empty constraints. |attach_token_sync_ptr| is used to detect logical
-    // allocation completion and success or failure, as seen by the |renderer_token|, because
-    // |attach_token_sync_ptr| and |renderer_token| are in the same sysmem failure domain (child
-    // domain of |buffer_collection_sync_ptr|).
-    fuchsia::sysmem::BufferCollectionConstraints constraints;
-    status = attach_token_sync_ptr->SetConstraints(false, constraints);
-    FX_DCHECK(status == ZX_OK);
-  }
-  attach_tokens_for_display_[collection_id] = std::move(attach_token_sync_ptr);
 
   // Import the collection to the renderer.
   if (!renderer_->ImportBufferCollection(collection_id, sysmem_allocator,
@@ -118,7 +82,7 @@ bool DisplayCompositor::ImportBufferCollection(
   fuchsia::hardware::display::ImageConfig image_config;
   std::unique_lock<std::mutex> lock(lock_);
   auto result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
-                                                    std::move(display_token), image_config);
+                                                    std::move(sync_token), image_config);
 
   return result;
 }
@@ -129,8 +93,6 @@ void DisplayCompositor::ReleaseBufferCollection(
   FX_DCHECK(display_controller_);
   (*display_controller_.get())->ReleaseBufferCollection(collection_id);
   renderer_->ReleaseBufferCollection(collection_id);
-  attach_tokens_for_display_.erase(collection_id);
-  buffer_collection_supports_display_.erase(collection_id);
 }
 
 bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metadata) {
@@ -156,21 +118,6 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
     FX_LOGS(ERROR) << "Renderer could not import image.";
     return false;
   }
-
-  if (buffer_collection_supports_display_.find(metadata.collection_id) ==
-      buffer_collection_supports_display_.end()) {
-    zx_status_t allocation_status = ZX_OK;
-    auto status = attach_tokens_for_display_[metadata.collection_id]->CheckBuffersAllocated(
-        &allocation_status);
-    buffer_collection_supports_display_[metadata.collection_id] =
-        status == ZX_OK && allocation_status == ZX_OK;
-
-    status = attach_tokens_for_display_[metadata.collection_id]->Close();
-    attach_tokens_for_display_.erase(metadata.collection_id);
-  }
-
-  if (!buffer_collection_supports_display_[metadata.collection_id])
-    return true;
 
   // TODO(fxbug.dev/71344): Pixel format should be ignored when using sysmem. We do not want
   // to have to rely on this kDefaultImageFormat.
@@ -233,12 +180,6 @@ void DisplayCompositor::SetDisplayLayers(uint64_t display_id, const std::vector<
 bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
   // Every rectangle should have an associated image.
   uint32_t num_images = data.images.size();
-
-  // Return early if we have an image that cannot be imported into display.
-  for (uint32_t i = 0; i < num_images; i++) {
-    if (InternalImageId(data.images[i].identifier) == allocation::kInvalidImageId)
-      return false;
-  }
 
   // Since we map 1 image to 1 layer, if there are more images than layers available for
   // the given display, then they cannot be directly composited to the display in hardware.
@@ -495,9 +436,6 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
                                         .height = kHeight};
     display_engine_data.frame_event_datas.push_back(NewFrameEventData());
     display_engine_data.targets.push_back(target);
-    // We know that this collection is supported by display because we collected constraints from
-    // display in scenic_impl::ImportBufferCollection() and waited for successful allocation.
-    buffer_collection_supports_display_[collection_id] = true;
     bool res = ImportBufferImage(target);
     FX_DCHECK(res);
   }
@@ -511,7 +449,8 @@ uint64_t DisplayCompositor::InternalImageId(allocation::GlobalImageId image_id) 
   // Lock the whole function.
   std::unique_lock<std::mutex> lock(lock_);
   auto itr = image_id_map_.find(image_id);
-  return itr == image_id_map_.end() ? allocation::kInvalidImageId : itr->second;
+  FX_DCHECK(itr != image_id_map_.end());
+  return itr->second;
 }
 
 }  // namespace flatland

@@ -104,7 +104,6 @@ fuchsia::sysmem::BufferCollectionSyncPtr CreateBufferCollectionSyncPtrAndSetCons
   image_constraints.color_spaces_count = 1;
   switch (format) {
     case fuchsia::sysmem::PixelFormatType::BGRA32:
-    case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
       image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
       break;
     case fuchsia::sysmem::PixelFormatType::I420:

@@ -78,10 +78,6 @@ class DisplayCompositorTest : public DisplayCompositorTestBase {
     return token;
   }
 
-  void SetDisplaySupported(allocation::GlobalBufferCollectionId id, bool is_supported) {
-    display_compositor_->buffer_collection_supports_display_[id] = is_supported;
-  }
-
  protected:
   const zx_pixel_format_t kPixelFormat = ZX_PIXEL_FORMAT_RGB_x888;
   std::unique_ptr<flatland::MockDisplayController> mock_display_controller_;
@@ -170,7 +166,6 @@ TEST_F(DisplayCompositorTest, ImageIsValidAfterReleaseBufferCollection) {
       .WillOnce(Return(true));
   display_compositor_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
                                               CreateToken());
-  SetDisplaySupported(kGlobalBufferCollectionId, true);
 
   // Import image.
   ImageMetadata image_metadata = ImageMetadata{
@@ -252,7 +247,6 @@ TEST_F(DisplayCompositorTest, ImportImageErrorCases) {
 
   display_compositor_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
                                               CreateToken());
-  SetDisplaySupported(kGlobalBufferCollectionId, true);
 
   ImageMetadata metadata = {
       .collection_id = kGlobalBufferCollectionId,
@@ -467,7 +461,6 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
 
   display_compositor_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
                                               CreateToken());
-  SetDisplaySupported(kGlobalBufferCollectionId, true);
 
   const uint64_t kParentDisplayImageId = 2;
   EXPECT_CALL(*mock, ImportImage(_, kGlobalBufferCollectionId, 0, _))
