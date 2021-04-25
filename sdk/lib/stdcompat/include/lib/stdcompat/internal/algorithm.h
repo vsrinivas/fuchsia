@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <iterator>
+#include <type_traits>
 
 #include "../utility.h"
 
@@ -77,9 +78,10 @@ constexpr void sort_heap(RandomIterator first, RandomIterator end, Comparator co
 // The sorting algorithm implemented here is heapsort.
 template <typename RandomIterator, typename Comparator>
 constexpr void sort(RandomIterator first, RandomIterator end, Comparator comparison) {
-  static_assert(std::is_same<typename std::iterator_traits<RandomIterator>::iterator_category,
-                             std::random_access_iterator_tag>::value,
-                "cpp20::sort requires random access iterators.");
+  static_assert(
+      std::is_base_of<std::random_access_iterator_tag,
+                      typename std::iterator_traits<RandomIterator>::iterator_category>::value,
+      "cpp20::sort requires random access iterators.");
   // Reverse the comparison to generate a heap with the opposite parent-child comparison.
   const auto reverse_comp = [&comparison](const auto& a, const auto& b) {
     return !comparison(a, b);
@@ -88,9 +90,24 @@ constexpr void sort(RandomIterator first, RandomIterator end, Comparator compari
   sort_heap(first, end, reverse_comp);
 }
 
-template <typename RandomIterator>
-constexpr void sort(RandomIterator first, RandomIterator end) {
-  return cpp20::internal::sort(first, end, [](const auto& a, const auto& b) { return a < b; });
+template <typename ForwardIt, typename Comparator>
+constexpr bool is_sorted(ForwardIt start, ForwardIt end, Comparator comp) {
+  static_assert(std::is_base_of<std::forward_iterator_tag,
+                                typename std::iterator_traits<ForwardIt>::iterator_category>::value,
+                "cpp20::is_sorted requires forward iterators.");
+  auto curr = start;
+  auto next = ++start;
+  // If curr >= end then next > end.
+  // We treat a range [a, b], where a > b, as an empty range, since no elements are within such
+  // range.
+  while (next < end) {
+    if (comp(*next, *curr)) {
+      return false;
+    }
+    curr = next;
+    next++;
+  }
+  return true;
 }
 
 }  // namespace internal

@@ -110,6 +110,40 @@ TEST(SortTest, ElementsAreSorted) {
                 "");
 }
 
+TEST(IsSortedTest, ElemenstAreSorted) {
+  constexpr auto kDataAscending = cpp20::to_array({1, 2, 3, 4, -1});
+
+  // Subrange is sorted.
+  static_assert(cpp20::is_sorted(kDataAscending.begin(), kDataAscending.end() - 1), "");
+  ASSERT_TRUE(std::is_sorted(kDataAscending.begin(), kDataAscending.end() - 1));
+
+  // Full array is not.
+  static_assert(!cpp20::is_sorted(kDataAscending.begin(), kDataAscending.end()), "");
+  ASSERT_FALSE(std::is_sorted(kDataAscending.begin(), kDataAscending.end()));
+
+  // Same but in reverse order with custom comparison.
+  constexpr auto kDataDescending = cpp20::to_array({4, 3, 2, 1, 5});
+
+  // Subrange is sorted.
+  static_assert(
+      cpp20::is_sorted(kDataDescending.begin(), kDataDescending.end() - 1, std::greater{}), "");
+  ASSERT_TRUE(std::is_sorted(kDataDescending.begin(), kDataDescending.end() - 1, std::greater{}));
+
+  // Full array is not.
+  static_assert(!cpp20::is_sorted(kDataDescending.begin(), kDataDescending.end(), std::greater{}),
+                "");
+  ASSERT_FALSE(std::is_sorted(kDataDescending.begin(), kDataDescending.end(), std::greater{}));
+
+  // Same but in reverse order with custom comparison.
+  constexpr auto kDataWithRepeatedElements = cpp20::to_array({4, 3, 2, 2, 1, 5});
+  // Full array is not.
+  static_assert(cpp20::is_sorted(kDataWithRepeatedElements.begin(),
+                                 kDataWithRepeatedElements.end() - 1, std::greater{}),
+                "");
+  ASSERT_TRUE(std::is_sorted(kDataWithRepeatedElements.begin(), kDataWithRepeatedElements.end() - 1,
+                             std::greater{}));
+}
+
 #if __cpp_lib_constexpr_algorithms >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(SortTest, IsAliasWhenStdIsAvailable) {
@@ -128,6 +162,27 @@ TEST(SortTest, IsAliasWhenStdIsAvailable) {
     constexpr void (*sort_std)(iterator_type, iterator_type, decltype(comp)) = std::sort;
 
     static_assert(sort_cpp20 == sort_std, "cpp20::sort should be an alias of std::sort.");
+  }
+}
+
+TEST(IsSortedTest, IsAliasWhenStdIsAvailable) {
+  {
+    using iterator_type = decltype(std::declval<std::vector<int>>().begin());
+    constexpr bool (*is_sorted_cpp20)(iterator_type, iterator_type) = cpp20::is_sorted;
+    constexpr bool (*is_sorted_std)(iterator_type, iterator_type) = std::is_sorted;
+
+    static_assert(is_sorted_cpp20 == is_sorted_std,
+                  "cpp20::is_sorted_std should be an alias of std::sort.");
+  }
+
+  {
+    using iterator_type = decltype(std::declval<std::vector<int>>().begin());
+    auto comp = [](const int& a, const int& b) -> bool { return false; };
+    constexpr bool (*is_sorted_cpp20)(iterator_type, decltype(comp)) = cpp20::is_sorted;
+    constexpr bool (*is_sorted_std)(iterator_type, decltype(comp)) = std::is_sorted;
+
+    static_assert(is_sorted_cpp20 == is_sorted_std,
+                  "cpp20::is_sorted_std should be an alias of std::sort.");
   }
 }
 
