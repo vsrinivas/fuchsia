@@ -28,7 +28,7 @@ pub mod shapes;
 mod status_code;
 mod transform_component;
 
-pub use crate::core::BinaryReader;
+pub use crate::core::{BinaryReader, Object};
 pub use artboard::Artboard;
 pub use backboard::Backboard;
 pub use component::Component;
@@ -36,7 +36,7 @@ pub use container_component::ContainerComponent;
 pub use draw_rules::DrawRules;
 pub use draw_target::DrawTarget;
 pub use drawable::Drawable;
-pub use file::File;
+pub use file::{File, ImportError};
 pub use node::Node;
 pub use renderer::{Gradient, GradientType, PaintColor, RenderPaint, Renderer, StrokeStyle, Style};
 pub use status_code::StatusCode;

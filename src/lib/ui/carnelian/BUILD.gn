@@ -304,6 +304,7 @@ rustc_binary("rive") {
   source_root = "examples/rive.rs"
   sources = [ "examples/rive.rs" ]
   deps = [
+    "//src/graphics/lib/compute/rive-rs",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/trace/rust:trace-provider",

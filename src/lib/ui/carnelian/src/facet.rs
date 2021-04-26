@@ -27,7 +27,6 @@ use rive_rs::{
 use std::{
     any::Any,
     collections::{BTreeMap, HashMap},
-    fs,
     path::PathBuf,
     sync::atomic::{AtomicUsize, Ordering},
 };
@@ -387,7 +386,7 @@ pub struct ToggleAnimationMessage {
 pub struct RiveFacet {
     location: Point,
     size: Size,
-    file: rive::File,
+    artboard: rive::Object<rive::Artboard>,
     animations: Vec<(LinearAnimationInstance, bool)>,
     last_presentation_time: Option<Time>,
     render_cache: RiveRenderCache,
@@ -395,17 +394,14 @@ pub struct RiveFacet {
 
 impl RiveFacet {
     pub fn new(
-        path: PathBuf,
         location: Point,
         size: Size,
+        artboard: rive::Object<rive::Artboard>,
         initial_animations: impl IntoIterator<Item = usize>,
     ) -> Self {
-        let buffer = fs::read(path).expect("failed to open .riv file");
-        let mut reader = rive::BinaryReader::new(&buffer);
-        let file = rive::File::import(&mut reader).expect("failed to import .riv file");
-        let artboard = file.artboard().unwrap();
         let artboard_ref = artboard.as_ref();
         artboard_ref.advance(0.0);
+
         let mut animations: Vec<(LinearAnimationInstance, bool)> = artboard_ref
             .animations::<LinearAnimation>()
             .map(|animation| (LinearAnimationInstance::new(animation), false))
@@ -419,7 +415,7 @@ impl RiveFacet {
         Self {
             location,
             size,
-            file,
+            artboard,
             animations,
             last_presentation_time: None,
             render_cache: RiveRenderCache::new(),
@@ -443,13 +439,12 @@ impl Facet for RiveFacet {
         };
         self.last_presentation_time = Some(presentation_time);
 
-        let artboard = self.file.artboard().unwrap();
-        let artboard_ref = artboard.as_ref();
+        let artboard_ref = self.artboard.as_ref();
 
         for (animation_instance, is_animating) in self.animations.iter_mut() {
             if *is_animating {
                 animation_instance.advance(elapsed);
-                animation_instance.apply(artboard.clone(), 1.0);
+                animation_instance.apply(self.artboard.clone(), 1.0);
             }
             if animation_instance.is_done() {
                 animation_instance.reset();
@@ -467,7 +462,7 @@ impl Facet for RiveFacet {
                     Fit::Contain,
                     Alignment::center(),
                     Aabb::new(0.0, 0.0, width, height),
-                    artboard.as_ref().bounds(),
+                    artboard_ref.bounds(),
                 ),
             );
         });

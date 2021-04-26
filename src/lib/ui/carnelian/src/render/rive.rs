@@ -6,20 +6,36 @@ use {
     crate::{
         color::Color,
         render::{
-            BlendMode, Context, Fill, FillRule, Gradient, GradientType, Path, PathBuilder, Raster,
-            Style,
+            BlendMode, Context as RenderContext, Fill, FillRule, Gradient, GradientType, Path,
+            PathBuilder, Raster, Style,
         },
         Point,
     },
+    anyhow::{Context, Error},
     euclid::{vec2, Transform2D},
     rive_rs::{
         self as rive,
         math::{self, Mat},
         shapes::{Command, CommandPath},
-        PaintColor, RenderPaint,
+        ImportError, PaintColor, RenderPaint,
     },
-    std::{collections::HashMap, num::NonZeroU64},
+    std::{collections::HashMap, fs, num::NonZeroU64, path::PathBuf},
 };
+
+pub fn load_rive(path: PathBuf) -> Result<rive::File, Error> {
+    let buffer = fs::read(path.clone())
+        .with_context(|| format!("Failed to read rive from {}", path.display()))?;
+    let mut reader = rive::BinaryReader::new(&buffer);
+    let file = rive::File::import(&mut reader).map_err(|error| {
+        let context = match error {
+            ImportError::UnsupportedVersion => format!("Unsupported version: {}", path.display()),
+            ImportError::Malformed => format!("Malformed: {}", path.display()),
+        };
+        anyhow::anyhow!(context)
+    })?;
+
+    Ok(file)
+}
 
 #[derive(Clone, Debug)]
 struct CachedRaster {
@@ -59,7 +75,7 @@ impl RenderCache {
         self.rasters.clear();
     }
 
-    pub fn with_renderer(&mut self, context: &Context, f: impl FnOnce(&mut Renderer<'_>)) {
+    pub fn with_renderer(&mut self, context: &RenderContext, f: impl FnOnce(&mut Renderer<'_>)) {
         self.reset();
         f(&mut Renderer { context, cache: self });
     }
@@ -67,7 +83,7 @@ impl RenderCache {
 
 #[derive(Debug)]
 pub struct Renderer<'c> {
-    context: &'c Context,
+    context: &'c RenderContext,
     cache: &'c mut RenderCache,
 }
 

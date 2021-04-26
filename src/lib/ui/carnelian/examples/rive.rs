@@ -10,13 +10,15 @@ use {
         facet::{FacetId, RiveFacet, Scene, SceneBuilder, SetSizeMessage, ToggleAnimationMessage},
         input::{self},
         make_app_assistant,
-        render::Context as RenderContext,
-        App, AppAssistant, Point, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
+        render::{rive::load_rive, Context as RenderContext},
+        App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
+    euclid::point2,
     fuchsia_trace_provider,
     fuchsia_zircon::Event,
-    std::path::PathBuf,
+    rive_rs::{self as rive},
+    std::path::Path,
 };
 
 /// Rive.
@@ -58,7 +60,7 @@ impl AppAssistant for RiveAppAssistant {
 
     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(RiveViewAssistant::new(
-            self.filename.clone(),
+            load_rive(Path::new("/pkg/data/static").join(self.filename.clone()))?,
             self.background.take().unwrap_or(Color::white()),
         )))
     }
@@ -74,16 +76,16 @@ struct SceneDetails {
 }
 
 struct RiveViewAssistant {
-    filename: String,
+    file: rive::File,
     background: Color,
     scene_details: Option<SceneDetails>,
 }
 
 impl RiveViewAssistant {
-    fn new(filename: String, background: Color) -> RiveViewAssistant {
+    fn new(file: rive::File, background: Color) -> RiveViewAssistant {
         let background = Color { r: background.r, g: background.g, b: background.b, a: 255 };
 
-        RiveViewAssistant { filename, background, scene_details: None }
+        RiveViewAssistant { file, background, scene_details: None }
     }
 
     fn set_size(&mut self, size: &Size) {
@@ -115,15 +117,13 @@ impl ViewAssistant for RiveViewAssistant {
         ready_event: Event,
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
-        let filename = &self.filename;
+        let file = &self.file;
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
             let mut builder = SceneBuilder::new(self.background);
-            let rive_facet = RiveFacet::new(
-                PathBuf::from(format!("/pkg/data/static/{}", filename)),
-                Point::new(0.0, 0.0),
-                context.size,
-                vec![0],
-            );
+            let artboard = file.artboard().unwrap();
+            let initial_animations = vec![0];
+            let rive_facet =
+                RiveFacet::new(point2(0.0, 0.0), context.size, artboard, initial_animations);
             let rive = builder.facet(Box::new(rive_facet));
             let scene = builder.build();
             SceneDetails { scene, rive }
