@@ -32,6 +32,8 @@ rustc_library("async-helpers") {
     "src/lib.rs",
     "src/responding_channel.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("async-helpers-tests") {

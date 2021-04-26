@@ -77,13 +77,13 @@ impl<V: Debug + PartialEq> Drop for TestObserver<V> {
 
 #[test]
 fn test_observer_take_value() {
-    TestObserver::observe(&1, TestObserver::expect_value(1));
+    assert_eq!(true, TestObserver::observe(&1, TestObserver::expect_value(1)));
 }
 
 #[test]
 #[should_panic]
 fn test_observer_take_cannot_double_observe() {
     let observer: TestObserver<i32> = TestObserver::new();
-    TestObserver::observe(&1, observer.clone());
-    TestObserver::observe(&2, observer.clone());
+    let _ = TestObserver::observe(&1, observer.clone());
+    let _ = TestObserver::observe(&2, observer.clone());
 }

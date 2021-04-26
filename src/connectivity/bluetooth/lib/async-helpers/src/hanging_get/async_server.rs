@@ -255,6 +255,7 @@ where
     }
 
     /// Pass a function to the hanging get that can update the hanging get state in place.
+    /// `update` should return false if the state was not updated.
     pub async fn update<F>(&mut self, update: F) -> Result<(), HangingGetServerError>
     where
         F: FnOnce(&mut S) -> bool + Send + 'static,
@@ -333,7 +334,7 @@ where
     /// Deregister all observers that subscribed with `key`. If an observer is subsequently
     /// subscribed with the same `key` value, it will be treated as a previously unseen `key`.
     pub fn unsubscribe(&mut self, key: K) {
-        self.observers.remove(&key);
+        drop(self.observers.remove(&key));
     }
 }
 
@@ -543,7 +544,7 @@ mod tests {
         assert!(!o2.has_value());
 
         // A third subscription will queue up along the other waiting observer
-        hanging.subscribe(0, TestObserver::expect_no_value()).unwrap_err();
+        let _ = hanging.subscribe(0, TestObserver::expect_no_value()).unwrap_err();
 
         // Set should notify all observers to the change
         hanging.set(1);
@@ -590,7 +591,7 @@ mod tests {
         let mut value = 1i32;
         p.set(2i32).await.unwrap();
         let f = receiver.next().await.unwrap();
-        f(&mut value);
+        assert_eq!(true, f(&mut value));
         assert_eq!(value, 2);
     }
 
@@ -606,7 +607,7 @@ mod tests {
         .await
         .unwrap();
         let f = receiver.next().await.unwrap();
-        f(&mut value);
+        assert_eq!(true, f(&mut value));
         assert_eq!(value, 2);
     }
 
