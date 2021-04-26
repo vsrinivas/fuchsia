@@ -85,7 +85,13 @@ group("network-drivers") {
 
 isolated_devmgr_v2_component("netemul-devmgr") {
   package_name = "netemul-v2-tests"
-  deps = [ ":network-drivers" ]
+  deps = [
+    ":network-drivers",
+
+    # TODO(https://fxbug.dev/75132): remove once this can be included in the isolated_devmgr
+    # template without causing flakes.
+    "//src/devices/bus/drivers/platform",
+  ]
 }
 
 fuchsia_test_package("netemul-v2-tests") {
