@@ -19,12 +19,12 @@ enum MailboxType : uint8 {
 
 struct MailboxDataBuf {
     uint32 cmd;
-    [Buffer] vector<uint8> tx;
+    [Buffer] vector<uint8>:MAX tx;
 };
 
 struct MailboxChannel {
     MailboxType mailbox;
-    [Buffer] vector<uint8> rx;
+    [Buffer] vector<uint8>:MAX rx;
 };
 
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
