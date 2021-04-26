@@ -3,36 +3,61 @@
 # found in the LICENSE file.
 
 import("//build/zircon/migrated_targets.gni")
+import("../libc.gni")
 
-source_set("sanitizers") {
-  deps = [
-    "//zircon/system/fidl:fuchsia-debugdata.c_header",
-    "//zircon/system/ulib/zx",
-    "//zircon/third_party/ulib/musl:musl_internal",
-  ]
-  sources = [
-    "__asan_early_init.c",
-    "asan-stubs.c",
-    "debugdata.cc",
-    "hooks.c",
-    "log.c",
-    "memory-snapshot.cc",
-    "ubsan-stubs.cc",
-  ]
+if (zircon_toolchain != false) {
+  source_set("sanitizers") {
+    deps = [
+      ":backtrace",
+      "//zircon/system/fidl:fuchsia-debugdata.c_header",
+      "//zircon/system/ulib/zx",
+      "//zircon/third_party/ulib/musl:musl_internal",
+    ]
+    sources = [
+      "__asan_early_init.c",
+      "__sanitizer_fast_backtrace.cc",
+      "asan-stubs.c",
+      "debugdata.cc",
+      "hooks.c",
+      "log.c",
+      "memory-snapshot.cc",
+      "ubsan-stubs.cc",
+    ]
 
-  # There is no '#if __has_feature(coverage)', so this has to be excluded
-  # from the build entirely when not in use.  Each variant that includes
-  # some -fsanitize-coverage=... switches in its configs must use the
-  # "sancov" tag so this code can detect it.
-  if (toolchain.tags + [ "sancov" ] - [ "sancov" ] != toolchain.tags) {
-    deps += [ ":sancov-stubs" ]
+    # There is no '#if __has_feature(coverage)', so this has to be excluded
+    # from the build entirely when not in use.  Each variant that includes
+    # some -fsanitize-coverage=... switches in its configs must use the
+    # "sancov" tag so this code can detect it.
+    if (toolchain.tags + [ "sancov" ] - [ "sancov" ] != toolchain.tags) {
+      deps += [ ":sancov-stubs" ]
+    }
+  }
+
+  # This code is only needed when compiling for sancov, but the file itself
+  # must be compiled without instrumentation of any kind.
+  source_set("sancov-stubs") {
+    visibility = [ ":*" ]
+    sources = [ "sancov-stubs.cc" ]
+    configs += [ "//build/config/zircon:no_sanitizers" ]
   }
 }
 
-# This code is only needed when compiling for sancov, but the file itself
-# must be compiled without instrumentation of any kind.
-source_set("sancov-stubs") {
-  visibility = [ ":*" ]
-  sources = [ "sancov-stubs.cc" ]
-  configs += [ "//build/config/zircon:no_sanitizers" ]
+libc_source_set("backtrace") {
+  sources = [ "backtrace.cc" ]
+  public = [ "backtrace.h" ]
+  public_deps = [ "//sdk/lib/stdcompat" ]
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
+
+  # Always compile with frame pointers so that BacktraceByFramePointer reliably
+  # has one for its own caller's frame to show up in the backtrace.
+  configs = [ "//build/config:frame_pointers" ]
+}
+
+libc_test("unittests") {
+  sources = [ "backtrace-tests.cc" ]
+  configs = [ "//build/config:frame_pointers" ]
+  deps = [
+    ":backtrace.testonly",
+    "//zircon/system/ulib/zxtest",
+  ]
 }

@@ -114,6 +114,16 @@ void __sanitizer_memory_snapshot(sanitizer_memory_snapshot_callback_t* globals,
                                  sanitizer_memory_snapshot_callback_t* tls,
                                  void (*done)(zx_status_t, void*), void* arg);
 
+// This does a fast, best-effort attempt to collect a backtrace.  It writes PC
+// values (return addresses) for up to max_frames call frames into the
+// pc_buffer, and returns the number of frames collected.  The first frame
+// (pc_buffer[0]) will be the caller of __sanitizer_fast_backtrace (and that's
+// the only frame guaranteed to be collected), the second will be that frame's
+// caller, and so on.  This is safe even if register and memory state is bogus.
+// It's best-effort and results will be imprecise in the face of code that
+// doesn't use either shadow-call-stack or frame pointers.
+size_t __sanitizer_fast_backtrace(uintptr_t* pc_buffer, size_t max_frames);
+
 // The "hook" interfaces are functions that the sanitizer runtime library
 // can define and libc will call.  There are default definitions in libc
 // which do nothing, but any other definitions will override those.  These
