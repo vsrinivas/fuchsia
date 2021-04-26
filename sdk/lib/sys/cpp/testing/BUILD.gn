@@ -47,6 +47,7 @@ source_set("integration") {
 
   public_deps = [
     ":enclosing_environment",
+    ":realm_builder",
     "//garnet/public/lib/gtest",
   ]
 
@@ -80,5 +81,22 @@ source_set("enclosing_environment") {
     "//sdk/lib/vfs/cpp",
     "//sdk/lib/vfs/cpp",
     "//zircon/system/ulib/async-default",
+  ]
+}
+
+# Temporarily house RealmBuiler in its own source_set until it's ready to
+# be published in SDK. When the library is ready for public consumption, it'll
+# be moved to the "unit" package above.
+source_set("realm_builder") {
+  testonly = true
+
+  sources = [
+    "realm_builder.cc",
+    "realm_builder.h",
+  ]
+
+  public_deps = [
+    # This is needed to ensure that realm_builder.h header is found by .cc ???
+    "//sdk/lib/sys/cpp",
   ]
 }

@@ -59,6 +59,7 @@ test("component_cpp_testing_tests_bin") {
   sources = [
     "component_interceptor_unittest.cc",
     "enclosing_environment_test.cc",
+    "realm_builder_unittest.cc",
   ]
 
   deps = [
