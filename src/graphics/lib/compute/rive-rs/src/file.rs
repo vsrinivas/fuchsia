@@ -34,7 +34,6 @@ fn read_runtime_object(
 ) -> Option<Object> {
     let id = core::get_type_id(reader.read_var_u64()?)?;
     let (core, object) = <dyn Core>::from_type_id(id)?;
-    dbg!(&core);
     objects.push(Rc::clone(&core));
 
     loop {
