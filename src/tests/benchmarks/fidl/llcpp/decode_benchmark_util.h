@@ -6,6 +6,8 @@
 #define SRC_TESTS_BENCHMARKS_FIDL_LLCPP_DECODE_BENCHMARK_UTIL_H_
 
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/message.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -42,7 +44,8 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
     {
       auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
-      auto decoded = fidl::DecodedMessage<FidlType>(converted.incoming_message());
+      ZX_ASSERT(converted.ok());
+      auto decoded = fidl::DecodedMessage<FidlType>(std::move(converted.incoming_message()));
       ZX_ASSERT(decoded.ok());
     }
 

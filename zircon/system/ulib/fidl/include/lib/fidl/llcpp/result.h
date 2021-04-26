@@ -21,7 +21,8 @@ class Result {
  public:
   Result() = default;
   Result(zx_status_t status, const char* error) : status_(status), error_(error) {}
-  explicit Result(const Result& result) {
+
+  Result(const Result& result) {
     status_ = result.status_;
     error_ = result.error_;
   }

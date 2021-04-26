@@ -73,11 +73,11 @@ struct ::fidl::internal::WireDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireInterface<
           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireInterface<
           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 
 template <>
@@ -88,11 +88,11 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<
           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireServer<
           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 #endif  // __Fuchsia__
 
@@ -208,18 +208,22 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+                GetFoo>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -361,18 +365,20 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+                GetFoo>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>();
     }
@@ -757,7 +763,7 @@ class ::fidl::WireServer<
                       GetFooCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -787,7 +793,7 @@ class ::fidl::WireInterface<
   virtual void GetFoo(GetFooCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -843,7 +849,7 @@ class ::fidl::WireResponseContext<
           message) = 0;
 
  private:
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
+  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -906,7 +912,7 @@ class ::fidl::internal::WireClientImpl<
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl_incoming_msg_t* msg) override;
+      fidl::IncomingMessage& msg) override;
 
   std::shared_ptr<::fidl::WireAsyncEventHandler<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>>

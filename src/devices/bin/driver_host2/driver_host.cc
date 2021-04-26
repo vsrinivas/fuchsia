@@ -79,10 +79,10 @@ zx::status<> Driver::Start(fidl::OutgoingMessage& start_args, async_dispatcher_t
   if (converted.status() != ZX_OK) {
     return zx::error(converted.status());
   }
-  zx_status_t status = record_->start(converted.incoming_message(), dispatcher, &opaque_);
   // After calling |record_->start|, we assume it has taken ownership of
   // the handles from |start_args|, and can therefore relinquish ownership.
-  converted.ReleaseHandles();
+  fidl_incoming_msg_t c_msg = std::move(converted.incoming_message()).ReleaseToEncodedCMessage();
+  zx_status_t status = record_->start(&c_msg, dispatcher, &opaque_);
   return zx::make_status(status);
 }
 

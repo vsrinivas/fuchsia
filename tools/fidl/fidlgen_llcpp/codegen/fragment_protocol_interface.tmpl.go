@@ -53,7 +53,7 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
 
   private:
   {{- /* Note that this implementation is snake_case to avoid name conflicts. */}}
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -92,7 +92,7 @@ class {{ .WireInterface }} : public ::fidl::internal::IncomingMessageDispatcher 
 
   private:
   {{- /* Note that this implementation is snake_case to avoid name conflicts. */}}
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 

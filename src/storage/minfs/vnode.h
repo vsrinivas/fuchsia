@@ -102,7 +102,7 @@ class VnodeMinfs : public fs::Vnode,
 
   // fs::Vnode interface (invoked publicly).
 #ifdef __Fuchsia__
-  void HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) final;
+  void HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) final;
 #endif
 
   // fbl::Recyclable interface.

@@ -109,7 +109,7 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
     template <typename Protocol>
     static FidlProtocol Create(typename fidl::WireServer<Protocol>* protocol_impl) {
       return FidlProtocol(static_cast<void*>(protocol_impl),
-                          [](void* impl, fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
+                          [](void* impl, fidl::IncomingMessage& msg, fidl::Transaction* txn) {
                             return fidl::WireTryDispatch<Protocol>(
                                 static_cast<typename fidl::WireServer<Protocol>*>(impl), msg, txn);
                           });
@@ -118,7 +118,7 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
     // Dispatches |message| on |Protocol|. The function consumes the message and returns true if the
     // method was recognized by the protocol. Otherwise, it leaves the message intact and returns
     // false.
-    ::fidl::DispatchResult TryDispatch(fidl_incoming_msg_t* message,
+    ::fidl::DispatchResult TryDispatch(fidl::IncomingMessage& message,
                                        fidl::Transaction* transaction) {
       return dispatch_fn_(protocol_impl_, message, transaction);
     }
@@ -130,7 +130,7 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
     ~FidlProtocol() = default;
 
    private:
-    using TypeErasedDispatchFn = ::fidl::DispatchResult (*)(void* impl, fidl_incoming_msg_t*,
+    using TypeErasedDispatchFn = ::fidl::DispatchResult (*)(void* impl, fidl::IncomingMessage&,
                                                             fidl::Transaction*);
 
     FidlProtocol() = delete;

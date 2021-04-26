@@ -163,16 +163,20 @@ public:
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
-                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      Decode<{{ .Name }}>();
+                   uint32_t handle_actual = 0)
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual,
+                                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
+      Decode<class {{ .Name }}>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg) : ::fidl::internal::IncomingMessage(msg) {
-      Decode<{{ .Name }}>();
+    DecodedMessage(::fidl::IncomingMessage&& msg) : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<class {{ .Name }}>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;

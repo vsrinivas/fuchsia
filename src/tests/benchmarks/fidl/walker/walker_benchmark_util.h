@@ -30,7 +30,8 @@ bool WalkerBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
     ZX_ASSERT(encoded.ok() && encoded.error() == nullptr);
     auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
-    auto decoded = fidl::DecodedMessage<FidlType>(converted.incoming_message());
+    ZX_ASSERT(converted.ok() && converted.error() == nullptr);
+    auto decoded = fidl::DecodedMessage<FidlType>(std::move(converted.incoming_message()));
     ZX_ASSERT(decoded.ok() && decoded.error() == nullptr);
 
     while (state->KeepRunning()) {

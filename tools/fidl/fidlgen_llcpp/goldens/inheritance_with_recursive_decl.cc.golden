@@ -94,8 +94,7 @@ namespace fidl_test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Parent>::
-    DispatchEvent(fidl_incoming_msg_t* msg) {
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    DispatchEvent(fidl::IncomingMessage& msg) {
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
@@ -107,15 +106,15 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Parent>::
     TryDispatch(::fidl::WireServer<
                     ::fidl_test_inheritancewithrecursivedecl::Parent>* impl,
-                fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+                ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_inheritancewithrecursivedecl::kParent_First_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_inheritancewithrecursivedecl::Parent::First>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -138,10 +137,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Parent>::
     Dispatch(::fidl::WireServer<
                  ::fidl_test_inheritancewithrecursivedecl::Parent>* impl,
-             fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+             ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -149,9 +148,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 ::fidl::DispatchResult
 fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Parent>::
-    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireServerDispatcher<
-      ::fidl_test_inheritancewithrecursivedecl::Parent>::Dispatch(this, msg,
+      ::fidl_test_inheritancewithrecursivedecl::Parent>::Dispatch(this,
+                                                                  std::move(
+                                                                      msg),
                                                                   txn);
 }
 
@@ -159,15 +160,15 @@ fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Parent>::
     ::fidl_test_inheritancewithrecursivedecl::Parent>::
     TryDispatch(::fidl::WireInterface<
                     ::fidl_test_inheritancewithrecursivedecl::Parent>* impl,
-                fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+                ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_inheritancewithrecursivedecl::kParent_First_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_inheritancewithrecursivedecl::Parent::First>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -190,10 +191,10 @@ fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Parent>::
     WireDispatcher<::fidl_test_inheritancewithrecursivedecl::Parent>::Dispatch(
         ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>*
             impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -201,9 +202,11 @@ fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Parent>::
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>::
-    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireDispatcher<
-      ::fidl_test_inheritancewithrecursivedecl::Parent>::Dispatch(this, msg,
+      ::fidl_test_inheritancewithrecursivedecl::Parent>::Dispatch(this,
+                                                                  std::move(
+                                                                      msg),
                                                                   txn);
 }
 #endif  // __Fuchsia__
@@ -403,8 +406,7 @@ namespace fidl_test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Child>::
-    DispatchEvent(fidl_incoming_msg_t* msg) {
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    DispatchEvent(fidl::IncomingMessage& msg) {
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
@@ -416,15 +418,15 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Child>::
     TryDispatch(::fidl::WireServer<
                     ::fidl_test_inheritancewithrecursivedecl::Child>* impl,
-                fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+                ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_inheritancewithrecursivedecl::kChild_First_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_inheritancewithrecursivedecl::Child::First>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -439,11 +441,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
       },
       {
           ::fidl_test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_inheritancewithrecursivedecl::Child::Second>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -466,10 +468,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Child>::
     Dispatch(::fidl::WireServer<
                  ::fidl_test_inheritancewithrecursivedecl::Child>* impl,
-             fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+             ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -477,9 +479,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 ::fidl::DispatchResult
 fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
-    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireServerDispatcher<
-      ::fidl_test_inheritancewithrecursivedecl::Child>::Dispatch(this, msg,
+      ::fidl_test_inheritancewithrecursivedecl::Child>::Dispatch(this,
+                                                                 std::move(msg),
                                                                  txn);
 }
 
@@ -487,15 +490,15 @@ fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
     ::fidl_test_inheritancewithrecursivedecl::Child>::
     TryDispatch(::fidl::WireInterface<
                     ::fidl_test_inheritancewithrecursivedecl::Child>* impl,
-                fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+                ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_inheritancewithrecursivedecl::kChild_First_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_inheritancewithrecursivedecl::Child::First>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -510,11 +513,11 @@ fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
       },
       {
           ::fidl_test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_inheritancewithrecursivedecl::Child::Second>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -537,10 +540,10 @@ fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
     WireDispatcher<::fidl_test_inheritancewithrecursivedecl::Child>::Dispatch(
         ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>*
             impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -548,9 +551,10 @@ fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>::
-    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireDispatcher<
-      ::fidl_test_inheritancewithrecursivedecl::Child>::Dispatch(this, msg,
+      ::fidl_test_inheritancewithrecursivedecl::Child>::Dispatch(this,
+                                                                 std::move(msg),
                                                                  txn);
 }
 #endif  // __Fuchsia__

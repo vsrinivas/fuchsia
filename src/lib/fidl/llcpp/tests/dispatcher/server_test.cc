@@ -60,7 +60,7 @@ class ::fidl::WireServer<fidl_test::TestProtocol>
   using _EnclosingProtocol = fidl_test::TestProtocol;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final {
     return ::fidl::DispatchResult::kNotFound;
   }

@@ -145,17 +145,17 @@ class Server {
   }
 
   template <typename FidlType>
-  static fidl::DecodedMessage<FidlType> DecodeAs(fidl_incoming_msg_t* msg) {
-    return fidl::DecodedMessage<FidlType>(msg);
+  static fidl::DecodedMessage<FidlType> DecodeAs(fidl::IncomingMessage& msg) {
+    return fidl::DecodedMessage<FidlType>(std::move(msg));
   }
 
-  static zx_status_t FidlDispatch(void* ctx, fidl_txn_t* txn, fidl_incoming_msg_t* msg,
+  static zx_status_t FidlDispatch(void* ctx, fidl_txn_t* txn, fidl_incoming_msg_t* c_msg,
                                   const void* ops) {
-    if (msg->num_bytes < sizeof(fidl_message_header_t)) {
-      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
-      return ZX_ERR_INVALID_ARGS;
+    auto msg = fidl::IncomingMessage::FromEncodedCMessage(c_msg);
+    if (!msg.ok()) {
+      return msg.status();
     }
-    fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+    fidl_message_header_t* hdr = msg.header();
     Server* server = reinterpret_cast<Server*>(ctx);
     switch (hdr->ordinal) {
       case fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesOrdinal: {

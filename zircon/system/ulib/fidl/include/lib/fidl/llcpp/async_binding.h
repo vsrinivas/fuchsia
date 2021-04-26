@@ -10,6 +10,7 @@
 #include <lib/async/wait.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/extract_resource_on_destruction.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/types.h>
@@ -136,11 +137,35 @@ class AsyncBinding : private async_wait_t {
 
   AsyncBinding(async_dispatcher_t* dispatcher, const zx::unowned_channel& borrowed_channel);
 
+  // Common message handling entrypoint shared by both client and server bindings.
   void MessageHandler(zx_status_t status, const zx_packet_signal_t* signal) __TA_EXCLUDES(lock_);
 
-  // Implemented separately for client and server. If `*binding_released` is set, the calling code
-  // no longer has ownership of `this` and so must not access state.
-  virtual std::optional<UnbindInfo> Dispatch(fidl_incoming_msg_t* msg, bool* binding_released) = 0;
+  // Dispatches a generic incoming message.
+  //
+  // ## Message ownership
+  //
+  // The client async binding should invoke the matching response handler or
+  // event handler, if one is found. |msg| is then consumed, regardless of
+  // decoding error.
+  //
+  // The server async binding should invoke the matching request handler if
+  // one is found. |msg| is then consumed, regardless of decoding error.
+  //
+  // In other cases (e.g. unknown message, epitaph), |msg| is not consumed.
+  //
+  // The caller should simply ignore the |fidl::IncomingMessage| object once
+  // it is passed to this function, letting RAII clean up handles as needed.
+  //
+  // ## Return value
+  //
+  // If errors occur during dispatching, the function will return an
+  // |UnbindInfo| describing the error. Otherwise, it will return
+  // |std::nullopt|.
+  //
+  // If `*binding_released` is set, the calling code no longer has ownership of
+  // this |AsyncBinding| object and so must not access its state.
+  virtual std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg,
+                                             bool* binding_released) = 0;
 
   // Used by both Close() and Unbind().
   UnboundNotificationPostingResult UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
@@ -179,7 +204,7 @@ class AnyAsyncServerBinding : public AsyncBinding {
                         IncomingMessageDispatcher* interface)
       : AsyncBinding(dispatcher, borrowed_channel), interface_(interface) {}
 
-  std::optional<UnbindInfo> Dispatch(fidl_incoming_msg_t* msg, bool* binding_released) override;
+  std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg, bool* binding_released) override;
 
   void Close(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t epitaph)
       __TA_EXCLUDES(lock_) {
@@ -289,7 +314,7 @@ class AsyncClientBinding final : public AsyncBinding {
   AsyncClientBinding(async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
                      std::shared_ptr<ClientBase> client, OnClientUnboundFn&& on_unbound_fn);
 
-  std::optional<UnbindInfo> Dispatch(fidl_incoming_msg_t* msg, bool* binding_released) override;
+  std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg, bool* binding_released) override;
 
   void FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override;
 

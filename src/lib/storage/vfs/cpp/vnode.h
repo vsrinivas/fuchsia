@@ -169,11 +169,10 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
   // Dispatches incoming FIDL messages which aren't recognized by |Connection::HandleMessage|.
   //
-  // Takes ownership of the FIDL message's handles. The default implementation just closes these
-  // handles.
+  // The default implementation just closes the connection through |txn|.
   //
   // This implementation may be overridden to support additional non-fuchsia.io FIDL protocols.
-  virtual void HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn);
+  virtual void HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn);
 
   // Extract handle, type, and extra info from a vnode.
   //

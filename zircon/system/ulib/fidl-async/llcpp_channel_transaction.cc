@@ -12,8 +12,8 @@ namespace fidl {
 
 namespace internal {
 
-void ChannelTransaction::Dispatch(fidl_incoming_msg_t msg) {
-  binding_->interface_->dispatch_message(&msg, this);
+void ChannelTransaction::Dispatch(fidl::IncomingMessage& msg) {
+  binding_->interface_->dispatch_message(std::move(msg), this);
 }
 
 zx_status_t ChannelTransaction::Reply(fidl::OutgoingMessage* message) {

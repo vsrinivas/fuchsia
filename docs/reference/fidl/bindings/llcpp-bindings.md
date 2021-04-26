@@ -720,16 +720,18 @@ The LLCPP bindings also provide functions for manually dispatching a message
 given an implementation, `fidl::WireTryDispatch<TicTacToe>` and
 `fidl::WireDispatch<TicTacToe>`:
 
-* `bool fidl::WireTryDispatch<TicTacToe>(fidl::WireServer<TicTacToe>* impl,
-  fidl_incoming_msg_t* msg, ::fidl::Transaction* txn)`: Attempts to dispatch the
-  incoming message. If there is no matching handler, it returns false, leaving
-  the message and transaction intact. In all other cases, it consumes the
-  message and returns true.
-* `bool fidl::WireDispatch<TicTacToe>(fidl::WireServer<TicTacToe>* impl,
-  fidl_incoming_msg_t* msg, ::fidl::Transaction* txn)`: Dispatches the incoming
-  message. If there is no matching handler, it closes all handles in the message
-  and closes the channel with a `ZX_ERR_NOT_SUPPORTED` epitaph, and returns
-  false.
+* `fidl::DispatchResult fidl::WireTryDispatch<TicTacToe>(
+  fidl::WireServer<TicTacToe>* impl, fidl::IncomingMessage& msg,
+  ::fidl::Transaction* txn)`: Attempts to dispatch the incoming message. If
+  there is no matching handler, it returns `fidl::DispatchResult::kNotFound`,
+  leaving the message and transaction intact. In all other cases, it consumes
+  the message and returns `fidl::DispatchResult::kFound`.
+* `fidl::DispatchResult fidl::WireDispatch<TicTacToe>(
+  fidl::WireServer<TicTacToe>* impl, fidl::IncomingMessage&& msg,
+  ::fidl::Transaction* txn)`: Dispatches the incoming message. If there is no
+  matching handler, it closes all handles in the message and closes the channel
+  with a `ZX_ERR_NOT_SUPPORTED` epitaph, and returns
+  `fidl::DispatchResult::kNotFound`.
 
 #### Requests {#server-requests}
 

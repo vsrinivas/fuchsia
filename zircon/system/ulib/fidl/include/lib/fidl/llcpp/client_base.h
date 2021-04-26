@@ -8,6 +8,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/extract_resource_on_destruction.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 #include <zircon/listnode.h>
@@ -82,7 +83,7 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
   // If |OnRawReply| returns an error, that indicates decoding failure, and
   // the caller should invoke |OnError| to propagate the error and give up
   // ownership.
-  virtual zx_status_t OnRawReply(fidl_incoming_msg_t* msg) = 0;
+  virtual zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) = 0;
 
   // Invoked if an error occurs handling the response message prior to invoking
   // the user-specified callback or if the ClientBase is destroyed with the
@@ -209,12 +210,35 @@ class ClientBase {
     return contexts_.size();
   }
 
-  // Dispatch function invoked by AsyncClientBinding on incoming message. Invokes the virtual
-  // DispatchEvent().
-  std::optional<UnbindInfo> Dispatch(fidl_incoming_msg_t* msg);
+  // Dispatches a generic incoming message.
+  //
+  // ## Message ownership
+  //
+  // If a matching response handler or event handler is found, |msg| is then
+  // consumed, regardless of decoding error. Otherwise, |msg| is not consumed.
+  //
+  // ## Return value
+  //
+  // If errors occur during dispatching, the function will return an
+  // |UnbindInfo| describing the error. Otherwise, it will return
+  // |std::nullopt|.
+  std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg);
 
-  // Generated client event dispatcher function.
-  virtual std::optional<UnbindInfo> DispatchEvent(fidl_incoming_msg_t* msg) = 0;
+  // Dispatches an incoming event.
+  //
+  // This should be implemented by the generated messaging layer.
+  //
+  // ## Message ownership
+  //
+  // If a matching event handler is found, |msg| is then consumed, regardless of
+  // decoding error. Otherwise, |msg| is not consumed.
+  //
+  // ## Return value
+  //
+  // If errors occur during dispatching, the function will return an
+  // |UnbindInfo| describing the error. Otherwise, it will return
+  // |std::nullopt|.
+  virtual std::optional<UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg) = 0;
 
  private:
   ChannelRefTracker channel_tracker_;

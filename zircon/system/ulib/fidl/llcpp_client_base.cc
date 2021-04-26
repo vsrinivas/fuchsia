@@ -74,41 +74,35 @@ void ClientBase::ReleaseResponseContextsWithError() {
   }
 }
 
-std::optional<UnbindInfo> ClientBase::Dispatch(fidl_incoming_msg_t* msg) {
-  auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg) {
+  if (fit::nullable epitaph = msg.maybe_epitaph(); unlikely(epitaph)) {
+    return UnbindInfo{UnbindInfo::kPeerClosed, (*epitaph)->error};
+  }
 
-  if (unlikely(hdr->ordinal == kFidlOrdinalEpitaph)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
-    if (hdr->txid != 0) {
-      return UnbindInfo{UnbindInfo::kUnexpectedMessage, ZX_ERR_INVALID_ARGS};
-    }
-    return UnbindInfo{UnbindInfo::kPeerClosed, reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
+  auto* hdr = msg.header();
+  if (hdr->txid == 0) {
+    // Dispatch events (received messages with no txid).
+    return DispatchEvent(msg);
   }
 
   // If this is a response, look up the corresponding ResponseContext based on the txid.
-  if (hdr->txid) {
-    ResponseContext* context = nullptr;
-    {
-      std::scoped_lock lock(lock_);
-      context = contexts_.erase(hdr->txid);
-      if (likely(context != nullptr)) {
-        list_delete(static_cast<list_node_t*>(context));
-      } else {
-        // Received unknown txid.
-        return UnbindInfo{UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_FOUND};
-      }
+  ResponseContext* context = nullptr;
+  {
+    std::scoped_lock lock(lock_);
+    context = contexts_.erase(hdr->txid);
+    if (likely(context != nullptr)) {
+      list_delete(static_cast<list_node_t*>(context));
+    } else {
+      // Received unknown txid.
+      return UnbindInfo{UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_FOUND};
     }
-    zx_status_t status = context->OnRawReply(msg);
-    if (unlikely(status != ZX_OK)) {
-      context->OnError();
-      return UnbindInfo{UnbindInfo::kDecodeError, status};
-    }
-
-    return std::nullopt;
   }
-
-  // Dispatch events (received messages with no txid).
-  return DispatchEvent(msg);
+  zx_status_t status = context->OnRawReply(std::move(msg));
+  if (unlikely(status != ZX_OK)) {
+    context->OnError();
+    return UnbindInfo{UnbindInfo::kDecodeError, msg.status()};
+  }
+  return std::nullopt;
 }
 
 void ChannelRefTracker::Init(zx::channel channel) {

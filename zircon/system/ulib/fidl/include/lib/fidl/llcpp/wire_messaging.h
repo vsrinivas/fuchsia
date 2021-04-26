@@ -7,6 +7,7 @@
 
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client_end.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <zircon/fidl.h>
 #endif  // __Fuchsia__
@@ -113,40 +114,112 @@ fidl::internal::WireCaller<FidlProtocol> WireCall(
 enum class DispatchResult;
 
 // Dispatches the incoming message to one of the handlers functions in the protocol.
+//
+// This function should only be used in very low-level code, such as when manually
+// dispatching a message to a server implementation.
+//
 // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-// a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+// a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning |fidl::DispatchResult::kNotFound|.
+//
+// Ownership of handles in |msg| are always transferred to the callee.
+//
+// The caller does not have to ensure |msg| has a |ZX_OK| status. It is idiomatic to pass a |msg|
+// with potential errors; any error would be funneled through |InternalError| on the |txn|.
 template <typename FidlProtocol>
-fidl::DispatchResult WireDispatch(fidl::WireInterface<FidlProtocol>* impl, fidl_incoming_msg_t* msg,
-                                  fidl::Transaction* txn) {
-  return fidl::internal::WireDispatcher<FidlProtocol>::Dispatch(impl, msg, txn);
+fidl::DispatchResult WireDispatch(fidl::WireInterface<FidlProtocol>* impl,
+                                  fidl::IncomingMessage&& msg, fidl::Transaction* txn) {
+  return fidl::internal::WireDispatcher<FidlProtocol>::Dispatch(impl, std::move(msg), txn);
+}
+
+// Dispatches the incoming message to one of the handlers functions in the protocol.
+//
+// This function should only be used in very low-level code, such as when manually
+// dispatching a message to a server implementation.
+//
+// If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+// a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning |fidl::DispatchResult::kNotFound|.
+//
+// This function takes a |const fidl_incoming_msg_t*| to aid interop with driver C APIs.
+// Prefer using the overload with |fidl::IncomingMessage&&| if possible.
+//
+// Ownership of handles in |msg| are always transferred to the callee.
+template <typename FidlProtocol>
+fidl::DispatchResult WireDispatch(fidl::WireInterface<FidlProtocol>* impl,
+                                  const fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
+  return fidl::internal::WireDispatcher<FidlProtocol>::Dispatch(
+      impl, fidl::IncomingMessage::FromEncodedCMessage(msg), txn);
 }
 
 // Attempts to dispatch the incoming message to a handler function in the server implementation.
-// If there is no matching handler, it returns false, leaving the message and transaction intact.
-// In all other cases, it consumes the message and returns true.
-// It is possible to chain multiple TryDispatch functions in this manner.
+//
+// This function should only be used in very low-level code, such as when manually
+// dispatching a message to a server implementation.
+//
+// If there is no matching handler, it returns |fidl::DispatchResult::kNotFound|, leaving the
+// message and transaction intact. In all other cases, it consumes the message and returns
+// |fidl::DispatchResult::kFound|. It is possible to chain multiple TryDispatch functions in this
+// manner.
+//
+// The caller does not have to ensure |msg| has a |ZX_OK| status. It is idiomatic to pass a |msg|
+// with potential errors; any error would be funneled through |InternalError| on the |txn|.
 template <typename FidlProtocol>
 fidl::DispatchResult WireTryDispatch(fidl::WireInterface<FidlProtocol>* impl,
-                                     fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
+                                     fidl::IncomingMessage& msg, fidl::Transaction* txn) {
   return fidl::internal::WireDispatcher<FidlProtocol>::TryDispatch(impl, msg, txn);
 }
 
 // Dispatches the incoming message to one of the handlers functions in the protocol.
+//
+// This function should only be used in very low-level code, such as when manually
+// dispatching a message to a server implementation.
+//
 // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-// a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+// a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning |fidl::DispatchResult::kNotFound|.
+//
+// Ownership of handles in |msg| are always transferred to the callee.
+//
+// The caller does not have to ensure |msg| has a |ZX_OK| status. It is idiomatic to pass a |msg|
+// with potential errors; any error would be funneled through |InternalError| on the |txn|.
 template <typename FidlProtocol>
-fidl::DispatchResult WireDispatch(fidl::WireServer<FidlProtocol>* impl, fidl_incoming_msg_t* msg,
+fidl::DispatchResult WireDispatch(fidl::WireServer<FidlProtocol>* impl, fidl::IncomingMessage&& msg,
                                   fidl::Transaction* txn) {
-  return fidl::internal::WireServerDispatcher<FidlProtocol>::Dispatch(impl, msg, txn);
+  return fidl::internal::WireServerDispatcher<FidlProtocol>::Dispatch(impl, std::move(msg), txn);
+}
+
+// Dispatches the incoming message to one of the handlers functions in the protocol.
+//
+// This function should only be used in very low-level code, such as when manually
+// dispatching a message to a server implementation.
+//
+// If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+// a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning |fidl::DispatchResult::kNotFound|.
+//
+// This function takes a |const fidl_incoming_msg_t*| to aid interop with driver C APIs.
+// Prefer using the overload with |fidl::IncomingMessage&&| if possible.
+//
+// Ownership of handles in |msg| are always transferred to the callee.
+template <typename FidlProtocol>
+fidl::DispatchResult WireDispatch(fidl::WireServer<FidlProtocol>* impl,
+                                  const fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
+  return fidl::internal::WireServerDispatcher<FidlProtocol>::Dispatch(
+      impl, fidl::IncomingMessage::FromEncodedCMessage(msg), txn);
 }
 
 // Attempts to dispatch the incoming message to a handler function in the server implementation.
-// If there is no matching handler, it returns false, leaving the message and transaction intact.
-// In all other cases, it consumes the message and returns true.
-// It is possible to chain multiple TryDispatch functions in this manner.
+//
+// This function should only be used in very low-level code, such as when manually
+// dispatching a message to a server implementation.
+//
+// If there is no matching handler, it returns |fidl::DispatchResult::kNotFound|, leaving the
+// message and transaction intact. In all other cases, it consumes the message and returns
+// |fidl::DispatchResult::kFound|. It is possible to chain multiple TryDispatch functions in this
+// manner.
+//
+// The caller does not have to ensure |msg| has a |ZX_OK| status. It is idiomatic to pass a |msg|
+// with potential errors; any error would be funneled through |InternalError| on the |txn|.
 template <typename FidlProtocol>
-fidl::DispatchResult WireTryDispatch(fidl::WireServer<FidlProtocol>* impl, fidl_incoming_msg_t* msg,
-                                     fidl::Transaction* txn) {
+fidl::DispatchResult WireTryDispatch(fidl::WireServer<FidlProtocol>* impl,
+                                     fidl::IncomingMessage& msg, fidl::Transaction* txn) {
   return fidl::internal::WireServerDispatcher<FidlProtocol>::TryDispatch(impl, msg, txn);
 }
 #endif  // __Fuchsia__

@@ -144,19 +144,23 @@ struct Padding7ByteMiddle {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding7ByteMiddle>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding7ByteMiddle>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -249,19 +253,23 @@ struct Padding7ByteEnd {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding7ByteEnd>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding7ByteEnd>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -354,19 +362,23 @@ struct Padding6ByteMiddle {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding6ByteMiddle>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding6ByteMiddle>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -459,19 +471,23 @@ struct Padding6ByteEnd {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding6ByteEnd>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding6ByteEnd>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -566,19 +582,23 @@ struct Padding5ByteMiddle {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding5ByteMiddle>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding5ByteMiddle>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -673,19 +693,23 @@ struct Padding5ByteEnd {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding5ByteEnd>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding5ByteEnd>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -778,19 +802,23 @@ struct Padding4ByteMiddle {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding4ByteMiddle>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding4ByteMiddle>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -883,19 +911,23 @@ struct Padding4ByteEnd {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding4ByteEnd>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding4ByteEnd>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -993,19 +1025,23 @@ struct Padding4ByteAlignmentLength12 {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding4ByteAlignmentLength12>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding4ByteAlignmentLength12>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -1098,19 +1134,23 @@ struct Padding3ByteMiddle {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding3ByteMiddle>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding3ByteMiddle>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -1203,19 +1243,23 @@ struct Padding3ByteEnd {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding3ByteEnd>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding3ByteEnd>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -1308,19 +1352,23 @@ struct Padding2ByteMiddle {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding2ByteMiddle>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding2ByteMiddle>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -1413,19 +1461,23 @@ struct Padding2ByteEnd {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding2ByteEnd>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding2ByteEnd>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -1521,19 +1573,23 @@ struct Padding2ByteAlignmentLength6 {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding2ByteAlignmentLength6>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding2ByteAlignmentLength6>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -1626,19 +1682,23 @@ struct Padding1ByteMiddle {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding1ByteMiddle>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding1ByteMiddle>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -1731,19 +1791,23 @@ struct Padding1ByteEnd {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct Padding1ByteEnd>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct Padding1ByteEnd>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;

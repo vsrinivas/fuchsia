@@ -97,7 +97,7 @@ class ::fidl::internal::WireClientImpl<fidl::TestProtocol> : private fidl::inter
       : event_handler_(std::move(event_handler)) {}
 
   // For each event, increment the event count.
-  std::optional<UnbindInfo> DispatchEvent(fidl_incoming_msg_t* msg) override {
+  std::optional<UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg) override {
     event_count_++;
     return {};
   }
@@ -115,7 +115,7 @@ class TestResponseContext : public internal::ResponseContext {
  public:
   explicit TestResponseContext(fidl::internal::WireClientImpl<TestProtocol>* client)
       : internal::ResponseContext(0), client_(client) {}
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override {
+  zx_status_t OnRawReply(fidl::IncomingMessage&& msg) override {
     client_->EraseTxid(this);
     return ZX_OK;
   }
@@ -658,7 +658,7 @@ class ReleaseTestResponseContext : public internal::ResponseContext {
  public:
   explicit ReleaseTestResponseContext(sync_completion_t* done)
       : internal::ResponseContext(0), done_(done) {}
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override {
+  zx_status_t OnRawReply(fidl::IncomingMessage&& msg) override {
     delete this;
     return ZX_OK;
   }

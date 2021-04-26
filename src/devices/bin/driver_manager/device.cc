@@ -639,7 +639,7 @@ zx_status_t Device::HandleRead() {
     zx::unowned_channel conn = channel();
     DevmgrFidlTxn txn(std::move(conn), hdr->txid);
     ::fidl::DispatchResult dispatch_result =
-        fidl::WireTryDispatch<fuchsia_device_manager::Coordinator>(this, &fidl_msg, &txn);
+        fidl::WireDispatch<fuchsia_device_manager::Coordinator>(this, &fidl_msg, &txn);
     auto status = txn.Status();
     if (dispatch_result == ::fidl::DispatchResult::kFound) {
       if (status == ZX_OK && state_ == Device::State::kDead) {
@@ -652,7 +652,8 @@ zx_status_t Device::HandleRead() {
 
   LOGF(ERROR, "Unsupported FIDL protocol (ordinal %#16lx) for device %p '%s'", hdr->ordinal, this,
        name_.data());
-  FidlHandleInfoCloseMany(fidl_msg.handles, fidl_msg.num_handles);
+  // After calling |WireDispatch|, handle ownership was already transferred over,
+  // so there is no need to close handles here.
   return ZX_ERR_IO;
 }
 

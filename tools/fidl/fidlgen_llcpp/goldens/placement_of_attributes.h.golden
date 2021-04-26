@@ -471,19 +471,23 @@ class ExampleTable final {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<ExampleTable>();
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
+      Decode<class ExampleTable>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<ExampleTable>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<class ExampleTable>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -600,19 +604,23 @@ struct ExampleStruct {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct ExampleStruct>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct ExampleStruct>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -665,11 +673,11 @@ struct ::fidl::internal::WireDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireInterface<::fidl_test_placementofattributes::ExampleProtocol>*
           impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireInterface<::fidl_test_placementofattributes::ExampleProtocol>*
           impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 
 template <>
@@ -680,11 +688,11 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_placementofattributes::ExampleProtocol>*
           impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireServer<::fidl_test_placementofattributes::ExampleProtocol>*
           impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 #endif  // __Fuchsia__
 
@@ -807,18 +815,21 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_placementofattributes::ExampleProtocol::Method>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_placementofattributes::ExampleProtocol::Method>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -1070,7 +1081,7 @@ class ::fidl::WireServer<::fidl_test_placementofattributes::ExampleProtocol>
                       MethodCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -1094,7 +1105,7 @@ class ::fidl::WireInterface<::fidl_test_placementofattributes::ExampleProtocol>
                       MethodCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -1207,7 +1218,7 @@ class ::fidl::internal::WireClientImpl<
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl_incoming_msg_t* msg) override;
+      fidl::IncomingMessage& msg) override;
 
   std::shared_ptr<::fidl::WireAsyncEventHandler<
       ::fidl_test_placementofattributes::ExampleProtocol>>

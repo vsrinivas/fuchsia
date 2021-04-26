@@ -19,17 +19,22 @@ test("fidl_llcpp_message_container_tests_bin") {
   output_name = "fidl_llcpp_message_container_tests"
   sources = [
     "encoded_test.cc",
+    "incoming_message_test.cc",
     "outgoing_message_test.cc",
     "outgoing_to_incoming_message_test.cc",
   ]
   deps = [
     ":fidl.llcpp.linearized.test_llcpp",
     "//sdk/lib/fidl/cpp/test:fidl_test_llcpp",
+    "//src/lib/fidl/llcpp/tests:types_test_utils",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
 }
 
 fuchsia_unittest_package("fidl_llcpp_message_container_tests") {
+  # TODO(fxbug.dev/74490): Required for death-tests. We could remove the
+  # manifests by switching to zxtest.
+  manifest = "meta/fidl_llcpp_message_container_tests.cmx"
   deps = [ ":fidl_llcpp_message_container_tests_bin" ]
 }

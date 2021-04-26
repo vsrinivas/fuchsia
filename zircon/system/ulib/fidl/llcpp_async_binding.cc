@@ -59,43 +59,32 @@ void AsyncBinding::OnUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindI
   FinishUnbind(std::move(binding), info);
 }
 
-void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* signal) {
+void AsyncBinding::MessageHandler(zx_status_t dispatcher_status, const zx_packet_signal_t* signal) {
   ZX_ASSERT(keep_alive_);
 
-  if (status != ZX_OK)
-    return OnUnbind(std::move(keep_alive_), {UnbindInfo::kDispatcherError, status});
+  if (dispatcher_status != ZX_OK)
+    return OnUnbind(std::move(keep_alive_), {UnbindInfo::kDispatcherError, dispatcher_status});
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
-    char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+    uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     for (uint64_t i = 0; i < signal->count; i++) {
-      fidl_incoming_msg_t msg = {
-          .bytes = bytes,
-          .handles = handles,
-          .num_bytes = 0u,
-          .num_handles = 0u,
-      };
       fidl_trace(WillLLCPPAsyncChannelRead);
-      status = zx_channel_read_etc(handle(), 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
-                                   ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
-      if (status != ZX_OK)
-        return OnUnbind(std::move(keep_alive_), {UnbindInfo::kChannelError, status});
-
-      // Do basic validation on the message.
-      status = msg.num_bytes < sizeof(fidl_message_header_t)
-                   ? ZX_ERR_INVALID_ARGS
-                   : fidl_validate_txn_header(reinterpret_cast<fidl_message_header_t*>(msg.bytes));
-      if (status != ZX_OK) {
-        FidlHandleInfoCloseMany(msg.handles, msg.num_handles);
-        return OnUnbind(std::move(keep_alive_), {UnbindInfo::kUnexpectedMessage, status});
+      IncomingMessage msg = fidl::ChannelReadEtc(
+          handle(), 0, fidl::BufferSpan(bytes, std::size(bytes)), cpp20::span(handles));
+      if (!msg.ok()) {
+        // NOTE: Slight imprecision here; the error should be |kChannelError|
+        // if failed to read from channel, and |kUnexpectedMessage| if failed
+        // validation.
+        return OnUnbind(std::move(keep_alive_), {UnbindInfo::kChannelError, msg.status()});
       }
-      fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes, msg.num_bytes,
-                 msg.num_handles);
+      fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes, msg.byte_actual(),
+                 msg.handle_actual());
 
       // Flag indicating whether this thread still has access to the binding.
       bool binding_released = false;
       // Dispatch the message.
-      auto maybe_unbind = Dispatch(&msg, &binding_released);
+      auto maybe_unbind = Dispatch(msg, &binding_released);
 
       // If binding_released is not set, keep_alive_ is still valid and this thread will continue to
       // read messages on this binding.
@@ -213,11 +202,11 @@ auto AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref, U
   return UnboundNotificationPostingResult::kOk;
 }
 
-std::optional<UnbindInfo> AnyAsyncServerBinding::Dispatch(fidl_incoming_msg_t* msg,
+std::optional<UnbindInfo> AnyAsyncServerBinding::Dispatch(fidl::IncomingMessage& msg,
                                                           bool* binding_released) {
-  auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  auto* hdr = msg.header();
   AsyncTransaction txn(hdr->txid, binding_released);
-  return txn.Dispatch(std::move(keep_alive_), msg);
+  return txn.Dispatch(std::move(keep_alive_), std::move(msg));
 }
 
 std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(async_dispatcher_t* dispatcher,
@@ -239,7 +228,7 @@ AsyncClientBinding::AsyncClientBinding(async_dispatcher_t* dispatcher,
       client_(std::move(client)),
       on_unbound_fn_(std::move(on_unbound_fn)) {}
 
-std::optional<UnbindInfo> AsyncClientBinding::Dispatch(fidl_incoming_msg_t* msg, bool*) {
+std::optional<UnbindInfo> AsyncClientBinding::Dispatch(fidl::IncomingMessage& msg, bool*) {
   return client_->Dispatch(msg);
 }
 

@@ -6,6 +6,8 @@
 #define LIB_FIDL_LLCPP_INTERNAL_SERVER_DETAILS_H_
 
 #include <lib/fidl/llcpp/async_binding.h>
+#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/types.h>
 
@@ -30,13 +32,13 @@ class IncomingMessageDispatcher {
   // Dispatches an incoming message to one of the handlers functions in the
   // protocol. If there is no matching handler, closes all the handles in
   // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
-  // returning false. The message should then be discarded.
+  // returning |fidl::DispatchResult::kNotFound|.
   //
   // Note that the |dispatch_message| name avoids conflicts with FIDL method
   // names which would appear on the subclasses.
   //
   // Always consumes the handles in |msg|.
-  virtual ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  virtual ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                                   ::fidl::Transaction* txn) = 0;
 };
 
@@ -49,14 +51,15 @@ struct MethodEntry {
   //
   // The function must consume the handles in |msg|.
   // The function should perform decoding, and return the decoding status.
-  zx_status_t (*dispatch)(void* interface, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  zx_status_t (*dispatch)(void* interface, ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 
 // The compiler generates an array of MethodEntry for each protocol.
 // The TryDispatch method for each protocol calls this function using the generated entries, which
 // searches through the array using the method ordinal to find the corresponding dispatch function.
-::fidl::DispatchResult TryDispatch(void* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn,
-                                   const MethodEntry* begin, const MethodEntry* end);
+::fidl::DispatchResult TryDispatch(void* impl, ::fidl::IncomingMessage& msg,
+                                   ::fidl::Transaction* txn, const MethodEntry* begin,
+                                   const MethodEntry* end);
 
 //
 // Definitions related to binding a connection to a dispatcher

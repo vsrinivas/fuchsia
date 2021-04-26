@@ -62,6 +62,8 @@ struct WlantapCtl : fidl::WireServer<wlantap::WlantapCtl> {
     // Convert to HLCPP by transiting through fidl bytes.
     auto phy_config = ::fuchsia::wlan::tap::WlantapPhyConfig::New();
     {
+      // TODO(fxbug.dev/74878): The conversion code here is fragile. We should
+      // replace it with the officially supported API once that is implemented.
       fidl::OwnedEncodedMessage<wlantap::wire::WlantapPhyConfig> encoded(&request->config);
       if (!encoded.ok()) {
         completer.Reply(encoded.status());
@@ -69,13 +71,16 @@ struct WlantapCtl : fidl::WireServer<wlantap::WlantapCtl> {
       }
       auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
       ZX_ASSERT(converted.ok());
-      fidl::DecodedMessage<wlantap::wire::WlantapPhyConfig> decoded(converted.incoming_message());
+      auto& incoming = converted.incoming_message();
+      uint32_t byte_actual = incoming.byte_actual();
+      fidl::DecodedMessage<wlantap::wire::WlantapPhyConfig> decoded{std::move(incoming)};
       if (!decoded.ok()) {
         completer.Reply(status);
         return;
       }
       fidl::Decoder dec(fidl::HLCPPIncomingMessage(
-          ::fidl::BytePart(decoded.bytes(), decoded.byte_actual(), decoded.byte_actual()),
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(decoded.PrimaryObject()), byte_actual,
+                           byte_actual),
           fidl::HandleInfoPart()));
       ::fuchsia::wlan::tap::WlantapPhyConfig::Decode(&dec, phy_config.get(), /* offset = */ 0);
     }

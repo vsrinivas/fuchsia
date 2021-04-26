@@ -149,14 +149,16 @@ struct {{ .WireResponse }} final {
   };
 
 public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
           uint32_t handle_actual = 0)
-    : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-    Decode<{{ .WireResponse }}>();
+      : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+    if (ok()) {
+      Decode<{{ .WireResponse }}>();
+    }
   }
-  DecodedMessage(fidl_incoming_msg_t* msg) : ::fidl::internal::IncomingMessage(msg) {
+  DecodedMessage(::fidl::IncomingMessage&& msg) : ::fidl::IncomingMessage(std::move(msg)) {
     Decode<{{ .WireResponse }}>();
   }
   DecodedMessage(const DecodedMessage&) = delete;

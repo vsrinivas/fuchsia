@@ -106,11 +106,12 @@ zx_status_t FakeCpuDevice::MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_t
 
 zx_status_t FakeCpuDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  if (fidl::WireTryDispatch<cpuctrl::Device>(this, msg, &transaction) ==
+  auto incoming_msg = fidl::IncomingMessage::FromEncodedCMessage(msg);
+  if (fidl::WireTryDispatch<cpuctrl::Device>(this, incoming_msg, &transaction) ==
       ::fidl::DispatchResult::kFound) {
     return transaction.Status();
   }
-  fidl::WireDispatch<fuchsia_device::Controller>(this, msg, &transaction);
+  fidl::WireDispatch<fuchsia_device::Controller>(this, std::move(incoming_msg), &transaction);
   return transaction.Status();
 }
 

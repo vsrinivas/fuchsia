@@ -44,9 +44,8 @@ void ::fidl_test_handles::wire::Handles::_CloseHandles() {
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
-    ::fidl_test_handles::SomeProtocol>::DispatchEvent(fidl_incoming_msg_t*
+    ::fidl_test_handles::SomeProtocol>::DispatchEvent(fidl::IncomingMessage&
                                                           msg) {
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
@@ -57,47 +56,47 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::fidl_test_handles::SomeProtocol>::TryDispatch(
         ::fidl::WireServer<::fidl_test_handles::SomeProtocol>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   return ::fidl::DispatchResult::kNotFound;
 }
 
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::fidl_test_handles::SomeProtocol>::Dispatch(
         ::fidl::WireServer<::fidl_test_handles::SomeProtocol>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  std::move(msg).CloseHandles();
   txn->InternalError(
       {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   return ::fidl::DispatchResult::kNotFound;
 }
 ::fidl::DispatchResult
 fidl::WireServer<::fidl_test_handles::SomeProtocol>::dispatch_message(
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireServerDispatcher<
-      ::fidl_test_handles::SomeProtocol>::Dispatch(this, msg, txn);
+      ::fidl_test_handles::SomeProtocol>::Dispatch(this, std::move(msg), txn);
 }
 
 ::fidl::DispatchResult
 fidl::internal::WireDispatcher<::fidl_test_handles::SomeProtocol>::TryDispatch(
     ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>* impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   return ::fidl::DispatchResult::kNotFound;
 }
 
 ::fidl::DispatchResult
 fidl::internal::WireDispatcher<::fidl_test_handles::SomeProtocol>::Dispatch(
     ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>* impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  std::move(msg).CloseHandles();
   txn->InternalError(
       {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   return ::fidl::DispatchResult::kNotFound;
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_handles::SomeProtocol>::dispatch_message(
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireDispatcher<
-      ::fidl_test_handles::SomeProtocol>::Dispatch(this, msg, txn);
+      ::fidl_test_handles::SomeProtocol>::Dispatch(this, std::move(msg), txn);
 }
 #endif  // __Fuchsia__
 

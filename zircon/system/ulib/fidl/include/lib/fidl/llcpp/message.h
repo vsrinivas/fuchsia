@@ -5,10 +5,14 @@
 #ifndef LIB_FIDL_LLCPP_MESSAGE_H_
 #define LIB_FIDL_LLCPP_MESSAGE_H_
 
+#include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/txn_header.h>
+#include <lib/fit/nullable.h>
+#include <lib/stdcompat/span.h>
 #include <lib/stdcompat/variant.h>
 #include <zircon/assert.h>
+#include <zircon/fidl.h>
 
 #include <memory>
 #include <vector>
@@ -17,8 +21,7 @@
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/zx/channel.h>
-#include <zircon/fidl.h>
-#endif
+#endif  // __Fuchsia__
 
 namespace fidl {
 
@@ -218,60 +221,188 @@ class OutgoingMessageResultSetter {
   }
 };
 
-// Class representing a FIDL message on the read path.
+}  // namespace internal
+
+// |IncomingMessage| represents a FIDL message on the read path.
 // Each instantiation of the class should only be used for one message.
+//
+// |IncomingMessage|s are created with the results from reading from a channel.
+// By default, it assumes it is a transactional message, and automatically
+// performs necessary validation on the message header - users may opt out
+// via the |kSkipMessageHeaderValidation| constructor overload in the case of
+// regular FIDL type encoding/decoding.
+//
+// |IncomingMessage| relinquishes the ownership of the handles after decoding.
+// Instead, callers must adopt the decoded content into another RAII class, such
+// as |fidl::DecodedMessage<FidlType>|.
+//
+// Functions that take |IncomingMessage&| conditionally take ownership of the
+// message. For functions in the public API, they must then indicate through
+// their return value if they took ownership. For functions in the binding
+// internals, it is sufficient to only document the conditions where minimum
+// overhead is desired.
+//
+// Functions that take |IncomingMessage&&| always take ownership of the message.
+// In practice, this means that they must either decode the message, or close
+// the handles, or move the message into a deeper function that takes
+// |IncomingMessage&&|.
+//
+// For efficiency, errors are stored inside this object. Callers must check for
+// errors after construction, and after performing each operation on the object.
+//
+// An |IncomingMessage| may be created from |fidl::ChannelReadEtc|:
+//
+//     fidl::IncomingMessage msg = fidl::ChannelReadEtc(handle, 0, byte_span, handle_span);
+//     if (!msg.ok()) { /* ... error handling ... */ }
+//
 class IncomingMessage : public ::fidl::Result {
  public:
   // Creates an object which can manage a FIDL message. Allocated memory is not owned by
   // the |IncomingMessage|, but handles are owned by it and cleaned up when the
   // |IncomingMessage| is destructed.
-  // If Decode has been called, the handles have been transferred to the allocated memory.
-  IncomingMessage();
+  //
+  // The bytes must represent a transactional message. See
+  // https://fuchsia.dev/fuchsia-src/reference/fidl/language/wire-format?hl=en#transactional-messages
   IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles,
                   uint32_t handle_actual);
-  explicit IncomingMessage(const fidl_incoming_msg_t* msg)
-      : ::fidl::Result(ZX_OK, nullptr), message_(*msg) {}
-  // Copy and move is disabled for the sake of avoiding double handle close.
-  // It is possible to implement the move operations with correct semantics if they are
-  // ever needed.
+
+  // Creates an |IncomingMessage| from a C |fidl_incoming_msg_t| already in
+  // encoded form. This should only be used when interfacing with C APIs.
+  // The handles in |c_msg| are owned by the returned |IncomingMessage| object.
+  //
+  // The bytes must represent a transactional message.
+  static IncomingMessage FromEncodedCMessage(const fidl_incoming_msg_t* c_msg);
+
+  struct SkipMessageHeaderValidationTag {};
+
+  // A marker that instructs the constructor of |IncomingMessage| to skip
+  // validating the message header. This is useful when the message is not a
+  // transactional message.
+  constexpr inline static auto kSkipMessageHeaderValidation = SkipMessageHeaderValidationTag{};
+
+  // An overload for when the bytes do not represent a transactional message.
+  //
+  // This constructor should be rarely used in practice. When decoding
+  // FIDL types that are not transactional messages (e.g. tables), consider
+  // using the constructor in |FidlType::DecodedMessage|, which delegates
+  // here appropriately.
+  IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles,
+                  uint32_t handle_actual, SkipMessageHeaderValidationTag);
+
+  // Creates an empty incoming message representing an error (e.g. failed to read from
+  // a channel).
+  //
+  // |status| must not be |ZX_OK|, and it is recommended to provide a non-null
+  // |error| reason string.
+  IncomingMessage(zx_status_t status, const char* error);
+
   IncomingMessage(const IncomingMessage&) = delete;
-  IncomingMessage(IncomingMessage&&) = delete;
   IncomingMessage& operator=(const IncomingMessage&) = delete;
-  IncomingMessage& operator=(IncomingMessage&&) = delete;
+
+  IncomingMessage(IncomingMessage&& other) noexcept : ::fidl::Result(other) {
+    MoveImpl(std::move(other));
+  }
+  IncomingMessage& operator=(IncomingMessage&& other) noexcept {
+    ::fidl::Result::operator=(other);
+    if (this != &other) {
+      MoveImpl(std::move(other));
+    }
+    return *this;
+  }
+
   ~IncomingMessage();
 
+  fidl_message_header_t* header() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<fidl_message_header_t*>(bytes());
+  }
+
+  // If the message is an epitaph, returns a pointer to the epitaph structure.
+  // Otherwise, returns null.
+  fit::nullable<fidl_epitaph_t*> maybe_epitaph() const {
+    ZX_DEBUG_ASSERT(ok());
+    if (unlikely(header()->ordinal == kFidlOrdinalEpitaph)) {
+      return fit::nullable(reinterpret_cast<fidl_epitaph_t*>(bytes()));
+    }
+    return fit::nullable<fidl_epitaph_t*>{};
+  }
+
   uint8_t* bytes() const { return reinterpret_cast<uint8_t*>(message_.bytes); }
-  zx_handle_info_t* handles() const { return message_.handles; }
   uint32_t byte_actual() const { return message_.num_bytes; }
+
+  zx_handle_info_t* handles() const { return message_.handles; }
   uint32_t handle_actual() const { return message_.num_handles; }
-  fidl_incoming_msg_t* message() { return &message_; }
+
+  // Convert the incoming message to its C API counterpart, releasing the
+  // ownership of handles to the caller in the process. This consumes the
+  // |IncomingMessage|.
+  //
+  // This should only be called while the message is in its encoded form.
+  fidl_incoming_msg_t ReleaseToEncodedCMessage() &&;
+
+  // Closes the handles managed by this message. This may be used when the
+  // code would like to consume a |IncomingMessage&&| and close its handles,
+  // but does not want to incur the overhead of moving it into a regular
+  // |IncomingMessage| object, and running the destructor.
+  //
+  // This consumes the |IncomingMessage|.
+  void CloseHandles() &&;
 
  protected:
-  // Reset the byte pointer. Used to relase the control onwership of the bytes.
+  // Reset the byte pointer. Used by subclasses to release their ownership over
+  // handles in the message while the message is in decoded form.
   void ResetBytes() { message_.bytes = nullptr; }
 
   // Decodes the message using |FidlType|. If this operation succeed, |status()| is ok and
   // |bytes()| contains the decoded object.
+  //
+  // On success, the handles owned by |IncomingMessage| are transferred to the decoded bytes.
+  //
   // This method should be used after a read.
   template <typename FidlType>
   void Decode() {
     Decode(FidlType::Type);
   }
 
+  // Release the handle ownership after the message has been converted to its
+  // decoded form. When used standalone and not as part of a |Decode|, this
+  // method is only useful when interfacing with C APIs.
+  void ReleaseHandles() { message_.num_handles = 0; }
+
  private:
+  void MoveImpl(IncomingMessage&& other) noexcept {
+    message_ = other.message_;
+    other.ReleaseHandles();
+  }
+
   // Decodes the message using |message_type|. If this operation succeed, |status()| is ok and
   // |bytes()| contains the decoded object.
+  //
+  // On success, the handles owned by |IncomingMessage| are transferred to the decoded bytes.
+  //
   // This method should be used after a read.
   void Decode(const fidl_type_t* message_type);
 
-  // Release the handles to prevent them to be closed by CloseHandles. This method is only useful
-  // when interfacing with low-level channel operations which consume the handles.
-  void ReleaseHandles() { message_.num_handles = 0; }
+  // Performs basic transactional message header validation and sets the |fidl::Result| fields
+  // accordingly.
+  void Validate();
 
   fidl_incoming_msg_t message_;
 };
 
-}  // namespace internal
+#ifdef __Fuchsia__
+
+// Wrapper around |zx_channel_read_etc| that instantiates an |IncomingMessage|
+// with the contents read from the |channel|, referencing the |bytes_storage|
+// and |handles_storage| buffers. The channel should contain transactional FIDL
+// messages, which the instantiated |IncomingMessage| will automatically validate.
+//
+// Error information is embedded in the returned |IncomingMessage| when applicable.
+IncomingMessage ChannelReadEtc(zx_handle_t channel, uint32_t options,
+                               ::fidl::BufferSpan bytes_storage,
+                               cpp20::span<zx_handle_info_t> handles_storage);
+
+#endif  // __Fuchsia__
 
 // This class owns a message of |FidlType| and encodes the message automatically upon construction
 // into a byte buffer.
@@ -291,46 +422,42 @@ using UnownedEncodedMessage = typename FidlType::UnownedEncodedMessage;
 template <typename FidlType>
 using DecodedMessage = typename FidlType::DecodedMessage;
 
-// Holds the result of a call to |OutgoingToIncomingMessage|.
+// Holds the result of converting an outgoing message to an incoming message.
 //
-// |OutgoingToIncomingMessageResult| objects own the bytes and handles resulting from
+// |OutgoingToIncomingMessage| objects own the bytes and handles resulting from
 // conversion.
-class OutgoingToIncomingMessageResult {
+class OutgoingToIncomingMessage {
  public:
-  OutgoingToIncomingMessageResult(OutgoingToIncomingMessageResult&& to_move) noexcept;
-  explicit OutgoingToIncomingMessageResult(fidl_incoming_msg_t incoming_message, zx_status_t status,
-                                           OutgoingMessage::CopiedBytes buf_bytes,
-                                           std::unique_ptr<zx_handle_info_t[]> buf_handles)
-      : incoming_message_(incoming_message),
-        status_(status),
-        buf_bytes_(std::move(buf_bytes)),
-        buf_handles_(std::move(buf_handles)) {}
-  ~OutgoingToIncomingMessageResult();
-  fidl_incoming_msg_t* incoming_message() {
+  // Converts an outgoing message to an incoming message.
+  //
+  // In doing so, it will make syscalls to fetch rights and type information
+  // of any provided handles. The caller is responsible for ensuring that
+  // returned handle rights and object types are checked appropriately.
+  //
+  // The constructed |OutgoingToIncomingMessage| will take ownership over
+  // handles from the input |OutgoingMessage|.
+  explicit OutgoingToIncomingMessage(OutgoingMessage& input);
+
+  ~OutgoingToIncomingMessage() = default;
+
+  fidl::IncomingMessage& incoming_message() & {
     ZX_DEBUG_ASSERT(ok());
-    return &incoming_message_;
+    return incoming_message_;
   }
-  void ReleaseHandles() { incoming_message_.num_handles = 0; }
-  zx_status_t status() const { return status_; }
-  bool ok() const { return status_ == ZX_OK; }
+
+  [[nodiscard]] zx_status_t status() const { return incoming_message_.status(); }
+  [[nodiscard]] bool ok() const { return incoming_message_.ok(); }
+  [[nodiscard]] const char* error() const { return incoming_message_.error(); }
 
  private:
-  fidl_incoming_msg_t incoming_message_ = {};
-  zx_status_t status_ = ZX_ERR_BAD_STATE;
+  static fidl::IncomingMessage ConversionImpl(OutgoingMessage& input,
+                                              OutgoingMessage::CopiedBytes& buf_bytes,
+                                              std::unique_ptr<zx_handle_info_t[]>& buf_handles);
 
   OutgoingMessage::CopiedBytes buf_bytes_;
-  std::unique_ptr<zx_handle_info_t[]> buf_handles_;
+  std::unique_ptr<zx_handle_info_t[]> buf_handles_ = {};
+  fidl::IncomingMessage incoming_message_;
 };
-
-// Converts an outgoing message to an incoming message.
-//
-// In doing so, it will make syscalls to fetch rights and type information
-// of any provided handles. The caller is responsible for ensuring that
-// returned handle rights and object types are checked appropriately.
-//
-// The returned |OutgoingToIncomingMessageResult| will take ownership over
-// handles from the input |OutgoingMessage|.
-OutgoingToIncomingMessageResult OutgoingToIncomingMessage(OutgoingMessage& input);
 
 }  // namespace fidl
 

@@ -59,7 +59,7 @@ class AsyncTransaction final : public Transaction {
   friend fidl::internal::AnyAsyncServerBinding;
 
   std::optional<UnbindInfo> Dispatch(std::shared_ptr<AsyncBinding>&& binding,
-                                     fidl_incoming_msg_t* msg);
+                                     fidl::IncomingMessage&& msg);
 
   void MoveImpl(AsyncTransaction&& other) noexcept {
     txid_ = other.txid_;

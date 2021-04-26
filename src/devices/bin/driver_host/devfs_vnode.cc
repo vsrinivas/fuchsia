@@ -82,7 +82,7 @@ zx_status_t DevfsVnode::GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::R
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void DevfsVnode::HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
+void DevfsVnode::HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) {
   if (dev_->Unbound()) {
     txn->Close(ZX_ERR_IO_NOT_PRESENT);
     return;
@@ -93,8 +93,9 @@ void DevfsVnode::HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transac
     return;
   }
 
+  fidl_incoming_msg_t c_msg = std::move(msg).ReleaseToEncodedCMessage();
   auto ddk_txn = MakeDdkInternalTransaction(txn);
-  zx_status_t status = dev_->MessageOp(msg, ddk_txn.Txn());
+  zx_status_t status = dev_->MessageOp(&c_msg, ddk_txn.Txn());
   if (status != ZX_OK && status != ZX_ERR_ASYNC) {
     // Close the connection on any error
     txn->Close(status);

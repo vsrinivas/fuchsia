@@ -210,10 +210,10 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
 
 zx_status_t fidl::WireResponseContext<
     ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>::
-    OnRawReply(fidl_incoming_msg_t* msg) {
+    OnRawReply(::fidl::IncomingMessage&& msg) {
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
-      decoded{msg};
+      decoded{std::move(msg)};
   if (unlikely(!decoded.ok())) {
     return decoded.status();
   }
@@ -285,15 +285,14 @@ zx_status_t fidl::WireResponseContext<
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::DispatchEvent(
-        fidl_incoming_msg_t* msg) {
+        fidl::IncomingMessage& msg) {
   if (event_handler_ != nullptr) {
-    fidl_message_header_t* hdr =
-        reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+    fidl_message_header_t* hdr = msg.header();
     switch (hdr->ordinal) {
       case ::fidl_test_protocols::kHandleRightsProtocol_AnEvent_Ordinal: {
         ::fidl::DecodedMessage<::fidl::WireResponse<
             ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>
-            decoded{msg};
+            decoded{std::move(msg)};
         if (!decoded.ok()) {
           return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
                                     decoded.status()};
@@ -305,7 +304,6 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
         break;
     }
   }
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
@@ -334,53 +332,35 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>::
     }
     return x;
   })();
+  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
   ::fidl::internal::InlineMessageBuffer<24> read_storage;
-  uint8_t* read_bytes = read_storage.data();
-  zx_handle_info_t read_handles[kHandleAllocSize];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  status = client_end.channel()->read_etc(
-      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles,
-      read_storage.size(), kHandleAllocSize, &actual_bytes, &actual_handles);
-  if (status == ZX_ERR_BUFFER_TOO_SMALL) {
+  std::array<zx_handle_info_t, kHandleAllocSize> read_handles;
+  ::fidl::IncomingMessage msg =
+      fidl::ChannelReadEtc(client_end.handle(), ZX_CHANNEL_READ_MAY_DISCARD,
+                           read_storage.view(), cpp20::span(read_handles));
+  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
     return ::fidl::Result(Unknown(), nullptr);
   }
-  if (status != ZX_OK) {
-    return ::fidl::Result(status, ::fidl::kErrorReadFailed);
+  if (!msg.ok()) {
+    return msg;
   }
-  if (actual_bytes < sizeof(fidl_message_header_t)) {
-    FidlHandleInfoCloseMany(read_handles, actual_handles);
-    return ::fidl::Result(ZX_ERR_INVALID_ARGS, ::fidl::kErrorInvalidHeader);
-  }
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(read_bytes);
-  status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    FidlHandleInfoCloseMany(read_handles, actual_handles);
-    return ::fidl::Result(status, ::fidl::kErrorInvalidHeader);
-  }
+  fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     case ::fidl_test_protocols::kHandleRightsProtocol_AnEvent_Ordinal: {
-      const char* error_message;
-      zx_status_t status = fidl_decode_etc(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::HandleRightsProtocol::AnEvent>::Type,
-          read_bytes, actual_bytes, read_handles, actual_handles,
-          &error_message);
-      if (status != ZX_OK) {
-        return ::fidl::Result(status, error_message);
+      ::fidl::DecodedMessage<::fidl::WireResponse<
+          ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>
+          decoded{::std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::Result(decoded.status(), decoded.error());
       }
-      AnEvent(reinterpret_cast<::fidl::WireResponse<
-                  ::fidl_test_protocols::HandleRightsProtocol::AnEvent>*>(
-          read_bytes));
+      AnEvent(decoded.PrimaryObject());
       return ::fidl::Result(ZX_OK, nullptr);
     }
     default: {
-      FidlHandleInfoCloseMany(read_handles, actual_handles);
       return ::fidl::Result(Unknown(), nullptr);
     }
   }
@@ -392,15 +372,15 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>::
     ::fidl_test_protocols::HandleRightsProtocol>::
     TryDispatch(
         ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -415,11 +395,11 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>::
       },
       {
           ::fidl_test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -441,10 +421,10 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>::
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::fidl_test_protocols::HandleRightsProtocol>::Dispatch(
         ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -452,24 +432,26 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>::
 }
 ::fidl::DispatchResult
 fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::dispatch_message(
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireServerDispatcher<
-      ::fidl_test_protocols::HandleRightsProtocol>::Dispatch(this, msg, txn);
+      ::fidl_test_protocols::HandleRightsProtocol>::Dispatch(this,
+                                                             std::move(msg),
+                                                             txn);
 }
 
 ::fidl::DispatchResult fidl::internal::
     WireDispatcher<::fidl_test_protocols::HandleRightsProtocol>::TryDispatch(
         ::fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>*
             impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -484,11 +466,11 @@ fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::dispatch_message(
       },
       {
           ::fidl_test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -511,10 +493,10 @@ fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::dispatch_message(
     WireDispatcher<::fidl_test_protocols::HandleRightsProtocol>::Dispatch(
         ::fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>*
             impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -522,9 +504,11 @@ fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>::dispatch_message(
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>::
-    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireDispatcher<
-      ::fidl_test_protocols::HandleRightsProtocol>::Dispatch(this, msg, txn);
+      ::fidl_test_protocols::HandleRightsProtocol>::Dispatch(this,
+                                                             std::move(msg),
+                                                             txn);
 }
 #endif  // __Fuchsia__
 
@@ -695,8 +679,7 @@ namespace fidl_test_protocols {
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_protocols::DiscoverableProtocol>::DispatchEvent(
-        fidl_incoming_msg_t* msg) {
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+        fidl::IncomingMessage& msg) {
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
@@ -708,15 +691,15 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
     ::fidl_test_protocols::DiscoverableProtocol>::
     TryDispatch(
         ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kDiscoverableProtocol_Method_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             auto* primary = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_protocols::DiscoverableProtocol::Method>*>(
-                msg->bytes);
+                msg.bytes());
             ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::
                 MethodCompleter::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
@@ -734,10 +717,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::fidl_test_protocols::DiscoverableProtocol>::Dispatch(
         ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -745,20 +728,22 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 }
 ::fidl::DispatchResult
 fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::dispatch_message(
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireServerDispatcher<
-      ::fidl_test_protocols::DiscoverableProtocol>::Dispatch(this, msg, txn);
+      ::fidl_test_protocols::DiscoverableProtocol>::Dispatch(this,
+                                                             std::move(msg),
+                                                             txn);
 }
 
 ::fidl::DispatchResult fidl::internal::
     WireDispatcher<::fidl_test_protocols::DiscoverableProtocol>::TryDispatch(
         ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>*
             impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kDiscoverableProtocol_Method_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::
                 MethodCompleter::Sync completer(txn);
@@ -778,10 +763,10 @@ fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::dispatch_message(
     WireDispatcher<::fidl_test_protocols::DiscoverableProtocol>::Dispatch(
         ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>*
             impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -789,9 +774,11 @@ fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::dispatch_message(
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>::
-    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireDispatcher<
-      ::fidl_test_protocols::DiscoverableProtocol>::Dispatch(this, msg, txn);
+      ::fidl_test_protocols::DiscoverableProtocol>::Dispatch(this,
+                                                             std::move(msg),
+                                                             txn);
 }
 #endif  // __Fuchsia__
 
@@ -955,10 +942,10 @@ fidl::internal::WireClientImpl<
 
 zx_status_t
 fidl::WireResponseContext<::fidl_test_protocols::Transitional::Request>::
-    OnRawReply(fidl_incoming_msg_t* msg) {
+    OnRawReply(::fidl::IncomingMessage&& msg) {
   ::fidl::DecodedMessage<
       ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>>
-      decoded{msg};
+      decoded{std::move(msg)};
   if (unlikely(!decoded.ok())) {
     return decoded.status();
   }
@@ -1055,16 +1042,15 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::OneWay(
 
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
-    ::fidl_test_protocols::Transitional>::DispatchEvent(fidl_incoming_msg_t*
+    ::fidl_test_protocols::Transitional>::DispatchEvent(fidl::IncomingMessage&
                                                             msg) {
   if (event_handler_ != nullptr) {
-    fidl_message_header_t* hdr =
-        reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+    fidl_message_header_t* hdr = msg.header();
     switch (hdr->ordinal) {
       case ::fidl_test_protocols::kTransitional_Event_Ordinal: {
         ::fidl::DecodedMessage<
             ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>>
-            decoded{msg};
+            decoded{std::move(msg)};
         if (!decoded.ok()) {
           return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
                                     decoded.status()};
@@ -1076,7 +1062,6 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
         break;
     }
   }
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
@@ -1103,53 +1088,35 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>::HandleOneEvent(
     }
     return x;
   })();
+  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
   ::fidl::internal::InlineMessageBuffer<24> read_storage;
-  uint8_t* read_bytes = read_storage.data();
-  zx_handle_info_t read_handles[kHandleAllocSize];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  status = client_end.channel()->read_etc(
-      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles,
-      read_storage.size(), kHandleAllocSize, &actual_bytes, &actual_handles);
-  if (status == ZX_ERR_BUFFER_TOO_SMALL) {
+  std::array<zx_handle_info_t, kHandleAllocSize> read_handles;
+  ::fidl::IncomingMessage msg =
+      fidl::ChannelReadEtc(client_end.handle(), ZX_CHANNEL_READ_MAY_DISCARD,
+                           read_storage.view(), cpp20::span(read_handles));
+  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
     return ::fidl::Result(Unknown(), nullptr);
   }
-  if (status != ZX_OK) {
-    return ::fidl::Result(status, ::fidl::kErrorReadFailed);
+  if (!msg.ok()) {
+    return msg;
   }
-  if (actual_bytes < sizeof(fidl_message_header_t)) {
-    FidlHandleInfoCloseMany(read_handles, actual_handles);
-    return ::fidl::Result(ZX_ERR_INVALID_ARGS, ::fidl::kErrorInvalidHeader);
-  }
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(read_bytes);
-  status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    FidlHandleInfoCloseMany(read_handles, actual_handles);
-    return ::fidl::Result(status, ::fidl::kErrorInvalidHeader);
-  }
+  fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     case ::fidl_test_protocols::kTransitional_Event_Ordinal: {
-      const char* error_message;
-      zx_status_t status =
-          fidl_decode_etc(::fidl::WireResponse<
-                              ::fidl_test_protocols::Transitional::Event>::Type,
-                          read_bytes, actual_bytes, read_handles,
-                          actual_handles, &error_message);
-      if (status != ZX_OK) {
-        return ::fidl::Result(status, error_message);
+      ::fidl::DecodedMessage<
+          ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>>
+          decoded{::std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::Result(decoded.status(), decoded.error());
       }
-      Event(reinterpret_cast<
-            ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>*>(
-          read_bytes));
+      Event(decoded.PrimaryObject());
       return ::fidl::Result(ZX_OK, nullptr);
     }
     default: {
-      FidlHandleInfoCloseMany(read_handles, actual_handles);
       return ::fidl::Result(Unknown(), nullptr);
     }
   }
@@ -1160,15 +1127,15 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>::HandleOneEvent(
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::fidl_test_protocols::Transitional>::TryDispatch(
         ::fidl::WireServer<::fidl_test_protocols::Transitional>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kTransitional_Request_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::Transitional::Request>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -1184,11 +1151,11 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>::HandleOneEvent(
       },
       {
           ::fidl_test_protocols::kTransitional_OneWay_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::Transitional::OneWay>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -1211,10 +1178,10 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>::HandleOneEvent(
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::fidl_test_protocols::Transitional>::Dispatch(
         ::fidl::WireServer<::fidl_test_protocols::Transitional>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -1222,23 +1189,23 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>::HandleOneEvent(
 }
 ::fidl::DispatchResult
 fidl::WireServer<::fidl_test_protocols::Transitional>::dispatch_message(
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireServerDispatcher<
-      ::fidl_test_protocols::Transitional>::Dispatch(this, msg, txn);
+      ::fidl_test_protocols::Transitional>::Dispatch(this, std::move(msg), txn);
 }
 
 ::fidl::DispatchResult fidl::internal::
     WireDispatcher<::fidl_test_protocols::Transitional>::TryDispatch(
         ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kTransitional_Request_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::Transitional::Request>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -1254,11 +1221,11 @@ fidl::WireServer<::fidl_test_protocols::Transitional>::dispatch_message(
       },
       {
           ::fidl_test_protocols::kTransitional_OneWay_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::Transitional::OneWay>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -1281,10 +1248,10 @@ fidl::WireServer<::fidl_test_protocols::Transitional>::dispatch_message(
 ::fidl::DispatchResult
 fidl::internal::WireDispatcher<::fidl_test_protocols::Transitional>::Dispatch(
     ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -1292,9 +1259,9 @@ fidl::internal::WireDispatcher<::fidl_test_protocols::Transitional>::Dispatch(
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::Transitional>::dispatch_message(
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireDispatcher<
-      ::fidl_test_protocols::Transitional>::Dispatch(this, msg, txn);
+      ::fidl_test_protocols::Transitional>::Dispatch(this, std::move(msg), txn);
 }
 #endif  // __Fuchsia__
 
@@ -1685,10 +1652,10 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
 
 zx_status_t
 fidl::WireResponseContext<::fidl_test_protocols::ChannelProtocol::MethodB>::
-    OnRawReply(fidl_incoming_msg_t* msg) {
+    OnRawReply(::fidl::IncomingMessage&& msg) {
   ::fidl::DecodedMessage<
       ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>>
-      decoded{msg};
+      decoded{std::move(msg)};
   if (unlikely(!decoded.ok())) {
     return decoded.status();
   }
@@ -1798,10 +1765,10 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
 
 zx_status_t
 fidl::WireResponseContext<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
-    OnRawReply(fidl_incoming_msg_t* msg) {
+    OnRawReply(::fidl::IncomingMessage&& msg) {
   ::fidl::DecodedMessage<
       ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>>
-      decoded{msg};
+      decoded{std::move(msg)};
   if (unlikely(!decoded.ok())) {
     return decoded.status();
   }
@@ -1912,10 +1879,10 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
 
 zx_status_t fidl::WireResponseContext<
     ::fidl_test_protocols::ChannelProtocol::MutateSocket>::
-    OnRawReply(fidl_incoming_msg_t* msg) {
+    OnRawReply(::fidl::IncomingMessage&& msg) {
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::ChannelProtocol::MutateSocket>>
-      decoded{msg};
+      decoded{std::move(msg)};
   if (unlikely(!decoded.ok())) {
     return decoded.status();
   }
@@ -1982,17 +1949,16 @@ zx_status_t fidl::WireResponseContext<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
-    ::fidl_test_protocols::ChannelProtocol>::DispatchEvent(fidl_incoming_msg_t*
-                                                               msg) {
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireClientImpl<::fidl_test_protocols::ChannelProtocol>::DispatchEvent(
+        fidl::IncomingMessage& msg) {
   if (event_handler_ != nullptr) {
-    fidl_message_header_t* hdr =
-        reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+    fidl_message_header_t* hdr = msg.header();
     switch (hdr->ordinal) {
       case ::fidl_test_protocols::kChannelProtocol_EventA_Ordinal: {
         ::fidl::DecodedMessage<::fidl::WireResponse<
             ::fidl_test_protocols::ChannelProtocol::EventA>>
-            decoded{msg};
+            decoded{std::move(msg)};
         if (!decoded.ok()) {
           return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
                                     decoded.status()};
@@ -2004,7 +1970,6 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
         break;
     }
   }
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
@@ -2034,52 +1999,35 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
     }
     return x;
   })();
+  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
   ::fidl::internal::InlineMessageBuffer<32> read_storage;
-  uint8_t* read_bytes = read_storage.data();
-  zx_handle_info_t read_handles[kHandleAllocSize];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  status = client_end.channel()->read_etc(
-      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles,
-      read_storage.size(), kHandleAllocSize, &actual_bytes, &actual_handles);
-  if (status == ZX_ERR_BUFFER_TOO_SMALL) {
+  std::array<zx_handle_info_t, kHandleAllocSize> read_handles;
+  ::fidl::IncomingMessage msg =
+      fidl::ChannelReadEtc(client_end.handle(), ZX_CHANNEL_READ_MAY_DISCARD,
+                           read_storage.view(), cpp20::span(read_handles));
+  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
     return ::fidl::Result(Unknown(), nullptr);
   }
-  if (status != ZX_OK) {
-    return ::fidl::Result(status, ::fidl::kErrorReadFailed);
+  if (!msg.ok()) {
+    return msg;
   }
-  if (actual_bytes < sizeof(fidl_message_header_t)) {
-    FidlHandleInfoCloseMany(read_handles, actual_handles);
-    return ::fidl::Result(ZX_ERR_INVALID_ARGS, ::fidl::kErrorInvalidHeader);
-  }
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(read_bytes);
-  status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    FidlHandleInfoCloseMany(read_handles, actual_handles);
-    return ::fidl::Result(status, ::fidl::kErrorInvalidHeader);
-  }
+  fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     case ::fidl_test_protocols::kChannelProtocol_EventA_Ordinal: {
-      const char* error_message;
-      zx_status_t status = fidl_decode_etc(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::ChannelProtocol::EventA>::Type,
-          read_bytes, actual_bytes, read_handles, actual_handles,
-          &error_message);
-      if (status != ZX_OK) {
-        return ::fidl::Result(status, error_message);
+      ::fidl::DecodedMessage<
+          ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>>
+          decoded{::std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::Result(decoded.status(), decoded.error());
       }
-      EventA(reinterpret_cast<::fidl::WireResponse<
-                 ::fidl_test_protocols::ChannelProtocol::EventA>*>(read_bytes));
+      EventA(decoded.PrimaryObject());
       return ::fidl::Result(ZX_OK, nullptr);
     }
     default: {
-      FidlHandleInfoCloseMany(read_handles, actual_handles);
       return ::fidl::Result(Unknown(), nullptr);
     }
   }
@@ -2090,15 +2038,15 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::fidl_test_protocols::ChannelProtocol>::TryDispatch(
         ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kChannelProtocol_MethodA_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::ChannelProtocol::MethodA>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -2114,11 +2062,11 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
       },
       {
           ::fidl_test_protocols::kChannelProtocol_MethodB_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::ChannelProtocol::MethodB>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -2134,11 +2082,11 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
       },
       {
           ::fidl_test_protocols::kChannelProtocol_TakeHandle_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::ChannelProtocol::TakeHandle>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -2154,11 +2102,11 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
       },
       {
           ::fidl_test_protocols::kChannelProtocol_MutateSocket_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::ChannelProtocol::MutateSocket>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -2181,10 +2129,10 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::fidl_test_protocols::ChannelProtocol>::Dispatch(
         ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -2192,23 +2140,24 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
 }
 ::fidl::DispatchResult
 fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireServerDispatcher<
-      ::fidl_test_protocols::ChannelProtocol>::Dispatch(this, msg, txn);
+      ::fidl_test_protocols::ChannelProtocol>::Dispatch(this, std::move(msg),
+                                                        txn);
 }
 
 ::fidl::DispatchResult fidl::internal::
     WireDispatcher<::fidl_test_protocols::ChannelProtocol>::TryDispatch(
         ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kChannelProtocol_MethodA_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::ChannelProtocol::MethodA>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -2225,11 +2174,11 @@ fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
       },
       {
           ::fidl_test_protocols::kChannelProtocol_MethodB_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::ChannelProtocol::MethodB>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -2246,11 +2195,11 @@ fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
       },
       {
           ::fidl_test_protocols::kChannelProtocol_TakeHandle_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::ChannelProtocol::TakeHandle>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -2266,11 +2215,11 @@ fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
       },
       {
           ::fidl_test_protocols::kChannelProtocol_MutateSocket_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::ChannelProtocol::MutateSocket>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -2293,10 +2242,10 @@ fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
 ::fidl::DispatchResult fidl::internal::
     WireDispatcher<::fidl_test_protocols::ChannelProtocol>::Dispatch(
         ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -2304,9 +2253,10 @@ fidl::WireServer<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::dispatch_message(
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireDispatcher<
-      ::fidl_test_protocols::ChannelProtocol>::Dispatch(this, msg, txn);
+      ::fidl_test_protocols::ChannelProtocol>::Dispatch(this, std::move(msg),
+                                                        txn);
 }
 #endif  // __Fuchsia__
 
@@ -2882,11 +2832,11 @@ fidl::internal::WireClientImpl<
 
 zx_status_t fidl::WireResponseContext<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        NoRequestEmptyResponse>::OnRawReply(fidl_incoming_msg_t* msg) {
+        NoRequestEmptyResponse>::OnRawReply(::fidl::IncomingMessage&& msg) {
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
           NoRequestEmptyResponse>>
-      decoded{msg};
+      decoded{std::move(msg)};
   if (unlikely(!decoded.ok())) {
     return decoded.status();
   }
@@ -3009,11 +2959,11 @@ fidl::internal::WireClientImpl<
 
 zx_status_t fidl::WireResponseContext<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        NoRequestWithResponse>::OnRawReply(fidl_incoming_msg_t* msg) {
+        NoRequestWithResponse>::OnRawReply(::fidl::IncomingMessage&& msg) {
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
           NoRequestWithResponse>>
-      decoded{msg};
+      decoded{std::move(msg)};
   if (unlikely(!decoded.ok())) {
     return decoded.status();
   }
@@ -3177,11 +3127,11 @@ fidl::internal::WireClientImpl<
 
 zx_status_t fidl::WireResponseContext<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        WithRequestEmptyResponse>::OnRawReply(fidl_incoming_msg_t* msg) {
+        WithRequestEmptyResponse>::OnRawReply(::fidl::IncomingMessage&& msg) {
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
           WithRequestEmptyResponse>>
-      decoded{msg};
+      decoded{std::move(msg)};
   if (unlikely(!decoded.ok())) {
     return decoded.status();
   }
@@ -3311,11 +3261,11 @@ fidl::internal::WireClientImpl<
 
 zx_status_t fidl::WireResponseContext<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        WithRequestWithResponse>::OnRawReply(fidl_incoming_msg_t* msg) {
+        WithRequestWithResponse>::OnRawReply(::fidl::IncomingMessage&& msg) {
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
           WithRequestWithResponse>>
-      decoded{msg};
+      decoded{std::move(msg)};
   if (unlikely(!decoded.ok())) {
     return decoded.status();
   }
@@ -3390,17 +3340,16 @@ zx_status_t fidl::WireResponseContext<
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
-    DispatchEvent(fidl_incoming_msg_t* msg) {
+    DispatchEvent(fidl::IncomingMessage& msg) {
   if (event_handler_ != nullptr) {
-    fidl_message_header_t* hdr =
-        reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+    fidl_message_header_t* hdr = msg.header();
     switch (hdr->ordinal) {
       case ::fidl_test_protocols::
           kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
         ::fidl::DecodedMessage<::fidl::WireResponse<
             ::fidl_test_protocols::WithAndWithoutRequestResponse::
                 OnEmptyResponse>>
-            decoded{msg};
+            decoded{std::move(msg)};
         if (!decoded.ok()) {
           return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
                                     decoded.status()};
@@ -3413,7 +3362,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
         ::fidl::DecodedMessage<::fidl::WireResponse<
             ::fidl_test_protocols::WithAndWithoutRequestResponse::
                 OnWithResponse>>
-            decoded{msg};
+            decoded{std::move(msg)};
         if (!decoded.ok()) {
           return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
                                     decoded.status()};
@@ -3425,7 +3374,6 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
         break;
     }
   }
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
@@ -3463,72 +3411,48 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     }
     return x;
   })();
+  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> read_storage;
-  uint8_t* read_bytes = read_storage.data();
-  zx_handle_info_t read_handles[kHandleAllocSize];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  status = client_end.channel()->read_etc(
-      ZX_CHANNEL_READ_MAY_DISCARD, read_bytes, read_handles,
-      read_storage.size(), kHandleAllocSize, &actual_bytes, &actual_handles);
-  if (status == ZX_ERR_BUFFER_TOO_SMALL) {
+  std::array<zx_handle_info_t, kHandleAllocSize> read_handles;
+  ::fidl::IncomingMessage msg =
+      fidl::ChannelReadEtc(client_end.handle(), ZX_CHANNEL_READ_MAY_DISCARD,
+                           read_storage.view(), cpp20::span(read_handles));
+  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
     return ::fidl::Result(Unknown(), nullptr);
   }
-  if (status != ZX_OK) {
-    return ::fidl::Result(status, ::fidl::kErrorReadFailed);
+  if (!msg.ok()) {
+    return msg;
   }
-  if (actual_bytes < sizeof(fidl_message_header_t)) {
-    FidlHandleInfoCloseMany(read_handles, actual_handles);
-    return ::fidl::Result(ZX_ERR_INVALID_ARGS, ::fidl::kErrorInvalidHeader);
-  }
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(read_bytes);
-  status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    FidlHandleInfoCloseMany(read_handles, actual_handles);
-    return ::fidl::Result(status, ::fidl::kErrorInvalidHeader);
-  }
+  fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     case ::fidl_test_protocols::
         kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
-      const char* error_message;
-      zx_status_t status = fidl_decode_etc(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  OnEmptyResponse>::Type,
-          read_bytes, actual_bytes, read_handles, actual_handles,
-          &error_message);
-      if (status != ZX_OK) {
-        return ::fidl::Result(status, error_message);
+      ::fidl::DecodedMessage<::fidl::WireResponse<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              OnEmptyResponse>>
+          decoded{::std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::Result(decoded.status(), decoded.error());
       }
-      OnEmptyResponse(reinterpret_cast<::fidl::WireResponse<
-                          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                              OnEmptyResponse>*>(read_bytes));
+      OnEmptyResponse(decoded.PrimaryObject());
       return ::fidl::Result(ZX_OK, nullptr);
     }
     case ::fidl_test_protocols::
         kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
-      const char* error_message;
-      zx_status_t status = fidl_decode_etc(
-          ::fidl::WireResponse<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  OnWithResponse>::Type,
-          read_bytes, actual_bytes, read_handles, actual_handles,
-          &error_message);
-      if (status != ZX_OK) {
-        return ::fidl::Result(status, error_message);
+      ::fidl::DecodedMessage<::fidl::WireResponse<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>
+          decoded{::std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::Result(decoded.status(), decoded.error());
       }
-      OnWithResponse(reinterpret_cast<::fidl::WireResponse<
-                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                             OnWithResponse>*>(read_bytes));
+      OnWithResponse(decoded.PrimaryObject());
       return ::fidl::Result(ZX_OK, nullptr);
     }
     default: {
-      FidlHandleInfoCloseMany(read_handles, actual_handles);
       return ::fidl::Result(Unknown(), nullptr);
     }
   }
@@ -3540,16 +3464,16 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     TryDispatch(::fidl::WireServer<
                     ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
-                fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+                ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             auto* primary = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                    NoRequestNoResponse>*>(msg->bytes);
+                    NoRequestNoResponse>*>(msg.bytes());
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 NoRequestNoResponseCompleter::Sync completer(txn);
@@ -3563,11 +3487,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             auto* primary = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                    NoRequestEmptyResponse>*>(msg->bytes);
+                    NoRequestEmptyResponse>*>(msg.bytes());
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 NoRequestEmptyResponseCompleter::Sync completer(txn);
@@ -3581,11 +3505,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             auto* primary = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                    NoRequestWithResponse>*>(msg->bytes);
+                    NoRequestWithResponse>*>(msg.bytes());
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
                 NoRequestWithResponseCompleter::Sync completer(txn);
@@ -3599,12 +3523,12 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
                     WithRequestNoResponse>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -3622,12 +3546,12 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
                     WithRequestEmptyResponse>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -3645,12 +3569,12 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
                     WithRequestWithResponse>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -3675,10 +3599,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     Dispatch(::fidl::WireServer<
                  ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
-             fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+             ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -3686,9 +3610,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 ::fidl::DispatchResult
 fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireServerDispatcher<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse>::Dispatch(this, msg,
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>::Dispatch(this,
+                                                                      std::move(
+                                                                          msg),
                                                                       txn);
 }
 
@@ -3696,12 +3622,12 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     TryDispatch(::fidl::WireInterface<
                     ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
-                fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+                ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
@@ -3716,7 +3642,7 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
@@ -3731,7 +3657,7 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::WireServer<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>::
@@ -3746,12 +3672,12 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
                     WithRequestNoResponse>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -3769,12 +3695,12 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
                     WithRequestEmptyResponse>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -3792,12 +3718,12 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
       {
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::DecodedMessage<::fidl::WireRequest<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
                     WithRequestWithResponse>>
-                decoded{msg};
+                decoded{std::move(msg)};
             if (unlikely(!decoded.ok())) {
               return decoded.status();
             }
@@ -3822,10 +3748,10 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     Dispatch(::fidl::WireInterface<
                  ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
-             fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+             fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -3833,9 +3759,11 @@ fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireDispatcher<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse>::Dispatch(this, msg,
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>::Dispatch(this,
+                                                                      std::move(
+                                                                          msg),
                                                                       txn);
 }
 #endif  // __Fuchsia__
@@ -4301,10 +4229,10 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 
 zx_status_t fidl::WireResponseContext<
     ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::
-    OnRawReply(fidl_incoming_msg_t* msg) {
+    OnRawReply(::fidl::IncomingMessage&& msg) {
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>
-      decoded{msg};
+      decoded{std::move(msg)};
   if (unlikely(!decoded.ok())) {
     return decoded.status();
   }
@@ -4412,10 +4340,10 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 
 zx_status_t fidl::WireResponseContext<
     ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::
-    OnRawReply(fidl_incoming_msg_t* msg) {
+    OnRawReply(::fidl::IncomingMessage&& msg) {
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>
-      decoded{msg};
+      decoded{std::move(msg)};
   if (unlikely(!decoded.ok())) {
     return decoded.status();
   }
@@ -4522,10 +4450,10 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 
 zx_status_t
 fidl::WireResponseContext<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
-    OnRawReply(fidl_incoming_msg_t* msg) {
+    OnRawReply(::fidl::IncomingMessage&& msg) {
   ::fidl::DecodedMessage<
       ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>
-      decoded{msg};
+      decoded{std::move(msg)};
   if (unlikely(!decoded.ok())) {
     return decoded.status();
   }
@@ -4588,10 +4516,9 @@ fidl::WireResponseContext<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
-    ::fidl_test_protocols::WithErrorSyntax>::DispatchEvent(fidl_incoming_msg_t*
-                                                               msg) {
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::DispatchEvent(
+        fidl::IncomingMessage& msg) {
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
@@ -4602,15 +4529,15 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::fidl_test_protocols::WithErrorSyntax>::TryDispatch(
         ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             auto* primary = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*>(
-                msg->bytes);
+                msg.bytes());
             ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
                 ResponseAsStructCompleter::Sync completer(txn);
             reinterpret_cast<
@@ -4622,11 +4549,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
       },
       {
           ::fidl_test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             auto* primary = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*>(
-                msg->bytes);
+                msg.bytes());
             ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
                 ErrorAsPrimitiveCompleter::Sync completer(txn);
             reinterpret_cast<
@@ -4638,11 +4565,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
       },
       {
           ::fidl_test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             auto* primary = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>*>(
-                msg->bytes);
+                msg.bytes());
             ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
                 ErrorAsEnumCompleter::Sync completer(txn);
             reinterpret_cast<
@@ -4661,10 +4588,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::fidl_test_protocols::WithErrorSyntax>::Dispatch(
         ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -4672,19 +4599,20 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 ::fidl::DispatchResult
 fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireServerDispatcher<
-      ::fidl_test_protocols::WithErrorSyntax>::Dispatch(this, msg, txn);
+      ::fidl_test_protocols::WithErrorSyntax>::Dispatch(this, std::move(msg),
+                                                        txn);
 }
 
 ::fidl::DispatchResult fidl::internal::
     WireDispatcher<::fidl_test_protocols::WithErrorSyntax>::TryDispatch(
         ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
                 ResponseAsStructCompleter::Sync completer(txn);
@@ -4697,7 +4625,7 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
       },
       {
           ::fidl_test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
                 ErrorAsPrimitiveCompleter::Sync completer(txn);
@@ -4710,7 +4638,7 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
       },
       {
           ::fidl_test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
                 ErrorAsEnumCompleter::Sync completer(txn);
@@ -4730,10 +4658,10 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
 ::fidl::DispatchResult fidl::internal::
     WireDispatcher<::fidl_test_protocols::WithErrorSyntax>::Dispatch(
         ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -4741,9 +4669,10 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireDispatcher<
-      ::fidl_test_protocols::WithErrorSyntax>::Dispatch(this, msg, txn);
+      ::fidl_test_protocols::WithErrorSyntax>::Dispatch(this, std::move(msg),
+                                                        txn);
 }
 #endif  // __Fuchsia__
 

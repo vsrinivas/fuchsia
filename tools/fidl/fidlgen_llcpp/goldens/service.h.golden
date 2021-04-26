@@ -79,10 +79,10 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_service::SecondProtocol>
   WireDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireInterface<::fidl_test_service::SecondProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireInterface<::fidl_test_service::SecondProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 
 template <>
@@ -92,10 +92,10 @@ struct ::fidl::internal::WireServerDispatcher<
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_service::SecondProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireServer<::fidl_test_service::SecondProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 #endif  // __Fuchsia__
 
@@ -208,18 +208,21 @@ struct ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_service::SecondProtocol::MethodOnSecond>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_service::SecondProtocol::MethodOnSecond>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -408,7 +411,7 @@ class ::fidl::WireServer<::fidl_test_service::SecondProtocol>
                               MethodOnSecondCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -431,7 +434,7 @@ class ::fidl::WireInterface<::fidl_test_service::SecondProtocol>
   virtual void MethodOnSecond(MethodOnSecondCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -467,10 +470,10 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_service::FirstProtocol>
   WireDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireInterface<::fidl_test_service::FirstProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireInterface<::fidl_test_service::FirstProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 
 template <>
@@ -480,10 +483,10 @@ struct ::fidl::internal::WireServerDispatcher<
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_service::FirstProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireServer<::fidl_test_service::FirstProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 #endif  // __Fuchsia__
 
@@ -596,18 +599,21 @@ struct ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_service::FirstProtocol::MethodOnFirst>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_service::FirstProtocol::MethodOnFirst>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -795,7 +801,7 @@ class ::fidl::WireServer<::fidl_test_service::FirstProtocol>
                              MethodOnFirstCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -818,7 +824,7 @@ class ::fidl::WireInterface<::fidl_test_service::FirstProtocol>
   virtual void MethodOnFirst(MethodOnFirstCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -1238,7 +1244,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_service::SecondProtocol>
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl_incoming_msg_t* msg) override;
+      fidl::IncomingMessage& msg) override;
 
   std::shared_ptr<
       ::fidl::WireAsyncEventHandler<::fidl_test_service::SecondProtocol>>
@@ -1326,7 +1332,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_service::FirstProtocol> final
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl_incoming_msg_t* msg) override;
+      fidl::IncomingMessage& msg) override;
 
   std::shared_ptr<
       ::fidl::WireAsyncEventHandler<::fidl_test_service::FirstProtocol>>

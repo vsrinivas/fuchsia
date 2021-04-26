@@ -153,16 +153,18 @@ struct {{ .WireRequest }} final {
     UnownedEncodedMessage message_;
   };
 
-  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-  public:
+ public:
+  class DecodedMessage final : public ::fidl::IncomingMessage {
+   public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
             uint32_t handle_actual = 0)
-      : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      Decode<{{ .WireRequest.Self }}>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<{{ .WireRequest }}>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg) : ::fidl::internal::IncomingMessage(msg) {
-      Decode<{{ .WireRequest.Self }}>();
+    DecodedMessage(::fidl::IncomingMessage&& msg) : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<{{ .WireRequest }}>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -187,8 +189,8 @@ struct {{ .WireRequest }} final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  private:
-    void _InitHeader(zx_txid_t _txid);
+ private:
+  void _InitHeader(zx_txid_t _txid);
 };
 {{- if .Request.IsResource }}
 {{- EndifFuchsia -}}

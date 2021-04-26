@@ -87,11 +87,12 @@ fidl::internal::WireClientImpl<
 
 zx_status_t fidl::WireResponseContext<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-        LibfuzzerNeedsNonemptyProtocol>::OnRawReply(fidl_incoming_msg_t* msg) {
+        LibfuzzerNeedsNonemptyProtocol>::OnRawReply(::fidl::IncomingMessage&&
+                                                        msg) {
   ::fidl::DecodedMessage<
       ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                LibfuzzerNeedsNonemptyProtocol>>
-      decoded{msg};
+      decoded{std::move(msg)};
   if (unlikely(!decoded.ok())) {
     return decoded.status();
   }
@@ -163,8 +164,7 @@ zx_status_t fidl::WireResponseContext<
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-    DispatchEvent(fidl_incoming_msg_t* msg) {
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    DispatchEvent(fidl::IncomingMessage& msg) {
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
@@ -176,16 +176,16 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     TryDispatch(::fidl::WireServer<
                     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl,
-                fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+                ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_bindingsdenylist::
               kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             auto* primary = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                    LibfuzzerNeedsNonemptyProtocol>*>(msg->bytes);
+                    LibfuzzerNeedsNonemptyProtocol>*>(msg.bytes());
             ::fidl::WireServer<
                 ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
                 LibfuzzerNeedsNonemptyProtocolCompleter::Sync completer(txn);
@@ -205,10 +205,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     Dispatch(::fidl::WireServer<
                  ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl,
-             fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+             ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -216,9 +216,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 }
 ::fidl::DispatchResult
 fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireServerDispatcher<
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(this, msg,
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(this,
+                                                                    std::move(
+                                                                        msg),
                                                                     txn);
 }
 
@@ -226,12 +228,12 @@ fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     TryDispatch(::fidl::WireInterface<
                     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl,
-                fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+                ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   static const ::fidl::internal::MethodEntry entries[] = {
       {
           ::fidl_test_bindingsdenylist::
               kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal,
-          [](void* interface, fidl_incoming_msg_t* msg,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
              ::fidl::Transaction* txn) {
             ::fidl::WireServer<
                 ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
@@ -252,10 +254,10 @@ fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     Dispatch(::fidl::WireInterface<
                  ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl,
-             fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+             fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
@@ -263,9 +265,11 @@ fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireDispatcher<
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(this, msg,
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(this,
+                                                                    std::move(
+                                                                        msg),
                                                                     txn);
 }
 #endif  // __Fuchsia__
@@ -317,8 +321,7 @@ void ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_bindingsdenylist::OnlyCppAndDeps>::DispatchEvent(
-        fidl_incoming_msg_t* msg) {
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+        fidl::IncomingMessage& msg) {
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
@@ -330,7 +333,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
     ::fidl_test_bindingsdenylist::OnlyCppAndDeps>::
     TryDispatch(
         ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyCppAndDeps>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   return ::fidl::DispatchResult::kNotFound;
 }
 
@@ -338,24 +341,26 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
     ::fidl_test_bindingsdenylist::OnlyCppAndDeps>::
     Dispatch(
         ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyCppAndDeps>* impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  std::move(msg).CloseHandles();
   txn->InternalError(
       {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   return ::fidl::DispatchResult::kNotFound;
 }
 ::fidl::DispatchResult fidl::
     WireServer<::fidl_test_bindingsdenylist::OnlyCppAndDeps>::dispatch_message(
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireServerDispatcher<
-      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(this, msg, txn);
+      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(this,
+                                                              std::move(msg),
+                                                              txn);
 }
 
 ::fidl::DispatchResult fidl::internal::
     WireDispatcher<::fidl_test_bindingsdenylist::OnlyCppAndDeps>::TryDispatch(
         ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>*
             impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   return ::fidl::DispatchResult::kNotFound;
 }
 
@@ -363,17 +368,19 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
     WireDispatcher<::fidl_test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(
         ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>*
             impl,
-        fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+        fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  std::move(msg).CloseHandles();
   txn->InternalError(
       {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   return ::fidl::DispatchResult::kNotFound;
 }
 ::fidl::DispatchResult
 fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>::
-    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireDispatcher<
-      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(this, msg, txn);
+      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(this,
+                                                              std::move(msg),
+                                                              txn);
 }
 #endif  // __Fuchsia__
 

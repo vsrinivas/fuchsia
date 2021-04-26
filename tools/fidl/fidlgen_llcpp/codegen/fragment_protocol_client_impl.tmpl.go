@@ -103,7 +103,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
   explicit WireClientImpl(std::shared_ptr<{{ .WireAsyncEventHandler }}> event_handler)
       : event_handler_(std::move(event_handler)) {}
 
-  std::optional<::fidl::UnbindInfo> DispatchEvent(fidl_incoming_msg_t* msg) override;
+  std::optional<::fidl::UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg) override;
 
   std::shared_ptr<{{ .WireAsyncEventHandler }}> event_handler_;
 };
@@ -114,15 +114,15 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
 {{ EnsureNamespace ""}}
 {{- IfdefFuchsia -}}
 std::optional<::fidl::UnbindInfo>
-{{ .WireClientImpl.NoLeading }}::DispatchEvent(fidl_incoming_msg_t* msg) {
+{{ .WireClientImpl.NoLeading }}::DispatchEvent(fidl::IncomingMessage& msg) {
   {{- if .Events }}
   if (event_handler_ != nullptr) {
-    fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+    fidl_message_header_t* hdr = msg.header();
     switch (hdr->ordinal) {
     {{- range .Events }}
       case {{ .OrdinalName }}:
       {
-        ::fidl::DecodedMessage<{{ .WireResponse }}> decoded{msg};
+        ::fidl::DecodedMessage<{{ .WireResponse }}> decoded{std::move(msg)};
         if (!decoded.ok()) {
           return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, decoded.status()};
         }
@@ -135,7 +135,6 @@ std::optional<::fidl::UnbindInfo>
     }
   }
   {{- end }}
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
 }
 {{- EndifFuchsia -}}

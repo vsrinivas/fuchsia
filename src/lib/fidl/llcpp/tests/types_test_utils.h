@@ -26,6 +26,7 @@
 
 namespace llcpp_types_test_utils {
 
+// HandleChecker checks all |zx::event| handles registered with it are freed.
 class HandleChecker {
  public:
   HandleChecker() = default;
@@ -34,6 +35,9 @@ class HandleChecker {
 
   void AddEvent(zx_handle_t event);
   void AddEvent(const zx::event& event);
+
+  // Tests expectations that all handles registered via |AddEvent| has been
+  // closed. Note that the kernel object is still kept alive by this class.
   void CheckEvents();
 
  private:

@@ -225,32 +225,18 @@ bool Connection::OnMessage() {
   std::shared_ptr<Binding> binding = binding_;
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl_incoming_msg_t msg = {
-      .bytes = bytes,
-      .handles = handles,
-      .num_bytes = 0,
-      .num_handles = 0,
-  };
-  zx_status_t r = binding->channel().read_etc(0, bytes, handles, std::size(bytes),
-                                              std::size(handles), &msg.num_bytes, &msg.num_handles);
-  if (r != ZX_OK) {
+  fidl::IncomingMessage msg = fidl::ChannelReadEtc(
+      binding->channel().get(), 0, fidl::BufferSpan(bytes, std::size(bytes)), cpp20::span(handles));
+  if (!msg.ok()) {
     return false;
   }
 
-  // Do basic validation on the message.
-  auto* header = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
-  r = msg.num_bytes < sizeof(fidl_message_header_t) ? ZX_ERR_INVALID_ARGS
-                                                    : fidl_validate_txn_header(header);
-  if (r != ZX_OK) {
-    FidlHandleInfoCloseMany(msg.handles, msg.num_handles);
-    return false;
-  }
-
+  auto* header = msg.header();
   FidlTransaction txn(header->txid, binding);
 
-  ::fidl::DispatchResult dispatch_result = fidl_protocol_.TryDispatch(&msg, &txn);
+  ::fidl::DispatchResult dispatch_result = fidl_protocol_.TryDispatch(msg, &txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
-    vnode_->HandleFsSpecificMessage(&msg, &txn);
+    vnode_->HandleFsSpecificMessage(msg, &txn);
   }
 
   switch (txn.ToResult()) {

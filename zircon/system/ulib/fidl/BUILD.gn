@@ -163,6 +163,7 @@ if (is_fuchsia) {
       "llcpp_message.cc",
     ]
     public_deps = [
+      "//sdk/lib/fit:headers",
       "//sdk/lib/stdcompat",
       "//src/zircon/lib/zircon:headers",
       "//zircon/system/ulib/zxc:headers",

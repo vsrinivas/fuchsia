@@ -24,8 +24,17 @@ namespace fuzzing {
 // matters here, that is, subsequent (larger) enum values imply further progress in a
 // `DecoderEncoder`.
 enum DecoderEncoderProgress {
-  // First operation (decode) failed.
+  // First operation failed.
+  //
+  // The first operation will be transactional header validation if the message is
+  // a transactional message, and will be decode if the message is just a regular
+  // FIDL type.
   NoProgress = 0,
+
+  // The `fidl::IncomingMessage` type initialization has been successful.
+  //
+  // This step involves transactional header validation if applicable.
+  InitializedForDecoding,
 
   // First attempt to decode succeeded.
   FirstDecodeSuccess,
@@ -83,7 +92,25 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes,
       .progress = DecoderEncoderProgress::NoProgress,
       .status = ZX_OK,
   };
-  typename T::DecodedMessage decoded(bytes, num_bytes, handles, num_handles);
+
+  std::optional<fidl::IncomingMessage> incoming_initialize_later;
+  constexpr bool kTransactionalMessage = fidl::IsFidlMessage<T>::value;
+  if (kTransactionalMessage) {
+    incoming_initialize_later = fidl::IncomingMessage(bytes, num_bytes, handles, num_handles);
+  } else {
+    incoming_initialize_later =
+        fidl::IncomingMessage(bytes, num_bytes, handles, num_handles,
+                              fidl::IncomingMessage::kSkipMessageHeaderValidation);
+  }
+  fidl::IncomingMessage& incoming = incoming_initialize_later.value();
+
+  if (!incoming.ok()) {
+    status.status = incoming.status();
+    return status;
+  }
+  status.progress = DecoderEncoderProgress::InitializedForDecoding;
+
+  fidl::DecodedMessage<T> decoded(std::move(incoming));
 
   if (decoded.status() != ZX_OK) {
     status.status = decoded.status();
@@ -114,7 +141,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes,
   }
   status.progress = DecoderEncoderProgress::FirstEncodeVerified;
 
-  typename T::DecodedMessage decoded2(conversion.incoming_message());
+  fidl::DecodedMessage<T> decoded2(std::move(conversion.incoming_message()));
 
   if (decoded2.status() != ZX_OK) {
     status.status = decoded2.status();

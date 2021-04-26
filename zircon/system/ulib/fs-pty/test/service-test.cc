@@ -47,8 +47,8 @@ class TestService : public fs_pty::Service<fs_pty::internal::NullPtyDevice<TestC
   ~TestService() override = default;
 
   // From fs_pty::Service
-  void HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) override {
-    auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
+  void HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) override {
+    auto* hdr = msg.header();
     state_->last_seen_ordinal.store(hdr->ordinal);
     txn->Close(ZX_ERR_NOT_SUPPORTED);
   }

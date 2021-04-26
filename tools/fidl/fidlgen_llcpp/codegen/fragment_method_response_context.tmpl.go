@@ -18,7 +18,7 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
   virtual void OnReply({{ .WireResponse }}* message) = 0;
 
  private:
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
+  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
 };
 {{- EndifFuchsia }}
 {{- end }}
@@ -31,8 +31,8 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
 {{ .WireResponseContext }}::{{ .WireResponseContext.Self }}()
     : ::fidl::internal::ResponseContext({{ .OrdinalName }}) {}
 
-zx_status_t {{ .WireResponseContext.NoLeading }}::OnRawReply(fidl_incoming_msg_t* msg) {
-  ::fidl::DecodedMessage<{{ .WireResponse }}> decoded{msg};
+zx_status_t {{ .WireResponseContext.NoLeading }}::OnRawReply(::fidl::IncomingMessage&& msg) {
+  ::fidl::DecodedMessage<{{ .WireResponse }}> decoded{std::move(msg)};
   if (unlikely(!decoded.ok())) {
     return decoded.status();
   }

@@ -25,10 +25,10 @@ TEST(OutgoingToIncomingMessage, IovecMessage) {
   auto msg = fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
   auto result = fidl::OutgoingToIncomingMessage(msg);
   ASSERT_EQ(ZX_OK, result.status());
-  ASSERT_EQ(std::size(bytes), result.incoming_message()->num_bytes);
-  EXPECT_EQ(0,
-            memcmp(result.incoming_message()->bytes, bytes, result.incoming_message()->num_bytes));
-  ASSERT_EQ(0u, result.incoming_message()->num_handles);
+  ASSERT_EQ(std::size(bytes), result.incoming_message().byte_actual());
+  EXPECT_EQ(
+      0, memcmp(result.incoming_message().bytes(), bytes, result.incoming_message().byte_actual()));
+  ASSERT_EQ(0u, result.incoming_message().handle_actual());
 }
 
 #ifdef __Fuchsia__
@@ -59,13 +59,13 @@ TEST(OutgoingToIncomingMessage, Handles) {
   auto msg = fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
   auto result = fidl::OutgoingToIncomingMessage(msg);
   ASSERT_EQ(ZX_OK, result.status());
-  fidl_incoming_msg_t* output = result.incoming_message();
-  EXPECT_EQ(output->num_bytes, 16u);
-  EXPECT_EQ(0, memcmp(output->bytes, bytes, output->num_bytes));
-  EXPECT_EQ(output->num_handles, 1u);
-  EXPECT_EQ(output->handles[0].handle, ev.get());
-  EXPECT_EQ(output->handles[0].type, ZX_OBJ_TYPE_EVENT);
-  EXPECT_EQ(output->handles[0].rights, ZX_DEFAULT_EVENT_RIGHTS);
+  fidl::IncomingMessage& output = result.incoming_message();
+  EXPECT_EQ(output.byte_actual(), 16u);
+  EXPECT_EQ(0, memcmp(output.bytes(), bytes, output.byte_actual()));
+  EXPECT_EQ(output.handle_actual(), 1u);
+  EXPECT_EQ(output.handles()[0].handle, ev.get());
+  EXPECT_EQ(output.handles()[0].type, ZX_OBJ_TYPE_EVENT);
+  EXPECT_EQ(output.handles()[0].rights, ZX_DEFAULT_EVENT_RIGHTS);
 }
 
 TEST(OutgoingToIncomingMessage, HandlesWrongType) {

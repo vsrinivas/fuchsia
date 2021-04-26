@@ -200,79 +200,132 @@ OutgoingMessage::CopiedBytes::CopiedBytes(const OutgoingMessage& msg) {
   }
 }
 
-namespace internal {
-
-IncomingMessage::IncomingMessage() : ::fidl::Result(ZX_OK, nullptr) {}
-
 IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles,
                                  uint32_t handle_actual)
+    : IncomingMessage(bytes, byte_actual, handles, handle_actual, kSkipMessageHeaderValidation) {
+  Validate();
+}
+
+IncomingMessage IncomingMessage::FromEncodedCMessage(const fidl_incoming_msg_t* c_msg) {
+  return IncomingMessage(reinterpret_cast<uint8_t*>(c_msg->bytes), c_msg->num_bytes, c_msg->handles,
+                         c_msg->num_handles);
+}
+
+IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles,
+                                 uint32_t handle_actual, SkipMessageHeaderValidationTag)
     : ::fidl::Result(ZX_OK, nullptr),
-      message_{.bytes = bytes,
-               .handles = handles,
-               .num_bytes = byte_actual,
-               .num_handles = handle_actual} {}
+      message_{
+          .bytes = bytes,
+          .handles = handles,
+          .num_bytes = byte_actual,
+          .num_handles = handle_actual,
+      } {}
 
-IncomingMessage::~IncomingMessage() { FidlHandleInfoCloseMany(handles(), handle_actual()); }
+IncomingMessage::IncomingMessage(zx_status_t status, const char* error)
+    : ::fidl::Result(
+          [=] {
+            ZX_DEBUG_ASSERT(status != ZX_OK);
+            return status;
+          }(),
+          error),
+      message_{} {}
 
-void IncomingMessage::Decode(const fidl_type_t* message_type) {
-  fidl_trace(WillLLCPPDecode, message_type, bytes(), byte_actual(), handle_actual());
-  status_ = fidl_decode_msg(message_type, &message_, &error_);
-  fidl_trace(DidLLCPPDecode);
+IncomingMessage::~IncomingMessage() { std::move(*this).CloseHandles(); }
+
+fidl_incoming_msg_t IncomingMessage::ReleaseToEncodedCMessage() && {
+  ZX_DEBUG_ASSERT(status_ == ZX_OK);
+  fidl_incoming_msg_t result = message_;
+  ReleaseHandles();
+  return result;
+}
+
+void IncomingMessage::CloseHandles() && {
+#ifdef __Fuchsia__
+  if (handle_actual() > 0) {
+    FidlHandleInfoCloseMany(handles(), handle_actual());
+  }
+#else
+  ZX_ASSERT(handle_actual() == 0);
+#endif
   ReleaseHandles();
 }
 
-}  // namespace internal
+void IncomingMessage::Decode(const fidl_type_t* message_type) {
+  ZX_DEBUG_ASSERT(status_ == ZX_OK);
+  fidl_trace(WillLLCPPDecode, message_type, bytes(), byte_actual(), handle_actual());
+  status_ = fidl_decode_msg(message_type, &message_, &error_);
+  fidl_trace(DidLLCPPDecode);
+  // Now the caller is responsible for the handles contained in `bytes()`.
+  ReleaseHandles();
+}
 
-OutgoingToIncomingMessageResult OutgoingToIncomingMessage(OutgoingMessage& input) {
+void IncomingMessage::Validate() {
+  if (byte_actual() < sizeof(fidl_message_header_t)) {
+    return SetResult(ZX_ERR_INVALID_ARGS, ::fidl::kErrorInvalidHeader);
+  }
+
+  auto* hdr = header();
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    return SetResult(status, ::fidl::kErrorInvalidHeader);
+  }
+
+  // See https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0053_epitaphs?hl=en#wire_format
+  if (unlikely(maybe_epitaph())) {
+    if (hdr->txid != 0) {
+      return SetResult(ZX_ERR_INVALID_ARGS, ::fidl::kErrorInvalidHeader);
+    }
+  }
+}
+
+#ifdef __Fuchsia__
+
+IncomingMessage ChannelReadEtc(zx_handle_t channel, uint32_t options,
+                               fidl::BufferSpan bytes_storage,
+                               cpp20::span<zx_handle_info_t> handles_storage) {
+  uint32_t num_bytes, num_handles;
+  zx_status_t status =
+      zx_channel_read_etc(channel, options, bytes_storage.data, handles_storage.data(),
+                          bytes_storage.capacity, handles_storage.size(), &num_bytes, &num_handles);
+  if (status != ZX_OK) {
+    return IncomingMessage(status, ::fidl::kErrorReadFailed);
+  }
+  return IncomingMessage(bytes_storage.data, num_bytes, handles_storage.data(), num_handles);
+}
+
+#endif  // __Fuchsia__
+
+OutgoingToIncomingMessage::OutgoingToIncomingMessage(OutgoingMessage& input)
+    : incoming_message_(ConversionImpl(input, buf_bytes_, buf_handles_)) {}
+
+IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
+    OutgoingMessage& input, OutgoingMessage::CopiedBytes& buf_bytes,
+    std::unique_ptr<zx_handle_info_t[]>& buf_handles) {
   zx_handle_disposition_t* handles = input.handles();
   uint32_t num_handles = input.handle_actual();
   input.ReleaseHandles();
 
   if (num_handles > ZX_CHANNEL_MAX_MSG_HANDLES) {
     FidlHandleDispositionCloseMany(handles, num_handles);
-    return OutgoingToIncomingMessageResult({}, ZX_ERR_OUT_OF_RANGE, {}, nullptr);
+    return fidl::IncomingMessage(ZX_ERR_OUT_OF_RANGE, nullptr);
   }
 
-  auto buf_handles = std::make_unique<zx_handle_info_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
-  zx_status_t status = FidlHandleDispositionsToHandleInfos(handles, buf_handles.get(), num_handles);
+  auto converted_handles = std::make_unique<zx_handle_info_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
+  zx_status_t status =
+      FidlHandleDispositionsToHandleInfos(handles, &converted_handles[0], num_handles);
   if (status != ZX_OK) {
-    return OutgoingToIncomingMessageResult({}, status, {}, nullptr);
+    return fidl::IncomingMessage(status, nullptr);
   }
+  buf_handles = std::move(converted_handles);
 
-  auto buf_bytes = input.CopyBytes();
+  buf_bytes = input.CopyBytes();
   if (buf_bytes.size() > ZX_CHANNEL_MAX_MSG_BYTES) {
     FidlHandleDispositionCloseMany(handles, num_handles);
-    return OutgoingToIncomingMessageResult({}, ZX_ERR_OUT_OF_RANGE, {}, nullptr);
+    return fidl::IncomingMessage(status, nullptr);
   }
 
-  return OutgoingToIncomingMessageResult(
-      {
-          .bytes = buf_bytes.data(),
-          .handles = buf_handles.get(),
-          .num_bytes = static_cast<uint32_t>(buf_bytes.size()),
-          .num_handles = num_handles,
-      },
-      ZX_OK, std::move(buf_bytes), std::move(buf_handles));
-}
-
-OutgoingToIncomingMessageResult::OutgoingToIncomingMessageResult(
-    OutgoingToIncomingMessageResult&& to_move) noexcept {
-  // struct copy
-  incoming_message_ = to_move.incoming_message_;
-  // Prevent to_move from deleting handles.
-  to_move.incoming_message_.num_handles = 0;
-
-  status_ = to_move.status_;
-
-  buf_bytes_ = std::move(to_move.buf_bytes_);
-  buf_handles_ = std::move(to_move.buf_handles_);
-}
-
-OutgoingToIncomingMessageResult::~OutgoingToIncomingMessageResult() {
-  // Ensure handles are closed before handle array is freed.
-  FidlHandleInfoCloseMany(incoming_message_.handles, incoming_message_.num_handles);
-  buf_bytes_ = {};
-  buf_handles_ = nullptr;
+  return fidl::IncomingMessage(buf_bytes.data(), buf_bytes.size(), buf_handles.get(), num_handles,
+                               fidl::IncomingMessage::kSkipMessageHeaderValidation);
 }
 
 }  // namespace fidl

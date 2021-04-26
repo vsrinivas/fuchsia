@@ -21,6 +21,7 @@
 
 namespace fidl {
 
+class IncomingMessage;
 class OutgoingMessage;
 
 // An abstract transaction, encapsulating the logic of sending reply messages.

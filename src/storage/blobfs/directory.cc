@@ -167,8 +167,8 @@ void Directory::Sync(SyncCallback closure) {
 
 #ifdef __Fuchsia__
 
-void Directory::HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
-  fidl::WireDispatch<fuchsia_blobfs::Blobfs>(this, msg, txn);
+void Directory::HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) {
+  fidl::WireDispatch<fuchsia_blobfs::Blobfs>(this, std::move(msg), txn);
 }
 
 void Directory::GetAllocatedRegions(GetAllocatedRegionsRequestView request,

@@ -58,7 +58,7 @@ class Directory final : public fs::Vnode {
   void Sync(SyncCallback closure) final;
 
 #ifdef __Fuchsia__
-  void HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) final;
+  void HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) final;
   void GetAllocatedRegions(GetAllocatedRegionsRequestView request,
                            GetAllocatedRegionsCompleter::Sync& completer) final;
   void SetCorruptBlobHandler(SetCorruptBlobHandlerRequestView request,

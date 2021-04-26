@@ -13,16 +13,18 @@ const fragmentProtocolDispatcherTmpl = `
 template<>
 struct {{ .WireDispatcher }} final {
   {{ .WireDispatcher.Self }}() = delete;
-  static ::fidl::DispatchResult TryDispatch({{ .WireInterface }}* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch({{ .WireInterface }}* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult TryDispatch(
+      {{- .WireInterface }}* impl, fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      {{- .WireInterface }}* impl, fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 
 template<>
 struct {{ .WireServerDispatcher }} final {
   {{ .WireServerDispatcher.Self }}() = delete;
-  static ::fidl::DispatchResult TryDispatch({{ .WireServer }}* impl, fidl_incoming_msg_t* msg,
+  static ::fidl::DispatchResult TryDispatch({{ .WireServer }}* impl, ::fidl::IncomingMessage& msg,
                                             ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch({{ .WireServer }}* impl, fidl_incoming_msg_t* msg,
+  static ::fidl::DispatchResult Dispatch({{ .WireServer }}* impl, ::fidl::IncomingMessage&& msg,
                                          ::fidl::Transaction* txn);
 };
 {{- EndifFuchsia }}
@@ -34,20 +36,20 @@ struct {{ .WireServerDispatcher }} final {
 {{- IfdefFuchsia -}}
 {{ EnsureNamespace "" }}
 ::fidl::DispatchResult {{ .WireServerDispatcher.NoLeading }}::TryDispatch(
-    {{ .WireServer }}* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    {{ .WireServer }}* impl, ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   {{- if .ClientMethods }}
   static const ::fidl::internal::MethodEntry entries[] = {
     {{- range .ClientMethods }}
       { {{ .OrdinalName }},
-        [](void* interface, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        [](void* interface, ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
           {{- if .RequestArgs }}
-          ::fidl::DecodedMessage<{{ .WireRequest }}> decoded{msg};
+          ::fidl::DecodedMessage<{{ .WireRequest }}> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
             return decoded.status();
           }
           auto* primary = decoded.PrimaryObject();
           {{- else }}
-          auto* primary = reinterpret_cast<{{ .WireRequest }}*>(msg->bytes);
+          auto* primary = reinterpret_cast<{{ .WireRequest }}*>(msg.bytes());
           {{- end }}
           {{ .WireCompleter }}::Sync completer(txn);
           reinterpret_cast<{{ $.WireServer }}*>(interface)->{{ .Name }}(
@@ -67,35 +69,36 @@ struct {{ .WireServerDispatcher }} final {
 
 {{ EnsureNamespace "" }}
 ::fidl::DispatchResult {{ .WireServerDispatcher.NoLeading }}::Dispatch(
-      {{ .WireServer }}* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    {{- .WireServer }}* impl, ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   {{- if .ClientMethods }}
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return dispatch_result;
   {{- else }}
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  std::move(msg).CloseHandles();
   txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   return ::fidl::DispatchResult::kNotFound;
   {{- end }}
 }
 
 {{- EnsureNamespace "" }}
-::fidl::DispatchResult {{ .WireServer.NoLeading }}::dispatch_message(fidl_incoming_msg_t* msg,
-                                                         ::fidl::Transaction* txn) {
-  return {{ .WireServerDispatcher }}::Dispatch(this, msg, txn);
+::fidl::DispatchResult {{ .WireServer.NoLeading }}::dispatch_message(
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  return {{ .WireServerDispatcher }}::Dispatch(this, std::move(msg), txn);
 }
 
-::fidl::DispatchResult {{ .WireDispatcher.NoLeading }}::TryDispatch({{ .WireInterface }}* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+::fidl::DispatchResult {{ .WireDispatcher.NoLeading }}::TryDispatch(
+    {{ .WireInterface }}* impl, ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
   {{- if .ClientMethods }}
   static const ::fidl::internal::MethodEntry entries[] = {
     {{- range .ClientMethods }}
       { {{ .OrdinalName }},
-        [](void* interface, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+        [](void* interface, ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
           {{- if .RequestArgs }}
-          ::fidl::DecodedMessage<{{ .WireRequest }}> decoded{msg};
+          ::fidl::DecodedMessage<{{ .WireRequest }}> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
             return decoded.status();
           }
@@ -121,25 +124,27 @@ struct {{ .WireServerDispatcher }} final {
 }
 
 {{ EnsureNamespace "" }}
-::fidl::DispatchResult {{ .WireDispatcher.NoLeading }}::Dispatch({{ .WireInterface }}* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+::fidl::DispatchResult
+{{ .WireDispatcher.NoLeading }}::Dispatch(
+    {{- .WireInterface }}* impl, fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   {{- if .ClientMethods }}
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+    std::move(msg).CloseHandles();
     txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return dispatch_result;
   {{- else }}
-  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  std::move(msg).CloseHandles();
   txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   return ::fidl::DispatchResult::kNotFound;
   {{- end }}
 }
 
 {{- EnsureNamespace "" }}
-::fidl::DispatchResult {{ .WireInterface.NoLeading }}::dispatch_message(fidl_incoming_msg_t* msg,
-                                                         ::fidl::Transaction* txn) {
-  return {{ .WireDispatcher }}::Dispatch(this, msg, txn);
+::fidl::DispatchResult {{ .WireInterface.NoLeading }}::dispatch_message(
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  return {{ .WireDispatcher }}::Dispatch(this, std::move(msg), txn);
 }
 {{- EndifFuchsia -}}
 

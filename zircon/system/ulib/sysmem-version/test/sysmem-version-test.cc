@@ -68,10 +68,9 @@ class LinearSnap {
     memcpy(snap_handles_, outgoing_message.handles(),
            outgoing_message.handle_actual() * sizeof(zx_handle_disposition_t));
     snap_handles_count_ = outgoing_message.handle_actual();
-    outgoing_to_incoming_result_.emplace(
-        fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage()));
+    outgoing_to_incoming_result_.emplace(encoded.GetOutgoingMessage());
     ZX_ASSERT(outgoing_to_incoming_result_.value().ok());
-    decoded_.emplace(outgoing_to_incoming_result_.value().incoming_message());
+    decoded_.emplace(std::move(outgoing_to_incoming_result_.value().incoming_message()));
     ZX_ASSERT(decoded_.value().ok());
     ZX_ASSERT(decoded_.value().error() == nullptr);
   }
@@ -84,7 +83,7 @@ class LinearSnap {
   uint32_t snap_data_size_ = {};
   uint32_t snap_handles_count_ = {};
 
-  std::optional<fidl::OutgoingToIncomingMessageResult> outgoing_to_incoming_result_;
+  std::optional<fidl::OutgoingToIncomingMessage> outgoing_to_incoming_result_;
   std::optional<fidl::DecodedMessage<FidlType>> decoded_;
 };
 

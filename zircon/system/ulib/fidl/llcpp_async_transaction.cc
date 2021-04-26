@@ -13,7 +13,7 @@ namespace fidl {
 namespace internal {
 
 std::optional<UnbindInfo> AsyncTransaction::Dispatch(std::shared_ptr<AsyncBinding>&& binding,
-                                                     fidl_incoming_msg_t* msg) {
+                                                     fidl::IncomingMessage&& msg) {
   ZX_ASSERT(!owned_binding_);
   ZX_ASSERT(!moved_);
   bool moved = false;
@@ -23,7 +23,8 @@ std::optional<UnbindInfo> AsyncTransaction::Dispatch(std::shared_ptr<AsyncBindin
   owned_binding_ = std::move(binding);
   // Avoid static_pointer_cast for now since it results in atomic inc/dec.
   auto* binding_raw = static_cast<AnyAsyncServerBinding*>(owned_binding_.get());
-  fidl::DispatchResult dispatch_result = binding_raw->interface_->dispatch_message(msg, this);
+  fidl::DispatchResult dispatch_result =
+      binding_raw->interface_->dispatch_message(std::move(msg), this);
   if (moved)
     return {};  // Return if `this` is no longer valid.
   moved_ = nullptr;

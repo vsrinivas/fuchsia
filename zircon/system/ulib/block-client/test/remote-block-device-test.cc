@@ -66,7 +66,8 @@ class MockBlockDevice {
     if (status != ZX_ERR_NOT_SUPPORTED) {
       return status;
     }
-    return fidl::WireTryDispatch<fio::Node>(mock_node_.get(), msg, nullptr) ==
+    auto incoming_msg = fidl::IncomingMessage::FromEncodedCMessage(msg);
+    return fidl::WireTryDispatch<fio::Node>(mock_node_.get(), incoming_msg, nullptr) ==
                    fidl::DispatchResult::kFound
                ? ZX_OK
                : ZX_ERR_PEER_CLOSED;

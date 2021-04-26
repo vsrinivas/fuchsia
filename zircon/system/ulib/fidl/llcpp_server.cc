@@ -8,12 +8,17 @@ namespace fidl {
 
 namespace internal {
 
-::fidl::DispatchResult TryDispatch(void* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn,
-                                   const MethodEntry* begin, const MethodEntry* end) {
-  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+::fidl::DispatchResult TryDispatch(void* impl, ::fidl::IncomingMessage& msg,
+                                   ::fidl::Transaction* txn, const MethodEntry* begin,
+                                   const MethodEntry* end) {
+  if (!msg.ok()) {
+    txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, msg.status()});
+    return ::fidl::DispatchResult::kNotFound;
+  }
+  auto* hdr = msg.header();
   while (begin < end) {
     if (hdr->ordinal == begin->ordinal) {
-      zx_status_t decode_status = begin->dispatch(impl, msg, txn);
+      zx_status_t decode_status = begin->dispatch(impl, std::move(msg), txn);
       if (unlikely(decode_status != ZX_OK)) {
         txn->InternalError({::fidl::UnbindInfo::kDecodeError, decode_status});
       }

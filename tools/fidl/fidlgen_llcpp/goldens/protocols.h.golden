@@ -743,10 +743,10 @@ struct ::fidl::internal::WireDispatcher<
   WireDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 
 template <>
@@ -756,10 +756,10 @@ struct ::fidl::internal::WireServerDispatcher<
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 #endif  // __Fuchsia__
 
@@ -885,18 +885,21 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -1048,18 +1051,21 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -1211,18 +1217,19 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>();
     }
@@ -1375,18 +1382,19 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>();
     }
@@ -1919,7 +1927,7 @@ class ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>
                               ResponseMethodCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -1951,7 +1959,7 @@ class ::fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>
                               ResponseMethodCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -2039,19 +2047,23 @@ struct WithErrorSyntaxResponseAsStructResponse {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct WithErrorSyntaxResponseAsStructResponse>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct WithErrorSyntaxResponseAsStructResponse>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -2145,19 +2157,23 @@ struct WithErrorSyntaxErrorAsPrimitiveResponse {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct WithErrorSyntaxErrorAsPrimitiveResponse>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct WithErrorSyntaxErrorAsPrimitiveResponse>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -2250,19 +2266,23 @@ struct WithErrorSyntaxErrorAsEnumResponse {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
+        : ::fidl::IncomingMessage(
+              bytes, byte_actual, handles, handle_actual,
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
       Decode<struct WithErrorSyntaxErrorAsEnumResponse>();
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<struct WithErrorSyntaxErrorAsEnumResponse>();
     }
+    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
+                         msg->handles, msg->num_handles) {}
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
@@ -2316,10 +2336,10 @@ struct ::fidl::internal::WireDispatcher<
   WireDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 
 template <>
@@ -2329,10 +2349,10 @@ struct ::fidl::internal::WireServerDispatcher<
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 #endif  // __Fuchsia__
 
@@ -2445,18 +2465,21 @@ struct ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::DiscoverableProtocol::Method>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::DiscoverableProtocol::Method>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -2653,7 +2676,7 @@ class ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>
                       MethodCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -2676,7 +2699,7 @@ class ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>
   virtual void Method(MethodCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -2731,10 +2754,10 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::Transitional>
   WireDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 
 template <>
@@ -2744,10 +2767,10 @@ struct ::fidl::internal::WireServerDispatcher<
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocols::Transitional>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::Transitional>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 #endif  // __Fuchsia__
 
@@ -2867,18 +2890,21 @@ struct ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request> final {
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::Transitional::Request>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<
+          ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -3015,18 +3041,19 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<
-          ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::Transitional::Request>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<
           ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>>();
     }
@@ -3165,18 +3192,21 @@ struct ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay> final {
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<
+            ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<
+          ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -3311,18 +3341,19 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event> final {
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<
-          ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<
+            ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<
           ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>>();
     }
@@ -3773,7 +3804,7 @@ class ::fidl::WireServer<::fidl_test_protocols::Transitional>
   }
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -3807,7 +3838,7 @@ class ::fidl::WireInterface<::fidl_test_protocols::Transitional>
   }
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -3880,10 +3911,10 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::ChannelProtocol>
   WireDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 
 template <>
@@ -3893,10 +3924,10 @@ struct ::fidl::internal::WireServerDispatcher<
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 #endif  // __Fuchsia__
 
@@ -4017,18 +4048,21 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::ChannelProtocol::MethodA>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::ChannelProtocol::MethodA>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -4166,18 +4200,19 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::ChannelProtocol::EventA>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::ChannelProtocol::EventA>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::ChannelProtocol::EventA>>();
     }
@@ -4320,18 +4355,21 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::ChannelProtocol::MethodB>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::ChannelProtocol::MethodB>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -4466,18 +4504,19 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::ChannelProtocol::MethodB>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::ChannelProtocol::MethodB>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::ChannelProtocol::MethodB>>();
     }
@@ -4622,18 +4661,21 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::ChannelProtocol::TakeHandle>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::ChannelProtocol::TakeHandle>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -4772,18 +4814,19 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::ChannelProtocol::TakeHandle>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::ChannelProtocol::TakeHandle>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::ChannelProtocol::TakeHandle>>();
     }
@@ -4930,18 +4973,21 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::ChannelProtocol::MutateSocket>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::ChannelProtocol::MutateSocket>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -5090,18 +5136,19 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::ChannelProtocol::MutateSocket>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::ChannelProtocol::MutateSocket>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::ChannelProtocol::MutateSocket>>();
     }
@@ -6039,7 +6086,7 @@ class ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>
                             MutateSocketCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -6087,7 +6134,7 @@ class ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>
                             MutateSocketCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -6189,11 +6236,11 @@ struct ::fidl::internal::WireDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireInterface<
           ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireInterface<
           ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 
 template <>
@@ -6204,11 +6251,11 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>*
           impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>*
           impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 #endif  // __Fuchsia__
 
@@ -6322,18 +6369,23 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestNoResponse>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              NoRequestNoResponse>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -6465,18 +6517,23 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestEmptyResponse>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              NoRequestEmptyResponse>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -6613,19 +6670,20 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              NoRequestEmptyResponse>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestEmptyResponse>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
               NoRequestEmptyResponse>>();
@@ -6764,18 +6822,23 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestWithResponse>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              NoRequestWithResponse>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -6915,19 +6978,20 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              NoRequestWithResponse>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestWithResponse>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
               NoRequestWithResponse>>();
@@ -7071,18 +7135,23 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestNoResponse>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              WithRequestNoResponse>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -7222,18 +7291,23 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestEmptyResponse>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              WithRequestEmptyResponse>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -7370,19 +7444,20 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              WithRequestEmptyResponse>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestEmptyResponse>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
               WithRequestEmptyResponse>>();
@@ -7530,18 +7605,23 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestWithResponse>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              WithRequestWithResponse>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -7682,19 +7762,20 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              WithRequestWithResponse>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestWithResponse>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
               WithRequestWithResponse>>();
@@ -7835,19 +7916,20 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              OnEmptyResponse>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                OnEmptyResponse>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
               OnEmptyResponse>>();
@@ -7992,19 +8074,20 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              OnWithResponse>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                OnWithResponse>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
               OnWithResponse>>();
@@ -9419,7 +9502,7 @@ class ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>
       WithRequestWithResponseCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -9495,7 +9578,7 @@ class ::fidl::WireInterface<
       WithRequestWithResponseCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -9550,10 +9633,10 @@ struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::WithErrorSyntax>
   WireDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 
 template <>
@@ -9563,10 +9646,10 @@ struct ::fidl::internal::WireServerDispatcher<
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static ::fidl::DispatchResult Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>* impl,
-      fidl_incoming_msg_t* msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 };
 #endif  // __Fuchsia__
 
@@ -9682,18 +9765,21 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -9838,18 +9924,19 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>();
     }
@@ -9985,18 +10072,21 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -10141,18 +10231,19 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>();
     }
@@ -10287,18 +10378,21 @@ struct ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<WireRequest>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireRequest<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<WireRequest>();
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
+      Decode<::fidl::WireRequest<
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>();
     }
     DecodedMessage(const DecodedMessage&) = delete;
     DecodedMessage(DecodedMessage&&) = delete;
@@ -10439,18 +10533,19 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+  class DecodedMessage final : public ::fidl::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>();
+        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
+      if (ok()) {
+        Decode<::fidl::WireResponse<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>();
+      }
     }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
+    DecodedMessage(::fidl::IncomingMessage&& msg)
+        : ::fidl::IncomingMessage(std::move(msg)) {
       Decode<::fidl::WireResponse<
           ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>();
     }
@@ -11286,7 +11381,7 @@ class ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>
                            ErrorAsEnumCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -11328,7 +11423,7 @@ class ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>
   virtual void ErrorAsEnum(ErrorAsEnumCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
 
@@ -12104,7 +12199,7 @@ class ::fidl::WireResponseContext<
           message) = 0;
 
  private:
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
+  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -12174,7 +12269,7 @@ class ::fidl::internal::WireClientImpl<
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl_incoming_msg_t* msg) override;
+      fidl::IncomingMessage& msg) override;
 
   std::shared_ptr<::fidl::WireAsyncEventHandler<
       ::fidl_test_protocols::HandleRightsProtocol>>
@@ -12281,7 +12376,7 @@ class ::fidl::internal::WireClientImpl<
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl_incoming_msg_t* msg) override;
+      fidl::IncomingMessage& msg) override;
 
   std::shared_ptr<::fidl::WireAsyncEventHandler<
       ::fidl_test_protocols::DiscoverableProtocol>>
@@ -12354,7 +12449,7 @@ class ::fidl::WireResponseContext<::fidl_test_protocols::Transitional::Request>
           message) = 0;
 
  private:
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
+  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -12420,7 +12515,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl_incoming_msg_t* msg) override;
+      fidl::IncomingMessage& msg) override;
 
   std::shared_ptr<
       ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>>
@@ -12513,7 +12608,7 @@ class ::fidl::WireResponseContext<
           message) = 0;
 
  private:
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
+  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -12531,7 +12626,7 @@ class ::fidl::WireResponseContext<
           message) = 0;
 
  private:
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
+  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -12549,7 +12644,7 @@ class ::fidl::WireResponseContext<
           ::fidl_test_protocols::ChannelProtocol::MutateSocket>* message) = 0;
 
  private:
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
+  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -12681,7 +12776,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl_incoming_msg_t* msg) override;
+      fidl::IncomingMessage& msg) override;
 
   std::shared_ptr<
       ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>>
@@ -12775,7 +12870,7 @@ class ::fidl::WireResponseContext<
                            NoRequestEmptyResponse>* message) = 0;
 
  private:
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
+  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -12793,7 +12888,7 @@ class ::fidl::WireResponseContext<
                            NoRequestWithResponse>* message) = 0;
 
  private:
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
+  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -12811,7 +12906,7 @@ class ::fidl::WireResponseContext<
                            WithRequestEmptyResponse>* message) = 0;
 
  private:
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
+  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -12829,7 +12924,7 @@ class ::fidl::WireResponseContext<
                            WithRequestWithResponse>* message) = 0;
 
  private:
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
+  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -13010,7 +13105,7 @@ class ::fidl::internal::WireClientImpl<
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl_incoming_msg_t* msg) override;
+      fidl::IncomingMessage& msg) override;
 
   std::shared_ptr<::fidl::WireAsyncEventHandler<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>>
@@ -13122,7 +13217,7 @@ class ::fidl::WireResponseContext<
           message) = 0;
 
  private:
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
+  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -13141,7 +13236,7 @@ class ::fidl::WireResponseContext<
           message) = 0;
 
  private:
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
+  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -13159,7 +13254,7 @@ class ::fidl::WireResponseContext<
           message) = 0;
 
  private:
-  zx_status_t OnRawReply(fidl_incoming_msg_t* msg) override;
+  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -13275,7 +13370,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl_incoming_msg_t* msg) override;
+      fidl::IncomingMessage& msg) override;
 
   std::shared_ptr<
       ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithErrorSyntax>>

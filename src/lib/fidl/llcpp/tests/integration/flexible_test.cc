@@ -250,22 +250,16 @@ class Server : fidl::WireServer<test::ReceiveFlexibleEnvelope>, private async_wa
     }
     if (signal->observed & ZX_CHANNEL_READABLE) {
       for (uint64_t i = 0; i < signal->count; i++) {
-        fidl_incoming_msg_t msg = {
-            .bytes = &bytes_[0],
-            .handles = &handles_[0],
-            .num_bytes = 0u,
-            .num_handles = 0u,
-        };
-        status = zx_channel_read_etc(async_wait_t::object, 0, msg.bytes, msg.handles,
-                                     ZX_CHANNEL_MAX_MSG_BYTES, ZX_CHANNEL_MAX_MSG_HANDLES,
-                                     &msg.num_bytes, &msg.num_handles);
-        if (status != ZX_OK || msg.num_bytes < sizeof(fidl_message_header_t)) {
+        fidl::IncomingMessage msg = fidl::ChannelReadEtc(
+            async_wait_t::object, 0, fidl::BufferSpan(bytes_->data(), bytes_->size()),
+            cpp20::span(*handles_));
+        if (!msg.ok()) {
           return;
         }
 
-        auto hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+        auto hdr = msg.header();
         RewriteTransaction txn(hdr->txid, zx::unowned_channel(async_wait_t::object));
-        fidl::WireDispatch<test::ReceiveFlexibleEnvelope>(this, &msg, &txn);
+        fidl::WireDispatch<test::ReceiveFlexibleEnvelope>(this, std::move(msg), &txn);
       }
 
       // Will only get here if every single message was handled synchronously and successfully.
@@ -283,9 +277,10 @@ class Server : fidl::WireServer<test::ReceiveFlexibleEnvelope>, private async_wa
 
  private:
   async_dispatcher_t* dispatcher_;
-  std::unique_ptr<char[]> bytes_ = std::make_unique<char[]>(ZX_CHANNEL_MAX_MSG_BYTES);
-  std::unique_ptr<zx_handle_info_t[]> handles_ =
-      std::make_unique<zx_handle_info_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
+  std::unique_ptr<std::array<uint8_t, ZX_CHANNEL_MAX_MSG_BYTES>> bytes_ =
+      std::make_unique<std::array<uint8_t, ZX_CHANNEL_MAX_MSG_BYTES>>();
+  std::unique_ptr<std::array<zx_handle_info_t, ZX_CHANNEL_MAX_MSG_HANDLES>> handles_ =
+      std::make_unique<std::array<zx_handle_info_t, ZX_CHANNEL_MAX_MSG_HANDLES>>();
 };
 
 }  // namespace
