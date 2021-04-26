@@ -54,7 +54,10 @@ template("_dart_snapshot_invocation") {
 
     args = [
       "--out",
-      rebase_path(app_path),
+      rebase_path(app_path, root_build_dir),
+
+      # `--dart` and `--snapshot` are used in the output app script, use
+      # absolute path so the script would work regardless where it's invoked.
       "--dart",
       rebase_path(dart_binary),
       "--snapshot",
@@ -72,7 +75,7 @@ template("_dart_snapshot_invocation") {
           path = rebase_path(app_path, root_build_dir)
         },
       ]
-      snapshot_path = [ snapshot ]
+      snapshot_path = [ rebase_path(snapshot, root_build_dir) ]
     }
   }
 }
@@ -199,7 +202,6 @@ template("dart_tool") {
   sdk_deps = []
 
   snapshot_path = "$target_gen_dir/${target_name}.snapshot"
-  depfile_path = "${snapshot_path}.d"
 
   snapshot_target_name = target_name + "_snapshot"
 
@@ -226,19 +228,13 @@ template("dart_tool") {
       testonly = invoker.testonly
     }
 
-    depfile = depfile_path
+    depfile = "${snapshot_path}.d"
 
     outputs = [ snapshot_path ]
 
     script = dart_binary
 
-    # The snapshot path needs to be rebased on top of the root build dir so
-    # that the resulting depfile gets properly formatted.
-    rebased_snapshot_path = rebase_path(snapshot_path, root_build_dir)
-    rebased_depfile_path = rebase_path(depfile_path)
-    rebased_packages_path = rebase_path(_packages_path)
-
-    main_uri = rebase_path(invoker.main_dart)
+    main_uri = rebase_path(invoker.main_dart, root_build_dir)
 
     # If we have sources defined we can check to see if the main file is included
     # in the source list. If so, we want to call the snapshot generation with
@@ -256,9 +252,9 @@ template("dart_tool") {
     args = [
       "--verbosity=warning",
       "--no-sound-null-safety",
-      "--snapshot=$rebased_snapshot_path",
-      "--snapshot-depfile=$rebased_depfile_path",
-      "--packages=$rebased_packages_path",
+      "--snapshot=" + rebase_path(snapshot_path, root_build_dir),
+      "--snapshot-depfile=" + rebase_path(depfile, root_build_dir),
+      "--packages=" + rebase_path(_packages_path, root_build_dir),
       main_uri,
     ]
 
