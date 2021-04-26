@@ -49,3 +49,8 @@ fuchsia_test_package("bt-hfp-audio-gateway-integration-tests") {
     }
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ ":bt-hfp-audio-gateway-integration-tests" ]
+}

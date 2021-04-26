@@ -107,9 +107,16 @@ fuchsia_component("component") {
   manifest = "meta/bt-hfp-audio-gateway.cmx"
 }
 
+fuchsia_component("component-v2") {
+  component_name = "bt-hfp-audio-gateway"
+  deps = [ ":bin" ]
+  manifest = "meta/bt-hfp-audio-gateway.cml"
+}
+
 fuchsia_package("bt-hfp-audio-gateway-default") {
   deps = [
     ":component",
+    ":component-v2",
     ":default_config",
   ]
 }

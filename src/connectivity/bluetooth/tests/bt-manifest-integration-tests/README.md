@@ -18,3 +18,7 @@ To run the AVRCP-Target smoke test:
 To run the RFCOMM smoke test:
 
 `fx test bt-rfcomm-smoke-test`
+
+To run the HFP Audio Gateway smoke test:
+
+`fx test bt-hfp-audio-gateway-smoke-test`
