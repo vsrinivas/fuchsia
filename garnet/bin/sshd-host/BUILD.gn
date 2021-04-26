@@ -33,19 +33,14 @@ executable("bin") {
   ]
 }
 
-resource("sshd-host-resources") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
-  outputs = [ "data/{{source_file_part}}" ]
-}
-
 fuchsia_package_with_single_component("sshd-host") {
   manifest = "meta/sshd-host.cmx"
   deps = [
     ":bin",
 
     # Used by programs that need to load ICU locale data, such as tz-util.
-    ":sshd-host-resources",
     "//build/validate:non_production_tag",
+    "//src/intl:icudtl",
     "//third_party/openssh-portable:hostkeygen",
     "//third_party/openssh-portable:scp",
     "//third_party/openssh-portable:sftp-server",

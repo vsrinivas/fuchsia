@@ -38,15 +38,10 @@ executable("bin") {
   ]
 }
 
-resource("timezone_resources") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
-  outputs = [ "data/{{source_file_part}}" ]
-}
-
 fuchsia_package_with_single_component("timezone") {
   manifest = "meta/timezone.cmx"
   deps = [
     ":bin",
-    ":timezone_resources",
+    "//src/intl:icudtl",
   ]
 }

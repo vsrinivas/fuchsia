@@ -52,18 +52,14 @@ resource("l10n_en_resource") {
   outputs = [ "data/assets/locales/en/l10n.json" ]
 }
 
-# Fuchsia's ICU does not have libicudata.so, and the locale data MUST
-# be loaded from a file instead.
-resource("icudata_resource") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
-  outputs = [ "data/icudtl.dat" ]
-}
-
 fuchsia_unittest_package("a11y-tests") {
   manifest = "meta/a11y_manager_apptests.cmx"
   deps = [
     ":a11y_manager_apptests",
-    ":icudata_resource",
     ":l10n_en_resource",
+
+    # Fuchsia's ICU does not have libicudata.so, and the locale data MUST
+    # be loaded from a file instead.
+    "//src/intl:icudtl",
   ]
 }

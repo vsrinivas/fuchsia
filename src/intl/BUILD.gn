@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/resource.gni")
+
 group("intl") {
   testonly = true
   public_deps = [
@@ -23,4 +25,9 @@ group("tests") {
 
 group("config") {
   public_deps = [ "intl_services:config" ]
+}
+
+resource("icudtl") {
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  outputs = [ "data/icudtl.dat" ]
 }

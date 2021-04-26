@@ -116,16 +116,10 @@ fuchsia_unittest_component("locale_util_unit_test") {
   deps = [ ":locale_util_unit_test_bin" ]
 }
 
-resource("icudtl_dat") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
-  outputs = [ "data/icudtl.dat" ]
-  testonly = true
-}
-
 fuchsia_test_package("intl_property_provider_impl_tests") {
   test_components = [
     ":intl_property_provider_impl_test",
     ":locale_util_unit_test",
   ]
-  deps = [ ":icudtl_dat" ]
+  deps = [ "//src/intl:icudtl" ]
 }

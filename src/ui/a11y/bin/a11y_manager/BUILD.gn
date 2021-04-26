@@ -138,19 +138,15 @@ foreach(file, l10n_files) {
   l10n_resource_deps += [ ":$name" ]
 }
 
-# Fuchsia's ICU does not have libicudata.so, and the locale data MUST
-# be loaded from a file instead.
-resource("icudata_resource") {
-  sources = [ rebase_path("//third_party/icu/common/icudtl.dat") ]
-  outputs = [ "data/icudtl.dat" ]
-}
-
 fuchsia_package_with_single_component("a11y-manager") {
   component_name = "a11y-manager"
   manifest = "meta/a11y_manager.cmx"
   deps = [
     ":bin",
-    ":icudata_resource",
+
+    # Fuchsia's ICU does not have libicudata.so, and the locale data MUST
+    # be loaded from a file instead.
+    "//src/intl:icudtl",
     "//src/ui/a11y/lib/screen_reader/i18n:resources",
   ]
   deps += l10n_resource_deps

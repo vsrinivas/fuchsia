@@ -35,12 +35,7 @@ fuchsia_component("intl_wisdom_server_rust") {
 fuchsia_package("intl_wisdom_rust") {
   deps = [
     ":intl_wisdom_client_rust",
-    ":intl_wisdom_rust_resources",
     ":intl_wisdom_server_rust",
+    "//src/intl:icudtl",
   ]
-}
-
-resource("intl_wisdom_rust_resources") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
-  outputs = [ "data/{{source_file_part}}" ]
 }

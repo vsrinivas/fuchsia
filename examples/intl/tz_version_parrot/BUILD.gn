@@ -46,14 +46,12 @@ fuchsia_package("tz_version_parrot") {
     ":tz_version_parrot_resources",
     ":tz_version_parrot_with_tzdata",
     ":tz_version_parrot_with_tzdata_wrong_revision",
+    "//src/intl:icudtl",
   ]
 }
 
 resource("tz_version_parrot_resources") {
-  sources = [
-    "//third_party/icu/common/icudtl.dat",
-    "newer_revision.txt",
-  ]
+  sources = [ "newer_revision.txt" ]
   outputs = [ "data/{{source_file_part}}" ]
 }
 

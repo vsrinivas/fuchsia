@@ -44,13 +44,8 @@ rustc_binary("intl_wisdom_client_rust") {
 fuchsia_unittest_package("intl_wisdom_client_rust_tests") {
   deps = [
     ":intl_wisdom_client_rust_test",
-    ":intl_wisdom_client_rust_tests_resources",
+    "//src/intl:icudtl",
   ]
-}
-
-resource("intl_wisdom_client_rust_tests_resources") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
-  outputs = [ "data/{{source_file_part}}" ]
 }
 
 group("client") {

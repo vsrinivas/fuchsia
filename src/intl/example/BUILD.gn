@@ -63,7 +63,7 @@ fuchsia_unittest_package("pkg") {
     ":fr-strings",
 
     # Contains the necessary ICU data.
-    ":icudtl",
+    "//src/intl:icudtl",
   ]
 
   # [END resources]
@@ -85,11 +85,6 @@ resource("es-strings") {
   data_deps = [ ":l10n" ]
   sources = [ "$target_gen_dir/es/l10n.json" ]
   outputs = [ "data/assets/locales/es/l10n.json" ]
-}
-
-resource("icudtl") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
-  outputs = [ "data/icudtl.dat" ]
 }
 
 # [END pkg]

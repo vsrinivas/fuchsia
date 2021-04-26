@@ -39,10 +39,7 @@ icu_tzdata_config_data("icu_tzdata_for_icu_data_rust_tests") {
 }
 
 resource("icu_data_test_files") {
-  sources = [
-    "//third_party/icu/common/icudtl.dat",
-    "test_bad_revision.txt",
-  ]
+  sources = [ "test_bad_revision.txt" ]
   outputs = [ "data/{{source_file_part}}" ]
 }
 
@@ -52,6 +49,7 @@ fuchsia_unittest_package("icu_data_rust_tests") {
     ":icu_data_test",
     ":icu_data_test_files",
     ":icu_tzdata_for_icu_data_rust_tests",
+    "//src/intl:icudtl",
   ]
 }
 

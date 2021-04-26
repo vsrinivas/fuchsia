@@ -31,7 +31,7 @@ fuchsia_unittest_package("timezone_tests") {
   manifest = "meta/deprecated_timezone_unit_tests.cmx"
   deps = [
     ":deprecated_timezone_unit_tests",
-    "//garnet/bin/timezone:timezone_resources",
+    "//src/intl:icudtl",
   ]
   test_specs = {
     log_settings = {

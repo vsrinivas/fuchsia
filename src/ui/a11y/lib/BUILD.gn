@@ -36,13 +36,6 @@ resource("l10n_en_resource") {
   deps = [ "//src/ui/a11y/lib/screen_reader/i18n:resources" ]
 }
 
-# Fuchsia's ICU does not have libicudata.so, and the locale data MUST
-# be loaded from a file instead.
-resource("icudata_resource") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
-  outputs = [ "data/icudtl.dat" ]
-}
-
 # needed for semantics_test
 resource("semantic_tree_data_resource") {
   sources = [
@@ -138,9 +131,11 @@ fuchsia_unittest_component("view-tests-component") {
 
 fuchsia_test_package("a11y-lib-tests") {
   deps = [
-    ":icudata_resource",
+    # Fuchsia's ICU does not have libicudata.so, and the locale data MUST
+    # be loaded from a file instead.
     ":l10n_en_resource",
     ":semantic_tree_data_resource",
+    "//src/intl:icudtl",
     "//src/ui/a11y/lib/screen_reader/i18n:resources",
   ]
 

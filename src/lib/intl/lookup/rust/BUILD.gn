@@ -66,18 +66,13 @@ resource("l10n_es_asset") {
   outputs = [ "data/assets/locales/es/l10n.json" ]
 }
 
-resource("icudtl_dat") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
-  outputs = [ "data/icudtl.dat" ]
-}
-
 fuchsia_unittest_package("intl-lookup-rust-tests") {
   deps = [
-    ":icudtl_dat",
     ":l10n_en_asset",
     ":l10n_es_asset",
     ":l10n_fr_asset",
     ":lib_test",
+    "//src/intl:icudtl",
   ]
 }
 

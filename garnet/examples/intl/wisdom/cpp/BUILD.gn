@@ -17,14 +17,9 @@ fuchsia_component("intl_wisdom_server") {
 fuchsia_package("intl_wisdom") {
   deps = [
     ":intl_wisdom_client",
-    ":intl_wisdom_resources",
     ":intl_wisdom_server",
+    "//src/intl:icudtl",
   ]
-}
-
-resource("intl_wisdom_resources") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
-  outputs = [ "data/{{source_file_part}}" ]
 }
 
 group("cpp") {

@@ -265,6 +265,7 @@ fuchsia_unittest_package("setui_service_tests") {
     ":lib_test",
     ":setui_service_tests_resources",
     ":tests_config",
+    "//src/intl:icudtl",
   ]
   test_specs = {
     log_settings = {
@@ -274,10 +275,7 @@ fuchsia_unittest_package("setui_service_tests") {
 }
 
 resource("setui_service_tests_resources") {
-  sources = [
-    "//third_party/icu/common/icudtl.dat",
-    "src/tests/testdata/test_store_data.store",
-  ]
+  sources = [ "src/tests/testdata/test_store_data.store" ]
   outputs = [ "data/{{source_file_part}}" ]
 }
 
@@ -337,16 +335,11 @@ fuchsia_component("setui_service_v2") {
   deps = [ ":bin" ]
 }
 
-resource("setui_service_resources") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
-  outputs = [ "data/{{source_file_part}}" ]
-}
-
 fuchsia_package("setui_service") {
   deps = [
-    ":setui_service_resources",
     ":setui_service_v1",
     ":setui_service_v2",
+    "//src/intl:icudtl",
   ]
 }
 
