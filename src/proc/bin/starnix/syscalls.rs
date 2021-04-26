@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl::endpoints::Proxy;
 use fidl_fuchsia_io as fio;
 use fuchsia_runtime::utc_time;
 use fuchsia_zircon::{self as zx, AsHandleRef, Task};
@@ -327,6 +328,16 @@ pub fn sys_exit_group(ctx: &ThreadContext, error_code: i32) -> Result<SyscallRes
     Ok(SyscallResult::Exit(error_code))
 }
 
+async fn async_openat(
+    parent: &fio::DirectoryProxy,
+    path: &str,
+    flags: u32,
+    mode: u32,
+) -> Result<fio::NodeSynchronousProxy, OpenError> {
+    let node = directory::open_node(parent, path, flags, mode).await?;
+    Ok(fio::NodeSynchronousProxy::new(node.into_channel().unwrap().into_zx_channel()))
+}
+
 pub fn sys_openat(
     ctx: &ThreadContext,
     dir_fd: i32,
@@ -348,7 +359,7 @@ pub fn sys_openat(
     let path = &path[1..];
     // TODO(tbodt): Need to switch to filesystem APIs that do not require UTF-8
     let path = std::str::from_utf8(path).expect("bad UTF-8 in filename");
-    let node = block_on(directory::open_node(&ctx.process.root, path, fio::OPEN_RIGHT_READABLE, 0))
+    let node = block_on(async_openat(&ctx.process.root, path, fio::OPEN_RIGHT_READABLE, 0))
         .map_err(|e| match e {
             OpenError::OpenError(zx::Status::NOT_FOUND) => ENOENT,
             _ => {

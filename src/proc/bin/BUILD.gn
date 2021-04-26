@@ -11,5 +11,8 @@ group("bin") {
 
 group("tests") {
   testonly = true
-  deps = [ "starnix:tests" ]
+  deps = [
+    "android:tests",
+    "starnix:tests",
+  ]
 }

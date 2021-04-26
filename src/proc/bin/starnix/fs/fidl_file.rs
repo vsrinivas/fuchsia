@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::endpoints::Proxy;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_kernel as fkernel;
 use fuchsia_component::client::connect_channel_to_service;
@@ -53,8 +52,7 @@ impl FidlNode {
 }
 
 impl FidlFile {
-    pub fn from_node(node: fio::NodeProxy) -> Result<FdHandle, Errno> {
-        let node = fio::NodeSynchronousProxy::new(node.into_channel().unwrap().into_zx_channel());
+    pub fn from_node(node: fio::NodeSynchronousProxy) -> Result<FdHandle, Errno> {
         let node = match node.describe(zx::Time::INFINITE).map_err(fidl_error)? {
             fio::NodeInfo::Directory(_) => {
                 FidlNode::Directory(fio::DirectorySynchronousProxy::new(node.into_channel()))
