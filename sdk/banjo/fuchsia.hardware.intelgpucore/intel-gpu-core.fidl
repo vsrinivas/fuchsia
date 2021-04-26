@@ -10,19 +10,19 @@ const uint32 IMAGE_TYPE_X_TILED = 1;
 const uint32 IMAGE_TYPE_Y_LEGACY_TILED = 2;
 const uint32 IMAGE_TYPE_YF_TILED = 3;
 
-[Transport = "Banjo", BanjoLayout="ddk-callback"]
+[Transport = "Banjo", BanjoLayout = "ddk-callback"]
 protocol ZxIntelGpuCoreInterrupt {
     Callback(uint32 master_interrupt_control, uint64 timestamp) -> ();
 };
 
-[Transport = "Banjo", BanjoLayout="ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol ZxIntelGpuCore {
     /// Reads 16 bits from pci config space; returned in |value_out|.
     ReadPciConfig16(uint16 addr) -> (zx.status s, uint16 value);
 
     /// Maps the given |pci_bar|; address returned in |addr_out|, size in bytes returned in
     /// |size_out|.
-    MapPciMmio(uint32 pci_bar) -> (zx.status s, [Buffer, CalleeAllocated] vector<uint8> buf);
+    MapPciMmio(uint32 pci_bar) -> (zx.status s, [Buffer, CalleeAllocated] vector<uint8>:MAX buf);
 
     /// Unmaps the given |pci_bar|.
     UnmapPciMmio(uint32 pci_bar) -> (zx.status s);
@@ -33,7 +33,7 @@ protocol ZxIntelGpuCore {
     /// Registers the given |callback| to be invoked with parameter |data| when an interrupt occurs
     /// matching |interrupt_mask|.
     RegisterInterruptCallback(ZxIntelGpuCoreInterrupt callback,
-                                 uint32 interrupt_mask) -> (zx.status s);
+                              uint32 interrupt_mask) -> (zx.status s);
 
     /// Un-registers a previously registered interrupt callback.
     UnregisterInterruptCallback() -> (zx.status s);
@@ -54,5 +54,5 @@ protocol ZxIntelGpuCore {
     /// Inserts page tables entries for the GTT allocation given by |addr| for the vmo represented by
     /// handle |buffer|, at the given |page_offset| and |page_count|. Takes ownership of |buffer|.
     GttInsert(uint64 addr, zx.handle:VMO buffer, uint64 page_offset,
-                  uint64 page_count) -> (zx.status s);
+              uint64 page_count) -> (zx.status s);
 };
