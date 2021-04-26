@@ -12,7 +12,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/virtualization_vsock_tests"
+        "binary": "bin/virtualization_vsock_tests"
     },
     "sandbox": {
         "services": [

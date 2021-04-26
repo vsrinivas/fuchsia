@@ -11,7 +11,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/server_daemon_test"
+        "binary": "bin/server_daemon_test"
     },
     "sandbox": {
         "features": [

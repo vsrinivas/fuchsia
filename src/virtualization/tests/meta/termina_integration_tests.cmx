@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/termina_integration_tests"
+        "binary": "bin/termina_integration_tests"
     },
     "sandbox": {
         "services": [

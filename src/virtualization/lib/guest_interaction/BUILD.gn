@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/fidl/fidl.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
@@ -14,6 +13,7 @@ group("tests") {
   testonly = true
   deps = [
     ":guest_discovery_service",
+    ":guest_interaction_operation_tests",
     ":guest_interaction_tests",
   ]
 }
@@ -161,41 +161,52 @@ executable("server_operation_test") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("guest_interaction_tests") {
+fuchsia_test_component("client_operation_test_cmp") {
+  deps = [ ":client_operation_test" ]
+  manifest = "meta/client_operation_test.cmx"
+}
+
+fuchsia_test_component("server_operation_test_cmp") {
+  deps = [ ":server_operation_test" ]
+  manifest = "meta/server_operation_test.cmx"
+}
+
+fuchsia_test_package("guest_interaction_operation_tests") {
+  test_components = [
+    ":client_operation_test_cmp",
+    ":server_operation_test_cmp",
+  ]
+}
+
+resource("test_script") {
+  sources = [ "test/test_script.sh" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_test_component("guest_interaction_service_test_cmp") {
   deps = [
-    ":client_operation_test",
     ":guest_interaction_service_test",
-    ":server_daemon_test",
-    ":server_operation_test",
+    ":test_script",
   ]
+  component_name = "guest_interaction_service_test"
+  manifest = "meta/guest_interaction_service_test.cmx"
+}
 
-  resources = [
-    {
-      path = rebase_path("test/test_script.sh")
-      dest = "test_script.sh"
-    },
+fuchsia_test_component("server_daemon_test_cmp") {
+  deps = [ ":server_daemon_test" ]
+  component_name = "server_daemon_test"
+  manifest = "meta/server_daemon_test.cmx"
+}
+
+fuchsia_test_package("guest_interaction_tests") {
+  test_components = [
+    ":guest_interaction_service_test_cmp",
+    ":server_daemon_test_cmp",
   ]
-
-  tests = [
-    {
-      name = "client_operation_test"
-    },
-    {
-      name = "server_operation_test"
-    },
-    {
-      name = "server_daemon_test"
-
-      # TODO(fxbug.dev/48129): Currently hangs in ASan. Fix and switch to [ nuc_env ].
-      environments = nuc_env_fails_on_asan
-    },
-    {
-      name = "guest_interaction_service_test"
-
-      # TODO(fxbug.dev/48129): Currently hangs in ASan. Fix and switch to [ nuc_env ].
-      environments = nuc_env_fails_on_asan
-    },
-  ]
+  test_specs = {
+    # TODO(fxbug.dev/48129): Currently hangs in ASan. Fix and switch to [ nuc_env ].
+    environments = nuc_env_fails_on_asan
+  }
 }
 
 executable("debian_guest_interaction_daemon") {
@@ -288,20 +299,9 @@ executable("guest_discovery_service_bin") {
   configs += [ "//build/config:all_source" ]
 }
 
-package("guest_discovery_service") {
+fuchsia_package_with_single_component("guest_discovery_service") {
   deps = [ ":guest_discovery_service_bin" ]
-
-  binaries = [
-    {
-      name = "guest_discovery_service"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/guest_discovery_service.cmx")
-      dest = "guest_discovery_service.cmx"
-    },
-  ]
+  manifest = "meta/guest_discovery_service.cmx"
 }
 
 executable("guest_interaction_service_test") {

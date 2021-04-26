@@ -11,7 +11,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/guest_interaction_service_test"
+        "binary": "bin/guest_interaction_service_test"
     },
     "sandbox": {
         "features": [
