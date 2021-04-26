@@ -5,6 +5,7 @@
 use {
     super::{Filesystem, FilesystemRename},
     crate::{directory::helper::DirectlyMutable, path::Path},
+    async_trait::async_trait,
     fuchsia_zircon::Status,
     std::{any::Any, marker::PhantomData, sync::Arc},
 };
@@ -19,11 +20,12 @@ impl<T: DirectlyMutable + 'static> SimpleFilesystem<T> {
     }
 }
 
+#[async_trait]
 impl<T> FilesystemRename for SimpleFilesystem<T>
 where
     T: DirectlyMutable + 'static,
 {
-    fn rename(
+    async fn rename(
         &self,
         src_dir: Arc<Any + Sync + Send + 'static>,
         src: Path,

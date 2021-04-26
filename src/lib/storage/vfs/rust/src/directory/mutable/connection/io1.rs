@@ -317,12 +317,20 @@ impl MutableConnection {
             Ok(Some(entry)) => entry,
         };
 
-        match self.base.directory.clone().into_mutable_directory().get_filesystem().rename(
-            self.base.directory.clone().into_mutable_directory().into_any(),
-            src,
-            dst_parent.into_mutable_directory().into_any(),
-            dst,
-        ) {
+        match self
+            .base
+            .directory
+            .clone()
+            .into_mutable_directory()
+            .get_filesystem()
+            .rename(
+                self.base.directory.clone().into_mutable_directory().into_any(),
+                src,
+                dst_parent.into_mutable_directory().into_any(),
+                dst,
+            )
+            .await
+        {
             Ok(()) => responder(Status::OK),
             Err(status) => responder(status),
         }
@@ -519,8 +527,9 @@ mod tests {
         }
     }
 
+    #[async_trait]
     impl FilesystemRename for MockFilesystem {
-        fn rename(
+        async fn rename(
             &self,
             src_dir: Arc<Any + Sync + Send + 'static>,
             src_name: Path,

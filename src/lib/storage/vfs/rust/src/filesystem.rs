@@ -4,6 +4,7 @@
 
 use {
     crate::path::Path,
+    async_trait::async_trait,
     fuchsia_zircon::Status,
     std::{any::Any, sync::Arc},
 };
@@ -12,8 +13,9 @@ pub(crate) mod simple;
 
 /// An implementation of a FilesystemRename represents a filesystem that supports
 /// renaming nodes inside it.
+#[async_trait]
 pub trait FilesystemRename: Sync + Send {
-    fn rename(
+    async fn rename(
         &self,
         src_dir: Arc<Any + Sync + Send + 'static>,
         src_name: Path,

@@ -17,6 +17,7 @@ use {
         volume::Volume,
     },
     anyhow::{bail, Error},
+    async_trait::async_trait,
     fuchsia_zircon::Status,
     std::{any::Any, sync::Arc},
     vfs::{
@@ -80,8 +81,9 @@ impl FxVolume {
     }
 }
 
+#[async_trait]
 impl FilesystemRename for FxVolume {
-    fn rename(
+    async fn rename(
         &self,
         _src_dir: Arc<dyn Any + Sync + Send + 'static>,
         _src_name: Path,

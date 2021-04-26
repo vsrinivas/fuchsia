@@ -10,6 +10,7 @@ use {
         util::fatfs_error_to_status,
     },
     anyhow::Error,
+    async_trait::async_trait,
     fatfs::{self, validate_filename, DefaultTimeProvider, FsOptions, LossyOemCpConverter},
     fuchsia_async::{Task, Time, Timer},
     fuchsia_zircon::{Duration, Status},
@@ -297,8 +298,9 @@ impl FatFilesystem {
     }
 }
 
+#[async_trait]
 impl FilesystemRename for FatFilesystem {
-    fn rename(
+    async fn rename(
         &self,
         src_dir: Arc<dyn Any + Sync + Send + 'static>,
         src_path: Path,
