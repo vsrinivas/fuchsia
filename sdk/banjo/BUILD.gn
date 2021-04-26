@@ -27,7 +27,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.pci",
   "fuchsia.hardware.power",
   "fuchsia.hardware.powerimpl",
-  "fuchsia.hardware.pwm",
   "fuchsia.hardware.rawnand",
   "fuchsia.hardware.rpmb",
   "fuchsia.hardware.scpi",
