@@ -4,6 +4,12 @@
 
 import("//build/zbi/kernel_cmdline.gni")
 
+# This serves as an anchor point. By expressing a dependency on
+# //boards/kernel_cmdline, build arguments declared in this file
+# (e.g. pmm_checker_from_board) are brought into scope.
+group("kernel_cmdline") {
+}
+
 kernel_cmdline("serial-legacy") {
   args = [ "kernel.serial=legacy" ]
   deps = [ "//build/validate:non_production_tag" ]
