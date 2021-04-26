@@ -13,10 +13,17 @@
 namespace amlogic_decoder {
 namespace test {
 
+class FakeOwner : public AmlogicVideo::Owner {
+ public:
+  // AmlogicVideo::Owner implementation.
+  void SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const override {}
+};
+
 class TestParser {
  public:
   static void MemoryCopy(uint32_t input_data_size) {
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));

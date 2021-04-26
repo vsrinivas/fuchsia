@@ -10,6 +10,7 @@
 #include <lib/zx/bti.h>
 #include <lib/zx/event.h>
 #include <lib/zx/handle.h>
+#include <lib/zx/thread.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -17,6 +18,7 @@
 #include <thread>
 
 #include "macros.h"
+#include "thread_role.h"
 
 namespace amlogic_decoder {
 
@@ -32,6 +34,7 @@ class Parser final {
     virtual __WARN_UNUSED_RESULT zx::unowned_bti bti() = 0;
     virtual __WARN_UNUSED_RESULT MmioRegisters* mmio() = 0;
     [[nodiscard]] virtual bool is_parser_gated() const = 0;
+    virtual void SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const = 0;
   };
 
   Parser(Owner* owner, zx::handle interrupt_handle);

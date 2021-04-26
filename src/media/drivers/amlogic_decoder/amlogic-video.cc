@@ -17,6 +17,7 @@
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/smc.h>
+#include <zircon/threads.h>
 
 #include <chrono>
 #include <memory>
@@ -77,7 +78,8 @@ enum Interrupt {
 
 }  // namespace
 
-AmlogicVideo::AmlogicVideo() {
+AmlogicVideo::AmlogicVideo(Owner* owner) : owner_(owner) {
+  ZX_DEBUG_ASSERT(owner_);
   ZX_DEBUG_ASSERT(metrics_ == &default_nop_metrics_);
   vdec1_core_ = std::make_unique<Vdec1>(this);
   hevc_core_ = std::make_unique<HevcDec>(this);
@@ -312,6 +314,10 @@ std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(io_buffer_t* io_buffe
 }
 
 void AmlogicVideo::FreeCanvas(CanvasEntry* canvas) { canvas_.Free(canvas->index()); }
+
+void AmlogicVideo::SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const {
+  owner_->SetThreadProfile(std::move(thread), role);
+}
 
 void AmlogicVideo::OnSignaledWatchdog() {
   std::lock_guard<std::mutex> lock(video_decoder_lock_);
@@ -966,6 +972,10 @@ void AmlogicVideo::InitializeInterrupts() {
     }
   });
 
+  SetThreadProfile(
+      zx::unowned_thread(native_thread_get_zx_handle(vdec0_interrupt_thread_.native_handle())),
+      ThreadRole::kVdec0Irq);
+
   vdec1_interrupt_thread_ = std::thread([this]() {
     while (true) {
       zx_time_t time;
@@ -988,6 +998,10 @@ void AmlogicVideo::InitializeInterrupts() {
       }
     }
   });
+
+  SetThreadProfile(
+      zx::unowned_thread(native_thread_get_zx_handle(vdec1_interrupt_thread_.native_handle())),
+      ThreadRole::kVdec1Irq);
 }
 
 zx_status_t AmlogicVideo::InitDecoder() {

@@ -15,6 +15,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/handle.h>
+#include <lib/zx/thread.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
@@ -28,12 +29,12 @@
 
 #include "decoder_core.h"
 #include "decoder_instance.h"
-#include "device_ctx.h"
 #include "firmware_blob.h"
 #include "parser.h"
 #include "registers.h"
 #include "secmem_session.h"
 #include "stream_buffer.h"
+#include "thread_role.h"
 #include "video_decoder.h"
 #include "watchdog.h"
 
@@ -53,7 +54,12 @@ class AmlogicVideo final : public VideoDecoder::Owner,
                            public Parser::Owner,
                            public Watchdog::Owner {
  public:
-  AmlogicVideo();
+  class Owner {
+   public:
+    virtual void SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const = 0;
+  };
+
+  explicit AmlogicVideo(Owner* owner);
 
   ~AmlogicVideo();
 
@@ -111,6 +117,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   // Parser::Owner implementation.
   [[nodiscard]] bool is_parser_gated() const override { return is_parser_gated_; }
+  void SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const override;
 
   // Watchdog::Owner implementation.
   void OnSignaledWatchdog() override;
@@ -205,6 +212,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // Signals the current decoder that there's an error and tells it to power off.
   void PowerOffForError() __TA_REQUIRES(video_decoder_lock_);
 
+  Owner* owner_ = nullptr;
   zx_device_t* parent_ = nullptr;
   ddk::PDev pdev_;
   ddk::SysmemProtocolClient sysmem_;
@@ -246,7 +254,6 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   zx::interrupt vdec0_interrupt_handle_;
   zx::interrupt vdec1_interrupt_handle_;
 
-  std::thread parser_interrupt_thread_;
   std::thread vdec0_interrupt_thread_;
   std::thread vdec1_interrupt_thread_;
 

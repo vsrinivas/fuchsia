@@ -8,6 +8,7 @@
 #include <lib/trace/event.h>
 #include <lib/zx/bti.h>
 #include <zircon/assert.h>
+#include <zircon/threads.h>
 
 #include <optional>
 
@@ -107,8 +108,12 @@ CodecAdapterH264Multi::CodecAdapterH264Multi(std::mutex& lock,
   ZX_DEBUG_ASSERT(video_);
   ZX_DEBUG_ASSERT(secure_memory_mode_[kInputPort] == fuchsia::mediacodec::SecureMemoryMode::OFF);
   ZX_DEBUG_ASSERT(secure_memory_mode_[kOutputPort] == fuchsia::mediacodec::SecureMemoryMode::OFF);
-  zx_status_t status = core_loop_.StartThread("H264 Core loop");
+  thrd_t thrd;
+  zx_status_t status = core_loop_.StartThread("H264 Core loop", &thrd);
   ZX_ASSERT(status == ZX_OK);
+
+  device_->SetThreadProfile(zx::unowned_thread(thrd_get_zx_handle(thrd)),
+                            ThreadRole::kH264MultiCore);
 }
 
 CodecAdapterH264Multi::~CodecAdapterH264Multi() {
@@ -1354,6 +1359,11 @@ void CodecAdapterH264Multi::CoreCodecResetStreamAfterCurrentFrame() {
     input_items.pop_front();
   }
   LOG(DEBUG, "done re-queueing items.");
+}
+
+void CodecAdapterH264Multi::CoreCodecSetStreamControlProfile(
+    zx::unowned_thread stream_control_thread) {
+  device_->SetThreadProfile(std::move(stream_control_thread), ThreadRole::kH264MultiStreamControl);
 }
 
 void CodecAdapterH264Multi::OnCoreCodecFailStream(fuchsia::media::StreamError error) {

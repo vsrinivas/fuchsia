@@ -6,6 +6,7 @@
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DEVICE_CTX_H_
 
 #include <fuchsia/hardware/mediacodec/llcpp/fidl.h>
+#include <lib/zx/thread.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -13,10 +14,10 @@
 #include "amlogic-video.h"
 #include "device_fidl.h"
 #include "driver_ctx.h"
+#include "thread_role.h"
 
 namespace amlogic_decoder {
 
-class AmlogicVideo;
 class DeviceCtx;
 
 using DdkDeviceType = ddk::Device<DeviceCtx, ddk::Messageable>;
@@ -30,7 +31,8 @@ using DdkDeviceType = ddk::Device<DeviceCtx, ddk::Messageable>;
 // instance of this class isn't tested to actually shut down cleanly (yet).
 class DeviceCtx : public fidl::WireServer<fuchsia_hardware_mediacodec::Device>,
                   public DdkDeviceType,
-                  public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA_CODEC> {
+                  public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA_CODEC>,
+                  public AmlogicVideo::Owner {
  public:
   DeviceCtx(DriverCtx* driver, zx_device_t* parent);
   ~DeviceCtx();
@@ -49,6 +51,9 @@ class DeviceCtx : public fidl::WireServer<fuchsia_hardware_mediacodec::Device>,
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { delete this; }
+
+  // AmlogicVideo::Owner implementation
+  void SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const override;
 
   // mediacodec impl.
   void GetCodecFactory(GetCodecFactoryRequestView request,

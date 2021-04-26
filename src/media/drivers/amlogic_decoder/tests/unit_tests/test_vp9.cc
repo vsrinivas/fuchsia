@@ -17,6 +17,13 @@
 namespace amlogic_decoder {
 namespace test {
 namespace {
+
+class FakeVideoOwner : public AmlogicVideo::Owner {
+ public:
+  // AmlogicVideo::Owner implementation.
+  void SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const override {}
+};
+
 class FakeDecoderCore : public DecoderCore {
  public:
   std::optional<InternalBuffer> LoadFirmwareToBuffer(const uint8_t* data, uint32_t len) override {
@@ -117,7 +124,8 @@ constexpr uint32_t kDosbusMemorySize = 0x10000;
 class Vp9UnitTest {
  public:
   static void LoopFilter() {
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeVideoOwner video_owner;
+    auto video = std::make_unique<AmlogicVideo>(&video_owner);
     ASSERT_TRUE(video);
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
 
@@ -137,7 +145,8 @@ class Vp9UnitTest {
   }
 
   static void InitializeMemory(bool use_compressed_output) {
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeVideoOwner video_owner;
+    auto video = std::make_unique<AmlogicVideo>(&video_owner);
     ASSERT_TRUE(video);
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
 

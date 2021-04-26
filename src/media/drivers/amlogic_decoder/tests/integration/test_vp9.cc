@@ -121,6 +121,12 @@ class Vp9TestClient : public TestFrameAllocator {
   }
 };
 
+class FakeOwner : public AmlogicVideo::Owner {
+ public:
+  // AmlogicVideo::Owner implementation.
+  void SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const override {}
+};
+
 // Repeatedly try to process video, either it's all processed or until a flag is set.
 static void FeedDataUntilFlag(AmlogicVideo* video, const uint8_t* input, uint32_t input_size,
                               std::atomic<bool>* stop_parsing) {
@@ -143,7 +149,8 @@ class TestVP9 {
  public:
   static void Decode(bool use_parser, bool use_compressed_output, bool delayed_return,
                      const char* input_filename, const char* filename, bool test_hashes) {
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
@@ -249,7 +256,8 @@ class TestVP9 {
   }
 
   static void DecodePerFrame() {
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
     Vp9TestClient client(video.get());
 
@@ -326,7 +334,8 @@ class TestVP9 {
   }
 
   static void DecodeResetHardware(const char* filename, bool use_parser) {
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
     Vp9TestClient client(video.get());
 
@@ -415,7 +424,8 @@ class TestVP9 {
   }
 
   static void DecodeMultiInstance(bool inject_initialization_fault) {
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
@@ -585,7 +595,8 @@ class TestVP9 {
 
   static void DecodeMalformed(const char* input_filename,
                               const std::vector<std::pair<uint32_t, uint8_t>>& modifications) {
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));

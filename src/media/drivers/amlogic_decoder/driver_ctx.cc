@@ -11,6 +11,7 @@
 #include <stdio.h>
 
 #include "amlogic-video.h"
+#include "device_ctx.h"
 #include "macros.h"
 
 namespace {

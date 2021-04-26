@@ -128,6 +128,7 @@ if (target_cpu == "arm64") {
       "secmem_session.cc",
       "secmem_session.h",
       "third_party/vp9_adapt_probs/vp9_coefficient_adaptation.c",
+      "thread_role.h",
       "vdec1.cc",
       "vdec1.h",
       "video_decoder.cc",

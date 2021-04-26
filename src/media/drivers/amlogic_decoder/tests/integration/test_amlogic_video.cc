@@ -14,10 +14,17 @@
 namespace amlogic_decoder {
 namespace test {
 
+class FakeOwner : public AmlogicVideo::Owner {
+ public:
+  // AmlogicVideo::Owner implementation.
+  void SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const override {}
+};
+
 class TestAmlogicVideo {
  public:
   static void BufferAlignment() {
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
@@ -50,9 +57,10 @@ class TestAmlogicVideo {
   }
 
   static void LoadFirmware(bool vdec) {
+    FakeOwner owner;
     auto firmware_type = vdec ? FirmwareBlob::FirmwareType::kDec_H264_Multi_Gxm
                               : FirmwareBlob::FirmwareType::kDec_Vp9_G12a;
-    auto video = std::make_unique<AmlogicVideo>();
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));

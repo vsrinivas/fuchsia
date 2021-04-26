@@ -74,6 +74,12 @@ class H264TestFrameDataProvider final : public H264MultiDecoder::FrameDataProvid
   async::Loop async_loop_;
 };
 
+class FakeOwner : public AmlogicVideo::Owner {
+ public:
+  // AmlogicVideo::Owner implementation.
+  void SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const override {}
+};
+
 // Set the min logging level so every log will display.
 static void SetMaxLogging() {
   syslog::LogSettings settings;
@@ -96,7 +102,8 @@ class TestH264Multi {
   };
   static void DecodeSetStream(const VideoInfo& data, bool use_parser) {
     SetMaxLogging();
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
     TestFrameAllocator frame_allocator(video.get());
 
@@ -210,7 +217,8 @@ class TestH264Multi {
   static void DecodeUnsplit(const char* input_filename,
                             uint8_t (*input_hashes)[SHA256_DIGEST_LENGTH], const char* filename) {
     SetMaxLogging();
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
     TestFrameAllocator frame_allocator(video.get());
 
@@ -307,7 +315,8 @@ class TestH264Multi {
   }
 
   static void TestInitializeTwice() {
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
     TestFrameAllocator frame_allocator(video.get());
 
@@ -342,7 +351,8 @@ class TestH264Multi {
 
   static void DecodeMultiInstance() {
     SetMaxLogging();
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
@@ -461,7 +471,8 @@ class TestH264Multi {
 
   static void DecodeChangeConfig() {
     SetMaxLogging();
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
     TestFrameAllocator frame_allocator(video.get());
 
@@ -560,7 +571,8 @@ class TestH264Multi {
                             uint8_t (*input_hashes)[SHA256_DIGEST_LENGTH], const char* filename,
                             bool early_eos) {
     SetMaxLogging();
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
     TestFrameAllocator frame_allocator(video.get());
 
@@ -644,7 +656,8 @@ class TestH264Multi {
   static void DecodeMalformed(VideoInfo data,
                               const std::vector<std::pair<uint32_t, uint8_t>>& modifications) {
     SetMaxLogging();
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
     TestFrameAllocator frame_allocator(video.get());
 

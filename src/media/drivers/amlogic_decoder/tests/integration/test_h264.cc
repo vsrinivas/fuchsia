@@ -26,10 +26,17 @@ void ValidateInputRegisters(AmlogicVideo* video) {
   EXPECT_EQ(7u, VldMemVififoControl::Get().ReadFrom(video->mmio()->dosbus).endianness());
 }
 
+class FakeOwner : public AmlogicVideo::Owner {
+ public:
+  // AmlogicVideo::Owner implementation.
+  void SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const override {}
+};
+
 class TestH264 {
  public:
   static void Decode(bool use_parser, bool use_minimum_frame_count) {
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
     TestFrameAllocator client(video.get());
     client.set_use_minimum_frame_count(use_minimum_frame_count);
@@ -119,7 +126,8 @@ class TestH264 {
   }
 
   static void DelayedReturn() {
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
 
     TestFrameAllocator client(video.get());
@@ -207,7 +215,8 @@ class TestH264 {
   }
 
   static void DecodeNalUnits(bool use_parser) {
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
 
     TestFrameAllocator client(video.get());
@@ -297,7 +306,8 @@ class TestH264 {
   }
 
   static void DecodeMalformed(uint64_t location, uint8_t value, bool enforce_no_frames) {
-    auto video = std::make_unique<AmlogicVideo>();
+    FakeOwner owner;
+    auto video = std::make_unique<AmlogicVideo>(&owner);
     ASSERT_TRUE(video);
     TestFrameAllocator client(video.get());
 

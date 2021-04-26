@@ -5,6 +5,7 @@
 #include "parser.h"
 
 #include <lib/trace/event.h>
+#include <zircon/threads.h>
 
 #include <limits>
 
@@ -143,6 +144,9 @@ zx_status_t Parser::InitializeEsParser(DecoderInstance* instance) {
         }
       }
     });
+    owner_->SetThreadProfile(
+        zx::unowned_thread(native_thread_get_zx_handle(parser_interrupt_thread_.native_handle())),
+        ThreadRole::kParserIrq);
   }
 
   ParserIntStatus::Get().FromValue(0xffff).WriteTo(owner_->mmio()->parser);

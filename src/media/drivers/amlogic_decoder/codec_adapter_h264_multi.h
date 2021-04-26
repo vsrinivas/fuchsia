@@ -68,6 +68,7 @@ class CodecAdapterH264Multi : public AmlogicCodecAdapter,
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
   void CoreCodecResetStreamAfterCurrentFrame() override;
   std::string CoreCodecGetName() override { return "AmlH264Multi"; }
+  void CoreCodecSetStreamControlProfile(zx::unowned_thread stream_control_thread) override;
 
   // VideoDecoder::Client implementation;
   void OnError() override;

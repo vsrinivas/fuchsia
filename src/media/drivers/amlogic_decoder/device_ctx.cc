@@ -7,6 +7,9 @@
 #include <fuchsia/hardware/mediacodec/llcpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/profile.h>
+#include <lib/zx/time.h>
+#include <zircon/threads.h>
 
 #include <ddktl/fidl.h>
 
@@ -16,11 +19,53 @@
 
 namespace amlogic_decoder {
 
+namespace {
+
+struct DeadlineParams {
+  std::string_view name;
+  zx::duration capacity;
+  zx::duration deadline;
+  zx::duration period;
+};
+
+DeadlineParams GetDeadlineParamsForRole(ThreadRole role) {
+  switch (role) {
+    case ThreadRole::kSharedFidl:
+      return DeadlineParams{.name = "aml-video/fidl",
+                            .capacity = zx::usec(400),
+                            .deadline = zx::usec(6000),
+                            .period = zx::usec(6000)};
+    case ThreadRole::kParserIrq:
+      return DeadlineParams{.name = "aml-video/parser_irq",
+                            .capacity = zx::usec(75),
+                            .deadline = zx::usec(500),
+                            .period = zx::usec(6000)};
+    case ThreadRole::kVdec0Irq:
+    case ThreadRole::kVdec1Irq:
+      return DeadlineParams{.name = "aml-video/vdec_irq",
+                            .capacity = zx::usec(800),
+                            .deadline = zx::usec(6000),
+                            .period = zx::usec(6000)};
+    case ThreadRole::kH264MultiCore:
+      return DeadlineParams{.name = "aml-video/h264_core",
+                            .capacity = zx::usec(300),
+                            .deadline = zx::usec(6000),
+                            .period = zx::usec(6000)};
+    case ThreadRole::kH264MultiStreamControl:
+      return DeadlineParams{.name = "aml-video/h264_stream_control",
+                            .capacity = zx::usec(100),
+                            .deadline = zx::usec(6000),
+                            .period = zx::usec(6000)};
+  }
+}
+
+}  // namespace
+
 DeviceCtx::DeviceCtx(DriverCtx* driver, zx_device_t* parent)
     : DdkDeviceType(parent),
       driver_(driver),
       codec_admission_control_(driver->shared_fidl_loop()->dispatcher()) {
-  video_ = std::make_unique<AmlogicVideo>();
+  video_ = std::make_unique<AmlogicVideo>(this);
   video_->SetMetrics(&metrics());
   device_fidl_ = std::make_unique<DeviceFidl>(this);
 }
@@ -46,7 +91,12 @@ DeviceCtx::~DeviceCtx() {
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
 }
 
-zx_status_t DeviceCtx::Bind() { return DdkAdd("amlogic_video"); }
+zx_status_t DeviceCtx::Bind() {
+  SetThreadProfile(zx::unowned_thread(thrd_get_zx_handle(driver_->shared_fidl_thread())),
+                   ThreadRole::kSharedFidl);
+
+  return DdkAdd("amlogic_video");
+}
 
 zx_status_t DeviceCtx::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction ddk_transaction(txn);
@@ -54,10 +104,33 @@ zx_status_t DeviceCtx::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return ddk_transaction.Status();
 }
 
+void DeviceCtx::SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const {
+  DeadlineParams deadline_params = GetDeadlineParamsForRole(role);
+
+  // TODO(fxbug.dev/40858): Use role-based API instead of defining our own profiles.
+  zx::profile profile;
+  zx_status_t status = device_get_deadline_profile(
+      parent(), deadline_params.capacity.get(), deadline_params.deadline.get(),
+      deadline_params.period.get(), deadline_params.name.data(), profile.reset_and_get_address());
+
+  if (status != ZX_OK) {
+    LOG(WARNING, "Unable to get profile for %s: %s", deadline_params.name.data(),
+        zx_status_get_string(status));
+    return;
+  }
+
+  status = thread->set_profile(std::move(profile), 0);
+  if (status != ZX_OK) {
+    LOG(WARNING, "Unable to set profile for %s: %s", deadline_params.name.data(),
+        zx_status_get_string(status));
+  }
+}
+
 void DeviceCtx::GetCodecFactory(GetCodecFactoryRequestView request,
                                 GetCodecFactoryCompleter::Sync& completer) {
   device_fidl()->ConnectChannelBoundCodecFactory(std::move(request->request));
 }
+
 void DeviceCtx::SetAuxServiceDirectory(SetAuxServiceDirectoryRequestView request,
                                        SetAuxServiceDirectoryCompleter::Sync& completer) {
   driver_->SetAuxServiceDirectory(
