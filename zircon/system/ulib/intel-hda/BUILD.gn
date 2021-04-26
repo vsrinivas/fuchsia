@@ -29,7 +29,7 @@ zx_library("intel-hda") {
   ]
   public_deps = [
     # <intel-hda/codec-utils/stream-base.h> has #include <fuchsia/hardware/intelhda/codec/c/banjo.h>.
-    "//sdk/banjo/fuchsia.hardware.intelhda.codec",
+    "//sdk/banjo/fuchsia.hardware.intelhda.codec:fuchsia.hardware.intelhda.codec_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/abs_clock",

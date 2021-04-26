@@ -64,7 +64,7 @@ source_set("src") {
   ]
   deps = [
     ":ihda_controller_bind",
-    "//sdk/banjo/fuchsia.hardware.intelhda.codec",
+    "//sdk/banjo/fuchsia.hardware.intelhda.codec:fuchsia.hardware.intelhda.codec_banjo_cpp",
     "//src/devices/lib/driver",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
