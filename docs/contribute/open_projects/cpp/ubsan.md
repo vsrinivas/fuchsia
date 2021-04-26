@@ -98,6 +98,9 @@ passes CQ, then proceed to the next section. This can happen if the offending
 code was fixed or removed but the author of the change left the suppression/bug
 intact.
 
+Additional information about UndefinedBehaviorSanitizer and the available checks
+can be found in the [upstream docs][ubsan].
+
 ### Completing a task
 
 Tag the cover bug in your change description as follows:
