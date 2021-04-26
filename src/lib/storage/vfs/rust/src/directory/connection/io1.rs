@@ -148,6 +148,11 @@ pub(in crate::directory) enum BaseDirectoryRequest {
         flags: u32,
         responder: DirectoryNodeSetFlagsResponder,
     },
+    AdvisoryLock {
+        #[allow(unused)]
+        request: fidl_fuchsia_io2::AdvisoryLockRequest,
+        responder: fidl_fuchsia_io::DirectoryAdvisoryLockResponder,
+    },
     Open {
         flags: u32,
         mode: u32,
@@ -252,6 +257,9 @@ impl From<DirectoryRequest> for DirectoryRequestType {
                 socket,
                 responder,
             } => Base(AddInotifyFilter { path, filters, watch_descriptor, socket, responder }),
+            DirectoryRequest::AdvisoryLock { request, responder} => {
+                Base(AdvisoryLock { request, responder })
+            }
             DirectoryRequest::Unlink { path, responder } => Derived(Unlink { path, responder }),
             DirectoryRequest::Unlink2 { name, options, responder } => {
                 Derived(Unlink2 { name, options, responder })
@@ -371,6 +379,9 @@ where
                 self.handle_open(flags, mode, path, object);
             }
             BaseDirectoryRequest::AddInotifyFilter { .. } => {}
+            BaseDirectoryRequest::AdvisoryLock { request : _, responder } => {
+                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
+            }
             BaseDirectoryRequest::ReadDirents { max_bytes, responder } => {
                 self.handle_read_dirents(max_bytes, |status, entries| {
                     responder.send(status.into_raw(), entries)

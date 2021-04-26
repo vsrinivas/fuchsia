@@ -526,6 +526,9 @@ async fn serve_failing_blobfs(
             DirectoryAdminRequest::Sync { responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing sync")?
             }
+            DirectoryAdminRequest::AdvisoryLock { responder, ..  } => {
+                responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?
+            }
             DirectoryAdminRequest::GetAttr { responder } => responder
                 .send(
                     zx::Status::IO.into_raw(),

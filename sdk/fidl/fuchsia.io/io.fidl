@@ -461,6 +461,7 @@ protocol DirectoryWatcher {
 /// Directory defines a node which is capable of containing other Objects.
 protocol Directory {
     compose Node;
+    compose fuchsia.io2.AdvisoryLocking;
 
     /// Opens a new object relative to this directory object.
     ///

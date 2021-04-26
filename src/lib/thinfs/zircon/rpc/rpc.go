@@ -175,6 +175,10 @@ func (d *directoryWrapper) Sync(fidl.Context) (int32, error) {
 	return int32(errorToZx(d.dir.Sync())), nil
 }
 
+func (d *directoryWrapper) AdvisoryLock(fidl.Context, io2.AdvisoryLockRequest) (io2.AdvisoryLockingAdvisoryLockResult, error) {
+	return io2.AdvisoryLockingAdvisoryLockResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
 func (d *directoryWrapper) GetAttr(fidl.Context) (int32, io.NodeAttributes, error) {
 	size, _, mtime, err := d.dir.Stat()
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
