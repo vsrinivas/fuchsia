@@ -33,7 +33,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.serial",
   "fuchsia.hardware.serialimpl",
   "fuchsia.hardware.serialimpl.async",
-  "fuchsia.hardware.spiimpl",
   "fuchsia.hardware.syscalls.pci",
   "fuchsia.hardware.tee",
   "fuchsia.hardware.test",

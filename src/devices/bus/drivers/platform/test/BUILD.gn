@@ -267,7 +267,7 @@ driver_module("test-spi") {
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.spi:fuchsia.hardware.spi_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.spiimpl",
+    "//sdk/banjo/fuchsia.hardware.spiimpl:fuchsia.hardware.spiimpl_banjo_cpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
