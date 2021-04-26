@@ -321,6 +321,20 @@ impl Ascendd {
         self.ctx.new_daemon(c)
     }
 
+    fn event_pair_cmd(&self, kind: &str) -> Command {
+        let mut c = self.labelled_cmd("overnet_event_pair", kind);
+        c.arg(kind);
+        c
+    }
+
+    fn event_pair_client(&self) -> Command {
+        self.event_pair_cmd("client")
+    }
+
+    fn add_event_pair_server(&mut self) -> Result<(), Error> {
+        self.ctx.new_daemon(self.event_pair_cmd("server"))
+    }
+
     fn add_onet_host_pipe(
         &mut self,
         label: &str,
@@ -487,6 +501,21 @@ mod tests {
             Ok(())
         })
     }
+
+    #[test]
+    fn event_pair() -> Result<(), Error> {
+        event_pair_test(Default::default())
+    }
+
+    pub fn event_pair_test(args: TestArgs) -> Result<(), Error> {
+        let ctx = TestContext::new(args);
+        let mut ascendd = Ascendd::new(&ctx).context("creating ascendd")?;
+        ctx.clone().show_reports_if_failed(args.timeout, move || {
+            ascendd.add_event_pair_server().context("starting server")?;
+            ctx.run_client(ascendd.event_pair_client()).context("running client")?;
+            Ok(())
+        })
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -547,6 +576,7 @@ fn main() -> Result<(), Error> {
             ("echo".to_string(), box_test(tests::echo_test)),
             ("multiple_ascendd_echo".to_string(), box_test(tests::multiple_ascendd_echo_test)),
             ("interface_passing".to_string(), box_test(tests::interface_passing_test)),
+            ("event_pair".to_string(), box_test(tests::event_pair_test)),
             (
                 "socket_passing_both_ways".to_string(),
                 box_test(|a| {

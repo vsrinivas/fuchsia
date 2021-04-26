@@ -8,6 +8,7 @@ group("examples") {
   testonly = true
   deps = [
     "echo",
+    "event_pair",
     "interface_passing",
     "socket_passing",
   ]
@@ -28,11 +29,17 @@ fuchsia_unittest_component("overnet_socket_passing_test") {
   manifest = "meta/overnet_socket_passing_test.cmx"
 }
 
+fuchsia_unittest_component("overnet_event_pair_test") {
+  deps = [ "event_pair:component" ]
+  manifest = "meta/overnet_event_pair_test.cmx"
+}
+
 fuchsia_test_package("overnet-examples-tests") {
   test_components = [
     ":overnet_echo_test",
     ":overnet_interface_passing_test",
     ":overnet_socket_passing_test",
+    ":overnet_event_pair_test",
   ]
   deps = [
     "//src/connectivity/network/mdns/service:component",

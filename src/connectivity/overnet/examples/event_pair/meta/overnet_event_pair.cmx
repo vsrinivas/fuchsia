@@ -1,0 +1,19 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/overnet_event_pair"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.NameLookup",
+            "fuchsia.net.mdns.Publisher",
+            "fuchsia.net.mdns.Subscriber",
+            "fuchsia.netemul.sync.SyncManager",
+            "fuchsia.overnet.ServiceConsumer",
+            "fuchsia.overnet.ServicePublisher",
+            "fuchsia.posix.socket.Provider"
+        ]
+    }
+}

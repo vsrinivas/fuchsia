@@ -12,6 +12,7 @@ if (is_host) {
       "$root_out_dir/ascendd",
       "$root_out_dir/onet",
       "$root_out_dir/overnet_echo",
+      "$root_out_dir/overnet_event_pair",
       "$root_out_dir/overnet_interface_passing",
       "$root_out_dir/overnet_socket_passing",
     ]
@@ -22,6 +23,7 @@ if (is_host) {
 
     deps = [
       "//src/connectivity/overnet/examples/echo:bin($host_toolchain)",
+      "//src/connectivity/overnet/examples/event_pair:bin($host_toolchain)",
       "//src/connectivity/overnet/examples/interface_passing:bin($host_toolchain)",
       "//src/connectivity/overnet/examples/socket_passing:bin($host_toolchain)",
       "//src/connectivity/overnet/tools/ascendd:bin($host_toolchain)",
