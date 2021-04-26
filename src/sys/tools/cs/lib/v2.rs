@@ -320,7 +320,7 @@ impl V2Component {
     pub fn print_details(&self, filter: &str) -> Result<(), Error> {
         if !self.print_details_recursive("", filter) {
             return Err(format_err!(
-                "filter should be a component name or component (partial) url."
+                "either it is not in the tree, or is part of a subtree that hasn't been resolved yet."
             ));
         };
         Ok(())

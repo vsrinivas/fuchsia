@@ -95,7 +95,12 @@ async fn main() -> Result<(), Error> {
             if let Some(hub_dir) = validate_hub_directory() {
                 let component = V2Component::explore(hub_dir, Subcommand::Show).await;
                 component.print_details(&filter).map_err(|e| {
-                    format_err!("Invalid filter '{}': {}\n{}", filter, e, CS_INFO_HELP)
+                    format_err!(
+                        "'{}' was not found in the component tree: {}\n{}",
+                        filter,
+                        e,
+                        CS_INFO_HELP
+                    )
                 })?
             }
         }

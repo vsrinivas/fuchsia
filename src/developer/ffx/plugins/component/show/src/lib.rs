@@ -27,8 +27,13 @@ async fn show_impl(rcs_proxy: rc::RemoteControlProxy, filter: &str) -> Result<()
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
     let component = V2Component::explore(hub_dir, Subcommand::Show).await;
-    component
-        .print_details(&filter)
-        .map_err(|e| ffx_error!("Invalid filter '{}': {}\n{}", filter, e, COMPONENT_SHOW_HELP))?;
+    component.print_details(&filter).map_err(|e| {
+        ffx_error!(
+            "'{}' was not found in the component tree: {}\n{}",
+            filter,
+            e,
+            COMPONENT_SHOW_HELP
+        )
+    })?;
     Ok(())
 }
