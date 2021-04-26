@@ -30,13 +30,6 @@ public:
   {{- end }}
   const static {{ .Name }} kMask;
 
-  {{- if (eq .Namespace.String "::fuchsia_hardware_sharedmemory::wire") }}
-    // Generate old names temporarily for out-of-tree users
-    {{- range .Members }}
-      const static {{ $.Name }} {{ .Natural.Name }};
-    {{- end }}
-  {{- end }}
-
   explicit constexpr inline operator {{ .Type }}() const { return value_; }
   explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
   constexpr inline bool operator==(const {{ .Name }}& other) const { return value_ == other.value_; }
@@ -81,14 +74,6 @@ constexpr const {{ $ }} {{ $.Name }}::{{ $member.Name }} =
     {{ $ }}({{ $member.Value }});
 {{- end }}
 constexpr const {{ . }} {{ .Name }}::kMask = {{ $ }}({{ .Mask }}u);
-
-{{- if (eq .Namespace.String "::fuchsia_hardware_sharedmemory::wire") }}
-  // Generate old names temporarily for out-of-tree users
-  {{- range $member := .Members }}
-    constexpr const {{ $ }} {{ $.Name }}::{{ $member.Natural.Name }} =
-        {{ $ }}({{ $member.Value }});
-  {{- end }}
-{{- end }}
 
 constexpr inline {{ . }} {{ .Name }}::operator~() const {
   return {{ $ }}(static_cast<{{ .Type }}>(~this->value_ & kMask.value_));

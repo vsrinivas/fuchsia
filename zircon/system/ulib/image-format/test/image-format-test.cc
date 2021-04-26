@@ -722,12 +722,12 @@ TEST(ImageFormat, R8G8Formats_V1_LLCPP) {
 }
 
 TEST(ImageFormat, A2R10G10B10_Formats_V1_LLCPP) {
-  for (const auto& pixel_format_type : {sysmem_v1::wire::PixelFormatType::A2R10G10B10,
-                                        sysmem_v1::wire::PixelFormatType::A2B10G10R10}) {
+  for (const auto& pixel_format_type : {sysmem_v1::wire::PixelFormatType::kA2R10G10B10,
+                                        sysmem_v1::wire::PixelFormatType::kA2B10G10R10}) {
     sysmem_v1::wire::PixelFormat format = {
         .type = pixel_format_type,
         .has_format_modifier = true,
-        .format_modifier.value = sysmem_v1::wire::FORMAT_MODIFIER_LINEAR,
+        .format_modifier.value = sysmem_v1::wire::kFormatModifierLinear,
     };
 
     sysmem_v1::wire::ImageFormatConstraints constraints = {
