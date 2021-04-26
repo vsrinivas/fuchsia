@@ -5,12 +5,17 @@
 use anyhow::{Context, Error};
 use fidl_fuchsia_io as fio;
 use fuchsia_zircon::{self as zx, AsHandleRef, Status};
+use lazy_static::lazy_static;
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
 
 use crate::executive::*;
 use crate::fs::{FdTable, SyslogFile};
 use crate::uapi::*;
+
+lazy_static! {
+    static ref PAGE_SIZE: u64 = zx::system_get_page_size() as u64;
+}
 
 pub struct ProcessParameters {
     pub name: CString,
@@ -170,6 +175,7 @@ pub async fn load_executable(
         (AT_GID, process.security.gid as u64),
         (AT_EGID, process.security.egid as u64),
         (AT_BASE, interp_elf.map_or(0, |interp| interp.base as u64)),
+        (AT_PAGESZ, *PAGE_SIZE),
         (AT_PHDR, main_elf.bias.wrapping_add(main_elf.headers.file_header().phoff) as u64),
         (AT_PHNUM, main_elf.headers.file_header().phnum as u64),
         (AT_ENTRY, main_elf.bias.wrapping_add(main_elf.headers.file_header().entry) as u64),
