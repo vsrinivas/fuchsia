@@ -1180,6 +1180,75 @@ TEST(CpuidTests, IntelCeleron3855u) {
       }));
 }
 
+TEST(CpuidTests, IntelPentiumN4200) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelPentiumN4200);
+
+  EXPECT_EQ(arch::Vendor::kIntel, arch::GetVendor(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kIntelGoldmont, arch::GetMicroarchitecture(cpuid));
+
+  auto info = cpuid.Read<arch::CpuidVersionInfo>();
+  EXPECT_EQ(0x6u, info.family());
+  EXPECT_EQ(0x5cu, info.model());
+  EXPECT_EQ(0x9u, info.stepping());
+
+  EXPECT_EQ("Intel(R) Pentium(R) CPU N4200 @ 1.10GHz"sv, arch::ProcessorName(cpuid).name());
+
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+
+  {
+    auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
+
+    // Present:
+    EXPECT_TRUE(features.rdrand());
+    EXPECT_TRUE(features.osxsave());
+    EXPECT_TRUE(features.xsave());
+    EXPECT_TRUE(features.x2apic());
+    EXPECT_TRUE(features.pdcm());
+    EXPECT_TRUE(features.cmpxchg16b());
+
+    // Not present:
+    EXPECT_FALSE(features.hypervisor());
+    EXPECT_FALSE(features.avx());
+    EXPECT_TRUE(features.monitor());
+  }
+
+  {
+    auto features = cpuid.Read<arch::CpuidExtendedFeatureFlagsB>();
+
+    // Present:
+    EXPECT_TRUE(features.intel_pt());
+    EXPECT_TRUE(features.smap());
+    EXPECT_TRUE(features.rdseed());
+    EXPECT_TRUE(features.fsgsbase());
+  }
+
+  // 1 die -> 4 cores -> 1 thread each.
+  ASSERT_NO_FATAL_FAILURE(CheckApicIdDecoding(cpuid, 1, 4, 1));
+
+  ASSERT_NO_FATAL_FAILURE(CheckCaches(  //
+      cpuid,                            //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 24,
+              .ways_of_associativity = 6,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 1024,
+              .ways_of_associativity = 16,
+          },
+      }));
+}
+
 TEST(CpuidTests, AmdA10_7870k) {
   arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdA10_7870k);
 

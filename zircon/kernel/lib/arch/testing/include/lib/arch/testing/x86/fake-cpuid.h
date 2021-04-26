@@ -33,6 +33,7 @@ enum class X86Microprocessor {
   kIntelCoreI7_6500u,
   kIntelCoreI7_6700k,
   kIntelCoreM3_7y30,
+  kIntelPentiumN4200,
   kIntelXeonE5520,
   kIntelXeonE5_2690_V3,
   kIntelXeonE5_2690_V4,

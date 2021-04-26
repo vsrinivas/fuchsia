@@ -64,6 +64,10 @@ FakeCpuidIo::FakeCpuidIo(X86Microprocessor microprocessor) {
 #include "data/cpuid/intel-core-m3-7y30.inc"
       break;
     }
+    case X86Microprocessor::kIntelPentiumN4200: {
+#include "data/cpuid/intel-pentium-n4200.inc"
+      break;
+    }
     case X86Microprocessor::kIntelXeonE5520: {
 #include "data/cpuid/intel-xeon-e5520.inc"
       break;
