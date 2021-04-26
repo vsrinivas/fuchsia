@@ -274,7 +274,7 @@ func (args argsWrapper) isResource() bool {
 }
 
 type messageInner struct {
-	fidlgen.TypeShape
+	TypeShape
 	HlCodingTable   name
 	WireCodingTable name
 }
@@ -284,7 +284,6 @@ type messageInner struct {
 // message should be created using newMessage.
 type message struct {
 	messageInner
-	fidlgen.Strictness
 	IsResource       bool
 	ClientAllocation allocation
 	ServerAllocation allocation
@@ -305,24 +304,16 @@ type boundednessQuery func(methodContext, fidlgen.Strictness) boundedness
 func newMessage(inner messageInner, args []Parameter, wire wireTypeNames,
 	direction messageDirection) message {
 	ts := inner.TypeShape
-	strictness := fidlgen.Strictness(!ts.HasFlexibleEnvelope)
 	return message{
 		messageInner: inner,
-		Strictness:   strictness,
 		IsResource:   argsWrapper(args).isResource(),
 		ClientAllocation: computeAllocation(
-			ts.InlineSize,
-			ts.MaxOutOfLine,
-			direction.queryBoundedness(clientContext, strictness)),
+			ts.MaxTotalSize(),
+			direction.queryBoundedness(clientContext, ts.HasFlexibleEnvelope)),
 		ServerAllocation: computeAllocation(
-			ts.InlineSize,
-			ts.MaxOutOfLine,
-			direction.queryBoundedness(serverContext, strictness)),
+			ts.MaxTotalSize(),
+			direction.queryBoundedness(serverContext, ts.HasFlexibleEnvelope)),
 	}
-}
-
-func (m message) HasPointer() bool {
-	return m.Depth > 0
 }
 
 type wireMethod struct {
@@ -357,8 +348,8 @@ type methodInner struct {
 	Marker       nameVariants
 	wireMethod
 	baseCodingTableName string
-	requestTypeShape    fidlgen.TypeShape
-	responseTypeShape   fidlgen.TypeShape
+	requestTypeShape    TypeShape
+	responseTypeShape   TypeShape
 
 	Attributes
 	nameVariants
@@ -394,21 +385,21 @@ const (
 )
 
 // Compute boundedness based on client/server, request/response, and strictness.
-func (d messageDirection) queryBoundedness(c methodContext, s fidlgen.Strictness) boundedness {
+func (d messageDirection) queryBoundedness(c methodContext, hasFlexibleEnvelope bool) boundedness {
 	switch d {
 	case messageDirectionRequest:
 		if c == clientContext {
 			// Allocation is bounded when sending request from a client.
 			return boundednessBounded
 		} else {
-			return boundedness(s.IsStrict())
+			return boundedness(!hasFlexibleEnvelope)
 		}
 	case messageDirectionResponse:
 		if c == serverContext {
 			// Allocation is bounded when sending response from a server.
 			return boundednessBounded
 		} else {
-			return boundedness(s.IsStrict())
+			return boundedness(!hasFlexibleEnvelope)
 		}
 	}
 	panic(fmt.Sprintf("unexpected message direction: %v", d))
@@ -497,15 +488,13 @@ func (p Parameter) NameAndType() (string, Type) {
 	return p.Name(), p.Type
 }
 
-func allEventsStrict(methods []Method) fidlgen.Strictness {
-	strictness := fidlgen.IsStrict
+func anyEventHasFlexibleEnvelope(methods []Method) bool {
 	for _, m := range methods {
-		if !m.HasRequest && m.HasResponse && m.Response.IsFlexible() {
-			strictness = fidlgen.IsFlexible
-			break
+		if !m.HasRequest && m.HasResponse && m.Response.HasFlexibleEnvelope {
+			return true
 		}
 	}
-	return strictness
+	return false
 }
 
 func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
@@ -534,8 +523,8 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 			// reserved words logic, since that's the behavior in fidlc.
 			baseCodingTableName: codingTableName + string(v.Name),
 			Marker:              methodMarker,
-			requestTypeShape:    v.RequestTypeShapeV1,
-			responseTypeShape:   v.ResponseTypeShapeV1,
+			requestTypeShape:    TypeShape{v.RequestTypeShapeV1},
+			responseTypeShape:   TypeShape{v.ResponseTypeShapeV1},
 			wireMethod:          newWireMethod(name.Wire.Name(), wireTypeNames, protocolName.Wire, methodMarker.Wire),
 			Attributes:          Attributes{v.Attributes},
 			Ordinal:             v.Ordinal,
@@ -551,7 +540,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 
 	var maxResponseSize int
 	for _, method := range methods {
-		if size := method.Response.InlineSize + method.Response.MaxOutOfLine; size > maxResponseSize {
+		if size := method.Response.MaxTotalSize(); size > maxResponseSize {
 			maxResponseSize = size
 		}
 	}
@@ -564,8 +553,8 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 		wireTypeNames:    wireTypeNames,
 		DiscoverableName: p.GetServiceName(),
 		SyncEventAllocation: computeAllocation(
-			maxResponseSize, 0, messageDirectionResponse.queryBoundedness(
-				clientContext, allEventsStrict(methods))),
+			maxResponseSize, messageDirectionResponse.queryBoundedness(
+				clientContext, anyEventHasFlexibleEnvelope(methods))),
 		Methods:     methods,
 		FuzzingName: fuzzingName,
 		TestBase:    protocolName.appendName("_TestBase").appendNamespace("testing"),
@@ -639,14 +628,14 @@ const (
 	boxedBuffer
 )
 
-func computeAllocation(primarySize int, maxOutOfLine int, boundedness boundedness) allocation {
+func computeAllocation(maxTotalSize int, boundedness boundedness) allocation {
 	var sizeString string
 	var size int
-	if boundedness == boundednessUnbounded || primarySize+maxOutOfLine > channelMaxMessageSize {
+	if boundedness == boundednessUnbounded || maxTotalSize > channelMaxMessageSize {
 		sizeString = "ZX_CHANNEL_MAX_MSG_BYTES"
 		size = channelMaxMessageSize
 	} else {
-		size = fidlAlign(primarySize + maxOutOfLine)
+		size = maxTotalSize
 		sizeString = fmt.Sprintf("%d", size)
 	}
 

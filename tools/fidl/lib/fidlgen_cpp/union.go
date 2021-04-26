@@ -10,6 +10,7 @@ import (
 
 type Union struct {
 	Attributes
+	TypeShape
 	fidlgen.Strictness
 	fidlgen.Resourceness
 	nameVariants
@@ -20,11 +21,7 @@ type Union struct {
 	WireOrdinalEnum    name
 	WireInvalidOrdinal name
 	Members            []UnionMember
-	InlineSize         int
-	MaxHandles         int
-	MaxOutOfLine       int
 	Result             *Result
-	HasPointer         bool
 }
 
 func (Union) Kind() declKind {
@@ -60,6 +57,7 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 	wireOrdinalEnum := name.Wire.nest("Ordinal")
 	u := Union{
 		Attributes:         Attributes{val.Attributes},
+		TypeShape:          TypeShape{val.TypeShapeV1},
 		Strictness:         val.Strictness,
 		Resourceness:       val.Resourceness,
 		nameVariants:       name,
@@ -69,10 +67,6 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 		TagInvalid:         tagEnum.nest("Invalid"),
 		WireOrdinalEnum:    wireOrdinalEnum,
 		WireInvalidOrdinal: wireOrdinalEnum.nest("Invalid"),
-		InlineSize:         val.TypeShapeV1.InlineSize,
-		MaxHandles:         val.TypeShapeV1.MaxHandles,
-		MaxOutOfLine:       val.TypeShapeV1.MaxOutOfLine,
-		HasPointer:         val.TypeShapeV1.Depth > 0,
 	}
 
 	for _, mem := range val.Members {

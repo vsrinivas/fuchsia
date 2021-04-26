@@ -40,7 +40,7 @@ struct {{ .WireResponse }} final {
   static constexpr uint32_t MaxNumHandles = {{ .Response.MaxHandles }};
   static constexpr uint32_t PrimarySize = {{ .Response.InlineSize }};
   static constexpr uint32_t MaxOutOfLine = {{ .Response.MaxOutOfLine }};
-  static constexpr bool HasFlexibleEnvelope = {{ .Response.IsFlexible }};
+  static constexpr bool HasFlexibleEnvelope = {{ .Response.HasFlexibleEnvelope }};
   static constexpr bool HasPointer = {{ .Response.HasPointer }};
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;

@@ -26,6 +26,18 @@ func (a Attributes) Docs() string {
 	return buf.String()
 }
 
+type TypeShape struct {
+	fidlgen.TypeShape
+}
+
+func (ts TypeShape) MaxTotalSize() int {
+	return fidlAlign(ts.TypeShape.InlineSize) + fidlAlign(ts.TypeShape.MaxOutOfLine)
+}
+
+func (ts TypeShape) HasPointer() bool {
+	return ts.TypeShape.Depth > 0
+}
+
 type declKind namespacedEnumMember
 
 type declKinds struct {

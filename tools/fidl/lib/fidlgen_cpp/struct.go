@@ -13,17 +13,13 @@ import (
 
 type Struct struct {
 	Attributes
+	TypeShape
 	fidlgen.Resourceness
 	nameVariants
 	CodingTableType   string
 	Members           []StructMember
-	InlineSize        int
-	MaxHandles        int
-	MaxOutOfLine      int
 	BackingBufferType string
-	HasPadding        bool
 	IsResultValue     bool
-	HasPointer        bool
 	Result            *Result
 	// Full decls needed to check if a type is memcpy compatible.
 	// Only set if it may be possible for a type to be memcpy compatible,
@@ -82,20 +78,17 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	n := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
+	ts := TypeShape{val.TypeShapeV1}
 	r := Struct{
 		Attributes:      Attributes{val.Attributes},
+		TypeShape:       ts,
 		Resourceness:    val.Resourceness,
 		nameVariants:    n,
 		CodingTableType: codingTableType,
 		Members:         []StructMember{},
-		InlineSize:      val.TypeShapeV1.InlineSize,
-		MaxHandles:      val.TypeShapeV1.MaxHandles,
-		MaxOutOfLine:    val.TypeShapeV1.MaxOutOfLine,
 		BackingBufferType: computeAllocation(
-			val.TypeShapeV1.InlineSize, val.TypeShapeV1.MaxOutOfLine, boundednessBounded).
+			ts.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),
-		HasPadding: val.TypeShapeV1.HasPadding,
-		HasPointer: val.TypeShapeV1.Depth > 0,
 	}
 
 	for _, v := range val.Members {

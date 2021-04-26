@@ -42,7 +42,7 @@ struct {{ .WireRequest }} final {
   static constexpr uint32_t MaxOutOfLine = {{ .Request.MaxOutOfLine }};
   static constexpr uint32_t AltPrimarySize = {{ .Request.InlineSize }};
   static constexpr uint32_t AltMaxOutOfLine = {{ .Request.MaxOutOfLine }};
-  static constexpr bool HasFlexibleEnvelope = {{ .Request.IsFlexible }};
+  static constexpr bool HasFlexibleEnvelope = {{ .Request.HasFlexibleEnvelope }};
   static constexpr bool HasPointer = {{ .Request.HasPointer }};
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
