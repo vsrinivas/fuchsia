@@ -77,33 +77,13 @@ fuchsia_package("netstack3") {
   deps = [ ":component" ]
 }
 
-fuchsia_component("bin-test") {
+fuchsia_unittest_package("netstack3-tests") {
   component_name = "netstack3-bin-test"
-  testonly = true
   manifest = "meta/netstack3-bin-test.cmx"
-  deps = [ ":bin_test" ]
-}
-
-fuchsia_component("core-lib-test") {
-  component_name = "netstack3-core-lib-test"
-  testonly = true
-  manifest = "meta/netstack3-core-lib-test.cmx"
-  deps = [ "core:netstack3-core_test" ]
-}
-
-fuchsia_component("specialize-ip-macro-test-lib-test") {
-  testonly = true
-  manifest = "meta/specialize-ip-macro-test-lib-test.cmx"
-  deps = [ "core/specialize-ip-macro/test:lib_test" ]
-}
-
-fuchsia_test_package("netstack3-tests") {
-  test_components = [
-    ":bin-test",
-    ":core-lib-test",
-    ":specialize-ip-macro-test-lib-test",
+  deps = [
+    ":bin_test",
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
   ]
-  deps = [ "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component" ]
 }
 
 group("tests") {
@@ -111,7 +91,7 @@ group("tests") {
   deps = [
     ":netstack3",
     ":netstack3-tests",
-    "core:netstack3-core_test($host_toolchain)",
+    "core:tests",
     "tools",
   ]
 }

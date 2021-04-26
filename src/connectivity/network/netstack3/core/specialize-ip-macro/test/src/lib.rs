@@ -8,7 +8,7 @@
 /// Module with types that have the same identifiers that `specialize_ip` and
 /// `specialize_ip_macro` attributes looks for. Both of these attributes
 /// look for the `Ipv4`, `Ipv6`, `Ipv4Addr`, and `Ipv6Addr` identifiers
-/// within `net_types::ip` so we create the same heirarchy in this test.
+/// within `net_types::ip` so we create the same hierarchy in this test.
 #[cfg(test)]
 pub(crate) mod net_types {
     pub(crate) mod ip {

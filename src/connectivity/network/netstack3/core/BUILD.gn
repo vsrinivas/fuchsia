@@ -2,13 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/rust/rustc_test.gni")
 
 rustc_library("netstack3-core") {
   name = "netstack3_core"
   version = "0.1.0"
   edition = "2018"
+  with_unit_tests = true
 
   configs -= [ "//build/config/rust:no_features" ]
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
@@ -19,65 +20,6 @@ rustc_library("netstack3-core") {
 
     # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
     "fakestd",
-    "//garnet/lib/rust/never",
-    "//src/connectivity/lib/internet-checksum",
-    "//src/connectivity/lib/net-types",
-    "//src/connectivity/network/netstack3/core/specialize-ip-macro",
-    "//src/lib/mundane",
-    "//src/lib/network/packet",
-    "//src/lib/network/packet-formats",
-    "//src/lib/zerocopy",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:rand_xorshift",
-    "//third_party/rust_crates:thiserror",
-  ]
-
-  sources = [
-    "src/algorithm/mod.rs",
-    "src/algorithm/port_alloc.rs",
-    "src/context.rs",
-    "src/data_structures/id_map.rs",
-    "src/data_structures/id_map_collection.rs",
-    "src/data_structures/mod.rs",
-    "src/data_structures/token_bucket.rs",
-    "src/device/arp.rs",
-    "src/device/ethernet.rs",
-    "src/device/link.rs",
-    "src/device/mod.rs",
-    "src/device/ndp.rs",
-    "src/error.rs",
-    "src/ip/forwarding.rs",
-    "src/ip/gmp/igmp.rs",
-    "src/ip/gmp/mld.rs",
-    "src/ip/gmp/mod.rs",
-    "src/ip/icmp.rs",
-    "src/ip/ipv6.rs",
-    "src/ip/mod.rs",
-    "src/ip/path_mtu.rs",
-    "src/ip/reassembly.rs",
-    "src/ip/socket.rs",
-    "src/ip/types.rs",
-    "src/lib.rs",
-    "src/macros.rs",
-    "src/socket.rs",
-    "src/transport/mod.rs",
-    "src/transport/udp.rs",
-  ]
-}
-
-rustc_test("netstack3-core_test") {
-  version = "0.1.0"
-  edition = "2018"
-  name = "netstack3_core_lib_test"
-
-  configs -= [ "//build/config/rust:no_features" ]
-  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
-
-  deps = [
-    # TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11): remove this module.
-    "fakealloc",
     "//garnet/lib/rust/never",
     "//src/connectivity/lib/internet-checksum",
     "//src/connectivity/lib/net-types",
@@ -125,5 +67,20 @@ rustc_test("netstack3-core_test") {
     "src/testutil.rs",
     "src/transport/mod.rs",
     "src/transport/udp.rs",
+  ]
+}
+
+fuchsia_unittest_package("unittest_package") {
+  component_name = "netstack3-core_test"
+  package_name = "netstack3-core_test"
+  deps = [ ":netstack3-core_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":netstack3-core_test($host_toolchain)",
+    ":unittest_package",
+    "specialize-ip-macro:tests",
   ]
 }
