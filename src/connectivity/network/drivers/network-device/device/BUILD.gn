@@ -24,7 +24,7 @@ ddk_source_split("device") {
   ]
 
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.network.device",
+    "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//src/lib/vmo_store",
     "//zircon/public/lib/async-cpp",

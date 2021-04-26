@@ -24,7 +24,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.display.controller",
   "fuchsia.hardware.nand",
   "fuchsia.hardware.nandinfo",
-  "fuchsia.hardware.network.device",
   "fuchsia.hardware.network.mac",
   "fuchsia.hardware.pci",
   "fuchsia.hardware.pciroot",

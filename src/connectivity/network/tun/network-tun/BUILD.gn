@@ -27,7 +27,7 @@ source_set("src") {
     "tun_pair.h",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.network.device",
+    "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun_llcpp",
     "//sdk/lib/fit",
