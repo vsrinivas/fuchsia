@@ -686,6 +686,10 @@ impl Target {
         self.inner.nodename_str().await
     }
 
+    pub async fn set_nodename(&self, nodename: String) {
+        self.inner.nodename.lock().await.replace(nodename);
+    }
+
     pub async fn boot_timestamp_nanos(&self) -> Option<u64> {
         self.inner.boot_timestamp_nanos.read().await.clone()
     }
@@ -789,11 +793,25 @@ impl Target {
             .clone()
             .into_iter()
             .filter(|entry| {
-                if let IpAddr::V6(v) = &entry.addr.ip {
-                    entry.addr.scope_id != 0 || !v.is_link_local_addr()
-                } else {
-                    true
-                }
+                entry.manual
+                    || if let IpAddr::V6(v) = &entry.addr.ip {
+                        entry.addr.scope_id != 0 || !v.is_link_local_addr()
+                    } else {
+                        true
+                    }
+            })
+            .collect();
+    }
+
+    pub async fn drop_loopback_addrs(&self) {
+        let mut addrs = self.inner.addrs.write().await;
+
+        *addrs = addrs
+            .clone()
+            .into_iter()
+            .filter(|entry| {
+                entry.manual
+                    || if let IpAddr::V4(v) = &entry.addr.ip { !v.is_loopback() } else { true }
             })
             .collect();
     }
@@ -1306,8 +1324,7 @@ impl From<TargetAddr> for TargetQuery {
 }
 
 struct TargetCollectionInner {
-    named: HashMap<String, Target>,
-    unnamed: Vec<Target>,
+    targets: HashMap<u64, Target>,
 }
 
 pub struct TargetCollection {
@@ -1321,11 +1338,8 @@ impl EventSynthesizer<DaemonEvent> for TargetCollection {
         let collection = self.inner.read().await;
         // TODO(awdavies): This won't be accurate once a target is able to create
         // more than one event at a time.
-        let mut res = Vec::with_capacity(collection.named.len());
-        for target in collection.named.values() {
-            res.extend(target.synthesize_events().await);
-        }
-        for target in collection.unnamed.iter() {
+        let mut res = Vec::with_capacity(collection.targets.len());
+        for target in collection.targets.values() {
             res.extend(target.synthesize_events().await);
         }
         res
@@ -1335,10 +1349,7 @@ impl EventSynthesizer<DaemonEvent> for TargetCollection {
 impl TargetCollection {
     pub fn new() -> Self {
         Self {
-            inner: RwLock::new(TargetCollectionInner {
-                named: HashMap::new(),
-                unnamed: Vec::new(),
-            }),
+            inner: RwLock::new(TargetCollectionInner { targets: HashMap::new() }),
             events: RwLock::new(None),
         }
     }
@@ -1364,50 +1375,24 @@ impl TargetCollection {
 
     pub async fn targets(&self) -> Vec<Target> {
         let inner = self.inner.read().await;
-        inner.named.values().chain(inner.unnamed.iter()).cloned().collect()
+        inner.targets.values().cloned().collect()
     }
 
     pub async fn remove_target(&self, target_id: String) -> bool {
-        let mut inner = self.inner.write().await;
-
-        if inner.named.remove(&target_id).is_none() {
-            let mut found = None;
-            'unnamed: for (index, target) in inner.unnamed.iter().enumerate() {
-                for addr in target.addrs().await.into_iter() {
-                    if format!("{}", addr.ip) == target_id {
-                        found = Some(index);
-                        break 'unnamed;
-                    }
-                }
-            }
-
-            if let Some(found) = found {
-                inner.unnamed.remove(found);
-                true
-            } else {
-                let mut found = None;
-                'named: for (index, target) in inner.named.iter() {
-                    for addr in target.addrs().await.into_iter() {
-                        if format!("{}", addr.ip) == target_id {
-                            found = Some(index.clone());
-                            break 'named;
-                        }
-                    }
-                }
-
-                if let Some(found) = found {
-                    inner.named.remove(&found);
-                    true
-                } else {
-                    false
-                }
-            }
-        } else {
+        if let Some(t) = self.get(target_id).await {
+            let mut inner = self.inner.write().await;
+            inner.targets.remove(&t.id());
             true
+        } else {
+            false
         }
     }
 
     pub async fn merge_insert(&self, new_target: Target) -> Target {
+        // Drop non-manual loopback address entries, as matching against
+        // them could otherwise match every target in the collection.
+        new_target.drop_loopback_addrs().await;
+
         let new_ids = new_target.ids().await;
         let new_nodename = new_target.nodename().await;
         let new_ips =
@@ -1417,74 +1402,47 @@ impl TargetCollection {
 
         let mut inner = self.inner.write().await;
 
-        // An unnamed match is an index pointing to a target that either matches
-        // by serial number or by an address.
-        let mut unnamed_match = None;
+        // Look for a target by primary ID first
+        let mut to_update = new_ids.iter().find_map(|id| inner.targets.get(&id));
 
-        // Look for an unnamed match by index, so we can move it if found.
-        for (i, unnamed_target) in inner.unnamed.iter().enumerate() {
-            // Look for an unnamed target with a matching ID
-            if unnamed_target.has_id(new_target.ids().await.iter()).await {
-                unnamed_match.replace(i);
-                break;
-            }
-
-            // Or a matching address
-            if unnamed_target.addrs().await.iter().any(|addr| new_ips.contains(&addr.ip)) {
-                unnamed_match.replace(i);
-                break;
-            }
-
-            // Or a matching serial
-            if let Some(ref serial) = new_serial {
-                if unnamed_target.serial().await.map(|s| s == *serial).unwrap_or(false) {
-                    unnamed_match.replace(i);
-                    break;
-                }
-            }
-        }
-
-        // If an unnamed entry was found, attempt to name it, moving it to the named set.
-        let mut to_update = if let Some(unnamed_match) = unnamed_match {
-            if let Some(name) = new_target.inner.nodename.lock().await.clone() {
-                let mergeable = inner.unnamed.remove(unnamed_match);
-                *mergeable.inner.nodename.lock().await = Some(name.clone());
-                inner.named.insert(name.clone(), mergeable);
-                inner.named.get(&name)
-            } else {
-                Some(&inner.unnamed[unnamed_match])
-            }
-        } else {
-            None
-        };
-
-        // If we haven't yet found a target, try to find one from the named set
-        // by ID, nodename, serial, or address.
+        // If we haven't yet found a target, try to find one by all IDs, nodename, serial, or address.
         if to_update.is_none() {
-            for (_, named_target) in inner.named.iter() {
-                let serials_match =
-                    match (named_target.serial().await.as_ref(), new_serial.as_ref()) {
+            for target in inner.targets.values() {
+                let serials_match = async {
+                    match (target.serial().await.as_ref(), new_serial.as_ref()) {
                         (Some(s), Some(other_s)) => s == other_s,
                         _ => false,
-                    };
-                if named_target.has_id(new_ids.iter()).await
-                    || new_nodename == named_target.nodename().await
-                    || (
-                        // Only match IP addresses IF the ssh port is the same (including un-set).
-                        named_target.ssh_port().await == new_port
-                            && named_target
-                                .addrs()
-                                .await
-                                .iter()
-                                .any(|addr| new_ips.contains(&addr.ip))
-                    )
-                    || serials_match
+                    }
+                };
+
+                // Only match the new nodename if it is Some and the same.
+                let nodenames_match = async {
+                    match (&new_nodename, target.nodename().await) {
+                        (Some(ref left), Some(ref right)) => left == right,
+                        _ => false,
+                    }
+                };
+
+                if target.has_id(new_ids.iter()).await
+                    || serials_match.await
+                    || nodenames_match.await
+                    // Only match against addresses if the ports are the same
+                    || (target.ssh_port().await == new_port
+                        && target.addrs().await.iter().any(|addr| new_ips.contains(&addr.ip)))
                 {
-                    to_update.replace(named_target);
+                    to_update.replace(target);
                     break;
                 }
             }
         }
+
+        log::info!("Merging target {:?} into {:?}", new_target, to_update);
+
+        // Do not merge unscoped link-local addresses into the target
+        // collection, as they are not routable and therefore not safe
+        // for connecting to the remote, and may collide with other
+        // scopes.
+        new_target.drop_unscoped_link_local_addrs().await;
 
         if let Some(to_update) = to_update {
             if let Some(config) = new_target.build_config().await {
@@ -1493,6 +1451,10 @@ impl TargetCollection {
             if let Some(serial) = new_target.serial().await {
                 to_update.inner.serial.write().await.replace(serial);
             }
+            if let Some(new_name) = new_target.nodename().await {
+                to_update.set_nodename(new_name).await;
+            }
+
             futures::join!(
                 to_update.update_last_response(new_target.last_response().await),
                 to_update.addrs_extend(new_target.addrs().await),
@@ -1510,17 +1472,12 @@ impl TargetCollection {
             });
             to_update.clone()
         } else {
-            new_target.drop_unscoped_link_local_addrs().await;
             let result = new_target.clone();
 
             let (new_target_name, new_target_serial) =
                 futures::join!(new_target.nodename(), new_target.serial());
 
-            if let Some(ref name) = new_target_name {
-                inner.named.insert(name.clone(), new_target);
-            } else {
-                inner.unnamed.push(new_target);
-            }
+            inner.targets.insert(new_target.id(), new_target);
 
             if new_target_name.is_some() || new_target_serial.is_some() {
                 let info = result.target_info().await;
@@ -1562,7 +1519,7 @@ impl TargetCollection {
             // clear that an ambiguous target error is about having more than
             // one target in the cache rather than giving an ambiguous target
             // error around targets that cannot be displayed in the frontend.
-            let targets = &self.inner.read().await.named;
+            let targets = &self.inner.read().await.targets;
             let targets =
                 futures::future::join_all(
                     targets
@@ -1617,7 +1574,7 @@ impl TargetCollection {
     {
         let t: TargetQuery = t.into();
         let inner = self.inner.read().await;
-        for target in inner.named.values().chain(inner.unnamed.iter()) {
+        for target in inner.targets.values() {
             if target.inner.state.lock().await.connection_state.is_connected() {
                 if t.matches(target).await {
                     return Some(target.clone());
@@ -1634,7 +1591,7 @@ impl TargetCollection {
     {
         let t: TargetQuery = t.into();
         let inner = self.inner.read().await;
-        inner.named.values().chain(inner.unnamed.iter()).match_target(t).await
+        inner.targets.values().match_target(t).await
     }
 }
 
@@ -2382,6 +2339,42 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_does_not_merge_different_ports_with_no_name() {
+        let ip = "::1".parse().unwrap();
+
+        let mut addr_set = BTreeSet::new();
+        addr_set.replace(TargetAddr { ip, scope_id: 0 });
+        let t1 = Target::new_with_addrs(Option::<String>::None, addr_set.clone());
+        t1.set_ssh_port(Some(8022)).await;
+        let t2 = Target::new_with_addrs(Option::<String>::None, addr_set.clone());
+        t2.set_ssh_port(Some(8023)).await;
+
+        let tc = TargetCollection::new_with_queue().await;
+        tc.merge_insert(t1).await;
+        tc.merge_insert(t2).await;
+
+        let mut targets = tc.targets().await.into_iter().collect::<Vec<Target>>();
+
+        assert_eq!(targets.len(), 2);
+
+        targets.sort_by(|a, b| block_on(a.ssh_port()).cmp(&block_on(b.ssh_port())));
+        let mut iter = targets.into_iter();
+        let mut found1 = iter.next().expect("must have target one");
+        let mut found2 = iter.next().expect("must have target two");
+
+        // Avoid iterator order dependency
+        if found1.ssh_port().await == Some(8023) {
+            std::mem::swap(&mut found1, &mut found2)
+        }
+
+        assert_eq!(found1.addrs().await.into_iter().next().unwrap().ip, ip);
+        assert_eq!(found1.ssh_port().await, Some(8022));
+
+        assert_eq!(found2.addrs().await.into_iter().next().unwrap().ip, ip);
+        assert_eq!(found2.ssh_port().await, Some(8023));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_does_not_merge_different_ports() {
         let ip = "::1".parse().unwrap();
 
@@ -2447,8 +2440,13 @@ mod test {
         tc.merge_insert(t1).await;
         tc.merge_insert(t2).await;
         let mut targets = tc.targets().await.into_iter();
-        let target1 = targets.next().expect("Merging resulted in no targets.");
-        let target2 = targets.next().expect("Merging resulted in only one target.");
+        let mut target1 = targets.next().expect("Merging resulted in no targets.");
+        let mut target2 = targets.next().expect("Merging resulted in only one target.");
+
+        if target1.nodename().await.is_none() {
+            std::mem::swap(&mut target1, &mut target2)
+        }
+
         assert!(targets.next().is_none());
         assert_eq!(target1.nodename_str().await, "this-is-a-crunchy-falafel");
         assert_eq!(target2.nodename().await, None);
@@ -2472,8 +2470,12 @@ mod test {
         tc.merge_insert(t1).await;
         tc.merge_insert(t2).await;
         let mut targets = tc.targets().await.into_iter();
-        let target1 = targets.next().expect("Merging resulted in no targets.");
-        let target2 = targets.next().expect("Merging resulted in only one target.");
+        let mut target1 = targets.next().expect("Merging resulted in no targets.");
+        let mut target2 = targets.next().expect("Merging resulted in only one target.");
+
+        if target1.nodename().await.is_none() {
+            std::mem::swap(&mut target1, &mut target2);
+        }
         assert!(targets.next().is_none());
         assert_eq!(target1.nodename_str().await, "this-is-a-crunchy-falafel");
         assert_eq!(target2.nodename().await, None);
@@ -2497,8 +2499,13 @@ mod test {
         tc.merge_insert(t1).await;
         tc.merge_insert(t2).await;
         let mut targets = tc.targets().await.into_iter();
-        let target1 = targets.next().expect("Merging resulted in no targets.");
-        let target2 = targets.next().expect("Merging resulted in only one target.");
+        let mut target1 = targets.next().expect("Merging resulted in no targets.");
+        let mut target2 = targets.next().expect("Merging resulted in only one target.");
+
+        if target1.nodename().await.is_none() {
+            std::mem::swap(&mut target1, &mut target2);
+        }
+
         assert!(targets.next().is_none());
         assert_eq!(target1.nodename_str().await, "this-is-a-crunchy-falafel");
         assert_eq!(target2.nodename().await, None);
