@@ -2,7 +2,6 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Script to generate runtimes.json for Clang toolchain
 
 This script invokes Clang with different flags to discover the corresponding
@@ -22,7 +21,6 @@ import re
 import shutil
 import subprocess
 import sys
-
 
 ELF_MAGIC = b"\x7fELF"
 
@@ -60,8 +58,9 @@ def trace_link(clang_dir, target, sysroot, cflags, ldflags):
 
 def read_soname_and_build_id(readelf, filename):
     p = subprocess.Popen(
-        [readelf, "-Wnd", filename], stdout=subprocess.PIPE, env={"LC_ALL": "C"}
-    )
+        [readelf, "-Wnd", filename],
+        stdout=subprocess.PIPE,
+        env={"LC_ALL": "C"})
     outs, _ = p.communicate()
     if p.returncode != 0:
         raise Exception("failed to read notes")
@@ -75,25 +74,53 @@ def read_soname_and_build_id(readelf, filename):
 
 
 def generate_entry(filename, clang_dir, build_id_dir, dump_syms):
-    entry = {"dist": os.path.relpath(filename, clang_dir)}
+    clang_lib_dir = os.path.join(clang_dir, 'lib')
+
+    def rebase_path(path):
+        """Rebase a path to clang_lib_dir if it is one of its sub-directories."""
+        if path.startswith(clang_lib_dir + os.sep):
+            return os.path.relpath(path, clang_lib_dir)
+        else:
+            return os.path.abspath(path)
+
+    entry = {"dist": rebase_path(filename)}
     soname, build_id = read_soname_and_build_id(
-        os.path.join(clang_dir, "bin", "llvm-readelf"), filename
-    )
+        os.path.join(clang_dir, "bin", "llvm-readelf"), filename)
     if soname:
         entry["soname"] = soname
+    else:
+        soname = os.path.basename(filename)
+
+    # Map a few well-known runtime libraries to their installation name.
+    # This is not used at build time, but to generate some build API files.
+    # The code below strips the .so and .so.xxx extensions.
+    _KNOWN_SO_NAMES = [
+        "libc++",
+        "libc++abi",
+        "libunwind",
+    ]
+    for known_name in _KNOWN_SO_NAMES:
+        if soname == known_name + '.so' or soname.startswith(known_name +
+                                                             '.so.'):
+            entry["name"] = known_name
+            break
 
     if not build_id_dir:
         return entry
+
+    # In many cases, filename will be a symlink to another file.
+    # E.g. libc++.so.2 --> libc++.so.2.0.
+    real_filename = os.path.realpath(filename)
 
     dist_file = build_id_dir + "/%s/%s" % (build_id[0:2], build_id[2:])
     debug_file = dist_file + ".debug"
     os.makedirs(os.path.dirname(debug_file), exist_ok=True)
     if not os.path.exists(debug_file):
         try:
-            os.link(filename, debug_file)
+            os.link(real_filename, debug_file)
         except OSError as e:
             if e.errno == errno.EXDEV:
-                shutil.copyfile(filename, debug_file)
+                shutil.copyfile(real_filename, debug_file)
             else:
                 raise e
     if not os.path.exists(dist_file):
@@ -103,38 +130,39 @@ def generate_entry(filename, clang_dir, build_id_dir, dump_syms):
                 "--strip-all",
                 debug_file,
                 dist_file,
-            ]
-        )
-    entry["dist"] = dist_file
-    entry["debug"] = debug_file
+            ])
+    entry["dist"] = rebase_path(dist_file)
+    entry["debug"] = rebase_path(debug_file)
 
     if not dump_syms:
         return entry
 
-    breakpad_file = build_id_dir + ".sym"
+    breakpad_file = dist_file + ".sym"
     if not os.path.exists(breakpad_file):
         with open(breakpad_file, "w") as f:
-            soname = soname or os.path.basename(filename)
             subprocess.check_call(
-                [dump_syms, "-r", "-n", soname, "-o", "Fuchsia", debug_file], stdout=f,
+                [dump_syms, "-r", "-n", soname, "-o", "Fuchsia", debug_file],
+                stdout=f,
             )
-    entry["breakpad"] = breakpad_file
+    entry["breakpad"] = rebase_path(breakpad_file)
 
     return entry
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--clang-toolchain", required=True, help="path to Clang")
-    parser.add_argument("--fuchsia-sdk", required=True, help="path to Fuchsia SDK")
+    parser.add_argument(
+        "--clang-toolchain", required=True, help="path to Clang")
+    parser.add_argument(
+        "--fuchsia-sdk", required=True, help="path to Fuchsia SDK")
     parser.add_argument("--build-id-dir", help="path .build-id directory")
-    parser.add_argument("--dump-syms", help="path to Breakpad dump_syms utility")
+    parser.add_argument(
+        "--dump-syms", help="path to Breakpad dump_syms utility")
     args = parser.parse_args()
 
     clang_dir = os.path.abspath(args.clang_toolchain)
-    build_id_dir = os.path.abspath(args.build_id_dir) if args.build_id_dir else None
-    if build_id_dir and build_id_dir.startswith(clang_dir):
-        build_id_dir = os.path.relpath(build_id_dir, clang_dir)
+    build_id_dir = os.path.abspath(
+        args.build_id_dir) if args.build_id_dir else None
 
     runtimes = []
     for target in TARGETS:
@@ -144,7 +172,8 @@ def main():
         for cflags in CFLAGS:
             for ldflags in LDFLAGS:
                 runtime = []
-                for lib in trace_link(clang_dir, target, sysroot, cflags, ldflags):
+                for lib in trace_link(clang_dir, target, sysroot, cflags,
+                                      ldflags):
                     lib_path = os.path.abspath(lib)
                     if not os.path.isfile(lib_path):
                         continue
@@ -156,17 +185,14 @@ def main():
                         continue
                     runtime.append(
                         generate_entry(
-                            lib_path, clang_dir, build_id_dir, args.dump_syms
-                        )
-                    )
+                            lib_path, clang_dir, build_id_dir, args.dump_syms))
                 runtimes.append(
                     {
                         "cflags": cflags,
                         "ldflags": ldflags,
                         "runtime": runtime,
                         "target": [target],
-                    }
-                )
+                    })
 
     json.dump(runtimes, sys.stdout, indent=2, sort_keys=True)
 
