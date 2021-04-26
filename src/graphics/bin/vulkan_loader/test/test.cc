@@ -4,7 +4,9 @@
 
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
+#include <zircon/types.h>
 
 #include <gtest/gtest.h>
 
@@ -38,6 +40,48 @@ TEST(VulkanLoader, ManifestLoad) {
   EXPECT_EQ(ZX_OK, vmo_out.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info),
                                     nullptr, nullptr));
   EXPECT_TRUE(handle_info.rights & ZX_RIGHT_EXECUTE);
+  EXPECT_FALSE(handle_info.rights & ZX_RIGHT_WRITE);
   EXPECT_EQ(ZX_OK, loader->Get("not-present", &vmo_out));
   EXPECT_FALSE(vmo_out.is_valid());
+}
+
+// Check that writes to one VMO returned by the server will not modify a separate VMO returned by
+// the service.
+TEST(VulkanLoader, VmosIndependent) {
+  fuchsia::vulkan::loader::LoaderSyncPtr loader;
+  EXPECT_EQ(ZX_OK, fdio_service_connect("/svc/fuchsia.vulkan.loader.Loader",
+                                        loader.NewRequest().TakeChannel().release()));
+
+  zx::vmo vmo_out;
+  // manifest.json remaps this to bin/pkg-server.
+  EXPECT_EQ(ZX_OK, loader->Get("pkg-server2", &vmo_out));
+  EXPECT_TRUE(vmo_out.is_valid());
+
+  fzl::VmoMapper mapper;
+  EXPECT_EQ(ZX_OK, mapper.Map(vmo_out, 0, 0, ZX_VM_PERM_EXECUTE | ZX_VM_PERM_READ));
+  uint8_t original_value = *static_cast<uint8_t*>(mapper.start());
+  uint8_t byte_to_write = original_value + 1;
+  size_t actual;
+  // zx_process_write_memory can write to memory mapped without ZX_VM_PERM_WRITE. If that ever
+  // changes, this test can probably be removed.
+  zx_status_t status = zx::process::self()->write_memory(
+      reinterpret_cast<uint64_t>(mapper.start()), &byte_to_write, sizeof(byte_to_write), &actual);
+
+  // zx_process_write_memory may be disabled using a kernel command-line flag.
+  if (status == ZX_ERR_NOT_SUPPORTED) {
+    EXPECT_EQ(original_value, *static_cast<uint8_t*>(mapper.start()));
+  } else {
+    EXPECT_EQ(ZX_OK, status);
+
+    EXPECT_EQ(byte_to_write, *static_cast<uint8_t*>(mapper.start()));
+  }
+
+  // Ensure that the new clone is unaffected.
+  zx::vmo vmo2;
+  EXPECT_EQ(ZX_OK, loader->Get("pkg-server2", &vmo2));
+  EXPECT_TRUE(vmo2.is_valid());
+
+  fzl::VmoMapper mapper2;
+  EXPECT_EQ(ZX_OK, mapper2.Map(vmo2, 0, 0, ZX_VM_PERM_EXECUTE | ZX_VM_PERM_READ));
+  EXPECT_EQ(original_value, *static_cast<uint8_t*>(mapper2.start()));
 }

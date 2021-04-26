@@ -19,6 +19,7 @@ executable("test_bin") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
+    "//zircon/system/ulib/fzl",
   ]
 }
 

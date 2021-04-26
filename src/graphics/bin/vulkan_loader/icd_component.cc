@@ -132,6 +132,25 @@ bool IcdComponent::ValidateMetadataJson(const std::string& component_url,
   return true;
 }
 
+zx::status<zx::vmo> IcdComponent::CloneVmo() const {
+  std::lock_guard lock(vmo_lock_);
+  if (!vmo_info_)
+    return zx::error(ZX_ERR_BAD_STATE);
+
+  uint64_t size;
+  zx_status_t status = vmo_info_->vmo.get_size(&size);
+  if (status != ZX_OK)
+    return zx::error(status);
+  zx::vmo vmo;
+  // Snapshot is ok because we never modify our VMO, and blobfs should never modify it either. We
+  // use ZX_VMO_CHILD_NO_WRITE because otherwise ZX_RIGHT_EXECUTE is removed.
+  status = vmo_info_->vmo.create_child(
+      ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE | ZX_VMO_CHILD_NO_WRITE, 0, size, &vmo);
+  if (status != ZX_OK)
+    return zx::error(status);
+  return zx::ok(std::move(vmo));
+}
+
 // See the accompanying README.md for a description of what a Vulkan component needs to have.
 void IcdComponent::ReadFromComponent(fit::deferred_callback failure_callback,
                                      fidl::InterfaceHandle<fuchsia::io::Directory> out_dir) {

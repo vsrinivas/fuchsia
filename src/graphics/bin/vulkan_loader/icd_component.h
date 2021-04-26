@@ -11,6 +11,7 @@
 #include <lib/fit/defer.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/status.h>
+#include <zircon/types.h>
 
 #include "rapidjson/document.h"
 #include "sdk/lib/sys/inspect/cpp/component.h"
@@ -44,16 +45,7 @@ class IcdComponent : public std::enable_shared_from_this<IcdComponent> {
   // only when logging errors.
   static bool ValidateMetadataJson(const std::string& component_url,
                                    const rapidjson::GenericDocument<rapidjson::UTF8<>>& doc);
-  zx::status<zx::vmo> DuplicateVmo() const {
-    std::lock_guard lock(vmo_lock_);
-    if (!vmo_info_)
-      return zx::error(ZX_ERR_BAD_STATE);
-    zx::vmo vmo;
-    zx_status_t status = vmo_info_->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
-    if (status != ZX_OK)
-      return zx::error(status);
-    return zx::ok(std::move(vmo));
-  }
+  zx::status<zx::vmo> CloneVmo() const;
 
   // library_path is essentially an arbitrary string given by `library_path` from the ICD.
   std::string library_path() const {
