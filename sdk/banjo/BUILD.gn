@@ -25,7 +25,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.nand",
   "fuchsia.hardware.nandinfo",
   "fuchsia.hardware.pci",
-  "fuchsia.hardware.pciroot",
   "fuchsia.hardware.power",
   "fuchsia.hardware.powerimpl",
   "fuchsia.hardware.pwm",

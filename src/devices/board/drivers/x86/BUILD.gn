@@ -105,7 +105,7 @@ driver_module("platform-bus-x86") {
     ":x64-bind",
     "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.pciroot",
+    "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
@@ -147,7 +147,7 @@ test("x86-battery-test") {
   deps = [
     "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.pciroot",
+    "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
