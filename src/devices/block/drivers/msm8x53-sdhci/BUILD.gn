@@ -25,7 +25,7 @@ driver_module("msm8x53-sdhci") {
   deps = [
     ":msm8x53-sdhci-bind",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.sdhci",
+    "//sdk/banjo/fuchsia.hardware.sdhci:fuchsia.hardware.sdhci_banjo_cpp",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
