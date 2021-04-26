@@ -168,6 +168,9 @@ pub(crate) struct EssSa {
     key_replay_counter: u64,
     // A retry counter and key frame to resend if a timeout is received while waiting for a response.
     last_key_frame_buf: Option<(u32, eapol::KeyFrameBuf)>,
+    // Updates to send after we receive an eapol send confirmation. This will contain an empty update
+    // sink if we're awaiting a confirm but do not have any subsequent updates to send.
+    updates_awaiting_confirm: Option<UpdateSink>,
 
     // Individual Security Associations.
     pmksa: StateMachine<Pmksa>,
@@ -192,6 +195,7 @@ impl EssSa {
             negotiated_protection,
             key_replay_counter: 0,
             last_key_frame_buf: None,
+            updates_awaiting_confirm: None,
             pmksa: StateMachine::new(Pmksa::Initialized { pmk }),
             ptksa: StateMachine::new(Ptksa::Uninitialized { cfg: ptk_exch_cfg }),
             gtksa: StateMachine::new(Gtksa::Uninitialized { cfg: gtk_exch_cfg }),
@@ -365,31 +369,51 @@ impl EssSa {
     // Do any necessary final processing before passing updates to the higher layer.
     fn push_updates(&mut self, update_sink: &mut UpdateSink, new_updates: UpdateSink) {
         for update in new_updates {
-            match &update {
-                SecAssocUpdate::TxEapolKeyFrame { frame, expect_response } => {
+            // If we've sent an eapol frame, buffer all remaining updates until we receive a confirm.
+            if let Some(buffered_updates) = &mut self.updates_awaiting_confirm {
+                buffered_updates.push(update);
+            } else {
+                if let SecAssocUpdate::TxEapolKeyFrame { frame, expect_response } = &update {
                     if *expect_response {
                         self.last_key_frame_buf = Some((1, frame.clone()));
                     } else {
                         // We don't expect a response, so we don't need to keep the frame around.
                         self.last_key_frame_buf = None;
                     }
+                    self.updates_awaiting_confirm.replace(Default::default());
                 }
-                _ => (),
-            };
-            update_sink.push(update);
+                update_sink.push(update);
+            }
         }
     }
 
     pub fn on_eapol_conf(
         &mut self,
-        _update_sink: &mut UpdateSink,
-        _result: EapolResultCode,
+        update_sink: &mut UpdateSink,
+        result: EapolResultCode,
     ) -> Result<(), Error> {
-        // TODO(fxbug.dev/68454): Implement.
-        Ok(())
+        match self.updates_awaiting_confirm.take() {
+            Some(updates) => match result {
+                EapolResultCode::Success => {
+                    // We successfully sent a frame. Now send the resulting ESSSA updates.
+                    self.push_updates(update_sink, updates);
+                    Ok(())
+                }
+                EapolResultCode::TransmissionFailure => Err(Error::KeyFrameTransmissionFailed),
+            },
+            None => {
+                error!("Ignored unexpected eapol send confirm");
+                Ok(())
+            }
+        }
     }
 
     pub fn on_key_frame_timeout(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
+        // IEEE Std 802.11-2016 6.3.22.2.4: We should always receive a confirm in response to an eapol tx.
+        // If we never received an eapol conf, treat this as a fatal error.
+        if let Some(updates) = &self.updates_awaiting_confirm {
+            return Err(Error::NoKeyFrameTransmissionConfirm(updates.len()));
+        }
         // Resend the last key frame if appropriate
         if let Some((attempt, key_frame)) = self.last_key_frame_buf.as_mut() {
             *attempt += 1;
@@ -604,6 +628,9 @@ mod tests {
         test_util::expect_reported_sae_auth_status(&a_updates[..], AuthStatus::Success);
         test_util::expect_reported_status(&a_updates[..], SecAssocStatus::PmkSaEstablished);
         let msg1 = test_util::expect_eapol_resp(&a_updates[..]);
+        authenticator
+            .on_eapol_conf(&mut a_updates, EapolResultCode::Success)
+            .expect("Failed eapol conf");
         assert_eq!(a_updates.len(), 4, "{:?}", a_updates);
 
         test_eapol_exchange(&mut supplicant, &mut authenticator, Some(msg1), true);
@@ -1141,6 +1168,77 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_msg2_out_of_order_conf() {
+        // Create ESS Security Association
+        let mut supplicant = test_util::get_wpa2_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+
+        // Send the first frame but don't send a conf in response.
+        let msg = test_util::get_wpa2_4whs_msg1(&ANONCE[..], |_| {});
+        let mut update_sink = UpdateSink::default();
+        supplicant
+            .on_eapol_frame(&mut update_sink, eapol::Frame::Key(msg.keyframe()))
+            .expect("Failed to send eapol frame");
+        let msg2 = test_util::expect_eapol_resp(&update_sink[..]);
+
+        // No key frame confirm means that we will buffer updates until the confirm is received.
+        let snonce = msg2.keyframe().key_frame_fields.key_nonce;
+        let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
+        let (result, updates) = send_fourway_msg3(&mut supplicant, &ptk, |_| {});
+        result.expect("Failed to send msg3");
+        assert!(updates.is_empty());
+
+        // When confirm is received we receive updates through msg4
+        let mut update_sink = UpdateSink::default();
+        supplicant
+            .on_eapol_conf(&mut update_sink, EapolResultCode::Success)
+            .expect("Failed to send eapol conf");
+        assert_eq!(update_sink.len(), 1);
+        test_util::expect_eapol_resp(&update_sink[..]);
+
+        // On another confirm, we receive the remaining updates.
+        supplicant
+            .on_eapol_conf(&mut update_sink, EapolResultCode::Success)
+            .expect("Failed to send eapol conf");
+        test_util::expect_reported_ptk(&update_sink[..]);
+        test_util::expect_reported_gtk(&update_sink[..]);
+    }
+
+    #[test]
+    fn test_msg2_no_conf() {
+        // Create ESS Security Association
+        let mut supplicant = test_util::get_wpa2_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+
+        // Send the first frame but don't send a conf in response.
+        let msg = test_util::get_wpa2_4whs_msg1(&ANONCE[..], |_| {});
+        let mut update_sink = UpdateSink::default();
+        supplicant
+            .on_eapol_frame(&mut update_sink, eapol::Frame::Key(msg.keyframe()))
+            .expect("Failed to send eapol frame");
+        let msg2 = test_util::expect_eapol_resp(&update_sink[..]);
+
+        // No key frame confirm means that we will buffer updates until the confirm is received.
+        let snonce = msg2.keyframe().key_frame_fields.key_nonce;
+        let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
+        let (result, updates) = send_fourway_msg3(&mut supplicant, &ptk, |_| {});
+        result.expect("Failed to send msg3");
+        assert!(updates.is_empty());
+
+        // We never receive a confirm, and report this on timeout.
+        // There are 4 pending updates that we drop after this timeout:
+        //   * EAPOL message 4
+        //   * PTK
+        //   * GTK
+        //   * ESSSA Established
+        let mut update_sink = vec![];
+        assert_variant!(
+            supplicant.on_eapol_key_frame_timeout(&mut update_sink),
+            Err(Error::NoKeyFrameTransmissionConfirm(4))
+        );
+    }
+
     // TODO(hahnr): Add additional tests:
     // Invalid messages from Authenticator
     // Timeouts
@@ -1174,7 +1272,11 @@ mod tests {
             None => {
                 assert_eq!(a_updates.len(), 2);
                 test_util::expect_reported_status(&a_updates, SecAssocStatus::PmkSaEstablished);
-                test_util::expect_eapol_resp(&a_updates[..])
+                let resp = test_util::expect_eapol_resp(&a_updates[..]);
+                authenticator
+                    .on_eapol_conf(&mut a_updates, EapolResultCode::Success)
+                    .expect("Failed eapol conf");
+                resp
             }
         };
 
@@ -1183,6 +1285,9 @@ mod tests {
         let result = supplicant.on_eapol_frame(&mut s_updates, eapol::Frame::Key(msg1.keyframe()));
         assert!(result.is_ok(), "Supplicant failed processing msg #1: {}", result.unwrap_err());
         let msg2 = test_util::expect_eapol_resp(&s_updates[..]);
+        supplicant
+            .on_eapol_conf(&mut s_updates, EapolResultCode::Success)
+            .expect("Failed eapol conf");
         assert_eq!(s_updates.len(), 1, "{:?}", s_updates);
 
         // Send msg #2 to Authenticator and wait for response.
@@ -1191,13 +1296,20 @@ mod tests {
             authenticator.on_eapol_frame(&mut a_updates, eapol::Frame::Key(msg2.keyframe()));
         assert!(result.is_ok(), "Authenticator failed processing msg #2: {}", result.unwrap_err());
         let msg3 = test_util::expect_eapol_resp(&a_updates[..]);
+        authenticator
+            .on_eapol_conf(&mut a_updates, EapolResultCode::Success)
+            .expect("Failed eapol conf");
         assert_eq!(a_updates.len(), 1, "{:?}", a_updates);
 
         // Send msg #3 to Supplicant and wait for response.
         let mut s_updates = vec![];
         let result = supplicant.on_eapol_frame(&mut s_updates, eapol::Frame::Key(msg3.keyframe()));
         assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
+        assert_eq!(s_updates.len(), 1); // We shouldn't see the ptk or gtk until an eapol conf is received.
         let msg4 = test_util::expect_eapol_resp(&s_updates[..]);
+        supplicant
+            .on_eapol_conf(&mut s_updates, EapolResultCode::Success)
+            .expect("Failed eapol conf");
         let s_ptk = test_util::expect_reported_ptk(&s_updates[..]);
         let s_gtk = test_util::expect_reported_gtk(&s_updates[..]);
         let s_igtk = if wpa3 {
@@ -1233,6 +1345,23 @@ mod tests {
         assert_eq!(a_igtk, s_igtk);
     }
 
+    fn send_eapol_conf(
+        supplicant: &mut Supplicant,
+        update_sink: &mut UpdateSink,
+    ) -> Result<(), Error> {
+        let mut sent_frame = false;
+        for update in &update_sink[..] {
+            if let SecAssocUpdate::TxEapolKeyFrame { .. } = update {
+                sent_frame = true;
+            }
+        }
+        if sent_frame {
+            supplicant.on_eapol_conf(update_sink, EapolResultCode::Success)
+        } else {
+            Ok(())
+        }
+    }
+
     fn send_fourway_msg1<F>(
         supplicant: &mut Supplicant,
         msg_modifier: F,
@@ -1243,6 +1372,7 @@ mod tests {
         let msg = test_util::get_wpa2_4whs_msg1(&ANONCE[..], msg_modifier);
         let mut update_sink = UpdateSink::default();
         let result = supplicant.on_eapol_frame(&mut update_sink, eapol::Frame::Key(msg.keyframe()));
+        let result = result.and_then(|_| send_eapol_conf(supplicant, &mut update_sink));
         (result, update_sink)
     }
 
@@ -1257,6 +1387,7 @@ mod tests {
         let msg = test_util::get_wpa2_4whs_msg3(ptk, &ANONCE[..], &GTK, msg_modifier);
         let mut update_sink = UpdateSink::default();
         let result = supplicant.on_eapol_frame(&mut update_sink, eapol::Frame::Key(msg.keyframe()));
+        let result = result.and_then(|_| send_eapol_conf(supplicant, &mut update_sink));
         (result, update_sink)
     }
 
@@ -1270,6 +1401,7 @@ mod tests {
         let msg = test_util::get_group_key_hs_msg1(ptk, &gtk[..], key_id, key_replay_counter);
         let mut update_sink = UpdateSink::default();
         let result = supplicant.on_eapol_frame(&mut update_sink, eapol::Frame::Key(msg.keyframe()));
+        let result = result.and_then(|_| send_eapol_conf(supplicant, &mut update_sink));
         (result, update_sink)
     }
 }

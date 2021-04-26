@@ -411,6 +411,10 @@ pub enum Error {
     UnexpectedEsssaInitiation,
     #[error("too many key frame transmission retries")]
     TooManyKeyFrameRetries,
+    #[error("key frame transmission failed")]
+    KeyFrameTransmissionFailed,
+    #[error("no key frame transmission confirm received; dropped {} pending updates", _0)]
+    NoKeyFrameTransmissionConfirm(usize),
     #[error("unsupported Key Descriptor Type: {:?}", _0)]
     UnsupportedKeyDescriptor(eapol::KeyDescriptor),
     #[error("unexpected Key Descriptor Type {:?}; expected {:?}", _0, _1)]

@@ -450,7 +450,7 @@ pub fn create_wpa2_psk_authenticator(
 }
 
 pub fn process_tx_auth_updates(
-    _authenticator: &mut wlan_rsn::Authenticator,
+    authenticator: &mut wlan_rsn::Authenticator,
     update_sink: &mut wlan_rsn::rsna::UpdateSink,
     channel: &WlanChan,
     bssid: &mac::Bssid,
@@ -482,6 +482,9 @@ pub fn process_tx_auth_updates(
                     phy,
                 )?;
                 update_sink.remove(i);
+                authenticator
+                    .on_eapol_conf(update_sink, fidl_mlme::EapolResultCode::Success)
+                    .expect("Error sending EAPOL confirm");
             }
             _ => i += 1,
         };
