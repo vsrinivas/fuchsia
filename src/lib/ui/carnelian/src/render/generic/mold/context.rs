@@ -246,6 +246,17 @@ fn render_composition(
                 },
                 blend_mode: match layer.style.blend_mode {
                     BlendMode::Over => mold::BlendMode::Over,
+                    BlendMode::Screen => mold::BlendMode::Screen,
+                    BlendMode::Overlay => mold::BlendMode::Overlay,
+                    BlendMode::Darken => mold::BlendMode::Darken,
+                    BlendMode::Lighten => mold::BlendMode::Lighten,
+                    BlendMode::ColorDodge => mold::BlendMode::ColorDodge,
+                    BlendMode::ColorBurn => mold::BlendMode::ColorBurn,
+                    BlendMode::HardLight => mold::BlendMode::HardLight,
+                    BlendMode::SoftLight => mold::BlendMode::SoftLight,
+                    BlendMode::Difference => mold::BlendMode::Difference,
+                    BlendMode::Exclusion => mold::BlendMode::Exclusion,
+                    BlendMode::Multiply => mold::BlendMode::Multiply,
                 },
             });
 

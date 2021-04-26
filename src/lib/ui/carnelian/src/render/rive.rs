@@ -187,17 +187,17 @@ impl rive::Renderer for Renderer<'_> {
 
         let blend_mode = match paint.blend_mode {
             rive::shapes::paint::BlendMode::SrcOver => BlendMode::Over,
-            // rive::shapes::paint::BlendMode::Screen => BlendMode::Screen,
-            // rive::shapes::paint::BlendMode::Overlay => BlendMode::Overlay,
-            // rive::shapes::paint::BlendMode::Darken => BlendMode::Darken,
-            // rive::shapes::paint::BlendMode::Lighten => BlendMode::Lighten,
-            // rive::shapes::paint::BlendMode::ColorDodge => BlendMode::ColorDodge,
-            // rive::shapes::paint::BlendMode::ColorBurn => BlendMode::ColorBurn,
-            // rive::shapes::paint::BlendMode::HardLight => BlendMode::HardLight,
-            // rive::shapes::paint::BlendMode::SoftLight => BlendMode::SoftLight,
-            // rive::shapes::paint::BlendMode::Difference => BlendMode::Difference,
-            // rive::shapes::paint::BlendMode::Exclusion => BlendMode::Exclusion,
-            // rive::shapes::paint::BlendMode::Multiply => BlendMode::Multiply,
+            rive::shapes::paint::BlendMode::Screen => BlendMode::Screen,
+            rive::shapes::paint::BlendMode::Overlay => BlendMode::Overlay,
+            rive::shapes::paint::BlendMode::Darken => BlendMode::Darken,
+            rive::shapes::paint::BlendMode::Lighten => BlendMode::Lighten,
+            rive::shapes::paint::BlendMode::ColorDodge => BlendMode::ColorDodge,
+            rive::shapes::paint::BlendMode::ColorBurn => BlendMode::ColorBurn,
+            rive::shapes::paint::BlendMode::HardLight => BlendMode::HardLight,
+            rive::shapes::paint::BlendMode::SoftLight => BlendMode::SoftLight,
+            rive::shapes::paint::BlendMode::Difference => BlendMode::Difference,
+            rive::shapes::paint::BlendMode::Exclusion => BlendMode::Exclusion,
+            rive::shapes::paint::BlendMode::Multiply => BlendMode::Multiply,
             _ => {
                 println!("unsupported blend_mode: {:?}", paint.blend_mode);
                 BlendMode::Over

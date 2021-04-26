@@ -211,11 +211,39 @@ pub enum Fill {
     Solid(Color),
 }
 
-/// Raster blend mode.
+/// Raster blend mode. See https://www.w3.org/TR/compositing/#blending for more details.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BlendMode {
-    /// Blends raster over previous rasters.
+    /// Normal. Source is placed over the destination.
     Over,
+    /// The source color is multiplied by the destination color and replaces the destination.
+    Multiply,
+    /// Multiplies the complements of the backdrop and source color values, then complements the
+    /// result.
+    Screen,
+    /// Multiplies or screens the colors, depending on the backdrop color value.
+    Overlay,
+    /// Selects the darker of the backdrop and source colors.
+    Darken,
+    /// Selects the lighter of the backdrop and source colors.
+    Lighten,
+    /// Brightens the backdrop color to reflect the source color. Painting with black produces no
+    /// changes.
+    ColorDodge,
+    /// Darkens the backdrop color to reflect the source color. Painting with white produces no
+    /// change.
+    ColorBurn,
+    /// Multiplies or screens the colors, depending on the source color value. The effect is
+    /// similar to shining a harsh spotlight on the backdrop.
+    HardLight,
+    /// Darkens or lightens the colors, depending on the source color value. The effect is similar
+    /// to shining a diffused spotlight on the backdrop.
+    SoftLight,
+    /// Subtracts the darker of the two constituent colors from the lighter color.
+    Difference,
+    /// Produces an effect similar to that of the `Difference` mode but lower in contrast.
+    /// Painting with white inverts the backdrop color; painting with black produces no change.
+    Exclusion,
 }
 
 /// Raster style.

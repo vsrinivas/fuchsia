@@ -33,6 +33,8 @@ fn group_layers(
         };
         let blend_mode_len = match style.blend_mode {
             BlendMode::Over => 1,
+            // TODO(fxb/75358): Add more blend-modes to spinel.
+            _ => 1,
         };
 
         1 + fill_rule_len + fill_len + blend_mode_len
@@ -78,10 +80,21 @@ fn group_layers(
             }
         }
 
-        match style.blend_mode {
-            BlendMode::Over => {
-                cmds[cursor] = SpnCommand::SpnStylingOpcodeBlendOver;
-            }
+        cmds[cursor] = match style.blend_mode {
+            BlendMode::Over => SpnCommand::SpnStylingOpcodeBlendOver,
+            // TODO(fxb/75358): Add more blend-modes to spinel.
+            // BlendMode::Multiply => SpnCommand::SpnStylingOpcodeBlendMultiply,
+            // BlendMode::Screen => SpnCommand::SpnStylingOpcodeBlendScreen,
+            // BlendMode::Overlay => SpnCommand::SpnStylingOpcodeBlendOverlay,
+            // BlendMode::Darken => SpnCommand::SpnStylingOpcodeBlendDarken,
+            // BlendMode::Lighten => SpnCommand::SpnStylingOpcodeBlendLighten,
+            // BlendMode::ColorDodge => SpnCommand::SpnStylingOpcodeBlendColorDodge,
+            // BlendMode::ColorBurn => SpnCommand::SpnStylingOpcodeBlendColorBurn,
+            // BlendMode::HardLight => SpnCommand::SpnStylingOpcodeBlendHardLight,
+            // BlendMode::SoftLight => SpnCommand::SpnStylingOpcodeBlendSoftLight,
+            // BlendMode::Difference => SpnCommand::SpnStylingOpcodeBlendDifference,
+            // BlendMode::Exclusion => SpnCommand::SpnStylingOpcodeBlendExclusion,
+            _ => SpnCommand::SpnStylingOpcodeBlendOver,
         }
     }
 }
