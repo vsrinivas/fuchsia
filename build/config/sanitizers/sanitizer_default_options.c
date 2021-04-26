@@ -56,7 +56,7 @@
 // Explicit alignas prevents the compiler from "optimizing" with extra padding.
 // Likewise, asan red zones would pollute the special section.
 #define DEFINE_IN_SECTION(scn_sfx) \
-  __attribute__((used, no_sanitize_address)) IN_SECTION(scn_sfx) alignas(char)
+  __attribute__((used, retain, no_sanitize_address)) IN_SECTION(scn_sfx) alignas(char)
 
 // The linker-generated start/stop symbols are always private to this same
 // module and don't need GOT indirection.
