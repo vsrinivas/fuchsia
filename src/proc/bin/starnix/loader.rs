@@ -8,9 +8,11 @@ use fuchsia_zircon::{self as zx, AsHandleRef, Status};
 use lazy_static::lazy_static;
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
+use std::sync::Arc;
 
-use crate::executive::*;
-use crate::fs::{FdTable, SyslogFile};
+use crate::auth::*;
+use crate::fs::{FileSystem, SyslogFile};
+use crate::task::*;
 use crate::uapi::*;
 
 lazy_static! {
@@ -116,15 +118,16 @@ fn load_elf(vmo: &zx::Vmo, vmar: &zx::Vmar) -> Result<LoadedElf, Error> {
 // TODO(tbodt): change to return an errno when it's time to implement execve
 // TODO(tbodt): passing the root to this function doesn't make any sense
 pub async fn load_executable(
-    job: &zx::Job,
+    kernel: &Arc<Kernel>,
     executable: zx::Vmo,
     params: &ProcessParameters,
     root: fio::DirectoryProxy,
-) -> Result<ProcessContext, Error> {
-    job.set_name(&params.name)?;
-    let (process, root_vmar) = job.create_child_process(params.name.as_bytes())?;
+) -> Result<Arc<Task>, Error> {
+    let creds = Credentials { uid: 3, gid: 3, euid: 3, egid: 3 };
+    let fs = Arc::new(FileSystem::new(root));
+    let task = Task::new(&kernel, &params.name, fs.clone(), creds)?;
 
-    let main_elf = load_elf(&executable, &root_vmar).context("Main ELF failed to load")?;
+    let main_elf = load_elf(&executable, &task.mm.root_vmar).context("Main ELF failed to load")?;
     let interp_elf = if let Some(interp_hdr) =
         main_elf.headers.program_header_with_type(elf_parse::SegmentType::Interp)?
     {
@@ -135,8 +138,8 @@ pub async fn load_executable(
         if interp.starts_with('/') {
             interp = &interp[1..];
         }
-        let interp_vmo = library_loader::load_vmo(&root, interp).await?;
-        Some(load_elf(&interp_vmo, &root_vmar).context("Interpreter ELF failed to load")?)
+        let interp_vmo = library_loader::load_vmo(&fs.root, interp).await?;
+        Some(load_elf(&interp_vmo, &task.mm.root_vmar).context("Interpreter ELF failed to load")?)
     } else {
         None
     };
@@ -149,31 +152,24 @@ pub async fn load_executable(
     let stack_size: usize = 0x5000;
     let stack_vmo = zx::Vmo::create(stack_size as u64)?;
     stack_vmo.set_name(CStr::from_bytes_with_nul(b"[stack]\0")?)?;
-    let stack_base = root_vmar
+    let stack_base = task
+        .mm
+        .root_vmar
         .map(0, &stack_vmo, 0, stack_size, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE)
         .context("failed to map stack")?;
     let stack = stack_base + stack_size - 8;
 
-    let process = ProcessContext {
-        process_id: 3, // TODO: Assign from a process map.
-        handle: process,
-        mm: MemoryManager::new(root_vmar),
-        security: SecurityContext { uid: 3, gid: 3, euid: 3, egid: 3 },
-        root,
-        fd_table: FdTable::new(),
-    };
-
     // TODO(tbodt): this would fit better elsewhere
     let stdio = SyslogFile::new();
-    assert!(process.fd_table.install_fd(stdio.clone()).unwrap().raw() == 0);
-    assert!(process.fd_table.install_fd(stdio.clone()).unwrap().raw() == 1);
-    assert!(process.fd_table.install_fd(stdio).unwrap().raw() == 2);
+    assert!(task.files.install_fd(stdio.clone()).unwrap().raw() == 0);
+    assert!(task.files.install_fd(stdio.clone()).unwrap().raw() == 1);
+    assert!(task.files.install_fd(stdio).unwrap().raw() == 2);
 
     let auxv = vec![
-        (AT_UID, process.security.uid as u64),
-        (AT_EUID, process.security.euid as u64),
-        (AT_GID, process.security.gid as u64),
-        (AT_EGID, process.security.egid as u64),
+        (AT_UID, task.creds.uid as u64),
+        (AT_EUID, task.creds.euid as u64),
+        (AT_GID, task.creds.gid as u64),
+        (AT_EGID, task.creds.egid as u64),
         (AT_BASE, interp_elf.map_or(0, |interp| interp.base as u64)),
         (AT_PAGESZ, *PAGE_SIZE),
         (AT_PHDR, main_elf.bias.wrapping_add(main_elf.headers.file_header().phoff) as u64),
@@ -183,10 +179,9 @@ pub async fn load_executable(
     ];
     let stack = populate_initial_stack(&stack_vmo, &params, auxv, stack_base, stack)?;
 
-    let main_thread = process.handle.create_thread("initial-thread".as_bytes())?;
-    process.handle.start(&main_thread, entry, stack, zx::Handle::invalid(), 0)?;
+    task.thread_group.read().process.start(&task.thread, entry, stack, zx::Handle::invalid(), 0)?;
 
-    Ok(process)
+    Ok(task)
 }
 
 #[cfg(test)]

@@ -9,8 +9,8 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
 
+use crate::task::*;
 use crate::uapi::*;
-use crate::ThreadContext;
 
 #[derive(Hash, PartialEq, Eq, Debug, Copy, Clone)]
 pub struct FdNumber(pub i32);
@@ -27,43 +27,28 @@ impl FdNumber {
 pub trait FileDesc: Deref<Target = FileCommon> {
     /// Read from the file without an offset. If your file is seekable, consider implementing this
     /// with fd_impl_seekable.
-    fn read(&self, ctx: &ThreadContext, data: &[iovec_t]) -> Result<usize, Errno>;
+    fn read(&self, task: &Task, data: &[iovec_t]) -> Result<usize, Errno>;
     /// Read from the file at an offset. If your file is seekable, consider implementing this with
     /// fd_impl_nonseekable!.
-    fn read_at(
-        &self,
-        _ctx: &ThreadContext,
-        _offset: usize,
-        _data: &[iovec_t],
-    ) -> Result<usize, Errno>;
+    fn read_at(&self, _task: &Task, _offset: usize, _data: &[iovec_t]) -> Result<usize, Errno>;
     /// Write to the file without an offset. If your file is seekable, consider implementing this
     /// with fd_impl_seekable!.
-    fn write(&self, ctx: &ThreadContext, data: &[iovec_t]) -> Result<usize, Errno>;
+    fn write(&self, task: &Task, data: &[iovec_t]) -> Result<usize, Errno>;
     /// Write to the file at a offset. If your file is nonseekable, consider implementing this with
     /// fd_impl_nonseekable!.
-    fn write_at(
-        &self,
-        _ctx: &ThreadContext,
-        _offset: usize,
-        data: &[iovec_t],
-    ) -> Result<usize, Errno>;
+    fn write_at(&self, _task: &Task, _offset: usize, data: &[iovec_t]) -> Result<usize, Errno>;
 
     /// Responds to an mmap call by returning a VMO. At least the requested protection flags must
     /// be set on the VMO. Reading or writing the VMO must read or write the file. If this is not
     /// possible given the requested protection, an error must be returned.
-    fn get_vmo(
-        &self,
-        _ctx: &ThreadContext,
-        _prot: zx::VmarFlags,
-        _flags: u32,
-    ) -> Result<zx::Vmo, Errno> {
+    fn get_vmo(&self, _task: &Task, _prot: zx::VmarFlags, _flags: u32) -> Result<zx::Vmo, Errno> {
         Err(ENODEV)
     }
 
     // TODO(tbodt): This is actually an operation of the filesystem and not the file descriptor: if
     // you open a device file, fstat will go to the filesystem, not to the device. It's only here
     // because we don't have such a thing yet. Will need to be moved.
-    fn fstat(&self, ctx: &ThreadContext) -> Result<stat_t, Errno>;
+    fn fstat(&self, task: &Task) -> Result<stat_t, Errno>;
 }
 
 /// Implements FileDesc methods in a way that makes sense for nonseekable files. You must implement
@@ -71,17 +56,12 @@ pub trait FileDesc: Deref<Target = FileCommon> {
 #[macro_export]
 macro_rules! fd_impl_nonseekable {
     () => {
-        fn read_at(
-            &self,
-            _ctx: &ThreadContext,
-            _offset: usize,
-            _data: &[iovec_t],
-        ) -> Result<usize, Errno> {
+        fn read_at(&self, _task: &Task, _offset: usize, _data: &[iovec_t]) -> Result<usize, Errno> {
             Err(ESPIPE)
         }
         fn write_at(
             &self,
-            _ctx: &ThreadContext,
+            _task: &Task,
             _offset: usize,
             _data: &[iovec_t],
         ) -> Result<usize, Errno> {
@@ -95,15 +75,15 @@ macro_rules! fd_impl_nonseekable {
 #[macro_export]
 macro_rules! fd_impl_seekable {
     () => {
-        fn read(&self, ctx: &ThreadContext, data: &[iovec_t]) -> Result<usize, Errno> {
+        fn read(&self, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
             let mut offset = self.offset.lock();
-            let size = self.read_at(ctx, *offset, data)?;
+            let size = self.read_at(task, *offset, data)?;
             *offset += size;
             Ok(size)
         }
-        fn write(&self, ctx: &ThreadContext, data: &[iovec_t]) -> Result<usize, Errno> {
+        fn write(&self, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
             let mut offset = self.offset.lock();
-            let size = self.write_at(ctx, *offset, data)?;
+            let size = self.write_at(task, *offset, data)?;
             *offset += size;
             Ok(size)
         }
@@ -116,7 +96,7 @@ pub struct FileCommon {
     pub offset: Mutex<usize>,
 }
 
-pub type FdHandle = Arc<dyn FileDesc>;
+pub type FdHandle = Arc<dyn FileDesc + Send + Sync>;
 
 pub struct FdTable {
     table: RwLock<HashMap<FdNumber, FdHandle>>,

@@ -2,12 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_io as fio;
-use fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, HandleBased, Status};
-use parking_lot::{Mutex, RwLock};
-use std::sync::Arc;
+use fuchsia_zircon::{self as zx, HandleBased, Status};
+use parking_lot::RwLock;
 
-use crate::fs::FdTable;
 use crate::uapi::*;
 
 pub struct ProgramBreak {
@@ -38,13 +35,18 @@ impl Default for ProgramBreak {
 const PROGRAM_BREAK_LIMIT: u64 = 64 * 1024 * 1024;
 
 pub struct MemoryManager {
+    /// A handle to the underlying Zircon process object.
+    // TODO: Remove this handle once we can read and write process memory directly.
+    pub process: zx::Process,
+
     pub root_vmar: zx::Vmar,
+
     program_break: RwLock<ProgramBreak>,
 }
 
 impl MemoryManager {
-    pub fn new(root_vmar: zx::Vmar) -> Self {
-        MemoryManager { root_vmar, program_break: RwLock::new(ProgramBreak::default()) }
+    pub fn new(process: zx::Process, root_vmar: zx::Vmar) -> Self {
+        MemoryManager { process, root_vmar, program_break: RwLock::new(ProgramBreak::default()) }
     }
 
     pub fn set_program_break(&self, addr: UserAddress) -> Result<UserAddress, Status> {
@@ -112,34 +114,9 @@ impl MemoryManager {
         }
         return Ok(program_break.current);
     }
-}
 
-#[derive(Default)]
-pub struct SecurityContext {
-    pub uid: uid_t,
-    pub gid: uid_t,
-    pub euid: uid_t,
-    pub egid: uid_t,
-}
-
-// TODO(tbodt): merge ProcessContext and ThreadContext into a single struct corresponding to struct
-// task_struct in Linux
-
-pub struct ProcessContext {
-    pub process_id: pid_t,
-    pub handle: zx::Process,
-    pub security: SecurityContext,
-    pub mm: MemoryManager,
-
-    // TODO: Replace with a real VFS. This can't last long.
-    pub root: fio::DirectoryProxy,
-    /// Corresponds to struct task_struct->files in Linux.
-    pub fd_table: FdTable,
-}
-
-impl ProcessContext {
     pub fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
-        let actual = self.handle.read_memory(addr.ptr(), bytes).map_err(|_| EFAULT)?;
+        let actual = self.process.read_memory(addr.ptr(), bytes).map_err(|_| EFAULT)?;
         if actual != bytes.len() {
             return Err(EFAULT);
         }
@@ -151,50 +128,17 @@ impl ProcessContext {
         addr: UserAddress,
         buffer: &'a mut [u8],
     ) -> Result<&'a [u8], Errno> {
-        let actual = self.handle.read_memory(addr.ptr(), buffer).map_err(|_| EFAULT)?;
+        let actual = self.process.read_memory(addr.ptr(), buffer).map_err(|_| EFAULT)?;
         let buffer = &mut buffer[..actual];
         let null_index = memchr::memchr(b'\0', buffer).ok_or(ENAMETOOLONG)?;
         Ok(&buffer[..null_index])
     }
 
     pub fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<(), Errno> {
-        let actual = self.handle.write_memory(addr.ptr(), bytes).map_err(|_| EFAULT)?;
+        let actual = self.process.write_memory(addr.ptr(), bytes).map_err(|_| EFAULT)?;
         if actual != bytes.len() {
             return Err(EFAULT);
         }
         Ok(())
-    }
-}
-
-pub struct ThreadContext {
-    pub thread_id: pid_t,
-
-    /// A handle to the underlying Zircon thread object.
-    pub handle: zx::Thread,
-
-    /// A reference to the process the thread is running in. The process context is wrapped in an
-    /// `Arc` since multiple threads share the same process context.
-    pub process: Arc<ProcessContext>,
-
-    /// A copy of the registers associated with the Zircon thread. Up-to-date values can be read
-    /// from `self.handle.read_state_general_regs()`. To write these values back to the thread, call
-    /// `self.handle.write_state_general_regs(self.registers)`.
-    pub registers: zx_thread_state_general_regs_t,
-
-    // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
-    pub set_child_tid: Mutex<UserAddress>,
-    pub clear_child_tid: Mutex<UserAddress>,
-}
-
-impl ThreadContext {
-    pub fn new(handle: zx::Thread, process: Arc<ProcessContext>) -> ThreadContext {
-        ThreadContext {
-            thread_id: 7, // TODO: Assign from a thread map.
-            handle: handle,
-            process: process,
-            registers: zx_thread_state_general_regs_t::default(),
-            set_child_tid: Mutex::new(UserAddress::default()),
-            clear_child_tid: Mutex::new(UserAddress::default()),
-        }
     }
 }

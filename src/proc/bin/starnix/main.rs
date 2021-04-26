@@ -15,7 +15,8 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{
         self as zx, sys::zx_exception_info_t, sys::ZX_EXCEPTION_STATE_HANDLED,
-        sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL, AsHandleRef, Task,
+        sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL, AsHandleRef,
+        Task as zxTask,
     },
     futures::{StreamExt, TryStreamExt},
     io_util::directory,
@@ -26,16 +27,19 @@ use {
     std::sync::Arc,
 };
 
-mod executive;
+mod auth;
 mod fs;
 mod loader;
+mod mm;
 mod syscall_table;
 mod syscalls;
+mod task;
 mod uapi;
 
-use executive::*;
 use loader::*;
 use syscall_table::dispatch_syscall;
+use syscalls::SyscallContext;
+use task::*;
 use uapi::SyscallResult;
 
 // TODO: Should we move this code into fuchsia_zircon? It seems like part of a better abstraction
@@ -72,10 +76,7 @@ fn read_channel_sync(chan: &zx::Channel, buf: &mut zx::MessageBuf) -> Result<(),
 ///
 /// Once this function has completed, the process' exit code (if one is available) can be read from
 /// `process_context.exit_code`.
-fn run_process(
-    process_context: Arc<ProcessContext>,
-    exceptions: zx::Channel,
-) -> Result<i32, Error> {
+fn run_task(task: Arc<Task>, exceptions: zx::Channel) -> Result<i32, Error> {
     let mut buffer = zx::MessageBuf::new();
     while read_channel_sync(&exceptions, &mut buffer).is_ok() {
         let info = as_exception_info(&buffer);
@@ -89,10 +90,17 @@ fn run_process(
             continue;
         }
 
-        let mut ctx = ThreadContext::new(exception.get_thread()?, process_context.clone());
+        let thread = exception.get_thread()?;
 
-        let report = ctx.handle.get_exception_report()?;
+        // TODO: We current assume thread == task.thread, which is valid because
+        // we only have one thread in each process. When we start another thread,
+        // we'll need to refactor this code to understand multiple threads.
+        assert!(
+            thread.get_koid() == task.thread.get_koid(),
+            "Starnix currently assumes a single thread."
+        );
 
+        let report = thread.get_exception_report()?;
         if report.context.synth_code != ZX_EXCP_POLICY_CODE_BAD_SYSCALL {
             info!("exception synth_code: {}", report.context.synth_code);
             exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?;
@@ -100,7 +108,8 @@ fn run_process(
         }
 
         let syscall_number = report.context.synth_data as u64;
-        ctx.registers = ctx.handle.read_state_general_regs()?;
+        let mut ctx = SyscallContext { task: &task, registers: thread.read_state_general_regs()? };
+
         let regs = &ctx.registers;
         let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
         // TODO(tbodt): Print the name of the syscall instead of its number (using a proc macro or
@@ -123,8 +132,8 @@ fn run_process(
                 ctx.registers.rax = (-errno.value()) as u64;
             }
         }
-        ctx.handle.write_state_general_regs(ctx.registers)?;
 
+        thread.write_state_general_regs(ctx.registers)?;
         exception.set_exception_state(&ZX_EXCEPTION_STATE_HANDLED)?;
     }
 
@@ -132,6 +141,7 @@ fn run_process(
 }
 
 async fn start_component(
+    kernel: Arc<Kernel>,
     start_info: ComponentStartInfo,
     controller: ServerEnd<ComponentControllerMarker>,
 ) -> Result<(), Error> {
@@ -166,9 +176,6 @@ async fn start_component(
         .await
         .context("failed to load executable")?;
 
-    let parent_job = fuchsia_runtime::job_default();
-    let job = parent_job.create_child_job()?;
-
     let params = ProcessParameters {
         name: CString::new(binary_path.clone())?,
         argv: vec![CString::new(binary_path.clone())?],
@@ -177,13 +184,9 @@ async fn start_component(
 
     std::thread::spawn(move || {
         let err = (|| -> Result<(), Error> {
-            let process_context =
-                block_on(load_executable(&job, executable_vmo, &params, root_proxy))?;
-            let process_context = Arc::new(process_context);
-            let exit_code = run_process(
-                process_context.clone(),
-                process_context.handle.create_exception_channel()?,
-            )?;
+            let task = block_on(load_executable(&kernel, executable_vmo, &params, root_proxy))?;
+            let exceptions = task.thread_group.read().process.create_exception_channel()?;
+            let exit_code = run_task(task, exceptions)?;
 
             // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
             // communicate the exit code. The component manager could interpret certain epitaphs as starnix
@@ -204,13 +207,15 @@ async fn start_component(
 }
 
 async fn start_runner(
+    kernel: Arc<Kernel>,
     mut request_stream: fcrunner::ComponentRunnerRequestStream,
 ) -> Result<(), Error> {
     while let Some(event) = request_stream.try_next().await? {
         match event {
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
+                let kernel = kernel.clone();
                 fasync::Task::local(async move {
-                    if let Err(e) = start_component(start_info, controller).await {
+                    if let Err(e) = start_component(kernel, start_info, controller).await {
                         error!("failed to start component: {}", e);
                     }
                 })
@@ -276,11 +281,15 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["starnix"]).expect("failed to initialize logger");
     info!("main");
 
+    // The root kernel object for this instance of Starnix.
+    let kernel = Kernel::new(&CString::new("kernel")?)?;
+
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::Task::local(
-            async move { start_runner(stream).await.expect("failed to start runner.") },
-        )
+        let kernel = kernel.clone();
+        fasync::Task::local(async move {
+            start_runner(kernel, stream).await.expect("failed to start runner.")
+        })
         .detach();
     });
     fs.dir("svc").add_fidl_service(move |stream| {

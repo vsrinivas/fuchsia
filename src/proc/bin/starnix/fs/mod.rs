@@ -2,9 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_io as fio;
+
 mod fd;
 mod fidl_file;
 mod syslog_fd;
 pub use fd::*;
 pub use fidl_file::*;
 pub use syslog_fd::*;
+
+pub struct FileSystem {
+    // TODO: Replace with a real VFS. This can't last long.
+    pub root: fio::DirectoryProxy,
+}
+
+impl FileSystem {
+    pub fn new(root: fio::DirectoryProxy) -> FileSystem {
+        FileSystem { root }
+    }
+}

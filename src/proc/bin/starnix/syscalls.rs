@@ -5,38 +5,50 @@
 use fidl::endpoints::Proxy;
 use fidl_fuchsia_io as fio;
 use fuchsia_runtime::utc_time;
-use fuchsia_zircon::{self as zx, AsHandleRef, Task};
+use fuchsia_zircon::{
+    self as zx, sys::zx_thread_state_general_regs_t, AsHandleRef, Task as zxTask,
+};
 use io_util::directory;
 use io_util::node::OpenError;
 use log::{info, warn};
 use std::convert::TryInto;
 use std::ffi::{CStr, CString};
+use std::sync::Arc;
 use zerocopy::AsBytes;
 
 use crate::block_on;
-use crate::executive::*;
 use crate::fs::*;
+use crate::task::*;
 use crate::uapi::*;
 
+pub struct SyscallContext<'a> {
+    pub task: &'a Arc<Task>,
+
+    /// A copy of the registers associated with the Zircon thread. Up-to-date values can be read
+    /// from `self.handle.read_state_general_regs()`. To write these values back to the thread, call
+    /// `self.handle.write_state_general_regs(self.registers)`.
+    pub registers: zx_thread_state_general_regs_t,
+}
+
 pub fn sys_write(
-    ctx: &ThreadContext,
+    ctx: &SyscallContext<'_>,
     fd: FdNumber,
     buffer: UserAddress,
     count: usize,
 ) -> Result<SyscallResult, Errno> {
-    let fd = ctx.process.fd_table.get(fd)?;
-    Ok(fd.write(ctx, &[iovec_t { iov_base: buffer, iov_len: count }])?.into())
+    let fd = ctx.task.files.get(fd)?;
+    Ok(fd.write(&ctx.task, &[iovec_t { iov_base: buffer, iov_len: count }])?.into())
 }
 
 pub fn sys_fstat(
-    ctx: &ThreadContext,
+    ctx: &SyscallContext<'_>,
     fd: FdNumber,
     buffer: UserAddress,
 ) -> Result<SyscallResult, Errno> {
-    let fd = ctx.process.fd_table.get(fd)?;
-    let result = fd.fstat(ctx)?;
+    let fd = ctx.task.files.get(fd)?;
+    let result = fd.fstat(&ctx.task)?;
     let bytes = result.as_bytes();
-    ctx.process.write_memory(buffer, bytes)?;
+    ctx.task.mm.write_memory(buffer, bytes)?;
     return Ok(SUCCESS);
 }
 
@@ -55,7 +67,7 @@ fn mmap_prot_to_vm_opt(prot: u32) -> zx::VmarFlags {
 }
 
 pub fn sys_mmap(
-    ctx: &ThreadContext,
+    ctx: &SyscallContext<'_>,
     addr: UserAddress,
     length: usize,
     prot: u32,
@@ -120,11 +132,11 @@ pub fn sys_mmap(
         vmo
     } else {
         // TODO(tbodt): maximize protection flags so that mprotect works
-        let fd = ctx.process.fd_table.get(fd)?;
+        let fd = ctx.task.files.get(fd)?;
         let zx_prot = mmap_prot_to_vm_opt(prot);
         if flags & MAP_PRIVATE != 0 {
             // TODO(tbodt): Use VMO_FLAG_PRIVATE to have the filesystem server do the clone for us.
-            let vmo = fd.get_vmo(ctx, zx_prot - zx::VmarFlags::PERM_WRITE, flags)?;
+            let vmo = fd.get_vmo(&ctx.task, zx_prot - zx::VmarFlags::PERM_WRITE, flags)?;
             let mut clone_flags = zx::VmoChildOptions::COPY_ON_WRITE;
             if !zx_prot.contains(zx::VmarFlags::PERM_WRITE) {
                 clone_flags |= zx::VmoChildOptions::NO_WRITE;
@@ -132,34 +144,34 @@ pub fn sys_mmap(
             vmo.create_child(clone_flags, 0, vmo.get_size().map_err(impossible_error)?)
                 .map_err(impossible_error)?
         } else {
-            fd.get_vmo(ctx, zx_prot, flags)?
+            fd.get_vmo(&ctx.task, zx_prot, flags)?
         }
     };
     let vmo_offset = if flags & MAP_ANONYMOUS != 0 { 0 } else { offset };
 
-    let root_base = ctx.process.mm.root_vmar.info().unwrap().base;
+    let root_base = ctx.task.mm.root_vmar.info().unwrap().base;
     let ptr = if addr.ptr() == 0 { 0 } else { addr.ptr() - root_base };
     let addr =
-        ctx.process.mm.root_vmar.map(ptr, &vmo, vmo_offset as u64, length, zx_flags).map_err(
-            |s| match s {
+        ctx.task.mm.root_vmar.map(ptr, &vmo, vmo_offset as u64, length, zx_flags).map_err(|s| {
+            match s {
                 zx::Status::INVALID_ARGS => EINVAL,
                 zx::Status::ACCESS_DENIED => EACCES, // or EPERM?
                 zx::Status::NOT_SUPPORTED => ENODEV,
                 zx::Status::NO_MEMORY => ENOMEM,
                 _ => impossible_error(s),
-            },
-        )?;
+            }
+        })?;
     Ok(addr.into())
 }
 
 pub fn sys_mprotect(
-    ctx: &ThreadContext,
+    ctx: &SyscallContext<'_>,
     addr: UserAddress,
     length: usize,
     prot: u32,
 ) -> Result<SyscallResult, Errno> {
     // SAFETY: This is safe because the vmar belongs to a different process.
-    unsafe { ctx.process.mm.root_vmar.protect(addr.ptr(), length, mmap_prot_to_vm_opt(prot)) }
+    unsafe { ctx.task.mm.root_vmar.protect(addr.ptr(), length, mmap_prot_to_vm_opt(prot)) }
         .map_err(|s| match s {
             zx::Status::INVALID_ARGS => EINVAL,
             // TODO: This should still succeed and change protection on whatever is mapped.
@@ -170,26 +182,26 @@ pub fn sys_mprotect(
     Ok(SUCCESS)
 }
 
-pub fn sys_brk(ctx: &ThreadContext, addr: UserAddress) -> Result<SyscallResult, Errno> {
+pub fn sys_brk(ctx: &SyscallContext<'_>, addr: UserAddress) -> Result<SyscallResult, Errno> {
     // info!("brk: addr={}", addr);
     // TODO(tbodt): explicit error mapping
-    Ok(ctx.process.mm.set_program_break(addr).map_err(Errno::from_status_like_fdio)?.into())
+    Ok(ctx.task.mm.set_program_break(addr).map_err(Errno::from_status_like_fdio)?.into())
 }
 
 pub fn sys_pread64(
-    ctx: &ThreadContext,
+    ctx: &SyscallContext<'_>,
     fd: FdNumber,
     buf: UserAddress,
     count: usize,
     offset: usize,
 ) -> Result<SyscallResult, Errno> {
-    let fd = ctx.process.fd_table.get(fd)?;
-    let bytes = fd.read_at(ctx, offset, &[iovec_t { iov_base: buf, iov_len: count }])?;
+    let fd = ctx.task.files.get(fd)?;
+    let bytes = fd.read_at(&ctx.task, offset, &[iovec_t { iov_base: buf, iov_len: count }])?;
     Ok(bytes.into())
 }
 
 pub fn sys_writev(
-    ctx: &ThreadContext,
+    ctx: &SyscallContext<'_>,
     fd: FdNumber,
     iovec_addr: UserAddress,
     iovec_count: i32,
@@ -203,13 +215,13 @@ pub fn sys_writev(
     iovecs.reserve(iovec_count); // TODO: try_reserve
     iovecs.resize(iovec_count, iovec_t::default());
 
-    ctx.process.read_memory(iovec_addr, iovecs.as_mut_slice().as_bytes_mut())?;
-    let fd = ctx.process.fd_table.get(fd)?;
-    Ok(fd.write(ctx, &iovecs)?.into())
+    ctx.task.mm.read_memory(iovec_addr, iovecs.as_mut_slice().as_bytes_mut())?;
+    let fd = ctx.task.files.get(fd)?;
+    Ok(fd.write(&ctx.task, &iovecs)?.into())
 }
 
 pub fn sys_access(
-    _ctx: &ThreadContext,
+    _ctx: &SyscallContext<'_>,
     path: UserAddress,
     mode: i32,
 ) -> Result<SyscallResult, Errno> {
@@ -217,20 +229,28 @@ pub fn sys_access(
     Err(ENOSYS)
 }
 
-pub fn sys_getpid(_ctx: &ThreadContext) -> Result<SyscallResult, Errno> {
+pub fn sys_getpid(_ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
     // This is set to 1 because Bionic skips referencing /dev if getpid() == 1, under the
     // assumption that anything running after init will have access to /dev.
     // TODO(tbodt): actual PID field
     Ok(1.into())
 }
 
-pub fn sys_exit(ctx: &ThreadContext, error_code: i32) -> Result<SyscallResult, Errno> {
+pub fn sys_exit(ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
     info!("exit: error_code={}", error_code);
-    ctx.process.handle.kill().map_err(impossible_error)?;
+    let process: &zx::Process = &ctx.task.thread_group.read().process;
+    process.kill().map_err(impossible_error)?;
     Ok(SyscallResult::Exit(error_code))
 }
 
-pub fn sys_uname(ctx: &ThreadContext, name: UserAddress) -> Result<SyscallResult, Errno> {
+pub fn sys_exit_group(ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
+    info!("exit_group: error_code={}", error_code);
+    let process: &zx::Process = &ctx.task.thread_group.read().process;
+    process.kill().map_err(impossible_error)?;
+    Ok(SyscallResult::Exit(error_code))
+}
+
+pub fn sys_uname(ctx: &SyscallContext<'_>, name: UserAddress) -> Result<SyscallResult, Errno> {
     fn init_array(fixed: &mut [u8; 65], init: &'static str) {
         let init_bytes = init.as_bytes();
         let len = init.len();
@@ -250,12 +270,12 @@ pub fn sys_uname(ctx: &ThreadContext, name: UserAddress) -> Result<SyscallResult
     init_array(&mut result.version, "starnix");
     init_array(&mut result.machine, "x86_64");
     let bytes = result.as_bytes();
-    ctx.process.write_memory(name, bytes)?;
+    ctx.task.mm.write_memory(name, bytes)?;
     return Ok(SUCCESS);
 }
 
 pub fn sys_readlink(
-    _ctx: &ThreadContext,
+    _ctx: &SyscallContext<'_>,
     _path: UserAddress,
     _buffer: UserAddress,
     _buffer_size: usize,
@@ -267,38 +287,41 @@ pub fn sys_readlink(
     Err(EINVAL)
 }
 
-pub fn sys_getuid(ctx: &ThreadContext) -> Result<SyscallResult, Errno> {
-    Ok(ctx.process.security.uid.into())
+pub fn sys_getuid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
+    Ok(ctx.task.creds.uid.into())
 }
 
-pub fn sys_getgid(ctx: &ThreadContext) -> Result<SyscallResult, Errno> {
-    Ok(ctx.process.security.gid.into())
+pub fn sys_getgid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
+    Ok(ctx.task.creds.gid.into())
 }
 
-pub fn sys_geteuid(ctx: &ThreadContext) -> Result<SyscallResult, Errno> {
-    Ok(ctx.process.security.euid.into())
+pub fn sys_geteuid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
+    Ok(ctx.task.creds.euid.into())
 }
 
-pub fn sys_getegid(ctx: &ThreadContext) -> Result<SyscallResult, Errno> {
-    Ok(ctx.process.security.egid.into())
+pub fn sys_getegid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
+    Ok(ctx.task.creds.egid.into())
 }
 
 pub fn sys_fstatfs(
-    ctx: &ThreadContext,
+    ctx: &SyscallContext<'_>,
     _fd: FdNumber,
     buf_addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
     let result = statfs::default();
-    ctx.process.write_memory(buf_addr, result.as_bytes())?;
+    ctx.task.mm.write_memory(buf_addr, result.as_bytes())?;
     Ok(SUCCESS)
 }
 
-pub fn sys_sched_getscheduler(_ctx: &ThreadContext, _pid: i32) -> Result<SyscallResult, Errno> {
+pub fn sys_sched_getscheduler(
+    _ctx: &SyscallContext<'_>,
+    _pid: i32,
+) -> Result<SyscallResult, Errno> {
     Ok(SCHED_NORMAL.into())
 }
 
 pub fn sys_arch_prctl(
-    ctx: &mut ThreadContext,
+    ctx: &mut SyscallContext<'_>,
     code: u32,
     addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
@@ -315,17 +338,11 @@ pub fn sys_arch_prctl(
 }
 
 pub fn sys_set_tid_address(
-    ctx: &ThreadContext,
+    ctx: &SyscallContext<'_>,
     tidptr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
-    *ctx.clear_child_tid.lock() = tidptr;
-    Ok(ctx.thread_id.into())
-}
-
-pub fn sys_exit_group(ctx: &ThreadContext, error_code: i32) -> Result<SyscallResult, Errno> {
-    info!("exit_group: error_code={}", error_code);
-    ctx.process.handle.kill().map_err(impossible_error)?;
-    Ok(SyscallResult::Exit(error_code))
+    *ctx.task.clear_child_tid.lock() = tidptr;
+    Ok(ctx.task.get_tid().into())
 }
 
 async fn async_openat(
@@ -339,7 +356,7 @@ async fn async_openat(
 }
 
 pub fn sys_openat(
-    ctx: &ThreadContext,
+    ctx: &SyscallContext<'_>,
     dir_fd: i32,
     path_addr: UserAddress,
     flags: i32,
@@ -350,7 +367,7 @@ pub fn sys_openat(
         return Err(EINVAL);
     }
     let mut buf = [0u8; PATH_MAX as usize];
-    let path = ctx.process.read_c_string(path_addr, &mut buf)?;
+    let path = ctx.task.mm.read_c_string(path_addr, &mut buf)?;
     info!("openat({}, {}, {:#x}, {:#o})", dir_fd, String::from_utf8_lossy(path), flags, mode);
     if path[0] != b'/' {
         warn!("non-absolute paths are unimplemented");
@@ -359,7 +376,7 @@ pub fn sys_openat(
     let path = &path[1..];
     // TODO(tbodt): Need to switch to filesystem APIs that do not require UTF-8
     let path = std::str::from_utf8(path).expect("bad UTF-8 in filename");
-    let node = block_on(async_openat(&ctx.process.root, path, fio::OPEN_RIGHT_READABLE, 0))
+    let node = block_on(async_openat(&ctx.task.fs.root, path, fio::OPEN_RIGHT_READABLE, 0))
         .map_err(|e| match e {
             OpenError::OpenError(zx::Status::NOT_FOUND) => ENOENT,
             _ => {
@@ -367,25 +384,25 @@ pub fn sys_openat(
                 EIO
             }
         })?;
-    Ok(ctx.process.fd_table.install_fd(FidlFile::from_node(node)?)?.into())
+    Ok(ctx.task.files.install_fd(FidlFile::from_node(node)?)?.into())
 }
 
 pub fn sys_getrandom(
-    ctx: &ThreadContext,
+    ctx: &SyscallContext<'_>,
     buf_addr: UserAddress,
     size: usize,
     _flags: i32,
 ) -> Result<SyscallResult, Errno> {
     let mut buf = vec![0; size];
     let size = zx::cprng_draw(&mut buf).map_err(impossible_error)?;
-    ctx.process.write_memory(buf_addr, &buf[0..size])?;
+    ctx.task.mm.write_memory(buf_addr, &buf[0..size])?;
     Ok(size.into())
 }
 
 const NANOS_PER_SECOND: i64 = 1000 * 1000 * 1000;
 
 pub fn sys_clock_gettime(
-    ctx: &ThreadContext,
+    ctx: &SyscallContext<'_>,
     which_clock: u32,
     tp_addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
@@ -393,23 +410,22 @@ pub fn sys_clock_gettime(
         CLOCK_REALTIME => {
             let now = utc_time().into_nanos();
             let tv = timespec_t { tv_sec: now / NANOS_PER_SECOND, tv_nsec: now % NANOS_PER_SECOND };
-            ctx.process.write_memory(tp_addr, tv.as_bytes()).map(|_| SUCCESS)
+            ctx.task.mm.write_memory(tp_addr, tv.as_bytes()).map(|_| SUCCESS)
         }
         _ => Err(EINVAL),
     }
 }
 
 pub fn sys_gettimeofday(
-    ctx: &ThreadContext,
+    ctx: &SyscallContext<'_>,
     tv_addr: UserAddress,
     tz_addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
-    let process = &ctx.process;
     if !tv_addr.is_null() {
         let now = utc_time().into_nanos();
         let tv =
             timeval_t { tv_sec: now / NANOS_PER_SECOND, tv_usec: (now % NANOS_PER_SECOND) / 1000 };
-        process.write_memory(tv_addr, tv.as_bytes())?;
+        ctx.task.mm.write_memory(tv_addr, tv.as_bytes())?;
     }
     if !tz_addr.is_null() {
         warn!("NOT_IMPLEMENTED: gettimeofday does not implement tz argument");
@@ -418,7 +434,7 @@ pub fn sys_gettimeofday(
 }
 
 pub fn sys_getcwd(
-    ctx: &ThreadContext,
+    ctx: &SyscallContext<'_>,
     buf: UserAddress,
     size: usize,
 ) -> Result<SyscallResult, Errno> {
@@ -429,11 +445,11 @@ pub fn sys_getcwd(
     if bytes.len() > size {
         return Err(ERANGE);
     }
-    ctx.process.write_memory(buf, bytes)?;
+    ctx.task.mm.write_memory(buf, bytes)?;
     return Ok(bytes.len().into());
 }
 
-pub fn sys_unknown(_ctx: &ThreadContext, syscall_number: u64) -> Result<SyscallResult, Errno> {
+pub fn sys_unknown(_ctx: &SyscallContext<'_>, syscall_number: u64) -> Result<SyscallResult, Errno> {
     info!("UNKNOWN syscall: {}", syscall_number);
     // TODO: We should send SIGSYS once we have signals.
     Err(ENOSYS)

@@ -13,8 +13,8 @@ use std::sync::Arc;
 
 use super::*;
 use crate::fd_impl_seekable;
+use crate::task::*;
 use crate::uapi::*;
-use crate::ThreadContext;
 
 lazy_static! {
     static ref VMEX_RESOURCE: zx::Resource = {
@@ -71,7 +71,7 @@ const BYTES_PER_BLOCK: i64 = 512;
 impl FileDesc for FidlFile {
     fd_impl_seekable!();
 
-    fn read_at(&self, ctx: &ThreadContext, offset: usize, buf: &[iovec_t]) -> Result<usize, Errno> {
+    fn read_at(&self, task: &Task, offset: usize, buf: &[iovec_t]) -> Result<usize, Errno> {
         let mut total = 0;
         for vec in buf {
             total += vec.iov_len;
@@ -88,7 +88,7 @@ impl FileDesc for FidlFile {
         let mut offset = 0;
         for vec in buf {
             let end = std::cmp::min(offset + vec.iov_len, data.len());
-            ctx.process.write_memory(vec.iov_base, &data[offset..end])?;
+            task.mm.write_memory(vec.iov_base, &data[offset..end])?;
             offset = end;
             if offset == data.len() {
                 break;
@@ -97,18 +97,13 @@ impl FileDesc for FidlFile {
         Ok(data.len())
     }
 
-    fn write_at(
-        &self,
-        _ctx: &ThreadContext,
-        _offset: usize,
-        _data: &[iovec_t],
-    ) -> Result<usize, Errno> {
+    fn write_at(&self, _task: &Task, _offset: usize, _data: &[iovec_t]) -> Result<usize, Errno> {
         Err(ENOSYS)
     }
 
     fn get_vmo(
         &self,
-        _ctx: &ThreadContext,
+        _task: &Task,
         mut prot: zx::VmarFlags,
         _flags: u32,
     ) -> Result<zx::Vmo, Errno> {
@@ -129,7 +124,7 @@ impl FileDesc for FidlFile {
         Ok(vmo)
     }
 
-    fn fstat(&self, ctx: &ThreadContext) -> Result<stat_t, Errno> {
+    fn fstat(&self, task: &Task) -> Result<stat_t, Errno> {
         // TODO: log FIDL error
         let (status, attrs) = self.node.lock().get_attr().map_err(fidl_error)?;
         zx::Status::ok(status).map_err(fio_error)?;
@@ -138,8 +133,8 @@ impl FileDesc for FidlFile {
             st_ino: attrs.id,
             st_size: attrs.content_size as i64,
             st_blocks: attrs.storage_size as i64 / BYTES_PER_BLOCK,
-            st_uid: ctx.process.security.uid,
-            st_gid: ctx.process.security.gid,
+            st_uid: task.creds.uid,
+            st_gid: task.creds.gid,
             st_nlink: attrs.link_count,
             ..stat_t::default()
         })

@@ -4,7 +4,6 @@
 
 use paste::paste;
 
-use crate::executive::ThreadContext;
 use crate::fs::FdNumber;
 use crate::syscalls::*;
 use crate::uapi::*;
@@ -77,7 +76,7 @@ macro_rules! syscall_match {
 }
 
 pub fn dispatch_syscall(
-    ctx: &mut ThreadContext,
+    ctx: &mut SyscallContext<'_>,
     syscall_number: u64,
     args: (u64, u64, u64, u64, u64, u64),
 ) -> Result<SyscallResult, Errno> {

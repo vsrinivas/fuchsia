@@ -53,15 +53,17 @@ if (target_cpu == "x64") {
     ]
 
     sources = [
-      "executive.rs",
+      "auth.rs",
       "fs/fd.rs",
       "fs/fidl_file.rs",
       "fs/mod.rs",
       "fs/syslog_fd.rs",
       "loader.rs",
       "main.rs",
+      "mm.rs",
       "syscall_table.rs",
       "syscalls.rs",
+      "task.rs",
       "uapi.rs",
     ]
   }
