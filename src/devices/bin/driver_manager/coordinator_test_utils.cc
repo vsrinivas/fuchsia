@@ -40,11 +40,12 @@ void InitializeCoordinator(Coordinator* coordinator) {
   ASSERT_OK(status);
 
   // Load the fragment driver
-  load_driver(coordinator->GetFragmentDriverPath().c_str(),
+  load_driver(nullptr, coordinator->GetFragmentDriverPath().c_str(),
               fit::bind_member(coordinator, &Coordinator::DriverAddedInit));
 
   // Add the driver we're using as platform bus
-  load_driver(kSystemDriverPath, fit::bind_member(coordinator, &Coordinator::DriverAddedInit));
+  load_driver(nullptr, kSystemDriverPath,
+              fit::bind_member(coordinator, &Coordinator::DriverAddedInit));
 
   // Initialize devfs.
   devfs_init(coordinator->root_device(), coordinator->dispatcher());

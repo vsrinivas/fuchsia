@@ -243,8 +243,24 @@ TEST(MiscTestCase, LoadDriver) {
     delete drv;
     found_driver = true;
   };
-  load_driver(kDriverPath, callback);
+  load_driver(nullptr, kDriverPath, callback);
   ASSERT_TRUE(found_driver);
+}
+
+TEST(MiscTestCase, LoadDisabledDriver) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread("mock-boot-args"));
+  mock_boot_arguments::Server boot_args{{{"driver.mock_device.disable", "true"}}};
+  fidl::WireSyncClient<fuchsia_boot::Arguments> client;
+  boot_args.CreateClient(loop.dispatcher(), &client);
+
+  bool found_driver = false;
+  auto callback = [&found_driver](Driver* drv, const char* version) {
+    delete drv;
+    found_driver = true;
+  };
+  load_driver(&client, kDriverPath, callback);
+  ASSERT_FALSE(found_driver);
 }
 
 TEST(MiscTestCase, BindDrivers) {
@@ -261,7 +277,7 @@ TEST(MiscTestCase, BindDrivers) {
     driver = drv;
     return coordinator.DriverAdded(drv, version);
   };
-  load_driver(kDriverPath, callback);
+  load_driver(nullptr, kDriverPath, callback);
   loop.RunUntilIdle();
   ASSERT_EQ(1, coordinator.drivers().size_slow());
   ASSERT_EQ(driver, &coordinator.drivers().front());
@@ -395,7 +411,7 @@ TEST(MiscTestCase, BindDevices) {
   ASSERT_EQ(1, coordinator.devices().size_slow());
 
   // Add the driver.
-  load_driver(kDriverPath, fit::bind_member(&coordinator, &Coordinator::DriverAdded));
+  load_driver(nullptr, kDriverPath, fit::bind_member(&coordinator, &Coordinator::DriverAdded));
   loop.RunUntilIdle();
   ASSERT_FALSE(coordinator.drivers().is_empty());
 
@@ -454,7 +470,7 @@ TEST(MiscTestCase, TestOutput) {
   device->test_reporter = std::move(test_reporter_);
 
   // Add the driver.
-  load_driver(kDriverPath, fit::bind_member(&coordinator, &Coordinator::DriverAdded));
+  load_driver(nullptr, kDriverPath, fit::bind_member(&coordinator, &Coordinator::DriverAdded));
   loop.RunUntilIdle();
   ASSERT_FALSE(coordinator.drivers().is_empty());
 

@@ -52,7 +52,8 @@ void DriverLoader::LoadDrivers() {
     return;
   }
 
-  find_loadable_drivers("/system/driver", fit::bind_member(this, &DriverLoader::DriverAdded));
+  find_loadable_drivers(coordinator_->boot_args(), "/system/driver",
+                        fit::bind_member(this, &DriverLoader::DriverAdded));
   async::PostTask(coordinator_->dispatcher(),
                   [coordinator = coordinator_, drivers = std::move(drivers_)]() mutable {
                     coordinator->AddAndBindDrivers(std::move(drivers));

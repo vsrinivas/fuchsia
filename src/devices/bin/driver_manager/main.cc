@@ -453,10 +453,12 @@ int main(int argc, char** argv) {
   }
 
   for (const std::string& path : driver_manager_args.driver_search_paths) {
-    find_loadable_drivers(path, fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
+    find_loadable_drivers(coordinator.boot_args(), path,
+                          fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
   }
   for (const char* driver : driver_manager_args.load_drivers) {
-    load_driver(driver, fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
+    load_driver(coordinator.boot_args(), driver,
+                fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
   }
 
   coordinator.PrepareProxy(coordinator.sys_device(), nullptr);

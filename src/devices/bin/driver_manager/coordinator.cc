@@ -51,7 +51,6 @@
 #include "composite_device.h"
 #include "devfs.h"
 #include "driver_host_loader_service.h"
-#include "env.h"
 #include "fidl.h"
 #include "fidl_txn.h"
 #include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
@@ -1677,8 +1676,9 @@ zx_status_t Coordinator::LoadEphemeralDriver(internal::PackageResolverInterface*
   if (!result.is_ok()) {
     return result.status_value();
   }
-  zx_status_t status = load_driver_vmo(result.value().libname, std::move(result.value().vmo),
-                                       fit::bind_member(this, &Coordinator::DriverAdded));
+  zx_status_t status =
+      load_driver_vmo(boot_args(), result.value().libname, std::move(result.value().vmo),
+                      fit::bind_member(this, &Coordinator::DriverAdded));
   if (status != ZX_OK) {
     return ZX_ERR_INTERNAL;
   }

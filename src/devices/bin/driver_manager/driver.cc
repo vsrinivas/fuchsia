@@ -23,7 +23,6 @@
 #include <driver-info/driver-info.h>
 #include <fbl/string_printf.h>
 
-#include "env.h"
 #include "fdio.h"
 #include "src/devices/lib/log/log.h"
 
@@ -32,16 +31,22 @@ namespace {
 namespace fio = fuchsia_io;
 
 struct AddContext {
+  fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args;
   const char* libname;
   DriverLoadCallback func;
   // This is optional. If present, holds the driver shared library that was loaded ephemerally.
   zx::vmo vmo;
 };
 
-bool is_driver_disabled(const char* name) {
+bool is_driver_disabled(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args,
+                        const char* name) {
+  if (!boot_args) {
+    return false;
+  }
   // driver.<driver_name>.disable
   auto option = fbl::StringPrintf("driver.%s.disable", name);
-  return getenv_bool(option.data(), false);
+  auto disabled = boot_args->GetBool(fidl::StringView::FromExternal(option), false);
+  return disabled.ok() && disabled->value;
 }
 
 void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi,
@@ -53,7 +58,7 @@ void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi,
   note->vendor[sizeof(note->vendor) - 1] = 0;
   note->version[sizeof(note->version) - 1] = 0;
 
-  if (is_driver_disabled(note->name)) {
+  if (is_driver_disabled(context->boot_args, note->name)) {
     return;
   }
 
@@ -113,12 +118,13 @@ void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi,
 
 }  // namespace
 
-void find_loadable_drivers(const std::string& path, DriverLoadCallback func) {
+void find_loadable_drivers(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args,
+                           const std::string& path, DriverLoadCallback func) {
   DIR* dir = opendir(path.c_str());
   if (dir == nullptr) {
     return;
   }
-  AddContext context = {"", std::move(func), zx::vmo{}};
+  AddContext context = {boot_args, "", std::move(func), zx::vmo{}};
 
   struct dirent* de;
   while ((de = readdir(dir)) != nullptr) {
@@ -148,9 +154,10 @@ void find_loadable_drivers(const std::string& path, DriverLoadCallback func) {
   closedir(dir);
 }
 
-zx_status_t load_driver_vmo(std::string_view libname, zx::vmo vmo, DriverLoadCallback func) {
+zx_status_t load_driver_vmo(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args,
+                            std::string_view libname, zx::vmo vmo, DriverLoadCallback func) {
   zx_handle_t vmo_handle = vmo.get();
-  AddContext context = {libname.data(), std::move(func), std::move(vmo)};
+  AddContext context = {boot_args, libname.data(), std::move(func), std::move(vmo)};
 
   auto di_vmo_read = [](void* vmo, void* data, size_t len, size_t off) {
     return zx_vmo_read(*((zx_handle_t*)vmo), data, off, len);
@@ -195,7 +202,8 @@ zx_status_t load_vmo(std::string_view libname, zx::vmo* out_vmo) {
   return r;
 }
 
-void load_driver(const char* path, DriverLoadCallback func) {
+void load_driver(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args, const char* path,
+                 DriverLoadCallback func) {
   // TODO: check for duplicate driver add
   int fd = open(path, O_RDONLY);
   if (fd < 0) {
@@ -203,7 +211,7 @@ void load_driver(const char* path, DriverLoadCallback func) {
     return;
   }
 
-  AddContext context = {path, std::move(func), zx::vmo{}};
+  AddContext context = {boot_args, path, std::move(func), zx::vmo{}};
   zx_status_t status = di_read_driver_info(fd, &context, found_driver);
   close(fd);
 

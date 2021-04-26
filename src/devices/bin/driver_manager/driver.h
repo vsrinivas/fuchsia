@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_H_
 
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/fit/function.h>
 #include <lib/zx/vmo.h>
@@ -44,9 +45,12 @@ struct Driver : public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
 
 using DriverLoadCallback = fit::function<void(Driver* driver, const char* version)>;
 
-void load_driver(const char* path, DriverLoadCallback func);
-zx_status_t load_driver_vmo(std::string_view libname, zx::vmo vmo, DriverLoadCallback func);
+void load_driver(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args, const char* path,
+                 DriverLoadCallback func);
+zx_status_t load_driver_vmo(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args,
+                            std::string_view libname, zx::vmo vmo, DriverLoadCallback func);
 zx_status_t load_vmo(std::string_view libname, zx::vmo* out_vmo);
-void find_loadable_drivers(const std::string& path, DriverLoadCallback func);
+void find_loadable_drivers(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args,
+                           const std::string& path, DriverLoadCallback func);
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_H_
