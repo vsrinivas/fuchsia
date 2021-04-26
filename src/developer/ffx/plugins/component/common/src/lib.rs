@@ -16,7 +16,7 @@ no further.";
 pub const COMPONENT_LIST_HELP: &str = "only format: 'cmx' / 'cml' / 'running' / 'stopped'.
 Default option is displaying all components if no argument is entered.";
 
-pub const COMPONENT_SHOW_HELP: &str = "Filter format: component_name / url / partial url.
+pub const COMPONENT_SHOW_HELP: &str = "Filter accepts a partial component name or url.
 
 Example:
 'appmgr', 'appmgr.cm', 'fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm'
