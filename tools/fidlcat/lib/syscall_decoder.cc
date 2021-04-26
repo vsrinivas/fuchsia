@@ -77,7 +77,6 @@ SyscallDecoder::SyscallDecoder(SyscallDecoderDispatcher* dispatcher,
       syscall_(syscall),
       use_(std::move(use)),
       timestamp_(timestamp) {
-  fidlcat_thread_ = dispatcher->SearchThread(thread->GetKoid());
   if (fidlcat_thread_ == nullptr) {
     Process* fidlcat_process = dispatcher_->SearchProcess(thread->GetProcess()->GetKoid());
     if (fidlcat_process == nullptr) {

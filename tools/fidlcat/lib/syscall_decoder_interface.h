@@ -11,6 +11,7 @@
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/lib/fidl_codec/wire_types.h"
+#include "tools/fidlcat/lib/event.h"
 
 namespace fidlcat {
 
@@ -58,8 +59,7 @@ class SyscallDecoderInterface {
   virtual uint8_t* BufferContent(Stage stage, uint64_t address) = 0;
 
  protected:
-  SyscallDecoderInterface(SyscallDecoderDispatcher* dispatcher, zxdb::Thread* thread)
-      : dispatcher_(dispatcher), arch_(thread->session()->arch()) {}
+  SyscallDecoderInterface(SyscallDecoderDispatcher* dispatcher, zxdb::Thread* thread);
 
   SyscallDecoderDispatcher* const dispatcher_;
   const debug_ipc::Arch arch_;

@@ -43,6 +43,7 @@ if (is_host) {
       "statistics.cc",
       "syscall_decoder.cc",
       "syscall_decoder_dispatcher.cc",
+      "syscall_decoder_interface.cc",
       "syscall_definition.cc",
       "top.cc",
       "type_decoder.cc",
