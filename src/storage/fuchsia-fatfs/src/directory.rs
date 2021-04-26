@@ -482,15 +482,14 @@ impl MutableDirectory for FatDirectory {
         Err(Status::NOT_SUPPORTED)
     }
 
-    async fn unlink(&self, path: Path) -> Result<(), Status> {
+    async fn unlink(&self, name: &str, must_be_directory: bool) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let name = path.peek().unwrap();
         let parent = self.borrow_dir(&fs_lock)?;
-        let mut existing_node = self.cache_get(&name);
+        let mut existing_node = self.cache_get(name);
         let mut done = false;
         match existing_node {
             Some(FatNode::File(ref mut file)) => {
-                if path.is_dir() {
+                if must_be_directory {
                     return Err(Status::NOT_DIR);
                 }
                 if let Some(file) = file.borrow_file_mut(&fs_lock) {
@@ -505,8 +504,8 @@ impl MutableDirectory for FatDirectory {
                 }
             }
             None => {
-                if path.is_dir() {
-                    let entry = self.find_child(&fs_lock, &name)?;
+                if must_be_directory {
+                    let entry = self.find_child(&fs_lock, name)?;
                     if !entry.ok_or(Status::NOT_FOUND)?.is_dir() {
                         return Err(Status::NOT_DIR);
                     }
@@ -514,10 +513,10 @@ impl MutableDirectory for FatDirectory {
             }
         }
         if !done {
-            parent.remove(&name).map_err(fatfs_error_to_status)?;
+            parent.remove(name).map_err(fatfs_error_to_status)?;
         }
         if existing_node.is_some() {
-            self.cache_remove(&fs_lock, &name);
+            self.cache_remove(&fs_lock, name);
         }
         match existing_node {
             Some(FatNode::File(ref mut file)) => file.did_delete(),

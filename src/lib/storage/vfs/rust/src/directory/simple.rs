@@ -42,7 +42,10 @@ use {
         any::Any,
         boxed::Box,
         clone::Clone,
-        collections::{btree_map, BTreeMap},
+        collections::{
+            btree_map::{self, Entry},
+            BTreeMap,
+        },
         iter,
         marker::PhantomData,
         ops::DerefMut,
@@ -374,7 +377,11 @@ where
         Ok(())
     }
 
-    fn remove_entry_impl(&self, name: String) -> Result<Option<Arc<dyn DirectoryEntry>>, Status> {
+    fn remove_entry_impl(
+        &self,
+        name: String,
+        must_be_directory: bool,
+    ) -> Result<Option<Arc<dyn DirectoryEntry>>, Status> {
         assert_eq_size!(u64, usize);
         if name.len() as u64 >= MAX_NAME_LENGTH {
             return Err(Status::INVALID_ARGS);
@@ -382,9 +389,19 @@ where
 
         let mut this = self.inner.lock();
 
-        this.watchers.send_event(&mut SingleNameEventProducer::removed(&name));
-
-        Ok(this.entries.remove(&name))
+        match this.entries.entry(name) {
+            Entry::Vacant(_) => Ok(None),
+            Entry::Occupied(occupied) => {
+                if must_be_directory && occupied.get().entry_info().type_() != DIRENT_TYPE_DIRECTORY
+                {
+                    Err(Status::NOT_DIR)
+                } else {
+                    let (key, value) = occupied.remove_entry();
+                    this.watchers.send_event(&mut SingleNameEventProducer::removed(&key));
+                    Ok(Some(value))
+                }
+            }
+        }
     }
 
     fn link(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {

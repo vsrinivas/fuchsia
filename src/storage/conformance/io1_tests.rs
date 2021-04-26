@@ -4,7 +4,9 @@
 
 use {
     fidl::endpoints::{create_endpoints, create_proxy, Proxy, ServiceMarker},
-    fidl_fuchsia_io as io, fidl_fuchsia_io_test as io_test, fidl_fuchsia_mem,
+    fidl_fuchsia_io as io,
+    fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
+    fidl_fuchsia_io_test as io_test, fidl_fuchsia_mem,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_zircon as zx,
     fuchsia_zircon::Status,
@@ -876,7 +878,7 @@ async fn link_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn unlink_file_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_link.unwrap_or_default() {
+    if harness.config.immutable_dir.unwrap_or_default() {
         return;
     }
     let contents = "abcdef".as_bytes();
@@ -899,7 +901,7 @@ async fn unlink_file_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn unlink_file_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_link.unwrap_or_default() {
+    if harness.config.immutable_dir.unwrap_or_default() {
         return;
     }
     let contents = "abcdef".as_bytes();
@@ -922,7 +924,7 @@ async fn unlink_file_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn unlink_directory_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_link.unwrap_or_default() {
+    if harness.config.immutable_dir.unwrap_or_default() {
         return;
     }
 
@@ -941,7 +943,7 @@ async fn unlink_directory_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn unlink_directory_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_link.unwrap_or_default() {
+    if harness.config.immutable_dir.unwrap_or_default() {
         return;
     }
 
@@ -955,6 +957,34 @@ async fn unlink_directory_with_insufficient_rights() {
         let status = dir.unlink("src").await.expect("unlink failed");
         assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
     }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn unlink_must_be_directory() {
+    let harness = TestHarness::new().await;
+
+    if harness.config.immutable_dir.unwrap_or_default() {
+        return;
+    }
+
+    let root = root_directory(vec![directory("dir", vec![]), file("file", vec![])]);
+    let test_dir = harness.get_directory(root, harness.all_rights);
+
+    let must_be_directory =
+        UnlinkOptions { flags: Some(UnlinkFlags::MustBeDirectory), ..UnlinkOptions::EMPTY };
+    test_dir
+        .unlink2("dir", must_be_directory.clone())
+        .await
+        .expect("unlink fidl failed")
+        .expect("unlink dir failed");
+    assert_eq!(
+        test_dir
+            .unlink2("file", must_be_directory)
+            .await
+            .expect("unlink fidl failed")
+            .expect_err("unlink file succeeded"),
+        zx::sys::ZX_ERR_NOT_DIR
+    );
 }
 
 #[fasync::run_singlethreaded(test)]

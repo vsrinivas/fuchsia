@@ -66,7 +66,7 @@ impl AddableDirectoryWithResult for Directory {
 
     fn remove_node<'a>(&'a self, name: &'a str) -> Result<Arc<dyn DirectoryEntry>, ModelError> {
         self.clone()
-            .remove_entry(String::from(name))
+            .remove_entry(String::from(name), false)
             .unwrap()
             .ok_or(ModelError::remove_entry_error(name))
     }

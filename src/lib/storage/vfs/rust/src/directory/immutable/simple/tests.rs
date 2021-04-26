@@ -1177,7 +1177,7 @@ fn in_tree_remove_file() {
         open_as_vmo_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
         open_as_vmo_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
 
-        let o_passwd = etc.remove_entry("passwd").unwrap();
+        let o_passwd = etc.remove_entry("passwd", false).unwrap();
         match o_passwd {
             None => panic!("remove_entry() did not find 'passwd'"),
             Some(passwd) => {
@@ -1211,7 +1211,7 @@ fn in_tree_move_file() {
 
         let fstab = etc
             .clone()
-            .remove_entry("fstab")
+            .remove_entry("fstab", false)
             .unwrap()
             .expect("remove_entry() did not find 'fstab'");
 
@@ -1386,7 +1386,7 @@ fn watch_removal() {
         );
         assert_watcher_one_message_watched_events!(watcher, { IDLE, vec![] });
 
-        let o_passwd = etc.remove_entry("passwd").unwrap();
+        let o_passwd = etc.remove_entry("passwd", false).unwrap();
         match o_passwd {
             None => panic!("remove_entry() did not find 'passwd'"),
             Some(passwd) => {

@@ -107,7 +107,7 @@ impl Publisher {
 
     fn unpublish(&mut self) {
         if self.inspector.is_some() {
-            self.dir.clone().remove_entry(TreeMarker::SERVICE_NAME).expect("remove entry");
+            self.dir.clone().remove_entry(TreeMarker::SERVICE_NAME, false).expect("remove entry");
         }
         self.inspector = None;
     }

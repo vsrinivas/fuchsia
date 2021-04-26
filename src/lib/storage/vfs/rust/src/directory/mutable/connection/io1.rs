@@ -31,7 +31,7 @@ use {
         DirectoryMarker, DirectoryObject, DirectoryRequest, NodeAttributes, NodeInfo, NodeMarker,
         OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_io2::UnlinkOptions,
+    fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
     std::sync::Arc,
@@ -212,14 +212,12 @@ impl MutableConnection {
     async fn handle_unlink<R>(
         &mut self,
         name: String,
-        _options: Option<UnlinkOptions>,
+        options: Option<UnlinkOptions>,
         responder: R,
     ) -> Result<(), fidl::Error>
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
-        // TODO(fxbug.dev/74923): do something with options.
-
         if self.base.flags & OPEN_RIGHT_WRITABLE == 0 {
             return responder(Status::BAD_HANDLE);
         }
@@ -241,7 +239,17 @@ impl MutableConnection {
             return responder(Status::BAD_PATH);
         }
 
-        match self.base.directory.clone().unlink(path).await {
+        let must_be_directory = match options {
+            None => path.is_dir(),
+            Some(options) => {
+                if path.as_ref().contains('/') {
+                    return responder(Status::BAD_PATH);
+                }
+                options.flags.map(|f| f.contains(UnlinkFlags::MustBeDirectory)).unwrap_or(false)
+            }
+        };
+
+        match self.base.directory.clone().unlink(path.peek().unwrap(), must_be_directory).await {
             Ok(()) => responder(Status::OK),
             Err(status) => responder(status),
         }
@@ -352,7 +360,7 @@ mod tests {
     #[derive(Debug, PartialEq)]
     enum MutableDirectoryAction {
         Link { id: u32, path: String },
-        Unlink { id: u32, path: Path },
+        Unlink { id: u32, name: String },
         Rename { id: u32, src_name: String, dst_dir: Arc<MockDirectory>, dst_name: String },
         SetAttr { id: u32, flags: u32, attrs: NodeAttributes },
         Sync,
@@ -442,8 +450,11 @@ mod tests {
             self.fs.handle_event(MutableDirectoryAction::Link { id: self.id, path })
         }
 
-        async fn unlink(&self, path: Path) -> Result<(), Status> {
-            self.fs.handle_event(MutableDirectoryAction::Unlink { id: self.id, path })
+        async fn unlink(&self, name: &str, _must_be_directory: bool) -> Result<(), Status> {
+            self.fs.handle_event(MutableDirectoryAction::Unlink {
+                id: self.id,
+                name: name.to_string(),
+            })
         }
 
         async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
@@ -621,10 +632,7 @@ mod tests {
         let events = events.0.lock().unwrap();
         assert_eq!(
             *events,
-            vec![MutableDirectoryAction::Unlink {
-                id: 0,
-                path: Path::validate_and_split("test").unwrap()
-            },]
+            vec![MutableDirectoryAction::Unlink { id: 0, name: "test".to_string() },]
         );
     }
 

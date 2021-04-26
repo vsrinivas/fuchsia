@@ -9,7 +9,6 @@ use {
             entry_container::{Directory, MutableDirectory},
         },
         filesystem::Filesystem,
-        path::Path,
     },
     async_trait::async_trait,
     fidl_fuchsia_io::NodeAttributes,
@@ -43,16 +42,21 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     fn add_entry_impl(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status>;
 
     /// Removes a child entry from this directory.  In case an entry with the matching name was
-    /// found, the entry will be returned to the caller.
+    /// found, the entry will be returned to the caller.  If `must_be_directory` is true, an error
+    /// is returned if the entry is not a directory.
     ///
     /// Possible errors are:
     ///   * `name` exceeding [`fidl_fuchsia_io::MAX_FILENAME`] bytes in length.
-    fn remove_entry<Name>(&self, name: Name) -> Result<Option<Arc<dyn DirectoryEntry>>, Status>
+    fn remove_entry<Name>(
+        &self,
+        name: Name,
+        must_be_directory: bool,
+    ) -> Result<Option<Arc<dyn DirectoryEntry>>, Status>
     where
         Name: Into<String>,
         Self: Sized,
     {
-        self.remove_entry_impl(name.into())
+        self.remove_entry_impl(name.into(), must_be_directory)
     }
 
     /// Removes a child entry from this directory.  In case an entry with the matching name was
@@ -60,7 +64,11 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     ///
     /// Possible errors are:
     ///   * `name` exceeding [`fidl_fuchsia_io::MAX_FILENAME`] bytes in length.
-    fn remove_entry_impl(&self, name: String) -> Result<Option<Arc<dyn DirectoryEntry>>, Status>;
+    fn remove_entry_impl(
+        &self,
+        name: String,
+        must_be_directory: bool,
+    ) -> Result<Option<Arc<dyn DirectoryEntry>>, Status>;
 
     /// Add a child entry to this directory, even if it already exists.  The target is discarded,
     /// if it exists.
@@ -124,8 +132,8 @@ impl<T: DirectlyMutable> MutableDirectory for T {
         (self as &dyn DirectlyMutable).link(name, entry)
     }
 
-    async fn unlink(&self, mut name: Path) -> Result<(), Status> {
-        match self.remove_entry_impl(name.next().unwrap().into()) {
+    async fn unlink(&self, name: &str, must_be_directory: bool) -> Result<(), Status> {
+        match self.remove_entry_impl(name.into(), must_be_directory) {
             Ok(Some(_)) => Ok(()),
             Ok(None) => Err(Status::NOT_FOUND),
             Err(e) => Err(e),

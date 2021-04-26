@@ -60,9 +60,11 @@ where
             unsafe {
                 dst_parent.rename_to(
                     dst.into_string(),
-                    Box::new(move || match src_parent.remove_entry_impl(src.into_string())? {
-                        None => Err(Status::NOT_FOUND),
-                        Some(entry) => Ok(entry),
+                    Box::new(move || {
+                        match src_parent.remove_entry_impl(src.into_string(), false)? {
+                            None => Err(Status::NOT_FOUND),
+                            Some(entry) => Ok(entry),
+                        }
                     }),
                 )
             }

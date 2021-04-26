@@ -158,6 +158,12 @@ impl Path {
     }
 }
 
+impl AsRef<str> for Path {
+    fn as_ref(&self) -> &str {
+        &self.inner
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

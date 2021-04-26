@@ -261,13 +261,9 @@ impl MutableDirectory for FxDirectory {
         Err(Status::NOT_SUPPORTED)
     }
 
-    async fn unlink(&self, path: Path) -> Result<(), Status> {
-        if !path.is_single_component() {
-            // The VFS is supposed to handle traversal. Per fxbug.dev/74544, it does not, but that
-            // ought to be fixed in the VFS rather than here.
-            return Err(Status::BAD_PATH);
-        }
-        self.as_strong().await.unlink_inner(path.peek().unwrap()).await.map_err(map_to_status)
+    async fn unlink(&self, name: &str, _must_be_directory: bool) -> Result<(), Status> {
+        // TODO(csuter): do something with must_be_directory.
+        self.as_strong().await.unlink_inner(name).await.map_err(map_to_status)
     }
 
     async fn set_attrs(&self, _flags: u32, _attrs: NodeAttributes) -> Result<(), Status> {

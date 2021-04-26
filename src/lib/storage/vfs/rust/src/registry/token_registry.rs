@@ -361,7 +361,7 @@ mod tests {
                 panic!("Not implemented!")
             }
 
-            async fn unlink(&self, _name: Path) -> Result<(), Status> {
+            async fn unlink(&self, _name: &str, _must_be_directory: bool) -> Result<(), Status> {
                 panic!("Not implemented!")
             }
 
