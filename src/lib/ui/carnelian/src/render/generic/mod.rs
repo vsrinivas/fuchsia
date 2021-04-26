@@ -204,11 +204,27 @@ pub enum FillRule {
     WholeTile,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum GradientType {
+    Linear,
+    Radial,
+}
+
+#[derive(Clone, Debug)]
+pub struct Gradient {
+    pub r#type: GradientType,
+    pub start: Point,
+    pub end: Point,
+    pub stops: Vec<(Color, f32)>,
+}
+
 /// Raster fill type.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum Fill {
     /// Fills the raster with a uniform color.
     Solid(Color),
+    /// Fills the raster with a gradient.
+    Gradient(Gradient),
 }
 
 /// Raster blend mode. See https://www.w3.org/TR/compositing/#blending for more details.
@@ -247,7 +263,7 @@ pub enum BlendMode {
 }
 
 /// Raster style.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Style {
     /// Raster fill rule.
     pub fill_rule: FillRule,

@@ -367,7 +367,7 @@ impl Facet for ShedFacet {
         let location = self.location;
         layer_group.replace_all(rasters.iter().map(|(raster, style)| Layer {
             raster: raster.clone().translate(location.to_vector().to_i32()),
-            style: *style,
+            style: style.clone(),
         }));
         self.rasters = Some(rasters);
         Ok(())
@@ -474,7 +474,10 @@ impl Facet for RiveFacet {
 
         let location = self.location;
         layer_group.replace_all(self.render_cache.rasters.iter().rev().map(|(raster, style)| {
-            Layer { raster: raster.clone().translate(location.to_vector().to_i32()), style: *style }
+            Layer {
+                raster: raster.clone().translate(location.to_vector().to_i32()),
+                style: style.clone(),
+            }
         }));
 
         Ok(())

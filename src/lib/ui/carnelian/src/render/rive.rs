@@ -5,7 +5,10 @@
 use {
     crate::{
         color::Color,
-        render::{BlendMode, Context, Fill, FillRule, Path, PathBuilder, Raster, Style},
+        render::{
+            BlendMode, Context, Fill, FillRule, Gradient, GradientType, Path, PathBuilder, Raster,
+            Style,
+        },
         Point,
     },
     euclid::{vec2, Transform2D},
@@ -209,27 +212,32 @@ impl rive::Renderer for Renderer<'_> {
             rive::shapes::FillRule::EvenOdd => FillRule::EvenOdd,
         };
 
+        fn to_color(color: &rive::shapes::paint::Color32) -> Color {
+            Color { r: color.red(), g: color.green(), b: color.blue(), a: color.alpha() }
+        }
+
         let style = match &paint.color {
-            PaintColor::Solid(color) => Style {
-                fill_rule,
-                fill: Fill::Solid(Color {
-                    r: color.red(),
-                    g: color.green(),
-                    b: color.blue(),
-                    a: color.alpha(),
-                }),
-                blend_mode,
-            },
+            PaintColor::Solid(color) => {
+                Style { fill_rule, fill: Fill::Solid(to_color(color)), blend_mode }
+            }
             PaintColor::Gradient(gradient) => {
-                println!("unsupported paint color: {:?}", paint.color);
-                let color_stop = gradient.stops.first().unwrap();
+                let start = transform * gradient.start;
+                let end = transform * gradient.end;
+
                 Style {
                     fill_rule,
-                    fill: Fill::Solid(Color {
-                        r: color_stop.0.red(),
-                        g: color_stop.0.green(),
-                        b: color_stop.0.blue(),
-                        a: color_stop.0.alpha(),
+                    fill: Fill::Gradient(Gradient {
+                        r#type: match gradient.r#type {
+                            rive::GradientType::Linear => GradientType::Linear,
+                            rive::GradientType::Radial => GradientType::Radial,
+                        },
+                        start: Point::new(start.x, start.y),
+                        end: Point::new(end.x, end.y),
+                        stops: gradient
+                            .stops
+                            .iter()
+                            .map(|(color, stop)| (to_color(color), *stop))
+                            .collect::<Vec<_>>(),
                     }),
                     blend_mode,
                 }

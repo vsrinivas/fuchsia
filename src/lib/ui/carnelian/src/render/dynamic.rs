@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub use crate::render::generic::{BlendMode, Fill, FillRule, Style};
+pub use crate::render::generic::{BlendMode, Fill, FillRule, Gradient, GradientType, Style};
 use crate::{
     color::Color,
     render::generic::{

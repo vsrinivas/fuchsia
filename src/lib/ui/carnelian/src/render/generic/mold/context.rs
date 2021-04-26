@@ -29,7 +29,8 @@ use crate::{
         mold::{
             image::VmoImage, Mold, MoldComposition, MoldImage, MoldPathBuilder, MoldRasterBuilder,
         },
-        BlendMode, Context, CopyRegion, Fill, FillRule, PostCopy, PreClear, PreCopy, RenderExt,
+        BlendMode, Context, CopyRegion, Fill, FillRule, GradientType, PostCopy, PreClear, PreCopy,
+        RenderExt,
     },
     ViewAssistantContext,
 };
@@ -241,8 +242,24 @@ fn render_composition(
                     // TODO(dtiselice): Implement WholeTile.
                     FillRule::WholeTile => mold::FillRule::NonZero,
                 },
-                fill: match layer.style.fill {
+                fill: match &layer.style.fill {
                     Fill::Solid(color) => mold::Fill::Solid(color.to_linear_bgra()),
+                    Fill::Gradient(gradient) => {
+                        let mut builder = mold::GradientBuilder::new(
+                            [gradient.start.x, gradient.start.y],
+                            [gradient.end.x, gradient.end.y],
+                        );
+                        builder.r#type(match gradient.r#type {
+                            GradientType::Linear => mold::GradientType::Linear,
+                            GradientType::Radial => mold::GradientType::Radial,
+                        });
+
+                        for &(color, stop) in &gradient.stops {
+                            builder.color_with_stop(color.to_linear_bgra(), stop);
+                        }
+
+                        mold::Fill::Gradient(builder.build().unwrap())
+                    }
                 },
                 blend_mode: match layer.style.blend_mode {
                     BlendMode::Over => mold::BlendMode::Over,

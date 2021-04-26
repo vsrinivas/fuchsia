@@ -28,8 +28,10 @@ fn group_layers(
             FillRule::EvenOdd => 1,
             FillRule::WholeTile => 0,
         };
-        let fill_len = match style.fill {
+        let fill_len = match &style.fill {
             Fill::Solid(..) => 3,
+            // TODO(fxb/67020): Add gradient support to spinel.
+            Fill::Gradient(..) => 3,
         };
         let blend_mode_len = match style.blend_mode {
             BlendMode::Over => 1,
@@ -70,9 +72,17 @@ fn group_layers(
             FillRule::WholeTile => {}
         }
 
-        match style.fill {
+        match &style.fill {
             Fill::Solid(color) => {
                 let color = color.to_linear_premult_rgba();
+                unsafe {
+                    spn_styling_layer_fill_rgba_encoder(&mut cmds[cursor], color.as_ptr());
+                }
+                cursor += 3;
+            }
+            // TODO(fxb/67020): Add gradient support to spinel.
+            Fill::Gradient(gradient) => {
+                let color = gradient.stops.first().unwrap().0.to_linear_premult_rgba();
                 unsafe {
                     spn_styling_layer_fill_rgba_encoder(&mut cmds[cursor], color.as_ptr());
                 }
