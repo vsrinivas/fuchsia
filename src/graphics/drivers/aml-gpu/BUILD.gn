@@ -34,7 +34,7 @@ source_set("sources") {
     ":aml_gpu_bind",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpu.mali:fuchsia.hardware.gpu.mali_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.iommu",
+    "//sdk/banjo/fuchsia.hardware.iommu:fuchsia.hardware.iommu_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.registers:fuchsia.hardware.registers_banjo_cpp",
