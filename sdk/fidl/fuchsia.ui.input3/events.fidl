@@ -54,6 +54,9 @@ flexible enum NonPrintableKey : uint32 {
 /// is otherwise unprintable.
 strict union KeyMeaning {
     /// The Unicode codepoint representing character typed, if any.
+    /// * In Dart and Go, this corresponds to a `rune`.
+    /// * In Rust, this corresponds to a `char`.
+    /// * In C and C++, this corresponds to ICU's UChar32.
     1: uint32 codepoint;
 
     /// The meaning of the key for key events with no corresponding symbol.
@@ -61,7 +64,7 @@ strict union KeyMeaning {
 };
 
 /// A Keyboard event generated to reflect key input. `timestamp` and `type` are required.
-/// At least one of `key` and `key_meaning`  must be set for a valid event. 
+/// At least one of `key` and `key_meaning`  must be set for a valid event.
 table KeyEvent {
     /// Time in nanoseconds when the event was recorded, in the `CLOCK_MONOTONIC` time base.
     1: zx.time timestamp;
