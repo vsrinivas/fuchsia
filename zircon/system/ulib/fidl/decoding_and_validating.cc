@@ -494,6 +494,10 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
     set_error("Cannot validate null bytes");
     return ZX_ERR_INVALID_ARGS;
   }
+  if (unlikely(!FidlIsAligned(reinterpret_cast<const uint8_t*>(bytes)))) {
+    set_error("Bytes must be aligned to FIDL_ALIGNMENT");
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   zx_status_t status;
   size_t primary_size;

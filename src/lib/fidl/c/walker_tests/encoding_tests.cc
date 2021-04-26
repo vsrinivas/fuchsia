@@ -2596,17 +2596,23 @@ TEST(Iovec, TooFewIovec) {
 }
 
 TEST(Iovec, TooFewBytes) {
-  BoolStruct obj{true};
-  constexpr uint32_t kBufferSize = 2;
-  zx_channel_iovec_t out_iovec[kBufferSize];
-  uint8_t buffer[1];
+  fidl::FidlAllocator allocator;
+  const char input[] = "abcd";
+  StringStruct str = {.str = fidl::StringView(allocator, input)};
+
+  // This is only enough to hold the primary object, and not enough to hold
+  // the out-of-line string.
+  constexpr uint32_t kBufferSize = FIDL_ALIGNMENT;
+  FIDL_ALIGNDECL uint8_t buffer[kBufferSize];
+  constexpr uint32_t kIovecSize = 2;
+  zx_channel_iovec_t out_iovec[kIovecSize];
   uint32_t out_actual_iovecs;
   uint32_t out_actual_handles;
   const char* out_error = nullptr;
   zx_status_t status = fidl::internal::EncodeIovecEtc(
-      &fidl_test_coding_BoolStructTable, &obj, out_iovec, kBufferSize, nullptr, 0, buffer, 0,
-      &out_actual_iovecs, &out_actual_handles, &out_error);
-  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+      &fidl_test_coding_StringStructTable, &str, out_iovec, kIovecSize, nullptr, 0, buffer,
+      kBufferSize, &out_actual_iovecs, &out_actual_handles, &out_error);
+  ASSERT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL);
   EXPECT_NOT_NULL(out_error);
 }
 

@@ -30,14 +30,12 @@ namespace internal {
 #ifdef __Fuchsia__
 class ClientBase;
 class ResponseContext;
-#endif
+#endif  // __Fuchsia__
 
 // Create a type for the 1-element iovec buffer used as the output of fidl_encode_iovec.
 // TODO(fxbug.dev/66977) Replace this with a resizable buffer type.
 constexpr size_t IovecBufferSize = 1;
 using IovecBuffer = zx_channel_iovec_t[IovecBufferSize];
-
-class OutgoingMessageResultSetter;
 
 }  // namespace internal
 
@@ -208,20 +206,7 @@ class OutgoingMessage : public ::fidl::Result {
   // If OutgoingMessage is constructed with a fidl_outgoing_msg_t* that contains bytes
   // rather than iovec, it is converted to a single-element iovec pointing to the bytes.
   zx_channel_iovec_t converted_byte_message_iovec_ = {};
-
-  friend class internal::OutgoingMessageResultSetter;
 };
-
-namespace internal {
-
-class OutgoingMessageResultSetter {
- public:
-  static void SetResult(OutgoingMessage& message, zx_status_t status, const char* error) {
-    message.SetResult(status, error);
-  }
-};
-
-}  // namespace internal
 
 // |IncomingMessage| represents a FIDL message on the read path.
 // Each instantiation of the class should only be used for one message.

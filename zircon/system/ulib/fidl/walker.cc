@@ -44,12 +44,12 @@ zx_status_t StartingOutOfLineOffset(const fidl_type_t* type, uint32_t buffer_siz
   }
   if (primary_size > buffer_size) {
     set_error("Buffer is too small for first inline object");
-    return ZX_ERR_INVALID_ARGS;
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
   uint64_t first_out_of_line = FidlAlign(static_cast<uint32_t>(primary_size));
   if (first_out_of_line > buffer_size) {
     set_error("Buffer is too small for first inline object");
-    return ZX_ERR_INVALID_ARGS;
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
   if (first_out_of_line > std::numeric_limits<uint32_t>::max()) {
     set_error("Out of line starting offset overflows");

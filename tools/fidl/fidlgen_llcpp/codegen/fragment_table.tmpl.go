@@ -111,11 +111,6 @@ public:
           .backing_buffer = backing_buffer,
           .backing_buffer_capacity = backing_buffer_size,
         }) {
-      if (backing_buffer_size < sizeof({{ .Name }})) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-          message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<{{ .Name }}>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;

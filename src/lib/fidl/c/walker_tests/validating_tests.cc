@@ -225,7 +225,7 @@ TEST(BufferTooSmall, validate_overflow_buffer_on_FidlAlign) {
   auto status = fidl_validate(&type, &message, 1, 0, &error);
 
   // Expect error to be something about buffer too small (for for properly padded message).
-  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL);
   EXPECT_NOT_NULL(error);
   ASSERT_SUBSTR(error, "too small");
 }
@@ -290,8 +290,9 @@ TEST(Handles, validate_single_present_handle_unaligned_error) {
   // Test a short, unaligned version of nonnullable message
   // handle. All fidl message objects should be 8 byte aligned.
   //
-  // We use a 16 bytes array rather than fidl_message_header_t to avoid
-  // aligning to 8 bytes.
+  // We use a 16 bytes array rather than fidl_message_header_t, and
+  // manually place the |message| structure at a 4 bytes offset,
+  // to avoid aligning to 8 bytes.
   struct unaligned_nonnullable_handle_inline_data {
     uint8_t header[sizeof(fidl_message_header_t)];
     zx_handle_t handle;
@@ -300,7 +301,11 @@ TEST(Handles, validate_single_present_handle_unaligned_error) {
     unaligned_nonnullable_handle_inline_data inline_struct;
   };
 
-  unaligned_nonnullable_handle_message_layout message = {};
+  uint8_t message_buffer[FIDL_ALIGN(sizeof(unaligned_nonnullable_handle_message_layout) +
+                                    sizeof(zx_handle_t))] = {};
+  unaligned_nonnullable_handle_message_layout& message =
+      *reinterpret_cast<unaligned_nonnullable_handle_message_layout*>(
+          &message_buffer[sizeof(zx_handle_t)]);
   message.inline_struct.handle = FIDL_HANDLE_PRESENT;
 
   zx_handle_t handles[] = {

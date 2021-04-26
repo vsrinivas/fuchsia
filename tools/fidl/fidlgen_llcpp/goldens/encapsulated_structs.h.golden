@@ -84,11 +84,6 @@ struct NonInlineStructTestStruct {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(NonInlineStructTestStruct)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<NonInlineStructTestStruct>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -197,11 +192,6 @@ struct Int8Int32 {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Int8Int32)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Int8Int32>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -306,11 +296,6 @@ struct Int16Int8 {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Int16Int8)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Int16Int8>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -413,11 +398,6 @@ struct ArrayInt16Int8 {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(ArrayInt16Int8)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<ArrayInt16Int8>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -525,11 +505,6 @@ struct StructPaddingTestStruct {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(StructPaddingTestStruct)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<StructPaddingTestStruct>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -641,11 +616,6 @@ struct TopLevelStruct {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(TopLevelStruct)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<TopLevelStruct>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;

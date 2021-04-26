@@ -64,11 +64,6 @@ struct Simple {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Simple)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Simple>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -172,11 +167,6 @@ struct BasicStruct {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(BasicStruct)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<BasicStruct>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;

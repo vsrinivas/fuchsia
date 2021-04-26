@@ -158,11 +158,6 @@ class SimpleTable final {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(SimpleTable)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<SimpleTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -418,11 +413,6 @@ class ReverseOrdinalTable final {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(ReverseOrdinalTable)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<ReverseOrdinalTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -612,11 +602,6 @@ class OlderSimpleTable final {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(OlderSimpleTable)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<OlderSimpleTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -866,11 +851,6 @@ class NewerSimpleTable final {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(NewerSimpleTable)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<NewerSimpleTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -1031,11 +1011,6 @@ class EmptyTable final {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(EmptyTable)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<EmptyTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;

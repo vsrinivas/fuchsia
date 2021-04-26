@@ -186,8 +186,12 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
 
     void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
       // Fail to send the reply due to an encoding error (the buffer is too small).
-      fidl::BufferSpan empty;
-      EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, completer.Reply(empty, request->in).status());
+      // The buffer still needs to be properly aligned.
+      constexpr size_t kSmallSize = 8;
+      FIDL_ALIGNDECL uint8_t small_buffer[kSmallSize];
+      static_assert(sizeof(fidl::WireResponse<Example::TwoWay>) > kSmallSize);
+      fidl::BufferSpan too_small(small_buffer, std::size(small_buffer));
+      EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, completer.Reply(too_small, request->in).status());
       completer.Close(ZX_OK);  // This should not panic.
     }
 

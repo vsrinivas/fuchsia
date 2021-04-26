@@ -121,7 +121,7 @@ TEST(ProxyController, BadSend) {
   zx_status_t status = std::numeric_limits<zx_status_t>::max();
   controller.reader().set_error_handler([&status](zx_status_t s) { status = s; });
   controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(), nullptr);
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+  EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, status);
   EXPECT_EQ(0, error_count);
   loop.RunUntilIdle();
   EXPECT_EQ(0, error_count);

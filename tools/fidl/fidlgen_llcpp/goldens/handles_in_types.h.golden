@@ -233,11 +233,6 @@ class TableWithHandle final {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(TableWithHandle)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<TableWithHandle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -388,11 +383,6 @@ struct HandlesInTypes {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(HandlesInTypes)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<HandlesInTypes>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;

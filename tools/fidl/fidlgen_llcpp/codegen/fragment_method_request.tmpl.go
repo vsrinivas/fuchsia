@@ -69,11 +69,6 @@ struct {{ .WireRequest }} final {
         .backing_buffer = _backing_buffer,
         .backing_buffer_capacity = _backing_buffer_size,
       }) {
-    if (_backing_buffer_size < sizeof({{ .WireRequest.Self }})) {
-      ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-        message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-      return;
-    }
     FIDL_ALIGNDECL {{ .WireRequest.Self }} _request({{ RenderForwardParams "_txid" .RequestArgs }});
     message_.Encode<{{ .WireRequest.Self }}>(&_request);
   }
@@ -89,11 +84,6 @@ struct {{ .WireRequest }} final {
         .backing_buffer = _backing_buffer,
         .backing_buffer_capacity = _backing_buffer_size,
       }) {
-    if (_backing_buffer_size < sizeof({{ .WireRequest.Self }})) {
-      ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-        message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-      return;
-    }
     message_.Encode<{{ .WireRequest.Self }}>(request);
   }
   UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;

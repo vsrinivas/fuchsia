@@ -93,11 +93,6 @@ struct Padding7ByteMiddle {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding7ByteMiddle)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding7ByteMiddle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -202,11 +197,6 @@ struct Padding7ByteEnd {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding7ByteEnd)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding7ByteEnd>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -311,11 +301,6 @@ struct Padding6ByteMiddle {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding6ByteMiddle)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding6ByteMiddle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -420,11 +405,6 @@ struct Padding6ByteEnd {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding6ByteEnd)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding6ByteEnd>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -531,11 +511,6 @@ struct Padding5ByteMiddle {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding5ByteMiddle)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding5ByteMiddle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -642,11 +617,6 @@ struct Padding5ByteEnd {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding5ByteEnd)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding5ByteEnd>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -751,11 +721,6 @@ struct Padding4ByteMiddle {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding4ByteMiddle)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding4ByteMiddle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -860,11 +825,6 @@ struct Padding4ByteEnd {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding4ByteEnd)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding4ByteEnd>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -974,11 +934,6 @@ struct Padding4ByteAlignmentLength12 {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding4ByteAlignmentLength12)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding4ByteAlignmentLength12>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -1083,11 +1038,6 @@ struct Padding3ByteMiddle {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding3ByteMiddle)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding3ByteMiddle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -1192,11 +1142,6 @@ struct Padding3ByteEnd {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding3ByteEnd)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding3ByteEnd>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -1301,11 +1246,6 @@ struct Padding2ByteMiddle {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding2ByteMiddle)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding2ByteMiddle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -1410,11 +1350,6 @@ struct Padding2ByteEnd {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding2ByteEnd)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding2ByteEnd>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -1522,11 +1457,6 @@ struct Padding2ByteAlignmentLength6 {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding2ByteAlignmentLength6)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding2ByteAlignmentLength6>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -1631,11 +1561,6 @@ struct Padding1ByteMiddle {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding1ByteMiddle)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding1ByteMiddle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -1740,11 +1665,6 @@ struct Padding1ByteEnd {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Padding1ByteEnd)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Padding1ByteEnd>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;

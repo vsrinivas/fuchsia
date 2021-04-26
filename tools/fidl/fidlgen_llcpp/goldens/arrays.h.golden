@@ -310,11 +310,6 @@ class TableSmallArray final {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(TableSmallArray)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<TableSmallArray>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -503,11 +498,6 @@ class TableLargeArray final {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(TableLargeArray)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<TableLargeArray>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -636,11 +626,6 @@ struct StructSmallArray {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(StructSmallArray)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<StructSmallArray>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -743,11 +728,6 @@ struct StructLargeArray {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(StructLargeArray)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<StructLargeArray>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;

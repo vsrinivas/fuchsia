@@ -207,11 +207,6 @@ struct StructWithNullableVector {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(StructWithNullableVector)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<StructWithNullableVector>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -315,11 +310,6 @@ struct StructWithNullableUnion {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(StructWithNullableUnion)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<StructWithNullableUnion>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -422,11 +412,6 @@ struct StructWithNullableStruct {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(StructWithNullableStruct)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<StructWithNullableStruct>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -529,11 +514,6 @@ struct StructWithNullableString {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(StructWithNullableString)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<StructWithNullableString>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -644,11 +624,6 @@ struct StructWithNullableRequest {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(StructWithNullableRequest)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<StructWithNullableRequest>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -762,11 +737,6 @@ struct StructWithNullableProtocol {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(StructWithNullableProtocol)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<StructWithNullableProtocol>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -880,11 +850,6 @@ struct StructWithNullableHandle {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(StructWithNullableHandle)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<StructWithNullableHandle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -1056,11 +1021,6 @@ struct ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> final {
               .backing_buffer = _backing_buffer,
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
-      if (_backing_buffer_size < sizeof(WireRequest)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       FIDL_ALIGNDECL WireRequest _request(_txid, a, b);
       message_.Encode<WireRequest>(&_request);
     }
@@ -1072,11 +1032,6 @@ struct ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> final {
               .backing_buffer = _backing_buffer,
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
-      if (_backing_buffer_size < sizeof(WireRequest)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<WireRequest>(request);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -1200,11 +1155,6 @@ struct ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add> final {
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
       FIDL_ALIGNDECL WireResponse _response{sum};
-      if (_backing_buffer_size < sizeof(WireResponse)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<
           ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>(
           &_response);
@@ -1217,11 +1167,6 @@ struct ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add> final {
               .backing_buffer = _backing_buffer,
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
-      if (_backing_buffer_size < sizeof(WireResponse)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<
           ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>(
           response);
@@ -1680,11 +1625,6 @@ struct Int32Wrapper {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Int32Wrapper)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Int32Wrapper>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;

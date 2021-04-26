@@ -208,11 +208,6 @@ struct ExampleFooResponse {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(ExampleFooResponse)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<ExampleFooResponse>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -373,11 +368,6 @@ struct ::fidl::WireRequest<::fidl_test_error::Example::Foo> final {
               .backing_buffer = _backing_buffer,
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
-      if (_backing_buffer_size < sizeof(WireRequest)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       FIDL_ALIGNDECL WireRequest _request(_txid, s);
       message_.Encode<WireRequest>(&_request);
     }
@@ -389,11 +379,6 @@ struct ::fidl::WireRequest<::fidl_test_error::Example::Foo> final {
               .backing_buffer = _backing_buffer,
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
-      if (_backing_buffer_size < sizeof(WireRequest)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<WireRequest>(request);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -520,11 +505,6 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::Foo> final {
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
       FIDL_ALIGNDECL WireResponse _response{result};
-      if (_backing_buffer_size < sizeof(WireResponse)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
           &_response);
     }
@@ -536,11 +516,6 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::Foo> final {
               .backing_buffer = _backing_buffer,
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
-      if (_backing_buffer_size < sizeof(WireResponse)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
           response);
     }

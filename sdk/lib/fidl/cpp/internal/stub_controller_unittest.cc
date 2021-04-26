@@ -268,7 +268,7 @@ TEST(StubController, BadResponse) {
     EXPECT_TRUE(response.needs_response());
     Encoder encoder(42u);
     // Bad message format.
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+    EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
               response.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage()));
     return ZX_OK;
   };

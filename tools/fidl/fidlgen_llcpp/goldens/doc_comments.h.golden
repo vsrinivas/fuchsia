@@ -414,11 +414,6 @@ class Table final {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Table)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Table>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -748,11 +743,6 @@ struct Struct {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Struct)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Struct>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -929,11 +919,6 @@ struct ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method> final {
               .backing_buffer = _backing_buffer,
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
-      if (_backing_buffer_size < sizeof(WireRequest)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       FIDL_ALIGNDECL WireRequest _request(_txid);
       message_.Encode<WireRequest>(&_request);
     }
@@ -945,11 +930,6 @@ struct ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method> final {
               .backing_buffer = _backing_buffer,
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
-      if (_backing_buffer_size < sizeof(WireRequest)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<WireRequest>(request);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -1070,11 +1050,6 @@ struct ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent> final {
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
       FIDL_ALIGNDECL WireResponse _response{};
-      if (_backing_buffer_size < sizeof(WireResponse)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<
           ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>(
           &_response);
@@ -1087,11 +1062,6 @@ struct ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent> final {
               .backing_buffer = _backing_buffer,
               .backing_buffer_capacity = _backing_buffer_size,
           }) {
-      if (_backing_buffer_size < sizeof(WireResponse)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<
           ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>(
           response);

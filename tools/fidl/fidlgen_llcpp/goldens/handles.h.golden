@@ -227,11 +227,6 @@ struct Handles {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(Handles)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<Handles>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;

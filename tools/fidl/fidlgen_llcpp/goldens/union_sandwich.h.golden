@@ -468,11 +468,6 @@ struct SandwichUnionSize8Alignment4 {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(SandwichUnionSize8Alignment4)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<SandwichUnionSize8Alignment4>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -580,11 +575,6 @@ struct SandwichUnionSize36Alignment4 {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(SandwichUnionSize36Alignment4)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<SandwichUnionSize36Alignment4>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -692,11 +682,6 @@ struct SandwichUnionSize12Alignment4 {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(SandwichUnionSize12Alignment4)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<SandwichUnionSize12Alignment4>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -802,11 +787,6 @@ struct StructSize16Alignment8 {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(StructSize16Alignment8)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<StructSize16Alignment8>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -914,11 +894,6 @@ struct SandwichUnionSize24Alignment8 {
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
-      if (backing_buffer_size < sizeof(SandwichUnionSize24Alignment8)) {
-        ::fidl::internal::OutgoingMessageResultSetter::SetResult(
-            message_, ZX_ERR_BUFFER_TOO_SMALL, nullptr);
-        return;
-      }
       message_.Encode<SandwichUnionSize24Alignment8>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
