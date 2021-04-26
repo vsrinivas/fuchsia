@@ -75,7 +75,11 @@ fn compile_cml(document: &cml::Document) -> Result<fsys::ComponentDecl, Error> {
     let all_collections = document.all_collection_names().into_iter().collect();
     Ok(fsys::ComponentDecl {
         program: document.program.as_ref().map(|p| translate_program(p)).transpose()?,
-        uses: document.r#use.as_ref().map(translate_use).transpose()?,
+        uses: document
+            .r#use
+            .as_ref()
+            .map(|u| translate_use(u, &all_capability_names, &all_children))
+            .transpose()?,
         exposes: document
             .expose
             .as_ref()
@@ -210,11 +214,15 @@ fn translate_program(program: &cml::Program) -> Result<fsys::ProgramDecl, Error>
 }
 
 /// `use` rules consume a single capability from one source (parent|framework).
-fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
+fn translate_use(
+    use_in: &Vec<cml::Use>,
+    all_capability_names: &HashSet<cml::Name>,
+    all_children: &HashSet<&cml::Name>,
+) -> Result<Vec<fsys::UseDecl>, Error> {
     let mut out_uses = vec![];
     for use_ in use_in {
         if let Some(n) = use_.service() {
-            let source = extract_use_source(use_)?;
+            let source = extract_use_source(use_, all_capability_names, all_children)?;
             let target_paths =
                 all_target_use_paths(use_, use_).ok_or_else(|| Error::internal("no capability"))?;
             let source_names = n.to_vec();
@@ -228,7 +236,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                 }));
             }
         } else if let Some(n) = use_.protocol() {
-            let source = extract_use_source(use_)?;
+            let source = extract_use_source(use_, all_capability_names, all_children)?;
             let target_paths =
                 all_target_use_paths(use_, use_).ok_or_else(|| Error::internal("no capability"))?;
             let source_names = n.to_vec();
@@ -242,7 +250,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                 }));
             }
         } else if let Some(n) = use_.directory() {
-            let source = extract_use_source(use_)?;
+            let source = extract_use_source(use_, all_capability_names, all_children)?;
             let target_path = one_target_use_path(use_, use_)?;
             let rights = translate::extract_required_rights(use_, "use")?;
             let subdir = extract_use_subdir(use_);
@@ -707,13 +715,26 @@ fn translate_debug_capabilities(
     Ok(out_capabilities)
 }
 
-fn extract_use_source(in_obj: &cml::Use) -> Result<fsys::Ref, Error> {
+fn extract_use_source(
+    in_obj: &cml::Use,
+    all_capability_names: &HashSet<cml::Name>,
+    all_children_names: &HashSet<&cml::Name>,
+) -> Result<fsys::Ref, Error> {
     match in_obj.from.as_ref() {
         Some(cml::UseFromRef::Parent) => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
         Some(cml::UseFromRef::Framework) => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
         Some(cml::UseFromRef::Debug) => Ok(fsys::Ref::Debug(fsys::DebugRef {})),
         Some(cml::UseFromRef::Named(name)) => {
-            Ok(fsys::Ref::Capability(fsys::CapabilityRef { name: name.clone().into() }))
+            if all_capability_names.contains(&name) {
+                Ok(fsys::Ref::Capability(fsys::CapabilityRef { name: name.clone().into() }))
+            } else if all_children_names.contains(&name) {
+                Ok(fsys::Ref::Child(fsys::ChildRef { name: name.clone().into(), collection: None }))
+            } else {
+                Err(Error::internal(format!(
+                    "use source \"{:?}\" not supported for \"use from\"",
+                    name
+                )))
+            }
         }
         None => Ok(fsys::Ref::Parent(fsys::ParentRef {})), // Default value.
     }

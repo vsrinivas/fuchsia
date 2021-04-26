@@ -114,6 +114,15 @@ pub enum RoutingError {
     UseFromParentNotFound { moniker: AbsoluteMoniker, capability_id: String },
 
     #[error(
+        "A `use from child` declaration was found at `{}` for `{}`, but no matching \
+        `expose` declaration was found in child `#{}`>",
+        moniker,
+        capability_id,
+        child
+    )]
+    UseFromChildNotFound { moniker: AbsoluteMoniker, capability_id: String, child: String },
+
+    #[error(
         "A `use` declaration was found at `{}` for {} `{}`, but no matching \
         {} registration was found in the component's environment",
         moniker,
@@ -325,6 +334,19 @@ pub enum RoutingError {
     )]
     ExposeFromFrameworkNotFound { moniker: AbsoluteMoniker, capability_id: String },
 
+    #[error(
+        "A `use from #{}` declaration was found at `{}` for `{}`, but no matching \
+        `expose` declaration was found in the child",
+        child_moniker,
+        moniker,
+        capability_id
+    )]
+    UseFromChildExposeNotFound {
+        child_moniker: PartialMoniker,
+        moniker: AbsoluteMoniker,
+        capability_id: String,
+    },
+
     #[error("Routing a capability from an unsupported source type: {}", source_type)]
     UnsupportedRouteSource { source_type: String },
 
@@ -414,6 +436,18 @@ impl RoutingError {
         Self::UseFromParentNotFound {
             moniker: moniker.clone(),
             capability_id: capability_id.into(),
+        }
+    }
+
+    pub fn use_from_child_not_found(
+        moniker: &AbsoluteMoniker,
+        capability_id: impl Into<String>,
+        child: String,
+    ) -> Self {
+        Self::UseFromChildNotFound {
+            moniker: moniker.clone(),
+            capability_id: capability_id.into(),
+            child,
         }
     }
 

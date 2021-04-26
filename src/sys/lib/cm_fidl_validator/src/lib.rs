@@ -701,6 +701,11 @@ impl<'a> ValidationContext<'a> {
                     self.errors.push(Error::invalid_capability(decl, field, &capability.name));
                 }
             }
+            Some(fsys::Ref::Child(child)) => {
+                if !self.all_children.contains_key(&child.name as &str) {
+                    self.errors.push(Error::invalid_child(decl, field, &child.name));
+                }
+            }
             Some(_) => {
                 self.errors.push(Error::invalid_field(decl, field));
             }
@@ -2615,6 +2620,50 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::invalid_capability("UseProtocolDecl", "source", "this-storage-doesnt-exist"),
+            ])),
+        },
+        test_validate_uses_invalid_child => {
+            input = {
+                ComponentDecl {
+                    uses: Some(vec![
+                        UseDecl::Protocol(UseProtocolDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "no-such-child".to_string(), collection: None})),
+                            source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                            target_path: Some("/svc/fuchsia.sys2.StorageAdmin".to_string()),
+                            ..UseProtocolDecl::EMPTY
+                        }),
+                        UseDecl::Service(UseServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "no-such-child".to_string(), collection: None})),
+                            source_name: Some("service_name".to_string()),
+                            target_path: Some("/svc/service_name".to_string()),
+                            ..UseServiceDecl::EMPTY
+                        }),
+                        UseDecl::Directory(UseDirectoryDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "no-such-child".to_string(), collection: None})),
+                            source_name: Some("DirectoryName".to_string()),
+                            target_path: Some("/data/DirectoryName".to_string()),
+                            rights: Some(fio2::Operations::Connect),
+                            subdir: None,
+                            ..UseDirectoryDecl::EMPTY
+                        }),
+                        UseDecl::Event(UseEventDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "no-such-child".to_string(), collection: None})),
+                            source_name: Some("abc".to_string()),
+                            target_name: Some("abc".to_string()),
+                            filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                            mode: Some(EventMode::Async),
+                            ..UseEventDecl::EMPTY
+                        }),
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result =
+                Err(ErrorList::new(vec![
+                Error::invalid_child("UseProtocolDecl", "source", "no-such-child"),
+                Error::invalid_child("UseServiceDecl", "source", "no-such-child"),
+                Error::invalid_child("UseDirectoryDecl", "source", "no-such-child"),
+                Error::invalid_child("UseEventDecl", "source", "no-such-child"),
             ])),
         },
         test_validate_has_events_in_event_stream => {

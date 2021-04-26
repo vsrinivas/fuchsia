@@ -283,6 +283,150 @@ async fn use_from_parent() {
 ///    \
 ///     b
 ///
+/// a: uses directory /data/bar from #b as /data/hippo
+/// a: uses service /svc/bar from #b as /svc/hippo
+/// b: exposes directory /data/foo from self as /data/bar
+/// b: exposes service /svc/foo from self as /svc/bar
+#[fuchsia::test]
+async fn use_from_child() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Directory(UseDirectoryDecl {
+                    source: UseSource::Child("b".to_string()),
+                    source_name: "bar_data".into(),
+                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    rights: *rights::READ_RIGHTS,
+                    subdir: None,
+                }))
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Child("b".to_string()),
+                    source_name: "bar_svc".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
+                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source: ExposeSource::Self_,
+                    source_name: "foo_data".into(),
+                    target_name: "bar_data".into(),
+                    target: ExposeTarget::Parent,
+                    rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
+                }))
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                    source: ExposeSource::Self_,
+                    source_name: "foo_svc".into(),
+                    target_name: "bar_svc".into(),
+                    target: ExposeTarget::Parent,
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.check_use(vec![].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+    test.check_use(
+        vec![].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///      \
+///       c
+///
+/// a: uses /data/baz from #b as /data/hippo
+/// a: uses /svc/baz from #b as /svc/hippo
+/// b: exposes directory /data/bar from #c as /data/baz
+/// b: exposes service /svc/bar from #c as /svc/baz
+/// c: exposes directory /data/foo from self as /data/bar
+/// c: exposes service /svc/foo from self as /svc/bar
+#[fuchsia::test]
+async fn use_from_grandchild() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Directory(UseDirectoryDecl {
+                    source: UseSource::Child("b".to_string()),
+                    source_name: "baz_data".into(),
+                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    rights: *rights::READ_RIGHTS,
+                    subdir: None,
+                }))
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Child("b".to_string()),
+                    source_name: "baz_svc".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source: ExposeSource::Child("c".to_string()),
+                    source_name: "bar_data".into(),
+                    target_name: "baz_data".into(),
+                    target: ExposeTarget::Parent,
+                    rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
+                }))
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                    source: ExposeSource::Child("c".to_string()),
+                    source_name: "bar_svc".into(),
+                    target_name: "baz_svc".into(),
+                    target: ExposeTarget::Parent,
+                }))
+                .add_lazy_child("c")
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
+                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source: ExposeSource::Self_,
+                    source_name: "foo_data".into(),
+                    target_name: "bar_data".into(),
+                    target: ExposeTarget::Parent,
+                    rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
+                }))
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                    source: ExposeSource::Self_,
+                    source_name: "foo_svc".into(),
+                    target_name: "bar_svc".into(),
+                    target: ExposeTarget::Parent,
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.check_use(vec![].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+    test.check_use(
+        vec![].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///
 /// a: offers service /svc/foo from self as /svc/bar
 /// b: uses service /svc/bar as /svc/hippo
 ///
@@ -4920,6 +5064,61 @@ async fn use_service_from_parent() {
             assert_eq!(name, CapabilityName("foo".into()));
             assert_eq!(source_path, "/svc/foo".parse::<CapabilityPath>().unwrap());
             assert!(Arc::ptr_eq(&component.upgrade().unwrap(), &a_component));
+        }
+        _ => panic!("bad capability source"),
+    };
+}
+
+///   a
+///  /
+/// b
+///
+/// a: use from #b
+/// b: expose to parent from self
+#[fuchsia::test]
+async fn use_service_from_child() {
+    let use_decl = UseServiceDecl {
+        source: UseSource::Child("b".to_string()),
+        source_name: "foo".into(),
+        target_path: CapabilityPath::try_from("/foo").unwrap(),
+    };
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new().use_(use_decl.clone().into()).add_lazy_child("b").build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .service(ServiceDecl {
+                    name: "foo".into(),
+                    source_path: "/svc/foo".try_into().unwrap(),
+                })
+                .expose(ExposeDecl::Service(ExposeServiceDecl {
+                    sources: vec![ServiceSource {
+                        source: ExposeSource::Self_,
+                        source_name: "foo".into(),
+                    }],
+                    target_name: "foo".into(),
+                    target: ExposeTarget::Parent,
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTestBuilder::new("a", components).build().await;
+    let a_component = test.model.look_up(&AbsoluteMoniker::root()).await.expect("root instance");
+    let b_component = test.model.look_up(&vec!["b:0"].into()).await.expect("b instance");
+    let source = route_capability(RouteRequest::UseService(use_decl), &a_component)
+        .await
+        .expect("failed to route service");
+    match source {
+        RouteSource::Service(CapabilitySource::Component {
+            capability: ComponentCapability::Service(ServiceDecl { name, source_path }),
+            component,
+        }) => {
+            assert_eq!(name, CapabilityName("foo".into()));
+            assert_eq!(source_path, "/svc/foo".parse::<CapabilityPath>().unwrap());
+            assert!(Arc::ptr_eq(&component.upgrade().unwrap(), &b_component));
         }
         _ => panic!("bad capability source"),
     };

@@ -1161,6 +1161,7 @@ pub enum UseSource {
     Framework,
     Debug,
     Capability(CapabilityName),
+    Child(String),
 }
 
 impl FidlIntoNative<UseSource> for fsys::Ref {
@@ -1170,6 +1171,7 @@ impl FidlIntoNative<UseSource> for fsys::Ref {
             fsys::Ref::Framework(_) => UseSource::Framework,
             fsys::Ref::Debug(_) => UseSource::Debug,
             fsys::Ref::Capability(c) => UseSource::Capability(c.name.into()),
+            fsys::Ref::Child(c) => UseSource::Child(c.name),
             _ => panic!("invalid UseSource variant"),
         }
     }
@@ -1184,6 +1186,7 @@ impl NativeIntoFidl<fsys::Ref> for UseSource {
             UseSource::Capability(name) => {
                 fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
             }
+            UseSource::Child(name) => fsys::Ref::Child(fsys::ChildRef { name, collection: None }),
         }
     }
 }
@@ -1591,6 +1594,12 @@ mod tests {
                         target_path: Some("/svc/legacy_mynetstack".to_string()),
                         ..fsys::UseProtocolDecl::EMPTY
                     }),
+                    fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
+                        source: Some(fsys::Ref::Child(fsys::ChildRef { name: "echo".to_string(), collection: None})),
+                        source_name: Some("echo_service".to_string()),
+                        target_path: Some("/svc/echo_service".to_string()),
+                        ..fsys::UseProtocolDecl::EMPTY
+                    }),
                     fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
                         source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                         source_name: Some("dir".to_string()),
@@ -1945,6 +1954,11 @@ mod tests {
                             source_name: "legacy_netstack".try_into().unwrap(),
                             target_path: "/svc/legacy_mynetstack".try_into().unwrap(),
                         }),
+                        UseDecl::Protocol(UseProtocolDecl {
+                            source: UseSource::Child("echo".to_string()),
+                            source_name: "echo_service".try_into().unwrap(),
+                            target_path: "/svc/echo_service".try_into().unwrap(),
+                        }),
                         UseDecl::Directory(UseDirectoryDecl {
                             source: UseSource::Framework,
                             source_name: "dir".try_into().unwrap(),
@@ -1966,7 +1980,7 @@ mod tests {
                             target_name: "diagnostics_ready".into(),
                             filter: Some(hashmap!{"path".to_string() =>  DictionaryValue::Str("/diagnostics".to_string())}),
                             mode: EventMode::Sync,
-                        })
+                        }),
                     ],
                     exposes: vec![
                         ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -2207,6 +2221,27 @@ mod tests {
     }
 
     test_fidl_into_and_from! {
+        fidl_into_and_from_use_source => {
+            input = vec![
+                fsys::Ref::Parent(fsys::ParentRef{}),
+                fsys::Ref::Framework(fsys::FrameworkRef{}),
+                fsys::Ref::Debug(fsys::DebugRef{}),
+                fsys::Ref::Capability(fsys::CapabilityRef {name: "capability".to_string()}),
+                fsys::Ref::Child(fsys::ChildRef {
+                    name: "foo".to_string(),
+                    collection: None,
+                }),
+            ],
+            input_type = fsys::Ref,
+            result = vec![
+                UseSource::Parent,
+                UseSource::Framework,
+                UseSource::Debug,
+                UseSource::Capability(CapabilityName("capability".to_string())),
+                UseSource::Child("foo".to_string()),
+            ],
+            result_type = UseSource,
+        },
         fidl_into_and_from_expose_source => {
             input = vec![
                 fsys::Ref::Self_(fsys::SelfRef {}),

@@ -515,7 +515,10 @@ impl<'a> ValidationContext<'a> {
         }
 
         if let Some(cml::UseFromRef::Named(name)) = &use_.from {
-            self.validate_component_capability_ref("\"use\" source", &cml::AnyRef::Named(name))?;
+            self.validate_component_child_or_capability_ref(
+                "\"use\" source",
+                cml::AnyRef::Named(name),
+            )?;
         }
 
         Ok(())
@@ -1303,7 +1306,7 @@ mod tests {
         assert_matches!(
             result,
             Err(Error::Parse { err, location: Some(l), filename: Some(f) })
-                if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"debug\", \"#<capability-name>\", or none" &&
+                if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"debug\", \"#<capability-name>\", \"#<child-name>\", or none" &&
                 l == Location { line: 5, column: 21 } &&
                 f.ends_with("/test.cml")
         );
@@ -1483,7 +1486,7 @@ mod tests {
                   { "protocol": "CoolFonts", "from": "self" }
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"debug\", \"#<capability-name>\", or none"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"debug\", \"#<capability-name>\", \"#<child-name>\", or none"
         ),
         test_cml_use_from_missing_capability(
             json!({
@@ -1491,7 +1494,7 @@ mod tests {
                   { "protocol": "fuchsia.sys2.Admin", "from": "#mystorage" }
                 ]
             }),
-            Err(Error::Validate { err, .. }) if &err == "\"use\" source \"#mystorage\" does not appear in \"capabilities\""
+            Err(Error::Validate { err, .. }) if &err == "\"use\" source \"#mystorage\" does not appear in \"children\" or \"capabilities\""
         ),
         test_cml_use_bad_path(
             json!({

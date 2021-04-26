@@ -550,7 +550,9 @@ impl fmt::Display for AnyRef<'_> {
 
 /// A reference in a `use from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
-#[reference(expected = "\"parent\", \"framework\", \"debug\", \"#<capability-name>\", or none")]
+#[reference(
+    expected = "\"parent\", \"framework\", \"debug\", \"#<capability-name>\", \"#<child-name>\", or none"
+)]
 pub enum UseFromRef {
     /// A reference to the parent.
     Parent,
@@ -558,11 +560,11 @@ pub enum UseFromRef {
     Framework,
     /// A reference to debug.
     Debug,
-    /// A reference to a capability declared on self.
+    /// A reference to a child or a capability declared on self.
     ///
-    /// This is only valid on use declarations for a protocol that references a storage capability
-    /// declared in the same component, which will cause the framework to host a
-    /// fuchsia.sys2.StorageAdmin protocol for the component.
+    /// A reference to a capability is only valid on use declarations for a protocol that
+    /// references a storage capability declared in the same component, which will cause the
+    /// framework to host a fuchsia.sys2.StorageAdmin protocol for the component.
     ///
     /// This cannot be used to directly access capabilities that a component itself declares.
     Named(Name),

@@ -753,6 +753,20 @@ impl ErrorNotFoundFromParent for OfferProtocolDecl {
     }
 }
 
+impl ErrorNotFoundInChild for UseProtocolDecl {
+    fn error_not_found_in_child(
+        moniker: AbsoluteMoniker,
+        child_moniker: PartialMoniker,
+        capability_name: CapabilityName,
+    ) -> RoutingError {
+        RoutingError::UseFromChildExposeNotFound {
+            child_moniker,
+            moniker,
+            capability_id: capability_name.into(),
+        }
+    }
+}
+
 impl ErrorNotFoundInChild for OfferProtocolDecl {
     fn error_not_found_in_child(
         moniker: AbsoluteMoniker,
@@ -799,6 +813,20 @@ impl ErrorNotFoundFromParent for OfferServiceDecl {
     }
 }
 
+impl ErrorNotFoundInChild for UseServiceDecl {
+    fn error_not_found_in_child(
+        moniker: AbsoluteMoniker,
+        child_moniker: PartialMoniker,
+        capability_name: CapabilityName,
+    ) -> RoutingError {
+        RoutingError::UseFromChildExposeNotFound {
+            child_moniker,
+            moniker,
+            capability_id: capability_name.into(),
+        }
+    }
+}
+
 impl ErrorNotFoundInChild for OfferServiceDecl {
     fn error_not_found_in_child(
         moniker: AbsoluteMoniker,
@@ -842,6 +870,20 @@ impl ErrorNotFoundFromParent for OfferDirectoryDecl {
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::OfferFromParentNotFound { moniker, capability_id: capability_name.into() }
+    }
+}
+
+impl ErrorNotFoundInChild for UseDirectoryDecl {
+    fn error_not_found_in_child(
+        moniker: AbsoluteMoniker,
+        child_moniker: PartialMoniker,
+        capability_name: CapabilityName,
+    ) -> RoutingError {
+        RoutingError::UseFromChildExposeNotFound {
+            child_moniker,
+            moniker,
+            capability_id: capability_name.into(),
+        }
     }
 }
 
@@ -1039,6 +1081,20 @@ impl ErrorNotFoundInChild for ExposeResolverDecl {
         RoutingError::ExposeFromChildExposeNotFound {
             moniker,
             child_moniker,
+            capability_id: capability_name.into(),
+        }
+    }
+}
+
+impl ErrorNotFoundInChild for UseEventDecl {
+    fn error_not_found_in_child(
+        moniker: AbsoluteMoniker,
+        child_moniker: PartialMoniker,
+        capability_name: CapabilityName,
+    ) -> RoutingError {
+        RoutingError::UseFromChildExposeNotFound {
+            child_moniker,
+            moniker,
             capability_id: capability_name.into(),
         }
     }

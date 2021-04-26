@@ -117,6 +117,9 @@ where
             UseResult::FromParent(offer, component) => {
                 self.route_from_offer(offer, component, sources, visitor).await
             }
+            UseResult::FromChild(_use_decl, _component) => {
+                unreachable!("found use from child but capability cannot be exposed")
+            }
         }
     }
 
@@ -159,7 +162,7 @@ where
 // strategy.
 impl<U, O, E> RoutingStrategy<Use<U>, Offer<O>, Expose<E>>
 where
-    U: UseDeclCommon + ErrorNotFoundFromParent + Into<UseDecl> + 'static,
+    U: UseDeclCommon + ErrorNotFoundFromParent + ErrorNotFoundInChild + Into<UseDecl> + 'static,
     O: OfferDeclCommon
         + ErrorNotFoundFromParent
         + ErrorNotFoundInChild
@@ -195,10 +198,27 @@ where
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
         V: Clone + Send + Sync + 'static,
     {
-        match Use::route(use_decl, use_target, &sources, visitor).await? {
+        match Use::route(use_decl, use_target.clone(), &sources, visitor).await? {
             UseResult::Source(source) => return Ok(source),
             UseResult::FromParent(offer, component) => {
                 self.route_from_offer(offer, component, sources, visitor).await
+            }
+            UseResult::FromChild(use_decl, child_component) => {
+                let child_decl = child_component.decl().await?;
+                let expose_decl = find_matching_expose(use_decl.source_name(), &child_decl)
+                    .cloned()
+                    .ok_or_else(|| {
+                        let child_moniker = child_component
+                            .child_moniker()
+                            .expect("ChildMoniker should exist")
+                            .to_partial();
+                        <U as ErrorNotFoundInChild>::error_not_found_in_child(
+                            use_target.abs_moniker().clone(),
+                            child_moniker,
+                            use_decl.source_name().clone(),
+                        )
+                    })?;
+                self.route_from_expose(expose_decl, child_component, sources, visitor).await
             }
         }
     }
@@ -670,11 +690,16 @@ where
 pub struct Use<U>(PhantomData<U>);
 
 /// The result of routing a Use declaration to the next phase.
-enum UseResult<C: ComponentInstanceInterface, O> {
+enum UseResult<C: ComponentInstanceInterface, O, U> {
     /// The source of the Use was found (Framework, AboveRoot, etc.)
     Source(CapabilitySourceInterface<C>),
     /// The Use led to a parent Offer declaration.
     FromParent(O, Arc<C>),
+    /// The Use led to a child Expose declaration.
+    /// Note: Instead of FromChild carrying an ExposeDecl of the matching child, it carries a
+    /// UseDecl. This is because some RoutingStrategy<> don't support Expose, but are still
+    /// required to enumerate over UseResult<>.
+    FromChild(U, Arc<C>),
 }
 
 impl<U> Use<U>
@@ -688,7 +713,7 @@ where
         target: Arc<C>,
         sources: &S,
         visitor: &mut V,
-    ) -> Result<UseResult<C, O>, RoutingError>
+    ) -> Result<UseResult<C, O, U>, RoutingError>
     where
         C: ComponentInstanceInterface,
         S: Sources,
@@ -747,6 +772,21 @@ where
                     Ok(UseResult::FromParent(parent_offer, parent_component))
                 }
             },
+            UseSource::Child(name) => {
+                let moniker = target.abs_moniker();
+                let child_component = {
+                    let partial = PartialMoniker::new(name.clone(), None);
+                    target.get_live_child(&partial).await?.ok_or_else(|| {
+                        RoutingError::use_from_child_not_found(
+                            moniker,
+                            use_.source_name().clone(),
+                            name.clone(),
+                        )
+                    })?
+                };
+
+                Ok(UseResult::FromChild(use_, child_component))
+            }
             UseSource::Debug => {
                 // This is not supported today. It might be worthwhile to support this if
                 // more than just protocol has a debug capability.

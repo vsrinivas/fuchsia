@@ -11,7 +11,7 @@ use {
     async_trait::async_trait,
     cm_rust::{
         CapabilityDecl, CapabilityName, ComponentDecl, DependencyType, OfferDecl, OfferSource,
-        OfferTarget, RegistrationSource, StorageDirectorySource,
+        OfferTarget, RegistrationSource, StorageDirectorySource, UseDecl, UseSource,
     },
     futures::future::select_all,
     maplit::hashset,
@@ -46,6 +46,7 @@ impl Action for ShutdownAction {
 /// may be either a component or a component collection.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
 pub enum DependencyNode {
+    Parent,
     Child(String),
     Collection(String),
 }
@@ -74,9 +75,19 @@ fn find_storage_provider(
     None
 }
 
-async fn shutdown_component(child: ShutdownInfo) -> Result<ChildMoniker, ModelError> {
-    ActionSet::register(child.component, ShutdownAction::new()).await?;
-    Ok(child.moniker.clone())
+async fn shutdown_component(target: ShutdownInfo) -> Result<ParentOrChildMoniker, ModelError> {
+    match target.moniker {
+        ParentOrChildMoniker::Parent => {
+            // TODO: Put the parent in a "shutting down" state so that if it creates new instances
+            // after this point, they are created in a shut down state.
+            target.component.stop_instance(true).await?;
+        }
+        ParentOrChildMoniker::ChildMoniker(_) => {
+            ActionSet::register(target.component, ShutdownAction::new()).await?;
+        }
+    }
+
+    Ok(target.moniker.clone())
 }
 
 /// Structure which holds bidirectional capability maps used during the
@@ -84,10 +95,10 @@ async fn shutdown_component(child: ShutdownInfo) -> Result<ChildMoniker, ModelEr
 struct ShutdownJob {
     /// A map from users of capabilities to the components that provide those
     /// capabilities
-    target_to_sources: HashMap<ChildMoniker, Vec<ChildMoniker>>,
+    target_to_sources: HashMap<ParentOrChildMoniker, Vec<ParentOrChildMoniker>>,
     /// A map from providers of capabilities to those components which use the
     /// capabilities
-    source_to_targets: HashMap<ChildMoniker, ShutdownInfo>,
+    source_to_targets: HashMap<ParentOrChildMoniker, ShutdownInfo>,
 }
 
 /// ShutdownJob encapsulates the logic and state require to shutdown a component.
@@ -95,38 +106,48 @@ impl ShutdownJob {
     /// Creates a new ShutdownJob by examining the Component's declaration and
     /// runtime state to build up the necessary data structures to stop
     /// components in the component in dependency order.
-    pub async fn new(state: &ResolvedInstanceState) -> ShutdownJob {
-        // `children` represents the dependency relationships between the
-        // children as expressed in the component's declaration.
+    pub async fn new(
+        instance: &Arc<ComponentInstance>,
+        state: &ResolvedInstanceState,
+    ) -> ShutdownJob {
+        // `dependency_map` represents the dependency relationships between the nodes in this
+        // realm (the children, and the parent), as expressed in the component's declaration.
         // This representation must be reconciled with the runtime state of the
         // component. This means mapping children in the declaration with the one
         // or more children that may exist in collections and one or more
         // instances with a matching PartialMoniker that may exist.
-        let children = process_component_dependencies(state.decl());
-        let mut source_to_targets: HashMap<ChildMoniker, ShutdownInfo> = HashMap::new();
+        // `dependency_map` maps server => clients (aka provider => consumers, or source => targets)
+        let dependency_map = process_component_dependencies(state.decl());
+        let mut source_to_targets: HashMap<ParentOrChildMoniker, ShutdownInfo> = HashMap::new();
 
-        for (child_name, sibling_deps) in children {
-            let deps = get_child_monikers(&sibling_deps, state);
+        for (source, targets) in dependency_map {
+            let dependents = get_shutdown_monikers(&targets, state);
 
-            let singleton_child_set = hashset![child_name];
+            let singleton_source = hashset![source];
             // The shutdown target may be a collection, if so this will expand
             // the collection out into a list of all its members, otherwise it
             // contains a single component.
-            let matching_children: Vec<_> =
-                get_child_monikers(&singleton_child_set, state).into_iter().collect();
-            for child in matching_children {
-                let component =
-                    state.get_child(&child).expect("component not found in children").clone();
+            let matching_sources: Vec<_> =
+                get_shutdown_monikers(&singleton_source, state).into_iter().collect();
+            for source in matching_sources {
+                let component = match &source {
+                    ParentOrChildMoniker::Parent => instance.clone(),
+                    ParentOrChildMoniker::ChildMoniker(moniker) => {
+                        state.get_child(&moniker).expect("component not found in children").clone()
+                    }
+                };
 
                 source_to_targets.insert(
-                    child.clone(),
-                    ShutdownInfo { moniker: child, dependents: deps.clone(), component },
+                    source.clone(),
+                    ShutdownInfo { moniker: source, dependents: dependents.clone(), component },
                 );
             }
         }
-
-        let mut target_to_sources: HashMap<ChildMoniker, Vec<ChildMoniker>> = HashMap::new();
-        // Look at each of the children
+        // `target_to_sources` is the inverse of `source_to_targets`, and maps a target to all of
+        // its dependencies. This inverse mapping gives us a way to do quick lookups when updating
+        // `source_to_targets` as we shutdown components in execute().
+        let mut target_to_sources: HashMap<ParentOrChildMoniker, Vec<ParentOrChildMoniker>> =
+            HashMap::new();
         for provider in source_to_targets.values() {
             // All listed siblings are ones that depend on this child
             // and all those siblings must stop before this one
@@ -194,21 +215,21 @@ impl ShutdownJob {
 
             // Look up the dependencies of the component that stopped
             match self.target_to_sources.remove(&moniker) {
-                Some(vec) => {
-                    for dep_moniker in vec {
+                Some(sources) => {
+                    for source in sources {
                         let ready_to_stop = {
-                            if let Some(child) = self.source_to_targets.get_mut(&dep_moniker) {
-                                child.dependents.remove(&moniker);
+                            if let Some(info) = self.source_to_targets.get_mut(&source) {
+                                info.dependents.remove(&moniker);
                                 // Have all of this components dependents stopped?
-                                child.dependents.is_empty()
+                                info.dependents.is_empty()
                             } else {
                                 // The component that provided a capability to
                                 // the stopped component doesn't exist or
                                 // somehow already stopped. This is unexpected.
                                 panic!(
-                                    "The component '{}' appears to have stopped before its \
-                                     dependency '{}'",
-                                    moniker, dep_moniker
+                                    "The component '{:?}' appears to have stopped before its \
+                                     dependency '{:?}'",
+                                    moniker, source
                                 );
                             }
                         };
@@ -217,7 +238,7 @@ impl ShutdownJob {
                         if ready_to_stop {
                             stop_targets.push(
                                 self.source_to_targets
-                                    .remove(&dep_moniker)
+                                    .remove(&source)
                                     .expect("A key that was just available has disappeared."),
                             );
                         }
@@ -252,19 +273,26 @@ async fn do_shutdown(component: &Arc<ComponentInstance>) -> Result<(), ModelErro
         }
         match *state {
             InstanceState::Resolved(ref s) => {
-                let mut shutdown_job = ShutdownJob::new(s).await;
+                let mut shutdown_job = ShutdownJob::new(component, s).await;
                 drop(state);
                 Box::pin(shutdown_job.execute()).await?;
+                return Ok(());
             }
             InstanceState::New | InstanceState::Discovered | InstanceState::Destroyed => {}
         }
     }
-    // Now that all children have shut down, shut down the parent.
-    // TODO: Put the parent in a "shutting down" state so that if it creates new instances
+    // Control flow arrives here if the component isn't resolved.
+    // TODO: Put this component in a "shutting down" state so that if it creates new instances
     // after this point, they are created in a shut down state.
     component.stop_instance(true).await?;
 
     Ok(())
+}
+
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+enum ParentOrChildMoniker {
+    Parent,
+    ChildMoniker(ChildMoniker),
 }
 
 /// Used to track information during the shutdown process. The dependents
@@ -273,9 +301,9 @@ async fn do_shutdown(component: &Arc<ComponentInstance>) -> Result<(), ModelErro
 struct ShutdownInfo {
     // TODO(jmatt) reduce visibility of fields
     /// The identifier for this component
-    pub moniker: ChildMoniker,
+    pub moniker: ParentOrChildMoniker,
     /// The components that this component offers capabilities to
-    pub dependents: HashSet<ChildMoniker>,
+    pub dependents: HashSet<ParentOrChildMoniker>,
     pub component: Arc<ComponentInstance>,
 }
 
@@ -285,42 +313,45 @@ impl fmt::Debug for ShutdownInfo {
     }
 }
 
-/// Given a set of DependencyNodes, find all the ChildMonikers in the supplied
-/// Component that match.
-fn get_child_monikers(
-    child_names: &HashSet<DependencyNode>,
+/// Given a set of DependencyNodes, find all the matching ParentOrChildMonikers in the supplied
+/// Component.
+fn get_shutdown_monikers(
+    nodes: &HashSet<DependencyNode>,
     component_state: &ResolvedInstanceState,
-) -> HashSet<ChildMoniker> {
-    let mut deps: HashSet<ChildMoniker> = HashSet::new();
-    let components = component_state.all_children();
+) -> HashSet<ParentOrChildMoniker> {
+    let mut deps: HashSet<ParentOrChildMoniker> = HashSet::new();
+    let all_children = component_state.all_children();
 
-    for child in child_names {
-        match child {
+    for node in nodes {
+        match node {
             DependencyNode::Child(name) => {
                 let dep_moniker = PartialMoniker::new(name.to_string(), None);
                 let matching_children = component_state.get_all_child_monikers(&dep_moniker);
                 for m in matching_children {
-                    deps.insert(m);
+                    deps.insert(ParentOrChildMoniker::ChildMoniker(m));
                 }
             }
             DependencyNode::Collection(name) => {
-                for moniker in components.keys() {
+                for moniker in all_children.keys() {
                     match moniker.collection() {
                         Some(m) => {
                             if m == name {
-                                deps.insert(moniker.clone());
+                                deps.insert(ParentOrChildMoniker::ChildMoniker(moniker.clone()));
                             }
                         }
                         None => {}
                     }
                 }
             }
+            DependencyNode::Parent => {
+                deps.insert(ParentOrChildMoniker::Parent);
+            }
         }
     }
     deps
 }
 
-/// Maps a dependency node (child or collection) to the nodes that depend on it.
+/// Maps a dependency node (parent, child or collection) to the nodes that depend on it.
 pub type DependencyMap = HashMap<DependencyNode, HashSet<DependencyNode>>;
 
 /// For a given ComponentDecl, parse it, identify capability dependencies
@@ -342,10 +373,56 @@ pub fn process_component_dependencies(decl: &ComponentDecl) -> DependencyMap {
             .iter()
             .map(|c| (DependencyNode::Collection(c.name.clone()), HashSet::new())),
     );
+    dependency_map.insert(DependencyNode::Parent, HashSet::new());
 
     get_dependencies_from_offers(decl, &mut dependency_map);
     get_dependencies_from_environments(decl, &mut dependency_map);
+    get_dependencies_from_uses(decl, &mut dependency_map);
     dependency_map
+}
+
+/// Loops through all the use declarations to determine if parents depend on child capabilities, and vice-versa.
+fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut DependencyMap) {
+    // - By default, all children are dependents of the parent (`decl`)
+    // - If parent (`decl`) uses from child, then child's dependent is parent instead.
+    let add_to_dependency_map = |dependency_map: &mut DependencyMap, source: &UseSource| {
+        match source {
+            UseSource::Child(name) => {
+                match dependency_map.get_mut(&DependencyNode::Child(name.to_string())) {
+                    Some(targets) => {
+                        targets.insert(DependencyNode::Parent);
+                    }
+                    _ => {
+                        panic!("A dependency went off the map!");
+                    }
+                }
+            }
+            // capabilities which are not `use` from child are not relevant.
+            _ => {}
+        }
+    };
+    for use_ in &decl.uses {
+        match use_ {
+            UseDecl::Protocol(decl) => add_to_dependency_map(dependency_map, &decl.source),
+            UseDecl::Service(decl) => add_to_dependency_map(dependency_map, &decl.source),
+            UseDecl::Directory(decl) => add_to_dependency_map(dependency_map, &decl.source),
+            // storage doesn't have a `use` source; storage is always assumed to be from the parent.
+            UseDecl::Storage(_decl) => {}
+            UseDecl::Event(decl) => add_to_dependency_map(dependency_map, &decl.source),
+            // event streams specify a `use` source.
+            UseDecl::EventStream(_decl) => {}
+        }
+    }
+    // Next, find all children/collections who don't provide for the parent, and make them the parent's dependents.
+    let mut parent_dependents = dependency_map
+        .remove(&DependencyNode::Parent)
+        .expect("Parent was not found in the dependency_map");
+    for (source, targets) in dependency_map.iter() {
+        if !targets.contains(&DependencyNode::Parent) {
+            parent_dependents.insert(source.clone());
+        }
+    }
+    dependency_map.insert(DependencyNode::Parent, parent_dependents);
 }
 
 /// Loops through all the offer declarations to determine which siblings
@@ -637,6 +714,7 @@ mod tests {
         };
 
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childA".to_string())]));
         expected.push((DependencyNode::Child("childA".to_string()), vec![]));
         validate_results(expected, process_component_dependencies(&decl));
     }
@@ -661,6 +739,7 @@ mod tests {
         };
 
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childA".to_string())]));
         expected.push((DependencyNode::Child("childA".to_string()), vec![]));
         validate_results(expected, process_component_dependencies(&decl));
     }
@@ -684,6 +763,7 @@ mod tests {
         };
 
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childA".to_string())]));
         expected.push((DependencyNode::Child("childA".to_string()), vec![]));
         validate_results(expected, process_component_dependencies(&decl));
     }
@@ -728,6 +808,13 @@ mod tests {
         v.sort_unstable();
         expected.push((DependencyNode::Child(child_b.name.clone()), v));
         expected.push((DependencyNode::Child(child_a.name.clone()), vec![]));
+        expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child(child_a.name.clone()),
+                DependencyNode::Child(child_b.name.clone()),
+            ],
+        ));
         expected.sort_unstable();
 
         validate_results(expected, process_component_dependencies(&decl));
@@ -752,6 +839,13 @@ mod tests {
         };
 
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child("childA".to_string()),
+                DependencyNode::Child("childB".to_string()),
+            ],
+        ));
         expected.push((DependencyNode::Child("childA".to_string()), vec![]));
         expected.push((DependencyNode::Child("childB".to_string()), vec![]));
         validate_results(expected, process_component_dependencies(&decl));
@@ -777,6 +871,13 @@ mod tests {
 
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
         expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child("childA".to_string()),
+                DependencyNode::Child("childB".to_string()),
+            ],
+        ));
+        expected.push((
             DependencyNode::Child("childA".to_string()),
             vec![DependencyNode::Child("childB".to_string())],
         ));
@@ -800,6 +901,13 @@ mod tests {
         };
 
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child("childA".to_string()),
+                DependencyNode::Collection("coll".to_string()),
+            ],
+        ));
         expected.push((
             DependencyNode::Child("childA".to_string()),
             vec![DependencyNode::Collection("coll".to_string())],
@@ -839,6 +947,14 @@ mod tests {
 
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
         expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child("childA".to_string()),
+                DependencyNode::Child("childB".to_string()),
+                DependencyNode::Child("childC".to_string()),
+            ],
+        ));
+        expected.push((
             DependencyNode::Child("childA".to_string()),
             vec![DependencyNode::Child("childB".to_string())],
         ));
@@ -877,6 +993,14 @@ mod tests {
         };
 
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child("childA".to_string()),
+                DependencyNode::Child("childB".to_string()),
+                DependencyNode::Child("childC".to_string()),
+            ],
+        ));
         expected.push((
             DependencyNode::Child("childA".to_string()),
             vec![DependencyNode::Child("childB".to_string())],
@@ -925,6 +1049,13 @@ mod tests {
         };
 
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child(child_a.name.clone()),
+                DependencyNode::Child(child_b.name.clone()),
+            ],
+        ));
         expected.push((DependencyNode::Child(child_b.name.clone()), vec![]));
         expected.push((DependencyNode::Child(child_a.name.clone()), vec![]));
         expected.sort_unstable();
@@ -979,6 +1110,13 @@ mod tests {
         v.sort_unstable();
         expected.push((DependencyNode::Child(child_b.name.clone()), v));
         expected.push((DependencyNode::Child(child_a.name.clone()), vec![]));
+        expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child(child_a.name.clone()),
+                DependencyNode::Child(child_b.name.clone()),
+            ],
+        ));
         expected.sort_unstable();
 
         validate_results(expected, process_component_dependencies(&decl));
@@ -1032,6 +1170,14 @@ mod tests {
             DependencyNode::Child(child_c.name.clone()),
         ];
         v.sort_unstable();
+        expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child(child_a.name.clone()),
+                DependencyNode::Child(child_b.name.clone()),
+                DependencyNode::Child(child_c.name.clone()),
+            ],
+        ));
         expected.push((DependencyNode::Child(child_b.name.clone()), v));
         expected.push((DependencyNode::Child(child_a.name.clone()), vec![]));
         expected.push((DependencyNode::Child(child_c.name.clone()), vec![]));
@@ -1089,6 +1235,14 @@ mod tests {
 
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
         expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child(child_a.name.clone()),
+                DependencyNode::Child(child_b.name.clone()),
+                DependencyNode::Child(child_c.name.clone()),
+            ],
+        ));
+        expected.push((
             DependencyNode::Child(child_b.name.clone()),
             vec![DependencyNode::Child(child_c.name.clone())],
         ));
@@ -1144,7 +1298,14 @@ mod tests {
         };
 
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-
+        expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child(child_a.name.clone()),
+                DependencyNode::Child(child_b.name.clone()),
+                DependencyNode::Child(child_c.name.clone()),
+            ],
+        ));
         expected.push((
             DependencyNode::Child(child_a.name.clone()),
             vec![DependencyNode::Child(child_b.name.clone())],
@@ -1249,6 +1410,16 @@ mod tests {
 
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
         expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child(child_a.name.clone()),
+                DependencyNode::Child(child_b.name.clone()),
+                DependencyNode::Child(child_c.name.clone()),
+                DependencyNode::Child(child_d.name.clone()),
+                DependencyNode::Child(child_e.name.clone()),
+            ],
+        ));
+        expected.push((
             DependencyNode::Child(child_a.name.clone()),
             vec![
                 DependencyNode::Child(child_b.name.clone()),
@@ -1323,6 +1494,77 @@ mod tests {
     }
 
     #[test]
+    fn test_use_from_child() {
+        let decl = ComponentDecl {
+            offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                source: OfferSource::Self_,
+                source_name: "serviceParent".into(),
+                target_name: "serviceParent".into(),
+                target: OfferTarget::Child("childA".to_string()),
+                dependency_type: DependencyType::Strong,
+            })],
+            children: vec![ChildDecl {
+                name: "childA".to_string(),
+                url: "ignored:///child".to_string(),
+                startup: fsys::StartupMode::Lazy,
+                environment: None,
+            }],
+            uses: vec![UseDecl::Protocol(UseProtocolDecl {
+                source: UseSource::Child("childA".to_string()),
+                source_name: "test.protocol".into(),
+                target_path: CapabilityPath::try_from("/svc/test.protocol").unwrap(),
+            })],
+            ..default_component_decl()
+        };
+
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((DependencyNode::Parent, vec![]));
+        expected.push((DependencyNode::Child("childA".to_string()), vec![DependencyNode::Parent]));
+        validate_results(expected, process_component_dependencies(&decl));
+    }
+
+    #[test]
+    fn test_use_from_some_children() {
+        let decl = ComponentDecl {
+            offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                source: OfferSource::Self_,
+                source_name: "serviceParent".into(),
+                target_name: "serviceParent".into(),
+                target: OfferTarget::Child("childA".to_string()),
+                dependency_type: DependencyType::Strong,
+            })],
+            children: vec![
+                ChildDecl {
+                    name: "childA".to_string(),
+                    url: "ignored:///child".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                    environment: None,
+                },
+                ChildDecl {
+                    name: "childB".to_string(),
+                    url: "ignored:///child".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                    environment: None,
+                },
+            ],
+            uses: vec![UseDecl::Protocol(UseProtocolDecl {
+                source: UseSource::Child("childA".to_string()),
+                source_name: "test.protocol".into(),
+                target_path: CapabilityPath::try_from("/svc/test.protocol").unwrap(),
+            })],
+            ..default_component_decl()
+        };
+
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        // childB is a dependent because we consider all children dependent, unless the parent
+        // uses something from the child.
+        expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childB".to_string())]));
+        expected.push((DependencyNode::Child("childA".to_string()), vec![DependencyNode::Parent]));
+        expected.push((DependencyNode::Child("childB".to_string()), vec![]));
+        validate_results(expected, process_component_dependencies(&decl));
+    }
+
+    #[test]
     fn test_resolver_capability_creates_dependency() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
@@ -1348,6 +1590,13 @@ mod tests {
         };
 
         let mut expected = vec![
+            (
+                DependencyNode::Parent,
+                vec![
+                    DependencyNode::Child(child_a.name.clone()),
+                    DependencyNode::Child(child_b.name.clone()),
+                ],
+            ),
             (
                 DependencyNode::Child(child_a.name.clone()),
                 vec![DependencyNode::Child(child_b.name.clone())],
@@ -2346,6 +2595,87 @@ mod tests {
                 Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
                 Lifecycle::Stop(vec!["a:0", "b:0"].into()),
                 Lifecycle::Stop(vec!["a:0"].into()),
+            ];
+            assert_eq!(events, expected);
+        }
+    }
+
+    /// Shut down `a`:
+    ///   a     (a use b)
+    ///  / \
+    /// b    c
+    /// In this case, c shuts down first, then a, then b.
+    #[fuchsia::test]
+    async fn shutdown_use_from_child() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .add_eager_child("b")
+                    .add_eager_child("c")
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Child("b".to_string()),
+                        source_name: "serviceC".into(),
+                        target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
+                    }))
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceC".into(),
+                        source_path: "/svc/serviceC".parse().unwrap(),
+                    })
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "serviceC".into(),
+                        target_name: "serviceC".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .build(),
+            ),
+            ("c", ComponentDeclBuilder::new().build()),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_c = test.look_up(vec!["a:0", "c:0"].into()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
+
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+
+        // Register shutdown action on "a", and wait for it. This should cause all components
+        // to shut down.
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+            let expected: Vec<_> = vec![
+                Lifecycle::Stop(vec!["a:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["a:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0"].into()),
             ];
             assert_eq!(events, expected);
         }
