@@ -15,12 +15,20 @@
 #include "threads_impl.h"
 #include "zircon_impl.h"
 
-__NO_SAFESTACK NO_ASAN static inline pthread_t prestart(void* arg) {
+__NO_SAFESTACK NO_ASAN static pthread_t prestart(void* arg) {
   pthread_t self = arg;
+
 #ifdef __aarch64__
   // Initialize the shadow call stack pointer, which grows up.
   __asm__ volatile("ldr x18, %0" : : "m"(self->shadow_call_stack.iov_base));
+
+  // Push our own return address on the shadow call stack so it appears as the
+  // first frame in a backtrace.  Before that, push a zero return address as an
+  // end marker similar to how CFI unwinding marks the base frame by having its
+  // return address column compute zero.
+  __asm__ volatile("stp xzr, %0, [x18], #16" : : "r"(__builtin_return_address(0)));
 #endif
+
   zxr_tp_set(zxr_thread_get_handle(&self->zxr_thread), pthread_to_tp(self));
   __sanitizer_thread_start_hook(self->sanitizer_hook, (thrd_t)self);
   return self;
@@ -60,9 +68,11 @@ int __pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict att
     return ENOTSUP;
 
   char thread_name[ZX_MAX_NAME_LEN];
-  thrd_t new = __allocate_thread(
-      attr._a_guardsize, attr._a_stacksize,
-      attr.__name != NULL ? attr.__name : attr.__c11 ? "thrd_t" : "pthread_t", thread_name);
+  thrd_t new = __allocate_thread(attr._a_guardsize, attr._a_stacksize,
+                                 attr.__name != NULL ? attr.__name
+                                 : attr.__c11        ? "thrd_t"
+                                                     : "pthread_t",
+                                 thread_name);
   if (new == NULL)
     return EAGAIN;
 

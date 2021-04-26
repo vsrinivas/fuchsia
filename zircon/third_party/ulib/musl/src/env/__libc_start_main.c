@@ -191,25 +191,32 @@ NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
         "jmp start_main\n"
         "# Target receives %[arg]"
         :
-        : [ base ] "r"(p.td->safe_stack.iov_base), [ len ] "r"(p.td->safe_stack.iov_len),
+        : [base] "r"(p.td->safe_stack.iov_base), [len] "r"(p.td->safe_stack.iov_len),
           "m"(p),  // Tell the compiler p's fields are all still alive.
-          [ arg ] "D"(&p));
+          [arg] "D"(&p));
 #elif defined(__aarch64__)
     __asm__(
         "add sp, %[base], %[len]\n"
         "mov x18, %[shadow_call_stack]\n"
-        // Neither sp nor x18 might be used as an input operand, but x0 might be.
-        // So clobber x0 last.  We don't need to declare it to the compiler as a
-        // clobber since we'll never come back and it's fine if it's used as an
-        // input operand.
+        // Push our own return address on the shadow call stack so it appears
+        // in a backtrace just as it would if this function itself were using
+        // the normal shadow-call-stack protocol.  Before that, push a zero
+        // return address as an end marker similar to how CFI unwinding marks
+        // the base frame by having its return address column compute zero.
+        "stp xzr, %[return_address], [x18], #16\n"
+        // Neither sp nor x18 might be used as an input operand, but x0 might
+        // be.  So clobber x0 last.  We don't need to declare it to the
+        // compiler as a clobber since we'll never come back and it's fine if
+        // it's used as an input operand.
         "mov x0, %[arg]\n"
         "b start_main"
         :
-        : [ base ] "r"(p.td->safe_stack.iov_base), [ len ] "r"(p.td->safe_stack.iov_len),
+        : [base] "r"(p.td->safe_stack.iov_base), [len] "r"(p.td->safe_stack.iov_len),
           // Shadow call stack grows up.
-          [ shadow_call_stack ] "r"(p.td->shadow_call_stack.iov_base),
+          [shadow_call_stack] "r"(p.td->shadow_call_stack.iov_base),
+          [return_address] "r"(__builtin_return_address(0)),
           "m"(p),  // Tell the compiler p's fields are all still alive.
-          [ arg ] "r"(&p));
+          [arg] "r"(&p));
 #else
 #error what architecture?
 #endif
