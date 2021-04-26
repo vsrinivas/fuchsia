@@ -26,7 +26,7 @@ struct ScpiOpp {
 
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Scpi {
-    GetSensor(string name) -> (zx.status s, uint32 sensor_id);
+    GetSensor(string:MAX name) -> (zx.status s, uint32 sensor_id);
     GetSensorValue(uint32 sensor_id) -> (zx.status s, uint32 sensor_value);
     GetDvfsInfo(uint8 power_domain) -> (zx.status s, ScpiOpp opps);
     GetDvfsIdx(uint8 power_domain) -> (zx.status s, uint16 index);
