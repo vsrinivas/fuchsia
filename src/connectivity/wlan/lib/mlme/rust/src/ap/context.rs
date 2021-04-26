@@ -77,6 +77,17 @@ impl Context {
         })
     }
 
+    /// Sends EAPOL.conf (fuchsia.wlan.mlme.EapolConfirm) to the SME.
+    pub fn send_mlme_eapol_conf(
+        &self,
+        result_code: fidl_mlme::EapolResultCode,
+        dst_addr: MacAddr,
+    ) -> Result<(), Error> {
+        self.device.access_sme_sender(|sender| {
+            sender.send_eapol_conf(&mut fidl_mlme::EapolConfirm { result_code, dst_addr })
+        })
+    }
+
     /// Sends MLME-AUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.5.4) to the SME.
     pub fn send_mlme_auth_ind(
         &self,

@@ -223,9 +223,21 @@ impl InfraBss {
         req: fidl_mlme::EapolRequest,
     ) -> Result<(), Error> {
         let client = get_client_mut(&mut self.clients, req.dst_addr)?;
-        client
+        match client
             .handle_mlme_eapol_req(ctx, req.src_addr, &req.data)
             .map_err(|e| make_client_error(client.addr, e))
+        {
+            Ok(()) => ctx.send_mlme_eapol_conf(fidl_mlme::EapolResultCode::Success, req.dst_addr),
+            Err(e) => {
+                if let Err(e) = ctx.send_mlme_eapol_conf(
+                    fidl_mlme::EapolResultCode::TransmissionFailure,
+                    req.dst_addr,
+                ) {
+                    error!("Failed to send eapol transmission failure: {:?}", e);
+                }
+                Err(e)
+            }
+        }
     }
 
     fn make_beacon_frame(
@@ -1051,6 +1063,12 @@ mod tests {
                 1, 2, 3,
             ][..]
         );
+
+        let confirm = fake_device
+            .next_mlme_msg::<fidl_mlme::EapolConfirm>()
+            .expect("Did not receive valid Eapol Confirm msg");
+        assert_eq!(confirm.result_code, fidl_mlme::EapolResultCode::Success);
+        assert_eq!(&confirm.dst_addr[..], &CLIENT_ADDR[..]);
     }
 
     #[test]
