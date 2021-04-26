@@ -127,7 +127,7 @@ class PixelTest : public gtest::RealLoopFixture {
     zx::time start = zx::clock::get_monotonic();
     while (zx::clock::get_monotonic() - start <= timeout) {
       fuchsia::ui::scenic::ScreenshotData screenshot;
-      bool ok;
+      bool ok = false;
       scenic_->TakeScreenshot(
           [this, &screenshot, &ok](fuchsia::ui::scenic::ScreenshotData screenshot_in, bool status) {
             ok = status;
