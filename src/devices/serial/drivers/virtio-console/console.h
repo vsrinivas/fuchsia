@@ -69,7 +69,7 @@ class TransferQueue {
 class ConsoleDevice : public Device,
                       public ddk::Device<ConsoleDevice, ddk::Messageable>,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE>,
-                      public fidl::WireRawChannelInterface<fuchsia_hardware_virtioconsole::Device> {
+                      public fidl::WireServer<fuchsia_hardware_virtioconsole::Device> {
  public:
   explicit ConsoleDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
   ~ConsoleDevice() override;
@@ -83,7 +83,7 @@ class ConsoleDevice : public Device,
   void IrqConfigChange() override {}  // No need to handle configuration changes
   const char* tag() const override { return "virtio-console"; }
 
-  void GetChannel(zx::channel req, GetChannelCompleter::Sync& completer) override;
+  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
   zx_status_t GetEvent(zx::eventpair* event) {
     return event_remote_.duplicate(ZX_RIGHTS_BASIC, event);
   }

@@ -16,8 +16,8 @@ namespace virtcon {
 // This is the class that accepts virtcon session's from virtcon's FIDL and manages
 // the sessions until they are closed.
 // This class is not thread safe.
-class SessionManager final : public fidl::WireInterface<fuchsia_virtualconsole::SessionManager> {
-  using fidl::WireInterface<fuchsia_virtualconsole::SessionManager>::CreateSession;
+class SessionManager final : public fidl::WireServer<fuchsia_virtualconsole::SessionManager> {
+  using fidl::WireServer<fuchsia_virtualconsole::SessionManager>::CreateSession;
 
  public:
   // Create a SessionManager. The pointers to `dispatcher` and `color_scheme` are unowned and
@@ -29,9 +29,10 @@ class SessionManager final : public fidl::WireInterface<fuchsia_virtualconsole::
   void Bind(fidl::ServerEnd<fuchsia_virtualconsole::SessionManager> request);
 
   // FIDL functions.
-  void CreateSession(::fidl::ServerEnd<fuchsia_hardware_pty::Device> session,
+  void CreateSession(CreateSessionRequestView request,
                      CreateSessionCompleter::Sync& completer) override;
-  void HasPrimaryConnected(HasPrimaryConnectedCompleter::Sync& completer) override;
+  void HasPrimaryConnected(HasPrimaryConnectedRequestView request,
+                           HasPrimaryConnectedCompleter::Sync& completer) override;
 
   // Create a Vc Session that reads and writes from `session`.
   // The `session` channel must represent a connection to a `fuchsia.hardware.pty.Device`.

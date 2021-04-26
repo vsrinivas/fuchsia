@@ -66,7 +66,7 @@ class FakeNetCopy : public netsvc::NetCopyInterface {
   void AbortWrite() override {}
 };
 
-class FakeSysinfo : public fidl::WireInterface<fuchsia_sysinfo::SysInfo> {
+class FakeSysinfo : public fidl::WireServer<fuchsia_sysinfo::SysInfo> {
  public:
   FakeSysinfo(async_dispatcher_t* dispatcher) {
     zx::channel remote;
@@ -74,17 +74,22 @@ class FakeSysinfo : public fidl::WireInterface<fuchsia_sysinfo::SysInfo> {
     fidl::BindSingleInFlightOnly(dispatcher, std::move(remote), this);
   }
 
-  void GetBoardName(GetBoardNameCompleter::Sync& completer) {
+  void GetBoardName(GetBoardNameRequestView request, GetBoardNameCompleter::Sync& completer) {
     completer.Reply(ZX_OK, fidl::StringView{board_, sizeof(board_)});
   }
 
-  void GetBoardRevision(GetBoardRevisionCompleter::Sync& completer) { completer.Reply(ZX_OK, 0); }
+  void GetBoardRevision(GetBoardRevisionRequestView request,
+                        GetBoardRevisionCompleter::Sync& completer) {
+    completer.Reply(ZX_OK, 0);
+  }
 
-  void GetBootloaderVendor(GetBootloaderVendorCompleter::Sync& completer) {
+  void GetBootloaderVendor(GetBootloaderVendorRequestView request,
+                           GetBootloaderVendorCompleter::Sync& completer) {
     completer.Reply(ZX_OK, fidl::StringView{vendor_, sizeof(vendor_)});
   }
 
-  void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync& completer) {
+  void GetInterruptControllerInfo(GetInterruptControllerInfoRequestView request,
+                                  GetInterruptControllerInfoCompleter::Sync& completer) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
   }
 

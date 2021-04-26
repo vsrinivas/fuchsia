@@ -9,90 +9,101 @@
 // The pty server half only supports OpenClient and SetWindowSize. Return ZX_ERR_NOT_SUPPORTED for
 // all of the others
 
-void PtyServerDevice::SetWindowSize(fuchsia_hardware_pty::wire::WindowSize size,
+void PtyServerDevice::SetWindowSize(SetWindowSizeRequestView request,
                                     SetWindowSizeCompleter::Sync& completer) {
   fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::SetWindowSize>> buf;
-  server_->set_window_size({.width = size.width, .height = size.height});
+  server_->set_window_size({.width = request->size.width, .height = request->size.height});
   completer.Reply(buf.view(), ZX_OK);
 }
-void PtyServerDevice::OpenClient(uint32_t id, fidl::ServerEnd<fuchsia_hardware_pty::Device> client,
+void PtyServerDevice::OpenClient(OpenClientRequestView request,
                                  OpenClientCompleter::Sync& completer) {
   fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::OpenClient>> buf;
-  completer.Reply(buf.view(), server_->CreateClient(id, std::move(client)));
+  completer.Reply(buf.view(), server_->CreateClient(request->id, std::move(request->client)));
 }
 
-void PtyServerDevice::ClrSetFeature(uint32_t clr, uint32_t set,
+void PtyServerDevice::ClrSetFeature(ClrSetFeatureRequestView request,
                                     ClrSetFeatureCompleter::Sync& completer) {
   fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::ClrSetFeature>> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, 0);
 }
 
-void PtyServerDevice::GetWindowSize(GetWindowSizeCompleter::Sync& completer) {
+void PtyServerDevice::GetWindowSize(GetWindowSizeRequestView request,
+                                    GetWindowSizeCompleter::Sync& completer) {
   fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::GetWindowSize>> buf;
   fuchsia_hardware_pty::wire::WindowSize wsz = {.width = 0, .height = 0};
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, wsz);
 }
 
-void PtyServerDevice::MakeActive(uint32_t client_pty_id, MakeActiveCompleter::Sync& completer) {
+void PtyServerDevice::MakeActive(MakeActiveRequestView request,
+                                 MakeActiveCompleter::Sync& completer) {
   fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::MakeActive>> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED);
 }
 
-void PtyServerDevice::ReadEvents(ReadEventsCompleter::Sync& completer) {
+void PtyServerDevice::ReadEvents(ReadEventsRequestView request,
+                                 ReadEventsCompleter::Sync& completer) {
   fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::ReadEvents>> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, 0);
 }
 
 // Assert in all of these, since these should be handled by fs::Connection before our
 // HandleFsSpecificMessage() is called.
-void PtyServerDevice::Read(uint64_t count, ReadCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void PtyServerDevice::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) {
+void PtyServerDevice::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> node,
-                            CloneCompleter::Sync& completer) {
+void PtyServerDevice::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Close(CloseCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void PtyServerDevice::Describe(DescribeCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void PtyServerDevice::GetAttr(GetAttrCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void PtyServerDevice::GetFlags(GetFlagsCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void PtyServerDevice::ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync& completer) {
+void PtyServerDevice::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
-                              WriteAtCompleter::Sync& completer) {
+void PtyServerDevice::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Seek(int64_t offset, fuchsia_io::wire::SeekOrigin start,
-                           SeekCompleter::Sync& completer) {
+void PtyServerDevice::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Truncate(uint64_t length, TruncateCompleter::Sync& completer) {
+void PtyServerDevice::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::SetFlags(uint32_t flags, SetFlagsCompleter::Sync& completer) {
+void PtyServerDevice::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::GetBuffer(uint32_t flags, GetBufferCompleter::Sync& completer) {
+void PtyServerDevice::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Sync(SyncCompleter::Sync& completer) { ZX_ASSERT(false); }
+void PtyServerDevice::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
 
-void PtyServerDevice::SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
-                              SetAttrCompleter::Sync& completer) {
+void PtyServerDevice::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void PtyServerDevice::Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void PtyServerDevice::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void PtyServerDevice::GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void PtyServerDevice::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void PtyServerDevice::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

@@ -20,7 +20,7 @@ namespace netsvc {
 using ReadCallback = fbl::Function<zx_status_t(void* /*buf*/, size_t /*offset*/, size_t /*size*/,
                                                size_t* /*actual*/)>;
 
-class PayloadStreamer : public fidl::WireInterface<fuchsia_paver::PayloadStream> {
+class PayloadStreamer : public fidl::WireServer<fuchsia_paver::PayloadStream> {
  public:
   PayloadStreamer(zx::channel chan, ReadCallback callback);
 
@@ -29,9 +29,9 @@ class PayloadStreamer : public fidl::WireInterface<fuchsia_paver::PayloadStream>
   PayloadStreamer(PayloadStreamer&&) = delete;
   PayloadStreamer& operator=(PayloadStreamer&&) = delete;
 
-  void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& completer);
+  void RegisterVmo(RegisterVmoRequestView request, RegisterVmoCompleter::Sync& completer) override;
 
-  void ReadData(ReadDataCompleter::Sync& completer);
+  void ReadData(ReadDataRequestView request, ReadDataCompleter::Sync& completer) override;
 
  private:
   ReadCallback read_;

@@ -16,18 +16,19 @@ PayloadStreamer::PayloadStreamer(zx::channel chan, ReadCallback callback)
   fidl::BindSingleInFlightOnly(async_get_default_dispatcher(), std::move(chan), this);
 }
 
-void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& completer) {
+void PayloadStreamer::RegisterVmo(RegisterVmoRequestView request,
+                                  RegisterVmoCompleter::Sync& completer) {
   if (vmo_) {
     completer.Reply(ZX_ERR_ALREADY_BOUND);
     return;
   }
 
-  vmo_ = std::move(vmo);
+  vmo_ = std::move(request->vmo);
   auto status = mapper_.Map(vmo_, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   completer.Reply(status);
 }
 
-void PayloadStreamer::ReadData(ReadDataCompleter::Sync& completer) {
+void PayloadStreamer::ReadData(ReadDataRequestView request, ReadDataCompleter::Sync& completer) {
   using fuchsia_paver::wire::ReadResult;
   ReadResult result;
   if (!vmo_) {

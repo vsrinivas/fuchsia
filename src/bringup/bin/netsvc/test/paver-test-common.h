@@ -79,25 +79,27 @@ constexpr AbrData kInitAbrData = {
         },
 };
 
-class FakePaver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver>,
-                  public fidl::WireInterface<fuchsia_paver::BootManager>,
-                  public fidl::WireRawChannelInterface<fuchsia_paver::DynamicDataSink> {
+class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
+                  public fidl::WireServer<fuchsia_paver::BootManager>,
+                  public fidl::WireServer<fuchsia_paver::DynamicDataSink> {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
     dispatcher_ = dispatcher;
-    return fidl::BindSingleInFlightOnly<fidl::WireRawChannelInterface<fuchsia_paver::Paver>>(
+    return fidl::BindSingleInFlightOnly<fidl::WireServer<fuchsia_paver::Paver>>(
         dispatcher, std::move(request), this);
   }
 
-  void FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync& _completer) override {
-    fidl::BindSingleInFlightOnly<fidl::WireRawChannelInterface<fuchsia_paver::DynamicDataSink>>(
-        dispatcher_, std::move(data_sink), this);
+  void FindDataSink(FindDataSinkRequestView request,
+                    FindDataSinkCompleter::Sync& _completer) override {
+    fidl::BindSingleInFlightOnly<fidl::WireServer<fuchsia_paver::DynamicDataSink>>(
+        dispatcher_, request->data_sink.TakeChannel(), this);
   }
 
-  void UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink,
+  void UseBlockDevice(UseBlockDeviceRequestView request,
                       UseBlockDeviceCompleter::Sync& _completer) override {
     auto result =
-        fidl::WireCall<fuchsia_device::Controller>(zx::unowned(block_device)).GetTopologicalPath();
+        fidl::WireCall<fuchsia_device::Controller>(request->block_device.borrow().channel())
+            .GetTopologicalPath();
     if (!result.ok() || result->result.is_err()) {
       return;
     }
@@ -108,47 +110,50 @@ class FakePaver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver>,
         return;
       }
     }
-    fidl::BindSingleInFlightOnly<fidl::WireRawChannelInterface<fuchsia_paver::DynamicDataSink>>(
-        dispatcher_, std::move(dynamic_data_sink), this);
+    fidl::BindSingleInFlightOnly<fidl::WireServer<fuchsia_paver::DynamicDataSink>>(
+        dispatcher_, request->data_sink.TakeChannel(), this);
   }
 
-  void FindBootManager(zx::channel boot_manager,
+  void FindBootManager(FindBootManagerRequestView request,
                        FindBootManagerCompleter::Sync& _completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kInitializeAbr);
     if (abr_supported_) {
-      fidl::BindSingleInFlightOnly<fidl::WireInterface<fuchsia_paver::BootManager>>(
-          dispatcher_, std::move(boot_manager), this);
+      fidl::BindSingleInFlightOnly<fidl::WireServer<fuchsia_paver::BootManager>>(
+          dispatcher_, request->boot_manager.TakeChannel(), this);
     }
   }
 
-  void QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync& completer) override {
+  void QueryCurrentConfiguration(QueryCurrentConfigurationRequestView request,
+                                 QueryCurrentConfigurationCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kQueryCurrentConfiguration);
     completer.ReplySuccess(fuchsia_paver::wire::Configuration::kA);
   }
 
-  void FindSysconfig(zx::channel sysconfig, FindSysconfigCompleter::Sync& _completer) override {}
+  void FindSysconfig(FindSysconfigRequestView request,
+                     FindSysconfigCompleter::Sync& _completer) override {}
 
-  void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync& completer) override {
+  void QueryActiveConfiguration(QueryActiveConfigurationRequestView request,
+                                QueryActiveConfigurationCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kQueryActiveConfiguration);
     completer.ReplySuccess(fuchsia_paver::wire::Configuration::kA);
   }
 
-  void QueryConfigurationStatus(fuchsia_paver::wire::Configuration configuration,
+  void QueryConfigurationStatus(QueryConfigurationStatusRequestView request,
                                 QueryConfigurationStatusCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kQueryConfigurationStatus);
     completer.ReplySuccess(fuchsia_paver::wire::ConfigurationStatus::kHealthy);
   }
 
-  void SetConfigurationActive(fuchsia_paver::wire::Configuration configuration,
+  void SetConfigurationActive(SetConfigurationActiveRequestView request,
                               SetConfigurationActiveCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kSetConfigurationActive);
     zx_status_t status;
-    switch (configuration) {
+    switch (request->configuration) {
       case fuchsia_paver::wire::Configuration::kA:
         abr_data_.slot_a.active = true;
         abr_data_.slot_a.unbootable = false;
@@ -168,12 +173,12 @@ class FakePaver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver>,
     completer.Reply(status);
   }
 
-  void SetConfigurationUnbootable(fuchsia_paver::wire::Configuration configuration,
+  void SetConfigurationUnbootable(SetConfigurationUnbootableRequestView request,
                                   SetConfigurationUnbootableCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kSetConfigurationUnbootable);
     zx_status_t status;
-    switch (configuration) {
+    switch (request->configuration) {
       case fuchsia_paver::wire::Configuration::kA:
         abr_data_.slot_a.unbootable = true;
         status = ZX_OK;
@@ -191,54 +196,52 @@ class FakePaver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver>,
     completer.Reply(status);
   }
 
-  void SetConfigurationHealthy(fuchsia_paver::wire::Configuration configuration,
+  void SetConfigurationHealthy(SetConfigurationHealthyRequestView request,
                                SetConfigurationHealthyCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kSetConfigurationHealthy);
     completer.Reply(ZX_OK);
   }
 
-  void Flush(fidl::WireRawChannelInterface<fuchsia_paver::DynamicDataSink>::FlushCompleter::Sync&
-                 completer) override {
+  void Flush(
+      fidl::WireServer<fuchsia_paver::DynamicDataSink>::FlushRequestView request,
+      fidl::WireServer<fuchsia_paver::DynamicDataSink>::FlushCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kDataSinkFlush);
     completer.Reply(ZX_OK);
   }
 
   void Flush(
-      fidl::WireInterface<fuchsia_paver::BootManager>::FlushCompleter::Sync& completer) override {
+      fidl::WireServer<fuchsia_paver::BootManager>::FlushRequestView request,
+      fidl::WireServer<fuchsia_paver::BootManager>::FlushCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kBootManagerFlush);
     completer.Reply(ZX_OK);
   }
 
-  void ReadAsset(fuchsia_paver::wire::Configuration configuration, fuchsia_paver::wire::Asset asset,
-                 ReadAssetCompleter::Sync& completer) override {
+  void ReadAsset(ReadAssetRequestView request, ReadAssetCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kReadAsset);
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void WriteAsset(fuchsia_paver::wire::Configuration configuration,
-                  fuchsia_paver::wire::Asset asset, fuchsia_mem::wire::Buffer payload,
-                  WriteAssetCompleter::Sync& completer) override {
+  void WriteAsset(WriteAssetRequestView request, WriteAssetCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kWriteAsset);
-    auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
+    auto status = request->payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
   }
 
-  void WriteFirmware(fuchsia_paver::wire::Configuration configuration, fidl::StringView type,
-                     fuchsia_mem::wire::Buffer payload,
+  void WriteFirmware(WriteFirmwareRequestView request,
                      WriteFirmwareCompleter::Sync& completer) override {
     using fuchsia_paver::wire::WriteFirmwareResult;
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kWriteFirmware);
-    last_firmware_type_ = std::string(type.data(), type.size());
+    last_firmware_type_ = std::string(request->type.data(), request->type.size());
 
     // Reply varies depending on whether we support |type| or not.
-    if (supported_firmware_type_ == std::string_view(type.data(), type.size())) {
-      auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
+    if (supported_firmware_type_ == std::string_view(request->type.data(), request->type.size())) {
+      auto status = request->payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
       completer.Reply(
           WriteFirmwareResult::WithStatus(fidl::ObjectView<zx_status_t>::FromExternal(&status)));
     } else {
@@ -248,7 +251,8 @@ class FakePaver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver>,
     }
   }
 
-  void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync& completer) override {
+  void WriteVolumes(WriteVolumesRequestView request,
+                    WriteVolumesCompleter::Sync& completer) override {
     {
       fbl::AutoLock al(&lock_);
       AppendCommand(Command::kWriteVolumes);
@@ -260,7 +264,7 @@ class FakePaver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver>,
       completer.Reply(status);
       return;
     }
-    fidl::WireSyncClient<fuchsia_paver::PayloadStream> stream(std::move(payload_stream));
+    fidl::WireSyncClient<fuchsia_paver::PayloadStream> stream(request->payload.TakeChannel());
     auto result = stream.RegisterVmo(std::move(vmo));
     status = result.ok() ? result.value().status : result.status();
     if (status != ZX_OK) {
@@ -308,35 +312,37 @@ class FakePaver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver>,
     completer.Reply(status);
   }
 
-  void WriteBootloader(fuchsia_mem::wire::Buffer payload,
+  void WriteBootloader(WriteBootloaderRequestView request,
                        WriteBootloaderCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kWriteBootloader);
-    auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
+    auto status = request->payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
   }
 
-  void WriteDataFile(fidl::StringView filename, fuchsia_mem::wire::Buffer payload,
+  void WriteDataFile(WriteDataFileRequestView request,
                      WriteDataFileCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kWriteDataFile);
-    auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
+    auto status = request->payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
   }
 
-  void WipeVolume(WipeVolumeCompleter::Sync& completer) override {
+  void WipeVolume(WipeVolumeRequestView request, WipeVolumeCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kWipeVolume);
     completer.ReplySuccess({});
   }
 
-  void InitializePartitionTables(InitializePartitionTablesCompleter::Sync& completer) override {
+  void InitializePartitionTables(InitializePartitionTablesRequestView request,
+                                 InitializePartitionTablesCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kInitPartitionTables);
     completer.Reply(ZX_OK);
   }
 
-  void WipePartitionTables(WipePartitionTablesCompleter::Sync& completer) override {
+  void WipePartitionTables(WipePartitionTablesRequestView request,
+                           WipePartitionTablesCompleter::Sync& completer) override {
     fbl::AutoLock al(&lock_);
     AppendCommand(Command::kWipePartitionTables);
     completer.Reply(ZX_OK);

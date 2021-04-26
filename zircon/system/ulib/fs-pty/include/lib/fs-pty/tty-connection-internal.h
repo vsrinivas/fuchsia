@@ -12,44 +12,41 @@ namespace fs_pty::internal {
 // We would like to construct a |NullPtyDevice| with some arbitrary arguments.
 // This class exists so that we don't need to templatize all of the implementation,
 // just the ctor.  The extra argument to the ctor in |NullPtyDevice| is discarded.
-class NullPtyDeviceImpl : public fidl::WireInterface<fuchsia_hardware_pty::Device> {
+class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> {
  public:
   NullPtyDeviceImpl() = default;
   ~NullPtyDeviceImpl() override = default;
 
   // fuchsia.hardware.pty.Device methods
-  void OpenClient(uint32_t id, fidl::ServerEnd<fuchsia_hardware_pty::Device> client,
-                  OpenClientCompleter::Sync& completer) final;
-  void ClrSetFeature(uint32_t clr, uint32_t set, ClrSetFeatureCompleter::Sync& completer) final;
-  void GetWindowSize(GetWindowSizeCompleter::Sync& completer) final;
-  void MakeActive(uint32_t client_pty_id, MakeActiveCompleter::Sync& completer) final;
-  void ReadEvents(ReadEventsCompleter::Sync& completer) final;
-  void SetWindowSize(fuchsia_hardware_pty::wire::WindowSize size,
+  void OpenClient(OpenClientRequestView request, OpenClientCompleter::Sync& completer) final;
+  void ClrSetFeature(ClrSetFeatureRequestView request,
+                     ClrSetFeatureCompleter::Sync& completer) final;
+  void GetWindowSize(GetWindowSizeRequestView request,
+                     GetWindowSizeCompleter::Sync& completer) final;
+  void MakeActive(MakeActiveRequestView request, MakeActiveCompleter::Sync& completer) final;
+  void ReadEvents(ReadEventsRequestView request, ReadEventsCompleter::Sync& completer) final;
+  void SetWindowSize(SetWindowSizeRequestView request,
                      SetWindowSizeCompleter::Sync& completer) final;
 
   // fuchsia.io.File methods (which were composed by fuchsia.hardware.pty.Device)
-  void Read(uint64_t count, ReadCompleter::Sync& completer) final;
-  void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync& completer) final;
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
+  void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) final;
 
-  void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) final;
-  void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
-               WriteAtCompleter::Sync& completer) final;
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
+  void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) final;
 
-  void Seek(int64_t offset, fuchsia_io::wire::SeekOrigin start,
-            SeekCompleter::Sync& completer) final;
-  void Truncate(uint64_t length, TruncateCompleter::Sync& completer) final;
-  void GetFlags(GetFlagsCompleter::Sync& completer) final;
-  void SetFlags(uint32_t flags, SetFlagsCompleter::Sync& completer) final;
-  void GetBuffer(uint32_t flags, GetBufferCompleter::Sync& completer) final;
+  void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
+  void Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) final;
+  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
+  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
+  void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) final;
 
-  void Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> node,
-             CloneCompleter::Sync& completer) final;
-  void Close(CloseCompleter::Sync& completer) final;
-  void Describe(DescribeCompleter::Sync& completer) final;
-  void Sync(SyncCompleter::Sync& completer) final;
-  void GetAttr(GetAttrCompleter::Sync& completer) final;
-  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
-               SetAttrCompleter::Sync& completer) final;
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final;
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final;
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final;
+  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
+  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
 };
 
 template <typename Console>

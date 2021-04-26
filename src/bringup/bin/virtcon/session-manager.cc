@@ -138,16 +138,17 @@ void SessionManager::Bind(fidl::ServerEnd<fuchsia_virtualconsole::SessionManager
   fidl::BindServer(dispatcher_, std::move(request), this);
 }
 
-void SessionManager::CreateSession(fidl::ServerEnd<fpty::Device> session,
+void SessionManager::CreateSession(CreateSessionRequestView request,
                                    CreateSessionCompleter::Sync& completer) {
-  completer.Reply(CreateSession(std::move(session)).status_value());
+  completer.Reply(CreateSession(std::move(request->session)).status_value());
 }
 
 zx::status<vc_t*> SessionManager::CreateSession(fidl::ServerEnd<fpty::Device> session) {
   return CreateSession(std::move(session), !keep_log_visible_ && (num_vcs_ == 0), color_scheme_);
 }
 
-void SessionManager::HasPrimaryConnected(HasPrimaryConnectedCompleter::Sync& completer) {
+void SessionManager::HasPrimaryConnected(HasPrimaryConnectedRequestView request,
+                                         HasPrimaryConnectedCompleter::Sync& completer) {
   completer.Reply(is_primary_bound());
 }
 

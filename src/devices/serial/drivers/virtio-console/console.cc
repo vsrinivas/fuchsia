@@ -342,9 +342,10 @@ zx_status_t ConsoleDevice::Write(const void* buf, size_t count, size_t* actual) 
   return ZX_OK;
 }
 
-void ConsoleDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync& completer) {
+void ConsoleDevice::GetChannel(GetChannelRequestView request,
+                               GetChannelCompleter::Sync& completer) {
   // Must post a task, since ManagedVfs is not thread-safe.
-  async::PostTask(loop_.dispatcher(), [this, req = std::move(req)]() mutable {
+  async::PostTask(loop_.dispatcher(), [this, req = request->req.TakeChannel()]() mutable {
     vfs_.Serve(console_vnode_, std::move(req), fs::VnodeConnectionOptions::ReadWrite());
   });
 }

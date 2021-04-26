@@ -91,13 +91,14 @@ void device_id_get(unsigned char mac[6], char out[HOST_NAME_MAX], uint32_t gener
   }
 }
 
-class DeviceNameProviderServer final : public fidl::WireInterface<fuchsia_device::NameProvider> {
+class DeviceNameProviderServer final : public fidl::WireServer<fuchsia_device::NameProvider> {
   const char* name;
   const size_t size;
 
  public:
   DeviceNameProviderServer(const char* device_name, size_t size) : name(device_name), size(size) {}
-  void GetDeviceName(GetDeviceNameCompleter::Sync& completer) override {
+  void GetDeviceName(GetDeviceNameRequestView request,
+                     GetDeviceNameCompleter::Sync& completer) override {
     completer.ReplySuccess(fidl::StringView::FromExternal(name, size));
   }
 };

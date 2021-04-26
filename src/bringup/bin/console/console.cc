@@ -135,8 +135,8 @@ zx_status_t Console::Log(fuchsia_logger::wire::LogMessage log) {
   return tx_sink_(reinterpret_cast<const uint8_t*>(buffer.data()), buffer.size());
 }
 
-void Console::Log(fuchsia_logger::wire::LogMessage log, LogCompleter::Sync& completer) {
-  zx_status_t status = Log(std::move(log));
+void Console::Log(LogRequestView request, LogCompleter::Sync& completer) {
+  zx_status_t status = Log(std::move(request->log));
   if (status != ZX_OK) {
     completer.Close(status);
     return;
@@ -144,9 +144,8 @@ void Console::Log(fuchsia_logger::wire::LogMessage log, LogCompleter::Sync& comp
   completer.Reply();
 }
 
-void Console::LogMany(fidl::VectorView<fuchsia_logger::wire::LogMessage> logs,
-                      LogManyCompleter::Sync& completer) {
-  for (auto& log : logs) {
+void Console::LogMany(LogManyRequestView request, LogManyCompleter::Sync& completer) {
+  for (auto& log : request->log) {
     zx_status_t status = Log(std::move(log));
     if (status != ZX_OK) {
       completer.Close(status);
@@ -156,4 +155,4 @@ void Console::LogMany(fidl::VectorView<fuchsia_logger::wire::LogMessage> logs,
   completer.Reply();
 }
 
-void Console::Done(DoneCompleter::Sync& completer) {}
+void Console::Done(DoneRequestView request, DoneCompleter::Sync& completer) {}

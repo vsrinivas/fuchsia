@@ -21,42 +21,44 @@
 
 namespace fs_pty::internal {
 
-void DispatchPtyDeviceMessage(fidl::WireInterface<fuchsia_hardware_pty::Device>* interface,
+void DispatchPtyDeviceMessage(fidl::WireServer<fuchsia_hardware_pty::Device>* interface,
                               fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
   fidl::WireDispatch<fuchsia_hardware_pty::Device>(interface, msg, txn);
 }
 
 // Return ZX_ERR_NOT_SUPPORTED for all of the PTY things we don't actually support
-void NullPtyDeviceImpl::OpenClient(uint32_t id,
-                                   fidl::ServerEnd<fuchsia_hardware_pty::Device> client,
+void NullPtyDeviceImpl::OpenClient(OpenClientRequestView request,
                                    OpenClientCompleter::Sync& completer) {
   fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::OpenClient>> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED);
 }
 
-void NullPtyDeviceImpl::ClrSetFeature(uint32_t clr, uint32_t set,
+void NullPtyDeviceImpl::ClrSetFeature(ClrSetFeatureRequestView request,
                                       ClrSetFeatureCompleter::Sync& completer) {
   fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::ClrSetFeature>> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, 0);
 }
 
-void NullPtyDeviceImpl::GetWindowSize(GetWindowSizeCompleter::Sync& completer) {
+void NullPtyDeviceImpl::GetWindowSize(GetWindowSizeRequestView request,
+                                      GetWindowSizeCompleter::Sync& completer) {
   fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::GetWindowSize>> buf;
   fuchsia_hardware_pty::wire::WindowSize wsz = {.width = 0, .height = 0};
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, wsz);
 }
 
-void NullPtyDeviceImpl::MakeActive(uint32_t client_pty_id, MakeActiveCompleter::Sync& completer) {
+void NullPtyDeviceImpl::MakeActive(MakeActiveRequestView request,
+                                   MakeActiveCompleter::Sync& completer) {
   fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::MakeActive>> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED);
 }
 
-void NullPtyDeviceImpl::ReadEvents(ReadEventsCompleter::Sync& completer) {
+void NullPtyDeviceImpl::ReadEvents(ReadEventsRequestView request,
+                                   ReadEventsCompleter::Sync& completer) {
   fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::ReadEvents>> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, 0);
 }
 
-void NullPtyDeviceImpl::SetWindowSize(fuchsia_hardware_pty::wire::WindowSize size,
+void NullPtyDeviceImpl::SetWindowSize(SetWindowSizeRequestView request,
                                       SetWindowSizeCompleter::Sync& completer) {
   fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::SetWindowSize>> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED);
@@ -65,55 +67,64 @@ void NullPtyDeviceImpl::SetWindowSize(fuchsia_hardware_pty::wire::WindowSize siz
 // We need to provide these methods because |fuchsia.hardware.pty.Device| composes |fuchsia.io|.
 // Assert in all of these, since these should be handled by fs::Connection before our
 // HandleFsSpecificMessage() is called.
-void NullPtyDeviceImpl::Read(uint64_t count, ReadCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void NullPtyDeviceImpl::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) {
+void NullPtyDeviceImpl::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> node,
-                              CloneCompleter::Sync& completer) {
+void NullPtyDeviceImpl::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Close(CloseCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void NullPtyDeviceImpl::Describe(DescribeCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void NullPtyDeviceImpl::GetAttr(GetAttrCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void NullPtyDeviceImpl::GetFlags(GetFlagsCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void NullPtyDeviceImpl::ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync& completer) {
+void NullPtyDeviceImpl::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
-                                WriteAtCompleter::Sync& completer) {
+void NullPtyDeviceImpl::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Seek(int64_t offset, fuchsia_io::wire::SeekOrigin start,
-                             SeekCompleter::Sync& completer) {
+void NullPtyDeviceImpl::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Truncate(uint64_t length, TruncateCompleter::Sync& completer) {
+void NullPtyDeviceImpl::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::SetFlags(uint32_t flags, SetFlagsCompleter::Sync& completer) {
+void NullPtyDeviceImpl::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::GetBuffer(uint32_t flags, GetBufferCompleter::Sync& completer) {
+void NullPtyDeviceImpl::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Sync(SyncCompleter::Sync& completer) { ZX_ASSERT(false); }
+void NullPtyDeviceImpl::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
 
-void NullPtyDeviceImpl::SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
-                                SetAttrCompleter::Sync& completer) {
+void NullPtyDeviceImpl::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void NullPtyDeviceImpl::Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void NullPtyDeviceImpl::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void NullPtyDeviceImpl::GetBuffer(GetBufferRequestView request,
+                                  GetBufferCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void NullPtyDeviceImpl::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void NullPtyDeviceImpl::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

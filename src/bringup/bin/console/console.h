@@ -20,7 +20,7 @@
 
 #include "fifo.h"
 
-class Console : public fidl::WireInterface<fuchsia_logger::LogListenerSafe>,
+class Console : public fidl::WireServer<fuchsia_logger::LogListenerSafe>,
                 public fbl::RefCounted<Console> {
  public:
   // Maximum amount of data that will be written to tx_sink_() per call.
@@ -59,10 +59,9 @@ class Console : public fidl::WireInterface<fuchsia_logger::LogListenerSafe>,
   void DebugReaderThread();
 
   // Functions to handle fuchsia.log.LogListenerSafe
-  void Log(fuchsia_logger::wire::LogMessage log, LogCompleter::Sync& completer) override;
-  void LogMany(fidl::VectorView<fuchsia_logger::wire::LogMessage> logs,
-               LogManyCompleter::Sync& completer) override;
-  void Done(DoneCompleter::Sync& completer) override;
+  void Log(LogRequestView request, LogCompleter::Sync& completer) override;
+  void LogMany(LogManyRequestView request, LogManyCompleter::Sync& completer) override;
+  void Done(DoneRequestView request, DoneCompleter::Sync& completer) override;
 
   Fifo rx_fifo_;
   zx::eventpair rx_event_;
