@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/io/llcpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
@@ -45,27 +45,30 @@ struct Context {
   size_t content_size;  // Must be <= zx_system_get_page_size().
   uint32_t last_flags;
 };
-class TestServer final : public fidl::WireInterface<fuchsia_io::File> {
+class TestServer final : public fuchsia_io::testing::File_TestBase {
  public:
   explicit TestServer(Context* context) : context(context) {}
 
-  void Clone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> object,
-             CloneCompleter::Sync& completer) override {}
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    ADD_FAILURE("%s should not be called", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
 
   void Close(CloseCompleter::Sync& completer) override { completer.Reply(ZX_OK); }
 
   void Describe(DescribeCompleter::Sync& completer) override {
     if (context->is_vmofile) {
-      zx::vmo vmo;
-      zx_status_t status = context->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
+      fuchsia_io::wire::Vmofile vmofile = {
+          .offset = 0,
+          .length = context->content_size,
+      };
+
+      zx_status_t status = context->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmofile.vmo);
       if (status != ZX_OK) {
+        completer.Close(status);
         return;
       }
 
-      fuchsia_io::wire::Vmofile vmofile;
-      vmofile.vmo = std::move(vmo);
-      vmofile.offset = 0;
-      vmofile.length = context->content_size;
       completer.Reply(fuchsia_io::wire::NodeInfo::WithVmofile(
           fidl::ObjectView<fuchsia_io::wire::Vmofile>::FromExternal(&vmofile)));
     } else {
@@ -75,8 +78,6 @@ class TestServer final : public fidl::WireInterface<fuchsia_io::File> {
     }
   }
 
-  void Sync(SyncCompleter::Sync& completer) override {}
-
   void GetAttr(GetAttrCompleter::Sync& completer) override {
     completer.Reply(ZX_OK, {
                                .id = 5,
@@ -85,11 +86,6 @@ class TestServer final : public fidl::WireInterface<fuchsia_io::File> {
                                .link_count = 1,
                            });
   }
-
-  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attribute,
-               SetAttrCompleter::Sync& completer) override {}
-
-  void Read(uint64_t count, ReadCompleter::Sync& completer) override {}
 
   void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync& completer) override {
     if (!context->supports_read_at) {
@@ -110,11 +106,6 @@ class TestServer final : public fidl::WireInterface<fuchsia_io::File> {
     completer.Reply(ZX_OK, fidl::VectorView<uint8_t>::FromExternal(buffer.data(), actual));
   }
 
-  void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) override {}
-
-  void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
-               WriteAtCompleter::Sync& completer) override {}
-
   void Seek(int64_t offset, fuchsia_io::wire::SeekOrigin start,
             SeekCompleter::Sync& completer) override {
     if (!context->supports_seek) {
@@ -122,12 +113,6 @@ class TestServer final : public fidl::WireInterface<fuchsia_io::File> {
     }
     completer.Reply(ZX_OK, 0);
   }
-
-  void Truncate(uint64_t length, TruncateCompleter::Sync& completer) override {}
-
-  void GetFlags(GetFlagsCompleter::Sync& completer) override {}
-
-  void SetFlags(uint32_t flags, SetFlagsCompleter::Sync& completer) override {}
 
   void GetBuffer(uint32_t flags, GetBufferCompleter::Sync& completer) override {
     context->last_flags = flags;
