@@ -11,7 +11,7 @@
   "pkg/vfs_cpp/include/lib/vfs/cpp/internal/node_connection.h": "a1f50acc4feeb4732100a7b21dd1389b",
   "pkg/vfs_cpp/include/lib/vfs/cpp/lazy_dir.h": "037bc987ec92596fa222a4632d7bd07b",
   "pkg/vfs_cpp/include/lib/vfs/cpp/node_kind.h": "0c3617b046f42900b02fe26ab4f11d83",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/pseudo_dir.h": "d93cee4ae5d2a1ed0cc22e1d05f51633",
+  "pkg/vfs_cpp/include/lib/vfs/cpp/pseudo_dir.h": "15dc2becad72fbcedfb173da23ea04c1",
   "pkg/vfs_cpp/include/lib/vfs/cpp/pseudo_file.h": "cb8057401d26542dd4409ede460afc1c",
   "pkg/vfs_cpp/include/lib/vfs/cpp/remote_dir.h": "5c71a316496002d251e74b9e9fe68f71",
   "pkg/vfs_cpp/include/lib/vfs/cpp/service.h": "be476af3e98b1b3463746ed63294f132",

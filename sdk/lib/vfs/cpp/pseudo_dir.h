@@ -68,9 +68,6 @@ class PseudoDir : public vfs::internal::Directory {
   // matching |node| pointer.
   zx_status_t RemoveEntry(const std::string& name, Node* node);
 
-  // Removes all directory entries.
-  void RemoveAllEntries();
-
   // Checks if directory is empty.
   // Be careful while using this function if using this Dir in multiple
   // threads.
