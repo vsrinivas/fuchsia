@@ -35,6 +35,7 @@ use {
     log::*,
     moniker::AbsoluteMoniker,
     moniker::ExtendedMoniker,
+    routing::component_instance::ComponentInstanceInterface,
     std::{
         convert::TryInto,
         path::PathBuf,
@@ -203,8 +204,7 @@ impl StorageAdmin {
                     let abs_moniker =
                         AbsoluteMoniker::from_relative(&component.abs_moniker, &relative_moniker)?;
                     let instance_id = component
-                        .try_get_context()?
-                        .component_id_index()
+                        .try_get_component_id_index()?
                         .look_up_moniker(&abs_moniker)
                         .cloned();
 
@@ -236,8 +236,7 @@ impl StorageAdmin {
                                 &relative_moniker,
                             )?;
                             let instance_id = component
-                                .try_get_context()?
-                                .component_id_index()
+                                .try_get_component_id_index()?
                                 .look_up_moniker(&abs_moniker)
                                 .cloned();
                             let res = storage::delete_isolated_storage(

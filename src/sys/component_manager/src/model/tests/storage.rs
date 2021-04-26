@@ -14,6 +14,7 @@ use {
     component_id_index::gen_instance_id,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     moniker::{AbsoluteMoniker, ExtendedMoniker, RelativeMoniker},
+    routing_test_helpers::component_id_index::make_index_file,
     std::{collections::HashSet, convert::TryInto, fs, path::PathBuf},
 };
 

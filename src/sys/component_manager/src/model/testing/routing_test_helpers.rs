@@ -10,7 +10,6 @@ use {
         model::{
             binding::Binder,
             component::BindReason,
-            component_id_index::ComponentInstanceId,
             error::ModelError,
             events::registry::EventSubscription,
             hooks::HooksRegistration,
@@ -35,6 +34,9 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     moniker::{AbsoluteMoniker, PartialMoniker, RelativeMoniker},
+    routing::{
+        component_id_index::ComponentInstanceId, component_instance::ComponentInstanceInterface,
+    },
     std::{
         collections::{HashMap, HashSet},
         convert::{TryFrom, TryInto},
@@ -436,9 +438,8 @@ impl RoutingTest {
                 let instance_id = self
                     .model
                     .root
-                    .try_get_context()
+                    .try_get_component_id_index()
                     .unwrap()
-                    .component_id_index()
                     .look_up_moniker(&moniker)
                     .cloned();
 
@@ -495,9 +496,8 @@ impl RoutingTest {
                 let component_instance_id = self
                     .model
                     .root
-                    .try_get_context()
+                    .try_get_component_id_index()
                     .unwrap()
-                    .component_id_index()
                     .look_up_moniker(&component_abs_moniker)
                     .cloned();
                 storage_admin_proxy
@@ -861,8 +861,7 @@ impl Drop for ScopedNamespaceDir<'_> {
 /// Contains functions to use capabilities in routing tests.
 pub mod capability_util {
     use {
-        super::*, crate::model::component_id_index::ComponentInstanceId, anyhow::format_err,
-        cm_rust::NativeIntoFidl, fidl::endpoints::ServiceMarker,
+        super::*, anyhow::format_err, cm_rust::NativeIntoFidl, fidl::endpoints::ServiceMarker,
         fidl_fuchsia_sys2::EventSourceMarker, matches::assert_matches, std::path::PathBuf,
     };
 

@@ -5,10 +5,9 @@
 use {
     crate::{
         config::RuntimeConfig,
-        model::{
-            component_id_index::ComponentIdIndex, error::ModelError, policy::GlobalPolicyChecker,
-        },
+        model::{error::ModelError, policy::GlobalPolicyChecker},
     },
+    routing::component_id_index::ComponentIdIndex,
     std::sync::{Arc, Weak},
 };
 
@@ -17,7 +16,7 @@ use {
 /// want to share with Realms.
 pub struct ModelContext {
     policy_checker: GlobalPolicyChecker,
-    component_id_index: ComponentIdIndex,
+    component_id_index: Arc<ComponentIdIndex>,
 }
 
 impl ModelContext {
@@ -25,8 +24,8 @@ impl ModelContext {
     pub async fn new(runtime_config: Arc<RuntimeConfig>) -> Result<Self, ModelError> {
         Ok(Self {
             component_id_index: match &runtime_config.component_id_index_path {
-                Some(path) => ComponentIdIndex::new(&path).await?,
-                None => ComponentIdIndex::default(),
+                Some(path) => Arc::new(ComponentIdIndex::new(&path).await?),
+                None => Arc::new(ComponentIdIndex::default()),
             },
             policy_checker: GlobalPolicyChecker::new(runtime_config),
         })
@@ -37,8 +36,8 @@ impl ModelContext {
         &self.policy_checker
     }
 
-    pub fn component_id_index(&self) -> &ComponentIdIndex {
-        &self.component_id_index
+    pub fn component_id_index(&self) -> Arc<ComponentIdIndex> {
+        self.component_id_index.clone()
     }
 }
 

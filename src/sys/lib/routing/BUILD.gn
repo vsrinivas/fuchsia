@@ -31,6 +31,7 @@ rustc_library("routing") {
     "//src/sys/lib/cm_fidl_validator",
     "//src/sys/lib/cm_rust",
     "//src/sys/lib/cm_types",
+    "//src/sys/lib/component_id_index",
     "//src/sys/lib/moniker",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
@@ -45,6 +46,7 @@ rustc_library("routing") {
   sources = [
     "src/capability_source.rs",
     "src/collection.rs",
+    "src/component_id_index.rs",
     "src/component_instance.rs",
     "src/config.rs",
     "src/environment.rs",
@@ -57,6 +59,11 @@ rustc_library("routing") {
     "src/rights.rs",
     "src/router.rs",
     "src/walk_state.rs",
+  ]
+
+  test_deps = [
+    "testing:routing_test_helpers",
+    "//src/lib/fuchsia",
   ]
 }
 

@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 use {
+    anyhow,
     clonable_error::ClonableError,
-    component_id_index, fidl_fuchsia_component_internal as fcomponent_internal, io_util,
+    component_id_index, fidl,
+    fidl::encoding::decode_persistent,
+    fidl_fuchsia_component_internal as fcomponent_internal,
     moniker::{AbsoluteMoniker, MonikerError},
     std::collections::HashMap,
     thiserror::Error,
@@ -26,6 +29,18 @@ pub enum ComponentIdIndexError {
     MonikerError(#[from] MonikerError),
 }
 
+impl ComponentIdIndexError {
+    pub fn index_unreadable(
+        index_file_path: impl Into<String>,
+        err: impl Into<anyhow::Error>,
+    ) -> Self {
+        ComponentIdIndexError::IndexUnreadable {
+            path: index_file_path.into(),
+            err: err.into().into(),
+        }
+    }
+}
+
 /// ComponentIdIndex parses a given index and provides methods to look up instance IDs.
 #[derive(Debug, Default)]
 pub struct ComponentIdIndex {
@@ -34,14 +49,12 @@ pub struct ComponentIdIndex {
 
 impl ComponentIdIndex {
     pub async fn new(index_file_path: &str) -> Result<Self, ComponentIdIndexError> {
-        let fidl_index = io_util::file::read_in_namespace_to_fidl::<
-            fcomponent_internal::ComponentIdIndex,
-        >(index_file_path)
-        .await
-        .map_err(|err| ComponentIdIndexError::IndexUnreadable {
-            path: index_file_path.to_string(),
-            err: err.into(),
-        })?;
+        let raw_content = std::fs::read(index_file_path)
+            .map_err(|err| ComponentIdIndexError::index_unreadable(index_file_path, err))?;
+
+        let fidl_index =
+            decode_persistent::<fcomponent_internal::ComponentIdIndex>(&raw_content)
+                .map_err(|err| ComponentIdIndexError::index_unreadable(index_file_path, err))?;
 
         let index = component_id_index::Index::from_fidl(fidl_index)?;
 
@@ -77,7 +90,7 @@ impl ComponentIdIndex {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::model::testing::test_helpers::make_index_file;
+    use routing_test_helpers::component_id_index::make_index_file;
 
     #[fuchsia::test]
     async fn look_up_moniker_no_exists() {

@@ -8,7 +8,6 @@ use {
         channel,
         model::{
             component::{BindReason, ComponentInstance},
-            component_id_index::ComponentInstanceId,
             error::ModelError,
         },
     },
@@ -21,6 +20,7 @@ use {
         OPEN_RIGHT_WRITABLE,
     },
     moniker::{AbsoluteMoniker, RelativeMoniker},
+    routing::component_id_index::ComponentInstanceId,
     std::path::PathBuf,
     thiserror::Error,
 };

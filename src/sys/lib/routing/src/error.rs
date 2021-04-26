@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::policy::PolicyError,
+    crate::{component_id_index::ComponentIdIndexError, policy::PolicyError},
     clonable_error::ClonableError,
     cm_rust::{CapabilityName, EventMode},
     fidl_fuchsia_component as fcomponent, fuchsia_zircon_status as zx,
@@ -20,6 +20,8 @@ pub enum ComponentInstanceError {
     ComponentManagerInstanceUnavailable {},
     #[error("policy checker not found for component instance {}", moniker)]
     PolicyCheckerNotFound { moniker: AbsoluteMoniker },
+    #[error("component ID index not found for component instance {}", moniker)]
+    ComponentIdIndexNotFound { moniker: AbsoluteMoniker },
     #[error("Failed to resolve `{}`: {}", moniker, err)]
     ResolveFailed {
         moniker: AbsoluteMoniker,
@@ -361,6 +363,9 @@ pub enum RoutingError {
 
     #[error(transparent)]
     PolicyError(#[from] PolicyError),
+
+    #[error(transparent)]
+    ComponentIdIndexError(#[from] ComponentIdIndexError),
 }
 
 impl RoutingError {

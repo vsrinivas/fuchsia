@@ -13,7 +13,6 @@ use {
             },
             binding,
             component_controller::ComponentController,
-            component_id_index::ComponentInstanceId,
             context::{ModelContext, WeakModelContext},
             environment::Environment,
             error::ModelError,
@@ -30,6 +29,7 @@ use {
         },
     },
     ::routing::{
+        component_id_index::{ComponentIdIndex, ComponentInstanceId},
         component_instance::{
             ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
             WeakComponentInstanceInterface, WeakExtendedInstanceInterface,
@@ -676,6 +676,13 @@ impl ComponentInstanceInterface for ComponentInstance {
         Ok(context.policy().clone())
     }
 
+    fn try_get_component_id_index(&self) -> Result<Arc<ComponentIdIndex>, ComponentInstanceError> {
+        let context = self.try_get_context().map_err(|_| {
+            ComponentInstanceError::ComponentIdIndexNotFound { moniker: self.abs_moniker().clone() }
+        })?;
+        Ok(context.component_id_index())
+    }
+
     fn try_get_parent(&self) -> Result<ExtendedInstance, ComponentInstanceError> {
         self.parent.upgrade()
     }
@@ -1287,8 +1294,8 @@ pub mod tests {
                 mocks::{ControlMessage, ControllerActionResponse, MockController},
                 routing_test_helpers::{RoutingTest, RoutingTestBuilder},
                 test_helpers::{
-                    self, component_decl_with_test_runner, make_index_file, ActionsTest,
-                    ComponentDeclBuilder, ComponentInfo,
+                    self, component_decl_with_test_runner, ActionsTest, ComponentDeclBuilder,
+                    ComponentInfo,
                 },
             },
         },
@@ -1299,6 +1306,7 @@ pub mod tests {
         fuchsia_zircon::{self as zx, AsHandleRef, Koid},
         futures::lock::Mutex,
         matches::assert_matches,
+        routing_test_helpers::component_id_index::make_index_file,
         std::{boxed::Box, collections::HashMap, sync::Arc, task::Poll},
     };
 

@@ -147,7 +147,6 @@ template("component_manager") {
     "src/model/binding.rs",
     "src/model/component.rs",
     "src/model/component_controller.rs",
-    "src/model/component_id_index.rs",
     "src/model/context.rs",
     "src/model/dir_tree.rs",
     "src/model/environment.rs",

@@ -4,7 +4,6 @@
 
 use {
     crate::model::{
-        component_id_index::ComponentIdIndexError,
         events::error::EventsError,
         policy::PolicyError,
         resolver::ResolverError,
@@ -12,6 +11,7 @@ use {
         runner::RunnerError,
         storage::StorageError,
     },
+    ::routing::component_id_index::ComponentIdIndexError,
     ::routing::error::ComponentInstanceError,
     anyhow::Error,
     clonable_error::ClonableError,
@@ -34,11 +34,6 @@ pub enum ModelError {
     CollectionNotFound { name: String },
     #[error("context not found")]
     ContextNotFound,
-    #[error("component id index invalid: {}", err)]
-    ComponentIdIndexError {
-        #[from]
-        err: ComponentIdIndexError,
-    },
     #[error("{} is not supported", feature)]
     Unsupported { feature: String },
     #[error("component declaration invalid")]
@@ -131,6 +126,11 @@ pub enum ModelError {
     Inspect {
         #[from]
         err: fuchsia_inspect::Error,
+    },
+    #[error("component id index error: {}", err)]
+    ComponentIdIndexError {
+        #[from]
+        err: ComponentIdIndexError,
     },
 }
 
