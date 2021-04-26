@@ -132,7 +132,8 @@ void SynDhub::Shutdown() {
   interrupt_.destroy();
 }
 
-zx_status_t SynDhub::SharedDmaSetNotifyCallback(uint32_t channel_id, const dma_notify_t* cb) {
+zx_status_t SynDhub::SharedDmaSetNotifyCallback(uint32_t channel_id,
+                                                const dma_notify_callback_t* cb) {
   if (channel_id > DmaId::kDmaIdMax) {
     return ZX_ERR_INVALID_ARGS;
   }

@@ -11,7 +11,7 @@
 #include <zxtest/zxtest.h>
 
 bool operator==(const shared_dma_protocol_t& a, const shared_dma_protocol_t& b) { return true; }
-bool operator==(const dma_notify_t& a, const dma_notify_t& b) { return true; }
+bool operator==(const dma_notify_callback_t& a, const dma_notify_callback_t& b) { return true; }
 
 class CicFilterTest : public CicFilter {
  public:

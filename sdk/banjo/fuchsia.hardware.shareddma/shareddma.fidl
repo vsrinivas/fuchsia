@@ -16,7 +16,7 @@ enum DmaState : uint32 {
 };
 
 [Transport = "Banjo", BanjoLayout = "ddk-callback"]
-protocol DmaNotify {
+protocol DmaNotifyCallback {
     Callback(DmaState state) -> ();
 };
 
@@ -28,8 +28,8 @@ protocol SharedDma {
     /// The provided id is opaque and HW specific.  The id implicitly defines the direction of the
     /// DMA (biderectional DMAs are not supported yet).  Transfer sizes and alignment are
     /// managed within the shared DMA driver.
-    InitializeAndGetBuffer(uint32 channel_id, DmaType type, uint32 size) ->
-        (zx.status s, zx.handle:VMO vmo);
+    InitializeAndGetBuffer(uint32 channel_id, DmaType type, uint32 size)
+        -> (zx.status s, zx.handle:VMO vmo);
 
     /// Start DMA
     Start(uint32 channel_id);
@@ -47,6 +47,5 @@ protocol SharedDma {
     GetTransferSize(uint32 channel_id) -> (uint32 available_size);
 
     /// Specifies a callback for notifications of state change.
-    SetNotifyCallback(uint32 channel_id, DmaNotify cb) -> (zx.status s);
+    SetNotifyCallback(uint32 channel_id, DmaNotifyCallback cb) -> (zx.status s);
 };
-

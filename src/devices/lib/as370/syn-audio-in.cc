@@ -185,7 +185,7 @@ zx_status_t SynAudioInDevice::Init() {
     return status;
   }
 
-  dma_notify_t notify = {};
+  dma_notify_callback_t notify = {};
   auto notify_cb = [](void* ctx, dma_state_t state) -> void {
     SynAudioInDevice* thiz = static_cast<SynAudioInDevice*>(ctx);
     zx_port_packet packet = {kPortDmaNotification, ZX_PKT_TYPE_USER, ZX_OK, {}};

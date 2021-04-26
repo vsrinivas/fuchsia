@@ -29,8 +29,8 @@ test("syn-audio-in-test-bin") {
     "syn-audio-in-test.cc",
   ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.shareddma",
-    "//sdk/banjo/fuchsia.hardware.shareddma:fuchsia.hardware.shareddma_mock",
+    "//sdk/banjo/fuchsia.hardware.shareddma:fuchsia.hardware.shareddma_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.shareddma:fuchsia.hardware.shareddma_banjo_cpp_mock",
     "//src/devices/lib/as370",
     "//src/devices/lib/mmio",
     "//src/devices/testing/mock-mmio-reg",
