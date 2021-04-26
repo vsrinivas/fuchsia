@@ -20,7 +20,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.bluetooth.avdtp:fuchsia.bluetooth.avdtp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
     "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
