@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/headless_root_presenter_unittests"
-    }
-}
