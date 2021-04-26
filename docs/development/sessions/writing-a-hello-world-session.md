@@ -152,7 +152,7 @@ the the session component.
 The file starts by importing GN templates that are used in this `BUILD.gn`. To
 build a session component you must import the `session_config.gni`.
 
-```none
+```gn
 import("//src/session/build/session_config.gni")
 ```
 
@@ -163,7 +163,7 @@ command. This command tells the build where to find the `session_config.json`
 for this component. Add the `session_config` to the `BUILD.gn` just below the
 import statements:
 
-```none
+```gn
 session_config("hello-world-session-config.json") {
   config = "meta/hello-world-session-config.json"
 }
@@ -179,7 +179,7 @@ doesn't have much functionality there are things in the list that aren't needed.
 But, also, `syslog` is missing so the session wouldn't have access to do any
 logging. Replace the dependencies with the following code:
 
-```none
+```gn
 deps = [
   "//src/lib/fuchsia",
   "//src/lib/fuchsia-async",
