@@ -368,8 +368,12 @@ mod tests {
         debug_log.enqueue_read_entry(&TestDebugEntry::new("WARNING: second log".as_bytes()));
         debug_log.enqueue_read_entry(&TestDebugEntry::new("INFO: third log".as_bytes()));
         debug_log.enqueue_read_entry(&TestDebugEntry::new("fourth log".as_bytes()));
-        // Create a string padded with UTF-8 codepoints at the beginning so it's not labeled
-        // as an error log.
+        // Create a string prefixed with multi-byte UTF-8 characters. This entry will be labeled as
+        // Info rather than Error because the string "ERROR:" only appears after the
+        // MAX_STRING_SEARCH_SIZE. It's crucial that we use multi-byte UTF-8 characters because we
+        // want to verify that the search is character oriented rather than byte oriented and that
+        // it can handle the MAX_STRING_SEARCH_SIZE boundary falling in the middle of a multi-byte
+        // character.
         let long_padding = (0..100).map(|_| "\u{10FF}").collect::<String>();
         let long_log = format!("{}ERROR: fifth log", long_padding);
         debug_log.enqueue_read_entry(&TestDebugEntry::new(long_log.as_bytes()));
