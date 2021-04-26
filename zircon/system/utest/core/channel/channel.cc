@@ -20,12 +20,16 @@
 #include <lib/fit/defer.h>
 #include <lib/zx/event.h>
 #include <lib/zx/fifo.h>
+#include <lib/zx/job.h>
 #include <lib/zx/object.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/rights.h>
 #include <zircon/types.h>
 
+#include <mini-process/mini-process.h>
 #include <zxtest/zxtest.h>
 
 #include "utils.h"
@@ -1403,6 +1407,39 @@ TEST(ChannelTest, ReadAndWriteWithMultipleSizes) {
       ASSERT_EQ(data[0], read_data[0]);
     }
   }
+}
+
+// Verify that a process is killed by a policy exception if it writes to a "full" channel.
+TEST(ChannelTest, ChannelFullException) {
+  zx::process proc;
+  zx::thread thread;
+  zx::vmar vmar;
+
+  constexpr char kName[] = "channel-full-exception-test";
+  ASSERT_OK(
+      zx::process::create(*zx::job::default_job(), kName, sizeof(kName) - 1, 0, &proc, &vmar));
+  ASSERT_OK(zx::thread::create(proc, kName, sizeof(kName) - 1, 0u, &thread));
+
+  zx::channel local;
+  zx::channel remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  zx::channel cmd_channel;
+  ASSERT_OK(start_mini_process_etc(proc.get(), thread.get(), vmar.get(), local.release(), true,
+                                   cmd_channel.reset_and_get_address()));
+
+  uint64_t write_count = 0;
+  while (mini_process_cmd(cmd_channel.get(), MINIP_CMD_CHANNEL_WRITE, nullptr) == ZX_OK) {
+    write_count++;
+  }
+
+  // Make sure it wrote at least a reasonable number of messages before terminating.
+  ASSERT_GT(write_count, 1000);
+  ASSERT_OK(proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr));
+
+  zx_info_process_t proc_info;
+  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
+  ASSERT_EQ(proc_info.return_code, ZX_TASK_RETCODE_EXCEPTION_KILL);
 }
 
 }  // namespace

@@ -95,6 +95,10 @@ class ChannelDispatcher final
   uint64_t get_message_count() const TA_REQ(get_lock()) { return messages_.size(); }
   uint64_t get_max_message_count() const TA_REQ(get_lock()) { return max_message_count_; }
 
+  // Returns the number of times a channel reached the max pending message count,
+  // |kMaxPendingMessageCount|.
+  static int64_t get_channel_full_count();
+
   // PeeredDispatcher implementation.
   void on_zero_handles_locked() TA_REQ(get_lock());
   void OnPeerZeroHandlesLocked() TA_REQ(get_lock());

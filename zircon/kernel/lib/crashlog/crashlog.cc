@@ -23,6 +23,7 @@
 #include <ktl/algorithm.h>
 #include <ktl/move.h>
 #include <ktl/span.h>
+#include <object/channel_dispatcher.h>
 #include <object/handle.h>
 #include <vm/pmm.h>
 #include <vm/pmm_checker.h>
@@ -222,10 +223,10 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
   // Include counters for critical events.
   fprintf(&outfile.stream_,
           "counters: haf=%" PRId64 " paf=%" PRId64 " pvf=%" PRId64 " lcs=%" PRId64 " lhb=%" PRId64
-          " \n",
+          " cf=%" PRId64 " \n",
           HandleTableArena::get_alloc_failed_count(), pmm_get_alloc_failed_count(),
           PmmChecker::get_validation_failed_count(), lockup_get_critical_section_oops_count(),
-          lockup_get_no_heartbeat_oops_count());
+          ChannelDispatcher::get_channel_full_count(), lockup_get_no_heartbeat_oops_count());
 
   // Finally, include the contents of the panic buffer (which may be empty).
   //

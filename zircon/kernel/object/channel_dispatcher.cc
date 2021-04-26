@@ -33,6 +33,7 @@ KCOUNTER(channel_packet_depth_16, "channel.depth.16")
 KCOUNTER(channel_packet_depth_64, "channel.depth.64")
 KCOUNTER(channel_packet_depth_256, "channel.depth.256")
 KCOUNTER(channel_packet_depth_unbounded, "channel.depth.unbounded")
+KCOUNTER(channel_full, "channel.full")
 KCOUNTER(dispatcher_channel_create_count, "dispatcher.channel.create")
 KCOUNTER(dispatcher_channel_destroy_count, "dispatcher.channel.destroy")
 
@@ -43,6 +44,9 @@ KCOUNTER(dispatcher_channel_destroy_count, "dispatcher.channel.destroy")
 // TODO(cpu): This limit can be lower but mojo's ChannelTest.PeerStressTest sends
 // about 3K small messages. Switching to size limit is more reasonable.
 constexpr size_t kMaxPendingMessageCount = 3500;
+
+// static
+int64_t ChannelDispatcher::get_channel_full_count() { return channel_full.Value(); }
 
 // static
 zx_status_t ChannelDispatcher::Create(KernelHandle<ChannelDispatcher>* handle0,
@@ -366,6 +370,7 @@ void ChannelDispatcher::WriteSelf(MessagePacketPtr msg) {
     printf("KERN: channel (%zu) has %zu messages (%s) (write). Raising exception\n", get_koid(),
            messages_.size(), pname);
     Thread::Current::SignalPolicyException(ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE, 0u);
+    kcounter_add(channel_full, 1);
   }
 
   UpdateStateLocked(0u, ZX_CHANNEL_READABLE);
