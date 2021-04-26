@@ -71,13 +71,13 @@ impl From<BlobId> for fidl::BlobId {
     }
 }
 
-impl From<fuchsia_merkle::Hash> for BlobId {
-    fn from(hash: fuchsia_merkle::Hash) -> Self {
+impl From<fuchsia_hash::Hash> for BlobId {
+    fn from(hash: fuchsia_hash::Hash) -> Self {
         Self(hash.into())
     }
 }
 
-impl From<BlobId> for fuchsia_merkle::Hash {
+impl From<BlobId> for fuchsia_hash::Hash {
     fn from(id: BlobId) -> Self {
         id.0.into()
     }
