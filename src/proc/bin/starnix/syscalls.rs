@@ -232,8 +232,12 @@ pub fn sys_access(
 pub fn sys_getpid(_ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
     // This is set to 1 because Bionic skips referencing /dev if getpid() == 1, under the
     // assumption that anything running after init will have access to /dev.
-    // TODO(tbodt): actual PID field
+    // TODO(tbodt): actual PID field (e.g., ctx.task.get_pid()).
     Ok(1.into())
+}
+
+pub fn sys_gettid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
+    Ok(ctx.task.get_tid().into())
 }
 
 pub fn sys_exit(ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {

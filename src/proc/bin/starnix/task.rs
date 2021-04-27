@@ -57,15 +57,7 @@ pub struct PidTable {
 
 impl PidTable {
     pub fn new() -> PidTable {
-        PidTable {
-            // Bionic makes some assumptions about the process with PID 1 that we are not
-            // prepared to cope with yet. For now, we give the first process created a PID
-            // of 2.
-            //
-            // TODO: Change to 0 once we can cope with bionic's special behavior for PID 1.
-            last_pid: 1,
-            tasks: HashMap::new(),
-        }
+        PidTable { last_pid: 0, tasks: HashMap::new() }
     }
 
     #[cfg(test)] // Currently used only by tests.
@@ -225,14 +217,14 @@ mod test {
         let fs = Arc::new(FileSystem::new(root));
 
         let task = Task::new_mock(&kernel, fs.clone()).expect("failed to create first task");
-        assert_eq!(task.get_tid(), 2);
+        assert_eq!(task.get_tid(), 1);
         let another_task =
             Task::new_mock(&kernel, fs.clone()).expect("failed to create second task");
-        assert_eq!(another_task.get_tid(), 3);
+        assert_eq!(another_task.get_tid(), 2);
 
         let pids = kernel.pids.read();
+        assert_eq!(pids.get_task(1).unwrap().get_tid(), 1);
         assert_eq!(pids.get_task(2).unwrap().get_tid(), 2);
-        assert_eq!(pids.get_task(3).unwrap().get_tid(), 3);
-        assert!(pids.get_task(4).is_none());
+        assert!(pids.get_task(3).is_none());
     }
 }
