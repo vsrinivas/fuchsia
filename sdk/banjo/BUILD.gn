@@ -34,7 +34,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.serialimpl",
   "fuchsia.hardware.serialimpl.async",
   "fuchsia.hardware.syscalls.pci",
-  "fuchsia.hardware.vreg",
 ]
 
 # This target only exists to support the `analyze_deps.py` script. It is
