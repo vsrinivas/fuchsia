@@ -178,7 +178,7 @@ zbi_result_t zbi_create_entry_with_payload(void* base, const size_t capacity, ui
     return ZBI_RESULT_ERROR;
   }
 
-  uint8_t* new_section;
+  uint8_t* new_section = NULL;
   zbi_result_t result =
       zbi_create_entry(base, capacity, type, extra, flags, payload_length, (void**)&new_section);
 
