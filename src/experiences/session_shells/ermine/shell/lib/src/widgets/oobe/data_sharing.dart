@@ -6,15 +6,15 @@ import 'package:ermine_ui/ermine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:internationalization/strings.dart';
 
-import '../../models/oobe_model.dart';
 import '../../utils/styles.dart';
 import 'oobe_buttons.dart';
 import 'oobe_header.dart';
 
 class DataSharing extends StatelessWidget {
-  final OobeModel model;
+  final VoidCallback onBack;
+  final VoidCallback onNext;
 
-  const DataSharing({@required this.model});
+  const DataSharing({@required this.onBack, @required this.onNext});
 
   @override
   Widget build(BuildContext context) {
@@ -34,8 +34,8 @@ class DataSharing extends StatelessWidget {
         ),
       ),
       OobeButtons([
-        OobeButtonModel(Strings.back, model.onBack),
-        OobeButtonModel(Strings.skip, model.onNext),
+        OobeButtonModel(Strings.back, onBack),
+        OobeButtonModel(Strings.skip, onNext),
       ]),
     ]);
   }

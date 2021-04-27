@@ -85,9 +85,6 @@ class ErmineStyle {
   /// Oobe header padding between logo and text.
   static const double kOobeHeaderElementsPadding = 8;
 
-  /// Oobe title width.
-  static const double kOobeTitleWidth = 856;
-
   /// Oobe padding between title and description.
   static const double kOobeTitleDescriptionPadding = 24;
 
@@ -96,9 +93,6 @@ class ErmineStyle {
 
   /// Oobe body vertical margins.
   static const double kOobeBodyVerticalMargins = 72;
-
-  /// Oobe body horizontal margins.
-  static const double kOobeBodyHorizontalMargins = 150;
 
   /// Oobe button margins.
   static const double kOobeButtonMargin = 8;

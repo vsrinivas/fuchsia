@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:test/test.dart';
+import 'package:flutter/material.dart';
 import 'package:mockito/mockito.dart';
+import 'package:test/test.dart';
 
 // ignore_for_file: implementation_imports
 import 'package:ermine/src/models/app_model.dart';
 import 'package:ermine/src/models/oobe_model.dart';
 
 void main() {
-  OobeModel oobeModel;
+  TestOobeModel oobeModel;
   final appModel = MockAppModel();
 
   setUp(() {
-    oobeModel = OobeModel(onFinished: appModel.exitOobe);
+    oobeModel = TestOobeModel(appModel.exitOobe)..loadTestOobeItems();
   });
 
   test('OobeModel should be able to navigate between screens.', () {
@@ -38,3 +39,18 @@ void main() {
 }
 
 class MockAppModel extends Mock implements AppModel {}
+
+class TestOobeModel extends OobeModel {
+  TestOobeModel(VoidCallback onFinished) : super(onFinished: onFinished);
+
+  // The real OOBE items cannot be loaded in a test environment so instead we
+  // use this. For the purpose of the test we do not care what the items are
+  // as long as there are multiple items.
+  void loadTestOobeItems() {
+    oobeItems = [
+      Container(), // In place of Channel
+      Container(), // In place of DataSharing
+      Container(), // In place of SshKeys
+    ];
+  }
+}

@@ -6,20 +6,17 @@ import 'package:ermine_ui/ermine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:internationalization/strings.dart';
 
-import '../../models/app_model.dart';
 import '../../models/oobe_model.dart';
 import '../../utils/styles.dart';
 
 /// Defines a widget that holds the [Oobe] widget and manages its animation.
 class OobeContainer extends StatelessWidget {
-  final AppModel model;
+  final OobeModel model;
 
   const OobeContainer({@required this.model});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(child: Oobe(model: OobeModel(onFinished: model.exitOobe)));
-  }
+  Widget build(BuildContext context) => Container(child: Oobe(model: model));
 }
 
 /// Defines a class that displays the Oobe system overlay.

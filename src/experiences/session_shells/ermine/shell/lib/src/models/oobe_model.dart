@@ -18,11 +18,13 @@ class OobeModel {
   ValueNotifier<int> currentItem = ValueNotifier(0);
 
   /// Constructor.
-  OobeModel({@required this.onFinished}) {
+  OobeModel({@required this.onFinished});
+
+  void loadOobeItems() {
     oobeItems = [
-      Channel(model: this),
-      DataSharing(model: this),
-      SshKeys(model: this),
+      Channel.withSvcPath(onBack, onNext),
+      DataSharing(onBack: onBack, onNext: onNext),
+      SshKeys(onBack: onBack, onNext: onNext),
     ];
   }
 

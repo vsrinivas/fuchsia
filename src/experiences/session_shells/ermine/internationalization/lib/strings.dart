@@ -404,6 +404,43 @@ class Strings {
             'The description displayed for selecting an OTA channel in the OOBE',
       );
 
+  static String get oobeBetaChannelDesc => Intl.message(
+        'A branch promoted on a weekly basis from dogfood or test as assessed by our manual testers and release management',
+        name: 'oobeBetaChannelDesc',
+        desc: 'The description displayed for the "Beta" update channel',
+      );
+
+  static String get oobeDevhostChannelDesc => Intl.message(
+        'Receive updates from your local machine.',
+        name: 'oobeDevhostChannelDesc',
+        desc: 'The description displayed for the "Devhost" update channel',
+      );
+
+  static String get oobeDogfoodChannelDesc => Intl.message(
+        'A branch promoted on a daily basis from the most recent test version that passed the entry criteria for dogfood as assessed by our manual testers and release management.',
+        name: 'oobeDogfoodChannelDesc',
+        desc: 'The description displayed for the "Dogfood" update channel',
+      );
+
+  static String get oobeStableChannelDesc => Intl.message(
+        'A branch promoted on a six-weekly basis from beta.',
+        name: 'oobeStableChannelDesc',
+        desc: 'The description displayed for the "Stable" update channel',
+      );
+
+  static String get oobeTestChannelDesc => Intl.message(
+        'A branch auto-promoted from the latest green build on master and auto-pushed to all test channels 4 times per day, Sunday (to account for non-MTV timezones) through Friday. It is used by the manual testers to validate the state of the tree, and by brave team members who want to test the most raw and cutting-edge builds.',
+        name: 'oobeTestChannelDesc',
+        desc: 'The description displayed for the "Test" update channel',
+      );
+
+  static String get oobeLoadChannelError => Intl.message(
+        'ERROR: Could not load channels\nThe OTA channel can be selected later from settings menu.',
+        name: 'oobeLoadChannelError',
+        desc:
+            'The message displayed when the list of update channels cannot be loaded.',
+      );
+
   static String get dataSharingTitle => Intl.message(
         'Send Usage & Diagnostics Data to Google',
         name: 'dataSharingTitle',
@@ -428,5 +465,11 @@ class Strings {
         'Register your SSH key either by pulling from your Gitbub account or by adding manually.',
         name: 'oobeSshKeysDesc',
         desc: 'The description displayed of adding an SSH key in the OOBE',
+      );
+
+  static String get next => Intl.message(
+        'Next',
+        name: 'next',
+        desc: 'The label for the "next" button.',
       );
 }

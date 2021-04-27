@@ -17,13 +17,10 @@ class OobeHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(children: <Widget>[
       // Title.
-      Container(
-        width: ErmineStyle.kOobeTitleWidth,
-        child: Text(
-          title,
-          textAlign: TextAlign.center,
-          style: ErmineTextStyles.headline1,
-        ),
+      Text(
+        title,
+        textAlign: TextAlign.center,
+        style: ErmineTextStyles.headline1,
       ),
       Padding(
           padding: EdgeInsets.only(

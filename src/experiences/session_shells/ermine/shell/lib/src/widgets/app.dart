@@ -12,6 +12,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
 
 import '../models/app_model.dart';
+import '../models/oobe_model.dart';
 import '../utils/styles.dart';
 
 import 'support/alert.dart';
@@ -90,5 +91,9 @@ class App extends StatelessWidget {
   Widget buildAlert(AppModel model) => AlertContainer(model: model);
 
   @visibleForTesting
-  Widget buildOobe(AppModel model) => OobeContainer(model: model);
+  Widget buildOobe(AppModel model) {
+    OobeModel oobeModel = OobeModel(onFinished: model.exitOobe)
+      ..loadOobeItems();
+    return OobeContainer(model: oobeModel);
+  }
 }
