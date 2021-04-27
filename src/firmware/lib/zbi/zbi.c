@@ -268,7 +268,9 @@ zbi_result_t zbi_get_next_entry_payload(void* base, size_t capacity, void** payl
   // take, e.g. a bootloader may just supply whatever leftover memory it has.
   // Just truncate to the max ZBI size and ignore any extra capacity.
   if (capacity > MAX_CONTAINER_SIZE) {
-    capacity = MAX_CONTAINER_SIZE;
+    // On systems with a 32-bit size_t, this cast is necessary to avoid an error.
+    // Note that this code will never run on those systems.
+    capacity = (size_t)MAX_CONTAINER_SIZE;
   }
   if (capacity < sizeof(*hdr) || capacity - sizeof(*hdr) < hdr->length) {
     return ZBI_RESULT_TOO_BIG;
