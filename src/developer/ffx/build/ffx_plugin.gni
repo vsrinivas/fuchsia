@@ -84,7 +84,11 @@ template("ffx_plugin") {
     output_name = invoker.name
   }
   suite_name = output_name + "_suite"
+
   tests_deps = []
+  if (defined(invoker.test_deps)) {
+    tests_deps += invoker.test_deps
+  }
 
   if (is_host) {
     args_deps = []
