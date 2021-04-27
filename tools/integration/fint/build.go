@@ -137,6 +137,7 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 				summaryLines,
 				"\n",
 			)
+			return artifacts, fmt.Errorf("ninja build did not converge to no-op")
 		}
 	}
 
