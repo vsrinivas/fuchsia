@@ -83,33 +83,13 @@ _environment_service_account =
 template("system_test_upgrade_suite") {
   assert(is_linux || is_mac, "system_tests are for linux/mac only")
 
-  # FIXME: remove after migration to the new name is complete.
-  if (defined(invoker.release_builder)) {
-    assert(
-        !defined(invoker.downgrade_release_builder),
-        "downgrade_release_builder and release_builder are mutually exclusive")
-    _downgrade_release_builder = invoker.release_builder
-  } else if (defined(invoker.downgrade_release_builder)) {
-    _downgrade_release_builder = invoker.downgrade_release_builder
-  }
-
-  # FIXME: remove after migration to the new name is complete.
-  if (defined(invoker.release_build_id)) {
-    assert(
-        !defined(invoker.downgrade_release_build_id),
-        "downgrade_release_build_id and release_build_id are mutually exclusive")
-    _downgrade_release_build_id = invoker.release_build_id
-  } else if (defined(invoker.downgrade_release_build_id)) {
-    _downgrade_release_build_id = invoker.downgrade_release_build_id
-  }
-
   assert(
-      defined(_downgrade_release_builder) ||
-          defined(_downgrade_release_build_id),
+      defined(invoker.downgrade_release_builder) ||
+          defined(invoker.downgrade_release_build_id),
       "downgrade_release_builder or downgrade_release_build_id must be defined for $target_name")
   assert(
-      !(defined(_downgrade_release_builder) &&
-            defined(_downgrade_release_build_id)),
+      !(defined(invoker.downgrade_release_builder) &&
+            defined(invoker.downgrade_release_build_id)),
       "downgrade_release_builder and downgrade_release_build_id are mutually exclusive for $target_name")
 
   assert(
@@ -133,17 +113,17 @@ template("system_test_upgrade_suite") {
 
     _args = [ "-test.v" ]  # Print test detailed case status
 
-    if (defined(_downgrade_release_builder)) {
+    if (defined(invoker.downgrade_release_builder)) {
       _args += [
         "-downgrade-builder-name",
-        _downgrade_release_builder,
+        invoker.downgrade_release_builder,
       ]
     }
 
-    if (defined(_downgrade_release_build_id)) {
+    if (defined(invoker.downgrade_release_build_id)) {
       _args += [
         "-downgrade-build-id",
-        _downgrade_release_build_id,
+        invoker.downgrade_release_build_id,
       ]
     }
 
