@@ -14,6 +14,12 @@ The library overrides syscalls defined in the
 have a built in deadline. The overrides route time-based waits and signals to
 the service component via the [`fuchsia.testing.FakeClock`][fidl] protocol.
 
+In addition, the named-timer crate allows an author to annotate critical
+deadlines in a component with names. When linked against the fake-clock
+library, the deadline set and expired events are reported to the fake-clock
+service. A test author may register interest in these events to stop time when
+these critical points are reached.
+
 ## Use
 
 A test that wishes to use fake-clock must correctly link the library to each

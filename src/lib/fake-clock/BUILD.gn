@@ -17,6 +17,7 @@ group("tests") {
     ":fake-clock",
     "examples",
     "lib:tests",
+    "named-timer:tests",
     "svc:tests",
   ]
 }

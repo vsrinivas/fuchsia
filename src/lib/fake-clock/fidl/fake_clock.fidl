@@ -4,6 +4,7 @@
 
 library fuchsia.testing;
 using zx;
+using fuchsia.testing.deadline;
 
 /// Allows access to fake clocks managed by `FakeClockControl`.
 [Discoverable]
@@ -24,6 +25,22 @@ protocol FakeClock {
     /// `event` is a duplicate of the client-side of the event pair, and it's used to retrieve the
     /// originally registered event through its kernel object identifier.
     CancelEvent(zx.handle:EVENTPAIR event) -> ();
+    /// Calculate and set a deadline associated with an id.
+    /// The returned `deadline` is calculated as `duration` after the current fake time.
+    /// FakeClock emits two events: A `SET` event immediately, and an `EXPIRED` event when the
+    /// deadline expires. A test using `FakeClockControl` may reference events related to the
+    /// deadline using a matching `id`. See `FakeClockControl.SetStopPoint` for information on how a
+    /// test can wait for a deadline event.
+    CreateNamedDeadline(fuchsia.testing.deadline.DeadlineId id, zx.duration duration)
+        -> (zx.time deadline);
+};
+
+/// The type of event related to a deadline.
+enum DeadlineEventType {
+    /// The deadline was set.
+    SET = 1;
+    /// The deadline has been reached.
+    EXPIRED = 2;
 };
 
 /// A fake clock increment in a uniform random range.
@@ -64,6 +81,25 @@ protocol FakeClockControl {
     /// applied. Returns `ZX_ERR_INVALID_ARGS` if the provided `increment` is invalid (such as a
     /// badly formed RandomRange).
     ResumeWithIncrements(zx.duration real, Increment increment) -> () error zx.status;
+    /// Registers interest in a deadline event.
+    /// `deadline_id` and `event_type` identify the named deadline and the event associated with
+    /// the deadline. When the event occurs, FakeClock will signal `EVENTPAIR_SIGNALED` on
+    /// `on_stop`. If time is free-running, the clock is stopped. Closing the eventpair cancels
+    /// interest in the deadline. If the eventpair is closed when a deadline is reached, time is
+    /// not stopped. Note that only events that occur after `AddStopPoint` is called are matched.
+    /// In addition, the `EXPIRED` event is always reported, even if the component that created the
+    /// deadline does not act on the deadline expiration.
+    ///
+    /// The intended use is to set a stop point using `AddStopPoint`, resume running time with
+    /// `ResumeWithIncrements`, then wait for the stop point to occur using the `on_stop`
+    /// eventpair.
+    /// Setting a stop point is only allowed while time is stopped. If time is free running when
+    /// this method is invoked `ZX_ERR_ACCESS_DENIED` is returned. If a stop point is already
+    /// registered for the same event, `ZX_ALREADY_BOUND` is returned.
+    AddStopPoint(
+        fuchsia.testing.deadline.DeadlineId deadline_id, DeadlineEventType event_type,
+        zx.handle:EVENTPAIR on_stop
+        ) -> () error zx.status;
     /// Pauses free-running increments on the fake clock.
     Pause() -> ();
 };

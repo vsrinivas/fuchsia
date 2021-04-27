@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/testing/deadline/llcpp/fidl.h>
 #include <fuchsia/testing/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
@@ -11,7 +12,10 @@
 
 #include <thread>
 
+#include <src/lib/fake-clock/named-timer/named_timer.h>
+
 namespace fake_clock = fuchsia_testing;
+namespace fake_clock_deadline = fuchsia_testing_deadline;
 
 namespace {
 zx::unowned_channel GetService() {
@@ -241,4 +245,16 @@ __EXPORT zx_status_t zx_timer_cancel(zx_handle_t handle) {
   }
   ZX_ASSERT(fidl::WireCall<fake_clock::FakeClock>(GetService()).CancelEvent(std::move(e)).ok());
   return ZX_OK;
+}
+
+__EXPORT bool create_named_deadline(char* component, size_t component_len, char* code,
+                                    size_t code_len, zx_time_t duration, zx_time_t* out) {
+  fake_clock_deadline::wire::DeadlineId id;
+  id.component_id = fidl::StringView::FromExternal(component, component_len);
+  id.code = fidl::StringView::FromExternal(code, code_len);
+  auto result = fidl::WireCall<fake_clock::FakeClock>(GetService())
+                    .CreateNamedDeadline(std::move(id), duration);
+  ZX_ASSERT(result.ok());
+  *out = result->deadline;
+  return true;
 }

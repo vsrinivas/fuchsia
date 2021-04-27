@@ -12,6 +12,7 @@ rustc_binary("fake_clock_svc") {
 
   deps = [
     "//src/lib/fake-clock/fidl:fidl-rustc",
+    "//src/lib/fake-clock/named-timer:fidl-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -22,6 +23,11 @@ rustc_binary("fake_clock_svc") {
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
+  ]
+
+  test_deps = [
+    "//src/lib/fake-clock/named-timer",
+    "//src/lib/fuchsia",
   ]
 
   sources = [ "src/main.rs" ]

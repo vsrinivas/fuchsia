@@ -9,6 +9,9 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use futures::{StreamExt, TryStreamExt};
 use log::warn;
+use named_timer::DeadlineId;
+
+const DEADLINE_NAME: DeadlineId<'static> = DeadlineId::new("fake-clock-example", "deadline");
 
 #[fasync::run_singlethreaded]
 async fn main() {
@@ -32,7 +35,17 @@ async fn handle_requests_for_stream(stream: ExampleRequestStream) -> Result<(), 
                     responder.send(zx::Time::get_monotonic().into_nanos())
                 }
                 ExampleRequest::WaitUntil { timeout, responder } => {
-                    fasync::Timer::new(fasync::Time::from_zx(zx::Time::from_nanos(timeout))).await;
+                    let () =
+                        fasync::Timer::new(fasync::Time::from_zx(zx::Time::from_nanos(timeout)))
+                            .await;
+                    responder.send()
+                }
+                ExampleRequest::WaitFor { duration, responder } => {
+                    let () = named_timer::NamedTimer::new(
+                        &DEADLINE_NAME,
+                        zx::Duration::from_nanos(duration),
+                    )
+                    .await;
                     responder.send()
                 }
             }

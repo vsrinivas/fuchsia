@@ -25,6 +25,7 @@ shared_library("lib") {
     ":fake_clock_lib_includes",
     "//sdk/lib/fdio",
     "//src/lib/fake-clock/fidl:fidl_llcpp",
+    "//src/lib/fake-clock/named-timer:named-timer-headers",
     "//src/lib/fxl",
   ]
 

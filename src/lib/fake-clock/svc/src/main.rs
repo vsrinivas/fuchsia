@@ -4,16 +4,17 @@
 
 use anyhow::Error;
 use fidl_fuchsia_testing::{
-    FakeClockControlRequest, FakeClockControlRequestStream, FakeClockRequest,
+    DeadlineEventType, FakeClockControlRequest, FakeClockControlRequestStream, FakeClockRequest,
     FakeClockRequestStream, Increment,
 };
+use fidl_fuchsia_testing_deadline::DeadlineId;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon::{self as zx, AsHandleRef, DurationNum, Peered};
 use futures::{stream::StreamExt, FutureExt};
-use log::{debug, warn};
+use log::{debug, error, warn};
 
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{hash_map, BinaryHeap, HashMap};
 use std::convert::TryFrom;
 use std::sync::{Arc, Mutex};
 
@@ -30,6 +31,7 @@ struct RegisteredEvent {
     pending: bool,
 }
 
+// Ord and Eq implementations provided for use with BinaryHeap.
 impl<E> Eq for PendingEvent<E> {}
 impl<E> PartialEq for PendingEvent<E> {
     fn eq(&self, other: &Self) -> bool {
@@ -67,6 +69,37 @@ impl RegisteredEvent {
     }
 }
 
+#[derive(Eq, PartialEq, Hash, Debug)]
+struct StopPoint {
+    deadline_id: DeadlineId,
+    event_type: DeadlineEventType,
+}
+
+struct PendingDeadlineExpireEvent {
+    deadline_id: DeadlineId,
+    deadline: zx::Time,
+}
+
+// Ord and Eq implementations provided for use with BinaryHeap.
+impl Eq for PendingDeadlineExpireEvent {}
+impl PartialEq for PendingDeadlineExpireEvent {
+    fn eq(&self, other: &Self) -> bool {
+        self.deadline == other.deadline
+    }
+}
+
+impl PartialOrd for PendingDeadlineExpireEvent {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for PendingDeadlineExpireEvent {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other.deadline.cmp(&self.deadline)
+    }
+}
+
 /// The fake clock implementation.
 /// Type parameter `T` is used to observe events during testing.
 /// The empty tuple `()` implements `FakeClockObserver` and is meant to be used
@@ -76,6 +109,8 @@ struct FakeClock<T> {
     free_running: Option<fasync::Task<()>>,
     pending_events: BinaryHeap<PendingEvent>,
     registered_events: HashMap<zx::Koid, RegisteredEvent>,
+    pending_named_deadlines: BinaryHeap<PendingDeadlineExpireEvent>,
+    registered_stop_points: HashMap<StopPoint, zx::EventPair>,
     observer: T,
 }
 
@@ -100,6 +135,8 @@ impl<T: FakeClockObserver> FakeClock<T> {
             free_running: None,
             pending_events: BinaryHeap::new(),
             registered_events: HashMap::new(),
+            pending_named_deadlines: BinaryHeap::new(),
+            registered_stop_points: HashMap::new(),
             observer: T::new(),
         }
     }
@@ -118,6 +155,43 @@ impl<T: FakeClockObserver> FakeClock<T> {
                 break;
             }
         }
+    }
+
+    /// Check if a matching stop point is registered and attempts to signal the matching eventpair
+    /// if one is registered. Returns true iff a match exists and signaling the event pair succeeds.
+    fn check_stop_point(&mut self, stop_point: &StopPoint) -> bool {
+        if let Some(stop_point_eventpair) = self.registered_stop_points.remove(&stop_point) {
+            match stop_point_eventpair.signal_peer(zx::Signals::NONE, zx::Signals::EVENT_SIGNALED) {
+                Ok(()) => true,
+                Err(zx::Status::PEER_CLOSED) => false,
+                Err(e) => {
+                    debug!("Failed to signal named event: {:?}", e);
+                    false
+                }
+            }
+        } else {
+            false
+        }
+    }
+
+    /// Check if any expired stop points are registered and signal any that exist. Returns true iff
+    /// at least one is expired and has been successfully signaled.
+    fn check_stop_points(&mut self) -> bool {
+        let mut stop_time = false;
+        while let Some(e) = self.pending_named_deadlines.peek() {
+            if e.deadline <= self.time {
+                let stop_point = StopPoint {
+                    deadline_id: self.pending_named_deadlines.pop().unwrap().deadline_id,
+                    event_type: DeadlineEventType::Expired,
+                };
+                if self.check_stop_point(&stop_point) {
+                    stop_time = true;
+                }
+            } else {
+                break;
+            }
+        }
+        stop_time
     }
 
     fn install_event(
@@ -209,6 +283,42 @@ impl<T: FakeClockObserver> FakeClock<T> {
         entry.clear();
     }
 
+    /// Set a stop point at which to stop time and signal the provided `eventpair`.
+    /// Returns `ZX_ALREADY_BOUND` if an identical stop point is already registered.
+    fn set_stop_point(
+        &mut self,
+        stop_point: StopPoint,
+        eventpair: zx::EventPair,
+    ) -> Result<(), zx::Status> {
+        match self.registered_stop_points.entry(stop_point) {
+            hash_map::Entry::Occupied(mut occupied) => {
+                match occupied.get().wait_handle(zx::Signals::EVENTPAIR_CLOSED, zx::Time::ZERO) {
+                    Ok(_) => {
+                        // Okay to replace an eventpair if the other end is already closed.
+                        let _previous = occupied.insert(eventpair);
+                        Ok(())
+                    }
+                    Err(zx::Status::TIMED_OUT) => {
+                        warn!("Received duplicate interest in stop point {:?}.", occupied.key());
+                        Err(zx::Status::ALREADY_BOUND)
+                    }
+                    Err(e) => {
+                        error!("Got an error while checking signals on an eventpair: {:?}", e);
+                        Err(zx::Status::ALREADY_BOUND)
+                    }
+                }
+            }
+            hash_map::Entry::Vacant(vacant) => {
+                let _value: &mut zx::EventPair = vacant.insert(eventpair);
+                Ok(())
+            }
+        }
+    }
+
+    fn add_named_deadline(&mut self, pending_deadline: PendingDeadlineExpireEvent) {
+        let () = self.pending_named_deadlines.push(pending_deadline);
+    }
+
     fn increment(&mut self, increment: &Increment) {
         let dur = match increment {
             Increment::Determined(d) => *d,
@@ -227,7 +337,15 @@ impl<T: FakeClockObserver> FakeClock<T> {
         .nanos();
         debug!("incrementing mock clock {:?} => {:?}", increment, dur);
         self.time += dur;
-        self.check_events();
+        let () = self.check_events();
+        if self.check_stop_points() {
+            let () = self.stop_free_running();
+        }
+    }
+
+    fn stop_free_running(&mut self) {
+        // Dropping the task stops it being polled.
+        drop(self.free_running.take());
     }
 }
 
@@ -238,7 +356,8 @@ fn start_free_running<T: FakeClockObserver>(
     real_increment: zx::Duration,
     increment: Increment,
 ) {
-    let mock_clock_clone = Arc::clone(mock_clock);
+    let mock_clock_clone = Arc::clone(&mock_clock);
+
     mock_clock.lock().unwrap().free_running = Some(fasync::Task::local(async move {
         let mut itv = fasync::Interval::new(real_increment);
         debug!("free running mock clock {:?} {:?}", real_increment, increment);
@@ -250,10 +369,7 @@ fn start_free_running<T: FakeClockObserver>(
 }
 
 fn stop_free_running<T: FakeClockObserver>(mock_clock: &FakeClockHandle<T>) {
-    let mut mc = mock_clock.lock().unwrap();
-    let free_run_task = mc.free_running.take();
-    // Dropping the task ensures it will not be polled anymore.
-    drop(free_run_task);
+    mock_clock.lock().unwrap().stop_free_running();
 }
 
 fn check_valid_increment(increment: &Increment) -> bool {
@@ -296,6 +412,24 @@ async fn handle_control_events<T: FakeClockObserver>(
                     let _ = responder.send(&mut Ok(()));
                 }
             }
+            FakeClockControlRequest::AddStopPoint {
+                deadline_id,
+                event_type,
+                on_stop,
+                responder,
+            } => {
+                debug!("stop point of type {:?} registered", event_type);
+                let mut mc = mock_clock.lock().unwrap();
+                if mc.is_free_running() {
+                    let _ = responder.send(&mut Err(zx::Status::ACCESS_DENIED.into_raw()));
+                } else {
+                    let _ = responder.send(
+                        &mut mc
+                            .set_stop_point(StopPoint { deadline_id, event_type }, on_stop)
+                            .map_err(zx::Status::into_raw),
+                    );
+                }
+            }
         }
     }
 }
@@ -327,6 +461,21 @@ async fn handle_events<T: FakeClockObserver>(
                     mock_clock.lock().unwrap().cancel_event(k);
                 }
                 let _ = responder.send();
+            }
+            FakeClockRequest::CreateNamedDeadline { id, duration, responder } => {
+                debug!("Creating named deadline with id {:?}", id);
+                let stop_point =
+                    StopPoint { deadline_id: id.clone(), event_type: DeadlineEventType::Set };
+                if mock_clock.lock().unwrap().check_stop_point(&stop_point) {
+                    stop_free_running(&mock_clock);
+                }
+
+                let deadline = mock_clock.lock().unwrap().time + zx::Duration::from_nanos(duration);
+                let expiration_point =
+                    PendingDeadlineExpireEvent { deadline_id: id, deadline: deadline };
+                mock_clock.lock().unwrap().add_named_deadline(expiration_point);
+
+                let _ = responder.send(deadline.into_nanos());
             }
         }
     }
@@ -367,7 +516,11 @@ mod tests {
     use super::*;
     use fuchsia_zircon::Koid;
     use futures::channel::mpsc;
+    use named_timer::DeadlineId;
     use std::sync::Once;
+
+    const DEADLINE_ID: DeadlineId<'static> = DeadlineId::new("component_1", "code_1");
+    const DEADLINE_ID_2: DeadlineId<'static> = DeadlineId::new("component_1", "code_2");
 
     /// log::Log implementation that uses stdout.
     ///
@@ -560,5 +713,218 @@ mod tests {
         // increment once again and it should be signaled then:
         mock_clock.increment(&Increment::Determined(10.millis().into_nanos()));
         assert!(check_signaled(&client));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_stop_points() {
+        let clock_handle = Arc::new(Mutex::new(FakeClock::<RemovalObserver>::new()));
+        let (client_event, server_event) = zx::EventPair::create().unwrap();
+        let () = clock_handle
+            .lock()
+            .unwrap()
+            .set_stop_point(
+                StopPoint { deadline_id: DEADLINE_ID.into(), event_type: DeadlineEventType::Set },
+                server_event,
+            )
+            .expect("set stop point failed");
+        let () = start_free_running(
+            &clock_handle,
+            DEFAULT_INCREMENTS_MS.millis(),
+            Increment::Determined(DEFAULT_INCREMENTS_MS.millis().into_nanos()),
+        );
+        // Checking for the stop point should signal the event pair.
+        assert!(clock_handle.lock().unwrap().check_stop_point(&StopPoint {
+            deadline_id: DEADLINE_ID.into(),
+            event_type: DeadlineEventType::Set
+        }));
+        assert!(check_signaled(&client_event));
+        let () = stop_free_running(&clock_handle);
+
+        // A deadline set to expire in the future stops time when the deadline is reached.
+        let future_deadline_timeout = clock_handle.lock().unwrap().time + 10.millis();
+        let () = clock_handle.lock().unwrap().add_named_deadline(PendingDeadlineExpireEvent {
+            deadline_id: DEADLINE_ID.into(),
+            deadline: future_deadline_timeout,
+        });
+        let (client_event, server_event) = zx::EventPair::create().unwrap();
+        let () = clock_handle
+            .lock()
+            .unwrap()
+            .set_stop_point(
+                StopPoint {
+                    deadline_id: DEADLINE_ID.into(),
+                    event_type: DeadlineEventType::Expired,
+                },
+                server_event,
+            )
+            .expect("set stop point failed");
+        let () = start_free_running(
+            &clock_handle,
+            DEFAULT_INCREMENTS_MS.millis(),
+            Increment::Determined(DEFAULT_INCREMENTS_MS.millis().into_nanos()),
+        );
+        assert_eq!(
+            fasync::OnSignals::new(&client_event, zx::Signals::EVENTPAIR_SIGNALED).await.unwrap(),
+            zx::Signals::EVENTPAIR_SIGNALED
+        );
+        assert!(!clock_handle.lock().unwrap().is_free_running());
+        assert_eq!(clock_handle.lock().unwrap().time, future_deadline_timeout);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_ignored_stop_points() {
+        let clock_handle = Arc::new(Mutex::new(FakeClock::<RemovalObserver>::new()));
+        let () = start_free_running(
+            &clock_handle,
+            DEFAULT_INCREMENTS_MS.millis(),
+            Increment::Determined(DEFAULT_INCREMENTS_MS.millis().into_nanos()),
+        );
+        // Checking for an unregistered stop point should not stop time.
+        assert!(!clock_handle.lock().unwrap().check_stop_point(&StopPoint {
+            deadline_id: DEADLINE_ID.into(),
+            event_type: DeadlineEventType::Set
+        }));
+        assert!(clock_handle.lock().unwrap().is_free_running());
+
+        // Time is not stopped if the other end of a registered event pair is dropped.
+        let (client_event, server_event) = zx::EventPair::create().unwrap();
+        let () = clock_handle
+            .lock()
+            .unwrap()
+            .set_stop_point(
+                StopPoint { deadline_id: DEADLINE_ID.into(), event_type: DeadlineEventType::Set },
+                server_event,
+            )
+            .expect("set stop point failed");
+        let () = start_free_running(
+            &clock_handle,
+            DEFAULT_INCREMENTS_MS.millis(),
+            Increment::Determined(DEFAULT_INCREMENTS_MS.millis().into_nanos()),
+        );
+        drop(client_event);
+        assert!(!clock_handle.lock().unwrap().check_stop_point(&StopPoint {
+            deadline_id: DEADLINE_ID.into(),
+            event_type: DeadlineEventType::Set
+        }));
+        assert!(clock_handle.lock().unwrap().is_free_running());
+        let () = stop_free_running(&clock_handle);
+
+        // If we set two EXPIRED points and drop the handle of the earlier one, time should stop
+        // on the later stop point.
+        let future_deadline_timeout_1 = clock_handle.lock().unwrap().time + 10.millis();
+        let future_deadline_timeout_2 = clock_handle.lock().unwrap().time + 20.millis();
+        let () = clock_handle.lock().unwrap().add_named_deadline(PendingDeadlineExpireEvent {
+            deadline_id: DEADLINE_ID.into(),
+            deadline: future_deadline_timeout_1,
+        });
+        let () = clock_handle.lock().unwrap().add_named_deadline(PendingDeadlineExpireEvent {
+            deadline_id: DEADLINE_ID_2.into(),
+            deadline: future_deadline_timeout_2,
+        });
+        let (client_event_1, server_event_1) = zx::EventPair::create().unwrap();
+        let () = clock_handle
+            .lock()
+            .unwrap()
+            .set_stop_point(
+                StopPoint {
+                    deadline_id: DEADLINE_ID.into(),
+                    event_type: DeadlineEventType::Expired,
+                },
+                server_event_1,
+            )
+            .expect("set stop point failed");
+        let (client_event_2, server_event_2) = zx::EventPair::create().unwrap();
+        let () = clock_handle
+            .lock()
+            .unwrap()
+            .set_stop_point(
+                StopPoint {
+                    deadline_id: DEADLINE_ID_2.into(),
+                    event_type: DeadlineEventType::Expired,
+                },
+                server_event_2,
+            )
+            .expect("set stop point failed");
+        drop(client_event_1);
+        let () = start_free_running(
+            &clock_handle,
+            DEFAULT_INCREMENTS_MS.millis(),
+            Increment::Determined(DEFAULT_INCREMENTS_MS.millis().into_nanos()),
+        );
+        assert_eq!(
+            fasync::OnSignals::new(&client_event_2, zx::Signals::EVENTPAIR_SIGNALED).await.unwrap(),
+            zx::Signals::EVENTPAIR_SIGNALED
+        );
+        assert!(!clock_handle.lock().unwrap().is_free_running());
+        assert_eq!(clock_handle.lock().unwrap().time, future_deadline_timeout_2);
+    }
+
+    #[fuchsia::test]
+    fn duplicate_stop_points_rejected() {
+        let mut clock = FakeClock::<()>::new();
+        let (client_event_1, server_event_1) = zx::EventPair::create().unwrap();
+        assert!(clock
+            .set_stop_point(
+                StopPoint {
+                    deadline_id: DEADLINE_ID.into(),
+                    event_type: DeadlineEventType::Expired
+                },
+                server_event_1
+            )
+            .is_ok());
+
+        let (client_event_2, server_event_2) = zx::EventPair::create().unwrap();
+        assert_eq!(
+            clock.set_stop_point(
+                StopPoint {
+                    deadline_id: DEADLINE_ID.into(),
+                    event_type: DeadlineEventType::Expired
+                },
+                server_event_2
+            ),
+            Err(zx::Status::ALREADY_BOUND)
+        );
+
+        // original can still be signaled.
+        assert!(clock.check_stop_point(&StopPoint {
+            deadline_id: DEADLINE_ID.into(),
+            event_type: DeadlineEventType::Expired
+        }));
+        assert!(check_signaled(&client_event_1));
+        assert!(!check_signaled(&client_event_2));
+    }
+
+    #[fuchsia::test]
+    fn duplicate_stop_point_accepted_if_initial_closed() {
+        let mut clock = FakeClock::<()>::new();
+        let (client_event_1, server_event_1) = zx::EventPair::create().unwrap();
+        assert!(clock
+            .set_stop_point(
+                StopPoint {
+                    deadline_id: DEADLINE_ID.into(),
+                    event_type: DeadlineEventType::Expired
+                },
+                server_event_1
+            )
+            .is_ok());
+
+        drop(client_event_1);
+        let (client_event_2, server_event_2) = zx::EventPair::create().unwrap();
+        assert!(clock
+            .set_stop_point(
+                StopPoint {
+                    deadline_id: DEADLINE_ID.into(),
+                    event_type: DeadlineEventType::Expired
+                },
+                server_event_2
+            )
+            .is_ok());
+
+        // The later eventpair is signaled when checking a stop point.
+        assert!(clock.check_stop_point(&StopPoint {
+            deadline_id: DEADLINE_ID.into(),
+            event_type: DeadlineEventType::Expired
+        }));
+        assert!(check_signaled(&client_event_2));
     }
 }
