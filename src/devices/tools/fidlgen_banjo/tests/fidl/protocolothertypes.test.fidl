@@ -1,1 +1,78 @@
-../../../banjo/test/banjo/protocol-other-types.test.banjo
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.protocolothertypes;
+
+struct ThisIsAStruct {
+    string s;
+};
+
+union ThisIsAUnion {
+    1: string s;
+};
+
+enum ThisIsAnEnum {
+    x = 23;
+};
+
+const uint32 strings_size = 32;
+
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+protocol OtherTypes {
+    Struct(ThisIsAStruct s) -> (ThisIsAStruct s);
+    Union(ThisIsAUnion u) -> (ThisIsAUnion u);
+    Enum(ThisIsAnEnum e) -> (ThisIsAnEnum e);
+    String(string s) -> (string s);
+    StringSized(string:4 s) -> (string:4 s);
+    StringSized2(string:strings_size s) -> (string:strings_size s);
+};
+
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+protocol OtherTypesAsync {
+    [Async]
+    Struct(ThisIsAStruct s) -> (ThisIsAStruct s);
+    [Async]
+    Union(ThisIsAUnion u) -> (ThisIsAUnion u);
+    [Async]
+    Enum(ThisIsAnEnum e) -> (ThisIsAnEnum e);
+    [Async]
+    String(string s) -> (string s);
+    [Async]
+    StringSized(string:4 s) -> (string:4 s);
+    [Async]
+    StringSized2(string:strings_size s) -> (string:strings_size s);
+};
+
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+protocol OtherTypesReference {
+    Struct(ThisIsAStruct? s) -> (ThisIsAStruct? s);
+    Union(ThisIsAUnion? u) -> (ThisIsAUnion? u);
+    String(string? s) -> (string? s);
+    StringSized(string:4? s) -> (string:4? s);
+    StringSized2(string:strings_size? s) -> (string:strings_size? s);
+};
+
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+protocol OtherTypesAsyncReference {
+    [Async]
+    Struct(ThisIsAStruct? s) -> (ThisIsAStruct? s);
+    [Async]
+    Union(ThisIsAUnion? u) -> (ThisIsAUnion? u);
+    [Async]
+    String(string? s) -> (string? s);
+    [Async]
+    StringSized(string:4? s) -> (string:4? s);
+    [Async]
+    StringSized2(string:strings_size? s) -> (string:strings_size? s);
+};
+
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+protocol Interface {
+   Value(OtherTypes intf) -> (OtherTypes intf);
+   Reference(OtherTypes? intf) -> (OtherTypes? intf);
+   [Async]
+   Async(OtherTypes intf) -> (OtherTypes intf);
+   [Async]
+   AsyncRefernce(OtherTypes? intf) -> (OtherTypes? intf);
+};

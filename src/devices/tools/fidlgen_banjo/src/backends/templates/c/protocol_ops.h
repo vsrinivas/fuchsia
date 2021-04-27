@@ -1,1 +1,3 @@
-../../../../../banjo/src/backends/templates/c/protocol_ops.h
+struct {c_name}_protocol_ops {{
+{fns}
+}};

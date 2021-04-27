@@ -1,1 +1,18 @@
-../../../banjo/test/banjo/handles.test.banjo
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.handles;
+
+using zx;
+
+resource struct Container {
+  zx.handle:CHANNEL a_handle;
+  zx.handle:CHANNEL another_handle;
+};
+
+[Transport = "Banjo"]
+protocol Doer {
+  DoSomething(zx.handle:CHANNEL the_handle) -> ();
+  DoSomethingElse(zx.handle:CHANNEL the_handle_too) -> ();
+};

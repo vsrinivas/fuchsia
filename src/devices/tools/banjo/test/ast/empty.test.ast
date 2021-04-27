@@ -1,6 +1,0 @@
-BanjoAst {
-    primary_namespace: "banjo.examples.empty",
-    namespaces: {
-        "banjo.examples.empty": [],
-    },
-}

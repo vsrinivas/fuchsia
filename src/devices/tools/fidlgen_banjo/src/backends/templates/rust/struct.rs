@@ -1,1 +1,5 @@
-../../../../../banjo/src/backends/templates/rust/struct.rs
+#[repr({alignment})]
+#[derive(Copy, Clone{debug}{partial_eq})]
+pub struct {name} {{
+{struct_fields}
+}}

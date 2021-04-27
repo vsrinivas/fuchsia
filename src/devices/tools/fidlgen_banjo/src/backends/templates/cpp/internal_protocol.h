@@ -1,1 +1,6 @@
-../../../../../banjo/src/backends/templates/cpp/internal_protocol.h
+{decls}
+
+template <typename D>
+constexpr void Check{protocol_name}ProtocolSubclass() {{
+{static_asserts}
+}}

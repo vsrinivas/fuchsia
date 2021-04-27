@@ -1,1 +1,4 @@
-../../../../../banjo/src/backends/templates/rust/body.rs
+{constant_decls}
+{struct_decls}
+{enum_decls}
+{union_decls}

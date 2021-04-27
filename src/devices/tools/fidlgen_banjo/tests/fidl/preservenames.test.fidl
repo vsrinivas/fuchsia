@@ -1,1 +1,12 @@
-../../../banjo/test/banjo/preserve_names.test.banjo
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.preservenames;
+
+[PreserveCNames]
+struct SomeData {
+  uint32 HELLO_WORLD;
+  uint32 kSomeValue;
+  string one_more_field;
+};

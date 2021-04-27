@@ -1,1 +1,2 @@
-../../../../../banjo/src/backends/templates/cpp/footer.h
+
+}} // namespace ddk

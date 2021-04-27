@@ -1,1 +1,46 @@
-../../../banjo/test/banjo/protocol-primitive.test.banjo
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.protocolprimitive;
+
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+protocol SynchronousPrimitive {
+    Bool(bool b) -> (bool b, bool b_2);
+    Int8(int8 i8) -> (int8 i8, int8 i8_2);
+    Int16(int16 i16) -> (int16 i16, int16 i16_2);
+    Int32(int32 i32) -> (int32 i32, int32 i32_2);
+    Int64(int64 i64) -> (int64 i64, int64 i64_2);
+    Uint8(uint8 u8) -> (uint8 u8, uint8 u8_2);
+    Uint16(uint16 u16) -> (uint16 u16, uint16 u16_2);
+    Uint32(uint32 u32) -> (uint32 u32, uint32 u32_2);
+    Uint64(uint64 u64) -> (uint64 u64, uint64 u64_2);
+    Float32(float32 f32) -> (float32 f32, float32 f32_2);
+    Float64(float64 u64) -> (float64 f64, float64 f64_2);
+};
+
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+protocol AsyncPrimitive {
+    [Async]
+    Bool(bool b) -> (bool b, bool b_2);
+    [Async]
+    Int8(int8 i8) -> (int8 i8, int8 i8_2);
+    [Async]
+    Int16(int16 i16) -> (int16 i16, int16 i16_2);
+    [Async]
+    Int32(int32 i32) -> (int32 i32, int32 i32_2);
+    [Async]
+    Int64(int64 i64) -> (int64 i64, int64 i64_2);
+    [Async]
+    Uint8(uint8 u8) -> (uint8 u8, uint8 u8_2);
+    [Async]
+    Uint16(uint16 u16) -> (uint16 u16, uint16 u16_2);
+    [Async]
+    Uint32(uint32 u32) -> (uint32 u32, uint32 u32_2);
+    [Async]
+    Uint64(uint64 u64) -> (uint64 u64, uint64 u64_2);
+    [Async]
+    Float32(float32 f32) -> (float32 f32, float32 f32_2);
+    [Async]
+    Float64(float64 u64) -> (float64 f64, float64 f64_2);
+};

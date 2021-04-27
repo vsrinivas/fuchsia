@@ -1,1 +1,12 @@
-../../../banjo/test/banjo/order1.test.banjo
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.order1;
+
+enum EchoMe {
+    zero = 0;
+    one = 1;
+};
+
+const EchoMe favorite_echo = EchoMe.zero;

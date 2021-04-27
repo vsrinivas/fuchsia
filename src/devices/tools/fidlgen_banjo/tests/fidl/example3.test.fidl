@@ -1,1 +1,13 @@
-../../../banjo/test/banjo/example-3.test.banjo
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.example3;
+
+struct Point {
+    // Abscissa
+    int64 x;
+
+    // Ordinate
+    int64 y;
+};

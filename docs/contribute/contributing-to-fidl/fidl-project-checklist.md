@@ -76,7 +76,7 @@ semantics changes.
 [span-tests]: /zircon/system/utest/fidl-compiler/span_tests.cc
 [table-tests]: /zircon/system/utest/fidl-compiler/table_tests.cc
 [fidldoc]: /tools/fidl/fidldoc
-[banjo]: /src/devices/tools/banjo
+[banjo]: /src/devices/tools/fidlgen_banjo
 [measure-tape]: /tools/fidl/measure-tape
 [gidl]: /tools/fidl/gidl
 [kazoo]: /zircon/tools/kazoo

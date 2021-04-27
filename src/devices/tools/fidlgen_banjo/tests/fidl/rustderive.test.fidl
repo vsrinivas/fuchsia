@@ -1,1 +1,82 @@
-../../../banjo/test/banjo/rust-derive.test.banjo
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.rustderive;
+
+const uint32 SMALL_ARRAY_SIZE = 8;
+const uint32 LARGE_ARRAY_SIZE = 2048;
+
+// Next three data structures intended for checking that type that doesn't derive
+// PartialEq causes type depending on it to not auto-derive PartialEq
+union SomeUnion {
+    1: array<uint8>:8 bytes1;
+    2: array<uint8>:16 bytes2;
+};
+
+struct UnionParentStruct {
+    SomeUnion some_union;
+};
+
+struct UnionGrandParentStruct {
+    UnionParentStruct field;
+};
+
+// Next three data structures are to sanity test that types still derive PartialEq/Debug
+enum SomeEnum {
+    v1 = 1;
+    v2 = 2;
+};
+
+struct EnumParentStruct {
+    SomeEnum some_enum;
+};
+
+struct EnumGrandParentStruct {
+    EnumParentStruct field;
+};
+
+// Small array should auto-derive Debug/PartialEq
+struct SmallArrayStruct {
+    array<uint8>:SMALL_ARRAY_SIZE small_array;
+};
+
+// Big array should not auto-derive Debug/PartialEq
+struct BigArrayStruct {
+    array<uint8>:LARGE_ARRAY_SIZE big_array;
+};
+
+// Next three data structures have circular reference. Should still be able to derive
+// Debug and PartialEq
+struct Foo {
+    Bar bar;
+};
+
+struct Bar {
+    Foo? bar;
+    Baz? baz;
+};
+
+struct Baz {
+    Foo? foo;
+    Bar? bar;
+    Baz? baz;
+};
+
+// Next three data structures have circular reference. Unlike the above case, one struct
+// cannot derive PartialEq, hence other structs cannot, either.
+struct Foo2 {
+    Bar2 bar;
+};
+
+struct Bar2 {
+    Foo2? bar;
+    Baz2? baz;
+};
+
+struct Baz2 {
+    Foo2? foo;
+    Bar2? bar;
+    Baz2? baz;
+    SomeUnion some_union;
+};

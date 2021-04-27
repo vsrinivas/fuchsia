@@ -1,1 +1,59 @@
-../../../banjo/test/banjo/protocol-vector.test.banjo
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.protocolvector;
+
+// TODO(surajmalhotra): Reference for vectors.
+
+using zx;
+
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+protocol Vector {
+    Bool(vector<bool>:1 b) -> (vector<bool>:1 b);
+    Int8(vector<int8>:1 i8) -> (vector<int8>:1 i8);
+    Int16(vector<int16>:1 i16) -> (vector<int16>:1 i16);
+    Int32(vector<int32>:1 i32) -> (vector<int32>:1 i32);
+    Int64(vector<int64>:1 i64) -> (vector<int64>:1 i64);
+    Uint8(vector<uint8>:1 u8) -> (vector<uint8>:1 u8);
+    Uint16(vector<uint16>:1 u16) -> (vector<uint16>:1 u16);
+    Uint32(vector<uint32>:1 u32) -> (vector<uint32>:1 u32);
+    Uint64(vector<uint64>:1 u64) -> (vector<uint64>:1 u64);
+    Float32(vector<float32>:1 f32) -> (vector<float32>:1 f32);
+    Float64(vector<float64>:1 u64) -> (vector<float64>:1 f64);
+    Handle(vector<zx.handle>:1 u64) -> (vector<zx.handle>:1 f64);
+};
+
+const uint32 vector_size = 32;
+
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+protocol Vector2 {
+    Bool(vector<bool>:vector_size b) -> (vector<bool>:vector_size b);
+    Int8(vector<int8>:vector_size i8) -> (vector<int8>:vector_size i8);
+    Int16(vector<int16>:vector_size i16) -> (vector<int16>:vector_size i16);
+    Int32(vector<int32>:vector_size i32) -> (vector<int32>:vector_size i32);
+    Int64(vector<int64>:vector_size i64) -> (vector<int64>:vector_size i64);
+    Uint8(vector<uint8>:vector_size u8) -> (vector<uint8>:vector_size u8);
+    Uint16(vector<uint16>:vector_size u16) -> (vector<uint16>:vector_size u16);
+    Uint32(vector<uint32>:vector_size u32) -> (vector<uint32>:vector_size u32);
+    Uint64(vector<uint64>:vector_size u64) -> (vector<uint64>:vector_size u64);
+    Float32(vector<float32>:vector_size f32) -> (vector<float32>:vector_size f32);
+    Float64(vector<float64>:vector_size u64) -> (vector<float64>:vector_size f64);
+    Handle(vector<zx.handle>:vector_size u64) -> (vector<zx.handle>:vector_size f64);
+};
+
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+protocol VectorOfVectors {
+    Bool(vector<vector<bool>:4>:vector_size b) -> (vector<vector<bool>:4>:vector_size b);
+    Int8(vector<vector<int8>:4>:vector_size i8) -> (vector<vector<int8>:4>:vector_size i8);
+    Int16(vector<vector<int16>:4>:vector_size i16) -> (vector<vector<int16>:4>:vector_size i16);
+    Int32(vector<vector<int32>:4>:vector_size i32) -> (vector<vector<int32>:4>:vector_size i32);
+    Int64(vector<vector<int64>:4>:vector_size i64) -> (vector<vector<int64>:4>:vector_size i64);
+    Uint8(vector<vector<uint8>:4>:vector_size u8) -> (vector<vector<uint8>:4>:vector_size u8);
+    Uint16(vector<vector<uint16>:4>:vector_size u16) -> (vector<vector<uint16>:4>:vector_size u16);
+    Uint32(vector<vector<uint32>:4>:vector_size u32) -> (vector<vector<uint32>:4>:vector_size u32);
+    Uint64(vector<vector<uint64>:4>:vector_size u64) -> (vector<vector<uint64>:4>:vector_size u64);
+    Float32(vector<vector<float32>:4>:vector_size f32) -> (vector<vector<float32>:4>:vector_size f32);
+    Float64(vector<vector<float64>:4>:vector_size u64) -> (vector<vector<float64>:4>:vector_size f64);
+    Handle(vector<vector<zx.handle>:4>:vector_size u64) -> (vector<vector<zx.handle>:4>:vector_size f64);
+};

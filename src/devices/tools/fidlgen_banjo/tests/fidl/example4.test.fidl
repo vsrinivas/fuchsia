@@ -1,1 +1,18 @@
-../../../banjo/test/banjo/example-4.test.banjo
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.example4;
+
+struct Point {
+    uint64 x;
+};
+
+enum Enum {
+    x = 23;
+};
+
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+protocol Interface {
+    func(bool x) -> ();
+};

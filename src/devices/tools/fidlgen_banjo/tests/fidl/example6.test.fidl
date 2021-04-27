@@ -1,1 +1,12 @@
-../../../banjo/test/banjo/example-6.test.banjo
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.example6;
+
+const int32 x = 23;
+
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+protocol Hello {
+    Say(string req) -> (string response);
+};
