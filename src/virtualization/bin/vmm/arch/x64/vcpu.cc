@@ -24,8 +24,8 @@
 
 namespace {
 
-zx_status_t HandleMemX86(const zx_packet_guest_mem_t& mem, uint64_t trap_key,
-                         const Instruction* inst) {
+zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, uint64_t trap_key,
+                             const Instruction* inst) {
   TRACE_DURATION("machina", "mmio", "addr", mem.addr, "access_size", inst->access_size);
 
   zx_status_t status;
@@ -85,16 +85,14 @@ zx_status_t HandleMemX86(const zx_packet_guest_mem_t& mem, uint64_t trap_key,
 }  // namespace
 
 zx_status_t Vcpu::ArchHandleMem(const zx_packet_guest_mem_t& mem, uint64_t trap_key) {
+  // Read guest register state.
   zx_vcpu_state_t vcpu_state;
-  zx_status_t status;
-  {
-    status = vcpu_.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
-    if (status != ZX_OK) {
-      return status;
-    }
+  zx_status_t status = vcpu_.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
+  if (status != ZX_OK) {
+    return status;
   }
 
-  bool do_write = false;
+  // Decode the instruction the guest was attempting to perform.
   Instruction inst;
   status = inst_decode(mem.inst_buf, mem.inst_len, mem.default_operand_size, &vcpu_state, &inst);
   if (status != ZX_OK) {
@@ -103,17 +101,21 @@ zx_status_t Vcpu::ArchHandleMem(const zx_packet_guest_mem_t& mem, uint64_t trap_
       fxl::StringAppendf(&inst, " %x", mem.inst_buf[i]);
     }
     FX_LOGS(ERROR) << "Unsupported instruction:" << inst;
-  } else {
-    status = HandleMemX86(mem, trap_key, &inst);
-    // If there was an attempt to read or test memory, update the GPRs.
-    do_write = inst.type == INST_MOV_READ || inst.type == INST_TEST;
+    return status;
   }
 
-  if (status == ZX_OK && do_write) {
+  // Perform the access.
+  status = PerformMemAccess(mem, trap_key, &inst);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // If there was an attempt to read or test memory, update the guest's GPRs.
+  if (inst.type == INST_MOV_READ || inst.type == INST_TEST) {
     return vcpu_.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
   }
 
-  return status;
+  return ZX_OK;
 }
 
 zx_status_t Vcpu::ArchHandleInput(const zx_packet_guest_io_t& io, uint64_t trap_key) {

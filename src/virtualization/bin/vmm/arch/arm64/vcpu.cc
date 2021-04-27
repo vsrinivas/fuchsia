@@ -23,7 +23,7 @@
 
 namespace {
 
-zx_status_t HandleMemArm(const zx_packet_guest_mem_t& mem, uint64_t trap_key, uint64_t* reg) {
+zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, uint64_t trap_key, uint64_t* reg) {
   TRACE_DURATION("machina", "mmio", "addr", mem.addr, "access_size", mem.access_size);
 
   IoValue mmio = {mem.access_size, {.u64 = mem.data}};
@@ -46,22 +46,32 @@ zx_status_t HandleMemArm(const zx_packet_guest_mem_t& mem, uint64_t trap_key, ui
 }  // namespace
 
 zx_status_t Vcpu::ArchHandleMem(const zx_packet_guest_mem_t& mem, uint64_t trap_key) {
-  zx_vcpu_state_t vcpu_state;
-  zx_status_t status;
+  // Perform the access.
+  uint64_t read_value;
+  zx_status_t status = PerformMemAccess(mem, trap_key, &read_value);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // If the guest was reading from the MMIO, update their register set
+  // to contain the read value.
   if (mem.read) {
+    // Read.
+    zx_vcpu_state_t vcpu_state;
     status = vcpu_.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // Update the register set.
+    vcpu_state.x[mem.xt] = read_value;
+
+    // Write.
+    status = vcpu_.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
     if (status != ZX_OK) {
       return status;
     }
   }
 
-  bool do_write = false;
-  do_write = mem.read;
-  status = HandleMemArm(mem, trap_key, &vcpu_state.x[mem.xt]);
-
-  if (status == ZX_OK && do_write) {
-    return vcpu_.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
-  }
-
-  return status;
+  return ZX_OK;
 }
