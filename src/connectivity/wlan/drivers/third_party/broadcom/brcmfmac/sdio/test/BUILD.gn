@@ -20,8 +20,8 @@ executable("sdio_test") {
   deps = [
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
-    "//sdk/banjo/fuchsia.hardware.sdio",
-    "//sdk/banjo/fuchsia.hardware.sdio:fuchsia.hardware.sdio_mock",
+    "//sdk/banjo/fuchsia.hardware.sdio:fuchsia.hardware.sdio_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.sdio:fuchsia.hardware.sdio_banjo_cpp_mock",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test:stub_device",

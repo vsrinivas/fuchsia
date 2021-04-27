@@ -74,7 +74,7 @@ resource struct SdmmcReqNew {
     /// The client ID for this request. Only VMOs registered with this client may be present in
     /// buffers below.
     uint8 client_id;
-    vector<SdmmcBufferRegion> buffers;
+    vector<SdmmcBufferRegion>:MAX buffers;
 };
 
 /// number of pages per request - 2M per request
@@ -95,7 +95,7 @@ resource struct SdmmcReq {
     /// Used if use_dma is true
     zx.handle:VMO dma_vmo;
     /// Used if use_dma is false
-    [Mutable, Buffer] vector<uint8> virt;
+    [Mutable, Buffer] vector<uint8>:MAX virt;
     /// offset into dma_vmo or virt
     uint64 buf_offset;
     zx.handle pmt;
@@ -139,8 +139,8 @@ struct SdmmcHostInfo {
 };
 
 enum SdmmcVmoRight : uint32 {
-    READ = 0x1;   // The protocol implementation can read from this VMO (used for write requests).
-    WRITE = 0x2;  // The protocol implementation can write to this VMO (used for read requests).
+    READ = 0x1; // The protocol implementation can read from this VMO (used for write requests).
+    WRITE = 0x2; // The protocol implementation can write to this VMO (used for read requests).
 };
 
 [Transport = "Banjo", BanjoLayout = "ddk-interface"]

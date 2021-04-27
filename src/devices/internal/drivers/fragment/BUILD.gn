@@ -44,7 +44,7 @@ driver_module("fragment") {
     "//sdk/banjo/fuchsia.hardware.registers:fuchsia.hardware.registers_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.rpmb:fuchsia.hardware.rpmb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.scpi:fuchsia.hardware.scpi_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.sdio",
+    "//sdk/banjo/fuchsia.hardware.sdio:fuchsia.hardware.sdio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.shareddma:fuchsia.hardware.shareddma_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.spi:fuchsia.hardware.spi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",

@@ -20,7 +20,7 @@ struct SdioFuncHwInfo {
     uint8 fn_intf_code;
 };
 
-enum SDIO_CARD : uint32 {
+enum SdioCard : uint32 {
     MULTI_BLOCK = 0x1;
     SRW = 0x2;
     DIRECT_COMMAND = 0x4;
@@ -59,7 +59,7 @@ resource struct SdioRwTxnNew {
     bool incr;
     bool write;
 
-    vector<fuchsia.hardware.sdmmc.SdmmcBufferRegion> buffers;
+    vector<fuchsia.hardware.sdmmc.SdmmcBufferRegion>:MAX buffers;
 };
 
 resource struct SdioRwTxn {
@@ -71,7 +71,7 @@ resource struct SdioRwTxn {
     /// Used if use_dma is true
     zx.handle:VMO dma_vmo;
     /// Used if use_dma is false
-    [Mutable, Buffer] vector<uint8> virt;
+    [Mutable, Buffer] vector<uint8>:MAX virt;
     /// offset into dma_vmo or virt
     uint64 buf_offset;
 };

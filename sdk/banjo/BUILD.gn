@@ -20,8 +20,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.audiotypes",
   "fuchsia.hardware.display.controller",
   "fuchsia.hardware.pci",
-  "fuchsia.hardware.sdio",
-  "fuchsia.hardware.sdmmc",
   "fuchsia.hardware.serial",
   "fuchsia.hardware.serialimpl",
   "fuchsia.hardware.serialimpl.async",

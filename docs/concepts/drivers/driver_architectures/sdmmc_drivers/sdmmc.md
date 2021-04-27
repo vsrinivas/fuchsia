@@ -14,7 +14,7 @@ driver. If the controller implements the SDHCI specification then this driver
 should implement
 [fuchsia.hardware.sdhci](/sdk/banjo/fuchsia.hardware.sdhci/sdhci.fidl), otherwise it
 should implement
-[fuchsia.hardware.sdmmc](/sdk/banjo/fuchsia.hardware.sdmmc/sdmmc.banjo). It may be
+[fuchsia.hardware.sdmmc](/sdk/banjo/fuchsia.hardware.sdmmc/sdmmc.fidl). It may be
 helpful to disable DMA and higher speed modes through `SdmmcHostInfo` and
 `SdmmcHostPrefs` until the basic functionality of the hardware has been
 validated. See the SDHCI and SDMMC protocol definitions for more information.
@@ -32,7 +32,7 @@ device supports it (eMMC only, based on JEDEC standard JESD84-B51 section 6.6.22
 ## SDIO core driver
 
 The SDIO core driver creates devices that implement
-[fuchsia.hardware.sdio](/sdk/banjo/fuchsia.hardware.sdio/sdio.banjo), one for
+[fuchsia.hardware.sdio](/sdk/banjo/fuchsia.hardware.sdio/sdio.fidl), one for
 each IO function. Whereas the only expected client of the SD/eMMC block driver
 is the storage stack, the SDIO driver will have different clients depending on
 what kind of SDIO card is detected. Client drivers bind to the SDIO core driver

@@ -98,7 +98,7 @@ template("sherlock_driver") {
       "//sdk/banjo/fuchsia.hardware.iommu:fuchsia.hardware.iommu_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-      "//sdk/banjo/fuchsia.hardware.sdmmc",
+      "//sdk/banjo/fuchsia.hardware.sdmmc:fuchsia.hardware.sdmmc_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.serial",
       "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
       "//sdk/fidl/fuchsia.hardware.gpu.amlogic:fuchsia.hardware.gpu.amlogic_llcpp",
