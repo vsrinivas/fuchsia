@@ -10,6 +10,7 @@
 #include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
@@ -67,6 +68,7 @@ class FakeDdkSpi : public fake_ddk::Bind {
         .mmio_count = 1,
         .irq_count = 1,
     });
+
     zx::vmo dup;
     ASSERT_OK(mmio_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
 
@@ -78,6 +80,12 @@ class FakeDdkSpi : public fake_ddk::Bind {
 
     EXPECT_OK(loop_.StartThread("aml-spi-test-registers-thread"));
     registers_.fidl_service()->ExpectWrite<uint32_t>(0x1c, 1 << 1, 1 << 1);
+
+    ASSERT_OK(zx::interrupt::create({}, 0, ZX_INTERRUPT_VIRTUAL, &interrupt_));
+    zx::interrupt dut_interrupt;
+
+    ASSERT_OK(interrupt_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dut_interrupt));
+    pdev_.set_interrupt(0, std::move(dut_interrupt));
   }
 
   ~FakeDdkSpi() override {
@@ -175,6 +183,7 @@ class FakeDdkSpi : public fake_ddk::Bind {
   fzl::VmoMapper mmio_mapper_;
   ddk::MockGpio gpio_;
   fake_pdev::FakePDev pdev_;
+  zx::interrupt interrupt_;
 };
 
 }  // namespace spi

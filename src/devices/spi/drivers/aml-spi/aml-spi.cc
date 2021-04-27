@@ -110,13 +110,10 @@ void AmlSpi::Exchange8(const uint8_t* txdata, uint8_t* out_rxdata, size_t size) 
     }
 
     // start burst
-    auto statreg = StatReg::Get().FromValue(0).set_tc(1).WriteTo(&mmio_);
+    StatReg::Get().FromValue(0).set_tc(1).WriteTo(&mmio_);
     conreg.set_burst_length(burst_size - 1).set_xch(1).WriteTo(&mmio_);
 
-    // wait for completion
-    do {
-      statreg.ReadFrom(&mmio_);
-    } while (!statreg.tc());
+    WaitForTransferComplete();
 
     // read
     if (out_rxdata) {
@@ -169,12 +166,10 @@ void AmlSpi::Exchange64(const uint8_t* txdata, uint8_t* out_rxdata, size_t size)
       }
     }
 
-    auto statreg = StatReg::Get().FromValue(0).set_tc(1).WriteTo(&mmio_);
+    StatReg::Get().FromValue(0).set_tc(1).WriteTo(&mmio_);
     conreg.set_burst_length(burst_size_words - 1).set_xch(1).WriteTo(&mmio_);
 
-    do {
-      statreg.ReadFrom(&mmio_);
-    } while (!statreg.tc());
+    WaitForTransferComplete();
 
     if (out_rxdata) {
       uint64_t* const rx = reinterpret_cast<uint64_t*>(out_rxdata);
@@ -213,6 +208,20 @@ void AmlSpi::SetThreadProfile() {
   }
 }
 
+void AmlSpi::WaitForTransferComplete() {
+  auto statreg = StatReg::Get().FromValue(0);
+  while (!statreg.ReadFrom(&mmio_).tc()) {
+    if (interrupt_.is_valid()) {
+      interrupt_.wait(nullptr);
+    }
+    // TODO(fxbug.dev/74692): Add a small delay here if there is no interrupt to wait on. Check with
+    // other users of this driver to make sure the performance impact is acceptable, or see if they
+    // can switch to using interrupts instead.
+  }
+
+  statreg.WriteTo(&mmio_);
+}
+
 zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t txdata_size,
                                     uint8_t* out_rxdata, size_t rxdata_size,
                                     size_t* out_rxdata_actual) {
@@ -246,6 +255,10 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
     mmio_.Read32(AML_SPI_RXDATA);
   }
 
+  if (interrupt_.is_valid()) {
+    IntReg::Get().FromValue(0).set_tcen(1).WriteTo(&mmio_);
+  }
+
   chips_[cs].gpio.Write(0);
 
   // Only use 64-bit words if we will be able to reset the controller.
@@ -254,6 +267,8 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
   } else {
     Exchange8(txdata, out_rxdata, exchange_size);
   }
+
+  IntReg::Get().FromValue(0).WriteTo(&mmio_);
 
   chips_[cs].gpio.Write(1);
 
@@ -434,6 +449,9 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     reset_fidl_client.emplace(std::move(reset_client));
   }
 
+  zx::interrupt interrupt;
+  pdev.GetInterrupt(0, &interrupt);  // Supplying an interrupt is optional.
+
   fbl::Array<ChipInfo> chips = InitChips(&config, device);
   if (!chips) {
     return ZX_ERR_NO_RESOURCES;
@@ -456,9 +474,9 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
       config.bus_id == 0 ? kSpi0ResetMask : (config.bus_id == 1 ? kSpi1ResetMask : 0);
 
   fbl::AllocChecker ac;
-  std::unique_ptr<AmlSpi> spi(new (&ac)
-                                  AmlSpi(device, *std::move(mmio), std::move(reset_fidl_client),
-                                         reset_mask, std::move(chips), std::move(thread_profile)));
+  std::unique_ptr<AmlSpi> spi(
+      new (&ac) AmlSpi(device, *std::move(mmio), std::move(reset_fidl_client), reset_mask,
+                       std::move(chips), std::move(thread_profile), std::move(interrupt)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

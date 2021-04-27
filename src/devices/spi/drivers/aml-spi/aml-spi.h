@@ -65,21 +65,25 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
 
   AmlSpi(zx_device_t* device, ddk::MmioBuffer mmio,
          std::optional<fidl::WireSyncClient<fuchsia_hardware_registers::Device>> reset,
-         uint32_t reset_mask, fbl::Array<ChipInfo> chips, zx::profile thread_profile)
+         uint32_t reset_mask, fbl::Array<ChipInfo> chips, zx::profile thread_profile,
+         zx::interrupt interrupt)
       : DeviceType(device),
         mmio_(std::move(mmio)),
         reset_(std::move(reset)),
         reset_mask_(reset_mask),
         chips_(std::move(chips)),
-        thread_profile_(std::move(thread_profile)) {}
+        thread_profile_(std::move(thread_profile)),
+        interrupt_(std::move(interrupt)) {}
 
-  static fbl::Array<ChipInfo> InitChips(amlspi_config_t* map, zx_device_t* device);
+  static fbl::Array<ChipInfo> InitChips(amlspi_config_t* config, zx_device_t* device);
   void DumpState();
 
   void Exchange8(const uint8_t* txdata, uint8_t* out_rxdata, size_t size);
   void Exchange64(const uint8_t* txdata, uint8_t* out_rxdata, size_t size);
 
   void SetThreadProfile();
+
+  void WaitForTransferComplete();
 
   // Checks size against the registered VMO size and returns a Span with offset applied. Returns a
   // Span with data set to nullptr if vmo_id wasn't found. Returns a Span with size set to zero if
@@ -93,6 +97,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   fbl::Array<ChipInfo> chips_;
   bool need_reset_ = false;
   zx::profile thread_profile_;
+  zx::interrupt interrupt_;
 };
 
 }  // namespace spi

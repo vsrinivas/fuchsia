@@ -26,6 +26,11 @@
 
 namespace nelson {
 
+// Approximate best-case time to read out one radar burst.
+constexpr zx::duration kSelinaCapacity = zx::usec(10'000);
+// The radar sensor interrupts the host with a new burst every 33,333 us.
+constexpr zx::duration kSelinaPeriod = zx::usec(33'333);
+
 static const pbus_mmio_t spi_mmios[] = {
     {
         .base = S905D3_SPICC1_BASE,
@@ -52,8 +57,8 @@ static const spi_channel_t spi_channels[] = {
 };
 
 static const amlspi_config_t spi_config = {
-    .capacity = zx::usec(10'000).to_nsecs(),
-    .period = zx::usec(33'333).to_nsecs(),
+    .capacity = kSelinaCapacity.to_nsecs(),
+    .period = kSelinaPeriod.to_nsecs(),
     .bus_id = NELSON_SPICC1,
     .cs_count = 1,
     .cs = {0},  // index into fragments list
