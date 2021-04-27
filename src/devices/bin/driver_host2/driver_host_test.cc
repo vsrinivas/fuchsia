@@ -29,7 +29,7 @@ namespace fmem = fuchsia::mem;
 namespace frunner = fuchsia_component_runner;
 namespace ftest = fuchsia_driverhost_test;
 
-using Completer = fidl::WireInterface<fdf::DriverHost>::StartCompleter::Sync;
+using Completer = fidl::WireServer<fdf::DriverHost>::StartCompleter::Sync;
 using namespace inspect::testing;
 
 class fake_context : public fit::context {
@@ -126,7 +126,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
 
  protected:
   async::Loop& loop() { return loop_; }
-  fidl::WireInterface<fdf::DriverHost>* driver_host() { return &driver_host_; }
+  fidl::WireServer<fdf::DriverHost>* driver_host() { return &driver_host_; }
 
   void AddEntry(fs::Service::Connector connector) {
     EXPECT_EQ(ZX_OK, svc_dir_->AddEntry(fidl::DiscoverableProtocolName<ftest::Incoming>,
@@ -188,8 +188,9 @@ class DriverHostTest : public gtest::TestLoopFixture {
       driver_start_args.set_ns(allocator, std::move(ns_entries));
       driver_start_args.set_outgoing_dir(allocator, std::move(outgoing_dir_endpoints->server));
       Completer completer(&transaction);
-      driver_host()->Start(std::move(driver_start_args), std::move(driver_endpoints->server),
-                           completer);
+      fidl::WireRequest<fdf::DriverHost::Start> request(0, driver_start_args,
+                                                        std::move(driver_endpoints->server));
+      driver_host()->Start(&request, completer);
     }
     loop().RunUntilIdle();
     EXPECT_EQ(expected_epitaph, epitaph);
@@ -315,7 +316,9 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
   {
     Completer completer(&transaction);
-    driver_host()->Start(fdf::wire::DriverStartArgs(), std::move(driver_server_end), completer);
+    fidl::WireRequest<fdf::DriverHost::Start> request(0, fdf::wire::DriverStartArgs(),
+                                                      std::move(driver_server_end));
+    driver_host()->Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
@@ -327,8 +330,10 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     fdf::wire::DriverStartArgs driver_start_args(allocator);
     driver_start_args.set_url(allocator, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
 
-    driver_host()->Start(std::move(driver_start_args),
-                         fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)), completer);
+    fidl::WireRequest<fdf::DriverHost::Start> request(
+        0, std::move(driver_start_args),
+        fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)));
+    driver_host()->Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
@@ -341,8 +346,10 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     fdf::wire::DriverStartArgs driver_start_args(allocator);
     driver_start_args.set_url(allocator, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
     driver_start_args.set_ns(allocator);
-    driver_host()->Start(std::move(driver_start_args),
-                         fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)), completer);
+    fidl::WireRequest<fdf::DriverHost::Start> request(
+        0, std::move(driver_start_args),
+        fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)));
+    driver_host()->Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
 
@@ -360,8 +367,10 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     driver_start_args.set_ns(allocator, std::move(entries1));
 
     Completer completer(&transaction);
-    driver_host()->Start(std::move(driver_start_args),
-                         fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)), completer);
+    fidl::WireRequest<fdf::DriverHost::Start> request(
+        0, std::move(driver_start_args),
+        fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)));
+    driver_host()->Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
@@ -380,8 +389,10 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     driver_start_args.set_ns(allocator, std::move(entries2));
 
     Completer completer(&transaction);
-    driver_host()->Start(std::move(driver_start_args),
-                         fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)), completer);
+    fidl::WireRequest<fdf::DriverHost::Start> request(
+        0, std::move(driver_start_args),
+        fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)));
+    driver_host()->Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
 }
@@ -442,7 +453,9 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
     driver_start_args.set_program(allocator, std::move(dictionary));
     driver_start_args.set_ns(allocator, std::move(ns_entries));
 
-    driver_host()->Start(std::move(driver_start_args), std::move(driver_server_end), completer);
+    fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
+                                                      std::move(driver_server_end));
+    driver_host()->Start(&request, completer);
   }
   loop().RunUntilIdle();
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);

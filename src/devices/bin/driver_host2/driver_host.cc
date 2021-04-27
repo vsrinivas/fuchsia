@@ -118,26 +118,25 @@ zx::status<> DriverHost::PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc
   return zx::make_status(status);
 }
 
-void DriverHost::Start(fdf::wire::DriverStartArgs start_args,
-                       fidl::ServerEnd<fuchsia_driver_framework::Driver> request,
-                       StartCompleter::Sync& completer) {
-  if (!start_args.has_url()) {
+void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer) {
+  if (!request->start_args.has_url()) {
     LOGF(ERROR, "Failed to start driver, missing 'url' argument");
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
-  std::string url(start_args.url().get());
-  auto pkg = start_args.has_ns() ? start_args::NsValue(start_args.ns(), "/pkg")
-                                 : zx::error(ZX_ERR_INVALID_ARGS);
+  std::string url(request->start_args.url().get());
+  auto pkg = request->start_args.has_ns() ? start_args::NsValue(request->start_args.ns(), "/pkg")
+                                          : zx::error(ZX_ERR_INVALID_ARGS);
   if (pkg.is_error()) {
     LOGF(ERROR, "Failed to start driver, missing '/pkg' directory: %s",
          zx_status_get_string(pkg.error_value()));
     completer.Close(pkg.error_value());
     return;
   }
-  zx::status<std::string> binary = start_args.has_program()
-                                       ? start_args::ProgramValue(start_args.program(), "binary")
-                                       : zx::error(ZX_ERR_INVALID_ARGS);
+  zx::status<std::string> binary =
+      request->start_args.has_program()
+          ? start_args::ProgramValue(request->start_args.program(), "binary")
+          : zx::error(ZX_ERR_INVALID_ARGS);
   if (binary.is_error()) {
     LOGF(ERROR, "Failed to start driver, missing 'binary' argument: %s",
          zx_status_get_string(binary.error_value()));
@@ -161,7 +160,8 @@ void DriverHost::Start(fdf::wire::DriverStartArgs start_args,
   }
   // We encode start_args outside of callback in order to access stack-allocated
   // data before it is destroyed.
-  auto message = std::make_unique<fdf::wire::DriverStartArgs::OwnedEncodedMessage>(&start_args);
+  auto message =
+      std::make_unique<fdf::wire::DriverStartArgs::OwnedEncodedMessage>(&request->start_args);
   if (!message->ok()) {
     LOGF(ERROR, "Failed to start driver '/pkg/%s', could not encode start args: %s", binary->data(),
          message->error());
@@ -174,7 +174,7 @@ void DriverHost::Start(fdf::wire::DriverStartArgs start_args,
   // this callback to extend its lifetime.
   fidl::Client<fio::File> file(std::move(endpoints->client), loop_->dispatcher(),
                                std::make_shared<FileEventHandler>(binary.value()));
-  auto callback = [this, request = std::move(request), completer = completer.ToAsync(),
+  auto callback = [this, request = std::move(request->driver), completer = completer.ToAsync(),
                    url = std::move(url), binary = std::move(binary.value()),
                    message = std::move(message),
                    _ = file.Clone()](fidl::WireResponse<fio::File::GetBuffer>* response) mutable {
