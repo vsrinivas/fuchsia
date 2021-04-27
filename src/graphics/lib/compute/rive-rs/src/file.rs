@@ -148,4 +148,8 @@ impl File {
             .find(|artboard| artboard.cast::<Component>().as_ref().name() == name)
             .cloned()
     }
+
+    pub fn artboards(&self) -> impl Iterator<Item = &Object<Artboard>> {
+        self.artboards.iter()
+    }
 }

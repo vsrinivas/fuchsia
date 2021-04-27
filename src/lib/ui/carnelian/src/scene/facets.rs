@@ -14,13 +14,7 @@ use crate::{
 };
 use anyhow::Error;
 use euclid::{default::Transform2D, size2, vec2};
-use fuchsia_zircon::{self as zx, Time};
-use rive_rs::{
-    self as rive,
-    animation::LinearAnimationInstance,
-    layout::{self, Alignment, Fit},
-    math::Aabb,
-};
+use rive_rs::{self as rive};
 use std::{any::Any, path::PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -432,49 +426,17 @@ impl Facet for SpacingFacet {
     }
 }
 
-/// Message used to toggle animation of a Rive facet
-pub struct ToggleAnimationMessage {
-    /// The index of the animation in the art book whose animation state
-    /// should be toggled.
-    pub index: usize,
-}
-
 /// A facet constructed with the contents of a Rive animation file.
 pub struct RiveFacet {
     size: Size,
     artboard: rive::Object<rive::Artboard>,
-    animations: Vec<(LinearAnimationInstance, bool)>,
-    last_presentation_time: Option<Time>,
     render_cache: RiveRenderCache,
 }
 
 impl RiveFacet {
     /// Create a Rive facet with the contents of a Rive file.
-    pub fn new(
-        size: Size,
-        artboard: rive::Object<rive::Artboard>,
-        initial_animations: impl IntoIterator<Item = usize>,
-    ) -> Self {
-        let artboard_ref = artboard.as_ref();
-        artboard_ref.advance(0.0);
-
-        let mut animations: Vec<(LinearAnimationInstance, bool)> = artboard_ref
-            .animations()
-            .map(|animation| (LinearAnimationInstance::new(animation), false))
-            .collect();
-        for index in initial_animations.into_iter() {
-            if index < animations.len() {
-                animations[index].1 = true;
-            }
-        }
-
-        Self {
-            size,
-            artboard,
-            animations,
-            last_presentation_time: None,
-            render_cache: RiveRenderCache::new(),
-        }
+    pub fn new(size: Size, artboard: rive::Object<rive::Artboard>) -> Self {
+        Self { size, artboard, render_cache: RiveRenderCache::new() }
     }
 }
 
@@ -485,38 +447,16 @@ impl Facet for RiveFacet {
         layer_group: &mut LayerGroup,
         render_context: &mut RenderContext,
     ) -> Result<(), Error> {
-        let presentation_time = zx::Time::get_monotonic();
-        let elapsed = if let Some(last_presentation_time) = self.last_presentation_time {
-            const NANOS_PER_SECOND: f32 = 1_000_000_000.0;
-            (presentation_time - last_presentation_time).into_nanos() as f32 / NANOS_PER_SECOND
-        } else {
-            0.0
-        };
-        self.last_presentation_time = Some(presentation_time);
-
         let artboard_ref = self.artboard.as_ref();
-
-        for (animation_instance, is_animating) in self.animations.iter_mut() {
-            if *is_animating {
-                animation_instance.advance(elapsed);
-                animation_instance.apply(self.artboard.clone(), 1.0);
-            }
-            if animation_instance.is_done() {
-                animation_instance.reset();
-                *is_animating = false;
-            }
-        }
-
         let width = self.size.width as f32;
         let height = self.size.height as f32;
         self.render_cache.with_renderer(render_context, |renderer| {
-            artboard_ref.advance(elapsed);
             artboard_ref.draw(
                 renderer,
-                layout::align(
-                    Fit::Contain,
-                    Alignment::center(),
-                    Aabb::new(0.0, 0.0, width, height),
+                rive::layout::align(
+                    rive::layout::Fit::Contain,
+                    rive::layout::Alignment::center(),
+                    rive::math::Aabb::new(0.0, 0.0, width, height),
                     artboard_ref.bounds(),
                 ),
             );
@@ -540,12 +480,6 @@ impl Facet for RiveFacet {
     fn handle_message(&mut self, msg: Box<dyn Any>) {
         if let Some(set_size) = msg.downcast_ref::<SetSizeMessage>() {
             self.size = set_size.size;
-        }
-        if let Some(toggle_animation) = msg.downcast_ref::<ToggleAnimationMessage>() {
-            let i = toggle_animation.index;
-            if i < self.animations.len() {
-                self.animations[i].1 = !self.animations[i].1;
-            }
         }
     }
 }

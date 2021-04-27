@@ -11,14 +11,14 @@ use {
         make_app_assistant,
         render::{rive::load_rive, Context as RenderContext},
         scene::{
-            facets::{FacetId, RiveFacet, SetSizeMessage, ToggleAnimationMessage},
+            facets::{FacetId, RiveFacet, SetSizeMessage},
             scene::{Scene, SceneBuilder},
         },
         App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
     fuchsia_trace_provider,
-    fuchsia_zircon::Event,
+    fuchsia_zircon::{self as zx, Event, Time},
     rive_rs::{self as rive},
     std::path::Path,
 };
@@ -38,6 +38,10 @@ struct Args {
     /// background color (default is white)
     #[argh(option, from_str_fn(parse_color))]
     background: Option<Color>,
+
+    /// artboard name (default is first artboard found)
+    #[argh(option)]
+    artboard: Option<String>,
 }
 
 fn parse_color(value: &str) -> Result<Color, String> {
@@ -49,6 +53,7 @@ struct RiveAppAssistant {
     use_spinel: bool,
     filename: String,
     background: Option<Color>,
+    artboard: Option<String>,
 }
 
 impl AppAssistant for RiveAppAssistant {
@@ -57,6 +62,7 @@ impl AppAssistant for RiveAppAssistant {
         self.use_spinel = args.use_spinel;
         self.filename = args.file;
         self.background = args.background;
+        self.artboard = args.artboard;
         Ok(())
     }
 
@@ -64,6 +70,7 @@ impl AppAssistant for RiveAppAssistant {
         Ok(Box::new(RiveViewAssistant::new(
             load_rive(Path::new("/pkg/data/static").join(self.filename.clone()))?,
             self.background.take().unwrap_or(Color::white()),
+            self.artboard.take(),
         )))
     }
 
@@ -75,19 +82,29 @@ impl AppAssistant for RiveAppAssistant {
 struct SceneDetails {
     scene: Scene,
     rive: FacetId,
+    artboard: rive::Object<rive::Artboard>,
+    animations: Vec<(rive::animation::LinearAnimationInstance, bool)>,
 }
 
 struct RiveViewAssistant {
     file: rive::File,
     background: Color,
+    artboard: Option<String>,
+    last_presentation_time: Option<Time>,
     scene_details: Option<SceneDetails>,
 }
 
 impl RiveViewAssistant {
-    fn new(file: rive::File, background: Color) -> RiveViewAssistant {
+    fn new(file: rive::File, background: Color, artboard: Option<String>) -> RiveViewAssistant {
         let background = Color { r: background.r, g: background.g, b: background.b, a: 255 };
 
-        RiveViewAssistant { file, background, scene_details: None }
+        RiveViewAssistant {
+            file,
+            background,
+            artboard,
+            last_presentation_time: None,
+            scene_details: None,
+        }
     }
 
     fn set_size(&mut self, size: &Size) {
@@ -100,9 +117,9 @@ impl RiveViewAssistant {
 
     fn toggle_animation(&mut self, index: usize) {
         if let Some(scene_details) = self.scene_details.as_mut() {
-            scene_details
-                .scene
-                .send_message(&scene_details.rive, Box::new(ToggleAnimationMessage { index }));
+            if index < scene_details.animations.len() {
+                scene_details.animations[index].1 = !scene_details.animations[index].1;
+            }
         }
     }
 }
@@ -119,20 +136,76 @@ impl ViewAssistant for RiveViewAssistant {
         ready_event: Event,
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
-        let file = &self.file;
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
             let mut builder = SceneBuilder::new().background_color(self.background);
-            let artboard = file.artboard().unwrap();
-            let initial_animations = vec![0];
-            let rive_facet = RiveFacet::new(context.size, artboard, initial_animations);
+            let artboards: Vec<_> = self
+                .file
+                .artboards()
+                .map(|artboard| artboard.cast::<rive::Component>().as_ref().name())
+                .collect();
+            println!("artboards: {:#?}", artboards);
+            let artboard = self
+                .artboard
+                .as_ref()
+                .map_or_else(|| self.file.artboard(), |name| self.file.get_artboard(name))
+                .expect("failed to get artboard");
+            let artboard_ref = artboard.as_ref();
+            let animations: Vec<_> = artboard_ref
+                .animations()
+                .enumerate()
+                .map(|(i, animation)| {
+                    let name = animation.cast::<rive::animation::Animation>().as_ref().name();
+                    format!("{}:{}", i, name)
+                })
+                .collect();
+            println!("animations: {:#?}", animations);
+            let rive_facet = RiveFacet::new(context.size, artboard.clone());
             let rive = builder.facet(Box::new(rive_facet));
             let scene = builder.build();
-            SceneDetails { scene, rive }
+
+            // Create animation instances and enable animation at index 0.
+            let animations: Vec<(rive::animation::LinearAnimationInstance, bool)> = artboard_ref
+                .animations()
+                .enumerate()
+                .map(|(i, animation)| {
+                    (rive::animation::LinearAnimationInstance::new(animation), i == 0)
+                })
+                .collect();
+
+            SceneDetails { scene, rive, artboard, animations }
         });
+
+        let presentation_time = zx::Time::get_monotonic();
+        let elapsed = if let Some(last_presentation_time) = self.last_presentation_time {
+            const NANOS_PER_SECOND: f32 = 1_000_000_000.0;
+            (presentation_time - last_presentation_time).into_nanos() as f32 / NANOS_PER_SECOND
+        } else {
+            0.0
+        };
+        self.last_presentation_time = Some(presentation_time);
+
+        let artboard_ref = scene_details.artboard.as_ref();
+
+        let mut request_render = false;
+        for (animation_instance, is_animating) in scene_details.animations.iter_mut() {
+            if *is_animating {
+                animation_instance.advance(elapsed);
+                animation_instance.apply(scene_details.artboard.clone(), 1.0);
+            }
+            if animation_instance.is_done() {
+                animation_instance.reset();
+                *is_animating = false;
+            } else {
+                request_render = true;
+            }
+        }
+        artboard_ref.advance(elapsed);
 
         scene_details.scene.render(render_context, ready_event, context)?;
         self.scene_details = Some(scene_details);
-        context.request_render();
+        if request_render {
+            context.request_render();
+        }
         Ok(())
     }
 
