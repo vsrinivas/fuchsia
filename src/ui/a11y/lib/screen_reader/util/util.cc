@@ -68,7 +68,8 @@ bool NodeIsDescribable(const fuchsia::accessibility::semantics::Node* node) {
                            node->role() == fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH ||
                            node->role() == fuchsia::accessibility::semantics::Role::RADIO_BUTTON ||
                            node->role() == fuchsia::accessibility::semantics::Role::LINK ||
-                           node->role() == fuchsia::accessibility::semantics::Role::CHECK_BOX);
+                           node->role() == fuchsia::accessibility::semantics::Role::CHECK_BOX ||
+                           node->role() == fuchsia::accessibility::semantics::Role::SLIDER);
   return contains_text || is_actionable;
 }
 
