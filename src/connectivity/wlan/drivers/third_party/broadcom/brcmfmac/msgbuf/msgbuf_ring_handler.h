@@ -39,6 +39,9 @@ class MsgbufRingHandler : public InterruptProviderInterface::InterruptHandler {
 
     // Callback to handle a firmware event.
     virtual void HandleWlEvent(const void* data, size_t size) = 0;
+
+    // Callback to handle RX data.
+    virtual void HandleRxData(int interface_index, const void* data, size_t size) = 0;
   };
 
   MsgbufRingHandler();
@@ -130,6 +133,8 @@ class MsgbufRingHandler : public InterruptProviderInterface::InterruptHandler {
   WorkQueue::value_type CreateMsgbufIoctlResponseCallback(const MsgbufIoctlResponse& ioctl_response)
       __TA_REQUIRES(interrupt_handler_mutex_);
   WorkQueue::value_type CreateMsgbufWlEventCallback(const MsgbufWlEvent& wl_event)
+      __TA_REQUIRES(interrupt_handler_mutex_);
+  WorkQueue::value_type CreateMsgbufRxEventCallback(const MsgbufRxEvent& rx_event)
       __TA_REQUIRES(interrupt_handler_mutex_);
 
   // Handle each of the MSGBUF message types which do not require a callback.

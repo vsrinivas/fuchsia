@@ -15,6 +15,8 @@ namespace brcmfmac {
 struct [[gnu::packed]] MsgbufCommonHeader {
   enum class MsgType : uint8_t {
     kInvalid = 0,
+    kFirmwareStatus = 0x01,
+    kRingStatus = 0x02,
     kFlowRingCreateRequest = 0x03,
     kFlowRingCreateResponse = 0x04,
     kFlowRingDeleteRequest = 0x05,
@@ -28,6 +30,7 @@ struct [[gnu::packed]] MsgbufCommonHeader {
     kTxRequest = 0x0F,
     kTxResponse = 0x10,
     kRxBufferPost = 0x11,
+    kRxEvent = 0x12,
   };
 
   MsgType msgtype;
@@ -45,6 +48,23 @@ static_assert(sizeof(bcme_short_status_t) == sizeof(int16_t));
 struct [[gnu::packed]] MsgbufCompletionHeader {
   bcme_short_status_t status;  // Note: signed integer.
   uint16_t flow_ring_id;
+};
+
+struct [[gnu::packed]] MsgbufFirmwareStatus {
+  static constexpr MsgbufCommonHeader::MsgType kMsgType =
+      MsgbufCommonHeader::MsgType::kFirmwareStatus;
+  MsgbufCommonHeader msg;
+  MsgbufCompletionHeader compl_hdr;
+  uint16_t write_idx;
+  uint16_t rsvd0[5];
+};
+
+struct [[gnu::packed]] MsgbufRingStatus {
+  static constexpr MsgbufCommonHeader::MsgType kMsgType = MsgbufCommonHeader::MsgType::kRingStatus;
+  MsgbufCommonHeader msg;
+  MsgbufCompletionHeader compl_hdr;
+  uint16_t write_idx;
+  uint16_t rsvd0[5];
 };
 
 struct [[gnu::packed]] MsgbufFlowRingCreateRequest {
@@ -161,6 +181,19 @@ struct [[gnu::packed]] MsgbufWlEvent {
   uint16_t event_data_len;
   uint16_t seqnum;
   uint16_t rsvd0[4];
+};
+
+struct [[gnu::packed]] MsgbufRxEvent {
+  static constexpr MsgbufCommonHeader::MsgType kMsgType = MsgbufCommonHeader::MsgType::kRxEvent;
+  MsgbufCommonHeader msg;
+  MsgbufCompletionHeader compl_hdr;
+  uint16_t metadata_len;
+  uint16_t data_len;
+  uint16_t data_offset;
+  uint16_t flags;
+  uint32_t rx_status_0;
+  uint32_t rx_status_1;
+  uint32_t rsvd0;
 };
 
 }  // namespace brcmfmac

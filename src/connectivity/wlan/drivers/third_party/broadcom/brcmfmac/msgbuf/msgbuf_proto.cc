@@ -32,6 +32,9 @@ constexpr int kTxBufferCount = 2048;
 std::unique_ptr<brcmf_proto> CreateProto(MsgbufProto* msgbuf) {
   auto proto = std::make_unique<brcmf_proto>();
 
+  proto->add_iface = [](brcmf_pub* drvr, int ifidx) {};
+  proto->del_iface = [](brcmf_pub* drvr, int ifidx) {};
+  proto->reset_iface = [](brcmf_pub* drvr, int ifidx) {};
   proto->hdrpull = [](brcmf_pub* drvr, brcmf_netbuf* netbuf, brcmf_if** ifp) {
     return reinterpret_cast<MsgbufProto*>(drvr->proto->pd)->HdrPull(netbuf, ifp);
   };
@@ -92,6 +95,7 @@ class MsgbufProto::RingEventHandler : public MsgbufRingHandler::EventHandler {
 
   // MsgbufRingHandler::EventHandler implementation.
   void HandleWlEvent(const void* data, size_t size) override;
+  void HandleRxData(int interface_index, const void* data, size_t size) override;
 
  private:
   brcmf_pub* drvr_ = nullptr;
@@ -116,6 +120,16 @@ void MsgbufProto::RingEventHandler::HandleWlEvent(const void* data, size_t size)
     return;
   }
   brcmf_fweh_process_event(drvr_, reinterpret_cast<const brcmf_event*>(data), size);
+}
+
+void MsgbufProto::RingEventHandler::HandleRxData(int interface_index, const void* data,
+                                                 size_t size) {
+  brcmf_if* const ifp = brcmf_get_ifp(drvr_, interface_index);
+  if (ifp == nullptr || ifp->ndev == nullptr) {
+    BRCMF_ERR("Received packet for invalid interface %d", interface_index);
+    return;
+  }
+  brcmf_netif_rx(ifp, data, size);
 }
 
 MsgbufProto::MsgbufProto() = default;
@@ -199,7 +213,7 @@ zx_status_t MsgbufProto::QueryDcmd(int ifidx, uint cmd, void* buf, uint len, bcm
   status = ring_handler_->Ioctl(ifidx, cmd, std::move(tx_buffer), len, &rx_buffer, &rx_data_size,
                                 &firmware_error);
   if (status != ZX_OK) {
-    BRCMF_ERR("ioctl failed, ifidx=%d cmd=0x%08x fwerr=%d: %s", ifidx, cmd, firmware_error,
+    BRCMF_ERR("Ioctl failed, ifidx=%d cmd=0x%08x fwerr=%d: %s", ifidx, cmd, firmware_error,
               zx_status_get_string(status));
     return status;
   }

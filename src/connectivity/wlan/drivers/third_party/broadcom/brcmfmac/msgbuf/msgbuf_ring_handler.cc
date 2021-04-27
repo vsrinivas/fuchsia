@@ -34,6 +34,8 @@ union RxBufferSubmitRingEntry {
 
 union ControlCompleteRingEntry {
   MsgbufCommonHeader common_header;
+  MsgbufFirmwareStatus firmware_status;
+  MsgbufRingStatus ring_status;
   MsgbufFlowRingCreateResponse flow_ring_create_response;
   MsgbufFlowRingDeleteResponse flow_ring_delete_response;
   MsgbufIoctlResponse ioctl_response;
@@ -47,6 +49,7 @@ union TxCompleteRingEntry {
 
 union RxCompleteRingEntry {
   MsgbufCommonHeader common_header;
+  MsgbufRxEvent rx_event;
 };
 
 }  // namespace
@@ -466,6 +469,45 @@ MsgbufRingHandler::WorkQueue::value_type MsgbufRingHandler::CreateMsgbufWlEventC
   };
 }
 
+MsgbufRingHandler::WorkQueue::value_type MsgbufRingHandler::CreateMsgbufRxEventCallback(
+    const MsgbufRxEvent& rx_event) {
+  // Invoke the event handler, defensively.
+  return [this, request_id = rx_event.msg.request_id, rx_size = rx_event.data_len,
+          rx_offset = rx_event.data_offset, interface_index = rx_event.msg.ifidx]() {
+    AssertIsWorkerThread();
+    zx_status_t status = ZX_OK;
+
+    DmaPool::Buffer buffer;
+    if ((status = rx_buffer_pool_->Acquire(request_id, &buffer)) != ZX_OK) {
+      BRCMF_ERR("Failed to acquire rx buffer %d", request_id);
+      return;
+    }
+    // We have consumed one RX buffer for this received packet.
+    ++required_rx_buffers_;
+
+    if (event_handler_ == nullptr) {
+      // No event handler to invoke.
+      return;
+    }
+
+    const size_t offset = (rx_offset != 0) ? rx_offset : rx_data_offset_;
+    const size_t rx_size_with_offset = rx_size + offset;
+    if (rx_size_with_offset > buffer.size()) {
+      BRCMF_ERR("Received bad data length %zu, max %zu", rx_size_with_offset, buffer.size());
+      return;
+    }
+    const void* data = nullptr;
+    if ((status = buffer.MapRead(rx_size, &data)) != ZX_OK) {
+      BRCMF_ERR("Failed to map rx buffer %d", buffer.index());
+      return;
+    }
+
+    const void* const rx_data =
+        reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(data) + offset);
+    event_handler_->HandleRxData(interface_index, rx_data, rx_size);
+  };
+}
+
 void MsgbufRingHandler::HandleMsgbufTxResponse(const MsgbufTxResponse& tx_response) {
   zx_status_t status = ZX_OK;
 
@@ -509,6 +551,18 @@ MsgbufRingHandler::WorkQueue::container_type MsgbufRingHandler::ProcessControlCo
               reinterpret_cast<const char*>(buffer) +
               entry_index * control_complete_ring_->item_size());
       switch (entry->common_header.msgtype) {
+        case MsgbufCommonHeader::MsgType::kFirmwareStatus: {
+          BRCMF_ERR("Firmware error: status %d write_idx %d",
+                    entry->firmware_status.compl_hdr.status, entry->firmware_status.write_idx);
+          break;
+        }
+
+        case MsgbufCommonHeader::MsgType::kRingStatus: {
+          BRCMF_ERR("Ring error: status %d write_idx %d", entry->ring_status.compl_hdr.status,
+                    entry->ring_status.write_idx);
+          break;
+        }
+
         case MsgbufCommonHeader::MsgType::kFlowRingCreateResponse: {
           work_list.emplace_back(
               CreateMsgbufFlowRingCreateResponseCallback(entry->flow_ring_create_response));
@@ -609,6 +663,11 @@ MsgbufRingHandler::WorkQueue::container_type MsgbufRingHandler::ProcessRxComplet
       const RxCompleteRingEntry* const entry = reinterpret_cast<const RxCompleteRingEntry*>(
           reinterpret_cast<const char*>(buffer) + entry_index * rx_complete_ring_->item_size());
       switch (entry->common_header.msgtype) {
+        case MsgbufCommonHeader::MsgType::kRxEvent: {
+          work_list.emplace_back(CreateMsgbufRxEventCallback(entry->rx_event));
+          break;
+        }
+
         default: {
           BRCMF_ERR("Invalid msgtype %d", static_cast<int>(entry->common_header.msgtype));
           break;
