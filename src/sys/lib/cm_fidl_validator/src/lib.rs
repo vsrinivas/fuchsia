@@ -1910,7 +1910,7 @@ fn check_events_mode(
 mod tests {
     use {
         super::*, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2::*,
-        lazy_static::lazy_static, proptest::prelude::*, regex::Regex,
+        lazy_static::lazy_static, proptest::prelude::*, regex::Regex, test_case::test_case,
     };
 
     const PATH_REGEX_STR: &str = r"(/[^/]+)+";
@@ -2190,8 +2190,9 @@ mod tests {
             )+
         ) => {
             $(
-                #[test]
-                fn $test_name() {
+                #[test_case(DependencyType::Weak)]
+                #[test_case(DependencyType::WeakForMigration)]
+                fn $test_name(weak_dep: DependencyType) {
                     let mut decl = new_component_decl();
                     let offers = vec![
                         {
@@ -2213,7 +2214,7 @@ mod tests {
                             offer_decl.target = Some(Ref::Child(
                                ChildRef { name: "a".to_string(), collection: None },
                             ));
-                            offer_decl.dependency_type = Some(DependencyType::WeakForMigration);
+                            offer_decl.dependency_type = Some(weak_dep);
                             $ty(offer_decl)
                         },
                     ];
@@ -3666,7 +3667,7 @@ mod tests {
                            }
                         )),
                         target_name: Some(format!("{}", "b".repeat(101))),
-                        dependency_type: Some(DependencyType::WeakForMigration),
+                        dependency_type: Some(DependencyType::Weak),
                         ..OfferProtocolDecl::EMPTY
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
@@ -3698,7 +3699,7 @@ mod tests {
                         target_name: Some(format!("{}", "b".repeat(101))),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        dependency_type: Some(DependencyType::WeakForMigration),
+                        dependency_type: Some(DependencyType::Weak),
                         ..OfferDirectoryDecl::EMPTY
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
@@ -3849,7 +3850,7 @@ mod tests {
                         target_name: Some("assets".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        dependency_type: Some(DependencyType::WeakForMigration),
+                        dependency_type: Some(DependencyType::Weak),
                         ..OfferDirectoryDecl::EMPTY
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
@@ -4071,7 +4072,7 @@ mod tests {
                            }
                         )),
                         target_name: Some("legacy_logger".to_string()),
-                        dependency_type: Some(DependencyType::WeakForMigration),
+                        dependency_type: Some(DependencyType::Weak),
                         ..OfferProtocolDecl::EMPTY
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
@@ -4230,7 +4231,7 @@ mod tests {
                         target_name: Some("assets".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        dependency_type: Some(DependencyType::WeakForMigration),
+                        dependency_type: Some(DependencyType::Weak),
                         ..OfferDirectoryDecl::EMPTY
                     }),
                 ]);
@@ -4375,7 +4376,7 @@ mod tests {
                         target_name: Some("assets".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        dependency_type: Some(DependencyType::WeakForMigration),
+                        dependency_type: Some(DependencyType::Weak),
                         ..OfferDirectoryDecl::EMPTY
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
@@ -4493,7 +4494,7 @@ mod tests {
                            }
                         )),
                         target_name: Some("fuchsia.logger.LegacyLog".to_string()),
-                        dependency_type: Some(DependencyType::WeakForMigration),
+                        dependency_type: Some(DependencyType::Weak),
                         ..OfferProtocolDecl::EMPTY
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
@@ -4530,7 +4531,7 @@ mod tests {
                         target_name: Some("data".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        dependency_type: Some(DependencyType::WeakForMigration),
+                        dependency_type: Some(DependencyType::Weak),
                         ..OfferDirectoryDecl::EMPTY
                     }),
                     OfferDecl::Storage(OfferStorageDecl {

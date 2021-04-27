@@ -436,10 +436,13 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
         // here.
         let source_target_pairs = match dep {
             OfferDecl::Protocol(svc_offer) => {
-                if svc_offer.dependency_type == DependencyType::WeakForMigration {
-                    // weak dependencies are ignored by this algorithm, because weak dependencies
-                    // can be broken arbitrarily.
-                    continue;
+                match svc_offer.dependency_type {
+                    DependencyType::Strong => {}
+                    DependencyType::Weak | DependencyType::WeakForMigration => {
+                        // weak dependencies are ignored by this algorithm, because weak
+                        // dependencies can be broken arbitrarily.
+                        continue;
+                    }
                 }
                 match &svc_offer.source {
                     OfferSource::Child(source) => match &svc_offer.target {
@@ -485,10 +488,13 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                 pairs
             }
             OfferDecl::Directory(dir_offer) => {
-                if dir_offer.dependency_type == DependencyType::WeakForMigration {
-                    // weak dependencies are ignored by this algorithm, because weak dependencies
-                    // can be broken arbitrarily.
-                    continue;
+                match dir_offer.dependency_type {
+                    DependencyType::Strong => {}
+                    DependencyType::Weak | DependencyType::WeakForMigration => {
+                        // weak dependencies are ignored by this algorithm, because weak
+                        // dependencies can be broken arbitrarily.
+                        continue;
+                    }
                 }
                 match &dir_offer.source {
                     OfferSource::Child(source) => match &dir_offer.target {
@@ -670,6 +676,7 @@ mod tests {
         moniker::{AbsoluteMoniker, PartialMoniker},
         std::collections::HashMap,
         std::{convert::TryFrom, sync::Weak},
+        test_case::test_case,
     };
 
     // TODO(jmatt) Add tests for all capability types
@@ -719,15 +726,16 @@ mod tests {
         validate_results(expected, process_component_dependencies(&decl));
     }
 
-    #[test]
-    fn test_weak_service_from_parent() {
+    #[test_case(DependencyType::Weak)]
+    #[test_case(DependencyType::WeakForMigration)]
+    fn test_weak_service_from_parent(weak_dep: DependencyType) {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferSource::Self_,
                 source_name: "serviceParent".into(),
                 target_name: "serviceParent".into(),
                 target: OfferTarget::Child("childA".to_string()),
-                dependency_type: DependencyType::WeakForMigration,
+                dependency_type: weak_dep,
             })],
             children: vec![ChildDecl {
                 name: "childA".to_string(),
@@ -1013,8 +1021,9 @@ mod tests {
         validate_results(expected, process_component_dependencies(&decl));
     }
 
-    #[test]
-    fn test_single_weak_dependency() {
+    #[test_case(DependencyType::Weak)]
+    #[test_case(DependencyType::WeakForMigration)]
+    fn test_single_weak_dependency(weak_dep: DependencyType) {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
@@ -1034,14 +1043,14 @@ mod tests {
                     source_name: "serviceParent".into(),
                     target_name: "serviceParent".into(),
                     target: OfferTarget::Child("childA".to_string()),
-                    dependency_type: DependencyType::WeakForMigration,
+                    dependency_type: weak_dep.clone(),
                 }),
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Child("childB".to_string()),
                     source_name: "childBOffer".into(),
                     target_name: "serviceSibling".into(),
                     target: OfferTarget::Child("childA".to_string()),
-                    dependency_type: DependencyType::WeakForMigration,
+                    dependency_type: weak_dep.clone(),
                 }),
             ],
             children: vec![child_a.clone(), child_b.clone()],
@@ -1185,8 +1194,9 @@ mod tests {
         validate_results(expected, process_component_dependencies(&decl));
     }
 
-    #[test]
-    fn test_multiple_dependencies() {
+    #[test_case(DependencyType::Weak)]
+    #[test_case(DependencyType::WeakForMigration)]
+    fn test_multiple_dependencies(weak_dep: DependencyType) {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
@@ -1226,7 +1236,7 @@ mod tests {
                     source_name: "childCToA".into(),
                     target_name: "serviceSibling".into(),
                     target: OfferTarget::Child("childA".to_string()),
-                    dependency_type: DependencyType::WeakForMigration,
+                    dependency_type: weak_dep,
                 }),
             ],
             children: vec![child_a.clone(), child_b.clone(), child_c.clone()],

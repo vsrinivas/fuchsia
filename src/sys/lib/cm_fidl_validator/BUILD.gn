@@ -21,6 +21,7 @@ rustc_library("cm_fidl_validator") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:test-case",
   ]
 
   sources = [ "src/lib.rs" ]

@@ -578,10 +578,11 @@ impl Default for StartupMode {
 #[serde(rename_all = "snake_case")]
 pub enum DependencyType {
     Strong,
+    Weak,
     WeakForMigration,
 }
 
-symmetrical_enums!(DependencyType, fsys::DependencyType, Strong, WeakForMigration);
+symmetrical_enums!(DependencyType, fsys::DependencyType, Strong, Weak, WeakForMigration);
 
 impl Default for DependencyType {
     fn default() -> Self {

@@ -814,6 +814,7 @@ fidl_translations_identical!(fsys::EnvironmentExtends);
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DependencyType {
     Strong,
+    Weak,
     WeakForMigration,
 }
 
@@ -821,6 +822,7 @@ impl FidlIntoNative<DependencyType> for fsys::DependencyType {
     fn fidl_into_native(self) -> DependencyType {
         match self {
             fsys::DependencyType::Strong => DependencyType::Strong,
+            fsys::DependencyType::Weak => DependencyType::Weak,
             fsys::DependencyType::WeakForMigration => DependencyType::WeakForMigration,
         }
     }
@@ -830,6 +832,7 @@ impl NativeIntoFidl<fsys::DependencyType> for DependencyType {
     fn native_into_fidl(self) -> fsys::DependencyType {
         match self {
             DependencyType::Strong => fsys::DependencyType::Strong,
+            DependencyType::Weak => fsys::DependencyType::Weak,
             DependencyType::WeakForMigration => fsys::DependencyType::WeakForMigration,
         }
     }

@@ -2054,7 +2054,7 @@ mod tests {
                         "protocol": "fuchsia.logger.LegacyLog",
                         "from": "#logger",
                         "to": "#netstack", // Verifies compilation of singleton "to:".
-                        "dependency": "weak_for_migration"
+                        "dependency": "weak"
                     },
                     {
                         "protocol": "fuchsia.logger.LegacyLog",
@@ -2183,7 +2183,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("fuchsia.logger.LegacyLog".to_string()),
-                            dependency_type: Some(fsys::DependencyType::WeakForMigration),
+                            dependency_type: Some(fsys::DependencyType::Weak),
                             ..fsys::OfferProtocolDecl::EMPTY
                         }
                     ),
@@ -2944,7 +2944,7 @@ mod tests {
                         "protocol": "fuchsia.logger.LegacyLog",
                         "from": "#logger",
                         "to": [ "#netstack", "#modular" ],
-                        "dependency": "weak_for_migration"
+                        "dependency": "weak"
                     },
                 ],
                 "children": [
@@ -3075,7 +3075,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("fuchsia.logger.LegacyLog".to_string()),
-                            dependency_type: Some(fsys::DependencyType::WeakForMigration),
+                            dependency_type: Some(fsys::DependencyType::Weak),
                             ..fsys::OfferProtocolDecl::EMPTY
                         }
                     ),
@@ -3090,7 +3090,7 @@ mod tests {
                                 name: "modular".to_string(),
                             })),
                             target_name: Some("fuchsia.logger.LegacyLog".to_string()),
-                            dependency_type: Some(fsys::DependencyType::WeakForMigration),
+                            dependency_type: Some(fsys::DependencyType::Weak),
                             ..fsys::OfferProtocolDecl::EMPTY
                         }
                     ),

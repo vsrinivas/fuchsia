@@ -25,10 +25,13 @@ flexible union OfferDecl {
 enum DependencyType {
     /// A strong dependency which may be required by components that use it.
     STRONG = 1;
-    /// A weak dependency specifically used to mark cyclic dependencies of
-    /// migrated components. Components that use a weak dependency must support
-    /// the dependency being unavailable at arbitrary times.
-    WEAK_FOR_MIGRATION = 2;
+    /// A weak dependency which is allowed to form a cycle. Components that use
+    /// a weak dependency must support the dependency being unavailable at
+    /// arbitrary times.
+    WEAK = 2;
+    /// A weak dependency specifically used to mark cyclic dependencies from
+    /// migrated v1 components.
+    WEAK_FOR_MIGRATION = 3;
 };
 
 /// Declares a service offered by a component to one of its children, which may
