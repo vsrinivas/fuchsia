@@ -64,7 +64,7 @@ class NotificationsImpl : public ProcessSymbols::Notifications {
 
 TEST(ProcessSymbols, SetModules_Probe) {
   std::string test_file_name = TestSymbolModule::GetCheckedInTestFileName();
-  std::string test_file_build_id = TestSymbolModule::GetCheckedInTestFileBuildID();
+  std::string test_file_build_id = TestSymbolModule::kCheckedInBuildId;
   SystemSymbols system(nullptr);
   system.build_id_index().AddOneFile(test_file_name);
 

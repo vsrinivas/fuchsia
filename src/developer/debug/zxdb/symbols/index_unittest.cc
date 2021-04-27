@@ -37,84 +37,84 @@ TEST(Index, IndexDump) {
   const char kExpected[] = R"(  Namespaces:
     <<empty index string>>
       Functions:
-        AnonNSFunction: {[0x1520, 0x152f)}
+        AnonNSFunction: {[0x14e0, 0x14ef)}
         LineLookupTest<0>: {[0x1040, 0x104f)}
         LineLookupTest<1>: {[0x1050, 0x105d)}
     my_ns
       Types:
-        Base1: 0x26a
-        Base2: 0x280
-        MyClass: 0x8aa
+        Base1: 0x1b3
+        Base2: 0x1c3
+        MyClass: 0x664
           Types:
-            Inner: 0x8d5
+            Inner: 0x683
               Functions:
-                MyMemberTwo: {[0x1440, 0x144b)}
+                MyMemberTwo: {[0x1400, 0x140b)}
           Functions:
-            MyMemberOne: {[0x1530, 0x153f)}
+            MyMemberOne: {[0x14d0, 0x14df)}
           Variables:
-            kClassStatic: 0x897
-        Struct: 0x1f3
+            kClassStatic: 0x65b
+        Struct: 0x154
           Functions:
-            MyFunc: {[0x1350, 0x1363)}
+            MyFunc: {[0x10f0, 0x1105)}
           Variables:
-            kConstInt: 0x22d
-            kConstLongDouble: 0x239
-        StructMemberPtr: 0x35a
-        TypeForUsing: 0x1a3
+            kConstInt: 0x182
+            kConstLongDouble: 0x18b
+        StructMemberPtr: 0x287
+        TypeForUsing: 0x1d3
       Functions:
-        DoStructCall: {[0x1100, 0x114c)}
+        DoStructCall: {[0x1120, 0x116c)}
         GetStruct: {[0x10a0, 0x10c5)}
         GetStructMemberPtr: {[0x10d0, 0x10e1)}
-        InlinedFunction: {[0x1150, 0x115f)}, {[0x12a0, 0x12a6)}
-        NamespaceFunction: {[0x1450, 0x145b)}
-        PassRValueRef: {[0x10f0, 0x10fa)}
+        InlinedFunction: {[0x0, 0xf)}, {[0x12e0, 0x12e6)}
+        NamespaceFunction: {[0x1410, 0x141b)}
+        PassRValueRef: {[0x1110, 0x111a)}
       Variables:
-        kGlobal: 0x87e
+        kGlobal: 0x64f
     std
       Types:
-        nullptr_t: 0x186
+        nullptr_t: 0x363
   Types:
-    ClassInTest2: 0x9ea
+    ClassInTest2: 0x741
       Functions:
-        FunctionInTest2: {[0x1540, 0x154b)}
-    ForInline: 0x4d4
+        FunctionInTest2: {[0x14f0, 0x14fb)}
+    ForInline: 0x2b2
       Functions:
-        ForInline: {[0x1390, 0x13a4)}
-        InlinedFunction: {[0x124f, 0x125d)}
-    MyTemplate<my_ns::Struct, 42>: 0x465
+        ForInline: {[0x12b0, 0x12c4)}
+        InlinedFunction: {[0x126d, 0x1276)}
+    MyTemplate<my_ns::Struct, 42>: 0x124
       Functions:
-        MyTemplate: {[0x1370, 0x1385)}
-    StructWithEnums: 0x104
+        MyTemplate: {[0x11e0, 0x11f5)}
+    StructWithEnums: 0xce
       Types:
-        RegularEnum: 0x119
-        TypedEnum: 0x152
-    VirtualBase: 0x6d0
+        RegularEnum: 0xdd
+        TypedEnum: 0x107
+    VirtualBase: 0x319
       Functions:
-        DoIt: {[0x1410, 0x141a)}
-        VirtualBase: {[0x13f0, 0x140e)}
-    VirtualDerived: 0x68e
+        DoIt: {[0x0, 0xa)}
+        VirtualBase: {[0x13e0, 0x13fc)}
+    VirtualDerived: 0x2e3
       Functions:
-        DoIt: {[0x1410, 0x141a)}
-        VirtualDerived: {[0x13b0, 0x13ec)}
-    __ARRAY_SIZE_TYPE__: 0x80b
-    char: 0x3d7
-    int: 0xd2
-    long double: 0x3cb
-    signed char: 0x17a
-    unsigned int: 0x16c
+        DoIt: {[0x0, 0xa)}
+        VirtualDerived: {[0x13a0, 0x13df)}
+    __ARRAY_SIZE_TYPE__: 0x5df
+    char: 0x2ae
+    int: 0x9a
+    long double: 0x2a5
+    signed char: 0x120
+    unsigned int: 0x118
   Functions:
-    CallInline: {[0x1290, 0x12a8)}
-    CallInlineMember: {[0x11e0, 0x1287)}
+    CallInline: {[0x12d0, 0x12e8)}
+    CallInlineMember: {[0x1200, 0x12a5)}
     DoLineLookupTest: {[0x1000, 0x1034)}
     GetIntPtr: {[0x1060, 0x1068)}
-    GetNullPtrT: {[0x12e0, 0x12e8)}
+    GetNullPtrT: {[0x1320, 0x133f)}
     GetString: {[0x1070, 0x1099)}
-    GetStructWithEnums: {[0x12b0, 0x12da)}
-    GetTemplate: {[0x1190, 0x11d6)}
-    GetUsing: {[0x12f0, 0x1309)}
-    GetVirtualDerived: {[0x1310, 0x134f)}
-    My2DArray: {[0x1160, 0x118b)}
-    MyFunction: {[0x1460, 0x1516)}
+    GetStructWithEnums: {[0x12f0, 0x131a)}
+    GetTemplate: {[0x11a0, 0x11e0)}
+    GetUsing: {[0x1340, 0x1359)}
+    GetVirtualDerived: {[0x1360, 0x1399)}
+    My2DArray: {[0x1170, 0x1193)}
+    MyFunction: {[0x1420, 0x14cd)}
 )";
   EXPECT_EQ(kExpected, out.str());
 

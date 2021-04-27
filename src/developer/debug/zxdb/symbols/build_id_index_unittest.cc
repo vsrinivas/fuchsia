@@ -9,13 +9,13 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/zxdb/common/host_util.h"
+#include "src/developer/debug/zxdb/symbols/test_symbol_module.h"
 
 namespace zxdb {
 
 namespace {
 
 const char kSmallTestBuildID[] = "763feb38b0e37a89964c330c5cf7f7af2ce79e54";
-const char kSymbolTestSoBuildID[] = "596f4c8afa5a0a43";
 
 std::filesystem::path GetTestDataDir() {
   std::filesystem::path path(GetSelfPath());
@@ -26,7 +26,10 @@ std::filesystem::path GetTestDataDir() {
 
 std::filesystem::path GetSmallTestFile() { return GetTestDataDir() / "small_test_file.elf"; }
 std::filesystem::path GetSymbolTestSoBuildIDPath() {
-  return GetTestDataDir() / "build_id/.build-id/59/6f4c8afa5a0a43.debug";
+  // Construct the expected name, using the first two build id chars as a subdirectory.
+  std::string build_id(TestSymbolModule::kCheckedInBuildId);
+  return GetTestDataDir() / "build_id/.build-id" / build_id.substr(0, 2) /
+         (build_id.substr(2) + ".debug");
 }
 
 }  // namespace
@@ -61,8 +64,10 @@ TEST(BuildIDIndex, IndexBuildIdDir) {
   index.AddBuildIdDir(GetTestDataDir() / "build_id/.build-id");
 
   // We should be able to look up the test file.
-  EXPECT_EQ(GetSymbolTestSoBuildIDPath(), index.EntryForBuildID(kSymbolTestSoBuildID).binary);
-  EXPECT_EQ(GetSymbolTestSoBuildIDPath(), index.EntryForBuildID(kSymbolTestSoBuildID).debug_info);
+  EXPECT_EQ(GetSymbolTestSoBuildIDPath(),
+            index.EntryForBuildID(TestSymbolModule::kCheckedInBuildId).binary);
+  EXPECT_EQ(GetSymbolTestSoBuildIDPath(),
+            index.EntryForBuildID(TestSymbolModule::kCheckedInBuildId).debug_info);
 }
 
 TEST(BuildIDIndex, ReadFromSymbolIndex) {

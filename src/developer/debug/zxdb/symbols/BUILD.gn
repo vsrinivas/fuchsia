@@ -223,7 +223,10 @@ if (is_host) {
     sources = [ "test_data/libsymbol_test_so.targetso" ]
 
     outputs = [
-      "$root_out_dir/test_data/zxdb/build_id/.build-id/59/6f4c8afa5a0a43.debug",
+      # This output name must match the build ID of the checked-in symbol file. See
+      # test_symbol_module.cc for the build ID constant used in the test code and instructions on
+      # how to update.
+      "$root_out_dir/test_data/zxdb/build_id/.build-id/9e/b335ffa35de20c.debug",
     ]
   }
 

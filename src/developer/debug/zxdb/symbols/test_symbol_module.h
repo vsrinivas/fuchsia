@@ -58,6 +58,8 @@ class TestSymbolModule {
   static const char kPltFunctionName[];
   static const uint64_t kPltFunctionOffset;
 
+  static const char kCheckedInBuildId[];
+
   // Returns the relative directory where the test program can find the checked-in test files. It
   // will have a trailing slash.
   static std::string GetTestDataDir();
@@ -69,9 +71,6 @@ class TestSymbolModule {
   // Returns the checked in .so used for line testing. As the mapping changes between architectures,
   // the file is compiled offline and remains the same.
   static std::string GetCheckedInTestFileName();
-
-  // Returns the Build ID for the checked in .so returned by GetCheckedInTestFileName.
-  static std::string GetCheckedInTestFileBuildID();
 
   // Returns a stripped version of the file returned by GetCheckedInTestFileName().
   static std::string GetStrippedCheckedInTestFileName();

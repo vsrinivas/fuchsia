@@ -16,8 +16,8 @@ namespace zxdb {
 const char TestSymbolModule::kMyNamespaceName[] = "my_ns";
 const char TestSymbolModule::kMyFunctionName[] = "MyFunction";
 const int TestSymbolModule::kMyFunctionLine = 109;
-const uint64_t TestSymbolModule::kMyFunctionAddress = 0x1460u;
-const size_t TestSymbolModule::kMyFunctionPrologueSize = 8;
+const uint64_t TestSymbolModule::kMyFunctionAddress = 0x1420u;
+const size_t TestSymbolModule::kMyFunctionPrologueSize = 10;
 const char TestSymbolModule::kNamespaceFunctionName[] = "my_ns::NamespaceFunction";
 const char TestSymbolModule::kMyClassName[] = "my_ns::MyClass";
 const char TestSymbolModule::kMyInnerClassName[] = "my_ns::MyClass::Inner";
@@ -28,7 +28,15 @@ const char TestSymbolModule::kAnonNSFunctionName[] = "AnonNSFunction";
 const char TestSymbolModule::kGlobalName[] = "my_ns::kGlobal";
 const char TestSymbolModule::kClassStaticName[] = "my_ns::MyClass::kClassStatic";
 const char TestSymbolModule::kPltFunctionName[] = "__stack_chk_fail";
-const uint64_t TestSymbolModule::kPltFunctionOffset = 0x1570;
+const uint64_t TestSymbolModule::kPltFunctionOffset = 0x1520;
+
+// Build ID of the checked-in symbol file. When the checked-in test file is updated, use:
+//   readelf -n test_data/libsymbol_test_so.targetso
+// to get the new one.
+//
+// NOTE WHEN UPDATING: the build also needs to be updated to put the file into this directory. See
+// the "dot_buildid" rule in BUILD.gn
+const char TestSymbolModule::kCheckedInBuildId[] = "9eb335ffa35de20c";
 
 namespace {
 
@@ -60,9 +68,6 @@ std::string TestSymbolModule::GetTestFileName() {
 std::string TestSymbolModule::GetCheckedInTestFileName() {
   return GetTestDataDir() + "libsymbol_test_so.targetso";
 }
-
-// static
-std::string TestSymbolModule::GetCheckedInTestFileBuildID() { return "596f4c8afa5a0a43"; }
 
 // static
 std::string TestSymbolModule::GetStrippedCheckedInTestFileName() {

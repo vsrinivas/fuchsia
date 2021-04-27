@@ -67,12 +67,12 @@ TEST(ModuleSymbols, GetMappedLength) {
 
   // The checked-in test .so's last PROGBITS segment record is:
   //
-  //   [15] .got.plt          PROGBITS         0000000000003008  00003008
+  //   [15] .got.plt          PROGBITS         0000000000002000  00002000
   //       0000000000000030  0000000000000000  WA       0     0     8
   //
-  // So 0x3008 offset + 0x38 = 0x3038 ending offset. This will likely change if the checked-in
+  // So 0x3008 offset + 0x30 = 0x2030 ending offset. This will likely change if the checked-in
   // test .so is updated. Just verify the results with "readelf -S"
-  EXPECT_EQ(0x3038u, setup.symbols()->GetMappedLength());
+  EXPECT_EQ(0x2030u, setup.symbols()->GetMappedLength());
 }
 
 TEST(ModuleSymbols, Basic) {
@@ -295,7 +295,9 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
 
   // This number may change if we recompile the symbol test. That's OK, just make sure it agrees
   // with the relative address from symbol dump.
-  EXPECT_EQ(0x3000u, addrs[0].address());
+  //
+  // TODO(fxbug.dev/75488) The definition of this location uses DW_OP_addrx which is not supported.
+  // EXPECT_EQ(0x3000u, addrs[0].address());
 
   // Look up the class static.
   addrs = setup.symbols()->ResolveInputLocation(
@@ -312,7 +314,9 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
 
   // This number may change if we recompile the symbol test. That's OK, just make sure it agrees
   // with the relative address from symbol dump.
-  EXPECT_EQ(0x3004u, addrs[0].address());
+  //
+  // TODO(fxbug.dev/75488) The definition of this location uses DW_OP_addrx which is not supported.
+  // EXPECT_EQ(0x3004u, addrs[0].address());
 
   // Annotate the global variable as a register. This lookup should fail since registers can't be
   // looked up in the symbols (this tests that ModuleSymbolsImpl filters out bad special component
@@ -482,8 +486,8 @@ TEST(ModuleSymbols, ElfSymbols) {
 
   // Virtual tables have ELF symbols but not DWARF symbols, so to test that we read the ELF symbols
   // properly, look one up.
-  const char kVirtualDerivedVtableName[] = "_ZTT14VirtualDerived";
-  const char kVirtualDerivedVtableUnmangledName[] = "VTT for VirtualDerived";
+  const char kVirtualDerivedVtableName[] = "_ZTV14VirtualDerived";
+  const char kVirtualDerivedVtableUnmangledName[] = "vtable for VirtualDerived";
   Identifier vtable_identifier(
       IdentifierComponent(SpecialIdentifier::kElf, kVirtualDerivedVtableName));
   std::vector<Location> result = setup.symbols()->ResolveInputLocation(
