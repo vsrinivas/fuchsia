@@ -16,10 +16,7 @@ python_host_test("analyze_deps_test") {
   sources = [ "analyze_deps.py" ]
 }
 
-_all_libraries_deps = [
-  "fuchsia.hardware.audiotypes",
-  "fuchsia.hardware.display.controller",
-]
+_all_libraries_deps = []
 
 # This target only exists to support the `analyze_deps.py` script. It is
 # currently not connected to the build graph.

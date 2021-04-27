@@ -9,7 +9,7 @@ source_set("shared") {
   visibility = [ ":*" ]
   sources = [ "simple-display.cc" ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.display.controller",
+    "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
@@ -50,7 +50,7 @@ foreach(driver, simple_drivers) {
     deps = [
       ":shared",
       ":simple-$driver-bind",
-      "//sdk/banjo/fuchsia.hardware.display.controller",
+      "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
       "//src/devices/pci/lib/device-protocol-pci",
       "//src/devices/pci/lib/pci",

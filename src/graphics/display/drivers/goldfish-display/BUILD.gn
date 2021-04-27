@@ -33,7 +33,7 @@ source_set("common") {
   configs += [ "//build/config:all_source" ]
   sources = []
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.display.controller",
+    "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.goldfish.control:fuchsia.hardware.goldfish.control_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",

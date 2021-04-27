@@ -284,7 +284,7 @@ basic bootloader driver. In most cases, your roadmap will be:
  6. Integrate with [Sysmem][sysmem].
 
 <!--xrefs-->
-[dcimpl]: /sdk/banjo/fuchsia.hardware.display.controller/display-controller.banjo
+[dcimpl]: /sdk/banjo/fuchsia.hardware.display.controller/display-controller.fidl
 [ddk-tl]: /docs/concepts/drivers/driver_development/using-ddktl.md
 [display-core]: /src/graphics/display/drivers/display/
 [driver-binding]: /docs/concepts/drivers/device_driver_model/driver-binding.md

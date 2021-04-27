@@ -4,5 +4,5 @@
 
 source_set("audio") {
   sources = [ "audio.h" ]
-  deps = [ "//sdk/banjo/fuchsia.hardware.audiotypes" ]
+  deps = [ "//sdk/banjo/fuchsia.hardware.audiotypes:fuchsia.hardware.audiotypes_banjo_cpp" ]
 }

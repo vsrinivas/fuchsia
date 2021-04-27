@@ -33,7 +33,7 @@ group("common") {
   visibility = [ ":*" ]
 
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.display.controller",
+    "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_c",

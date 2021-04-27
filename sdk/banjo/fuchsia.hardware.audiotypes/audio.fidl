@@ -5,19 +5,19 @@
 library fuchsia.hardware.audiotypes;
 
 enum AudioTypesAudioSampleFormat : uint32 {
-    BITSTREAM = 0x1;               // 1 << 0
-    EIGHT_BIT = 0x2;               // 1 << 1
-    SIXTEEN_BIT = 0x4;             // 1 << 2
-    TWENTY_BIT_PACKED = 0x10;      // 1 << 4
+    BITSTREAM = 0x1; // 1 << 0
+    EIGHT_BIT = 0x2; // 1 << 1
+    SIXTEEN_BIT = 0x4; // 1 << 2
+    TWENTY_BIT_PACKED = 0x10; // 1 << 4
     TWENTY_FOUR_BIT_PACKED = 0x20; // 1 << 5
-    TWENTY_BIT_IN32 = 0x40;        // 1 << 6
-    TWENTY_FOUR_BIT_IN32 = 0x80;   // 1 << 7
-    THIRTY_TWO_BIT = 0x100;        // 1 << 8
-    THIRTY_TWO_BIT_FLOAT = 0x200;  // 1 << 9
+    TWENTY_BIT_IN32 = 0x40; // 1 << 6
+    TWENTY_FOUR_BIT_IN32 = 0x80; // 1 << 7
+    THIRTY_TWO_BIT = 0x100; // 1 << 8
+    THIRTY_TWO_BIT_FLOAT = 0x200; // 1 << 9
 
-    FLAG_UNSIGNED = 0x4000;       // 1 << 30
-    FLAG_INVERT_ENDIAN = 0x8000;  // 1 << 31
-    FLAG_MASK = 0xC000;           // FLAG_UNSIGNED | FLAG_INVERT_ENDIAN
+    FLAG_UNSIGNED = 0x4000; // 1 << 30
+    FLAG_INVERT_ENDIAN = 0x8000; // 1 << 31
+    FLAG_MASK = 0xC000; // FLAG_UNSIGNED | FLAG_INVERT_ENDIAN
 };
 
 [Packed]

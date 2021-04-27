@@ -104,7 +104,7 @@ struct AddedDisplayInfo {
     /// length 3, all other strings may be empty.
     string:4 manufacturer_id;
     /// non-null
-    string manufacturer_name;
+    string:MAX manufacturer_name;
     /// null-terminated
     string:14 monitor_name;
     /// null-terminated
@@ -140,7 +140,7 @@ protocol DisplayControllerInterface {
     OnDisplayVsync(uint64 display_id, zx.time timestamp, vector<uint64>:MAX handle) -> ();
 
     GetAudioFormat(uint64 display_id, uint32 fmt_idx)
-               -> (zx.status s, fuchsia.hardware.audiotypes.AudioTypesAudioStreamFormatRange fmt);
+        -> (zx.status s, fuchsia.hardware.audiotypes.AudioTypesAudioStreamFormatRange fmt);
 };
 
 enum Alpha : uint8 {
@@ -343,7 +343,6 @@ enum Client : uint32 {
     /// buffers, and as such they cannot perform software gamma
     /// correction.
     GAMMA = 0x100;
-
 };
 
 /// The client guarantees that check_configuration and apply_configuration are always
@@ -392,7 +391,7 @@ protocol DisplayControllerImpl {
     /// The driver must not retain references to the configuration after this function returns.
     /// TODO: Fix me...
     CheckConfiguration([InnerPointer] vector<DisplayConfig>:MAX display_config)
-                       -> (uint32 display_cfg_result, [CalleeAllocated] vector<uint32>:MAX layer_cfg_result);
+        -> (uint32 display_cfg_result, [CalleeAllocated] vector<uint32>:MAX layer_cfg_result);
 
     /// Applies the configuration.
     ///
