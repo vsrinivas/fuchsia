@@ -87,7 +87,7 @@ enum RecoveryMessages {
     ResetFailed,
 }
 
-const RECOVERY_MODE_HEADLINE: &'static str = "Recovery Mode";
+const RECOVERY_MODE_HEADLINE: &'static str = "Recovery mode";
 const RECOVERY_MODE_BODY: &'static str = "Press and hold both volume keys to factory reset.";
 
 const COUNTDOWN_MODE_HEADLINE: &'static str = "Factory reset device";
@@ -144,11 +144,12 @@ impl RenderResources {
         is_counting_down: bool,
     ) -> Self {
         let min_dimension = target_size.width.min(target_size.height);
-        let logo_edge = min_dimension * 0.5;
+        let logo_edge = min_dimension * 0.24;
         let text_size = min_dimension / 10.0;
+        let top_margin = 0.255;
 
         let body_text_size = min_dimension / 18.0;
-        let countdown_text_size = min_dimension / 4.0;
+        let countdown_text_size = min_dimension / 6.0;
 
         let mut builder = SceneBuilder::new(BG_COLOR);
 
@@ -156,7 +157,7 @@ impl RenderResources {
         // Calculate position for centering the logo image
         let logo_position = {
             let x = target_size.width / 2.0;
-            let y = target_size.height / 2.0 - logo_size.height / 2.0 + body_text_size;
+            let y = top_margin * target_size.height + logo_edge / 2.0;
             point2(x, y)
         };
 
@@ -205,7 +206,7 @@ impl RenderResources {
             },
         );
 
-        let margin = 0.1;
+        let margin = 0.23;
         let body_x = target_size.width * margin;
         let wrap_width = target_size.width - 2.0 * body_x;
         builder.text(
