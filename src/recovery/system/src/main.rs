@@ -7,12 +7,15 @@ use argh::FromArgs;
 use carnelian::{
     color::Color,
     drawing::{load_font, path_for_circle, DisplayRotation, FontFace},
-    facet::{
-        RasterFacet, Scene, SceneBuilder, ShedFacet, TextFacetOptions, TextHorizontalAlignment,
-        TextVerticalAlignment,
-    },
     input, make_message,
     render::{BlendMode, Context as RenderContext, Fill, FillRule, Raster, Style},
+    scene::{
+        facets::{
+            RasterFacet, ShedFacet, TextFacetOptions, TextHorizontalAlignment,
+            TextVerticalAlignment,
+        },
+        scene::{Scene, SceneBuilder},
+    },
     App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, Coord, LocalBoxFuture,
     Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
@@ -179,7 +182,7 @@ impl RenderResources {
         let body_text_size = min_dimension / 18.0;
         let countdown_text_size = min_dimension / 6.0;
 
-        let mut builder = SceneBuilder::new(BG_COLOR);
+        let mut builder = SceneBuilder::new().background_color(BG_COLOR);
 
         let logo_size: Size = size2(logo_edge, logo_edge);
         // Calculate position for centering the logo image
@@ -198,7 +201,7 @@ impl RenderResources {
                     fill: Fill::Solid(COUNTDOWN_COLOR),
                     blend_mode: BlendMode::Over,
                 },
-                Point::zero(),
+                logo_size,
             );
 
             builder.text(
@@ -213,11 +216,10 @@ impl RenderResources {
                     ..TextFacetOptions::default()
                 },
             );
-            let _ = builder.facet(Box::new(circle_facet));
+            let _ = builder.facet_at_location(Box::new(circle_facet), logo_position);
         } else {
-            let shed_facet =
-                ShedFacet::new(PathBuf::from(LOGO_IMAGE_PATH), logo_position, logo_size);
-            builder.facet(Box::new(shed_facet));
+            let shed_facet = ShedFacet::new(PathBuf::from(LOGO_IMAGE_PATH), logo_size);
+            builder.facet_at_location(Box::new(shed_facet), logo_position);
         }
 
         let heading_text_location =

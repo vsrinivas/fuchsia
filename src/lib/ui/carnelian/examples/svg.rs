@@ -7,9 +7,12 @@ use {
     argh::FromArgs,
     carnelian::{
         color::Color,
-        facet::{FacetId, Scene, SceneBuilder, SetLocationMessage, ShedFacet},
         input, make_app_assistant,
         render::Context,
+        scene::{
+            facets::{FacetId, ShedFacet},
+            scene::{Scene, SceneBuilder},
+        },
         App, AppAssistant, Point, Rect, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
@@ -88,15 +91,15 @@ impl ViewAssistant for SvgViewAssistant {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
             let location = Rect::from_size(context.size).center();
             self.position = location;
-            let mut builder = SceneBuilder::new(BACKGROUND_COLOR);
+            let mut builder = SceneBuilder::new().background_color(BACKGROUND_COLOR);
             let edge_size = context.size.width.min(context.size.height) * SPACING_FRACTION;
             let shed_facet = ShedFacet::new(
                 PathBuf::from("/pkg/data/static/fuchsia.shed"),
-                location,
                 size2(edge_size, edge_size),
             );
             let shed_facet_id = builder.facet(Box::new(shed_facet));
-            let scene = builder.build();
+            let mut scene = builder.build();
+            scene.set_facet_location(&shed_facet_id, location);
             SceneDetails { scene, facet_id: shed_facet_id }
         });
 
@@ -124,10 +127,7 @@ impl ViewAssistant for SvgViewAssistant {
                     *location = touch_location.to_f32();
                 }
                 if let Some(scene_details) = self.scene_details.as_mut() {
-                    scene_details.scene.send_message(
-                        &scene_details.facet_id,
-                        Box::new(SetLocationMessage { location: self.position }),
-                    );
+                    scene_details.scene.set_facet_location(&scene_details.facet_id, self.position);
                 }
             }
 

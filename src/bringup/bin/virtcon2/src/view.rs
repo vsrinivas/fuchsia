@@ -7,14 +7,15 @@ use {
     carnelian::{
         color::Color,
         drawing::{load_font, path_for_rounded_rectangle, FontFace},
-        facet::{
-            Facet, LayerGroup, Scene, SceneBuilder, TextFacetOptions, TextHorizontalAlignment,
-            TextVerticalAlignment,
-        },
         render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Style},
-        Coord, Point, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+        scene::{
+            facets::{Facet, TextFacetOptions, TextHorizontalAlignment, TextVerticalAlignment},
+            scene::{Scene, SceneBuilder},
+            LayerGroup,
+        },
+        Coord, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
     },
-    euclid::{point2, size2, vec2, Angle, Transform2D},
+    euclid::{point2, size2, Angle, Transform2D},
     fuchsia_zircon::{Event, Time},
     std::{f32::consts::PI, path::PathBuf},
 };
@@ -23,14 +24,13 @@ use {
 struct SquareFacet {
     color: Color,
     start: Time,
-    position: Point,
     size: f32,
     path: Option<Path>,
 }
 
 impl SquareFacet {
-    fn new(color: Color, start: Time, position: Point, size: f32) -> Self {
-        Self { color, start, position, size, path: None }
+    fn new(color: Color, start: Time, size: f32) -> Self {
+        Self { color, start, size, path: None }
     }
 
     fn clone_path(&self) -> Path {
@@ -65,9 +65,8 @@ impl Facet for SquareFacet {
             self.path.replace(path);
         }
 
-        let transformation = Transform2D::rotation(Angle::radians(angle))
-            .then_scale(self.size, self.size)
-            .then_translate(vec2(self.position.x, self.position.y));
+        let transformation =
+            Transform2D::rotation(Angle::radians(angle)).then_scale(self.size, self.size);
         let mut raster_builder = render_context.raster_builder().expect("raster_builder");
         raster_builder.add(&self.clone_path(), Some(&transformation));
         let raster = raster_builder.build();
@@ -80,6 +79,10 @@ impl Facet for SquareFacet {
             },
         }));
         Ok(())
+    }
+
+    fn get_size(&self) -> Size {
+        size2(self.size, self.size)
     }
 }
 
@@ -142,10 +145,9 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
             let square_position = point2(center_x, square_y);
             let label_y = target_size.height * 0.5 + (font_size + padding);
             let label_position = point2(center_x, label_y);
-            let mut builder = SceneBuilder::new(self.background_color);
-            let square_facet =
-                SquareFacet::new(self.foreground_color, self.start, square_position, square_size);
-            builder.facet(Box::new(square_facet));
+            let mut builder = SceneBuilder::new().background_color(self.background_color);
+            let square_facet = SquareFacet::new(self.foreground_color, self.start, square_size);
+            let square_facet_id = builder.facet(Box::new(square_facet));
             builder.text(
                 self.face.clone(),
                 LABEL_TEXT,
@@ -158,7 +160,8 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                     ..TextFacetOptions::default()
                 },
             );
-            let scene = builder.build();
+            let mut scene = builder.build();
+            scene.set_facet_location(&square_facet_id, square_position);
             SceneDetails { scene }
         });
 

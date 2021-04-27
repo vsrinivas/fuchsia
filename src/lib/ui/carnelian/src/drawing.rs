@@ -25,6 +25,7 @@ use ttf_parser::Face;
 /// The supported rotations and can be used by views to rotate their content
 /// to display appropriately when running on the frame buffer.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[allow(missing_docs)]
 pub enum DisplayRotation {
     Deg0,
     Deg90,
@@ -33,6 +34,7 @@ pub enum DisplayRotation {
 }
 
 impl DisplayRotation {
+    /// Create a transformation to accommodate the screen rotation.
     pub fn transform(&self, target_size: &Size2D<Coord>) -> Transform2D<Coord> {
         let w = target_size.width;
         let h = target_size.height;
@@ -44,6 +46,7 @@ impl DisplayRotation {
         }
     }
 
+    /// Create a transformation to undo the screen rotation.
     pub fn inv_transform(&self, target_size: &Size2D<Coord>) -> Transform2D<Coord> {
         let w = target_size.width;
         let h = target_size.height;
@@ -52,17 +55,6 @@ impl DisplayRotation {
             Self::Deg90 => Transform2D::from_array([0.0, 1.0, -1.0, 0.0, h, 0.0]),
             Self::Deg180 => Transform2D::from_array([-1.0, 0.0, 0.0, -1.0, w, h]),
             Self::Deg270 => Transform2D::from_array([0.0, -1.0, 1.0, 0.0, 0.0, w]),
-        }
-    }
-
-    pub fn rotation(&self) -> Option<Transform2D<Coord>> {
-        match self {
-            Self::Deg0 => None,
-            _ => {
-                let display_rotation = *self;
-                let angle: Angle<Coord> = display_rotation.into();
-                Some(Transform2D::rotation(angle))
-            }
         }
     }
 }
@@ -306,6 +298,7 @@ impl Paint {
     }
 }
 
+/// Load a font from the provided path.
 pub fn load_font(path: PathBuf) -> Result<FontFace, Error> {
     let file = File::open(path).context("File::open")?;
     let vmo = fdio::get_vmo_copy_from_file(&file).context("fdio::get_vmo_copy_from_file")?;
@@ -323,7 +316,7 @@ pub fn load_font(path: PathBuf) -> Result<FontFace, Error> {
     Ok(FontFace::new(&*mapped_font_data)?)
 }
 
-/// Struct containing a font and a cache of rendered glyphs.
+/// Struct containing a font data.
 #[derive(Clone)]
 pub struct FontFace {
     /// Font.
@@ -331,11 +324,13 @@ pub struct FontFace {
 }
 
 impl FontFace {
+    /// Create a new FontFace.
     pub fn new(data: &'static [u8]) -> Result<FontFace, Error> {
         let face = Face::from_slice(data, 0)?;
         Ok(FontFace { face })
     }
 
+    /// Get the ascent, in pixels, for this font at the specified size.
     pub fn ascent(&self, size: f32) -> f32 {
         let ascent = self.face.ascender();
         self.face
@@ -344,6 +339,7 @@ impl FontFace {
             .expect("units_per_em")
     }
 
+    /// Get the descent, in pixels, for this font at the specified size.
     pub fn descent(&self, size: f32) -> f32 {
         let descender = self.face.descender();
         self.face
@@ -352,6 +348,7 @@ impl FontFace {
             .expect("units_per_em")
     }
 
+    /// Get the capital height, in pixels, for this font at the specified size.
     pub fn capital_height(&self, size: f32) -> Option<f32> {
         self.face.capital_height().and_then(|capital_height| {
             self.face
@@ -361,6 +358,7 @@ impl FontFace {
     }
 }
 
+/// Return the size in pixels for the specified text, face and size.
 pub fn measure_text_width(face: &FontFace, font_size: f32, text: &str) -> f32 {
     text.chars()
         .filter_map(|c| {
@@ -377,6 +375,8 @@ pub fn measure_text_width(face: &FontFace, font_size: f32, text: &str) -> f32 {
         .sum()
 }
 
+/// Break up text into chunks guaranteed to be no wider than max_width when rendered with
+/// face at font_size.
 pub fn linebreak_text(face: &FontFace, font_size: f32, text: &str, max_width: f32) -> Vec<String> {
     let chunks: Vec<&str> = text.split_whitespace().collect();
     let space_width = measure_text_width(face, font_size, " ");
@@ -482,12 +482,14 @@ impl ttf_parser::OutlineBuilder for GlyphBuilder<'_> {
 }
 
 #[derive(Debug)]
+#[allow(missing_docs)]
 pub struct Glyph {
     pub raster: Raster,
     pub bounding_box: Rect,
 }
 
 impl Glyph {
+    #[allow(missing_docs)]
     pub fn new(
         context: &mut RenderContext,
         face: &FontFace,
@@ -518,22 +520,26 @@ impl Glyph {
 }
 
 #[derive(Debug)]
+#[allow(missing_docs)]
 pub struct GlyphMap {
     glyphs: BTreeMap<ttf_parser::GlyphId, Glyph>,
 }
 
 impl GlyphMap {
+    #[allow(missing_docs)]
     pub fn new() -> Self {
         Self { glyphs: BTreeMap::new() }
     }
 }
 
+#[allow(missing_docs)]
 pub struct Text {
     pub raster: Raster,
     pub bounding_box: Rect,
 }
 
 impl Text {
+    #[allow(missing_docs)]
     pub fn new_with_lines(
         context: &mut RenderContext,
         lines: &Vec<String>,
@@ -587,6 +593,7 @@ impl Text {
         Self { raster: raster_union.expect("raster_union"), bounding_box }
     }
 
+    #[allow(missing_docs)]
     pub fn new(
         context: &mut RenderContext,
         text: &str,

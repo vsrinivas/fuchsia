@@ -48,6 +48,8 @@ data_files = [
     { src = "examples/static/baboon.png", dst = "data/static/baboon.png"},
     { src = "examples/static/cross.png", dst = "data/static/cross.png"},
     { src = "examples/static/fuchsia.shed", dst = "data/static/fuchsia.shed"},
+    { src = "examples/static/juice.riv", dst = "data/static/juice.riv"},
+    { src = "examples/static/knight.riv", dst = "data/static/knight.riv"},
     { src = "../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf", dst = "data/fonts/RobotoSlab-Regular.ttf"},
     { src = "../../../../prebuilt/third_party/fonts/quintessential/Quintessential-Regular.ttf", dst = "data/fonts/Quintessential-Regular.ttf"},
     { src = "../../../../prebuilt/third_party/fonts/roboto/Roboto-Regular.ttf", dst = "data/fonts/Roboto-Regular.ttf"},

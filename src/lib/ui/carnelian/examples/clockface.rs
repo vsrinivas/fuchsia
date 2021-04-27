@@ -7,11 +7,15 @@ use {
     argh::FromArgs,
     carnelian::{
         color::Color,
-        facet::{Facet, LayerGroup, Scene, SceneBuilder},
         make_app_assistant,
         render::{
             BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, PathBuilder, Raster,
             Style,
+        },
+        scene::{
+            facets::Facet,
+            scene::{Scene, SceneBuilder},
+            LayerGroup,
         },
         App, AppAssistant, Point, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
@@ -219,6 +223,7 @@ impl Facet for ClockFaceFacet {
         const ELEVATION: f32 = 0.01;
 
         let scale = size.width.min(size.height);
+        self.size = size;
 
         self.update(render_context, &size, scale);
 
@@ -282,6 +287,10 @@ impl Facet for ClockFaceFacet {
         layer_group.replace_all(layers);
         Ok(())
     }
+
+    fn get_size(&self) -> Size {
+        self.size
+    }
 }
 
 struct SceneDetails {
@@ -311,7 +320,7 @@ impl ViewAssistant for ClockfaceViewAssistant {
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
-            let mut builder = SceneBuilder::new(BACKGROUND_COLOR);
+            let mut builder = SceneBuilder::new().background_color(BACKGROUND_COLOR);
             let clock_face_facet = ClockFaceFacet::new(render_context);
             let _ = builder.facet(Box::new(clock_face_facet));
             SceneDetails { scene: builder.build() }

@@ -8,9 +8,13 @@ use {
     carnelian::{
         color::Color,
         drawing::path_for_rectangle,
-        facet::{Facet, LayerGroup, Scene, SceneBuilder},
         make_app_assistant,
         render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Style},
+        scene::{
+            facets::Facet,
+            scene::{Scene, SceneBuilder},
+            LayerGroup,
+        },
         App, AppAssistant, Point, Rect, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
@@ -56,13 +60,14 @@ impl AppAssistant for GammaAppAssistant {
 
 struct GammaFacet {
     path: Path,
+    size: Size,
 }
 
 impl GammaFacet {
     fn new(context: &mut RenderContext) -> Self {
         let path = path_for_rectangle(&Rect::new(Point::zero(), size2(1.0, 1.0)), context);
 
-        Self { path }
+        Self { path, size: Size::zero() }
     }
 }
 
@@ -73,6 +78,7 @@ impl Facet for GammaFacet {
         layer_group: &mut LayerGroup,
         render_context: &mut RenderContext,
     ) -> std::result::Result<(), anyhow::Error> {
+        self.size = size;
         let transform = Transform2D::scale(size.width * 0.5, size.height * 0.5);
         let mut raster_builder = render_context.raster_builder().expect("raster_builder");
         raster_builder.add(&self.path, Some(&transform));
@@ -109,6 +115,10 @@ impl Facet for GammaFacet {
         layer_group.replace_all(layers);
         Ok(())
     }
+
+    fn get_size(&self) -> Size {
+        self.size
+    }
 }
 
 struct SceneDetails {
@@ -138,7 +148,7 @@ impl ViewAssistant for GammaViewAssistant {
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
-            let mut builder = SceneBuilder::new(WHITE_COLOR);
+            let mut builder = SceneBuilder::new().background_color(WHITE_COLOR);
             let gamma_facet = GammaFacet::new(render_context);
             let _ = builder.facet(Box::new(gamma_facet));
             SceneDetails { scene: builder.build() }

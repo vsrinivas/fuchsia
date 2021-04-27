@@ -61,14 +61,17 @@
 //! ```
 
 mod app;
+/// Color related items
 pub mod color;
+/// Drawing related items
 pub mod drawing;
-pub mod facet;
 pub mod geometry;
 pub mod input;
 pub mod input_ext;
 mod message;
 pub mod render;
+/// UI item abstraction
+pub mod scene;
 mod view;
 
 pub use crate::{

@@ -7,14 +7,16 @@ use {
     argh::FromArgs,
     carnelian::{
         color::Color,
-        facet::{FacetId, RiveFacet, Scene, SceneBuilder, SetSizeMessage, ToggleAnimationMessage},
         input::{self},
         make_app_assistant,
         render::{rive::load_rive, Context as RenderContext},
+        scene::{
+            facets::{FacetId, RiveFacet, SetSizeMessage, ToggleAnimationMessage},
+            scene::{Scene, SceneBuilder},
+        },
         App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
-    euclid::point2,
     fuchsia_trace_provider,
     fuchsia_zircon::Event,
     rive_rs::{self as rive},
@@ -119,11 +121,10 @@ impl ViewAssistant for RiveViewAssistant {
     ) -> Result<(), Error> {
         let file = &self.file;
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
-            let mut builder = SceneBuilder::new(self.background);
+            let mut builder = SceneBuilder::new().background_color(self.background);
             let artboard = file.artboard().unwrap();
             let initial_animations = vec![0];
-            let rive_facet =
-                RiveFacet::new(point2(0.0, 0.0), context.size, artboard, initial_animations);
+            let rive_facet = RiveFacet::new(context.size, artboard, initial_animations);
             let rive = builder.facet(Box::new(rive_facet));
             let scene = builder.build();
             SceneDetails { scene, rive }

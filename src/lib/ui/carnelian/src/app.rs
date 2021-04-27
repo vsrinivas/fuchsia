@@ -27,10 +27,13 @@ use toml;
 
 mod strategies;
 
+/// Type alias for a non-sync future
 pub type LocalBoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
 
+/// Rendering options struct
 #[derive(PartialEq, Debug, Default, Copy, Clone)]
 pub struct RenderOptions {
+    /// use spinel for rendering
     pub use_spinel: bool,
 }
 
@@ -46,24 +49,29 @@ pub(crate) type InternalSender = UnboundedSender<MessageInternal>;
 
 pub(crate) const FIRST_VIEW_KEY: ViewKey = 100;
 
+/// Context struct passed to the application assistant creator
+// function.
 #[derive(Clone)]
 pub struct AppContext {
     sender: InternalSender,
 }
 
 impl AppContext {
+    /// Send a message to a view controller.
     pub fn queue_message(&self, target: ViewKey, message: Message) {
         self.sender
             .unbounded_send(MessageInternal::TargetedMessage(target, message))
             .expect("AppContext::queue_message - unbounded_send");
     }
 
+    /// Request that a frame be rendered at the next appropriate time.
     pub fn request_render(&self, target: ViewKey) {
         self.sender
             .unbounded_send(MessageInternal::RequestRender(target))
             .expect("AppContext::queue_message - unbounded_send");
     }
 
+    /// Create an context for testing things that need an app context.
     pub fn new_for_testing_purposes_only() -> AppContext {
         let (internal_sender, _) = unbounded::<MessageInternal>();
         AppContext { sender: internal_sender }
@@ -80,6 +88,7 @@ fn make_app_assistant_fut<T: AppAssistant + Default + 'static>(
     Box::pin(f)
 }
 
+/// Convenience function to create an application assistant that implements Default.
 pub fn make_app_assistant<T: AppAssistant + Default + 'static>() -> AssistantCreatorFunc {
     Box::new(make_app_assistant_fut::<T>)
 }
@@ -117,11 +126,13 @@ pub trait AppAssistant {
         RenderOptions::default()
     }
 
+    /// Application option to exercise transparent rotation.
     fn get_display_rotation(&self) -> DisplayRotation {
         DisplayRotation::Deg0
     }
 }
 
+/// Reference to an application assistant.
 pub type AppAssistantPtr = Box<dyn AppAssistant>;
 
 /// Reference to FrameBuffer.
@@ -158,7 +169,9 @@ pub(crate) enum MessageInternal {
     InputReport(DeviceId, ViewKey, hid_input_report::InputReport),
 }
 
+/// Future that returns an application assistant.
 pub type AssistantCreator<'a> = LocalBoxFuture<'a, Result<AppAssistantPtr, Error>>;
+/// Function that creates an AssistantCreator future.
 pub type AssistantCreatorFunc = Box<dyn Fn(&AppContext) -> AssistantCreator<'_>>;
 
 impl App {

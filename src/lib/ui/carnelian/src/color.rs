@@ -77,6 +77,7 @@ impl Color {
         ColorRgba { red: self.r, green: self.g, blue: self.b, alpha: self.a }
     }
 
+    /// Create a linear, premultiplied RGBA representation
     pub fn to_linear_premult_rgba(&self) -> [f32; 4] {
         let alpha = self.a as f32 * 255.0f32.recip();
 
@@ -88,6 +89,7 @@ impl Color {
         ]
     }
 
+    /// Create a linear BGRA representation
     pub fn to_linear_bgra(&self) -> [f32; 4] {
         [
             srgb_to_linear(self.b),
@@ -97,6 +99,7 @@ impl Color {
         ]
     }
 
+    /// Create a premultiplied SRGB representation
     pub fn to_srgb_premult_rgba(&self) -> [f32; 4] {
         let recip = 255.0f32.recip();
         let alpha = self.a as f32 * recip;

@@ -6,10 +6,14 @@ use anyhow::{Context as _, Error};
 use carnelian::{
     color::Color,
     drawing::{path_for_rectangle, path_for_rounded_rectangle},
-    facet::{Facet, FacetId, LayerGroup, Scene, SceneBuilder},
     input::{self},
     make_app_assistant,
     render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Style},
+    scene::{
+        facets::{Facet, FacetId},
+        scene::{Scene, SceneBuilder},
+        LayerGroup,
+    },
     App, AppAssistant, Coord, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
     ViewKey,
 };
@@ -88,11 +92,12 @@ struct SpinningSquareFacet {
     rounded: bool,
     start: Time,
     square_path: Option<Path>,
+    size: Size,
 }
 
 impl SpinningSquareFacet {
-    fn new(square_color: Color, start: Time) -> Self {
-        Self { square_color, rounded: false, start, square_path: None }
+    fn new(square_color: Color, start: Time, size: Size) -> Self {
+        Self { square_color, rounded: false, start, square_path: None, size }
     }
 
     fn clone_square_path(&self) -> Path {
@@ -115,6 +120,7 @@ impl Facet for SpinningSquareFacet {
 
         let center_x = size.width * 0.5;
         let center_y = size.height * 0.5;
+        self.size = size;
         let square_size = size.width.min(size.height) * 0.6;
         let presentation_time = Time::get_monotonic();
         let t = ((presentation_time.into_nanos() - self.start.into_nanos()) as f32
@@ -156,6 +162,10 @@ impl Facet for SpinningSquareFacet {
             self.rounded = !self.rounded;
             self.square_path = None;
         }
+    }
+
+    fn get_size(&self) -> Size {
+        self.size
     }
 }
 
@@ -219,19 +229,25 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
-            let mut builder = SceneBuilder::new(self.background_color);
-            let square_facet = SpinningSquareFacet::new(self.square_color, self.start);
-            let square = builder.facet(Box::new(square_facet));
-            const STRIPE_COUNT: usize = 5;
-            let stripe_height = context.size.height / (STRIPE_COUNT * 2 + 1) as f32;
-            let stripe_size = size2(context.size.width, stripe_height);
-            let mut y = stripe_height;
-            for _ in 0..STRIPE_COUNT {
-                let stripe_bounds = Rect::new(point2(0.0, y), stripe_size);
-                builder.rectangle(stripe_bounds, Color::white());
-                y += stripe_height * 2.0;
-            }
-            let scene = builder.build();
+            let mut builder = SceneBuilder::new().background_color(self.background_color);
+            let mut square = None;
+            builder.group().stack().contents(|builder| {
+                let square_facet =
+                    SpinningSquareFacet::new(self.square_color, self.start, context.size);
+                square = Some(builder.facet(Box::new(square_facet)));
+                const STRIPE_COUNT: usize = 5;
+                let stripe_height = context.size.height / (STRIPE_COUNT * 2 + 1) as f32;
+                const STRIPE_WIDTH_RATIO: f32 = 0.8;
+                let stripe_size = size2(context.size.width * STRIPE_WIDTH_RATIO, stripe_height);
+                builder.group().column().max_size().space_evenly().contents(|builder| {
+                    for _ in 0..STRIPE_COUNT {
+                        builder.rectangle(stripe_size, Color::white());
+                    }
+                });
+            });
+            let square = square.expect("square");
+            let mut scene = builder.build();
+            scene.layout(context.size);
             SceneDetails { scene, square }
         });
 

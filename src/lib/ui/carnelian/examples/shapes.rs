@@ -7,13 +7,16 @@ use argh::FromArgs;
 use carnelian::{
     color::Color,
     drawing::{path_for_circle, path_for_polygon, path_for_rectangle, path_for_rounded_rectangle},
-    facet::{FacetId, RasterFacet, Scene, SceneBuilder, SetLocationMessage},
     geometry::{Corners, IntPoint},
     input::{self},
     make_app_assistant,
     render::{BlendMode, Context as RenderContext, Fill, FillRule, Raster, Style},
-    App, AppAssistant, Coord, Point, Rect, RenderOptions, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey,
+    scene::{
+        facets::{FacetId, RasterFacet},
+        scene::{Scene, SceneBuilder},
+    },
+    App, AppAssistant, Coord, Point, Rect, RenderOptions, Size, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::{default::Vector2D, point2, size2, vec2};
 use fuchsia_trace::duration;
@@ -24,6 +27,8 @@ use std::{collections::HashMap, mem};
 fn make_bounds(context: &ViewAssistantContext) -> Rect {
     Rect::from_size(context.size)
 }
+
+const SHAPE_SIZE: Size = size2(60.0, 60.0);
 
 /// Shapes
 #[derive(Clone, Debug, FromArgs)]
@@ -134,7 +139,7 @@ impl TouchHandler {
                 fill: Fill::Solid(color),
                 blend_mode: BlendMode::Over,
             },
-            Point::zero(),
+            SHAPE_SIZE,
         );
         let facet_id = scene.add_facet(Box::new(raster_facet));
         Self { location: Point::zero(), color, shape_type, facet_id }
@@ -150,8 +155,7 @@ impl TouchHandler {
         let bounds = make_bounds(context);
         self.location =
             point2(touch_point.x, touch_point.y).clamp(bounds.origin, bounds.bottom_right());
-        scene
-            .send_message(&self.facet_id, Box::new(SetLocationMessage { location: self.location }));
+        scene.set_facet_location(&self.facet_id, self.location);
     }
 }
 
@@ -265,7 +269,7 @@ impl ViewAssistant for ShapeDropViewAssistant {
         let background_color = self.background_color;
 
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
-            let builder = SceneBuilder::new(background_color);
+            let builder = SceneBuilder::new().background_color(background_color);
             let scene = builder.build();
             SceneDetails { scene }
         });
@@ -277,10 +281,7 @@ impl ViewAssistant for ShapeDropViewAssistant {
         let bounds = make_bounds(context);
         for animator in animators.iter_mut() {
             animator.animate(&bounds);
-            scene_details.scene.send_message(
-                &animator.facet_id,
-                Box::new(SetLocationMessage { location: animator.location }),
-            );
+            scene_details.scene.set_facet_location(&animator.facet_id, animator.location);
         }
 
         let (mut running, not_running): (Vec<_>, Vec<_>) =

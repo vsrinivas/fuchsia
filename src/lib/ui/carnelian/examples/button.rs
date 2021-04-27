@@ -7,17 +7,21 @@ use argh::FromArgs;
 use carnelian::{
     color::Color,
     drawing::{load_font, measure_text_width, DisplayRotation, FontFace},
-    facet::{
-        FacetId, Scene, SceneBuilder, SetColorMessage, TextFacetOptions, TextHorizontalAlignment,
-        TextVerticalAlignment,
-    },
     input::{self},
     make_app_assistant, make_message,
     render::Context as RenderContext,
-    App, AppAssistant, Message, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey,
+    scene::{
+        facets::{
+            FacetId, SetColorMessage, TextFacetOptions, TextHorizontalAlignment,
+            TextVerticalAlignment,
+        },
+        layout::{CrossAxisAlignment, Flex, FlexOptions, MainAxisAlignment, MainAxisSize, Stack},
+        scene::{Scene, SceneBuilder, SceneOptions},
+    },
+    App, AppAssistant, Message, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+    ViewKey,
 };
-use euclid::{point2, size2, vec2};
+use euclid::size2;
 use fuchsia_zircon::{Event, Time};
 use std::path::PathBuf;
 
@@ -75,7 +79,6 @@ impl AppAssistant for ButtonAppAssistant {
 struct Button {
     pub font_size: f32,
     pub padding: f32,
-    bounds: Rect,
     bg_color: Color,
     bg_color_active: Color,
     bg_color_disabled: Color,
@@ -95,33 +98,30 @@ impl Button {
         text: &str,
         font_size: f32,
         padding: f32,
-        position: Point,
         builder: &mut SceneBuilder,
     ) -> Result<Button, Error> {
+        builder.start_group("button", Stack::new_ptr());
         let face = load_font(PathBuf::from("/pkg/data/fonts/RobotoSlab-Regular.ttf"))?;
         let label_width = measure_text_width(&face, font_size, text);
         let label = builder.text(
             face.clone(),
             text,
             font_size,
-            position,
+            Point::zero(),
             TextFacetOptions {
                 color: Color::white(),
-                horizontal_alignment: TextHorizontalAlignment::Center,
-                vertical_alignment: TextVerticalAlignment::Center,
+                horizontal_alignment: TextHorizontalAlignment::Left,
+                vertical_alignment: TextVerticalAlignment::Top,
                 ..TextFacetOptions::default()
             },
         );
         let bg_color = Color::from_hash_code("#B7410E")?;
-        let bg_bounds = Rect::new(
-            position - vec2(label_width, font_size) / 2.0 - vec2(padding, padding),
-            size2(label_width + padding * 2.0, font_size + padding * 2.0),
-        );
-        let background = builder.rectangle(bg_bounds, bg_color);
+        let bg_size = size2(label_width + padding * 2.0, font_size + padding * 2.0);
+        let background = builder.rectangle(bg_size, bg_color);
+        builder.end_group();
         let button = Button {
             font_size: font_size,
             padding: padding,
-            bounds: bg_bounds,
             fg_color: Color::white(),
             bg_color,
             bg_color_active: Color::from_hash_code("#f0703c")?,
@@ -181,7 +181,7 @@ impl Button {
             return;
         }
 
-        let bounds = self.bounds;
+        let bounds = scene.get_facet_bounds(&self.background);
 
         if self.tracking_pointer.is_none() {
             match pointer_event.phase {
@@ -235,15 +235,37 @@ struct ButtonViewAssistant {
     focused: bool,
     bg_color: Color,
     red_light: bool,
+    main_alignment_index: usize,
+    cross_alignment_index: usize,
+    column_main_alignment_index: usize,
     scene_details: Option<SceneDetails>,
 }
 
 const BUTTON_LABEL: &'static str = "Depress Me";
+const CROSS_AXIS_ALIGNMENTS: &'static [CrossAxisAlignment] =
+    &[CrossAxisAlignment::Start, CrossAxisAlignment::Center, CrossAxisAlignment::End];
+
+const MAIN_AXIS_ALIGNMENTS: &'static [MainAxisAlignment] = &[
+    MainAxisAlignment::Start,
+    MainAxisAlignment::Center,
+    MainAxisAlignment::End,
+    MainAxisAlignment::SpaceBetween,
+    MainAxisAlignment::SpaceAround,
+    MainAxisAlignment::SpaceEvenly,
+];
 
 impl ButtonViewAssistant {
     fn new() -> Result<ButtonViewAssistant, Error> {
         let bg_color = Color::from_hash_code("#EBD5B3")?;
-        Ok(ButtonViewAssistant { focused: false, bg_color, red_light: false, scene_details: None })
+        Ok(ButtonViewAssistant {
+            focused: false,
+            bg_color,
+            red_light: false,
+            main_alignment_index: 5,
+            cross_alignment_index: 1,
+            column_main_alignment_index: 5,
+            scene_details: None,
+        })
     }
 
     fn set_red_light(&mut self, red_light: bool) {
@@ -256,6 +278,22 @@ impl ButtonViewAssistant {
             }
             self.red_light = red_light;
         }
+    }
+
+    fn cycle_main_alignment(&mut self) {
+        self.main_alignment_index = (self.main_alignment_index + 1) % MAIN_AXIS_ALIGNMENTS.len();
+        self.scene_details = None;
+    }
+
+    fn cycle_cross_alignment(&mut self) {
+        self.cross_alignment_index = (self.cross_alignment_index + 1) % CROSS_AXIS_ALIGNMENTS.len();
+        self.scene_details = None;
+    }
+
+    fn cycle_column_main_alignment(&mut self) {
+        self.column_main_alignment_index =
+            (self.column_main_alignment_index + 1) % MAIN_AXIS_ALIGNMENTS.len();
+        self.scene_details = None;
     }
 }
 
@@ -276,26 +314,48 @@ impl ViewAssistant for ButtonViewAssistant {
             let min_dimension = target_size.width.min(target_size.height);
             let font_size = (min_dimension / 5.0).ceil().min(64.0);
             let padding = (min_dimension / 20.0).ceil().max(8.0);
-            let center_x = target_size.width * 0.5;
-            let button_y = target_size.height * 0.7;
-            let mut builder = SceneBuilder::new(self.bg_color);
-            let indicator_y = target_size.height / 5.0;
-            let indicator_len = target_size.height.min(target_size.width) / 8.0;
-            let indicator_size = size2(indicator_len * 2.0, indicator_len);
-            let indicator_pos = point2(center_x - indicator_len, indicator_y - indicator_len / 2.0);
-            let indicator_bounds = Rect::new(indicator_pos, indicator_size);
-            let indicator = builder.rectangle(indicator_bounds, Color::green());
-            let mut button = Button::new(
-                BUTTON_LABEL,
-                font_size,
-                padding,
-                point2(center_x, button_y),
-                &mut builder,
-            )
-            .expect("button");
+            let mut options = SceneOptions::with_background_color(self.bg_color);
+            options.root_arranger = Some(Flex::with_options_ptr(FlexOptions::column(
+                MainAxisSize::Max,
+                MAIN_AXIS_ALIGNMENTS[self.column_main_alignment_index],
+                CrossAxisAlignment::Center,
+            )));
+            let mut builder = SceneBuilder::new().background_color(self.bg_color);
+            let mut button = None;
+            let mut indicator_id = None;
+            builder
+                .group()
+                .column()
+                .max_size()
+                .main_align(MAIN_AXIS_ALIGNMENTS[self.column_main_alignment_index])
+                .contents(|builder| {
+                    let indicator_len = target_size.height.min(target_size.width) / 8.0;
+                    let indicator_size = size2(indicator_len * 1.25, indicator_len);
+                    let indicator_side_size = size2(indicator_len / 2.0, indicator_len * 1.5);
+                    builder.start_group(
+                        "indicator_row",
+                        Flex::with_options_ptr(FlexOptions::row(
+                            MainAxisSize::Max,
+                            MAIN_AXIS_ALIGNMENTS[self.main_alignment_index],
+                            CROSS_AXIS_ALIGNMENTS[self.cross_alignment_index],
+                        )),
+                    );
+                    builder.rectangle(indicator_side_size, Color::blue());
+                    indicator_id = Some(builder.rectangle(
+                        indicator_size,
+                        if self.red_light { Color::red() } else { Color::green() },
+                    ));
+                    builder.rectangle(indicator_side_size, Color::blue());
+                    builder.end_group();
+                    button = Some(
+                        Button::new(BUTTON_LABEL, font_size, padding, builder).expect("button"),
+                    );
+                });
+            let mut button = button.expect("button");
             let mut scene = builder.build();
+            scene.layout(target_size);
             button.set_focused(&mut scene, self.focused);
-            SceneDetails { scene, indicator, button }
+            SceneDetails { scene, indicator: indicator_id.expect("indicator_id"), button }
         });
 
         scene_details.scene.render(render_context, ready_event, context)?;
@@ -342,6 +402,28 @@ impl ViewAssistant for ButtonViewAssistant {
             scene_details.button.set_focused(&mut scene_details.scene, focused);
         }
         context.request_render();
+        Ok(())
+    }
+
+    fn handle_keyboard_event(
+        &mut self,
+        _context: &mut ViewAssistantContext,
+        _event: &input::Event,
+        keyboard_event: &input::keyboard::Event,
+    ) -> Result<(), Error> {
+        const C: u32 = 99;
+        const M: u32 = 109;
+        const R: u32 = 114;
+        if let Some(code_point) = keyboard_event.code_point {
+            if keyboard_event.phase == input::keyboard::Phase::Pressed {
+                match code_point {
+                    C => self.cycle_cross_alignment(),
+                    M => self.cycle_main_alignment(),
+                    R => self.cycle_column_main_alignment(),
+                    _ => println!("code_point = {}", code_point),
+                }
+            }
+        }
         Ok(())
     }
 }

@@ -6,9 +6,15 @@ use anyhow::Error;
 use carnelian::{
     color::Color,
     drawing::{load_font, FontFace},
-    facet::*,
     input::{self},
     render::Context as RenderContext,
+    scene::{
+        facets::{
+            FacetId, SetColorMessage, SetTextMessage, TextFacetOptions, TextHorizontalAlignment,
+            TextVerticalAlignment,
+        },
+        scene::{Scene, SceneBuilder},
+    },
     App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, Coord, LocalBoxFuture,
     Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
@@ -160,8 +166,9 @@ impl ViewAssistant for FontMetricsViewAssistant {
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
-            let mut builder = SceneBuilder::new(Color::white());
-            builder.round_scene_corners(self.round_scene_corners);
+            let mut builder = SceneBuilder::new()
+                .background_color(Color::white())
+                .round_scene_corners(self.round_scene_corners);
             let size = context.size;
             let text_size = size.height.min(size.width) / self.sample_size_divisor;
             let ascent = self.sample_faces[self.sample_index].ascent(text_size);
@@ -200,28 +207,24 @@ impl ViewAssistant for FontMetricsViewAssistant {
             let mut lines = Vec::new();
 
             lines.push(builder.h_line(
-                baseline_location,
-                baseline_left,
-                baseline_right,
+                baseline_width,
                 LINE_THICKNESS,
                 self.line_color,
+                Some(point2(baseline_left, baseline_location)),
             ));
 
             let ascent_x = baseline_left + size.width * BASELINE_INDENT / 5.0;
             lines.push(builder.v_line(
-                ascent_x,
-                baseline_location - ascent,
-                baseline_location,
+                ascent,
                 LINE_THICKNESS,
                 self.line_color,
+                Some(point2(ascent_x, baseline_location - ascent)),
             ));
-
             lines.push(builder.v_line(
-                ascent_x,
-                baseline_location,
-                baseline_location - descent,
+                -descent,
                 LINE_THICKNESS,
                 self.line_color,
+                Some(point2(ascent_x, baseline_location)),
             ));
 
             let label_size = size.height.min(size.width) / 30.0;
