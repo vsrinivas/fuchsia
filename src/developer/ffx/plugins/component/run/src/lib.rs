@@ -3,15 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Result},
+    anyhow::{anyhow, Context, Error, Result},
     blocking::Unblock,
+    cs::{io::Directory, v2::V2Component, Subcommand},
     ffx_component_run_args::RunComponentCommand,
     ffx_core::ffx_plugin,
     fidl::endpoints::create_proxy,
+    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys::{
         ComponentControllerEvent, ComponentControllerMarker, FileDescriptor, LaunchInfo,
         LauncherProxy, TerminationReason::*,
     },
+    fuchsia_zircon_status::Status,
     futures::StreamExt,
     signal_hook::{consts::signal::SIGINT, iterator::Signals},
 };
@@ -20,8 +23,35 @@ use {
 // rather than redefining it here.
 const HANDLE_TYPE_FILE_DESCRIPTOR: i32 = 0x30;
 
+async fn get_process_id(url: &str, rcs_proxy: rc::RemoteControlProxy) -> Result<Vec<u32>, Error> {
+    let (root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+        .context("creating hub root proxy")?;
+    rcs_proxy
+        .open_hub(dir_server)
+        .await?
+        .map_err(|i| Status::ok(i).unwrap_err())
+        .context("opening hub")?;
+    let hub_dir = Directory::from_proxy(root);
+    let component = V2Component::explore(hub_dir, Subcommand::Show).await;
+    let process_ids = component.get_process_id_recursive(url, &mut vec![]);
+    Ok(process_ids)
+}
+
 #[ffx_plugin(LauncherProxy = "core/appmgr:out:fuchsia.sys.Launcher")]
-pub async fn run_component(launcher_proxy: LauncherProxy, run: RunComponentCommand) -> Result<()> {
+pub async fn run_component(
+    rcs_proxy: rc::RemoteControlProxy,
+    launcher_proxy: LauncherProxy,
+    run: RunComponentCommand,
+) -> Result<()> {
+    let process_ids = get_process_id(&run.url, rcs_proxy).await.expect("failed to get process_ids");
+    run_component_cmd(launcher_proxy, process_ids, run).await
+}
+
+async fn run_component_cmd(
+    launcher_proxy: LauncherProxy,
+    process_ids: Vec<u32>,
+    run: RunComponentCommand,
+) -> Result<()> {
     let (control_proxy, control_server_end) = create_proxy::<ComponentControllerMarker>()?;
     let (sout, cout) =
         fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
@@ -95,7 +125,7 @@ pub async fn run_component(launcher_proxy: LauncherProxy, run: RunComponentComma
     };
 
     let mut info = LaunchInfo {
-        url: run.url,
+        url: run.url.clone(),
         arguments: Some(run.args),
         out: Some(Box::new(out_fd)),
         err: Some(Box::new(err_fd)),
@@ -109,6 +139,25 @@ pub async fn run_component(launcher_proxy: LauncherProxy, run: RunComponentComma
             "Error starting component: {:?}. Ensure there is a target connected with `ffx list`"
         )
     })?;
+
+    if run.background {
+        if process_ids.len() > 0 {
+            println!("Started component: {}\nProcess IDs: {:?}", run.url, process_ids);
+        } else {
+            println!("Started component: {}", run.url);
+        }
+        std::process::exit(0);
+    } else {
+        if process_ids.len() > 0 {
+            println!(
+                "Started component: {}\nProcess IDs: {:?}\nComponent stdout and stderr will be shown below. Press Ctrl+C to exit and kill the component.",
+                run.url, process_ids
+            );
+        } else {
+            println!("Started component: {}\nComponent stdout and stderr will be shown below. Press Ctrl+C to exit and kill the component.", run.url);
+        }
+    }
+
     let (copy_res, term_event) = futures::join!(copy_futures, term_event_future);
     copy_res?;
 
@@ -170,13 +219,16 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_run_component() -> Result<()> {
+    async fn test_run_component_cmd() -> Result<()> {
         let url = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx".to_string();
         let args = vec!["test1".to_string(), "test2".to_string()];
-        let run_cmd = RunComponentCommand { url, args };
+        let background = true;
+        let run_cmd = RunComponentCommand { url, args, background };
         let launcher_proxy = setup_fake_launcher_service();
-        let _response =
-            run_component(launcher_proxy, run_cmd).await.expect("getting tests should not fail");
+        let process_ids = vec![12345];
+        let _response = run_component_cmd(launcher_proxy, process_ids, run_cmd)
+            .await
+            .expect("getting tests should not fail");
         Ok(())
     }
 }

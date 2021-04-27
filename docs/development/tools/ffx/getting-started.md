@@ -270,9 +270,9 @@ Here's an example of running the Rust hello-world component. First, you'll need
 the hello-world package in your universe:
 
 ```
-$ fx set <product>.<board> --with //examples/hello_world/rust:hello_world_rust && fx build
+$ fx set <product>.<board> --with //examples/hello_world/rust:hello-world-rust && fx build
 ...
-$ fx ffx component run fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx
+$ fx ffx component run fuchsia-pkg://fuchsia.com/hello-world-rust#meta/hello-world-rust.cmx
 Hello, world!
 ```
 

@@ -184,6 +184,15 @@ impl V1Realm {
 
         did_print
     }
+
+    pub fn get_process_id_recursive(&self, url: &str, pids: &mut Vec<u32>) -> Vec<u32> {
+        let mut process_ids = vec![];
+        for child in &self.child_components {
+            let tmp_pids = child.get_process_id_recursive(url, pids);
+            process_ids.extend(tmp_pids);
+        }
+        process_ids
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -346,6 +355,23 @@ impl V1Component {
             did_print |= child.print_details_recursive(&moniker_prefix, filter);
         }
         did_print
+    }
+
+    pub fn get_process_id_recursive(&self, url: &str, pids: &mut Vec<u32>) -> Vec<u32> {
+        let mut process_ids = vec![];
+        if let Some(details) = &self.details {
+            if details.url == url {
+                if let Some(process_id) = details.process_id {
+                    process_ids.push(process_id);
+                }
+            }
+        }
+
+        for child in &self.child_components {
+            let tmp_pids = child.get_process_id_recursive(url, pids);
+            process_ids.extend(tmp_pids);
+        }
+        process_ids
     }
 }
 

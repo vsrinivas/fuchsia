@@ -395,6 +395,34 @@ impl V2Component {
 
         did_print
     }
+
+    pub fn get_process_id_recursive(&self, url: &str, pids: &mut Vec<u32>) -> Vec<u32> {
+        let mut process_ids = vec![];
+        if let Some(details) = &self.details {
+            if details.url == url {
+                if let Some(execution) = &self.execution {
+                    if let Some(elf_runtime) = &execution.elf_runtime {
+                        process_ids.push(elf_runtime.process_id);
+                    }
+                }
+            }
+        } else {
+            eprintln!("Error! `V2Component` doesn't have `Details`!");
+        }
+
+        for child in &self.children {
+            let tmp_pids = child.get_process_id_recursive(url, pids);
+            process_ids.extend(tmp_pids);
+        }
+
+        // If this component is appmgr, search for matching url in all v1 components
+        if let Some(v1_realm) = &self.appmgr_root_v1_realm {
+            let pids = v1_realm.get_process_id_recursive(url, pids);
+            process_ids.extend(pids);
+        }
+
+        process_ids
+    }
 }
 
 #[cfg(test)]
@@ -1424,5 +1452,150 @@ mod tests {
         let v2_component = V2Component::explore(root_dir, Subcommand::Show).await;
 
         assert!(v2_component.print_details("asdfgh").is_err());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn get_process_id_recursive_gets_process_id() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- children
+        // |- component_type
+        // |- exec
+        //    |- expose
+        //       |- diagnostics
+        //       |- fuchsia.diagnostics.internal.LogStatsController
+        //    |- in
+        //    |- runtime
+        //       |- elf
+        //          |- job-id
+        //          |- process-id
+        // |- id
+        // |- url
+        fs::create_dir(root.join("children")).unwrap();
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        File::create(exec.join("expose/diagnostics")).unwrap();
+        File::create(exec.join("expose/fuchsia.diagnostics.internal.LogStatsController")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("runtime")).unwrap();
+        fs::create_dir(exec.join("runtime/elf")).unwrap();
+        File::create(exec.join("runtime/elf/job_id"))
+            .unwrap()
+            .write_all("12345".as_bytes())
+            .unwrap();
+        File::create(exec.join("runtime/elf/process_id"))
+            .unwrap()
+            .write_all("67890".as_bytes())
+            .unwrap();
+        File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
+            .unwrap();
+
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root hub directory!");
+        let v2_component = V2Component::explore(root_dir, Subcommand::Show).await;
+
+        assert_eq!(
+            v2_component.get_process_id_recursive("fuchsia-boot:///#meta/root.cm", &mut vec![]),
+            vec![67890]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn get_process_id_recursive_does_not_get_process_id_with_no_matching_url() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- children
+        // |- component_type
+        // |- exec
+        //    |- expose
+        //       |- diagnostics
+        //       |- fuchsia.diagnostics.internal.LogStatsController
+        //    |- in
+        //    |- runtime
+        //       |- elf
+        //          |- job-id
+        //          |- process-id
+        // |- id
+        // |- url
+        fs::create_dir(root.join("children")).unwrap();
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        File::create(exec.join("expose/diagnostics")).unwrap();
+        File::create(exec.join("expose/fuchsia.diagnostics.internal.LogStatsController")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("runtime")).unwrap();
+        fs::create_dir(exec.join("runtime/elf")).unwrap();
+        File::create(exec.join("runtime/elf/job_id"))
+            .unwrap()
+            .write_all("12345".as_bytes())
+            .unwrap();
+        File::create(exec.join("runtime/elf/process_id"))
+            .unwrap()
+            .write_all("67890".as_bytes())
+            .unwrap();
+        File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
+            .unwrap();
+
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root hub directory!");
+        let v2_component = V2Component::explore(root_dir, Subcommand::Show).await;
+
+        assert_eq!(v2_component.get_process_id_recursive("random-string", &mut vec![]), []);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn get_process_id_recursive_does_not_get_process_id_when_no_process_id_exists() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- children
+        // |- component_type
+        // |- exec
+        //    |- expose
+        //       |- diagnostics
+        //       |- fuchsia.diagnostics.internal.LogStatsController
+        //    |- in
+        // |- id
+        // |- url
+        fs::create_dir(root.join("children")).unwrap();
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        File::create(exec.join("expose/diagnostics")).unwrap();
+        File::create(exec.join("expose/fuchsia.diagnostics.internal.LogStatsController")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
+            .unwrap();
+
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root hub directory!");
+        let v2_component = V2Component::explore(root_dir, Subcommand::Show).await;
+
+        assert_eq!(
+            v2_component.get_process_id_recursive("fuchsia-boot:///#meta/root.cm", &mut vec![]),
+            []
+        );
     }
 }
