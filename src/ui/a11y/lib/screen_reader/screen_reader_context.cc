@@ -30,8 +30,8 @@ ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_
       std::make_unique<i18n::MessageFormatter>(icu::Locale("en-US"), result.take_value());
   auto screen_reader_message_generator =
       std::make_unique<ScreenReaderMessageGenerator>(std::move(message_formatter));
-  speaker_ =
-      std::make_unique<Speaker>(&tts_engine_ptr_, std::move(screen_reader_message_generator));
+  speaker_ = std::make_unique<Speaker>(&executor_, &tts_engine_ptr_,
+                                       std::move(screen_reader_message_generator));
 }
 
 ScreenReaderContext::ScreenReaderContext() : executor_(async_get_default_dispatcher()) {}

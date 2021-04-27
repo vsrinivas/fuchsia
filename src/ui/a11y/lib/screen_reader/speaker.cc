@@ -8,21 +8,10 @@
 #include <lib/fit/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include <chrono>
-#include <thread>
-
 namespace a11y {
 namespace {
 
 using fuchsia::accessibility::tts::Utterance;
-
-// Delays the task by |delay| msec, resuming its execution after.
-void DelayTask(int64_t delay, fit::suspended_task task) {
-  std::thread([delay, task]() mutable {
-    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-    task.resume_task();
-  }).detach();
-}
 
 // Concatenates all utterance strings into a single string.
 std::string ConcatenateUtterances(
@@ -44,9 +33,10 @@ std::string ConcatenateUtterances(
 
 }  // namespace
 
-Speaker::Speaker(fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr,
+Speaker::Speaker(async::Executor* executor, fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr,
                  std::unique_ptr<ScreenReaderMessageGenerator> screen_reader_message_generator)
-    : tts_engine_ptr_(tts_engine_ptr),
+    : executor_(executor),
+      tts_engine_ptr_(tts_engine_ptr),
       screen_reader_message_generator_(std::move(screen_reader_message_generator)) {
   FX_DCHECK(tts_engine_ptr_);
 }
@@ -142,25 +132,25 @@ fit::promise<> Speaker::DispatchSingleUtterance(std::weak_ptr<SpeechTask> weak_t
     return EndSpeechTask(std::move(weak_task), /*success=*/false);
   }
 
-  return fit::make_promise([delay_elapsed = false, weak_task = std::weak_ptr(task)](
-                               fit::context& context) mutable -> fit::result<Utterance> {
-           auto task = weak_task.lock();
-           if (!task) {
-             return fit::error();
-           }
-           FX_DCHECK(static_cast<uint64_t>(task->utterance_index) < task->utterances.size());
-           auto& utterance_and_context = task->utterances[task->utterance_index];
-           if (utterance_and_context.delay.to_msecs() > 0 && !delay_elapsed) {
-             // DelayTask() will have the capability of resuming this task. The task will run again,
-             // but delay_elapsed will be true, which means that the task continues its normal
-             // execution.
-             DelayTask(utterance_and_context.delay.to_msecs(), context.suspend_task());
-             delay_elapsed = true;
-             return fit::pending();
-           }
-           task->utterance_index++;
-           return fit::ok(std::move(utterance_and_context.utterance));
-         })
+  // Create a promise representing the (optional) delay, and chain the utterance dispatch off of it.
+  fit::promise<> delay = fit::make_ok_promise();
+  FX_DCHECK(static_cast<uint64_t>(task->utterance_index) < task->utterances.size());
+  auto& utterance_and_context = task->utterances[task->utterance_index];
+  if (utterance_and_context.delay > zx::duration(0)) {
+    delay = executor_->MakeDelayedPromise(utterance_and_context.delay);
+  }
+
+  return delay
+      .and_then([weak_task = std::weak_ptr(task)]() mutable -> fit::result<Utterance> {
+        auto task = weak_task.lock();
+        if (!task) {
+          return fit::error();
+        }
+        FX_DCHECK(static_cast<uint64_t>(task->utterance_index) < task->utterances.size());
+        auto& utterance_and_context = task->utterances[task->utterance_index];
+        task->utterance_index++;
+        return fit::ok(std::move(utterance_and_context.utterance));
+      })
       .and_then([this](Utterance& utterance) mutable -> fit::promise<> {
         return EnqueueUtterance(std::move(utterance));
       })

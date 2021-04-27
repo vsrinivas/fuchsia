@@ -7,6 +7,7 @@
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/accessibility/tts/cpp/fidl.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/zx/time.h>
@@ -44,7 +45,8 @@ class Speaker {
     bool save_utterance = true;
   };
 
-  explicit Speaker(fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr,
+  explicit Speaker(async::Executor* executor,
+                   fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr,
                    std::unique_ptr<ScreenReaderMessageGenerator> screen_reader_message_generator);
   virtual ~Speaker();
 
@@ -117,6 +119,9 @@ class Speaker {
   // Returns a promise that speaks enqueued utterances. An error is thrown if the atempt to speak
   // the utterance(s) is rejected by the TTS service.
   fit::promise<> Speak();
+
+  // The async executor that these promises will be run on
+  async::Executor* executor_ = nullptr;
 
   // Interface to the tts service that receives utterance requests.
   fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr_ = nullptr;
