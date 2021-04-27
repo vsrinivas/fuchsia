@@ -49,7 +49,7 @@ driver_module("vim2") {
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.scpi:fuchsia.hardware.scpi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sdmmc:fuchsia.hardware.sdmmc_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.serial",
+    "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_banjo_cpp",
     "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",

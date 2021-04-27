@@ -27,8 +27,8 @@ driver_module("bt-transport-uart") {
   deps = [
     ":bt_transport_uart_bind",
     "//sdk/banjo/fuchsia.hardware.bt.hci:fuchsia.hardware.bt.hci_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.serial",
-    "//sdk/banjo/fuchsia.hardware.serialimpl.async",
+    "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.serialimpl.async:fuchsia.hardware.serialimpl.async_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

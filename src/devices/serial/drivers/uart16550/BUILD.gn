@@ -43,8 +43,8 @@ template("define_common_lib") {
     ]
     public_deps = [
       "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
-      "//sdk/banjo/fuchsia.hardware.serial",
-      "//sdk/banjo/fuchsia.hardware.serialimpl",
+      "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_banjo_cpp",
+      "//sdk/banjo/fuchsia.hardware.serialimpl:fuchsia.hardware.serialimpl_banjo_cpp",
       "//src/lib/ddk",
       "//src/lib/ddktl",
       "//zircon/public/lib/fbl",

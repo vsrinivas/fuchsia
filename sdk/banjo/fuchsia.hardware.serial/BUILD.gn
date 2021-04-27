@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
+import("//build/fidl/fidl.gni")
 
-banjo("fuchsia.hardware.serial") {
+fidl("fuchsia.hardware.serial") {
   sdk_category = "partner"
-  sources = [ "serial.banjo" ]
-  deps = [ "//sdk/banjo/zx" ]
+  sources = [ "serial.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

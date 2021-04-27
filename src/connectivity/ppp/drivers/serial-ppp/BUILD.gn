@@ -26,7 +26,7 @@ source_set("driver") {
   public_deps = [
     ":serial-ppp-bind",
     "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.serial",
+    "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//sdk/lib/fit-promise",
     "//src/connectivity/ppp/lib/common",
