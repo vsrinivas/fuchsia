@@ -46,6 +46,32 @@ typically involves replacing a `.cmx` file with a `.cml` file.
 
 Please see the [self-service migration guide][migrating-sys-components].
 
+### Terminology
+
+Use this terminology when talking about the state of migrating a component from
+v1 to v2.
+
+A component and its tests can be migrated separately. For this reason, describe
+the state of migration for the component and its tests explicitly.
+
+#### Examples
+"root_presenter is _partially migrated_ but its tests are _not migrated_."
+
+"stash and its tests are _fully migrated_."
+
+"basemgr is a _partially migrated_ component with _partially migrated_ tests.
+Specifically, ..."
+
+"setui_service was _prototyped_ to v2 and it exposed some missing dependencies."
+
+#### Terms table
+&nbsp; | The component | Tests that exercise it
+:-----:|---------------|------------------------
+**Fully migrated**|The component has a `.cml` file and no `.cmx` file **AND** the component runs as v2 in all product builds|All automated tests run the component as a v2 component
+**Partially migrated**|The component has a `.cml` file and a `.cmx` file **AND** the component runs as v1 in some product configurations but not others, or is guarded by a flag to do so for development purposes|Some automated tests exist in which the component runs as a v2 component, but others run it as v1
+**Prototyped**|The component runs as a v1 component in all product configurations **AND** the component has a `.cml` file|All automated tests in CI/CQ run the component as v1 **AND** there are tests with the component as v2, but they don't run in CI/CQ
+**Not migrated**|The component does not have a `.cml` file|There are no tests that run the component as v2
+
 ## Latest status
 
 Last updated: **April 2021**
