@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/4190c548050cab46d75660f0650f9e39ea95524a/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/6bd48dbb676e48ccc12395cfaae4d167a534eb14/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/4190c548050cab46d75660f0650f9e39ea95524a/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/6bd48dbb676e48ccc12395cfaae4d167a534eb14/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -2708,6 +2708,13 @@ From //build/images/args.gni:107
 
 From //src/devices/bus/drivers/pci/pci.gni:10
 
+### pmm_checker_from_board
+Used to control whether board definitions include PMM checker options.
+
+**Current value (from the default):** `true`
+
+From //boards/kernel_cmdline/BUILD.gn:34
+
 ### pre_erase_flash
 
 **Current value (from the default):** `false`
@@ -2963,7 +2970,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"WEl9a67yLwXf_jo-OMCiXuNyK5HsgUv-gQVD6N5S9pEC"`
+**Current value (from the default):** `"fJuKFNndat8KoNwxeKVhLZKjgz9ZzqI4kGvkwZhL9AIC"`
 
 From //build/rust/config.gni:32
 
@@ -3990,13 +3997,4 @@ From //build/config/arm.gni:28
 **Current value (from the default):** `8`
 
 From //build/config/arm.gni:12
-
-## `target_cpu = "x64"`
-
-### pmm_checker_from_board
-Used to control whether board definitions include PMM checker options.
-
-**Current value (from the default):** `true`
-
-From //boards/kernel_cmdline/BUILD.gn:28
 
