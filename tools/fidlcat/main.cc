@@ -169,8 +169,7 @@ int ConsoleMain(int argc, const char* argv[]) {
   fidl_codec::LibraryLoader loader(paths, &loader_err);
   loader.ParseBuiltinSemantic();
   if (loader_err.value != fidl_codec::LibraryReadError::kOk) {
-    FX_LOGS(ERROR) << "Failed to read libraries";
-    return 1;
+    FX_LOGS(ERROR) << "Failed to load FIDL definitions. Some FIDL messages may not be decoded.";
   }
 
   std::shared_ptr<Comparator> comparator =
