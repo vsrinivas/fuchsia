@@ -11,7 +11,10 @@ use fidl_fuchsia_testing_deadline::DeadlineId;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon::{self as zx, AsHandleRef, DurationNum, Peered};
-use futures::{stream::StreamExt, FutureExt};
+use futures::{
+    stream::{StreamExt, TryStreamExt},
+    FutureExt,
+};
 use log::{debug, error, warn};
 
 use std::collections::{hash_map, BinaryHeap, HashMap};
@@ -54,17 +57,19 @@ impl<E> Ord for PendingEvent<E> {
 impl RegisteredEvent {
     fn signal(&mut self) {
         self.pending = false;
-        if let Err(e) = self.event.signal_peer(zx::Signals::NONE, zx::Signals::EVENT_SIGNALED) {
-            debug!("Failed to signal event: {:?}", e);
-        } else {
-            debug!("Signaled event");
+        match self.event.signal_peer(zx::Signals::NONE, zx::Signals::EVENT_SIGNALED) {
+            Ok(()) => (),
+            Err(zx::Status::PEER_CLOSED) => debug!("Got PEER_CLOSED while signaling an event"),
+            Err(e) => error!("Got an unexpected error while signaling an event: {:?}", e),
         }
     }
 
     fn clear(&mut self) {
         self.pending = false;
-        if let Err(e) = self.event.signal_peer(zx::Signals::EVENT_SIGNALED, zx::Signals::NONE) {
-            debug!("Failed to clear event: {:?}", e);
+        match self.event.signal_peer(zx::Signals::EVENT_SIGNALED, zx::Signals::NONE) {
+            Ok(()) => (),
+            Err(zx::Status::PEER_CLOSED) => debug!("Got PEER_CLOSED while clearing an event"),
+            Err(e) => error!("Got an unexpected error while clearing an event: {:?}", e),
         }
     }
 }
@@ -163,9 +168,12 @@ impl<T: FakeClockObserver> FakeClock<T> {
         if let Some(stop_point_eventpair) = self.registered_stop_points.remove(&stop_point) {
             match stop_point_eventpair.signal_peer(zx::Signals::NONE, zx::Signals::EVENT_SIGNALED) {
                 Ok(()) => true,
-                Err(zx::Status::PEER_CLOSED) => false,
+                Err(zx::Status::PEER_CLOSED) => {
+                    debug!("Got PEER_COSED while signaling a named event");
+                    false
+                }
                 Err(e) => {
-                    debug!("Failed to signal named event: {:?}", e);
+                    error!("Failed to signal named event: {:?}", e);
                     false
                 }
             }
@@ -381,35 +389,35 @@ fn check_valid_increment(increment: &Increment) -> bool {
 
 async fn handle_control_events<T: FakeClockObserver>(
     mock_clock: FakeClockHandle<T>,
-    mut rs: FakeClockControlRequestStream,
-) {
-    while let Some(Ok(req)) = rs.next().await {
+    rs: FakeClockControlRequestStream,
+) -> Result<(), fidl::Error> {
+    rs.try_for_each(|req| async {
         match req {
             FakeClockControlRequest::Advance { increment, responder } => {
                 if check_valid_increment(&increment) {
                     let mut mc = mock_clock.lock().unwrap();
                     if mc.is_free_running() {
-                        let _ = responder.send(&mut Err(zx::Status::ACCESS_DENIED.into_raw()));
+                        responder.send(&mut Err(zx::Status::ACCESS_DENIED.into_raw()))
                     } else {
                         mc.increment(&increment);
-                        let _ = responder.send(&mut Ok(()));
+                        responder.send(&mut Ok(()))
                     }
                 } else {
-                    let _ = responder.send(&mut Err(zx::Status::INVALID_ARGS.into_raw()));
+                    responder.send(&mut Err(zx::Status::INVALID_ARGS.into_raw()))
                 }
             }
             FakeClockControlRequest::Pause { responder } => {
                 stop_free_running(&mock_clock);
-                let _ = responder.send();
+                responder.send()
             }
             FakeClockControlRequest::ResumeWithIncrements { real, increment, responder } => {
                 if real <= 0 || !check_valid_increment(&increment) {
-                    let _ = responder.send(&mut Err(zx::Status::INVALID_ARGS.into_raw()));
+                    responder.send(&mut Err(zx::Status::INVALID_ARGS.into_raw()))
                 } else {
                     // stop free running if we are
                     stop_free_running(&mock_clock);
                     start_free_running(&mock_clock, real.nanos(), increment);
-                    let _ = responder.send(&mut Ok(()));
+                    responder.send(&mut Ok(()))
                 }
             }
             FakeClockControlRequest::AddStopPoint {
@@ -421,24 +429,25 @@ async fn handle_control_events<T: FakeClockObserver>(
                 debug!("stop point of type {:?} registered", event_type);
                 let mut mc = mock_clock.lock().unwrap();
                 if mc.is_free_running() {
-                    let _ = responder.send(&mut Err(zx::Status::ACCESS_DENIED.into_raw()));
+                    responder.send(&mut Err(zx::Status::ACCESS_DENIED.into_raw()))
                 } else {
-                    let _ = responder.send(
+                    responder.send(
                         &mut mc
                             .set_stop_point(StopPoint { deadline_id, event_type }, on_stop)
                             .map_err(zx::Status::into_raw),
-                    );
+                    )
                 }
             }
         }
-    }
+    })
+    .await
 }
 
 async fn handle_events<T: FakeClockObserver>(
     mock_clock: FakeClockHandle<T>,
-    mut rs: FakeClockRequestStream,
-) {
-    while let Some(Ok(req)) = rs.next().await {
+    rs: FakeClockRequestStream,
+) -> Result<(), fidl::Error> {
+    rs.try_for_each(|req| async {
         match req {
             FakeClockRequest::RegisterEvent { time, event, control_handle: _ } => {
                 mock_clock.lock().unwrap().install_event(
@@ -446,21 +455,22 @@ async fn handle_events<T: FakeClockObserver>(
                     zx::Time::from_nanos(time),
                     event.into(),
                 );
+                Ok(())
             }
             FakeClockRequest::Get { responder } => {
-                let _ = responder.send(mock_clock.lock().unwrap().time.into_nanos());
+                responder.send(mock_clock.lock().unwrap().time.into_nanos())
             }
             FakeClockRequest::RescheduleEvent { event, time, responder } => {
                 if let Ok(k) = event.get_koid() {
                     mock_clock.lock().unwrap().reschedule_event(zx::Time::from_nanos(time), k)
                 }
-                let _ = responder.send();
+                responder.send()
             }
             FakeClockRequest::CancelEvent { event, responder } => {
                 if let Ok(k) = event.get_koid() {
                     mock_clock.lock().unwrap().cancel_event(k);
                 }
-                let _ = responder.send();
+                responder.send()
             }
             FakeClockRequest::CreateNamedDeadline { id, duration, responder } => {
                 debug!("Creating named deadline with id {:?}", id);
@@ -475,10 +485,11 @@ async fn handle_events<T: FakeClockObserver>(
                     PendingDeadlineExpireEvent { deadline_id: id, deadline: deadline };
                 mock_clock.lock().unwrap().add_named_deadline(expiration_point);
 
-                let _ = responder.send(deadline.into_nanos());
+                responder.send(deadline.into_nanos())
             }
         }
-    }
+    })
+    .await
 }
 
 #[fasync::run_singlethreaded]
@@ -500,11 +511,31 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc")
         .add_fidl_service(move |rs: FakeClockControlRequestStream| {
             let cl = Arc::clone(&mock_clock);
-            fasync::Task::local(handle_control_events(cl, rs)).detach()
+            fasync::Task::local(async move {
+                match handle_control_events(cl, rs).await {
+                    Ok(()) => (),
+                    Err(e) if e.is_closed() => {
+                        debug!("Got channel closed while serving fake clock control: {:?}", e)
+                    }
+                    Err(e) => {
+                        error!("Got unexpected error while serving fake clock control: {:?}", e)
+                    }
+                }
+            })
+            .detach()
         })
         .add_fidl_service(move |rs: FakeClockRequestStream| {
             let cl = Arc::clone(&m1);
-            fasync::Task::local(handle_events(cl, rs)).detach()
+            fasync::Task::local(async move {
+                match handle_events(cl, rs).await {
+                    Ok(()) => (),
+                    Err(e) if e.is_closed() => {
+                        debug!("Got channel closed while serving fake clock : {:?}", e)
+                    }
+                    Err(e) => error!("Got unexpected error while serving fake clock: {:?}", e),
+                }
+            })
+            .detach()
         });
     fs.take_and_serve_directory_handle()?;
     let () = fs.collect().await;
