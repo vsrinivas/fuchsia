@@ -59,6 +59,10 @@ zx_status_t Vout::InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t wid
     case PANEL_P070ACB_FT:
       init_disp_table = &kDisplaySettingP070ACB_FT;
       break;
+    case PANEL_KD070D82_FT_9365:
+    case PANEL_KD070D82_FT:
+      init_disp_table = &kDisplaySettingKD070D82_FT;
+      break;
     case PANEL_TV101WXM_FT_9365:
     case PANEL_TV101WXM_FT:
       init_disp_table = &kDisplaySettingTV101WXM_FT;

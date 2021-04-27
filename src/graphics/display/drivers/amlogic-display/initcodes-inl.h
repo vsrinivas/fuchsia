@@ -565,4 +565,17 @@ constexpr uint8_t lcd_init_sequence_TV101WXM_FT_9365[] = {
   0xFF, 0xFF,
 };
 
+constexpr uint8_t lcd_init_sequence_KD070D82_FT_9365[] = {
+  0xFF, 10,
+
+  // Reset high, low, high
+  0xF0, 3, 0, 1, 30,
+  0xF0, 3, 0, 0, 10,
+  0xF0, 3, 0, 1, 30,
+  0xFC, 2, 0x04, 3,
+
+  // End marker
+  0xFF, 0xFF,
+};
+
 // clang-format on
