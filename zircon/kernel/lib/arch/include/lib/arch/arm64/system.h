@@ -106,6 +106,189 @@ ARCH_ARM64_SYSREG(ArmSctlrEl2, "sctlr_el2");
 struct ArmSctlrEl3 : public arch::SysRegDerived<ArmSctlrEl3, ArmSystemControlRegister> {};
 ARCH_ARM64_SYSREG(ArmSctlrEl3, "sctlr_el3");
 
+// Physical address size.
+//
+// Used by both TCR_EL1 Intermediate physical address size and TCR_EL2 Physical address size.
+//
+// [arm/v8]: D13.2.120 Translation Control Register (EL1)
+// [arm/v8]: D13.2.121 Translation Control Register (EL2)
+enum class ArmTcrPhysicalSize {
+  k32Bits = 0b000,
+  k36Bits = 0b001,
+  k40Bits = 0b010,
+  k42Bits = 0b011,
+  k44Bits = 0b100,
+  k48Bits = 0b101,
+  k52Bits = 0b110,
+};
+
+// TCR_EL1 Cache Attributes
+//
+// Used in multiple bitfields for TCR_EL1 and TCR_EL2.
+//
+// [arm/v8]: D13.2.120 TCR_EL1, Translation Control Register (EL1)
+// [arm/v8]: D13.2.121 TCR_EL2, Translation Control Register (EL2)
+enum class ArmTcrCacheAttr {
+  kNonCacheable = 0b00,
+  kWriteBackWriteAllocate = 0b01,
+  kWriteThrough = 0b10,
+  kWriteBack = 0b11,
+};
+
+// Granule size values for the TCR_EL1 and TCR_EL2 fields.
+//
+// WARNING: The encodings for the TG0 field and TG1 field are different.
+//
+// [arm/v8]: D13.2.120 TCR_EL1, Translation Control Register (EL1)
+// [arm/v8]: D13.2.121 TCR_EL2, Translation Control Register (EL2)
+enum class ArmTcrTg0Value {
+  k4KiB = 0b00,
+  k16KiB = 0b10,
+  k64KiB = 0b01,
+};
+enum class ArmTcrTg1Value {
+  k4KiB = 0b10,
+  k16KiB = 0b01,
+  k64KiB = 0b11,
+};
+
+// Cache shareability attribute for the TCR_EL1 and TCR_EL2 fields.
+//
+// [arm/v8]: D13.2.120 TCR_EL1, Translation Control Register (EL1)
+// [arm/v8]: D13.2.121 TCR_EL2, Translation Control Register (EL2)
+enum class ArmTcrShareAttr {
+  kNonShareable = 0b00,
+  kOuterShareable = 0b10,
+  kInnerShareable = 0b11,
+};
+
+// Translation Control Register (TCR) for EL1.
+//
+// The TCR controls the settings relating to the page table, including
+// the layout (such as granule size setting and size of the address
+// space).
+//
+// [arm/v8]: D13.2.120 TCR_EL1, Translation Control Register (EL1)
+class ArmTcrEl1 : public SysRegBase<ArmTcrEl1> {
+ public:
+  // Bits [63:60] reserved.
+  DEF_BIT(59, ds);
+  DEF_BIT(58, tcma1);
+  DEF_BIT(57, tcma0);
+  DEF_BIT(56, e0pd1);
+  DEF_BIT(55, e0pd0);
+  DEF_BIT(54, nfd1);
+  DEF_BIT(53, nfd0);
+  DEF_BIT(52, tbid1);  // TTBR1 Top Byte Ignored for Data only
+  DEF_BIT(51, tbid0);  // TTBR0 Top Byte Ignored for Data only
+  DEF_BIT(50, hwu162);
+  DEF_BIT(49, hwu161);
+  DEF_BIT(48, hwu160);
+  DEF_BIT(47, hwu159);
+  DEF_BIT(46, hwu062);
+  DEF_BIT(45, hwu061);
+  DEF_BIT(44, hwu060);
+  DEF_BIT(43, hwu059);
+  DEF_BIT(42, hpd1);  // TTBR0 Hierarchical Permission Disable
+  DEF_BIT(41, hpd0);  // TTBR0 Hierarchical Permission Disable
+  DEF_BIT(40, hd);    // Hardware Dirty state management
+  DEF_BIT(39, ha);    // Hardware Access flag updated
+  DEF_BIT(38, tbi1);  // TTBR1 Top Byte Ignored
+  DEF_BIT(37, tbi0);  // TTBR0 Top Byte Ignored
+  DEF_BIT(36, as);    // ASID size: 0 = 8-bit, 1 = 16-bit
+  // Bit 35 reserved.
+  DEF_ENUM_FIELD(ArmTcrPhysicalSize, 34, 32, ips);  // Intermediate physical address size.
+  DEF_ENUM_FIELD(ArmTcrTg1Value, 31, 30, tg1);      // TTBR1 granule size
+  DEF_ENUM_FIELD(ArmTcrShareAttr, 29, 28, sh1);     // TTBR1 cache sharability
+  DEF_ENUM_FIELD(ArmTcrCacheAttr, 27, 26, orgn1);   // TTBR1 outer cacheability
+  DEF_ENUM_FIELD(ArmTcrCacheAttr, 25, 24, irgn1);   // TTBR1 inner cacheability
+  DEF_BIT(23, epd1);                                // TTBR1 table walks disabled
+  DEF_BIT(22, a1);                                  // ASID select: 0 = TTBR0, 1 = TTBR1
+  DEF_FIELD(21, 16, t1sz);                          // TTBR0 size offset
+  DEF_ENUM_FIELD(ArmTcrTg0Value, 15, 14, tg0);      // TTBR0 granule size
+  DEF_ENUM_FIELD(ArmTcrShareAttr, 13, 12, sh0);     // TTBR0 cache sharability
+  DEF_ENUM_FIELD(ArmTcrCacheAttr, 11, 10, orgn0);   // TTBR0 outer cacheability
+  DEF_ENUM_FIELD(ArmTcrCacheAttr, 9, 8, irgn0);     // TTBR0 inner cacheability
+  DEF_BIT(7, epd0);                                 // TTBR0 table walks disabled
+  // Bit 6 reserved.
+  DEF_FIELD(5, 0, t0sz);  // TTBR0 size offset
+};
+
+ARCH_ARM64_SYSREG(ArmTcrEl1, "tcr_el1");
+
+// Translation Control Register (TCR) for EL2.
+//
+// This register layout is only valid when HCR_EL2.E2H == 0 (that is,
+// Virtualization Host Extensions are disabled).
+//
+// [arm/v8]: D13.2.121 TCR_EL2, Translation Control Register (EL2)
+struct ArmTcrEl2 : public SysRegBase<ArmTcrEl2> {
+  // Bits [63:33] reserved.
+  DEF_BIT(32, ds);
+  DEF_BIT(31, res1_bit32);  // RES1: should be preserved or written as 1.
+  DEF_BIT(30, tcma);
+  DEF_BIT(29, tbid);
+  DEF_BIT(28, hwu62);
+  DEF_BIT(27, hwu61);
+  DEF_BIT(26, hwu60);
+  DEF_BIT(25, hwu59);
+  DEF_BIT(24, hpd);                                // Hierarchical Permission Disable
+  DEF_BIT(23, res1_bit23);                         // RES1: should be preserved or written as 1.
+  DEF_BIT(22, hd);                                 // Hardware Dirty state management
+  DEF_BIT(21, ha);                                 // Hardware Access flag updated
+  DEF_BIT(20, tbi);                                // Top byte ignored
+  DEF_ENUM_FIELD(ArmTcrPhysicalSize, 18, 16, ps);  // Physical address size
+  DEF_ENUM_FIELD(ArmTcrTg0Value, 15, 14, tg0);     // TTBR0 Granule size
+  DEF_ENUM_FIELD(ArmTcrShareAttr, 13, 12, sh0);    // TTBR0 Cache sharability
+  DEF_ENUM_FIELD(ArmTcrCacheAttr, 11, 10, orgn0);  // TTBR0 Outer cacheability
+  DEF_ENUM_FIELD(ArmTcrCacheAttr, 9, 8, irgn0);    // TTBR0 Inner cacheability
+  // Bits [7:6] reserved.
+  DEF_FIELD(5, 0, t0sz);  // TTBR0 size offset
+
+  ArmTcrEl2() {
+    // Bits marked RES1 need to be either preserved or set to 1. If constructing
+    // the register from scratch, set them to 1.
+    //
+    // TODO(fxbug.dev/75300): Consider adding RES1 support to hwreg library.
+    set_res1_bit32(1);
+    set_res1_bit23(1);
+  }
+};
+
+ARCH_ARM64_SYSREG(ArmTcrEl2, "tcr_el2");
+
+// Page table root pointer.
+//
+// This common format is used for several registers which contain
+// the root of the page table.
+//
+// [arm/v8]: D13.2.132 TTBR0_EL1, Translation Table Base Register 0 (EL1)
+// [arm/v8]: D13.2.133 TTBR0_EL2, Translation Table Base Register 0 (EL2)
+// [arm/v8]: D13.2.134 TTBR0_EL3, Translation Table Base Register 0 (EL3)
+// [arm/v8]: D13.2.135 TTBR1_EL1, Translation Table Base Register 1 (EL1)
+// [arm/v8]: D13.2.136 TTBR1_EL2, Translation Table Base Register 1 (EL2)
+struct ArmTranslationTableBaseRegister
+    : public SysRegDerivedBase<ArmTranslationTableBaseRegister, uint64_t> {
+  DEF_FIELD(63, 48, asid);
+  DEF_UNSHIFTED_FIELD(47, 1, addr);  // Bits [47:1] of the root table physical address.
+  DEF_BIT(0, cnp);                   // Common not private.
+};
+
+struct ArmTtbr0El1 : public arch::SysRegDerived<ArmTtbr0El1, ArmTranslationTableBaseRegister> {};
+ARCH_ARM64_SYSREG(ArmTtbr0El1, "ttbr0_el1");
+
+struct ArmTtbr0El2 : public arch::SysRegDerived<ArmTtbr0El2, ArmTranslationTableBaseRegister> {};
+ARCH_ARM64_SYSREG(ArmTtbr0El2, "ttbr0_el2");
+
+struct ArmTtbr0El3 : public arch::SysRegDerived<ArmTtbr0El3, ArmTranslationTableBaseRegister> {};
+ARCH_ARM64_SYSREG(ArmTtbr0El3, "ttbr0_el3");
+
+struct ArmTtbr1El1 : public arch::SysRegDerived<ArmTtbr1El1, ArmTranslationTableBaseRegister> {};
+ARCH_ARM64_SYSREG(ArmTtbr1El1, "ttbr1_el1");
+
+struct ArmTtbr1El2 : public arch::SysRegDerived<ArmTtbr1El2, ArmTranslationTableBaseRegister> {};
+ARCH_ARM64_SYSREG(ArmTtbr1El2, "ttbr1_el2");
+
 }  // namespace arch
 
 #endif  // ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_ARM64_SYSTEM_H_
