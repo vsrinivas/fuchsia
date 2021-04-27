@@ -40,7 +40,7 @@ driver_module("wlanphy-testdev") {
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sdio",
-    "//sdk/banjo/fuchsia.hardware.test",
+    "//sdk/banjo/fuchsia.hardware.test:fuchsia.hardware.test_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphy",
     "//sdk/fidl/fuchsia.wlan.device",
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device_llcpp",

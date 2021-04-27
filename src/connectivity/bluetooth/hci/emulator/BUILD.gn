@@ -29,7 +29,7 @@ driver_module("driver") {
 
   deps = [
     ":bt-hci-emulator-bind",
-    "//sdk/banjo/fuchsia.hardware.test",
+    "//sdk/banjo/fuchsia.hardware.test:fuchsia.hardware.test_banjo_cpp",
     "//sdk/fidl/fuchsia.bluetooth.test",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c_client",
     "//sdk/lib/fit-promise",

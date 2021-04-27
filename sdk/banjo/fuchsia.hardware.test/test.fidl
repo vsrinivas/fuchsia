@@ -13,7 +13,7 @@ struct TestReport {
 };
 
 [Transport = "Banjo", BanjoLayout = "ddk-callback"]
-protocol TestFunc {
+protocol TestFuncCallback {
     Callback() -> (zx.status s, TestReport report);
 };
 
@@ -29,7 +29,7 @@ protocol Test {
     GetChannel() -> (zx.handle:CHANNEL h);
 
     /// Sets test function.
-    SetTestFunc(TestFunc func) -> ();
+    SetTestFunc(TestFuncCallback func) -> ();
 
     /// Run tests, calls the function set in |SetTestFunc|.
     RunTests() -> (zx.status s, TestReport report);

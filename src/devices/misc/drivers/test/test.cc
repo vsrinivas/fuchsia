@@ -41,7 +41,7 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
   void TestSetOutputSocket(zx::socket socket);
   void TestGetOutputSocket(zx::socket* out_socket);
   void TestGetChannel(zx::channel* out_channel);
-  void TestSetTestFunc(const test_func_t* func);
+  void TestSetTestFunc(const test_func_callback_t* func);
   zx_status_t TestRunTests(test_report_t* out_report);
   void TestDestroy();
 
@@ -50,7 +50,7 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
  private:
   zx::socket output_;
   zx::channel channel_;
-  test_func_t test_func_;
+  test_func_callback_t test_func_;
 };
 
 class TestRootDevice;
@@ -84,7 +84,7 @@ void TestDevice::TestGetOutputSocket(zx::socket* out_socket) {
 
 void TestDevice::TestGetChannel(zx::channel* out_channel) { *out_channel = std::move(channel_); }
 
-void TestDevice::TestSetTestFunc(const test_func_t* func) { test_func_ = *func; }
+void TestDevice::TestSetTestFunc(const test_func_callback_t* func) { test_func_ = *func; }
 
 zx_status_t TestDevice::TestRunTests(test_report_t* report) {
   if (test_func_.callback == NULL) {

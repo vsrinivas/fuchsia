@@ -39,7 +39,7 @@ driver_module("fake_qmi_driver") {
 
   deps = [
     ":qmi_fake_bind",
-    "//sdk/banjo/fuchsia.hardware.test",
+    "//sdk/banjo/fuchsia.hardware.test:fuchsia.hardware.test_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.telephony.transport:fuchsia.hardware.telephony.transport_llcpp",
     "//sdk/fidl/fuchsia.telephony.snoop:fuchsia.telephony.snoop_llcpp",
     "//sdk/lib/fdio",
