@@ -28,11 +28,13 @@ namespace {
 }
 
 // Only change "X" for one character. i.e. X -> 12 is not allowed.
-const size_t kMaxLogLineSize = Format(BuildLogMessage(FX_LOG_INFO, "line X").value()).size();
-const size_t kRepeatedFormatStrSize = std::string("!!! MESSAGE REPEATED X MORE TIMES !!!\n").size();
+const auto kMaxLogLineSize =
+    StorageSize::Bytes(Format(BuildLogMessage(FX_LOG_INFO, "line X").value()).size());
+const auto kRepeatedFormatStrSize =
+    StorageSize::Bytes(std::string("!!! MESSAGE REPEATED X MORE TIMES !!!\n").size());
 // We set the block size to an arbitrary large numbers for test cases where the block logic does
 // not matter.
-const size_t kVeryLargeBlockSize = kMaxLogLineSize * 100;
+const auto kVeryLargeBlockSize = kMaxLogLineSize * 100;
 
 std::unique_ptr<Encoder> MakeIdentityEncoder() {
   return std::unique_ptr<Encoder>(new IdentityEncoder());

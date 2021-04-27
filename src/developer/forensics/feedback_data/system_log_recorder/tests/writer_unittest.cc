@@ -36,7 +36,8 @@ namespace {
 }
 
 // Only change "X" for one character. i.e. X -> 12 is not allowed.
-const size_t kMaxLogLineSize = Format(BuildLogMessage(FX_LOG_INFO, "line X").value()).size();
+const auto kMaxLogLineSize =
+    StorageSize::Bytes(Format(BuildLogMessage(FX_LOG_INFO, "line X").value()).size());
 
 class EncoderStub : public Encoder {
  public:
@@ -77,8 +78,8 @@ TEST(WriterTest, VerifyFileOrdering) {
   // From this behavior although we use 4 files, we only expect to retrieve the last 3 messages.
   files::ScopedTempDir temp_dir;
 
-  const size_t kBlockSize = kMaxLogLineSize;
-  const size_t kBufferSize = kMaxLogLineSize;
+  const StorageSize kBlockSize = kMaxLogLineSize;
+  const StorageSize kBufferSize = kMaxLogLineSize;
 
   LogMessageStore store(kBlockSize, kBufferSize, MakeIdentityEncoder());
   store.TurnOnRateLimiting();
@@ -138,8 +139,8 @@ TEST(WriterTest, VerifyEncoderInput) {
   // and expect that the encoder receives 2 reset signals and encodes 2 log messages in each block.
   files::ScopedTempDir temp_dir;
 
-  const size_t kBlockSize = kMaxLogLineSize * 2;
-  const size_t kBufferSize = kMaxLogLineSize * 2;
+  const StorageSize kBlockSize = kMaxLogLineSize * 2;
+  const StorageSize kBufferSize = kMaxLogLineSize * 2;
 
   auto encoder = std::unique_ptr<EncoderStub>(new EncoderStub());
   auto encoder_ptr = encoder.get();

@@ -33,8 +33,10 @@ namespace {
 constexpr zx::duration kTimeWaitForLimitedLogs = zx::sec(60);
 
 // Only change "X" for one character. i.e. X -> 12 is not allowed.
-const size_t kMaxLogLineSize = std::string("[15604.000][07559][07687][] INFO: line X\n").size();
-const size_t kDroppedFormatStrSize = std::string("!!! DROPPED X MESSAGES !!!\n").size();
+const auto kMaxLogLineSize =
+    StorageSize::Bytes(std::string("[15604.000][07559][07687][] INFO: line X\n").size());
+const auto kDroppedFormatStrSize =
+    StorageSize::Bytes(std::string("!!! DROPPED X MESSAGES !!!\n").size());
 
 TEST(Encoding, VerifyProductionEncoderDecoderVersion) {
   // Verify that the production decoder and encoder always have the same version.
@@ -120,15 +122,15 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   files::ScopedTempDir temp_dir;
 
-  const size_t kWriteSize = kMaxLogLineSize * 2 + kDroppedFormatStrSize;
+  const StorageSize kWriteSize = kMaxLogLineSize * 2 + kDroppedFormatStrSize;
 
   SystemLogRecorder recorder(dispatcher(), dispatcher(), services(),
                              SystemLogRecorder::WriteParameters{
                                  .period = kWriterPeriod,
-                                 .max_write_size_bytes = kWriteSize,
+                                 .max_write_size = kWriteSize,
                                  .logs_dir = temp_dir.path(),
                                  .max_num_files = 2u,
-                                 .total_log_size_bytes = 2u * kWriteSize,
+                                 .total_log_size = 2u * kWriteSize,
                              },
                              std::unique_ptr<Encoder>(new IdentityEncoder()));
   recorder.Start();
@@ -282,15 +284,15 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_StopAndDeleteLogs) {
 
   files::ScopedTempDir temp_dir;
 
-  const size_t kWriteSize = kMaxLogLineSize * 2 + kDroppedFormatStrSize;
+  const StorageSize kWriteSize = kMaxLogLineSize * 2 + kDroppedFormatStrSize;
 
   SystemLogRecorder recorder(dispatcher(), dispatcher(), services(),
                              SystemLogRecorder::WriteParameters{
                                  .period = kWriterPeriod,
-                                 .max_write_size_bytes = kWriteSize,
+                                 .max_write_size = kWriteSize,
                                  .logs_dir = temp_dir.path(),
                                  .max_num_files = 2u,
-                                 .total_log_size_bytes = 2u * kWriteSize,
+                                 .total_log_size = 2u * kWriteSize,
                              },
                              std::unique_ptr<Encoder>(new IdentityEncoder()));
   recorder.Start();
@@ -400,15 +402,16 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_Flush) {
 
   const std::string kFlushStr = "FLUSH\n";
 
-  const size_t kWriteSize = kMaxLogLineSize * 2 + kDroppedFormatStrSize + kFlushStr.size();
+  const StorageSize kWriteSize =
+      kMaxLogLineSize * 2 + kDroppedFormatStrSize + StorageSize::Bytes(kFlushStr.size());
 
   SystemLogRecorder recorder(dispatcher(), dispatcher(), services(),
                              SystemLogRecorder::WriteParameters{
                                  .period = kWriterPeriod,
-                                 .max_write_size_bytes = kWriteSize,
+                                 .max_write_size = kWriteSize,
                                  .logs_dir = temp_dir.path(),
                                  .max_num_files = 2u,
-                                 .total_log_size_bytes = 2u * kWriteSize,
+                                 .total_log_size = 2u * kWriteSize,
                              },
                              std::unique_ptr<Encoder>(new IdentityEncoder()));
   recorder.Start();

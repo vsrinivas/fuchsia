@@ -52,6 +52,7 @@ source_set("src") {
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback_data:archive_accessor",
     "//src/developer/forensics/utils:logs",
+    "//src/developer/forensics/utils:storage_size",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 

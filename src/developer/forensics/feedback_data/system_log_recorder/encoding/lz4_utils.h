@@ -16,7 +16,7 @@ namespace forensics {
 namespace feedback_data {
 namespace system_log_recorder {
 
-constexpr size_t kMaxChunkSize = ::forensics::feedback_data::kMaxWriteSizeInBytes;
+constexpr size_t kMaxChunkSize = ::forensics::feedback_data::kMaxWriteSize.ToBytes();
 static_assert(LZ4_COMPRESSBOUND(kMaxChunkSize) > 0, "The chunk size is invalid!");
 
 // The maximum number of bytes that can safely be encoded by the LZ4 encoder. This was computed

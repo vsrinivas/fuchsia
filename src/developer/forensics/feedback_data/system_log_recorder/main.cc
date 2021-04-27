@@ -56,10 +56,10 @@ int main() {
   SystemLogRecorder recorder(main_loop.dispatcher(), write_loop.dispatcher(), context->svc(),
                              SystemLogRecorder::WriteParameters{
                                  .period = kWritePeriod,
-                                 .max_write_size_bytes = kMaxWriteSizeInBytes,
+                                 .max_write_size = kMaxWriteSize,
                                  .logs_dir = kCurrentLogsDir,
                                  .max_num_files = kMaxNumLogFiles,
-                                 .total_log_size_bytes = kPersistentLogsMaxSizeInKb * 1024,
+                                 .total_log_size = kPersistentLogsMaxSize,
                              },
                              std::unique_ptr<Encoder>(new ProductionEncoder()));
 

@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_UTILS_STORAGE_SIZE_H_
 
 #include <cstdint>
+#include <numeric>
 
 namespace forensics {
 
@@ -82,7 +83,9 @@ class StorageSize final {
   uint64_t bytes_{0};
 };
 
-constexpr StorageSize operator*(uint64_t scalar, StorageSize size) {
+template <typename T>
+constexpr StorageSize operator*(const T scalar, StorageSize size) {
+  static_assert(std::numeric_limits<T>::is_integer);
   return StorageSize(size.Get() * scalar);
 }
 

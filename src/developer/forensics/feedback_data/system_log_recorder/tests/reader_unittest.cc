@@ -35,7 +35,8 @@ namespace {
 }
 
 // Only change "X" for one character. i.e. X -> 12 is not allowed.
-const size_t kMaxLogLineSize = Format(BuildLogMessage(FX_LOG_INFO, "line X").value()).size();
+const StorageSize kMaxLogLineSize =
+    StorageSize::Bytes(Format(BuildLogMessage(FX_LOG_INFO, "line X").value()).size());
 
 std::unique_ptr<Encoder> MakeIdentityEncoder() {
   return std::unique_ptr<Encoder>(new IdentityEncoder());
@@ -141,7 +142,8 @@ TEST(ReaderTest, SortsMessagesMixed) {
 TEST(ReaderTest, SortsMessages) {
   files::ScopedTempDir temp_dir;
 
-  LogMessageStore store(8 * 1024, 8 * 1024, MakeIdentityEncoder());
+  LogMessageStore store(StorageSize::Kilobytes(8), StorageSize::Kilobytes(8),
+                        MakeIdentityEncoder());
   SystemLogWriter writer(temp_dir.path(), 1u, &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0", zx::msec(0))));

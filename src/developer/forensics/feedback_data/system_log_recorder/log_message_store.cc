@@ -33,21 +33,21 @@ std::string FormatError(const std::string& error) {
 
 }  // namespace
 
-LogMessageStore::LogMessageStore(size_t max_block_capacity_bytes, size_t max_buffer_capacity_bytes,
+LogMessageStore::LogMessageStore(StorageSize max_block_capacity, StorageSize max_buffer_capacity,
                                  std::unique_ptr<Encoder> encoder)
     : mtx_(),
       buffer_(),
-      buffer_stats_(max_buffer_capacity_bytes),
-      block_stats_(max_block_capacity_bytes),
+      buffer_stats_(max_buffer_capacity),
+      block_stats_(max_block_capacity),
       encoder_(std::move(encoder)) {
-  FX_CHECK(max_block_capacity_bytes >= max_buffer_capacity_bytes);
+  FX_CHECK(max_block_capacity >= max_buffer_capacity);
 }
 
 void LogMessageStore::AddToBuffer(const std::string& str) {
   const std::string encoded = encoder_->Encode(str);
   buffer_.push_back(encoded);
-  block_stats_.Use(encoded.size());
-  buffer_stats_.Use(encoded.size());
+  block_stats_.Use(StorageSize::Bytes(encoded.size()));
+  buffer_stats_.Use(StorageSize::Bytes(encoded.size()));
 }
 
 bool LogMessageStore::Add(::fit::result<fuchsia::logger::LogMessage, std::string> log) {
@@ -85,7 +85,7 @@ bool LogMessageStore::Add(::fit::result<fuchsia::logger::LogMessage, std::string
   const std::string str = (log.is_ok()) ? Format(log.value()) : FormatError(log.error());
 
   // 5. Push the incoming message if below the limit or there is no rate limit; otherwise drop it.
-  if (!buffer_rate_limit_ || buffer_stats_.CanUse(str.size())) {
+  if (!buffer_rate_limit_ || buffer_stats_.CanUse(StorageSize::Bytes(str.size()))) {
     AddToBuffer(str);
     last_pushed_message_ = log_msg;
     last_pushed_message_count_ = 1;

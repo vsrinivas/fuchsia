@@ -12,6 +12,7 @@
 #include <mutex>
 
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/encoder.h"
+#include "src/developer/forensics/utils/storage_size.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -34,7 +35,7 @@ namespace system_log_recorder {
 // pushed entirely, even if it means going overbound.
 class LogMessageStore {
  public:
-  LogMessageStore(size_t max_block_capacity_bytes, size_t max_buffer_capacity_bytes,
+  LogMessageStore(StorageSize max_block_capacity, StorageSize max_buffer_capacity,
                   std::unique_ptr<Encoder> encoder);
 
   // May add the encoded log message to the store:
@@ -55,21 +56,21 @@ class LogMessageStore {
  private:
   class ContainerStats {
    public:
-    ContainerStats(size_t capacity_in_bytes)
-        : capacity_in_bytes_(capacity_in_bytes), bytes_remaining_(capacity_in_bytes){};
+    explicit ContainerStats(const StorageSize capacity)
+        : capacity_(capacity), remaining_(capacity_){};
     // Reduces the free space in the container by |quantity|.
-    void Use(size_t quantity) {
-      // We allow overcommitting, but we cap |bytes_remaining_| at 0.
-      bytes_remaining_ -= std::min(bytes_remaining_, quantity);
+    void Use(const StorageSize quantity) {
+      // We allow overcommitting, but we cap |remaining_| at 0.
+      remaining_ -= std::min(remaining_, quantity);
     }
-    void MakeFull() { bytes_remaining_ = 0; }
-    bool CanUse(size_t quantity) { return bytes_remaining_ >= quantity; }
-    void Reset() { bytes_remaining_ = capacity_in_bytes_; }
-    bool IsFull() { return bytes_remaining_ == 0; }
+    void MakeFull() { remaining_ = StorageSize::Bytes(0); }
+    bool CanUse(const StorageSize quantity) { return remaining_ >= quantity; }
+    void Reset() { remaining_ = capacity_; }
+    bool IsFull() { return remaining_ == StorageSize::Bytes(0); }
 
    private:
-    size_t capacity_in_bytes_;
-    size_t bytes_remaining_;
+    StorageSize capacity_;
+    StorageSize remaining_;
   };
 
   // Encodes the string, stores it in the buffer, and reduces the free space remaining for
