@@ -478,52 +478,49 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::chann
   // to allow us to update the PBus instance in the device context after creating
   // the device.
   fbl::AllocChecker ac;
-  std::unique_ptr<uint8_t[]> ptr(new (&ac) uint8_t[sizeof(sysdev_suspend_t)]);
+  std::unique_ptr<sysdev_suspend_t> suspend(new (&ac) sysdev_suspend_t);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  auto* suspend_buf = reinterpret_cast<sysdev_suspend_t*>(ptr.get());
-  suspend_buf->pbus_instance = nullptr;
+  suspend->pbus_instance = nullptr;
 
-  device_add_args_t args = {};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "sys";
-  args.ops = &sys_device_proto;
-  args.flags = DEVICE_ADD_NON_BINDABLE;
-  args.ctx = suspend_buf;
+  device_add_args_t args = {
+      .version = DEVICE_ADD_ARGS_VERSION,
+      .name = "sys",
+      .ctx = suspend.get(),
+      .ops = &sys_device_proto,
+      .flags = DEVICE_ADD_NON_BINDABLE,
+  };
 
   // Create /dev/sys.
-  auto status = device_add(parent, &args, &suspend_buf->sys_root);
-  if (status != ZX_OK) {
+  if (zx_status_t status = device_add(parent, &args, &suspend->sys_root); status != ZX_OK) {
     return status;
-  } else {
-    __UNUSED auto* dummy = ptr.release();
   }
+  sysdev_suspend_t* suspend_ptr = suspend.release();
 
   // Add child of sys for the board driver to bind to.
   std::unique_ptr<platform_bus::PlatformBus> bus(
-      new (&ac) platform_bus::PlatformBus(suspend_buf->sys_root, std::move(items_svc)));
+      new (&ac) platform_bus::PlatformBus(suspend_ptr->sys_root, std::move(items_svc)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  suspend_buf->pbus_instance = bus.get();
+  suspend_ptr->pbus_instance = bus.get();
 
-  status = bus->Init();
-  if (status != ZX_OK) {
+  if (zx_status_t status = bus->Init(); status != ZX_OK) {
     return status;
   }
+  // devmgr is now in charge of the device.
+  platform_bus::PlatformBus* bus_ptr = bus.release();
 
   // Create /dev/sys/cpu-trace.
   // But only do so if we have an iommu handle. Normally we do, but tests
   // may create us without a root resource, and thus without the iommu
   // handle.
-  if (bus->iommu_handle_.is_valid()) {
+  if (bus_ptr->iommu_handle_.is_valid()) {
     // Failure is not fatal. Error message already printed.
-    InitCpuTrace(suspend_buf->sys_root, bus->iommu_handle_);
+    InitCpuTrace(suspend_ptr->sys_root, bus_ptr->iommu_handle_);
   }
 
-  // devmgr is now in charge of the device.
-  __UNUSED auto* dummy = bus.release();
   return ZX_OK;
 }
 
