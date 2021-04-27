@@ -19,19 +19,48 @@ fi
 # accept the concession that something other than the global --target flag
 # being spelled exactly --target as an argument is highly unlikely.
 found_target=false
-for arg in "$@"; do
-  if [[ "$arg" == "--target" ]]; then
-    found_target=true
-    break;
-  fi
+args=()
+while [[ $# -gt 0 ]]; do
+  arg="$1"
+  args+=("$1")
+  shift
+
+  # Handle global flags explicitly, separating those which have parameters from
+  # those that do not, searching for --target. As soon as a non-known argument
+  # is discovered, pass all other flags as-is.
+  # This case should be kept in sync with the ffx global flags.
+  case "$arg" in
+    # target special case.
+    -t|--target)
+      found_target=true
+      args+=("$1")
+      shift
+      ;;
+
+    # ffx global flags that have parameters.
+    -c|--config|-e|--env|-T|--timeout)
+      args+=("$1")
+      shift
+      ;;
+
+    # ffx global flags that do not accept parameters.
+    -v|--verbose|-h|--help)
+      :
+      ;;
+
+    # Any other flag results in all flags being passed forward as-is and the
+    # loop is terminated.
+    *)
+      args+=("$@")
+      break
+      ;;
+  esac
 done
 
-if ${found_target}; then
-  args=("$@")
-else
+if ! ${found_target}; then
   # Note: the quotes around get-device-pair are critical, if no fx default
   # device is set, we explicitly want to pass "" here.
-  args=(--target "$(get-device-pair)" "$@")
+  args=(--target "$(get-device-pair)" "${args[@]}")
 fi
 
 config="{ \"sdk\": { \"root\": \"${FUCHSIA_BUILD_DIR}\", \"type\": \"in-tree\" } }"
