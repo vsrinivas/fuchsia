@@ -5,7 +5,7 @@
 Running a process on Fuchsia is more complicated than in other systems because there are different
 loader environments (see "A note about launcher environments" below).
 
-The only want to reliably debug all types of processes is to create a filter on the process name via
+The only way to reliably debug all types of processes is to create a filter on the process name via
 "attach" and start it the normal way you would start that process. The process name is usually the
 name of the build target that generates it. To check what this is, use "ps" (either in the debugger
 or from a system shell) with it running.
