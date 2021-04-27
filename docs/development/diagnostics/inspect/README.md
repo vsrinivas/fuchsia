@@ -176,7 +176,7 @@ about the component to the hub. For instance, appmgr exposes
   The [health][rust-5] module supports exposing structured health information
   in a format known by health checking tools.
 
-  The [testing][rust-6] module supports the `assert_inspect_tree!` macro to
+  The [testing][rust-6] module supports the `assert_data_tree!` macro to
   match Inspect data for testing.
 
 * {[Dart](https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/)}

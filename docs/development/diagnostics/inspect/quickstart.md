@@ -307,7 +307,7 @@ See below for the quick start guide in your language of choice.
   See [this example](/examples/diagnostics/inspect/rust/src/main.rs) for further
   learning of other types offered by the API.
 
-  To test your inspect code, you can use `assert_inspect_tree`:
+  To test your inspect code, you can use `assert_data_tree`:
 
   ```rust
 
@@ -318,7 +318,7 @@ See below for the quick start guide in your language of choice.
   child.record_string("another_property", "example");
   let children = inspector.create_child("children");
 
-  assert_inspect_tree!(inspector, root: {
+  assert_data_tree!(inspector, root: {
     child1: {
       some_property_name: 1.0,
       another_property: "example",

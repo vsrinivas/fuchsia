@@ -33,7 +33,7 @@ These libraries are not specific to Inspect and are used for various kinds of di
 
 ### [`diagnostics-hierarchy`][diagnostics_hierarchy]
 
-This library includes the convenient macro `assert_inspect_tree` for testing as well as the
+This library includes the convenient macro `assert_data_tree` for testing as well as the
 definition of the `DiagnosticsHierarchy`, which is not exclusive to Inspect and
 is also used for logs and other diagnostics data sources.
 
