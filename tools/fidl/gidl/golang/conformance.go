@@ -33,6 +33,7 @@ import (
 // Avoid unused import warnings if certain tests are disabled.
 var _ = math.Float32frombits
 var _ = reflect.Copy
+var _ = zx.HandleInvalid
 
 {{ if .EncodeSuccessCases }}
 func TestAllEncodeSuccessCases(t *testing.T) {
