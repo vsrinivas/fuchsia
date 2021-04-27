@@ -597,8 +597,11 @@ More details are discussed in [RFC-0057: Default No Handles][rfc-0057].
     disposition of the connection. The epitaph must be the last message
     delivered through the channel. An epitaph message includes a 32-bit int
     value of type **zx_status_t**.  Negative values are reserved for system
-    error codes.  Positive values are reserved for application errors.  A status
-    of ZX_OK indicates successful operation.
+    error codes. The value `ZX_OK` (0) indicates an operation was successful.
+    Application-defined error codes (previously defined as all positive
+    `zx_status_t` values) are deprecated. For more details about epitaphs, see
+    rejection of  [RFC-0031: Typed Epitaphs][rfc-0031]. For more details about
+    `zx_status_t` see [RFC-0085: Reducing the zx_status_t space][rfc-0085].
 
 #### Declaration
 
@@ -803,8 +806,10 @@ for you that contains commonly used Zircon definitions.
 <!-- xref -->
 [mixin]: https://en.wikipedia.org/wiki/Mixin
 [rfc-0023]: /docs/contribute/governance/rfcs/0023_compositional_model_protocols.md
+[rfc-0031]: /docs/contribute/governance/rfcs/0031_typed_epitaphs.md
 [rfc-0033]: /docs/contribute/governance/rfcs/0033_handling_unknown_fields_strictness.md
 [rfc-0057]: /docs/contribute/governance/rfcs/0057_default_no_handles.md
+[rfc-0085]: /docs/contribute/governance/rfcs/0085_reducing_zx_status_t_space.md
 [fidl-overview]: /docs/concepts/fidl/overview.md
 [fidl-grammar]: /docs/reference/fidl/language/grammar.md
 [doc-attribute]: /docs/reference/fidl/language/attributes.md#Doc
