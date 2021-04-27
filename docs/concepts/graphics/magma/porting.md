@@ -318,7 +318,7 @@ the system driver using the Zircon DDK.
 [libmagma]: /src/graphics/lib/magma/src/libmagma
 [intelgn]: /src/graphics/lib/magma/gnbuild/magma-intel-gen/BUILD.gn
 [fuchsia.hardware.clock.Clock]: /sdk/banjo/fuchsia.hardware.clock/clock.fidl
-[fuchsia.hardware.power.Power]: /sdk/banjo/fuchsia.hardware.power/power.banjo
+[fuchsia.hardware.power.Power]: /sdk/banjo/fuchsia.hardware.power/power.fidl
 [dgsd]: /docs/concepts/drivers/getting_started.md
 [libc]: /docs/concepts/system/libc.md
 [fdio]: /docs/concepts/system/life_of_an_open.md#fdio

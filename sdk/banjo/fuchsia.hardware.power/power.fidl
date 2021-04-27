@@ -8,7 +8,7 @@ using zx;
 
 enum PowerDomainStatus : uint8 {
     DISABLED = 1;
-    ENABLED =  2;
+    ENABLED = 2;
 };
 
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
