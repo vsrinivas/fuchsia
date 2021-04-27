@@ -41,8 +41,8 @@ the MaxBytes attribute takes a stringified number as its argument, like so:
 is predictably typed.
 
 The FIDL syntax is currently undergoing a major migration as part of the
-[RFC-0050: Syntax Revamp][fidl-syntax-revamp] effort. This presents a good
-opportunity to implement syntax changes for attributes as well.
+[RFC-0050: Syntax Revamp][rfc-0050] effort. This presents a good opportunity to
+implement syntax changes for attributes as well.
 
 ## Design
 
@@ -123,6 +123,21 @@ syntax is:
 attribute = "@", IDENTIFIER , ( "(" , constant | attribute-args, ")" ) ;
 attribute-args = attribute-arg | attribute-arg, "," attribute-args;
 attribute-arg = IDENTIFIER , "=" , constant;
+```
+
+[RFC-0040: Identifier Uniqueness][rfc-0040] applies to attribute names. This
+means that different casings and consecutive underscores in attribute names are
+reduced to a single common name during canonical name resolution. The following
+example thus causes a scoping clash, generating an error at compile time:
+
+```fidl
+@foo_bar
+@FooBar   // Error: re-used attribute name "foo_bar"
+@fooBar   // Error: re-used attribute name "foo_bar"
+@Foo_Bar  // Error: re-used attribute name "foo_bar"
+@foo__bar // Error: re-used attribute name "foo_bar"
+@FOOBar   // Error: re-used attribute name "foo_bar"
+type S = struct {};
 ```
 
 ### JSON IR
@@ -291,8 +306,8 @@ Continuing with the `@native` example from the previous section, the
 
 ### Case Study: FIDL Versioning
 
-[RFC-0083: FIDL Versioning][fidl-versioning] describes an attribute-based syntax
-for appending versioning metadata to FIDL declarations and their members. In
+[RFC-0083: FIDL Versioning][rfc-0083] describes an attribute-based syntax for
+appending versioning metadata to FIDL declarations and their members. In
 particular, it defines a new attribute, `@available`, which takes the optional
 arguments `platform`, `since`, `removed`, `deprecated`, and `note`. For example:
 
@@ -324,11 +339,11 @@ may carry the `platform` argument, are handled in this bespoke manner as well.
 
 ## Implementation
 
-This proposal will be implemented as part of the broader
-[RFC-0050][fidl-syntax-revamp] FIDL syntax conversion. All FIDL files written in
-the "new" syntax will be expected to conform to the changes laid out in this
-RFC, and the formal FIDL grammar will be updated to reflect its design at the
-same time as the rest of RFC-0050.
+This proposal will be implemented as part of the broader [RFC-0050][rfc-0050]
+FIDL syntax conversion. All FIDL files written in the "new" syntax will be
+expected to conform to the changes laid out in this RFC, and the formal FIDL
+grammar will be updated to reflect its design at the same time as the rest of
+RFC-0050.
 
 In addition, the [schema definition][fidl-json-schema] will be updated to
 accommodate the JSON IR changes specified by this document. However, it is
@@ -365,11 +380,10 @@ easier to write and reason about.
 ## Documentation
 
 All relevant documentation and examples will be updated to feature the new
-syntax as part of the broader [RFC-0050][fidl-syntax-revamp] documentation
-update. In particular, the [reference documentation][fidl-attributes] for
-official FIDL attributes will be updated to reflect the rules stipulated by this
-design, and to note valid argument types and implied defaults for each
-attribute.
+syntax as part of the broader [RFC-0050][rfc-0050] documentation update. In
+particular, the [reference documentation][fidl-attributes] for official FIDL
+attributes will be updated to reflect the rules stipulated by this design, and
+to note valid argument types and implied defaults for each attribute.
 
 ## Drawbacks, Alternatives, and Unknowns
 
@@ -473,8 +487,7 @@ casing style for attributes alone.
 ## Prior Art and References
 
 This RFC is an evolution of the syntax defined in [RFC-0050: Syntax
-Revamp][fidl-syntax-revamp], and will thus modify the formal [FIDL
-Grammar][fidl-grammar].
+Revamp][rfc-0050], and will thus modify the formal [FIDL Grammar][fidl-grammar].
 
 This proposal drew on a number of existing "attribute-like" implementations in
 other languages, specifically:
@@ -506,8 +519,9 @@ the syntax proposed in this document.
 [fidl-json-schema]: https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/schema.json;drc=ed2a2cddbd2257595ff9fd8e9c4d151b291edec1
 [fidl-json-schema-attribute]: https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/schema.json;l=1183;drc=ed2a2cddbd2257595ff9fd8e9c4d151b291edec1
 [fidl-style-guide]: /docs/development/languages/fidl/guides/style.md#usage
-[fidl-syntax-revamp]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md
-[fidl-versioning]: /docs/contribute/governance/rfcs/0083_fidl_versioning.md
 [python-decorator-syntax]: https://docs.python.org/3/reference/expressions.html#calls
 [python-keyword-syntax]: https://www.python.org/dev/peps/pep-0318/
+[rfc-0040]: /docs/contribute/governance/rfcs/0040_identifier_uniqueness.md
+[rfc-0050]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md
+[rfc-0083]: /docs/contribute/governance/rfcs/0083_fidl_versioning.md
 [rust-attribute-syntax]: https://doc.rust-lang.org/reference/attributes.html
