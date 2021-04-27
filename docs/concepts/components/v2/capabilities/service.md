@@ -139,7 +139,7 @@ For more information about the open request, see
 [glossary-outgoing]: /docs/glossary.md#outgoing-directory
 [glossary-protocol]: /docs/glossary.md#protocol-capability
 [glossary-service]: /docs/glossary.md#service-capability
-[life-of-a-protocol-open]: /docs/concepts/components/v2/life_of_a_protocol_open.md
+[life-of-a-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
 [offer]: /docs/concepts/components/v2/component_manifests.md#offer
 [protocol-capability]: /docs/concepts/components/v2/capabilities/protocol.md
 [routing-example]: /examples/components/routing

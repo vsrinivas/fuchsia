@@ -45,18 +45,16 @@ toc:
       section:
       - title: "ELF runner"
         path: /docs/concepts/components/v2/elf_runner.md
-    - title: "Troubleshooting & testing"
-      section:
-      - title: "Hub"
-        path: /docs/concepts/components/v2/hub.md
-      - title: "Hermetic testing using OpaqueTest"
-        path: /docs/concepts/components/v2/opaque_test.md
-    - title: "Internals"
-      section:
-      - title: "Design principles"
-        path: /docs/concepts/components/v2/design_principles.md
-      - title: "Life of a protocol open"
-        path: /docs/concepts/components/v2/life_of_a_protocol_open.md
+  - title: "Troubleshooting & testing"
+    section:
+    - title: "Hub"
+      path: /docs/concepts/components/v2/hub.md
+    - title: "Hermetic testing using OpaqueTest"
+      path: /docs/concepts/components/v2/opaque_test.md
+  - title: "Internals"
+    section:
+    - title: "Design principles"
+      path: /docs/concepts/components/v2/design_principles.md
   - title: "State of the Components v2 migration"
     path: /docs/concepts/components/v2/migration.md
 - title: "Component URLs"

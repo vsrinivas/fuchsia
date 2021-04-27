@@ -274,7 +274,7 @@ with `use` declarations; it must use `BindChild()`.
 [handle]: /docs/concepts/kernel/handles.md
 [channel]: /docs/reference/kernel_objects/channel.md
 [namespaces]: /docs/concepts/process/namespaces.md
-[component-manifests]: component_manifests.md
+[component-manifests]: /docs/concepts/components/v2/component_manifests.md
 [fuchsia.io]: /sdk/fidl/fuchsia.io/io.fidl
 [abi-system]: /docs/concepts/system/abi/system.md
 [realm.fidl]: /sdk/fidl/fuchsia.sys2/realm.fidl

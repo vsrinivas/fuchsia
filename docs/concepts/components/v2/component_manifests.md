@@ -77,7 +77,7 @@ See also: [ELF Runner](elf_runner.md), [Component Runners][doc-runners]
 
 Component manifests provide a syntax for routing capabilities between
 components. For a detailed walkthrough about what happens during capability
-routing, see [_Life of a protocol open_](life_of_a_protocol_open.md)
+routing, see [_Life of a protocol open_](capabilities/life_of_a_protocol_open.md)
 
 #### Capability types {#capability-types}
 

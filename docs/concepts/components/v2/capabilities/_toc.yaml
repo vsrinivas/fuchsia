@@ -22,3 +22,5 @@ toc:
   path: /docs/concepts/components/v2/capabilities/service.md
 - title: "Storage capabilities"
   path: /docs/concepts/components/v2/capabilities/storage.md
+- title: "Life of a protocol open"
+  path: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md

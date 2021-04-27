@@ -298,7 +298,7 @@ the server.
 [declaring-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [depending-fidl]: /docs/development/languages/fidl/tutorials/hlcpp/basics/using-fidl.md
 [component-manager]: /docs/concepts/components/v2/component_manager.md
-[protocol-open]: /docs/concepts/components/v2/life_of_a_protocol_open.md
+[protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
 [discoverable]: /docs/reference/fidl/bindings/hlcpp-bindings.md#discoverable
 [bindings-iface]: /docs/reference/fidl/bindings/hlcpp-bindings.md#protocols
 [pipeline]: /docs/concepts/api/fidl.md#request-pipelining

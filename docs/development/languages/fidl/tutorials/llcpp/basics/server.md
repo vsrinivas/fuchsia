@@ -287,7 +287,7 @@ the server.
 [declaring-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [depending-fidl]: /docs/development/languages/fidl/tutorials/llcpp/basics/using-fidl.md
 [component-manager]: /docs/concepts/components/v2/component_manager.md
-[protocol-open]: /docs/concepts/components/v2/life_of_a_protocol_open.md#binding_to_a_component_and_sending_a_protocol_channel
+[protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md#binding_to_a_component_and_sending_a_protocol_channel
 [bindings-iface]: /docs/reference/fidl/bindings/llcpp-bindings.md#protocols
 [compiling-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [async-loop]: /zircon/system/ulib/async-loop/include/lib/async-loop/cpp/loop.h

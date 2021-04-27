@@ -160,7 +160,7 @@ For a list of these protocols and what they can be used for, see
 [glossary-namespace]: /docs/glossary.md#namespace
 [glossary-outgoing]: /docs/glossary.md#outgoing-directory
 [glossary-protocol]: /docs/glossary.md#protocol-capability
-[life-of-a-protocol-open]: /docs/concepts/components/v2/life_of_a_protocol_open.md
+[life-of-a-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
 [offer]: /docs/concepts/components/v2/component_manifests.md#offer
 [routing-example]: /examples/components/routing
 [service-capability]: /docs/concepts/components/v2/capabilities/service.md

@@ -22,3 +22,5 @@ ability to connect to and access which resources.
   protocols) provided by other components or the framework itself.
 - [Storage capabilities](storage.md): special-cased directories with different
   semantics.
+- [Life of a protocol open](life_of_a_protocol_open.md): How
+  components connect to protocols in their namespaces.

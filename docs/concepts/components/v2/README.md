@@ -68,8 +68,6 @@ the transition to the new architecture is complete.
 
 - [Design principles](design_principles.md): Guidelines for arriving at
   architectural decisions.
-- [Life of a protocol open](life_of_a_protocol_open.md): How components connect
-  to protocols in their namespaces.
 
 [doc-component-urls]: /docs/concepts/components/component_urls.md
 [glossary-components-v1]: /docs/glossary.md#components-v1

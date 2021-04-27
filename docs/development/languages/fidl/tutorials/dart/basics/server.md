@@ -250,7 +250,7 @@ requests is running. The next step will be to write a client for the server.
 [declaring-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [depending-fidl]: /docs/development/languages/fidl/tutorials/dart/basics/using-fidl.md
 [component-manager]: /docs/concepts/components/v2/component_manager.md
-[protocol-open]: /docs/concepts/components/v2/life_of_a_protocol_open.md#binding_to_a_component_and_sending_a_protocol_channel
+[protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md#binding_to_a_component_and_sending_a_protocol_channel
 [compiling-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [overview]: /docs/development/languages/fidl/tutorials/overview.md
 [components]: /docs/development/components/build.md
