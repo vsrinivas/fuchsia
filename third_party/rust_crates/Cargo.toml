@@ -246,6 +246,7 @@ cmake = { path = "tiny_mirrors/cmake"}
 # TODO(fxbug.dev/56201): Vendor fatfs when upstream makes a new release.
 # See https://github.com/rafalh/rust-fatfs/pull/37#issuecomment-653760603 for more information.
 crossterm_winapi = { path = "tiny_mirrors/crossterm_winapi" }
+fatfs = { path = "tiny_mirrors/fatfs" } # TODO(fxbug.dev/75491) remove
 fuchsia-cprng = { path = "../../src/lib/zircon/rust/fuchsia-cprng" }
 futures-timer = { path = "tiny_mirrors/futures-timer" }
 js-sys = { path = "tiny_mirrors/js-sys" }
@@ -259,6 +260,7 @@ regex-automata = { path = "tiny_mirrors/regex-automata" }
 rust-crypto = { path = "../rust-mirrors/rust-crypto" }
 rustls = { path = "tiny_mirrors/rustls" }
 security-framework = { path = "tiny_mirrors/security-framework" }
+serde_json5 = { path = "../rust-mirrors/serde_json5" } # TODO(fxbug.dev/75491) remove
 streaming-stats = { path = "tiny_mirrors/streaming-stats" }
 # termcolor 1.1.0 w/ UNLICENSE file removed per OSRB
 termcolor = { path = "tiny_mirrors/termcolor" }
