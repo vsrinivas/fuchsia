@@ -204,15 +204,11 @@ impl ClientImpl {
 
         // Process MessageHub requests
         fasync::Task::spawn(async move {
-            while let Ok((payload, message_client)) = context.receptor.next_payload().await {
+            while let Ok((payload, message_client)) = context.receptor.next_of::<Payload>().await {
                 let setting_type = client.setting_type;
 
                 // Setting handlers should only expect commands
-                match Command::try_from(
-                    Payload::try_from(payload).expect("should only receive handler payloads"),
-                )
-                .expect("should only receive commands")
-                {
+                match Command::try_from(payload).expect("should only receive commands") {
                     // Rebroadcasting requires special handling. The handler will request the
                     // current value from controller and then notify the caller as if it was a
                     // change in value.
@@ -393,10 +389,9 @@ pub mod persist {
                 )
                 .send();
 
-            while let Ok((payload, _)) = receptor.next_payload().await {
-                if let service::Payload::Storage(storage::Payload::Response(
-                    storage::StorageResponse::Read(setting_info),
-                )) = payload
+            while let Ok((payload, _)) = receptor.next_of::<storage::Payload>().await {
+                if let storage::Payload::Response(storage::StorageResponse::Read(setting_info)) =
+                    payload
                 {
                     return setting_info;
                 } else {

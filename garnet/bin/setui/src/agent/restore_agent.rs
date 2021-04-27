@@ -9,11 +9,10 @@ use crate::blueprint_definition;
 use crate::event::{restore, Event, Publisher};
 use crate::handler::base::{Error, Payload as HandlerPayload, Request};
 use crate::handler::device_storage::DeviceStorageAccess;
-use crate::message::base::{Audience, MessageEvent};
+use crate::message::base::Audience;
 use crate::service;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
-use futures::StreamExt;
 use std::collections::HashSet;
 
 blueprint_definition!("restore_agent", crate::agent::restore_agent::RestoreAgent::create);
@@ -40,17 +39,10 @@ impl RestoreAgent {
         };
 
         fasync::Task::spawn(async move {
-            while let Some(event) = context.receptor.next().await {
-                if let MessageEvent::Message(
-                    service::Payload::Agent(Payload::Invocation(invocation)),
-                    client,
-                ) = event
-                {
-                    client
-                        .reply(Payload::Complete(agent.handle(invocation).await).into())
-                        .send()
-                        .ack();
-                }
+            while let Ok((Payload::Invocation(invocation), client)) =
+                context.receptor.next_of::<Payload>().await
+            {
+                client.reply(Payload::Complete(agent.handle(invocation).await).into()).send().ack();
             }
         })
         .detach();
@@ -68,8 +60,11 @@ impl RestoreAgent {
                         )
                         .send();
 
-                    if let service::Payload::Setting(HandlerPayload::Response(response)) =
-                        receptor.next_payload().await.map_err(|_| AgentError::UnexpectedError)?.0
+                    if let HandlerPayload::Response(response) = receptor
+                        .next_of::<HandlerPayload>()
+                        .await
+                        .map_err(|_| AgentError::UnexpectedError)?
+                        .0
                     {
                         match response {
                             Ok(_) => {

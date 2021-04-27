@@ -74,13 +74,13 @@ where
         let mut receptor = self
             .service_messenger
             .message(
-                service::Payload::Setting(HandlerPayload::Request(request)),
+                HandlerPayload::Request(request).into(),
                 Audience::Address(service::Address::Handler(setting_type)),
             )
             .send();
 
-        if let Ok((service::Payload::Setting(HandlerPayload::Response(result)), _)) =
-            receptor.next_payload().await
+        if let Ok((HandlerPayload::Response(result), _)) =
+            receptor.next_of::<HandlerPayload>().await
         {
             return result;
         }

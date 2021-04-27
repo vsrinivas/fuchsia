@@ -5,15 +5,13 @@
 use crate::agent::{AgentError, Context, Payload};
 use crate::event;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::message::base::MessageEvent;
 use crate::service;
 use crate::tests::scaffold;
 use crate::EnvironmentBuilder;
 use fuchsia_async as fasync;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
-use futures::StreamExt;
-use std::convert::TryFrom;
+use matches::assert_matches;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_event_test_environment";
@@ -50,13 +48,13 @@ async fn test_agent_event_propagation() {
             *publisher_capture.lock().await = Some(context.get_publisher());
 
             fasync::Task::spawn(async move {
-                while let Ok((payload, client)) = context.receptor.next_payload().await {
-                    if let Ok(Payload::Invocation(_)) = Payload::try_from(payload) {
-                        client
-                            .reply(Payload::Complete(Err(AgentError::UnhandledLifespan)).into())
-                            .send()
-                            .ack();
-                    }
+                while let Ok((Payload::Invocation(_), client)) =
+                    context.receptor.next_of::<Payload>().await
+                {
+                    client
+                        .reply(Payload::Complete(Err(AgentError::UnhandledLifespan)).into())
+                        .send()
+                        .ack();
                 }
             })
             .detach();
@@ -82,17 +80,7 @@ async fn test_agent_event_propagation() {
     let publisher = agent_publisher.lock().await.take().expect("Should have captured publisher");
     publisher.send_event(sent_event.clone());
 
-    let received_event =
-        receptor.next().await.expect("First message should have been the broadcast");
-    match received_event {
-        MessageEvent::Message(
-            service::Payload::Event(event::Payload::Event(broadcasted_event)),
-            _,
-        ) => {
-            assert_eq!(broadcasted_event, sent_event);
-        }
-        _ => {
-            panic!("Should have received an event payload");
-        }
-    }
+    assert_matches!(
+        receptor.next_of::<event::Payload>().await.expect("Should have received broadcast").0,
+        event::Payload::Event(broadcasted_event) if broadcasted_event == sent_event);
 }

@@ -177,10 +177,8 @@ impl InspectSettingAgent {
                 )
                 .send();
 
-            if let Ok((
-                service::Payload::Setting(SettingPayload::Response(Ok(Some(setting_info)))),
-                _,
-            )) = receptor.next_payload().await
+            if let Ok((SettingPayload::Response(Ok(Some(setting_info))), _)) =
+                receptor.next_of::<SettingPayload>().await
             {
                 self.write_setting_to_inspect(setting_info).await;
             } else {

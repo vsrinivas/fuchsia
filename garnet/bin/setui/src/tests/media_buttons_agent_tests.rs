@@ -8,17 +8,15 @@ use crate::agent::Lifespan;
 use crate::agent::{Context, Payload};
 use crate::event::{self, Event};
 use crate::input::{ButtonType, VolumeGain};
-use crate::message::base::{Audience, MessageEvent, MessengerType};
+use crate::message::base::{Audience, MessengerType};
 use crate::service;
 use crate::service_context::ServiceContext;
 use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use fidl_fuchsia_ui_input::MediaButtonsEvent;
 use futures::lock::Mutex;
-use futures::StreamExt;
 use media_buttons::MediaButtonsAgent;
 use std::collections::HashSet;
-use std::convert::TryFrom;
 use std::sync::Arc;
 
 struct FakeServices {
@@ -68,13 +66,8 @@ async fn test_media_buttons_proxied() {
         .message(Payload::Invocation(invocation).into(), Audience::Messenger(signature))
         .send();
     let mut completion_result = None;
-    while let Some(event) = reply_receptor.next().await {
-        if let MessageEvent::Message(payload, _) = event {
-            if let Ok(Payload::Complete(result)) = Payload::try_from(payload) {
-                completion_result = Some(result);
-                break;
-            }
-        }
+    if let Ok((Payload::Complete(result), _)) = reply_receptor.next_of::<Payload>().await {
+        completion_result = Some(result);
     }
 
     // Validate that the setup is complete.
@@ -95,9 +88,10 @@ async fn test_media_buttons_proxied() {
     // Track the events to make sure they came in.
     let mut mic_mute_received = false;
     let mut volume_received = false;
-    while let Ok((payload, _)) = event_receptor.next_payload().await {
-        if let service::Payload::Event(event::Payload::Event(Event::MediaButtons(event))) = payload
-        {
+    while let Ok((event::Payload::Event(event), _)) =
+        event_receptor.next_of::<event::Payload>().await
+    {
+        if let Event::MediaButtons(event) = event {
             match event {
                 event::media_buttons::Event::OnButton(ButtonType::MicrophoneMute(true)) => {
                     mic_mute_received = true;

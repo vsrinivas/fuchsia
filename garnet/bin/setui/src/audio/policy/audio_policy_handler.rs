@@ -73,7 +73,6 @@ use crate::policy::policy_handler::{
 };
 use crate::policy::response::Error as PolicyError;
 use crate::policy::{self as policy_base, PolicyInfo};
-use crate::service;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_err;
@@ -222,12 +221,10 @@ impl AudioPolicyHandler {
     async fn fetch_audio_info(&self) -> Result<AudioInfo, Error> {
         self.client_proxy
             .send_setting_request(SettingType::Audio, SettingRequest::Get)
-            .next_payload()
+            .next_of::<HandlerPayload>()
             .await
             .and_then(|(payload, _)| {
-                if let service::Payload::Setting(HandlerPayload::Response(Ok(Some(
-                    SettingInfo::Audio(audio_info),
-                )))) = payload
+                if let HandlerPayload::Response(Ok(Some(SettingInfo::Audio(audio_info)))) = payload
                 {
                     Ok(audio_info)
                 } else {

@@ -10,6 +10,7 @@ use futures::channel::mpsc::UnboundedReceiver;
 use futures::task::{Context, Poll};
 use futures::Stream;
 use futures::StreamExt;
+use std::convert::TryFrom;
 use std::pin::Pin;
 
 type EventReceiver<P, A, R> = UnboundedReceiver<MessageEvent<P, A, R>>;
@@ -67,6 +68,24 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Receptor<P, 
         }
 
         return Err(format_err!("could not retrieve payload"));
+    }
+
+    pub async fn next_of<T: TryFrom<P>>(&mut self) -> Result<(T, MessageClient<P, A, R>), Error>
+    where
+        <T as std::convert::TryFrom<P>>::Error: std::fmt::Debug,
+    {
+        let (payload, client) = self.next_payload().await?;
+
+        let converted_payload = T::try_from(payload)
+            .map(move |converted_payload| (converted_payload, client))
+            .map_err(|err| format_err!("conversion failed: {:?}", err));
+
+        // Treat any conversion failures as fatal.
+        if converted_payload.is_err() {
+            panic!("did not receive payload of expected type");
+        }
+
+        converted_payload
     }
 
     pub async fn wait_for_acknowledge(&mut self) -> Result<(), Error> {

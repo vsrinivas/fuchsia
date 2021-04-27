@@ -15,7 +15,7 @@ use {
         ClientImpl, Command, ControllerError, ControllerStateResult, Event, GenerateController,
         Handler, IntoHandlerResult, Payload, SettingHandlerResult, State,
     },
-    crate::message::base::{Audience, MessageEvent, MessengerType},
+    crate::message::base::{Audience, MessengerType},
     crate::service,
     crate::tests::message_utils::verify_payload,
     crate::EnvironmentBuilder,
@@ -23,7 +23,6 @@ use {
     futures::channel::mpsc::{unbounded, UnboundedSender},
     futures::StreamExt,
     std::collections::{HashMap, HashSet},
-    std::convert::TryFrom,
     std::sync::Arc,
 };
 
@@ -154,16 +153,17 @@ async fn test_write_notify() {
     blueprint.create(agent_context).await;
     let mut invocation_receptor = invocation_messenger
         .message(
-            service::Payload::Agent(crate::agent::Payload::Invocation(crate::agent::Invocation {
+            crate::agent::Payload::Invocation(crate::agent::Invocation {
                 lifespan: crate::agent::Lifespan::Initialization,
                 service_context: Arc::new(crate::service_context::ServiceContext::new(None, None)),
-            })),
+            })
+            .into(),
             crate::message::base::Audience::Messenger(agent_receptor_signature),
         )
         .send();
     // Wait for storage to be initialized.
-    while let Ok((payload, _)) = invocation_receptor.next_payload().await {
-        if let service::Payload::Agent(crate::agent::Payload::Complete(result)) = payload {
+    while let Ok((payload, _)) = invocation_receptor.next_of::<crate::agent::Payload>().await {
+        if let crate::agent::Payload::Complete(result) = payload {
             if let Ok(()) = result {
                 break;
             } else {
@@ -562,18 +562,14 @@ async fn test_unimplemented_error() {
             )
             .send();
 
-        while let Some(message_event) = reply_receptor.next().await {
-            if let MessageEvent::Message(incoming_payload, _) = message_event {
-                if let Ok(Payload::Result(Err(ControllerError::UnimplementedRequest(
-                    incoming_type,
-                    _,
-                )))) = Payload::try_from(incoming_payload)
-                {
-                    assert_eq!(incoming_type, setting_type);
-                    return;
-                } else {
-                    panic!("should have received a result");
-                }
+        while let Ok((payload, _)) = reply_receptor.next_of::<Payload>().await {
+            if let Payload::Result(Err(ControllerError::UnimplementedRequest(incoming_type, _))) =
+                payload
+            {
+                assert_eq!(incoming_type, setting_type);
+                return;
+            } else {
+                panic!("should have received a result");
             }
         }
     }

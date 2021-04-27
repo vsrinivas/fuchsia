@@ -20,7 +20,6 @@ use {
     fuchsia_async as fasync,
     futures::future::BoxFuture,
     futures::lock::Mutex,
-    std::convert::TryFrom,
     std::sync::Arc,
 };
 
@@ -41,13 +40,13 @@ impl TestAgent {
         let mut agent = TestAgent { messenger_factory: context.messenger_factory.clone() };
 
         fasync::Task::spawn(async move {
-            while let Ok((payload, client)) = context.receptor.next_payload().await {
-                if let Ok(AgentPayload::Invocation(invocation)) = AgentPayload::try_from(payload) {
-                    client
-                        .reply(AgentPayload::Complete(agent.handle(invocation).await).into())
-                        .send()
-                        .ack();
-                }
+            while let Ok((AgentPayload::Invocation(invocation), client)) =
+                context.receptor.next_of::<AgentPayload>().await
+            {
+                client
+                    .reply(AgentPayload::Complete(agent.handle(invocation).await).into())
+                    .send()
+                    .ack();
             }
         })
         .detach();

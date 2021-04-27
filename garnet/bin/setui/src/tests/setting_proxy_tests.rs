@@ -15,6 +15,8 @@ use futures::StreamExt;
 
 use async_trait::async_trait;
 
+use matches::assert_matches;
+
 use crate::base::{SettingType, UnknownInfo};
 use crate::event;
 use crate::handler::base::{
@@ -399,14 +401,12 @@ async fn test_request() {
         )
         .send();
 
-    while let Some(event) = receptor.next().await {
-        if let Ok((HandlerPayload::Response(response), _)) =
-            HandlerPayload::try_from_with_client(event)
-        {
-            assert!(response.is_ok());
-            assert_eq!(None, response.unwrap());
-            return;
-        }
+    if let Ok((HandlerPayload::Response(response), _)) = receptor.next_of::<HandlerPayload>().await
+    {
+        assert!(response.is_ok());
+        assert_eq!(None, response.unwrap());
+    } else {
+        panic!("should have received response");
     }
 }
 
@@ -637,12 +637,20 @@ fn test_retry() {
         for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
             verify_handler_event(
                 setting_type,
-                event_receptor.next().await.expect("should be notified of external failure"),
+                event_receptor
+                    .next_of::<event::Payload>()
+                    .await
+                    .expect("should be notified of external failure")
+                    .0,
                 event::handler::Event::Request(event::handler::Action::Execute, request.clone()),
             );
             verify_handler_event(
                 setting_type,
-                event_receptor.next().await.expect("should be notified of external failure"),
+                event_receptor
+                    .next_of::<event::Payload>()
+                    .await
+                    .expect("should be notified of external failure")
+                    .0,
                 event::handler::Event::Request(event::handler::Action::Retry, request.clone()),
             );
         }
@@ -650,7 +658,11 @@ fn test_retry() {
         // Ensure that the final event reports that attempts were exceeded
         verify_handler_event(
             setting_type,
-            event_receptor.next().await.expect("should be notified of external failure"),
+            event_receptor
+                .next_of::<event::Payload>()
+                .await
+                .expect("should be notified of external failure")
+                .0,
             event::handler::Event::Request(
                 event::handler::Action::AttemptsExceeded,
                 request.clone(),
@@ -718,10 +730,10 @@ fn test_retry() {
 
     executor.wake_next_timer();
 
-    let event_fut = event_receptor.next();
+    let event_fut = event_receptor.next_of::<event::Payload>();
     futures::pin_mut!(event_fut);
-    let state = if let Poll::Ready(Some(state)) = executor.run_until_stalled(&mut event_fut) {
-        state
+    let state = if let Poll::Ready(Ok((payload, _))) = executor.run_until_stalled(&mut event_fut) {
+        payload
     } else {
         panic!("state retrieval stalled or had no result");
     };
@@ -774,17 +786,29 @@ async fn test_early_exit() {
     for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
         verify_handler_event(
             setting_type,
-            event_receptor.next().await.expect("should be notified of external failure"),
+            event_receptor
+                .next_of::<event::Payload>()
+                .await
+                .expect("should be notified of external failure")
+                .0,
             event::handler::Event::Request(event::handler::Action::Execute, request.clone()),
         );
         verify_handler_event(
             setting_type,
-            event_receptor.next().await.expect("should be notified of external failure"),
+            event_receptor
+                .next_of::<event::Payload>()
+                .await
+                .expect("should be notified of external failure")
+                .0,
             event::handler::Event::Exit(exit_result.clone()),
         );
         verify_handler_event(
             setting_type,
-            event_receptor.next().await.expect("should be notified of external failure"),
+            event_receptor
+                .next_of::<event::Payload>()
+                .await
+                .expect("should be notified of external failure")
+                .0,
             event::handler::Event::Request(event::handler::Action::Retry, request.clone()),
         );
     }
@@ -792,7 +816,11 @@ async fn test_early_exit() {
     // Ensure that the final event reports that attempts were exceeded
     verify_handler_event(
         setting_type,
-        event_receptor.next().await.expect("should be notified of external failure"),
+        event_receptor
+            .next_of::<event::Payload>()
+            .await
+            .expect("should be notified of external failure")
+            .0,
         event::handler::Event::Request(event::handler::Action::AttemptsExceeded, request.clone()),
     );
 }
@@ -837,35 +865,38 @@ fn test_timeout() {
             )
             .send();
 
-        while let Some(event) = receptor.next().await {
-            if let MessageEvent::Message(
-                service::Payload::Setting(HandlerPayload::Response(response)),
-                _,
-            ) = event
-            {
-                // Make sure the result is an `ControllerError::TimeoutError`
-                assert!(
-                    matches!(response, Err(HandlerError::TimeoutError)),
-                    "error should have been encountered"
-                );
-            }
-        }
+        assert_matches!(
+            receptor.next_of::<HandlerPayload>().await.expect("should receive response").0,
+            HandlerPayload::Response(Err(HandlerError::TimeoutError))
+        );
 
         // For each failed attempt, make sure a retry event was broadcasted
         for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
             verify_handler_event(
                 setting_type,
-                event_receptor.next().await.expect("should be notified of execute"),
+                event_receptor
+                    .next_of::<event::Payload>()
+                    .await
+                    .expect("should be notified of execute")
+                    .0,
                 event::handler::Event::Request(event::handler::Action::Execute, request.clone()),
             );
             verify_handler_event(
                 setting_type,
-                event_receptor.next().await.expect("should be notified of timeout"),
+                event_receptor
+                    .next_of::<event::Payload>()
+                    .await
+                    .expect("should be notified of timeout")
+                    .0,
                 event::handler::Event::Request(event::handler::Action::Timeout, request.clone()),
             );
             verify_handler_event(
                 setting_type,
-                event_receptor.next().await.expect("should be notified of reattempt"),
+                event_receptor
+                    .next_of::<event::Payload>()
+                    .await
+                    .expect("should be notified of reattempt")
+                    .0,
                 event::handler::Event::Request(event::handler::Action::Retry, request.clone()),
             );
         }
@@ -873,7 +904,11 @@ fn test_timeout() {
         // Ensure that the final event reports that attempts were exceeded
         verify_handler_event(
             setting_type,
-            event_receptor.next().await.expect("should be notified of exceeded attempts"),
+            event_receptor
+                .next_of::<event::Payload>()
+                .await
+                .expect("should be notified of exceeded attempts")
+                .0,
             event::handler::Event::Request(
                 event::handler::Action::AttemptsExceeded,
                 request.clone(),
@@ -944,12 +979,20 @@ fn test_timeout_no_retry() {
 
         verify_handler_event(
             setting_type,
-            event_receptor.next().await.expect("should be notified of execution"),
+            event_receptor
+                .next_of::<event::Payload>()
+                .await
+                .expect("should be notified of execution")
+                .0,
             event::handler::Event::Request(event::handler::Action::Execute, request.clone()),
         );
         verify_handler_event(
             setting_type,
-            event_receptor.next().await.expect("should be notified of timeout"),
+            event_receptor
+                .next_of::<event::Payload>()
+                .await
+                .expect("should be notified of timeout")
+                .0,
             event::handler::Event::Request(event::handler::Action::Timeout, request),
         );
     };
@@ -974,16 +1017,11 @@ fn test_timeout_no_retry() {
 /// Checks that the supplied message event specifies the supplied handler event.
 fn verify_handler_event(
     setting_type: SettingType,
-    message_event: service::message::MessageEvent,
+    event_payload: event::Payload,
     event: event::handler::Event,
 ) {
-    if let MessageEvent::Message(
-        service::Payload::Event(event::Payload::Event(event::Event::Handler(
-            captured_type,
-            captured_event,
-        ))),
-        _,
-    ) = message_event
+    if let event::Payload::Event(event::Event::Handler(captured_type, captured_event)) =
+        event_payload
     {
         assert_eq!(captured_type, setting_type);
         assert_eq!(event, captured_event);
@@ -994,13 +1032,10 @@ fn verify_handler_event(
 }
 
 async fn get_response(mut receptor: service::message::Receptor) -> Option<Response> {
-    while let Some(event) = receptor.next().await {
-        if let Ok((HandlerPayload::Response(response), _)) =
-            HandlerPayload::try_from_with_client(event)
-        {
-            return Some(response);
-        }
+    if let Ok((HandlerPayload::Response(response), _)) = receptor.next_of::<HandlerPayload>().await
+    {
+        return Some(response);
+    } else {
+        return None;
     }
-
-    return None;
 }

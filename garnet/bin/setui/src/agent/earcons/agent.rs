@@ -11,16 +11,13 @@ use crate::agent::{AgentError, Invocation, InvocationResult};
 use crate::blueprint_definition;
 use crate::event::Publisher;
 use crate::handler::device_storage::DeviceStorageAccess;
-use crate::message::base::MessageEvent;
 use crate::service;
 use crate::service_context::{ExternalServiceProxy, ServiceContext};
 use fidl_fuchsia_media_sounds::PlayerProxy;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::lock::Mutex;
-use futures::StreamExt;
 use std::collections::HashSet;
-use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -64,15 +61,10 @@ impl Agent {
         };
 
         fasync::Task::spawn(async move {
-            while let Some(message) = context.receptor.next().await {
-                if let MessageEvent::Message(payload, client) = message {
-                    if let Ok(Payload::Invocation(invocation)) = Payload::try_from(payload) {
-                        client
-                            .reply(Payload::Complete(agent.handle(invocation).await).into())
-                            .send()
-                            .ack();
-                    }
-                }
+            while let Ok((Payload::Invocation(invocation), client)) =
+                context.receptor.next_of::<Payload>().await
+            {
+                client.reply(Payload::Complete(agent.handle(invocation).await).into()).send().ack();
             }
 
             fx_log_info!("Earcons agent done processing requests");

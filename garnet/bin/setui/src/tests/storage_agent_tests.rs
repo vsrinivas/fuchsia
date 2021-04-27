@@ -8,11 +8,10 @@ use crate::handler::device_storage::{
     DeviceStorage, DeviceStorageAccess, DeviceStorageCompatible, DeviceStorageFactory,
 };
 use crate::handler::setting_handler::persist::UpdateState;
-use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
+use crate::message::base::{Audience, MessengerType};
 use crate::service::{self, Address};
 use crate::storage::{Payload, StorageRequest, StorageResponse};
 use crate::EnvironmentBuilder;
-use futures::StreamExt;
 use matches::assert_matches;
 use std::sync::Arc;
 
@@ -54,20 +53,9 @@ async fn test_read() {
         )
         .send();
 
-    while let Some(response) = receptor.next().await {
-        match response {
-            MessageEvent::Status(Status::Received) => {} // no-op
-            MessageEvent::Message(
-                service::Payload::Storage(Payload::Response(StorageResponse::Read(setting_info))),
-                _,
-            ) => {
-                assert_matches!(setting_info,
-                    SettingInfo::Unknown(UnknownInfo(value)) if value == ORIGINAL_VALUE);
-                break;
-            }
-            _ => panic!("Did not receive expected response: {:?}", response),
-        }
-    }
+    assert_matches!(receptor.next_of::<Payload>().await,
+        Ok((Payload::Response(StorageResponse::Read(SettingInfo::Unknown(UnknownInfo(value)))), _))
+            if value == ORIGINAL_VALUE);
 }
 
 // Assert that we can write values by sending messages to the storage agent and seeing a response
@@ -96,19 +84,10 @@ async fn test_write() {
         )
         .send();
 
-    while let Some(response) = receptor.next().await {
-        match response {
-            MessageEvent::Status(Status::Received) => {} // no-op
-            MessageEvent::Message(
-                service::Payload::Storage(Payload::Response(StorageResponse::Write(result))),
-                _,
-            ) => {
-                assert_matches!(result, Ok(UpdateState::Updated));
-                break;
-            }
-            _ => panic!("Did not receive expected response: {:?}", response),
-        }
-    }
+    assert_matches!(
+        receptor.next_of::<Payload>().await,
+        Ok((Payload::Response(StorageResponse::Write(Ok(UpdateState::Updated)),), _))
+    );
 
     let UnknownInfo(value) = store.get::<UnknownInfo>().await;
     assert_eq!(CHANGED_VALUE, value);

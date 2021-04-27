@@ -19,7 +19,6 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::StreamExt;
 use std::collections::HashSet;
-use std::convert::TryFrom;
 use std::sync::Arc;
 
 blueprint_definition!("buttons_agent", MediaButtonsAgent::create);
@@ -56,13 +55,10 @@ impl MediaButtonsAgent {
 
         let mut receptor = context.receptor;
         fasync::Task::spawn(async move {
-            while let Ok((payload, client)) = receptor.next_payload().await {
-                if let Ok(Payload::Invocation(invocation)) = Payload::try_from(payload) {
-                    client
-                        .reply(Payload::Complete(agent.handle(invocation).await).into())
-                        .send()
-                        .ack();
-                }
+            while let Ok((Payload::Invocation(invocation), client)) =
+                receptor.next_of::<Payload>().await
+            {
+                client.reply(Payload::Complete(agent.handle(invocation).await).into()).send().ack();
             }
 
             fx_log_info!("Media buttons agent done processing requests");
@@ -377,12 +373,10 @@ mod tests {
         // loop below to eventually finish.
         service_message_hub.delete(handler_receptor.get_signature());
 
-        while let Some(message) = handler_receptor.next().await {
-            if let MessageEvent::Message(service::Payload::Setting(HandlerPayload::Request(_)), _) =
-                message
-            {
-                received_events += 1;
-            }
+        while let Ok((HandlerPayload::Request(_), _)) =
+            handler_receptor.next_of::<HandlerPayload>().await
+        {
+            received_events += 1;
         }
 
         // No events were received via the setting handler.

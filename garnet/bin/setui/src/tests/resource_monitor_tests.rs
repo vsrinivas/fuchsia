@@ -7,7 +7,6 @@ use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::monitor;
 use crate::monitor::base::monitor::Context as MonitorContext;
 use crate::monitor::environment::Actor;
-use crate::service;
 use crate::tests::scaffold;
 use crate::EnvironmentBuilder;
 use anyhow::Error;
@@ -39,7 +38,7 @@ impl TestMonitorAgent {
                 Box::pin(async move {
                     // Immediately respond to all invocations
                     fasync::Task::spawn(async move {
-                        while let Ok((.., client)) = context.receptor.next_payload().await {
+                        while let Ok((.., client)) = context.receptor.next_of::<Payload>().await {
                             client.reply(Payload::Complete(Ok(())).into()).send().ack();
                         }
                     })
@@ -97,7 +96,12 @@ async fn test_environment_bringup() {
 
     // Ensure command is received by the monitor.
     assert!(matches!(
-        monitor_context.receptor.next_payload().await.expect("payload should be present").0,
-        service::Payload::Monitor(monitor::Payload::Monitor)
+        monitor_context
+            .receptor
+            .next_of::<monitor::Payload>()
+            .await
+            .expect("payload should be present")
+            .0,
+        monitor::Payload::Monitor
     ));
 }

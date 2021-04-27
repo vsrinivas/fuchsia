@@ -19,7 +19,6 @@ use futures::lock::Mutex;
 use futures::StreamExt;
 use rand::Rng;
 use std::collections::HashSet;
-use std::convert::TryFrom;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_agent_test_environment";
@@ -91,16 +90,16 @@ impl TestAgent {
             Arc::new(move |mut context: Context| {
                 let agent = agent_clone.clone();
                 fasync::Task::spawn(async move {
-                    while let Ok((payload, client)) = context.receptor.next_payload().await {
-                        if let Ok(Payload::Invocation(invocation)) = Payload::try_from(payload) {
-                            client
-                                .reply(
-                                    Payload::Complete(agent.lock().await.handle(invocation).await)
-                                        .into(),
-                                )
-                                .send()
-                                .ack();
-                        }
+                    while let Ok((Payload::Invocation(invocation), client)) =
+                        context.receptor.next_of::<Payload>().await
+                    {
+                        client
+                            .reply(
+                                Payload::Complete(agent.lock().await.handle(invocation).await)
+                                    .into(),
+                            )
+                            .send()
+                            .ack();
                     }
                 })
                 .detach();

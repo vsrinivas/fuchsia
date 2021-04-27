@@ -16,7 +16,6 @@ use crate::service_context::ServiceContext;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use std::collections::HashSet;
-use std::convert::TryFrom;
 use std::sync::Arc;
 
 blueprint_definition!("camera_watcher_agent", CameraWatcherAgent::create);
@@ -57,8 +56,8 @@ impl CameraWatcherAgent {
 
         let mut receptor = context.receptor;
         fasync::Task::spawn(async move {
-            while let Ok((payload, client)) = receptor.next_payload().await {
-                if let Ok(Payload::Invocation(invocation)) = Payload::try_from(payload) {
+            while let Ok((payload, client)) = receptor.next_of::<Payload>().await {
+                if let Payload::Invocation(invocation) = payload {
                     client
                         .reply(Payload::Complete(agent.handle(invocation).await).into())
                         .send()
@@ -347,8 +346,8 @@ mod tests {
         service_message_hub.delete(handler_receptor.get_signature());
 
         assert_matches!(
-            handler_receptor.next_payload().await,
-            Ok((service::Payload::Setting(HandlerPayload::Request(request)), _))
+            handler_receptor.next_of::<HandlerPayload>().await,
+            Ok((HandlerPayload::Request(request), _))
                 if request == verification_request
         )
     }

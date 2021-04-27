@@ -295,15 +295,12 @@ mod tests {
             .send();
 
         // Will stall if not encountered.
-        let responder = if let Some(MessageEvent::Message(
-            service::Payload::Storage(Payload::Request(_)),
-            responder,
-        )) = receptor.next().await
-        {
-            responder
-        } else {
-            panic!("Test setup is broken, should have received a storage request")
-        };
+        let responder =
+            if let Ok((Payload::Request(_), responder)) = receptor.next_of::<Payload>().await {
+                responder
+            } else {
+                panic!("Test setup is broken, should have received a storage request")
+            };
 
         match setting {
             Setting::Type(setting_type) => {

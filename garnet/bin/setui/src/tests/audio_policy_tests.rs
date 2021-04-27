@@ -223,15 +223,16 @@ async fn test_policy_message_hub() {
         .expect("addressable messenger should be present")
         .1;
 
-    let request_payload: service::Payload = Payload::Request(Request::Get).into();
+    let request_payload = Payload::Request(Request::Get);
 
     // Send request.
     let mut reply_receptor = messenger
-        .message(request_payload.clone(), Audience::Address(policy_handler_address))
+        .message(request_payload.clone().into(), Audience::Address(policy_handler_address))
         .send();
 
     // Wait and verify request received.
-    let (payload, client) = policy_receptor.next_payload().await.expect("should receive message");
+    let (payload, client) =
+        policy_receptor.next_of::<Payload>().await.expect("should receive message");
     assert_eq!(payload, request_payload);
     assert_eq!(client.get_author(), receptor.get_signature());
 

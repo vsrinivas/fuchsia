@@ -6,7 +6,7 @@ use crate::audio::types::AudioStreamType;
 #[cfg(test)]
 use crate::audio::{create_default_audio_stream, StreamVolumeControl};
 use crate::event;
-use crate::message::base::{MessageEvent, MessengerType};
+use crate::message::base::MessengerType;
 use crate::service;
 use crate::service_context::ServiceContext;
 use crate::tests::fakes::audio_core_service;
@@ -14,6 +14,8 @@ use crate::tests::fakes::service_registry::ServiceRegistry;
 use futures::lock::Mutex;
 use futures::StreamExt;
 use std::sync::Arc;
+
+use matches::assert_matches;
 
 // Returns a registry populated with the AudioCore service.
 async fn create_service() -> Arc<Mutex<ServiceRegistry>> {
@@ -53,20 +55,14 @@ async fn test_drop_thread() {
         .ok();
     }
 
-    let received_event =
-        receptor.next().await.expect("First message should have been the closed event");
-
-    match received_event {
-        MessageEvent::Message(
-            service::Payload::Event(event::Payload::Event(broadcasted_event)),
-            _,
-        ) => {
-            assert_eq!(broadcasted_event, event::Event::Closed("volume_control_events"));
-        }
-        _ => {
-            panic!("Should have received an event payload");
-        }
-    }
+    assert_matches!(
+        receptor
+            .next_of::<event::Payload>()
+            .await
+            .expect("First message should have been the closed event")
+            .0,
+        event::Payload::Event(event::Event::Closed("volume_control_events"))
+    );
 }
 
 /// Ensures that the StreamVolumeControl properly fires the provided early exit

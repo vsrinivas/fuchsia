@@ -99,7 +99,7 @@ impl Authority {
                 .send();
 
             if sequential {
-                let result = process_payload(receptor.next_payload().await);
+                let result = process_payload(receptor.next_of::<Payload>().await);
                 if result.is_err() {
                     return result;
                 }
@@ -111,7 +111,7 @@ impl Authority {
         // Pending acks should only be present for non sequential execution. In
         // this case wait for each to complete.
         for mut receptor in pending_receptors {
-            let result = process_payload(receptor.next_payload().await);
+            let result = process_payload(receptor.next_of::<Payload>().await);
             if result.is_err() {
                 return result;
             }
@@ -122,13 +122,11 @@ impl Authority {
 }
 
 fn process_payload(
-    payload: Result<(service::Payload, service::message::MessageClient), Error>,
+    payload: Result<(Payload, service::message::MessageClient), Error>,
 ) -> Result<(), Error> {
     match payload {
-        Ok((service::Payload::Agent(Payload::Complete(Ok(_))), _)) => Ok(()),
-        Ok((service::Payload::Agent(Payload::Complete(Err(AgentError::UnhandledLifespan))), _)) => {
-            Ok(())
-        }
+        Ok((Payload::Complete(Ok(_)), _)) => Ok(()),
+        Ok((Payload::Complete(Err(AgentError::UnhandledLifespan)), _)) => Ok(()),
         _ => Err(format_err!("invocation failed")),
     }
 }

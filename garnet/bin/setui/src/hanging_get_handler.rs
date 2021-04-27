@@ -455,16 +455,12 @@ mod tests {
 
             let handler_clone = handler.clone();
             fasync::Task::spawn(async move {
-                while let Ok((payload, client)) = receptor.next_payload().await {
-                    let mut handler = handler_clone.lock().await;
-                    match Payload::try_from(payload) {
-                        Ok(Payload::Request(request)) => {
-                            handler.request(client, request);
-                        }
-                        _ => {
-                            panic!("unexpected payload");
-                        }
-                    }
+                while let (Payload::Request(request), client) = receptor
+                    .next_of::<Payload>()
+                    .await
+                    .unwrap_or_else(|err| panic!("could not get payload: {:?}", err))
+                {
+                    handler_clone.lock().await.request(client, request);
                 }
             })
             .detach();

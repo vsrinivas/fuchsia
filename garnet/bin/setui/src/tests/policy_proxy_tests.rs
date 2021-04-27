@@ -238,14 +238,13 @@ async fn test_policy_messages_passed_to_handler() {
         .send();
 
     // Wait for a response.
-    let (policy_response, _) =
-        policy_send_receptor.next_payload().await.expect("policy response received");
+    let (policy_response, _) = policy_send_receptor
+        .next_of::<policy_base::Payload>()
+        .await
+        .expect("policy response received");
 
     // Policy handler returned its response through the policy proxy, back to the client.
-    assert_eq!(
-        policy_response,
-        service::Payload::Policy(policy_base::Payload::Response(Ok(policy_payload)))
-    );
+    assert_eq!(policy_response, policy_base::Payload::Response(Ok(policy_payload)));
 }
 
 /// Verify that when the policy handler doesn't take any action on a setting request, it will

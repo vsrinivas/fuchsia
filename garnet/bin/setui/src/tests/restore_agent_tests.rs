@@ -8,7 +8,6 @@ use crate::event::{self as event, restore, Event};
 use crate::handler::base::Request;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::{ControllerError, SettingHandlerResult};
-use crate::message::base::MessageEvent;
 use crate::service;
 use crate::service::message::Receptor;
 use crate::tests::fakes::base::create_setting_handler;
@@ -17,7 +16,6 @@ use crate::tests::scaffold::event::subscriber::Blueprint;
 use crate::EnvironmentBuilder;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
-use futures::StreamExt;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "restore_agent_test_environment";
@@ -115,18 +113,16 @@ async fn test_restore() {
     .await;
 }
 
+// TODO(fxbug.dev/73047): Verify the event was properly passed through and matches.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_unimplemented() {
     let receptor = create_event_environment().await;
     let mut event_receptor = receptor.lock().await.take().expect("Should have captured receptor");
-    if let Some(MessageEvent::Message(
-        service::Payload::Event(event::Payload::Event(received_event)),
-        ..,
-    )) = event_receptor.next().await
+    if let Ok((
+        event::Payload::Event(Event::Restore(restore::Event::NoOp(SettingType::Setup))),
+        _,
+    )) = event_receptor.next_of::<event::Payload>().await
     {
-        // Will stall if not encountered
-        if received_event == Event::Restore(restore::Event::NoOp(SettingType::Setup)) {
-            return;
-        }
+        return;
     }
 }

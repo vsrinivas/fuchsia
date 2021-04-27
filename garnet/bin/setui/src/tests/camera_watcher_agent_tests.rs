@@ -5,15 +5,13 @@
 use crate::agent::camera_watcher::CameraWatcherAgent;
 use crate::agent::{Context, Invocation, Lifespan, Payload};
 use crate::event::{self, Event};
-use crate::message::base::{Audience, MessageEvent, MessengerType};
+use crate::message::base::{Audience, MessengerType};
 use crate::service;
 use crate::service_context::ServiceContext;
 use crate::tests::fakes::camera3_service::Camera3Service;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use futures::lock::Mutex;
-use futures::StreamExt;
 use std::collections::HashSet;
-use std::convert::TryFrom;
 use std::sync::Arc;
 
 struct FakeServices {
@@ -66,13 +64,9 @@ async fn test_camera_agent_proxy() {
         .message(Payload::Invocation(invocation).into(), Audience::Messenger(signature))
         .send();
     let mut completion_result = None;
-    while let Some(event) = reply_receptor.next().await {
-        if let MessageEvent::Message(payload, _) = event {
-            if let Ok(Payload::Complete(result)) = Payload::try_from(payload) {
-                completion_result = Some(result);
-                break;
-            }
-        }
+    while let Ok((Payload::Complete(result), _)) = reply_receptor.next_of::<Payload>().await {
+        completion_result = Some(result);
+        break;
     }
 
     // Validate that the setup is complete.
@@ -83,9 +77,8 @@ async fn test_camera_agent_proxy() {
 
     // Track the events to make sure they came in.
     let mut camera_state = false;
-    while let Ok((payload, _)) = event_receptor.next_payload().await {
-        if let service::Payload::Event(event::Payload::Event(Event::CameraUpdate(event))) = payload
-        {
+    while let Ok((payload, _)) = event_receptor.next_of::<event::Payload>().await {
+        if let event::Payload::Event(Event::CameraUpdate(event)) = payload {
             match event {
                 event::camera_watcher::Event::OnSWMuteState(muted) => {
                     camera_state = muted;

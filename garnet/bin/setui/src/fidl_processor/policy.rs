@@ -50,8 +50,8 @@ impl RequestContext {
             )
             .send();
 
-        let response_payload = receptor.next_payload().await;
-        if let Ok((service::Payload::Policy(Payload::Response(result)), _)) = response_payload {
+        let response_payload = receptor.next_of::<Payload>().await;
+        if let Ok((Payload::Response(result), _)) = response_payload {
             return result;
         } else if let Err(err) = response_payload {
             fx_log_err!("Failed to get policy response: {}", err);

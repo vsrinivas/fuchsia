@@ -51,24 +51,23 @@ impl VolumeChangeHandler {
             .send();
 
         // Get initial user media volume level.
-        let last_user_volumes = if let Ok((
-            service::Payload::Setting(Payload::Response(Ok(Some(SettingInfo::Audio(info))))),
-            _,
-        )) = receptor.next_payload().await
-        {
-            // Create map from stream type to user volume levels for each stream.
-            info.streams
-                .iter()
-                .filter(|x| {
-                    x.stream_type == AudioStreamType::Media
-                        || x.stream_type == AudioStreamType::Interruption
-                })
-                .map(|stream| (stream.stream_type, stream.user_volume_level))
-                .collect()
-        } else {
-            // Could not extract info from response, default to empty volumes.
-            HashMap::new()
-        };
+        let last_user_volumes =
+            if let Ok((Payload::Response(Ok(Some(SettingInfo::Audio(info)))), _)) =
+                receptor.next_of::<Payload>().await
+            {
+                // Create map from stream type to user volume levels for each stream.
+                info.streams
+                    .iter()
+                    .filter(|x| {
+                        x.stream_type == AudioStreamType::Media
+                            || x.stream_type == AudioStreamType::Interruption
+                    })
+                    .map(|stream| (stream.stream_type, stream.user_volume_level))
+                    .collect()
+            } else {
+                // Could not extract info from response, default to empty volumes.
+                HashMap::new()
+            };
 
         fasync::Task::spawn(async move {
             let mut handler = Self {
