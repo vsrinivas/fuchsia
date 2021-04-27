@@ -129,10 +129,10 @@ pub struct Publisher {
 
 impl Publisher {
     pub async fn create(
-        factory: &service::message::Factory,
+        delegate: &service::message::Delegate,
         messenger_type: service::message::MessengerType,
     ) -> Publisher {
-        let (messenger, _) = factory
+        let (messenger, _) = delegate
             .create(messenger_type)
             .await
             .expect("should be able to retrieve messenger for publisher");
@@ -161,6 +161,6 @@ pub mod subscriber {
     /// The Subscriber Blueprint is used for spawning new subscribers on demand
     /// in the environment.
     pub trait Blueprint {
-        fn create(&self, message_factory: service::message::Factory) -> BoxFuture<'static, ()>;
+        fn create(&self, delegate: service::message::Delegate) -> BoxFuture<'static, ()>;
     }
 }

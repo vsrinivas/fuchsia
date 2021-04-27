@@ -199,8 +199,8 @@ mod tests {
         let setting_request = Request::Get;
         let target_setting_type = SettingType::Unknown;
 
-        let service_messenger_factory = service::message::create_hub();
-        let (_, mut setting_proxy_receptor) = service_messenger_factory
+        let service_delegate = service::message::create_hub();
+        let (_, mut setting_proxy_receptor) = service_delegate
             .create(MessengerType::Addressable(service::Address::Handler(
                 policy_type.setting_type(),
             )))
@@ -211,7 +211,7 @@ mod tests {
         let storage = storage_factory.get_store().await;
 
         let client_proxy = ClientProxy {
-            service_messenger: service_messenger_factory
+            service_messenger: service_delegate
                 .create(MessengerType::Unbound)
                 .await
                 .expect("messenger should be created")
@@ -235,15 +235,15 @@ mod tests {
         let policy_type = PolicyType::Unknown;
         let setting_type = SettingType::Unknown;
 
-        let service_messenger_factory = service::message::create_hub();
+        let service_delegate = service::message::create_hub();
 
-        let (_, mut receptor) = service_messenger_factory
+        let (_, mut receptor) = service_delegate
             .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
             .await
             .expect("service receptor created");
 
         let client_proxy = ClientProxy {
-            service_messenger: service_messenger_factory
+            service_messenger: service_delegate
                 .create(MessengerType::Unbound)
                 .await
                 .expect("messenger should be created")

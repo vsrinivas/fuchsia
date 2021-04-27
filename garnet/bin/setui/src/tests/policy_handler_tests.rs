@@ -65,8 +65,8 @@ impl PolicyHandler for FakePolicyHandler {
 async fn test_write() {
     let expected_value = PrivacyInfo { user_data_sharing_consent: Some(true) };
 
-    let messenger_factory = service::message::create_hub();
-    let (messenger, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let delegate = service::message::create_hub();
+    let (messenger, _) = delegate.create(MessengerType::Unbound).await.unwrap();
 
     let storage_factory = InMemoryStorageFactory::new();
     storage_factory.initialize_storage::<PrivacyInfo>().await;

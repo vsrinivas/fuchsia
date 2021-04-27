@@ -159,7 +159,7 @@ pub struct SettingProxy {
     /// Factory for generating a new controller to service requests.
     handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
     /// Messenger factory for communication with service components.
-    messenger_factory: service::message::Factory,
+    delegate: service::message::Delegate,
     /// Messenger to send messages to controllers.
     messenger: service::message::Messenger,
     /// Signature for messages from controllers to be direct towards.
@@ -189,13 +189,13 @@ impl SettingProxy {
     pub async fn create(
         setting_type: SettingType,
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
-        messenger_factory: service::message::Factory,
+        delegate: service::message::Delegate,
         max_attempts: u64,
         teardown_timeout: Duration,
         request_timeout: Option<Duration>,
         retry_on_timeout: bool,
     ) -> Result<service::message::Signature, Error> {
-        let (messenger, receptor) = messenger_factory
+        let (messenger, receptor) = delegate
             .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
             .await
             .map_err(Error::new)?;
@@ -205,7 +205,7 @@ impl SettingProxy {
         // migrated to the MessageHub defined above.
 
         let event_publisher = event::Publisher::create(
-            &messenger_factory,
+            &delegate,
             MessengerType::Addressable(service::Address::EventSource(
                 event::Address::SettingProxy(setting_type),
             )),
@@ -225,7 +225,7 @@ impl SettingProxy {
             active_request: None,
             pending_requests: VecDeque::new(),
             listen_requests: Vec::new(),
-            messenger_factory,
+            delegate,
             messenger,
             signature: service_signature,
             event_publisher: event_publisher,
@@ -347,7 +347,7 @@ impl SettingProxy {
                 .handler_factory
                 .lock()
                 .await
-                .generate(self.setting_type, self.messenger_factory.clone(), self.signature.clone())
+                .generate(self.setting_type, self.delegate.clone(), self.signature.clone())
                 .await
                 .map_or(None, Some);
         }
@@ -756,7 +756,7 @@ impl SettingProxy {
 
         // This ensures that the client event loop for the corresponding controller is
         // properly stopped. Without this, the client event loop will run forever.
-        self.messenger_factory.delete(signature);
+        self.delegate.delete(signature);
 
         publish!(self, event::handler::Event::Teardown);
     }

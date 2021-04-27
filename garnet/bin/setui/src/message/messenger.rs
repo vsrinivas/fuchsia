@@ -6,7 +6,7 @@ use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::base::{
     default, messenger, role, ActionSender, Address, Audience, CreateMessengerResult, Fingerprint,
     Message, MessageAction, MessageError, MessageType, MessengerAction, MessengerActionSender,
-    MessengerId, MessengerPresenceResult, MessengerType, Payload, Role, Signature,
+    MessengerId, MessengerType, Payload, Role, Signature,
 };
 use crate::message::beacon::Beacon;
 use crate::message::message_builder::MessageBuilder;
@@ -30,7 +30,7 @@ pub struct Builder<P: Payload + 'static, A: Address + 'static, R: Role + 'static
 impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Builder<P, A, R> {
     /// Creates a new builder for constructing a messenger of the given
     /// type.
-    fn new(
+    pub(super) fn new(
         messenger_action_tx: MessengerActionSender<P, A, R>,
         messenger_type: MessengerType<P, A, R>,
     ) -> Self {
@@ -57,62 +57,6 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Builder<P, A
             .ok();
 
         rx.await.map_err(|_| MessageError::Unexpected).and_then(identity)
-    }
-}
-
-/// MessengerFactory is the artifact of creating a MessageHub. It can be used
-/// to create new messengers.
-#[derive(Clone)]
-pub struct MessengerFactory<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
-    role_action_tx: role::ActionSender<R>,
-    messenger_action_tx: MessengerActionSender<P, A, R>,
-}
-
-impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessengerFactory<P, A, R> {
-    pub(super) fn new(
-        action_tx: MessengerActionSender<P, A, R>,
-        role_action_tx: role::ActionSender<R>,
-    ) -> MessengerFactory<P, A, R> {
-        MessengerFactory { messenger_action_tx: action_tx, role_action_tx }
-    }
-
-    /// This method is soft-deprecated for now.
-    // #[deprecated(note = "Please use messenger_builder instead")]
-    pub async fn create_role(&self) -> Result<role::Signature<R>, role::Error> {
-        let (tx, rx) =
-            futures::channel::oneshot::channel::<Result<role::Response<R>, role::Error>>();
-
-        self.role_action_tx.unbounded_send(role::Action::Create(tx)).ok();
-
-        rx.await.unwrap_or(Err(role::Error::CommunicationError)).map(|result| match result {
-            role::Response::Role(signature) => signature,
-        })
-    }
-
-    /// Returns a builder for constructing a new messenger.
-    pub fn messenger_builder(&self, messenger_type: MessengerType<P, A, R>) -> Builder<P, A, R> {
-        Builder::new(self.messenger_action_tx.clone(), messenger_type)
-    }
-
-    pub async fn create(
-        &self,
-        messenger_type: MessengerType<P, A, R>,
-    ) -> CreateMessengerResult<P, A, R> {
-        self.messenger_builder(messenger_type).build().await
-    }
-
-    /// Checks whether a messenger is present at the given [`Signature`]. Note
-    /// that there is no guarantee that the messenger at the given [`Signature`]
-    /// will not be deleted or created after this function returns.
-    #[allow(dead_code)]
-    pub async fn contains(&self, signature: Signature<A>) -> MessengerPresenceResult<A> {
-        let (tx, rx) = futures::channel::oneshot::channel::<MessengerPresenceResult<A>>();
-        self.messenger_action_tx.unbounded_send(MessengerAction::CheckPresence(signature, tx)).ok();
-        rx.await.unwrap_or(Err(MessageError::Unexpected))
-    }
-
-    pub fn delete(&self, signature: Signature<A>) {
-        self.messenger_action_tx.unbounded_send(MessengerAction::DeleteBySignature(signature)).ok();
     }
 }
 

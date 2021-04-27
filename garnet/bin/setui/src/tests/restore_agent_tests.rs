@@ -27,10 +27,10 @@ async fn create_event_environment() -> Arc<Mutex<Option<Receptor>>> {
 
     // Upon environment initialization, the subscriber will capture the event receptor.
     let create_subscriber =
-        Arc::new(move |factory: service::message::Factory| -> BoxFuture<'static, ()> {
+        Arc::new(move |delegate: service::message::Delegate| -> BoxFuture<'static, ()> {
             let event_receptor = receptor_capture.clone();
             Box::pin(async move {
-                *event_receptor.lock().await = Some(service::build_event_listener(&factory).await);
+                *event_receptor.lock().await = Some(service::build_event_listener(&delegate).await);
             })
         });
 

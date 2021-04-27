@@ -399,13 +399,13 @@ mod tests {
     struct TestSettingHandlerBuilder {
         id_to_send: Option<f32>,
         always_fail: bool,
-        messenger_factory: service::message::Factory,
+        delegate: service::message::Delegate,
         setting_type: SettingType,
     }
 
     impl TestSettingHandlerBuilder {
-        fn new(messenger_factory: service::message::Factory, setting_type: SettingType) -> Self {
-            Self { messenger_factory, id_to_send: None, always_fail: false, setting_type }
+        fn new(delegate: service::message::Delegate, setting_type: SettingType) -> Self {
+            Self { delegate, id_to_send: None, always_fail: false, setting_type }
         }
 
         fn set_initial_id(mut self, id: f32) -> Self {
@@ -420,7 +420,7 @@ mod tests {
 
         async fn build(self) -> Arc<Mutex<TestSettingHandler>> {
             TestSettingHandler::create(
-                self.messenger_factory,
+                self.delegate,
                 self.id_to_send,
                 self.always_fail,
                 self.setting_type,
@@ -437,7 +437,7 @@ mod tests {
 
     impl TestSettingHandler {
         async fn create(
-            messenger_factory: service::message::Factory,
+            delegate: service::message::Delegate,
             id_to_send: Option<f32>,
             always_fail: bool,
             setting_type: SettingType,
@@ -448,7 +448,7 @@ mod tests {
                 always_fail: always_fail,
             }));
 
-            let (_, mut receptor) = messenger_factory
+            let (_, mut receptor) = delegate
                 .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
                 .await
                 .expect("messenger should have been created");
@@ -561,16 +561,16 @@ mod tests {
     /// Ensures errors are gracefully handed back by the hanging_get
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_error_resolution() {
-        let messenger_factory = service::message::create_hub();
+        let delegate = service::message::create_hub();
         let setting_type = SettingType::Display;
-        let _ = TestSettingHandlerBuilder::new(messenger_factory.clone(), setting_type)
+        let _ = TestSettingHandlerBuilder::new(delegate.clone(), setting_type)
             .set_always_fail(true)
             .build()
             .await;
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender, String>>> =
             HangingGetHandler::create(
-                messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
+                delegate.create(MessengerType::Unbound).await.unwrap().0,
                 setting_type,
             )
             .await;
@@ -598,18 +598,17 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_change_after_watch() {
-        let messenger_factory = service::message::create_hub();
+        let delegate = service::message::create_hub();
         let setting_type = SettingType::Display;
 
-        let setting_handler_handle =
-            TestSettingHandlerBuilder::new(messenger_factory.clone(), setting_type)
-                .set_initial_id(ID1)
-                .build()
-                .await;
+        let setting_handler_handle = TestSettingHandlerBuilder::new(delegate.clone(), setting_type)
+            .set_initial_id(ID1)
+            .build()
+            .await;
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender, String>>> =
             HangingGetHandler::create(
-                messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
+                delegate.create(MessengerType::Unbound).await.unwrap().0,
                 setting_type,
             )
             .await;
@@ -642,18 +641,17 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_watch_after_change() {
-        let messenger_factory = service::message::create_hub();
+        let delegate = service::message::create_hub();
         let setting_type = SettingType::Display;
 
-        let setting_handler_handle =
-            TestSettingHandlerBuilder::new(messenger_factory.clone(), setting_type)
-                .set_initial_id(ID1)
-                .build()
-                .await;
+        let setting_handler_handle = TestSettingHandlerBuilder::new(delegate.clone(), setting_type)
+            .set_initial_id(ID1)
+            .build()
+            .await;
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender, String>>> =
             HangingGetHandler::create(
-                messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
+                delegate.create(MessengerType::Unbound).await.unwrap().0,
                 setting_type,
             )
             .await;
@@ -686,17 +684,16 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch_with_change_function() {
-        let messenger_factory = service::message::create_hub();
+        let delegate = service::message::create_hub();
         let setting_type = SettingType::Display;
-        let setting_handler_handle =
-            TestSettingHandlerBuilder::new(messenger_factory.clone(), setting_type)
-                .set_initial_id(ID1)
-                .build()
-                .await;
+        let setting_handler_handle = TestSettingHandlerBuilder::new(delegate.clone(), setting_type)
+            .set_initial_id(ID1)
+            .build()
+            .await;
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender, String>>> =
             HangingGetHandler::create(
-                messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
+                delegate.create(MessengerType::Unbound).await.unwrap().0,
                 setting_type,
             )
             .await;
@@ -764,18 +761,17 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_watch_with_change_function_multiple() {
-        let messenger_factory = service::message::create_hub();
+        let delegate = service::message::create_hub();
         let setting_type = SettingType::Display;
 
-        let setting_handler_handle =
-            TestSettingHandlerBuilder::new(messenger_factory.clone(), setting_type)
-                .set_initial_id(ID1)
-                .build()
-                .await;
+        let setting_handler_handle = TestSettingHandlerBuilder::new(delegate.clone(), setting_type)
+            .set_initial_id(ID1)
+            .build()
+            .await;
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender, String>>> =
             HangingGetHandler::create(
-                messenger_factory.create(MessengerType::Unbound).await.unwrap().0,
+                delegate.create(MessengerType::Unbound).await.unwrap().0,
                 setting_type,
             )
             .await;

@@ -596,7 +596,9 @@ pub(super) type CreateMessengerResult<P, A, R> =
 pub(super) type MessengerSender<P, A, R> = Sender<CreateMessengerResult<P, A, R>>;
 
 /// Callback for checking on messenger presence
+#[cfg(test)]
 pub(super) type MessengerPresenceSender<A> = Sender<MessengerPresenceResult<A>>;
+#[cfg(test)]
 pub(super) type MessengerPresenceResult<A> = Result<bool, MessageError<A>>;
 
 /// Type definition for a sender handed by the MessageHub to spawned components
@@ -611,6 +613,7 @@ pub(super) enum MessengerAction<P: Payload + 'static, A: Address + 'static, R: R
         MessengerSender<P, A, R>,
         MessengerActionSender<P, A, R>,
     ),
+    #[cfg(test)]
     /// Check whether a messenger exists for the given [`Signature`]
     CheckPresence(Signature<A>, MessengerPresenceSender<A>),
     /// Deletes a messenger by its [`Signature`]

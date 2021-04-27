@@ -14,7 +14,7 @@ use crate::intl::types::IntlInfo;
 use crate::light::types::LightState;
 use crate::night_mode::types::NightModeInfo;
 use crate::payload_convert;
-use crate::service::message::{Factory, Messenger, Receptor, Signature};
+use crate::service::message::{Delegate, Messenger, Receptor, Signature};
 use crate::service_context::ServiceContext;
 use crate::setup::types::ConfigurationInterfaceFlags;
 
@@ -284,7 +284,7 @@ pub trait SettingHandlerFactory {
     async fn generate(
         &mut self,
         setting_type: SettingType,
-        messenger_factory: Factory,
+        delegate: Delegate,
         notifier_signature: Signature,
     ) -> Result<Signature, SettingHandlerFactoryError>;
 }

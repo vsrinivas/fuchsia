@@ -170,8 +170,8 @@ macro_rules! payload_convert {
 }
 
 #[cfg(test)]
-pub async fn build_event_listener(messenger_factory: &message::Factory) -> message::Receptor {
-    messenger_factory
+pub async fn build_event_listener(delegate: &message::Delegate) -> message::Receptor {
+    delegate
         .messenger_builder(MessengerType::Unbound)
         .add_role(role::Signature::role(Role::Event(event::Role::Sink)))
         .build()

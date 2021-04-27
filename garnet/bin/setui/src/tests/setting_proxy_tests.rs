@@ -157,24 +157,19 @@ impl SettingHandler {
 struct FakeFactory {
     handlers: HashMap<SettingType, service::message::Signature>,
     request_counts: HashMap<SettingType, u64>,
-    messenger_factory: service::message::Factory,
+    delegate: service::message::Delegate,
 }
 
 impl FakeFactory {
-    pub fn new(messenger_factory: service::message::Factory) -> Self {
-        FakeFactory {
-            handlers: HashMap::new(),
-            request_counts: HashMap::new(),
-            messenger_factory: messenger_factory,
-        }
+    pub fn new(delegate: service::message::Delegate) -> Self {
+        FakeFactory { handlers: HashMap::new(), request_counts: HashMap::new(), delegate: delegate }
     }
 
     pub async fn create(
         &mut self,
         setting_type: SettingType,
     ) -> (service::message::Messenger, service::message::Receptor) {
-        let (client, receptor) =
-            self.messenger_factory.create(MessengerType::Unbound).await.unwrap();
+        let (client, receptor) = self.delegate.create(MessengerType::Unbound).await.unwrap();
         self.handlers.insert(setting_type, receptor.get_signature());
 
         (client, receptor)
@@ -194,7 +189,7 @@ impl SettingHandlerFactory for FakeFactory {
     async fn generate(
         &mut self,
         setting_type: SettingType,
-        _: service::message::Factory,
+        _: service::message::Delegate,
         _: service::message::Signature,
     ) -> Result<service::message::Signature, SettingHandlerFactoryError> {
         let existing_count = self.get_request_count(setting_type);
@@ -233,14 +228,14 @@ impl TestEnvironmentBuilder {
     }
 
     pub async fn build(self) -> TestEnvironment {
-        let messenger_factory = service::message::create_hub();
+        let delegate = service::message::create_hub();
 
-        let handler_factory = Arc::new(Mutex::new(FakeFactory::new(messenger_factory.clone())));
+        let handler_factory = Arc::new(Mutex::new(FakeFactory::new(delegate.clone())));
 
         let proxy_handler_signature = SettingProxy::create(
             self.setting_type,
             handler_factory.clone(),
-            messenger_factory.clone(),
+            delegate.clone(),
             SETTING_PROXY_MAX_ATTEMPTS,
             TEARDOWN_TIMEOUT,
             self.timeout.map_or(None, |(duration, _)| Some(duration)),
@@ -249,7 +244,7 @@ impl TestEnvironmentBuilder {
         .await
         .expect("proxy creation should succeed");
 
-        let (service_client, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+        let (service_client, _) = delegate.create(MessengerType::Unbound).await.unwrap();
 
         let (handler_messenger, handler_receptor) =
             handler_factory.lock().await.create(self.setting_type).await;
@@ -270,7 +265,7 @@ impl TestEnvironmentBuilder {
             setting_handler_rx: state_rx,
             setting_handler: handler,
             setting_type: self.setting_type,
-            messenger_factory,
+            delegate,
         }
     }
 }
@@ -282,7 +277,7 @@ pub struct TestEnvironment {
     setting_handler_rx: UnboundedReceiver<State>,
     setting_handler: Arc<Mutex<SettingHandler>>,
     setting_type: SettingType,
-    pub messenger_factory: service::message::Factory,
+    pub delegate: service::message::Delegate,
 }
 
 impl TestEnvironment {
@@ -310,7 +305,7 @@ async fn test_message_hub_presence() {
     let environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
     assert!(environment
-        .messenger_factory
+        .delegate
         .contains(service::message::Signature::Address(service::Address::Handler(setting_type)))
         .await
         .expect("should have result"));
@@ -596,8 +591,7 @@ fn test_retry() {
     async fn run_retries(setting_type: SettingType) -> (TestEnvironment, message::Receptor) {
         let environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
-        let mut event_receptor =
-            service::build_event_listener(&environment.messenger_factory).await;
+        let mut event_receptor = service::build_event_listener(&environment.delegate).await;
 
         // Queue up external failure responses in the handler.
         for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
@@ -749,7 +743,7 @@ async fn test_early_exit() {
     let setting_type = SettingType::Unknown;
     let environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
-    let mut event_receptor = service::build_event_listener(&environment.messenger_factory).await;
+    let mut event_receptor = service::build_event_listener(&environment.delegate).await;
 
     // Queue up external failure responses in the handler.
     for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
@@ -838,8 +832,7 @@ fn test_timeout() {
             .build()
             .await;
 
-        let mut event_receptor =
-            service::build_event_listener(&environment.messenger_factory).await;
+        let mut event_receptor = service::build_event_listener(&environment.delegate).await;
 
         // Queue up to ignore resquests
         for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
@@ -854,7 +847,7 @@ fn test_timeout() {
 
         // Send request.
         let mut receptor = environment
-            .messenger_factory
+            .delegate
             .create(MessengerType::Unbound)
             .await
             .expect("messenger should be created")
@@ -946,8 +939,7 @@ fn test_timeout_no_retry() {
             .build()
             .await;
 
-        let mut event_receptor =
-            service::build_event_listener(&environment.messenger_factory).await;
+        let mut event_receptor = service::build_event_listener(&environment.delegate).await;
 
         // Queue up to ignore resquests
         environment

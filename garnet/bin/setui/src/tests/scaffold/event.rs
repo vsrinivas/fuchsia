@@ -8,7 +8,7 @@ pub mod subscriber {
     use futures::future::BoxFuture;
     use std::sync::Arc;
 
-    type Generate = Arc<dyn Fn(service::message::Factory) -> BoxFuture<'static, ()> + Send + Sync>;
+    type Generate = Arc<dyn Fn(service::message::Delegate) -> BoxFuture<'static, ()> + Send + Sync>;
 
     /// This blueprint provides a way for tests to specify an asynchronous
     /// closure as the create function for an event subscriber.
@@ -23,8 +23,8 @@ pub mod subscriber {
     }
 
     impl event::subscriber::Blueprint for Blueprint {
-        fn create(&self, message_factory: service::message::Factory) -> BoxFuture<'static, ()> {
-            (self.generate)(message_factory)
+        fn create(&self, delegate: service::message::Delegate) -> BoxFuture<'static, ()> {
+            (self.generate)(delegate)
         }
     }
 }

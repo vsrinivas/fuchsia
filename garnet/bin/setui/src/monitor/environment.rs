@@ -25,7 +25,7 @@ use crate::service;
 /// surrounding monitoring, such as the resource monitors.
 #[derive(Clone)]
 pub struct Actor {
-    messenger_factory: service::message::Factory,
+    delegate: service::message::Delegate,
     monitors: Vec<base_monitor::Generate>,
 }
 
@@ -35,7 +35,7 @@ impl Actor {
     pub async fn start_monitoring(&self) -> Result<service::message::TargetedMessenger, Error> {
         // Create unbound, broadcasting messenger to send messages to the monitors.
         let monitor_messenger = service::message::TargetedMessenger::new(
-            self.messenger_factory
+            self.delegate
                 .create(MessengerType::Unbound)
                 .await
                 .map_err(|_| {
@@ -48,7 +48,7 @@ impl Actor {
         // Bring up each monitor.
         for monitor in &self.monitors {
             let (_, monitor_receptor) =
-                self.messenger_factory.create(MessengerType::Unbound).await.map_err(|_| {
+                self.delegate.create(MessengerType::Unbound).await.map_err(|_| {
                     Error::MessageSetupFailure("could not create monitor receptor".into())
                 })?;
 
@@ -82,7 +82,7 @@ impl Builder {
 
     /// Constructs the configuration.
     pub fn build(self) -> Actor {
-        let monitor_messenger_factory = service::message::create_hub();
-        Actor { messenger_factory: monitor_messenger_factory, monitors: self.monitors }
+        let monitor_delegate = service::message::create_hub();
+        Actor { delegate: monitor_delegate, monitors: self.monitors }
     }
 }

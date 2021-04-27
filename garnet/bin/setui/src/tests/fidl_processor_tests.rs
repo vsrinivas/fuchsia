@@ -58,11 +58,9 @@ async fn create_processor(
 ) -> PrivacyProxy {
     let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<PrivacyMarker>().unwrap();
 
-    let service_messenger_factory = service::message::create_hub();
-    let (service_messenger, _) = service_messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("should create messenger");
+    let service_delegate = service::message::create_hub();
+    let (service_messenger, _) =
+        service_delegate.create(MessengerType::Unbound).await.expect("should create messenger");
 
     let fidl_processor = BaseFidlProcessor::<PrivacyMarker>::with_processing_units(
         stream,

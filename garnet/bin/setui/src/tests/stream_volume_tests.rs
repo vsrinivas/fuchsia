@@ -29,11 +29,11 @@ async fn create_service() -> Arc<Mutex<ServiceRegistry>> {
 // Tests that the volume event stream thread exits when the StreamVolumeControl is deleted.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_drop_thread() {
-    let messenger_factory = service::message::create_hub();
+    let delegate = service::message::create_hub();
 
-    let mut receptor = service::build_event_listener(&messenger_factory).await;
+    let mut receptor = service::build_event_listener(&delegate).await;
 
-    let publisher = event::Publisher::create(&messenger_factory, MessengerType::Unbound).await;
+    let publisher = event::Publisher::create(&delegate, MessengerType::Unbound).await;
 
     let service_context =
         ServiceContext::new(Some(ServiceRegistry::serve(create_service().await)), None);

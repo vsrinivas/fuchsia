@@ -97,7 +97,7 @@ pub type BlueprintHandle = Arc<dyn Blueprint + Send + Sync>;
 pub struct Context {
     pub receptor: Receptor,
     publisher: event::Publisher,
-    pub messenger_factory: service::message::Factory,
+    pub delegate: service::message::Delegate,
     pub available_components: HashSet<SettingType>,
     pub resource_monitor_actor: Option<monitor::environment::Actor>,
 }
@@ -105,18 +105,12 @@ pub struct Context {
 impl Context {
     pub async fn new(
         receptor: Receptor,
-        messenger_factory: service::message::Factory,
+        delegate: service::message::Delegate,
         available_components: HashSet<SettingType>,
         resource_monitor_actor: Option<monitor::environment::Actor>,
     ) -> Self {
-        let publisher = event::Publisher::create(&messenger_factory, MessengerType::Unbound).await;
-        Self {
-            receptor,
-            publisher,
-            messenger_factory,
-            available_components,
-            resource_monitor_actor,
-        }
+        let publisher = event::Publisher::create(&delegate, MessengerType::Unbound).await;
+        Self { receptor, publisher, delegate, available_components, resource_monitor_actor }
     }
 
     /// Generates a new `Messenger` on the service `MessageHub`. Only
@@ -125,7 +119,7 @@ impl Context {
     pub async fn create_messenger(
         &self,
     ) -> Result<service::message::Messenger, service::message::MessageError> {
-        Ok(self.messenger_factory.create(MessengerType::Unbound).await?.0)
+        Ok(self.delegate.create(MessengerType::Unbound).await?.0)
     }
 
     pub fn get_publisher(&self) -> event::Publisher {

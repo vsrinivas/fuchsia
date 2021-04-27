@@ -19,7 +19,7 @@ pub struct Authority {
     // A mapping of agent addresses
     agent_signatures: Vec<service::message::Signature>,
     // Factory passed to agents for communicating with the service.
-    messenger_factory: service::message::Factory,
+    delegate: service::message::Delegate,
     // Messenger
     messenger: service::message::Messenger,
     // Available components
@@ -30,18 +30,18 @@ pub struct Authority {
 
 impl Authority {
     pub async fn create(
-        messenger_factory: service::message::Factory,
+        delegate: service::message::Delegate,
         available_components: HashSet<SettingType>,
         resource_monitor_actor: Option<monitor::environment::Actor>,
     ) -> Result<Authority, Error> {
-        let (client, _) = messenger_factory
+        let (client, _) = delegate
             .create(MessengerType::Unbound)
             .await
             .map_err(|_| anyhow::format_err!("could not create agent messenger for authority"))?;
 
         return Ok(Authority {
             agent_signatures: Vec::new(),
-            messenger_factory,
+            delegate,
             messenger: client,
             available_components,
             resource_monitor_actor,
@@ -50,7 +50,7 @@ impl Authority {
 
     pub async fn register(&mut self, blueprint: BlueprintHandle) {
         let agent_receptor = self
-            .messenger_factory
+            .delegate
             .create(MessengerType::Unbound)
             .await
             .expect("agent receptor should be created")
@@ -60,7 +60,7 @@ impl Authority {
             .create(
                 Context::new(
                     agent_receptor,
-                    self.messenger_factory.clone(),
+                    self.delegate.clone(),
                     self.available_components.clone(),
                     self.resource_monitor_actor.clone(),
                 )

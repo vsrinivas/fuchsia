@@ -41,11 +41,11 @@ macro_rules! fidl_process_full {
             use ::futures::FutureExt;
 
             pub fn spawn (
-                service_messenger_factory: service::message::Factory,
+                delegate: service::message::Delegate,
                 stream: paste::paste!{[<$interface RequestStream>]}
             ) {
                 fasync::Task::local(async move {
-                    let service_messenger = service_messenger_factory
+                    let service_messenger = delegate
                         .create(MessengerType::Unbound)
                         .await.expect("service messenger should be created")
                         .0;
@@ -99,11 +99,11 @@ macro_rules! fidl_process_policy {
             use fuchsia_async as fasync;
 
             pub fn spawn(
-                messenger_factory: service::message::Factory,
+                delegate: service::message::Delegate,
                 stream: paste::paste! {[<$interface RequestStream>]},
             ) {
                 fasync::Task::local(async move {
-                    let service_messenger = messenger_factory
+                    let service_messenger = delegate
                         .create(MessengerType::Unbound)
                         .await
                         .expect("service messenger should be created")

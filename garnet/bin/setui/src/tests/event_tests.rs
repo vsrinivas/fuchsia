@@ -20,22 +20,22 @@ const ENV_NAME: &str = "settings_service_event_test_environment";
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_agent_event_propagation() {
     let agent_publisher: Arc<Mutex<Option<event::Publisher>>> = Arc::new(Mutex::new(None));
-    let event_factory: Arc<Mutex<Option<service::message::Factory>>> = Arc::new(Mutex::new(None));
+    let delegate: Arc<Mutex<Option<service::message::Delegate>>> = Arc::new(Mutex::new(None));
 
     // Capturing the context allows retrieving the publisher meant for the
     // agent.
     let publisher_capture = agent_publisher.clone();
 
-    // Capturing the factory allows registering a listener to published events.
-    let event_factory_capture = event_factory.clone();
+    // Capturing the delegate allows registering a listener to published events.
+    let cloned_delegate = delegate.clone();
 
     // Upon instantiation, the subscriber will capture the event message
-    // factory.
+    // delegate.
     let create_subscriber =
-        Arc::new(move |factory: service::message::Factory| -> BoxFuture<'static, ()> {
-            let event_factory = event_factory_capture.clone();
+        Arc::new(move |captured_delegate: service::message::Delegate| -> BoxFuture<'static, ()> {
+            let delegate = cloned_delegate.clone();
             Box::pin(async move {
-                *event_factory.lock().await = Some(factory);
+                *delegate.lock().await = Some(captured_delegate);
             })
         });
 
@@ -71,9 +71,9 @@ async fn test_agent_event_propagation() {
         .await
         .unwrap();
 
-    let factory =
-        event_factory.clone().lock().await.take().expect("Should have captured event factory");
-    let mut receptor = service::build_event_listener(&factory).await;
+    let service_delegate =
+        delegate.clone().lock().await.take().expect("Should have captured event factory");
+    let mut receptor = service::build_event_listener(&service_delegate).await;
 
     let sent_event = event::Event::Custom("test");
 

@@ -32,12 +32,12 @@ blueprint_definition!("test_agent", TestAgent::create);
 // a message sent on the message hub returned from environment creation is received by
 // other components attached to the message hub.
 pub struct TestAgent {
-    messenger_factory: service::message::Factory,
+    delegate: service::message::Delegate,
 }
 
 impl TestAgent {
     async fn create(mut context: Context) {
-        let mut agent = TestAgent { messenger_factory: context.messenger_factory.clone() };
+        let mut agent = TestAgent { delegate: context.delegate.clone() };
 
         fasync::Task::spawn(async move {
             while let Ok((AgentPayload::Invocation(invocation), client)) =
@@ -64,7 +64,7 @@ impl TestAgent {
         _service_context: Arc<ServiceContext>,
     ) -> InvocationResult {
         let (_, mut receptor) = self
-            .messenger_factory
+            .delegate
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message| {
                     matches!(
@@ -106,7 +106,7 @@ async fn test_message_hub() {
         Arc::new(Mutex::new(InputDeviceRegistryService::new()));
     service_registry.lock().await.register_service(input_device_registry_service_handle.clone());
 
-    let Environment { nested_environment: _, messenger_factory, .. } =
+    let Environment { nested_environment: _, delegate, .. } =
         EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
             .service(ServiceRegistry::serve(service_registry))
             .agents(&[blueprint::create()])
@@ -116,7 +116,7 @@ async fn test_message_hub() {
             .unwrap();
 
     // Send message for TestAgent to receive.
-    let (messenger, _) = messenger_factory
+    let (messenger, _) = delegate
         .messenger_builder(MessengerType::Unbound)
         .build()
         .await

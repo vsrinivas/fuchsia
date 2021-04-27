@@ -179,16 +179,17 @@ async fn create_environment(
         initial_audio_info.replace_stream(AudioStream::from(stream));
     }
 
-    let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<service::message::Factory>();
+    let (event_tx, mut event_rx) =
+        futures::channel::mpsc::unbounded::<service::message::Delegate>();
     let storage_factory = Arc::new(InMemoryStorageFactory::with_initial_data(&initial_audio_info));
 
     // Upon instantiation, the subscriber will capture the event message
     // factory.
     let create_subscriber =
-        Arc::new(move |factory: service::message::Factory| -> BoxFuture<'static, ()> {
+        Arc::new(move |delegate: service::message::Delegate| -> BoxFuture<'static, ()> {
             let event_tx = event_tx.clone();
             Box::pin(async move {
-                event_tx.unbounded_send(factory).ok();
+                event_tx.unbounded_send(delegate).ok();
             })
         });
 
@@ -205,9 +206,9 @@ async fn create_environment(
         .await
         .unwrap();
 
-    let event_factory = event_rx.next().await.expect("should return a factory");
+    let delegate = event_rx.next().await.expect("should return a factory");
 
-    let (_, receptor) = event_factory
+    let (_, receptor) = delegate
         .create(MessengerType::Unbound)
         .await
         .expect("Should be able to retrieve messenger for publisher");

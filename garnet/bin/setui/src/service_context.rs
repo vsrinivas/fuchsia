@@ -24,22 +24,22 @@ pub type GenerateService =
 /// environment.
 pub struct ServiceContext {
     generate_service: Option<GenerateService>,
-    messenger_factory: Option<service::message::Factory>,
+    delegate: Option<service::message::Delegate>,
 }
 
 impl ServiceContext {
     pub fn new(
         generate_service: Option<GenerateService>,
-        messenger_factory: Option<service::message::Factory>,
+        delegate: Option<service::message::Delegate>,
     ) -> Self {
-        Self { generate_service, messenger_factory }
+        Self { generate_service, delegate }
     }
 
     async fn make_publisher(&self) -> Option<Publisher> {
         let maybe: OptionFuture<_> = self
-            .messenger_factory
+            .delegate
             .as_ref()
-            .map(|factory| Publisher::create(factory, MessengerType::Unbound))
+            .map(|delegate| Publisher::create(delegate, MessengerType::Unbound))
             .into();
         maybe.await
     }

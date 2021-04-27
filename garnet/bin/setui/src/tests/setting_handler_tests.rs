@@ -121,10 +121,10 @@ async fn test_spawn() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_write_notify() {
-    let factory = service::message::create_hub();
+    let delegate = service::message::create_hub();
     let (handler_messenger, handler_receptor) =
-        factory.create(MessengerType::Unbound).await.unwrap();
-    let signature = factory
+        delegate.create(MessengerType::Unbound).await.unwrap();
+    let signature = delegate
         .create(MessengerType::Unbound)
         .await
         .expect("messenger should be created")
@@ -134,12 +134,12 @@ async fn test_write_notify() {
     let storage_factory = Arc::new(InMemoryStorageFactory::new());
     storage_factory.initialize_storage::<AccessibilityInfo>().await;
 
-    let (invocation_messenger, _) = factory.create(MessengerType::Unbound).await.unwrap();
-    let (_, agent_receptor) = factory.create(MessengerType::Unbound).await.unwrap();
+    let (invocation_messenger, _) = delegate.create(MessengerType::Unbound).await.unwrap();
+    let (_, agent_receptor) = delegate.create(MessengerType::Unbound).await.unwrap();
     let agent_receptor_signature = agent_receptor.get_signature();
     let agent_context = crate::agent::Context::new(
         agent_receptor,
-        factory,
+        delegate,
         {
             let mut settings = HashSet::new();
             settings.insert(SettingType::Accessibility);
@@ -301,14 +301,14 @@ impl controller::Handle for BlankController {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_event_propagation() {
-    let factory = service::message::create_hub();
+    let delegate = service::message::create_hub();
     let setting_type = SettingType::Unknown;
 
-    let (messenger, receptor) = factory.create(MessengerType::Unbound).await.unwrap();
+    let (messenger, receptor) = delegate.create(MessengerType::Unbound).await.unwrap();
     let (event_tx, mut event_rx) = unbounded::<State>();
     let (invocations_tx, _invocations_rx) = unbounded::<HashMap<State, u8>>();
     let (handler_messenger, handler_receptor) =
-        factory.create(MessengerType::Unbound).await.unwrap();
+        delegate.create(MessengerType::Unbound).await.unwrap();
     let signature = handler_receptor.get_signature();
     let context = ContextBuilder::new(
         setting_type,
@@ -367,24 +367,24 @@ async fn test_event_propagation() {
     assert_eq!(Some(State::Teardown), event_rx.next().await);
 
     // Deleting the signature of the messenger ensures the client event loop is stopped.
-    factory.delete(signature);
+    delegate.delete(signature);
 
     assert_eq!(None, event_rx.next().await);
 }
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_rebroadcast() {
-    let factory = service::message::create_hub();
+    let delegate = service::message::create_hub();
     let setting_type = SettingType::Unknown;
 
     // This messenger represents the outside client for the setting controller, which would be
     // the setting proxy in most cases.
-    let (messenger, mut receptor) = factory.create(MessengerType::Unbound).await.unwrap();
+    let (messenger, mut receptor) = delegate.create(MessengerType::Unbound).await.unwrap();
 
     // The handler messenger is handed to controllers to communicate with the wrapping handler
     // logic, which listens on counterpart receptor.
     let (handler_messenger, handler_receptor) =
-        factory.create(MessengerType::Unbound).await.unwrap();
+        delegate.create(MessengerType::Unbound).await.unwrap();
 
     let signature = handler_receptor.get_signature();
 
@@ -434,14 +434,14 @@ async fn test_rebroadcast() {
 
 // Test that the controller state is entered [n] times.
 async fn verify_controller_state(state: State, n: u8) {
-    let factory = service::message::create_hub();
+    let delegate = service::message::create_hub();
     let setting_type = SettingType::Audio;
 
-    let (messenger, receptor) = factory.create(MessengerType::Unbound).await.unwrap();
+    let (messenger, receptor) = delegate.create(MessengerType::Unbound).await.unwrap();
     let (event_tx, mut event_rx) = unbounded::<State>();
     let (invocations_tx, mut invocations_rx) = unbounded::<HashMap<State, u8>>();
     let (handler_messenger, handler_receptor) =
-        factory.create(MessengerType::Unbound).await.unwrap();
+        delegate.create(MessengerType::Unbound).await.unwrap();
     let signature = handler_receptor.get_signature();
     let context = ContextBuilder::new(
         setting_type,
@@ -538,11 +538,11 @@ impl controller::Handle for StubController {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_unimplemented_error() {
     for setting_type in get_all_setting_types() {
-        let factory = service::message::create_hub();
+        let delegate = service::message::create_hub();
 
-        let (messenger, receptor) = factory.create(MessengerType::Unbound).await.unwrap();
+        let (messenger, receptor) = delegate.create(MessengerType::Unbound).await.unwrap();
         let (handler_messenger, handler_receptor) =
-            factory.create(MessengerType::Unbound).await.unwrap();
+            delegate.create(MessengerType::Unbound).await.unwrap();
         let signature = handler_receptor.get_signature();
         let context = ContextBuilder::new(
             setting_type,

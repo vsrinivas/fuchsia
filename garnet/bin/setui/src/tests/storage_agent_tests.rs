@@ -22,7 +22,7 @@ impl DeviceStorageAccess for TestAccess {
     const STORAGE_KEYS: &'static [&'static str] = &[UnknownInfo::KEY];
 }
 
-async fn create_test_environment() -> (service::message::Factory, Arc<DeviceStorage>) {
+async fn create_test_environment() -> (service::message::Delegate, Arc<DeviceStorage>) {
     let storage_factory = Arc::new(InMemoryStorageFactory::new());
     storage_factory
         .initialize::<TestAccess>()
@@ -35,17 +35,15 @@ async fn create_test_environment() -> (service::message::Factory, Arc<DeviceStor
         .unwrap();
     let store = storage_factory.get_store().await;
     store.write(&UnknownInfo(ORIGINAL_VALUE), true).await.expect("Write should succeed");
-    (env.messenger_factory, store)
+    (env.delegate, store)
 }
 
 // Assert that we can read values by sending messages to the storage agent and receive a response.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_read() {
-    let (messenger_factory, _) = create_test_environment().await;
-    let (messenger, _) = messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("should be able to get messenger");
+    let (delegate, _) = create_test_environment().await;
+    let (messenger, _) =
+        delegate.create(MessengerType::Unbound).await.expect("should be able to get messenger");
     let mut receptor = messenger
         .message(
             service::Payload::Storage(Payload::Request(StorageRequest::Read(SettingType::Unknown))),
@@ -64,13 +62,13 @@ async fn test_read() {
 async fn test_write() {
     const CHANGED_VALUE: bool = false;
 
-    let (service_messenger_factory, store) = create_test_environment().await;
+    let (service_delegate, store) = create_test_environment().await;
 
     // Validate original value before the write request.
     let UnknownInfo(value) = store.get::<UnknownInfo>().await;
     assert_eq!(ORIGINAL_VALUE, value);
 
-    let (messenger, _) = service_messenger_factory
+    let (messenger, _) = service_delegate
         .create(MessengerType::Unbound)
         .await
         .expect("should be able to get messenger");

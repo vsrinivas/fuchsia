@@ -119,7 +119,7 @@ impl InspectAgent {
 
     pub async fn create_with_node(context: Context, node: inspect::Node) {
         let (_, message_rx) = context
-            .messenger_factory
+            .delegate
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message| {
                     // Only catch setting handler requests.
@@ -234,22 +234,19 @@ mod tests {
     /// From caller to recipient. This is useful when testing brokers in
     /// between.
     struct RequestProcessor {
-        messenger_factory: service::message::Factory,
+        delegate: service::message::Delegate,
     }
 
     impl RequestProcessor {
-        fn new(messenger_factory: service::message::Factory) -> Self {
-            RequestProcessor { messenger_factory }
+        fn new(delegate: service::message::Delegate) -> Self {
+            RequestProcessor { delegate }
         }
 
         async fn send_and_receive(&self, setting_type: SettingType, setting_request: Request) {
-            let (messenger, _) = self
-                .messenger_factory
-                .create(MessengerType::Unbound)
-                .await
-                .expect("should be created");
+            let (messenger, _) =
+                self.delegate.create(MessengerType::Unbound).await.expect("should be created");
             let (_, mut receptor) = self
-                .messenger_factory
+                .delegate
                 .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
                 .await
                 .expect("should be created");
@@ -289,7 +286,7 @@ mod tests {
         let inspect_node = inspector.root().create_child("switchboard");
         let context = create_context().await;
 
-        let request_processor = RequestProcessor::new(context.messenger_factory.clone());
+        let request_processor = RequestProcessor::new(context.delegate.clone());
 
         InspectAgent::create_with_node(context, inspect_node).await;
 
@@ -369,7 +366,7 @@ mod tests {
         let inspect_node = inspector.root().create_child("switchboard");
         let context = create_context().await;
 
-        let request_processor = RequestProcessor::new(context.messenger_factory.clone());
+        let request_processor = RequestProcessor::new(context.delegate.clone());
 
         let _agent = InspectAgent::create_with_node(context, inspect_node).await;
 
@@ -447,7 +444,7 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("switchboard");
         let context = create_context().await;
-        let request_processor = RequestProcessor::new(context.messenger_factory.clone());
+        let request_processor = RequestProcessor::new(context.delegate.clone());
 
         let _agent = InspectAgent::create_with_node(context, inspect_node).await;
 

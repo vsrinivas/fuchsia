@@ -211,7 +211,7 @@ async fn test_policy_messages_passed_to_handler() {
     let policy_request = policy_base::Request::Get;
     let policy_payload = policy_base::response::Payload::PolicyInfo(UnknownInfo(true).into());
 
-    let service_messenger_factory = service::message::create_hub();
+    let service_delegate = service::message::create_hub();
     // Initialize the policy proxy and a messenger to communicate with it.
     PolicyProxy::create(
         POLICY_TYPE,
@@ -219,15 +219,13 @@ async fn test_policy_messages_passed_to_handler() {
             InMemoryStorageFactory::new(),
             FakePolicyHandlerBuilder::new().set_policy_response(Ok(policy_payload.clone())).build(),
         ),
-        service_messenger_factory.clone(),
+        service_delegate.clone(),
     )
     .await
     .ok();
 
-    let (policy_messenger, _) = service_messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("policy messenger created");
+    let (policy_messenger, _) =
+        service_delegate.create(MessengerType::Unbound).await.expect("policy messenger created");
 
     // Send a policy request to the policy proxy.
     let mut policy_send_receptor = policy_messenger
@@ -251,8 +249,8 @@ async fn test_policy_messages_passed_to_handler() {
 /// continue on to its intended destination without interference.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_message_pass_through() {
-    let messenger_factory = service::message::create_hub();
-    let (_, mut setting_proxy_receptor) = messenger_factory
+    let delegate = service::message::create_hub();
+    let (_, mut setting_proxy_receptor) = delegate
         .create(MessengerType::Addressable(service::Address::Handler(SETTING_TYPE)))
         .await
         .expect("setting_proxy created");
@@ -263,14 +261,13 @@ async fn test_setting_message_pass_through() {
             InMemoryStorageFactory::new(),
             FakePolicyHandlerBuilder::new().build(),
         ),
-        messenger_factory.clone(),
+        delegate.clone(),
     )
     .await
     .ok();
 
     // Create a messenger that represents the setting caller.
-    let (messenger, _) =
-        messenger_factory.create(MessengerType::Unbound).await.expect("messenger created");
+    let (messenger, _) = delegate.create(MessengerType::Unbound).await.expect("messenger created");
 
     // Send a setting request to the setting handler.
     let mut settings_send_receptor = messenger
@@ -306,9 +303,9 @@ async fn test_setting_message_pass_through() {
 /// given result is provided back to the requestor without reaching the setting handler.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_message_result_replacement() {
-    let messenger_factory = service::message::create_hub();
+    let delegate = service::message::create_hub();
 
-    let (_, mut setting_proxy_receptor) = messenger_factory
+    let (_, mut setting_proxy_receptor) = delegate
         .create(MessengerType::Addressable(service::Address::Handler(SETTING_TYPE)))
         .await
         .expect("setting_proxy created");
@@ -326,7 +323,7 @@ async fn test_setting_message_result_replacement() {
                 )
                 .build(),
         ),
-        messenger_factory.clone(),
+        delegate.clone(),
     )
     .await
     .ok();
@@ -335,8 +332,7 @@ async fn test_setting_message_result_replacement() {
     let setting_handler_address = service::Address::Handler(SETTING_TYPE);
 
     // Create a messenger that represents an outside caller.
-    let (messenger, _) =
-        messenger_factory.create(MessengerType::Unbound).await.expect("messenger created");
+    let (messenger, _) = delegate.create(MessengerType::Unbound).await.expect("messenger created");
 
     // Send a setting request from the requestor to the setting handler.
     let mut settings_send_receptor = messenger
@@ -351,7 +347,7 @@ async fn test_setting_message_result_replacement() {
     // and wait for it to be received. Since messages are delivered in-order, if the setting handler
     // received the original message, this will fail.
     let (test_messenger, _) =
-        messenger_factory.create(MessengerType::Unbound).await.expect("messenger created");
+        delegate.create(MessengerType::Unbound).await.expect("messenger created");
 
     test_messenger
         .message(
@@ -390,11 +386,11 @@ async fn test_setting_message_payload_replacement() {
     let setting_request_2 = Request::Restore;
     let setting_request_2_payload = Payload::Request(setting_request_2.clone());
 
-    let messenger_factory = service::message::create_hub();
+    let delegate = service::message::create_hub();
 
     let setting_handler_address = service::Address::Handler(SETTING_TYPE);
 
-    let (_, mut setting_proxy_receptor) = messenger_factory
+    let (_, mut setting_proxy_receptor) = delegate
         .create(MessengerType::Addressable(setting_handler_address.clone()))
         .await
         .expect("setting proxy messenger created");
@@ -408,14 +404,13 @@ async fn test_setting_message_payload_replacement() {
                 .set_request_transform(RequestTransform::Request(setting_request_2))
                 .build(),
         ),
-        messenger_factory.clone(),
+        delegate.clone(),
     )
     .await
     .ok();
 
     // Create a messenger that represents the client.
-    let (messenger, _) =
-        messenger_factory.create(MessengerType::Unbound).await.expect("messenger created");
+    let (messenger, _) = delegate.create(MessengerType::Unbound).await.expect("messenger created");
 
     // Send a setting request from the client to the setting handler.
     let mut settings_send_receptor = messenger
@@ -447,9 +442,9 @@ async fn test_setting_message_payload_replacement() {
 /// continue on to its intended destination without interference.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_response_pass_through() {
-    let messenger_factory = service::message::create_hub();
+    let delegate = service::message::create_hub();
 
-    let (setting_proxy_messenger, _) = messenger_factory
+    let (setting_proxy_messenger, _) = delegate
         .create(MessengerType::Addressable(service::Address::Handler(SETTING_TYPE)))
         .await
         .expect("setting proxy messenger created");
@@ -460,14 +455,14 @@ async fn test_setting_response_pass_through() {
             InMemoryStorageFactory::new(),
             FakePolicyHandlerBuilder::new().build(),
         ),
-        messenger_factory.clone(),
+        delegate.clone(),
     )
     .await
     .ok();
 
     // Create a messenger that represents the client.
     let (_, mut receptor) =
-        messenger_factory.create(MessengerType::Unbound).await.expect("messenger created");
+        delegate.create(MessengerType::Unbound).await.expect("messenger created");
 
     // Send a setting event from the setting proxy to the client.
     setting_proxy_messenger
@@ -483,8 +478,8 @@ async fn test_setting_response_pass_through() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_response_replace() {
-    let messenger_factory = service::message::create_hub();
-    let (setting_proxy_messenger, _) = messenger_factory
+    let delegate = service::message::create_hub();
+    let (setting_proxy_messenger, _) = delegate
         .create(MessengerType::Addressable(service::Address::Handler(SETTING_TYPE)))
         .await
         .expect("setting proxy messenger created");
@@ -500,14 +495,14 @@ async fn test_setting_response_replace() {
                 )
                 .build(),
         ),
-        messenger_factory.clone(),
+        delegate.clone(),
     )
     .await
     .ok();
 
     // Create a messenger that represents the client.
     let (_, mut receptor) =
-        messenger_factory.create(MessengerType::Unbound).await.expect("messenger created");
+        delegate.create(MessengerType::Unbound).await.expect("messenger created");
 
     // Send a setting request from the setting proxy to the client.
     setting_proxy_messenger
@@ -533,9 +528,9 @@ async fn test_multiple_messages() {
     let policy_request = policy_base::Request::Get;
     let policy_payload = policy_base::response::Payload::PolicyInfo(UnknownInfo(true).into());
 
-    let messenger_factory = service::message::create_hub();
+    let delegate = service::message::create_hub();
 
-    let (_, _setting_proxy_receptor) = messenger_factory
+    let (_, _setting_proxy_receptor) = delegate
         .create(MessengerType::Addressable(service::Address::Handler(SETTING_TYPE)))
         .await
         .expect("setting proxy messenger created");
@@ -553,18 +548,17 @@ async fn test_multiple_messages() {
                 )
                 .build(),
         ),
-        messenger_factory.clone(),
+        delegate.clone(),
     )
     .await
     .ok();
 
     // Create a messenger for sending messages directly to the policy proxy.
     let (policy_messenger, _) =
-        messenger_factory.create(MessengerType::Unbound).await.expect("policy messenger created");
+        delegate.create(MessengerType::Unbound).await.expect("policy messenger created");
 
     // Create a messenger that represents the client.
-    let (messenger, _) =
-        messenger_factory.create(MessengerType::Unbound).await.expect("messenger created");
+    let (messenger, _) = delegate.create(MessengerType::Unbound).await.expect("messenger created");
 
     // Send a few requests to the policy proxy.
     for _ in 0..3 {

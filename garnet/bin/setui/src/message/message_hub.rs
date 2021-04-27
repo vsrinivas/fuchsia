@@ -10,7 +10,8 @@ use crate::message::base::{
     MessengerId, MessengerType, Payload, Role, Signature, Status,
 };
 use crate::message::beacon::{Beacon, BeaconBuilder};
-use crate::message::messenger::{Messenger, MessengerClient, MessengerFactory};
+use crate::message::delegate::Delegate;
+use crate::message::messenger::{Messenger, MessengerClient};
 use anyhow::format_err;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
@@ -89,7 +90,7 @@ pub struct MessageHub<P: Payload + 'static, A: Address + 'static, R: Role + 'sta
 
 impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P, A, R> {
     /// Returns a new MessageHub for the given types.
-    pub fn create(fuse: Option<ActionFuseHandle>) -> MessengerFactory<P, A, R> {
+    pub fn create(fuse: Option<ActionFuseHandle>) -> Delegate<P, A, R> {
         let (action_tx, mut action_rx) = futures::channel::mpsc::unbounded::<(
             Fingerprint<A>,
             MessageAction<P, A, R>,
@@ -155,7 +156,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
         })
         .detach();
 
-        MessengerFactory::new(messenger_tx, role_tx)
+        Delegate::new(messenger_tx, role_tx)
     }
 
     fn check_exit(&self) {
@@ -492,6 +493,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
 
                 responder.send(Ok((MessengerClient::new(messenger, fuse), receptor))).ok();
             }
+            #[cfg(test)]
             MessengerAction::CheckPresence(signature, responder) => {
                 responder.send(Ok(self.resolve_messenger_id(&signature).is_ok())).ok();
             }

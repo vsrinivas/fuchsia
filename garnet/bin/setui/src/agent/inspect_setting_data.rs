@@ -91,7 +91,7 @@ impl InspectSettingAgent {
         let inspector = custom_inspector.unwrap_or_else(|| component::inspector());
 
         let (messenger_client, receptor) = match context
-            .messenger_factory
+            .delegate
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message| {
                     // Only catch messages that were originally sent from the interfaces, and
@@ -261,11 +261,11 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child(INSPECT_NODE_NAME);
         let context = create_context().await;
-        let messenger_factory = context.messenger_factory.clone();
+        let delegate = context.delegate.clone();
         let agent_signature = context.receptor.get_signature();
 
         let (_, mut setting_proxy_receptor) = context
-            .messenger_factory
+            .delegate
             .create(MessengerType::Addressable(service::Address::Handler(SettingType::Unknown)))
             .await
             .expect("should create proxy");
@@ -282,7 +282,7 @@ mod tests {
         });
 
         // Message service lifespan to agent.
-        messenger_factory
+        delegate
             .create(MessengerType::Unbound)
             .await
             .expect("should create messenger")
@@ -337,13 +337,10 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child(INSPECT_NODE_NAME);
         let context = create_context().await;
-        let messenger_factory = context.messenger_factory.clone();
+        let delegate = context.delegate.clone();
 
-        let mut proxy_receptor = messenger_factory
-            .create(MessengerType::Unbound)
-            .await
-            .expect("should create proxy messenger")
-            .1;
+        let mut proxy_receptor =
+            delegate.create(MessengerType::Unbound).await.expect("should create proxy messenger").1;
 
         InspectSettingAgent::create_with_node(context, inspect_node, Some(&inspector)).await;
 
@@ -357,7 +354,7 @@ mod tests {
         });
 
         // Setting handler notifies proxy of setting changed.
-        messenger_factory
+        delegate
             .create(MessengerType::Unbound)
             .await
             .expect("seting handler should be created")

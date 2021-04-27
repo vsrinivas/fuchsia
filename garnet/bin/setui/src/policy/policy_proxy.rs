@@ -31,10 +31,10 @@ impl PolicyProxy {
     pub async fn create(
         policy_type: PolicyType,
         handler_factory: Arc<Mutex<dyn PolicyHandlerFactory + Send + Sync>>,
-        messenger_factory: service::message::Factory,
+        delegate: service::message::Delegate,
     ) -> Result<(), Error> {
         let (handler_messenger, receptor) =
-            messenger_factory.create(MessengerType::Unbound).await.map_err(Error::new)?;
+            delegate.create(MessengerType::Unbound).await.map_err(Error::new)?;
 
         let setting_type = policy_type.setting_type();
 
@@ -85,9 +85,9 @@ impl PolicyProxy {
         .build();
 
         let (_, service_proxy_receptor) =
-            messenger_factory.create(MessengerType::Broker(Some(service_proxy_filter))).await?;
+            delegate.create(MessengerType::Broker(Some(service_proxy_filter))).await?;
 
-        let (_, service_policy_receptor) = messenger_factory
+        let (_, service_policy_receptor) = delegate
             .messenger_builder(MessengerType::Addressable(service::Address::PolicyHandler(
                 policy_type,
             )))

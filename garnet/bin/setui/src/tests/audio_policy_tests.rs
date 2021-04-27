@@ -207,17 +207,15 @@ async fn remove_policy(env: &TestEnvironment, policy_id: u32) {
 // properly.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_policy_message_hub() {
-    let messenger_factory = service::message::create_hub();
+    let delegate = service::message::create_hub();
     let policy_handler_address = service::Address::PolicyHandler(PolicyType::Audio);
 
     // Create messenger to send request.
-    let (messenger, receptor) = messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("unbound messenger should be present");
+    let (messenger, receptor) =
+        delegate.create(MessengerType::Unbound).await.expect("unbound messenger should be present");
 
     // Create receptor to act as policy endpoint.
-    let mut policy_receptor = messenger_factory
+    let mut policy_receptor = delegate
         .create(MessengerType::Addressable(policy_handler_address))
         .await
         .expect("addressable messenger should be present")

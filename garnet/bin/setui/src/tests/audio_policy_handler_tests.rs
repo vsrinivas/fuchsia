@@ -48,11 +48,11 @@ struct TestEnvironment {
     handler: AudioPolicyHandler,
 
     /// Factory for internal message hub.
-    internal_messenger_factory: message::Factory,
+    internal_delegate: message::Delegate,
 
     setting_handler_signature: message::Signature,
 
-    messenger_factory: service::message::Factory,
+    delegate: service::message::Delegate,
 }
 
 impl TestEnvironment {
@@ -68,15 +68,15 @@ impl TestEnvironment {
     }
 
     async fn new_with_store(store: Arc<DeviceStorage>) -> Self {
-        let messenger_factory = service::message::create_hub();
+        let delegate = service::message::create_hub();
         let (messenger, _) =
-            messenger_factory.create(MessengerType::Unbound).await.expect("core messenger created");
+            delegate.create(MessengerType::Unbound).await.expect("core messenger created");
         let policy_type = PolicyType::Audio;
 
-        let test_factory = message::create_hub();
+        let test_delegate = message::create_hub();
 
         let handler_signature =
-            TestEnvironment::spawn_setting_handler(&messenger_factory, &test_factory).await;
+            TestEnvironment::spawn_setting_handler(&delegate, &test_delegate).await;
 
         let client_proxy = ClientProxy::new(messenger, store.clone(), policy_type);
 
@@ -87,15 +87,15 @@ impl TestEnvironment {
         Self {
             store,
             handler,
-            internal_messenger_factory: test_factory,
+            internal_delegate: test_delegate,
             setting_handler_signature: handler_signature,
-            messenger_factory: messenger_factory,
+            delegate: delegate,
         }
     }
 
     async fn create_volume_listener(&self) -> service::message::Receptor {
         let messenger = self
-            .messenger_factory
+            .delegate
             .create(MessengerType::Unbound)
             .await
             .expect("messenger should be present")
@@ -110,7 +110,7 @@ impl TestEnvironment {
     }
 
     async fn create_request_observer(&self) -> message::Receptor {
-        self.internal_messenger_factory
+        self.internal_delegate
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message| {
                     matches!(message.payload(), TestEnvironmentPayload::Request(_))
@@ -122,10 +122,10 @@ impl TestEnvironment {
     }
 
     async fn spawn_setting_handler(
-        service_factory: &service::message::Factory,
-        test_factory: &message::Factory,
+        service_delegate: &service::message::Delegate,
+        test_delegate: &message::Delegate,
     ) -> message::Signature {
-        let cmd_receptor = test_factory
+        let cmd_receptor = test_delegate
             .create(MessengerType::Unbound)
             .await
             .expect("receptor for handler should be created")
@@ -133,7 +133,7 @@ impl TestEnvironment {
 
         let signature = cmd_receptor.get_signature();
 
-        let receptor = service_factory
+        let receptor = service_delegate
             .create(MessengerType::Addressable(service::Address::Handler(SettingType::Audio)))
             .await
             .expect("should create setting messenger")
@@ -142,7 +142,7 @@ impl TestEnvironment {
         let receptor_fuse = receptor.fuse();
         let cmd_receptor_fuse = cmd_receptor.fuse();
 
-        let test_messenger = test_factory
+        let test_messenger = test_delegate
             .create(MessengerType::Unbound)
             .await
             .expect("receptor for handler should be created")
@@ -204,7 +204,7 @@ impl TestEnvironment {
 
     async fn serve_audio_info(&mut self, audio_info: AudioInfo) {
         let messenger = self
-            .internal_messenger_factory
+            .internal_delegate
             .create(MessengerType::Unbound)
             .await
             .expect("receptor for handler should be created")

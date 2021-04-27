@@ -9,6 +9,7 @@ pub(self) mod beacon;
 /// Common message-related definitions.
 pub mod action_fuse;
 pub mod base;
+pub mod delegate;
 pub mod message_builder;
 pub mod message_client;
 pub mod message_hub;
@@ -37,15 +38,16 @@ macro_rules! message_hub_definition {
             use crate::message::base::MessageType as BaseMessageType;
             use crate::message::base::MessengerType as BaseMessengerType;
             use crate::message::base::Signature as BaseSignature;
+            use crate::message::delegate::Delegate as BaseDelegate;
             use crate::message::message_client::MessageClient as BaseMessageClient;
             use crate::message::message_hub::MessageHub;
             use crate::message::messenger::{
-                MessengerClient as BaseMessengerClient, MessengerFactory as BaseFactory,
+                MessengerClient as BaseMessengerClient,
                 TargetedMessengerClient as BaseTargetedMessengerClient,
             };
             use crate::message::receptor::Receptor as BaseReceptor;
 
-            pub type Factory = BaseFactory<$payload, $address, $role>;
+            pub type Delegate = BaseDelegate<$payload, $address, $role>;
 
             #[allow(dead_code)]
             pub type Audience = BaseAudience<$address, $role>;
@@ -78,7 +80,7 @@ macro_rules! message_hub_definition {
             pub type Signature = BaseSignature<$address>;
 
             #[allow(dead_code)]
-            pub fn create_hub() -> Factory {
+            pub fn create_hub() -> Delegate {
                 MessageHub::<$payload, $address, $role>::create(None)
             }
         }

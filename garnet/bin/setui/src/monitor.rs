@@ -26,16 +26,16 @@
 //!
 //! async fn message_example() {
 //!     // Create monitor message hub.
-//!     let messenger_factory = service::message::create_hub();
+//!     let delegate = service::message::create_hub();
 //!
 //!     // Create a messenger for watchdog.
-//!     let (watchdog_client, _) = messenger_factory
+//!     let (watchdog_client, _) = delegate
 //!         .create(MessengerType::Unbound)
 //!         .await
 //!         .expect("should be able to create messenger");
 //!
 //!     // Create a messenger for monitor.
-//!     let (_, mut monitor_receptor) = messenger_factory
+//!     let (_, mut monitor_receptor) = delegate
 //!         .messenger_builder(MessengerType::Unbound)
 //!         .add_role(role::Signature::role(service::Role::Monitor(monitor::Role::Monitor)))
 //!         .build()
@@ -160,16 +160,16 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_messaging() {
         // Create monitor message hub.
-        let messenger_factory = service::message::create_hub();
+        let delegate = service::message::create_hub();
 
         // Create a messenger for watchdog.
-        let (watchdog_client, _) = messenger_factory
+        let (watchdog_client, _) = delegate
             .create(MessengerType::Unbound)
             .await
             .expect("should be able to create messenger");
 
         // Create a messenger for monitor.
-        let (_, mut monitor_receptor) = messenger_factory
+        let (_, mut monitor_receptor) = delegate
             .messenger_builder(MessengerType::Unbound)
             .add_role(role::Signature::role(service::Role::Monitor(monitor::Role::Monitor)))
             .build()

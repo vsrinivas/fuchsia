@@ -8,7 +8,7 @@ use crate::handler::base::{
 use crate::handler::setting_handler::{Command, Payload, State};
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::service;
-use crate::service::message::{Factory, Signature};
+use crate::service::message::{Delegate, Signature};
 use crate::service_context::ServiceContext;
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_err;
@@ -33,14 +33,14 @@ impl SettingHandlerFactory for SettingHandlerFactoryImpl {
     async fn generate(
         &mut self,
         setting_type: SettingType,
-        messenger_factory: Factory,
+        delegate: Delegate,
         notifier_signature: Signature,
     ) -> Result<Signature, SettingHandlerFactoryError> {
         if !self.environment.settings.contains(&setting_type) {
             return Err(SettingHandlerFactoryError::SettingNotFound(setting_type));
         }
 
-        let (messenger, receptor) = messenger_factory
+        let (messenger, receptor) = delegate
             .create(MessengerType::Unbound)
             .await
             .map_err(|_| SettingHandlerFactoryError::HandlerMessengerError)?;
@@ -62,7 +62,7 @@ impl SettingHandlerFactory for SettingHandlerFactoryImpl {
         .await
         .map_err(|_| SettingHandlerFactoryError::HandlerStartupError(setting_type))?;
 
-        let (controller_messenger, _) = messenger_factory
+        let (controller_messenger, _) = delegate
             .create(MessengerType::Unbound)
             .await
             .map_err(|_| SettingHandlerFactoryError::ControllerMessengerError)?;
@@ -164,14 +164,14 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn ensure_startup_is_awaited() {
-        let messenger_factory = service::message::create_hub();
+        let delegate = service::message::create_hub();
         let mut factory_impl = SettingHandlerFactoryImpl::new(
             {
                 let mut settings = HashSet::new();
                 settings.insert(SettingType::Unknown);
                 settings
             },
-            Arc::new(ServiceContext::new(None, Some(messenger_factory.clone()))),
+            Arc::new(ServiceContext::new(None, Some(delegate.clone()))),
             Arc::new(AtomicU64::new(0)),
         );
 
@@ -190,7 +190,7 @@ mod tests {
         factory_impl.register(SettingType::Unknown, generate_handler);
 
         // Create a broker that only listens to replies.
-        let (_, broker_receptor) = messenger_factory
+        let (_, broker_receptor) = delegate
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message: &Message<_, _, _>| {
                     // Only filter for reply's that contain results.
@@ -204,14 +204,12 @@ mod tests {
             .await
             .expect("could not create broker receptor");
 
-        let (_, receptor) = messenger_factory
-            .create(MessengerType::Unbound)
-            .await
-            .expect("messenger should be created");
+        let (_, receptor) =
+            delegate.create(MessengerType::Unbound).await.expect("messenger should be created");
         // Generate the controller, but don't await it yet so we can time it with the response
         // from the broker.
         let mut generate_future = factory_impl
-            .generate(SettingType::Unknown, messenger_factory, receptor.get_signature())
+            .generate(SettingType::Unknown, delegate, receptor.get_signature())
             .into_stream()
             .fuse();
         let mut broker_receptor = broker_receptor.fuse();

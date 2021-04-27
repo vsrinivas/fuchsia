@@ -20,7 +20,7 @@ const ENV_NAME: &str = "settings_service_resource_monitor_test_environment";
 
 type CallbackSender = UnboundedSender<Actor>;
 
-/// `TestMonitorAgent` exposes the monitor messenger factory it receives at
+/// `TestMonitorAgent` exposes the monitor messenger delegate it receives at
 /// creation.
 #[derive(Debug)]
 struct TestMonitorAgent;

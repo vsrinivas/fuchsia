@@ -35,7 +35,7 @@ use {
     crate::policy::PolicyType,
     crate::power::power_controller::PowerController,
     crate::privacy::privacy_controller::PrivacyController,
-    crate::service::message::Factory as MessengerFactory,
+    crate::service::message::Delegate,
     crate::service_context::GenerateService,
     crate::service_context::ServiceContext,
     crate::setup::setup_controller::SetupController,
@@ -194,15 +194,12 @@ impl ServiceConfiguration {
 /// complete.
 pub struct Environment {
     pub nested_environment: Option<NestedEnvironment>,
-    pub messenger_factory: MessengerFactory,
+    pub delegate: Delegate,
 }
 
 impl Environment {
-    pub fn new(
-        nested_environment: Option<NestedEnvironment>,
-        messenger_factory: MessengerFactory,
-    ) -> Environment {
-        Environment { nested_environment, messenger_factory }
+    pub fn new(nested_environment: Option<NestedEnvironment>, delegate: Delegate) -> Environment {
+        Environment { nested_environment, delegate }
     }
 }
 
@@ -244,14 +241,14 @@ macro_rules! register_handler {
 /// streams, the target FIDL interface, and a list of `SettingType`s whose
 /// presence will cause this handler to be included.
 macro_rules! register_fidl_handler {
-    ($components:ident, $service_dir:ident, $messenger_factory:ident,
+    ($components:ident, $service_dir:ident, $delegate:ident,
             $interface:ident, $handler_mod:ident$(, $target:ident)+) => {
         if false $(|| $components.contains(&SettingType::$target))+
         {
-            let messenger_factory = $messenger_factory.clone();
+            let delegate = $delegate.clone();
             $service_dir.add_fidl_service(
                     move |stream: $interface| {
-                        crate::$handler_mod::fidl_io::spawn(messenger_factory.clone(),
+                        crate::$handler_mod::fidl_io::spawn(delegate.clone(),
                         stream);
                     });
         }
@@ -358,7 +355,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     async fn prepare_env(
         self,
         runtime: Runtime,
-    ) -> Result<(ServiceFs<ServiceObj<'static, ()>>, MessengerFactory), Error> {
+    ) -> Result<(ServiceFs<ServiceObj<'static, ()>>, Delegate), Error> {
         let mut fs = ServiceFs::new();
 
         let service_dir;
@@ -372,7 +369,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         }
 
         // Define top level MessageHub for service communication.
-        let messenger_factory = service::message::create_hub();
+        let delegate = service::message::create_hub();
 
         let (agent_types, settings, policies, flags) = match self.configuration {
             Some(configuration) => (
@@ -385,7 +382,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         };
 
         let service_context =
-            Arc::new(ServiceContext::new(self.generate_service, Some(messenger_factory.clone())));
+            Arc::new(ServiceContext::new(self.generate_service, Some(delegate.clone())));
 
         let context_id_counter = Arc::new(AtomicU64::new(1));
 
@@ -443,7 +440,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         create_environment(
             service_dir,
-            messenger_factory.clone(),
+            delegate.clone(),
             settings,
             policies,
             agent_blueprints,
@@ -457,7 +454,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         .await
         .map_err(|err| format_err!("could not create environment: {:?}", err))?;
 
-        Ok((fs, messenger_factory))
+        Ok((fs, delegate))
     }
 
     pub fn spawn(self, mut executor: fasync::Executor) -> Result<(), Error> {
@@ -474,11 +471,11 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
     pub async fn spawn_nested(self, env_name: &'static str) -> Result<Environment, Error> {
         match self.prepare_env(Runtime::Nested(env_name)).await {
-            Ok((mut fs, messenger_factory)) => {
+            Ok((mut fs, delegate)) => {
                 let nested_environment = Some(fs.create_salted_nested_environment(&env_name)?);
                 fasync::Task::spawn(fs.collect()).detach();
 
-                Ok(Environment::new(nested_environment, messenger_factory))
+                Ok(Environment::new(nested_environment, delegate))
             }
             Err(error) => Err(error),
         }
@@ -656,7 +653,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 /// support the components specified in the components HashSet.
 async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
-    messenger_factory: service::message::Factory,
+    delegate: service::message::Delegate,
     components: HashSet<SettingType>,
     policies: HashSet<PolicyType>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
@@ -668,7 +665,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     storage_factory: Arc<T>,
 ) -> Result<(), Error> {
     for blueprint in event_subscriber_blueprints {
-        blueprint.create(messenger_factory.clone()).await;
+        blueprint.create(delegate.clone()).await;
     }
 
     let monitor_actor = if resource_monitor_generators.is_empty() {
@@ -683,7 +680,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         SettingProxy::create(
             *setting_type,
             handler_factory.clone(),
-            messenger_factory.clone(),
+            delegate.clone(),
             DEFAULT_SETTING_PROXY_MAX_ATTEMPTS,
             DEFAULT_TEARDOWN_TIMEOUT,
             Some(DEFAULT_SETTING_PROXY_RESPONSE_TIMEOUT_MS.millis()),
@@ -695,58 +692,33 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     for policy_type in policies {
         let setting_type = policy_type.setting_type();
         if components.contains(&setting_type) {
-            PolicyProxy::create(
-                policy_type,
-                policy_handler_factory.clone(),
-                messenger_factory.clone(),
-            )
-            .await?;
+            PolicyProxy::create(policy_type, policy_handler_factory.clone(), delegate.clone())
+                .await?;
         }
     }
 
     let mut agent_authority =
-        Authority::create(messenger_factory.clone(), components.clone(), monitor_actor).await?;
+        Authority::create(delegate.clone(), components.clone(), monitor_actor).await?;
+
+    register_fidl_handler!(components, service_dir, delegate, LightRequestStream, light, Light);
 
     register_fidl_handler!(
         components,
         service_dir,
-        messenger_factory,
-        LightRequestStream,
-        light,
-        Light
-    );
-
-    register_fidl_handler!(
-        components,
-        service_dir,
-        messenger_factory,
+        delegate,
         AccessibilityRequestStream,
         accessibility,
         Accessibility
     );
 
-    register_fidl_handler!(
-        components,
-        service_dir,
-        messenger_factory,
-        AudioRequestStream,
-        audio,
-        Audio
-    );
+    register_fidl_handler!(components, service_dir, delegate, AudioRequestStream, audio, Audio);
+
+    register_fidl_handler!(components, service_dir, delegate, DeviceRequestStream, device, Device);
 
     register_fidl_handler!(
         components,
         service_dir,
-        messenger_factory,
-        DeviceRequestStream,
-        device,
-        Device
-    );
-
-    register_fidl_handler!(
-        components,
-        service_dir,
-        messenger_factory,
+        delegate,
         DisplayRequestStream,
         display,
         Display,
@@ -756,7 +728,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     register_fidl_handler!(
         components,
         service_dir,
-        messenger_factory,
+        delegate,
         DoNotDisturbRequestStream,
         do_not_disturb,
         DoNotDisturb
@@ -765,25 +737,18 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     register_fidl_handler!(
         components,
         service_dir,
-        messenger_factory,
+        delegate,
         FactoryResetRequestStream,
         factory_reset,
         FactoryReset
     );
 
-    register_fidl_handler!(
-        components,
-        service_dir,
-        messenger_factory,
-        IntlRequestStream,
-        intl,
-        Intl
-    );
+    register_fidl_handler!(components, service_dir, delegate, IntlRequestStream, intl, Intl);
 
     register_fidl_handler!(
         components,
         service_dir,
-        messenger_factory,
+        delegate,
         NightModeRequestStream,
         night_mode,
         NightMode
@@ -792,36 +757,19 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     register_fidl_handler!(
         components,
         service_dir,
-        messenger_factory,
+        delegate,
         PrivacyRequestStream,
         privacy,
         Privacy
     );
 
-    register_fidl_handler!(
-        components,
-        service_dir,
-        messenger_factory,
-        InputRequestStream,
-        input,
-        Input
-    );
+    register_fidl_handler!(components, service_dir, delegate, InputRequestStream, input, Input);
 
-    register_fidl_handler!(
-        components,
-        service_dir,
-        messenger_factory,
-        SetupRequestStream,
-        setup,
-        Setup
-    );
+    register_fidl_handler!(components, service_dir, delegate, SetupRequestStream, setup, Setup);
 
     // TODO(fxbug.dev/60925): allow configuration of policy API
     service_dir.add_fidl_service(move |stream: VolumePolicyControllerRequestStream| {
-        crate::audio::policy::volume_policy_fidl_handler::fidl_io::spawn(
-            messenger_factory.clone(),
-            stream,
-        );
+        crate::audio::policy::volume_policy_fidl_handler::fidl_io::spawn(delegate.clone(), stream);
     });
 
     // The service does not work without storage, so ensure it is always included first.

@@ -78,7 +78,7 @@ where
 {
     async fn create(context: Context, storage_factory: Arc<T>) {
         let (_, receptor) = context
-            .messenger_factory
+            .delegate
             .create(MessengerType::Addressable(Address::Storage))
             .await
             .expect("should acquire messenger");
@@ -280,11 +280,11 @@ mod tests {
             StorageManagement { storage_factory: Arc::new(InMemoryStorageFactory::new()) };
 
         // This section is just to get a responder. We don't need it to actually respond to anything.
-        let messenger_factory = service::message::create_hub();
+        let delegate = service::message::create_hub();
         let (messenger, _) =
-            messenger_factory.create(MessengerType::Unbound).await.expect("messenger created");
+            delegate.create(MessengerType::Unbound).await.expect("messenger created");
         let (_, mut receptor) =
-            messenger_factory.create(MessengerType::Unbound).await.expect("receptor created");
+            delegate.create(MessengerType::Unbound).await.expect("receptor created");
         messenger
             .message(
                 service::Payload::Storage(Payload::Request(StorageRequest::Read(

@@ -70,7 +70,7 @@ impl InspectPolicyAgent {
         // issue messages and block on their response. If another message is
         // passed to the agent during this wait, we will deadlock.
         let (messenger_client, broker_receptor) = match context
-            .messenger_factory
+            .delegate
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(|message| {
                     matches!(message.payload(), service::Payload::Policy(PolicyPayload::Request(_)))
@@ -289,7 +289,7 @@ mod tests {
         let context = create_context().await;
         // Create a receptor representing the policy proxy, with an appropriate role.
         let (_, mut policy_receptor) = context
-            .messenger_factory
+            .delegate
             .messenger_builder(MessengerType::Unbound)
             .add_role(role::Signature::role(service::Role::Policy(Role::PolicyHandler)))
             .build()
@@ -357,7 +357,7 @@ mod tests {
 
         // Create a receptor representing the policy proxy, with an appropriate role.
         let (_, mut policy_receptor) = context
-            .messenger_factory
+            .delegate
             .messenger_builder(MessengerType::Unbound)
             .add_role(role::Signature::role(service::Role::Policy(Role::PolicyHandler)))
             .build()
@@ -366,8 +366,7 @@ mod tests {
 
         // Create a messenger on the policy message hub to send requests for the inspect agent to
         // intercept.
-        let (policy_sender, _) =
-            context.messenger_factory.create(MessengerType::Unbound).await.unwrap();
+        let (policy_sender, _) = context.delegate.create(MessengerType::Unbound).await.unwrap();
 
         // Create the inspect agent.
         let inspector = inspect::Inspector::new();

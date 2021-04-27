@@ -172,6 +172,7 @@ rustc_library("lib") {
     "src/message/action_fuse.rs",
     "src/message/base.rs",
     "src/message/beacon.rs",
+    "src/message/delegate.rs",
     "src/message/message_builder.rs",
     "src/message/message_client.rs",
     "src/message/message_hub.rs",
