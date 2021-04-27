@@ -389,21 +389,20 @@ zx_status_t OpteeController::TeeConnectToApplication(const uuid_t* application_u
 }
 
 void OpteeController::ConnectToDeviceInfo(
-    fidl::ServerEnd<fuchsia_tee::DeviceInfo> device_info_request,
+    ConnectToDeviceInfoRequestView request,
     [[maybe_unused]] ConnectToDeviceInfoCompleter::Sync& _completer) {
-  ZX_DEBUG_ASSERT(device_info_request.is_valid());
+  ZX_DEBUG_ASSERT(request->device_info_request.is_valid());
 
-  fidl::BindServer<fidl::WireInterface<fuchsia_tee::DeviceInfo>>(
-      loop_.dispatcher(), std::move(device_info_request), this);
+  fidl::BindServer<fidl::WireServer<fuchsia_tee::DeviceInfo>>(
+      loop_.dispatcher(), std::move(request->device_info_request), this);
 }
 
 void OpteeController::ConnectToApplication(
-    fuchsia_tee::wire::Uuid application_uuid,
-    fidl::ClientEnd<fuchsia_tee_manager::Provider> service_provider,
-    fidl::ServerEnd<fuchsia_tee::Application> application_request,
+    ConnectToApplicationRequestView request,
     [[maybe_unused]] ConnectToApplicationCompleter::Sync& _completer) {
-  ConnectToApplicationInternal(Uuid(application_uuid), std::move(service_provider),
-                               std::move(application_request));
+  ConnectToApplicationInternal(Uuid(request->application_uuid),
+                               std::move(request->service_provider),
+                               std::move(request->application_request));
 }
 
 zx_status_t OpteeController::ConnectToApplicationInternal(
@@ -419,7 +418,7 @@ zx_status_t OpteeController::ConnectToApplicationInternal(
   return ZX_OK;
 }
 
-void OpteeController::GetOsInfo(GetOsInfoCompleter::Sync& completer) {
+void OpteeController::GetOsInfo(GetOsInfoRequestView request, GetOsInfoCompleter::Sync& completer) {
   fidl::FidlAllocator allocator;
   fuchsia_tee::wire::OsRevision os_rev(allocator);
   os_rev.set_major(allocator, os_revision().major);

@@ -178,14 +178,15 @@ TEST_F(OpteeClientTest, OpenSessionsClosedOnClientUnbind) {
   EXPECT_TRUE(open_sessions().empty());
 }
 
-class FakeRpmb : public fidl::WireInterface<frpmb::Rpmb> {
+class FakeRpmb : public fidl::WireServer<frpmb::Rpmb> {
  public:
   using RpmbRequestCallback = fbl::Function<void(fuchsia_hardware_rpmb::wire::Request &request,
                                                  RequestCompleter::Sync &completer)>;
   using GetInfoCallback = fbl::Function<void(GetDeviceInfoCompleter::Sync &completer)>;
   FakeRpmb() {}
 
-  void GetDeviceInfo(GetDeviceInfoCompleter::Sync &completer) override {
+  void GetDeviceInfo(GetDeviceInfoRequestView request,
+                     GetDeviceInfoCompleter::Sync &completer) override {
     if (info_callback_) {
       info_callback_(completer);
     } else {
@@ -193,10 +194,9 @@ class FakeRpmb : public fidl::WireInterface<frpmb::Rpmb> {
     }
   };
 
-  void Request(fuchsia_hardware_rpmb::wire::Request request,
-               RequestCompleter::Sync &completer) override {
+  void Request(RequestRequestView request, RequestCompleter::Sync &completer) override {
     if (request_callback_) {
-      request_callback_(request, completer);
+      request_callback_(request->request, completer);
     } else {
       completer.Close(ZX_ERR_NOT_SUPPORTED);
     }

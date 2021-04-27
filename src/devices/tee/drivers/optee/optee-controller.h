@@ -66,8 +66,8 @@ using DeviceType = ddk::Device<OpteeController, ddk::Messageable, ddk::Openable,
 class OpteeController : public OpteeControllerBase,
                         public DeviceType,
                         public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
-                        public fidl::WireInterface<fuchsia_tee::DeviceInfo>,
-                        public fidl::WireInterface<fuchsia_hardware_tee::DeviceConnector> {
+                        public fidl::WireServer<fuchsia_tee::DeviceInfo>,
+                        public fidl::WireServer<fuchsia_hardware_tee::DeviceConnector> {
  public:
   explicit OpteeController(zx_device_t* parent)
       : DeviceType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
@@ -89,15 +89,13 @@ class OpteeController : public OpteeControllerBase,
                                       zx::channel service_provider);
 
   // `DeviceConnector` FIDL protocol
-  void ConnectToDeviceInfo(fidl::ServerEnd<fuchsia_tee::DeviceInfo> device_info_request,
+  void ConnectToDeviceInfo(ConnectToDeviceInfoRequestView request,
                            ConnectToDeviceInfoCompleter::Sync& _completer) override;
-  void ConnectToApplication(fuchsia_tee::wire::Uuid application_uuid,
-                            fidl::ClientEnd<fuchsia_tee_manager::Provider> service_provider,
-                            fidl::ServerEnd<fuchsia_tee::Application> application_request,
+  void ConnectToApplication(ConnectToApplicationRequestView request,
                             ConnectToApplicationCompleter::Sync& _completer) override;
 
   // `DeviceInfo` FIDL protocol
-  void GetOsInfo(GetOsInfoCompleter::Sync& completer) override;
+  void GetOsInfo(GetOsInfoRequestView request, GetOsInfoCompleter::Sync& completer) override;
 
   CallResult CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) override;
 

@@ -31,7 +31,7 @@ namespace optee {
 // allocated shared memory buffers and sessions that were created by that client without interfering
 // with other active clients.
 
-class OpteeClient : public fidl::WireInterface<fuchsia_tee::Application> {
+class OpteeClient : public fidl::WireServer<fuchsia_tee::Application> {
  public:
   OpteeClient(OpteeControllerBase* controller,
               fidl::ClientEnd<fuchsia_tee_manager::Provider> provider, Uuid application_uuid)
@@ -45,16 +45,12 @@ class OpteeClient : public fidl::WireInterface<fuchsia_tee::Application> {
   OpteeClient& operator=(const OpteeClient&) = delete;
 
   // `fuchsia.tee.Application` FIDL Handlers
-  void OpenSession2(fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
-                    fidl::WireInterface<fuchsia_tee::Application>::OpenSession2Completer::Sync&
-                        completer) override;
-  void InvokeCommand(uint32_t session_id, uint32_t command_id,
-                     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
-                     fidl::WireInterface<fuchsia_tee::Application>::InvokeCommandCompleter::Sync&
-                         completer) override;
-  void CloseSession(uint32_t session_id,
-                    fidl::WireInterface<fuchsia_tee::Application>::CloseSessionCompleter::Sync&
-                        completer) override;
+  void OpenSession2(OpenSession2RequestView request,
+                    OpenSession2Completer::Sync& completer) override;
+  void InvokeCommand(InvokeCommandRequestView request,
+                     InvokeCommandCompleter::Sync& completer) override;
+  void CloseSession(CloseSessionRequestView request,
+                    CloseSessionCompleter::Sync& completer) override;
 
  private:
   using SharedMemoryList = fbl::DoublyLinkedList<std::unique_ptr<SharedMemory>>;

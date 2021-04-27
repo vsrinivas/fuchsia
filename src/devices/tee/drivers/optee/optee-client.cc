@@ -276,9 +276,8 @@ OpteeClient::~OpteeClient() {
   }
 }
 
-void OpteeClient::OpenSession2(
-    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
-    fidl::WireInterface<fuchsia_tee::Application>::OpenSession2Completer::Sync& completer) {
+void OpteeClient::OpenSession2(OpenSession2RequestView request,
+                               OpenSession2Completer::Sync& completer) {
   constexpr uint32_t kInvalidSession = 0;
 
   fidl::FidlAllocator allocator;
@@ -286,7 +285,7 @@ void OpteeClient::OpenSession2(
 
   auto create_result =
       OpenSessionMessage::TryCreate(controller_->driver_pool(), controller_->client_pool(),
-                                    application_uuid_, std::move(parameter_set));
+                                    application_uuid_, std::move(request->parameter_set));
   if (!create_result.is_ok()) {
     LOG(ERROR, "failed to create OpenSessionMessage (status: %d)", create_result.error());
     result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
@@ -340,22 +339,21 @@ void OpteeClient::OpenSession2(
 }
 
 void OpteeClient::InvokeCommand(
-    uint32_t session_id, uint32_t command_id,
-    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set,
-    fidl::WireInterface<fuchsia_tee::Application>::InvokeCommandCompleter::Sync& completer) {
+    InvokeCommandRequestView request,
+    fidl::WireServer<fuchsia_tee::Application>::InvokeCommandCompleter::Sync& completer) {
   fidl::FidlAllocator allocator;
   fuchsia_tee::wire::OpResult result(allocator);
 
-  if (open_sessions_.find(session_id) == open_sessions_.end()) {
+  if (open_sessions_.find(request->session_id) == open_sessions_.end()) {
     result.set_return_code(allocator, TEEC_ERROR_BAD_STATE);
     result.set_return_origin(allocator, fuchsia_tee::wire::ReturnOrigin::kCommunication);
     completer.Reply(std::move(result));
     return;
   }
 
-  auto create_result =
-      InvokeCommandMessage::TryCreate(controller_->driver_pool(), controller_->client_pool(),
-                                      session_id, command_id, std::move(parameter_set));
+  auto create_result = InvokeCommandMessage::TryCreate(
+      controller_->driver_pool(), controller_->client_pool(), request->session_id,
+      request->command_id, request->parameter_set);
   if (!create_result.is_ok()) {
     LOG(ERROR, "failed to create InvokeCommandMessage (status: %d)", create_result.error());
     result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
@@ -373,8 +371,8 @@ void OpteeClient::InvokeCommand(
     LOG(WARNING,
         "SMC call threshold exceeded. peak_smc_call_duration: %" PRIi64
         "ns trusted_app: %s session_id: 0x%" PRIx32 " command_id: 0x%" PRIx32,
-        peak_smc_call_duration.to_nsecs(), application_uuid_.ToString().c_str(), session_id,
-        command_id);
+        peak_smc_call_duration.to_nsecs(), application_uuid_.ToString().c_str(),
+        request->session_id, request->command_id);
   }
 
   if (call_code != kReturnOk) {
@@ -434,10 +432,9 @@ zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
   return ZX_OK;
 }
 
-void OpteeClient::CloseSession(
-    uint32_t session_id,
-    fidl::WireInterface<fuchsia_tee::Application>::CloseSessionCompleter::Sync& completer) {
-  CloseSession(session_id);
+void OpteeClient::CloseSession(CloseSessionRequestView request,
+                               CloseSessionCompleter::Sync& completer) {
+  CloseSession(request->session_id);
   completer.Reply();
 }
 
