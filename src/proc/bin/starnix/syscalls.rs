@@ -410,14 +410,14 @@ pub fn sys_clock_gettime(
     which_clock: u32,
     tp_addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
-    match which_clock {
-        CLOCK_REALTIME => {
-            let now = utc_time().into_nanos();
-            let tv = timespec_t { tv_sec: now / NANOS_PER_SECOND, tv_nsec: now % NANOS_PER_SECOND };
-            ctx.task.mm.write_memory(tp_addr, tv.as_bytes()).map(|_| SUCCESS)
-        }
-        _ => Err(EINVAL),
-    }
+    let time = match which_clock {
+        CLOCK_REALTIME => utc_time(),
+        CLOCK_MONOTONIC => zx::Time::get_monotonic(),
+        _ => return Err(EINVAL),
+    };
+    let nanos = time.into_nanos();
+    let tv = timespec_t { tv_sec: nanos / NANOS_PER_SECOND, tv_nsec: nanos % NANOS_PER_SECOND };
+    return ctx.task.mm.write_memory(tp_addr, tv.as_bytes()).map(|_| SUCCESS);
 }
 
 pub fn sys_gettimeofday(
