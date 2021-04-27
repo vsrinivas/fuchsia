@@ -2551,7 +2551,7 @@ macro_rules! fidl_struct_copy {
             unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, _recursion_depth: usize) -> $crate::Result<()> {
                 let buf_ptr = encoder.mut_buffer().as_mut_ptr().offset(offset as isize);
                 let typed_buf_ptr = std::mem::transmute::<*mut u8, *mut $name>(buf_ptr);
-                std::ptr::copy_nonoverlapping(self as *mut $name, typed_buf_ptr, 1);
+                typed_buf_ptr.write_unaligned((self as *const $name).read());
 
                 $(
                     let ptr = buf_ptr.offset($padding_offset);
