@@ -454,7 +454,7 @@ pub fn sys_getcwd(
 }
 
 pub fn sys_unknown(_ctx: &SyscallContext<'_>, syscall_number: u64) -> Result<SyscallResult, Errno> {
-    info!("UNKNOWN syscall: {}", syscall_number);
+    info!("UNKNOWN syscall({}): {}", syscall_number, SyscallDecl::from_number(syscall_number).name);
     // TODO: We should send SIGSYS once we have signals.
     Err(ENOSYS)
 }

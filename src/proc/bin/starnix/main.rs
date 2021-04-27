@@ -40,6 +40,7 @@ use loader::*;
 use syscall_table::dispatch_syscall;
 use syscalls::SyscallContext;
 use task::*;
+use uapi::SyscallDecl;
 use uapi::SyscallResult;
 
 // TODO: Should we move this code into fuchsia_zircon? It seems like part of a better abstraction
@@ -114,7 +115,7 @@ fn run_task(task: Arc<Task>, exceptions: zx::Channel) -> Result<i32, Error> {
         let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
         // TODO(tbodt): Print the name of the syscall instead of its number (using a proc macro or
         // something)
-        info!(target: "strace", "{}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x})", syscall_number, args.0, args.1, args.2, args.3, args.4, args.5);
+        info!(target: "strace", "{}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x})", SyscallDecl::from_number(syscall_number).name, args.0, args.1, args.2, args.3, args.4, args.5);
         match dispatch_syscall(&mut ctx, syscall_number, args) {
             Ok(SyscallResult::Exit(return_value)) => {
                 info!(target: "strace", "-> exit {:#x}", return_value);
