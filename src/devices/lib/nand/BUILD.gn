@@ -5,7 +5,7 @@
 source_set("nand") {
   sources = [ "nand.h" ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.nandinfo",
+    "//sdk/banjo/fuchsia.hardware.nandinfo:fuchsia.hardware.nandinfo_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.nand",
   ]
 }

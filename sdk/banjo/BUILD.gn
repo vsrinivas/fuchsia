@@ -19,12 +19,9 @@ python_host_test("analyze_deps_test") {
 _all_libraries_deps = [
   "fuchsia.hardware.audiotypes",
   "fuchsia.hardware.display.controller",
-  "fuchsia.hardware.nand",
-  "fuchsia.hardware.nandinfo",
   "fuchsia.hardware.pci",
   "fuchsia.hardware.power",
   "fuchsia.hardware.powerimpl",
-  "fuchsia.hardware.rawnand",
   "fuchsia.hardware.sdio",
   "fuchsia.hardware.sdmmc",
   "fuchsia.hardware.serial",

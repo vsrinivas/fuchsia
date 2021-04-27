@@ -124,5 +124,5 @@ protocol Nand {
     /// This should only be called before writing any data to the nand, and the
     /// returned data should be saved somewhere else, along blocks that become
     /// bad after they've been in use.
-    GetFactoryBadBlockList() -> (zx.status status, vector<uint32> bad_blocks);
+    GetFactoryBadBlockList() -> (zx.status status, vector<uint32>:MAX bad_blocks);
 };

@@ -28,7 +28,7 @@ driver_module("ram-nand") {
   deps = [
     ":common",
     ":ram-nand-bind",
-    "//sdk/banjo/fuchsia.hardware.nand",
+    "//sdk/banjo/fuchsia.hardware.nand:fuchsia.hardware.nand_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/devices/lib/driver",
     "//src/devices/lib/nand",
@@ -46,7 +46,7 @@ source_set("common") {
   visibility = [ ":*" ]
   sources = [ "ram-nand.cc" ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.nand",
+    "//sdk/banjo/fuchsia.hardware.nand:fuchsia.hardware.nand_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
@@ -69,7 +69,7 @@ test("ram-nand-test") {
   include_dirs = [ "." ]
   deps = [
     ":common",
-    "//sdk/banjo/fuchsia.hardware.nand",
+    "//sdk/banjo/fuchsia.hardware.nand:fuchsia.hardware.nand_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/lib/fdio",
     "//src/devices/testing/fake_ddk",
