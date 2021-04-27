@@ -94,33 +94,39 @@ impl Execution {
     async fn new(exec_dir: Directory) -> Self {
         // Get the ELF runtime
         let elf_runtime = if exec_dir.exists("runtime").await {
-            let runtime_dir = exec_dir.open_dir("runtime").expect("open_dir(`runtime`) failed!");
-            let entries = runtime_dir.entries().await;
-            if let Ok(entries) = entries {
-                if entries.iter().any(|s| s == "elf") {
-                    let elf_runtime_dir =
-                        runtime_dir.open_dir("elf").expect("open_dir(`elf`) failed!");
+            if let Ok(runtime_dir) = exec_dir.open_dir("runtime") {
+                let entries = runtime_dir.entries().await;
+                if let Ok(entries) = entries {
+                    if entries.iter().any(|s| s == "elf") {
+                        if let Ok(elf_runtime_dir) = runtime_dir.open_dir("elf") {
+                            let (job_id, process_id) = futures::join!(
+                                elf_runtime_dir.read_file("job_id"),
+                                elf_runtime_dir.read_file("process_id"),
+                            );
 
-                    let (job_id, process_id) = futures::join!(
-                        elf_runtime_dir.read_file("job_id"),
-                        elf_runtime_dir.read_file("process_id"),
-                    );
+                            let job_id = job_id
+                                .expect("read_file(`job_id`) failed!")
+                                .parse::<u32>()
+                                .expect("parse(`job_id`) failed!");
 
-                    let job_id = job_id
-                        .expect("read_file(`job_id`) failed!")
-                        .parse::<u32>()
-                        .expect("parse(`job_id`) failed!");
+                            let process_id = process_id
+                                .expect("read_file(`process_id`) failed!")
+                                .parse::<u32>()
+                                .expect("parse(`process_id`) failed!");
 
-                    let process_id = process_id
-                        .expect("read_file(`process_id`) failed!")
-                        .parse::<u32>()
-                        .expect("parse(`process_id`) failed!");
-
-                    Some(ElfRuntime { job_id, process_id })
+                            Some(ElfRuntime { job_id, process_id })
+                        } else {
+                            println!("WARNING: Could not open elf directory");
+                            None
+                        }
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
             } else {
+                println!("WARNING: Could not open runtime directory");
                 None
             }
         } else {
