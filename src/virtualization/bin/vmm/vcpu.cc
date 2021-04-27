@@ -23,90 +23,6 @@
 
 static thread_local Vcpu* thread_vcpu = nullptr;
 
-#if __aarch64__
-static zx_status_t HandleMemArm(const zx_packet_guest_mem_t& mem, uint64_t trap_key,
-                                uint64_t* reg) {
-  TRACE_DURATION("machina", "mmio", "addr", mem.addr, "access_size", mem.access_size);
-
-  IoValue mmio = {mem.access_size, {.u64 = mem.data}};
-  IoMapping* mapping = IoMapping::FromPortKey(trap_key);
-  if (!mem.read) {
-    return mapping->Write(mem.addr, mmio);
-  }
-
-  zx_status_t status = mapping->Read(mem.addr, &mmio);
-  if (status != ZX_OK) {
-    return status;
-  }
-  *reg = mmio.u64;
-  if (mem.sign_extend && *reg & (1ul << (mmio.access_size * CHAR_BIT - 1))) {
-    *reg |= UINT64_MAX << mmio.access_size;
-  }
-  return ZX_OK;
-}
-#elif __x86_64__
-#include "src/virtualization/bin/vmm/arch/x64/decode.h"
-
-static zx_status_t HandleMemX86(const zx_packet_guest_mem_t& mem, uint64_t trap_key,
-                                const Instruction* inst) {
-  TRACE_DURATION("machina", "mmio", "addr", mem.addr, "access_size", inst->access_size);
-
-  zx_status_t status;
-  IoValue mmio = {inst->access_size, {.u64 = 0}};
-  switch (inst->type) {
-    case INST_MOV_WRITE:
-      switch (inst->access_size) {
-        case 1:
-          status = inst_write8(inst, &mmio.u8);
-          break;
-        case 2:
-          status = inst_write16(inst, &mmio.u16);
-          break;
-        case 4:
-          status = inst_write32(inst, &mmio.u32);
-          break;
-        default:
-          return ZX_ERR_NOT_SUPPORTED;
-      }
-      if (status != ZX_OK) {
-        return status;
-      }
-      return IoMapping::FromPortKey(trap_key)->Write(mem.addr, mmio);
-
-    case INST_MOV_READ:
-      status = IoMapping::FromPortKey(trap_key)->Read(mem.addr, &mmio);
-      if (status != ZX_OK) {
-        return status;
-      }
-      switch (inst->access_size) {
-        case 1:
-          return inst_read8(inst, mmio.u8);
-        case 2:
-          return inst_read16(inst, mmio.u16);
-        case 4:
-          return inst_read32(inst, mmio.u32);
-        default:
-          return ZX_ERR_NOT_SUPPORTED;
-      }
-
-    case INST_TEST:
-      status = IoMapping::FromPortKey(trap_key)->Read(mem.addr, &mmio);
-      if (status != ZX_OK) {
-        return status;
-      }
-      switch (inst->access_size) {
-        case 1:
-          return inst_test8(inst, static_cast<uint8_t>(inst->imm), mmio.u8);
-        default:
-          return ZX_ERR_NOT_SUPPORTED;
-      }
-
-    default:
-      return ZX_ERR_INVALID_ARGS;
-  }
-}
-#endif
-
 Vcpu::Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr, async::Loop* loop)
     : id_(id), guest_(guest), entry_(entry), boot_ptr_(boot_ptr), loop_(loop) {}
 
@@ -207,10 +123,10 @@ zx_status_t Vcpu::Interrupt(uint32_t vector) { return vcpu_.interrupt(vector); }
 zx_status_t Vcpu::HandlePacket(const zx_port_packet_t& packet) {
   switch (packet.type) {
     case ZX_PKT_TYPE_GUEST_MEM:
-      return HandleMem(packet.guest_mem, packet.key);
+      return ArchHandleMem(packet.guest_mem, packet.key);
 #if __x86_64__
     case ZX_PKT_TYPE_GUEST_IO:
-      return HandleIo(packet.guest_io, packet.key);
+      return ArchHandleIo(packet.guest_io, packet.key);
 #endif  // __x86_64__
     case ZX_PKT_TYPE_GUEST_VCPU:
       return HandleVcpu(packet.guest_vcpu, packet.key);
@@ -219,88 +135,6 @@ zx_status_t Vcpu::HandlePacket(const zx_port_packet_t& packet) {
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
-
-zx_status_t Vcpu::HandleMem(const zx_packet_guest_mem_t& mem, uint64_t trap_key) {
-  zx_vcpu_state_t vcpu_state;
-  zx_status_t status;
-#if __aarch64__
-  if (mem.read)
-#endif
-  {
-    status = vcpu_.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  bool do_write = false;
-#if __aarch64__
-  do_write = mem.read;
-  status = HandleMemArm(mem, trap_key, &vcpu_state.x[mem.xt]);
-#elif __x86_64__
-  Instruction inst;
-  status = inst_decode(mem.inst_buf, mem.inst_len, mem.default_operand_size, &vcpu_state, &inst);
-  if (status != ZX_OK) {
-    std::string inst;
-    for (uint8_t i = 0; i < mem.inst_len; i++) {
-      fxl::StringAppendf(&inst, " %x", mem.inst_buf[i]);
-    }
-    FX_LOGS(ERROR) << "Unsupported instruction:" << inst;
-  } else {
-    status = HandleMemX86(mem, trap_key, &inst);
-    // If there was an attempt to read or test memory, update the GPRs.
-    do_write = inst.type == INST_MOV_READ || inst.type == INST_TEST;
-  }
-#endif  // __x86_64__
-
-  if (status == ZX_OK && do_write) {
-    return vcpu_.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
-  }
-
-  return status;
-}
-
-#if __x86_64__
-zx_status_t Vcpu::HandleInput(const zx_packet_guest_io_t& io, uint64_t trap_key) {
-  TRACE_DURATION("machina", "pio_in", "port", io.port, "access_size", io.access_size);
-
-  IoValue value = {};
-  value.access_size = io.access_size;
-  zx_status_t status = IoMapping::FromPortKey(trap_key)->Read(io.port, &value);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to handle port in 0x" << std::hex << io.port;
-    return status;
-  }
-
-  zx_vcpu_io_t vcpu_io;
-  memset(&vcpu_io, 0, sizeof(vcpu_io));
-  vcpu_io.access_size = value.access_size;
-  vcpu_io.u32 = value.u32;
-  if (vcpu_io.access_size != io.access_size) {
-    FX_LOGS(ERROR) << "Unexpected size (" << vcpu_io.access_size << " != " << io.access_size
-                   << ") for port in 0x" << std::hex << io.port;
-    return ZX_ERR_IO_DATA_INTEGRITY;
-  }
-  return vcpu_.write_state(ZX_VCPU_IO, &vcpu_io, sizeof(vcpu_io));
-}
-
-zx_status_t Vcpu::HandleOutput(const zx_packet_guest_io_t& io, uint64_t trap_key) {
-  TRACE_DURATION("machina", "pio_out", "port", io.port, "access_size", io.access_size);
-
-  IoValue value;
-  value.access_size = io.access_size;
-  value.u32 = io.u32;
-  zx_status_t status = IoMapping::FromPortKey(trap_key)->Write(io.port, value);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to handle port out 0x" << std::hex << io.port;
-  }
-  return status;
-}
-
-zx_status_t Vcpu::HandleIo(const zx_packet_guest_io_t& io, uint64_t trap_key) {
-  return io.input ? HandleInput(io, trap_key) : HandleOutput(io, trap_key);
-}
-#endif  // __x86_64__
 
 zx_status_t Vcpu::HandleVcpu(const zx_packet_guest_vcpu_t& packet, uint64_t trap_key) {
   switch (packet.type) {
