@@ -458,6 +458,58 @@ TEST_F(MetadataTest, Check_NoUtcMontonicDifferenceAvailable) {
   ASSERT_FALSE(metadata_json["files"]["attachment 1"].HasMember("utc_monotonic_difference"));
 }
 
+TEST_F(MetadataTest, Check_NoUtcMonotonicDifferenceMissingFile) {
+  const AnnotationKeys annotation_allowlist = {
+      "annotation 1",
+  };
+
+  const AttachmentKeys attachment_allowlist = {
+      kAttachmentInspect,
+      kAttachmentLogKernel,
+      kAttachmentLogSystem,
+      kPreviousLogsFilePath,
+  };
+
+  const Annotations annotations = {
+      {"annotation 1", AnnotationOr("annotation")},
+  };
+
+  const Attachments attachments = {
+      {kAttachmentInspect, AttachmentValue("")},
+      {kAttachmentLogKernel, AttachmentValue("")},
+      {kAttachmentLogSystem, AttachmentValue("")},
+      {kAttachmentLogSystemPrevious, AttachmentValue(Error::kCustom)},
+  };
+
+  SetUpMetadata(annotation_allowlist, attachment_allowlist);
+  RunLoopUntilIdle();
+
+  zx::time monotonic;
+  zx::time_utc utc;
+
+  clock_.Set(zx::time(0));
+
+  const zx::duration utc_monotonic_difference(utc.get() - monotonic.get());
+
+  monotonic = clock_.Now();
+  ASSERT_EQ(clock_.UtcNow(&utc), ZX_OK);
+
+  const auto metadata_json = MakeJsonReport(::fit::ok<Annotations>(std::move(annotations)),
+                                            ::fit::ok<Attachments>(std::move(attachments)));
+
+  UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentInspect, utc_monotonic_difference);
+  UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentLogKernel, utc_monotonic_difference);
+  UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentLogSystem, utc_monotonic_difference);
+
+  ASSERT_TRUE(metadata_json["files"].HasMember(kAttachmentLogSystemPrevious));
+  ASSERT_FALSE(
+      metadata_json["files"][kAttachmentLogSystemPrevious].HasMember("utc_monotonic_difference"));
+
+  ASSERT_TRUE(metadata_json["files"].HasMember(kAttachmentAnnotations));
+  ASSERT_FALSE(
+      metadata_json["files"][kAttachmentAnnotations].HasMember("utc_monotonic_difference"));
+}
+
 struct TestParam {
   std::string test_name;
   AnnotationKeys annotation_allowlist;

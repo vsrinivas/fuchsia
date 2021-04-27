@@ -100,7 +100,9 @@ Attachments AllAttachments(const AttachmentKeys& allowlist,
 void AddUtcMonotonicDifference(const std::optional<zx::duration>& utc_monotonic_difference,
                                Value* file, Document::AllocatorType& allocator) {
   if (!utc_monotonic_difference.has_value() || !file->IsObject() ||
-      file->HasMember("utc_monotonic_difference_nanos")) {
+      file->HasMember("utc_monotonic_difference_nanos") ||
+      (file->HasMember("state") && (*file)["state"].IsString() &&
+       (*file)["state"].GetString() == ToString(AttachmentValue::State::kMissing))) {
     return;
   }
 
