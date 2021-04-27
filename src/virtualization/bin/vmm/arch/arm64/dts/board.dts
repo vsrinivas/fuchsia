@@ -91,5 +91,7 @@
     compatible = "arm,pl031", "arm,primecell";
     arm,primecell-periphid = <0x00041031>;
     reg = <0x8 0x08301000 0 0x1000>;
+    clock-names = "apb_pclk";
+    clocks = <&pclk>;
   };
 };
