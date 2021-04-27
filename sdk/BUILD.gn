@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/toolchain.gni")
 import("//build/config/build_api_module.gni")
 import("//build/dart/fidl_move.gni")
 import("//build/dart/toolchain.gni")
@@ -58,7 +57,6 @@ group("tests_no_e2e") {
   assert_no_deps = e2e_test_libs
 
   deps = [
-    "banjo:tests",
     "dart:tests",
     "lib:tests",
   ]
@@ -554,10 +552,7 @@ sdk("fuchsia_dart") {
 sdk_molecule("ddk_host_tools") {
   visibility = [ ":*" ]
 
-  cross_compiled = [
-    "//tools/bindc:bindc_sdk",
-    "//src/devices/tools/banjo:banjo_bin_sdk",
-  ]
+  cross_compiled = [ "//tools/bindc:bindc_sdk" ]
 
   toolchains = []
   if (host_os == "linux") {
@@ -584,11 +579,11 @@ sdk_molecule("ddk_host_tools") {
 sdk_molecule("banjo") {
   visibility = [ ":*" ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_sdk($banjo_toolchain)",
-    "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_sdk($banjo_toolchain)",
-    "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_sdk($banjo_toolchain)",
-    "//sdk/banjo/fuchsia.hardware.serialimpl:fuchsia.hardware.serialimpl_sdk($banjo_toolchain)",
-    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_sdk($banjo_toolchain)",
+    "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_sdk($fidl_toolchain)",
+    "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_sdk($fidl_toolchain)",
+    "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_sdk($fidl_toolchain)",
+    "//sdk/banjo/fuchsia.hardware.serialimpl:fuchsia.hardware.serialimpl_sdk($fidl_toolchain)",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_sdk($fidl_toolchain)",
   ]
 }
 
