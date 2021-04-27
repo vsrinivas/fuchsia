@@ -6,10 +6,10 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/display-panel.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -156,15 +156,22 @@ zx_status_t Nelson::DisplayInit() {
       },
   };
 
-  // TODO(61396): Add support for DVT panels.
-  if (Is9365Ddic()) {
-    display_panel_info[0].panel_type = PANEL_TV101WXM_FT_9365;
-  } else {
-    if (GetDisplayId() & 1) {
-      display_panel_info[0].panel_type = PANEL_P070ACB_FT;
-    } else {
+  auto display_id = GetDisplayId();
+  switch (display_id) {
+    case 0b10:
       display_panel_info[0].panel_type = PANEL_TV070WSM_FT;
-    }
+    case 0b11:
+      display_panel_info[0].panel_type = PANEL_TV070WSM_FT_9365;
+      break;
+    case 0b01:
+      display_panel_info[0].panel_type = PANEL_KD070D82_FT_9365;
+      break;
+    case 0b00:
+      display_panel_info[0].panel_type = PANEL_KD070D82_FT;
+      break;
+    default:
+      zxlogf(ERROR, "%s: invalid display panel detected: %d", __func__, display_id);
+      return ZX_ERR_INVALID_ARGS;
   }
   display_panel_metadata[0].data_size = sizeof(display_panel_info);
   display_panel_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(&display_panel_info);
