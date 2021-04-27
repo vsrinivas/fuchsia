@@ -74,6 +74,7 @@ class CodecAdapterVp9 : public AmlogicCodecAdapter, public Vp9Decoder::FrameData
   void CoreCodecMidStreamOutputBufferReConfigPrepare() override;
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
   std::string CoreCodecGetName() override { return "AmlVp9"; }
+  void CoreCodecSetStreamControlProfile(zx::unowned_thread stream_control_thread) override;
 
   void ReadMoreInputData(Vp9Decoder* decoder) override;
   void ReadMoreInputDataFromReschedule(Vp9Decoder* decoder) override;

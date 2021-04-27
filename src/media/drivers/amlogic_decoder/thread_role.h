@@ -18,6 +18,8 @@ enum class ThreadRole {
   kVdec1Irq,
   kH264MultiCore,
   kH264MultiStreamControl,
+  kVp9InputProcessing,
+  kVp9StreamControl,
 };
 
 }  // namespace amlogic_decoder

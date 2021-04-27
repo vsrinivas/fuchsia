@@ -56,6 +56,16 @@ DeadlineParams GetDeadlineParamsForRole(ThreadRole role) {
                             .capacity = zx::usec(100),
                             .deadline = zx::usec(6000),
                             .period = zx::usec(6000)};
+    case ThreadRole::kVp9InputProcessing:
+      return DeadlineParams{.name = "aml-video/vp9_input_processing",
+                            .capacity = zx::usec(300),
+                            .deadline = zx::usec(6000),
+                            .period = zx::usec(6000)};
+    case ThreadRole::kVp9StreamControl:
+      return DeadlineParams{.name = "aml-video/vp9_stream_control",
+                            .capacity = zx::usec(100),
+                            .deadline = zx::usec(6000),
+                            .period = zx::usec(6000)};
   }
 }
 

@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/trace/event.h>
 #include <lib/zx/bti.h>
+#include <zircon/threads.h>
 
 #include <optional>
 
@@ -15,6 +16,7 @@
 #include "hevcdec.h"
 #include "pts_manager.h"
 #include "src/media/lib/memory_barriers/memory_barriers.h"
+#include "thread_role.h"
 #include "vp9_configuration.h"
 #include "vp9_decoder.h"
 #include "vp9_utils.h"
@@ -192,6 +194,9 @@ void CodecAdapterVp9::CoreCodecInit(
         "In CodecAdapterVp9::CoreCodecInit(), StartThread() failed (input)");
     return;
   }
+
+  device_->SetThreadProfile(zx::unowned_thread(thrd_get_zx_handle(input_processing_thread_)),
+                            ThreadRole::kVp9InputProcessing);
 
   initial_input_format_details_ = fidl::Clone(initial_input_format_details);
 
@@ -908,6 +913,10 @@ void CodecAdapterVp9::CoreCodecMidStreamOutputBufferReConfigFinish() {
     video_->video_decoder()->InitializedFrames(std::move(frames), coded_width, coded_height,
                                                stride);
   }  // ~lock
+}
+
+void CodecAdapterVp9::CoreCodecSetStreamControlProfile(zx::unowned_thread stream_control_thread) {
+  device_->SetThreadProfile(std::move(stream_control_thread), ThreadRole::kVp9StreamControl);
 }
 
 void CodecAdapterVp9::PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run) {
