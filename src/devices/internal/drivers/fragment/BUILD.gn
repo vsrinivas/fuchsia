@@ -49,7 +49,7 @@ driver_module("fragment") {
     "//sdk/banjo/fuchsia.hardware.spi:fuchsia.hardware.spi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.tee:fuchsia.hardware.tee_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.thermal",
+    "//sdk/banjo/fuchsia.hardware.thermal:fuchsia.hardware.thermal_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.modeswitch:fuchsia.hardware.usb.modeswitch_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.phy:fuchsia.hardware.usb.phy_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.vreg",

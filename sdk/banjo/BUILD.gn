@@ -34,7 +34,6 @@ _all_libraries_deps = [
   "fuchsia.hardware.serialimpl",
   "fuchsia.hardware.serialimpl.async",
   "fuchsia.hardware.syscalls.pci",
-  "fuchsia.hardware.thermal",
   "fuchsia.hardware.vreg",
 ]
 
