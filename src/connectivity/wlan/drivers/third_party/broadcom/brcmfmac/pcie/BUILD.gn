@@ -26,7 +26,7 @@ source_set("pcie") {
   ]
   public = [ "pcie_device.h" ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.pci",
+    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset",
@@ -58,7 +58,7 @@ source_set("pcie_driver_test") {
   public = [ "pcie_driver_test.h" ]
   deps = [
     ":pcie",
-    "//sdk/banjo/fuchsia.hardware.pci",
+    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",

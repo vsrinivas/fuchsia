@@ -7,5 +7,5 @@ source_set("pci") {
     "pci.c",
     "pci.h",
   ]
-  deps = [ "//sdk/banjo/fuchsia.hardware.syscalls.pci" ]
+  deps = [ "//sdk/banjo/fuchsia.hardware.syscalls.pci:fuchsia.hardware.syscalls.pci_banjo_cpp" ]
 }

@@ -73,7 +73,7 @@ source_set("shared") {
   deps = [
     ":ahci_bind",
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.pci",
+    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/pci/lib/pci",

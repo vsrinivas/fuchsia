@@ -17,7 +17,7 @@ bind_rules("goldfish_address_space-bind") {
 common_deps = [
   ":goldfish_address_space-bind",
   "//sdk/banjo/fuchsia.hardware.goldfish.addressspace:fuchsia.hardware.goldfish.addressspace_banjo_cpp",
-  "//sdk/banjo/fuchsia.hardware.pci",
+  "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
   "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
   "//src/devices/lib/driver",
   "//src/devices/lib/mmio",
@@ -61,17 +61,18 @@ test("goldfish-address-space-test") {
     "address_space_device.cc",
     "address_space_device_test.cc",
   ]
-  deps = common_deps + [
-           "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_mock",
-           "//src/devices/testing/fake-bti",
-           "//src/devices/testing/fake_ddk",
-           "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
-           "//zircon/public/lib/mock-function",
-           "//zircon/public/lib/sync",
-           "//zircon/public/lib/zircon-internal",
-           "//zircon/public/lib/zx",
-           "//zircon/public/lib/zxtest",
-         ]
+  deps =
+      common_deps + [
+        "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp_mock",
+        "//src/devices/testing/fake-bti",
+        "//src/devices/testing/fake_ddk",
+        "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
+        "//zircon/public/lib/mock-function",
+        "//zircon/public/lib/sync",
+        "//zircon/public/lib/zircon-internal",
+        "//zircon/public/lib/zx",
+        "//zircon/public/lib/zxtest",
+      ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

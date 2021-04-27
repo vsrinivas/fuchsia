@@ -70,7 +70,7 @@ source_set("src") {
     "//zircon/system/ulib/audio-proto-utils",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.pci",
+    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.intel.hda:fuchsia.hardware.intel.hda_c",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",

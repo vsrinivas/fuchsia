@@ -124,7 +124,7 @@ source_set("pcie") {
   ]
 
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.pci",
+    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/pci/lib/device-protocol-pci",
     "//zircon/public/lib/sync",
   ]

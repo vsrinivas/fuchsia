@@ -114,7 +114,6 @@ enum PciIrqMode : uint8 {
     COUNT = 5;
 };
 
-
 /// fxbug.dev/33713: Remove the zx_pcie types and implement them here
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Pci {

@@ -19,8 +19,6 @@ python_host_test("analyze_deps_test") {
 _all_libraries_deps = [
   "fuchsia.hardware.audiotypes",
   "fuchsia.hardware.display.controller",
-  "fuchsia.hardware.pci",
-  "fuchsia.hardware.syscalls.pci",
 ]
 
 # This target only exists to support the `analyze_deps.py` script. It is

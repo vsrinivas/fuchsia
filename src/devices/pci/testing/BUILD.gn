@@ -10,7 +10,7 @@ library_headers("pci-protocol-fake") {
   include_dir = "."
   headers = [ "pci_protocol_fake.h" ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.pci",
+    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/testing/fake-bti",
   ]
   testonly = true

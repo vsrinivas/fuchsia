@@ -22,7 +22,7 @@ driver_module("pci-sdhci") {
   deps = [
     ":pci-sdhci-bind",
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.pci",
+    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sdhci:fuchsia.hardware.sdhci_banjo_cpp",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
