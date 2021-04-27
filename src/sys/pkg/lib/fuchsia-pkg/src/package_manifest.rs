@@ -14,6 +14,12 @@ impl PackageManifest {
             VersionedPackageManifest::Version1(manifest) => manifest.blobs,
         }
     }
+
+    pub fn name(&self) -> &str {
+        match &self.0 {
+            VersionedPackageManifest::Version1(manifest) => &manifest.package.name,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
