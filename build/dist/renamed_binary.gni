@@ -1,0 +1,164 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/resource.gni")
+import("//build/images/shell_commands.gni")
+
+# This template can be used in the seldom case where it is necessary
+# to install inside a Fuchsia package a binary under a different name
+# than its original one.
+#
+# For example:
+#
+#    # Install bin/update as a copy of bin/multi_universal_tool
+#    # in any Fuchsia package that depends on this target.
+#    renamed_binary("pkgsvr-binary") {
+#      source = "$root_out_dir/multi_universal_tool"
+#      source_deps = [ "//src/sys/pkg/bin/multi-universal-tool" ]
+#      dest = "bin/update"
+#    }
+#
+# Compared to a resource() target that does the same thing, this
+# one also ensures that all runtime library dependencies will
+# be properly installed as well.
+#
+# Note that the original binary file is always installed with its
+# renamed version (there is no way to prevent this), but since
+# Fuchsia package archives are content-hash based, this doesn't
+# make their size significantly larger.
+#
+# Optionally, one can also declare that the binary should be
+# available in the shell, when a given package depends on this
+# target. This is useful when fuchsia_shell_package() cannot be
+# used directly, which happens when one does not want _all_ binaries
+# in the packages to be made visible to shell users (including
+# the original one, which is often undesirable).
+#
+# In other words:
+#
+#   renamed_binary("my-binary") {
+#     dest = "bin/foo"
+#     source = "$root_out_dir/original_binary"
+#     source_deps = ...
+#   }
+#
+#   fuchsia_shell_package("my-package") {
+#     ...
+#     deps = [ ":my-binary" ]
+#   }
+#
+# Will make both 'foo' and 'original_binary' available to the
+# shell, while:
+#
+#   renamed_binary("my-binary") {
+#     dest = "bin/foo"
+#     source = "$root_out_dir/original_binary"
+#     source_deps = ...
+#     fuchsia_shell_package_name = "my-package"
+#   }
+#
+#   fuchsia_package_with_single_component("my-package") {
+#     ...
+#     deps = [ ":my-binary" ]
+#   }
+#
+# Will only make 'foo' available to the shell, which is
+# generally better.
+#
+# Arguments:
+#   dest (required)
+#     [path] Destination path inside the package. Typically
+#     begins with a 'bin/' or 'test/' prefix.
+#
+#   source (required)
+#     [path] File path to the source executable. Typically
+#     something like "$root_out_dir/<source_binary_name>"
+#
+#   source_deps (required)
+#     [list of labels] A list of dependencies required to build
+#     the source file.
+#
+#   fuchsia_shell_package_name (optional)
+#     [string] If defined, must be a package name, and this template
+#     will ensure that the renamed binary will be available from the shell
+#     when said package depends on this target. Note that the
+#     original source binary, while also installed in the package,
+#     will _not_ be made visible to the shell through this target,
+#     only the renamed one.
+#
+#   deps, testonly, visibility
+#     Usual GN meaning.
+#
+template("renamed_binary") {
+  main_target_name = target_name
+
+  if (defined(invoker.fuchsia_shell_package_name)) {
+    # Generate a shell wrapper for the renamed binary.
+    # Do not use shell_command() here because it will create one wrapper for
+    # every executable() in the dependency tree rooted at source_deps, including
+    # one for the source binary. When the same source binary is used by several
+    # renamed_binary() targets, this creates a conflict late in the build!
+    _shell_package_name = invoker.fuchsia_shell_package_name
+    _shell_file = target_gen_dir + "/" + invoker.dest + ".shell"
+    _shell_file_target = "${main_target_name}.shell_file"
+    generated_file(_shell_file_target) {
+      outputs = [ _shell_file ]
+      contents = [ "#!resolve fuchsia-pkg://fuchsia.com/${_shell_package_name}#${invoker.dest}" ]
+      metadata = {
+        # Used by shell_commands() template. This ensures that only the renamed binary
+        # gets a shell wrapper, and not the source one.
+        shell_binary_entries = [
+          {
+            source = rebase_path(_shell_file, root_build_dir)
+            destination = invoker.dest
+            label =
+                get_label_info(":${main_target_name}", "label_with_toolchain")
+          },
+        ]
+        shell_binary_barrier = []
+      }
+    }
+  }
+
+  # The resource target that ensures the renamed executable is installed
+  # to the right location. Note that runtime dependencies are also needed,
+  # and this is achieved by having the main target also depending on
+  # invoker.source_deps below.
+  _resource_target = "${main_target_name}.renamed_executable"
+  resource(_resource_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    sources = [ invoker.source ]
+    outputs = [ invoker.dest ]
+    data_deps = invoker.source_deps
+    visibility = [
+      ":${main_target_name}",
+      ":*",
+    ]
+    if (defined(_shell_file_target)) {
+      deps = [ ":${_shell_file_target}" ]
+    }
+  }
+
+  group(main_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    # Ensure the renamed binary is installed into any Fuchsia
+    # package that depends on main_target_name.
+    deps += [ ":${_resource_target}" ]
+
+    # Also depend on the original source binary target(s). This
+    # is required to ensure that all runtime library dependencies
+    # are also properly installed, because the resource() target
+    # will actually block metadata collection for these.
+    deps += invoker.source_deps
+  }
+}
