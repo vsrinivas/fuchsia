@@ -18,6 +18,11 @@ use futures::{future::poll_fn, prelude::*, task::noop_waker_ref};
 use std::sync::{Arc, Weak};
 use std::task::{Context, Poll};
 
+/// Holds a reference to a router.
+/// We start out `Unused` with a weak reference to the router, but various methods
+/// need said router, and so we can transition to `Used` with a reference when the router
+/// is needed.
+/// Saves some repeated upgrading of weak to arc.
 #[derive(Clone)]
 pub(crate) enum RouterHolder<'a> {
     Unused(&'a Weak<Router>),
@@ -47,6 +52,7 @@ impl<'a> RouterHolder<'a> {
     }
 }
 
+/// Perform some IO operation on a handle.
 pub(crate) trait IO: Send {
     type Proxyable: Proxyable;
     type Output;
@@ -59,6 +65,10 @@ pub(crate) trait IO: Send {
     ) -> Poll<Result<Self::Output, zx_status::Status>>;
 }
 
+/// Serializer defines how to read or write a message to a QUIC stream.
+/// They are usually defined in pairs (one reader, one writer).
+/// In some cases those implementations end up being the same and we leverage that to improve
+/// footprint.
 pub(crate) trait Serializer: Send {
     type Message;
     fn new() -> Self;
@@ -73,23 +83,37 @@ pub(crate) trait Serializer: Send {
     ) -> Poll<Result<(), Error>>;
 }
 
+/// A proxyable message - defines how to parse/serialize itself, and gets pulled
+/// in by Proxyable to also define how to send/receive itself on the right kind of handle.
 pub(crate) trait Message: Send + Sized + Default + PartialEq + std::fmt::Debug {
+    /// How to parse this message type from bytes.
     type Parser: Serializer<Message = Self> + std::fmt::Debug;
+    /// How to turn this message into wire bytes.
     type Serializer: Serializer<Message = Self>;
 }
 
+/// The result of an IO read - either a message was received, or a signal.
 pub(crate) enum ReadValue {
     Message,
     SignalUpdate(SignalUpdate),
 }
 
+/// An object that can be proxied.
 pub(crate) trait Proxyable: Send + Sync + Sized + std::fmt::Debug {
+    /// The type of message exchanged by this handle.
+    /// This transitively also brings in types encoding how to parse/serialize messages to the
+    /// wire.
     type Message: Message;
+    /// A type that can be used for communicating messages from the handle to the proxy code.
     type Reader: IO<Proxyable = Self, Output = ReadValue>;
+    /// A type that can be used for communicating messages from the proxy code to the handle.
     type Writer: IO<Proxyable = Self, Output = ()>;
 
+    /// Convert a FIDL handle into a proxyable instance (or fail).
     fn from_fidl_handle(hdl: fidl::Handle) -> Result<Self, Error>;
+    /// Collapse this Proxyable instance back to the underlying FIDL handle (or fail).
     fn into_fidl_handle(self) -> Result<fidl::Handle, Error>;
+    /// Clear/set signals on this handle's peer.
     fn signal_peer(&self, clear: Signals, set: Signals) -> Result<(), Error>;
 }
 
@@ -98,6 +122,7 @@ pub(crate) trait IntoProxied {
     fn into_proxied(self) -> Result<Self::Proxied, Error>;
 }
 
+/// Wraps a Proxyable, adds some convenience values, and provides a nicer API.
 pub(crate) struct ProxyableHandle<Hdl: Proxyable> {
     hdl: Hdl,
     router: Weak<Router>,
@@ -119,10 +144,15 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
         self.hdl.into_fidl_handle()
     }
 
+    /// Write `msg` to the handle.
     pub(crate) async fn write(&self, msg: &mut Hdl::Message) -> Result<(), zx_status::Status> {
         self.handle_io(msg, Hdl::Writer::new()).await
     }
 
+    /// Attempt to read one `msg` from the handle.
+    /// Return Ok(Message) if a message was read.
+    /// Return Ok(SignalUpdate) if a signal was instead read.
+    /// Return Err(_) if an error occurred.
     pub(crate) fn read<'a>(
         &'a self,
         msg: &'a mut Hdl::Message,
@@ -138,6 +168,8 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
         &self.stats
     }
 
+    /// Given a signal update from the wire, apply it to the underlying handle (signalling
+    /// the peer and completing the loop).
     pub(crate) fn apply_signal_update(&self, signal_update: SignalUpdate) -> Result<(), Error> {
         if let Some(assert_signals) = signal_update.assert_signals {
             self.hdl
@@ -154,6 +186,9 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
         poll_fn(move |fut_ctx| io.poll_io(msg, &self.hdl, fut_ctx))
     }
 
+    /// Drain all remaining messages from this handle and write them to `stream_writer`.
+    /// Assumes that nothing else is writing to the handle, so that getting Poll::Pending on read
+    /// is a signal that all messages have been read.
     pub(crate) async fn drain_to_stream(
         &self,
         stream_writer: &mut StreamWriter<Hdl::Message>,
@@ -175,6 +210,7 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
         }
     }
 
+    /// Drain all messages on a stream into this handle.
     pub(crate) async fn drain_stream_to_handle(
         self,
         drain_stream: FramedStreamReader,
