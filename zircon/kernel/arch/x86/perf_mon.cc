@@ -99,6 +99,7 @@ typedef enum {
 // At a minimum we require Performance Monitoring version 4.
 // KISS: Skylake supports version 4.
 #define MINIMUM_INTEL_PERFMON_VERSION 4
+#define PERFMON_VERSION_OVERFLOW_INDICATOR_SUPPORTED (4)
 
 // MSRs
 
@@ -518,8 +519,16 @@ LK_INIT_HOOK(x86_perfmon, x86_perfmon_init_once, LK_INIT_LEVEL_ARCH)
 
 static void x86_perfmon_clear_overflow_indicators() {
   uint64_t value = (IA32_PERF_GLOBAL_OVF_CTRL_CLR_COND_CHGD_MASK |
-                    IA32_PERF_GLOBAL_OVF_CTRL_DS_BUFFER_CLR_OVF_MASK |
-                    IA32_PERF_GLOBAL_OVF_CTRL_UNCORE_CLR_OVF_MASK);
+                    IA32_PERF_GLOBAL_OVF_CTRL_DS_BUFFER_CLR_OVF_MASK);
+
+  // Clear overflow indicator for uncore PMU only if it is supported.
+  // The uncore PMU overflow indicator is supported by PMU version 4
+  // and later, but some hypervisors enumerate that version and don't
+  // support it anyway.
+  if ((perfmon_version >= PERFMON_VERSION_OVERFLOW_INDICATOR_SUPPORTED) &&
+      !arch::BootCpuid<arch::CpuidFeatureFlagsC>().hypervisor()) {
+    value |= IA32_PERF_GLOBAL_OVF_CTRL_UNCORE_CLR_OVF_MASK;
+  }
 
   // This function isn't performance critical enough to precompute this.
   for (unsigned i = 0; i < perfmon_num_programmable_counters; ++i) {
