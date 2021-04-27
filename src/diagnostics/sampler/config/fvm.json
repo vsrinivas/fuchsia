@@ -1,20 +1,33 @@
 {
-  "project_id": 3676913920,
-  "poll_rate_sec": 3600,
-  "metrics": [
-    {
-      "selector": "bootstrap/driver_manager:root/fvm/partitions/blobfs:total_slices_reserved",
-      "metric_id": 3000,
-      "metric_type": "Integer",
-      "event_codes": [0],
-      "use_legacy_cobalt": true
-    },
-    {
-      "selector": "bootstrap/driver_manager:root/fvm/partitions/minfs:total_slices_reserved",
-      "metric_id": 3000,
-      "metric_type": "Integer",
-      "event_codes": [1],
-      "use_legacy_cobalt": true
-    }
-  ]
+    "metrics": [
+        {
+            "event_codes": [
+                0
+            ],
+            "metric_id": 3000,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/fvm/partitions/blobfs:total_slices_reserved",
+            "use_legacy_cobalt": true
+        },
+        {
+            "event_codes": [
+                1
+            ],
+            "metric_id": 3000,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/fvm/partitions/minfs:total_slices_reserved",
+            "use_legacy_cobalt": true
+        },
+        {
+            "event_codes": [
+                1
+            ],
+            "metric_id": 28,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/fvm/mount_time/version_combo",
+            "use_legacy_cobalt": true
+        }
+    ],
+    "poll_rate_sec": 3600,
+    "project_id": 3676913920
 }

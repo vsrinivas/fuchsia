@@ -75,6 +75,17 @@ static constexpr uint64_t kMagic = 0x54524150204d5646;
 // header.
 //
 // See //src/storage/docs/versioning.md for more.
+//
+// *************************************************************************************************
+//
+// IMPORTANT: When changing either kCurrentFormatVersion or kCurrentRevision:
+//
+//   * Update //third_party/cobalt_config/fuchsia/local_storage/versions.txt
+//     (submission order does not matter).
+//
+//   * Update //src/storage/fvm/README.md with what changed.
+//
+// *************************************************************************************************
 static constexpr uint64_t kCurrentFormatVersion = 1;
 static constexpr uint64_t kCurrentRevision = 1;
 

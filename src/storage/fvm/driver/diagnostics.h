@@ -82,6 +82,9 @@ class Diagnostics {
 
   inspect::UintProperty mount_time_format_version_;
   inspect::UintProperty mount_time_oldest_revision_;
+  // The version combo property is constructed at mount time instead of being passed in. It is of
+  // the format <format-version>/<oldest-revision>.
+  inspect::StringProperty mount_time_version_combo_;
   inspect::UintProperty mount_time_slice_size_;
   inspect::UintProperty mount_time_num_slices_;
   inspect::UintProperty mount_time_partition_table_entries_;

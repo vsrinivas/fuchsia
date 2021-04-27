@@ -17,6 +17,7 @@ Diagnostics::Diagnostics() {
   mount_time_ = root_.CreateChild("mount_time");
   mount_time_format_version_ = mount_time_.CreateUint("format_version", 0);
   mount_time_oldest_revision_ = mount_time_.CreateUint("oldest_revision", 0);
+  mount_time_version_combo_ = mount_time_.CreateString("version_combo", "0/0");
   mount_time_slice_size_ = mount_time_.CreateUint("slice_size", 0);
   mount_time_num_slices_ = mount_time_.CreateUint("num_slices", 0);
   mount_time_partition_table_entries_ = mount_time_.CreateUint("partition_table_entries", 0);
@@ -34,6 +35,11 @@ Diagnostics::Diagnostics() {
 void Diagnostics::OnMount(OnMountArgs args) {
   mount_time_format_version_.Set(args.format_version);
   mount_time_oldest_revision_.Set(args.oldest_revision);
+
+  std::string version_combo =
+      std::to_string(args.format_version) + "/" + std::to_string(args.oldest_revision);
+  mount_time_version_combo_.Set(version_combo);
+
   mount_time_slice_size_.Set(args.slice_size);
   mount_time_num_slices_.Set(args.num_slices);
   mount_time_partition_table_entries_.Set(args.partition_table_entries);
