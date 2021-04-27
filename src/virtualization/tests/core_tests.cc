@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <chrono>
+#include <cstdlib>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -92,4 +95,31 @@ TYPED_TEST(CoreGuestTest, VirtioRng) {
   std::string result;
   EXPECT_EQ(this->RunUtil(kVirtioRngUtil, {}, &result), ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
+}
+
+TYPED_TEST(CoreGuestTest, RealTimeClock) {
+  // Real time clock not functioning in Zircon guest at this time.
+  //
+  // TODO(fxbug.dev/75440): Fix clock in Zircon guest.
+  if (this->GetGuestKernel() == GuestKernel::ZIRCON) {
+    return;
+  }
+
+  // Print seconds since Unix epoch (1970-01-01), and parse the result.
+  std::string result;
+  EXPECT_EQ(this->Execute({"/bin/date", "+%s"}, {}, &result), ZX_OK);
+  int64_t guest_timestamp = std::stol(result, /*pos=*/nullptr, /*base=*/10);
+  ASSERT_TRUE(guest_timestamp > 0) << "Could not parse guest time.";
+
+  // Get the system time.
+  std::chrono::time_point now = std::chrono::system_clock::now();
+  int64_t host_timestamp =
+      std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+
+  // Ensure the clock matches the system time, within a few minutes.
+  std::cout << "Guest time is " << (host_timestamp - guest_timestamp)
+            << " second(s) behind host time.\n";
+  EXPECT_LT(std::abs(host_timestamp - guest_timestamp), std::chrono::minutes(5).count())
+      << "Guest time (" << guest_timestamp << ") and host time (" << host_timestamp
+      << ") differ by more than 5 minutes.";
 }
