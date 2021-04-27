@@ -4,12 +4,12 @@
 
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/align.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/init-step.h>
 #include <fbl/algorithm.h>
 #include <hwreg/bitfields.h>
@@ -101,14 +101,14 @@ constexpr wifi_config_t wifi_config = {
         },
     .cc_table =
         {
-            {"WW", 1},   {"AU", 923}, {"CA", 901}, {"US", 843}, {"GB", 889}, {"BE", 889},
-            {"BG", 889}, {"CZ", 889}, {"DK", 889}, {"DE", 889}, {"EE", 889}, {"IE", 889},
-            {"GR", 889}, {"ES", 889}, {"FR", 889}, {"HR", 889}, {"IT", 889}, {"CY", 889},
-            {"LV", 889}, {"LT", 889}, {"LU", 889}, {"HU", 889}, {"MT", 889}, {"NL", 889},
-            {"AT", 889}, {"PL", 889}, {"PT", 889}, {"RO", 889}, {"SI", 889}, {"SK", 889},
-            {"FI", 889}, {"SE", 889}, {"EL", 889}, {"IS", 889}, {"LI", 889}, {"TR", 889},
-            {"CH", 889}, {"NO", 889}, {"JP", 2},   {"KR", 2},   {"TW", 2},   {"IN", 2},
-            {"SG", 2},   {"MX", 2},   {"NZ", 2},   {"", 0},
+            {"WW", 2},   {"AU", 924}, {"CA", 902}, {"US", 844}, {"GB", 890}, {"BE", 890},
+            {"BG", 890}, {"CZ", 890}, {"DK", 890}, {"DE", 890}, {"EE", 890}, {"IE", 890},
+            {"GR", 890}, {"ES", 890}, {"FR", 890}, {"HR", 890}, {"IT", 890}, {"CY", 890},
+            {"LV", 890}, {"LT", 890}, {"LU", 890}, {"HU", 890}, {"MT", 890}, {"NL", 890},
+            {"AT", 890}, {"PL", 890}, {"PT", 890}, {"RO", 890}, {"SI", 890}, {"SK", 890},
+            {"FI", 890}, {"SE", 890}, {"EL", 890}, {"IS", 890}, {"LI", 890}, {"TR", 890},
+            {"CH", 890}, {"NO", 890}, {"JP", 3},   {"KR", 3},   {"TW", 3},   {"IN", 3},
+            {"SG", 3},   {"MX", 3},   {"NZ", 3},   {"", 0},
         },
 };
 
