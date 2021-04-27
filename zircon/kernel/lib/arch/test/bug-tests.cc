@@ -86,7 +86,7 @@ TEST(BugTests, MdsTaa) {
     EXPECT_FALSE(arch::HasX86MdsTaaBugs(cpuid, msr));
   }
 
-  // Intel Atom x5-Z8350 (Silvermont)
+  // Intel Atom x5-Z8350 (Airmont)
   {
     // Older microcode: No IA32_ARCH_CAPABILITIES.
     // Expectations: MDS and no TAA.
@@ -317,6 +317,43 @@ TEST(BugTests, MeltdownPresence) {
     MakeArchCapabilitiesAvailable(cpuid);
     msr.Populate(arch::X86Msr::IA32_ARCH_CAPABILITIES, 0);
     EXPECT_TRUE(arch::HasX86MeltdownBug(cpuid, msr));
+  }
+}
+
+TEST(BugTests, L1tfPresence) {
+  // Intel Atom x5-Z8350 (Airmont)
+  // Expectation: not present
+  {
+    // Older microcode: No IA32_ARCH_CAPABILITIES.
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelAtomX5_Z8350);
+    arch::testing::FakeMsrIo msr;
+    EXPECT_FALSE(arch::HasX86L1tfBug(cpuid, msr));
+
+    // Newer microcode: IA32_ARCH_CAPABILITIES with RDCL_NO.
+    msr.Populate(arch::X86Msr::IA32_ARCH_CAPABILITIES, uint64_t{1});
+    EXPECT_FALSE(arch::HasX86L1tfBug(cpuid, msr));
+  }
+
+  // AMD Ryzen 5 1500X.
+  // Expectation: not present.
+  {
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen5_1500x);
+    arch::testing::FakeMsrIo msr;
+    EXPECT_FALSE(arch::HasX86L1tfBug(cpuid, msr));
+  }
+
+  // Intel Xeon E5-2690 v4.
+  // Expectation: present
+  {
+    // Older microcode: No IA32_ARCH_CAPABILITIES.
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelXeonE5_2690_V4);
+    arch::testing::FakeMsrIo msr;
+    EXPECT_TRUE(arch::HasX86L1tfBug(cpuid, msr));
+
+    // Newer microcode: IA32_ARCH_CAPABILITIES, but still susceptible.
+    MakeArchCapabilitiesAvailable(cpuid);
+    msr.Populate(arch::X86Msr::IA32_ARCH_CAPABILITIES, 0);
+    EXPECT_TRUE(arch::HasX86L1tfBug(cpuid, msr));
   }
 }
 

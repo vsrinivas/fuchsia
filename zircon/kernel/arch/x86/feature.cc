@@ -224,12 +224,9 @@ void x86_cpu_feature_init() {
   g_has_ibpb = arch::HasIbpb(cpuid);
   g_has_enhanced_ibrs = arch::HasIbrs(cpuid, msr, /*always_on_mode=*/true);
   g_has_meltdown = arch::HasX86MeltdownBug(cpuid, msr);
-
-  if (x86_vendor == X86_VENDOR_INTEL) {
-    g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid_old, &msr_old);
-    g_l1d_flush_on_vmentry = ((x86_get_disable_spec_mitigations() == false)) && g_has_l1tf &&
-                             x86_feature_test(X86_FEATURE_L1D_FLUSH);
-  }
+  g_has_l1tf = arch::HasX86L1tfBug(cpuid, msr);
+  g_l1d_flush_on_vmentry = !g_disable_spec_mitigations && g_has_l1tf &&
+                           arch::BootCpuid<arch::CpuidExtendedFeatureFlagsD>().l1d_flush();
   g_ras_fill_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false);
   g_cpu_vulnerable_to_rsb_underflow = (x86_get_disable_spec_mitigations() == false) &&
                                       (x86_vendor == X86_VENDOR_INTEL) &&
@@ -561,7 +558,6 @@ static const x86_microarch_config_t cannon_lake_config{
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
     .disable_c1e = true,
-    .has_l1tf = true,
     .idle_prefer_hlt = false,
     .idle_states =
         {
@@ -577,7 +573,6 @@ static const x86_microarch_config_t skylake_config{
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
     .disable_c1e = true,
-    .has_l1tf = true,
     .idle_prefer_hlt = false,
     .idle_states =
         {
@@ -602,7 +597,6 @@ static const x86_microarch_config_t skylake_x_config{
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
     .disable_c1e = true,
-    .has_l1tf = true,
     .idle_prefer_hlt = false,
     .idle_states =
         {
@@ -618,7 +612,6 @@ static const x86_microarch_config_t broadwell_config{
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
     .disable_c1e = true,
-    .has_l1tf = true,
     .idle_prefer_hlt = false,
     .idle_states =
         {
@@ -633,7 +626,6 @@ static const x86_microarch_config_t haswell_config{
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
     .disable_c1e = true,
-    .has_l1tf = true,
     .idle_prefer_hlt = false,
     .idle_states =
         {
@@ -648,7 +640,6 @@ static const x86_microarch_config_t ivybridge_config{
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = true,
-    .has_l1tf = true,
     .idle_prefer_hlt = false,
     .idle_states =
         {
@@ -663,7 +654,6 @@ static const x86_microarch_config_t sandybridge_config{
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = true,
-    .has_l1tf = true,
     .idle_prefer_hlt = false,
     .idle_states =
         {
@@ -678,7 +668,6 @@ static const x86_microarch_config_t westmere_config{
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = true,
-    .has_l1tf = true,
     .idle_prefer_hlt = false,
     .idle_states =
         {
@@ -693,7 +682,6 @@ static const x86_microarch_config_t nehalem_config{
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = true,
-    .has_l1tf = true,
     .idle_prefer_hlt = false,
     .idle_states =
         {
@@ -708,7 +696,6 @@ static const x86_microarch_config_t silvermont_config{
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
-    .has_l1tf = false,
     .idle_prefer_hlt = false,
     .idle_states =
         {
@@ -723,7 +710,6 @@ static const x86_microarch_config_t goldmont_config{
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
     .disable_c1e = false,
-    .has_l1tf = false,
     // [APL30] Apollo Lake SOCs (Goldmont) have an errata which causes stores to not always wake
     // MWAIT-ing cores. Prefer HLT to avoid the issue.
     .idle_prefer_hlt = true,
@@ -740,7 +726,6 @@ static const x86_microarch_config_t goldmont_plus_config{
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
-    .has_l1tf = false,
     .idle_prefer_hlt = false,
     .idle_states =
         {
@@ -765,7 +750,6 @@ static const x86_microarch_config_t intel_default_config{
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
-    .has_l1tf = true,
     .idle_prefer_hlt = false,
     .idle_states =
         {
@@ -782,7 +766,6 @@ static const x86_microarch_config_t zen_config{
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
-    .has_l1tf = false,
     // Zen SOCs save substantial power using HLT instead of MWAIT.
     // TODO(fxbug.dev/61265): Use a predictor/selection to use mwait for short sleeps.
     .idle_prefer_hlt = true,
@@ -799,7 +782,6 @@ static const x86_microarch_config_t jaguar_config{
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
-    .has_l1tf = false,
     .idle_prefer_hlt = false,
     .idle_states =
         {
@@ -814,7 +796,6 @@ static const x86_microarch_config_t bulldozer_config{
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
-    .has_l1tf = false,
     // Excavator SOCs in particular save substantial power using HLT instead of MWAIT
     .idle_prefer_hlt = true,
     .idle_states =
@@ -830,7 +811,6 @@ static const x86_microarch_config_t amd_default_config{
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
-    .has_l1tf = false,
     .idle_prefer_hlt = false,
     .idle_states =
         {
@@ -847,7 +827,6 @@ static const x86_microarch_config_t unknown_vendor_config{
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
-    .has_l1tf = true,
     .idle_prefer_hlt = false,
     .idle_states =
         {

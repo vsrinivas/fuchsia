@@ -354,6 +354,47 @@ inline bool HasX86MeltdownBug(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
   return false;
 }
 
+// Whether the CPU is susceptible to the L1 Terminal Fault (L1TF) bug:
+// https://software.intel.com/security-software-guidance/advisory-guidance/l1-terminal-fault.
+//
+// CVE-2018-3615, CVE-2018-3620, CVE-2018-3646.
+template <typename CpuidIoProvider, typename MsrIoProvider>
+inline bool HasX86L1tfBug(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
+  // Advertisement of RDCL_NO also implies non-susceptibility to L1TF:
+  // https://software.intel.com/security-software-guidance/deep-dives/deep-dive-intel-analysis-l1-terminal-fault.
+  if (ArchCapabilitiesMsr::IsSupported(cpuid) &&
+      ArchCapabilitiesMsr::Get().ReadFrom(&msr).rdcl_no()) {
+    return false;
+  }
+
+  switch (GetMicroarchitecture(cpuid)) {
+    case Microarchitecture::kUnknown:
+    case Microarchitecture::kIntelCore2:
+    case Microarchitecture::kIntelNehalem:
+    case Microarchitecture::kIntelWestmere:
+    case Microarchitecture::kIntelSandyBridge:
+    case Microarchitecture::kIntelIvyBridge:
+    case Microarchitecture::kIntelHaswell:
+    case Microarchitecture::kIntelBroadwell:
+    case Microarchitecture::kIntelSkylake:
+    case Microarchitecture::kIntelCannonLake:
+    case Microarchitecture::kIntelBonnell:
+      return true;
+    case Microarchitecture::kIntelSkylakeServer:
+    case Microarchitecture::kIntelSilvermont:
+    case Microarchitecture::kIntelAirmont:
+    case Microarchitecture::kIntelGoldmont:
+    case Microarchitecture::kIntelGoldmontPlus:
+    case Microarchitecture::kIntelTremont:
+    case Microarchitecture::kAmdFamilyBulldozer:
+    case Microarchitecture::kAmdFamilyJaguar:
+    case Microarchitecture::kAmdFamilyZen:
+    case Microarchitecture::kAmdFamilyZen3:
+      break;
+  }
+  return false;
+}
+
 // An architecturally prescribed mitigation for Spectre v2.
 enum class SpectreV2Mitigation {
   // Enhanced/always-on IBRS (i.e., IBRS that can be enabled once without
