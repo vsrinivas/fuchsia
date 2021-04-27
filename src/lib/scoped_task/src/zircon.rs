@@ -38,7 +38,7 @@ fn install_panic_hook() {
     panic::set_hook(new_hook);
 }
 
-#[cfg(rust_panic = "unwind")]
+#[cfg(not(rust_panic = "abort"))]
 fn install_panic_hook() {
     // When panic=unwind we can rely on the destructor of the individual
     // processes.
