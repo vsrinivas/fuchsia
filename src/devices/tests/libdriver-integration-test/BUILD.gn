@@ -57,6 +57,12 @@ isolated_devmgr_unittest_package("libdriver-integration-test") {
     "//src/devices/tests/mock-device",
     "//src/devices/tests/sysdev",
   ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 fidl("mock-device") {

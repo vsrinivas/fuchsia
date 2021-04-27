@@ -231,4 +231,10 @@ isolated_devmgr_unittest_package("driver-host-tests") {
     "//src/devices/misc/drivers/test",
     "//src/devices/tests/sysdev",
   ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

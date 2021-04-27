@@ -70,6 +70,11 @@ isolated_devmgr_unittest_package("ddk-lifecycle-test-package") {
     "//src/devices/bus/drivers/platform",
     "//src/devices/tests/sysdev",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {
