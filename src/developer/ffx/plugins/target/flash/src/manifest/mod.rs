@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::manifest::{v1::FlashManifest as FlashManifestV1, v2::FlashManifest as FlashManifestV2},
+    crate::manifest::{
+        v1::FlashManifest as FlashManifestV1, v2::FlashManifest as FlashManifestV2,
+        v3::FlashManifest as FlashManifestV3,
+    },
     anyhow::{anyhow, bail, Context, Error, Result},
     async_trait::async_trait,
     chrono::{DateTime, Duration, Utc},
@@ -27,6 +30,7 @@ use {
 
 pub(crate) mod v1;
 pub(crate) mod v2;
+pub(crate) mod v3;
 
 pub(crate) const UNKNOWN_VERSION: &str = "Unknown flash manifest version";
 const LARGE_FILE: &str = "large file, please wait... ";
@@ -53,6 +57,7 @@ pub(crate) struct ManifestFile {
 pub(crate) enum FlashManifest {
     V1(FlashManifestV1),
     V2(FlashManifestV2),
+    V3(FlashManifestV3),
 }
 
 impl FlashManifest {
@@ -68,6 +73,7 @@ impl FlashManifest {
         match manifest.version {
             1 => Ok(Self::V1(from_value(manifest.manifest.clone())?)),
             2 => Ok(Self::V2(from_value(manifest.manifest.clone())?)),
+            3 => Ok(Self::V3(from_value(manifest.manifest.clone())?)),
             _ => ffx_bail!("{}", UNKNOWN_VERSION),
         }
     }
@@ -87,6 +93,7 @@ impl Flash for FlashManifest {
         match self {
             Self::V1(v) => v.flash(writer, fastboot_proxy, cmd).await,
             Self::V2(v) => v.flash(writer, fastboot_proxy, cmd).await,
+            Self::V3(v) => v.flash(writer, fastboot_proxy, cmd).await,
         }
     }
 }

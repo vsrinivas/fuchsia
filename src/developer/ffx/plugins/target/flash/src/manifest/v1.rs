@@ -42,6 +42,15 @@ pub(crate) struct Partition(
 );
 
 impl Partition {
+    pub(crate) fn new(
+        name: String,
+        file: String,
+        variable: Option<String>,
+        variable_value: Option<String>,
+    ) -> Self {
+        Partition(name, file, variable, variable_value)
+    }
+
     pub(crate) fn name(&self) -> &str {
         self.0.as_str()
     }
