@@ -34,7 +34,7 @@ struct SliceRegion {
     uint64 count;
 };
 
-[Transport = "Banjo", BanjoLayout="ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol BlockVolume {
     /// Attempts to extend a virtual partition.
     Extend(SliceExtent extent) -> (zx.status status);
