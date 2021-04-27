@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context as _},
+    anyhow::Context as _,
     fidl::endpoints::{DiscoverableService, ServerEnd},
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_logger as flogger, fidl_fuchsia_net_tun as fnet_tun,
     fidl_fuchsia_netemul::{
@@ -14,10 +14,10 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_component_test::{
+        self as fcomponent,
         builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-        mock::{Mock, MockHandles},
-        Moniker, RealmInstance,
     },
+    fuchsia_zircon as zx,
     futures::{channel::mpsc, FutureExt as _, SinkExt as _, StreamExt as _, TryStreamExt as _},
     log::{debug, error, info},
     pin_utils::pin_mut,
@@ -26,6 +26,7 @@ use {
         atomic::{AtomicU64, Ordering},
         Arc,
     },
+    thiserror::Error,
 };
 
 type Result<T = (), E = anyhow::Error> = std::result::Result<T, E>;
@@ -33,160 +34,160 @@ type Result<T = (), E = anyhow::Error> = std::result::Result<T, E>;
 const REALM_COLLECTION_NAME: &str = "netemul";
 const NETEMUL_SERVICES_COMPONENT_NAME: &str = "netemul-services";
 
-struct ManagedRealm {
-    server_end: ServerEnd<ManagedRealmMarker>,
-    realm: RealmInstance,
+#[derive(Error, Debug)]
+enum CreateRealmError {
+    #[error("url not provided")]
+    UrlNotProvided,
+    #[error("name not provided")]
+    NameNotProvided,
+    #[error("duplicate capability {0:?} exposed by component '{1}'")]
+    DuplicateCapabilityUse(fnetemul::Capability, String),
+    #[error("realm builder error: {0:?}")]
+    RealmBuilderError(#[from] fcomponent::error::Error),
 }
 
-impl ManagedRealm {
-    async fn create(
-        server_end: ServerEnd<ManagedRealmMarker>,
-        options: RealmOptions,
-        prefix: &str,
-        network_realm: Arc<RealmInstance>,
-    ) -> Result<ManagedRealm> {
-        let RealmOptions { name, children, .. } = options;
-        let mut exposed_services = HashMap::new();
-        let mut components_using_all = Vec::new();
-        let mut builder = RealmBuilder::new().await.context("error creating new realm builder")?;
+impl Into<zx::Status> for CreateRealmError {
+    fn into(self) -> zx::Status {
+        match self {
+            CreateRealmError::UrlNotProvided
+            | CreateRealmError::NameNotProvided
+            | CreateRealmError::DuplicateCapabilityUse(_, _) => zx::Status::INVALID_ARGS,
+            CreateRealmError::RealmBuilderError(_) => zx::Status::INTERNAL,
+        }
+    }
+}
 
-        let _: &mut RealmBuilder = builder
-            .add_component(
-                NETEMUL_SERVICES_COMPONENT_NAME,
-                ComponentSource::Mock(Mock::new(move |mock_handles: MockHandles| {
+async fn create_realm_instance(
+    RealmOptions { name, children, .. }: RealmOptions,
+    prefix: &str,
+    network_realm: Arc<fcomponent::RealmInstance>,
+) -> Result<fcomponent::RealmInstance, CreateRealmError> {
+    let mut exposed_services = HashMap::new();
+    let mut components_using_all = Vec::new();
+    let mut builder = RealmBuilder::new().await?;
+    let _: &mut RealmBuilder = builder
+        .add_component(
+            NETEMUL_SERVICES_COMPONENT_NAME,
+            ComponentSource::Mock(fcomponent::mock::Mock::new(
+                move |mock_handles: fcomponent::mock::MockHandles| {
                     Box::pin(run_netemul_services(mock_handles, network_realm.clone()))
-                })),
-            )
-            .await
-            .with_context(|| {
-                format!("failed to add {} component", NETEMUL_SERVICES_COMPONENT_NAME)
-            })?;
-        for ChildDef { url, name, exposes, uses, .. } in children.unwrap_or_default() {
-            let url = url.ok_or(anyhow!("no url provided"))?;
-            let name = name.ok_or(anyhow!("no name provided"))?;
-            let _: &mut RealmBuilder = builder
-                .add_component(name.as_ref(), ComponentSource::url(&url))
-                .await
-                .with_context(|| {
-                    format!("error adding new component with name '{}' and url '{}'", name, url)
-                })?;
-            if let Some(exposes) = exposes {
-                for exposed in exposes {
-                    // TODO(https://fxbug.dev/72043): allow duplicate services.
-                    // Service names will be aliased as `child_name/service_name`, and this panic
-                    // will be replaced with an INVALID_ARGS epitaph sent on the `ManagedRealm`
-                    // channel if a child component with a duplicate name is created.
-                    match exposed_services.entry(exposed) {
-                        std::collections::hash_map::Entry::Occupied(entry) => {
-                            panic!(
-                                "duplicate service name '{}' exposed from component '{}'",
-                                entry.key(),
-                                entry.get(),
-                            );
-                        }
-                        std::collections::hash_map::Entry::Vacant(entry) => {
-                            let _: &mut RealmBuilder = builder
-                                .add_route(CapabilityRoute {
-                                    capability: Capability::protocol(entry.key()),
-                                    source: RouteEndpoint::component(&name),
-                                    targets: vec![RouteEndpoint::AboveRoot],
-                                })
-                                .with_context(|| {
-                                    format!(
-                                        "error adding route exposing capability '{}' from \
-                                        component '{}'",
-                                        entry.key(),
-                                        name,
-                                    )
-                                })?;
-                            let _: &mut String = entry.insert(name.clone());
-                        }
+                },
+            )),
+        )
+        .await?;
+    for ChildDef { url, name, exposes, uses, .. } in children.unwrap_or_default() {
+        let url = url.ok_or(CreateRealmError::UrlNotProvided)?;
+        let name = name.ok_or(CreateRealmError::NameNotProvided)?;
+        let _: &mut RealmBuilder =
+            builder.add_component(name.as_ref(), ComponentSource::url(&url)).await?;
+        if let Some(exposes) = exposes {
+            for exposed in exposes {
+                // TODO(https://fxbug.dev/72043): allow duplicate services.
+                // Service names will be aliased as `child_name/service_name`, and this panic will
+                // be replaced with an INVALID_ARGS epitaph sent on the `ManagedRealm` channel if a
+                // child component with a duplicate name is created, or if a child exposes two
+                // services of the same name.
+                match exposed_services.entry(exposed) {
+                    std::collections::hash_map::Entry::Occupied(entry) => {
+                        panic!(
+                            "duplicate service name '{}' exposed from component '{}'",
+                            entry.key(),
+                            entry.get(),
+                        );
+                    }
+                    std::collections::hash_map::Entry::Vacant(entry) => {
+                        let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
+                            capability: Capability::protocol(entry.key()),
+                            source: RouteEndpoint::component(&name),
+                            targets: vec![RouteEndpoint::AboveRoot],
+                        })?;
+                        let _: &mut String = entry.insert(name.clone());
                     }
                 }
             }
-            if let Some(uses) = uses {
-                match uses {
-                    ChildUses::All(fnetemul::Empty {}) => {
-                        // Route all built-in netemul services to the child.
-                        // TODO(https://fxbug.dev/72992): route netemul-provided `/dev`.
-                        // TODO(https://fxbug.dev/72403): route netemul-provided `SyncManager`.
-                        let () = route_log_sink_to_component(&mut builder, &name)?;
-                        let () = route_network_context_to_component(&mut builder, &name)?;
-                        let () = components_using_all.push(name);
-                    }
-                    ChildUses::Capabilities(caps) => {
-                        for cap in caps {
-                            match cap {
-                                fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
-                                    let () = route_log_sink_to_component(&mut builder, &name)?;
-                                }
-                                fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}) => {
-                                    let () =
-                                        route_network_context_to_component(&mut builder, &name)?;
-                                }
-                                fnetemul::Capability::NetemulSyncManager(fnetemul::Empty {}) => {
-                                    todo!()
-                                }
-                                fnetemul::Capability::NetemulDevfs(fnetemul::Empty {}) => todo!(),
-                                fnetemul::Capability::ChildDep(fnetemul::ChildDep {}) => todo!(),
+        }
+        if let Some(uses) = uses {
+            match uses {
+                ChildUses::All(fnetemul::Empty {}) => {
+                    // Route all built-in netemul services to the child.
+                    // TODO(https://fxbug.dev/72992): route netemul-provided `/dev`.
+                    // TODO(https://fxbug.dev/72403): route netemul-provided `SyncManager`.
+                    let () = route_log_sink_to_component(&mut builder, &name)?;
+                    let () = route_network_context_to_component(&mut builder, &name)?;
+                    let () = components_using_all.push(name);
+                }
+                ChildUses::Capabilities(caps) => {
+                    let mut used = std::collections::HashSet::new();
+                    for cap in caps {
+                        if !used.insert(cap) {
+                            return Err(CreateRealmError::DuplicateCapabilityUse(cap, name));
+                        }
+                        match cap {
+                            fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
+                                let () = route_log_sink_to_component(&mut builder, &name)?;
                             }
+                            fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}) => {
+                                let () = route_network_context_to_component(&mut builder, &name)?;
+                            }
+                            fnetemul::Capability::NetemulSyncManager(fnetemul::Empty {}) => todo!(),
+                            fnetemul::Capability::NetemulDevfs(fnetemul::Empty {}) => todo!(),
+                            fnetemul::Capability::ChildDep(fnetemul::ChildDep {}) => todo!(),
                         }
                     }
                 }
             }
         }
-        for component in components_using_all {
-            for (service, source) in &exposed_services {
-                // Don't route a capability back to its source.
-                if &component == source {
-                    continue;
-                }
-                let _: &mut RealmBuilder = builder
-                    .add_route(CapabilityRoute {
-                        capability: Capability::protocol(service),
-                        source: RouteEndpoint::component(source),
-                        targets: vec![RouteEndpoint::component(&component)],
-                    })
-                    .with_context(|| {
-                        format!(
-                            "error adding route offering '{}' from component '{}' to component \
-                            '{}'",
-                            service, source, component,
-                        )
-                    })?;
+    }
+    for component in components_using_all {
+        for (service, source) in &exposed_services {
+            // Don't route a capability back to its source.
+            if &component == source {
+                continue;
             }
+            let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
+                capability: Capability::protocol(service),
+                source: RouteEndpoint::component(source),
+                targets: vec![RouteEndpoint::component(&component)],
+            })?;
         }
-        let mut realm = builder.build();
-        // Mark all dependencies between components in the test realm as weak, to allow for
-        // dependency cycles.
-        //
-        // TODO(https://fxbug.dev/74977): once we can specify weak dependencies directly with the
-        // RealmBuilder API, only mark dependencies as `weak` that originated from a `ChildUses.all`
-        // configuration.
-        let cm_rust::ComponentDecl { offers, .. } = realm.get_decl_mut(&Moniker::root())?;
-        for offer in offers {
-            match offer {
-                cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                    dependency_type,
-                    ..
-                }) => {
-                    *dependency_type = cm_rust::DependencyType::WeakForMigration;
-                }
-                offer => error!(
+    }
+    let mut realm = builder.build();
+    // Mark all dependencies between components in the test realm as weak, to allow for dependency
+    // cycles.
+    //
+    // TODO(https://fxbug.dev/74977): once we can specify weak dependencies directly with the
+    // RealmBuilder API, only mark dependencies as `weak` that originated from a `ChildUses.all`
+    // configuration.
+    let cm_rust::ComponentDecl { offers, .. } = realm.get_decl_mut(&fcomponent::Moniker::root())?;
+    for offer in offers {
+        match offer {
+            cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                dependency_type, ..
+            }) => {
+                *dependency_type = cm_rust::DependencyType::WeakForMigration;
+            }
+            offer => {
+                error!(
                     "there should only be protocol offers from the root of the managed realm; \
                     found {:?}",
                     offer
-                ),
+                );
             }
         }
-        let name =
-            name.map(|name| format!("{}-{}", prefix, name)).unwrap_or_else(|| prefix.to_string());
-        info!("creating new ManagedRealm with name '{}'", name);
-        let () = realm.set_collection_name(REALM_COLLECTION_NAME);
-        let realm = realm.create_with_name(name).await.context("error creating realm instance")?;
-        Ok(ManagedRealm { server_end, realm })
     }
+    let name =
+        name.map(|name| format!("{}-{}", prefix, name)).unwrap_or_else(|| prefix.to_string());
+    info!("creating new ManagedRealm with name '{}'", name);
+    let () = realm.set_collection_name(REALM_COLLECTION_NAME);
+    realm.create_with_name(name).await.map_err(Into::into)
+}
 
+struct ManagedRealm {
+    server_end: ServerEnd<ManagedRealmMarker>,
+    realm: fcomponent::RealmInstance,
+}
+
+impl ManagedRealm {
     async fn run_service(self) -> Result {
         let Self { server_end, realm } = self;
         let mut stream = server_end.into_stream().context("failed to acquire request stream")?;
@@ -230,43 +231,33 @@ impl ManagedRealm {
     }
 }
 
-fn route_log_sink_to_component(builder: &mut RealmBuilder, component: &str) -> Result {
-    let _: &mut RealmBuilder = builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol(flogger::LogSinkMarker::SERVICE_NAME),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(component)],
-        })
-        .with_context(|| {
-            format!(
-                "error adding route offering '{}' to component '{}'",
-                flogger::LogSinkMarker::SERVICE_NAME,
-                component
-            )
-        })?;
+fn route_log_sink_to_component(
+    builder: &mut RealmBuilder,
+    component: &str,
+) -> Result<(), fcomponent::error::Error> {
+    let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
+        capability: Capability::protocol(flogger::LogSinkMarker::SERVICE_NAME),
+        source: RouteEndpoint::AboveRoot,
+        targets: vec![RouteEndpoint::component(component)],
+    })?;
     Ok(())
 }
 
-fn route_network_context_to_component(builder: &mut RealmBuilder, component: &str) -> Result {
-    let _: &mut RealmBuilder = builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol(fnetemul_network::NetworkContextMarker::SERVICE_NAME),
-            source: RouteEndpoint::component(NETEMUL_SERVICES_COMPONENT_NAME),
-            targets: vec![RouteEndpoint::component(component)],
-        })
-        .with_context(|| {
-            format!(
-                "error adding route offering '{}' to component '{}'",
-                fnetemul_network::NetworkContextMarker::SERVICE_NAME,
-                component
-            )
-        })?;
+fn route_network_context_to_component(
+    builder: &mut RealmBuilder,
+    component: &str,
+) -> Result<(), fcomponent::error::Error> {
+    let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
+        capability: Capability::protocol(fnetemul_network::NetworkContextMarker::SERVICE_NAME),
+        source: RouteEndpoint::component(NETEMUL_SERVICES_COMPONENT_NAME),
+        targets: vec![RouteEndpoint::component(component)],
+    })?;
     Ok(())
 }
 
 async fn run_netemul_services(
-    mock_handles: MockHandles,
-    network_realm: impl std::ops::Deref<Target = RealmInstance> + 'static,
+    mock_handles: fcomponent::mock::MockHandles,
+    network_realm: impl std::ops::Deref<Target = fcomponent::RealmInstance> + 'static,
 ) -> Result {
     let mut fs = ServiceFs::new();
     let _: &mut ServiceFsDir<'_, _> = fs
@@ -309,7 +300,9 @@ async fn get_this_package_name() -> Result<String> {
     Ok(name)
 }
 
-async fn setup_network_realm(sandbox_name: impl std::fmt::Display) -> Result<RealmInstance> {
+async fn setup_network_realm(
+    sandbox_name: impl std::fmt::Display,
+) -> Result<fcomponent::RealmInstance> {
     let pkg = get_this_package_name().await?;
     let package_url = |component_name: &str| {
         format!("fuchsia-pkg://fuchsia.com/{}#meta/{}.cm", pkg, component_name)
@@ -426,16 +419,20 @@ async fn handle_sandbox(
         let network_realm = &network_realm;
         async move {
             match request {
-                // TODO(https://fxbug.dev/72253): send the correct epitaph on failure.
-                SandboxRequest::CreateRealm { realm, options, control_handle: _ } => {
+                SandboxRequest::CreateRealm { realm: server_end, options, control_handle: _ } => {
                     let index = realm_index.fetch_add(1, Ordering::SeqCst);
                     let prefix = format!("{}{}", sandbox_name, index);
-                    match ManagedRealm::create(realm, options, &prefix, network_realm.clone())
-                        .await
-                        .context("failed to create ManagedRealm")
-                    {
-                        Ok(realm) => tx.send(realm).await.expect("receiver should not be closed"),
-                        Err(err) => error!("error creating ManagedRealm: {:?}", err),
+                    match create_realm_instance(options, &prefix, network_realm.clone()).await {
+                        Ok(realm) => tx
+                            .send(ManagedRealm { server_end, realm })
+                            .await
+                            .expect("receiver should not be closed"),
+                        Err(e) => {
+                            error!("error creating ManagedRealm: {}", e);
+                            server_end
+                                .close_with_epitaph(e.into())
+                                .unwrap_or_else(|e| error!("error sending epitaph: {:?}", e))
+                        }
                     }
                 }
                 SandboxRequest::GetNetworkContext { network_context, control_handle: _ } => {
@@ -490,7 +487,7 @@ mod tests {
     use super::*;
     use {
         fidl::endpoints::Proxy as _, fidl_fuchsia_netemul as fnetemul,
-        fidl_fuchsia_netemul_test::CounterMarker, fuchsia_zircon as zx, std::convert::TryFrom as _,
+        fidl_fuchsia_netemul_test::CounterMarker, std::convert::TryFrom as _,
     };
 
     // We can't just use a counter for the sandbox identifier, as we do in `main`, because tests
@@ -1097,6 +1094,112 @@ mod tests {
                 network_context.setup(&mut Vec::new().iter_mut()).await,
                 Ok((zx::sys::ZX_OK, Some(_setup_handle)))
             );
+        })
+        .await
+    }
+
+    // TODO(https://fxbug.dev/74868): when we can allowlist particular ERROR logs in a test, we can
+    // use #[fuchsia::test] which initializes syslog.
+    #[fasync::run_singlethreaded(test)]
+    async fn create_realm_invalid_options() {
+        with_sandbox("create_realm_invalid_options", |sandbox| async move {
+            // TODO(https://github.com/frondeus/test-case/issues/37): consider using the
+            // #[test_case] macro to define these cases statically, if we can access the name of the
+            // test case from the test case body. This is necessary in order to avoid creating
+            // sandboxes with colliding names at runtime.
+            //
+            // Note, however, that rustfmt struggles with macros, and using test-case for this test
+            // would result in a lot of large struct literals defined as macro arguments of
+            // #[test_case]. This may be more readable as an auto-formatted array.
+            struct TestCase<'a> {
+                name: &'a str,
+                options: fnetemul::RealmOptions,
+                epitaph: zx::Status,
+            }
+            let cases = [
+                TestCase {
+                    name: "no url provided",
+                    options: fnetemul::RealmOptions {
+                        children: Some(vec![fnetemul::ChildDef {
+                            name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                            ..fnetemul::ChildDef::EMPTY
+                        }]),
+                        ..fnetemul::RealmOptions::EMPTY
+                    },
+                    epitaph: zx::Status::INVALID_ARGS,
+                },
+                TestCase {
+                    name: "no name provided",
+                    options: fnetemul::RealmOptions {
+                        children: Some(vec![fnetemul::ChildDef {
+                            url: Some(COUNTER_PACKAGE_URL.to_string()),
+                            ..fnetemul::ChildDef::EMPTY
+                        }]),
+                        ..fnetemul::RealmOptions::EMPTY
+                    },
+                    epitaph: zx::Status::INVALID_ARGS,
+                },
+                TestCase {
+                    name: "duplicate service used by child",
+                    options: fnetemul::RealmOptions {
+                        children: Some(vec![fnetemul::ChildDef {
+                            name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                            url: Some(COUNTER_PACKAGE_URL.to_string()),
+                            uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                                fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                                fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                            ])),
+                            ..fnetemul::ChildDef::EMPTY
+                        }]),
+                        ..fnetemul::RealmOptions::EMPTY
+                    },
+                    epitaph: zx::Status::INVALID_ARGS,
+                },
+                TestCase {
+                    name: "duplicate components",
+                    options: fnetemul::RealmOptions {
+                        children: Some(vec![
+                            fnetemul::ChildDef {
+                                name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                                url: Some(COUNTER_PACKAGE_URL.to_string()),
+                                ..fnetemul::ChildDef::EMPTY
+                            },
+                            fnetemul::ChildDef {
+                                name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                                url: Some(COUNTER_PACKAGE_URL.to_string()),
+                                ..fnetemul::ChildDef::EMPTY
+                            },
+                        ]),
+                        ..fnetemul::RealmOptions::EMPTY
+                    },
+                    epitaph: zx::Status::INTERNAL,
+                },
+                // TODO(https://fxbug.dev/72043): once we allow duplicate services, verify that a
+                // child exposing duplicate services results in a ZX_ERR_INTERNAL epitaph.
+                //
+                // TODO(https://fxbug.dev/74977): once we only mark dependencies as `weak` that
+                // originated from a `ChildUses.all` configuration, verify that an explicit
+                // dependency cycle between components in a test realm (not using `ChildUses.all`)
+                // results in a ZX_ERR_INTERNAL epitaph.
+            ];
+            for TestCase { name, options, epitaph } in std::array::IntoIter::new(cases) {
+                let TestRealm { realm } = TestRealm::new(&sandbox, options);
+                match realm.take_event_stream().next().await.expect(&format!(
+                    "test case failed: \"{}\": epitaph should be sent on realm channel",
+                    name
+                )) {
+                    Err(fidl::Error::ClientChannelClosed {
+                        status,
+                        service_name:
+                            <ManagedRealmMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                    }) if status == epitaph => (),
+                    event => panic!(
+                        "test case failed: \"{}\": expected channel close with epitaph {}, got \
+                        unexpected event on realm channel: {:?}",
+                        name, epitaph, event
+                    ),
+                }
+            }
         })
         .await
     }
