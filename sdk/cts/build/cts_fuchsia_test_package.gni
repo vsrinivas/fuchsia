@@ -42,6 +42,12 @@ template("cts_fuchsia_test_package") {
         deps = [ ":${target_name}_verify_deps" ]
       }
     }
+
+    if (defined(deps)) {
+      deps += [ ":${target_name}_cts_file" ]
+    } else {
+      deps = [ ":${target_name}_cts_file" ]
+    }
   }
 
   write_cts_file(target_name) {

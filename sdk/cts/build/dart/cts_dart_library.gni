@@ -34,6 +34,11 @@ template("cts_dart_library") {
         non_dart_deps = [ ":${target_name}_verify_deps" ]
       }
     }
+    if (defined(non_dart_deps)) {
+      non_dart_deps += [ ":${target_name}_cts_file" ]
+    } else {
+      non_dart_deps = [ ":${target_name}_cts_file" ]
+    }
   }
 
   write_cts_file(target_name) {

@@ -9,9 +9,10 @@ template("write_cts_file") {
   not_needed(invoker, "*")
   cts_extension = "this_is_cts"
 
-  target_build_dir = get_label_info(":$target_name", "dir")
-  target_build_dir = string_replace(target_build_dir, "//", "/")
-  write_file(
-      "${root_build_dir}/cts/${target_build_dir}/${target_name}.${cts_extension}",
-      true)
+  target_build_dir = rebase_path(get_label_info(":$target_name", "dir"), "//")
+
+  generated_file("${target_name}_cts_file") {
+    outputs = [ "${root_build_dir}/cts/${target_build_dir}/${invoker.target_name}.${cts_extension}" ]
+    contents = true
+  }
 }

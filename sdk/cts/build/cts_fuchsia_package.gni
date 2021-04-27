@@ -20,7 +20,12 @@ template("cts_fuchsia_package") {
   fuchsia_package(target_name) {
     forward_variables_from(invoker, "*")
     if (defined(deps) && deps != []) {
-      deps += [ ":${target_name}_verify_deps" ]
+      deps += [
+        ":${target_name}_cts_file",
+        ":${target_name}_verify_deps",
+      ]
+    } else {
+      deps = [ ":${target_name}_cts_file" ]
     }
   }
 

@@ -37,6 +37,12 @@ template("cts_fidl") {
         non_fidl_deps = [ ":${target_name}_verify_deps" ]
       }
     }
+
+    if (defined(non_fidl_deps)) {
+      non_fidl_deps += [ ":${target_name}_cts_file" ]
+    } else {
+      non_fidl_deps = [ ":${target_name}_cts_file" ]
+    }
   }
 
   write_cts_file(target_name) {
