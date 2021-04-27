@@ -12,7 +12,8 @@ static constexpr char kVirtioMagmaUrl[] =
     "fuchsia-pkg://fuchsia.com/virtio_magma#meta/virtio_magma.cmx";
 
 VirtioMagma::VirtioMagma(const PhysMem& phys_mem)
-    : VirtioComponentDevice(phys_mem, 0, fit::bind_member(this, &VirtioMagma::ConfigureQueue),
+    : VirtioComponentDevice("Virtio Magma", phys_mem, 0,
+                            fit::bind_member(this, &VirtioMagma::ConfigureQueue),
                             fit::bind_member(this, &VirtioMagma::Ready)) {}
 
 zx_status_t VirtioMagma::Start(

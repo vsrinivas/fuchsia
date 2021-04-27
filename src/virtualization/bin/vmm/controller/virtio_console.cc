@@ -10,7 +10,7 @@ static constexpr char kVirtioConsoleUrl[] =
     "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cmx";
 
 VirtioConsole::VirtioConsole(const PhysMem& phys_mem)
-    : VirtioComponentDevice(phys_mem, 0 /* device_features */,
+    : VirtioComponentDevice("Virtio Console", phys_mem, 0 /* device_features */,
                             fit::bind_member(this, &VirtioConsole::ConfigureQueue),
                             fit::bind_member(this, &VirtioConsole::Ready)) {
   config_.max_nr_ports = kVirtioConsoleMaxNumPorts;

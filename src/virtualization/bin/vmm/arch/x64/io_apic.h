@@ -32,6 +32,7 @@ class IoApic : public IoHandler, public PlatformDevice {
   // IoHandler interface.
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+  std::string_view Name() const override { return "IO APIC"; }
 
   // Writes the redirect entry for a global IRQ.
   zx_status_t SetRedirect(uint32_t global_irq, RedirectEntry& redirect);

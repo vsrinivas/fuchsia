@@ -64,7 +64,7 @@ uint8_t VirtioInput::Pointer(uint8_t subsel, uint8_t* bitmap) {
 }
 
 VirtioInput::VirtioInput(const PhysMem& phys_mem, VirtioInputType type)
-    : VirtioComponentDevice(phys_mem, 0 /* device_features */,
+    : VirtioComponentDevice("Virtio Input", phys_mem, 0 /* device_features */,
                             fit::bind_member(this, &VirtioInput::ConfigureQueue),
                             fit::bind_member(this, &VirtioInput::ConfigureDevice),
                             fit::bind_member(this, &VirtioInput::Ready)),

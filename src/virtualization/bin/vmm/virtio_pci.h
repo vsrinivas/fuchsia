@@ -6,8 +6,11 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_VIRTIO_PCI_H_
 
 #include <lib/fit/function.h>
-#include <virtio/virtio.h>
 #include <zircon/types.h>
+
+#include <string_view>
+
+#include <virtio/virtio.h>
 
 #include "src/virtualization/bin/vmm/pci.h"
 
@@ -112,7 +115,7 @@ struct VirtioDeviceConfig {
 // Virtio PCI transport implementation.
 class VirtioPci : public PciDevice {
  public:
-  explicit VirtioPci(VirtioDeviceConfig* device_config);
+  explicit VirtioPci(VirtioDeviceConfig* device_config, std::string_view name);
 
   // Read a value at |bar| and |offset| from this device.
   zx_status_t ReadBar(uint8_t bar, uint64_t offset, IoValue* value) const override;

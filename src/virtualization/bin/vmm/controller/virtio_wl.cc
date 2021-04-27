@@ -11,7 +11,7 @@
 static constexpr char kVirtioWlUrl[] = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cmx";
 
 VirtioWl::VirtioWl(const PhysMem& phys_mem)
-    : VirtioComponentDevice(phys_mem, VIRTIO_WL_F_TRANS_FLAGS,
+    : VirtioComponentDevice("Virtio WL", phys_mem, VIRTIO_WL_F_TRANS_FLAGS,
                             fit::bind_member(this, &VirtioWl::ConfigureQueue),
                             fit::bind_member(this, &VirtioWl::Ready)) {}
 

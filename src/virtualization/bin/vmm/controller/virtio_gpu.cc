@@ -9,7 +9,7 @@
 static constexpr char kVirtioGpuUrl[] = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cmx";
 
 VirtioGpu::VirtioGpu(const PhysMem& phys_mem)
-    : VirtioComponentDevice(phys_mem, 0 /* device_features */,
+    : VirtioComponentDevice("Virtio GPU", phys_mem, 0 /* device_features */,
                             fit::bind_member(this, &VirtioGpu::ConfigureQueue),
                             fit::bind_member(this, &VirtioGpu::Ready)) {
   config_.num_scanouts = 1;

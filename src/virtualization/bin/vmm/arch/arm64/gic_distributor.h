@@ -25,6 +25,7 @@ class GicRedistributor : public IoHandler {
 
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+  std::string_view Name() const override { return "GIC Redistributor"; }
 
   bool IsEnabled(uint32_t vector) const;
 
@@ -52,6 +53,7 @@ class GicDistributor : public IoHandler, public PlatformDevice {
   // |IoHandler|
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+  std::string_view Name() const override { return "GIC Distributor"; }
 
   // |PlatformDevice|
   zx_status_t ConfigureZbi(cpp20::span<std::byte> zbi) const override;

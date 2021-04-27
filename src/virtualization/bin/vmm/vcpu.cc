@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <zircon/process.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
@@ -99,7 +100,8 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
       case ZX_ERR_CANCELED:
         return ZX_OK;
       default:
-        FX_PLOGS(ERROR, status) << "Failed to resume VCPU " << id_;
+        FX_LOGS(ERROR) << "Fatal error attempting to resume VCPU " << id_ << ": "
+                       << zx_status_get_string(status) << ". Shutting down VM.";
         return status;
     }
 
@@ -112,7 +114,8 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
         deferred.cancel();
         return ZX_OK;
       default:
-        FX_PLOGS(ERROR, status) << "Failed to handle packet " << packet.type;
+        FX_LOGS(ERROR) << "Fatal error handling packet of type " << packet.type << ": "
+                       << zx_status_get_string(status) << ". Shutting down VM.";
         return status;
     }
   }
@@ -120,10 +123,24 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
 
 zx_status_t Vcpu::Interrupt(uint32_t vector) { return vcpu_.interrupt(vector); }
 
+zx_status_t Vcpu::HandleMem(const zx_packet_guest_mem_t& packet, uint64_t trap_key) {
+  IoMapping* device_mapping = IoMapping::FromPortKey(trap_key);
+  zx_status_t status = ArchHandleMem(packet, device_mapping);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << std::hex << "Device '" << device_mapping->handler()->Name()
+                   << "' returned status " << zx_status_get_string(status)
+                   << " while attempting to handle MMIO access at paddr 0x" << packet.addr
+                   << " (mapping offset 0x" << (packet.addr - device_mapping->base()) << ").";
+    return status;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t Vcpu::HandlePacket(const zx_port_packet_t& packet) {
   switch (packet.type) {
     case ZX_PKT_TYPE_GUEST_MEM:
-      return ArchHandleMem(packet.guest_mem, packet.key);
+      return HandleMem(packet.guest_mem, packet.key);
 #if __x86_64__
     case ZX_PKT_TYPE_GUEST_IO:
       return ArchHandleIo(packet.guest_io, packet.key);

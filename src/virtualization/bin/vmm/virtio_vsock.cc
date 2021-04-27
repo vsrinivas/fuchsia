@@ -470,7 +470,7 @@ zx_status_t VirtioVsock::ChannelConnection::Write(VirtioQueue* queue, virtio_vso
 
 VirtioVsock::VirtioVsock(sys::ComponentContext* context, const PhysMem& phys_mem,
                          async_dispatcher_t* dispatcher)
-    : VirtioInprocessDevice(phys_mem, 0 /* device_features */),
+    : VirtioInprocessDevice("Virtio Vsock", phys_mem, 0 /* device_features */),
       dispatcher_(dispatcher),
       rx_stream_(dispatcher, rx_queue(), this),
       tx_stream_(dispatcher, tx_queue(), this) {

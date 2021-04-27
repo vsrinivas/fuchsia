@@ -9,7 +9,7 @@
 static constexpr char kVirtioNetUrl[] = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cmx";
 
 VirtioNet::VirtioNet(const PhysMem& phys_mem)
-    : VirtioComponentDevice(phys_mem, VIRTIO_NET_F_MAC,
+    : VirtioComponentDevice("Virtio Net", phys_mem, VIRTIO_NET_F_MAC,
                             fit::bind_member(this, &VirtioNet::ConfigureQueue),
                             fit::bind_member(this, &VirtioNet::Ready)) {}
 

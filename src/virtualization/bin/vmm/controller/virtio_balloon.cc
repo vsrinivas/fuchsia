@@ -11,7 +11,8 @@ static constexpr char kVirtioBalloonUrl[] =
     "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cmx";
 
 VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
-    : VirtioComponentDevice(phys_mem, VIRTIO_BALLOON_F_STATS_VQ | VIRTIO_BALLOON_F_DEFLATE_ON_OOM,
+    : VirtioComponentDevice("Virtio Balloon", phys_mem,
+                            VIRTIO_BALLOON_F_STATS_VQ | VIRTIO_BALLOON_F_DEFLATE_ON_OOM,
                             fit::bind_member(this, &VirtioBalloon::ConfigureQueue),
                             fit::bind_member(this, &VirtioBalloon::Ready)) {}
 

@@ -89,8 +89,9 @@ static constexpr uint32_t virtio_pci_device_class(uint16_t virtio_id) {
   return virtio_pci_class_code(virtio_id) | kVirtioPciRevisionId;
 }
 
-VirtioPci::VirtioPci(VirtioDeviceConfig* device_config)
+VirtioPci::VirtioPci(VirtioDeviceConfig* device_config, std::string_view name)
     : PciDevice({
+          .name = name,
           .device_id = virtio_pci_id(device_config->device_id),
           .vendor_id = kPciVendorIdVirtio,
           .subsystem_id = device_config->device_id,

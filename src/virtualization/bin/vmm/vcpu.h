@@ -14,6 +14,7 @@
 typedef struct zx_vcpu_state zx_vcpu_state_t;
 
 class Guest;
+class IoMapping;
 
 class Vcpu {
  public:
@@ -37,13 +38,14 @@ class Vcpu {
   // Guest packet handlers
   zx_status_t HandlePacket(const zx_port_packet_t& packet);
   zx_status_t HandleVcpu(const zx_packet_guest_vcpu_t& packet, uint64_t trap_key);
+  zx_status_t HandleMem(const zx_packet_guest_mem_t& packet, uint64_t trap_key);
 
   // Architecture-specific handlers, implemented in the
   // src/virtualization/bin/vmm/arch/${ARCH}/vcpu.cc
-  zx_status_t ArchHandleMem(const zx_packet_guest_mem_t& mem, uint64_t trap_key);
+  zx_status_t ArchHandleMem(const zx_packet_guest_mem_t& mem, IoMapping* device_mapping);
 #if __x86_64__
-  zx_status_t ArchHandleInput(const zx_packet_guest_io_t& io, uint64_t trap_key);
-  zx_status_t ArchHandleOutput(const zx_packet_guest_io_t& io, uint64_t trap_key);
+  zx_status_t ArchHandleInput(const zx_packet_guest_io_t& io, IoMapping* device_mapping);
+  zx_status_t ArchHandleOutput(const zx_packet_guest_io_t& io, IoMapping* device_mapping);
   zx_status_t ArchHandleIo(const zx_packet_guest_io_t& io, uint64_t trap_key);
 #endif
 

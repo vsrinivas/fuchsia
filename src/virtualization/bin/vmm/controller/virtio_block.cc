@@ -17,7 +17,7 @@ static bool read_only(fuchsia::virtualization::BlockMode mode) {
 
 VirtioBlock::VirtioBlock(const PhysMem& phys_mem, fuchsia::virtualization::BlockMode mode)
     : VirtioComponentDevice(
-          phys_mem,
+          "Virtio Block", phys_mem,
           // From Virtio 1.0, Section 5.2.5.2: Devices SHOULD always offer
           // VIRTIO_BLK_F_FLUSH.
           //

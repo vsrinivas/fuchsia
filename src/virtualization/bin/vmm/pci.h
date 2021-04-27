@@ -88,6 +88,7 @@ struct PciBar : public IoHandler {
   // IoHandler interface.
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+  std::string_view Name() const override;
 
   uint64_t aspace() const;
   uint64_t base() const;
@@ -98,6 +99,7 @@ class PciDevice {
  public:
   // Static attributes associated with a device.
   struct Attributes {
+    std::string_view name;
     // Device attributes.
     uint16_t device_id;
     uint16_t vendor_id;
@@ -124,6 +126,9 @@ class PciDevice {
   // If interrupts are enabled and the device has one pending, send it to the
   // bus.
   zx_status_t Interrupt();
+
+  // Return a human-readable name for this device, for debugging and logging.
+  std::string_view name() { return attrs_.name; }
 
   // Determines if the given base address register is implemented for this
   // device.
@@ -183,6 +188,7 @@ class PciPortHandler : public IoHandler {
   PciPortHandler(PciBus* bus);
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+  std::string_view Name() const override { return "PCI Bus"; }
 
  private:
   PciBus* bus_;
@@ -193,6 +199,7 @@ class PciEcamHandler : public IoHandler {
   PciEcamHandler(PciBus* bus);
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+  std::string_view Name() const override { return "PCI Bus"; }
 
  private:
   PciBus* bus_;

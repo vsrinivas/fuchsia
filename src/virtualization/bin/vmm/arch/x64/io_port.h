@@ -28,6 +28,7 @@ class PicHandler : public IoHandler {
 
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+  std::string_view Name() const override { return "PIC"; }
 };
 
 class PitHandler : public IoHandler {
@@ -36,6 +37,7 @@ class PitHandler : public IoHandler {
 
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+  std::string_view Name() const override { return "PIT"; }
 };
 
 class Pm1Handler : public IoHandler {
@@ -44,6 +46,7 @@ class Pm1Handler : public IoHandler {
 
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+  std::string_view Name() const override { return "PM1"; }
 
  private:
   mutable std::mutex mutex_;
@@ -56,6 +59,7 @@ class CmosHandler : public IoHandler {
 
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+  std::string_view Name() const override { return "CMOS"; }
 
  private:
   zx_status_t ReadCmosRegister(uint8_t cmos_index, uint8_t* value) const;
@@ -70,6 +74,7 @@ class I8042Handler : public IoHandler {
 
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+  std::string_view Name() const override { return "I8042"; }
 
  private:
   mutable std::mutex mutex_;
@@ -82,6 +87,7 @@ class I8237Handler : public IoHandler {
 
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+  std::string_view Name() const override { return "I8237"; }
 };
 
 class ProcessorInterfaceHandler : public IoHandler {
@@ -90,6 +96,7 @@ class ProcessorInterfaceHandler : public IoHandler {
 
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
+  std::string_view Name() const override { return "Processor Interface"; }
 
  private:
   uint8_t nmi_sc_ = 0;

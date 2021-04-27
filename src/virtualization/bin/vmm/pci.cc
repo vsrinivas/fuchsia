@@ -123,6 +123,8 @@ zx_status_t PciBar::Write(uint64_t addr, const IoValue& value) {
   return device->WriteBar(n, addr, value);
 }
 
+std::string_view PciBar::Name() const { return device->name(); }
+
 PciPortHandler::PciPortHandler(PciBus* bus) : bus_(bus) {}
 
 zx_status_t PciPortHandler::Read(uint64_t addr, IoValue* value) const {
@@ -144,6 +146,7 @@ zx_status_t PciEcamHandler::Write(uint64_t addr, const IoValue& value) {
 }
 
 static constexpr PciDevice::Attributes kRootComplexAttributes = {
+    .name = "Intel Q35",
     .device_id = PCI_DEVICE_ID_INTEL_Q35,
     .vendor_id = PCI_VENDOR_ID_INTEL,
     .subsystem_id = 0,

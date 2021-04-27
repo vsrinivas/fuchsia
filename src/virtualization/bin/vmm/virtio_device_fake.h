@@ -15,7 +15,7 @@ typedef struct test_config {
 class VirtioDeviceFake : public VirtioInprocessDevice<UINT8_MAX, 1, test_config_t> {
  public:
   VirtioDeviceFake()
-      : VirtioInprocessDevice(phys_mem_, 0 /* device_features */),
+      : VirtioInprocessDevice("Fake Virtio Device", phys_mem_, 0 /* device_features */),
         queue_fake_(queue(), 16 /* queue_size */) {}
 
   VirtioQueue* queue() { return VirtioInprocessDevice::queue(0); }

@@ -40,7 +40,7 @@ class VirtioDevice {
   VirtioPci pci_;
   VirtioQueueConfig queue_configs_[NumQueues] __TA_GUARDED(device_config_.mutex) = {};
 
-  VirtioDevice(const PhysMem& phys_mem, uint32_t device_features,
+  VirtioDevice(std::string_view name, const PhysMem& phys_mem, uint32_t device_features,
                VirtioDeviceConfig::ConfigQueueFn config_queue,
                VirtioDeviceConfig::NotifyQueueFn notify_queue,
                VirtioDeviceConfig::ConfigDeviceFn config_device,
@@ -59,7 +59,7 @@ class VirtioDevice {
             .config_device = std::move(config_device),
             .ready_device = std::move(ready_device),
         },
-        pci_(&device_config_) {}
+        pci_(&device_config_, name) {}
 
   virtual ~VirtioDevice() = default;
 
@@ -81,27 +81,27 @@ class VirtioDevice {
 template <uint8_t DeviceId, uint16_t NumQueues, typename ConfigType>
 class VirtioInprocessDevice : public VirtioDevice<DeviceId, NumQueues, ConfigType> {
  protected:
-  VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features,
+  VirtioInprocessDevice(std::string_view name, const PhysMem& phys_mem, uint32_t device_features,
                         VirtioDeviceConfig::ConfigDeviceFn config_device,
                         VirtioDeviceConfig::ReadyDeviceFn ready_device)
-      : VirtioInprocessDevice(phys_mem, device_features,
+      : VirtioInprocessDevice(name, phys_mem, device_features,
                               fit::bind_member(this, &VirtioInprocessDevice::ConfigQueue),
                               fit::bind_member(this, &VirtioInprocessDevice::NotifyQueue),
                               std::move(config_device), std::move(ready_device)) {}
 
-  VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features,
+  VirtioInprocessDevice(std::string_view name, const PhysMem& phys_mem, uint32_t device_features,
                         VirtioDeviceConfig::ConfigDeviceFn config_device)
-      : VirtioInprocessDevice(phys_mem, device_features, std::move(config_device),
+      : VirtioInprocessDevice(name, phys_mem, device_features, std::move(config_device),
                               noop_ready_device) {}
 
-  VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features,
+  VirtioInprocessDevice(std::string_view name, const PhysMem& phys_mem, uint32_t device_features,
                         VirtioDeviceConfig::NotifyQueueFn notify_queue)
-      : VirtioInprocessDevice(phys_mem, device_features,
+      : VirtioInprocessDevice(name, phys_mem, device_features,
                               fit::bind_member(this, &VirtioInprocessDevice::ConfigQueue),
                               std::move(notify_queue), noop_config_device, noop_ready_device) {}
 
-  VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features)
-      : VirtioInprocessDevice(phys_mem, device_features, noop_config_device) {}
+  VirtioInprocessDevice(std::string_view name, const PhysMem& phys_mem, uint32_t device_features)
+      : VirtioInprocessDevice(name, phys_mem, device_features, noop_config_device) {}
 
   // Processes notifications on a queue from the driver.
   zx_status_t NotifyQueue(uint16_t queue) {
@@ -148,13 +148,13 @@ class VirtioInprocessDevice : public VirtioDevice<DeviceId, NumQueues, ConfigTyp
   // One flow ID slot for each device queue, used for IO correlation tracing.
   std::atomic<trace_async_id_t> trace_flow_ids_[NumQueues] = {};
 
-  VirtioInprocessDevice(const PhysMem& phys_mem, uint32_t device_features,
+  VirtioInprocessDevice(std::string_view name, const PhysMem& phys_mem, uint32_t device_features,
                         VirtioDeviceConfig::ConfigQueueFn config_queue,
                         VirtioDeviceConfig::NotifyQueueFn notify_queue,
                         VirtioDeviceConfig::ConfigDeviceFn config_device,
                         VirtioDeviceConfig::ReadyDeviceFn ready_device)
       : VirtioDevice<DeviceId, NumQueues, ConfigType>(
-            phys_mem, device_features, std::move(config_queue), std::move(notify_queue),
+            name, phys_mem, device_features, std::move(config_queue), std::move(notify_queue),
             std::move(config_device), std::move(ready_device)) {
     for (int i = 0; i < NumQueues; ++i) {
       queues_[i].set_phys_mem(&phys_mem);
@@ -178,12 +178,12 @@ class VirtioInprocessDevice : public VirtioDevice<DeviceId, NumQueues, ConfigTyp
 template <uint8_t DeviceId, uint16_t NumQueues, typename ConfigType>
 class VirtioComponentDevice : public VirtioDevice<DeviceId, NumQueues, ConfigType> {
  protected:
-  VirtioComponentDevice(const PhysMem& phys_mem, uint32_t device_features,
+  VirtioComponentDevice(std::string_view name, const PhysMem& phys_mem, uint32_t device_features,
                         VirtioDeviceConfig::ConfigQueueFn config_queue,
                         VirtioDeviceConfig::ConfigDeviceFn config_device,
                         VirtioDeviceConfig::ReadyDeviceFn ready_device)
       : VirtioDevice<DeviceId, NumQueues, ConfigType>(
-            phys_mem, device_features, std::move(config_queue), noop_notify_queue,
+            name, phys_mem, device_features, std::move(config_queue), noop_notify_queue,
             std::move(config_device), std::move(ready_device)) {
     zx_status_t status = zx::event::create(0, &event_);
     FX_CHECK(status == ZX_OK) << "Failed to create event";
@@ -192,10 +192,10 @@ class VirtioComponentDevice : public VirtioDevice<DeviceId, NumQueues, ConfigTyp
     wait_.set_trigger(ZX_USER_SIGNAL_ALL);
   }
 
-  VirtioComponentDevice(const PhysMem& phys_mem, uint32_t device_features,
+  VirtioComponentDevice(std::string_view name, const PhysMem& phys_mem, uint32_t device_features,
                         VirtioDeviceConfig::ConfigQueueFn config_queue,
                         VirtioDeviceConfig::ReadyDeviceFn ready_device)
-      : VirtioComponentDevice(phys_mem, device_features, std::move(config_queue),
+      : VirtioComponentDevice(name, phys_mem, device_features, std::move(config_queue),
                               noop_config_device, std::move(ready_device)) {}
 
   zx_status_t PrepStart(const zx::guest& guest, async_dispatcher_t* dispatcher,

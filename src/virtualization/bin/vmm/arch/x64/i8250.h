@@ -23,6 +23,7 @@ class I8250 : public IoHandler {
   // |IoHandler|
   zx_status_t Read(uint64_t addr, IoValue* io) const override;
   zx_status_t Write(uint64_t addr, const IoValue& io) override;
+  std::string_view Name() const override { return "I8250"; }
 
  private:
   static constexpr size_t kBufferSize = 128;

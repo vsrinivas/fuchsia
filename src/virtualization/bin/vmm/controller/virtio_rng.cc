@@ -9,7 +9,7 @@
 static constexpr char kVirtioRngUrl[] = "fuchsia-pkg://fuchsia.com/virtio_rng#meta/virtio_rng.cmx";
 
 VirtioRng::VirtioRng(const PhysMem& phys_mem)
-    : VirtioComponentDevice(phys_mem, 0 /* device_features */,
+    : VirtioComponentDevice("Virtio RNG", phys_mem, 0 /* device_features */,
                             fit::bind_member(this, &VirtioRng::ConfigureQueue),
                             fit::bind_member(this, &VirtioRng::Ready)) {}
 

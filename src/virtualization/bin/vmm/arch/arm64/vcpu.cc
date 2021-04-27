@@ -23,16 +23,16 @@
 
 namespace {
 
-zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, uint64_t trap_key, uint64_t* reg) {
+zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device_mapping,
+                             uint64_t* reg) {
   TRACE_DURATION("machina", "mmio", "addr", mem.addr, "access_size", mem.access_size);
 
   IoValue mmio = {mem.access_size, {.u64 = mem.data}};
-  IoMapping* mapping = IoMapping::FromPortKey(trap_key);
   if (!mem.read) {
-    return mapping->Write(mem.addr, mmio);
+    return device_mapping->Write(mem.addr, mmio);
   }
 
-  zx_status_t status = mapping->Read(mem.addr, &mmio);
+  zx_status_t status = device_mapping->Read(mem.addr, &mmio);
   if (status != ZX_OK) {
     return status;
   }
@@ -45,10 +45,10 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, uint64_t trap_key
 
 }  // namespace
 
-zx_status_t Vcpu::ArchHandleMem(const zx_packet_guest_mem_t& mem, uint64_t trap_key) {
+zx_status_t Vcpu::ArchHandleMem(const zx_packet_guest_mem_t& mem, IoMapping* device_mapping) {
   // Perform the access.
   uint64_t read_value;
-  zx_status_t status = PerformMemAccess(mem, trap_key, &read_value);
+  zx_status_t status = PerformMemAccess(mem, device_mapping, &read_value);
   if (status != ZX_OK) {
     return status;
   }

@@ -9,6 +9,8 @@
 #include <lib/trace/event.h>
 #include <zircon/types.h>
 
+#include <string_view>
+
 class Guest;
 
 struct IoValue {
@@ -29,6 +31,9 @@ struct IoValue {
 class IoHandler {
  public:
   virtual ~IoHandler() = default;
+
+  // Get a human-readable name of this device, used for debugging and logging.
+  virtual std::string_view Name() const = 0;
 
   // Read |value.access_size| bytes from |addr| into |value|.
   virtual zx_status_t Read(zx_gpaddr_t addr, IoValue* value) const = 0;
@@ -62,6 +67,8 @@ class IoMapping {
   size_t size() const { return size_; }
 
   uint32_t kind() const { return kind_; }
+
+  IoHandler* handler() const { return handler_; }
 
   zx_status_t Read(zx_gpaddr_t addr, IoValue* value) const {
     const zx_gpaddr_t address = addr - base_ + off_;
