@@ -12,7 +12,7 @@ use crate::handler::setting_handler::{
 };
 use async_trait::async_trait;
 use fidl_fuchsia_input_report::InputDeviceMarker;
-use fuchsia_async::{self as fasync, DurationExt};
+use fuchsia_async::{self as fasync, DurationExt, Task};
 use fuchsia_zircon::Duration;
 use futures::channel::mpsc::{unbounded, UnboundedReceiver};
 use futures::future::{AbortHandle, Abortable};
@@ -28,6 +28,7 @@ const SCAN_DURATION_MS: i64 = 1000;
 pub struct LightSensorController {
     client: Arc<ClientImpl>,
     sensor: Sensor,
+    sensor_task: Option<Task<()>>,
     current_value: Arc<Mutex<LightData>>,
     notifier_abort: Option<AbortHandle>,
 }
@@ -60,7 +61,13 @@ impl controller::Create for LightSensorController {
         };
 
         let current_data = Arc::new(Mutex::new(get_sensor_data(&sensor).await));
-        Ok(Self { client, sensor, current_value: current_data, notifier_abort: None })
+        Ok(Self {
+            client,
+            sensor,
+            sensor_task: None,
+            current_value: current_data,
+            notifier_abort: None,
+        })
     }
 }
 
@@ -78,8 +85,9 @@ impl controller::Handle for LightSensorController {
     async fn change_state(&mut self, state: State) -> Option<ControllerStateResult> {
         match state {
             State::Listen => {
-                let change_receiver =
+                let (task, change_receiver) =
                     start_light_sensor_scanner(self.sensor.clone(), SCAN_DURATION_MS);
+                self.sensor_task = Some(task);
                 self.notifier_abort = Some(
                     notify_on_change(
                         change_receiver,
@@ -90,6 +98,10 @@ impl controller::Handle for LightSensorController {
                 );
             }
             State::EndListen => {
+                if let Some(task) = self.sensor_task.take() {
+                    task.cancel().await;
+                }
+
                 if let Some(abort_handle) = &self.notifier_abort {
                     abort_handle.abort();
                 }
@@ -156,27 +168,28 @@ async fn notify_on_change(
 fn start_light_sensor_scanner(
     sensor: Sensor,
     scan_duration_ms: i64,
-) -> UnboundedReceiver<LightData> {
+) -> (Task<()>, UnboundedReceiver<LightData>) {
     let (sender, receiver) = unbounded::<LightData>();
 
-    fasync::Task::spawn(async move {
-        let mut data = get_sensor_data(&sensor).await;
+    (
+        fasync::Task::spawn(async move {
+            let mut data = get_sensor_data(&sensor).await;
 
-        while !sender.is_closed() {
-            let new_data = get_sensor_data(&sensor).await;
+            loop {
+                let new_data = get_sensor_data(&sensor).await;
 
-            if data != new_data {
-                data = new_data;
-                if sender.unbounded_send(data.clone()).is_err() {
-                    break;
+                if data != new_data {
+                    data = new_data;
+                    if sender.unbounded_send(data.clone()).is_err() {
+                        break;
+                    }
                 }
-            }
 
-            fasync::Timer::new(Duration::from_millis(scan_duration_ms).after_now()).await;
-        }
-    })
-    .detach();
-    receiver
+                fasync::Timer::new(Duration::from_millis(scan_duration_ms).after_now()).await;
+            }
+        }),
+        receiver,
+    )
 }
 
 async fn get_sensor_data(sensor: &Sensor) -> LightData {
@@ -269,7 +282,7 @@ mod tests {
         let service_context = ServiceContext::new(None, None);
 
         let sensor = Sensor::new(&proxy, &service_context).await.unwrap();
-        let mut receiver = start_light_sensor_scanner(sensor, 1);
+        let (task, mut receiver) = start_light_sensor_scanner(sensor, 1);
 
         let sleep_duration = zx::Duration::from_millis(5);
         fasync::Timer::new(sleep_duration.after_now()).await;
@@ -284,6 +297,7 @@ mod tests {
         let data = receiver.next().await;
         assert_eq!(data.unwrap().illuminance, 32.0);
 
+        task.cancel().await;
         receiver.close();
 
         // Make sure we don't panic after receiver closes
@@ -333,11 +347,13 @@ mod tests {
         let service_context = ServiceContext::new(None, None);
 
         let sensor = Sensor::new(&proxy, &service_context).await.unwrap();
-        *receiver.lock().await = Some(start_light_sensor_scanner(sensor, 1));
+        let (task, data_receiver) = start_light_sensor_scanner(sensor, 1);
+        *receiver.lock().await = Some(data_receiver);
 
         fasync::Timer::new(zx::Duration::from_millis(5).after_now()).await;
         // Allow multiple iterations
         assert!(completed.load(Ordering::Relaxed));
+        task.cancel().await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
