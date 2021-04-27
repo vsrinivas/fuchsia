@@ -87,15 +87,17 @@ void USBVirtualBusBase::InitPeripheral() {
 
 int USBVirtualBusBase::GetRootFd() { return devfs_root().get(); }
 
-class EventWatcher : public fidl::WireInterface<fuchsia_hardware_usb_peripheral::Events> {
+class EventWatcher : public fidl::WireServer<fuchsia_hardware_usb_peripheral::Events> {
  public:
   explicit EventWatcher(async::Loop* loop, zx::channel svc, size_t functions)
       : loop_(loop), functions_(functions) {
     fidl::BindSingleInFlightOnly(loop->dispatcher(), std::move(svc), this);
   }
 
-  void FunctionRegistered(FunctionRegisteredCompleter::Sync& completer);
-  void FunctionsCleared(FunctionsClearedCompleter::Sync& completer);
+  void FunctionRegistered(FunctionRegisteredRequestView request,
+                          FunctionRegisteredCompleter::Sync& completer) override;
+  void FunctionsCleared(FunctionsClearedRequestView request,
+                        FunctionsClearedCompleter::Sync& completer) override;
 
   bool all_functions_registered() { return functions_registered_ == functions_; }
   bool all_functions_cleared() { return all_functions_cleared_; }
@@ -108,7 +110,8 @@ class EventWatcher : public fidl::WireInterface<fuchsia_hardware_usb_peripheral:
   bool all_functions_cleared_ = false;
 };
 
-void EventWatcher::FunctionRegistered(FunctionRegisteredCompleter::Sync& completer) {
+void EventWatcher::FunctionRegistered(FunctionRegisteredRequestView request,
+                                      FunctionRegisteredCompleter::Sync& completer) {
   functions_registered_++;
   if (all_functions_registered()) {
     loop_->Quit();
@@ -118,7 +121,8 @@ void EventWatcher::FunctionRegistered(FunctionRegisteredCompleter::Sync& complet
   }
 }
 
-void EventWatcher::FunctionsCleared(FunctionsClearedCompleter::Sync& completer) {
+void EventWatcher::FunctionsCleared(FunctionsClearedRequestView request,
+                                    FunctionsClearedCompleter::Sync& completer) {
   all_functions_cleared_ = true;
   loop_->Quit();
   completer.Close(ZX_ERR_CANCELED);

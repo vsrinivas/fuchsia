@@ -43,8 +43,8 @@ void Server::CreateClient(async_dispatcher* dispatcher,
   *argclient = fidl::WireSyncClient<fuchsia_boot::Arguments>{std::move(local)};
 }
 
-void Server::GetString(fidl::StringView view, GetStringCompleter::Sync& completer) {
-  auto ret = arguments.find(std::string{view.data(), view.size()});
+void Server::GetString(GetStringRequestView request, GetStringCompleter::Sync& completer) {
+  auto ret = arguments.find(std::string{request->key.data(), request->key.size()});
   if (ret == arguments.end()) {
     completer.Reply(fidl::StringView{});
   } else {
@@ -52,11 +52,10 @@ void Server::GetString(fidl::StringView view, GetStringCompleter::Sync& complete
   }
 }
 
-void Server::GetStrings(fidl::VectorView<fidl::StringView> keys,
-                        GetStringsCompleter::Sync& completer) {
+void Server::GetStrings(GetStringsRequestView request, GetStringsCompleter::Sync& completer) {
   std::vector<fidl::StringView> result;
-  for (uint64_t i = 0; i < keys.count(); i++) {
-    auto ret = arguments.find(std::string{keys[i].data(), keys[i].size()});
+  for (uint64_t i = 0; i < request->keys.count(); i++) {
+    auto ret = arguments.find(std::string{request->keys[i].data(), request->keys[i].size()});
     if (ret == arguments.end()) {
       result.emplace_back(fidl::StringView{});
     } else {
@@ -66,22 +65,21 @@ void Server::GetStrings(fidl::VectorView<fidl::StringView> keys,
   completer.Reply(fidl::VectorView<fidl::StringView>::FromExternal(result));
 }
 
-void Server::GetBool(fidl::StringView view, bool defaultval, GetBoolCompleter::Sync& completer) {
-  completer.Reply(StrToBool(view, defaultval));
+void Server::GetBool(GetBoolRequestView request, GetBoolCompleter::Sync& completer) {
+  completer.Reply(StrToBool(request->key, request->defaultval));
 }
 
-void Server::GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair> keys,
-                      GetBoolsCompleter::Sync& completer) {
+void Server::GetBools(GetBoolsRequestView request, GetBoolsCompleter::Sync& completer) {
   // The vector<bool> optimisation means we have to use a manually-allocated array.
-  std::unique_ptr<bool[]> ret = std::make_unique<bool[]>(keys.count());
-  for (uint64_t i = 0; i < keys.count(); i++) {
-    ret[i] = StrToBool(keys.data()[i].key, keys.data()[i].defaultval);
+  std::unique_ptr<bool[]> ret = std::make_unique<bool[]>(request->keys.count());
+  for (uint64_t i = 0; i < request->keys.count(); i++) {
+    ret[i] = StrToBool(request->keys.data()[i].key, request->keys.data()[i].defaultval);
   }
-  completer.Reply(fidl::VectorView<bool>::FromExternal(ret.get(), keys.count()));
+  completer.Reply(fidl::VectorView<bool>::FromExternal(ret.get(), request->keys.count()));
 }
 
-void Server::Collect(fidl::StringView prefix, CollectCompleter::Sync& completer) {
-  std::string match{prefix.data(), prefix.size()};
+void Server::Collect(CollectRequestView request, CollectCompleter::Sync& completer) {
+  std::string match{request->prefix.data(), request->prefix.size()};
   std::vector<fbl::String> result;
   for (auto entry : arguments) {
     if (entry.first.find_first_of(match) == 0) {

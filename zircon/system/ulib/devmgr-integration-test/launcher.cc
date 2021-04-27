@@ -49,25 +49,21 @@ namespace {
 using GetBootItemFunction = devmgr_launcher::GetBootItemFunction;
 
 // TODO(http://fxbug.dev/33183): Replace this with a test component_manager.
-class FakeRealm : public fidl::WireInterface<fuchsia_sys2::Realm> {
+class FakeRealm : public fidl::WireServer<fuchsia_sys2::Realm> {
  public:
-  void BindChild(fuchsia_sys2::wire::ChildRef child,
-                 fidl::ServerEnd<fuchsia_io::Directory> exposed_dir,
-                 BindChildCompleter::Sync& completer) override {
-    exposed_dir_ = std::move(exposed_dir);
+  void BindChild(BindChildRequestView request, BindChildCompleter::Sync& completer) override {
+    exposed_dir_ = std::move(request->exposed_dir);
     completer.ReplySuccess();
   }
 
-  void CreateChild(fuchsia_sys2::wire::CollectionRef collection, fuchsia_sys2::wire::ChildDecl decl,
-                   CreateChildCompleter::Sync& completer) override {
+  void CreateChild(CreateChildRequestView request, CreateChildCompleter::Sync& completer) override {
     completer.ReplySuccess();
   }
 
-  void DestroyChild(fuchsia_sys2::wire::ChildRef child,
+  void DestroyChild(DestroyChildRequestView request,
                     DestroyChildCompleter::Sync& completer) override {}
 
-  void ListChildren(fuchsia_sys2::wire::CollectionRef collection,
-                    fidl::ServerEnd<fuchsia_sys2::ChildIterator> iter,
+  void ListChildren(ListChildrenRequestView request,
                     ListChildrenCompleter::Sync& completer) override {}
 
  private:
@@ -75,14 +71,12 @@ class FakeRealm : public fidl::WireInterface<fuchsia_sys2::Realm> {
 };
 
 class FakePowerRegistration
-    : public fidl::WireInterface<fuchsia_power_manager::DriverManagerRegistration> {
+    : public fidl::WireServer<fuchsia_power_manager::DriverManagerRegistration> {
  public:
-  void Register(fidl::ClientEnd<fuchsia_device_manager::SystemStateTransition> transition,
-                fidl::ClientEnd<fuchsia_io::Directory> dir,
-                RegisterCompleter::Sync& completer) override {
+  void Register(RegisterRequestView request, RegisterCompleter::Sync& completer) override {
     // Store these so the other side doesn't see the channels close.
-    transition_ = std::move(transition);
-    dir_ = std::move(dir);
+    transition_ = std::move(request->system_state_transition);
+    dir_ = std::move(request->dir);
     completer.ReplySuccess();
   }
 
@@ -124,7 +118,7 @@ constexpr fuchsia_kernel_RootJob_ops kRootJobOps = {
 
 template <class Protocol>
 void CreateFakeCppService(fbl::RefPtr<fs::PseudoDir> root, async_dispatcher_t* dispatcher,
-                          std::unique_ptr<typename fidl::WireInterface<Protocol>> server) {
+                          std::unique_ptr<typename fidl::WireServer<Protocol>> server) {
   auto node = fbl::MakeRefCounted<fs::Service>(
       [dispatcher, server{std::move(server)}](fidl::ServerEnd<Protocol> channel) {
         return fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), server.get());

@@ -12,7 +12,7 @@
 
 namespace mock_boot_arguments {
 
-class Server final : public fidl::WireInterface<fuchsia_boot::Arguments> {
+class Server final : public fidl::WireServer<fuchsia_boot::Arguments> {
  public:
   explicit Server(std::map<std::string, std::string>&& args) : arguments{args} {}
   explicit Server() : arguments{} {}
@@ -20,13 +20,11 @@ class Server final : public fidl::WireInterface<fuchsia_boot::Arguments> {
   void CreateClient(async_dispatcher* dispatcher,
                     fidl::WireSyncClient<fuchsia_boot::Arguments>* argclient);
 
-  void GetString(fidl::StringView view, GetStringCompleter::Sync& completer) override;
-  void GetStrings(fidl::VectorView<fidl::StringView> keys,
-                  GetStringsCompleter::Sync& completer) override;
-  void GetBool(fidl::StringView view, bool defaultval, GetBoolCompleter::Sync& completer) override;
-  void GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair> keys,
-                GetBoolsCompleter::Sync& completer) override;
-  void Collect(fidl::StringView prefix, CollectCompleter::Sync& completer) override;
+  void GetString(GetStringRequestView request, GetStringCompleter::Sync& completer) override;
+  void GetStrings(GetStringsRequestView request, GetStringsCompleter::Sync& completer) override;
+  void GetBool(GetBoolRequestView request, GetBoolCompleter::Sync& completer) override;
+  void GetBools(GetBoolsRequestView request, GetBoolsCompleter::Sync& completer) override;
+  void Collect(CollectRequestView request, CollectCompleter::Sync& completer) override;
 
  private:
   std::map<std::string, std::string> arguments;
