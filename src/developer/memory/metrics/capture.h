@@ -39,6 +39,7 @@ struct Vmo {
   uint64_t committed_bytes;
   uint64_t allocated_bytes;
   unsigned num_children;
+  std::vector<zx_koid_t> children;
 };
 
 using CaptureLevel = enum { KMEM, PROCESS, VMO };
@@ -105,13 +106,14 @@ class Capture {
   static zx_status_t GetCapture(Capture* capture, const CaptureState& state, CaptureLevel level,
                                 OS* os, const std::vector<std::string>& rooted_vmo_names);
   void ReallocateDescendents(const std::vector<std::string>& rooted_vmo_names);
-  void ReallocateDescendents(zx_koid_t parent_koid);
+  void ReallocateDescendents(Vmo* parent);
 
   zx_time_t time_;
   zx_info_kmem_stats_t kmem_ = {};
   zx_info_kmem_stats_extended_t kmem_extended_ = {};
   std::unordered_map<zx_koid_t, Process> koid_to_process_;
   std::unordered_map<zx_koid_t, Vmo> koid_to_vmo_;
+  std::vector<zx_koid_t> root_vmos_;
 
   class ProcessGetter;
   friend class TestUtils;

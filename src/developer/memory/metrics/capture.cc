@@ -272,14 +272,14 @@ zx_status_t Capture::GetCapture(Capture* capture, const CaptureState& state, Cap
 // committed_bytes of their own. For accounting purposes it gives more clarity to push the
 // committed bytes to the lowest points in the tree, where the vmo names give more specific
 // meanings.
-void Capture::ReallocateDescendents(zx_koid_t parent_koid) {
-  Vmo& parent = koid_to_vmo_.at(parent_koid);
-  for (auto& [_, child] : koid_to_vmo_) {
-    if (child.parent_koid == parent_koid) {
-      uint64_t reallocated_bytes = std::min(parent.committed_bytes, child.allocated_bytes);
-      parent.committed_bytes -= reallocated_bytes;
+void Capture::ReallocateDescendents(Vmo* parent) {
+  for (auto& child_koid : parent->children) {
+    auto& child = koid_to_vmo_.at(child_koid);
+    if (child.parent_koid == parent->koid) {
+      uint64_t reallocated_bytes = std::min(parent->committed_bytes, child.allocated_bytes);
+      parent->committed_bytes -= reallocated_bytes;
       child.committed_bytes = reallocated_bytes;
-      ReallocateDescendents(child.koid);
+      ReallocateDescendents(&child);
     }
   }
 }
@@ -288,11 +288,24 @@ void Capture::ReallocateDescendents(zx_koid_t parent_koid) {
 // vmo that has a name listed in rooted_vmo_names.
 void Capture::ReallocateDescendents(const std::vector<std::string>& rooted_vmo_names) {
   TRACE_DURATION("memory_metrics", "Capture::ReallocateDescendents");
-  for (const auto& vmo_name : rooted_vmo_names) {
-    for (const auto& [koid, vmo] : koid_to_vmo_) {
-      if (vmo.name == vmo_name) {
-        ReallocateDescendents(koid);
+  for (auto const& [_, child] : koid_to_vmo_) {
+    if (child.parent_koid == ZX_KOID_INVALID) {
+      root_vmos_.push_back(child.koid);
+      continue;
+    }
+    auto parent_it = koid_to_vmo_.find(child.parent_koid);
+    if (parent_it == koid_to_vmo_.end()) {
+      continue;
+    }
+    parent_it->second.children.push_back(child.koid);
+  }
+  for (auto& vmo_koid : root_vmos_) {
+    auto &vmo = koid_to_vmo_.at(vmo_koid);
+    for (const auto& vmo_name : rooted_vmo_names) {
+      if (vmo.name != vmo_name) {
+        continue;
       }
+      ReallocateDescendents(&vmo);
     }
   }
 }
