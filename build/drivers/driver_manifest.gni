@@ -1,0 +1,168 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/distribution_manifest.gni")
+
+# Creates a driver manifest which is a JSON file that describes how drivers can be found
+# in the system.
+#
+# This target uses GN metadata to collect all drivers included in its dependencies into
+# the manifest file.
+#
+# By default, this template generates a manifest file, and ensures that
+# it will be installed under config/ into any package, boot or system
+# image that depends on it. This last part can be disabled by using
+# 'install_as_config_resource = false'.
+#
+# Parameters
+#
+#   manifest_name (optional)
+#     The name of the manifest
+#     Type: string
+#     Default: ${target_name}.json
+#
+#   package_url (required)
+#     The package url that forms the base of any driver paths.
+#     E.g: fuchsia-pkg://fuchsia.com/my-package
+#     E.g: fuchsia-boot:///
+#     Type: string
+#
+#   install_as_config_resource (optional)
+#     Whether to include the manifest in a fuchsia package or the fuchsia image
+#     Type: boolean
+#     Default: true
+#
+#   deps
+#   testonly
+#   visibility
+template("driver_manifest") {
+  assert(defined(invoker.package_url),
+         "driver_manifest() requires a package_url")
+  install_as_config_resource = true
+  if (defined(invoker.install_as_config_resource)) {
+    install_as_config_resource = invoker.install_as_config_resource
+  }
+  manifest_name = "${target_name}.json"
+  if (defined(invoker.manifest_name)) {
+    manifest_name = invoker.manifest_name
+  }
+
+  distribution_manifest_target = "${target_name}_distribution_manifest"
+  distribution_manifest_file =
+      "${target_gen_dir}/${target_name}.distribution_manifest"
+  distribution_manifest(distribution_manifest_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    outputs = [ "${distribution_manifest_file}" ]
+  }
+
+  action(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [ ":${distribution_manifest_target}" ]
+    script = "//build/drivers/create_driver_manifest.py"
+    inputs = [ "${distribution_manifest_file}" ]
+    outputs = [ "${target_out_dir}/${manifest_name}" ]
+    args = [
+      "--package-url",
+      invoker.package_url,
+      "--distribution_manifest",
+      rebase_path("${distribution_manifest_file}", root_build_dir),
+      "--output",
+      rebase_path(outputs[0], root_build_dir),
+    ]
+    metadata = {
+      # Used by the combined_driver_manifest() template.
+      driver_manifest_files = [ rebase_path(outputs[0], root_build_dir) ]
+      driver_manifest_barrier = []
+
+      # Used by the distribution_manifest() template.
+      distribution_entries_barrier = []
+      distribution_entries = []
+
+      # Used by zbi() template.
+      zbi_input_barrier = []
+
+      if (install_as_config_resource) {
+        distribution_entries += [
+          {
+            source = rebase_path(outputs[0], root_build_dir)
+            destination = "config/${manifest_name}"
+            label = get_label_info(":${target_name}", "label_with_toolchain")
+          },
+        ]
+      }
+    }
+  }
+}
+
+# Combines multiple driver manifests together into one driver manifest.
+#
+# This template generates a manifest file, and ensures that
+# it will be installed under config/ into any package, boot or system
+# image that depends on it.
+#
+# Parameters
+#
+#   manifest_name (optional)
+#     The name of the manifest
+#     Type: string
+#     Default: ${target_name}.json
+#
+#   deps
+#   testonly
+#   visibility
+template("combined_driver_manifest") {
+  manifest_name = "${target_name}.json"
+  if (defined(invoker.manifest_name)) {
+    manifest_name = invoker.manifest_name
+  }
+
+  manifest_files_target = "${target_name}_manifest_files"
+  manifest_files_path = "${target_gen_dir}/${target_name}.manifest_files"
+  generated_file(manifest_files_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    outputs = [ "${manifest_files_path}" ]
+    data_keys = [ "driver_manifest_files" ]
+    walk_keys = [ "driver_manifest_barrier" ]
+  }
+
+  action(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [ ":${manifest_files_target}" ]
+    script = "//build/drivers/combine_driver_manifests.py"
+    inputs = [ "${manifest_files_path}" ]
+    outputs = [ "${target_out_dir}/${target_name}.json" ]
+    depfile = "${target_gen_dir}/${target_name}.d"
+
+    args = [
+      "--manifest-file-list",
+      rebase_path("${manifest_files_path}", root_build_dir),
+      "--output",
+      rebase_path(outputs[0], root_build_dir),
+      "--dep-file",
+      rebase_path(depfile, root_build_dir),
+    ]
+    metadata = {
+      # Used by the distribution_manifest() template.
+      distribution_entries_barrier = []
+      distribution_entries = [
+        {
+          source = rebase_path(outputs[0], root_build_dir)
+          destination = "config/${manifest_name}"
+          label = get_label_info(":${target_name}", "label_with_toolchain")
+        },
+      ]
+
+      # Used by zbi() template.
+      zbi_input_barrier = []
+    }
+  }
+}
