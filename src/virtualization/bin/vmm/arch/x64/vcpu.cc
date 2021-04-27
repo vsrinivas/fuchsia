@@ -136,7 +136,7 @@ zx_status_t Vcpu::ArchHandleInput(const zx_packet_guest_io_t& io, IoMapping* dev
   if (vcpu_io.access_size != io.access_size) {
     FX_LOGS(ERROR) << "Unexpected size (" << vcpu_io.access_size << " != " << io.access_size
                    << ") for port in 0x" << std::hex << io.port;
-    return ZX_ERR_IO_DATA_INTEGRITY;
+    return ZX_ERR_IO;
   }
   return vcpu_.write_state(ZX_VCPU_IO, &vcpu_io, sizeof(vcpu_io));
 }
