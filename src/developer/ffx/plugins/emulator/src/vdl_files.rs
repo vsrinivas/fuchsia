@@ -12,14 +12,38 @@ use anyhow::Result;
 use ffx_core::ffx_bail;
 use ffx_emulator_args::{KillCommand, StartCommand};
 use regex::Regex;
+use shared_child::SharedChild;
+use signal_hook;
 use std::env;
 use std::fs::{copy, File};
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::str;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread;
+use std::time;
 use tempfile::{Builder, TempDir};
 
+/// Monitors a shared process for the interrupt signal. Only used for --monitor or --emu-only modes.
+///
+/// If user runs with --montior or --emu-only, Fuchsia Emulator will be running in the foreground,
+/// here we listen for the interrupt signal (ctrl+c), once detected, we'll wait for the emulator
+/// process to finish.
+fn monitored_child_process(child_arc: &Arc<SharedChild>) -> Result<()> {
+    let child_arc_clone = child_arc.clone();
+    let term = Arc::new(AtomicBool::new(false));
+    signal_hook::flag::register(signal_hook::consts::SIGINT, Arc::clone(&term))?;
+    let thread = std::thread::spawn(move || {
+        while !term.load(Ordering::Relaxed) {
+            thread::sleep(time::Duration::from_secs(1));
+        }
+        child_arc_clone.wait().unwrap()
+    });
+    thread.join().expect("cannot join monitor thread");
+    Ok(())
+}
 pub struct VDLFiles {
     image_files: ImageFiles,
     host_tools: HostTools,
@@ -367,6 +391,8 @@ impl VDLFiles {
             .arg("--audio=true")
             .arg(format!("--event_action={}", &invoker))
             .arg(format!("--debugger={}", &start_command.debugger))
+            .arg(format!("--monitor={}", &start_command.monitor))
+            .arg(format!("--emu_only={}", &start_command.emu_only))
             .arg(format!("--resize_fvm={}", vdl_args.image_size))
             .arg(format!("--gpu={}", vdl_args.gpu))
             .arg(format!("--headless_mode={}", vdl_args.headless))
@@ -387,7 +413,18 @@ impl VDLFiles {
         for i in 0..start_command.envs.len() {
             cmd.arg("--env").arg(&start_command.envs[i]);
         }
-        let status = cmd.status()?;
+        let shared_process = SharedChild::spawn(&mut cmd)?;
+        let child_arc = Arc::new(shared_process);
+
+        if start_command.emu_only || start_command.monitor {
+            match monitored_child_process(&child_arc) {
+                Ok(_) => return Ok(()),
+                Err(e) => ffx_bail!("emulator launcher did not terminate propertly, error: {}", e),
+            }
+        }
+
+        let status = child_arc.wait()?;
+
         if !status.success() {
             let persistent_emu_log = read_env_path("FUCHSIA_OUT_DIR")
                 .unwrap_or(env::current_dir()?)
@@ -562,42 +599,23 @@ mod tests {
 
     pub fn create_start_command() -> StartCommand {
         StartCommand {
-            headless: false,
             tuntap: true,
-            hidpi_scaling: false,
             upscript: Some("/path/to/upscript".to_string()),
             packages_to_serve: Some("pkg1.far,pkg2.far".to_string()),
-            image_size: None,
-            device_proto: None,
             aemu_path: Some("/path/to/aemu".to_string()),
             vdl_path: Some("/path/to/device_launcher".to_string()),
             host_gpu: true,
-            software_gpu: false,
-            window_width: 1280,
-            window_height: 800,
-            grpcwebproxy: None,
             grpcwebproxy_path: Some("/path/to/grpcwebproxy".to_string()),
             pointing_device: Some("mouse".to_string()),
             aemu_version: Some("git_revision:da1cc2ee512714a176f08b8b5fec035994ca305d".to_string()),
-            amber_unpack_root: None,
-            gcs_bucket: None,
             grpcwebproxy_version: Some("git_revision:1".to_string()),
             sdk_version: Some("0.20201130.3.1".to_string()),
             image_name: Some("qemu-x64".to_string()),
             vdl_version: Some("git_revision:2".to_string()),
-            emulator_log: None,
-            port_map: None,
-            vdl_output: None,
-            nointeractive: false,
-            cache_image: false,
-            debugger: false,
-            kernel_args: None,
-            nopackageserver: false,
-            package_server_log: None,
             envs: vec!["A=1".to_string(), "B=2".to_string(), "C=3".to_string()],
+            ..Default::default()
         }
     }
-
     #[test]
     #[serial]
     fn test_choosing_prebuild_with_path_specified() -> Result<()> {
@@ -611,7 +629,6 @@ mod tests {
         assert_eq!(PathBuf::from("/path/to/device_launcher"), vdl);
         let grpcwebproxy = VDLFiles::new(true)?.resolve_grpcwebproxy_path(start_command)?;
         assert_eq!(PathBuf::from("/path/to/grpcwebproxy"), grpcwebproxy);
-
         Ok(())
     }
 
@@ -659,7 +676,6 @@ mod tests {
         assert_eq!(tmp_dir.path().join("aemu-integration/emulator"), aemu);
         let grpcwebproxy = VDLFiles::new(true)?.resolve_grpcwebproxy_path(start_command)?;
         assert_eq!(tmp_dir.path().join("grpcwebproxy-latest/grpcwebproxy"), grpcwebproxy);
-
         Ok(())
     }
 

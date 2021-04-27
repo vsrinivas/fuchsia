@@ -33,6 +33,8 @@ ffx_plugin("ffx_emulator") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:serial_test",
+    "//third_party/rust_crates:shared_child",
+    "//third_party/rust_crates:signal-hook",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:walkdir",
     "//third_party/rust_crates:zip",

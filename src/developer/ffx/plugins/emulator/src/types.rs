@@ -605,39 +605,18 @@ mod tests {
     #[test]
     fn test_convert_start_cmd_to_vdl() {
         let start_command = &StartCommand {
-            headless: false,
             tuntap: true,
-            hidpi_scaling: false,
             upscript: Some("/path/to/upscript".to_string()),
             packages_to_serve: Some("pkg1.far,pkg2.far".to_string()),
-            image_size: None,
-            device_proto: None,
-            aemu_path: None,
-            vdl_path: None,
             host_gpu: true,
-            software_gpu: false,
-            window_width: 1280,
-            window_height: 800,
-            grpcwebproxy: None,
-            grpcwebproxy_path: None,
             pointing_device: Some("mouse".to_string()),
             aemu_version: Some("git_revision:da1cc2ee512714a176f08b8b5fec035994ca305d".to_string()),
-            gcs_bucket: None,
-            grpcwebproxy_version: None,
             sdk_version: Some("0.20201130.3.1".to_string()),
             image_name: Some("qemu-x64".to_string()),
-            vdl_version: None,
-            emulator_log: None,
             package_server_log: Some("/a/b/c/server.log".to_string()),
-            amber_unpack_root: None,
             envs: Vec::new(),
-            port_map: None,
-            vdl_output: None,
-            nointeractive: false,
             cache_image: true,
-            kernel_args: None,
-            debugger: false,
-            nopackageserver: false,
+            ..Default::default()
         };
         let vdl_args: VDLArgs = start_command.into();
         assert_eq!(vdl_args.headless, false);

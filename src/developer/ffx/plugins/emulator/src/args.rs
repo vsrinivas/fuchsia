@@ -34,7 +34,7 @@ pub enum VDLCommand {
     Kill(KillCommand),
 }
 
-#[derive(FromArgs, Debug, PartialEq)]
+#[derive(FromArgs, Default, Debug, PartialEq)]
 #[argh(subcommand, name = "start")]
 /// Starting Fuchsia Emulator
 pub struct StartCommand {
@@ -168,6 +168,16 @@ pub struct StartCommand {
     /// bool, pause on launch and wait for a debugger process to attach before resuming
     #[argh(switch)]
     pub debugger: bool,
+
+    /// bool, launches emulator in qemu console
+    /// No local services such as package_server will be running in this mode.
+    #[argh(switch, short = 'm')]
+    pub monitor: bool,
+
+    /// bool, launches user in femu serial console, this flag is required for bringup image.
+    /// No local services such as package_server will be running in this mode.
+    #[argh(switch)]
+    pub emu_only: bool,
 
     /// bool, disable automatically launching package server.
     #[argh(switch)]
