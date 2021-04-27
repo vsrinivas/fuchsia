@@ -526,6 +526,7 @@ mod tests {
     use {
         super::*,
         cm_rust::{EventMode, StorageDirectorySource},
+        fidl_fuchsia_sys2 as fsys,
     };
 
     #[test]
@@ -535,6 +536,7 @@ mod tests {
             source: StorageDirectorySource::Parent,
             backing_dir: "bar".into(),
             subdir: None,
+            storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
         });
         assert_eq!(storage_capability.type_name(), CapabilityTypeName::Storage);
 

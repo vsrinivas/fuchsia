@@ -15,6 +15,7 @@
             storage: "data",
             from: "#expose_dir_rights",
             backing_dir: "read_only",
+            storage_id: "static_instance_id_or_moniker",
         },
     ],
     offer: [

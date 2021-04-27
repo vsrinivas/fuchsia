@@ -13,10 +13,11 @@ use {
             rights::Rights,
             routing::{
                 self, route_and_open_capability, OpenDirectoryOptions, OpenOptions,
-                OpenProtocolOptions, OpenServiceOptions, OpenStorageOptions, RouteRequest,
+                OpenProtocolOptions, OpenServiceOptions, OpenStorageOptions,
             },
         },
     },
+    ::routing::{route_to_storage_decl, verify_instance_in_component_id_index, RouteRequest},
     anyhow::{Context, Error},
     cm_rust::{self, CapabilityPath, ComponentDecl, UseDecl, UseProtocolDecl},
     directory_broker,
@@ -158,12 +159,8 @@ impl IncomingNamespace {
                     )?;
                 }
                 cm_rust::UseDecl::Storage(_) => {
-                    Self::add_storage_use(
-                        &mut ns,
-                        &mut directory_waiters,
-                        use_,
-                        component.clone(),
-                    )?;
+                    Self::add_storage_use(&mut ns, &mut directory_waiters, use_, component.clone())
+                        .await?;
                 }
                 cm_rust::UseDecl::Event(_) | cm_rust::UseDecl::EventStream(_) => {
                     // Event capabilities are handled in model::model,
@@ -311,12 +308,31 @@ impl IncomingNamespace {
     /// storage described by `use_`. Once the channel is readable, the future calls
     /// `route_storage` to forward the channel to the source component's outgoing directory and
     /// terminates.
-    fn add_storage_use(
+    async fn add_storage_use(
         ns: &mut Vec<fcrunner::ComponentNamespaceEntry>,
-        waiters: &mut Vec<BoxFuture<()>>,
+        waiters: &mut Vec<BoxFuture<'_, ()>>,
         use_: &UseDecl,
         component: WeakComponentInstance,
     ) -> Result<(), ModelError> {
+        // Prevent component from using storage capability if it is restricted to the component ID
+        // index, and the component isn't in the index.
+        match use_ {
+            UseDecl::Storage(use_storage_decl) => {
+                // To check that the storage capability is restricted to the storage decl, we have
+                // to resolve the storage source capability. Because storage capabilites are only
+                // ever `offer`d down the component tree, and we always resolve parents before
+                // children, this resolution will walk the cache-happy path.
+                // TODO(dgonyeo): Eventually combine this logic with the general-purpose startup
+                // capability check.
+                let instance = component.upgrade()?;
+                if let Ok(source) = route_to_storage_decl(use_storage_decl.clone(), &instance).await
+                {
+                    verify_instance_in_component_id_index(&source, &instance).await?;
+                }
+            }
+            _ => unreachable!("unexpected storage decl"),
+        }
+
         Self::add_directory_helper(ns, waiters, use_, component)
     }
 

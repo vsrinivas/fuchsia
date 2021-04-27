@@ -87,6 +87,12 @@ pub enum RoutingError {
     },
 
     #[error(
+        "Component {} is trying to use a storage capability which is restricted to the component ID index.",
+        moniker
+    )]
+    ComponentNotInIdIndex { moniker: AbsoluteMoniker },
+
+    #[error(
         "A `use from parent` declaration was found at `/` for `{}`, \
         but no built-in capability matches",
         capability_id

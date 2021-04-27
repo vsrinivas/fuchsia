@@ -966,6 +966,9 @@ impl<'a> ValidationContext<'a> {
             }
             self.all_storage_and_sources.insert(name, source_child_name);
         }
+        if storage.storage_id.is_none() {
+            self.errors.push(Error::missing_field("StorageDecl", "storage_id"));
+        }
         check_name(storage.backing_dir.as_ref(), "StorageDecl", "backing_dir", &mut self.errors);
     }
 
@@ -4166,6 +4169,7 @@ mod tests {
                             collection: None,
                         })),
                         subdir: None,
+                        storage_id: Some(fsys::StorageId::StaticInstanceIdOrMoniker),
                         ..StorageDecl::EMPTY
                     }),
                 ]),
@@ -4244,6 +4248,7 @@ mod tests {
                             collection: None,
                         })),
                         subdir: None,
+                        storage_id: Some(fsys::StorageId::StaticInstanceIdOrMoniker),
                         ..StorageDecl::EMPTY
                     }),
                 ]);
@@ -5584,6 +5589,7 @@ mod tests {
                         source: None,
                         backing_dir: None,
                         subdir: None,
+                        storage_id: None,
                         ..StorageDecl::EMPTY
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
@@ -5609,6 +5615,7 @@ mod tests {
                 Error::missing_field("DirectoryDecl", "rights"),
                 Error::missing_field("StorageDecl", "source"),
                 Error::missing_field("StorageDecl", "name"),
+                Error::missing_field("StorageDecl", "storage_id"),
                 Error::missing_field("StorageDecl", "backing_dir"),
                 Error::missing_field("RunnerDecl", "name"),
                 Error::missing_field("RunnerDecl", "source_path"),
@@ -5643,6 +5650,7 @@ mod tests {
                         })),
                         backing_dir: Some("&bad".to_string()),
                         subdir: None,
+                        storage_id: Some(fsys::StorageId::StaticInstanceIdOrMoniker),
                         ..StorageDecl::EMPTY
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
@@ -5685,6 +5693,7 @@ mod tests {
                         })),
                         backing_dir: Some("foo".to_string()),
                         subdir: None,
+                        storage_id: Some(fsys::StorageId::StaticInstanceIdOrMoniker),
                         ..StorageDecl::EMPTY
                     }),
                 ]);
@@ -5722,6 +5731,7 @@ mod tests {
                         })),
                         backing_dir: Some(format!("{}", "c".repeat(101))),
                         subdir: None,
+                        storage_id: Some(fsys::StorageId::StaticInstanceIdOrMoniker),
                         ..StorageDecl::EMPTY
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
@@ -5794,6 +5804,7 @@ mod tests {
                         source: Some(Ref::Self_(SelfRef{})),
                         backing_dir: Some("directory".to_string()),
                         subdir: None,
+                        storage_id: Some(fsys::StorageId::StaticInstanceIdOrMoniker),
                         ..StorageDecl::EMPTY
                     }),
                     CapabilityDecl::Storage(StorageDecl {
@@ -5801,6 +5812,7 @@ mod tests {
                         source: Some(Ref::Self_(SelfRef{})),
                         backing_dir: Some("directory".to_string()),
                         subdir: None,
+                        storage_id: Some(fsys::StorageId::StaticInstanceIdOrMoniker),
                         ..StorageDecl::EMPTY
                     }),
                     CapabilityDecl::Runner(RunnerDecl {

@@ -16,6 +16,7 @@
             storage: "data",
             from: "#memfs",
             backing_dir: "memfs",
+            storage_id: "static_instance_id_or_moniker",
         },
     ],
     offer: [

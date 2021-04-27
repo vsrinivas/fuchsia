@@ -26,7 +26,7 @@ use {
 };
 
 pub use cm_types::{
-    DependencyType, Durability, Name, ParseError, Path, RelativePath, StartupMode, Url,
+    DependencyType, Durability, Name, ParseError, Path, RelativePath, StartupMode, StorageId, Url,
 };
 
 lazy_static! {
@@ -213,6 +213,11 @@ impl CapabilityId {
                 capability.capability_type(),
             )?));
         } else if let Some(n) = capability.storage() {
+            if capability.storage_id.is_none() {
+                return Err(Error::validate(
+                    "Storage declaration is missing \"storage_id\", but is required.",
+                ));
+            }
             return Ok(Self::storages_from(Self::get_one_or_many_names(
                 OneOrMany::One(n),
                 None,
@@ -1057,6 +1062,7 @@ pub struct Capability {
     pub rights: Option<Rights>,
     pub backing_dir: Option<Name>,
     pub subdir: Option<RelativePath>,
+    pub storage_id: Option<StorageId>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]

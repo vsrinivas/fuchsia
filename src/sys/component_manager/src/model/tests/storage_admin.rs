@@ -8,6 +8,7 @@ use {
         testing::{routing_test_helpers::*, test_helpers::*},
     },
     cm_rust::*,
+    fidl_fuchsia_sys2 as fsys,
     moniker::RelativeMoniker,
     std::{
         convert::{TryFrom, TryInto},
@@ -41,6 +42,7 @@ async fn storage_to_one_child_admin_to_another() {
                     backing_dir: "tmpfs".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                     subdir: None,
+                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
@@ -136,6 +138,7 @@ async fn directory_from_grandparent_storage_and_admin_from_parent() {
                     backing_dir: "data".try_into().unwrap(),
                     source: StorageDirectorySource::Parent,
                     subdir: Some(PathBuf::from("bar")),
+                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Capability("storage".into()),
@@ -226,6 +229,7 @@ async fn storage_admin_from_sibling() {
                     backing_dir: "tmpfs".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                     subdir: None,
+                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
@@ -290,6 +294,7 @@ async fn admin_protocol_used_in_the_same_place_storage_is_declared() {
                     backing_dir: "tmpfs".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                     subdir: None,
+                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
@@ -356,6 +361,7 @@ async fn storage_admin_from_protocol_on_self() {
                     backing_dir: "tmpfs".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                     subdir: None,
+                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
@@ -421,6 +427,7 @@ async fn storage_admin_from_protocol_from_parent() {
                     backing_dir: "tmpfs".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                     subdir: None,
+                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Capability("unrelated.protocol".into()),
@@ -512,6 +519,7 @@ async fn storage_admin_from_protocol_on_sibling() {
                     backing_dir: "tmpfs".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                     subdir: None,
+                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .protocol(ProtocolDeclBuilder::new("unrelated.protocol").build())
                 .offer(OfferDecl::Storage(OfferStorageDecl {
@@ -578,6 +586,7 @@ async fn storage_admin_from_storage_on_self_bad_protocol_name() {
                     backing_dir: "tmpfs".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                     subdir: None,
+                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
@@ -641,6 +650,7 @@ async fn storage_admin_from_storage_on_parent_bad_protocol_name() {
                     backing_dir: "tmpfs".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                     subdir: None,
+                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Capability("data".into()),
@@ -731,6 +741,7 @@ async fn storage_admin_from_protocol_on_sibling_bad_protocol_name() {
                     backing_dir: "tmpfs".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                     subdir: None,
+                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,

@@ -72,6 +72,23 @@ table StorageDecl {
 
     /// The subdirectory of the source directory that will back the storage
     4: string:fuchsia.component.MAX_PATH_LENGTH subdir;
+
+    /// This enum determines how to key a component's isolated storage directory.
+    /// Each option corresponds to a different key'ing strategy.
+    /// This field is required.
+    5: StorageId storage_id;
+};
+
+/// Declares which identifier to use to key a component's isolated storage directory.
+enum StorageId {
+    /// Isolated storage directories are keyed using a component's instance ID specified in the
+    /// component ID index. Components which are not listed in the index cannot use or open this
+    /// storage capability.
+    STATIC_INSTANCE_ID = 1;
+    /// Isolated storage directories are keyed using a component's instance ID if one is specified
+    /// in the component ID index. Otherwise, a component's relative moniker from the storage
+    /// capability is used to key its isolated storage directory.
+    STATIC_INSTANCE_ID_OR_MONIKER = 2;
 };
 
 /// Declares a runner capability backed by a service.

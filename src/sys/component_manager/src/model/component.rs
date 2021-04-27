@@ -23,7 +23,8 @@ use {
             policy::GlobalPolicyChecker,
             resolver::ResolvedComponent,
             routing::{
-                self, OpenOptions, OpenResourceError, OpenRunnerOptions, RouteRequest, RoutingError,
+                self, route_and_open_capability, OpenOptions, OpenResourceError, OpenRunnerOptions,
+                RouteRequest, RoutingError,
             },
             runner::{NullRunner, RemoteRunner, Runner},
         },
@@ -377,7 +378,7 @@ impl ComponentInstance {
                     open_mode: MODE_TYPE_SERVICE,
                     server_chan: &mut server_channel,
                 };
-                routing::route_and_open_capability(
+                route_and_open_capability(
                     RouteRequest::Runner(runner.clone()),
                     self,
                     OpenOptions::Runner(options),
@@ -822,6 +823,11 @@ impl ResolvedInstanceState {
     /// Returns a reference to the component's validated declaration.
     pub fn decl(&self) -> &ComponentDecl {
         &self.decl
+    }
+
+    #[cfg(test)]
+    pub fn decl_as_mut(&mut self) -> &mut ComponentDecl {
+        &mut self.decl
     }
 
     /// This component's `ExecutionScope`.

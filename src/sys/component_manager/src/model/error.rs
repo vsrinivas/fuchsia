@@ -90,6 +90,11 @@ pub enum ModelError {
         #[from]
         err: ComponentInstanceError,
     },
+    #[error(
+        "Component {} is trying to use a storage capability which is restricted to the component ID index.",
+        moniker
+    )]
+    ComponentNotInIdIndex { moniker: AbsoluteMoniker },
     #[error("failed to add entry {} to {}", entry_name, moniker)]
     AddEntryError { moniker: AbsoluteMoniker, entry_name: String },
     #[error("failed to remove entry {}", entry_name)]

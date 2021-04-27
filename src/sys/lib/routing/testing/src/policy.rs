@@ -7,6 +7,7 @@ use {
     cm_rust::{
         CapabilityName, CapabilityTypeName, ProtocolDecl, StorageDecl, StorageDirectorySource,
     },
+    fidl_fuchsia_sys2 as fsys,
     matches::assert_matches,
     moniker::{AbsoluteMoniker, ExtendedMoniker},
     routing::{
@@ -214,6 +215,7 @@ where
                 name: "cache".into(),
                 source: StorageDirectorySource::Parent,
                 subdir: None,
+                storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
             }),
             component: component.as_weak(),
         };

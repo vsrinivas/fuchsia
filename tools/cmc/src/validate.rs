@@ -349,6 +349,9 @@ impl<'a> ValidationContext<'a> {
             if capability.backing_dir.is_none() {
                 return Err(Error::validate("\"backing_dir\" should be present with \"storage\""));
             }
+            if capability.storage_id.is_none() {
+                return Err(Error::validate("\"storage_id\" should be present with \"storage\""));
+            }
         }
         if capability.runner.is_some() && capability.from.is_some() {
             return Err(Error::validate("\"from\" should not be present with \"runner\""));
@@ -1430,7 +1433,8 @@ mod tests {
                     {
                         "storage": "data-storage",
                         "from": "parent",
-                        "backing_dir": "minfs"
+                        "backing_dir": "minfs",
+                        "storage_id": "static_instance_id_or_moniker",
                     }
                 ]
             }),
@@ -1772,7 +1776,8 @@ mod tests {
                     {
                         "storage": "mystorage",
                         "from": "self",
-                        "backing_dir": "blobfs"
+                        "backing_dir": "blobfs",
+                        "storage_id": "static_instance_id_or_moniker",
                     }
                 ],
                 "children": [
@@ -2241,6 +2246,7 @@ mod tests {
                         "storage": "data",
                         "from": "parent",
                         "backing_dir": "minfs",
+                        "storage_id": "static_instance_id_or_moniker",
                     },
                 ],
             }),
@@ -2269,7 +2275,8 @@ mod tests {
                     {
                         "storage": "abcdefghijklmnopqrstuvwxyz0123456789_-storage",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
-                        "backing_dir": "example"
+                        "backing_dir": "example",
+                        "storage_id": "static_instance_id_or_moniker",
                     }
                 ]
             }),
@@ -2591,6 +2598,7 @@ mod tests {
                     "storage": "minfs",
                     "from": "#logger",
                     "backing_dir": "minfs-dir",
+                    "storage_id": "static_instance_id_or_moniker",
                 } ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Storage offer target \"#logger\" is same as source"
@@ -2645,7 +2653,8 @@ mod tests {
                 "capabilities": [ {
                     "storage": "cache",
                     "from": "self",
-                    "backing_dir": "minfs"
+                    "backing_dir": "minfs",
+                    "storage_id": "static_instance_id_or_moniker",
                 } ],
                 "children": [ {
                     "name": "echo_server",
@@ -3409,16 +3418,19 @@ mod tests {
                         "storage": "a",
                         "from": "#minfs",
                         "backing_dir": "minfs",
+                        "storage_id": "static_instance_id",
                     },
                     {
                         "storage": "b",
                         "from": "parent",
                         "backing_dir": "data",
+                        "storage_id": "static_instance_id_or_moniker",
                     },
                     {
                         "storage": "c",
                         "from": "self",
                         "backing_dir": "storage",
+                        "storage_id": "static_instance_id_or_moniker",
                     },
                 ],
                 "children": [
@@ -3437,6 +3449,7 @@ mod tests {
                         "storage": "abcdefghijklmnopqrstuvwxyz0123456789_-storage",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
                         "backing_dir": "example",
+                        "storage_id": "static_instance_id_or_moniker",
                     },
                 ],
                 "children": [
@@ -3453,7 +3466,8 @@ mod tests {
                     "capabilities": [ {
                         "storage": "minfs",
                         "from": "#missing",
-                        "backing_dir": "minfs"
+                        "backing_dir": "minfs",
+                        "storage_id": "static_instance_id_or_moniker",
                     } ]
                 }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"capabilities\" source \"#missing\" does not appear in \"children\""
@@ -3463,10 +3477,21 @@ mod tests {
                     "capabilities": [ {
                         "storage": "minfs",
                         "from": "self",
+                        "storage_id": "static_instance_id_or_moniker",
                     } ]
                 }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"backing_dir\" should be present with \"storage\""
 
+        ),
+        test_cml_storage_missing_storage_id(
+            json!({
+                    "capabilities": [ {
+                        "storage": "minfs",
+                        "from": "self",
+                        "backing_dir": "storage",
+                    }, ]
+                }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"storage_id\" should be present with \"storage\""
         ),
         test_cml_storage_path(
             json!({
@@ -3474,6 +3499,7 @@ mod tests {
                         "storage": "minfs",
                         "from": "self",
                         "path": "/minfs",
+                        "storage_id": "static_instance_id_or_moniker",
                     } ]
                 }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"path\" can not be present with \"storage\", use \"backing_dir\""

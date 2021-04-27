@@ -137,17 +137,20 @@
             from: "parent",
             subdir: "persistent",
             backing_dir: "minfs",
+            storage_id: "static_instance_id",
         },
         {
             storage: "cache",
             from: "parent",
             subdir: "cache",
             backing_dir: "minfs",
+            storage_id: "static_instance_id_or_moniker",
         },
         {
             storage: "tmp",
             from: "parent",
             backing_dir: "tmp",
+            storage_id: "static_instance_id_or_moniker",
         },
         {
             protocol: [

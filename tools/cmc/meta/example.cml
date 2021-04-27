@@ -37,6 +37,7 @@
             storage: "minfs",
             from: "parent",
             backing_dir: "data",
+            storage_id: "static_instance_id_or_moniker",
         },
         {
             runner: "dart_runner",

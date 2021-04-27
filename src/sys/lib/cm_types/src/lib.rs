@@ -590,6 +590,14 @@ impl Default for DependencyType {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum StorageId {
+    StaticInstanceId,
+    StaticInstanceIdOrMoniker,
+}
+symmetrical_enums!(StorageId, fsys::StorageId, StaticInstanceId, StaticInstanceIdOrMoniker);
+
 #[cfg(test)]
 mod tests {
     use {

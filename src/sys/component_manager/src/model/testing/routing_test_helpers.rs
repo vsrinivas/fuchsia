@@ -7,6 +7,7 @@ use {
         builtin::runner::BuiltinRunnerFactory,
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         config::{CapabilityAllowlistKey, RuntimeConfig, SecurityPolicy},
+        model::component::ComponentInstance,
         model::{
             binding::Binder,
             component::BindReason,
@@ -798,6 +799,25 @@ impl RoutingTest {
             self.mock_runner.wait_for_url(&resolved_url).await;
         }
         Ok(component_name)
+    }
+
+    pub async fn bind_and_get_instance<'a>(
+        &self,
+        moniker: &AbsoluteMoniker,
+        reason: BindReason,
+        wait_for_start: bool,
+    ) -> Result<Arc<ComponentInstance>, ModelError> {
+        let instance = self.model.bind(moniker, &reason).await?;
+        let component_name = match moniker.path().last() {
+            Some(part) => part.name().to_string(),
+            None => self.root_component_name.to_string(),
+        };
+        if wait_for_start {
+            let resolved_url = Self::resolved_url(&component_name);
+            self.mock_runner.wait_for_url(&resolved_url).await;
+        }
+
+        Ok(instance)
     }
 
     /// Wait for the given component to start running.

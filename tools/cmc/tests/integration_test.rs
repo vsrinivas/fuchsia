@@ -227,6 +227,7 @@ fn main() {
                 source: Some(Ref::Parent(ParentRef {})),
                 backing_dir: Some("data".to_string()),
                 subdir: None,
+                storage_id: Some(StorageId::StaticInstanceIdOrMoniker),
                 ..StorageDecl::EMPTY
             }),
             CapabilityDecl::Runner(RunnerDecl {

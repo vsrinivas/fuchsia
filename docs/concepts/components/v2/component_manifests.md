@@ -493,6 +493,16 @@ A definition of a [storage capability][doc-storage].
     storage.
 -   `subdir`: Users are given isolated access to this subdirectory that is
     inside of the `backing_dir` directory.
+-   `storage_id`: The identifier used to isolated storage for a component, one
+    of:
+    -   `static_instance_id`: The instance ID in the component ID index is used
+        as the key for a component's storage. Components which are not listed
+        in the component ID index will not be able to use this storage
+        capability.
+    -   `static_instance_id_or_moniker`:  If the component is listed in the
+        component ID index, the instance ID is used as the key for a
+        component's storage. Otherwise, the component's relative moniker from
+        the storage capability is used.
 
 #### runner {#capability-runner}
 

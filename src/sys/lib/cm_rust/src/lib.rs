@@ -686,6 +686,7 @@ pub struct StorageDecl {
     pub source: StorageDirectorySource,
     pub backing_dir: CapabilityName,
     pub subdir: Option<PathBuf>,
+    pub storage_id: fsys::StorageId,
 }
 
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
@@ -810,6 +811,7 @@ fidl_translations_identical!(fsys::Object);
 fidl_translations_identical!(fdata::Dictionary);
 fidl_translations_identical!(fio2::Operations);
 fidl_translations_identical!(fsys::EnvironmentExtends);
+fidl_translations_identical!(fsys::StorageId);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DependencyType {
@@ -1830,6 +1832,7 @@ mod tests {
                         backing_dir: Some("data".to_string()),
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         subdir: Some("cache".to_string()),
+                        storage_id: Some(fsys::StorageId::StaticInstanceId),
                         ..fsys::StorageDecl::EMPTY
                     }),
                     fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
@@ -2104,6 +2107,7 @@ mod tests {
                             backing_dir: "data".try_into().unwrap(),
                             source: StorageDirectorySource::Parent,
                             subdir: Some("cache".try_into().unwrap()),
+                            storage_id: fsys::StorageId::StaticInstanceId,
                         }),
                         CapabilityDecl::Runner(RunnerDecl {
                             name: "elf".into(),
@@ -2297,6 +2301,7 @@ mod tests {
                         collection: None,
                     })),
                     subdir: None,
+                    storage_id: Some(fsys::StorageId::StaticInstanceIdOrMoniker),
                     ..fsys::StorageDecl::EMPTY
                 },
             ],
@@ -2307,6 +2312,33 @@ mod tests {
                     backing_dir: "minfs".into(),
                     source: StorageDirectorySource::Child("foo".to_string()),
                     subdir: None,
+                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                },
+            ],
+            result_type = StorageDecl,
+        },
+        fidl_into_and_from_storage_capability_restricted => {
+            input = vec![
+                fsys::StorageDecl {
+                    name: Some("minfs".to_string()),
+                    backing_dir: Some("minfs".into()),
+                    source: Some(fsys::Ref::Child(fsys::ChildRef {
+                        name: "foo".to_string(),
+                        collection: None,
+                    })),
+                    subdir: None,
+                    storage_id: Some(fsys::StorageId::StaticInstanceId),
+                    ..fsys::StorageDecl::EMPTY
+                },
+            ],
+            input_type = fsys::StorageDecl,
+            result = vec![
+                StorageDecl {
+                    name: "minfs".into(),
+                    backing_dir: "minfs".into(),
+                    source: StorageDirectorySource::Child("foo".to_string()),
+                    subdir: None,
+                    storage_id: fsys::StorageId::StaticInstanceId,
                 },
             ],
             result_type = StorageDecl,

@@ -66,6 +66,9 @@ pub fn translate_capabilities(
                     None,
                 )?),
                 subdir: capability.subdir.clone().map(Into::into),
+                storage_id: Some(
+                    capability.storage_id.clone().expect("storage is missing storage_id").into(),
+                ),
                 ..fsys::StorageDecl::EMPTY
             }));
         } else if let Some(n) = &capability.runner {

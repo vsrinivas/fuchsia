@@ -1701,7 +1701,8 @@ mod tests {
                     {
                         "storage": "data-storage",
                         "from": "parent",
-                        "backing_dir": "minfs"
+                        "backing_dir": "minfs",
+                        "storage_id": "static_instance_id_or_moniker",
                     }
                 ]
             }),
@@ -1828,6 +1829,7 @@ mod tests {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         backing_dir: Some("minfs".to_string()),
                         subdir: None,
+                        storage_id: Some(fsys::StorageId::StaticInstanceIdOrMoniker),
                         ..fsys::StorageDecl::EMPTY
                     }),
                 ]),
@@ -1879,7 +1881,8 @@ mod tests {
                     {
                         "storage": "data-storage",
                         "from": "parent",
-                        "backing_dir": "minfs"
+                        "backing_dir": "minfs",
+                        "storage_id": "static_instance_id_or_moniker",
                     },
                 ],
                 "children": [
@@ -2031,6 +2034,7 @@ mod tests {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         backing_dir: Some("minfs".to_string()),
                         subdir: None,
+                        storage_id: Some(fsys::StorageId::StaticInstanceIdOrMoniker),
                         ..fsys::StorageDecl::EMPTY
                     }),
                 ]),
@@ -2166,6 +2170,7 @@ mod tests {
                         "storage": "data",
                         "backing_dir": "minfs",
                         "from": "#logger",
+                        "storage_id": "static_instance_id_or_moniker",
                     },
                 ],
             }),
@@ -2414,6 +2419,7 @@ mod tests {
                             })),
                             backing_dir: Some("minfs".to_string()),
                             subdir: None,
+                            storage_id: Some(fsys::StorageId::StaticInstanceIdOrMoniker),
                             ..fsys::StorageDecl::EMPTY
                         }
                     )
@@ -2581,11 +2587,13 @@ mod tests {
                         "storage": "mystorage",
                         "backing_dir": "storage",
                         "from": "#minfs",
+                        "storage_id": "static_instance_id_or_moniker",
                     },
                     {
                         "storage": "mystorage2",
                         "backing_dir": "storage2",
                         "from": "#minfs",
+                        "storage_id": "static_instance_id",
                     },
                     {
                         "runner": "myrunner",
@@ -2650,6 +2658,7 @@ mod tests {
                             })),
                             backing_dir: Some("storage".to_string()),
                             subdir: None,
+                            storage_id: Some(fsys::StorageId::StaticInstanceIdOrMoniker),
                             ..fsys::StorageDecl::EMPTY
                         }
                     ),
@@ -2662,6 +2671,7 @@ mod tests {
                             })),
                             backing_dir: Some("storage2".to_string()),
                             subdir: None,
+                            storage_id: Some(fsys::StorageId::StaticInstanceId),
                             ..fsys::StorageDecl::EMPTY
                         }
                     ),

@@ -45,7 +45,7 @@ use {
         StorageDirectorySource, UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseServiceDecl,
         UseSource, UseStorageDecl,
     },
-    fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
     moniker::{AbsoluteMoniker, PartialMoniker, RelativeMoniker},
     std::{
         path::{Path, PathBuf},
@@ -473,12 +473,40 @@ make_noop_visitor!(StorageVisitor, {
     CapabilityDecl => StorageDecl,
 });
 
+/// Verifies that the given component is in the index if its `storage_id` is StaticInstanceId.
+/// - On success, Ok(()) is returned
+/// - RoutingError::ComponentNotInIndex is returned on failure.
+pub async fn verify_instance_in_component_id_index<C>(
+    source: &CapabilitySourceInterface<C>,
+    instance: &Arc<C>,
+) -> Result<(), RoutingError>
+where
+    C: ComponentInstanceInterface + 'static,
+{
+    let storage_decl = match source {
+        CapabilitySourceInterface::Component {
+            capability: ComponentCapability::Storage(storage_decl),
+            component: _,
+        } => storage_decl,
+        _ => unreachable!("unexpected storage source"),
+    };
+
+    if storage_decl.storage_id == fsys::StorageId::StaticInstanceId
+        && instance.try_get_component_id_index()?.look_up_moniker(&instance.abs_moniker()) == None
+    {
+        return Err(RoutingError::ComponentNotInIdIndex {
+            moniker: instance.abs_moniker().clone(),
+        });
+    }
+    Ok(())
+}
+
 /// Routes a Storage capability from `target` to its source, starting from `use_decl`.
-/// The backing Directory capability is then routed to its source.
-async fn route_storage<C>(
+/// Returns the StorageDecl and the storage component's instance.
+pub async fn route_to_storage_decl<C>(
     use_decl: UseStorageDecl,
     target: &Arc<C>,
-) -> Result<RouteSource<C>, RoutingError>
+) -> Result<CapabilitySourceInterface<C>, RoutingError>
 where
     C: ComponentInstanceInterface + 'static,
 {
@@ -489,6 +517,20 @@ where
         .route(use_decl, target.clone(), allowed_sources, &mut StorageVisitor)
         .await?;
 
+    Ok(source)
+}
+
+/// Routes a Storage capability from `target` to its source, starting from `use_decl`.
+/// The backing Directory capability is then routed to its source.
+async fn route_storage<C>(
+    use_decl: UseStorageDecl,
+    target: &Arc<C>,
+) -> Result<RouteSource<C>, RoutingError>
+where
+    C: ComponentInstanceInterface + 'static,
+{
+    let source = route_to_storage_decl(use_decl, &target).await?;
+    verify_instance_in_component_id_index(&source, target).await?;
     target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
     Ok(RouteSource::Storage(source))
 }
