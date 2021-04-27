@@ -412,6 +412,11 @@ boot since a kernel panic occurred.
 It is not "sticky" -- if you reboot cleanly, it will be gone, and if you crash
 again it will be replaced.
 
+### ktrace.bufsize=\<uint32_t>
+**Default:** `0x20`
+
+This option specifies the number of megabytes allocated for ktrace records.
+
 
 ## Options available only on arm64 machines
 

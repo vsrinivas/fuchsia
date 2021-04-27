@@ -397,6 +397,10 @@ It is not "sticky" -- if you reboot cleanly, it will be gone, and if you crash
 again it will be replaced.
 )""")
 
+DEFINE_OPTION("ktrace.bufsize", uint32_t, ktrace_bufsize, {32}, R"""(
+This option specifies the number of megabytes allocated for ktrace records.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

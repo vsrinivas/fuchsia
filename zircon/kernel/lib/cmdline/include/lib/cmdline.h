@@ -124,7 +124,6 @@ extern Cmdline gCmdline;
 
 // TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
-static constexpr const char kKtraceBufSize[] = "ktrace.bufsize";
 static constexpr const char kKtraceGrpMask[] = "ktrace.grpmask";
 static constexpr const char kMemoryLimitDbg[] = "kernel.memory-limit-dbg";
 static constexpr const char kMemoryLimitMb[] = "kernel.memory-limit-mb";

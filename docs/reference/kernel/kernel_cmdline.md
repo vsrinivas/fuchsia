@@ -455,11 +455,6 @@ corruption.  A value of oops will cause a non-fatal kernel OOPS to be emitted
 when corruption is detected.  A value of panic will cause a fatal kernel panic
 to occur when corruption is detected.  Defaults to oops.
 
-## ktrace.bufsize
-
-This option specifies the size of the buffer for ktrace records, in megabytes.
-The default is 32MB.
-
 ## ktrace.grpmask
 
 This option specifies what ktrace records are emitted.

@@ -287,7 +287,7 @@ void ktrace_init(unsigned level) {
   // Note that because KTRACE_STATE grpmask starts at 0 and will not be changed,
   // the other functions in this file need not check for enabled-ness manually.
   bool syscalls_enabled = gBootOptions->enable_debugging_syscalls;
-  ktrace_bufsize_mb = gCmdline.GetUInt32(kernel_option::kKtraceBufSize, KTRACE_DEFAULT_BUFSIZE);
+  ktrace_bufsize_mb = gBootOptions->ktrace_bufsize;
   uint32_t grpmask = gCmdline.GetUInt32(kernel_option::kKtraceGrpMask, KTRACE_DEFAULT_GRPMASK);
 
   if (ktrace_bufsize_mb == 0 || !syscalls_enabled) {
