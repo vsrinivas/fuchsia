@@ -194,19 +194,22 @@ func runNinja(
 // whether an incremental build would be a no-op (i.e. all requested targets
 // have already been built). It returns true if the build would be a no-op,
 // false otherwise.
+//
+// It also returns a map of logs produced by the no-op check, which can be
+// presented to the user for help with debugging in case the check fails.
 func checkNinjaNoop(
 	ctx context.Context,
 	r ninjaRunner,
 	targets []string,
 	isMac bool,
-) (bool, error) {
+) (bool, map[string]*bytes.Buffer, error) {
 	// -n means dry-run.
 	args := []string{"-d", "explain", "--verbose", "-n"}
 	args = append(args, targets...)
 
 	var stdout, stderr bytes.Buffer
 	if err := r.run(ctx, args, &stdout, &stderr); err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	outputContains := func(s string) bool {
@@ -221,14 +224,18 @@ func checkNinjaNoop(
 			// TODO(https://fxbug.dev/61784): Dirty builds should be an error even on Mac.
 			for _, path := range brokenMacPaths {
 				if outputContains(path) {
-					return true, nil
+					return true, nil, nil
 				}
 			}
 		}
-		return false, nil
+		logs := map[string]*bytes.Buffer{
+			"`ninja -d explain -v -n` stdout": &stdout,
+			"`ninja -d explain -v -n` stderr": &stderr,
+		}
+		return false, logs, nil
 	}
 
-	return true, nil
+	return true, nil, nil
 }
 
 // ninjaGraph runs the ninja graph tool and pipes its stdout to a temporary

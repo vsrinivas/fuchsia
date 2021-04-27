@@ -254,12 +254,19 @@ func TestCheckNinjaNoop(t *testing.T) {
 				ninjaPath: "ninja",
 				buildDir:  t.TempDir(),
 			}
-			noop, err := checkNinjaNoop(ctx, r, []string{"foo"}, tc.isMac)
+			noop, logFiles, err := checkNinjaNoop(ctx, r, []string{"foo"}, tc.isMac)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if noop != tc.expectNoop {
-				t.Errorf("Unexpected ninja no-op result: got %v, expected %v", noop, tc.expectNoop)
+				t.Fatalf("Unexpected ninja no-op result: got %v, expected %v", noop, tc.expectNoop)
+			}
+			if tc.expectNoop {
+				if len(logFiles) > 0 {
+					t.Errorf("Expected no log files in case of no-op, but got: %+v", logFiles)
+				}
+			} else if len(logFiles) != 2 {
+				t.Errorf("Expected 2 log files in case of non-no-op, but got: %+v", logFiles)
 			}
 		})
 	}

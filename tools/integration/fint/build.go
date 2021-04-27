@@ -8,7 +8,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -76,6 +78,9 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	// The ninja log is generated automatically by Ninja and its path is
 	// constant relative to the build directory.
 	artifacts.NinjaLogPath = filepath.Join(contextSpec.BuildDir, ninjaLogPath)
+	// Initialize the map, otherwise it will be nil and attempts to set keys
+	// will fail.
+	artifacts.LogFiles = make(map[string]string)
 
 	runner := ninjaRunner{
 		runner:    &subprocess.Runner{},
@@ -118,9 +123,22 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	}
 
 	if !contextSpec.SkipNinjaNoopCheck {
-		noop, err := checkNinjaNoop(ctx, runner, targets, hostplatform.IsMac())
+		noop, logs, err := checkNinjaNoop(ctx, runner, targets, hostplatform.IsMac())
 		if err != nil {
 			return nil, err
+		}
+		if contextSpec.ArtifactDir != "" {
+			for name, buf := range logs {
+				f, err := ioutil.TempFile(contextSpec.ArtifactDir, url.QueryEscape(name))
+				if err != nil {
+					return nil, err
+				}
+				defer f.Close()
+				if _, err := buf.WriteTo(f); err != nil {
+					return nil, fmt.Errorf("failed to write log file %q: %w", name, err)
+				}
+				artifacts.LogFiles[name] = f.Name()
+			}
 		}
 		if !noop {
 			summaryLines := []string{

@@ -46,4 +46,11 @@ message BuildArtifacts {
 
   // The duration taken by the ninja build step.
   int32 ninja_duration_seconds = 10;
+
+  // Mapping from user-friendly title to absolute path for important log files
+  // that should be presented by the infrastructure for humans to read. We
+  // reference the logs by path rather than inlining the contents in the
+  // protobuf because the logs may be very long and inlining them would make it
+  // very hard for humans to read the output proto.
+  map<string, string> log_files = 11;
 }
