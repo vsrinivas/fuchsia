@@ -5,9 +5,9 @@ for Vulkan.
 
 Features include:
 
-* Ultra-fast sorting of 32‑bit or 64‑bit keys
+* Ultra-fast stable sorting of 32‑bit or 64‑bit keyvals
+* Key size is declared at sort time.
 * Indirectly dispatchable
-* Stable sorting
 * Simple to integrate in a Vulkan 1.2 environment
 
 ## Usage

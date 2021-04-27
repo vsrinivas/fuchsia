@@ -23,8 +23,13 @@
 //
 //
 //
-#include "radix_sort/platforms/vk/radix_sort_vk.h"      // public
+#include "radix_sort/platforms/vk/radix_sort_vk.h"  // public
+
+//
+// This test is a friend of the radix sort library and uses private includes.
+//
 #include "radix_sort/platforms/vk/radix_sort_vk_ext.h"  // private
+#include "radix_sort/platforms/vk/shaders/push.h"       // private
 
 //
 // Is the target archive(s) linkable or loadable?
@@ -215,28 +220,32 @@ static struct rs_name_target const rs_named_targets[] = {
 };
 // clang-format on
 
+//
+// No matching target name
+//
+static void
+rs_list_targets()
+{
+  fprintf(stderr, "Supported target names:\n");
+
+  for (uint32_t ii = 0; ii < ARRAY_LENGTH_MACRO(rs_named_targets); ii++)
+    {
+      fprintf(stderr, "  %s\n", rs_named_targets[ii].name);
+    }
+}
+
+//
+// Find matching target
+//
 static struct radix_sort_vk_target const *
 rs_load_target(char const * target_name)
 {
-  //
-  // Find matching target
-  //
   for (uint32_t ii = 0; ii < ARRAY_LENGTH_MACRO(rs_named_targets); ii++)
     {
       if (strcmp(target_name, rs_named_targets[ii].name) == 0)
         {
           return rs_named_targets[ii].target;
         }
-    }
-
-  //
-  // No matching target name
-  //
-  fprintf(stderr, "Error - supported target names:\n");
-
-  for (uint32_t ii = 0; ii < ARRAY_LENGTH_MACRO(rs_named_targets); ii++)
-    {
-      fprintf(stderr, "\t%s\n", rs_named_targets[ii].name);
     }
 
   return NULL;
@@ -248,8 +257,6 @@ rs_load_target(char const * target_name)
 // Debug dump routines
 //
 #ifdef RS_DEBUG_DUMP
-
-#define RS_RADIX_SIZE 256
 
 static void
 rs_debug_dump_256(char const * const     label,
@@ -333,7 +340,91 @@ rs_debug_dump_keyvals_u64(uint64_t const * const sort,
   fprintf(stdout, "\n");
 }
 
+static void
+rs_debug_dump_indirect(struct rs_indirect_info const * info)
+{
+  fprintf(stdout,
+          "pad.fill           = { .block_offset               = %10u\n"
+          "                       .dword_offset_min           = %10u\n"
+          "                       .dword_offset_max_minus_min = %10u  }\n",
+          info->pad.block_offset,
+          info->pad.dword_offset_min,
+          info->pad.dword_offset_max_minus_min);
+
+  fprintf(stdout,
+          "pad.zero           = { .block_offset               = %10u\n"
+          "                       .dword_offset_min           = %10u\n"
+          "                       .dword_offset_max_minus_min = %10u  }\n",
+          info->zero.block_offset,
+          info->zero.dword_offset_min,
+          info->zero.dword_offset_max_minus_min);
+
+  fprintf(stdout,
+          "dispatch.pad       = { %10u, %10u, %10u }\n",
+          info->dispatch.pad.x,
+          info->dispatch.pad.y,
+          info->dispatch.pad.z);
+
+  fprintf(stdout,
+          "dispatch.zero      = { %10u, %10u, %10u }\n",
+          info->dispatch.zero.x,
+          info->dispatch.zero.y,
+          info->dispatch.zero.z);
+
+  fprintf(stdout,
+          "dispatch.histogram = { %10u, %10u, %10u }\n",
+          info->dispatch.histogram.x,
+          info->dispatch.histogram.y,
+          info->dispatch.histogram.z);
+
+  fprintf(stdout,
+          "dispatch.scatter   = { %10u, %10u, %10u }\n",
+          info->dispatch.scatter.x,
+          info->dispatch.scatter.y,
+          info->dispatch.scatter.z);
+}
+
 #endif
+
+//
+//
+//
+static void
+rs_usage(char const * const argv[])
+{
+  fprintf(
+    stderr,
+    "\n"
+    "Usage: %s "
+    "<vendorID>:<deviceID> "
+    "<target name> "
+    "<\"direct\"|\"indirect\"> "
+    "[count lo "
+    "[count hi "
+    "[count step "
+    "[iterations "
+    "[warmup "
+    "[validate?] ] ] ] ] ]\n\n"
+
+    "  <vendorID>:<deviceID> : Execute on a specific Vulkan physical device.\n"
+    "  <\"direct\"|\"indirect\"> : Direct or indirect radix sort.\n"
+#ifdef __Fuchsia__
+    "  <target name>         : Name of Radix Sort target: \"pkg/data/targets/<vendor name>_<arch name>_<u32 or u64>.ar\".\n"
+#else
+    "  <target name>         : Name of Radix Sort target: <vendor name>_<arch name>_<u32 or u64>.\n"
+#endif
+    "  <count lo>            : Initial number of keyvals.\n"
+    "  <count hi>            : Final number of keyvals.\n"
+    "  <count step>          : Keyval step size.\n"
+    "  <iterations>          : Number of times each step is executed in the benchmark.\n"
+    "  <warmup>              : Number of times each step is executed before starting the benchmark.\n"
+    "  <validate?>           : If 0 then skip validating the device sorted results against a CPU sorting algorithm.\n\n",
+    argv[0]);
+
+#ifdef RS_TARGET_ARCHIVE_LINKABLE
+  rs_list_targets();
+#endif
+}
 
 //
 //
@@ -428,9 +519,13 @@ main(int argc, char const * argv[])
         }
     }
 
+  fprintf(stdout, "\n");
+
   if (pd == VK_NULL_HANDLE)
     {
       fprintf(stderr, "Error: Device %4X:%X not found\n", vendor_id, device_id);
+
+      rs_usage(argv);
 
       return EXIT_FAILURE;
     }
@@ -452,6 +547,57 @@ main(int argc, char const * argv[])
   if (argc < 3)
     {
       fprintf(stderr, "Error: Missing target filename\n");
+
+      rs_usage(argv);
+
+      exit(EXIT_FAILURE);
+    }
+
+  //
+  // load the target
+  //
+  struct radix_sort_vk_target const * rs_target = rs_load_target(argv[2]);
+
+  if (rs_target == NULL)
+    {
+      fprintf(stderr, "Error: Target \"%s\" not found\n", argv[2]);
+
+      rs_usage(argv);
+
+      exit(EXIT_FAILURE);
+    }
+
+  //
+  // make sure there is a target filename
+  //
+  if (argc < 4)
+    {
+      fprintf(stderr, "Error: Missing \"direct\" or \"indirect\" dispatch mode\n");
+
+      rs_usage(argv);
+
+      exit(EXIT_FAILURE);
+    }
+
+  //
+  // Direct or indirect radix sort dispatch?
+  //
+  bool is_direct;
+
+  if (strcmp(argv[3], "direct") == 0)
+    {
+      is_direct = true;
+    }
+  else if (strcmp(argv[3], "indirect") == 0)
+    {
+      is_direct = false;
+    }
+  else
+    {
+      fprintf(stderr, "Error: Specify either \"direct\" or \"indirect\"\n");
+
+      rs_usage(argv);
+
       exit(EXIT_FAILURE);
     }
 
@@ -459,12 +605,12 @@ main(int argc, char const * argv[])
   // get rest of command line
   //
   // clang-format on
-  uint32_t const count_lo   = (argc <= 3) ? 1024 : (uint32_t)strtoul(argv[3], NULL, 0);
-  uint32_t const count_hi   = (argc <= 4) ? count_lo : (uint32_t)strtoul(argv[4], NULL, 0);
-  uint32_t const count_step = (argc <= 5) ? count_lo : (uint32_t)strtoul(argv[5], NULL, 0);
-  uint32_t const loops      = (argc <= 6) ? RS_BENCH_LOOPS : (uint32_t)strtoul(argv[6], NULL, 0);
-  uint32_t const warmup     = (argc <= 7) ? RS_BENCH_WARMUP : (uint32_t)strtoul(argv[7], NULL, 0);
-  bool const     verify     = (argc <= 8) ? true : strtoul(argv[8], NULL, 0) != 0;
+  uint32_t const count_lo   = (argc <= 4) ? 1024 : (uint32_t)strtoul(argv[4], NULL, 0);
+  uint32_t const count_hi   = (argc <= 5) ? count_lo : (uint32_t)strtoul(argv[5], NULL, 0);
+  uint32_t const count_step = (argc <= 6) ? count_lo : (uint32_t)strtoul(argv[6], NULL, 0);
+  uint32_t const loops      = (argc <= 7) ? RS_BENCH_LOOPS : (uint32_t)strtoul(argv[7], NULL, 0);
+  uint32_t const warmup     = (argc <= 8) ? RS_BENCH_WARMUP : (uint32_t)strtoul(argv[8], NULL, 0);
+  bool const     verify     = (argc <= 9) ? true : strtoul(argv[9], NULL, 0) != 0;
   // clang-format on
 
   //
@@ -472,13 +618,19 @@ main(int argc, char const * argv[])
   //
   if (count_lo == 0)
     {
-      fprintf(stderr, "Error: keyval count must be >= 1\n");
+      fprintf(stderr, "Error: Keyval count must be >= 1\n");
       exit(EXIT_FAILURE);
     }
 
   if (count_lo > count_hi)
     {
       fprintf(stderr, "Error: count_lo > count_hi\n");
+      exit(EXIT_FAILURE);
+    }
+
+  if (loops == 0)
+    {
+      fprintf(stderr, "Error: Loops must be non-zero\n");
       exit(EXIT_FAILURE);
     }
 
@@ -514,17 +666,6 @@ main(int argc, char const * argv[])
     .queueCount       = 1,
     .pQueuePriorities = qci_priorities
   };
-
-  //
-  // load the target
-  //
-  struct radix_sort_vk_target const * rs_target = rs_load_target(argv[2]);
-
-  if (rs_target == NULL)
-    {
-      // TODO(allanmac): print out available targets in Fuchsia component
-      exit(EXIT_FAILURE);
-    }
 
   //
   // probe Radix Sort device extension requirements for this target
@@ -640,11 +781,15 @@ main(int argc, char const * argv[])
   float const vk_timestamp_period = pdp.limits.timestampPeriod;
 
   //
-  // Number of timestamps is: 4 + (number of subpasses)
+  // Number of timestamps is: 5 + (number of subpasses)
   //
-  // For 64-bit this is: 4 + 8 = 12
+  //   * direct   dispatch: 4 + subpass count
+  //   * indirect dispatch: 5 + subpass count
   //
-#define QUERY_POOL_SIZE_MAX (4 + 8)
+  // Indirect / 32-bit keyvals: 9
+  // Indirect / 64-bit keyvals: 13
+  //
+#define QUERY_POOL_SIZE_MAX (1 + 4 + 8)
 
   VkQueryPoolCreateInfo const query_pool_info = {
 
@@ -674,9 +819,17 @@ main(int argc, char const * argv[])
   // create buffers:
   //
   //   * rand buffer
+  //
   //   * keyval buffer x 2
+  //   * mappable keyval buffer
+  //
   //   * internal buffer
-  //   * mappable host buffer
+  //   * mappable internal buffer
+  //
+  //   * indirect buffer
+  //   * mappable indirect buffer
+  //
+  //   * count buffer (1 dword)
   //
   VkBufferCreateInfo bci = {
 
@@ -690,88 +843,155 @@ main(int argc, char const * argv[])
     // .usage
   };
 
-  VkBuffer buffer_internal, buffer_map_internal;
-  VkBuffer buffer_rand, buffer_even, buffer_odd, buffer_map_keyvals;
+  struct
+  {
+    VkBuffer rand;
+    VkBuffer keyvals_even;
+    VkBuffer keyvals_odd;
+    VkBuffer map_keyvals;
+    VkBuffer internal;
+    VkBuffer map_internal;
+    VkBuffer indirect;
+    VkBuffer map_indirect;
+    VkBuffer count;
+  } buffers;
 
-  //----------------------
-  bci.size  = rs_mr.internal_size;
+  // RAND
+  bci.size  = rs_mr.keyvals_size;
   bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
-              VK_BUFFER_USAGE_TRANSFER_SRC_BIT |    // SRC in case buffer size is 1
-              VK_BUFFER_USAGE_TRANSFER_DST_BIT |    //
+              VK_BUFFER_USAGE_TRANSFER_SRC_BIT;     // SRC for copying to keyval buffers
+
+  vk(CreateBuffer(device, &bci, NULL, &buffers.rand));
+
+  // EVEN/ODD
+  bci.size  = rs_mr.keyvals_size;
+  bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
+              VK_BUFFER_USAGE_TRANSFER_SRC_BIT |    // SRC for debug copying back to host
+              VK_BUFFER_USAGE_TRANSFER_DST_BIT |    // DST for initializing with rand
               VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
-  vk(CreateBuffer(device, &bci, NULL, &buffer_internal));
+  vk(CreateBuffer(device, &bci, NULL, &buffers.keyvals_even));
+  vk(CreateBuffer(device, &bci, NULL, &buffers.keyvals_odd));
 
-  //----------------------
+  // MAP KEYVALS
+  bci.size  = rs_mr.keyvals_size;
+  bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
+              VK_BUFFER_USAGE_TRANSFER_DST_BIT;     // DST for debug copying back to host
+
+  vk(CreateBuffer(device, &bci, NULL, &buffers.map_keyvals));
+
+  // INTERNAL
   bci.size  = rs_mr.internal_size;
   bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
-              VK_BUFFER_USAGE_TRANSFER_SRC_BIT |    //
-              VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-  vk(CreateBuffer(device, &bci, NULL, &buffer_map_internal));
-
-  //----------------------
-  bci.size  = rs_mr.keyvals_size;
-  bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
-              VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-
-  vk(CreateBuffer(device, &bci, NULL, &buffer_rand));
-
-  //----------------------
-  bci.size  = rs_mr.keyvals_size;
-  bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
-              VK_BUFFER_USAGE_TRANSFER_SRC_BIT |    // SRC in case buffer size is 1
-              VK_BUFFER_USAGE_TRANSFER_DST_BIT |    //
+              VK_BUFFER_USAGE_TRANSFER_SRC_BIT |    // SRC for debug copying back to host
+              VK_BUFFER_USAGE_TRANSFER_DST_BIT |    // DST for vkCmdFillBuffer()
               VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
-  vk(CreateBuffer(device, &bci, NULL, &buffer_even));
-  vk(CreateBuffer(device, &bci, NULL, &buffer_odd));
+  vk(CreateBuffer(device, &bci, NULL, &buffers.internal));
 
-  //----------------------
-  bci.size  = rs_mr.keyvals_size;
+  // MAP INTERNAL
+  bci.size  = rs_mr.internal_size;
   bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
-              VK_BUFFER_USAGE_TRANSFER_SRC_BIT |    //
-              VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+              VK_BUFFER_USAGE_TRANSFER_DST_BIT;     // DST for debug copying back to host
 
-  vk(CreateBuffer(device, &bci, NULL, &buffer_map_keyvals));
+  vk(CreateBuffer(device, &bci, NULL, &buffers.map_internal));
+
+  // INDIRECT
+  bci.size  = rs_mr.indirect_size;
+  bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |   //
+              VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |  // Indirect buffer
+              VK_BUFFER_USAGE_TRANSFER_SRC_BIT |     // SRC for debug copying back to host
+              VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+
+  vk(CreateBuffer(device, &bci, NULL, &buffers.indirect));
+
+  // MAP INDIRECT
+  bci.size  = rs_mr.indirect_size;
+  bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
+              VK_BUFFER_USAGE_TRANSFER_DST_BIT;     // DST for debug copying back to host
+
+  vk(CreateBuffer(device, &bci, NULL, &buffers.map_indirect));
+
+  // COUNT
+  bci.size  = sizeof(uint32_t);
+  bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
+              VK_BUFFER_USAGE_TRANSFER_DST_BIT |    // DST for vkCmdUpdateBuffer()
+              VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+
+  vk(CreateBuffer(device, &bci, NULL, &buffers.count));
 
   //
   // create dbis
   //
-  VkDescriptorBufferInfo const dbi_internal = {
+  struct
+  {
+    VkDescriptorBufferInfo keyvals_even;
+    VkDescriptorBufferInfo keyvals_odd;
+    VkDescriptorBufferInfo internal;
+    VkDescriptorBufferInfo indirect;
+    VkDescriptorBufferInfo count;
+  } dbis;
 
-    .buffer = buffer_internal,
+  dbis.keyvals_even = (VkDescriptorBufferInfo){
+
+    .buffer = buffers.keyvals_even,
+    .offset = 0,
+    .range  = rs_mr.keyvals_size
+  };
+
+  dbis.keyvals_odd = (VkDescriptorBufferInfo){
+
+    .buffer = buffers.keyvals_odd,
+    .offset = 0,
+    .range  = rs_mr.keyvals_size
+  };
+
+  dbis.internal = (VkDescriptorBufferInfo){
+
+    .buffer = buffers.internal,
     .offset = 0,
     .range  = rs_mr.internal_size
   };
 
-  VkDescriptorBufferInfo const dbi_keyvals_even = {
+  dbis.indirect = (VkDescriptorBufferInfo){
 
-    .buffer = buffer_even,
+    .buffer = buffers.indirect,
     .offset = 0,
-    .range  = rs_mr.keyvals_size
+    .range  = rs_mr.indirect_size
   };
 
-  VkDescriptorBufferInfo const dbi_keyvals_odd = {
+  dbis.count = (VkDescriptorBufferInfo){
 
-    .buffer = buffer_odd,
+    .buffer = buffers.count,
     .offset = 0,
-    .range  = rs_mr.keyvals_size
+    .range  = sizeof(uint32_t)
   };
 
   //
   // get memory requirements for one of the buffers
   //
-  VkMemoryRequirements mr_internal, mr_map_internal;
-  VkMemoryRequirements mr_rand, mr_even, mr_odd, mr_map_keyvals;
+  struct
+  {
+    VkMemoryRequirements rand;
+    VkMemoryRequirements keyvals_even;
+    VkMemoryRequirements keyvals_odd;
+    VkMemoryRequirements map_keyvals;
+    VkMemoryRequirements internal;
+    VkMemoryRequirements map_internal;
+    VkMemoryRequirements indirect;
+    VkMemoryRequirements map_indirect;
+    VkMemoryRequirements count;
+  } mrs;
 
-  vkGetBufferMemoryRequirements(device, buffer_internal, &mr_internal);
-  vkGetBufferMemoryRequirements(device, buffer_map_internal, &mr_map_internal);
-
-  vkGetBufferMemoryRequirements(device, buffer_rand, &mr_rand);
-  vkGetBufferMemoryRequirements(device, buffer_even, &mr_even);
-  vkGetBufferMemoryRequirements(device, buffer_odd, &mr_odd);
-  vkGetBufferMemoryRequirements(device, buffer_map_keyvals, &mr_map_keyvals);
+  vkGetBufferMemoryRequirements(device, buffers.rand, &mrs.rand);
+  vkGetBufferMemoryRequirements(device, buffers.keyvals_even, &mrs.keyvals_even);
+  vkGetBufferMemoryRequirements(device, buffers.keyvals_odd, &mrs.keyvals_odd);
+  vkGetBufferMemoryRequirements(device, buffers.map_keyvals, &mrs.map_keyvals);
+  vkGetBufferMemoryRequirements(device, buffers.internal, &mrs.internal);
+  vkGetBufferMemoryRequirements(device, buffers.map_internal, &mrs.map_internal);
+  vkGetBufferMemoryRequirements(device, buffers.indirect, &mrs.indirect);
+  vkGetBufferMemoryRequirements(device, buffers.map_indirect, &mrs.map_indirect);
+  vkGetBufferMemoryRequirements(device, buffers.count, &mrs.count);
 
   //
   // indicate that we're going to get the buffer's address
@@ -789,55 +1009,34 @@ main(int argc, char const * argv[])
   //
   // for simplicity, all buffers are the same size
   //
-  VkMemoryAllocateInfo const mai_internal = {
-
-    .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-    .pNext           = &afi_devaddr,
-    .allocationSize  = mr_internal.size,
-    .memoryTypeIndex = vk_find_mem_type_idx(&pdmp,  //
-                                            mr_internal.memoryTypeBits,
-                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-  };
-
-  VkMemoryAllocateInfo const mai_map_internal = {
-
-    .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-    .pNext           = NULL,
-    .allocationSize  = mr_map_internal.size,
-    .memoryTypeIndex = vk_find_mem_type_idx(&pdmp,
-                                            mr_map_internal.memoryTypeBits,
-                                            (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |  //
-                                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
-  };
-
   VkMemoryAllocateInfo const mai_rand = {
 
     .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
     .pNext           = NULL,
-    .allocationSize  = mr_rand.size,
+    .allocationSize  = mrs.rand.size,
     .memoryTypeIndex = vk_find_mem_type_idx(&pdmp,
-                                            mr_rand.memoryTypeBits,
+                                            mrs.rand.memoryTypeBits,
                                             (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |  //
                                              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
   };
 
-  VkMemoryAllocateInfo const mai_even = {
+  VkMemoryAllocateInfo const mai_keyvals_even = {
 
     .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
     .pNext           = &afi_devaddr,
-    .allocationSize  = mr_even.size,
+    .allocationSize  = mrs.keyvals_even.size,
     .memoryTypeIndex = vk_find_mem_type_idx(&pdmp,  //
-                                            mr_even.memoryTypeBits,
+                                            mrs.keyvals_even.memoryTypeBits,
                                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
   };
 
-  VkMemoryAllocateInfo const mai_odd = {
+  VkMemoryAllocateInfo const mai_keyvals_odd = {
 
     .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
     .pNext           = &afi_devaddr,
-    .allocationSize  = mr_odd.size,
+    .allocationSize  = mrs.keyvals_odd.size,
     .memoryTypeIndex = vk_find_mem_type_idx(&pdmp,  //
-                                            mr_odd.memoryTypeBits,
+                                            mrs.keyvals_odd.memoryTypeBits,
                                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
   };
 
@@ -845,34 +1044,99 @@ main(int argc, char const * argv[])
 
     .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
     .pNext           = NULL,
-    .allocationSize  = mr_map_keyvals.size,
+    .allocationSize  = mrs.map_keyvals.size,
     .memoryTypeIndex = vk_find_mem_type_idx(&pdmp,
-                                            mr_map_keyvals.memoryTypeBits,
+                                            mrs.map_keyvals.memoryTypeBits,
                                             (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |  //
                                              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
   };
 
-  VkDeviceMemory mem_internal, mem_map_internal;
-  VkDeviceMemory mem_rand, mem_even, mem_odd, mem_map_keyvals;
+  VkMemoryAllocateInfo const mai_internal = {
 
-  vk(AllocateMemory(device, &mai_internal, NULL, &mem_internal));
-  vk(AllocateMemory(device, &mai_map_internal, NULL, &mem_map_internal));
+    .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .pNext           = &afi_devaddr,
+    .allocationSize  = mrs.internal.size,
+    .memoryTypeIndex = vk_find_mem_type_idx(&pdmp,  //
+                                            mrs.internal.memoryTypeBits,
+                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+  };
 
-  vk(AllocateMemory(device, &mai_rand, NULL, &mem_rand));
-  vk(AllocateMemory(device, &mai_even, NULL, &mem_even));
-  vk(AllocateMemory(device, &mai_odd, NULL, &mem_odd));
-  vk(AllocateMemory(device, &mai_map_keyvals, NULL, &mem_map_keyvals));
+  VkMemoryAllocateInfo const mai_map_internal = {
+
+    .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .pNext           = NULL,
+    .allocationSize  = mrs.map_internal.size,
+    .memoryTypeIndex = vk_find_mem_type_idx(&pdmp,
+                                            mrs.map_internal.memoryTypeBits,
+                                            (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |  //
+                                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
+  };
+
+  VkMemoryAllocateInfo const mai_indirect = {
+
+    .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .pNext           = &afi_devaddr,
+    .allocationSize  = mrs.indirect.size,
+    .memoryTypeIndex = vk_find_mem_type_idx(&pdmp,  //
+                                            mrs.indirect.memoryTypeBits,
+                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+  };
+
+  VkMemoryAllocateInfo const mai_map_indirect = {
+
+    .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .pNext           = NULL,
+    .allocationSize  = mrs.map_indirect.size,
+    .memoryTypeIndex = vk_find_mem_type_idx(&pdmp,
+                                            mrs.map_indirect.memoryTypeBits,
+                                            (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |  //
+                                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
+  };
+
+  VkMemoryAllocateInfo const mai_count = {
+
+    .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .pNext           = &afi_devaddr,
+    .allocationSize  = mrs.count.size,
+    .memoryTypeIndex = vk_find_mem_type_idx(&pdmp,  //
+                                            mrs.count.memoryTypeBits,
+                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+  };
+  struct
+  {
+    VkDeviceMemory rand;
+    VkDeviceMemory keyvals_even;
+    VkDeviceMemory keyvals_odd;
+    VkDeviceMemory map_keyvals;
+    VkDeviceMemory internal;
+    VkDeviceMemory map_internal;
+    VkDeviceMemory indirect;
+    VkDeviceMemory map_indirect;
+    VkDeviceMemory count;
+  } mems;
+
+  vk(AllocateMemory(device, &mai_rand, NULL, &mems.rand));
+  vk(AllocateMemory(device, &mai_keyvals_even, NULL, &mems.keyvals_even));
+  vk(AllocateMemory(device, &mai_keyvals_odd, NULL, &mems.keyvals_odd));
+  vk(AllocateMemory(device, &mai_map_keyvals, NULL, &mems.map_keyvals));
+  vk(AllocateMemory(device, &mai_internal, NULL, &mems.internal));
+  vk(AllocateMemory(device, &mai_map_internal, NULL, &mems.map_internal));
+  vk(AllocateMemory(device, &mai_indirect, NULL, &mems.indirect));
+  vk(AllocateMemory(device, &mai_map_indirect, NULL, &mems.map_indirect));
+  vk(AllocateMemory(device, &mai_count, NULL, &mems.count));
 
   //
   // bind backing memory to the virtual allocations
   //
-  vk(BindBufferMemory(device, buffer_internal, mem_internal, 0));
-  vk(BindBufferMemory(device, buffer_map_internal, mem_map_internal, 0));
-
-  vk(BindBufferMemory(device, buffer_rand, mem_rand, 0));
-  vk(BindBufferMemory(device, buffer_even, mem_even, 0));
-  vk(BindBufferMemory(device, buffer_odd, mem_odd, 0));
-  vk(BindBufferMemory(device, buffer_map_keyvals, mem_map_keyvals, 0));
+  vk(BindBufferMemory(device, buffers.rand, mems.rand, 0));
+  vk(BindBufferMemory(device, buffers.keyvals_even, mems.keyvals_even, 0));
+  vk(BindBufferMemory(device, buffers.keyvals_odd, mems.keyvals_odd, 0));
+  vk(BindBufferMemory(device, buffers.map_keyvals, mems.map_keyvals, 0));
+  vk(BindBufferMemory(device, buffers.internal, mems.internal, 0));
+  vk(BindBufferMemory(device, buffers.map_internal, mems.map_internal, 0));
+  vk(BindBufferMemory(device, buffers.indirect, mems.indirect, 0));
+  vk(BindBufferMemory(device, buffers.map_indirect, mems.map_indirect, 0));
+  vk(BindBufferMemory(device, buffers.count, mems.count, 0));
 
   //
   // create the rand and sort host buffers
@@ -884,11 +1148,11 @@ main(int argc, char const * argv[])
 
   void * rand_map;
 
-  vk(MapMemory(device, mem_rand, 0, VK_WHOLE_SIZE, 0, &rand_map));
+  vk(MapMemory(device, mems.rand, 0, VK_WHOLE_SIZE, 0, &rand_map));
 
   memcpy(rand_map, rand_h, rs_mr.keyvals_size);
 
-  vkUnmapMemory(device, mem_rand);
+  vkUnmapMemory(device, mems.rand);
 
   //
   // create a single command buffer for this thread
@@ -901,9 +1165,10 @@ main(int argc, char const * argv[])
     .commandBufferCount = 1
   };
 
-  VkCommandBuffer cb;
+  VkCommandBuffer cb, cb_rand_copy;
 
   vk(AllocateCommandBuffers(device, &cmd_buffer_info, &cb));
+  vk(AllocateCommandBuffers(device, &cmd_buffer_info, &cb_rand_copy));
 
   //
   //
@@ -915,7 +1180,20 @@ main(int argc, char const * argv[])
     .pInheritanceInfo = NULL
   };
 
-  struct VkSubmitInfo const submit_info = {
+  struct VkSubmitInfo const submit_info_cb_rand_copy = {
+
+    .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .pNext                = NULL,
+    .waitSemaphoreCount   = 0,
+    .pWaitSemaphores      = NULL,
+    .pWaitDstStageMask    = NULL,
+    .commandBufferCount   = 1,
+    .pCommandBuffers      = &cb_rand_copy,
+    .signalSemaphoreCount = 0,
+    .pSignalSemaphores    = NULL
+  };
+
+  struct VkSubmitInfo const submit_info_cb = {
 
     .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
     .pNext                = NULL,
@@ -934,6 +1212,7 @@ main(int argc, char const * argv[])
   fprintf(stdout,
           "Device, "
           "Driver, "
+          "Dispatch, "
           "Keyval, "
           "Verified?, "
           "Count, "
@@ -972,7 +1251,7 @@ main(int argc, char const * argv[])
         continue;
 
       //
-      // init elapsed time accumulators
+      // Init elapsed time accumulators
       //
       uint64_t elapsed_min[QUERY_POOL_SIZE_MAX] = { [0 ... QUERY_POOL_SIZE_MAX - 1] = UINT64_MAX };
       uint64_t elapsed_max[QUERY_POOL_SIZE_MAX] = { 0 };
@@ -980,10 +1259,13 @@ main(int argc, char const * argv[])
 
       ext_timestamps.timestamps_set = 0;
 
+      //////////////////////////////////////////////////////////////////
       //
-      // initialize buffer_even with random keys
+      // COMMAND BUFFER RAND COPY
       //
-      vkBeginCommandBuffer(cb, &cb_begin_info);
+      // Initialize buffer_even with random keys
+      //
+      vkBeginCommandBuffer(cb_rand_copy, &cb_begin_info);
 
       VkBufferCopy const copy_rand = {
 
@@ -992,10 +1274,28 @@ main(int argc, char const * argv[])
         .size      = rs_mr.keyval_size * count
       };
 
-      vkCmdCopyBuffer(cb, buffer_rand, buffer_even, 1, &copy_rand);
+      vkCmdCopyBuffer(cb_rand_copy, buffers.rand, buffers.keyvals_even, 1, &copy_rand);
 
       //
-      // reset the query pool
+      // Initialize count
+      //
+      if (!is_direct)
+        {
+          vkCmdUpdateBuffer(cb_rand_copy, buffers.count, 0, sizeof(uint32_t), &count);
+        }
+
+      vk(EndCommandBuffer(cb_rand_copy));
+
+      //////////////////////////////////////////////////////////////////
+      //
+      // COMMAND BUFFER SORT
+      //
+      // Define sort
+      //
+      vkBeginCommandBuffer(cb, &cb_begin_info);
+
+      //
+      // Reset the query pool
       //
       vkCmdResetQueryPool(cb, query_pool, 0, QUERY_POOL_SIZE_MAX);
 
@@ -1010,28 +1310,58 @@ main(int argc, char const * argv[])
 #endif
 
       //
-      // sort
+      // Which dbi contains the sorted keyvals?
       //
-      struct radix_sort_vk_sort_info const info = {
-#ifdef RS_ENABLE_EXT_TIMESTAMPS
-        .ext = &ext_timestamps,
-#else
-        .ext = NULL,
-#endif
-        .key_bits     = keyval_bytes * 8,
-        .count        = count,
-        .keyvals_even = &dbi_keyvals_even,
-        .keyvals_odd  = &dbi_keyvals_odd,
-        .internal     = &dbi_internal
-      };
-
       VkDescriptorBufferInfo const * dbi_keyvals_sorted;
 
-      radix_sort_vk_sort(device, cb, rs, &info, &dbi_keyvals_sorted);
+      //
+      // Direct or indirect radix sort?
+      //
+      if (is_direct)
+        {
+          //
+          // DIRECT
+          //
+          struct radix_sort_vk_sort_info const info = {
+#ifdef RS_ENABLE_EXT_TIMESTAMPS
+            .ext = &ext_timestamps,
+#else
+            .ext = NULL,
+#endif
+            .key_bits     = keyval_bytes * 8,
+            .count        = count,
+            .keyvals_even = &dbis.keyvals_even,
+            .keyvals_odd  = &dbis.keyvals_odd,
+            .internal     = &dbis.internal
+          };
 
-      //
-      // If timestamp splits aren't enabled then capture end.
-      //
+          radix_sort_vk_sort(device, cb, rs, &info, &dbi_keyvals_sorted);
+        }
+      else
+        {
+          //
+          // INDIRECT
+          //
+          struct radix_sort_vk_sort_indirect_info const info = {
+#ifdef RS_ENABLE_EXT_TIMESTAMPS
+            .ext = &ext_timestamps,
+#else
+            .ext = NULL,
+#endif
+            .key_bits     = keyval_bytes * 8,
+            .count        = &dbis.count,
+            .keyvals_even = &dbis.keyvals_even,
+            .keyvals_odd  = &dbis.keyvals_odd,
+            .internal     = &dbis.internal,
+            .indirect     = &dbis.indirect
+          };
+
+          radix_sort_vk_sort_indirect(device, cb, rs, &info, &dbi_keyvals_sorted);
+        }
+
+        //
+        // If timestamp splits aren't enabled then capture end.
+        //
 #ifndef RS_ENABLE_EXT_TIMESTAMPS
       vkCmdWriteTimestamp(cb,
                           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -1039,11 +1369,9 @@ main(int argc, char const * argv[])
                           ext_timestamps.timestamps_set++);
 #endif
 
-      //
-      // end command buffer
-      //
       vk(EndCommandBuffer(cb));
 
+      //////////////////////////////////////////////////////////////////
       //
       // repeatedly submit in a tight loop
       //
@@ -1051,8 +1379,14 @@ main(int argc, char const * argv[])
 
       for (uint32_t loop_idx = 0; loop_idx < total_loops; loop_idx++)
         {
-          // submit!
-          vk(QueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE));
+          // submit rand copy and wait
+          vk(QueueSubmit(queue, 1, &submit_info_cb_rand_copy, VK_NULL_HANDLE));
+
+          // wait for queue to drain
+          vk(QueueWaitIdle(queue));
+
+          // submit radix sort and wait
+          vk(QueueSubmit(queue, 1, &submit_info_cb, VK_NULL_HANDLE));
 
           // wait for queue to drain
           vk(QueueWaitIdle(queue));
@@ -1095,6 +1429,7 @@ main(int argc, char const * argv[])
             }
         }
 
+      vk(ResetCommandBuffer(cb_rand_copy, 0));
       vk(ResetCommandBuffer(cb, 0));
 
       //
@@ -1124,15 +1459,6 @@ main(int argc, char const * argv[])
           //
           vkBeginCommandBuffer(cb, &cb_begin_info);
 
-          VkBufferCopy const buffer_internal_copy = {
-
-            .srcOffset = dbi_internal.offset,
-            .dstOffset = 0,
-            .size      = dbi_internal.range
-          };
-
-          vkCmdCopyBuffer(cb, buffer_internal, buffer_map_internal, 1, &buffer_internal_copy);
-
           //
           // get the sorted keys buffer from the device
           //
@@ -1145,16 +1471,37 @@ main(int argc, char const * argv[])
 
           vkCmdCopyBuffer(cb,
                           dbi_keyvals_sorted->buffer,
-                          buffer_map_keyvals,
+                          buffers.map_keyvals,
                           1,
                           &buffer_sorted_copy);
+
+          VkBufferCopy const buffer_internal_copy = {
+
+            .srcOffset = dbis.internal.offset,
+            .dstOffset = 0,
+            .size      = dbis.internal.range
+          };
+
+          vkCmdCopyBuffer(cb, buffers.internal, buffers.map_internal, 1, &buffer_internal_copy);
+
+          //
+          // get the indirect buffer from the device
+          //
+          VkBufferCopy const buffer_indirect_copy = {
+
+            .srcOffset = dbis.indirect.offset,
+            .dstOffset = 0,
+            .size      = dbis.indirect.range
+          };
+
+          vkCmdCopyBuffer(cb, buffers.indirect, buffers.map_indirect, 1, &buffer_indirect_copy);
 
           vk(EndCommandBuffer(cb));
 
           //
           // submit and wait until complete
           //
-          vk(QueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE));
+          vk(QueueSubmit(queue, 1, &submit_info_cb, VK_NULL_HANDLE));
 
           vk(QueueWaitIdle(queue));
 
@@ -1164,11 +1511,13 @@ main(int argc, char const * argv[])
           vk(ResetCommandBuffer(cb, 0));
 
           // map sorted
-          void * mem_map_internal_d;
           void * mem_map_keyvals_d;
+          void * mem_map_internal_d;
+          void * mem_map_indirect_d;
 
-          vk(MapMemory(device, mem_map_internal, 0, VK_WHOLE_SIZE, 0, &mem_map_internal_d));
-          vk(MapMemory(device, mem_map_keyvals, 0, VK_WHOLE_SIZE, 0, &mem_map_keyvals_d));
+          vk(MapMemory(device, mems.map_keyvals, 0, VK_WHOLE_SIZE, 0, &mem_map_keyvals_d));
+          vk(MapMemory(device, mems.map_internal, 0, VK_WHOLE_SIZE, 0, &mem_map_internal_d));
+          vk(MapMemory(device, mems.map_indirect, 0, VK_WHOLE_SIZE, 0, &mem_map_indirect_d));
 
           //
           // sort on host
@@ -1197,6 +1546,11 @@ main(int argc, char const * argv[])
           // DEBUG
           //
 #ifdef RS_DEBUG_DUMP
+          if (!is_direct)
+            {
+              rs_debug_dump_indirect(mem_map_indirect_d);
+            }
+
           if (keyval_bytes == 4)
             {
               rs_debug_dump_histograms(mem_map_internal_d, keyval_bytes, keyval_bytes, 32);
@@ -1225,8 +1579,9 @@ main(int argc, char const * argv[])
           //
           // done with buffer_sortedmap
           //
-          vkUnmapMemory(device, mem_map_internal);
-          vkUnmapMemory(device, mem_map_keyvals);
+          vkUnmapMemory(device, mems.map_keyvals);
+          vkUnmapMemory(device, mems.map_internal);
+          vkUnmapMemory(device, mems.map_indirect);
         }
 
       //
@@ -1238,12 +1593,13 @@ main(int argc, char const * argv[])
       // timestamps are in nanoseconds
       //
       fprintf(stdout,
-              "%s, %u.%u.%u.%u, %s, %s, %10u, CPU, %s, %9.3f, %6.2f, GPU, %9u, ",
+              "%s, %u.%u.%u.%u, %s, %s, %s, %10u, CPU, %s, %9.3f, %6.2f, GPU, %9u, ",
               pdp.deviceName,
               (pdp.driverVersion >> 24) & 0xFF,
               (pdp.driverVersion >> 16) & 0xFF,
               (pdp.driverVersion >> 8) & 0xFF,
               (pdp.driverVersion) & 0xFF,
+              is_direct ? "direct" : "indirect",
               (rs_mr.keyval_size == sizeof(uint32_t)) ? "uint" : "ulong",
               verify ? (verified ? "  OK  " : "*FAIL*") : "UNVERIFIED",
               count,
@@ -1274,22 +1630,26 @@ main(int argc, char const * argv[])
   radix_sort_vk_destroy(rs, device, NULL);
 
   // destroy buffers
-  vkDestroyBuffer(device, buffer_internal, NULL);
-  vkDestroyBuffer(device, buffer_map_internal, NULL);
-
-  vkDestroyBuffer(device, buffer_rand, NULL);
-  vkDestroyBuffer(device, buffer_even, NULL);
-  vkDestroyBuffer(device, buffer_odd, NULL);
-  vkDestroyBuffer(device, buffer_map_keyvals, NULL);
+  vkDestroyBuffer(device, buffers.rand, NULL);
+  vkDestroyBuffer(device, buffers.keyvals_even, NULL);
+  vkDestroyBuffer(device, buffers.keyvals_odd, NULL);
+  vkDestroyBuffer(device, buffers.map_keyvals, NULL);
+  vkDestroyBuffer(device, buffers.internal, NULL);
+  vkDestroyBuffer(device, buffers.map_internal, NULL);
+  vkDestroyBuffer(device, buffers.indirect, NULL);
+  vkDestroyBuffer(device, buffers.map_indirect, NULL);
+  vkDestroyBuffer(device, buffers.count, NULL);
 
   // free device memory
-  vkFreeMemory(device, mem_internal, NULL);
-  vkFreeMemory(device, mem_map_internal, NULL);
-
-  vkFreeMemory(device, mem_rand, NULL);
-  vkFreeMemory(device, mem_even, NULL);
-  vkFreeMemory(device, mem_odd, NULL);
-  vkFreeMemory(device, mem_map_keyvals, NULL);
+  vkFreeMemory(device, mems.rand, NULL);
+  vkFreeMemory(device, mems.keyvals_even, NULL);
+  vkFreeMemory(device, mems.keyvals_odd, NULL);
+  vkFreeMemory(device, mems.map_keyvals, NULL);
+  vkFreeMemory(device, mems.internal, NULL);
+  vkFreeMemory(device, mems.map_internal, NULL);
+  vkFreeMemory(device, mems.indirect, NULL);
+  vkFreeMemory(device, mems.map_indirect, NULL);
+  vkFreeMemory(device, mems.count, NULL);
 
   // free host memory
   free(rand_h);
@@ -1299,6 +1659,7 @@ main(int argc, char const * argv[])
   vkDestroyQueryPool(device, query_pool, NULL);
 
   // destroy command buffer and pool
+  vkFreeCommandBuffers(device, cmd_pool, 1, &cb_rand_copy);
   vkFreeCommandBuffers(device, cmd_pool, 1, &cb);
   vkDestroyCommandPool(device, cmd_pool, NULL);
 

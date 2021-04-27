@@ -10,7 +10,6 @@
 
 // clang-format off
 #extension GL_GOOGLE_include_directive             : require
-#extension GL_EXT_shader_explicit_arithmetic_types : require
 #extension GL_EXT_control_flow_attributes          : require
 #extension GL_KHR_shader_subgroup_basic            : require
 // clang-format on
@@ -19,6 +18,13 @@
 //
 //
 #include "config.h"
+
+//
+// Optional switches:
+//
+//   #define RS_HISTOGRAM_ENABLE_BITFIELD_EXTRACT
+//   #define RS_HISTOGRAM_DISABLE_SMEM_HISTOGRAM
+//
 
 //
 // Buffer reference macros and push constants
@@ -358,8 +364,8 @@ main()
   //
   // MACRO EXPANSION VARIANT
   //
-  // FIXME(allanmac): THIS ALSO SERVES AS A MALI R24
-  // WORKAROUND: EXPLICITLY EXPAND THE FOR/LOOP PASSES
+  // NOTE: THIS ALSO SERVES AS A MALI R24+ WORKAROUND: EXPLICITLY
+  // EXPAND THE FOR/LOOP PASSES
   //
 #ifndef RS_HISTOGRAM_DISABLE_SMEM_HISTOGRAM
 

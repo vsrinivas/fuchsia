@@ -39,26 +39,25 @@ template("radix_sort_vk_target") {
   #
   # shader_sources
   #
+  # Shaders *must* remain in the listed order.
+  #
   assert(defined(invoker.keyval_dwords), "Define invoker.keyval_dwords")
 
-  shader_sources = []
-  if (invoker.keyval_dwords == 1) {
-    shader_sources = [
-      "${_radix_sort_vk_dir}/shaders/histogram.comp",
-      "${_radix_sort_vk_dir}/shaders/prefix.comp",
-      "${_radix_sort_vk_dir}/shaders/scatter_0_even.comp",
-      "${_radix_sort_vk_dir}/shaders/scatter_0_odd.comp",
-    ]
-  } else if (invoker.keyval_dwords == 2) {
-    shader_sources = [
-      "${_radix_sort_vk_dir}/shaders/histogram.comp",
-      "${_radix_sort_vk_dir}/shaders/prefix.comp",
-      "${_radix_sort_vk_dir}/shaders/scatter_0_even.comp",
-      "${_radix_sort_vk_dir}/shaders/scatter_0_odd.comp",
+  # NOSORT
+  shader_sources = [
+    "${_radix_sort_vk_dir}/shaders/init.comp",
+    "${_radix_sort_vk_dir}/shaders/fill.comp",
+    "${_radix_sort_vk_dir}/shaders/histogram.comp",
+    "${_radix_sort_vk_dir}/shaders/prefix.comp",
+    "${_radix_sort_vk_dir}/shaders/scatter_0_even.comp",
+    "${_radix_sort_vk_dir}/shaders/scatter_0_odd.comp",
+  ]
+  if (invoker.keyval_dwords == 2) {
+    shader_sources += [
       "${_radix_sort_vk_dir}/shaders/scatter_1_even.comp",
       "${_radix_sort_vk_dir}/shaders/scatter_1_odd.comp",
     ]
-  } else {
+  } else if (invoker.keyval_dwords > 2) {
     assert(false, "invoker.keyval_dwords value not supported")
   }
 

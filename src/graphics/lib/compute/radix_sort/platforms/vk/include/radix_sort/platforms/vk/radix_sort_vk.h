@@ -97,7 +97,7 @@ void
 radix_sort_vk_destroy(struct radix_sort_vk * rs, VkDevice device, VkAllocationCallbacks const * ac);
 
 //
-// Returns the VkBuffer size and alignment requirements for a maximum number of
+// Returns the buffer size and alignment requirements for a maximum number of
 // keyvals.
 //
 // The radix sort implementation is not in place so two non-overlapping keyval
@@ -105,8 +105,11 @@ radix_sort_vk_destroy(struct radix_sort_vk * rs, VkDevice device, VkAllocationCa
 //
 // The radix sort instance also requires an internal extent during sorting.
 //
-// The alignment requirements for the keyval and internal extents must be
-// honored.
+// If the indirect dispatch sorting will be used, then a dispatch extent is also
+// required.
+//
+// The alignment requirements for the keyval, internal, and dispatch extents
+// must be honored.
 //
 //   Input:
 //     count             : Maximum number of keyvals
@@ -115,13 +118,13 @@ radix_sort_vk_destroy(struct radix_sort_vk * rs, VkDevice device, VkAllocationCa
 //     keyval_size       : Size of a single keyval
 //
 //     keyvals_size      : Minimum size of the even and odd keyval extents
-//     keyvals_alignment : Alignment of both keyval extents
+//     keyvals_alignment : Alignment of each keyval extent
 //
 //     internal_size     : Minimum size of internal extent
 //     internal_aligment : Alignment of the internal extent
 //
-//
-// Direct dispatch requires the following buffer usage bits:
+//     indirect_size     : Minimum size of indirect extent
+//     indirect_aligment : Alignment of the indirect extent
 //
 //   .keyvals_even/odd
 //   -----------------
@@ -132,16 +135,12 @@ radix_sort_vk_destroy(struct radix_sort_vk * rs, VkDevice device, VkAllocationCa
 //   ---------
 //   VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
 //   VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-//   VK_BUFFER_USAGE_TRANSFER_DST_BIT
+//   VK_BUFFER_USAGE_TRANSFER_DST_BIT ("direct" mode only)
 //
-// Indirect dispatch additionally requires the INDIRECT bit and assumes
-// `.devaddr_count` is 4-byte aligned:
-//
-//   .internal
+//   .indirect
 //   ---------
 //   VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
 //   VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-//   VK_BUFFER_USAGE_TRANSFER_DST_BIT
 //   VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT
 //
 
@@ -154,6 +153,9 @@ struct radix_sort_vk_memory_requirements
 
   VkDeviceSize internal_size;
   VkDeviceSize internal_alignment;
+
+  VkDeviceSize indirect_size;
+  VkDeviceSize indirect_alignment;
 };
 
 void
@@ -188,8 +190,9 @@ radix_sort_vk_get_memory_requirements(struct radix_sort_vk const *              
 // Pipeline barriers should be applied as necessary, both before and after
 // invoking this function.
 //
-// The radix sort begins with TRANSFER/WRITE and ends with a COMPUTE/WRITE to a
-// storage buffer.
+// The radix sort begins with TRANSFER/WRITE to the internal and keyvals_even
+// buffer and ends with a COMPUTE/WRITE to the internal and one of the keyvals
+// buffers.
 //
 
 struct radix_sort_vk_sort_info
@@ -236,8 +239,12 @@ radix_sort_vk_sort(VkDevice                               device,
 // Pipeline barriers should be applied as necessary, both before and after
 // invoking this function.
 //
-// The radix sort begins with TRANSFER/WRITE and ends with a COMPUTE/WRITE to a
-// storage buffer.
+// The indirect radix sort begins with a COMPUTE/READ from the count buffer and
+// ends with a COMPUTE/WRITE to the internal and one of the keyvals buffers.
+//
+// The indirect buffer must support USAGE_INDIRECT.
+//
+// The `count` buffer is at least 4 bytes and 4-byte aligned.
 //
 
 struct radix_sort_vk_sort_indirect_info
@@ -248,6 +255,7 @@ struct radix_sort_vk_sort_indirect_info
   VkDescriptorBufferInfo const * keyvals_even;
   VkDescriptorBufferInfo const * keyvals_odd;
   VkDescriptorBufferInfo const * internal;
+  VkDescriptorBufferInfo const * indirect;
 };
 
 void

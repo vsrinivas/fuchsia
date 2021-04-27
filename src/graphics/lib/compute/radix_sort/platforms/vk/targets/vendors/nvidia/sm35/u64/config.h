@@ -12,6 +12,9 @@
 // clang-format off
 #define RS_KEYVAL_DWORDS                   2
 
+#define RS_FILL_WORKGROUP_SIZE_LOG2        7
+#define RS_FILL_BLOCK_ROWS                 8
+
 #define RS_HISTOGRAM_WORKGROUP_SIZE_LOG2   8
 #define RS_HISTOGRAM_SUBGROUP_SIZE_LOG2    5
 #define RS_HISTOGRAM_BLOCK_ROWS            10

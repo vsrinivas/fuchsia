@@ -6,15 +6,16 @@
 #define SRC_GRAPHICS_LIB_COMPUTE_RADIX_SORT_PLATFORMS_VK_SHADERS_PUSH_H_
 
 //
+// There is a limit to the maximum number of keyvals that can be sorted because
+// the top 2 bits in the atomic lookback counters are used as tag bits.
 //
-//
-
 #define RS_MAX_KEYVALS ((1 << 30) - 1)
 
 //
+// Right now, the entire implementation is very much dependent on an 8-bit radix
+// size.  Most of the shaders attempt to honor this defined size but there are
+// still a number of places where 256 is assumed.
 //
-//
-
 #define RS_RADIX_LOG2 8
 #define RS_RADIX_SIZE (1 << RS_RADIX_LOG2)
 
@@ -56,6 +57,23 @@
 //
 // Define the push constant structures shared by the host and device.
 //
+//   INIT
+//   ----
+//   struct rs_push_init
+//   {
+//     uint64_t devaddr_count;         // address of count buffer
+//     uint64_t devaddr_indirect;      // address of indirect info buffer
+//   };
+//
+//   FILL
+//   ----
+//   struct rs_push_fill
+//   {
+//     uint64_t devaddr_info;          // address of indirect info for fill shader
+//     uint64_t devaddr_dwords;        // address of dwords extent
+//     uint32_t dword;                 // dword value used to fill the dwords extent
+//   };
+//
 //   HISTOGRAM
 //   ---------
 //   struct rs_push_histogram
@@ -83,6 +101,21 @@
 //     uint32_t pass_offset;           // keyval pass offset
 //   };
 //
+#define RS_STRUCT_PUSH_INIT()                                                                      \
+  struct rs_push_init                                                                              \
+  {                                                                                                \
+    RS_STRUCT_MEMBER(RS_DEVADDR, devaddr_info)                                                     \
+    RS_STRUCT_MEMBER(RS_DEVADDR, devaddr_count)                                                    \
+    RS_STRUCT_MEMBER(uint32_t, passes)                                                             \
+  }
+
+#define RS_STRUCT_PUSH_FILL()                                                                      \
+  struct rs_push_fill                                                                              \
+  {                                                                                                \
+    RS_STRUCT_MEMBER(RS_DEVADDR, devaddr_info)                                                     \
+    RS_STRUCT_MEMBER(RS_DEVADDR, devaddr_dwords)                                                   \
+    RS_STRUCT_MEMBER(uint32_t, dword)                                                              \
+  }
 
 #define RS_STRUCT_PUSH_HISTOGRAM()                                                                 \
   struct rs_push_histogram                                                                         \
@@ -108,6 +141,38 @@
     RS_STRUCT_MEMBER(uint32_t, pass_offset)                                                        \
   }
 
+//
+// Arguments to indirectly launched shaders.
+//
+
+#define RS_STRUCT_INDIRECT_INFO_DISPATCH()                                                         \
+  struct rs_indirect_info_dispatch                                                                 \
+  {                                                                                                \
+    RS_STRUCT_MEMBER_STRUCT(u32vec4, pad)                                                          \
+    RS_STRUCT_MEMBER_STRUCT(u32vec4, zero)                                                         \
+    RS_STRUCT_MEMBER_STRUCT(u32vec4, histogram)                                                    \
+    RS_STRUCT_MEMBER_STRUCT(u32vec4, scatter)                                                      \
+  }
+
+#define RS_STRUCT_INDIRECT_INFO_FILL()                                                             \
+  struct rs_indirect_info_fill                                                                     \
+  {                                                                                                \
+    RS_STRUCT_MEMBER(uint32_t, block_offset)                                                       \
+    RS_STRUCT_MEMBER(uint32_t, dword_offset_min)                                                   \
+    RS_STRUCT_MEMBER(uint32_t, dword_offset_max_minus_min)                                         \
+    RS_STRUCT_MEMBER(uint32_t, reserved)                                                           \
+  }
+
+#define RS_STRUCT_INDIRECT_INFO()                                                                  \
+  RS_STRUCT_INDIRECT_INFO_DISPATCH();                                                              \
+  RS_STRUCT_INDIRECT_INFO_FILL();                                                                  \
+  struct rs_indirect_info                                                                          \
+  {                                                                                                \
+    RS_STRUCT_MEMBER_STRUCT(rs_indirect_info_fill, pad)                                            \
+    RS_STRUCT_MEMBER_STRUCT(rs_indirect_info_fill, zero)                                           \
+    RS_STRUCT_MEMBER_STRUCT(rs_indirect_info_dispatch, dispatch)                                   \
+  }
+
 ////////////////////////////////////////////////////////////////////
 //
 // GLSL
@@ -115,8 +180,9 @@
 #ifdef VULKAN  // defined by GLSL/VK compiler
 
 // clang-format off
-#define RS_STRUCT_MEMBER(type_, name_)         type_ name_;
-#define RS_STRUCT_MEMBER_STRUCT(type_, name_)  type_ name_;
+#define RS_STRUCT_MEMBER(type_, name_)               type_ name_;
+#define RS_STRUCT_MEMBER_FARRAY(type_, len_, name_)  type_ name_[len_];
+#define RS_STRUCT_MEMBER_STRUCT(type_, name_)        type_ name_;
 // clang-format on
 
 ////////////////////////////////////////////////////////////////////
@@ -135,15 +201,28 @@ extern "C" {
 
 #include <stdint.h>
 
+struct u32vec4
+{
+  uint32_t x;
+  uint32_t y;
+  uint32_t z;
+  uint32_t w;
+};
+
 // clang-format off
-#define RS_DEVADDR                            uint64_t
-#define RS_STRUCT_MEMBER(type_, name_)        type_ name_;
-#define RS_STRUCT_MEMBER_STRUCT(type_, name_) struct type_ name_;
+#define RS_DEVADDR                                   uint64_t
+#define RS_STRUCT_MEMBER(type_, name_)               type_ name_;
+#define RS_STRUCT_MEMBER_FARRAY(type_, len_, name_)  type_ name_[len_];
+#define RS_STRUCT_MEMBER_STRUCT(type_, name_)        struct type_ name_;
 // clang-format on
 
+RS_STRUCT_PUSH_INIT();
+RS_STRUCT_PUSH_FILL();
 RS_STRUCT_PUSH_HISTOGRAM();
 RS_STRUCT_PUSH_PREFIX();
 RS_STRUCT_PUSH_SCATTER();
+
+RS_STRUCT_INDIRECT_INFO();
 
 //
 //

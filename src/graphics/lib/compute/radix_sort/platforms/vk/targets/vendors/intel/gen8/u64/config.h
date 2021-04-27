@@ -12,17 +12,25 @@
 // clang-format off
 #define RS_KEYVAL_DWORDS                   2
 
-#define RS_HISTOGRAM_WORKGROUP_SIZE_LOG2   8
-#define RS_HISTOGRAM_SUBGROUP_SIZE_LOG2    3
-#define RS_HISTOGRAM_BLOCK_ROWS            8
+#define RS_FILL_WORKGROUP_SIZE_LOG2        5
+#define RS_FILL_BLOCK_ROWS                 8
+
+#define RS_HISTOGRAM_WORKGROUP_SIZE_LOG2   7
+#define RS_HISTOGRAM_SUBGROUP_SIZE_LOG2    4
+#define RS_HISTOGRAM_BLOCK_ROWS            20
 
 #define RS_PREFIX_WORKGROUP_SIZE_LOG2      8
-#define RS_PREFIX_SUBGROUP_SIZE_LOG2       3
+#define RS_PREFIX_SUBGROUP_SIZE_LOG2       4
 
-#define RS_SCATTER_WORKGROUP_SIZE_LOG2     8
-#define RS_SCATTER_SUBGROUP_SIZE_LOG2      3
-#define RS_SCATTER_BLOCK_ROWS              8
+#define RS_SCATTER_WORKGROUP_SIZE_LOG2     7
+#define RS_SCATTER_SUBGROUP_SIZE_LOG2      4
+#define RS_SCATTER_BLOCK_ROWS              6
 // clang-format on
+
+//
+// - Use a broadcast match
+//
+#define RS_SCATTER_ENABLE_BROADCAST_MATCH
 
 //
 //

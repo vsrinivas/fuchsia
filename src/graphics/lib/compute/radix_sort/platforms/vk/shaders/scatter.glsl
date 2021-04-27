@@ -8,7 +8,6 @@
 // Each "pass" scatters the keyvals to their new destinations.
 //
 // clang-format off
-#extension GL_EXT_shader_explicit_arithmetic_types : require
 #extension GL_EXT_control_flow_attributes          : require
 #extension GL_KHR_shader_subgroup_basic            : require
 #extension GL_KHR_shader_subgroup_arithmetic       : require
@@ -27,7 +26,8 @@
 //   #define RS_SCATTER_DISABLE_REORDER
 //   #define RS_SCATTER_ENABLE_BITFIELD_EXTRACT
 //   #define RS_SCATTER_ENABLE_NV_MATCH
-//   #define RS_SCATTER_PREFIX_DISABLE_COMPONENTS_IN_REGISTERS
+//   #define RS_SCATTER_ENABLE_BROADCAST_MATCH
+//   #define RS_SCATTER_DISABLE_COMPONENTS_IN_REGISTERS
 //
 
 //
@@ -40,7 +40,7 @@
 //
 // Store prefix intermediates in registers?
 //
-#ifdef RS_SCATTER_PREFIX_DISABLE_COMPONENTS_IN_REGISTERS
+#ifdef RS_SCATTER_DISABLE_COMPONENTS_IN_REGISTERS
 #define RS_PREFIX_DISABLE_COMPONENTS_IN_REGISTERS
 #endif
 
@@ -435,14 +435,58 @@ void
 rs_histogram_rank(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
                   out uint32_t         kr[RS_SCATTER_BLOCK_ROWS])
 {
-// clang-format off
+  // clang-format off
 #define RS_HISTOGRAM_LOAD(digit_)          smem.extent[RS_SMEM_HISTOGRAM_OFFSET + (digit_)]
 #define RS_HISTOGRAM_STORE(digit_, count_) smem.extent[RS_SMEM_HISTOGRAM_OFFSET + (digit_)] = (count_)
-// clang-format on
+  // clang-format on
 
-//
-// 64
-//
+  //----------------------------------------------------------------------
+  //
+  // Use the Volta/Turing `match.sync` instruction.
+  //
+  // Note that performance is quite poor and the break-even for
+  // `match.sync` requires more bits.
+  //
+  //----------------------------------------------------------------------
+#ifdef RS_SCATTER_ENABLE_NV_MATCH
+
+  //
+  // 32
+  //
+#if (RS_SUBGROUP_SIZE == 32)
+
+  [[unroll]] for (uint32_t ii = 0; ii < RS_SCATTER_BLOCK_ROWS; ii++)
+  {
+    //
+    // NOTE(allanmac): Unfortunately there is no `match.any.sync.b8`
+    //
+    // TODO(allanmac): Consider using the `atomicOr()` match approach
+    // described by Adinets since Volta/Turing have extremely fast
+    // atomic smem operations.
+    //
+    const uint32_t digit = RS_KV_EXTRACT_DIGIT(kv[ii]);
+    const uint32_t match = subgroupPartitionNV(digit).x;
+
+    kr[ii] = (bitCount(match) << 16) | bitCount(match & gl_SubgroupLeMask.x);
+  }
+
+  //
+  // Undefined!
+  //
+#else
+#error "Error: rs_histogram_rank() undefined for subgroup size"
+#endif
+
+  //----------------------------------------------------------------------
+  //
+  // Default is to emulate a `match` operation with ballots.
+  //
+  //----------------------------------------------------------------------
+#elif !defined(RS_SCATTER_ENABLE_BROADCAST_MATCH)
+
+  //
+  // 64
+  //
 #if (RS_SUBGROUP_SIZE == 64)
 
   [[unroll]] for (uint32_t ii = 0; ii < RS_SCATTER_BLOCK_ROWS; ii++)
@@ -475,9 +519,9 @@ rs_histogram_rank(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
               bitCount(match.y & gl_SubgroupLeMask.y));
   }
 
-//
-// <= 32
-//
+  //
+  // <= 32
+  //
 #elif ((RS_SUBGROUP_SIZE <= 32) && !defined(RS_SCATTER_ENABLE_NV_MATCH))
 
   [[unroll]] for (uint32_t ii = 0; ii < RS_SCATTER_BLOCK_ROWS; ii++)
@@ -506,34 +550,88 @@ rs_histogram_rank(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
     kr[ii] = (bitCount(match) << 16) | bitCount(match & gl_SubgroupLeMask.x);
   }
 
-//
-// Use the Volta/Turing `match.sync` instruction.
-//
-// Note that performance is quite poor and the break-even for
-// `match.sync` requires more bits.
-//
-#elif ((RS_SUBGROUP_SIZE == 32) && defined(RS_SCATTER_ENABLE_NV_MATCH))
+  //
+  // Undefined!
+  //
+#else
+#error "Error: rs_histogram_rank() undefined for subgroup size"
+#endif
+
+  //----------------------------------------------------------------------
+  //
+  // Emulate a `match` operation with broadcasts.
+  //
+  // In general, using broadcasts is a win for narrow subgroups.
+  //
+  //----------------------------------------------------------------------
+#else
+
+  //
+  // 64
+  //
+#if (RS_SUBGROUP_SIZE == 64)
 
   [[unroll]] for (uint32_t ii = 0; ii < RS_SCATTER_BLOCK_ROWS; ii++)
   {
-    //
-    // NOTE(allanmac): Unfortunately there is no `match.any.sync.b8`
-    //
-    // TODO(allanmac): Consider using the `atomicOr()` match approach
-    // described by Adinets since Volta/Turing have extremely fast
-    // atomic smem operations.
-    //
     const uint32_t digit = RS_KV_EXTRACT_DIGIT(kv[ii]);
-    const uint32_t match = subgroupPartitionNV(digit).x;
+
+    u32vec2 match;
+
+    // subgroup invocation 0
+    {
+      match[0] = (subgroupBroadcast(digit, 0) == digit) ? (1u << 0) : 0;
+    }
+
+    // subgroup invocations 1-31
+    [[unroll]] for (int32_t jj = 1; jj < 32; jj++)
+    {
+      match[0] |= (subgroupBroadcast(digit, jj) == digit) ? (1u << jj) : 0;
+    }
+
+    // subgroup invocation 32
+    {
+      match[1] = (subgroupBroadcast(digit, 32) == digit) ? (1u << 0) : 0;
+    }
+
+    // subgroup invocations 33-63
+    [[unroll]] for (int32_t jj = 1; jj < 32; jj++)
+    {
+      match[1] |= (subgroupBroadcast(digit, jj) == digit) ? (1u << jj) : 0;
+    }
+
+    kr[ii] = ((bitCount(match.x) + bitCount(match.y)) << 16) |
+             (bitCount(match.x & gl_SubgroupLeMask.x) +  //
+              bitCount(match.y & gl_SubgroupLeMask.y));
+  }
+
+  //
+  // <= 32
+  //
+#elif ((RS_SUBGROUP_SIZE <= 32) && !defined(RS_SCATTER_ENABLE_NV_MATCH))
+
+  [[unroll]] for (uint32_t ii = 0; ii < RS_SCATTER_BLOCK_ROWS; ii++)
+  {
+    const uint32_t digit = RS_KV_EXTRACT_DIGIT(kv[ii]);
+
+    // subgroup invocation 0
+    uint32_t match = (subgroupBroadcast(digit, 0) == digit) ? (1u << 0) : 0;
+
+    // subgroup invocations 1-(RS_SUBGROUP_SIZE-1)
+    [[unroll]] for (int32_t jj = 1; jj < RS_SUBGROUP_SIZE; jj++)
+    {
+      match |= (subgroupBroadcast(digit, jj) == digit) ? (1u << jj) : 0;
+    }
 
     kr[ii] = (bitCount(match) << 16) | bitCount(match & gl_SubgroupLeMask.x);
   }
 
-//
-// Undefined!
-//
+  //
+  // Undefined!
+  //
 #else
 #error "Error: rs_histogram_rank() undefined for subgroup size"
+#endif
+
 #endif
 
   //
@@ -1231,8 +1329,8 @@ rs_rank_to_local(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
 // rank to the global histogram prefix.
 //
 void
-rs_rank_to_local_1(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
-                   inout uint32_t       kr[RS_SCATTER_BLOCK_ROWS])
+rs_rank_to_global(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
+                        inout uint32_t       kr[RS_SCATTER_BLOCK_ROWS])
 {
   //
   // Define the histogram reference
@@ -1405,34 +1503,18 @@ rs_load(out RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS])
 }
 
 //
-// Store workgroup of keyvals to global memory.
+// Convert local index to global
 //
 void
-rs_store(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS], const uint32_t kr[RS_SCATTER_BLOCK_ROWS])
+rs_local_to_global(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
+                   inout uint32_t       kr[RS_SCATTER_BLOCK_ROWS])
 {
-  //
-  // Define kv_out bufref
-  //
-  writeonly RS_BUFREF_DEFINE(buffer_rs_kv, rs_kv_out, RS_DEVADDR_KEYVALS_OUT(push));
-
-  //
-  // Store keyval:
-  //
-  //   "out[ lookback[ keyval.digit ] + keyval.rank ] = keyval"
-  //
-  // Note that the prefix scanned histogram[] was subtracted from the
-  // lookback[] array.
-  //
-  // FIXME(allanmac): Consider implementing an aligned writeout
-  // strategy to avoid excess global memory transactions.
-  //
   [[unroll]] for (uint32_t ii = 0; ii < RS_SCATTER_BLOCK_ROWS; ii++)
   {
     const uint32_t digit = RS_KV_EXTRACT_DIGIT(kv[ii]);
     const uint32_t exc   = smem.extent[RS_SMEM_LOOKBACK_OFFSET + digit];
-    const uint32_t idx   = exc + kr[ii] - 1;
 
-    rs_kv_out.extent[idx] = kv[ii];
+    kr[ii] += (exc - 1);
   }
 }
 
@@ -1440,7 +1522,7 @@ rs_store(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS], const uint32_t kr[RS_SC
 // Store a single workgroup
 //
 void
-rs_store_1(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS], const uint32_t kr[RS_SCATTER_BLOCK_ROWS])
+rs_store(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS], const uint32_t kr[RS_SCATTER_BLOCK_ROWS])
 {
   //
   // Define kv_out bufref
@@ -1518,13 +1600,13 @@ main()
   //
   if (gl_NumWorkGroups.x == 1)
     {
-      rs_rank_to_local_1(kv, kr);
+      rs_rank_to_global(kv, kr);
 
 #ifndef RS_SCATTER_DISABLE_REORDER
       rs_reorder_1(kv, kr);
 #endif
 
-      rs_store_1(kv, kr);
+      rs_store(kv, kr);
     }
   else
     {
@@ -1625,6 +1707,11 @@ main()
       //
       RS_BARRIER();
 #endif
+
+      //
+      // Convert local index to a global index.
+      //
+      rs_local_to_global(kv, kr);
 
       //
       // Store keyvals to their new locations

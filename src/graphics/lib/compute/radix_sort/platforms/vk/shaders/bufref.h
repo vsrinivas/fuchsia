@@ -11,6 +11,8 @@
 
 #ifdef VULKAN  // defined by GLSL/VK compiler
 
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+
 //
 // If the target does not support VkPhysicalDeviceFeatures.shaderInt64
 // then:

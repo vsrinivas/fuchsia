@@ -43,7 +43,13 @@ enum radix_sort_vk_ext_type
 //
 // Timestamp each logical step of the algorithm
 //
-// Number of timestamps is: 4 + (number of subpasses)
+// Number of timestamps is: 5 + (number of subpasses)
+//
+//   * direct   dispatch: 4 + subpass count
+//   * indirect dispatch: 5 + subpass count
+//
+// Indirect / 32-bit keyvals: 9
+// Indirect / 64-bit keyvals: 13
 //
 struct radix_sort_vk_ext_timestamps
 {
@@ -58,7 +64,7 @@ struct radix_sort_vk_ext_timestamps
 
 //
 //
-//
+//dsc
 
 #ifdef __cplusplus
 }

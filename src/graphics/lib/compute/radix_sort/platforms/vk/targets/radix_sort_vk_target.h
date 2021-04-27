@@ -31,6 +31,16 @@ struct radix_sort_vk_target_config
   struct
   {
     uint32_t workgroup_size_log2;
+  } init;
+
+  struct
+  {
+    uint32_t workgroup_size_log2;
+  } fill;
+
+  struct
+  {
+    uint32_t workgroup_size_log2;
     uint32_t subgroup_size_log2;
     uint32_t block_rows;
   } histogram;

@@ -25,6 +25,7 @@ source_set("vk") {
   sources = [
     "include/radix_sort/platforms/vk/radix_sort_vk.h",
     "radix_sort_vk.c",
+    "radix_sort_vk_ext.h",
     "shaders/push.h",
     "targets/radix_sort_vk_target.h",
     "targets/radix_sort_vk_target_requirements.c",
@@ -52,6 +53,7 @@ source_set("vk_tests") {
   sources = [
     "include/radix_sort/platforms/vk/radix_sort_vk.h",
     "radix_sort_vk.c",
+    "radix_sort_vk_ext.h",
     "shaders/push.h",
     "targets/radix_sort_vk_target.h",
     "targets/radix_sort_vk_target_requirements.c",
@@ -63,5 +65,5 @@ source_set("vk_tests") {
     "${graphics_compute_dir}/tools/target_archive:target_archive_headers",
     graphics_compute_vulkan_loader_target,
   ]
-  friend = [ "tests" ]
+  friend = [ "tests/radix_sort_vk_bench:*" ]
 }
