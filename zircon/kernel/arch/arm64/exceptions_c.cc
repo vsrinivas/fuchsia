@@ -234,6 +234,11 @@ static void arm64_instruction_abort_handler(iframe_t* iframe, uint exception_fla
   uint32_t iss = BITS(esr, 24, 0);
   bool is_user = !BIT(ec, 0);
 
+  if (unlikely(!is_user)) {
+    // Any instruction page fault in kernel mode is a bug.
+    exception_die(iframe, esr, far, "instruction abort in kernel mode\n");
+  }
+
   // Spectre V2: If we took an instruction abort in EL0 but the faulting address is not a user
   // address, invalidate the branch predictor. The $PC may have been updated before the abort is
   // delivered, user code may be attempting to mistrain indirect branch prediction structures.
@@ -303,6 +308,12 @@ static void arm64_data_abort_handler(iframe_t* iframe, uint exception_flags, uin
   LTRACEF("data fault: PC at %#" PRIx64 ", is_user %d, FAR %#" PRIx64 ", esr %#x, iss %#x\n",
           iframe->elr, is_user, far, esr, iss);
 
+  uint64_t dfr = Thread::Current::Get()->arch().data_fault_resume;
+  if (unlikely(!is_user) && unlikely(!dfr)) {
+    // Any page fault in kernel mode that's not during user-copy is a bug.
+    exception_die(iframe, esr, far, "data abort in kernel mode\n");
+  }
+
   uint32_t dfsc = BITS(iss, 5, 0);
   // Accessed faults do not need to be trapped like other kind of faults and so we attempt to
   // resolve such faults prior to potentially invoking the data fault resume handler.
@@ -317,7 +328,6 @@ static void arm64_data_abort_handler(iframe_t* iframe, uint exception_flags, uin
     }
   }
 
-  uint64_t dfr = Thread::Current::Get()->arch().data_fault_resume;
   if (unlikely(dfr && !BIT_SET(dfr, ARM64_DFR_RUN_FAULT_HANDLER_BIT))) {
     // Need to reconstruct the canonical resume address by ensuring it is correctly sign extended.
     // Double check the bit before ARM64_DFR_RUN_FAULT_HANDLER_BIT was set (indicating kernel

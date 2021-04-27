@@ -262,6 +262,26 @@ static zx_status_t x86_pfe_handler(iframe_t* frame) {
   uint64_t error_code = frame->err_code;
   vaddr_t va = x86_get_cr2();
 
+  uint64_t pfr = Thread::Current::Get()->arch().page_fault_resume;
+  if (unlikely(!(error_code & PFEX_U))) {
+    // Any page fault in kernel mode that's not during user-copy is a bug.
+    // Check for an SMAP violation.
+    //
+    // By policy, the kernel is not allowed to access user memory except when
+    // performing a user_copy. SMAP is used to enforce the policy.
+    if (g_x86_feature_has_smap &&          // CPU supports SMAP
+        !(frame->flags & X86_FLAGS_AC) &&  // SMAP was enabled at time of fault
+        is_user_address(va)) {             // fault address is a user address
+      printf("x86_pfe_handler: potential SMAP failure, supervisor access at address %#" PRIxPTR
+             "\n",
+             va);
+      pfr = 0;
+    }
+    if (unlikely(!pfr)) {
+      exception_die(frame, "page fault in kernel mode\n");
+    }
+  }
+
   /* reenable interrupts */
   PreemptionState& preemption_state = Thread::Current::preemption_state();
   preemption_state.PreemptReenableNoResched();
@@ -281,19 +301,6 @@ static zx_status_t x86_pfe_handler(iframe_t* frame) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // Check for an SMAP violation.
-  //
-  // By policy, the kernel is not allowed to access user memory except when performing a
-  // user_copy. SMAP is used to enforce the policy.
-  if (unlikely(!(error_code & PFEX_U) &&          // fault taken in kernel mode
-               g_x86_feature_has_smap &&          // CPU supports SMAP
-               !(frame->flags & X86_FLAGS_AC) &&  // SMAP was enabled at time of fault
-               is_user_address(va))) {            // faulting address is a user address
-    printf("x86_pfe_handler: potential SMAP failure, supervisor access at address %#" PRIxPTR "\n",
-           va);
-    return ZX_ERR_ACCESS_DENIED;
-  }
-
   /* convert the PF error codes to page fault flags */
   uint flags = 0;
   flags |= (error_code & PFEX_W) ? VMM_PF_FLAG_WRITE : 0;
@@ -303,7 +310,6 @@ static zx_status_t x86_pfe_handler(iframe_t* frame) {
 
   /* Check if the page fault handler should be skipped. It is skipped if there's a page_fault_resume
    * address and the highest bit is 0. */
-  uint64_t pfr = Thread::Current::Get()->arch().page_fault_resume;
   if (unlikely(pfr && !BIT_SET(pfr, X86_PFR_RUN_FAULT_HANDLER_BIT))) {
     // Need to reconstruct the canonical resume address by ensuring it is correctly sign extended.
     // Double check the bit before X86_PFR_RUN_FAULT_HANDLER_BIT was set (indicating kernel
