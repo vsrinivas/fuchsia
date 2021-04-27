@@ -17,6 +17,7 @@ use {
     futures::try_join,
     serde::{Deserialize, Serialize},
     std::{io::Write, path::Path},
+    termion::{color, style},
 };
 
 pub(crate) const MISSING_PRODUCT: &str = "Manifest does not contain product";
@@ -72,6 +73,7 @@ impl Flash for FlashManifest {
     where
         W: Write + Send,
     {
+        let total_time = Utc::now();
         let path = Path::new(&cmd.manifest)
             .canonicalize()
             .context("Getting absolute path of flashing manifest")?;
@@ -138,6 +140,16 @@ impl Flash for FlashManifest {
             .map_err(|_| anyhow!("Could not erase misc partition"))?;
         fastboot_proxy.set_active("a").await?.map_err(|_| anyhow!("Could not set active slot"))?;
         fastboot_proxy.continue_boot().await?.map_err(|_| anyhow!("Could not reboot device"))?;
+        let duration = Utc::now().signed_duration_since(total_time);
+        writeln!(
+            writer,
+            "{}Total Time{} [{}{:.2}s{}]",
+            color::Fg(color::Green),
+            style::Reset,
+            color::Fg(color::Blue),
+            (duration.num_milliseconds() as f32) / (1000 as f32),
+            style::Reset
+        )?;
         writeln!(writer, "Continuing to boot - this could take awhile")?;
         Ok(())
     }
