@@ -21,18 +21,18 @@ The system updater is designed such that the process can be interrupted at
 any time and it does not leave the system in an unbootable or corrupt state.
 
 First, the system updater reads the `update_mode` file to determine what operations to
-perform. Then, the board file reads and verifies that there is no misconfigurations
+perform. Then, the board file reads and verifies that there are no misconfigurations.
 Then, the update package fetches the packages to serve. Finally, the update package writes
 the kernel images and ensures that `vbmeta` must be written after the kernel image.
 
 ## Content of the update package
 
-The structure of the update package--fuchsia-pkg://fuchsia.com/update--looks like:
+The structure of the update package, `fuchsia-pkg://fuchsia.com/update`, contains the following:
 
 *   `/board`
-    The board name. The updater verifies the contents and does an update if they match
-    the previous board name to prevent accidentally attempting to update a device to an
-    unsupported architecture.  For example, attempting to update an x64 target to an arm64 build will fail.
+    The board name. The updater verifies the contents and does an update only if this value matches
+    the previous board name. This check prevents accidentally attempting to update a device to an
+    unsupported architecture. For example, attempting to update an `x64` target to an `arm64` build will fail.
 
 *   `/bootloader`
     Image of the bootloader firmware. DEPRECATED: please use `firmware` instead.
@@ -52,13 +52,13 @@ The structure of the update package--fuchsia-pkg://fuchsia.com/update--looks lik
     Firmware image. For example: `firmware`, `firmware_bl2`, `firmware_full`. Each device
     supports a custom set of firmware types, and unsupported types are ignored. This serves
     two main purposes:
-    * 1. We can specify multiple pieces of firmware, for example devices, which have multiple
-      bootloader stages.
-    * 2. Provides a simple and safe way to transition to new firmware types; it's just a matter of
-      adding the backend paver logic and then putting the new file in the update package.
+    1. Specifying multiple pieces of firmware; for example, devices which have multiple
+       bootloader stages.
+    2. Providing a simple and safe way to transition to new firmware types; it's just a matter of
+       adding the backend paver logic and then putting the new file in the update package.
 
 *   `/packages.json`
-    Json formatted list of merkle pinned package urls that belong to the base package set
+    JSON-formatted list of merkle-pinned package URLs that belong to the base package set
     of the target OS image. The update package looks at `/packages.json` to determine what
     (and in what order) needs to be updated.
     For example:
@@ -75,17 +75,17 @@ The structure of the update package--fuchsia-pkg://fuchsia.com/update--looks lik
 
 *   `/version`
     Same format as the [`/config/build-info/version`](/docs/development/build/build_information.md) file.
-*   `/zbi\[.signed\]`
-    Kernel image. Must not be present if the update-mode is ForceRecovery. zbi or zbi.signed
-    is required to be present if the update-mode is Normal.
-*   `/zedboot\[.signed\]`
+*   `/zbi[.signed]`
+    Kernel image. Must not be present if the `update-mode` is `force-recovery`. `zbi` or `zbi.signed`
+    is required to be present if the `update-mode` is `normal`.
+*   `/zedboot[.signed]`
     Recovery image
-*   `/meta/contents` + `/meta/package`
-    Metadata files present in all packages
-*   `update_mode.json`
-    Optional. If the file is not present, the update mode is normal. The other option is
-    ForceRecovery, which writes a recovery image and reboots into it. Any other update-mode
-    is invalid.
+*   `/meta/contents` and `/meta/package`
+    Metadata files present in all packages.
+*   `/update_mode.json`
+    Optional. If the file is not present, the `update-mode` is `normal`. The other option is
+    `force-recovery`, which writes a recovery image and reboots into it. Any other `update-mode`
+    value is invalid.
     For example:
 
     ```json
