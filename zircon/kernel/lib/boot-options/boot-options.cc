@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/boot-options/word-view.h>
+#include <lib/stdcompat/algorithm.h>
 #include <zircon/compiler.h>
 
 namespace {
@@ -105,40 +106,21 @@ constexpr std::string_view OptionName(std::string_view name) { return name; }
 constexpr auto OptionLessThan = [](auto&& a, auto&& b) { return OptionName(a) < OptionName(b); };
 
 constexpr auto CheckSortedNames = [](const auto& names) {
-  return std::is_sorted(names.begin(), names.end(), OptionLessThan);
+  return cpp20::is_sorted(names.begin(), names.end(), OptionLessThan);
 };
 
-#if _LIBCPP_STD_VER > 17
-#define CONSTEXPR_STD_SORT constexpr
-#else
-#define CONSTEXPR_STD_SORT const
-#endif
-
 // kSortedNames lists Index values in ascending lexicographic order of name.
-CONSTEXPR_STD_SORT auto kSortedNames = []() {
+constexpr auto kSortedNames = []() {
   std::array names{
 #define DEFINE_OPTION(name, type, member, init, doc) Index::member,
 #include <lib/boot-options/options.inc>
 #undef DEFINE_OPTION
   };
-  // TODO(mcgrathr): C++20 has constexpr std::sort but libc++ doesn't implement
-  // it yet.  Should be:
-  // std::sort(names.begin(), names.end(), OptionLessThan);
-  for ([[maybe_unused]] auto& i : names) {
-    for (auto& j : names) {
-      if (&j < &names[names.size() - 1] && OptionLessThan((&j)[1], j)) {
-        std::swap(j, (&j)[1]);
-      }
-    }
-  }
-#if _LIBCPP_STD_VER == 17
-  ZX_ASSERT(CheckSortedNames(names));
-#endif
+  cpp20::sort(names.begin(), names.end(), OptionLessThan);
   return names;
 }();
-#if _LIBCPP_STD_VER > 17
+
 static_assert(CheckSortedNames(kSortedNames));
-#endif
 
 // Map option name to Index using binary search.
 std::optional<Index> FindOption(std::string_view name) {
@@ -150,7 +132,7 @@ std::optional<Index> FindOption(std::string_view name) {
 }
 
 // The length of the longest option name.
-CONSTEXPR_STD_SORT size_t kMaxNameLen =
+constexpr size_t kMaxNameLen =
     OptionName(*std::max_element(kSortedNames.begin(), kSortedNames.end(), [](Index a, Index b) {
       return OptionName(a).size() < OptionName(b).size();
     })).size();
