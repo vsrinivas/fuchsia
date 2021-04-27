@@ -33,9 +33,9 @@
 // Further pessimistically, we default to assigning vulnerability in the case
 // unknown architectures.
 //
-// For non-architectural MSRs whose fields give workarounds to specific errata,
-// if no further qualification is given (e.g., a field name/mnemonic), we name
-// the field "erratum_${ID}_workaround".
+// For non-architectural MSRs whose fields give workarounds to a specific
+// erratum, if no further qualification is given (e.g., a field name/mnemonic),
+// we name the field "erratum_${ID}_workaround".
 
 namespace arch {
 
@@ -313,6 +313,45 @@ inline bool CanMitigateX86SsbBug(CpuidIoProvider&& cpuid) {
   // With a null I/O provider, we can make the requisite checks without
   // actually committing the writes.
   return MitigateX86SsbBug(cpuid, internal::NullMsrIo{});
+}
+
+// Whether the CPU is susceptible to the Rogue Data Cache Load (Meltdown) bug:
+// https://software.intel.com/security-software-guidance/advisory-guidance/rogue-data-cache-load.
+//
+// CVE-2017-5754.
+template <typename CpuidIoProvider, typename MsrIoProvider>
+inline bool HasX86MeltdownBug(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
+  // Check if the processor explicitly advertises that it is not affected.
+  if (ArchCapabilitiesMsr::IsSupported(cpuid) &&
+      ArchCapabilitiesMsr::Get().ReadFrom(&msr).rdcl_no()) {
+    return false;
+  }
+  switch (GetMicroarchitecture(cpuid)) {
+    case Microarchitecture::kUnknown:
+    case Microarchitecture::kIntelCore2:
+    case Microarchitecture::kIntelNehalem:
+    case Microarchitecture::kIntelWestmere:
+    case Microarchitecture::kIntelSandyBridge:
+    case Microarchitecture::kIntelIvyBridge:
+    case Microarchitecture::kIntelHaswell:
+    case Microarchitecture::kIntelBroadwell:
+    case Microarchitecture::kIntelSkylake:
+    case Microarchitecture::kIntelCannonLake:
+    case Microarchitecture::kIntelBonnell:
+    case Microarchitecture::kIntelSilvermont:
+    case Microarchitecture::kIntelAirmont:
+      return true;
+    case Microarchitecture::kIntelSkylakeServer:
+    case Microarchitecture::kIntelGoldmont:
+    case Microarchitecture::kIntelGoldmontPlus:
+    case Microarchitecture::kIntelTremont:
+    case Microarchitecture::kAmdFamilyBulldozer:
+    case Microarchitecture::kAmdFamilyJaguar:
+    case Microarchitecture::kAmdFamilyZen:
+    case Microarchitecture::kAmdFamilyZen3:
+      break;
+  }
+  return false;
 }
 
 // An architecturally prescribed mitigation for Spectre v2.

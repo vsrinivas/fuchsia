@@ -179,111 +179,6 @@ static bool test_x64_cpu_uarch_config_selection() {
   END_TEST;
 }
 
-static bool test_x64_meltdown_enumeration() {
-  fbl::AllocChecker ac;
-  BEGIN_TEST;
-
-  {
-    // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
-    auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac, cpu_id::kTestDataXeon2690v4);
-    ASSERT_TRUE(ac.check(), "");
-    data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] &=
-        ~(1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
-    cpu_id::FakeCpuId cpu(*data.get());
-    FakeMsrAccess fake_msrs = {};
-    EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
-  }
-
-  {
-    // Test an Intel Xeon E5-2690 V4 w/ new microcode (ARCH_CAPABILITIES available)
-    auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac, cpu_id::kTestDataXeon2690v4);
-    ASSERT_TRUE(ac.check(), "");
-    data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
-        (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
-    cpu_id::FakeCpuId cpu(*data.get());
-    FakeMsrAccess fake_msrs = {};
-    fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0};
-    EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
-  }
-
-  {
-    // Intel(R) Core(TM) i5-5257U has Meltdown
-    auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
-    ASSERT_TRUE(ac.check(), "");
-    data->leaf0 = {.reg = {0x14, 0x756e6547, 0x6c65746e, 0x49656e69}};
-    data->leaf1 = {.reg = {0x306d4, 0x100800, 0x7ffafbbf, 0xbfebfbff}};
-    data->leaf4 = {.reg = {0x1c004121, 0x1c0003f, 0x3f, 0x0}};
-    data->leaf7 = {.reg = {0x0, 0x21c27ab, 0x0, 0x9c000000}};
-    cpu_id::FakeCpuId cpu(*data.get());
-    FakeMsrAccess fake_msrs = {};
-    EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
-  }
-
-  {
-    // Intel(R) Xeon(R) Gold 6xxx; does not have Meltdown, reports via RDCL_NO
-    auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
-    ASSERT_TRUE(ac.check(), "");
-    data->leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
-    data->leaf1 = {.reg = {0x50656, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
-    data->leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
-    data->leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
-
-    cpu_id::FakeCpuId cpu(*data.get());
-    FakeMsrAccess fake_msrs = {};
-    fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x2b};
-    EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
-  }
-
-  {
-    // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have Meltdown, _but_ old microcode
-    // lacks RDCL_NO. We will misidentify this CPU as having Meltdown.
-    auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
-    ASSERT_TRUE(ac.check(), "");
-    data->leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
-    data->leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
-    data->leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
-    data->leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
-    data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] &=
-        ~(1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
-
-    FakeMsrAccess fake_msrs = {};
-    {
-      cpu_id::FakeCpuId cpu(*data.get());
-      EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
-    }
-
-    // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have Meltdown, reports via RDCL_NO
-    // (with recent microcode updates)
-    data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
-        (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
-
-    // 0x19 = RDCL_NO | SKIP_VMENTRY_L1DFLUSH | SSB_NO
-    fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x19};
-    {
-      cpu_id::FakeCpuId cpu(*data.get());
-      EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
-    }
-  }
-
-  {
-    // Intel(R) Celeron J4005 (Goldmont+ / Gemini Lake) _does_ have Meltdown,
-    // IA32_ARCH_CAPABILITIES[0] = 0
-    auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
-    ASSERT_TRUE(ac.check());
-    data->leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
-    data->leaf1 = {.reg = {0x706A1, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
-    data->leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
-    data->leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
-
-    cpu_id::FakeCpuId cpu(*data.get());
-    FakeMsrAccess fake_msrs = {};
-    fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0xA};  // microcode 2c -> Ah; 2e -> 6ah
-    EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
-  }
-
-  END_TEST;
-}
-
 static bool test_x64_l1tf_enumeration() {
   BEGIN_TEST;
 
@@ -611,7 +506,6 @@ UNITTEST("basic test of read/write MSR variants", test_x64_msrs)
 UNITTEST("test k cpu rdmsr commands", test_x64_msrs_k_commands)
 UNITTEST("test k hwp commands", test_x64_hwp_k_commands)
 UNITTEST("test uarch_config is correctly selected", test_x64_cpu_uarch_config_selection)
-UNITTEST("test enumeration of x64 Meltdown vulnerability", test_x64_meltdown_enumeration)
 UNITTEST("test enumeration of x64 L1TF vulnerability", test_x64_l1tf_enumeration)
 UNITTEST("test Intel x86 microcode patch loader match and load logic", test_x64_intel_ucode_loader)
 UNITTEST("test Intel x86 microcode patch loader mechanism", test_x64_intel_ucode_patch_loader)

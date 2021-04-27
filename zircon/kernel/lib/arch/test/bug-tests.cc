@@ -282,4 +282,42 @@ TEST(BugTests, SpectreV2Mitigation) {
   }
 }
 
+TEST(BugTests, MeltdownPresence) {
+  // Intel Pentium N4200 (Goldmont).
+  // Expectation: not present
+  {
+    // Older microcode: No IA32_ARCH_CAPABILITIES.
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelPentiumN4200);
+    arch::testing::FakeMsrIo msr;
+    EXPECT_FALSE(arch::HasX86MeltdownBug(cpuid, msr));
+
+    // Newer microcode: IA32_ARCH_CAPABILITIES with RDCL_NO.
+    MakeArchCapabilitiesAvailable(cpuid);
+    msr.Populate(arch::X86Msr::IA32_ARCH_CAPABILITIES, uint64_t{1});
+    EXPECT_FALSE(arch::HasX86MeltdownBug(cpuid, msr));
+  }
+
+  // AMD Ryzen 5 1500X.
+  // Expectation: not present.
+  {
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen5_1500x);
+    arch::testing::FakeMsrIo msr;
+    EXPECT_FALSE(arch::HasX86MeltdownBug(cpuid, msr));
+  }
+
+  // Intel Xeon E5-2690 v4.
+  // Expectation: present
+  {
+    // Older microcode: No IA32_ARCH_CAPABILITIES.
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelXeonE5_2690_V4);
+    arch::testing::FakeMsrIo msr;
+    EXPECT_TRUE(arch::HasX86MeltdownBug(cpuid, msr));
+
+    // Newer microcode: IA32_ARCH_CAPABILITIES, but still susceptible.
+    MakeArchCapabilitiesAvailable(cpuid);
+    msr.Populate(arch::X86Msr::IA32_ARCH_CAPABILITIES, 0);
+    EXPECT_TRUE(arch::HasX86MeltdownBug(cpuid, msr));
+  }
+}
+
 }  // namespace

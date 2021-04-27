@@ -124,20 +124,6 @@ uint32_t x86_intel_get_patch_level(void) {
   return patch_level;
 }
 
-bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
-  // IA32_ARCH_CAPABILITIES MSR enumerates fixes for Meltdown and other speculation-related side
-  // channels, where available.
-  if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
-    uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
-    if (arch_capabilities & X86_ARCH_CAPABILITIES_RDCL_NO) {
-      return false;
-    }
-  }
-
-  auto* const microarch_config = get_microarch_config(cpuid);
-  return microarch_config->has_meltdown;
-}
-
 bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   // IA32_ARCH_CAPABILITIES MSR enumerates fixes for L1TF, if available.
   if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
