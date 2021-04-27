@@ -224,7 +224,7 @@ impl V2Component {
             println!(
                 "{:<width_type$}{:<width_running_stopped$}Component Name",
                 "Component Type",
-                "Running/Stopped",
+                "Execution State",
                 width_type = WIDTH_CS_TREE,
                 width_running_stopped = WIDTH_CS_TREE
             );
@@ -338,7 +338,10 @@ impl V2Component {
                 println!("Type: v2 {} component", details.component_type);
 
                 if let Some(execution) = &self.execution {
+                    println!("Execution State: Running");
                     execution.print_details();
+                } else {
+                    println!("Execution State: Stopped");
                 }
 
                 println!("");

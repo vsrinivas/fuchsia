@@ -167,6 +167,7 @@ impl V1Realm {
             println!("Moniker: {}", moniker);
             println!("Job ID: {}", self.job_id);
             println!("Type: v1 realm");
+            println!("Execution State: Running");
             println!("");
             did_print = true;
         }
@@ -329,6 +330,7 @@ impl V1Component {
                 }
                 println!("Merkle Root: {}", merkle);
                 println!("Type: v1 component");
+                println!("Execution State: Running");
 
                 println!("Incoming Capabilities ({}):", details.incoming_capabilities.len());
                 for capability in &details.incoming_capabilities {
