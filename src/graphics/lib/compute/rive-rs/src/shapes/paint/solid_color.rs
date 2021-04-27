@@ -42,7 +42,7 @@ impl Core for SolidColor {
 }
 
 impl OnAdded for ObjectRef<'_, SolidColor> {
-    on_added!([on_added_clean], Component);
+    on_added!([on_added_clean, import], Component);
 
     fn on_added_dirty(&self, context: &dyn CoreContext) -> StatusCode {
         let component = self.cast::<Component>();

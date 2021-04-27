@@ -17,6 +17,7 @@ use crate::{
 pub struct Drawable {
     node: Node,
     blend_mode: Property<BlendMode>,
+    drawable_flags: Property<u64>,
     clipping_shapes: DynVec<Object<ClippingShape>>,
     pub(crate) flattened_draw_rules: OptionCell<Object<DrawRules>>,
     pub(crate) prev: OptionCell<Object<Self>>,
@@ -30,6 +31,14 @@ impl ObjectRef<'_, Drawable> {
 
     pub fn set_blend_mode(&self, blend_mode: BlendMode) {
         self.blend_mode.set(blend_mode);
+    }
+
+    pub fn drawable_flags(&self) -> u64 {
+        self.drawable_flags.get()
+    }
+
+    pub fn set_drawable_flags(&self, drawable_flags: u64) {
+        self.drawable_flags.set(drawable_flags);
     }
 }
 
@@ -54,7 +63,7 @@ impl ObjectRef<'_, Drawable> {
 impl Core for Drawable {
     parent_types![(node, Node)];
 
-    properties![(23, blend_mode, set_blend_mode), node];
+    properties![(23, blend_mode, set_blend_mode), (129, drawable_flags, set_drawable_flags), node];
 }
 
 impl OnAdded for ObjectRef<'_, Drawable> {
@@ -66,6 +75,7 @@ impl Default for Drawable {
         Self {
             node: Node::default(),
             blend_mode: Property::new(BlendMode::SrcOver),
+            drawable_flags: Property::new(0),
             clipping_shapes: DynVec::new(),
             flattened_draw_rules: OptionCell::new(),
             prev: OptionCell::new(),

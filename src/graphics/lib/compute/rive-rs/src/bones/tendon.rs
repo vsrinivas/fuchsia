@@ -111,6 +111,8 @@ impl Core for Tendon {
 }
 
 impl OnAdded for ObjectRef<'_, Tendon> {
+    on_added!([import], Component);
+
     fn on_added_dirty(&self, context: &dyn CoreContext) -> StatusCode {
         let bind = Mat {
             scale_x: self.xx(),

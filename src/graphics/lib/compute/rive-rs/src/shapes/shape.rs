@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::cell::Cell;
+use std::{cell::Cell, rc::Rc};
 
 use crate::{
     component::Component,
     component_dirt::ComponentDirt,
-    core::{Core, Object, ObjectRef, OnAdded},
+    core::{Core, CoreContext, Object, ObjectRef, OnAdded},
     drawable::Drawable,
     dyn_vec::DynVec,
     math::Mat,
-    option_cell::OptionCell,
     shapes::{Path, PathComposer, PathSpace, ShapePaintContainer},
+    status_code::StatusCode,
     transform_component::TransformComponent,
     Renderer,
 };
@@ -21,7 +21,7 @@ use crate::{
 pub struct Shape {
     drawable: Drawable,
     shape_paint_container: ShapePaintContainer,
-    path_composer: OptionCell<Object<PathComposer>>,
+    path_composer: Rc<PathComposer>,
     paths: DynVec<Object<Path>>,
     want_difference_path: Cell<bool>,
 }
@@ -44,29 +44,19 @@ impl ObjectRef<'_, Shape> {
     }
 
     pub fn path_changed(&self) {
-        self.path_composer
-            .get()
-            .expect("path_composer shoudl already be set on Shape")
-            .as_ref()
-            .cast::<Component>()
-            .add_dirt(ComponentDirt::PATH, true);
+        self.path_composer().cast::<Component>().add_dirt(ComponentDirt::PATH, true);
 
         self.cast::<ShapePaintContainer>().invalidate_stroke_effects();
     }
 
-    pub fn path_composer(&self) -> Option<Object<PathComposer>> {
-        self.path_composer.get()
-    }
-
-    pub fn set_path_composer(&self, path_composer: Object<PathComposer>) {
-        self.path_composer.set(Some(path_composer));
+    pub fn path_composer(&self) -> ObjectRef<'_, PathComposer> {
+        ObjectRef::from(Rc::clone(&self.path_composer))
     }
 
     pub fn draw(&self, renderer: &mut impl Renderer, transform: Mat) {
         // todo!("clip");
 
-        let path_composer =
-            self.path_composer().expect("path_composer should already be set on Shape");
+        let path_composer = self.path_composer();
 
         for shape_paint in self.cast::<ShapePaintContainer>().shape_paints() {
             let shape_paint = shape_paint.as_ref();
@@ -77,7 +67,7 @@ impl ObjectRef<'_, Shape> {
 
             if shape_paint.path_space() & PathSpace::LOCAL == PathSpace::LOCAL {
                 let transform = transform * self.cast::<TransformComponent>().world_transform();
-                path_composer.as_ref().with_local_path(|path| {
+                path_composer.with_local_path(|path| {
                     shape_paint.draw(
                         renderer,
                         path.expect("local_path should already be set on PathComposer"),
@@ -85,7 +75,7 @@ impl ObjectRef<'_, Shape> {
                     );
                 });
             } else {
-                path_composer.as_ref().with_world_path(|path| {
+                path_composer.with_world_path(|path| {
                     shape_paint.draw(
                         renderer,
                         path.expect("world_path should already be set on PathComposer"),
@@ -97,6 +87,8 @@ impl ObjectRef<'_, Shape> {
     }
 
     pub fn build_dependencies(&self) {
+        self.path_composer().cast::<Component>().build_dependencies();
+
         self.cast::<TransformComponent>().build_dependencies();
 
         // Set the blend mode on all the shape paints. If we ever animate this
@@ -127,5 +119,12 @@ impl Core for Shape {
 }
 
 impl OnAdded for ObjectRef<'_, Shape> {
-    on_added!(Drawable);
+    on_added!([on_added_clean, import], Drawable);
+
+    fn on_added_dirty(&self, context: &dyn CoreContext) -> StatusCode {
+        self.path_composer.shape.set(Some(self.as_object()));
+
+        self.cast::<TransformComponent>().on_added_dirty(context);
+        ObjectRef::from(Rc::clone(&self.path_composer)).on_added_dirty(context)
+    }
 }

@@ -51,7 +51,7 @@ impl Core for RootBone {
 }
 
 impl OnAdded for ObjectRef<'_, RootBone> {
-    on_added!([on_added_dirty], Bone);
+    on_added!([on_added_dirty, import], Bone);
 
     fn on_added_clean(&self, context: &dyn CoreContext) -> StatusCode {
         // Intentionally doesn't call Bone::on_added_clean and goes straight to

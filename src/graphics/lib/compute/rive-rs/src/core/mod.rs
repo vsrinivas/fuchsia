@@ -12,6 +12,7 @@ use crate::{
     animation::Loop,
     artboard::Artboard,
     draw_target::DrawTargetPlacement,
+    importers::ImportStack,
     shapes::{
         paint::{BlendMode, Color32, StrokeCap, StrokeJoin},
         FillRule,
@@ -29,7 +30,7 @@ pub use property::{Property, TryFromU64};
 
 macro_rules! types {
     ( $( ( $id:expr , $type:ty ) ),* $( , )? ) => {
-        pub fn get_type_id(id: u64) -> Option<TypeId> {
+        pub fn get_type_id(id: u16) -> Option<TypeId> {
             match id {
                 $(
                     $id => Some(TypeId::of::<$type>()),
@@ -79,7 +80,7 @@ macro_rules! parent_types {
 
 macro_rules! properties {
     ( $parent:ident ) => {
-        fn property_of(&self, key: u64) -> Option<&dyn ::std::any::Any> {
+        fn property_of(&self, key: u16) -> Option<&dyn ::std::any::Any> {
             self.$parent.property_of(key)
         }
 
@@ -89,7 +90,7 @@ macro_rules! properties {
     };
 
     ( $( ( $key:expr , $field:ident , $setter:ident ) ),* , $parent:ident $( , )? ) => {
-        fn property_of(&self, key: u64) -> Option<&dyn ::std::any::Any> {
+        fn property_of(&self, key: u16) -> Option<&dyn ::std::any::Any> {
             match key {
                 $(
                     $key => Some(&self.$field),
@@ -112,7 +113,7 @@ macro_rules! properties {
     };
 
     ( $( ( $key:expr , $field:ident , $setter:ident ) ),* $( , )? ) => {
-        fn property_of(&self, key: u64) -> Option<&dyn ::std::any::Any> {
+        fn property_of(&self, key: u16) -> Option<&dyn ::std::any::Any> {
             match key {
                 $(
                     $key => Some(&self.$field),
@@ -134,47 +135,57 @@ macro_rules! properties {
 }
 
 macro_rules! on_added {
-    () => {
-        fn on_added_dirty(&self, _context: &dyn crate::core::CoreContext) -> crate::status_code::StatusCode {
+    ( @impl import ) => {
+        fn import(&self,  _object: crate::core::Object, _import_stack: &crate::importers::ImportStack) -> crate::status_code::StatusCode {
             crate::status_code::StatusCode::Ok
         }
+    };
 
-        fn on_added_clean(&self, _context: &dyn crate::core::CoreContext) -> crate::status_code::StatusCode {
+    ( @impl $method:ident ) => {
+        fn $method(&self, _context: &dyn crate::core::CoreContext) -> crate::status_code::StatusCode {
             crate::status_code::StatusCode::Ok
         }
+    };
+
+    ( @impl import , $type:ty ) => {
+        fn import(&self, object: crate::core::Object, import_stack: &crate::importers::ImportStack) -> crate::status_code::StatusCode {
+            self.cast::<$type>().import(object, import_stack)
+        }
+    };
+
+    ( @impl $method:ident , $type:ty ) => {
+        fn $method(&self, context: &dyn crate::core::CoreContext) -> crate::status_code::StatusCode {
+            self.cast::<$type>().$method(context)
+        }
+    };
+
+    () => {
+        on_added!(@impl on_added_dirty);
+        on_added!(@impl on_added_clean);
+        on_added!(@impl import);
     };
 
     ( [ $( $method:ident ),+ ] ) => {
         $(
-            fn $method(&self, _context: &dyn crate::core::CoreContext) -> crate::status_code::StatusCode {
-                crate::status_code::StatusCode::Ok
-            }
+            on_added!(@impl $method);
         )+
-    };
-
-    ( $type:ty ) => {
-        fn on_added_dirty(&self, context: &dyn crate::core::CoreContext) -> crate::status_code::StatusCode {
-            self.cast::<$type>().on_added_dirty(context)
-        }
-
-        fn on_added_clean(&self, context: &dyn crate::core::CoreContext) -> crate::status_code::StatusCode {
-            self.cast::<$type>().on_added_clean(context)
-        }
     };
 
     ( [ $( $method:ident ),+ ] , $type:ty ) => {
         $(
-            fn $method(&self, context: &dyn crate::core::CoreContext) -> crate::status_code::StatusCode {
-                self.cast::<$type>().$method(context)
-            }
+            on_added!(@impl $method, $type);
         )+
+    };
+
+    ( $type:ty ) => {
+        on_added!(@impl on_added_dirty, $type);
+        on_added!(@impl on_added_clean, $type);
+        on_added!(@impl import, $type);
     };
 }
 
 pub trait AsAny: Any + fmt::Debug {
-    #[doc(hidden)]
     fn as_any(&self) -> &dyn Any;
-    #[doc(hidden)]
     fn any_type_name(&self) -> &'static str;
 }
 
@@ -228,7 +239,7 @@ pub trait Core: AsAny {
     }
 
     #[inline]
-    fn property_of(&self, key: u64) -> Option<&dyn Any> {
+    fn property_of(&self, key: u16) -> Option<&dyn Any> {
         None
     }
 
@@ -243,11 +254,11 @@ pub trait Core: AsAny {
 
 impl dyn Core {
     #[inline]
-    pub fn get_property<T: Clone + Default + 'static>(&self, key: u64) -> Option<&Property<T>> {
+    pub fn get_property<T: Clone + Default + 'static>(&self, key: u16) -> Option<&Property<T>> {
         self.property_of(key).and_then(<dyn Any>::downcast_ref::<Property<T>>)
     }
 
-    pub(crate) fn write(&self, property_key: u64, reader: &mut BinaryReader<'_>) -> bool {
+    pub(crate) fn write(&self, property_key: u16, reader: &mut BinaryReader<'_>) -> bool {
         if let Some(property) = self.property_of(property_key) {
             macro_rules! write_types {
                 ( $property:expr , $reader:expr , [ $( $type:ident ),* $( , )? ] ) => {
@@ -291,6 +302,8 @@ pub trait OnAdded {
     fn on_added_dirty(&self, context: &dyn CoreContext) -> StatusCode;
 
     fn on_added_clean(&self, context: &dyn CoreContext) -> StatusCode;
+
+    fn import(&self, object: Object, import_stack: &ImportStack) -> StatusCode;
 }
 
 pub trait CoreContext {
@@ -351,4 +364,23 @@ types![
     (50, crate::animation::KeyFrameId),
     (51, crate::shapes::Polygon),
     (52, crate::shapes::Star),
+    (53, crate::animation::StateMachine),
+    (54, crate::animation::StateMachineComponent),
+    (55, crate::animation::StateMachineInput),
+    (56, crate::animation::StateMachineDouble),
+    (57, crate::animation::StateMachineLayer),
+    (58, crate::animation::StateMachineTrigger),
+    (59, crate::animation::StateMachineBool),
+    (60, crate::animation::LayerState),
+    (61, crate::animation::AnimationState),
+    (62, crate::animation::AnyState),
+    (63, crate::animation::EntryState),
+    (64, crate::animation::ExitState),
+    (65, crate::animation::StateTransition),
+    (66, crate::animation::StateMachineLayerComponent),
+    (67, crate::animation::TransitionCondition),
+    (68, crate::animation::TransitionTriggerCondition),
+    (69, crate::animation::TransitionValueCondition),
+    (70, crate::animation::TransitionDoubleCondition),
+    (71, crate::animation::TransitionBoolCondition),
 ];

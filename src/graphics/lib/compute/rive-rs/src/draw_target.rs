@@ -93,7 +93,7 @@ impl Core for DrawTarget {
 }
 
 impl OnAdded for ObjectRef<'_, DrawTarget> {
-    on_added!([on_added_clean], Component);
+    on_added!([on_added_clean, import], Component);
 
     fn on_added_dirty(&self, context: &dyn CoreContext) -> StatusCode {
         let code = self.cast::<Component>().on_added_dirty(context);

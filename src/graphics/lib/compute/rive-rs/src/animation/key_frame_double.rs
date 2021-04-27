@@ -28,8 +28,9 @@ impl ObjectRef<'_, KeyFrameDouble> {
 
 fn apply_double(core: Object, property_key: u64, mix: f32, value: f32) {
     let core = core.as_ref();
-    let property =
-        core.get_property::<f32>(property_key).expect("KeyFrameDouble references wrong property");
+    let property = core
+        .get_property::<f32>(property_key as u16)
+        .expect("KeyFrameDouble references wrong property");
     if mix == 1.0 {
         core.animate(&core, property_key, &Animator::new(value));
     } else {

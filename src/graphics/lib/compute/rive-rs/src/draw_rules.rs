@@ -57,7 +57,7 @@ impl Core for DrawRules {
 }
 
 impl OnAdded for ObjectRef<'_, DrawRules> {
-    on_added!([on_added_clean], ContainerComponent);
+    on_added!([on_added_clean, import], ContainerComponent);
 
     fn on_added_dirty(&self, context: &dyn CoreContext) -> StatusCode {
         let code = self.cast::<Component>().on_added_dirty(context);

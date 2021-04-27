@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::cell::Cell;
+use std::{any::TypeId, cell::Cell};
 
 use crate::{
-    animation::CubicInterpolator,
+    animation::{CubicInterpolator, KeyFrameColor, KeyFrameDouble, KeyFrameId, KeyedProperty},
     core::{Core, CoreContext, Object, ObjectRef, OnAdded, Property},
+    importers::{ImportStack, KeyedPropertyImporter},
     option_cell::OptionCell,
     status_code::StatusCode,
 };
-
-use super::{KeyFrameColor, KeyFrameDouble, KeyFrameId};
 
 #[derive(Debug, Default)]
 pub struct KeyFrame {
@@ -136,5 +135,16 @@ impl OnAdded for ObjectRef<'_, KeyFrame> {
         }
 
         StatusCode::Ok
+    }
+
+    fn import(&self, object: Object, import_stack: &ImportStack) -> StatusCode {
+        if let Some(importer) =
+            import_stack.latest::<KeyedPropertyImporter>(TypeId::of::<KeyedProperty>())
+        {
+            importer.push_key_frame(object.as_ref().cast::<KeyFrame>().as_object());
+            StatusCode::Ok
+        } else {
+            StatusCode::MissingObject
+        }
     }
 }

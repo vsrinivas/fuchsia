@@ -27,6 +27,10 @@ impl<'b> BinaryReader<'b> {
         Self { buffer }
     }
 
+    pub fn reached_end(&self) -> bool {
+        self.buffer.is_empty()
+    }
+
     pub fn read_bytes(&mut self, len: usize) -> Option<&[u8]> {
         let slice = self.buffer.get(..len)?;
         self.buffer = &self.buffer[len..];

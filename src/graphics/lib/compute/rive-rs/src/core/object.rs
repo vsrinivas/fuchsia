@@ -12,6 +12,7 @@ use std::{
 
 use crate::{
     core::{Cast, Core, CoreContext, OnAdded},
+    importers::ImportStack,
     status_code::StatusCode,
 };
 
@@ -22,7 +23,8 @@ fn any_type_name<T: Any>() -> &'static str {
 pub struct Object<T = ()> {
     weak: Weak<dyn Core>,
     on_added_dirty: Option<fn(&Rc<dyn Core>, &dyn CoreContext) -> StatusCode>,
-    on_added_clean: Option<fn(&Rc<dyn Core>, &dyn CoreContext) -> StatusCode>,
+    pub on_added_clean: Option<fn(&Rc<dyn Core>, &dyn CoreContext) -> StatusCode>,
+    import: Option<fn(&Rc<dyn Core>, Object, &ImportStack) -> StatusCode>,
     _phantom: PhantomData<T>,
 }
 
@@ -32,6 +34,7 @@ impl<T> Object<T> {
             weak: Rc::downgrade(rc),
             on_added_dirty: None,
             on_added_clean: None,
+            import: None,
             _phantom: PhantomData,
         }
     }
@@ -45,6 +48,7 @@ impl<T> Object<T> {
             core_ref: CoreRef::Rc(self.upgrade_rc()),
             on_added_dirty: self.on_added_dirty,
             on_added_clean: self.on_added_clean,
+            import: self.import,
         }
     }
 
@@ -60,6 +64,7 @@ impl<T: Any> Object<T> {
             weak: Rc::downgrade(&rc),
             on_added_dirty: None,
             on_added_clean: None,
+            import: None,
             _phantom: PhantomData,
         })
     }
@@ -90,30 +95,50 @@ where
         where
             ObjectRef<'a, T>: OnAdded + 'a,
         {
-            let object: ObjectRef<'_, T> = ObjectRef {
+            let object_ref: ObjectRef<'_, T> = ObjectRef {
                 core_ref: CoreRef::Rc(Rc::clone(rc)),
                 on_added_dirty: None,
                 on_added_clean: None,
+                import: None,
             };
-            object.on_added_dirty(context)
+            object_ref.on_added_dirty(context)
         }
 
         fn on_added_clean<'a, T: Core>(rc: &Rc<dyn Core>, context: &dyn CoreContext) -> StatusCode
         where
             ObjectRef<'a, T>: OnAdded,
         {
-            let object: ObjectRef<'_, T> = ObjectRef {
+            let object_ref: ObjectRef<'_, T> = ObjectRef {
                 core_ref: CoreRef::Rc(Rc::clone(rc)),
                 on_added_dirty: None,
                 on_added_clean: None,
+                import: None,
             };
-            object.on_added_clean(context)
+            object_ref.on_added_clean(context)
+        }
+
+        fn import<'a, T: Core>(
+            rc: &Rc<dyn Core>,
+            object: Object,
+            import_stack: &ImportStack,
+        ) -> StatusCode
+        where
+            ObjectRef<'a, T>: OnAdded,
+        {
+            let object_ref: ObjectRef<'_, T> = ObjectRef {
+                core_ref: CoreRef::Rc(Rc::clone(rc)),
+                on_added_dirty: None,
+                on_added_clean: None,
+                import: None,
+            };
+            object_ref.import(object, import_stack)
         }
 
         Self {
             weak: object.weak,
             on_added_dirty: Some(on_added_dirty::<T>),
             on_added_clean: Some(on_added_clean::<T>),
+            import: Some(import::<T>),
             _phantom: PhantomData,
         }
     }
@@ -123,8 +148,9 @@ impl<T> Clone for Object<T> {
     fn clone(&self) -> Self {
         Self {
             weak: self.weak.clone(),
-            on_added_dirty: None,
-            on_added_clean: None,
+            on_added_dirty: self.on_added_dirty,
+            on_added_clean: self.on_added_clean,
+            import: self.import,
             _phantom: PhantomData,
         }
     }
@@ -223,11 +249,23 @@ pub struct ObjectRef<'a, T = ()> {
     core_ref: CoreRef<'a, T>,
     on_added_dirty: Option<fn(&Rc<dyn Core>, &dyn CoreContext) -> StatusCode>,
     on_added_clean: Option<fn(&Rc<dyn Core>, &dyn CoreContext) -> StatusCode>,
+    import: Option<fn(&Rc<dyn Core>, Object, &ImportStack) -> StatusCode>,
 }
 
 impl<'a, T: Core> From<&'a T> for ObjectRef<'a, T> {
     fn from(borrow: &'a T) -> Self {
-        Self { core_ref: CoreRef::Borrow(borrow), on_added_dirty: None, on_added_clean: None }
+        Self {
+            core_ref: CoreRef::Borrow(borrow),
+            on_added_dirty: None,
+            on_added_clean: None,
+            import: None,
+        }
+    }
+}
+
+impl<T: Core> From<Rc<T>> for ObjectRef<'_, T> {
+    fn from(rc: Rc<T>) -> Self {
+        Self { core_ref: CoreRef::Rc(rc), on_added_dirty: None, on_added_clean: None, import: None }
     }
 }
 
@@ -237,6 +275,7 @@ impl<'a, T: Core> ObjectRef<'a, T> {
             core_ref,
             on_added_dirty: self.on_added_dirty,
             on_added_clean: self.on_added_clean,
+            import: self.import,
         })
     }
 
@@ -263,6 +302,7 @@ impl<'a> ObjectRef<'a> {
             core_ref,
             on_added_dirty: self.on_added_dirty,
             on_added_clean: self.on_added_clean,
+            import: self.import,
         })
     }
 
@@ -286,6 +326,14 @@ impl<'a> ObjectRef<'a> {
             panic!("on_added_clean should not be called on ObjectRef from borrows");
         }
     }
+
+    pub fn import(&self, object: Object, import_stack: &ImportStack) -> StatusCode {
+        if let CoreRef::Rc(rc) = &self.core_ref {
+            self.import.map(|f| f(rc, object, import_stack)).unwrap_or(StatusCode::Ok)
+        } else {
+            panic!("import should not be called on ObjectRef from borrows");
+        }
+    }
 }
 
 impl<T> ObjectRef<'_, T> {
@@ -295,6 +343,7 @@ impl<T> ObjectRef<'_, T> {
                 weak: Rc::downgrade(rc),
                 on_added_dirty: self.on_added_dirty,
                 on_added_clean: self.on_added_clean,
+                import: self.import,
                 _phantom: PhantomData,
             }
         } else {
@@ -325,6 +374,7 @@ impl<T> Clone for ObjectRef<'_, T> {
             core_ref: self.core_ref.clone(),
             on_added_dirty: self.on_added_dirty,
             on_added_clean: self.on_added_clean,
+            import: self.import,
         }
     }
 }

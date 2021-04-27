@@ -17,7 +17,7 @@ use euclid::{default::Transform2D, size2, vec2};
 use fuchsia_zircon::{self as zx, Time};
 use rive_rs::{
     self as rive,
-    animation::{LinearAnimation, LinearAnimationInstance},
+    animation::LinearAnimationInstance,
     layout::{self, Alignment, Fit},
     math::Aabb,
 };
@@ -459,7 +459,7 @@ impl RiveFacet {
         artboard_ref.advance(0.0);
 
         let mut animations: Vec<(LinearAnimationInstance, bool)> = artboard_ref
-            .animations::<LinearAnimation>()
+            .animations()
             .map(|animation| (LinearAnimationInstance::new(animation), false))
             .collect();
         for index in initial_animations.into_iter() {

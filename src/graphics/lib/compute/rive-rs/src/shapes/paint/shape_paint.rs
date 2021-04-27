@@ -94,7 +94,7 @@ impl Core for ShapePaint {
 }
 
 impl OnAdded for ObjectRef<'_, ShapePaint> {
-    on_added!([on_added_dirty], ContainerComponent);
+    on_added!([on_added_dirty, import], ContainerComponent);
 
     fn on_added_clean(&self, _context: &dyn CoreContext) -> StatusCode {
         let container = self.cast::<Component>().parent().and_then(|parent| {

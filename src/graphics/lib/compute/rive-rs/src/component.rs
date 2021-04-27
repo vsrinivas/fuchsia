@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use std::{
+    any::TypeId,
     cell::Cell,
     hash::{Hash, Hasher},
     iter,
@@ -15,6 +16,7 @@ use crate::{
     container_component::ContainerComponent,
     core::{Core, CoreContext, Object, ObjectRef, OnAdded, Property},
     dyn_vec::DynVec,
+    importers::{ArtboardImporter, ImportStack},
     option_cell::OptionCell,
     shapes::{
         paint::LinearGradient, ClippingShape, Ellipse, Path, PathComposer, PointsPath, Polygon,
@@ -238,6 +240,15 @@ impl OnAdded for ObjectRef<'_, Component> {
             context.resolve(self.parent_id() as usize).and_then(|core| core.try_cast())
         {
             self.parent.set(Some(parent));
+            StatusCode::Ok
+        } else {
+            StatusCode::MissingObject
+        }
+    }
+
+    fn import(&self, object: Object, import_stack: &ImportStack) -> StatusCode {
+        if let Some(importer) = import_stack.latest::<ArtboardImporter>(TypeId::of::<Artboard>()) {
+            importer.push_object(object);
             StatusCode::Ok
         } else {
             StatusCode::MissingObject

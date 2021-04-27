@@ -5,20 +5,19 @@
 use crate::{
     component::Component,
     component_dirt::ComponentDirt,
-    core::{Core, CoreContext, Object, ObjectRef, OnAdded},
+    core::{Core, Object, ObjectRef, OnAdded},
     option_cell::OptionCell,
     shapes::{
         command_path::{CommandPath, CommandPathBuilder},
         PathSpace, Shape,
     },
-    status_code::StatusCode,
     TransformComponent,
 };
 
 #[derive(Debug, Default)]
 pub struct PathComposer {
     component: Component,
-    shape: OptionCell<Object<Shape>>,
+    pub(crate) shape: OptionCell<Object<Shape>>,
     local_path: OptionCell<CommandPath>,
     world_path: OptionCell<CommandPath>,
 }
@@ -99,17 +98,5 @@ impl Core for PathComposer {
 }
 
 impl OnAdded for ObjectRef<'_, PathComposer> {
-    on_added!([on_added_dirty], Component);
-
-    fn on_added_clean(&self, _context: &dyn CoreContext) -> StatusCode {
-        for parent in self.cast::<Component>().parents() {
-            if let Some(shape) = parent.try_cast::<Shape>() {
-                self.shape.set(Some(shape.clone()));
-                shape.as_ref().set_path_composer(self.as_object());
-                return StatusCode::Ok;
-            }
-        }
-
-        StatusCode::MissingObject
-    }
+    on_added!(Component);
 }

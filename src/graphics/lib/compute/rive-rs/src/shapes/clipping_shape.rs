@@ -80,12 +80,8 @@ impl ObjectRef<'_, ClippingShape> {
 impl ObjectRef<'_, ClippingShape> {
     pub fn build_dependencies(&self) {
         for shape in self.shapes.iter() {
-            shape
-                .as_ref()
-                .path_composer()
-                .expect("path_composer should already be set on Shape")
+            ObjectRef::from(shape.as_ref().path_composer())
                 .cast::<Component>()
-                .as_ref()
                 .push_dependent(self.as_object().cast());
         }
     }
@@ -95,17 +91,12 @@ impl ObjectRef<'_, ClippingShape> {
             let mut builder = CommandPathBuilder::new();
 
             for shape in self.shapes.iter() {
-                shape
-                    .as_ref()
-                    .path_composer()
-                    .expect("path_composer should already be set on Shape")
-                    .as_ref()
-                    .with_world_path(|path| {
-                        builder.path(
-                            path.expect("world_path should already be set on PathComposer"),
-                            Mat::default(),
-                        );
-                    });
+                ObjectRef::from(shape.as_ref().path_composer()).with_world_path(|path| {
+                    builder.path(
+                        path.expect("world_path should already be set on PathComposer"),
+                        Mat::default(),
+                    );
+                });
             }
 
             self.command_path.set(Some(builder.build()));
@@ -125,6 +116,8 @@ impl Core for ClippingShape {
 }
 
 impl OnAdded for ObjectRef<'_, ClippingShape> {
+    on_added!([import], Component);
+
     fn on_added_dirty(&self, context: &dyn CoreContext) -> StatusCode {
         let code = self.cast::<Component>().on_added_dirty(context);
         if code != StatusCode::Ok {

@@ -116,7 +116,7 @@ impl Core for PathVertex {
 }
 
 impl OnAdded for ObjectRef<'_, PathVertex> {
-    on_added!([on_added_clean], ContainerComponent);
+    on_added!([on_added_clean, import], ContainerComponent);
 
     fn on_added_dirty(&self, context: &dyn CoreContext) -> StatusCode {
         let code = self.cast::<ContainerComponent>().on_added_dirty(context);

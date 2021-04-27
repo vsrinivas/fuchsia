@@ -104,7 +104,7 @@ impl Core for TrimPath {
 }
 
 impl OnAdded for ObjectRef<'_, TrimPath> {
-    on_added!([on_added_dirty], Component);
+    on_added!([on_added_dirty, import], Component);
 
     fn on_added_clean(&self, _context: &dyn CoreContext) -> StatusCode {
         if let Some(stroke) =

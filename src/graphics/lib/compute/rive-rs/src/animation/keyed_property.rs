@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::any::TypeId;
+
 use crate::{
-    animation::KeyFrame,
+    animation::{KeyFrame, KeyedObject},
     core::{Core, CoreContext, Object, ObjectRef, OnAdded, Property},
     dyn_vec::DynVec,
+    importers::{ImportStack, KeyedObjectImporter},
     status_code::StatusCode,
 };
 
@@ -113,5 +116,16 @@ impl OnAdded for ObjectRef<'_, KeyedProperty> {
         }
 
         StatusCode::Ok
+    }
+
+    fn import(&self, object: Object, import_stack: &ImportStack) -> StatusCode {
+        if let Some(importer) =
+            import_stack.latest::<KeyedObjectImporter>(TypeId::of::<KeyedObject>())
+        {
+            importer.push_keyed_property(object.as_ref().cast::<KeyedProperty>().as_object());
+            StatusCode::Ok
+        } else {
+            StatusCode::MissingObject
+        }
     }
 }

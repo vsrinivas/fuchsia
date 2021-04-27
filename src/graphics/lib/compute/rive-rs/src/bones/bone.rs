@@ -62,7 +62,7 @@ impl Core for Bone {
 }
 
 impl OnAdded for ObjectRef<'_, Bone> {
-    on_added!([on_added_dirty], SkeletalComponent);
+    on_added!([on_added_dirty, import], SkeletalComponent);
 
     fn on_added_clean(&self, context: &dyn CoreContext) -> StatusCode {
         self.cast::<SkeletalComponent>().on_added_clean(context);

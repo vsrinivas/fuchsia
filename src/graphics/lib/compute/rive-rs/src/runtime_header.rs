@@ -17,7 +17,6 @@ const FINGERPRINT: &'static [u8] = "RIVE".as_bytes();
 pub struct RuntimeHeader {
     major_version: u32,
     minor_version: u32,
-    owner_id: u32,
     file_id: u32,
     property_to_field_index: HashMap<u32, u32>,
 }
@@ -31,7 +30,6 @@ impl RuntimeHeader {
 
         let major_version = reader.read_var_u64()? as u32;
         let minor_version = reader.read_var_u64()? as u32;
-        let owner_id = reader.read_var_u64()? as u32;
         let file_id = reader.read_var_u64()? as u32;
 
         let mut property_keys = Vec::new();
@@ -61,7 +59,7 @@ impl RuntimeHeader {
             current_bit += 2;
         }
 
-        Some(Self { major_version, minor_version, owner_id, file_id, property_to_field_index })
+        Some(Self { major_version, minor_version, file_id, property_to_field_index })
     }
 
     pub fn major_version(&self) -> u32 {

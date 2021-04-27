@@ -10,7 +10,7 @@ use std::{
 };
 
 use crate::{
-    animation::Animation,
+    animation::{LinearAnimation, StateMachine},
     component::Component,
     component_dirt::ComponentDirt,
     container_component::ContainerComponent,
@@ -25,10 +25,93 @@ use crate::{
     status_code::StatusCode,
 };
 
+#[derive(Clone, Debug)]
+pub struct ObjectsIter<T: Core> {
+    objects: Rc<RefCell<Vec<Object<T>>>>,
+    head: usize,
+    tail: usize,
+}
+
+impl<T: Core> ObjectsIter<T> {
+    fn new(objects: Rc<RefCell<Vec<Object<T>>>>) -> Self {
+        let len = objects.borrow().len();
+        Self { objects, head: 0, tail: len }
+    }
+}
+
+impl<T: Core> Iterator for ObjectsIter<T> {
+    type Item = Object<T>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.head == self.tail {
+            return None;
+        }
+
+        let result = self.objects.borrow().iter().cloned().nth(self.head);
+
+        if result.is_some() {
+            self.head += 1;
+        }
+
+        result
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.tail - self.head;
+        (len, Some(len))
+    }
+
+    #[inline]
+    fn count(self) -> usize {
+        self.tail - self.head
+    }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        self.objects.borrow().iter().cloned().nth(self.head + n)
+    }
+}
+
+impl<T: Core> DoubleEndedIterator for ObjectsIter<T> {
+    #[inline]
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.head == self.tail {
+            return None;
+        }
+
+        let result = self.objects.borrow().iter().cloned().nth(self.tail - 1);
+
+        if result.is_some() {
+            self.tail -= 1;
+        }
+
+        result
+    }
+
+    #[inline]
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        if n >= self.tail {
+            return None;
+        }
+
+        self.objects.borrow().iter().cloned().nth(self.tail - 1 - n)
+    }
+}
+
+impl<T: Core> ExactSizeIterator for ObjectsIter<T> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.tail - self.head
+    }
+}
+
 #[derive(Debug, Default)]
 struct ArtboardInner {
     objects: RefCell<Vec<Object>>,
-    animations: Rc<RefCell<Vec<Object<Animation>>>>,
+    animations: Rc<RefCell<Vec<Object<LinearAnimation>>>>,
+    state_machines: Rc<RefCell<Vec<Object<StateMachine>>>>,
     dependency_order: RefCell<VecDeque<Object<Component>>>,
     drawables: RefCell<Vec<Object<Drawable>>>,
     draw_targets: RefCell<Vec<Object<DrawTarget>>>,
@@ -59,6 +142,13 @@ impl ArtboardInner {
             }
         }
 
+        for object in self.state_machines.borrow().iter() {
+            let code = object.as_ref().on_added_dirty(self);
+            if code != StatusCode::Ok {
+                return code;
+            }
+        }
+
         let mut component_draw_rules = HashMap::new();
 
         for object in self.objects.borrow().iter() {
@@ -80,6 +170,13 @@ impl ArtboardInner {
         }
 
         for object in self.animations.borrow().iter() {
+            let code = object.as_ref().on_added_clean(self);
+            if code != StatusCode::Ok {
+                return code;
+            }
+        }
+
+        for object in self.state_machines.borrow().iter() {
             let code = object.as_ref().on_added_clean(self);
             if code != StatusCode::Ok {
                 return code;
@@ -251,8 +348,12 @@ impl ArtboardInner {
         self.objects.borrow_mut().push(object);
     }
 
-    pub fn push_animation(&self, animation: Object<Animation>) {
+    pub fn push_animation(&self, animation: Object<LinearAnimation>) {
         self.animations.borrow_mut().push(animation);
+    }
+
+    pub fn push_state_machine(&self, state_machine: Object<StateMachine>) {
+        self.state_machines.borrow_mut().push(state_machine);
     }
 
     pub fn on_component_dirty(&self, component: &Component) {
@@ -366,8 +467,12 @@ impl ObjectRef<'_, Artboard> {
         Ref::map(self.inner.objects.borrow(), |objects| objects.as_slice())
     }
 
-    pub fn push_animation(&self, animation: Object<Animation>) {
+    pub fn push_animation(&self, animation: Object<LinearAnimation>) {
         self.inner.push_animation(animation);
+    }
+
+    pub fn push_state_machine(&self, state_machine: Object<StateMachine>) {
+        self.inner.push_state_machine(state_machine);
     }
 
     pub fn on_component_dirty(&self, component: &Component) {
@@ -452,17 +557,12 @@ impl ObjectRef<'_, Artboard> {
         Aabb::new(0.0, 0.0, self.width(), self.height())
     }
 
-    pub fn animations<T: Core>(&self) -> impl Iterator<Item = Object<T>> {
-        let mut i = 0;
-        let animations = self.inner.animations.clone();
-        iter::from_fn(move || {
-            let borrow = animations.borrow();
-            borrow.get(i).cloned().map(|animation| {
-                i += 1;
-                animation
-            })
-        })
-        .filter_map(|animation| animation.try_cast())
+    pub fn animations(&self) -> ObjectsIter<LinearAnimation> {
+        ObjectsIter::new(self.inner.animations.clone())
+    }
+
+    pub fn state_machines(&self) -> ObjectsIter<StateMachine> {
+        ObjectsIter::new(self.inner.state_machines.clone())
     }
 }
 

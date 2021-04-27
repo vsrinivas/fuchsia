@@ -28,6 +28,8 @@ impl Core for Animation {
 }
 
 impl OnAdded for ObjectRef<'_, Animation> {
+    on_added!([import]);
+
     fn on_added_dirty(&self, context: &dyn CoreContext) -> StatusCode {
         if let Some(linear_animation) = self.try_cast::<LinearAnimation>() {
             return linear_animation.on_added_dirty(context);

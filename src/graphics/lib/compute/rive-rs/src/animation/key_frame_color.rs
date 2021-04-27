@@ -29,7 +29,7 @@ impl ObjectRef<'_, KeyFrameColor> {
 fn apply_color(core: Object, property_key: u64, mix: f32, value: Color32) {
     let core = core.as_ref();
     let property = core
-        .get_property::<Color32>(property_key)
+        .get_property::<Color32>(property_key as u16)
         .expect("KeyFrameColor references wrong property");
     if mix == 1.0 {
         core.animate(&core, property_key, &Animator::new(value));

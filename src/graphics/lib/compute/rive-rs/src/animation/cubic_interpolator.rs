@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::cell::RefCell;
+use std::{any::TypeId, cell::RefCell};
 
 use crate::{
-    core::{Core, CoreContext, ObjectRef, OnAdded, Property},
+    core::{Core, CoreContext, Object, ObjectRef, OnAdded, Property},
+    importers::{ArtboardImporter, ImportStack},
     status_code::StatusCode,
+    Artboard,
 };
 
 const SPLINE_TABLE_SIZE: usize = 11;
@@ -146,6 +148,15 @@ impl OnAdded for ObjectRef<'_, CubicInterpolator> {
         }
 
         StatusCode::Ok
+    }
+
+    fn import(&self, object: Object, import_stack: &ImportStack) -> StatusCode {
+        if let Some(importer) = import_stack.latest::<ArtboardImporter>(TypeId::of::<Artboard>()) {
+            importer.push_object(object);
+            StatusCode::Ok
+        } else {
+            StatusCode::MissingObject
+        }
     }
 }
 

@@ -2,22 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::rc::Rc;
+use std::{any::TypeId, rc::Rc};
 
 use crate::{
-    animation::{Animation, KeyFrame, KeyedObject, KeyedProperty, LinearAnimation},
+    animation::{KeyedObject, KeyedProperty, LinearAnimation},
     artboard::Artboard,
     backboard::Backboard,
     component::Component,
     core::{self, BinaryReader, Core, Object},
+    importers::{
+        ArtboardImporter, ImportStack, ImportStackObject, KeyedObjectImporter,
+        KeyedPropertyImporter, LinearAnimationImporter,
+    },
     runtime_header::RuntimeHeader,
     status_code::StatusCode,
 };
 
 /// Major version number supported by the runtime.
-const MAJOR_VERSION: u32 = 6;
+const MAJOR_VERSION: u32 = 7;
 /// Minor version number supported by the runtime.
-const _MINOR_VERSION: u32 = 3;
+const _MINOR_VERSION: u32 = 0;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ImportError {
@@ -31,13 +35,13 @@ fn read_runtime_object(
     reader: &mut BinaryReader<'_>,
     header: &RuntimeHeader,
     objects: &mut Vec<Rc<dyn Core>>,
-) -> Option<Object> {
-    let id = core::get_type_id(reader.read_var_u64()?)?;
+) -> Option<(Object, TypeId)> {
+    let id = core::get_type_id(reader.read_var_u64()? as u16)?;
     let (core, object) = <dyn Core>::from_type_id(id)?;
     objects.push(Rc::clone(&core));
 
     loop {
-        let property_key = reader.read_var_u64()?;
+        let property_key = reader.read_var_u64()? as u16;
         if property_key == 0 {
             break;
         }
@@ -63,15 +67,7 @@ fn read_runtime_object(
         }
     }
 
-    Some(object)
-}
-
-fn read_as<T: Core>(
-    reader: &mut BinaryReader<'_>,
-    header: &RuntimeHeader,
-    objects: &mut Vec<Rc<dyn Core>>,
-) -> Option<Object<T>> {
-    read_runtime_object(reader, header, objects)?.try_cast()
+    Some((object, id))
 }
 
 #[derive(Debug)]
@@ -85,7 +81,7 @@ impl File {
     pub fn import(reader: &mut BinaryReader<'_>) -> Result<Self, ImportError> {
         let header = RuntimeHeader::read(reader).ok_or(ImportError::Malformed)?;
 
-        if header.major_version() > MAJOR_VERSION {
+        if header.major_version() != MAJOR_VERSION {
             return Err(ImportError::UnsupportedVersion);
         }
 
@@ -94,77 +90,48 @@ impl File {
 
     fn read(reader: &mut BinaryReader<'_>, header: &RuntimeHeader) -> Option<Self> {
         let mut objects = Vec::new();
-        let backboard = read_as::<Backboard>(reader, &header, &mut objects)?;
+        let mut import_stack = ImportStack::default();
+        let mut backboard_option = None;
         let mut artboards = Vec::new();
 
-        for _ in 0..reader.read_var_u64()? {
-            let num_objects = reader.read_var_u64()?;
-            if num_objects == 0 {
-                return None;
-            }
+        while !reader.reached_end() {
+            let (object, id) = read_runtime_object(reader, header, &mut objects)?;
 
-            let artboard_object = read_as::<Artboard>(reader, header, &mut objects)?;
-            let artboard = artboard_object.as_ref();
-            artboard.push_object(artboard_object.clone().into());
-            artboards.push(artboard_object.clone());
-
-            for _ in 1..num_objects {
-                // todo!("don't return here");
-                artboard.push_object(read_runtime_object(reader, header, &mut objects)?);
-            }
-
-            for _ in 0..reader.read_var_u64()? {
-                if let Some(animation) = read_as::<Animation>(reader, header, &mut objects) {
-                    artboard.push_animation(animation.clone());
-
-                    if let Some(linear_animation) = animation.try_cast::<LinearAnimation>() {
-                        for _ in 0..reader.read_var_u64()? {
-                            if let Some(keyed_object) =
-                                read_as::<KeyedObject>(reader, header, &mut objects)
-                            {
-                                let linear_animation = linear_animation.as_ref();
-                                linear_animation.push_keyed_object(keyed_object.clone());
-
-                                for _ in 0..reader.read_var_u64()? {
-                                    if let Some(keyed_property) =
-                                        read_as::<KeyedProperty>(reader, header, &mut objects)
-                                    {
-                                        keyed_object
-                                            .as_ref()
-                                            .push_keyed_property(keyed_property.clone());
-
-                                        for _ in 0..reader.read_var_u64()? {
-                                            if let Some(key_frame) =
-                                                read_as::<KeyFrame>(reader, header, &mut objects)
-                                            {
-                                                key_frame
-                                                    .as_ref()
-                                                    .compute_seconds(linear_animation.fps());
-                                                keyed_property.as_ref().push_key_frame(key_frame);
-                                            } else {
-                                                continue;
-                                            }
-                                        }
-                                    } else {
-                                        continue;
-                                    }
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                    }
+            let stack_object: Option<Box<dyn ImportStackObject>> =
+                if let Some(artboard) = object.try_cast::<Artboard>() {
+                    Some(Box::new(ArtboardImporter::new(artboard)))
+                } else if let Some(animation) = object.try_cast::<LinearAnimation>() {
+                    Some(Box::new(LinearAnimationImporter::new(animation)))
+                } else if let Some(keyed_object) = object.try_cast::<KeyedObject>() {
+                    Some(Box::new(KeyedObjectImporter::new(keyed_object)))
+                } else if let Some(keyed_property) = object.try_cast::<KeyedProperty>() {
+                    let importer = import_stack
+                        .latest::<LinearAnimationImporter>(TypeId::of::<LinearAnimation>())?;
+                    Some(Box::new(KeyedPropertyImporter::new(importer.animation(), keyed_property)))
                 } else {
-                    continue;
-                }
+                    None
+                };
+
+            if import_stack.make_latest(id, stack_object) != StatusCode::Ok {
+                return None;
             }
 
-            if artboard.initialize() != StatusCode::Ok {
-                return None;
+            if object.as_ref().import(object.clone(), &import_stack) == StatusCode::Ok {
+                if let Some(backboard) = object.try_cast::<Backboard>() {
+                    backboard_option = Some(backboard);
+                }
+
+                if let Some(artboard) = object.try_cast::<Artboard>() {
+                    artboards.push(artboard);
+                }
             }
         }
 
-        Some(Self { backboard, artboards, objects })
+        if import_stack.resolve() != StatusCode::Ok {
+            return None;
+        }
+
+        Some(Self { backboard: backboard_option?, artboards, objects })
     }
 
     pub fn backboard(&self) -> Object<Backboard> {

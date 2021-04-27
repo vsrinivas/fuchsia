@@ -4,7 +4,7 @@
 
 use crate::{
     component_dirt::ComponentDirt,
-    core::{Core, CoreContext, Object, ObjectRef, OnAdded},
+    core::{Core, CoreContext, Object, ObjectRef, OnAdded, Property},
     dyn_vec::DynVec,
     math::{self, Mat},
     node::Node,
@@ -20,9 +20,20 @@ use crate::{
 #[derive(Debug, Default)]
 pub struct Path {
     node: Node,
+    path_flags: Property<u64>,
     shape: OptionCell<Object<Shape>>,
     pub(crate) vertices: DynVec<Object<PathVertex>>,
     command_path: OptionCell<CommandPath>,
+}
+
+impl ObjectRef<'_, Path> {
+    pub fn path_flags(&self) -> u64 {
+        self.path_flags.get()
+    }
+
+    pub fn set_path_flags(&self, path_flags: u64) {
+        self.path_flags.set(path_flags);
+    }
 }
 
 impl ObjectRef<'_, Path> {
@@ -251,11 +262,11 @@ impl ObjectRef<'_, Path> {
 impl Core for Path {
     parent_types![(node, Node)];
 
-    properties!(node);
+    properties![(128, path_flags, set_path_flags), node];
 }
 
 impl OnAdded for ObjectRef<'_, Path> {
-    on_added!([on_added_dirty], Node);
+    on_added!([on_added_dirty, import], Node);
 
     fn on_added_clean(&self, context: &dyn CoreContext) -> StatusCode {
         let code = self.cast::<Node>().on_added_clean(context);
