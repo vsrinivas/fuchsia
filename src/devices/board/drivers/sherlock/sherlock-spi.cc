@@ -49,8 +49,12 @@ static const spi_channel_t spi_channels[] = {
     },
 };
 
-static const amlspi_cs_map_t spi_cs_map = {
-    .bus_id = SHERLOCK_SPICC0, .cs_count = 1, .cs = {0}  // index into fragments list
+static const amlspi_config_t spi_config = {
+    .capacity = 0,
+    .period = 0,
+    .bus_id = SHERLOCK_SPICC0,
+    .cs_count = 1,
+    .cs = {0},  // index into fragments list
 };
 
 static const pbus_metadata_t spi_metadata[] = {
@@ -60,9 +64,9 @@ static const pbus_metadata_t spi_metadata[] = {
         .data_size = sizeof spi_channels,
     },
     {
-        .type = DEVICE_METADATA_AMLSPI_CS_MAPPING,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&spi_cs_map),
-        .data_size = sizeof spi_cs_map,
+        .type = DEVICE_METADATA_AMLSPI_CONFIG,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&spi_config),
+        .data_size = sizeof spi_config,
     },
 };
 

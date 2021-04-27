@@ -7,6 +7,7 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
+#include <lib/zx/time.h>
 
 #include <ddk/metadata/spi.h>
 #include <fbl/algorithm.h>
@@ -50,8 +51,12 @@ static const spi_channel_t spi_channels[] = {
     },
 };
 
-static const amlspi_cs_map_t spi_cs_map = {
-    .bus_id = NELSON_SPICC1, .cs_count = 1, .cs = {0}  // index into fragments list
+static const amlspi_config_t spi_config = {
+    .capacity = zx::usec(10'000).to_nsecs(),
+    .period = zx::usec(33'333).to_nsecs(),
+    .bus_id = NELSON_SPICC1,
+    .cs_count = 1,
+    .cs = {0},  // index into fragments list
 };
 
 static const pbus_metadata_t spi_metadata[] = {
@@ -61,9 +66,9 @@ static const pbus_metadata_t spi_metadata[] = {
         .data_size = sizeof spi_channels,
     },
     {
-        .type = DEVICE_METADATA_AMLSPI_CS_MAPPING,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&spi_cs_map),
-        .data_size = sizeof spi_cs_map,
+        .type = DEVICE_METADATA_AMLSPI_CONFIG,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&spi_config),
+        .data_size = sizeof spi_config,
     },
 };
 

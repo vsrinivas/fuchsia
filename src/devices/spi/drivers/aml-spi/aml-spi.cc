@@ -13,8 +13,11 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/zx/profile.h>
+#include <lib/zx/thread.h>
 #include <string.h>
 #include <threads.h>
+#include <zircon/threads.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -195,6 +198,21 @@ void AmlSpi::Exchange64(const uint8_t* txdata, uint8_t* out_rxdata, size_t size)
   Exchange8(txdata, out_rxdata, size);
 }
 
+void AmlSpi::SetThreadProfile() {
+  if (thread_profile_.is_valid()) {
+    // Set profile for bus transaction thread.
+    // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
+    // coding parameters.
+
+    zx::unowned_thread thread{thrd_get_zx_handle(thrd_current())};
+    zx_status_t status = thread->set_profile(thread_profile_, 0);
+    if (status != ZX_OK) {
+      zxlogf(WARNING, "Failed to apply deadline profile: %s", zx_status_get_string(status));
+    }
+    thread_profile_.reset();
+  }
+}
+
 zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t txdata_size,
                                     uint8_t* out_rxdata, size_t rxdata_size,
                                     size_t* out_rxdata_actual) {
@@ -205,6 +223,8 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
   if (txdata_size && rxdata_size && (txdata_size != rxdata_size)) {
     return ZX_ERR_INVALID_ARGS;
   }
+
+  SetThreadProfile();
 
   const size_t exchange_size = txdata_size ? txdata_size : rxdata_size;
 
@@ -349,7 +369,7 @@ zx_status_t AmlSpi::SpiImplExchangeVmo(uint32_t chip_select, uint32_t tx_vmo_id,
   return SpiImplExchange(chip_select, tx_buffer->data(), size, rx_buffer->data(), size, nullptr);
 }
 
-fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlspi_cs_map_t* map, zx_device_t* device) {
+fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlspi_config_t* map, zx_device_t* device) {
   fbl::Array<ChipInfo> chips(new ChipInfo[map->cs_count], map->cs_count);
   if (!chips) {
     return chips;
@@ -384,11 +404,11 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
   }
 
   size_t actual;
-  amlspi_cs_map_t gpio_map = {};
-  status = device_get_metadata(device, DEVICE_METADATA_AMLSPI_CS_MAPPING, &gpio_map,
-                               sizeof gpio_map, &actual);
-  if ((status != ZX_OK) || (actual != sizeof gpio_map)) {
-    zxlogf(ERROR, "Failed to read GPIO/chip select map");
+  amlspi_config_t config = {};
+  status =
+      device_get_metadata(device, DEVICE_METADATA_AMLSPI_CONFIG, &config, sizeof config, &actual);
+  if ((status != ZX_OK) || (actual != sizeof config)) {
+    zxlogf(ERROR, "Failed to read config metadata");
     return status;
   }
 
@@ -414,7 +434,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     reset_fidl_client.emplace(std::move(reset_client));
   }
 
-  fbl::Array<ChipInfo> chips = InitChips(&gpio_map, device);
+  fbl::Array<ChipInfo> chips = InitChips(&config, device);
   if (!chips) {
     return ZX_ERR_NO_RESOURCES;
   }
@@ -422,28 +442,39 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     return ZX_OK;
   }
 
+  zx::profile thread_profile;
+  if (config.capacity && config.period) {
+    status = device_get_deadline_profile(device, config.capacity, config.period, config.period,
+                                         "aml-spi-thread-profile",
+                                         thread_profile.reset_and_get_address());
+    if (status != ZX_OK) {
+      zxlogf(WARNING, "Failed to get deadline profile: %s", zx_status_get_string(status));
+    }
+  }
+
   const uint32_t reset_mask =
-      gpio_map.bus_id == 0 ? kSpi0ResetMask : (gpio_map.bus_id == 1 ? kSpi1ResetMask : 0);
+      config.bus_id == 0 ? kSpi0ResetMask : (config.bus_id == 1 ? kSpi1ResetMask : 0);
 
   fbl::AllocChecker ac;
-  std::unique_ptr<AmlSpi> spi(new (&ac) AmlSpi(
-      device, *std::move(mmio), std::move(reset_fidl_client), reset_mask, std::move(chips)));
+  std::unique_ptr<AmlSpi> spi(new (&ac)
+                                  AmlSpi(device, *std::move(mmio), std::move(reset_fidl_client),
+                                         reset_mask, std::move(chips), std::move(thread_profile)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
   char devname[32];
-  sprintf(devname, "aml-spi-%u", gpio_map.bus_id);
+  sprintf(devname, "aml-spi-%u", config.bus_id);
 
   status = spi->DdkAdd(devname);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "DdkAdd failed for SPI%u: %d", gpio_map.bus_id, status);
+    zxlogf(ERROR, "DdkAdd failed for SPI%u: %d", config.bus_id, status);
     return status;
   }
 
-  status = spi->DdkAddMetadata(DEVICE_METADATA_PRIVATE, &gpio_map.bus_id, sizeof gpio_map.bus_id);
+  status = spi->DdkAddMetadata(DEVICE_METADATA_PRIVATE, &config.bus_id, sizeof config.bus_id);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "DdkAddMetadata failed for SPI%u: %d", gpio_map.bus_id, status);
+    zxlogf(ERROR, "DdkAddMetadata failed for SPI%u: %d", config.bus_id, status);
     return status;
   }
 

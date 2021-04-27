@@ -58,7 +58,7 @@ class FakeDdkSpi : public fake_ddk::Bind {
 
     SetFragments(std::move(fragments));
 
-    SetMetadata(DEVICE_METADATA_AMLSPI_CS_MAPPING, kGpioMap, sizeof(kGpioMap));
+    SetMetadata(DEVICE_METADATA_AMLSPI_CONFIG, kSpiConfig, sizeof(kSpiConfig));
 
     ASSERT_OK(
         mmio_mapper_.CreateAndMap(0x100, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &mmio_));
@@ -102,7 +102,7 @@ class FakeDdkSpi : public fake_ddk::Bind {
         .unbind_op = args->ops->unbind,
     });
 
-    if (children_.size() == countof(kGpioMap)) {
+    if (children_.size() == countof(kSpiConfig)) {
       add_called_ = true;
     }
 
@@ -164,7 +164,7 @@ class FakeDdkSpi : public fake_ddk::Bind {
   }
 
  private:
-  static constexpr amlspi_cs_map_t kGpioMap[] = {
+  static constexpr amlspi_config_t kSpiConfig[] = {
       {.bus_id = 0, .cs_count = 2, .cs = {5, 3}},
   };
 
