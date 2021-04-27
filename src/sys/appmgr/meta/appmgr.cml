@@ -75,6 +75,7 @@
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
+                "fuchsia.virtualization.Manager",
             ],
         },
 
@@ -492,6 +493,7 @@
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
+                "fuchsia.virtualization.Manager",
             ],
             from: "self",
         },

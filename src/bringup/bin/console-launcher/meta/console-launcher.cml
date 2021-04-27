@@ -121,6 +121,7 @@
                 "fuchsia.tracing.kernel.Controller",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.virtualconsole.SessionManager",
+                "fuchsia.virtualization.Manager",
             ],
         },
     ],

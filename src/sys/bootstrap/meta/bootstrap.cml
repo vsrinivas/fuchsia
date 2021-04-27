@@ -159,6 +159,14 @@
         },
         {
             protocol: [
+                // Allow launching / managing guests from the console.
+                "fuchsia.virtualization.Manager",
+            ],
+            from: "parent",
+            to: [ "#console-launcher" ],
+        },
+        {
+            protocol: [
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",
                 "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",

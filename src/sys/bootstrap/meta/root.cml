@@ -196,6 +196,7 @@
                 "fuchsia.sys.Loader",
                 "fuchsia.tracing.controller.Controller",
                 "fuchsia.tracing.provider.Registry",
+                "fuchsia.virtualization.Manager",
             ],
             from: "#core",
             to: "#bootstrap",
