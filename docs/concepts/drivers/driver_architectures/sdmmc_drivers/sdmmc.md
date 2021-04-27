@@ -23,7 +23,7 @@ validated. See the SDHCI and SDMMC protocol definitions for more information.
 
 The SD/eMMC block driver creates a device that implements
 [fuchsia.hardware.block.BlockImpl](/sdk/banjo/fuchsia.hardware.block/block.fidl) and
-[fuchsia.hardware.block.partition](/sdk/banjo/fuchsia.hardware.block.partition/partition.banjo)
+[fuchsia.hardware.block.partition](/sdk/banjo/fuchsia.hardware.block.partition/partition.fidl)
 for the user data partition, as well as devices for the boot0 and boot1
 partitions if enabled (eMMC only). A device implementing
 [fuchsia.hardware.rpmb](/sdk/banjo/fuchsia.hardware.rpmb/rpmb.fidl) is created if the

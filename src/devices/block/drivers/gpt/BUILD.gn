@@ -33,7 +33,7 @@ driver_module("gpt") {
   deps = [
     ":gpt_bind",
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.block.partition",
+    "//sdk/banjo/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_banjo_cpp",
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
@@ -55,7 +55,7 @@ test("gpt-device-test-bin") {
   deps = [
     ":gpt_bind",
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.block.partition",
+    "//sdk/banjo/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_banjo_cpp",
     "//sdk/lib/fit",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",

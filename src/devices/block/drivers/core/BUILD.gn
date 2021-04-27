@@ -77,7 +77,7 @@ source_set("shared") {
   deps = [
     ":block-core-bind",
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.block.partition",
+    "//sdk/banjo/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.block.volume",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
