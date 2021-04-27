@@ -24,7 +24,7 @@ test("scsilib-disk-test-bin") {
   configs += [ "//build/config:all_source" ]
   sources = [ "scsilib-disk-test.cc" ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//src/devices/block/lib/scsi",

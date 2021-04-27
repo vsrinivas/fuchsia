@@ -4,5 +4,6 @@
 
 source_set("block") {
   sources = [ "block.h" ]
-  deps = [ "//sdk/banjo/fuchsia.hardware.block" ]
+  deps =
+      [ "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp" ]
 }

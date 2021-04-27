@@ -40,7 +40,7 @@ test("core-unittest-bin") {
   ]
   deps = [
     ":shared",
-    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/lib/fdio",
     "//src/devices/testing/no_ddk",
     "//zircon/public/lib/sync",
@@ -76,7 +76,7 @@ source_set("shared") {
   ]
   deps = [
     ":block-core-bind",
-    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.block.partition",
     "//sdk/banjo/fuchsia.hardware.block.volume",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",

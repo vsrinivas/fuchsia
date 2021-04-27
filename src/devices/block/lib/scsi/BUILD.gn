@@ -17,7 +17,7 @@ zx_library("scsi") {
   ]
   sources = [ "scsilib.cc" ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",

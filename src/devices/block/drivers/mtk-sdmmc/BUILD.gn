@@ -23,7 +23,7 @@ driver_module("mtk-sdmmc") {
   sources = [ "mtk-sdmmc.cc" ]
   deps = [
     ":mtk-sdmmc-bind",
-    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
@@ -55,7 +55,7 @@ test("mtk-sdmmc-test-bin") {
   ]
   deps = [
     ":mtk-sdmmc-bind",
-    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",

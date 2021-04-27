@@ -37,14 +37,14 @@ struct BlockInfo {
 };
 
 struct BlockStats {
-  /// Total number of block ops processed
-  uint64 total_ops;
-  /// Total number of blocks processed
-  uint64 total_blocks;
-  uint64 total_reads;
-  uint64 total_blocks_read;
-  uint64 total_writes;
-  uint64 total_blocks_written;
+    /// Total number of block ops processed
+    uint64 total_ops;
+    /// Total number of blocks processed
+    uint64 total_blocks;
+    uint64 total_reads;
+    uint64 total_blocks_read;
+    uint64 total_writes;
+    uint64 total_blocks_written;
 };
 
 alias Vmoid = uint16;

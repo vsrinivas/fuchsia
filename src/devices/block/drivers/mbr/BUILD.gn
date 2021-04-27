@@ -37,7 +37,7 @@ driver_module("mbr") {
   ]
   deps = [
     ":mbr_bind",
-    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.block.partition",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
@@ -62,7 +62,7 @@ test("mbr-test-bin") {
   ]
   deps = [
     ":mbr_bind",
-    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.block.partition",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",

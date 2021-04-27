@@ -98,7 +98,8 @@ test("block-verifier-test") {
 
 source_set("config") {
   sources = [ "config.cc" ]
-  public_deps = [ "//sdk/banjo/fuchsia.hardware.block" ]
+  public_deps =
+      [ "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//src/lib/ddk",
@@ -152,7 +153,7 @@ driver_module("block-verity") {
     ":config",
     ":geometry",
     ":sealer",
-    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

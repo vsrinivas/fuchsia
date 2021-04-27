@@ -25,7 +25,7 @@ static_library("zxcrypt-dev") {
   # To minimize the set of libraries that we depend on that need to be loaded
   # from /boot/lib in early boot, we statically link most of our dependencies.
   deps = [
-    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.block.volume",
     "//src/lib/ddk",
     "//third_party/boringssl",

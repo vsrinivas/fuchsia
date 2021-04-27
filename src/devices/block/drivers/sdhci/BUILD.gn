@@ -23,7 +23,7 @@ driver_module("sdhci") {
   sources = [ "sdhci.cc" ]
   deps = [
     ":sdhci-bind",
-    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sdhci:fuchsia.hardware.sdhci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sdmmc",
     "//src/devices/block/lib/sdmmc",
@@ -48,7 +48,7 @@ test("sdhci-test-bin") {
   ]
   deps = [
     ":sdhci-bind",
-    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sdhci:fuchsia.hardware.sdhci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sdhci:fuchsia.hardware.sdhci_banjo_cpp_mock",
     "//sdk/banjo/fuchsia.hardware.sdmmc",

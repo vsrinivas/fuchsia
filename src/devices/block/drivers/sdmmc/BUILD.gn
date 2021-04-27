@@ -31,7 +31,7 @@ driver_module("sdmmc") {
   ]
   deps = [
     ":sdmmc-bind",
-    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.block.partition",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.rpmb:fuchsia.hardware.rpmb_banjo_cpp",
@@ -81,7 +81,7 @@ test("sdmmc-test-bin") {
   ]
   deps = [
     ":sdmmc-bind",
-    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.block.partition",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.rpmb:fuchsia.hardware.rpmb_banjo_cpp",
