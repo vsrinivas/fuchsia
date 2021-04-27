@@ -19,7 +19,7 @@ namespace component {
 
 class Appmgr;
 
-class LifecycleServer final : public fidl::WireInterface<fuchsia_process_lifecycle::Lifecycle> {
+class LifecycleServer final : public fidl::WireServer<fuchsia_process_lifecycle::Lifecycle> {
  public:
   LifecycleServer(Appmgr* appmgr, fit::function<void(zx_status_t)> stop_callback)
       : appmgr_(appmgr) {
@@ -31,7 +31,7 @@ class LifecycleServer final : public fidl::WireInterface<fuchsia_process_lifecyc
 
   static zx_status_t Create(async_dispatcher_t* dispatcher, Appmgr* appmgr, zx::channel channel);
 
-  void Stop(StopCompleter::Sync& completer) override;
+  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
 
  private:
   Appmgr* appmgr_;
