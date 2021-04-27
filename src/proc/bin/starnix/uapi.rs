@@ -26,8 +26,6 @@ pub type off_t = uapi::__kernel_off_t;
 pub type pid_t = uapi::__kernel_pid_t;
 pub type uid_t = uapi::__kernel_uid_t;
 
-pub const PAGE_SIZE: u64 = 4 * 1024;
-
 #[derive(Debug, Eq, PartialEq)]
 pub struct Errno(u32);
 

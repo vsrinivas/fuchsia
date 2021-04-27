@@ -3,9 +3,14 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon::{self as zx, HandleBased, Status};
+use lazy_static::lazy_static;
 use parking_lot::RwLock;
 
 use crate::uapi::*;
+
+lazy_static! {
+    pub static ref PAGE_SIZE: u64 = zx::system_get_page_size() as u64;
+}
 
 pub struct ProgramBreak {
     vmar: zx::Vmar,
@@ -16,7 +21,7 @@ pub struct ProgramBreak {
 
     // The current program break.
     //
-    // The addresses from [base, current.round_up(PAGE_SIZE)) are mapped into the
+    // The addresses from [base, current.round_up(*PAGE_SIZE)) are mapped into the
     // client address space from the underlying |vmo|.
     current: UserAddress,
 }
@@ -76,9 +81,9 @@ impl MemoryManager {
         if addr < program_break.current {
             // The client wishes to free up memory. Adjust the program break to the new
             // location.
-            let aligned_previous = program_break.current.round_up(PAGE_SIZE);
+            let aligned_previous = program_break.current.round_up(*PAGE_SIZE);
             program_break.current = addr;
-            let aligned_current = program_break.current.round_up(PAGE_SIZE);
+            let aligned_current = program_break.current.round_up(*PAGE_SIZE);
 
             let len = aligned_current - aligned_previous;
             if len > 0 {
@@ -92,9 +97,9 @@ impl MemoryManager {
         }
 
         // Otherwise, we've been asked to increase the page break.
-        let aligned_previous = program_break.current.round_up(PAGE_SIZE);
+        let aligned_previous = program_break.current.round_up(*PAGE_SIZE);
         program_break.current = addr;
-        let aligned_current = program_break.current.round_up(PAGE_SIZE);
+        let aligned_current = program_break.current.round_up(*PAGE_SIZE);
 
         let len = aligned_current - aligned_previous;
         if len > 0 {

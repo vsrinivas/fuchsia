@@ -5,19 +5,15 @@
 use anyhow::{Context, Error};
 use fidl_fuchsia_io as fio;
 use fuchsia_zircon::{self as zx, AsHandleRef, Status};
-use lazy_static::lazy_static;
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
 use std::sync::Arc;
 
 use crate::auth::*;
 use crate::fs::{FileSystem, SyslogFile};
+use crate::mm::PAGE_SIZE;
 use crate::task::*;
 use crate::uapi::*;
-
-lazy_static! {
-    static ref PAGE_SIZE: u64 = zx::system_get_page_size() as u64;
-}
 
 pub struct ProcessParameters {
     pub name: CString,

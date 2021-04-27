@@ -18,6 +18,7 @@ use zerocopy::AsBytes;
 
 use crate::block_on;
 use crate::fs::*;
+use crate::mm::*;
 use crate::task::*;
 use crate::uapi::*;
 
@@ -100,7 +101,7 @@ pub fn sys_mmap(
     if length == 0 {
         return Err(EINVAL);
     }
-    if offset as u64 % PAGE_SIZE != 0 {
+    if offset as u64 % *PAGE_SIZE != 0 {
         return Err(EINVAL);
     }
 
