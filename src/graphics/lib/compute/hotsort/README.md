@@ -14,8 +14,8 @@ HotSort's advantages include:
 * A concurrency-friendly dense kernel grid
 * Support for GPU post-processing of sorted results
 
-HotSort is typically significantly faster than other GPU-accelerated
-implementations when sorting arrays of smaller than 500K-2M keys.
+Although HotSort is a comparison sort, it's typically significantly faster than
+other GPU-accelerated algorithms when sorting arrays smaller than ~500K keyvals.
 
 ## Benchmarks
 
@@ -48,13 +48,12 @@ multi-millisecond execution times on small GPUs:
 # Usage
 
 HotSort provides a build-time tool (named `hotsort_gen`) to generate
-highly-optimized sets of compiled compute kernels, based on
-[bitonic sorting networks], that target a specific GPU architecture.
-These binary code modules are packed with configuration data
-into what is called a _hotsort target_ file.
+highly-optimized sets of compiled compute kernels that target a specific GPU
+architecture.  These binary code modules are packed with configuration data into
+what is called a _HotSort target_ file.
 
-Additionally, HotSort provides a small runtime library to load said target
-files into your application, and invoke them to perform high-speed sorting.
+HotSort also provides a small runtime library to load a target into your
+application.
 
 A simple benchmarking example for HotSort can be found here:
 [```hotsort_vk_bench```](platforms/vk/tests/hotsort_vk_bench/main.c).
@@ -73,30 +72,25 @@ AMD    | GCN                                       | ✔                 | ✔  
 Intel  | GEN8+                                     | ✔                 | ✔                 | ❌          | Good but the assumed *best-shaped* kernels aren't being used due to a compiler issue
 Intel  | APL/GLK using a 2x9 or 1x12 thread pool   | ❌                  | ❌                 | ❌          | Need to generate properly shaped kernels
 
-### hotsort target generation
+### HotSort target generation
 
-One can generate a HotSort target using the
-[`hotsort_target GN template`](platforms/vk/targets/hotsort_target.gni)
-as a convenient way to invoke `hotsort_gen` with the selected parameters and
-configuration files. See the
-[`hotsort_vk_bench BUILD.gn`](platforms/vk/tests/hotsort_vk_bench/BUILD.gn)
-for a concrete example.
+A HotSort target can be generated using the [`hotsort_target GN
+template`](platforms/vk/targets/hotsort_target.gni).
 
-By default, the hotsort target's binary data will be available as C source
+See the [`hotsort_vk_bench
+BUILD.gn`](platforms/vk/tests/hotsort_vk_bench/BUILD.gn) for a concrete example.
+
+By default, the HotSort target's binary data will be available as C source
 file defining an array of `uint32_t` literals, and a corresponding header
 declaring the array by name.
 
-This header file is always named `hs_target.h`, and located into a sub-directory
-matching the `hotsort_target()` GN build target name.
-
-
-### hotsort target usage
+### HotSort target usage
 
 Include the generated `hs_target.h` file into your source code to access the
-hotsort target's data compiled as an uint32_t array.
+HotSort target's data compiled as an uint32_t array.
 
 Include [`hotsort_vk.h`](platforms/vk/hotsort_vk.h) into your source code to
-access the hotsort Vulkan-based APIs to load the hotsort target data and run it.
+access the HotSort Vulkan-based APIs to load the HotSort target data and run it.
 See comments in this header file for more details about the API.
 
 For example, to sort `count` keys on Vulkan:
@@ -115,26 +109,21 @@ struct hotsort_vk * hs = hotsort_vk_create(...,
                                            &hs_intel_gen8_u32);
 
 ...
-// bind pipeline-compatible descriptor sets
-...
+  // bind pipeline-compatible descriptor sets
+  ...
 
-// see how much padding may be required
-hotsort_vk_pad(hs,count,&count_padded_in,&count_padded_out);
+  // see how much padding may be required
+  hotsort_vk_pad(hs, count, &count_padded_in, &count_padded_out);
 
 // append compute shaders to command buffer
-hotsort_vk_sort(cb,
-                hs,
-                <array offsets>,
-                count,
-                padded_in,
-                padded_out);
+hotsort_vk_sort(cb, hs, <array offsets>, count, padded_in, padded_out);
 
 // command buffer end and queue submit
 
 ...
 
-// release the HotSort instance
-hotsort_vk_release(hs,...);
+  // release the HotSort instance
+  hotsort_vk_release(hs, ...);
 
 ```
 
@@ -143,13 +132,12 @@ hotsort_vk_release(hs,...);
 The HotSort sorting algorithm was created in 2012 and generalized in
 2015 to support GPUs that benefit from non-power-of-two workgroups.
 
-The objective of HotSort is to achieve high throughput as *early* as
-possible on small GPUs when sorting modestly-sized arrays ― 1,000s to
-100s of thousands of 64‑bit keys.
+The primary use case of HotSort is to achieve high throughput as *early* as
+possible on small GPUs when sorting arrays containing 1000's to 100's of
+thousands of integer keys.
 
-HotSort uses both well-known and obscure properties of bitonic
-sequences to create a novel mapping of keys onto data-parallel devices
-like GPUs.
+HotSort uses unique properties of bitonic sequences to create a novel mapping of
+keys onto data-parallel devices like GPUs.
 
 ## Overview
 
