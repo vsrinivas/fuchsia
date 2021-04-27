@@ -26,9 +26,16 @@ pub struct ConfigValue(pub(crate) Option<Value>);
 pub trait ValueStrategy {
     fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
         next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a>;
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        flatten(next)
+    }
 
-    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError>;
+    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
+        match query.select {
+            SelectMode::First => Ok(()),
+            SelectMode::All => Err(anyhow!(ADDITIVE_RETURN_ERR).into()),
+        }
+    }
 }
 
 impl From<ConfigValue> for Option<Value> {
@@ -44,12 +51,6 @@ impl From<Option<Value>> for ConfigValue {
 }
 
 impl ValueStrategy for Value {
-    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-
     fn validate_query(_query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
         Ok(())
     }
@@ -64,31 +65,12 @@ impl TryFrom<ConfigValue> for Value {
 }
 
 impl ValueStrategy for Option<Value> {
-    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-
     fn validate_query(_query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
         Ok(())
     }
 }
 
-impl ValueStrategy for String {
-    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-
-    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
-        match query.select {
-            SelectMode::First => Ok(()),
-            SelectMode::All => Err(anyhow!(ADDITIVE_RETURN_ERR).into()),
-        }
-    }
-}
+impl ValueStrategy for String {}
 
 impl TryFrom<ConfigValue> for String {
     type Error = ConfigError;
@@ -101,20 +83,7 @@ impl TryFrom<ConfigValue> for String {
     }
 }
 
-impl ValueStrategy for Option<String> {
-    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-
-    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
-        match query.select {
-            SelectMode::First => Ok(()),
-            SelectMode::All => Err(anyhow!(ADDITIVE_RETURN_ERR).into()),
-        }
-    }
-}
+impl ValueStrategy for Option<String> {}
 
 impl TryFrom<ConfigValue> for Option<String> {
     type Error = ConfigError;
@@ -124,20 +93,7 @@ impl TryFrom<ConfigValue> for Option<String> {
     }
 }
 
-impl ValueStrategy for usize {
-    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-
-    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
-        match query.select {
-            SelectMode::First => Ok(()),
-            SelectMode::All => Err(anyhow!(ADDITIVE_RETURN_ERR).into()),
-        }
-    }
-}
+impl ValueStrategy for usize {}
 
 impl TryFrom<ConfigValue> for usize {
     type Error = ConfigError;
@@ -158,20 +114,7 @@ impl TryFrom<ConfigValue> for usize {
     }
 }
 
-impl ValueStrategy for u64 {
-    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-
-    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
-        match query.select {
-            SelectMode::First => Ok(()),
-            SelectMode::All => Err(anyhow!(ADDITIVE_RETURN_ERR).into()),
-        }
-    }
-}
+impl ValueStrategy for u64 {}
 
 impl TryFrom<ConfigValue> for u64 {
     type Error = ConfigError;
@@ -186,20 +129,7 @@ impl TryFrom<ConfigValue> for u64 {
     }
 }
 
-impl ValueStrategy for i64 {
-    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-
-    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
-        match query.select {
-            SelectMode::First => Ok(()),
-            SelectMode::All => Err(anyhow!(ADDITIVE_RETURN_ERR).into()),
-        }
-    }
-}
+impl ValueStrategy for i64 {}
 
 impl TryFrom<ConfigValue> for i64 {
     type Error = ConfigError;
@@ -214,20 +144,7 @@ impl TryFrom<ConfigValue> for i64 {
     }
 }
 
-impl ValueStrategy for bool {
-    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-
-    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
-        match query.select {
-            SelectMode::First => Ok(()),
-            SelectMode::All => Err(anyhow!(ADDITIVE_RETURN_ERR).into()),
-        }
-    }
-}
+impl ValueStrategy for bool {}
 
 impl TryFrom<ConfigValue> for bool {
     type Error = ConfigError;
@@ -242,20 +159,7 @@ impl TryFrom<ConfigValue> for bool {
     }
 }
 
-impl ValueStrategy for PathBuf {
-    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-
-    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
-        match query.select {
-            SelectMode::First => Ok(()),
-            SelectMode::All => Err(anyhow!(ADDITIVE_RETURN_ERR).into()),
-        }
-    }
-}
+impl ValueStrategy for PathBuf {}
 
 impl TryFrom<ConfigValue> for PathBuf {
     type Error = ConfigError;
@@ -304,20 +208,7 @@ impl<T: TryFrom<ConfigValue>> TryFrom<ConfigValue> for Vec<T> {
     }
 }
 
-impl ValueStrategy for f64 {
-    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-
-    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
-        match query.select {
-            SelectMode::First => Ok(()),
-            SelectMode::All => Err(anyhow!(ADDITIVE_RETURN_ERR).into()),
-        }
-    }
-}
+impl ValueStrategy for f64 {}
 
 impl TryFrom<ConfigValue> for f64 {
     type Error = ConfigError;
@@ -332,20 +223,7 @@ impl TryFrom<ConfigValue> for f64 {
     }
 }
 
-impl ValueStrategy for Option<f64> {
-    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-
-    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
-        match query.select {
-            SelectMode::First => Ok(()),
-            SelectMode::All => Err(anyhow!(ADDITIVE_RETURN_ERR).into()),
-        }
-    }
-}
+impl ValueStrategy for Option<f64> {}
 
 impl TryFrom<ConfigValue> for Option<f64> {
     type Error = ConfigError;
