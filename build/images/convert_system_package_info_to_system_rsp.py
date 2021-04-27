@@ -50,15 +50,7 @@ def main():
         elif allowed is not None:
             system_packages.append(info)
         else:  # allowed is None
-            # As a special case, accept fuchsia_package() for proprietary Vulkan
-            # drivers. This allows delaying converting existing
-            # fuchsia_package() instances from //vendor/... targets.
-            label = info['label']
-            if label.startswith('//vendor') and ':libvulkan_' in label:
-                info['driver_package_alloed_in_extra_deps'] = True
-                extra_system_packages.append(info)
-            else:
-                regular_packages.append(info)
+            regular_packages.append(info)
 
     # Filter the packages list if needed, and print a human-friendly error
     # message that explains how to fix the issues, if some exist.
