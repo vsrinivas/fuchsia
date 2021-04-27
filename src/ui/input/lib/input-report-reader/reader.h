@@ -109,7 +109,7 @@ class InputReportReaderManager {
 //  This class shouldn't be touched directly. An InputReport driver should only manipulate
 //  the InputReportReaderManager.
 template <class Report>
-class InputReportReader : public fidl::WireInterface<fuchsia_input_report::InputReportsReader> {
+class InputReportReader : public fidl::WireServer<fuchsia_input_report::InputReportsReader> {
  public:
   // Create the InputReportReader. `manager` and `dispatcher` must outlive this InputReportReader.
   static std::unique_ptr<InputReportReader<Report>> Create(
@@ -122,7 +122,8 @@ class InputReportReader : public fidl::WireInterface<fuchsia_input_report::Input
 
   void ReceiveReport(const Report& report) TA_EXCL(&report_lock_);
 
-  void ReadInputReports(ReadInputReportsCompleter::Sync& completer) TA_EXCL(&report_lock_) override;
+  void ReadInputReports(ReadInputReportsRequestView request,
+                        ReadInputReportsCompleter::Sync& completer) TA_EXCL(&report_lock_) override;
 
  private:
   static constexpr size_t kInputReportBufferSize = 4096 * 4;
@@ -171,7 +172,8 @@ void InputReportReader<Report>::ReceiveReport(const Report& report) {
 }
 
 template <class Report>
-void InputReportReader<Report>::ReadInputReports(ReadInputReportsCompleter::Sync& completer) {
+void InputReportReader<Report>::ReadInputReports(ReadInputReportsRequestView request,
+                                                 ReadInputReportsCompleter::Sync& completer) {
   fbl::AutoLock lock(&report_lock_);
   if (completer_) {
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);

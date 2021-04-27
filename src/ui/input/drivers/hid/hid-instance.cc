@@ -80,7 +80,7 @@ zx_status_t HidInstance::ReadReportFromFifo(uint8_t* buf, size_t buf_size, zx_ti
   return ZX_OK;
 }
 
-void HidInstance::ReadReport(ReadReportCompleter::Sync& completer) {
+void HidInstance::ReadReport(ReadReportRequestView request, ReadReportCompleter::Sync& completer) {
   TRACE_DURATION("input", "HID ReadReport Instance", "bytes_in_fifo", zx_hid_fifo_size(&fifo_));
 
   if (flags_ & kHidFlagsDead) {
@@ -102,7 +102,8 @@ void HidInstance::ReadReport(ReadReportCompleter::Sync& completer) {
   completer.Reply(status, std::move(buf_view), time);
 }
 
-void HidInstance::ReadReports(ReadReportsCompleter::Sync& completer) {
+void HidInstance::ReadReports(ReadReportsRequestView request,
+                              ReadReportsCompleter::Sync& completer) {
   TRACE_DURATION("input", "HID GetReports Instance", "bytes_in_fifo", zx_hid_fifo_size(&fifo_));
 
   if (flags_ & kHidFlagsDead) {
@@ -141,7 +142,8 @@ void HidInstance::ReadReports(ReadReportsCompleter::Sync& completer) {
   completer.Reply(status, std::move(buf_view));
 }
 
-void HidInstance::GetReportsEvent(GetReportsEventCompleter::Sync& completer) {
+void HidInstance::GetReportsEvent(GetReportsEventRequestView request,
+                                  GetReportsEventCompleter::Sync& completer) {
   zx::event new_event;
   zx_status_t status = fifo_event_.duplicate(ZX_RIGHTS_BASIC, &new_event);
 
@@ -162,11 +164,13 @@ zx_status_t HidInstance::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void HidInstance::GetBootProtocol(GetBootProtocolCompleter::Sync& completer) {
+void HidInstance::GetBootProtocol(GetBootProtocolRequestView request,
+                                  GetBootProtocolCompleter::Sync& completer) {
   completer.Reply(base_->GetBootProtocol());
 }
 
-void HidInstance::GetDeviceIds(GetDeviceIdsCompleter::Sync& completer) {
+void HidInstance::GetDeviceIds(GetDeviceIdsRequestView request,
+                               GetDeviceIdsCompleter::Sync& completer) {
   hid_info_t info = base_->GetHidInfo();
   fuchsia_hardware_input::wire::DeviceIds ids = {};
   ids.vendor_id = info.vendor_id;
@@ -176,7 +180,8 @@ void HidInstance::GetDeviceIds(GetDeviceIdsCompleter::Sync& completer) {
   completer.Reply(ids);
 }
 
-void HidInstance::GetReportDesc(GetReportDescCompleter::Sync& completer) {
+void HidInstance::GetReportDesc(GetReportDescRequestView request,
+                                GetReportDescCompleter::Sync& completer) {
   size_t desc_size = base_->GetReportDescLen();
   const uint8_t* desc = base_->GetReportDesc();
 
@@ -185,8 +190,8 @@ void HidInstance::GetReportDesc(GetReportDescCompleter::Sync& completer) {
   completer.Reply(fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(desc), desc_size));
 }
 
-void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Sync& completer) {
-  size_t needed = base_->GetReportSizeById(id, type);
+void HidInstance::GetReport(GetReportRequestView request, GetReportCompleter::Sync& completer) {
+  size_t needed = base_->GetReportSizeById(request->id, request->type);
   if (needed == 0) {
     completer.Reply(ZX_ERR_NOT_FOUND, fidl::VectorView<uint8_t>(nullptr, 0));
     return;
@@ -194,30 +199,30 @@ void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Syn
 
   uint8_t report[needed];
   size_t actual = 0;
-  zx_status_t status = base_->GetHidbusProtocol()->GetReport(static_cast<uint8_t>(type), id, report,
-                                                             needed, &actual);
+  zx_status_t status = base_->GetHidbusProtocol()->GetReport(static_cast<uint8_t>(request->type),
+                                                             request->id, report, needed, &actual);
 
   auto report_view = fidl::VectorView<uint8_t>::FromExternal(report, actual);
   completer.Reply(status, std::move(report_view));
 }
 
-void HidInstance::SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report,
-                            SetReportCompleter::Sync& completer) {
-  size_t needed = base_->GetReportSizeById(id, type);
-  if (needed != report.count()) {
+void HidInstance::SetReport(SetReportRequestView request, SetReportCompleter::Sync& completer) {
+  size_t needed = base_->GetReportSizeById(request->id, request->type);
+  if (needed != request->report.count()) {
     zxlogf(ERROR, "%s: Tried to set Report %d (size 0x%lx) with 0x%lx bytes\n", base_->GetName(),
-           id, needed, report.count());
+           request->id, needed, request->report.count());
     completer.Reply(ZX_ERR_INVALID_ARGS);
     return;
   }
 
-  zx_status_t status = base_->GetHidbusProtocol()->SetReport(static_cast<uint8_t>(type), id,
-                                                             report.data(), report.count());
+  zx_status_t status =
+      base_->GetHidbusProtocol()->SetReport(static_cast<uint8_t>(request->type), request->id,
+                                            request->report.data(), request->report.count());
   completer.Reply(status);
   return;
 }
 
-void HidInstance::GetDeviceReportsReader(zx::channel reader,
+void HidInstance::GetDeviceReportsReader(GetDeviceReportsReaderRequestView request,
                                          GetDeviceReportsReaderCompleter::Sync& completer) {
   fbl::AutoLock lock(&readers_lock_);
   zx_status_t status;
@@ -230,11 +235,14 @@ void HidInstance::GetDeviceReportsReader(zx::channel reader,
     loop_started_ = true;
   }
   readers_.push_back(std::make_unique<DeviceReportsReader>(base_));
-  fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(reader), readers_.back().get());
+  fidl::BindSingleInFlightOnly(loop_.dispatcher(), request->reader.TakeChannel(),
+                               readers_.back().get());
   completer.ReplySuccess();
 }
 
-void HidInstance::SetTraceId(uint32_t id, SetTraceIdCompleter::Sync& completer) { trace_id_ = id; }
+void HidInstance::SetTraceId(SetTraceIdRequestView request, SetTraceIdCompleter::Sync& completer) {
+  trace_id_ = request->id;
+}
 
 void HidInstance::CloseInstance() {
   flags_ |= kHidFlagsDead;

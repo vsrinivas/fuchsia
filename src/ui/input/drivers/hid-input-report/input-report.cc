@@ -86,12 +86,12 @@ void InputReport::SendInitialConsumerControlReport(InputReportsReader* reader) {
   }
 }
 
-void InputReport::GetInputReportsReader(zx::channel req,
+void InputReport::GetInputReportsReader(GetInputReportsReaderRequestView request,
                                         GetInputReportsReaderCompleter::Sync& completer) {
   fbl::AutoLock lock(&readers_lock_);
 
-  auto reader =
-      InputReportsReader::Create(this, next_reader_id_++, loop_->dispatcher(), std::move(req));
+  auto reader = InputReportsReader::Create(this, next_reader_id_++, loop_->dispatcher(),
+                                           request->reader.TakeChannel());
   if (!reader) {
     return;
   }
@@ -103,7 +103,8 @@ void InputReport::GetInputReportsReader(zx::channel req,
   sync_completion_signal(&next_reader_wait_);
 }
 
-void InputReport::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
+void InputReport::GetDescriptor(GetDescriptorRequestView request,
+                                GetDescriptorCompleter::Sync& completer) {
   fidl::FidlAllocator<kFidlDescriptorBufferSize> descriptor_allocator;
   fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
 
@@ -127,13 +128,13 @@ void InputReport::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   }
 }
 
-void InputReport::SendOutputReport(fuchsia_input_report::wire::OutputReport report,
+void InputReport::SendOutputReport(SendOutputReportRequestView request,
                                    SendOutputReportCompleter::Sync& completer) {
   uint8_t hid_report[HID_MAX_DESC_LEN];
   size_t size;
   hid_input_report::ParseResult result = hid_input_report::ParseResult::kNotImplemented;
   for (auto& device : devices_) {
-    result = device->SetOutputReport(&report, hid_report, sizeof(hid_report), &size);
+    result = device->SetOutputReport(&request->report, hid_report, sizeof(hid_report), &size);
     if (result == hid_input_report::ParseResult::kOk) {
       break;
     }

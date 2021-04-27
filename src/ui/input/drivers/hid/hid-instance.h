@@ -41,7 +41,7 @@ using HidInstanceDeviceType = ddk::Device<HidInstance, ddk::Closable, ddk::Messa
 
 class HidInstance : public HidInstanceDeviceType,
                     public fbl::DoublyLinkedListable<HidInstance*>,
-                    public fidl::WireRawChannelInterface<fuchsia_hardware_input::Device>,
+                    public fidl::WireServer<fuchsia_hardware_input::Device>,
                     public ddk::EmptyProtocol<ZX_PROTOCOL_HID_DEVICE> {
  public:
   explicit HidInstance(zx_device_t* parent)
@@ -55,17 +55,20 @@ class HidInstance : public HidInstanceDeviceType,
   void DdkRelease();
   zx_status_t DdkClose(uint32_t flags);
 
-  void GetBootProtocol(GetBootProtocolCompleter::Sync& _completer) override;
-  void GetDeviceIds(GetDeviceIdsCompleter::Sync& _completer) override;
-  void GetReportDesc(GetReportDescCompleter::Sync& _completer) override;
-  void GetReportsEvent(GetReportsEventCompleter::Sync& _completer) override;
-  void GetReport(ReportType type, uint8_t id, GetReportCompleter::Sync& _completer) override;
-  void SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report,
-                 SetReportCompleter::Sync& _completer) override;
-  void SetTraceId(uint32_t id, SetTraceIdCompleter::Sync& _completer) override;
-  void ReadReports(ReadReportsCompleter::Sync& _completer) override;
-  void ReadReport(ReadReportCompleter::Sync& completer) override;
-  void GetDeviceReportsReader(zx::channel reader,
+  void GetBootProtocol(GetBootProtocolRequestView request,
+                       GetBootProtocolCompleter::Sync& _completer) override;
+  void GetDeviceIds(GetDeviceIdsRequestView request,
+                    GetDeviceIdsCompleter::Sync& _completer) override;
+  void GetReportDesc(GetReportDescRequestView request,
+                     GetReportDescCompleter::Sync& _completer) override;
+  void GetReportsEvent(GetReportsEventRequestView request,
+                       GetReportsEventCompleter::Sync& _completer) override;
+  void GetReport(GetReportRequestView request, GetReportCompleter::Sync& _completer) override;
+  void SetReport(SetReportRequestView request, SetReportCompleter::Sync& _completer) override;
+  void SetTraceId(SetTraceIdRequestView request, SetTraceIdCompleter::Sync& _completer) override;
+  void ReadReports(ReadReportsRequestView request, ReadReportsCompleter::Sync& _completer) override;
+  void ReadReport(ReadReportRequestView request, ReadReportCompleter::Sync& completer) override;
+  void GetDeviceReportsReader(GetDeviceReportsReaderRequestView request,
                               GetDeviceReportsReaderCompleter::Sync& completer) override;
 
   void CloseInstance();

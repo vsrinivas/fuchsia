@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -19,7 +20,6 @@
 
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 
@@ -27,26 +27,28 @@
 
 namespace gpio_light {
 
-void GpioLight::GetNumLights(GetNumLightsCompleter::Sync& completer) {
+void GpioLight::GetNumLights(GetNumLightsRequestView request,
+                             GetNumLightsCompleter::Sync& completer) {
   completer.Reply(gpio_count_);
 }
 
-void GpioLight::GetNumLightGroups(GetNumLightGroupsCompleter::Sync& completer) {
+void GpioLight::GetNumLightGroups(GetNumLightGroupsRequestView request,
+                                  GetNumLightGroupsCompleter::Sync& completer) {
   completer.Reply(0);
 }
 
-void GpioLight::GetInfo(uint32_t index, GetInfoCompleter::Sync& completer) {
-  if (index >= gpio_count_) {
+void GpioLight::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+  if (request->index >= gpio_count_) {
     completer.ReplyError(fuchsia_hardware_light::wire::LightError::kInvalidIndex);
     return;
   }
 
   char name[20];
   if (names_.size() > 0) {
-    snprintf(name, sizeof(name), "%s\n", names_.data() + index * kNameLength);
+    snprintf(name, sizeof(name), "%s\n", names_.data() + request->index * kNameLength);
   } else {
     // Return "gpio-X" if no metadata was provided.
-    snprintf(name, sizeof(name), "gpio-%u\n", index);
+    snprintf(name, sizeof(name), "gpio-%u\n", request->index);
   }
 
   completer.ReplySuccess({
@@ -55,51 +57,51 @@ void GpioLight::GetInfo(uint32_t index, GetInfoCompleter::Sync& completer) {
   });
 }
 
-void GpioLight::GetCurrentSimpleValue(uint32_t index,
+void GpioLight::GetCurrentSimpleValue(GetCurrentSimpleValueRequestView request,
                                       GetCurrentSimpleValueCompleter::Sync& completer) {
-  if (index >= gpio_count_) {
+  if (request->index >= gpio_count_) {
     completer.ReplyError(fuchsia_hardware_light::wire::LightError::kInvalidIndex);
     return;
   }
 
   uint8_t value;
-  if (gpios_[index].Read(&value) != ZX_OK) {
+  if (gpios_[request->index].Read(&value) != ZX_OK) {
     completer.ReplyError(fuchsia_hardware_light::wire::LightError::kFailed);
   } else {
     completer.ReplySuccess(value);
   }
 }
 
-void GpioLight::SetSimpleValue(uint32_t index, bool value,
+void GpioLight::SetSimpleValue(SetSimpleValueRequestView request,
                                SetSimpleValueCompleter::Sync& completer) {
-  if (index >= gpio_count_) {
+  if (request->index >= gpio_count_) {
     completer.ReplyError(fuchsia_hardware_light::wire::LightError::kInvalidIndex);
     return;
   }
 
-  if (gpios_[index].Write(value) != ZX_OK) {
+  if (gpios_[request->index].Write(request->value) != ZX_OK) {
     completer.ReplyError(fuchsia_hardware_light::wire::LightError::kFailed);
   } else {
     completer.ReplySuccess();
   }
 }
 
-void GpioLight::GetCurrentBrightnessValue(uint32_t index,
+void GpioLight::GetCurrentBrightnessValue(GetCurrentBrightnessValueRequestView request,
                                           GetCurrentBrightnessValueCompleter::Sync& completer) {
   completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
 }
 
-void GpioLight::SetBrightnessValue(uint32_t index, double value,
+void GpioLight::SetBrightnessValue(SetBrightnessValueRequestView request,
                                    SetBrightnessValueCompleter::Sync& completer) {
   completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
 }
 
-void GpioLight::GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync& completer) {
+void GpioLight::GetCurrentRgbValue(GetCurrentRgbValueRequestView request,
+                                   GetCurrentRgbValueCompleter::Sync& completer) {
   completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
 }
 
-void GpioLight::SetRgbValue(uint32_t index, fuchsia_hardware_light::wire::Rgb value,
-                            SetRgbValueCompleter::Sync& completer) {
+void GpioLight::SetRgbValue(SetRgbValueRequestView request, SetRgbValueCompleter::Sync& completer) {
   completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
 }
 

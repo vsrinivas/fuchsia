@@ -6,12 +6,12 @@
 
 #include <endian.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zx/profile.h>
 #include <threads.h>
 #include <zircon/threads.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
 
@@ -125,15 +125,17 @@ void Gt6853Device::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-void Gt6853Device::GetInputReportsReader(zx::channel server,
+void Gt6853Device::GetInputReportsReader(GetInputReportsReaderRequestView request,
                                          GetInputReportsReaderCompleter::Sync& completer) {
-  zx_status_t status = input_report_readers_.CreateReader(loop_.dispatcher(), std::move(server));
+  zx_status_t status =
+      input_report_readers_.CreateReader(loop_.dispatcher(), request->reader.TakeChannel());
   if (status == ZX_OK) {
     sync_completion_signal(&next_reader_wait_);  // Only for tests.
   }
 }
 
-void Gt6853Device::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
+void Gt6853Device::GetDescriptor(GetDescriptorRequestView request,
+                                 GetDescriptorCompleter::Sync& completer) {
   constexpr size_t kDescriptorBufferSize = 512;
 
   constexpr fuchsia_input_report::wire::Axis kAxisX = {
@@ -177,16 +179,17 @@ void Gt6853Device::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   completer.Reply(std::move(descriptor));
 }
 
-void Gt6853Device::SendOutputReport(fuchsia_input_report::wire::OutputReport report,
+void Gt6853Device::SendOutputReport(SendOutputReportRequestView request,
                                     SendOutputReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Gt6853Device::GetFeatureReport(GetFeatureReportCompleter::Sync& completer) {
+void Gt6853Device::GetFeatureReport(GetFeatureReportRequestView request,
+                                    GetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Gt6853Device::SetFeatureReport(fuchsia_input_report::wire::FeatureReport report,
+void Gt6853Device::SetFeatureReport(SetFeatureReportRequestView request,
                                     SetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }

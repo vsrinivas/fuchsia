@@ -42,7 +42,7 @@ namespace FidlBacklight = fuchsia_hardware_backlight;
 
 class Sgm37603a : public DeviceType,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT>,
-                  public fidl::WireInterface<FidlBacklight::Device> {
+                  public fidl::WireServer<FidlBacklight::Device> {
  public:
   virtual ~Sgm37603a() = default;
 
@@ -63,16 +63,21 @@ class Sgm37603a : public DeviceType,
   zx_status_t SetBacklightState(bool power, double brightness);
 
   // FIDL calls
-  void GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) override;
-  void SetStateNormalized(FidlBacklight::wire::State state,
+  void GetStateNormalized(GetStateNormalizedRequestView request,
+                          GetStateNormalizedCompleter::Sync& completer) override;
+  void SetStateNormalized(SetStateNormalizedRequestView request,
                           SetStateNormalizedCompleter::Sync& completer) override;
-  void GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) override;
-  void SetStateAbsolute(FidlBacklight::wire::State state,
+  void GetStateAbsolute(GetStateAbsoluteRequestView request,
+                        GetStateAbsoluteCompleter::Sync& completer) override;
+  void SetStateAbsolute(SetStateAbsoluteRequestView request,
                         SetStateAbsoluteCompleter::Sync& completer) override;
-  void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync& completer) override;
+  void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessRequestView request,
+                                GetMaxAbsoluteBrightnessCompleter::Sync& completer) override;
   void SetNormalizedBrightnessScale(
-      double scale, SetNormalizedBrightnessScaleCompleter::Sync& completer) override;
+      SetNormalizedBrightnessScaleRequestView request,
+      SetNormalizedBrightnessScaleCompleter::Sync& completer) override;
   void GetNormalizedBrightnessScale(
+      GetNormalizedBrightnessScaleRequestView request,
       GetNormalizedBrightnessScaleCompleter::Sync& completer) override;
 
  private:

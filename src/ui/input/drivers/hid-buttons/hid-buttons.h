@@ -214,7 +214,7 @@ class HidButtonsButtonsFunction
   thrd_t loop_thread_;
 };
 
-class ButtonsNotifyInterface : public fidl::WireInterface<Buttons> {
+class ButtonsNotifyInterface : public fidl::WireServer<Buttons> {
  public:
   explicit ButtonsNotifyInterface(HidButtonsDevice* peripheral) : device_(peripheral) {}
   ~ButtonsNotifyInterface() = default;
@@ -230,12 +230,13 @@ class ButtonsNotifyInterface : public fidl::WireInterface<Buttons> {
   const fidl::ServerBindingRef<Buttons>& binding() { return *binding_; }
 
   // Methods required by the FIDL interface
-  void GetState(ButtonType type, GetStateCompleter::Sync& _completer) {
-    _completer.Reply(device_->GetState(type));
+  void GetState(GetStateRequestView request, GetStateCompleter::Sync& _completer) override {
+    _completer.Reply(device_->GetState(request->type));
   }
-  void RegisterNotify(uint8_t types, RegisterNotifyCompleter::Sync& _completer) {
+  void RegisterNotify(RegisterNotifyRequestView request,
+                      RegisterNotifyCompleter::Sync& _completer) override {
     zx_status_t status = ZX_OK;
-    if ((status = device_->RegisterNotify(types, this)) == ZX_OK) {
+    if ((status = device_->RegisterNotify(request->types, this)) == ZX_OK) {
       _completer.ReplySuccess();
     } else {
       _completer.ReplyError(status);

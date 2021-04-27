@@ -46,7 +46,7 @@ class Gt6853Device;
 using DeviceType = ddk::Device<Gt6853Device, ddk::Messageable, ddk::Unbindable>;
 
 class Gt6853Device : public DeviceType,
-                     fidl::WireRawChannelInterface<fuchsia_input_report::InputDevice>,
+                     fidl::WireServer<fuchsia_input_report::InputDevice>,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
  public:
   enum class Register : uint16_t {
@@ -94,13 +94,15 @@ class Gt6853Device : public DeviceType,
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
 
-  void GetInputReportsReader(zx::channel server,
+  void GetInputReportsReader(GetInputReportsReaderRequestView request,
                              GetInputReportsReaderCompleter::Sync& completer) override;
-  void GetDescriptor(GetDescriptorCompleter::Sync& completer) override;
-  void SendOutputReport(fuchsia_input_report::wire::OutputReport report,
+  void GetDescriptor(GetDescriptorRequestView request,
+                     GetDescriptorCompleter::Sync& completer) override;
+  void SendOutputReport(SendOutputReportRequestView request,
                         SendOutputReportCompleter::Sync& completer) override;
-  void GetFeatureReport(GetFeatureReportCompleter::Sync& completer) override;
-  void SetFeatureReport(fuchsia_input_report::wire::FeatureReport report,
+  void GetFeatureReport(GetFeatureReportRequestView request,
+                        GetFeatureReportCompleter::Sync& completer) override;
+  void SetFeatureReport(SetFeatureReportRequestView request,
                         SetFeatureReportCompleter::Sync& completer) override;
 
   // Visible for testing.

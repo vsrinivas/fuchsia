@@ -89,7 +89,8 @@ zx_status_t Sgm37603a::DisableBacklight() {
   return ZX_OK;
 }
 
-void Sgm37603a::GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) {
+void Sgm37603a::GetStateNormalized(GetStateNormalizedRequestView request,
+                                   GetStateNormalizedCompleter::Sync& completer) {
   FidlBacklight::wire::State state = {};
   auto status = GetBacklightState(&state.backlight_on, &state.brightness);
   if (status == ZX_OK) {
@@ -99,9 +100,9 @@ void Sgm37603a::GetStateNormalized(GetStateNormalizedCompleter::Sync& completer)
   }
 }
 
-void Sgm37603a::SetStateNormalized(FidlBacklight::wire::State state,
+void Sgm37603a::SetStateNormalized(SetStateNormalizedRequestView request,
                                    SetStateNormalizedCompleter::Sync& completer) {
-  auto status = SetBacklightState(state.backlight_on, state.brightness);
+  auto status = SetBacklightState(request->state.backlight_on, request->state.brightness);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
@@ -109,25 +110,29 @@ void Sgm37603a::SetStateNormalized(FidlBacklight::wire::State state,
   }
 }
 
-void Sgm37603a::GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) {
+void Sgm37603a::GetStateAbsolute(GetStateAbsoluteRequestView request,
+                                 GetStateAbsoluteCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Sgm37603a::SetStateAbsolute(FidlBacklight::wire::State state,
+void Sgm37603a::SetStateAbsolute(SetStateAbsoluteRequestView request,
                                  SetStateAbsoluteCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Sgm37603a::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync& completer) {
+void Sgm37603a::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessRequestView request,
+                                         GetMaxAbsoluteBrightnessCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 void Sgm37603a::SetNormalizedBrightnessScale(
-    __UNUSED double scale, SetNormalizedBrightnessScaleCompleter::Sync& completer) {
+    SetNormalizedBrightnessScaleRequestView request,
+    SetNormalizedBrightnessScaleCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 void Sgm37603a::GetNormalizedBrightnessScale(
+    GetNormalizedBrightnessScaleRequestView request,
     GetNormalizedBrightnessScaleCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }

@@ -78,8 +78,8 @@ class BrightnessStickyReg : public hwreg::RegisterBase<BrightnessStickyReg, uint
 
 class Lp8556Device : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT>,
-                     public fidl::WireInterface<FidlBacklight::Device>,
-                     public fidl::WireInterface<FidlPowerSensor::Device> {
+                     public fidl::WireServer<FidlBacklight::Device>,
+                     public fidl::WireServer<FidlPowerSensor::Device> {
  public:
   Lp8556Device(zx_device_t* parent, ddk::I2cChannel i2c, ddk::MmioBuffer mmio)
       : DeviceType(parent), i2c_(std::move(i2c)), mmio_(std::move(mmio)) {}
@@ -121,25 +121,31 @@ class Lp8556Device : public DeviceType,
   PanelType GetPanelType();
 
   // FIDL calls
-  void GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) override;
-  void SetStateNormalized(FidlBacklight::wire::State state,
+  void GetStateNormalized(GetStateNormalizedRequestView request,
+                          GetStateNormalizedCompleter::Sync& completer) override;
+  void SetStateNormalized(SetStateNormalizedRequestView request,
                           SetStateNormalizedCompleter::Sync& completer) override;
   // Note: the device is calibrated at the factory to find a normalized brightness scale value that
   // corresponds to a set maximum brightness in nits. GetStateAbsolute() will return an error if
   // the normalized brightness scale is not set to the calibrated value, as there is no universal
   // way to map other scale values to absolute brightness.
-  void GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) override;
+  void GetStateAbsolute(GetStateAbsoluteRequestView request,
+                        GetStateAbsoluteCompleter::Sync& completer) override;
   // Note: this changes the normalized brightness scale back to the calibrated value in order to set
   // the absolute brightness.
-  void SetStateAbsolute(FidlBacklight::wire::State state,
+  void SetStateAbsolute(SetStateAbsoluteRequestView request,
                         SetStateAbsoluteCompleter::Sync& completer) override;
-  void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync& completer) override;
+  void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessRequestView request,
+                                GetMaxAbsoluteBrightnessCompleter::Sync& completer) override;
   void SetNormalizedBrightnessScale(
-      double scale, SetNormalizedBrightnessScaleCompleter::Sync& completer) override;
+      SetNormalizedBrightnessScaleRequestView request,
+      SetNormalizedBrightnessScaleCompleter::Sync& completer) override;
   void GetNormalizedBrightnessScale(
+      GetNormalizedBrightnessScaleRequestView request,
       GetNormalizedBrightnessScaleCompleter::Sync& completer) override;
 
-  void GetPowerWatts(GetPowerWattsCompleter::Sync& completer) override;
+  void GetPowerWatts(GetPowerWattsRequestView request,
+                     GetPowerWattsCompleter::Sync& completer) override;
 
  private:
   zx_status_t SetCurrentScale(uint16_t scale);

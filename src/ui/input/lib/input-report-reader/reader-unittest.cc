@@ -22,7 +22,7 @@ struct MouseReport {
   }
 };
 
-class MouseDevice : public fidl::WireRawChannelInterface<fuchsia_input_report::InputDevice> {
+class MouseDevice : public fidl::WireServer<fuchsia_input_report::InputDevice> {
  public:
   zx_status_t Start();
 
@@ -37,13 +37,15 @@ class MouseDevice : public fidl::WireRawChannelInterface<fuchsia_input_report::I
   }
 
   // The FIDL methods for InputDevice.
-  void GetInputReportsReader(zx::channel server,
+  void GetInputReportsReader(GetInputReportsReaderRequestView request,
                              GetInputReportsReaderCompleter::Sync& completer) override;
-  void GetDescriptor(GetDescriptorCompleter::Sync& completer) override;
-  void SendOutputReport(fuchsia_input_report::wire::OutputReport report,
+  void GetDescriptor(GetDescriptorRequestView request,
+                     GetDescriptorCompleter::Sync& completer) override;
+  void SendOutputReport(SendOutputReportRequestView request,
                         SendOutputReportCompleter::Sync& completer) override;
-  void GetFeatureReport(GetFeatureReportCompleter::Sync& completer) override;
-  void SetFeatureReport(fuchsia_input_report::wire::FeatureReport report,
+  void GetFeatureReport(GetFeatureReportRequestView request,
+                        GetFeatureReportCompleter::Sync& completer) override;
+  void SetFeatureReport(SetFeatureReportRequestView request,
                         SetFeatureReportCompleter::Sync& completer) override;
 
  private:
@@ -64,31 +66,34 @@ void MouseDevice::SendReport(const MouseReport& report) {
   input_report_readers_.SendReportToAllReaders(report);
 }
 
-void MouseDevice::GetInputReportsReader(zx::channel server,
+void MouseDevice::GetInputReportsReader(GetInputReportsReaderRequestView request,
                                         GetInputReportsReaderCompleter::Sync& completer) {
-  zx_status_t status = input_report_readers_.CreateReader(loop_.dispatcher(), std::move(server));
+  zx_status_t status =
+      input_report_readers_.CreateReader(loop_.dispatcher(), request->reader.TakeChannel());
   if (status == ZX_OK) {
     // Signal to a test framework (if it exists) that we are connected to a reader.
     sync_completion_signal(&next_reader_wait_);
   }
 }
 
-void MouseDevice::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
+void MouseDevice::GetDescriptor(GetDescriptorRequestView request,
+                                GetDescriptorCompleter::Sync& completer) {
   fidl::FidlAllocator allocator;
 
   completer.Reply(fuchsia_input_report::wire::DeviceDescriptor(allocator));
 }
 
-void MouseDevice::SendOutputReport(fuchsia_input_report::wire::OutputReport report,
+void MouseDevice::SendOutputReport(SendOutputReportRequestView request,
                                    SendOutputReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void MouseDevice::GetFeatureReport(GetFeatureReportCompleter::Sync& completer) {
+void MouseDevice::GetFeatureReport(GetFeatureReportRequestView request,
+                                   GetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void MouseDevice::SetFeatureReport(fuchsia_input_report::wire::FeatureReport report,
+void MouseDevice::SetFeatureReport(SetFeatureReportRequestView request,
                                    SetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }

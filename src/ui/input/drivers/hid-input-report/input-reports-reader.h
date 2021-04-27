@@ -25,7 +25,7 @@ class InputReportBase {
   virtual void RemoveReaderFromList(InputReportsReader* reader) = 0;
 };
 
-class InputReportsReader : public fidl::WireInterface<fuchsia_input_report::InputReportsReader> {
+class InputReportsReader : public fidl::WireServer<fuchsia_input_report::InputReportsReader> {
  public:
   // The InputReportBase has to exist for the lifetime of the InputReportsReader.
   // The pointer to InputReportBase is unowned.
@@ -41,7 +41,8 @@ class InputReportsReader : public fidl::WireInterface<fuchsia_input_report::Inpu
                      hid_input_report::Device* device);
 
   // FIDL functions.
-  void ReadInputReports(ReadInputReportsCompleter::Sync& completer) override;
+  void ReadInputReports(ReadInputReportsRequestView request,
+                        ReadInputReportsCompleter::Sync& completer) override;
 
  private:
   // This is the static size that is used to allocate this instance's InputReports that

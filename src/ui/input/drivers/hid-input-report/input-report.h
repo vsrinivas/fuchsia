@@ -24,7 +24,7 @@ class InputReport;
 using DeviceType = ddk::Device<InputReport, ddk::Unbindable, ddk::Messageable>;
 class InputReport : public DeviceType,
                     public InputReportBase,
-                    fidl::WireRawChannelInterface<fuchsia_input_report::InputDevice>,
+                    fidl::WireServer<fuchsia_input_report::InputDevice>,
                     ddk::HidReportListenerProtocol<InputReport>,
                     public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
  public:
@@ -46,15 +46,17 @@ class InputReport : public DeviceType,
   void RemoveReaderFromList(InputReportsReader* reader) override;
 
   // FIDL functions.
-  void GetInputReportsReader(zx::channel req,
+  void GetInputReportsReader(GetInputReportsReaderRequestView request,
                              GetInputReportsReaderCompleter::Sync& completer) override;
-  void GetDescriptor(GetDescriptorCompleter::Sync& completer) override;
-  void SendOutputReport(fuchsia_input_report::wire::OutputReport report,
+  void GetDescriptor(GetDescriptorRequestView request,
+                     GetDescriptorCompleter::Sync& completer) override;
+  void SendOutputReport(SendOutputReportRequestView request,
                         SendOutputReportCompleter::Sync& completer) override;
-  void GetFeatureReport(GetFeatureReportCompleter::Sync& completer) override {
+  void GetFeatureReport(GetFeatureReportRequestView request,
+                        GetFeatureReportCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  void SetFeatureReport(fuchsia_input_report::wire::FeatureReport report,
+  void SetFeatureReport(SetFeatureReportRequestView request,
                         SetFeatureReportCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }

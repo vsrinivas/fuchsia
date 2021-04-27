@@ -17,8 +17,7 @@ namespace hid_driver {
 
 class HidDevice;
 
-class DeviceReportsReader
-    : public fidl::WireInterface<fuchsia_hardware_input::DeviceReportsReader> {
+class DeviceReportsReader : public fidl::WireServer<fuchsia_hardware_input::DeviceReportsReader> {
  public:
   // The pointer to `base` must stay alive for as long as DeviceReportsReader
   // is alive.
@@ -34,7 +33,7 @@ class DeviceReportsReader
     }
   }
 
-  void ReadReports(ReadReportsCompleter::Sync& completer) override;
+  void ReadReports(ReadReportsRequestView request, ReadReportsCompleter::Sync& completer) override;
   zx_status_t WriteToFifo(const uint8_t* report, size_t report_len, zx_time_t time);
 
  private:

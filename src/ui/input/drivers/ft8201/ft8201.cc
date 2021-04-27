@@ -178,15 +178,17 @@ void Ft8201Device::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-void Ft8201Device::GetInputReportsReader(zx::channel server,
+void Ft8201Device::GetInputReportsReader(GetInputReportsReaderRequestView request,
                                          GetInputReportsReaderCompleter::Sync& completer) {
-  zx_status_t status = input_report_readers_.CreateReader(loop_.dispatcher(), std::move(server));
+  zx_status_t status =
+      input_report_readers_.CreateReader(loop_.dispatcher(), request->reader.TakeChannel());
   if (status == ZX_OK) {
     sync_completion_signal(&next_reader_wait_);  // Only for tests.
   }
 }
 
-void Ft8201Device::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
+void Ft8201Device::GetDescriptor(GetDescriptorRequestView request,
+                                 GetDescriptorCompleter::Sync& completer) {
   constexpr size_t kDescriptorBufferSize = 512;
 
   constexpr fuchsia_input_report::wire::Axis kAxisX = {
@@ -236,16 +238,17 @@ void Ft8201Device::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   completer.Reply(std::move(descriptor));
 }
 
-void Ft8201Device::SendOutputReport(fuchsia_input_report::wire::OutputReport report,
+void Ft8201Device::SendOutputReport(SendOutputReportRequestView request,
                                     SendOutputReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Ft8201Device::GetFeatureReport(GetFeatureReportCompleter::Sync& completer) {
+void Ft8201Device::GetFeatureReport(GetFeatureReportRequestView request,
+                                    GetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Ft8201Device::SetFeatureReport(fuchsia_input_report::wire::FeatureReport report,
+void Ft8201Device::SetFeatureReport(SetFeatureReportRequestView request,
                                     SetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }

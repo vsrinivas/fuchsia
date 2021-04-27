@@ -76,83 +76,86 @@ zx_status_t LightDevice::SetBrightnessValue(double value) {
   return ZX_OK;
 }
 
-void AmlLight::GetNumLights(GetNumLightsCompleter::Sync& completer) {
+void AmlLight::GetNumLights(GetNumLightsRequestView request,
+                            GetNumLightsCompleter::Sync& completer) {
   completer.Reply(static_cast<uint32_t>(lights_.size()));
 }
 
-void AmlLight::GetNumLightGroups(GetNumLightGroupsCompleter::Sync& completer) {
+void AmlLight::GetNumLightGroups(GetNumLightGroupsRequestView request,
+                                 GetNumLightGroupsCompleter::Sync& completer) {
   completer.Reply(0);
 }
 
-void AmlLight::GetInfo(uint32_t index, GetInfoCompleter::Sync& completer) {
-  if (index >= lights_.size()) {
+void AmlLight::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+  if (request->index >= lights_.size()) {
     completer.ReplyError(LightError::kInvalidIndex);
     return;
   }
-  auto name = lights_[index].GetName();
+  auto name = lights_[request->index].GetName();
   completer.ReplySuccess({
       .name = ::fidl::StringView::FromExternal(name),
-      .capability = lights_[index].GetCapability(),
+      .capability = lights_[request->index].GetCapability(),
   });
 }
 
-void AmlLight::GetCurrentSimpleValue(uint32_t index,
+void AmlLight::GetCurrentSimpleValue(GetCurrentSimpleValueRequestView request,
                                      GetCurrentSimpleValueCompleter::Sync& completer) {
-  if (index >= lights_.size()) {
+  if (request->index >= lights_.size()) {
     completer.ReplyError(LightError::kInvalidIndex);
     return;
   }
-  if (lights_[index].GetCapability() == Capability::kSimple) {
-    completer.ReplySuccess(lights_[index].GetCurrentSimpleValue());
+  if (lights_[request->index].GetCapability() == Capability::kSimple) {
+    completer.ReplySuccess(lights_[request->index].GetCurrentSimpleValue());
   } else {
     completer.ReplyError(LightError::kNotSupported);
   }
 }
 
-void AmlLight::SetSimpleValue(uint32_t index, bool value,
+void AmlLight::SetSimpleValue(SetSimpleValueRequestView request,
                               SetSimpleValueCompleter::Sync& completer) {
-  if (index >= lights_.size()) {
+  if (request->index >= lights_.size()) {
     completer.ReplyError(LightError::kInvalidIndex);
     return;
   }
-  if (lights_[index].SetSimpleValue(value) != ZX_OK) {
+  if (lights_[request->index].SetSimpleValue(request->value) != ZX_OK) {
     completer.ReplyError(LightError::kFailed);
   } else {
     completer.ReplySuccess();
   }
 }
 
-void AmlLight::GetCurrentBrightnessValue(uint32_t index,
+void AmlLight::GetCurrentBrightnessValue(GetCurrentBrightnessValueRequestView request,
                                          GetCurrentBrightnessValueCompleter::Sync& completer) {
-  if (index >= lights_.size()) {
+  if (request->index >= lights_.size()) {
     completer.ReplyError(LightError::kInvalidIndex);
     return;
   }
-  if (lights_[index].GetCapability() == Capability::kBrightness) {
-    completer.ReplySuccess(lights_[index].GetCurrentBrightnessValue());
+  if (lights_[request->index].GetCapability() == Capability::kBrightness) {
+    completer.ReplySuccess(lights_[request->index].GetCurrentBrightnessValue());
   } else {
     completer.ReplyError(LightError::kNotSupported);
   }
 }
 
-void AmlLight::SetBrightnessValue(uint32_t index, double value,
+void AmlLight::SetBrightnessValue(SetBrightnessValueRequestView request,
                                   SetBrightnessValueCompleter::Sync& completer) {
-  if (index >= lights_.size()) {
+  if (request->index >= lights_.size()) {
     completer.ReplyError(LightError::kInvalidIndex);
     return;
   }
-  if (lights_[index].SetBrightnessValue(value) != ZX_OK) {
+  if (lights_[request->index].SetBrightnessValue(request->value) != ZX_OK) {
     completer.ReplyError(LightError::kFailed);
   } else {
     completer.ReplySuccess();
   }
 }
 
-void AmlLight::GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync& completer) {
+void AmlLight::GetCurrentRgbValue(GetCurrentRgbValueRequestView request,
+                                  GetCurrentRgbValueCompleter::Sync& completer) {
   completer.ReplyError(LightError::kNotSupported);
 }
 
-void AmlLight::SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync& completer) {
+void AmlLight::SetRgbValue(SetRgbValueRequestView request, SetRgbValueCompleter::Sync& completer) {
   completer.ReplyError(LightError::kInvalidIndex);
 }
 

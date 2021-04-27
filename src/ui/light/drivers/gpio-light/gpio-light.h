@@ -19,7 +19,7 @@ class GpioLight;
 using GpioLightType = ddk::Device<GpioLight, ddk::Messageable>;
 
 class GpioLight : public GpioLightType,
-                  public fidl::WireInterface<fuchsia_hardware_light::Light>,
+                  public fidl::WireServer<fuchsia_hardware_light::Light>,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_LIGHT> {
  public:
   explicit GpioLight(zx_device_t* parent) : GpioLightType(parent) {}
@@ -31,45 +31,50 @@ class GpioLight : public GpioLightType,
   void DdkRelease();
 
   // FIDL messages.
-  void GetNumLights(GetNumLightsCompleter::Sync& completer);
-  void GetNumLightGroups(GetNumLightGroupsCompleter::Sync& completer);
-  void GetInfo(uint32_t index, GetInfoCompleter::Sync& completer);
-  void GetCurrentSimpleValue(uint32_t index, GetCurrentSimpleValueCompleter::Sync& completer);
-  void SetSimpleValue(uint32_t index, bool value, SetSimpleValueCompleter::Sync& completer);
-  void GetCurrentBrightnessValue(uint32_t index,
-                                 GetCurrentBrightnessValueCompleter::Sync& completer);
-  void SetBrightnessValue(uint32_t index, double value,
-                          SetBrightnessValueCompleter::Sync& completer);
-  void GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync& completer);
-  void SetRgbValue(uint32_t index, fuchsia_hardware_light::wire::Rgb value,
-                   SetRgbValueCompleter::Sync& completer);
+  void GetNumLights(GetNumLightsRequestView request,
+                    GetNumLightsCompleter::Sync& completer) override;
+  void GetNumLightGroups(GetNumLightGroupsRequestView request,
+                         GetNumLightGroupsCompleter::Sync& completer) override;
+  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
+  void GetCurrentSimpleValue(GetCurrentSimpleValueRequestView request,
+                             GetCurrentSimpleValueCompleter::Sync& completer) override;
+  void SetSimpleValue(SetSimpleValueRequestView request,
+                      SetSimpleValueCompleter::Sync& completer) override;
+  void GetCurrentBrightnessValue(GetCurrentBrightnessValueRequestView request,
+                                 GetCurrentBrightnessValueCompleter::Sync& completer) override;
+  void SetBrightnessValue(SetBrightnessValueRequestView request,
+                          SetBrightnessValueCompleter::Sync& completer) override;
+  void GetCurrentRgbValue(GetCurrentRgbValueRequestView request,
+                          GetCurrentRgbValueCompleter::Sync& completer) override;
+  void SetRgbValue(SetRgbValueRequestView request, SetRgbValueCompleter::Sync& completer) override;
 
-  void GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync& completer) {
+  void GetGroupInfo(GetGroupInfoRequestView request,
+                    GetGroupInfoCompleter::Sync& completer) override {
     completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
   }
-  void GetGroupCurrentSimpleValue(uint32_t group_id,
-                                  GetGroupCurrentSimpleValueCompleter::Sync& completer) {
+  void GetGroupCurrentSimpleValue(GetGroupCurrentSimpleValueRequestView request,
+                                  GetGroupCurrentSimpleValueCompleter::Sync& completer) override {
     completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
   }
-  void SetGroupSimpleValue(uint32_t group_id, ::fidl::VectorView<bool> values,
-                           SetGroupSimpleValueCompleter::Sync& completer) {
+  void SetGroupSimpleValue(SetGroupSimpleValueRequestView request,
+                           SetGroupSimpleValueCompleter::Sync& completer) override {
     completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
   }
-  void GetGroupCurrentBrightnessValue(uint32_t group_id,
-                                      GetGroupCurrentBrightnessValueCompleter::Sync& completer) {
+  void GetGroupCurrentBrightnessValue(
+      GetGroupCurrentBrightnessValueRequestView request,
+      GetGroupCurrentBrightnessValueCompleter::Sync& completer) override {
     completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
   }
-  void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<double> values,
-                               SetGroupBrightnessValueCompleter::Sync& completer) {
+  void SetGroupBrightnessValue(SetGroupBrightnessValueRequestView request,
+                               SetGroupBrightnessValueCompleter::Sync& completer) override {
     completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
   }
-  void GetGroupCurrentRgbValue(uint32_t group_id,
-                               GetGroupCurrentRgbValueCompleter::Sync& completer) {
+  void GetGroupCurrentRgbValue(GetGroupCurrentRgbValueRequestView request,
+                               GetGroupCurrentRgbValueCompleter::Sync& completer) override {
     completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
   }
-  void SetGroupRgbValue(uint32_t group_id,
-                        ::fidl::VectorView<fuchsia_hardware_light::wire::Rgb> values,
-                        SetGroupRgbValueCompleter::Sync& completer) {
+  void SetGroupRgbValue(SetGroupRgbValueRequestView request,
+                        SetGroupRgbValueCompleter::Sync& completer) override {
     completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
   }
 
