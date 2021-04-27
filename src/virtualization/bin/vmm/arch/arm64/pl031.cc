@@ -17,7 +17,17 @@ __END_CDECLS;
 
 // PL031 registers.
 enum class Pl031Register : uint64_t {
-  DR = 0x00,
+  DR = 0x00,  // Data register
+  CR = 0x0c,  // Control register
+};
+
+// Control register bit definitions.
+//
+// See ARM PrimeCell Real Time Clock (PL031), Revision r1p3.
+// Section 3.3.4 Control Register, RTCCR.
+enum ControlRegister {
+  // Bits [31:1] reserved.
+  kCrRtcStart = 1u << 0,
 };
 
 static constexpr uint64_t kPl031PhysBase = 0x808301000;
@@ -28,22 +38,46 @@ zx_status_t Pl031::Init(Guest* guest) {
 }
 
 zx_status_t Pl031::Read(uint64_t addr, IoValue* value) const {
+  // We only support 32-bit reads/writes.
+  if (value->access_size != 4) {
+    return ZX_ERR_IO;
+  }
+
   switch (static_cast<Pl031Register>(addr)) {
     case Pl031Register::DR:
-      if (value->access_size != 4) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
-      }
       value->u32 = rtc_time();
       return ZX_OK;
+
+    case Pl031Register::CR:
+      value->u32 = 0;
+      return ZX_OK;
+
     default:
-      FX_LOGS(ERROR) << "Unhandled PL031 address read 0x" << std::hex << addr;
-      return ZX_ERR_IO;
+      FX_LOGS(WARNING) << "Unhandled PL031 address read 0x" << std::hex << addr;
+      value->u32 = 0;
+      return ZX_OK;
   }
 }
 
 zx_status_t Pl031::Write(uint64_t addr, const IoValue& value) {
-  FX_LOGS(ERROR) << "Unhandled PL031 address write 0x" << std::hex << addr;
-  return ZX_ERR_IO;
+  // We only support 32-bit reads/writes.
+  if (value.access_size != 4) {
+    return ZX_ERR_IO;
+  }
+
+  switch (static_cast<Pl031Register>(addr)) {
+    case Pl031Register::CR:
+      // We only support enabling the RTC. Warn on any other value.
+      if (value.u32 != ControlRegister::kCrRtcStart) {
+        FX_LOGS(WARNING) << "Unsupported value 0x" << std::hex << value.u32
+                         << " written to PL031 control register. Ignoring";
+      }
+      return ZX_OK;
+
+    default:
+      FX_LOGS(WARNING) << "Unsupported write to PL031 register 0x" << std::hex << addr;
+      return ZX_OK;
+  }
 }
 
 zx_status_t Pl031::ConfigureDtb(void* dtb) const {
