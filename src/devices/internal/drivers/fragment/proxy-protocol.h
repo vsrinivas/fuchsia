@@ -5,6 +5,14 @@
 #ifndef SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_PROXY_PROTOCOL_H_
 #define SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_PROXY_PROTOCOL_H_
 
+#include <fuchsia/hardware/amlogiccanvas/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/power/c/banjo.h>
+#include <fuchsia/hardware/pwm/c/banjo.h>
+#include <fuchsia/hardware/tee/c/banjo.h>
+#include <fuchsia/hardware/usb/modeswitch/c/banjo.h>
+#include <fuchsia/hardware/vreg/c/banjo.h>
+
 namespace fragment {
 
 // Maximum transfer size we can proxy.
