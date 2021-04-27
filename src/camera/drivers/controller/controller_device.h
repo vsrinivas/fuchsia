@@ -38,7 +38,7 @@ using ControllerDeviceType = ddk::Device<ControllerDevice, ddk::Unbindable, ddk:
 
 class ControllerDevice : public ControllerDeviceType,
                          public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA>,
-                         public fidl::WireInterface<fuchsia_hardware_camera::Device> {
+                         public fidl::WireServer<fuchsia_hardware_camera::Device> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerDevice);
   explicit ControllerDevice(zx_device_t* parent, zx::event event)
@@ -68,10 +68,9 @@ class ControllerDevice : public ControllerDeviceType,
   void ShutDown();
 
   // Fuchsia Hardware Camera FIDL implementation.
-  void GetChannel2(::fidl::ServerEnd<fuchsia_camera2_hal::Controller> server_end,
-                   GetChannel2Completer::Sync& completer) override;
+  void GetChannel2(GetChannel2RequestView request, GetChannel2Completer::Sync& completer) override;
   // Call not supported
-  void GetChannel(zx::channel handle, GetChannelCompleter::Sync& completer) override {
+  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

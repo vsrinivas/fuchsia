@@ -33,9 +33,9 @@ zx_status_t ControllerDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* t
   return transaction.Status();
 }
 
-void ControllerDevice::GetChannel2(::fidl::ServerEnd<fuchsia_camera2_hal::Controller> server_end,
+void ControllerDevice::GetChannel2(GetChannel2RequestView request,
                                    GetChannel2Completer::Sync& completer) {
-  if (!server_end.is_valid()) {
+  if (!request->server_end.is_valid()) {
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -47,7 +47,7 @@ void ControllerDevice::GetChannel2(::fidl::ServerEnd<fuchsia_camera2_hal::Contro
   }
 
   fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control_interface(
-      server_end.TakeChannel());
+      request->server_end.TakeChannel());
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
 
