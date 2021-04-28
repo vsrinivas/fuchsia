@@ -25,6 +25,8 @@ lazy_static! {
     )));
 }
 
+const INSPECTOR_SIZE: usize = 2 * 1024 * 1024 /* 2MB */;
+
 enum GroupData {
     Node(Node),
     Count(UintProperty),
@@ -55,6 +57,7 @@ impl Groups {
 }
 
 pub fn init() {
+    component::init_inspector_with_size(INSPECTOR_SIZE);
     component::health().set_starting_up();
 }
 

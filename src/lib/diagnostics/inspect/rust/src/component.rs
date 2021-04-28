@@ -33,16 +33,19 @@
 //! health.set_ok();
 //! ```
 
-use {
-    super::{health, Inspector},
-    lazy_static::lazy_static,
-    std::sync::{Arc, Mutex},
-};
+use super::{health, Inspector};
+use inspect_format::constants;
+use lazy_static::lazy_static;
+use parking_lot::Mutex;
+use std::sync::Arc;
 
 lazy_static! {
+  // The size with which the default inspector is initialized.
+  static ref INSPECTOR_SIZE : Mutex<usize> = Mutex::new(constants::DEFAULT_VMO_SIZE_BYTES);
+
   // The component-level inspector.  We probably want to use this inspector across components where
   // practical.
-  static ref INSPECTOR: Inspector = Inspector::new();
+  static ref INSPECTOR: Inspector = Inspector::new_with_size(*INSPECTOR_SIZE.lock());
 
   // Health node based on the global inspector from `inspector()`.
   static ref HEALTH: Arc<Mutex<health::Node>> = Arc::new(Mutex::new(health::Node::new(INSPECTOR.root())));
@@ -58,16 +61,13 @@ pub struct Health {
 // A thread-safe implementation of a global health reporter.
 impl health::Reporter for Health {
     fn set_starting_up(&mut self) {
-        let lock = self.health_node.lock();
-        lock.expect("lock success").set_starting_up();
+        self.health_node.lock().set_starting_up();
     }
     fn set_ok(&mut self) {
-        let lock = self.health_node.lock();
-        lock.expect("lock success").set_ok();
+        self.health_node.lock().set_ok();
     }
     fn set_unhealthy(&mut self, message: &str) {
-        let lock = self.health_node.lock();
-        lock.expect("lock success").set_unhealthy(message);
+        self.health_node.lock().set_unhealthy(message);
     }
 }
 
@@ -76,7 +76,15 @@ impl health::Reporter for Health {
 /// It is recommended that all health nodes register with this inspector (as opposed to any other
 /// that may have been created).
 pub fn inspector() -> &'static Inspector {
-    return &INSPECTOR;
+    &INSPECTOR
+}
+
+/// Initializes and returns the singleton component inspector.
+pub fn init_inspector_with_size(max_size: usize) -> &'static Inspector {
+    lazy_static::initialize(&INSPECTOR_SIZE);
+    *INSPECTOR_SIZE.lock() = max_size;
+    lazy_static::initialize(&INSPECTOR);
+    &INSPECTOR
 }
 
 /// Returns a handle to the standardized singleton top-level health reporter on each call.
@@ -96,10 +104,8 @@ pub fn health() -> Health {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::{assert_data_tree, health::Reporter, testing::AnyProperty},
-    };
+    use super::*;
+    use crate::{assert_data_tree, health::Reporter, testing::AnyProperty};
 
     #[test]
     fn health_checker_lifecycle() {
@@ -160,9 +166,19 @@ mod tests {
     #[test]
     fn record_on_inspector() {
         let inspector = super::inspector();
+        assert_eq!(
+            inspector.vmo.as_ref().unwrap().get_size().unwrap(),
+            constants::DEFAULT_VMO_SIZE_BYTES as u64
+        );
         inspector.root().record_int("a", 1);
         assert_data_tree!(inspector, root: contains {
             a: 1i64,
         })
+    }
+
+    #[test]
+    fn init_inspector_with_size() {
+        super::init_inspector_with_size(8192);
+        assert_eq!(super::inspector().vmo.as_ref().unwrap().get_size().unwrap(), 8192);
     }
 }
