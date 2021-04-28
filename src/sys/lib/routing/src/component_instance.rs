@@ -145,6 +145,23 @@ impl<C: ComponentInstanceInterface> WeakExtendedInstanceInterface<C> {
     }
 }
 
+impl<C: ComponentInstanceInterface> From<&ExtendedInstanceInterface<C>>
+    for WeakExtendedInstanceInterface<C>
+{
+    fn from(extended: &ExtendedInstanceInterface<C>) -> Self {
+        match extended {
+            ExtendedInstanceInterface::Component(component) => {
+                WeakExtendedInstanceInterface::Component(WeakComponentInstanceInterface::new(
+                    component,
+                ))
+            }
+            ExtendedInstanceInterface::AboveRoot(top_instance) => {
+                WeakExtendedInstanceInterface::AboveRoot(Arc::downgrade(top_instance))
+            }
+        }
+    }
+}
+
 /// A special instance identified with the top of the tree, i.e. component manager's instance.
 pub trait TopInstanceInterface: Sized + std::fmt::Debug {
     fn namespace_capabilities(&self) -> &NamespaceCapabilities;

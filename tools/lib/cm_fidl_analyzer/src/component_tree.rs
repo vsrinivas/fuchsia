@@ -37,6 +37,7 @@ pub struct NodePath(Vec<PartialMoniker>);
 
 /// A representation of a v2 component containing a `ComponentDecl` as well as the `NodePath`s of
 /// the component itself and of its parent and children (if any).
+#[derive(Clone)]
 pub struct ComponentNode {
     pub decl: ComponentDecl,
     node_path: NodePath,
@@ -47,6 +48,7 @@ pub struct ComponentNode {
 }
 
 /// The environment of a v2 component.
+#[derive(Clone)]
 pub struct NodeEnvironment {
     /// The name of this environment as defined by its creator. Should be `None` for the root
     /// environment.
@@ -215,6 +217,14 @@ impl ComponentNode {
 
     pub fn node_path(&self) -> NodePath {
         self.node_path.clone()
+    }
+
+    pub fn parent(&self) -> Option<&NodePath> {
+        self.parent.as_ref()
+    }
+
+    pub fn children(&self) -> &Vec<NodePath> {
+        &self.children
     }
 
     pub fn environment(&self) -> &NodeEnvironment {

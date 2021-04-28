@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod capability_routing;
+pub mod component_model;
 pub mod component_tree;
 
 use {cm_rust::ComponentDecl, thiserror::Error};
