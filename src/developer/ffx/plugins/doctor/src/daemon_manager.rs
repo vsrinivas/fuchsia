@@ -33,7 +33,9 @@ pub(crate) struct DefaultDaemonManager {}
 impl DaemonManager for DefaultDaemonManager {
     // Kills any running daemons. Returns a bool indicating whether any daemons were killed.
     async fn kill_all(&self) -> Result<bool> {
-        let status = Command::new("pkill").arg("-f").arg("ffx daemon").status()?;
+        // If ffx was started with a --config or a --target, as fx does, there
+        // may be flags between ffx and daemon start.
+        let status = Command::new("pkill").arg("-f").arg("(^|/)ffx (-.* )?daemon start$").status()?;
 
         // There can be a delay between when the daemon is killed and when the
         // ascendd socket closes. If we return too quickly, the main loop will see
