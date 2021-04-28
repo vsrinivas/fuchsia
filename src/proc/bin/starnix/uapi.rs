@@ -12,7 +12,7 @@ use std::fmt;
 use std::ops;
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::fs::FdNumber;
+use crate::fs::FileDescriptor;
 
 #[cfg(target_arch = "x86_64")]
 use linux_uapi::x86_64 as uapi;
@@ -724,8 +724,8 @@ impl From<UserAddress> for SyscallResult {
     }
 }
 
-impl From<FdNumber> for SyscallResult {
-    fn from(value: FdNumber) -> Self {
+impl From<FileDescriptor> for SyscallResult {
+    fn from(value: FileDescriptor) -> Self {
         SyscallResult::Success(value.raw() as u64)
     }
 }

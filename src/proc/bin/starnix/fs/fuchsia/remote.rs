@@ -8,11 +8,10 @@ use fuchsia_component::client::connect_channel_to_service;
 use fuchsia_zircon as zx;
 use lazy_static::lazy_static;
 use log::info;
-use parking_lot::Mutex;
 use std::sync::Arc;
 
-use super::*;
 use crate::fd_impl_seekable;
+use crate::fs::*;
 use crate::task::*;
 use crate::uapi::*;
 
@@ -26,49 +25,46 @@ lazy_static! {
     };
 }
 
-#[derive(FileDesc)]
-pub struct FidlFile {
+#[derive(FileObject)]
+pub struct RemoteFile {
     common: FileCommon,
-
-    // TODO(fxbug.dev/75039): See if we can remove this mutex. It seems strange that one is needed for sync
-    // FIDL but not async FIDL.
-    node: Mutex<FidlNode>,
+    node: RemoteNode,
 }
 
-enum FidlNode {
+enum RemoteNode {
     File(fio::FileSynchronousProxy),
     Directory(fio::DirectorySynchronousProxy),
     Other(fio::NodeSynchronousProxy),
 }
 
-impl FidlNode {
-    fn get_attr(&mut self) -> Result<(i32, fio::NodeAttributes), fidl::Error> {
+impl RemoteNode {
+    fn get_attr(&self) -> Result<(i32, fio::NodeAttributes), fidl::Error> {
         match self {
-            FidlNode::File(n) => n.get_attr(zx::Time::INFINITE),
-            FidlNode::Directory(n) => n.get_attr(zx::Time::INFINITE),
-            FidlNode::Other(n) => n.get_attr(zx::Time::INFINITE),
+            RemoteNode::File(n) => n.get_attr(zx::Time::INFINITE),
+            RemoteNode::Directory(n) => n.get_attr(zx::Time::INFINITE),
+            RemoteNode::Other(n) => n.get_attr(zx::Time::INFINITE),
         }
     }
 }
 
-impl FidlFile {
-    pub fn from_node(node: fio::NodeSynchronousProxy) -> Result<FdHandle, Errno> {
+impl RemoteFile {
+    pub fn from_node(node: fio::NodeSynchronousProxy) -> Result<FileHandle, Errno> {
         let node = match node.describe(zx::Time::INFINITE).map_err(fidl_error)? {
             fio::NodeInfo::Directory(_) => {
-                FidlNode::Directory(fio::DirectorySynchronousProxy::new(node.into_channel()))
+                RemoteNode::Directory(fio::DirectorySynchronousProxy::new(node.into_channel()))
             }
             fio::NodeInfo::File(_) => {
-                FidlNode::File(fio::FileSynchronousProxy::new(node.into_channel()))
+                RemoteNode::File(fio::FileSynchronousProxy::new(node.into_channel()))
             }
-            _ => FidlNode::Other(node),
+            _ => RemoteNode::Other(node),
         };
-        Ok(Arc::new(FidlFile { common: FileCommon::default(), node: Mutex::new(node) }))
+        Ok(Arc::new(RemoteFile { common: FileCommon::default(), node }))
     }
 }
 
 const BYTES_PER_BLOCK: i64 = 512;
 
-impl FileDesc for FidlFile {
+impl FileObject for RemoteFile {
     fd_impl_seekable!();
 
     fn read_at(&self, task: &Task, offset: usize, buf: &[iovec_t]) -> Result<usize, Errno> {
@@ -76,13 +72,13 @@ impl FileDesc for FidlFile {
         for vec in buf {
             total += vec.iov_len;
         }
-        let (status, data) = match *self.node.lock() {
-            FidlNode::File(ref n) => {
+        let (status, data) = match self.node {
+            RemoteNode::File(ref n) => {
                 // TODO(tbodt): Break this into 8k chunks if needed to fit in the FIDL protocol
                 n.read_at(total as u64, offset as u64, zx::Time::INFINITE).map_err(fidl_error)
             }
-            FidlNode::Directory(_) => Err(EISDIR),
-            FidlNode::Other(_) => Err(EINVAL),
+            RemoteNode::Directory(_) => Err(EISDIR),
+            RemoteNode::Other(_) => Err(EINVAL),
         }?;
         zx::Status::ok(status).map_err(fio_error)?;
         let mut offset = 0;
@@ -110,8 +106,8 @@ impl FileDesc for FidlFile {
         let has_execute = prot.contains(zx::VmarFlags::PERM_EXECUTE);
         prot -= zx::VmarFlags::PERM_EXECUTE;
 
-        let (status, buffer) = match *self.node.lock() {
-            FidlNode::File(ref n) => {
+        let (status, buffer) = match self.node {
+            RemoteNode::File(ref n) => {
                 n.get_buffer(prot.bits(), zx::Time::INFINITE).map_err(fidl_error)
             }
             _ => Err(ENODEV),
@@ -126,7 +122,7 @@ impl FileDesc for FidlFile {
 
     fn fstat(&self, task: &Task) -> Result<stat_t, Errno> {
         // TODO: log FIDL error
-        let (status, attrs) = self.node.lock().get_attr().map_err(fidl_error)?;
+        let (status, attrs) = self.node.get_attr().map_err(fidl_error)?;
         zx::Status::ok(status).map_err(fio_error)?;
         Ok(stat_t {
             st_mode: attrs.mode,

@@ -5,7 +5,7 @@
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 
-#[proc_macro_derive(FileDesc)]
+#[proc_macro_derive(FileObject)]
 pub fn derive_file_desc(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let name = parse_macro_input!(item as DeriveInput).ident;
     (quote! {

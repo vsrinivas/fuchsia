@@ -5,23 +5,23 @@
 use log::info;
 use std::sync::Arc;
 
-use super::*;
 use crate::fd_impl_nonseekable;
+use crate::fs::*;
 use crate::task::*;
 use crate::uapi::*;
 
-#[derive(FileDesc)]
+#[derive(FileObject)]
 pub struct SyslogFile {
     common: FileCommon,
 }
 
 impl SyslogFile {
-    pub fn new() -> FdHandle {
+    pub fn new() -> FileHandle {
         Arc::new(SyslogFile { common: FileCommon::default() })
     }
 }
 
-impl FileDesc for SyslogFile {
+impl FileObject for SyslogFile {
     fd_impl_nonseekable!();
 
     fn write(&self, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {

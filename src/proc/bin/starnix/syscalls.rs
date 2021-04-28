@@ -33,7 +33,7 @@ pub struct SyscallContext<'a> {
 
 pub fn sys_write(
     ctx: &SyscallContext<'_>,
-    fd: FdNumber,
+    fd: FileDescriptor,
     buffer: UserAddress,
     count: usize,
 ) -> Result<SyscallResult, Errno> {
@@ -43,7 +43,7 @@ pub fn sys_write(
 
 pub fn sys_fstat(
     ctx: &SyscallContext<'_>,
-    fd: FdNumber,
+    fd: FileDescriptor,
     buffer: UserAddress,
 ) -> Result<SyscallResult, Errno> {
     let fd = ctx.task.files.get(fd)?;
@@ -73,7 +73,7 @@ pub fn sys_mmap(
     length: usize,
     prot: u32,
     flags: u32,
-    fd: FdNumber,
+    fd: FileDescriptor,
     offset: usize,
 ) -> Result<SyscallResult, Errno> {
     info!(
@@ -191,7 +191,7 @@ pub fn sys_brk(ctx: &SyscallContext<'_>, addr: UserAddress) -> Result<SyscallRes
 
 pub fn sys_pread64(
     ctx: &SyscallContext<'_>,
-    fd: FdNumber,
+    fd: FileDescriptor,
     buf: UserAddress,
     count: usize,
     offset: usize,
@@ -203,7 +203,7 @@ pub fn sys_pread64(
 
 pub fn sys_writev(
     ctx: &SyscallContext<'_>,
-    fd: FdNumber,
+    fd: FileDescriptor,
     iovec_addr: UserAddress,
     iovec_count: i32,
 ) -> Result<SyscallResult, Errno> {
@@ -310,7 +310,7 @@ pub fn sys_getegid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
 
 pub fn sys_fstatfs(
     ctx: &SyscallContext<'_>,
-    _fd: FdNumber,
+    _fd: FileDescriptor,
     buf_addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
     let result = statfs::default();
@@ -389,7 +389,7 @@ pub fn sys_openat(
                 EIO
             }
         })?;
-    Ok(ctx.task.files.install_fd(FidlFile::from_node(node)?)?.into())
+    Ok(ctx.task.files.install_fd(RemoteFile::from_node(node)?)?.into())
 }
 
 pub fn sys_getrandom(

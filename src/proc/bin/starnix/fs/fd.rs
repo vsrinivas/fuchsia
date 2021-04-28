@@ -4,7 +4,6 @@
 
 use fuchsia_zircon as zx;
 use parking_lot::{Mutex, RwLock};
-pub use starnix_macros::FileDesc;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -12,11 +11,13 @@ use std::sync::Arc;
 use crate::task::*;
 use crate::uapi::*;
 
+pub use starnix_macros::FileObject;
+
 #[derive(Hash, PartialEq, Eq, Debug, Copy, Clone)]
-pub struct FdNumber(pub i32);
-impl FdNumber {
-    pub fn from_raw(n: i32) -> FdNumber {
-        FdNumber(n)
+pub struct FileDescriptor(i32);
+impl FileDescriptor {
+    pub fn from_raw(n: i32) -> FileDescriptor {
+        FileDescriptor(n)
     }
     pub fn raw(&self) -> i32 {
         self.0
@@ -24,7 +25,7 @@ impl FdNumber {
 }
 
 /// Corresponds to struct file_operations in Linux, plus any filesystem-specific data.
-pub trait FileDesc: Deref<Target = FileCommon> {
+pub trait FileObject: Deref<Target = FileCommon> {
     /// Read from the file without an offset. If your file is seekable, consider implementing this
     /// with fd_impl_seekable.
     fn read(&self, task: &Task, data: &[iovec_t]) -> Result<usize, Errno>;
@@ -96,10 +97,10 @@ pub struct FileCommon {
     pub offset: Mutex<usize>,
 }
 
-pub type FdHandle = Arc<dyn FileDesc + Send + Sync>;
+pub type FileHandle = Arc<dyn FileObject + Send + Sync>;
 
 pub struct FdTable {
-    table: RwLock<HashMap<FdNumber, FdHandle>>,
+    table: RwLock<HashMap<FileDescriptor, FileHandle>>,
 }
 
 impl FdTable {
@@ -107,17 +108,17 @@ impl FdTable {
         FdTable { table: RwLock::new(HashMap::new()) }
     }
 
-    pub fn install_fd(&self, fd: FdHandle) -> Result<FdNumber, Errno> {
+    pub fn install_fd(&self, fd: FileHandle) -> Result<FileDescriptor, Errno> {
         let mut table = self.table.write();
-        let mut n = FdNumber::from_raw(0);
+        let mut n = FileDescriptor::from_raw(0);
         while table.contains_key(&n) {
-            n = FdNumber::from_raw(n.raw() + 1);
+            n = FileDescriptor::from_raw(n.raw() + 1);
         }
         table.insert(n, fd);
         Ok(n)
     }
 
-    pub fn get(&self, n: FdNumber) -> Result<FdHandle, Errno> {
+    pub fn get(&self, n: FileDescriptor) -> Result<FileHandle, Errno> {
         let table = self.table.read();
         table.get(&n).map(|handle| handle.clone()).ok_or_else(|| EBADF)
     }
@@ -140,6 +141,6 @@ mod test {
 
         assert!(Arc::ptr_eq(&table.get(fd_num).unwrap(), &test_file));
         assert!(Arc::ptr_eq(&table.get(fd_num2).unwrap(), &test_file));
-        assert_eq!(table.get(FdNumber::from_raw(fd_num2.raw() + 1)).map(|_| ()), Err(EBADF));
+        assert_eq!(table.get(FileDescriptor::from_raw(fd_num2.raw() + 1)).map(|_| ()), Err(EBADF));
     }
 }

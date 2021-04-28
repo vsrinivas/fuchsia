@@ -55,9 +55,10 @@ if (target_cpu == "x64") {
     sources = [
       "auth.rs",
       "fs/fd.rs",
-      "fs/fidl_file.rs",
+      "fs/fuchsia/mod.rs",
+      "fs/fuchsia/remote.rs",
+      "fs/fuchsia/syslog.rs",
       "fs/mod.rs",
-      "fs/syslog_fd.rs",
       "loader.rs",
       "main.rs",
       "mm.rs",

@@ -5,11 +5,10 @@
 use fidl_fuchsia_io as fio;
 
 mod fd;
-mod fidl_file;
-mod syslog_fd;
+mod fuchsia;
+
 pub use fd::*;
-pub use fidl_file::*;
-pub use syslog_fd::*;
+pub use fuchsia::*;
 
 pub struct FileSystem {
     // TODO: Replace with a real VFS. This can't last long.
