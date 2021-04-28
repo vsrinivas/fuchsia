@@ -42,7 +42,7 @@ using UsbDeviceType =
 class UsbDevice : public UsbDeviceType,
                   public ddk::UsbProtocol<UsbDevice, ddk::base_protocol>,
                   public fbl::RefCounted<UsbDevice>,
-                  public fidl::WireInterface<fuchsia_hardware_usb_device::Device> {
+                  public fidl::WireServer<fuchsia_hardware_usb_device::Device> {
  public:
   UsbDevice(zx_device_t* parent, const ddk::UsbHciProtocolClient& hci, uint32_t device_id,
             uint32_t hub_id, usb_speed_t speed, fbl::RefPtr<UsbWaiterInterface> waiter)
@@ -96,20 +96,26 @@ class UsbDevice : public UsbDeviceType,
   size_t UsbGetRequestSize();
 
   // FIDL messages.
-  void GetDeviceSpeed(GetDeviceSpeedCompleter::Sync& completer);
-  void GetDeviceDescriptor(GetDeviceDescriptorCompleter::Sync& completer);
-  void GetConfigurationDescriptorSize(uint8_t config,
-                                      GetConfigurationDescriptorSizeCompleter::Sync& completer);
-  void GetConfigurationDescriptor(uint8_t config,
-                                  GetConfigurationDescriptorCompleter::Sync& completer);
-  void GetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
-                           GetStringDescriptorCompleter::Sync& completer);
-  void SetInterface(uint8_t interface_number, uint8_t alt_setting,
-                    SetInterfaceCompleter::Sync& completer);
-  void GetDeviceId(GetDeviceIdCompleter::Sync& completer);
-  void GetHubDeviceId(GetHubDeviceIdCompleter::Sync& completer);
-  void GetConfiguration(GetConfigurationCompleter::Sync& completer);
-  void SetConfiguration(uint8_t configuration, SetConfigurationCompleter::Sync& completer);
+  void GetDeviceSpeed(GetDeviceSpeedRequestView request,
+                      GetDeviceSpeedCompleter::Sync& completer) override;
+  void GetDeviceDescriptor(GetDeviceDescriptorRequestView request,
+                           GetDeviceDescriptorCompleter::Sync& completer) override;
+  void GetConfigurationDescriptorSize(
+      GetConfigurationDescriptorSizeRequestView request,
+      GetConfigurationDescriptorSizeCompleter::Sync& completer) override;
+  void GetConfigurationDescriptor(GetConfigurationDescriptorRequestView request,
+                                  GetConfigurationDescriptorCompleter::Sync& completer) override;
+  void GetStringDescriptor(GetStringDescriptorRequestView request,
+                           GetStringDescriptorCompleter::Sync& completer) override;
+  void SetInterface(SetInterfaceRequestView request,
+                    SetInterfaceCompleter::Sync& completer) override;
+  void GetDeviceId(GetDeviceIdRequestView request, GetDeviceIdCompleter::Sync& completer) override;
+  void GetHubDeviceId(GetHubDeviceIdRequestView request,
+                      GetHubDeviceIdCompleter::Sync& completer) override;
+  void GetConfiguration(GetConfigurationRequestView request,
+                        GetConfigurationCompleter::Sync& completer) override;
+  void SetConfiguration(SetConfigurationRequestView request,
+                        SetConfigurationCompleter::Sync& completer) override;
 
   // Hub support.
   void SetHubInterface(const usb_hub_interface_protocol_t* hub_intf);

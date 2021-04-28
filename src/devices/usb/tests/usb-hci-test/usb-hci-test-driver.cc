@@ -25,7 +25,7 @@
 
 namespace usb {
 
-void HciTest::Run(RunCompleter::Sync& completer) {
+void HciTest::Run(RunRequestView request, RunCompleter::Sync& completer) {
   if (test_running_) {
     completer.ReplyError(ZX_ERR_CONNECTION_REFUSED);
     return;

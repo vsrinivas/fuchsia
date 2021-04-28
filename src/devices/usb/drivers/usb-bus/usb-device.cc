@@ -712,19 +712,22 @@ uint64_t UsbDevice::UsbGetCurrentFrame() { return hci_.GetCurrentFrame(); }
 
 size_t UsbDevice::UsbGetRequestSize() { return UnownedRequest::RequestSize(parent_req_size_); }
 
-void UsbDevice::GetDeviceSpeed(GetDeviceSpeedCompleter::Sync& completer) {
+void UsbDevice::GetDeviceSpeed(GetDeviceSpeedRequestView request,
+                               GetDeviceSpeedCompleter::Sync& completer) {
   completer.Reply(speed_);
 }
 
-void UsbDevice::GetDeviceDescriptor(GetDeviceDescriptorCompleter::Sync& completer) {
+void UsbDevice::GetDeviceDescriptor(GetDeviceDescriptorRequestView request,
+                                    GetDeviceDescriptorCompleter::Sync& completer) {
   fidl::Array<uint8_t, sizeof(device_desc_)> data;
   memcpy(data.data(), &device_desc_, sizeof(device_desc_));
   completer.Reply(std::move(data));
 }
 
 void UsbDevice::GetConfigurationDescriptorSize(
-    uint8_t config, GetConfigurationDescriptorSizeCompleter::Sync& completer) {
-  auto* descriptor = GetConfigDesc(config);
+    GetConfigurationDescriptorSizeRequestView request,
+    GetConfigurationDescriptorSizeCompleter::Sync& completer) {
+  auto* descriptor = GetConfigDesc(request->config);
   if (!descriptor) {
     completer.Reply(ZX_ERR_INVALID_ARGS, 0);
   }
@@ -733,9 +736,9 @@ void UsbDevice::GetConfigurationDescriptorSize(
   completer.Reply(ZX_OK, length);
 }
 
-void UsbDevice::GetConfigurationDescriptor(uint8_t config,
+void UsbDevice::GetConfigurationDescriptor(GetConfigurationDescriptorRequestView request,
                                            GetConfigurationDescriptorCompleter::Sync& completer) {
-  auto* descriptor = GetConfigDesc(config);
+  auto* descriptor = GetConfigDesc(request->config);
   if (!descriptor) {
     completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
     return;
@@ -747,28 +750,32 @@ void UsbDevice::GetConfigurationDescriptor(uint8_t config,
                       const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(descriptor)), length));
 }
 
-void UsbDevice::GetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
+void UsbDevice::GetStringDescriptor(GetStringDescriptorRequestView request,
                                     GetStringDescriptorCompleter::Sync& completer) {
   char buffer[fuchsia_hardware_usb_device::wire::kMaxStringDescSize];
   size_t actual = 0;
-  auto status = UsbGetStringDescriptor(desc_id, lang_id, &lang_id,
+  auto status = UsbGetStringDescriptor(request->desc_id, request->lang_id, &request->lang_id,
                                        reinterpret_cast<uint8_t*>(buffer), sizeof(buffer), &actual);
-  completer.Reply(status, fidl::StringView(buffer, actual), lang_id);
+  completer.Reply(status, fidl::StringView(buffer, actual), request->lang_id);
 }
 
-void UsbDevice::SetInterface(uint8_t interface_number, uint8_t alt_setting,
+void UsbDevice::SetInterface(SetInterfaceRequestView request,
                              SetInterfaceCompleter::Sync& completer) {
-  auto status = UsbSetInterface(interface_number, alt_setting);
+  auto status = UsbSetInterface(request->interface_number, request->alt_setting);
   completer.Reply(status);
 }
 
-void UsbDevice::GetDeviceId(GetDeviceIdCompleter::Sync& completer) { completer.Reply(device_id_); }
+void UsbDevice::GetDeviceId(GetDeviceIdRequestView request, GetDeviceIdCompleter::Sync& completer) {
+  completer.Reply(device_id_);
+}
 
-void UsbDevice::GetHubDeviceId(GetHubDeviceIdCompleter::Sync& completer) {
+void UsbDevice::GetHubDeviceId(GetHubDeviceIdRequestView request,
+                               GetHubDeviceIdCompleter::Sync& completer) {
   completer.Reply(hub_id_);
 }
 
-void UsbDevice::GetConfiguration(GetConfigurationCompleter::Sync& completer) {
+void UsbDevice::GetConfiguration(GetConfigurationRequestView request,
+                                 GetConfigurationCompleter::Sync& completer) {
   fbl::AutoLock lock(&state_lock_);
 
   auto* descriptor = reinterpret_cast<usb_configuration_descriptor_t*>(
@@ -776,9 +783,9 @@ void UsbDevice::GetConfiguration(GetConfigurationCompleter::Sync& completer) {
   completer.Reply(descriptor->bConfigurationValue);
 }
 
-void UsbDevice::SetConfiguration(uint8_t configuration,
+void UsbDevice::SetConfiguration(SetConfigurationRequestView request,
                                  SetConfigurationCompleter::Sync& completer) {
-  auto status = UsbSetConfiguration(configuration);
+  auto status = UsbSetConfiguration(request->configuration);
   completer.Reply(status);
 }
 

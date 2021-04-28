@@ -34,7 +34,7 @@ using UsbVirtualBusType =
 
 // This is the main class for the USB virtual bus.
 class UsbVirtualBus : public UsbVirtualBusType,
-                      public fidl::WireInterface<fuchsia_hardware_usb_virtual_bus::Bus> {
+                      public fidl::WireServer<fuchsia_hardware_usb_virtual_bus::Bus> {
  public:
   explicit UsbVirtualBus(zx_device_t* parent) : UsbVirtualBusType(parent) {}
 
@@ -78,10 +78,10 @@ class UsbVirtualBus : public UsbVirtualBusType,
   size_t UsbHciGetRequestSize();
 
   // FIDL messages
-  void Enable(EnableCompleter::Sync& completer);
-  void Disable(DisableCompleter::Sync& completer);
-  void Connect(ConnectCompleter::Sync& completer);
-  void Disconnect(DisconnectCompleter::Sync& completer);
+  void Enable(EnableRequestView request, EnableCompleter::Sync& completer) override;
+  void Disable(DisableRequestView request, DisableCompleter::Sync& completer) override;
+  void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
+  void Disconnect(DisconnectRequestView request, DisconnectCompleter::Sync& completer) override;
 
   // Public for unit tests.
   void SetConnected(bool connected);

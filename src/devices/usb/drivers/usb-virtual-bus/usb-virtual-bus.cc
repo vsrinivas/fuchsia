@@ -508,7 +508,7 @@ zx_status_t UsbVirtualBus::UsbHciCancelAll(uint32_t device_id, uint8_t ep_addres
 
 size_t UsbVirtualBus::UsbHciGetRequestSize() { return Request::RequestSize(sizeof(usb_request_t)); }
 
-void UsbVirtualBus::Enable(EnableCompleter::Sync& completer) {
+void UsbVirtualBus::Enable(EnableRequestView request, EnableCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
 
   zx_status_t status = ZX_OK;
@@ -523,7 +523,7 @@ void UsbVirtualBus::Enable(EnableCompleter::Sync& completer) {
   completer.Reply(status);
 }
 
-void UsbVirtualBus::Disable(DisableCompleter::Sync& completer) {
+void UsbVirtualBus::Disable(DisableRequestView request, DisableCompleter::Sync& completer) {
   SetConnected(false);
   UsbVirtualHost* host;
   UsbVirtualDevice* device;
@@ -543,7 +543,7 @@ void UsbVirtualBus::Disable(DisableCompleter::Sync& completer) {
   completer.Reply(ZX_OK);
 }
 
-void UsbVirtualBus::Connect(ConnectCompleter::Sync& completer) {
+void UsbVirtualBus::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
   if (host_ == nullptr || device_ == nullptr) {
     completer.Reply(ZX_ERR_BAD_STATE);
     return;
@@ -553,7 +553,8 @@ void UsbVirtualBus::Connect(ConnectCompleter::Sync& completer) {
   completer.Reply(ZX_OK);
 }
 
-void UsbVirtualBus::Disconnect(DisconnectCompleter::Sync& completer) {
+void UsbVirtualBus::Disconnect(DisconnectRequestView request,
+                               DisconnectCompleter::Sync& completer) {
   if (host_ == nullptr || device_ == nullptr) {
     completer.Reply(ZX_ERR_BAD_STATE);
     return;

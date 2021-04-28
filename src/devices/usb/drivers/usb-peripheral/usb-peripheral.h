@@ -92,11 +92,10 @@ struct UsbConfiguration : fbl::RefCounted<UsbConfiguration> {
 // This is the main class for the USB peripheral role driver.
 // It binds against the USB DCI driver device and manages a list of UsbFunction devices,
 // one for each USB function in the peripheral role configuration.
-class UsbPeripheral
-    : public UsbPeripheralType,
-      public ddk::EmptyProtocol<ZX_PROTOCOL_USB_PERIPHERAL>,
-      public ddk::UsbDciInterfaceProtocol<UsbPeripheral>,
-      public fidl::WireRawChannelInterface<fuchsia_hardware_usb_peripheral::Device> {
+class UsbPeripheral : public UsbPeripheralType,
+                      public ddk::EmptyProtocol<ZX_PROTOCOL_USB_PERIPHERAL>,
+                      public ddk::UsbDciInterfaceProtocol<UsbPeripheral>,
+                      public fidl::WireServer<fuchsia_hardware_usb_peripheral::Device> {
  public:
   UsbPeripheral(zx_device_t* parent) : UsbPeripheralType(parent), dci_(parent), ums_(parent) {}
 
@@ -116,11 +115,11 @@ class UsbPeripheral
 
   // FIDL messages
 
-  void SetConfiguration(DeviceDescriptor desc,
-                        ::fidl::VectorView<ConfigurationDescriptor> configuration_descriptors,
+  void SetConfiguration(SetConfigurationRequestView request,
                         SetConfigurationCompleter::Sync& completer) override;
-  void ClearFunctions(ClearFunctionsCompleter::Sync& completer) override;
-  void SetStateChangeListener(zx::channel listener,
+  void ClearFunctions(ClearFunctionsRequestView request,
+                      ClearFunctionsCompleter::Sync& completer) override;
+  void SetStateChangeListener(SetStateChangeListenerRequestView request,
                               SetStateChangeListenerCompleter::Sync& completer) override;
 
   zx_status_t SetDeviceDescriptor(DeviceDescriptor desc);

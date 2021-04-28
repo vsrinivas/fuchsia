@@ -24,7 +24,7 @@ using HciTestBase = ddk::Device<HciTest, ddk::Unbindable, ddk::Messageable, ddk:
 
 class HciTest : public HciTestBase,
                 public ddk::EmptyProtocol<ZX_PROTOCOL_USB_HCI_TEST>,
-                public fidl::WireInterface<fuchsia_hardware_usb_hcitest::Device> {
+                public fidl::WireServer<fuchsia_hardware_usb_hcitest::Device> {
  public:
   HciTest(zx_device_t* parent, const ddk::UsbProtocolClient& usb)
       : HciTestBase(parent), usb_(usb) {}
@@ -41,7 +41,7 @@ class HciTest : public HciTestBase,
     txn.Reply();
   }
   void DdkRelease() { delete this; }
-  void Run(RunCompleter::Sync& _completer);
+  void Run(RunRequestView request, RunCompleter::Sync& _completer) override;
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);

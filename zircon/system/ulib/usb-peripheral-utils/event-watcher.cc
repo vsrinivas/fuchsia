@@ -10,7 +10,8 @@
 
 namespace usb_peripheral_utils {
 
-void EventWatcher::FunctionRegistered(FunctionRegisteredCompleter::Sync& completer) {
+void EventWatcher::FunctionRegistered(FunctionRegisteredRequestView request,
+                                      FunctionRegisteredCompleter::Sync& completer) {
   functions_registered_++;
   if (all_functions_registered()) {
     loop_->Quit();
@@ -20,7 +21,8 @@ void EventWatcher::FunctionRegistered(FunctionRegisteredCompleter::Sync& complet
   }
 }
 
-void EventWatcher::FunctionsCleared(FunctionsClearedCompleter::Sync& completer) {
+void EventWatcher::FunctionsCleared(FunctionsClearedRequestView request,
+                                    FunctionsClearedCompleter::Sync& completer) {
   all_functions_cleared_ = true;
   loop_->Quit();
   completer.Close(ZX_ERR_CANCELED);

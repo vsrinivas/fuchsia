@@ -12,15 +12,17 @@
 
 namespace usb_peripheral_utils {
 
-class __EXPORT EventWatcher : public fidl::WireInterface<fuchsia_hardware_usb_peripheral::Events> {
+class __EXPORT EventWatcher : public fidl::WireServer<fuchsia_hardware_usb_peripheral::Events> {
  public:
   explicit EventWatcher(async::Loop* loop, zx::channel svc, size_t functions)
       : loop_(loop), functions_(functions) {
     fidl::BindSingleInFlightOnly(loop->dispatcher(), std::move(svc), this);
   }
 
-  void FunctionRegistered(FunctionRegisteredCompleter::Sync& completer);
-  void FunctionsCleared(FunctionsClearedCompleter::Sync& completer);
+  void FunctionRegistered(FunctionRegisteredRequestView request,
+                          FunctionRegisteredCompleter::Sync& completer) override;
+  void FunctionsCleared(FunctionsClearedRequestView request,
+                        FunctionsClearedCompleter::Sync& completer) override;
 
   bool all_functions_registered() { return functions_registered_ == functions_; }
   bool all_functions_cleared() { return all_functions_cleared_; }

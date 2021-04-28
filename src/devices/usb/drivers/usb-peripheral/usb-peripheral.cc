@@ -824,14 +824,13 @@ void UsbPeripheral::UsbDciInterfaceSetConnected(bool connected) {
 
 void UsbPeripheral::UsbDciInterfaceSetSpeed(usb_speed_t speed) { speed_ = speed; }
 
-void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
-                                     ::fidl::VectorView<ConfigurationDescriptor> config_descs,
+void UsbPeripheral::SetConfiguration(SetConfigurationRequestView request,
                                      SetConfigurationCompleter::Sync& completer) {
   zxlogf(DEBUG, "%s", __func__);
-  ZX_ASSERT(!config_descs.empty());
+  ZX_ASSERT(!request->config_descriptors.empty());
   peripheral::wire::DeviceSetConfigurationResult response;
   uint8_t index = 0;
-  for (auto& func_descs : config_descs) {
+  for (auto& func_descs : request->config_descriptors) {
     auto descriptor = fbl::MakeRefCounted<UsbConfiguration>();
     descriptor->index = index;
     configurations_.push_back(descriptor);
@@ -853,7 +852,7 @@ void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
       return;
     }
 
-    zx_status_t status = SetDeviceDescriptor(std::move(device_desc));
+    zx_status_t status = SetDeviceDescriptor(std::move(request->device_desc));
     if (status != ZX_OK) {
       response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
       completer.Reply(std::move(response));
@@ -912,7 +911,8 @@ zx_status_t UsbPeripheral::SetDeviceDescriptor(DeviceDescriptor desc) {
   }
 }
 
-void UsbPeripheral::ClearFunctions(ClearFunctionsCompleter::Sync& completer) {
+void UsbPeripheral::ClearFunctions(ClearFunctionsRequestView request,
+                                   ClearFunctionsCompleter::Sync& completer) {
   zxlogf(DEBUG, "%s", __func__);
   ClearFunctions();
   completer.Reply();
@@ -927,7 +927,7 @@ int UsbPeripheral::ListenerCleanupThread() {
   return 0;
 }
 
-void UsbPeripheral::SetStateChangeListener(zx::channel listener,
+void UsbPeripheral::SetStateChangeListener(SetStateChangeListenerRequestView request,
                                            SetStateChangeListenerCompleter::Sync& completer) {
   // This code is wrapped in a loop
   // to prevent a race condition in the event that multiple
@@ -957,7 +957,7 @@ void UsbPeripheral::SetStateChangeListener(zx::channel listener,
       // another caller may have tried to do this while we were blocked on thrd_join.
       continue;
     }
-    listener_ = std::move(listener);
+    listener_ = request->listener.TakeChannel();
     if (thrd_create(
             &thread_,
             [](void* arg) -> int {
