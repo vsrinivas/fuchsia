@@ -68,7 +68,7 @@ impl controller::Handle for AccessibilityController {
                     )));
                 }
                 let result =
-                    self.client.write_setting(info.merge(original_info).into(), false).await;
+                    self.client.write_setting(original_info.merge(info).into(), false).await;
                 Some(result.into_handler_result())
             }
             _ => None,

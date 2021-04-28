@@ -101,7 +101,7 @@ impl IntlController {
         self.write_intl_info_to_service(info.clone()).await;
 
         let current = self.client.read_setting::<IntlInfo>().await;
-        self.client.write_setting(info.merge(current).into(), false).await.into_handler_result()
+        self.client.write_setting(current.merge(info).into(), false).await.into_handler_result()
     }
 
     /// Checks if the given IntlInfo is valid.

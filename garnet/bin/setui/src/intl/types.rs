@@ -18,10 +18,10 @@ pub struct IntlInfo {
 impl Merge for IntlInfo {
     fn merge(&self, other: Self) -> Self {
         IntlInfo {
-            locales: self.locales.clone().or(other.locales),
-            temperature_unit: self.temperature_unit.or(other.temperature_unit),
-            time_zone_id: self.time_zone_id.clone().or(other.time_zone_id),
-            hour_cycle: self.hour_cycle.or(other.hour_cycle),
+            locales: other.locales.or_else(|| self.locales.clone()),
+            temperature_unit: other.temperature_unit.or(self.temperature_unit),
+            time_zone_id: other.time_zone_id.or_else(|| self.time_zone_id.clone()),
+            hour_cycle: other.hour_cycle.or(self.hour_cycle),
         }
     }
 }

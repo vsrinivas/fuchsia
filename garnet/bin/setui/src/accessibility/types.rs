@@ -24,19 +24,19 @@ impl AccessibilityInfo {
 impl Merge for AccessibilityInfo {
     fn merge(&self, other: Self) -> Self {
         AccessibilityInfo {
-            audio_description: self.audio_description.or(other.audio_description),
-            screen_reader: self.screen_reader.or(other.screen_reader),
-            color_inversion: self.color_inversion.or(other.color_inversion),
-            enable_magnification: self.enable_magnification.or(other.enable_magnification),
-            color_correction: self
+            audio_description: other.audio_description.or(self.audio_description),
+            screen_reader: other.screen_reader.or(self.screen_reader),
+            color_inversion: other.color_inversion.or(self.color_inversion),
+            enable_magnification: other.enable_magnification.or(self.enable_magnification),
+            color_correction: other
                 .color_correction
                 .map(ColorBlindnessType::into)
-                .or(other.color_correction),
+                .or(self.color_correction),
             captions_settings: match (self.captions_settings, other.captions_settings) {
                 (Some(caption_settings), Some(other_caption_settings)) => {
                     Some(caption_settings.merge(other_caption_settings))
                 }
-                _ => self.captions_settings.or(other.captions_settings),
+                _ => other.captions_settings.or(self.captions_settings),
             },
         }
     }
@@ -112,13 +112,13 @@ impl CaptionsSettings {
 impl Merge for CaptionsSettings {
     fn merge(&self, other: Self) -> Self {
         CaptionsSettings {
-            for_media: self.for_media.or(other.for_media),
-            for_tts: self.for_tts.or(other.for_tts),
-            window_color: self.window_color.or(other.window_color),
-            background_color: self.background_color.or(other.background_color),
+            for_media: other.for_media.or(self.for_media),
+            for_tts: other.for_tts.or(self.for_tts),
+            window_color: other.window_color.or(self.window_color),
+            background_color: other.background_color.or(self.background_color),
             font_style: match (self.font_style, other.font_style) {
                 (Some(style), Some(other_style)) => Some(style.merge(other_style)),
-                _ => self.font_style.or(other.font_style),
+                _ => other.font_style.or(self.font_style),
             },
         }
     }
@@ -166,10 +166,10 @@ impl CaptionFontStyle {
 impl Merge for CaptionFontStyle {
     fn merge(&self, other: Self) -> Self {
         CaptionFontStyle {
-            family: self.family.or(other.family),
-            color: self.color.or(other.color),
-            relative_size: self.relative_size.or(other.relative_size),
-            char_edge_style: self.char_edge_style.or(other.char_edge_style),
+            family: other.family.or(self.family),
+            color: other.color.or(self.color),
+            relative_size: other.relative_size.or(self.relative_size),
+            char_edge_style: other.char_edge_style.or(self.char_edge_style),
         }
     }
 }
