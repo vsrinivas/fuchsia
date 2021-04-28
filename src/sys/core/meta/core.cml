@@ -315,6 +315,7 @@
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.RootResource",
                 "fuchsia.device.manager.Administrator",
+                "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.manager.DriverHostDevelopment",
                 "fuchsia.device.NameProvider",
