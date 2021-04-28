@@ -43,6 +43,7 @@ rustc_library("netstack3-core") {
     "src/data_structures/id_map.rs",
     "src/data_structures/id_map_collection.rs",
     "src/data_structures/mod.rs",
+    "src/data_structures/ref_counted_hash_map.rs",
     "src/data_structures/token_bucket.rs",
     "src/device/arp.rs",
     "src/device/ethernet.rs",

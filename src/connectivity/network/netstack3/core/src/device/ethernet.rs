@@ -30,6 +30,7 @@ use packet_formats::ethernet::{
 use specialize_ip_macro::specialize_ip_address;
 
 use crate::context::{DualStateContext, FrameContext, InstantContext, StateContext, TimerHandler};
+use crate::data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult};
 use crate::device::arp::{
     self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpState, ArpTimerId,
 };
@@ -232,7 +233,7 @@ impl EthernetDeviceStateBuilder {
             mac: self.mac,
             mtu: self.mtu,
             hw_mtu: self.mtu,
-            link_multicast_groups: HashMap::new(),
+            link_multicast_groups: RefCountedHashSet::default(),
             ipv4_arp: ArpState::default(),
             ndp: NdpState::new(self.ndp_configs),
             pending_frames: HashMap::new(),
@@ -255,7 +256,7 @@ pub(crate) struct EthernetDeviceState<I: Instant> {
     hw_mtu: u32,
 
     /// Link multicast groups this device has joined.
-    link_multicast_groups: HashMap<MulticastAddr<Mac>, usize>,
+    link_multicast_groups: RefCountedHashSet<MulticastAddr<Mac>>,
 
     /// IPv4 ARP state.
     ipv4_arp: ArpState<EthernetLinkDevice, Ipv4Addr>,
@@ -315,7 +316,7 @@ impl<I: Instant> EthernetDeviceState<I> {
         (self.mac == *dst_mac)
             || dst_mac.is_broadcast()
             || (MulticastAddr::new(*dst_mac)
-                .map(|a| self.link_multicast_groups.contains_key(&a))
+                .map(|a| self.link_multicast_groups.contains(&a))
                 .unwrap_or(false))
     }
 
@@ -917,17 +918,16 @@ pub(super) fn join_link_multicast<C: EthernetIpDeviceContext>(
 
     let groups = &mut device_state.link_multicast_groups;
 
-    let counter = groups.entry(multicast_addr).or_insert(0);
-    *counter += 1;
-
-    if *counter == 1 {
-        trace!("ethernet::join_link_multicast: joining link multicast {:?}", multicast_addr,);
-    } else {
-        trace!(
-            "ethernet::join_link_multicast: already joinined link multicast {:?}, counter = {}",
-            multicast_addr,
-            *counter,
-        );
+    match groups.insert(multicast_addr) {
+        InsertResult::Inserted(()) => {
+            trace!("ethernet::join_link_multicast: joining link multicast {:?}", multicast_addr);
+        }
+        InsertResult::AlreadyPresent => {
+            trace!(
+                "ethernet::join_link_multicast: already joined link multicast {:?}",
+                multicast_addr,
+            );
+        }
     }
 }
 
@@ -958,21 +958,23 @@ fn leave_link_multicast<C: EthernetIpDeviceContext>(
 
     let groups = &mut device_state.link_multicast_groups;
 
-    // Will panic if `device_id` has not yet joined the multicast address.
-    let counter = groups.get_mut(&multicast_addr).unwrap();
-
-    if *counter == 1 {
-        trace!("ethernet::leave_link_multicast: leaving link multicast {:?}", multicast_addr,);
-
-        groups.remove(&multicast_addr);
-    } else {
-        *counter -= 1;
-
-        trace!(
-            "ethernet::leave_link_multicast: not leaving link multicast {:?} as there are still listeners for it, counter = {}",
-            multicast_addr,
-            *counter,
-        );
+    match groups.remove(multicast_addr) {
+        RemoveResult::Removed(()) => {
+            trace!("ethernet::leave_link_multicast: leaving link multicast {:?}", multicast_addr);
+        }
+        RemoveResult::StillPresent => {
+            trace!(
+                "ethernet::leave_link_multicast: not leaving link multicast {:?} as there are still listeners for it",
+                multicast_addr,
+            );
+        }
+        RemoveResult::NotPresent => {
+            panic!(
+                "ethernet::leave_link_multicast: device {:?} has not yet joined link multicast {:?}",
+                device_id,
+                multicast_addr,
+            );
+        }
     }
 }
 
