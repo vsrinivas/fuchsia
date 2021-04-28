@@ -10,32 +10,34 @@ namespace analytics::core_dev_tools {
 
 namespace {
 
-constexpr const char* const kBotEnvironments[] = {
-    "TF_BUILD",            // Azure
-    "bamboo.buildKey",     // Bamboo
-    "BUILDKITE",           // BUILDKITE
-    "CIRCLECI",            // Circle
-    "CIRRUS_CI",           // Cirrus
-    "CODEBUILD_BUILD_ID",  // Codebuild
-    "UNITTEST_ON_FORGE",   // Forge
-    "SWARMING_BOT_ID",     // Fuchsia
-    "GITHUB_ACTIONS",      // GitHub Actions
-    "GITLAB_CI",           // GitLab
-    "HEROKU_TEST_RUN_ID",  // Heroku
-    "BUILD_ID",            // Hudson & Jenkins
-    "TEAMCITY_VERSION",    // Teamcity
-    "TRAVIS",              // Travis
-};
-
+constexpr BotInfo kBotEnvironments[] = {{"TEST_ONLY_ENV", "test-only"},
+                                        {"TF_BUILD", "azure"},
+                                        {"bamboo.buildKey", "bamboo"},
+                                        {"BUILDKITE", "buildkite"},
+                                        {"CIRCLECI", "circle"},
+                                        {"CIRRUS_CI", "cirrus"},
+                                        {"CODEBUILD_BUILD_ID", "codebuild"},
+                                        {"UNITTEST_ON_FORGE", "forge"},
+                                        {"SWARMING_BOT_ID", "luci"},
+                                        {"GITHUB_ACTIONS", "github"},
+                                        {"GITLAB_CI", "gitlab"},
+                                        {"HEROKU_TEST_RUN_ID", "heroku"},
+                                        {"BUILD_ID", "hudson-jenkins"},
+                                        {"TEAMCITY_VERSION", "teamcity"},
+                                        {"TRAVIS", "travis"}};
 }  // namespace
 
-bool IsRunByBot() {
-  for (const char* env : kBotEnvironments) {
-    if (std::getenv(env)) {
-      return true;
+bool IsRunByBot() { return GetBotInfo().IsRunByBot(); }
+
+BotInfo GetBotInfo() {
+  for (const auto& bot : kBotEnvironments) {
+    if (std::getenv(bot.environment)) {
+      return bot;
     }
   }
-  return false;
+  return {};
 }
+
+bool BotInfo::IsRunByBot() const { return environment != nullptr; }
 
 }  // namespace analytics::core_dev_tools

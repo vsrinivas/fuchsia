@@ -7,6 +7,8 @@ import("//build/test.gni")
 source_set("testable_internals") {
   visibility = [ ":*" ]
   sources = [
+    "environment_status.cc",
+    "environment_status.h",
     "persistent_status.cc",
     "persistent_status.h",
   ]
@@ -39,8 +41,6 @@ static_library("core_dev_tools") {
     "analytics_status.h",
     "command_line_options.cc",
     "command_line_options.h",
-    "environment_status.cc",
-    "environment_status.h",
     "general_parameters.cc",
     "general_parameters.h",
     "google_analytics_client.cc",
@@ -67,6 +67,7 @@ static_library("core_dev_tools") {
 test("unittests") {
   output_name = "analytics_cpp_core_dev_tools_unittests"
   sources = [
+    "environment_status_unittest.cc",
     "persistent_status_unittest.cc",
     "user_agent_unittest.cc",
   ]
