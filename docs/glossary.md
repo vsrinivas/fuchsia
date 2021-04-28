@@ -123,6 +123,12 @@ syntax for [service capabilities](#service-capability),
 
 Capability routing is a [components v2](#components-v2) concept.
 
+### **Carnelian** {#Carnelian}
+
+A user-interface framework for Fuchsia components written in Rust.
+
+Further details are available in [the source](/src/lib/ui/carnelian/README.md)
+
 #### expose {#expose}
 
 A [component instance](#component-instance) may use the `expose`
