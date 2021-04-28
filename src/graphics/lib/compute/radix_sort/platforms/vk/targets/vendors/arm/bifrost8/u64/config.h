@@ -15,16 +15,16 @@
 #define RS_FILL_WORKGROUP_SIZE_LOG2        3
 #define RS_FILL_BLOCK_ROWS                 32
 
-#define RS_HISTOGRAM_WORKGROUP_SIZE_LOG2   7
+#define RS_HISTOGRAM_WORKGROUP_SIZE_LOG2   3
 #define RS_HISTOGRAM_SUBGROUP_SIZE_LOG2    3
-#define RS_HISTOGRAM_BLOCK_ROWS            8
+#define RS_HISTOGRAM_BLOCK_ROWS            22
 
 #define RS_PREFIX_WORKGROUP_SIZE_LOG2      7
 #define RS_PREFIX_SUBGROUP_SIZE_LOG2       3
 
-#define RS_SCATTER_WORKGROUP_SIZE_LOG2     7
+#define RS_SCATTER_WORKGROUP_SIZE_LOG2     6
 #define RS_SCATTER_SUBGROUP_SIZE_LOG2      3
-#define RS_SCATTER_BLOCK_ROWS              8
+#define RS_SCATTER_BLOCK_ROWS              9
 // clang-format on
 
 //

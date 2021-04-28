@@ -40,6 +40,9 @@ Intel  | GEN8+         | ✔                  | ✔               |
 ### Intel HD Graphics 615
 ![Intel HD Graphics 615](docs/images/intel_hd615.png)
 
+### ARM Mali G52
+![ARM Mali G52](docs/images/arm_g52.png)
+
 ### ARM Mali G31
 ![ARM Mali G31](docs/images/arm_g31.png)
 
