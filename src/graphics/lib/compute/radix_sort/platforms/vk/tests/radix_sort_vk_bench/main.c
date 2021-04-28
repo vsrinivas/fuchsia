@@ -1621,6 +1621,11 @@ main(int argc, char const * argv[])
 
         fprintf(stdout, "%7.2f\n", 1000.0 * count / elapsed_ns_min_f64);
       }
+
+      //
+      // Make each trial visible ASAP...
+      //
+      fflush(stdout);
     }
   //
   // cleanup
