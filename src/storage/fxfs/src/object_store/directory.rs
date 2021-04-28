@@ -118,46 +118,23 @@ impl Directory {
         );
     }
 
-    /// Removes |name| from the directory.
+    /// Inserts a child into the directory.
     ///
     /// Requires transaction locks on |self|.
-    pub async fn remove_child<'a>(
+    pub fn insert_child<'a>(
         &'a self,
         transaction: &mut Transaction<'a>,
         name: &str,
-    ) -> Result<(), Error> {
-        self.replace_child(transaction, name, ObjectValue::None).await
-    }
-
-    async fn replace_child<'a>(
-        &'a self,
-        transaction: &mut Transaction<'a>,
-        name: &str,
-        new_value: ObjectValue,
-    ) -> Result<(), Error> {
-        let (object_id, descriptor) = self.lookup(name).await?;
-        match descriptor {
-            ObjectDescriptor::File => {
-                self.store
-                    .adjust_refs(transaction, object_id, -1)
-                    .await
-                    .context("Failed to adjust refs")?;
-            }
-            ObjectDescriptor::Directory => {
-                let dir = self.store.open_directory(object_id).await?;
-                if dir.has_children().await? {
-                    bail!(FxfsError::NotEmpty);
-                }
-            }
-            ObjectDescriptor::Volume(_) => {
-                bail!("deleting volumes is unimplemented");
-            }
-        }
+        object_id: u64,
+        descriptor: ObjectDescriptor,
+    ) {
         transaction.add(
             self.store.store_object_id(),
-            Mutation::replace_or_insert_object(ObjectKey::child(self.object_id, name), new_value),
+            Mutation::replace_or_insert_object(
+                ObjectKey::child(self.object_id, name),
+                ObjectValue::child(object_id, descriptor),
+            ),
         );
-        Ok(())
     }
 
     /// Returns an iterator that will return directory entries skipping deleted ones.  Example
@@ -230,43 +207,73 @@ impl DirectoryIterator<'_, '_> {
     }
 }
 
-/// Moves src/src_name to dst/dst_name.
+/// Moves src.0/src.1 to dst.0/dst.1.
 ///
-/// If |dst| already has a child |dst_name|, that child is removed; the constraints of remove_child
-/// apply.
+/// If |dst.0| already has a child |dst.1|, it is removed. If that child was a directory, it must
+/// be empty. If |graveyard| is set, the child is moved there instead of being deleted.
 ///
-/// Requires transaction locks on both of |src| and |dst|.
-pub async fn move_child<'a>(
+/// If |src| is None, this is effectively the same as unlink(dst.0/dst.1).
+pub async fn replace_child<'a>(
     transaction: &mut Transaction<'a>,
-    src: &'a Directory,
-    src_name: &str,
-    dst: &'a Directory,
-    dst_name: &str,
+    src: Option<(&'a Directory, &str)>,
+    dst: (&'a Directory, &str),
+    graveyard: Option<&'a Directory>,
 ) -> Result<(), Error> {
-    let (object_id, descriptor) = src.lookup(src_name).await?;
-    if let Err(e) = dst
-        .replace_child(transaction, dst_name, ObjectValue::child(object_id, descriptor.clone()))
-        .await
-    {
-        if FxfsError::NotFound.matches(&e) {
+    let deleted_id_and_descriptor = match dst.0.lookup(dst.1).await {
+        Ok((old_id, ObjectDescriptor::File)) => {
+            if graveyard.is_none() {
+                dst.0
+                    .store
+                    .adjust_refs(transaction, old_id, -1)
+                    .await
+                    .context("Failed to adjust refs")?;
+            }
+            Some((old_id, ObjectDescriptor::File))
+        }
+        Ok((old_id, ObjectDescriptor::Directory)) => {
+            let dir = dst.0.store.open_directory(old_id).await?;
+            if dir.has_children().await? {
+                bail!(FxfsError::NotEmpty);
+            }
+            Some((old_id, ObjectDescriptor::Directory))
+        }
+        Ok((_, ObjectDescriptor::Volume(_))) => bail!(FxfsError::Inconsistent),
+        Err(e) if FxfsError::NotFound.matches(&e) => {
+            if src.is_none() {
+                // Neither src nor dst exist
+                bail!(FxfsError::NotFound);
+            }
+            None
+        }
+        Err(e) => bail!(e),
+    };
+    let new_value = if let Some((src_dir, src_name)) = src {
+        transaction.add(
+            src_dir.store.store_object_id(),
+            Mutation::replace_or_insert_object(
+                ObjectKey::child(src_dir.object_id, src_name),
+                ObjectValue::None,
+            ),
+        );
+        src_dir.lookup(src_name).await.map(|(id, descriptor)| ObjectValue::child(id, descriptor))?
+    } else {
+        ObjectValue::None
+    };
+    transaction.add(
+        dst.0.store.store_object_id(),
+        Mutation::replace_or_insert_object(ObjectKey::child(dst.0.object_id, dst.1), new_value),
+    );
+    if let Some(graveyard) = graveyard {
+        if let Some((id, descriptor)) = deleted_id_and_descriptor {
             transaction.add(
-                dst.store.store_object_id(),
+                graveyard.store.store_object_id(),
                 Mutation::insert_object(
-                    ObjectKey::child(dst.object_id, dst_name),
-                    ObjectValue::child(object_id, descriptor),
+                    ObjectKey::child(graveyard.object_id, &format!("{}", id)),
+                    ObjectValue::child(id, descriptor),
                 ),
             );
-        } else {
-            bail!(e);
         }
     }
-    transaction.add(
-        src.store.store_object_id(),
-        Mutation::replace_or_insert_object(
-            ObjectKey::child(src.object_id, src_name),
-            ObjectValue::None,
-        ),
-    );
     Ok(())
 }
 
@@ -304,7 +311,7 @@ mod tests {
         crate::{
             errors::FxfsError,
             object_store::{
-                directory::move_child,
+                directory::replace_child,
                 filesystem::{FxFilesystem, SyncOptions},
                 transaction::TransactionHandler,
                 HandleOptions, ObjectDescriptor, ObjectHandle, ObjectHandleExt,
@@ -406,7 +413,9 @@ mod tests {
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        dir.remove_child(&mut transaction, "foo").await.expect("remove_child failed");
+        replace_child(&mut transaction, None, (&dir, "foo"), None)
+            .await
+            .expect("replace_child failed");
         transaction.commit().await;
 
         assert_eq!(
@@ -417,6 +426,46 @@ mod tests {
                 .expect("wrong error"),
             FxfsError::NotFound
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_delete_child_into_graveyard() {
+        let device = Arc::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
+        let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        let dir = fs
+            .root_store()
+            .create_directory(&mut transaction)
+            .await
+            .expect("create_directory failed");
+        let graveyard = fs
+            .root_store()
+            .create_directory(&mut transaction)
+            .await
+            .expect("create_directory failed");
+
+        dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
+        transaction.commit().await;
+
+        assert!(!graveyard.has_children().await.expect("has_children failed"));
+
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        replace_child(&mut transaction, None, (&dir, "foo"), Some(&graveyard))
+            .await
+            .expect("replace_child failed");
+        transaction.commit().await;
+
+        assert_eq!(
+            dir.lookup("foo")
+                .await
+                .expect_err("lookup succeeded")
+                .downcast::<FxfsError>()
+                .expect("wrong error"),
+            FxfsError::NotFound
+        );
+        assert!(graveyard.has_children().await.expect("has_children failed"));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -439,20 +488,26 @@ mod tests {
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         assert_eq!(
-            dir.remove_child(&mut transaction, "foo")
+            replace_child(&mut transaction, None, (&dir, "foo"), None)
                 .await
-                .expect_err("remove_child succeeded")
+                .expect_err("replace_child succeeded")
                 .downcast::<FxfsError>()
                 .expect("wrong error"),
             FxfsError::NotEmpty
         );
 
-        child.remove_child(&mut transaction, "bar").await.expect("remove_child failed");
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        replace_child(&mut transaction, None, (&child, "bar"), None)
+            .await
+            .expect("replace_child failed");
         transaction.commit().await;
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        dir.remove_child(&mut transaction, "foo").await.expect("remove_child failed");
+        replace_child(&mut transaction, None, (&dir, "foo"), None)
+            .await
+            .expect("replace_child failed");
         transaction.commit().await;
 
         assert_eq!(
@@ -482,7 +537,9 @@ mod tests {
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        dir.remove_child(&mut transaction, "foo").await.expect("remove_child failed");
+        replace_child(&mut transaction, None, (&dir, "foo"), None)
+            .await
+            .expect("replace_child failed");
         transaction.commit().await;
 
         let mut transaction =
@@ -512,7 +569,9 @@ mod tests {
 
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-            dir.remove_child(&mut transaction, "foo").await.expect("remove_child failed");
+            replace_child(&mut transaction, None, (&dir, "foo"), None)
+                .await
+                .expect("replace_child failed");
             transaction.commit().await;
 
             fs.sync(SyncOptions::default()).await.expect("sync failed");
@@ -532,7 +591,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_move_child() {
+    async fn test_replace_child() {
         let device = Arc::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
         let mut transaction =
@@ -555,9 +614,9 @@ mod tests {
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        move_child(&mut transaction, &child_dir1, "foo", &child_dir2, "bar")
+        replace_child(&mut transaction, Some((&child_dir1, "foo")), (&child_dir2, "bar"), None)
             .await
-            .expect("move_child failed");
+            .expect("replace_child failed");
         transaction.commit().await;
 
         assert_eq!(
@@ -573,7 +632,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_move_child_overwrites_dst() {
+    async fn test_replace_child_overwrites_dst() {
         let device = Arc::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
         let mut transaction =
@@ -610,9 +669,9 @@ mod tests {
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        move_child(&mut transaction, &child_dir1, "foo", &child_dir2, "bar")
+        replace_child(&mut transaction, Some((&child_dir1, "foo")), (&child_dir2, "bar"), None)
             .await
-            .expect("move_child failed");
+            .expect("replace_child failed");
         transaction.commit().await;
 
         assert_eq!(
@@ -639,7 +698,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_move_child_fails_if_would_overwrite_nonempty_dir() {
+    async fn test_replace_child_fails_if_would_overwrite_nonempty_dir() {
         let device = Arc::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
         let mut transaction =
@@ -671,9 +730,9 @@ mod tests {
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         assert_eq!(
-            move_child(&mut transaction, &child_dir1, "foo", &child_dir2, "bar")
+            replace_child(&mut transaction, Some((&child_dir1, "foo")), (&child_dir2, "bar"), None)
                 .await
-                .expect_err("move_child succeeded")
+                .expect_err("replace_child succeeded")
                 .downcast::<FxfsError>()
                 .expect("wrong error"),
             FxfsError::NotEmpty
@@ -681,7 +740,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_move_child_within_dir() {
+    async fn test_replace_child_within_dir() {
         let device = Arc::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
         let mut transaction =
@@ -696,7 +755,9 @@ mod tests {
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        move_child(&mut transaction, &dir, "foo", &dir, "bar").await.expect("move_child failed");
+        replace_child(&mut transaction, Some((&dir, "foo")), (&dir, "bar"), None)
+            .await
+            .expect("replace_child failed");
         transaction.commit().await;
 
         assert_eq!(
@@ -736,7 +797,9 @@ mod tests {
         transaction.commit().await;
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        dir.remove_child(&mut transaction, "apple").await.expect("remove_child failed");
+        replace_child(&mut transaction, None, (&dir, "apple"), None)
+            .await
+            .expect("rereplace_child failed");
         transaction.commit().await;
         let layer_set = dir.object_store().tree().layer_set();
         let mut merger = layer_set.merger();

@@ -68,6 +68,7 @@ impl TransactionHandler for FakeFilesystem {
     ) -> Result<Transaction<'a>, Error> {
         let mut locks: Vec<_> = locks.iter().cloned().collect();
         locks.sort_unstable();
+        locks.dedup();
         self.lock_manager.lock(&locks).await;
         Ok(Transaction::new(self, locks))
     }

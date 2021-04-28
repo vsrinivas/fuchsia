@@ -6,7 +6,7 @@ use {
     crate::{
         object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::StoreObjectHandle,
-        server::{errors::map_to_status, node::FxNode, volume::FxVolume},
+        server::{directory::FxDirectory, errors::map_to_status, node::FxNode, volume::FxVolume},
     },
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
@@ -57,6 +57,12 @@ impl Drop for FxFile {
 impl FxNode for FxFile {
     fn object_id(&self) -> u64 {
         self.handle.object_id()
+    }
+    fn parent(&self) -> Option<Arc<FxDirectory>> {
+        unreachable!(); // Add a parent back-reference if needed.
+    }
+    fn set_parent(&self, _parent: Arc<FxDirectory>) {
+        // NOP
     }
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
         self

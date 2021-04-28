@@ -228,7 +228,16 @@ impl PartialEq for TxnMutation<'_> {
 
 impl Eq for TxnMutation<'_> {}
 
-/// A transaction groups mutation records to be commited as a group.
+impl std::fmt::Debug for TxnMutation<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TxnMutation")
+            .field("object_id", &self.object_id)
+            .field("mutation", &self.mutation)
+            .finish()
+    }
+}
+
+/// A transaction groups mutation records to be committed as a group.
 pub struct Transaction<'a> {
     handler: Arc<dyn TransactionHandler>,
 
@@ -294,6 +303,7 @@ impl<'a> Transaction<'a> {
 
     /// Commits a transaction.
     pub async fn commit(self) {
+        log::debug!("Commit {:?}", &self);
         self.handler.clone().commit_transaction(self).await;
     }
 }
@@ -302,7 +312,17 @@ impl Drop for Transaction<'_> {
     fn drop(&mut self) {
         // Call the TransactionHandler implementation of drop_transaction which should, as a
         // minimum, call LockManager's drop_transaction to ensure the locks are released.
+        log::debug!("Drop {:?}", &self);
         self.handler.clone().drop_transaction(self);
+    }
+}
+
+impl std::fmt::Debug for Transaction<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Transaction")
+            .field("mutations", &self.mutations)
+            .field("lock_keys", &self.lock_keys)
+            .finish()
     }
 }
 

@@ -32,7 +32,7 @@ use {
         any::Any,
         sync::{
             atomic::{AtomicBool, Ordering},
-            Arc,
+            Arc, Mutex,
         },
     },
     vfs::{
@@ -53,13 +53,81 @@ use {
 
 pub struct FxDirectory {
     volume: Arc<FxVolume>,
+    // The root directory is the only directory which has no parent, and its parent can never
+    // change, hence the Option can go on the outside.
+    parent: Option<Mutex<Arc<FxDirectory>>>,
     directory: object_store::Directory,
     is_deleted: AtomicBool,
 }
 
 impl FxDirectory {
-    pub(super) fn new(volume: Arc<FxVolume>, directory: object_store::Directory) -> Self {
-        Self { volume, directory, is_deleted: AtomicBool::new(false) }
+    pub(super) fn new(
+        volume: Arc<FxVolume>,
+        parent: Option<Arc<FxDirectory>>,
+        directory: object_store::Directory,
+    ) -> Self {
+        Self {
+            volume,
+            parent: parent.map(|p| Mutex::new(p)),
+            directory,
+            is_deleted: AtomicBool::new(false),
+        }
+    }
+
+    pub(super) fn directory(&self) -> &object_store::Directory {
+        &self.directory
+    }
+
+    pub(super) fn volume(&self) -> &Arc<FxVolume> {
+        &self.volume
+    }
+
+    /// Acquires a transaction with the appropriate locks to unlink |name|. Returns the transaction,
+    /// as well as the ID and type of the child.
+    ///
+    /// We always need to lock |self|, but we only need to lock the child if it's a directory,
+    /// to prevent entries being added to the directory.
+    pub(super) async fn acquire_transaction_for_unlink<'a>(
+        self: &Arc<Self>,
+        extra_keys: &[LockKey],
+        name: &str,
+    ) -> Result<(Transaction<'a>, u64, ObjectDescriptor), Error> {
+        // Since we don't know the child object ID until we've looked up the child, we need to loop
+        // until we have acquired a lock on a child whose ID is the same as it was in the last
+        // iteration (or the child is a file, at which point it doesn't matter).
+        //
+        // Note that the returned transaction may lock more objects than is necessary (for example,
+        // if the child "foo" was first a directory, then was renamed to "bar" and a file "foo" was
+        // created, we might acquire a lock on both the parent and "bar").
+        let store = self.volume.store();
+        let mut child_object_id = INVALID_OBJECT_ID;
+        loop {
+            let mut lock_keys = if child_object_id == INVALID_OBJECT_ID {
+                vec![LockKey::object(store.store_object_id(), self.object_id())]
+            } else {
+                vec![
+                    LockKey::object(store.store_object_id(), self.object_id()),
+                    LockKey::object(store.store_object_id(), child_object_id),
+                ]
+            };
+            lock_keys.extend_from_slice(extra_keys);
+            let fs = store.filesystem().clone();
+            let transaction = fs.new_transaction(&lock_keys).await?;
+
+            let (object_id, object_descriptor) = self.directory.lookup(name).await?;
+            match object_descriptor {
+                ObjectDescriptor::File => {
+                    return Ok((transaction, object_id, object_descriptor));
+                }
+                ObjectDescriptor::Directory => {
+                    if object_id == child_object_id {
+                        return Ok((transaction, object_id, object_descriptor));
+                    }
+                    child_object_id = object_id;
+                }
+                ObjectDescriptor::Volume(_) => bail!(FxfsError::Inconsistent),
+            }
+        }
     }
 
     fn ensure_writable(&self) -> Result<(), Error> {
@@ -103,7 +171,9 @@ impl FxDirectory {
                     if transaction_or_guard.is_left() && flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 {
                         bail!(FxfsError::AlreadyExists);
                     }
-                    self.volume.get_or_load_node(object_id, object_descriptor).await?
+                    self.volume
+                        .get_or_load_node(object_id, object_descriptor, Some(self.clone()))
+                        .await?
                 }
                 Err(e) if FxfsError::NotFound.matches(&e) => {
                     if let Left(mut transaction) = transaction_or_guard {
@@ -139,66 +209,39 @@ impl FxDirectory {
         self.ensure_writable()?;
         if mode & MODE_TYPE_DIRECTORY != 0 {
             let dir = self.directory.create_child_dir(transaction, name).await?;
-            Ok(Arc::new(FxDirectory::new(self.volume.clone(), dir)) as Arc<dyn FxNode>)
+            Ok(Arc::new(FxDirectory::new(self.volume.clone(), Some(self.clone()), dir))
+                as Arc<dyn FxNode>)
         } else {
             let handle = self.directory.create_child_file(transaction, name).await?;
             Ok(Arc::new(FxFile::new(handle, self.volume.clone())) as Arc<dyn FxNode>)
         }
     }
 
-    async fn unlink_inner(self: &Arc<Self>, name: &str) -> Result<(), Error> {
-        // Acquire a transaction with the appropriate locks.
-        // We always need to lock |self|, but we only need to lock the child if it's a directory,
-        // to prevent entries being added to the directory.
-        // Since we don't know the child object ID until we've looked up the child, we need to loop
-        // until we have acquired a lock on a child whose ID is the same as it was in the last
-        // iteration (or the child is a file, at which point it doesn't matter).
-        //
-        // Note that the returned transaction may lock more objects than is necessary (for example,
-        // if the child "foo" was first a directory, then was renamed to "bar" and a file "foo" was
-        // created, we might acquire a lock on both the parent and "bar").
-        let store = self.volume.store();
-        let mut child_object_id = INVALID_OBJECT_ID;
-        let (mut transaction, object_descriptor) = loop {
-            let lock_keys = if child_object_id == INVALID_OBJECT_ID {
-                vec![LockKey::object(store.store_object_id(), self.object_id())]
-            } else {
-                vec![
-                    LockKey::object(store.store_object_id(), self.object_id()),
-                    LockKey::object(store.store_object_id(), child_object_id),
-                ]
-            };
-            let fs = store.filesystem().clone();
-            let transaction = fs.new_transaction(&lock_keys).await?;
-
-            let (object_id, object_descriptor) = self.directory.lookup(name).await?;
-            match object_descriptor {
-                ObjectDescriptor::File => {
-                    child_object_id = object_id;
-                    break (transaction, object_descriptor);
-                }
-                ObjectDescriptor::Directory => {
-                    if object_id == child_object_id {
-                        break (transaction, object_descriptor);
-                    }
-                    child_object_id = object_id;
-                }
-                ObjectDescriptor::Volume(_) => bail!(FxfsError::Inconsistent),
-            }
-        };
-
-        // TODO(jfsulliv): We can immediately delete files if they have no open references, but
-        // we need appropriate locking in place to be able to check the file's open count.
-        let _dir = if let ObjectDescriptor::File = object_descriptor {
-            directory::move_child(
-                &mut transaction,
-                &self.directory,
-                &name,
-                self.volume.graveyard(),
-                &format!("{}", child_object_id),
-            )
-            .await?;
-            None
+    /// Replaces |name| (which is object |object_id| of type |descriptor|) with |replacement|
+    /// (which can be a different directory).  If |replacement| is unset, simply removes the object.
+    ///
+    /// It is the caller's responsibility to make sure that |name|, |object_id|, and
+    /// |object_descriptor| all refer to the same object.
+    ///
+    /// If the child was a directory, returns the child node which MUST NOT be dropped until
+    /// |transaction| is committed. This is necessary to ensure that the node isn't evicted from the
+    /// cache before |transaction| finishes and actually unlinks the node.
+    ///
+    /// TODO(csuter): Separate out a commit_prepare which acquires the lock, so that we can handle
+    /// situations like this more gracefully. (Alternatively, add a callback to commit.)
+    #[must_use]
+    pub(super) async fn replace_child<'a>(
+        self: &'a Arc<Self>,
+        transaction: &mut Transaction<'a>,
+        name: &str,
+        object_id: u64,
+        descriptor: ObjectDescriptor,
+        replacement: Option<(&'a Arc<FxDirectory>, &str)>,
+    ) -> Result<Option<Arc<dyn FxNode>>, Error> {
+        let (dir, graveyard) = if let ObjectDescriptor::File = descriptor {
+            // TODO(jfsulliv): We can immediately delete files if they have no open references, but
+            // we need appropriate locking in place to be able to check the file's open count.
+            (None, Some(self.volume.graveyard()))
         } else {
             // For directories, we need to set |is_deleted| on the in-memory node. If the node's
             // absent from the cache, we *must* load the node into memory, and make sure the node
@@ -208,29 +251,32 @@ impl FxDirectory {
             // Holding a placeholder here could deadlock, since transaction.commit() will block
             // until there are no readers, but a reader could be blocked on the cache by the
             // placeholder.
-            // TODO(csuter): Separate out a commit_prepare which acquires the lock, so that we can
-            // handle situations like this more gracefully. (Alternatively, add a callback to
-            // commit.)
-            self.directory.remove_child(&mut transaction, &name).await?;
             let dir = self
                 .volume
-                .get_or_load_node(child_object_id, object_descriptor)
+                .get_or_load_node(object_id, descriptor, Some(self.clone()))
                 .await?
                 .into_any()
                 .downcast::<FxDirectory>()
                 .unwrap();
             dir.is_deleted.store(true, Ordering::Relaxed);
-            Some(dir)
+            (Some(dir as Arc<dyn FxNode>), None)
         };
-        transaction.commit().await;
-
-        Ok(())
+        // TODO(jfsulliv): This results in an unnecessary second lookup; we could pass in object_id
+        // and descriptor here, since we've already resolved them.
+        directory::replace_child(
+            transaction,
+            replacement.map(|(dir, name)| (dir.directory(), name)),
+            (self.directory(), name),
+            graveyard,
+        )
+        .await?;
+        Ok(dir)
     }
 
     // TODO(jfsulliv): Change the VFS to send in &Arc<Self> so we don't need this.
     async fn as_strong(&self) -> Arc<Self> {
         self.volume
-            .get_or_load_node(self.object_id(), ObjectDescriptor::Directory)
+            .get_or_load_node(self.object_id(), ObjectDescriptor::Directory, self.parent())
             .await
             .expect("open_or_load_node on self failed")
             .into_any()
@@ -249,6 +295,15 @@ impl FxNode for FxDirectory {
     fn object_id(&self) -> u64 {
         self.directory.object_id()
     }
+    fn parent(&self) -> Option<Arc<FxDirectory>> {
+        self.parent.as_ref().map(|p| p.lock().unwrap().clone())
+    }
+    fn set_parent(&self, parent: Arc<FxDirectory>) {
+        match &self.parent {
+            Some(p) => *p.lock().unwrap() = parent,
+            None => panic!("Called set_parent on root node"),
+        }
+    }
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
         self
     }
@@ -263,7 +318,16 @@ impl MutableDirectory for FxDirectory {
 
     async fn unlink(&self, name: &str, _must_be_directory: bool) -> Result<(), Status> {
         // TODO(csuter): do something with must_be_directory.
-        self.as_strong().await.unlink_inner(name).await.map_err(map_to_status)
+        let this = self.as_strong().await;
+        let (mut transaction, object_id, object_descriptor) =
+            this.acquire_transaction_for_unlink(&[], name).await.map_err(map_to_status)?;
+        // _dir must be held until after the transaction commits; see FxDirectory::replace_child.
+        let _dir = this
+            .replace_child(&mut transaction, name, object_id, object_descriptor, None)
+            .await
+            .map_err(map_to_status)?;
+        transaction.commit().await;
+        Ok(())
     }
 
     async fn set_attrs(&self, _flags: u32, _attrs: NodeAttributes) -> Result<(), Status> {

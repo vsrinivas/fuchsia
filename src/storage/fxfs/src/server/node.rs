@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::server::directory::FxDirectory,
     futures::future::poll_fn,
     std::{
         any::Any,
@@ -16,6 +17,8 @@ use {
 /// FxNode is a node in the filesystem hierarchy (either a file or directory).
 pub trait FxNode: Any + Send + Sync + 'static {
     fn object_id(&self) -> u64;
+    fn parent(&self) -> Option<Arc<FxDirectory>>;
+    fn set_parent(&self, parent: Arc<FxDirectory>);
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static>;
 }
 
@@ -30,6 +33,12 @@ struct Placeholder(Mutex<PlaceholderInner>);
 impl FxNode for Placeholder {
     fn object_id(&self) -> u64 {
         self.0.lock().unwrap().object_id
+    }
+    fn parent(&self) -> Option<Arc<FxDirectory>> {
+        unreachable!();
+    }
+    fn set_parent(&self, _parent: Arc<FxDirectory>) {
+        unreachable!();
     }
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
         self
@@ -140,7 +149,10 @@ impl NodeCache {
 #[cfg(test)]
 mod tests {
     use {
-        crate::server::node::{FxNode, GetResult, NodeCache},
+        crate::server::{
+            directory::FxDirectory,
+            node::{FxNode, GetResult, NodeCache},
+        },
         fuchsia_async as fasync,
         std::{
             any::Any,
@@ -156,6 +168,12 @@ mod tests {
     impl FxNode for FakeNode {
         fn object_id(&self) -> u64 {
             self.0
+        }
+        fn parent(&self) -> Option<Arc<FxDirectory>> {
+            unreachable!();
+        }
+        fn set_parent(&self, _parent: Arc<FxDirectory>) {
+            unreachable!();
         }
         fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
             self
