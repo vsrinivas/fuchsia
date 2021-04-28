@@ -281,9 +281,6 @@ func init() {
 	fidlNames := []string{"FidlType", "HandleEvents",
 		"has_invalid_tag", "IsEmpty", "New", "Tag", "unknown", "Unknown",
 		"UnknownBytes", "UnknownData", "which", "Which"}
-	// TODO(ianloic) add: "Clone"
-	// There are Clone methods on a couple of protocols so this may be a breaking change.
-	// fxbug.dev/7785
 
 	// misc other names
 	// TODO(ianloic): confirm which of these can be removed
@@ -312,5 +309,10 @@ func init() {
 	nsComponentContext.ReserveNames(fidlNames)
 	nsComponentContext.ReserveNames(miscNames)
 
+	// A Clone() method on a type named Clone would conflict with its constructor.
+	typeContext.ReserveNames([]string{"Clone"})
+
+	structMemberContext.ReserveNames([]string{"Clone"})
+	enumMemberContext.ReserveNames([]string{"Clone"})
 	bitsMemberContext.ReserveNames([]string{"kMask"})
 }

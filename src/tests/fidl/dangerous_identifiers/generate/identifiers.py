@@ -62,6 +62,7 @@ IDENTIFIERS = [
     Identifier('char16_t'),
     Identifier('char32_t'),
     Identifier('class'),
+    Identifier('clone'),
     Identifier('co_await'),
     Identifier('co_return'),
     Identifier('co_yield'),
