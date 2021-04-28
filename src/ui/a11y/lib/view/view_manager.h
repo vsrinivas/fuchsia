@@ -18,6 +18,7 @@
 #include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
 #include "src/ui/a11y/lib/semantics/semantics_event_manager.h"
 #include "src/ui/a11y/lib/semantics/semantics_source.h"
+#include "src/ui/a11y/lib/view/a11y_view.h"
 #include "src/ui/a11y/lib/view/view_wrapper.h"
 
 namespace a11y {
@@ -37,6 +38,7 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
                        std::unique_ptr<ViewSemanticsFactory> view_semantics_factory,
                        std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory,
                        std::unique_ptr<SemanticsEventManager> semantics_event_manager,
+                       std::unique_ptr<AccessibilityViewInterface> a11y_view,
                        sys::ComponentContext* context, vfs::PseudoDir* debug_dir);
   ~ViewManager() override;
 
@@ -165,6 +167,8 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory_;
 
   std::unique_ptr<SemanticsEventManager> semantics_event_manager_;
+
+  std::unique_ptr<AccessibilityViewInterface> a11y_view_;
 
   fidl::Binding<fuchsia::accessibility::virtualkeyboard::Listener>
       virtualkeyboard_listener_binding_;

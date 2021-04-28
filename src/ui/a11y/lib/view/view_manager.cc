@@ -19,11 +19,13 @@ ViewManager::ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
                          std::unique_ptr<ViewSemanticsFactory> view_semantics_factory,
                          std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory,
                          std::unique_ptr<SemanticsEventManager> semantics_event_manager,
+                         std::unique_ptr<AccessibilityViewInterface> a11y_view,
                          sys::ComponentContext* context, vfs::PseudoDir* debug_dir)
     : factory_(std::move(factory)),
       view_semantics_factory_(std::move(view_semantics_factory)),
       annotation_view_factory_(std::move(annotation_view_factory)),
       semantics_event_manager_(std::move(semantics_event_manager)),
+      a11y_view_(std::move(a11y_view)),
       virtualkeyboard_listener_binding_(this),
       context_(context),
       debug_dir_(debug_dir) {}

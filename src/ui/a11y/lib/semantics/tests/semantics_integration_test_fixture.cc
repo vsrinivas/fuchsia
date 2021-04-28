@@ -18,6 +18,7 @@
 
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/semantics/a11y_semantics_event_manager.h"
+#include "src/ui/a11y/lib/view/tests/mocks/mock_accessibility_view.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 
 namespace accessibility_test {
@@ -87,6 +88,7 @@ SemanticsIntegrationTest::SemanticsIntegrationTest(const std::string& environmen
                     std::make_unique<MockViewSemanticsFactory>(),
                     std::make_unique<MockAnnotationViewFactory>(),
                     std::make_unique<a11y::A11ySemanticsEventManager>(),
+                    std::make_unique<MockAccessibilityView>(),
                     component_context_provider_.context(),
                     component_context_provider_.context()->outgoing()->debug_dir()) {}
 

@@ -17,6 +17,18 @@
 
 namespace a11y {
 
+// Interface for managing an accessibility view.
+//
+// // This view is used to vend capabilities to the accessibility manager
+// that a view confers, e.g. ability to request focus, consume and
+// respond to input events, annotate underlying views, and apply
+// coordinate transforms to its subtree.
+class AccessibilityViewInterface {
+ public:
+  AccessibilityViewInterface() = default;
+  virtual ~AccessibilityViewInterface() = default;
+};
+
 // The AccessibilityView class represents the accessibility-owned view
 // directly below the root view in the scene graph.
 //
@@ -24,11 +36,11 @@ namespace a11y {
 // that a view confers, e.g. ability to request focus, consume and
 // respond to input events, annotate underlying views, and apply
 // coordinate transforms to its subtree.
-class AccessibilityView {
+class AccessibilityView : public AccessibilityViewInterface {
  public:
   AccessibilityView(sys::ComponentContext* component_context,
                     fuchsia::ui::scenic::ScenicPtr scenic);
-  ~AccessibilityView() = default;
+  ~AccessibilityView() override = default;
 
  private:
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events);

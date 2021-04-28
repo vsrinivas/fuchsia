@@ -22,6 +22,7 @@
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree_service_factory.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_event_manager.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
+#include "src/ui/a11y/lib/view/tests/mocks/mock_accessibility_view.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 
 namespace accessibility_test {
@@ -47,7 +48,8 @@ class LinearNavigationActionTest : public gtest::TestLoopFixture {
         factory_ptr_(factory_.get()),
         view_manager_(std::move(factory_), std::make_unique<MockViewSemanticsFactory>(),
                       std::make_unique<MockAnnotationViewFactory>(),
-                      std::make_unique<MockSemanticsEventManager>(), context_provider_.context(),
+                      std::make_unique<MockSemanticsEventManager>(),
+                      std::make_unique<MockAccessibilityView>(), context_provider_.context(),
                       context_provider_.context()->outgoing()->debug_dir()),
         semantic_provider_(&view_manager_) {
     action_context_.semantics_source = &view_manager_;

@@ -6,6 +6,7 @@ source_set("mocks") {
   testonly = true
 
   sources = [
+    "mock_accessibility_view.h",
     "mock_view_semantics.cc",
     "mock_view_semantics.h",
     "scenic_mocks.cc",

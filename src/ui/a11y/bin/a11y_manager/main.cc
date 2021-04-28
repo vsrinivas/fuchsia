@@ -17,6 +17,7 @@
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 #include "src/ui/a11y/lib/semantics/a11y_semantics_event_manager.h"
 #include "src/ui/a11y/lib/util/boot_info_manager.h"
+#include "src/ui/a11y/lib/view/a11y_view.h"
 #include "src/ui/a11y/lib/view/a11y_view_semantics.h"
 
 namespace {
@@ -30,12 +31,15 @@ int run_a11y_manager(int argc, const char** argv) {
   inspector->Health().StartingUp();
   inspector->Health().Ok();
 
-  a11y::ViewManager view_manager(std::make_unique<a11y::SemanticTreeServiceFactory>(
-                                     inspector->root().CreateChild("semantic_trees")),
-                                 std::make_unique<a11y::A11yViewSemanticsFactory>(),
-                                 std::make_unique<a11y::AnnotationViewFactory>(),
-                                 std::make_unique<a11y::A11ySemanticsEventManager>(), context.get(),
-                                 context->outgoing()->debug_dir());
+  a11y::ViewManager view_manager(
+      std::make_unique<a11y::SemanticTreeServiceFactory>(
+          inspector->root().CreateChild("semantic_trees")),
+      std::make_unique<a11y::A11yViewSemanticsFactory>(),
+      std::make_unique<a11y::AnnotationViewFactory>(),
+      std::make_unique<a11y::A11ySemanticsEventManager>(),
+      std::make_unique<a11y::AccessibilityView>(
+          context.get(), context->svc()->Connect<fuchsia::ui::scenic::Scenic>()),
+      context.get(), context->outgoing()->debug_dir());
   a11y::TtsManager tts_manager(context.get());
   a11y::ColorTransformManager color_transform_manager(context.get());
   a11y::GestureListenerRegistry gesture_listener_registry;
