@@ -21,16 +21,23 @@ template <typename T>
 class RelaxedAtomic {
  public:
   RelaxedAtomic() noexcept = default;
-  constexpr RelaxedAtomic(T desired) : wrapped_(desired) {}
+  constexpr RelaxedAtomic(T value) : wrapped_(value) {}
 
   T load() const noexcept { return wrapped_.load(ktl::memory_order_relaxed); }
   void store(T desired) noexcept { wrapped_.store(desired, ktl::memory_order_relaxed); }
+
   T fetch_add(T value) noexcept { return wrapped_.fetch_add(value, ktl::memory_order_relaxed); }
+  T fetch_sub(T value) noexcept { return wrapped_.fetch_sub(value, ktl::memory_order_relaxed); }
+  T fetch_and(T value) noexcept { return wrapped_.fetch_and(value, ktl::memory_order_relaxed); }
+  T fetch_or(T value) noexcept { return wrapped_.fetch_or(value, ktl::memory_order_relaxed); }
 
   operator T() const noexcept { return load(); }
 
-  T operator=(T desired) noexcept { return store(desired), desired; }
+  T operator=(T value) noexcept { return store(value), value; }
   T operator+=(T value) noexcept { return fetch_add(value) + value; }
+  T operator-=(T value) noexcept { return fetch_sub(value) - value; }
+  T operator&=(T value) noexcept { return fetch_and(value) & value; }
+  T operator|=(T value) noexcept { return fetch_or(value) | value; }
 
  private:
   ktl::atomic<T> wrapped_;
