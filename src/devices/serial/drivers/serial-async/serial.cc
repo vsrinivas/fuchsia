@@ -29,11 +29,11 @@ zx_status_t SerialDevice::SerialConfig(uint32_t baud_rate, uint32_t flags) {
   return serial_.Config(baud_rate, flags);
 }
 
-void SerialDevice::GetClass(GetClassCompleter::Sync& completer) {
+void SerialDevice::GetClass(GetClassRequestView request, GetClassCompleter::Sync& completer) {
   completer.Reply(static_cast<fuchsia_hardware_serial::wire::Class>(serial_class_));
 }
 
-void SerialDevice::Read(ReadCompleter::Sync& completer) {
+void SerialDevice::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   if (read_completer_.has_value()) {
     completer.ReplyError(ZX_ERR_BAD_STATE);
     return;
@@ -55,8 +55,7 @@ void SerialDevice::Read(ReadCompleter::Sync& completer) {
       this);
 }
 
-void SerialDevice::GetChannel(fidl::ServerEnd<fuchsia_hardware_serial::NewDevice> req,
-                              GetChannelCompleter::Sync& completer) {
+void SerialDevice::GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) {
   if (loop_.has_value()) {
     if (loop_->GetState() == ASYNC_LOOP_SHUTDOWN) {
       loop_.reset();
@@ -69,8 +68,8 @@ void SerialDevice::GetChannel(fidl::ServerEnd<fuchsia_hardware_serial::NewDevice
   loop_->StartThread("serial-thread");
 
   // Invoked when the channel is closed or on any binding-related error.
-  fidl::OnUnboundFn<fidl::WireInterface<fuchsia_hardware_serial::NewDevice>> unbound_fn(
-      [](fidl::WireInterface<fuchsia_hardware_serial::NewDevice>* dev, fidl::UnbindInfo,
+  fidl::OnUnboundFn<fidl::WireServer<fuchsia_hardware_serial::NewDevice>> unbound_fn(
+      [](fidl::WireServer<fuchsia_hardware_serial::NewDevice>* dev, fidl::UnbindInfo,
          fidl::ServerEnd<fuchsia_hardware_serial::NewDevice>) {
         auto* device = static_cast<SerialDevice*>(dev);
         device->loop_->Quit();
@@ -79,20 +78,20 @@ void SerialDevice::GetChannel(fidl::ServerEnd<fuchsia_hardware_serial::NewDevice
       });
 
   auto binding =
-      fidl::BindServer(loop_->dispatcher(), std::move(req),
-                       static_cast<fidl::WireInterface<fuchsia_hardware_serial::NewDevice>*>(this),
+      fidl::BindServer(loop_->dispatcher(), std::move(request->req),
+                       static_cast<fidl::WireServer<fuchsia_hardware_serial::NewDevice>*>(this),
                        std::move(unbound_fn));
   binding_.emplace(std::move(binding));
 }
 
-void SerialDevice::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) {
+void SerialDevice::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   if (write_completer_.has_value()) {
     completer.ReplyError(ZX_ERR_BAD_STATE);
     return;
   }
   write_completer_ = completer.ToAsync();
   serial_.WriteAsync(
-      data.data(), data.count(),
+      request->data.data(), request->data.count(),
       [](void* ctx, zx_status_t status) {
         if (status) {
           auto completer = std::move(static_cast<SerialDevice*>(ctx)->write_completer_);
@@ -107,14 +106,13 @@ void SerialDevice::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& c
       this);
 }
 
-void SerialDevice::SetConfig(fuchsia_hardware_serial::wire::Config config,
-                             SetConfigCompleter::Sync& completer) {
+void SerialDevice::SetConfig(SetConfigRequestView request, SetConfigCompleter::Sync& completer) {
   using fuchsia_hardware_serial::wire::CharacterWidth;
   using fuchsia_hardware_serial::wire::FlowControl;
   using fuchsia_hardware_serial::wire::Parity;
   using fuchsia_hardware_serial::wire::StopWidth;
   uint32_t flags = 0;
-  switch (config.character_width) {
+  switch (request->config.character_width) {
     case CharacterWidth::kBits5:
       flags |= SERIAL_DATA_BITS_5;
       break;
@@ -129,7 +127,7 @@ void SerialDevice::SetConfig(fuchsia_hardware_serial::wire::Config config,
       break;
   }
 
-  switch (config.stop_width) {
+  switch (request->config.stop_width) {
     case StopWidth::kBits1:
       flags |= SERIAL_STOP_BITS_1;
       break;
@@ -138,7 +136,7 @@ void SerialDevice::SetConfig(fuchsia_hardware_serial::wire::Config config,
       break;
   }
 
-  switch (config.parity) {
+  switch (request->config.parity) {
     case Parity::kNone:
       flags |= SERIAL_PARITY_NONE;
       break;
@@ -150,7 +148,7 @@ void SerialDevice::SetConfig(fuchsia_hardware_serial::wire::Config config,
       break;
   }
 
-  switch (config.control_flow) {
+  switch (request->config.control_flow) {
     case FlowControl::kNone:
       flags |= SERIAL_FLOW_CTRL_NONE;
       break;
@@ -159,7 +157,7 @@ void SerialDevice::SetConfig(fuchsia_hardware_serial::wire::Config config,
       break;
   }
 
-  zx_status_t status = SerialConfig(config.baud_rate, flags);
+  zx_status_t status = SerialConfig(request->config.baud_rate, flags);
   completer.Reply(status);
 }
 

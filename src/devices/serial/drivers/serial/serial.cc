@@ -291,18 +291,17 @@ zx_status_t SerialDevice::DdkWrite(const void* buf, size_t count, zx_off_t off, 
   return serial_.Write(reinterpret_cast<const uint8_t*>(buf), count, actual);
 }
 
-void SerialDevice::GetClass(GetClassCompleter::Sync& completer) {
+void SerialDevice::GetClass(GetClassRequestView request, GetClassCompleter::Sync& completer) {
   completer.Reply(static_cast<fuchsia_hardware_serial::wire::Class>(serial_class_));
 }
 
-void SerialDevice::SetConfig(fuchsia_hardware_serial::wire::Config config,
-                             SetConfigCompleter::Sync& completer) {
+void SerialDevice::SetConfig(SetConfigRequestView request, SetConfigCompleter::Sync& completer) {
   using fuchsia_hardware_serial::wire::CharacterWidth;
   using fuchsia_hardware_serial::wire::FlowControl;
   using fuchsia_hardware_serial::wire::Parity;
   using fuchsia_hardware_serial::wire::StopWidth;
   uint32_t flags = 0;
-  switch (config.character_width) {
+  switch (request->config.character_width) {
     case CharacterWidth::kBits5:
       flags |= SERIAL_DATA_BITS_5;
       break;
@@ -317,7 +316,7 @@ void SerialDevice::SetConfig(fuchsia_hardware_serial::wire::Config config,
       break;
   }
 
-  switch (config.stop_width) {
+  switch (request->config.stop_width) {
     case StopWidth::kBits1:
       flags |= SERIAL_STOP_BITS_1;
       break;
@@ -326,7 +325,7 @@ void SerialDevice::SetConfig(fuchsia_hardware_serial::wire::Config config,
       break;
   }
 
-  switch (config.parity) {
+  switch (request->config.parity) {
     case Parity::kNone:
       flags |= SERIAL_PARITY_NONE;
       break;
@@ -338,7 +337,7 @@ void SerialDevice::SetConfig(fuchsia_hardware_serial::wire::Config config,
       break;
   }
 
-  switch (config.control_flow) {
+  switch (request->config.control_flow) {
     case FlowControl::kNone:
       flags |= SERIAL_FLOW_CTRL_NONE;
       break;
@@ -347,7 +346,7 @@ void SerialDevice::SetConfig(fuchsia_hardware_serial::wire::Config config,
       break;
   }
 
-  zx_status_t status = SerialConfig(config.baud_rate, flags);
+  zx_status_t status = SerialConfig(request->config.baud_rate, flags);
   completer.Reply(status);
 }
 

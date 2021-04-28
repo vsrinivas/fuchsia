@@ -26,8 +26,8 @@ class SerialDevice;
 using DeviceType = ddk::Device<SerialDevice, ddk::Messageable>;
 
 class SerialDevice : public DeviceType,
-                     public fidl::WireInterface<fuchsia_hardware_serial::NewDevice>,
-                     public fidl::WireInterface<fuchsia_hardware_serial::NewDeviceProxy> {
+                     public fidl::WireServer<fuchsia_hardware_serial::NewDevice>,
+                     public fidl::WireServer<fuchsia_hardware_serial::NewDeviceProxy> {
  public:
   explicit SerialDevice(zx_device_t* parent) : DeviceType(parent), serial_(parent) {}
 
@@ -42,15 +42,13 @@ class SerialDevice : public DeviceType,
   // Serial protocol implementation.
   zx_status_t SerialGetInfo(serial_port_info_t* info);
   zx_status_t SerialConfig(uint32_t baud_rate, uint32_t flags);
-  void Read(ReadCompleter::Sync& completer) override;
-  void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) override;
-  void GetChannel(fidl::ServerEnd<fuchsia_hardware_serial::NewDevice> req,
-                  GetChannelCompleter::Sync& completer) override;
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override;
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override;
+  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
 
   // Fidl protocol implementation.
-  void GetClass(GetClassCompleter::Sync& completer) override;
-  void SetConfig(fuchsia_hardware_serial::wire::Config config,
-                 SetConfigCompleter::Sync& completer) override;
+  void GetClass(GetClassRequestView request, GetClassCompleter::Sync& completer) override;
+  void SetConfig(SetConfigRequestView request, SetConfigCompleter::Sync& completer) override;
 
  private:
   // The serial protocol of the device we are binding against.

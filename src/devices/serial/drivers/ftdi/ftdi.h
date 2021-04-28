@@ -78,7 +78,7 @@ class FtdiDevice;
 using DeviceType =
     ddk::Device<FtdiDevice, ddk::Unbindable, ddk::Messageable, ddk::Writable, ddk::Readable>;
 class FtdiDevice : public DeviceType,
-                   public fidl::WireInterface<fuchsia_hardware_ftdi::Device>,
+                   public fidl::WireServer<fuchsia_hardware_ftdi::Device>,
                    public ddk::SerialImplProtocol<FtdiDevice, ddk::base_protocol> {
  public:
   explicit FtdiDevice(zx_device_t* parent) : DeviceType(parent), usb_client_(parent) {}
@@ -115,9 +115,7 @@ class FtdiDevice : public DeviceType,
   zx_status_t SerialImplSetNotifyCallback(const serial_notify_t* cb);
 
  private:
-  void CreateI2C(fuchsia_hardware_ftdi::wire::I2cBusLayout layout,
-                 fuchsia_hardware_ftdi::wire::I2cDevice device,
-                 CreateI2CCompleter::Sync& _completer) override;
+  void CreateI2C(CreateI2CRequestView request, CreateI2CCompleter::Sync& _completer) override;
 
   static zx_status_t FidlCreateI2c(void* ctx,
                                    const fuchsia_hardware_ftdi::wire::I2cBusLayout* layout,

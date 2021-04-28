@@ -25,7 +25,7 @@ using DeviceType = ddk::Device<SerialDevice, ddk::Openable, ddk::Closable, ddk::
                                ddk::Writable, ddk::Messageable>;
 
 class SerialDevice : public DeviceType,
-                     public fidl::WireInterface<fuchsia_hardware_serial::Device>,
+                     public fidl::WireServer<fuchsia_hardware_serial::Device>,
                      public ddk::SerialProtocol<SerialDevice, ddk::base_protocol> {
  public:
   explicit SerialDevice(zx_device_t* parent) : DeviceType(parent), serial_(parent), open_(false) {}
@@ -52,9 +52,8 @@ class SerialDevice : public DeviceType,
   void StateCallback(serial_state_t state);
 
   // Fidl protocol implementation.
-  void GetClass(GetClassCompleter::Sync& completer) override;
-  void SetConfig(fuchsia_hardware_serial::wire::Config config,
-                 SetConfigCompleter::Sync& completer) override;
+  void GetClass(GetClassRequestView request, GetClassCompleter::Sync& completer) override;
+  void SetConfig(SetConfigRequestView request, SetConfigCompleter::Sync& completer) override;
 
   // The serial protocol of the device we are binding against.
   ddk::SerialImplProtocolClient serial_;
