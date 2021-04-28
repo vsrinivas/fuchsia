@@ -235,20 +235,20 @@ if (current_toolchain == dart_toolchain) {
 
       outputs = [ _snapshot ]
 
-      script = _dart_binary
-
-      # The snapshot path needs to be rebased on top of the root build dir so
-      # that the resulting depfile gets properly formatted.
-      _rebased_snapshot = rebase_path(_snapshot, root_build_dir)
-      _rebased_depfile = rebase_path(depfile)
-      _rebased_packages_path = rebase_path(_packages_file)
+      # Dart writes absolute paths to depfiles, convert them to relative.
+      # See more information in https://fxbug.dev/75451.
+      script = "//build/depfile_path_to_relative.py"
+      inputs = [ _dart_binary ]
 
       args = [
+        "--depfile=" + rebase_path(depfile, root_build_dir),
+        "--",
+        rebase_path(_dart_binary, root_build_dir),
         "--verbosity=warning",
-        "--snapshot=$_rebased_snapshot",
-        "--snapshot-depfile=$_rebased_depfile",
-        "--packages=$_rebased_packages_path",
-        rebase_path(_main_file),
+        "--snapshot=" + rebase_path(_snapshot, root_build_dir),
+        "--snapshot-depfile=" + rebase_path(depfile, root_build_dir),
+        "--packages=" + rebase_path(_packages_file, root_build_dir),
+        rebase_path(_main_file, root_build_dir),
       ]
 
       deps = dart_sdk_deps + [
