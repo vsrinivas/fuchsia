@@ -283,6 +283,9 @@ impl HostDispatcherState {
         info!("Host added: {}", id.to_string());
         self.host_devices.insert(id, host.clone());
 
+        // If this is the only host, mark it as active.
+        let _ = self.get_active_id();
+
         // Update inspect state
         self.inspect.host_count.set(self.host_devices.len() as u64);
 
@@ -291,19 +294,23 @@ impl HostDispatcherState {
             let _res = l.send_on_adapter_updated(&mut control::AdapterInfo::from(host.info()));
         });
 
+        // Notify HostWatcher interface clients about the new device.
+        self.notify_host_watchers();
+
         // Resolve pending adapter futures.
         self.resolve_host_requests();
     }
 
-    /// Updates the active adapter and notifies listeners
+    /// Updates the active adapter and notifies listeners & host watchers.
     fn set_active_id(&mut self, id: Option<HostId>) {
         info!("New active adapter: {}", id.map_or("<none>".to_string(), |id| id.to_string()));
         self.active_id = id;
+        self.notify_host_watchers();
         if let Some(host) = self.get_active_host() {
             let mut adapter_info = control::AdapterInfo::from(host.info());
             self.notify_event_listeners(|listener| {
                 let _res = listener.send_on_active_adapter_changed(Some(&mut adapter_info));
-            })
+            });
         }
     }
 
@@ -318,6 +325,33 @@ impl HostDispatcherState {
             }
             None => false,
         })
+    }
+
+    pub fn notify_host_watchers(&self) {
+        // The HostInfo::active field for the active host must be filled in later.
+        let active_id = self.active_id;
+
+        // Wait for the hanging get watcher to update so we can linearize updates
+        let current_hosts: Vec<HostInfo> = self
+            .host_devices
+            .values()
+            .map(|host| {
+                let mut info = host.info();
+                // Fill in HostInfo::active
+                if let Some(active_id) = active_id {
+                    info.active = active_id == host.id();
+                }
+                info
+            })
+            .collect();
+        let mut publisher = self.watch_hosts_publisher.clone();
+        fasync::Task::spawn(async move {
+            publisher
+                .set(current_hosts)
+                .await
+                .expect("Fatal error: Host Watcher HangingGet unreachable");
+        })
+        .detach();
     }
 }
 
@@ -806,8 +840,6 @@ impl HostDispatcher {
 
         self.state.write().add_host(host_device.id(), host_device.clone());
 
-        self.notify_host_watchers().await;
-
         // Start listening to Host interface events.
         fasync::Task::spawn(host_device.watch_events(self.clone()).map(|r| {
             r.unwrap_or_else(|err| {
@@ -823,17 +855,8 @@ impl HostDispatcher {
 
     // Update our hanging_get server with the latest hosts. This will notify any pending
     // hanging_gets and any new requests will see the new results.
-    fn notify_host_watchers(&self) -> impl Future<Output = ()> {
-        let mut publisher = self.state.write().watch_hosts_publisher.clone();
-        // Wait for the hanging get watcher to update so we can linearize updates
-        let current_hosts: Vec<_> =
-            self.state.write().host_devices.values().map(|host| host.info()).collect();
-        async move {
-            publisher
-                .set(current_hosts)
-                .await
-                .expect("Fatal error: Host Watcher HangingGet unreachable");
-        }
+    fn notify_host_watchers(&self) {
+        self.state.write().notify_host_watchers();
     }
 
     pub async fn rm_device(&self, host_path: &Path) {
@@ -879,7 +902,7 @@ impl HostDispatcher {
                 warn!("Failed to persist state on adapter change: {:?}", err);
             }
         }
-        self.notify_host_watchers().await;
+        self.notify_host_watchers();
     }
 
     /// Configure a newly active adapter with the correct behavior for an active adapter.
@@ -904,8 +927,7 @@ impl HostDispatcher {
 
     #[cfg(test)]
     pub(crate) fn add_test_host(&self, id: HostId, host: HostDevice) {
-        let mut state = self.state.write();
-        state.add_host(id, host)
+        self.state.write().add_host(id, host);
     }
 }
 
@@ -925,7 +947,8 @@ impl HostListener for HostDispatcher {
 
     type HostInfoFut = BoxFuture<'static, Result<(), anyhow::Error>>;
     fn on_host_updated(&mut self, _info: HostInfo) -> Self::HostInfoFut {
-        self.notify_host_watchers().map(|_| Ok(())).boxed()
+        self.notify_host_watchers();
+        async { Ok(()) }.boxed()
     }
 }
 
@@ -1064,191 +1087,6 @@ async fn assign_host_data(
         }
     };
     host.set_local_data(data).map_err(|e| e.into())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{
-        build_config::{BrEdrConfig, Config},
-        host_dispatcher::test as hd_test,
-        store::stash::Stash,
-    };
-    use {
-        fidl::encoding::Decodable,
-        fidl_fuchsia_bluetooth::Appearance,
-        fidl_fuchsia_bluetooth_host::HostRequest,
-        fidl_fuchsia_bluetooth_sys::TechnologyType,
-        fuchsia_async as fasync,
-        fuchsia_bluetooth::types::{bonding_data::example, Peer, PeerId},
-        fuchsia_inspect::{self as inspect, assert_data_tree},
-        futures::stream::TryStreamExt,
-        matches::assert_matches,
-        std::collections::HashSet,
-    };
-
-    fn peer(id: PeerId) -> Peer {
-        Peer {
-            id: id.into(),
-            address: Address::Public([1, 2, 3, 4, 5, 6]),
-            technology: TechnologyType::LowEnergy,
-            name: Some("Peer Name".into()),
-            appearance: Some(Appearance::Watch),
-            device_class: None,
-            rssi: None,
-            tx_power: None,
-            connected: false,
-            bonded: false,
-            le_services: vec![],
-            bredr_services: vec![],
-        }
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn on_device_changed_inspect_state() {
-        // test setup
-        let stash = Stash::in_memory_mock();
-        let inspector = inspect::Inspector::new();
-        let system_inspect = inspector.root().create_child("system");
-        let (gas_channel_sender, _generic_access_req_stream) = mpsc::channel(0);
-        let watch_peers_broker = hanging_get::HangingGetBroker::new(
-            HashMap::new(),
-            |_, _| true,
-            hanging_get::DEFAULT_CHANNEL_SIZE,
-        );
-        let watch_hosts_broker = hanging_get::HangingGetBroker::new(
-            Vec::new(),
-            |_, _| true,
-            hanging_get::DEFAULT_CHANNEL_SIZE,
-        );
-        let dispatcher = HostDispatcher::new(
-            "test".to_string(),
-            Appearance::Display,
-            stash,
-            system_inspect,
-            gas_channel_sender,
-            watch_peers_broker.new_publisher(),
-            watch_peers_broker.new_registrar(),
-            watch_hosts_broker.new_publisher(),
-            watch_hosts_broker.new_registrar(),
-        );
-        let peer_id = PeerId(1);
-
-        // assert inspect tree is in clean state
-        assert_data_tree!(inspector, root: {
-            system: contains {
-                peer_count: 0u64,
-                peers: {}
-            }
-        });
-
-        // add new peer and assert inspect tree is updated
-        dispatcher.on_device_updated(peer(peer_id)).await;
-        assert_data_tree!(inspector, root: {
-            system: contains {
-                peer_count: 1u64,
-                peers: {
-                    "peer_0": contains {
-                        peer_id: peer_id.to_string(),
-                        technology: "LowEnergy"
-                    }
-                }
-            }
-        });
-
-        // remove peer and assert inspect tree is updated
-        dispatcher.on_device_removed(peer_id).await;
-        assert_data_tree!(inspector, root: {
-            system: contains {
-                peer_count: 0u64,
-                peers: { }
-            }
-        });
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_change_name_no_deadlock() {
-        let dispatcher = hd_test::make_simple_test_dispatcher();
-        // Call a function that used to use the self.state.write().gas_channel_sender.send().await
-        // pattern, which caused a deadlock by yielding to the executor while holding onto a write
-        // lock to the mutable gas_channel. We expect an error here because there's no active host
-        // in the dispatcher - we don't need to go through the trouble of setting up an emulated
-        // host to test whether or not we can send messages to the GAS task. We just want to make
-        // sure that the function actually returns and doesn't deadlock.
-        dispatcher.set_name("test-change".to_string()).await.unwrap_err();
-    }
-
-    async fn host_is_in_dispatcher(id: &HostId, dispatcher: &HostDispatcher) -> bool {
-        dispatcher.get_adapters().await.iter().map(|i| i.id).collect::<HashSet<_>>().contains(id)
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn apply_settings_fails_host_removed() {
-        let dispatcher = hd_test::make_simple_test_dispatcher();
-        let host_id = HostId(42);
-        let mut host_server =
-            hd_test::create_and_add_test_host_to_dispatcher(host_id, &dispatcher).unwrap();
-        assert!(host_is_in_dispatcher(&host_id, &dispatcher).await);
-        let run_host = async move {
-            if let Ok(Some(HostRequest::SetConnectable { responder, .. })) =
-                host_server.try_next().await
-            {
-                responder.send(&mut Err(sys::Error::Failed)).unwrap();
-            } else {
-                panic!("Unexpected request");
-            }
-        };
-        let disable_connectable_fut = async {
-            let updated_config = dispatcher
-                .apply_sys_settings(sys::Settings {
-                    bredr_connectable_mode: Some(false),
-                    ..sys::Settings::new_empty()
-                })
-                .await;
-            assert_matches!(
-                updated_config,
-                Config { bredr: BrEdrConfig { connectable: false, .. }, .. }
-            );
-        };
-        futures::future::join(run_host, disable_connectable_fut).await;
-        assert!(!host_is_in_dispatcher(&host_id, &dispatcher).await);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_commit_bootstrap_doesnt_fail_from_host_failure() {
-        // initiate test host-dispatcher
-        let host_dispatcher = hd_test::make_simple_test_dispatcher();
-
-        // add a test host with a channel we provide, which fails on restore_bonds()
-        let host_id = HostId(1);
-        let mut host_server =
-            hd_test::create_and_add_test_host_to_dispatcher(host_id, &host_dispatcher).unwrap();
-        assert!(host_is_in_dispatcher(&host_id, &host_dispatcher).await);
-
-        let run_host = async {
-            match host_server.try_next().await {
-                Ok(Some(HostRequest::RestoreBonds { bonds, responder })) => {
-                    // Fail by returning all bonds as errors
-                    let _ = responder.send(&mut bonds.into_iter());
-                }
-                x => panic!("Expected RestoreBonds Request but got: {:?}", x),
-            }
-        };
-
-        let identity = Identity {
-            host: HostData { irk: None },
-            bonds: vec![example::bond(
-                Address::Public([1, 1, 1, 1, 1, 1]),
-                Address::Public([0, 0, 0, 0, 0, 0]),
-            )],
-        };
-        // Call dispatcher.commit_bootstrap() & assert that the result is success
-        let result =
-            futures::future::join(host_dispatcher.commit_bootstrap(vec![identity]), run_host)
-                .await
-                .0;
-        assert_matches!(result, Ok(()));
-    }
 }
 
 #[cfg(test)]

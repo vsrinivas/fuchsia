@@ -97,7 +97,7 @@ proptest! {
         let mock_host = HostDevice::mock(host_id, host_address, &PathBuf::from("/dev/host1"), host_proxy);
         let host_info = Arc::new(RwLock::new(mock_host.info()));
 
-        hd.add_test_host(host_id, mock_host.clone());
+        let _ = hd.add_test_host(host_id, mock_host.clone());
         hd.set_active_host(host_id)?;
 
         // Maps {client no. -> discovery session token}

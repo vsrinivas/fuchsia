@@ -326,7 +326,7 @@ impl HostDevice {
             id,
             technology: TechnologyType::DualMode,
             address,
-            active: true,
+            active: false,
             local_name: None,
             discoverable: false,
             discovering: false,
