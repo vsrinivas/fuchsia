@@ -50,12 +50,15 @@ modular_testing::TestHarnessBuilder::InterceptOptions FakeComponent::BuildInterc
         component_context_->outgoing()->AddPublicService(
             lifecycle_bindings_.GetHandler(this, dispatcher));
 
-        auto outgoing_directory_request = std::move(startup_info.launch_info.directory_request);
+        // Serve the outgoing directory once OnCreateAsync finishes.
+        auto serve_outgoing = [this,
+                               outgoing_directory_request =
+                                   std::move(startup_info.launch_info.directory_request),
+                               dispatcher]() mutable {
+          component_context_->outgoing()->Serve(std::move(outgoing_directory_request), dispatcher);
+        };
 
-        OnCreate(std::move(startup_info));
-
-        // Serve the outgoing directory.
-        component_context_->outgoing()->Serve(std::move(outgoing_directory_request), dispatcher);
+        OnCreateAsync(std::move(startup_info), std::move(serve_outgoing));
       };
 
   return options;

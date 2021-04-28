@@ -87,13 +87,26 @@ class FakeComponent : fuchsia::modular::Lifecycle {
             fuchsia::sys::TerminationReason reason = fuchsia::sys::TerminationReason::EXITED);
 
  protected:
-  // Called when the component is created.  The directory handles for "/svc" in
-  // |startup_info.flat_namespace| and that for
-  // |startup_info.launch_info.directory_request| will be invalid: they are
-  // both consumed in the construction of |component_context_|.
+  // Called when the component is created.
+  //
+  // The directory handles for "/svc" in |startup_info.flat_namespace| and
+  // for |startup_info.launch_info.directory_request| will be invalid:
+  // they are both consumed in the construction of |component_context_|.
   //
   // Clients may override this to be notified of create as well as to consume
   // remaining |startup_info.flat_namespace| entries.
+  //
+  // |callback| must be called to finish component creation, and specifically,
+  // to start serving the component's outgoing directory. All modifications
+  // to the outgoing directory (e.g. adding services) should be performed
+  // before |callback| is invoked.
+  virtual void OnCreateAsync(fuchsia::sys::StartupInfo startup_info,
+                             fit::function<void()> callback) {
+    OnCreate(std::move(startup_info));
+    callback();
+  }
+
+  // Called when the component is created by OnCreateAsync.
   virtual void OnCreate(fuchsia::sys::StartupInfo startup_info) {}
 
   // Called when |intercepted_componet_ptr_|'s OnKill event is dispatched.
